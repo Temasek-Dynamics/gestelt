@@ -1,0 +1,94 @@
+<launch>
+    <!-- size of map, change the size inflate x, y, z according to your application -->
+    <arg name="map_size_x"/>
+    <arg name="map_size_y"/>
+    <arg name="map_size_z"/>
+    <arg name="drone_id"/>
+    <!-- topic of your odometry such as VIO or LIO -->
+    <arg name="odom_topic"/>
+    <!-- number of moving objects -->
+    <arg name="obj_num" value="10" />
+
+    <arg name="drone_id_ns"  value="drone$(arg drone_id)"/>
+
+    <!-- Ego Planner params -->
+    <include file="$(find ego_planner)/launch/advanced_param.xml">
+        <arg name="drone_id" value="$(arg drone_id)"/>
+        <arg name="map_size_x_" value="$(arg map_size_x)"/>
+        <arg name="map_size_y_" value="$(arg map_size_y)"/>
+        <arg name="map_size_z_" value="$(arg map_size_z)"/>
+        <arg name="obj_num_set" value="$(arg obj_num)" />
+
+        <arg name="odometry_topic" value="/$(arg drone_id_ns)/mavros/local_position/odom"/>
+
+        <!-- camera pose: transform of camera frame in the world frame -->
+        <!-- depth topic: depth image, 640x480 by default -->
+        <!-- don't set cloud_topic if you already set these ones! -->
+        <!-- <arg name="depth_topic" value="/iris_depth_camera/camera/depth/image_raw"/> -->
+        <!-- <arg name="camera_pose_topic" value="/mavros/local_position/pose"/> -->
+        <!-- <arg name="camera_pose_topic" value="/iris_depth_camera/camera/pose"/> -->
+        <arg name="depth_topic" value="pcl_render_node/depth"/>
+        <arg name="camera_pose_topic" value="/$(arg drone_id_ns)/mavros/local_position/pose"/>
+        
+        <!-- topic of point cloud measurement, such as from LIDAR  -->
+        <!-- don't set camera pose and depth, if you already set this one! -->
+        <!-- <arg name="cloud_topic" value="/iris_depth_camera/camera/depth/points"/> -->
+        <arg name="cloud_topic" value="/$(arg drone_id_ns)/map"/>
+
+        <!-- intrinsic params of the depth camera -->
+        <!-- The values here are for the libgazebo_ros_openni_kinect gazebo simulated camera -->
+        <arg name="cx" value="424.5"/>
+        <arg name="cy" value="240.5"/>
+        <arg name="fx" value="454.6857718666893"/>
+        <arg name="fy" value="454.6857718666893"/>
+
+        <!-- maximum velocity, acceleration and jerk the drone will reach -->
+        <arg name="max_vel" value="1.5" />
+        <arg name="max_acc" value="3.0" />
+        <arg name="max_jer" value="20.0" />
+
+        <!--always set to 1.5 times grater than sensing horizen-->
+        <arg name="planning_horizon" value="7.5" />
+        <!-- TODO: What is this param? -->
+        <arg name="use_distinctive_trajs" value="false" />
+        <!-- 1: use 2D Nav Goal to select goal  -->
+        <!-- 2: use global waypoints below  -->
+        <arg name="flight_type" value="1" />
+
+        <!-- global waypoints -->
+        <!-- It generates a piecewise min-snap traj passing all waypoints -->
+        <arg name="point_num" value="4" />
+        <arg name="point0_x" value="0" />
+        <arg name="point0_y" value="-5" />
+        <arg name="point0_z" value="1" />
+        <arg name="point1_x" value="5" />
+        <arg name="point1_y" value="0" />
+        <arg name="point1_z" value="1.0" />
+        <arg name="point2_x" value="0.0" />
+        <arg name="point2_y" value="-5" />
+        <arg name="point2_z" value="1.0" />
+        <arg name="point3_x" value="-5" />
+        <arg name="point3_y" value="0.0" />
+        <arg name="point3_z" value="1.0" />
+        <arg name="point4_x" value="0.0" />
+        <arg name="point4_y" value="0.0" />
+        <arg name="point4_z" value="1.0" />
+    </include>
+
+    <!-- Visualize the odom of the drone -->
+    <node pkg="odom_visualization" name="drone_$(arg drone_id)_odom_visualization" type="odom_visualization" output="screen">
+        <!-- Input Odom -->
+        <remap from="~odom" to="/mavros/local_position/odom"/>
+        <param name="color/a" value="1.0"/>
+        <param name="color/r" value="0.0"/>
+        <param name="color/g" value="0.0"/>
+        <param name="color/b" value="0.0"/>
+        <param name="covariance_scale" value="100.0"/>
+        <param name="robot_scale" value="0.35"/>
+        <param name="tf45" value="false"/>
+        <param name="drone_id" value="drone_id"/>
+    </node>
+
+    
+
+</launch>

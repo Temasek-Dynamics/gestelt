@@ -1,0 +1,9 @@
+repositories:
+  ../../PX4-Autopilot:
+    type: git
+    url: https://github.com/PX4/PX4-Autopilot.git
+    version: main
+  ../simple_quad_simulator:
+    type: git
+    url: https://github.com/JohnTGZ/simple_quad_simulator.git
+    version: master

@@ -1,0 +1,5 @@
+<launch>
+  <arg name="config" default="default"/>
+
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find gestalt_bringup)/launch/rviz/$(arg config).rviz" required="true" />
+</launch>
