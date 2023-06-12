@@ -21,6 +21,10 @@
       name="map_to_$(arg drone_id_ns)_origin_tf" 
       args="$(arg init_x) $(arg init_y) $(arg init_z) 0 0 0 1 map $(arg drone_id_ns)_origin 100" />
 
+    <node pkg="tf" type="static_transform_publisher" 
+      name="$(arg drone_id_ns)_base_link_to_cam_link_tf" 
+      args="0.08 0 0.02 0 0 0 1 $(arg drone_id_ns)_base_link $(arg drone_id_ns)_cam_link 100" />
+
     <group ns="$(arg drone_id_ns)">
       <!-- MAVROS and vehicle configs -->
       <arg name="mavlink_udp_port" default="$(eval 14560 + arg('drone_id'))"/>
@@ -31,8 +35,9 @@
 
       <!-- generate sdf vehicle model -->
       <!-- <arg name="cmd" default="xmlstarlet ed -u '//plugin[@name=&quot;mavlink_interface&quot;]/mavlink_tcp_port' -v $(arg mavlink_tcp_port) $(find gestalt_bringup)/simulation/models/$(arg model)/$(arg model).sdf"/> -->
-      <arg name="cmd" default="xmlstarlet ed -u '//plugin[@name=&quot;mavlink_interface&quot;]/mavlink_tcp_port' -v $(arg mavlink_tcp_port) $(find px4)/Tools/simulation/gazebo-classic/sitl_gazebo-classic/models/$(arg model)/$(arg model).sdf"/>
-      <!-- <arg name="cmd" default="xmlstarlet ed -u '//plugin[@name=&quot;mavlink_interface&quot;]/mavlink_tcp_port' -v $(arg mavlink_tcp_port) -u '//plugin[@name=&quot;camera_controller&quot;]/robotNamespace' -v $(arg drone_ns) $(find gestalt_bringup)/simulation/models/$(arg model)/$(arg model).sdf"/> -->
+      <!-- <arg name="cmd" default="xmlstarlet ed -u '//plugin[@name=&quot;mavlink_interface&quot;]/mavlink_tcp_port' -v $(arg mavlink_tcp_port) $(find px4)/Tools/simulation/gazebo-classic/sitl_gazebo-classic/models/$(arg model)/$(arg model).sdf"/> -->
+      <!-- <arg name="cmd" default="xmlstarlet ed -u '//plugin[@name=&quot;mavlink_interface&quot;]/mavlink_tcp_port' -v $(arg mavlink_tcp_port) -u '//plugin[@name=&quot;camera_controller&quot;]/robotNamespace' -v $(arg drone_id_ns) $(find gestalt_bringup)/simulation/models/$(arg model)/$(arg model).sdf"/> -->
+      <arg name="cmd" default="xmlstarlet ed -u '//plugin[@name=&quot;mavlink_interface&quot;]/mavlink_tcp_port' -v $(arg mavlink_tcp_port) -u '//plugin[@name=&quot;camera_controller&quot;]/frameName' -v $(arg drone_id_ns)_cam_link $(find gestalt_bringup)/simulation/models/$(arg model)/$(arg model).sdf"/>
 
       <param command="$(arg cmd)" name="model_description"/>
       <!-- PX4 SITL -->

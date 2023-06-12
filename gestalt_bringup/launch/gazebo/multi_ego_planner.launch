@@ -19,6 +19,13 @@
     <arg name="broadcast_ip" value="127.0.0.255"/>
   </include>
 
+  <node pkg="gestalt_bringup" type="swarm_collision_checker" 
+    name="swarm_collision_checker" output="screen">
+    <param name="~num_drones" value="$(arg num_drones)" />
+    <param name="~collision_tolerance" value="1.0" />
+    <param name="~check_collision_freq" value="10.0" />
+  </node>
+
   <!-- Drone 0 -->
   <include file="$(find gestalt_bringup)/launch/gazebo/single_ego_planner.launch">
     <arg name="drone_id"   value="0"/>

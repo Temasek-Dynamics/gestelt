@@ -101,7 +101,7 @@
         <param name="grid_map/local_update_range_y" value="5.5" />
         <param name="grid_map/local_update_range_z" value="4.5" />
         <!-- The obstacles_inflation param affects the inflation zones of the obstacles -->
-        <param name="grid_map/obstacles_inflation" value="0.0" />
+        <param name="grid_map/obstacles_inflation" value="1.5" />
         <param name="grid_map/local_map_margin" value="10"/>
         <param name="grid_map/ground_height" value="-0.25"/>
         <!-- camera parameter -->

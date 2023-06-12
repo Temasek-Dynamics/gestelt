@@ -7,3 +7,7 @@ repositories:
     type: git
     url: https://github.com/JohnTGZ/simple_quad_simulator.git
     version: master
+  ../octomap_mapping:
+    type: git
+    url: https://github.com/OctoMap/octomap_mapping
+    version: kinetic-devel
