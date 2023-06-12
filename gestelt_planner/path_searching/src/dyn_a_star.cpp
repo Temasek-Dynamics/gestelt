@@ -141,6 +141,8 @@ bool AStar::ConvertToIndexAndAdjustStartEndPoints(Vector3d start_pt, Vector3d en
 
 ASTAR_RET AStar::AstarSearch(const double step_size, Vector3d start_pt, Vector3d end_pt)
 {
+    // step_size is the same as the grid map resolution 
+
     ros::Time time_1 = ros::Time::now();
     ++rounds_;
 
