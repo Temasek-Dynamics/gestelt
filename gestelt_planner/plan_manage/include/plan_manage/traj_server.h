@@ -61,7 +61,6 @@ std::string string_format( const std::string& format, Args ... args )
 
 class TrajServer{
 public:
-
   /* Initialization methods */
 
   void init(ros::NodeHandle& nh);

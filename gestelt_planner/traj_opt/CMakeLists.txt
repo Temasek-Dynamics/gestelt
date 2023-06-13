@@ -18,6 +18,7 @@ find_package(catkin REQUIRED COMPONENTS
   cv_bridge
   traj_utils
   path_searching
+  global_planner
 )
 
 catkin_package(

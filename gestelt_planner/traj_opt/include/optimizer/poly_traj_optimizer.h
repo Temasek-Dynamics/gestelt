@@ -9,6 +9,8 @@
 #include <traj_utils/plan_container.hpp>
 #include "poly_traj_utils.hpp"
 
+#include <global_planner/planner_base.h>
+
 namespace ego_planner
 {
 
@@ -67,6 +69,9 @@ namespace ego_planner
   private:
     GridMap::Ptr grid_map_;
     AStar::Ptr a_star_;
+
+    std::unique_ptr<PlannerBase> global_planner_;
+
     poly_traj::MinJerkOpt jerkOpt_;
     SwarmTrajData *swarm_trajs_{NULL}; // Can not use shared_ptr and no need to free
     ConstraintPoints cps_;

@@ -12,6 +12,9 @@ find_package(catkin REQUIRED COMPONENTS
   rospy
   plan_env
   cv_bridge
+  std_msgs
+  geometry_msgs
+  visualization_msgs
 )
 find_package(Eigen3 REQUIRED)
 # find_package(PCL 1.7 REQUIRED)
@@ -46,4 +49,14 @@ add_library(${PROJECT_NAME}
 ## Specify libraries to link a library or executable target against
 target_link_libraries(${PROJECT_NAME}
   ${catkin_LIBRARIES}
+)
+
+
+add_executable(a_star src/a_star.cpp)
+add_dependencies(a_star 
+  ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS}
+)
+target_link_libraries(a_star
+  ${catkin_LIBRARIES}
+  ${PROJECT_NAME}
 )

@@ -17,25 +17,72 @@ enum CellState
 
 struct GridNode
 {
+  GridNode(const Eigen::Vector3i& idx)
+  {
+    this->idx = idx;
+  }
+
 	// int rounds{0}; // Distinguish every call
 
+	Eigen::Vector3i idx;
+	double g_cost{inf}, f_cost{inf};
+	std::shared_ptr<GridNode> parent{nullptr};
   CellState state{CellState::UNDEFINED};
 
-	Eigen::Vector3i idx;
+  // Equality
+  bool operator==(const GridNode& node) const
+  {
+    if (this->idx(0) == node.idx(0) 
+      && this->idx(1) == node.idx(1)
+      && this->idx(2) == node.idx(2)){
+      return true;
+    } 
+    return false;
+  }
 
-	double g_cost{inf}, f_cost{inf};
+  struct ObjHash
+  {
+    size_t operator()(GridNode& node) const
+    {
+      return (node.idx(0) * 7927 + node.idx(1)) * 7993 + node.idx(2);
+    }
+  };
 
-	std::shared_ptr<GridNode> parent{nullptr};
+  struct PointedObjEq {
+    bool operator () ( GridNodePtr l_node, GridNodePtr r_node) const {
+      return *l_node == *r_node;
+    }
+  };
+
+  struct PointedObjHash
+  {
+    size_t operator()(const GridNodePtr& node) const
+    {
+      // https://stackoverflow.com/questions/1358468/how-to-create-unique-integer-number-from-3-different-integers-numbers1-oracle-l
+      // https://stackoverflow.com/questions/38965931/hash-function-for-3-integers
+      return (node->idx(0) * 7927 + node->idx(1)) * 7993 + node->idx(2);
+    }
+  };
+
+  // https://stackoverflow.com/questions/32613304/find-a-value-in-an-unordered-set-of-shared-ptr
+  struct CompareCostPtr
+  {
+    bool operator()(const GridNodePtr& l_node, const GridNodePtr& r_node)
+    {
+      return l_node->f_cost > r_node->f_cost;
+    }
+  };
+
 };
 
-class CompareCost
-{
-public:
-	bool operator()(GridNodePtr node_1, GridNodePtr node_2)
-	{
-		return node_1->f_cost > node_2->f_cost;
-	}
-};
+// class CompareCost
+// {
+// public:
+// 	bool operator()(GridNodePtr node_1, GridNodePtr node_2)
+// 	{
+// 		return node_1->f_cost > node_2->f_cost;
+// 	}
+// };
 
 class PlannerCommon {
 /**
@@ -62,13 +109,11 @@ public:
           nb_idx(1) = (cur_node->idx)(1) + dy;
           nb_idx(2) = (cur_node->idx)(2) + dz;
           
-          if (!isInMap(nb_idx)){
+          if (!isInMap(nb_idx) || isOccupied(nb_idx)){
             continue;
           }
 
-          GridNodePtr nb_node = std::make_shared<GridNode>();
-
-          nb_node->idx = nb_idx;
+          GridNodePtr nb_node = std::make_shared<GridNode>(nb_idx);
 
           neighbors.push_back(nb_node);
         }
@@ -104,23 +149,23 @@ public:
     dy -= diag;
     dz -= diag;
 
-      if (dx == 0)
-      {
-          h = 1.0 * sqrt(3.0) * diag + sqrt(2.0) * min(dy, dz) + 1.0 * abs(dy - dz);
-      }
-      if (dy == 0)
-      {
-          h = 1.0 * sqrt(3.0) * diag + sqrt(2.0) * min(dx, dz) + 1.0 * abs(dx - dz);
-      }
-      if (dz == 0)
-      {
-          h = 1.0 * sqrt(3.0) * diag + sqrt(2.0) * min(dx, dy) + 1.0 * abs(dx - dy);
-      }
-      return h;
+    if (dx == 0)
+    {
+      h = 1.0 * sqrt(3.0) * diag + sqrt(2.0) * min(dy, dz) + 1.0 * abs(dy - dz);
+    }
+    if (dy == 0)
+    {
+      h = 1.0 * sqrt(3.0) * diag + sqrt(2.0) * min(dx, dz) + 1.0 * abs(dx - dz);
+    }
+    if (dz == 0)
+    {
+      h = 1.0 * sqrt(3.0) * diag + sqrt(2.0) * min(dx, dy) + 1.0 * abs(dx - dy);
+    }
+    return h;
   }
 
   // Convert from 3d position to gridmap index
-  bool PosToIdx(const Vector3d& pos, Vector3i& idx) {
+  bool posToIdx(const Vector3d& pos, Vector3i& idx) {
     if (!isInMap(pos)){
       return false;
     }
@@ -128,7 +173,23 @@ public:
     return true;
   }
 
-  // Check if position is occupied
+  bool idxToPos(const Vector3i& idx, Vector3d& pos){
+    if (!isInMap(idx)){
+      return false;
+    }
+
+    occ_map_->indexToPos(idx, pos);
+    return true;
+  }
+
+  bool isOccupied(const Vector3i& idx){
+    Eigen::Vector3d pos;
+    if (!idxToPos(idx, pos)){
+      return true;
+    }
+    return isOccupied(pos);
+  }
+
   bool isOccupied(const Vector3d& pos){
     return occ_map_->getInflateOccupancy(pos) == 1 ? true : false;
   }
@@ -139,6 +200,112 @@ public:
 
   bool isInMap(const Vector3d& pos){
     return occ_map_->isInMap(pos) ;
+  }
+
+
+  void publishClosedList(const std::unordered_set<GridNodePtr, GridNode::PointedObjHash, GridNode::PointedObjEq>& closed_list, ros::Publisher& marker_viz_pub) {
+    visualization_msgs::Marker closed_nodes;
+
+    closed_nodes.header.frame_id = "world";
+    closed_nodes.header.stamp = ros::Time::now();
+    closed_nodes.type = visualization_msgs::Marker::CUBE_LIST;
+    closed_nodes.action = visualization_msgs::Marker::ADD;
+    closed_nodes.id = 0; 
+    closed_nodes.pose.orientation.w = 1.0;
+
+    closed_nodes.color.r = 1.0;
+    closed_nodes.color.g = 1.0;
+    closed_nodes.color.b = 1.0;
+    closed_nodes.color.a = 0.2;
+
+    closed_nodes.scale.x = 0.1;
+    closed_nodes.scale.y = 0.1;
+    closed_nodes.scale.z = 0.1;
+
+    geometry_msgs::Point pt;
+    for (auto itr = closed_list.begin(); itr != closed_list.end(); ++itr) {
+      Eigen::Vector3d node_pos;
+      idxToPos((*itr)->idx, node_pos);
+      pt.x = node_pos(0);
+      pt.y = node_pos(1);
+      pt.z = node_pos(2);
+      closed_nodes.points.push_back(pt);
+    }
+
+    marker_viz_pub.publish(closed_nodes);
+  }
+
+  void publishPath(const std::vector<Eigen::Vector3d>& path, ros::Publisher& marker_viz_pub) {
+    visualization_msgs::Marker path_spheres, start_sphere, goal_sphere, path_line_strip;
+
+    start_sphere.header.frame_id = goal_sphere.header.frame_id = "world";
+    start_sphere.header.stamp = goal_sphere.header.stamp = ros::Time::now();
+    start_sphere.type = goal_sphere.type = visualization_msgs::Marker::SPHERE;
+    start_sphere.action = goal_sphere.action = visualization_msgs::Marker::ADD;
+    start_sphere.id = goal_sphere.id = 0; 
+    start_sphere.pose.orientation.w = goal_sphere.pose.orientation.w = 1.0;
+
+    start_sphere.color.r = goal_sphere.color.r = 0.0;
+    start_sphere.color.g = goal_sphere.color.g = 0.0;
+    start_sphere.color.b = goal_sphere.color.b = 1.0;
+    start_sphere.color.a = goal_sphere.color.a = 0.6;
+
+    start_sphere.scale.x = goal_sphere.scale.x = 0.2;
+    start_sphere.scale.y = goal_sphere.scale.y = 0.2;
+    start_sphere.scale.z = goal_sphere.scale.z = 0.2;
+
+    path_line_strip.header.frame_id = "world";
+    path_line_strip.header.stamp = ros::Time::now();
+    path_line_strip.type = visualization_msgs::Marker::LINE_STRIP;
+    path_line_strip.action = visualization_msgs::Marker::ADD;
+    path_line_strip.id = 1000;
+    path_line_strip.pose.orientation.w = 1.0;
+
+    path_line_strip.color.r = 0.0;
+    path_line_strip.color.g = 0.0;
+    path_line_strip.color.b = 1.0;
+    path_line_strip.color.a = 0.6;
+
+    path_line_strip.scale.x = 0.1;
+
+    path_spheres.header.frame_id = "world";
+    path_spheres.header.stamp = ros::Time::now();
+    path_spheres.type = visualization_msgs::Marker::SPHERE_LIST;
+    path_spheres.action = visualization_msgs::Marker::ADD;
+    path_spheres.id = 0; 
+    path_spheres.pose.orientation.w = 1.0;
+
+    path_spheres.color.r = 0.0;
+    path_spheres.color.g = 0.0;
+    path_spheres.color.b = 1.0;
+    path_spheres.color.a = 0.6;
+
+    path_spheres.scale.x = 0.2;
+    path_spheres.scale.y = 0.2;
+    path_spheres.scale.z = 0.2;
+
+    start_sphere.pose.position.x = path[0](0);
+    start_sphere.pose.position.y = path[0](1);
+    start_sphere.pose.position.z = path[0](2);
+
+    geometry_msgs::Point pt;
+    for (int i = 1; i < path.size() - 1; i++){
+      pt.x = path[i](0);
+      pt.y = path[i](1);
+      pt.z = path[i](2);
+
+      path_spheres.points.push_back(pt);
+      path_line_strip.points.push_back(pt);
+    }
+
+    goal_sphere.pose.position.x = path.back()(0);
+    goal_sphere.pose.position.y = path.back()(1);
+    goal_sphere.pose.position.z = path.back()(2);
+
+    marker_viz_pub.publish(start_sphere);
+    marker_viz_pub.publish(goal_sphere);
+    marker_viz_pub.publish(path_spheres);
+    marker_viz_pub.publish(path_line_strip);
   }
 
 private:

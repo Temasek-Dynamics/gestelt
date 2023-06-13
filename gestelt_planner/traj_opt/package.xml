@@ -68,6 +68,7 @@
   <exec_depend>path_searching</exec_depend>
   <exec_depend>traj_utils</exec_depend>
 
+  <depend>global_planner</depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>
