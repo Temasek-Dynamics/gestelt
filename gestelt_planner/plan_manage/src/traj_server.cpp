@@ -190,7 +190,7 @@ void TrajServer::execTrajTimerCb(const ros::TimerEvent &e)
     
     case ServerState::MISSION:
       if (isMissionComplete()){
-        logInfoThrottled("Waiting for mission", 5.0);
+        // logInfoThrottled("Waiting for mission", 5.0);
         execHover();
       }
       else {
@@ -230,7 +230,7 @@ void TrajServer::tickServerStateTimerCb(const ros::TimerEvent &e)
         break;
       }
     case ServerState::IDLE:
-      logInfoThrottled("[IDLE] Ready to take off", 5.0 );
+      // logInfoThrottled("[IDLE] Ready to take off", 5.0 );
 
       switch (getServerEvent())
       {
@@ -392,7 +392,7 @@ void TrajServer::tickServerStateTimerCb(const ros::TimerEvent &e)
       }
 
       if (!isMissionComplete()){
-        logInfoThrottled("[MISSION] executing mission...", 5.0);
+        // logInfoThrottled("[MISSION] executing mission...", 5.0);
       }
       break;
 

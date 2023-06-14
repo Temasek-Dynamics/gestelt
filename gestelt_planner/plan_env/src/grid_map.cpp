@@ -1158,10 +1158,9 @@ void GridMap::publishMapInflate(bool all_info)
   boundIndex(min_cut);
   boundIndex(max_cut);
 
-  for (int x = min_cut(0); x <= max_cut(0); ++x)
-    for (int y = min_cut(1); y <= max_cut(1); ++y)
-      for (int z = min_cut(2); z <= max_cut(2); ++z)
-      {
+  for (int x = min_cut(0); x <= max_cut(0); ++x){
+    for (int y = min_cut(1); y <= max_cut(1); ++y){
+      for (int z = min_cut(2); z <= max_cut(2); ++z){
         if (md_.occupancy_buffer_inflate_[toAddress(x, y, z)] == 0)
           continue;
 
@@ -1175,6 +1174,8 @@ void GridMap::publishMapInflate(bool all_info)
         pt.z = pos(2);
         cloud.push_back(pt);
       }
+    }
+  }
 
   cloud.width = cloud.points.size();
   cloud.height = 1;

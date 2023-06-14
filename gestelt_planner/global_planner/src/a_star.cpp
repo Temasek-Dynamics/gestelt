@@ -1,4 +1,4 @@
-#include "global_planner/planner_base.h"
+#include <global_planner/planner_base.h>
 
 int main(int argc, char **argv)
 {

@@ -48,7 +48,6 @@ struct matrix_hash : std::unary_function<T, size_t>
 
 struct MappingParameters
 {
-
   /* map properties */
   Eigen::Vector3d map_origin_, map_size_;
   Eigen::Vector3d map_min_boundary_, map_max_boundary_; // map range in metric position
@@ -486,8 +485,9 @@ inline void GridMap::posToIndex(const Eigen::Vector3d &pos, Eigen::Vector3i &id)
 
 inline void GridMap::indexToPos(const Eigen::Vector3i &id, Eigen::Vector3d &pos)
 {
-  for (int i = 0; i < 3; ++i)
+  for (int i = 0; i < 3; ++i){
     pos(i) = (id(i) + 0.5) * mp_.resolution_ + mp_.map_origin_(i);
+  }
 }
 
 inline void GridMap::inflatePoint(const Eigen::Vector3i &pt, int step, vector<Eigen::Vector3i> &pts)
@@ -513,12 +513,14 @@ inline void GridMap::inflatePoint(const Eigen::Vector3i &pt, int step, vector<Ei
   // }
 
   /* ---------- all inflate ---------- */
-  for (int x = -step; x <= step; ++x)
-    for (int y = -step; y <= step; ++y)
+  for (int x = -step; x <= step; ++x){
+    for (int y = -step; y <= step; ++y){
       for (int z = -step; z <= step; ++z)
       {
         pts[num++] = Eigen::Vector3i(pt(0) + x, pt(1) + y, pt(2) + z);
       }
+    }
+  }
 }
 
 inline double GridMap::getResolution() { return mp_.resolution_; }

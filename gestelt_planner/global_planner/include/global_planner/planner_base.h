@@ -1,3 +1,6 @@
+#ifndef _PLANNER_BASE_H_
+#define _PLANNER_BASE_H_
+
 #include <algorithm>
 #include <limits>
 #include <unordered_set>
@@ -6,8 +9,13 @@
 #include <global_planner/planner_common.h>
 
 #include <std_msgs/Empty.h>
+#include <sensor_msgs/PointCloud2.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <visualization_msgs/MarkerArray.h>
+
+#include <pcl/point_cloud.h>
+#include <pcl/point_types.h>
+#include <pcl_conversions/pcl_conversions.h>
 
 using namespace Eigen;
 
@@ -17,13 +25,15 @@ public:
   PlannerBase(ros::NodeHandle& nh){
     nh.param("enable_debug", debug_, true);
 
-    set_start_sub_ = nh.subscribe("plan_set_start", 10, &PlannerBase::setStartCb, this);
-    set_goal_sub_ = nh.subscribe("plan_set_goal", 10, &PlannerBase::setGoalCb, this);
+    set_start_sub_ = nh.subscribe("/plan_set_start", 10, &PlannerBase::setStartCb, this);
+    set_goal_sub_ = nh.subscribe("/plan_set_goal", 10, &PlannerBase::setGoalCb, this);
 
-    trigger_plan_sub_ = nh.subscribe("trigger_plan", 10, &PlannerBase::triggerPlanCb, this);
+    trigger_plan_sub_ = nh.subscribe("/trigger_plan", 10, &PlannerBase::triggerPlanCb, this);
 
-    plan_viz_pub_ = nh.advertise<visualization_msgs::MarkerArray>("plan", 10);
-    closed_list_viz_pub_ = nh.advertise<visualization_msgs::MarkerArray>("closed_list", 10);
+    gridmap_sub_ = nh.subscribe("/gridmap", 10, &PlannerBase::gridmapSubCb, this);
+
+    plan_viz_pub_ = nh.advertise<visualization_msgs::MarkerArray>("/plan", 10);
+    closed_list_viz_pub_ = nh.advertise<visualization_msgs::MarkerArray>("/closed_list", 10);
   }
 
   void setStartCb(const geometry_msgs::PoseStamped::ConstPtr &msg) {
@@ -46,6 +56,33 @@ public:
     common_->publishPath(this->getPath(), plan_viz_pub_);
   }
 
+
+  void gridmapSubCb(const sensor_msgs::PointCloud2::ConstPtr &msg){
+    ROS_INFO("Received point clouds");
+    // Assume unorganized point cloud
+
+    pcl::fromROSMsg(msg, *grid_map_)
+
+    if (grid_map_.isOrganized ()){
+      ROS_ERROR("[global_planner] Organized point clouds are not supported!")
+      return;
+    }
+
+    if (!grid_map_init_){
+      // TODO figure out a way to pass this from the mapper
+      Eigen::Vector3d map_size = Eigen::Vector3d(80.0, 80.0, 3.0);
+      double ground_height = -0.25;
+      Eigen::Vector3d map_origin = Eigen::Vector3d(-x_size/2, -y_size/2, ground_height);
+      double map_res = 0.1;
+
+      common_.reset(new PlannerCommon(grid_map_, map_size, map_origin, map_res));
+      grid_map_init_ = true;
+    }
+    else {
+      common_->updateMap(grid_map_);
+    }
+  }
+
   // Reset previously saved path and openlist
   void reset(){
     planning_successful_ = false;
@@ -54,13 +91,20 @@ public:
     open_list_ = std::priority_queue<GridNodePtr, std::vector<GridNodePtr>, GridNode::CompareCostPtr>();
   }
 
-  void addGridMap(GridMap::Ptr occ_map){
-    occ_map_ = occ_map;
+  // void addGridMap(GridMap::Ptr occ_map){
+  //   occ_map_ = occ_map;
 
-    common_.reset(new PlannerCommon(occ_map));
-  }
+  //   common_.reset(new PlannerCommon(occ_map));
+  //   grid_map_init_ = true;
+  // }
 
   bool generate_plan(Vector3d start_pos, Vector3d goal_pos){
+    if (!grid_map_init_){
+      ROS_ERROR("[global_planner] Grid map is not initialized! Unable to start generating plan.");
+      return;
+    }
+    
+    ROS_INFO("PLANNING PATH!");
     reset();
     // TODO: Convert start and goal pos (in world frame) to the UAV's frame
 
@@ -188,7 +232,32 @@ private:
   }
 
 private: 
-  GridMap::Ptr occ_map_;
+  std::vector<GridNodePtr> gridnode_path_;
+  std::vector<Eigen::Vector3i> idx_path_; // Path with indices of nodes
+  std::vector<Eigen::Vector3d> pos_path_; // Path with position of nodes
+
+  // ROS Subscribers
+  ros::Subscriber set_start_sub_, set_goal_sub_;
+  ros::Subscriber trigger_plan_sub_;
+  ros::Subscriber gridmap_sub_;
+
+  // ROS Publishers
+  ros::Publisher plan_viz_pub_, closed_list_viz_pub_;
+
+  /* Params */
+  bool debug_{false};
+
+  /* Flags */
+  bool planning_successful_{false};
+  bool grid_map_init_{false};
+
+  /* Temporarily stored data */
+  Eigen::Vector3d start_pose_, goal_pose_;
+
+  std::shared_ptr<pcl::PointCloud<pcl::PointXYZ>> grid_map_;
+
+  /* Path planner data structures */
+
   // class for commonly used helper functions 
   std::unique_ptr<PlannerCommon> common_; 
 
@@ -197,25 +266,8 @@ private:
   // closed list stores nodes that have been visited
   std::unordered_set<GridNodePtr, GridNode::PointedObjHash, GridNode::PointedObjEq> closed_list_;
 
-  std::vector<GridNodePtr> gridnode_path_;
-  std::vector<Eigen::Vector3i> idx_path_; // Path with indices of nodes
-  std::vector<Eigen::Vector3d> pos_path_; // Path with position of nodes
 
-  // ROS Subscribers
-  ros::Subscriber set_start_sub_, set_goal_sub_;
-  ros::Subscriber trigger_plan_sub_;
-
-  // ROS Publishers
-  ros::Publisher plan_viz_pub_, closed_list_viz_pub_;
-
-  // params
-  bool debug_{false};
-
-  // flags
-  bool planning_successful_{false};
-
-  // stored data
-  // geometry_msgs::PoseStamped start_pose_, goal_pose_;
-  Eigen::Vector3d start_pose_, goal_pose_;
 
 };
+
+#endif

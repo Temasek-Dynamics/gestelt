@@ -76,6 +76,7 @@
     "typeindex": "cpp",
     "typeinfo": "cpp",
     "bit": "cpp",
-    "*.ipp": "cpp"
+    "*.ipp": "cpp",
+    "core": "cpp"
   }
 }

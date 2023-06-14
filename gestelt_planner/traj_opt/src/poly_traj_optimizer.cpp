@@ -1704,8 +1704,6 @@ namespace ego_planner
   /* helper functions */
   void PolyTrajOptimizer::setParam(ros::NodeHandle &nh)
   {
-    global_planner_.reset(new PlannerBase(nh));
-
     nh.param("optimization/constraint_points_perPiece", cps_num_prePiece_, -1);
     nh.param("optimization/weight_obstacle", wei_obs_, -1.0);
     nh.param("optimization/weight_obstacle_soft", wei_obs_soft_, -1.0);
@@ -1736,8 +1734,6 @@ namespace ego_planner
 
     a_star_.reset(new AStar);
     a_star_->initGridMap(grid_map_, Eigen::Vector3i(100, 100, 100));
-
-    global_planner_->addGridMap(map);
 
   }
 

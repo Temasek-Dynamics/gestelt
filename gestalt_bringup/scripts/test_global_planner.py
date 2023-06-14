@@ -5,9 +5,9 @@ from trajectory_server_msgs.msg import State, Waypoints
 from geometry_msgs.msg import Pose, PoseStamped
 from std_msgs.msg import Int8, Empty
 
-set_goal_pub = rospy.Publisher('/global_planner/plan_set_goal', PoseStamped, queue_size=10)
-set_start_pub = rospy.Publisher('/global_planner/plan_set_start', PoseStamped, queue_size=10)
-trigger_pub = rospy.Publisher('/global_planner/trigger_plan', Empty, queue_size=10)
+set_goal_pub = rospy.Publisher('/plan_set_goal', PoseStamped, queue_size=10)
+set_start_pub = rospy.Publisher('/plan_set_start', PoseStamped, queue_size=10)
+trigger_pub = rospy.Publisher('/trigger_plan', Empty, queue_size=10)
 
 def create_posestamped(x, y, z):
     pose = PoseStamped()
@@ -31,8 +31,6 @@ def main():
     goal_pose = create_posestamped(1.0, 1.0, 1.0)
 
     set_start_pub.publish(start_pose)
-    set_goal_pub.publish(goal_pose)
-    set_goal_pub.publish(goal_pose)
     set_goal_pub.publish(goal_pose)
 
     trigger_pub.publish(Empty())

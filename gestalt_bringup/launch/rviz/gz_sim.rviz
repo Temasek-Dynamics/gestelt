@@ -97,7 +97,7 @@ Visualization Manager:
               Marker Topic: /drone_0_ego_planner_node/goal_point
               Name: goal_point
               Namespaces:
-                "": true
+                {}
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
@@ -105,7 +105,7 @@ Visualization Manager:
               Marker Topic: /drone_0_ego_planner_node/global_list
               Name: global_path
               Namespaces:
-                "": true
+                {}
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
@@ -113,7 +113,7 @@ Visualization Manager:
               Marker Topic: /drone_0_ego_planner_node/optimal_list
               Name: optimal_traj
               Namespaces:
-                "": true
+                {}
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
@@ -1055,7 +1055,7 @@ Visualization Manager:
       Value: true
     - Class: rviz/MarkerArray
       Enabled: true
-      Marker Topic: /global_planner/closed_list
+      Marker Topic: /closed_list
       Name: closed_list
       Namespaces:
         {}
@@ -1063,7 +1063,7 @@ Visualization Manager:
       Value: true
     - Class: rviz/MarkerArray
       Enabled: true
-      Marker Topic: /global_planner/plan
+      Marker Topic: /plan
       Name: plan
       Namespaces:
         {}
@@ -1098,7 +1098,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/ThirdPersonFollower
-      Distance: 11.040817260742188
+      Distance: 9.831205368041992
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -1106,17 +1106,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: -0.09651076793670654
-        Y: 2.3657174110412598
-        Z: 4.9320751713821664e-06
+        X: 1.5349318981170654
+        Y: -1.5368382930755615
+        Z: 6.124168066889979e-06
       Focal Shape Fixed Size: false
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.33979639410972595
+      Pitch: -0.12020369619131088
       Target Frame: my_view
-      Yaw: 6.007243633270264
+      Yaw: 3.3972456455230713
     Saved:
       - Class: rviz/FPS
         Enable Stereo Rendering:

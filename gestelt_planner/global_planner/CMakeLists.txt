@@ -17,7 +17,7 @@ find_package(catkin REQUIRED COMPONENTS
   visualization_msgs
 )
 find_package(Eigen3 REQUIRED)
-# find_package(PCL 1.7 REQUIRED)
+find_package(PCL 1.7 REQUIRED)
 
 ###################################
 ## catkin specific configuration ##
@@ -39,6 +39,7 @@ include_directories(
   include
   ${catkin_INCLUDE_DIRS}
   ${Eigen3_INCLUDE_DIRS} 
+  ${PCL_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
@@ -50,7 +51,6 @@ add_library(${PROJECT_NAME}
 target_link_libraries(${PROJECT_NAME}
   ${catkin_LIBRARIES}
 )
-
 
 add_executable(a_star src/a_star.cpp)
 add_dependencies(a_star 

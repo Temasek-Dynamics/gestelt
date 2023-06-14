@@ -101,7 +101,7 @@ namespace ego_planner
     if (fsm_num++ == 500)
     {
       fsm_num = 0;
-      printFSMExecState();
+      // printFSMExecState();
     }
 
     switch (getServerState())

@@ -1,9 +1,13 @@
+#ifndef _PLANNER_COMMON_H_
+#define _PLANNER_COMMON_H_
+
 // Common helper methods for planners
 #include <plan_env/grid_map.h>
 #include <Eigen/Eigen>
 
 using namespace Eigen;
-double inf = numeric_limits<float>::infinity();
+constexpr double inf = numeric_limits<float>::infinity();
+constexpr double epsilon = std::numeric_limits<T>::epsilon;
 
 struct GridNode; //forward declration
 typedef std::shared_ptr<GridNode> GridNodePtr;
@@ -75,23 +79,34 @@ struct GridNode
 
 };
 
-// class CompareCost
-// {
-// public:
-// 	bool operator()(GridNodePtr node_1, GridNodePtr node_2)
-// 	{
-// 		return node_1->f_cost > node_2->f_cost;
-// 	}
-// };
-
 class PlannerCommon {
 /**
  * PlannerCommon acts a wrapper to the underlying obstacle map and provides commonly
  * used methods for search-based planners
  * */ 
 public:
-  PlannerCommon(GridMap::Ptr occ_map) {
-    occ_map_ = occ_map;
+  PlannerCommon(std::shared_ptr<pcl::PointCloud<pcl::PointXYZ>>& map, 
+    const Eigen::Vector3d& map_origin, 
+    const Eigen::Vector3d& map_size, 
+    const double& map_res)
+  : map_origin_(map_origin), map_size_(map_size), map_res_(map_res) 
+  {
+    for (int i = 0; i < 3; ++i){
+      map_voxel_size_(i) = ceil(map_size(i) / map_res);
+    }
+
+    map_max_boundary_ = map_origin + map_size;
+
+    updateMap(map);
+
+  }
+
+  void updateMap(std::shared_ptr<pcl::PointCloud<pcl::PointXYZ>>& map) {
+    pc_map_ = map;
+    // Need to convert map to a gridmap
+    for (size_t i = 0; i < *pc_map_.points.size(); ++i)
+    {
+    }
   }
 
   std::vector<GridNodePtr> getNeighbors(GridNodePtr cur_node) {
@@ -169,7 +184,11 @@ public:
     if (!isInMap(pos)){
       return false;
     }
-    occ_map_->posToIndex(pos, idx);
+
+    for (int i = 0; i < 3; ++i){
+      idx(i) = floor((pos(i) - map_origin_(i)) / map_res_);
+    }
+
     return true;
   }
 
@@ -178,30 +197,60 @@ public:
       return false;
     }
 
-    occ_map_->indexToPos(idx, pos);
+    for (int i = 0; i < 3; ++i){
+      pos(i) = (id(i) + 0.5) * map_res_ + map_origin_(i);
+    }
+
     return true;
   }
 
   bool isOccupied(const Vector3i& idx){
+
     Eigen::Vector3d pos;
     if (!idxToPos(idx, pos)){
       return true;
     }
+
     return isOccupied(pos);
   }
 
   bool isOccupied(const Vector3d& pos){
-    return occ_map_->getInflateOccupancy(pos) == 1 ? true : false;
+
+
+    return gridmap_->getInflateOccupancy(pos) == 1 ? true : false;
   }
 
   bool isInMap(const Vector3i& idx){
-    return occ_map_->isInMap(idx) ;
+    if (idx(0) < 0 || idx(1) < 0 || idx(2) < 0)
+    {
+      return false;
+    }
+    if (idx(0) > mp_.map_voxel_size_(0) - 1 || idx(1) > mp_.map_voxel_size_(1) - 1 ||
+        idx(2) > mp_.map_voxel_size_(2) - 1)
+    {
+      return false;
+    }
+
+    return true;
   }
 
   bool isInMap(const Vector3d& pos){
-    return occ_map_->isInMap(pos) ;
-  }
+    if (pos(0) < mp_.map_origin_(0) + epsilon 
+        || pos(1) < mp_.map_origin_(1) + epsilon 
+        || pos(2) < mp_.map_origin_(2) + epsilon)
+    {
+      // cout << "less than min range!" << endl;
+      return false;
+    }
+    if (pos(0) > mp_.map_max_boundary_(0) - epsilon 
+      || pos(1) > mp_.map_max_boundary_(1) - epsilon 
+      || pos(2) > mp_.map_max_boundary_(2) - epsilon)
+    {
+      return false;
+    }
 
+    return true;
+  }
 
   void publishClosedList(const std::unordered_set<GridNodePtr, GridNode::PointedObjHash, GridNode::PointedObjEq>& closed_list, ros::Publisher& marker_viz_pub) {
     visualization_msgs::Marker closed_nodes;
@@ -309,6 +358,16 @@ public:
   }
 
 private:
-  GridMap::Ptr occ_map_;
+  std::shared_ptr<pcl::PointCloud<pcl::PointXYZ>> pc_map_;
+  //TODO grid_map_;
+
+  Eigen::Vector3d map_origin_; // point at which (x,y,z) is a minimum
+  Eigen::Vector3d map_size_; // Maximum size of map in (x,y,z)
+  Eigen::Vector3d map_max_boundary_; // point at which (x,y,z) is a maximum
+
+  Eigen::Vector3d map_voxel_size_; // Maximum number of voxels in (x,y,z)
+
+  double map_res_;
 };
 
+#endif
