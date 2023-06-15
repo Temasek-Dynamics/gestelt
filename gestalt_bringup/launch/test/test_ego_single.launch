@@ -19,20 +19,6 @@
     <arg name="broadcast_ip" value="127.0.0.255"/>
   </include>
 
-  <node pkg="global_planner" type="a_star" name="global_planner" output="screen">
-    <!-- Subscribed Topics -->
-    <!-- <remap from="/plan_set_start" to="/drone_$(arg drone_id)/plan_set_start"/>
-    <remap from="/plan_set_goal" to="/drone_$(arg drone_id)/plan_set_goal"/>
-    <remap from="/trigger_plan" to="/drone_$(arg drone_id)/trigger_plan"/>   -->
-
-    <!-- Published Topics -->
-    <!-- <remap from="/plan" to="/drone_$(arg drone_id)/plan"/>  
-    <remap from="/closed_list" to="/drone_$(arg drone_id)/closed_list"/>  -->
-
-    <!-- params -->
-    <param name="~enable_debug" value="true" type="bool"/>
-  </node>
-
   <!-- Drone 0 -->
   <include file="$(find gestalt_bringup)/launch/gazebo/single_ego_planner.launch">
     <arg name="drone_id"   value="0"/>

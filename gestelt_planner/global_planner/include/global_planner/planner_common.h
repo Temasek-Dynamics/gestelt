@@ -4,10 +4,14 @@
 // Common helper methods for planners
 #include <plan_env/grid_map.h>
 #include <Eigen/Eigen>
+#include <pcl/octree/octree_search.h>
+#include <pcl/point_cloud.h>
+
+#include <visualization_msgs/Marker.h>
 
 using namespace Eigen;
 constexpr double inf = numeric_limits<float>::infinity();
-constexpr double epsilon = std::numeric_limits<T>::epsilon;
+constexpr double epsilon = std::numeric_limits<double>::epsilon();
 
 struct GridNode; //forward declration
 typedef std::shared_ptr<GridNode> GridNodePtr;
@@ -68,7 +72,6 @@ struct GridNode
     }
   };
 
-  // https://stackoverflow.com/questions/32613304/find-a-value-in-an-unordered-set-of-shared-ptr
   struct CompareCostPtr
   {
     bool operator()(const GridNodePtr& l_node, const GridNodePtr& r_node)
@@ -85,11 +88,12 @@ class PlannerCommon {
  * used methods for search-based planners
  * */ 
 public:
-  PlannerCommon(std::shared_ptr<pcl::PointCloud<pcl::PointXYZ>>& map, 
+  PlannerCommon(pcl::PointCloud<pcl::PointXYZ>::Ptr& map, 
     const Eigen::Vector3d& map_origin, 
     const Eigen::Vector3d& map_size, 
-    const double& map_res)
-  : map_origin_(map_origin), map_size_(map_size), map_res_(map_res) 
+    const double& map_res,
+    std::string uav_origin_frame)
+  : map_origin_(map_origin), map_size_(map_size), map_res_(map_res), uav_origin_frame_(uav_origin_frame)
   {
     for (int i = 0; i < 3; ++i){
       map_voxel_size_(i) = ceil(map_size(i) / map_res);
@@ -97,16 +101,28 @@ public:
 
     map_max_boundary_ = map_origin + map_size;
 
+    // The resolution parameter describes the length of the smallest voxels at lowest octree level. 
+    // octree_map_.reset(new pcl::octree::OctreePointCloudSearch<pcl::PointXYZ>(map_res));
+    octree_map_ = std::make_shared<pcl::octree::OctreePointCloudSearch<pcl::PointXYZ>>(map_res);
     updateMap(map);
+
+
+    ROS_INFO("Map size (m): (%f, %f, %f) -> (%f, %f, %f)", 
+      map_origin_(0), map_origin_(1), map_origin_(2),
+      map_max_boundary_(0), map_max_boundary_(1), map_max_boundary_(2));
+
+    ROS_INFO("Map voxel size: (%d, %d, %d)", 
+      map_voxel_size_(0), map_voxel_size_(1), map_voxel_size_(2));
+
+    ROS_INFO("Map resolution: (%f)", map_res_);
 
   }
 
-  void updateMap(std::shared_ptr<pcl::PointCloud<pcl::PointXYZ>>& map) {
+  void updateMap(pcl::PointCloud<pcl::PointXYZ>::Ptr& map) {
     pc_map_ = map;
-    // Need to convert map to a gridmap
-    for (size_t i = 0; i < *pc_map_.points.size(); ++i)
-    {
-    }
+
+    octree_map_->setInputCloud(pc_map_);
+    octree_map_->addPointsFromInputCloud();
   }
 
   std::vector<GridNodePtr> getNeighbors(GridNodePtr cur_node) {
@@ -152,7 +168,6 @@ public:
     return dx + dy + dz;
   }
 
-  // Get euclidean distance between node_1 and node_2
   double get_diag_cost(GridNodePtr node_1, GridNodePtr node_2) {
     double dx = abs(node_1->idx(0) - node_2->idx(0));
     double dy = abs(node_1->idx(1) - node_2->idx(1));
@@ -181,6 +196,7 @@ public:
 
   // Convert from 3d position to gridmap index
   bool posToIdx(const Vector3d& pos, Vector3i& idx) {
+    ROS_INFO("PosToIdx: Pos(%f, %f, %f)", pos(0), pos(1), pos(2));
     if (!isInMap(pos)){
       return false;
     }
@@ -188,6 +204,7 @@ public:
     for (int i = 0; i < 3; ++i){
       idx(i) = floor((pos(i) - map_origin_(i)) / map_res_);
     }
+    ROS_INFO("  Converted to idx (%d, %d, %d)", idx(0), idx(1), idx(2));
 
     return true;
   }
@@ -198,14 +215,13 @@ public:
     }
 
     for (int i = 0; i < 3; ++i){
-      pos(i) = (id(i) + 0.5) * map_res_ + map_origin_(i);
+      pos(i) = (idx(i) + 0.5) * map_res_ + map_origin_(i);
     }
 
     return true;
   }
 
   bool isOccupied(const Vector3i& idx){
-
     Eigen::Vector3d pos;
     if (!idxToPos(idx, pos)){
       return true;
@@ -215,9 +231,12 @@ public:
   }
 
   bool isOccupied(const Vector3d& pos){
-
-
-    return gridmap_->getInflateOccupancy(pos) == 1 ? true : false;
+    std::vector<int> pointIdxVec;
+    pcl::PointXYZ searchPoint(pos(0), pos(1), pos(2));
+    if (octree_map_->voxelSearch(searchPoint, pointIdxVec)){
+      return true;
+    }
+    return false;
   }
 
   bool isInMap(const Vector3i& idx){
@@ -225,9 +244,12 @@ public:
     {
       return false;
     }
-    if (idx(0) > mp_.map_voxel_size_(0) - 1 || idx(1) > mp_.map_voxel_size_(1) - 1 ||
-        idx(2) > mp_.map_voxel_size_(2) - 1)
+    if (idx(0) > map_voxel_size_(0) - 1 
+      || idx(1) > map_voxel_size_(1) - 1 
+      || idx(2) > map_voxel_size_(2) - 1)
     {
+      ROS_ERROR("idx(%d, %d, %d) is outside voxel size(%d, %d, %d)",
+        idx(0), idx(1), idx(2), map_voxel_size_(0), map_voxel_size_(1), map_voxel_size_(2));
       return false;
     }
 
@@ -235,16 +257,16 @@ public:
   }
 
   bool isInMap(const Vector3d& pos){
-    if (pos(0) < mp_.map_origin_(0) + epsilon 
-        || pos(1) < mp_.map_origin_(1) + epsilon 
-        || pos(2) < mp_.map_origin_(2) + epsilon)
+    if (pos(0) < map_origin_(0) + epsilon 
+        || pos(1) < map_origin_(1) + epsilon 
+        || pos(2) < map_origin_(2) + epsilon)
     {
       // cout << "less than min range!" << endl;
       return false;
     }
-    if (pos(0) > mp_.map_max_boundary_(0) - epsilon 
-      || pos(1) > mp_.map_max_boundary_(1) - epsilon 
-      || pos(2) > mp_.map_max_boundary_(2) - epsilon)
+    if (pos(0) > map_max_boundary_(0) - epsilon 
+      || pos(1) > map_max_boundary_(1) - epsilon 
+      || pos(2) > map_max_boundary_(2) - epsilon)
     {
       return false;
     }
@@ -255,7 +277,7 @@ public:
   void publishClosedList(const std::unordered_set<GridNodePtr, GridNode::PointedObjHash, GridNode::PointedObjEq>& closed_list, ros::Publisher& marker_viz_pub) {
     visualization_msgs::Marker closed_nodes;
 
-    closed_nodes.header.frame_id = "world";
+    closed_nodes.header.frame_id = uav_origin_frame_;
     closed_nodes.header.stamp = ros::Time::now();
     closed_nodes.type = visualization_msgs::Marker::CUBE_LIST;
     closed_nodes.action = visualization_msgs::Marker::ADD;
@@ -265,7 +287,7 @@ public:
     closed_nodes.color.r = 1.0;
     closed_nodes.color.g = 1.0;
     closed_nodes.color.b = 1.0;
-    closed_nodes.color.a = 0.2;
+    closed_nodes.color.a = 0.6;
 
     closed_nodes.scale.x = 0.1;
     closed_nodes.scale.y = 0.1;
@@ -287,11 +309,12 @@ public:
   void publishPath(const std::vector<Eigen::Vector3d>& path, ros::Publisher& marker_viz_pub) {
     visualization_msgs::Marker path_spheres, start_sphere, goal_sphere, path_line_strip;
 
-    start_sphere.header.frame_id = goal_sphere.header.frame_id = "world";
+    start_sphere.header.frame_id = goal_sphere.header.frame_id = uav_origin_frame_;
     start_sphere.header.stamp = goal_sphere.header.stamp = ros::Time::now();
     start_sphere.type = goal_sphere.type = visualization_msgs::Marker::SPHERE;
     start_sphere.action = goal_sphere.action = visualization_msgs::Marker::ADD;
-    start_sphere.id = goal_sphere.id = 0; 
+    start_sphere.id = 1;
+    goal_sphere.id = 2; 
     start_sphere.pose.orientation.w = goal_sphere.pose.orientation.w = 1.0;
 
     start_sphere.color.r = goal_sphere.color.r = 0.0;
@@ -303,7 +326,7 @@ public:
     start_sphere.scale.y = goal_sphere.scale.y = 0.2;
     start_sphere.scale.z = goal_sphere.scale.z = 0.2;
 
-    path_line_strip.header.frame_id = "world";
+    path_line_strip.header.frame_id = uav_origin_frame_;
     path_line_strip.header.stamp = ros::Time::now();
     path_line_strip.type = visualization_msgs::Marker::LINE_STRIP;
     path_line_strip.action = visualization_msgs::Marker::ADD;
@@ -317,11 +340,12 @@ public:
 
     path_line_strip.scale.x = 0.1;
 
-    path_spheres.header.frame_id = "world";
+    path_spheres.header.frame_id = uav_origin_frame_;
     path_spheres.header.stamp = ros::Time::now();
     path_spheres.type = visualization_msgs::Marker::SPHERE_LIST;
     path_spheres.action = visualization_msgs::Marker::ADD;
-    path_spheres.id = 0; 
+    path_spheres.ns = "global_plan_path_spheres"; 
+    path_spheres.id = 995; 
     path_spheres.pose.orientation.w = 1.0;
 
     path_spheres.color.r = 0.0;
@@ -329,9 +353,9 @@ public:
     path_spheres.color.b = 1.0;
     path_spheres.color.a = 0.6;
 
-    path_spheres.scale.x = 0.2;
-    path_spheres.scale.y = 0.2;
-    path_spheres.scale.z = 0.2;
+    path_spheres.scale.x = 0.1;
+    path_spheres.scale.y = 0.1;
+    path_spheres.scale.z = 0.1;
 
     start_sphere.pose.position.x = path[0](0);
     start_sphere.pose.position.y = path[0](1);
@@ -344,29 +368,32 @@ public:
       pt.z = path[i](2);
 
       path_spheres.points.push_back(pt);
-      path_line_strip.points.push_back(pt);
+      // path_line_strip.points.push_back(pt);
     }
 
     goal_sphere.pose.position.x = path.back()(0);
     goal_sphere.pose.position.y = path.back()(1);
     goal_sphere.pose.position.z = path.back()(2);
 
-    marker_viz_pub.publish(start_sphere);
-    marker_viz_pub.publish(goal_sphere);
+    // marker_viz_pub.publish(start_sphere);
+    // marker_viz_pub.publish(goal_sphere);
     marker_viz_pub.publish(path_spheres);
-    marker_viz_pub.publish(path_line_strip);
+    // marker_viz_pub.publish(path_line_strip);
+
+    ROS_INFO("Size of path: %ld", path.size());
   }
 
 private:
-  std::shared_ptr<pcl::PointCloud<pcl::PointXYZ>> pc_map_;
-  //TODO grid_map_;
+  pcl::PointCloud<pcl::PointXYZ>::Ptr pc_map_;
+  std::shared_ptr<pcl::octree::OctreePointCloudSearch<pcl::PointXYZ>> octree_map_;
 
   Eigen::Vector3d map_origin_; // point at which (x,y,z) is a minimum
   Eigen::Vector3d map_size_; // Maximum size of map in (x,y,z)
   Eigen::Vector3d map_max_boundary_; // point at which (x,y,z) is a maximum
 
-  Eigen::Vector3d map_voxel_size_; // Maximum number of voxels in (x,y,z)
+  Eigen::Vector3i map_voxel_size_; // Maximum number of voxels in (x,y,z)
 
+  std::string uav_origin_frame_;
   double map_res_;
 };
 

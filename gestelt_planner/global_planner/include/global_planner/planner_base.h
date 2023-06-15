@@ -11,7 +11,7 @@
 #include <std_msgs/Empty.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <geometry_msgs/PoseStamped.h>
-#include <visualization_msgs/MarkerArray.h>
+#include <visualization_msgs/Marker.h>
 
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
@@ -24,6 +24,7 @@ class PlannerBase
 public:
   PlannerBase(ros::NodeHandle& nh){
     nh.param("enable_debug", debug_, true);
+    nh.param("uav_origin_frame", uav_origin_frame_, std::string("drone0_origin"));
 
     set_start_sub_ = nh.subscribe("/plan_set_start", 10, &PlannerBase::setStartCb, this);
     set_goal_sub_ = nh.subscribe("/plan_set_goal", 10, &PlannerBase::setGoalCb, this);
@@ -32,8 +33,19 @@ public:
 
     gridmap_sub_ = nh.subscribe("/gridmap", 10, &PlannerBase::gridmapSubCb, this);
 
-    plan_viz_pub_ = nh.advertise<visualization_msgs::MarkerArray>("/plan", 10);
-    closed_list_viz_pub_ = nh.advertise<visualization_msgs::MarkerArray>("/closed_list", 10);
+    plan_viz_pub_ = nh.advertise<visualization_msgs::Marker>("/plan", 10);
+    closed_list_viz_pub_ = nh.advertise<visualization_msgs::Marker>("/closed_list", 10);
+
+    grid_map_.reset(new pcl::PointCloud<pcl::PointXYZ>);
+
+    start_pose_(0) = 0.0;
+    start_pose_(1) = 1.0;
+    start_pose_(2) = 1.0;
+
+    goal_pose_(0) = 4.0;
+    goal_pose_(1) = 0.0;
+    goal_pose_(2) = 1.0;
+
   }
 
   void setStartCb(const geometry_msgs::PoseStamped::ConstPtr &msg) {
@@ -52,30 +64,28 @@ public:
 
   void triggerPlanCb(const std_msgs::Empty::ConstPtr &msg) {
     ROS_INFO("Planning triggered!");
-    generate_plan(start_pose_, goal_pose_);
-    common_->publishPath(this->getPath(), plan_viz_pub_);
+    if (generate_plan(start_pose_, goal_pose_)){
+      common_->publishPath(this->getPath(), plan_viz_pub_);
+    }
   }
 
-
   void gridmapSubCb(const sensor_msgs::PointCloud2::ConstPtr &msg){
-    ROS_INFO("Received point clouds");
-    // Assume unorganized point cloud
+    pcl::fromROSMsg(*msg, *grid_map_);
 
-    pcl::fromROSMsg(msg, *grid_map_)
-
-    if (grid_map_.isOrganized ()){
-      ROS_ERROR("[global_planner] Organized point clouds are not supported!")
+    if (grid_map_->isOrganized()){
+      ROS_ERROR("[global_planner] Organized point clouds are not supported!");
       return;
     }
 
     if (!grid_map_init_){
+      ROS_INFO("[global_planner] Grid map initialized");
       // TODO figure out a way to pass this from the mapper
       Eigen::Vector3d map_size = Eigen::Vector3d(80.0, 80.0, 3.0);
       double ground_height = -0.25;
-      Eigen::Vector3d map_origin = Eigen::Vector3d(-x_size/2, -y_size/2, ground_height);
+      Eigen::Vector3d map_origin = Eigen::Vector3d( -map_size(0)/2, -map_size(1)/2, ground_height);
       double map_res = 0.1;
 
-      common_.reset(new PlannerCommon(grid_map_, map_size, map_origin, map_res));
+      common_.reset(new PlannerCommon(grid_map_, map_origin, map_size, map_res, uav_origin_frame_));
       grid_map_init_ = true;
     }
     else {
@@ -101,16 +111,16 @@ public:
   bool generate_plan(Vector3d start_pos, Vector3d goal_pos){
     if (!grid_map_init_){
       ROS_ERROR("[global_planner] Grid map is not initialized! Unable to start generating plan.");
-      return;
+      return false;
     }
     
-    ROS_INFO("PLANNING PATH!");
+    ROS_INFO("[global_planner] generate_plan starting");
     reset();
     // TODO: Convert start and goal pos (in world frame) to the UAV's frame
 
     Vector3i start_idx, goal_idx;
 
-    if (!common_->posToIdx(start_pos, start_idx) || common_->posToIdx(goal_pos, goal_idx)){
+    if (!common_->posToIdx(start_pos, start_idx) || !common_->posToIdx(goal_pos, goal_idx)){
       return false;
     }
 
@@ -118,12 +128,13 @@ public:
     GridNodePtr goal_node = std::make_shared<GridNode>(goal_idx);
 
     start_node->g_cost = 0.0;
-    start_node->f_cost = getCostBtwNodes(start_node, goal_node);
+    start_node->f_cost = tie_breaker_ * common_->get_euclidean_cost(start_node, goal_node);
     start_node->parent = nullptr;
     
     addToOpenlist(start_node);
 
     int num_iter = 0;
+
     while (!open_list_.empty()) 
     {
       GridNodePtr cur_node = popOpenlist();
@@ -131,7 +142,7 @@ public:
 
       if (*cur_node == *goal_node)
       {
-        ROS_INFO("[Global Planner] Goal found!");
+        ROS_INFO("[global_planner] Goal found!");
         // Goal reached, terminate search and obtain path
         planning_successful_ = true;
         tracePath(cur_node);
@@ -141,22 +152,29 @@ public:
       // Explore neighbors
       for (GridNodePtr nb_node : common_->getNeighbors(cur_node))
       {
+        double tent_g_cost = cur_node->g_cost + common_->get_euclidean_cost(cur_node, nb_node);
+
         if (inClosedList(nb_node)) {
+          // Update explored cost
+          if (tent_g_cost < nb_node->g_cost){
+            nb_node->g_cost = tent_g_cost;
+            nb_node->f_cost = tent_g_cost + tie_breaker_ * common_->get_euclidean_cost(nb_node, goal_node);
+          }
           continue;
         }
-        double tent_g_cost = cur_node->g_cost + getCostBtwNodes(cur_node, nb_node);
-
+        
         if (tent_g_cost < nb_node->g_cost) {
           nb_node->g_cost = tent_g_cost;
-          nb_node->f_cost = tent_g_cost + getCostBtwNodes(nb_node, goal_node);
+          nb_node->f_cost = tent_g_cost + tie_breaker_ * common_->get_euclidean_cost(nb_node, goal_node);
+          
           nb_node->parent = cur_node;
-          open_list_.push(nb_node);
+          addToOpenlist(nb_node);
         }
       }
       num_iter++;
 
       if (debug_){
-        if (num_iter % 100 == 0){
+        if (num_iter % 50 == 0){
           common_->publishClosedList(closed_list_, closed_list_viz_pub_);
         }
       }
@@ -246,6 +264,8 @@ private:
 
   /* Params */
   bool debug_{false};
+  std::string uav_origin_frame_;
+  const double tie_breaker_ = 1.0 + 1.0 / 10000;
 
   /* Flags */
   bool planning_successful_{false};
@@ -254,7 +274,7 @@ private:
   /* Temporarily stored data */
   Eigen::Vector3d start_pose_, goal_pose_;
 
-  std::shared_ptr<pcl::PointCloud<pcl::PointXYZ>> grid_map_;
+  pcl::PointCloud<pcl::PointXYZ>::Ptr grid_map_;
 
   /* Path planner data structures */
 

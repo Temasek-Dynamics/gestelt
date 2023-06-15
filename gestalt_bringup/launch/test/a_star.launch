@@ -1,0 +1,17 @@
+<launch>
+
+  <node pkg="global_planner" type="a_star" name="global_planner" output="screen">
+    <!-- Subscribed Topics -->
+    <!-- <remap from="/plan_set_start" to="/drone$(arg drone_id)/plan_set_start"/>
+    <remap from="/plan_set_goal" to="/drone$(arg drone_id)/plan_set_goal"/>
+    <remap from="/trigger_plan" to="/drone$(arg drone_id)/trigger_plan"/>   -->
+    <remap from="/gridmap" to="/drone_0_ego_planner_node/grid_map/occupancy_inflate"/> 
+    <!-- Published Topics -->
+    <!-- <remap from="/plan" to="/drone_$(arg drone_id)/plan"/>  
+    <remap from="/closed_list" to="/drone_$(arg drone_id)/closed_list"/>  -->
+
+    <!-- params -->
+    <param name="~enable_debug" value="true" type="bool"/>
+  </node>
+
+</launch>

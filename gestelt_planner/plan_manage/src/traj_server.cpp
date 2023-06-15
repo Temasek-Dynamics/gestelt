@@ -262,7 +262,7 @@ void TrajServer::tickServerStateTimerCb(const ros::TimerEvent &e)
       switch (getServerEvent())
       {
         case TAKEOFF_E:
-          logWarn("[TAKEOFF] IGNORED EVENT. UAV already attempting taking off");
+          // logWarn("[TAKEOFF] IGNORED EVENT. UAV already attempting taking off");
           break;
         case LAND_E:
           logInfo("[TAKEOFF] Attempting landing");

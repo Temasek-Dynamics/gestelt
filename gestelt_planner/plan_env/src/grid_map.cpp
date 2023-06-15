@@ -1142,6 +1142,8 @@ void GridMap::publishMapInflate(bool all_info)
   if (map_inf_pub_.getNumSubscribers() <= 0)
     return;
 
+  // TODO: Allocate size to cloud first and then assign, instead of dynamically pushing back
+
   pcl::PointXYZ pt;
   pcl::PointCloud<pcl::PointXYZ> cloud;
 
