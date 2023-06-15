@@ -21,7 +21,6 @@ rostopic pub /traj_server_event std_msgs/Int8 "data: 2" --once
     - Automated checking of collision avoidance
         - Agent-Obstacle collision
             - Collision occurs when sensor data is within a certain range of the base link frame.
-    - Lock PX4-autopilot vcs repo to a specific commit
     - Investigate
         - Unknown regions are assumed to be obstacle free?
             - Planning trajectories into the unknown
