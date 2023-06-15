@@ -18,14 +18,19 @@ rostopic pub /traj_server_event std_msgs/Int8 "data: 2" --once
 ```
 
 # TODO
-    - Automated checking of collision avoidance
+    - Automated checking of collision
         - Agent-Obstacle collision
-            - Collision occurs when sensor data is within a certain range of the base link frame.
+            - 1: Collision occurs when sensor data is within a certain range of the base link frame.
+                - Doesn't work if robot is not facing the obstacle
+            - 2: Use gazebo collision detector
+                - Challenges of using API
+            - 3: 
     - Investigate
         - Unknown regions are assumed to be obstacle free?
             - Planning trajectories into the unknown
     - Add flag for building in release mode
     - Use drone_detection module to remove the drone point cloud, starting with simulation.
+    - Change gridmap to use PCL and octree search for occupancy grid
 
 ## Simulation
 - Add publish server state to ego replan fsm, so that trajectory server can aggregate it.

@@ -3,6 +3,7 @@
 
 // Common helper methods for planners
 #include <plan_env/grid_map.h>
+#include <limits>
 #include <Eigen/Eigen>
 #include <pcl/octree/octree_search.h>
 #include <pcl/point_cloud.h>

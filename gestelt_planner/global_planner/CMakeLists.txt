@@ -44,7 +44,8 @@ include_directories(
 
 ## Declare a C++ library
 add_library(${PROJECT_NAME}
-  src/planner_base.cpp
+  # src/planner_base.cpp
+  src/a_star.cpp
 )
 
 ## Specify libraries to link a library or executable target against
@@ -52,7 +53,7 @@ target_link_libraries(${PROJECT_NAME}
   ${catkin_LIBRARIES}
 )
 
-add_executable(a_star src/a_star.cpp)
+add_executable(a_star src/a_star_node.cpp)
 add_dependencies(a_star 
   ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS}
 )
