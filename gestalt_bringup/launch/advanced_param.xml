@@ -86,7 +86,7 @@
         <param name="fsm/thresh_no_replan_meter" value="1.0" type="double"/>
         <!-- planning_horizon: Distance to plan for local target -->
         <param name="fsm/planning_horizon" value="$(arg planning_horizon)" type="double"/>
-        <!-- emergency_time: always set to 1.5 times grater than sensing horizon-->
+        <!-- emergency_time: always set to 1.5 times greater than sensing horizon-->
         <param name="fsm/emergency_time" value="1.0" type="double"/>
         <param name="fsm/fail_safe" value="true"/>
 
@@ -101,7 +101,7 @@
         <param name="grid_map/local_update_range_y" value="5.5" />
         <param name="grid_map/local_update_range_z" value="4.5" />
         <!-- The obstacles_inflation param affects the inflation zones of the obstacles -->
-        <param name="grid_map/obstacles_inflation" value="1.5" />
+        <param name="grid_map/obstacles_inflation" value="1.2" />
         <param name="grid_map/local_map_margin" value="10"/>
         <param name="grid_map/ground_height" value="-0.25"/>
         <!-- camera parameter -->
@@ -145,13 +145,12 @@
         <param name="optimization/weight_time" value="10.0" type="double"/>
         <param name="optimization/weight_formation" value="100" type="double"/>
         <!-- The obstacle_clearance param seems to have no effect? -->
-        <param name="optimization/obstacle_clearance" value="0.8" type="double"/>
-        <param name="optimization/obstacle_clearance_soft" value="1.0" type="double"/>
-        <param name="optimization/swarm_clearance" value="0.5" type="double"/>
+        <param name="optimization/obstacle_clearance" value="0.6" type="double"/>
+        <param name="optimization/obstacle_clearance_soft" value="0.8" type="double"/>
+        <param name="optimization/swarm_clearance" value="0.4" type="double"/>
         <param name="optimization/max_vel" value="$(arg max_vel)" type="double"/>
         <param name="optimization/max_acc" value="$(arg max_acc)" type="double"/>
         <param name="optimization/max_jer" value="$(arg max_jer)" type="double"/>
-        <param name="optimization/record_opt" value="true"/>
         <!-- formation: Affects the target position of the drone relative to the goal-->
         <param name="formation/num" value="$(arg num_drones)"/>
         <!-- <rosparam param="formation/start">[0, 0, 1]</rosparam>

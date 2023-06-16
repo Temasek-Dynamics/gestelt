@@ -27,7 +27,7 @@ namespace ego_planner
     grid_map_.reset(new GridMap);
     grid_map_->initMap(nh);
 
-    ploy_traj_opt_.reset(new PolyTrajOptimizer);
+    ploy_traj_opt_.reset(new PolyTrajOptimizer());
     ploy_traj_opt_->setParam(nh);
     ploy_traj_opt_->setEnvironment(grid_map_);
 
@@ -381,10 +381,11 @@ namespace ego_planner
     static int count_success = 0;
     sum_time += (t_init + t_opt).toSec();
     count_success++;
-    cout << "total time:\033[42m" << (t_init + t_opt).toSec()
-         << "\033[0m,init:" << t_init.toSec()
-         << ",optimize:" << t_opt.toSec()
-         << ",avg_time=" << sum_time / count_success << endl;
+
+    // cout << "total time:\033[42m" << (t_init + t_opt).toSec()
+    //      << "\033[0m,init:" << t_init.toSec()
+    //      << ",optimize:" << t_opt.toSec()
+    //      << ",avg_time=" << sum_time / count_success << endl;
 
     setLocalTrajFromOpt(best_MJO, touch_goal);
     visualization_->displayOptimalList(cstr_pts, 0);

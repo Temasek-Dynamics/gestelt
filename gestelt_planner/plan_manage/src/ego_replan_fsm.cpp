@@ -271,10 +271,12 @@ namespace ego_planner
         else 
         {
           logError(string_format("Replan failed upon detecting potential collision"));
-          if (potential_agent_collision_)
+          if (potential_agent_to_agent_collision_)
           {
-            logError(string_format("Potential agent collision detected, activating ESTOP"));
-            setServerEvent(EMERGENCY_STOP_E);
+            logError(string_format("Potential agent to agent collision detected, ESTOP has been disabled from activation for debugging"));
+
+            // logError(string_format("Potential agent to agent collision detected, activating ESTOP"));
+            // setServerEvent(EMERGENCY_STOP_E);
           }
         }
 
@@ -886,8 +888,11 @@ namespace ego_planner
       // Is local target near the goal?
       const bool target_near_goal = ((local_target_pt_ - end_pt_).norm() < 1e-2);
       size_t i_end = target_near_goal ? pts_chk.size() : pts_chk.size() * 3 / 4;
+
+      // Iterate through each piece index
       for (size_t i = i_start; i < i_end; ++i)
       {
+        // Iterate through each point within piece index
         for (size_t j = j_start; j < pts_chk[i].size(); ++j)
         {
 
@@ -920,7 +925,7 @@ namespace ego_planner
                   logWarn(string_format("Clearance between drone %d and drone %d is %f, too close!",
                           planner_manager_->pp_.drone_id, (int)id, dist));
 
-                  potential_agent_collision_ = ((t - t_cur) < emergency_time_);
+                  potential_agent_to_agent_collision_ = ((t - t_cur) < emergency_time_);
                   return true;
                 }
               }

@@ -160,7 +160,6 @@
         <param name="optimization/max_vel" value="$(arg max_vel)" type="double"/>
         <param name="optimization/max_acc" value="$(arg max_acc)" type="double"/>
         <param name="optimization/max_jer" value="$(arg max_jer)" type="double"/>
-        <param name="optimization/record_opt" value="true"/>
         <!-- formation-->
         <param name="formation/num" value="7"/>
         <rosparam param="formation/start">[-32,0,1]</rosparam>

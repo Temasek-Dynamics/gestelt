@@ -81,7 +81,8 @@
         <arg name="max_acc" value="3.0" />
         <arg name="max_jer" value="20.0" />
 
-        <!--always set to 1.5 times grater than sensing horizen-->
+        <!--always set to 1.5 times grater than sensing horizon-->
+        <!-- sensing horizon here refers to the sensor range. e.g. about 4.5-5m for realsense d435 -->
         <arg name="planning_horizon" value="7.5" />
         <!-- TODO: What is this param? -->
         <arg name="use_distinctive_trajs" value="false" />

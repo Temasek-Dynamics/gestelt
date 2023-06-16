@@ -17,7 +17,7 @@ namespace ego_planner
   public:
     int cp_size; // deformation points
     Eigen::MatrixXd points;
-    std::vector<std::vector<Eigen::Vector3d>> base_point; // The point at the statrt of the direction vector (collision point)
+    std::vector<std::vector<Eigen::Vector3d>> base_point; // The point at the start of the direction vector (collision point)
     std::vector<std::vector<Eigen::Vector3d>> direction;  // Direction vector, must be normalized.
     std::vector<bool> flag_temp;                          // A flag that used in many places. Initialize it everytime before using it.
 
@@ -105,7 +105,7 @@ namespace ego_planner
     double t_now_;
 
   public:
-    PolyTrajOptimizer() {}
+    PolyTrajOptimizer(){}
     ~PolyTrajOptimizer() {}
 
     enum CHK_RET

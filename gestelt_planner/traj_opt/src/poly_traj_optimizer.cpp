@@ -99,14 +99,15 @@ namespace ego_planner
           // A not-blank return value means collision to obstales
           flag_still_occ = true;
           restart_nums++;
-          printf("\033[32miter=%d,time(ms)=%5.3f, fine check collided, keep optimizing\n\033[0m", iter_num_, time_ms);
+          // printf("\033[32miter=%d,time(ms)=%5.3f, fine check collided, keep optimizing\n\033[0m", iter_num_, time_ms);
         }
       }
+      // Minimization process cancelled
       else if (result == lbfgs::LBFGSERR_CANCELED)
       {
         flag_force_return = true;
-        rebound_times++;
-        cout << "iter=" << iter_num_ << ",time(ms)=" << time_ms << ",rebound." << endl;
+        rebound_times++; 
+        // cout << "iter=" << iter_num_ << ",time(ms)=" << time_ms << ",rebound." << endl;
       }
       else
       {
@@ -123,70 +124,6 @@ namespace ego_planner
     return flag_success;
   }
 
-  // std::vector<std::pair<int, int>> PolyTrajOptimizer::finelyCheckConstraintPointsOnly(
-  //     Eigen::MatrixXd &init_points)
-  // {
-  //   vector<std::pair<int, int>> segment_ids;
-  //   constexpr int ENOUGH_INTERVAL = 2;
-  //   double step_size = grid_map_->getResolution() / ((init_points.col(0) - init_points.rightCols(1)).norm() / (init_points.cols() - 1)) / 1.5;
-  //   int in_id = -1, out_id = -1;
-  //   int same_occ_state_times = ENOUGH_INTERVAL + 1;
-  //   bool occ, last_occ = false;
-  //   bool flag_got_start = false, flag_got_end = false, flag_got_end_maybe = false;
-  //   int i_end = ConstraintPoints::two_thirds_id(init_points); // only check closed 2/3 points.
-
-  //   for (int i = 1; i <= i_end; ++i)
-  //   {
-  //     for (double a = 1.0; a > 0.0; a -= step_size)
-  //     {
-  //       occ = grid_map_->getInflateOccupancy(a * init_points.col(i - 1) + (1 - a) * init_points.col(i));
-
-  //       if (occ && !last_occ)
-  //       {
-  //         if (same_occ_state_times > ENOUGH_INTERVAL || i == 1)
-  //         {
-  //           in_id = i - 1;
-  //           flag_got_start = true;
-  //         }
-  //         same_occ_state_times = 0;
-  //         flag_got_end_maybe = false; // terminate in advance
-  //       }
-  //       else if (!occ && last_occ)
-  //       {
-  //         out_id = i;
-  //         flag_got_end_maybe = true;
-  //         same_occ_state_times = 0;
-  //       }
-  //       else
-  //       {
-  //         ++same_occ_state_times;
-  //       }
-
-  //       if (flag_got_end_maybe && (same_occ_state_times > ENOUGH_INTERVAL || (i == (int)init_points.cols() - 1)))
-  //       {
-  //         flag_got_end_maybe = false;
-  //         flag_got_end = true;
-  //       }
-
-  //       last_occ = occ;
-
-  //       if (flag_got_start && flag_got_end)
-  //       {
-  //         flag_got_start = false;
-  //         flag_got_end = false;
-  //         if (in_id < 0 || out_id < 0)
-  //         {
-  //           ROS_ERROR("Should not happen! in_id=%d, out_id=%d", in_id, out_id);
-  //           vector<std::pair<int, int>> blank_ret;
-  //           return blank_ret;
-  //         }
-  //         segment_ids.push_back(std::pair<int, int>(in_id, out_id));
-  //       }
-  //     }
-  //   }
-
-  //   return segment_ids;
-  // }
 
   bool PolyTrajOptimizer::computePointsToCheck(
       poly_traj::Trajectory &traj,
@@ -217,7 +154,7 @@ namespace ego_planner
         }
         else
         {
-          ROS_ERROR("Failed to get points list to check. touch_goal_=%d, pts_check.size()=%d", touch_goal_, (int)pts_check.size());
+          ROS_ERROR("UAV_%d: Failed to get points list to check. touch_goal_=%d, pts_check.size()=%d", drone_id_, touch_goal_, (int)pts_check.size());
           pts_check.clear();
           return false;
         }
@@ -336,7 +273,7 @@ namespace ego_planner
           flag_got_end = false;
           if (in_id < 0 || out_id < 0)
           {
-            ROS_ERROR("Should not happen! in_id=%d, out_id=%d", in_id, out_id);
+            ROS_ERROR("UAV_%d: Should not happen! in_id=%d, out_id=%d", drone_id_, in_id, out_id);
             return CHK_RET::ERR;
           }
           segment_ids.push_back(std::pair<int, int>(in_id, out_id));
@@ -372,11 +309,11 @@ namespace ego_planner
         segment_ids[i].second = segment_ids[i + 1].second;
         segment_ids.erase(segment_ids.begin() + i + 1);
         --i;
-        ROS_WARN("A cornor case 2, I have never exeam it.");
+        ROS_WARN("UAV_%d: A cornor case 2, I have never exeam it.", drone_id_);
       }
       else
       {
-        ROS_ERROR("A-star error, force return!");
+        ROS_ERROR("UAV_%d: A-star error, force return!", drone_id_);
         return CHK_RET::ERR;
       }
     }
@@ -658,7 +595,7 @@ namespace ego_planner
         }
         if (j < 0) // fail to get the obs free point
         {
-          ROS_ERROR("ERROR! the drone is in obstacle. It means a crash in real-world.");
+          ROS_ERROR("UAV_%d: ERROR! the drone is in obstacle. It means a crash in real-world.", drone_id_);
           in_id = 0;
         }
 
@@ -674,7 +611,7 @@ namespace ego_planner
         }
         if (j >= cps_.cp_size) // fail to get the obs free point
         {
-          ROS_WARN("WARN! terminal point of the current trajectory is in obstacle, skip this planning.");
+          ROS_WARN("UAV_%d: WARN! terminal point of the current trajectory is in obstacle, skip this planning.", drone_id_);
 
           force_stop_type_ = STOP_FOR_ERROR;
           return false;

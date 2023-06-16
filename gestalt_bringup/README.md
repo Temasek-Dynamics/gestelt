@@ -18,13 +18,18 @@ rostopic pub /traj_server_event std_msgs/Int8 "data: 2" --once
 ```
 
 # TODO
+    - Run tests to see what causes the drones to stop following the trajectories
+        - What causes the emergency stop?
+            - When the agents are too close to each other and the replan fails upon detecting a potential collsion
+                - "Replan failed upon detecting potential collision"
+                - "Potential agent collision detected, activating ESTOP"
     - Automated checking of collision
         - Agent-Obstacle collision
             - 1: Collision occurs when sensor data is within a certain range of the base link frame.
                 - Doesn't work if robot is not facing the obstacle
             - 2: Use gazebo collision detector
                 - Challenges of using API
-            - 3: 
+            - 3: Use gazebo bumper plugin to detect collisions 
     - Investigate
         - Unknown regions are assumed to be obstacle free?
             - Planning trajectories into the unknown

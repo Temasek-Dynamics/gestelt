@@ -254,7 +254,7 @@ private:
   double emergency_time_; // Threshold time to deal with potential collision
   bool enable_fail_safe_; 
   bool flag_escape_emergency_; // Used to prevent repeated execution of estop functions
-  bool potential_agent_collision_{false}; // Indicates potential collision with other agents in the near future
+  bool potential_agent_to_agent_collision_{false}; // Indicates potential collision with other agents in the near future
 
   // Indicates that all agents within a swarm have a provided trajectory
   bool have_recv_pre_agent_; 
@@ -450,8 +450,8 @@ private:
   }
 
   void setServerState(ServerState des_state){
-    logInfo(string_format("Transitioning server state: %s -> %s", 
-      StateToString(getServerState()).c_str(), StateToString(des_state).c_str()));
+    // logInfo(string_format("Transitioning server state: %s -> %s", 
+    //   StateToString(getServerState()).c_str(), StateToString(des_state).c_str()));
 
     if (des_state == getServerState())
       continously_called_times_++;
