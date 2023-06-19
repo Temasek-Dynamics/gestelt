@@ -18,24 +18,18 @@ rostopic pub /traj_server_event std_msgs/Int8 "data: 2" --once
 ```
 
 # TODO
-    - Run tests to see what causes the drones to stop following the trajectories
-        - What causes the emergency stop?
-            - When the agents are too close to each other and the replan fails upon detecting a potential collsion
-                - "Replan failed upon detecting potential collision"
-                - "Potential agent collision detected, activating ESTOP"
+    - Tune PID 
+    - Add option to:
+        - enable/disable running on radxa
+        - Add flag for building in release mode
     - Automated checking of collision
         - Agent-Obstacle collision
             - 1: Collision occurs when sensor data is within a certain range of the base link frame.
                 - Doesn't work if robot is not facing the obstacle
             - 2: Use gazebo collision detector
                 - Challenges of using API
-            - 3: Use gazebo bumper plugin to detect collisions 
-    - Investigate
-        - Unknown regions are assumed to be obstacle free?
-            - Planning trajectories into the unknown
-    - Add flag for building in release mode
+            - 3: Use gazebo bumper plugin to detect collisions
     - Use drone_detection module to remove the drone point cloud, starting with simulation.
-    - Change gridmap to use PCL and octree search for occupancy grid
 
 ## Simulation
 - Add publish server state to ego replan fsm, so that trajectory server can aggregate it.
@@ -43,11 +37,11 @@ rostopic pub /traj_server_event std_msgs/Int8 "data: 2" --once
     - When actual number of drones are 2 
         - If num_drone == 2, then the planned path is abnormal and goes very close to the ground
         - If num_drone == 3, the planned path is normal. 
-- Set up a more complex simulation world
 
 ## gridmap
 - Add body to camera transform as a matrix ROS Param (Make sure that it is same as that in simulation)
 - Take in intrinsic params of camera via camera_info topic
+- Change gridmap to use PCL and octree search for occupancy grid
 
 ## Trajectory Server
 - Add mutexes
@@ -57,8 +51,6 @@ rostopic pub /traj_server_event std_msgs/Int8 "data: 2" --once
 ## Benchmarking/Diagnostics
 - Benchmark the replanning time for each drone's planner (are they close enough to the specified replanning frequency?)
 
-## Hardware
-- Test compilation on radxa
-
 ## Issues
 - When rounding corners of obstacles, if the goal lies about a sharp turn around the corner, a trajectory with a sharp turn is planned, this could lead to issues if the obstacles is especially large as the drone will not be able to detect the other wall of the obstacle until it has turned around. 
+- When the agents are too close to each other and the replan fails upon detecting a potential collsion between swarm agents. This condition happens more often when the obstacle_inflation is increased to a significantly higher value (1.2) and drones are navigating through narrow corridors.
