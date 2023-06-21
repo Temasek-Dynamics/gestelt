@@ -15,13 +15,72 @@ cd ~/gestelt_ws/src/gestelt_bringup/gestalt_bringup/scripts
 rostopic pub /traj_server_event std_msgs/Int8 "data: 0" --once
 # Taking Mission
 rostopic pub /traj_server_event std_msgs/Int8 "data: 2" --once
+
+TAKEOFF_E,        // 0
+LAND_E,           // 1
+MISSION_E,        // 2
+CANCEL_MISSION_E, // 3
+E_STOP_E,         // 4
+EMPTY_E,          // 5
 ```
 
 # TODO
     - Tune PID 
-    - Add option to:
-        - enable/disable running on radxa
-        - Add flag for building in release mode
+        - (1)
+            - Rate Controller
+                - ROLL
+                    - MC_ROLLRATE_K: 1.0
+                    - MC_ROLLRATE_P: 0.249
+                        - Enhance damping of the roll channel, faster attenuation of the oscillation
+                    - MC_ROLLRATE_D: 0.0046
+                    - MC_ROLLRATE_I: 0.325
+                - PITCH
+                    - MC_PITCHRATE_K: 1.0
+                    - MC_PITCHRATE_P: 0.233
+                    - MC_PITCHRATE_D: 0.0044
+                    - MC_PITCHRATE_I: 0.3
+                - YAW
+                    - MC_YAWRATE_K: 1.0
+                    - MC_YAWRATE_P: 0.18
+                    - MC_YAWRATE_I: 0.18
+            - Attitude Controller
+                - MC_ROLL_P
+                    - 3.84
+                    - To reduce amplitude of oscillation
+                - MC_PITCH_P
+                    - 4.1
+                - MC_YAW_P
+                    - 5.26
+            - Velocity Controller
+                - (horizontal)
+                    - MPC_XY_VEL_P_ACC
+                        - 3.25
+                    - MPC_XY_VEL_I_ACC
+                        - 0.4
+                    - MPC_XY_VEL_D_ACC
+                        - 0.2
+                - (vertical)
+                    - MPC_Z_VEL_P_ACC
+                        - 4.0
+                    - MPC_Z_VEL_I_ACC
+                        - 2.0
+                    - MPC_Z_VEL_D_ACC
+                        - 0.0
+            - Position Controller
+                - (horizontal)
+                    - MPC_XY_P 
+                        - 0.8
+                        - Reduce position control gain
+                - (vertical)
+                    - MPC_Z_P 
+                        - 1.0
+                        - Reduce overshoot of position.
+    - Observe overly aggressive trajectories that the vehicle is unable to maneuver 
+        - Do we need to execute aggresive trajectories? 
+        - One way to solve this is to use a more accurate model
+            - Use the actual mass in Gazebo params
+            - Propeller coefficients
+    - Record ROSBag
     - Automated checking of collision
         - Agent-Obstacle collision
             - 1: Collision occurs when sensor data is within a certain range of the base link frame.
@@ -29,7 +88,10 @@ rostopic pub /traj_server_event std_msgs/Int8 "data: 2" --once
             - 2: Use gazebo collision detector
                 - Challenges of using API
             - 3: Use gazebo bumper plugin to detect collisions
-    - Use drone_detection module to remove the drone point cloud, starting with simulation.
+    - Add option to:
+        - enable/disable running on radxa
+        - Add flag for building in release mode
+
 
 ## Simulation
 - Add publish server state to ego replan fsm, so that trajectory server can aggregate it.
