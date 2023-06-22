@@ -81,19 +81,20 @@ def main():
         print("tick!")
         rate.sleep()
 
-    # # Send waypoints to UAVs
-    # print(f"Sending waypoints to UAVs")
-    # waypoints = []
-    # # Square formation with length L
-    # length = 12
-    # d = length/2
-    # waypoints.append(create_pose(d, 0, 1))
-    # waypoints.append(create_pose(d, d, 1))
-    # waypoints.append(create_pose(-d, d, 1))
-    # waypoints.append(create_pose(-d, -d, 1))
-    # waypoints.append(create_pose(d, -d, 1))
-    # waypoints.append(create_pose(0, 0, 1))
-    # pub_waypoints(waypoints)
+    # Send waypoints to UAVs
+    print(f"Sending waypoints to UAVs")
+    waypoints = []
+    # Square formation with length L
+    length = 12
+    d = length/2
+    for i in range(10):
+        waypoints.append(create_pose(d, 0, 1))
+        waypoints.append(create_pose(d, d, 1))
+        waypoints.append(create_pose(-d, d, 1))
+        waypoints.append(create_pose(-d, -d, 1))
+        waypoints.append(create_pose(d, -d, 1))
+        waypoints.append(create_pose(0, 0, 1))
+    pub_waypoints(waypoints)
 
 if __name__ == '__main__':
     main()

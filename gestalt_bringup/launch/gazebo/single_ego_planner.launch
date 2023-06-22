@@ -105,6 +105,8 @@
         <param name="traj_server/state_machine_tick_freq" value="50.0" type="double"/>
         <param name="traj_server/takeoff_height" value="2.0" type="double"/>
 
+        <param name="traj_server/max_poses_to_track" value="1000" type="int"/>
+
         <!-- Subscribed Topics -->
         <remap from="~planning/trajectory" to="/drone_$(arg drone_id)_planning/trajectory"/>
         <remap from="/mavros/state" to="/$(arg drone_id_ns)/mavros/state"/>

@@ -79,7 +79,11 @@ EMPTY_E,          // 5
         - Do we need to execute aggresive trajectories? 
         - One way to solve this is to use a more accurate model
             - Use the actual mass in Gazebo params
-            - Propeller coefficients
+                - 0.25 g
+            - Motor coefficients
+                - mOTOR 6000V
+            - Battery: 2S 7.4V
+            - Propellers: 3 inch three-blade propellers
     - Record ROSBag
     - Automated checking of collision
         - Agent-Obstacle collision
