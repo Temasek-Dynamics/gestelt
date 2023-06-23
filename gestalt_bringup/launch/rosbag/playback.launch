@@ -1,0 +1,21 @@
+<launch>
+  <arg name="config" default="gz_sim"/>
+
+  <arg name="path" default="/tmp/"/>
+  <arg name="file0" default="ego_planner_drone_0.bag"/>
+  <arg name="file1" default="ego_planner_drone_1.bag"/>
+  <arg name="file2" default="ego_planner_drone_2.bag"/>
+  <arg name="file3" default="ego_planner_drone_3.bag"/>
+
+  <node name="rviz" pkg="rviz" type="rviz" required="true" 
+    args="-d $(find gestalt_bringup)/launch/rviz/$(arg config).rviz" />
+
+  <node pkg="rosbag" type="play" name="player" output="screen" 
+    args="--clock 
+      /tmp/$(arg file0) 
+      /tmp/$(arg file1) 
+      /tmp/$(arg file2) 
+      /tmp/$(arg file3)
+    "/>
+
+</launch>

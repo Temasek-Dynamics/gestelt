@@ -1,0 +1,34 @@
+<launch>
+  <!-- Input/output topics -->
+  <arg name="pose_topic" value="mavros/local_position/pose" />
+
+
+  <node pkg="rosbag" type="record" name="others_record" output="screen"
+    args="record -O /tmp/ego_planner_$(arg drone_id_ns_ego) 
+    /tf
+    /swarm_collision_points
+    /obstacle_collision_points
+    ">
+  </node>
+
+  <include file="$(find gestalt_bringup)/launch/rosbag/record_single.launch">
+    <arg name="drone_id"   value="0"/>
+    <arg name="pose_topic" value="$(arg pose_topic)"/>
+  </include>
+  
+  <include file="$(find gestalt_bringup)/launch/rosbag/record_single.launch">
+    <arg name="drone_id"   value="1"/>
+    <arg name="pose_topic" value="$(arg pose_topic)"/>
+  </include>
+
+  <include file="$(find gestalt_bringup)/launch/rosbag/record_single.launch">
+    <arg name="drone_id"   value="2"/>
+    <arg name="pose_topic" value="$(arg pose_topic)"/>
+  </include>
+
+  <include file="$(find gestalt_bringup)/launch/rosbag/record_single.launch">
+    <arg name="drone_id"   value="3"/>
+    <arg name="pose_topic" value="$(arg pose_topic)"/>
+  </include>
+
+</launch>
