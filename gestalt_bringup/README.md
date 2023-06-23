@@ -27,24 +27,33 @@ EMPTY_E,          // 5
 # Meeting Pointers(23/6/23)
 - Change of mass of vehicle to 250g, and after PID tuning, it displays significantly lesser overshoot and smoother paths
 - Added collision sensor plugin and parsing of the topic to display where collisions occur on RVIZ
-
+- ROSBag recording for multiple vehicles to analyze them later on 
+- What does DSO want to achieve out of this?
+    - (?) Use our own drone + virtual drones 
+    - Metrics to record
+        - Maximum possible speed
+ 
 # TODO
-    - ROSBag recording for multiple vehicles to analyze them later on 
-    - Look at porting from ROS1 to ROS2
-        - Simulation
-        - Egoplanner Library
-        - Launch files
-        - gestalt_bringup executables
+    - Upload to bitbucket (official repo)
+    - Add option to:
+        - enable/disable running on radxa
+        - Add flag for building in release mode
+    - Consider a mixed ecosystem approach
+        - Look at porting from ROS1 to ROS2
+            - Simulation
+            - Egoplanner Library
+            - Launch files
+            - gestalt_bringup executables
+        - Aim: 
+            - To be able to use third party libraries from ROS easily
+            - Reduce unnecessary components
     - Perform physical tests to determine physical characteristics
         - Use the actual mass in Gazebo params
             - 0.25 g
         - Motor coefficients
-            - mOTOR 6000V
+            - Motor 6000V
         - Battery: 2S 7.4V
         - Propellers: 3 inch three-blade propellers
-    - Add option to:
-        - enable/disable running on radxa
-        - Add flag for building in release mode
 
 
 ## Simulation
