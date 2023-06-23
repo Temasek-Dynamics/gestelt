@@ -23,15 +23,6 @@ CANCEL_MISSION_E, // 3
 E_STOP_E,         // 4
 EMPTY_E,          // 5
 ```
-
-# Meeting Pointers(23/6/23)
-- Change of mass of vehicle to 250g, and after PID tuning, it displays significantly lesser overshoot and smoother paths
-- Added collision sensor plugin and parsing of the topic to display where collisions occur on RVIZ
-- ROSBag recording for multiple vehicles to analyze them later on 
-- What does DSO want to achieve out of this?
-    - (?) Use our own drone + virtual drones 
-    - Metrics to record
-        - Maximum possible speed
  
 # TODO
     - Upload to bitbucket (official repo)

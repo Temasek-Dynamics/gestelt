@@ -71,3 +71,4 @@
 20. Created global_planner module, with an example 3d a_star planner. Makes use of PCL point clouds and octree search to check the occupancy grid.
 21. (22/6/23) Added PID params for Raynor vehicle setup
 22. (23/6/23) Added obstacle collision sensor to base_link of Raynor gazebo model. And added parsing and visualization of collision with obstacles.
+23. (23/6/23) Added launch files to record rosbags of simulation runs.
