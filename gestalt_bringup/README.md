@@ -24,59 +24,15 @@ E_STOP_E,         // 4
 EMPTY_E,          // 5
 ```
 
+# Meeting Pointers(23/6/23)
+- Change of mass of vehicle to 250g, and after PID tuning, it displays significantly lesser overshoot and smoother paths
+    - Show flightlog 
+- Added collision sensor plugin and parsing of the topic to display where collisions occur on RVIZ
+- ROSBag recording for multiple vehicles to analyze them later on 
+
 # TODO
-    - Tune PID 
-        - (1)
-            - Rate Controller
-                - ROLL
-                    - MC_ROLLRATE_K: 1.0
-                    - MC_ROLLRATE_P: 0.249
-                        - Enhance damping of the roll channel, faster attenuation of the oscillation
-                    - MC_ROLLRATE_D: 0.0046
-                    - MC_ROLLRATE_I: 0.325
-                - PITCH
-                    - MC_PITCHRATE_K: 1.0
-                    - MC_PITCHRATE_P: 0.233
-                    - MC_PITCHRATE_D: 0.0044
-                    - MC_PITCHRATE_I: 0.3
-                - YAW
-                    - MC_YAWRATE_K: 1.0
-                    - MC_YAWRATE_P: 0.18
-                    - MC_YAWRATE_I: 0.18
-            - Attitude Controller
-                - MC_ROLL_P
-                    - 3.84
-                    - To reduce amplitude of oscillation
-                - MC_PITCH_P
-                    - 4.1
-                - MC_YAW_P
-                    - 5.26
-            - Velocity Controller
-                - (horizontal)
-                    - MPC_XY_VEL_P_ACC
-                        - 3.25
-                    - MPC_XY_VEL_I_ACC
-                        - 0.4
-                    - MPC_XY_VEL_D_ACC
-                        - 0.2
-                - (vertical)
-                    - MPC_Z_VEL_P_ACC
-                        - 4.0
-                    - MPC_Z_VEL_I_ACC
-                        - 2.0
-                    - MPC_Z_VEL_D_ACC
-                        - 0.0
-            - Position Controller
-                - (horizontal)
-                    - MPC_XY_P 
-                        - 0.8
-                        - Reduce position control gain
-                - (vertical)
-                    - MPC_Z_P 
-                        - 1.0
-                        - Reduce overshoot of position.
+    - Add launch file to record ROSBag
     - Observe overly aggressive trajectories that the vehicle is unable to maneuver 
-        - Do we need to execute aggresive trajectories? 
         - One way to solve this is to use a more accurate model
             - Use the actual mass in Gazebo params
                 - 0.25 g
@@ -84,14 +40,6 @@ EMPTY_E,          // 5
                 - mOTOR 6000V
             - Battery: 2S 7.4V
             - Propellers: 3 inch three-blade propellers
-    - Record ROSBag
-    - Automated checking of collision
-        - Agent-Obstacle collision
-            - 1: Collision occurs when sensor data is within a certain range of the base link frame.
-                - Doesn't work if robot is not facing the obstacle
-            - 2: Use gazebo collision detector
-                - Challenges of using API
-            - 3: Use gazebo bumper plugin to detect collisions
     - Add option to:
         - enable/disable running on radxa
         - Add flag for building in release mode
@@ -116,6 +64,58 @@ EMPTY_E,          // 5
 
 ## Benchmarking/Diagnostics
 - Benchmark the replanning time for each drone's planner (are they close enough to the specified replanning frequency?)
+
+## PID Tuning Guide
+- Tune PID 
+    - Rate Controller
+        - ROLL
+            - MC_ROLLRATE_K: 1.0
+            - MC_ROLLRATE_P: 0.249
+                - Enhance damping of the roll channel, faster attenuation of the oscillation
+            - MC_ROLLRATE_D: 0.0046
+            - MC_ROLLRATE_I: 0.325
+        - PITCH
+            - MC_PITCHRATE_K: 1.0
+            - MC_PITCHRATE_P: 0.233
+            - MC_PITCHRATE_D: 0.0044
+            - MC_PITCHRATE_I: 0.3
+        - YAW
+            - MC_YAWRATE_K: 1.0
+            - MC_YAWRATE_P: 0.18
+            - MC_YAWRATE_I: 0.18
+    - Attitude Controller
+        - MC_ROLL_P
+            - 3.84
+            - To reduce amplitude of oscillation
+        - MC_PITCH_P
+            - 4.1
+        - MC_YAW_P
+            - 5.26
+    - Velocity Controller
+        - (horizontal)
+            - MPC_XY_VEL_P_ACC
+                - 3.25
+            - MPC_XY_VEL_I_ACC
+                - 0.4
+            - MPC_XY_VEL_D_ACC
+                - 0.2
+        - (vertical)
+            - MPC_Z_VEL_P_ACC
+                - 4.0
+            - MPC_Z_VEL_I_ACC
+                - 2.0
+            - MPC_Z_VEL_D_ACC
+                - 0.0
+    - Position Controller
+        - (horizontal)
+            - MPC_XY_P 
+                - 0.8
+                - Reduce position control gain
+        - (vertical)
+            - MPC_Z_P 
+                - 1.0
+                - Reduce overshoot of position.
+
 
 ## Issues
 - When rounding corners of obstacles, if the goal lies about a sharp turn around the corner, a trajectory with a sharp turn is planned, this could lead to issues if the obstacles is especially large as the drone will not be able to detect the other wall of the obstacle until it has turned around. 
