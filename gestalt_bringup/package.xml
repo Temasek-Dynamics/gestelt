@@ -37,6 +37,7 @@
   <exec_depend>mavros_msgs</exec_depend>
 
   <depend>geometry_msgs</depend>
+  <depend>gazebo_msgs</depend> 
   <depend>visualization_msgs</depend> 
   <depend>tf2_ros</depend> 
   <depend>eigen</depend>

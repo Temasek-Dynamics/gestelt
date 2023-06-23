@@ -331,7 +331,7 @@ Visualization Manager:
           Marker Topic: /drone1/model
           Name: model
           Namespaces:
-            drone1: true
+            {}
           Queue Size: 100
           Value: true
         - Class: rviz/Group
@@ -341,7 +341,7 @@ Visualization Manager:
               Marker Topic: /drone_1_ego_planner_node/goal_point
               Name: goal_point
               Namespaces:
-                "": true
+                {}
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
@@ -357,7 +357,7 @@ Visualization Manager:
               Marker Topic: /drone_1_ego_planner_node/optimal_list
               Name: optimal_traj
               Namespaces:
-                "": true
+                {}
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
@@ -570,7 +570,7 @@ Visualization Manager:
           Marker Topic: /drone2/model
           Name: Marker
           Namespaces:
-            drone2: true
+            {}
           Queue Size: 100
           Value: true
         - Class: rviz/Group
@@ -640,7 +640,7 @@ Visualization Manager:
               Marker Topic: /drone_2_ego_planner_node/goal_point
               Name: goal_point
               Namespaces:
-                "": true
+                {}
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
@@ -656,7 +656,7 @@ Visualization Manager:
               Marker Topic: /drone_2_ego_planner_node/optimal_list
               Name: optimal_traj
               Namespaces:
-                "": true
+                {}
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
@@ -809,7 +809,7 @@ Visualization Manager:
           Marker Topic: /drone3/model
           Name: Marker
           Namespaces:
-            drone3: true
+            {}
           Queue Size: 100
           Value: true
         - Class: rviz/Group
@@ -879,7 +879,7 @@ Visualization Manager:
               Marker Topic: /drone_3_ego_planner_node/goal_point
               Name: goal_point
               Namespaces:
-                "": true
+                {}
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
@@ -895,7 +895,7 @@ Visualization Manager:
               Marker Topic: /drone_3_ego_planner_node/optimal_list
               Name: optimal_traj
               Namespaces:
-                "": true
+                {}
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
@@ -1055,23 +1055,15 @@ Visualization Manager:
       Marker Topic: /swarm_collision_points
       Name: swarm_collision
       Namespaces:
+        {}
+      Queue Size: 100
+      Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /obstacle_collision_points
+      Name: obstacle_collision
+      Namespaces:
         "": true
-      Queue Size: 100
-      Value: true
-    - Class: rviz/Marker
-      Enabled: true
-      Marker Topic: /closed_list
-      Name: closed_list
-      Namespaces:
-        {}
-      Queue Size: 100
-      Value: true
-    - Class: rviz/Marker
-      Enabled: true
-      Marker Topic: /plan
-      Name: /plan
-      Namespaces:
-        {}
       Queue Size: 100
       Value: true
   Enabled: true
@@ -1102,7 +1094,7 @@ Visualization Manager:
   Value: true
   Views:
     Current:
-      Angle: -1.6550004482269287
+      Angle: -1.5100005865097046
       Class: rviz/TopDownOrtho
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
@@ -1112,10 +1104,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Scale: 69.47511291503906
+      Scale: 49.31724166870117
       Target Frame: my_view
-      X: 3.8380014896392822
-      Y: -2.115003824234009
+      X: 4.641096115112305
+      Y: -2.4390692710876465
     Saved:
       - Class: rviz/FPS
         Enable Stereo Rendering:

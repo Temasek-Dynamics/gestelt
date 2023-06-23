@@ -65,8 +65,8 @@
         </contact>
 
         <plugin name="bumper_sensor" filename="libgazebo_ros_bumper.so">
-          <bumperTopicName>raynor_bumper</bumperTopicName>
-          <frameName>base_link</frameName>
+          <bumperTopicName>collision_sensor</bumperTopicName>
+          <frameName>world</frameName>
         </plugin>
       </sensor>
 

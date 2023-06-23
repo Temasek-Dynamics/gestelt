@@ -26,20 +26,22 @@ EMPTY_E,          // 5
 
 # Meeting Pointers(23/6/23)
 - Change of mass of vehicle to 250g, and after PID tuning, it displays significantly lesser overshoot and smoother paths
-    - Show flightlog 
 - Added collision sensor plugin and parsing of the topic to display where collisions occur on RVIZ
-- ROSBag recording for multiple vehicles to analyze them later on 
 
 # TODO
-    - Add launch file to record ROSBag
-    - Observe overly aggressive trajectories that the vehicle is unable to maneuver 
-        - One way to solve this is to use a more accurate model
-            - Use the actual mass in Gazebo params
-                - 0.25 g
-            - Motor coefficients
-                - mOTOR 6000V
-            - Battery: 2S 7.4V
-            - Propellers: 3 inch three-blade propellers
+    - ROSBag recording for multiple vehicles to analyze them later on 
+    - Look at porting from ROS1 to ROS2
+        - Simulation
+        - Egoplanner Library
+        - Launch files
+        - gestalt_bringup executables
+    - Perform physical tests to determine physical characteristics
+        - Use the actual mass in Gazebo params
+            - 0.25 g
+        - Motor coefficients
+            - mOTOR 6000V
+        - Battery: 2S 7.4V
+        - Propellers: 3 inch three-blade propellers
     - Add option to:
         - enable/disable running on radxa
         - Add flag for building in release mode
@@ -53,9 +55,9 @@ EMPTY_E,          // 5
         - If num_drone == 3, the planned path is normal. 
 
 ## gridmap
+- Change gridmap to use PCL and octree search for occupancy grid
 - Add body to camera transform as a matrix ROS Param (Make sure that it is same as that in simulation)
 - Take in intrinsic params of camera via camera_info topic
-- Change gridmap to use PCL and octree search for occupancy grid
 
 ## Trajectory Server
 - Add mutexes

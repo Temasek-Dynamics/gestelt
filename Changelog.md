@@ -70,4 +70,4 @@
 19. (12/6/23) Added swarm collision checker to check for collision between the swarm agents. This node subscribes to the pose of each agent and publishes spheres visualizing where the inter-agent distance falls below the user-defined collision tolerance.
 20. Created global_planner module, with an example 3d a_star planner. Makes use of PCL point clouds and octree search to check the occupancy grid.
 21. (22/6/23) Added PID params for Raynor vehicle setup
-22. (23/6/23) Added collision sensor to base_link of Raynor gazebo model. 
+22. (23/6/23) Added obstacle collision sensor to base_link of Raynor gazebo model. And added parsing and visualization of collision with obstacles.

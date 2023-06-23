@@ -6,6 +6,8 @@
 #include <geometry_msgs/Point.h>
 #include <visualization_msgs/Marker.h>
 
+#include <gazebo_msgs/ContactsState.h>
+
 #include <tf2_ros/transform_listener.h>
 #include <tf2_ros/transform_broadcaster.h>
 
@@ -28,14 +30,24 @@ public:
 
     // Subscribers
     for (int i = 0; i < num_drones_; i++) {
+      // Add pose topic subscription
       std::string pose_topic = std::string("/drone" + std::to_string(i) + "/mavros/local_position/pose");
+
       ros::Subscriber pose_sub = nh.subscribe<geometry_msgs::PoseStamped>(
-        pose_topic, 5, boost::bind(&SwarmCollisionChecker::pose_cb, this, _1, i));
+        pose_topic, 5, boost::bind(&SwarmCollisionChecker::poseCB, this, _1, i));
       drones_pose_sub_.push_back(pose_sub);
+
+      // Add collision sensor subscription
+      std::string collision_sensor_topic = std::string("/drone" + std::to_string(i) + "/collision_sensor");
+
+      ros::Subscriber collision_sensor_sub = nh.subscribe<gazebo_msgs::ContactsState>(
+        collision_sensor_topic, 5, boost::bind(&SwarmCollisionChecker::collisionCB, this, _1, i));
+      collision_sensor_sub_.push_back(collision_sensor_sub);
     }
 
     // Publishers
-    collision_points_pub_ = nh.advertise<visualization_msgs::Marker>("/swarm_collision_points", 10);
+    swarm_collision_pub_ = nh.advertise<visualization_msgs::Marker>("/swarm_collision_points", 10);
+    obs_collision_pub_ = nh.advertise<visualization_msgs::Marker>("/obstacle_collision_points", 10);
 
     // Timers
     // pub_camera_pose_timer_ = nh.createTimer(ros::Duration(1/30), &SwarmCollisionChecker::pubCameraPoseTimerCb, this);
@@ -54,7 +66,7 @@ public:
       geometry_msgs::PoseStamped world_to_origin_tf;
 
       if (!getTransform("world", drone_origin_frame, world_to_origin_tf)){
-        ROS_ERROR("Failed to get transform from world to drone origin frame, shutting down.");
+        ROS_ERROR("[Collision Checker] Failed to get transform from world to drone origin frame, shutting down.");
         ros::shutdown();
       }
       world_to_drone_origin_tfs_.push_back(world_to_origin_tf);
@@ -62,8 +74,8 @@ public:
 
   }
 
-  // Subscribe to robot pose and publish transformations
-  void pose_cb(const geometry_msgs::PoseStamped::ConstPtr &msg, int drone_id)
+  // Subscribe to robot pose
+  void poseCB(const geometry_msgs::PoseStamped::ConstPtr &msg, int drone_id)
   {
     world_to_drone_base_[drone_id].header.stamp = msg->header.stamp;
     world_to_drone_base_[drone_id].header.frame_id = msg->header.frame_id;
@@ -71,6 +83,39 @@ public:
     world_to_drone_base_[drone_id].pose.position.x = msg->pose.position.x + world_to_drone_origin_tfs_[drone_id].pose.position.x;
     world_to_drone_base_[drone_id].pose.position.y = msg->pose.position.y + world_to_drone_origin_tfs_[drone_id].pose.position.y;
     world_to_drone_base_[drone_id].pose.position.z = msg->pose.position.z + world_to_drone_origin_tfs_[drone_id].pose.position.z;
+  }
+
+  // Subscribe to collision sensor topic
+  void collisionCB(const gazebo_msgs::ContactsState::ConstPtr &msg, int drone_id)
+  {
+    if (!msg->states.empty()){
+      for (auto collision : msg->states){
+        ROS_INFO("[Collision Checker] Collision detected between %s and %s at position (%f, %f, %f)!", 
+          collision.collision1_name.c_str(), collision.collision2_name.c_str(),
+          collision.contact_positions[0].x, collision.contact_positions[0].y, collision.contact_positions[0].z);
+
+        geometry_msgs::Point collision_point;
+        collision_point.x = collision.contact_positions[0].x;
+        collision_point.y = collision.contact_positions[0].y;
+        collision_point.z = collision.contact_positions[0].z;
+
+        obs_collision_points_.push_back(collision_point);
+
+        if (obs_collision_points_.size() > 500){
+          // Prevent swarm_collision_points_ from getting too large
+          obs_collision_points_.pop_front();
+        }
+      }
+    }
+
+    std_msgs::ColorRGBA sphere_color;
+    sphere_color.r = 1.0;
+    sphere_color.g = 1.0;
+    sphere_color.b = 0.0;
+    sphere_color.a = 0.8;
+    
+    // Publish point visualization at which obstacle collision occured
+    obs_collision_pub_.publish(createSphereList(0, obs_collision_points_, sphere_color));
   }
 
   void checkCollisionTimerCb(const ros::TimerEvent &e){
@@ -90,15 +135,27 @@ public:
           collision_point.y = (world_to_drone_base_[i].pose.position.y + world_to_drone_base_[j].pose.position.y)/2;
           collision_point.z = (world_to_drone_base_[i].pose.position.z + world_to_drone_base_[j].pose.position.z)/2;
         
-          collision_points_.push_back(collision_point);
+          swarm_collision_points_.push_back(collision_point);
 
-          if (collision_points_.size() > 500){
-            // Prevent collision_points_ from getting too large
-            collision_points_.pop_front();
+          if (swarm_collision_points_.size() > 500){
+            // Prevent swarm_collision_points_ from getting too large
+            swarm_collision_points_.pop_front();
           }
         } 
       }
     }
+
+    std_msgs::ColorRGBA sphere_color;
+    sphere_color.r = 1.0;
+    sphere_color.g = 0.0;
+    sphere_color.b = 0.0;
+    sphere_color.a = 0.8;
+    
+    // Publish point visualization at which inter-agent collision occured
+    swarm_collision_pub_.publish(createSphereList(0, swarm_collision_points_, sphere_color));
+  }
+
+  visualization_msgs::Marker createSphereList(const int& id, const std::deque<geometry_msgs::Point>& collision_points, const std_msgs::ColorRGBA& color) {
 
     // Publish collision points
     visualization_msgs::Marker sphere_ls;
@@ -107,24 +164,20 @@ public:
     sphere_ls.header.stamp = ros::Time::now();
     sphere_ls.type = visualization_msgs::Marker::SPHERE_LIST;
     sphere_ls.action = visualization_msgs::Marker::ADD;
-    sphere_ls.id = 0; //TODO is this important?
+    sphere_ls.id = id; 
     sphere_ls.pose.orientation.w = 1.0;
 
-    sphere_ls.color.r = 1.0;
-    sphere_ls.color.g = 0.0;
-    sphere_ls.color.b = 0.0;
-    sphere_ls.color.a = 0.8;
+    sphere_ls.color = color;
 
-    sphere_ls.scale.x = 0.6;
-    sphere_ls.scale.y = 0.6;
-    sphere_ls.scale.z = 0.6;
+    sphere_ls.scale.x = 0.4;
+    sphere_ls.scale.y = 0.4;
+    sphere_ls.scale.z = 0.4;
 
-    for (auto collision_point : collision_points_){
+    for (auto collision_point : collision_points){
       sphere_ls.points.push_back(collision_point);
     }
 
-    // Publish point visualization at which collision occured
-    collision_points_pub_.publish(sphere_ls);
+    return sphere_ls;
   }
 
   // Helper method to get transformation between 2 frames
@@ -165,10 +218,12 @@ private:
 
   // Subscribers
   std::vector<ros::Subscriber> drones_pose_sub_; // Subscribers to pose of each UAV agent
+  std::vector<ros::Subscriber> collision_sensor_sub_; // Subscribers to collision sensor of each UAV agent
 
   // Publishers
   // ros::Publisher camera_pos_pub_;
-  ros::Publisher collision_points_pub_;
+  ros::Publisher swarm_collision_pub_;
+  ros::Publisher obs_collision_pub_;
 
   // Timers
   // ros::Timer pub_camera_pose_timer_;
@@ -184,7 +239,8 @@ private:
   std::vector<geometry_msgs::PoseStamped> world_to_drone_origin_tfs_; // Position of all drone origin frames relative to world frame
   std::vector<geometry_msgs::PoseStamped> world_to_drone_base_; // Position of all drones base links relative to world frame
 
-  std::deque<geometry_msgs::Point> collision_points_; // Position of all collision points
+  std::deque<geometry_msgs::Point> swarm_collision_points_; // Position of all collision points
+  std::deque<geometry_msgs::Point> obs_collision_points_; // Position of all collision points
 };
 
 int main(int argc, char **argv)
