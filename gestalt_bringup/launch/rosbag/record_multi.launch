@@ -4,7 +4,7 @@
 
 
   <node pkg="rosbag" type="record" name="others_record" output="screen"
-    args="record -O /tmp/ego_planner_$(arg drone_id_ns_ego) 
+    args="record -O /tmp/ego_planner_tf
     /tf
     /swarm_collision_points
     /obstacle_collision_points

@@ -9,7 +9,6 @@
 
   <node pkg="rosbag" type="record" name="$(arg drone_id_ns)_record" output="screen"
     args="record -O /tmp/ego_planner_$(arg drone_id_ns_ego) 
-    /tf
     /$(arg drone_id_ns_ego)_ego_planner_node/grid_map/occupancy
     /$(arg drone_id_ns_ego)_ego_planner_node/optimal_list
     /$(arg drone_id_ns_ego)_ego_planner_node/goal_point
