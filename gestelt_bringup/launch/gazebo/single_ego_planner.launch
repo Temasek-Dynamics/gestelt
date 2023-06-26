@@ -80,7 +80,11 @@
         <arg name="max_vel" value="1.5" />
         <arg name="max_acc" value="3.0" />
         <arg name="max_jer" value="20.0" />
-
+        
+        <!-- thresh_no_replan_meter: Replan only if current position and local target exceeds this parameter -->
+        <arg name="thresh_no_replan_meter" value="1.0" />
+        <!-- thresh_replan_time: Replanning period (1/frequency)-->
+        <arg name="thresh_replan_time" value="0.5" />
         <!--always set to 1.5 times grater than sensing horizon-->
         <!-- sensing horizon here refers to the sensor range. e.g. about 4.5-5m for realsense d435 -->
         <arg name="planning_horizon" value="7.5" />

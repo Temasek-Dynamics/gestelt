@@ -40,7 +40,7 @@ CMD_2="
 roslaunch gestelt_bringup test_ego_single.launch
 "
 
-CMD_3="rosrun gestelt_bringup test_mission.py"
+CMD_3="rosrun gestelt_bringup single_mission.py"
 
 if [ "$SESSIONEXISTS" = "" ]
 then 
