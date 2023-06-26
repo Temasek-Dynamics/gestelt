@@ -7,7 +7,7 @@ SESSIONEXISTS=$(tmux list-sessions | grep $SESSION)
 # Directories
 #####
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
-gestalt_bringup_DIR="$SCRIPT_DIR/.."
+gestelt_bringup_DIR="$SCRIPT_DIR/.."
 PX4_AUTOPILOT_REPO_DIR="$SCRIPT_DIR/../../../../PX4-Autopilot"
 
 #####
@@ -18,29 +18,29 @@ source $SCRIPT_DIR/../../../../devel/setup.bash &&
 "
 SOURCE_PX4_AUTOPILOT="
 source $PX4_AUTOPILOT_REPO_DIR/Tools/simulation/gazebo-classic/setup_gazebo.bash $PX4_AUTOPILOT_REPO_DIR $PX4_AUTOPILOT_REPO_DIR/build/px4_sitl_default &&
-export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:$gestalt_bringup_DIR:$PX4_AUTOPILOT_REPO_DIR:$PX4_AUTOPILOT_REPO_DIR/Tools/simulation/gazebo-classic/sitl_gazebo-classic &&
+export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:$gestelt_bringup_DIR:$PX4_AUTOPILOT_REPO_DIR:$PX4_AUTOPILOT_REPO_DIR/Tools/simulation/gazebo-classic/sitl_gazebo-classic &&
 "
 
 #####
 # Commands
 #####
 CMD_0="
-roslaunch gestalt_bringup gz_multi_uav.launch world_name:=$SCRIPT_DIR/../simulation/worlds/ego_test.world
+roslaunch gestelt_bringup gz_multi_uav.launch world_name:=$SCRIPT_DIR/../simulation/worlds/ego_test.world
 "
 
 # CMD_0="
-# roslaunch gestalt_bringup gz_multi_uav.launch  world_name:=$SCRIPT_DIR/../simulation/worlds/empty.world
+# roslaunch gestelt_bringup gz_multi_uav.launch  world_name:=$SCRIPT_DIR/../simulation/worlds/empty.world
 # "
 
 CMD_1="
-roslaunch gestalt_bringup rviz.launch config:=gz_sim
+roslaunch gestelt_bringup rviz.launch config:=gz_sim
 "
 
 CMD_2="
-roslaunch gestalt_bringup multi_ego_planner.launch
+roslaunch gestelt_bringup multi_ego_planner.launch
 "
 
-CMD_3="rosrun gestalt_bringup mission_startup_and_send_wp.py"
+CMD_3="rosrun gestelt_bringup mission_startup_and_send_wp.py"
 
 if [ "$SESSIONEXISTS" = "" ]
 then 

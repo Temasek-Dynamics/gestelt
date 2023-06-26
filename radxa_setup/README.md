@@ -37,7 +37,6 @@ alias sros="source /opt/ros/noetic/setup.bash"
 alias sws="source devel/setup.bash"
 alias sbash="source ~/.bashrc"
 
-
 # Set up network
 # http://wiki.ros.org/ROS/NetworkSetup
 export ROS_MASTER_URI=http://PC_IP:11311

@@ -49,16 +49,29 @@ cd ~/gestelt_ws/PX4-Autopilot
 bash ./Tools/setup/ubuntu.sh --no-nuttx
 # Make SITL target for Gazebo simulation
 DONT_RUN=1 make px4_sitl_default gazebo-classic
-cp -r ~/gestelt_ws/src/gestelt/gestalt_bringup/simulation/models/raynor ~/gestelt_ws/PX4-Autopilot/Tools/simulation/gazebo-classic/sitl_gazebo-classic/models/
+cp -r ~/gestelt_ws/src/gestelt/gestelt_bringup/simulation/models/raynor ~/gestelt_ws/PX4-Autopilot/Tools/simulation/gazebo-classic/sitl_gazebo-classic/models/
 
 # If you screw up the PX4 Autopilot build at any point, clean up the build files via the following command:
 make distclean
 ```
 
+4. Building 
+```bash
+# Assuming your workspace is named as follows
+cd ~/gestelt_ws/
+
+# Building for debugging/development
+catkin_make 
+# Building for release mode (For use on Radxa)
+catkin_make -DCMAKE_BUILD_TYPE=Release
+```
+
+5. Setting up the Offboard computer
+We assume that Radxa is being used as the offboard computer. Refer to [radxa_setup](./radxa_setup/README.md) for more instructions.
+
+
 # Future Roadmap
-- Solidify framework for managing multiple robots
 - Port to ROS2
-- Investigate changing the custom GridMap implementation to alternatives such as Octomap but still consider the potential performance issues with an established library.
 - Trajectory Server
     - Support Cancel/Start/Pause of waypoints execution
     - Handle goals in obstacle regions (Cancel the goal?)

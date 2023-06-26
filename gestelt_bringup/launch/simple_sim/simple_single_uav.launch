@@ -21,7 +21,7 @@
     <arg name="obj_num" value="10" />
 
     <!-- Ego Planner params -->
-    <include file="$(find gestalt_bringup)/launch/advanced_param.xml">
+    <include file="$(find gestelt_bringup)/launch/advanced_param.xml">
         <arg name="drone_id" value="$(arg drone_id)"/>
         <arg name="num_drones" value="$(arg num_drones)" />
 

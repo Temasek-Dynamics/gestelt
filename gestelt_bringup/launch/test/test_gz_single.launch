@@ -23,7 +23,7 @@
     args="0 0 0 0 0 0 1 world map 100" />
 
   <!-- Drone 0 -->
-  <include file="$(find gestalt_bringup)/launch/gazebo/gz_single_uav.launch">
+  <include file="$(find gestelt_bringup)/launch/gazebo/gz_single_uav.launch">
     <arg name="drone_id"   value="0"/>
     <arg name="vehicle" default="$(arg vehicle)"/>
     <arg name="model" default="$(arg model)"/>

@@ -1,9 +1,9 @@
-# gestalt_bringup
+# gestelt_bringup
 This package contains bringup files for Gestalt.
 
 # Quick start
 ```bash
-cd ~/gestelt_ws/src/gestelt_bringup/gestalt_bringup/scripts
+cd ~/gestelt_ws/src/gestelt_bringup/gestelt_bringup/scripts
 # Simulation using simple quad simulator
 ./simple_sim.sh
 # Simulation using gazebo
@@ -25,16 +25,24 @@ EMPTY_E,          // 5
 ```
  
 # TODO
-    - Upload to bitbucket (official repo)
     - Add option to:
-        - enable/disable running on radxa
         - Add flag for building in release mode
+        - enable/disable running on radxa
+    - Record metrics 
+        - Maximum possible speed
+        - Communications reqd – message size, frequency of sending
+        - Communications latency tolerated – milliseconds
+        - Algo run time on Radxa – milliseconds
+        - Success rate
+        - Maximum flight speed it can enable in sparse/dense environment
+        - Maximum number of UAVs it can handle
+
     - Consider a mixed ecosystem approach
         - Look at porting from ROS1 to ROS2
             - Simulation
             - Egoplanner Library
             - Launch files
-            - gestalt_bringup executables
+            - gestelt_bringup executables
         - Aim: 
             - To be able to use third party libraries from ROS easily
             - Reduce unnecessary components

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(gestalt_bringup)
+project(gestelt_bringup)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 add_compile_options(-std=c++14)
@@ -25,7 +25,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
 #  INCLUDE_DIRS 
   # include
-#  LIBRARIES gestalt_bringup
+#  LIBRARIES gestelt_bringup
  CATKIN_DEPENDS ${ROS_LIBRARIES}
  DEPENDS Eigen Boost
 )

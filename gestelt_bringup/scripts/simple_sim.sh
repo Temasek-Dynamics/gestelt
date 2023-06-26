@@ -16,8 +16,8 @@ SOURCE_WS="source $SCRIPT_DIR/../../../../devel/setup.bash &&"
 #####
 # Commands
 #####
-CMD_0="roslaunch gestalt_bringup rviz.launch config:=simple_sim"
-CMD_1="roslaunch gestalt_bringup simple_multi_uav.launch"
+CMD_0="roslaunch gestelt_bringup rviz.launch config:=simple_sim"
+CMD_1="roslaunch gestelt_bringup simple_multi_uav.launch"
 CMD_3="rostopic pub /traj_server_event std_msgs/Int8 \"data: 0 \" "
 
 # rostopic pub /traj_server_event std_msgs/Int8 "data: 0" 

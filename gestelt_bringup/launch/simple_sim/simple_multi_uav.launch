@@ -29,7 +29,7 @@
     args="0 0 0 0 0 0 1 world map 100" />
 
   <!-- Drone 0 -->
-  <include file="$(find gestalt_bringup)/launch/simple_sim/simple_single_uav.launch">
+  <include file="$(find gestelt_bringup)/launch/simple_sim/simple_single_uav.launch">
     <arg name="drone_id"   value="0"/>
     <arg name="num_drones" value="$(arg num_drones)"/>
     <arg name="init_x"     value="-1.0"/>
@@ -47,7 +47,7 @@
   </include>
   
   <!-- Drone 1 -->
-  <include file="$(find gestalt_bringup)/launch/simple_sim/simple_single_uav.launch">
+  <include file="$(find gestelt_bringup)/launch/simple_sim/simple_single_uav.launch">
     <arg name="drone_id"   value="1"/>
     <arg name="num_drones" value="$(arg num_drones)"/>
     <arg name="init_x"     value="1.0"/>
@@ -65,7 +65,7 @@
   </include>
 
   <!-- Drone 2 -->
-  <include file="$(find gestalt_bringup)/launch/simple_sim/simple_single_uav.launch">
+  <include file="$(find gestelt_bringup)/launch/simple_sim/simple_single_uav.launch">
     <arg name="drone_id"   value="2"/>
     <arg name="num_drones" value="$(arg num_drones)"/>
     <arg name="init_x"     value="1.0"/>
@@ -83,7 +83,7 @@
   </include>
 
   <!-- Drone 3 -->
-  <include file="$(find gestalt_bringup)/launch/simple_sim/simple_single_uav.launch">
+  <include file="$(find gestelt_bringup)/launch/simple_sim/simple_single_uav.launch">
     <arg name="drone_id"   value="3"/>
     <arg name="num_drones" value="$(arg num_drones)"/>
     <arg name="init_x"     value="-1.0"/>

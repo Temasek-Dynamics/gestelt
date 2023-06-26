@@ -14,7 +14,7 @@
     <arg name="interactive" default="true"/>
     <env name="PX4_SIM_MODEL" value="gazebo-classic_$(arg vehicle)" />
 
-    <!-- <env name="GAZEBO_MODEL_PATH" value="${GAZEBO_MODEL_PATH}:$(find gestalt_bringup)/simulation/models"/> -->
+    <!-- <env name="GAZEBO_MODEL_PATH" value="${GAZEBO_MODEL_PATH}:$(find gestelt_bringup)/simulation/models"/> -->
 
     <!-- Add static transform from drone to it's origin -->
     <node pkg="tf" type="static_transform_publisher" 
@@ -34,10 +34,10 @@
       <arg name="fcu_url" default="udp://:$(arg fcu_addr)@localhost:$(arg fcu_port)"/>
 
       <!-- generate sdf vehicle model -->
-      <!-- <arg name="cmd" default="xmlstarlet ed -u '//plugin[@name=&quot;mavlink_interface&quot;]/mavlink_tcp_port' -v $(arg mavlink_tcp_port) $(find gestalt_bringup)/simulation/models/$(arg model)/$(arg model).sdf"/> -->
+      <!-- <arg name="cmd" default="xmlstarlet ed -u '//plugin[@name=&quot;mavlink_interface&quot;]/mavlink_tcp_port' -v $(arg mavlink_tcp_port) $(find gestelt_bringup)/simulation/models/$(arg model)/$(arg model).sdf"/> -->
       <!-- <arg name="cmd" default="xmlstarlet ed -u '//plugin[@name=&quot;mavlink_interface&quot;]/mavlink_tcp_port' -v $(arg mavlink_tcp_port) $(find px4)/Tools/simulation/gazebo-classic/sitl_gazebo-classic/models/$(arg model)/$(arg model).sdf"/> -->
-      <!-- <arg name="cmd" default="xmlstarlet ed -u '//plugin[@name=&quot;mavlink_interface&quot;]/mavlink_tcp_port' -v $(arg mavlink_tcp_port) -u '//plugin[@name=&quot;camera_controller&quot;]/robotNamespace' -v $(arg drone_id_ns) $(find gestalt_bringup)/simulation/models/$(arg model)/$(arg model).sdf"/> -->
-      <arg name="cmd" default="xmlstarlet ed -u '//plugin[@name=&quot;mavlink_interface&quot;]/mavlink_tcp_port' -v $(arg mavlink_tcp_port) -u '//plugin[@name=&quot;camera_controller&quot;]/frameName' -v $(arg drone_id_ns)_cam_link $(find gestalt_bringup)/simulation/models/$(arg model)/$(arg model).sdf"/>
+      <!-- <arg name="cmd" default="xmlstarlet ed -u '//plugin[@name=&quot;mavlink_interface&quot;]/mavlink_tcp_port' -v $(arg mavlink_tcp_port) -u '//plugin[@name=&quot;camera_controller&quot;]/robotNamespace' -v $(arg drone_id_ns) $(find gestelt_bringup)/simulation/models/$(arg model)/$(arg model).sdf"/> -->
+      <arg name="cmd" default="xmlstarlet ed -u '//plugin[@name=&quot;mavlink_interface&quot;]/mavlink_tcp_port' -v $(arg mavlink_tcp_port) -u '//plugin[@name=&quot;camera_controller&quot;]/frameName' -v $(arg drone_id_ns)_cam_link $(find gestelt_bringup)/simulation/models/$(arg model)/$(arg model).sdf"/>
 
       <param command="$(arg cmd)" name="model_description"/>
       <!-- PX4 SITL -->
@@ -59,8 +59,8 @@
         <param name="fcu_protocol" value="v2.0" />
 
         <!-- load blacklist, config -->
-        <rosparam command="load" file="$(find gestalt_bringup)/config/px4_pluginlists.yaml" />
-        <rosparam command="load" file="$(find gestalt_bringup)/config/px4_config.yaml" />
+        <rosparam command="load" file="$(find gestelt_bringup)/config/px4_pluginlists.yaml" />
+        <rosparam command="load" file="$(find gestelt_bringup)/config/px4_config.yaml" />
 
         <param name="global_position/frame_id" value="$(arg drone_id_ns)_origin"/>
         <param name="local_position/frame_id" value="$(arg drone_id_ns)_origin"/>
