@@ -32,6 +32,7 @@ void TrajServer::init(ros::NodeHandle& nh)
   poly_traj_sub_ = nh.subscribe("planning/trajectory", 10, &TrajServer::polyTrajCallback, this);
   heartbeat_sub_ = nh.subscribe("heartbeat", 10, &TrajServer::heartbeatCallback, this);
   uav_state_sub_ = nh.subscribe<mavros_msgs::State>("/mavros/state", 10, &TrajServer::UAVStateCb, this);
+  planner_state_sub_ = nh.subscribe("/planner_state", 10, &TrajServer::plannerStateCB, this);
 
   pose_sub_ = nh.subscribe<geometry_msgs::PoseStamped>("/mavros/local_position/pose", 1, &TrajServer::UAVPoseCB, this);
   odom_sub_ = nh.subscribe<nav_msgs::Odometry>("/mavros/local_position/odom", 1, &TrajServer::UAVOdomCB, this);
@@ -126,6 +127,11 @@ void TrajServer::polyTrajCallback(traj_utils::PolyTrajPtr msg)
   // traj_id_ = msg->traj_id;
 
   startMission();
+}
+
+void TrajServer::plannerStateCB(const std_msgs::String::ConstPtr &msg)
+{
+  planner_state_ = msg->data;
 }
 
 void TrajServer::UAVStateCb(const mavros_msgs::State::ConstPtr &msg)
@@ -408,8 +414,7 @@ void TrajServer::pubServerStateTimerCb(const ros::TimerEvent &e){
 
   state_msg.drone_id = drone_id_;
   state_msg.traj_server_state = StateToString(getServerState());
-  // TODO: Get FSM server state
-  state_msg.planner_server_state = "";
+  state_msg.planner_server_state = planner_state_;
   state_msg.uav_state = uav_current_state_.mode;
   state_msg.armed = uav_current_state_.armed;
 

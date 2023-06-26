@@ -28,9 +28,6 @@ CMD_0="
 roslaunch gestelt_bringup gz_multi_uav.launch world_name:=$SCRIPT_DIR/../simulation/worlds/ego_test.world
 "
 
-# CMD_0="
-# roslaunch gestelt_bringup gz_multi_uav.launch  world_name:=$SCRIPT_DIR/../simulation/worlds/empty.world
-# "
 
 CMD_1="
 roslaunch gestelt_bringup rviz.launch config:=gz_sim

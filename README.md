@@ -69,6 +69,22 @@ catkin_make -DCMAKE_BUILD_TYPE=Release
 5. Setting up the Offboard computer
 We assume that Radxa is being used as the offboard computer. Refer to [radxa_setup](./radxa_setup/README.md) for more instructions.
 
+# Quick start
+
+## Gazebo multi-UAV simulation
+```bash
+cd ./gestelt_bringup/scripts 
+./gazebo_sim_multi_uav.sh
+```
+
+## Offboard computer (Radxa)
+```bash
+# Each offboard computer will needa unique ID within the same network
+export GESTELT_ID=ID_NUM
+cd ./gestelt_bringup/scripts 
+./radxa_uav.sh
+```
+
 
 # Future Roadmap
 - Port to ROS2

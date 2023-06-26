@@ -2,7 +2,6 @@
     <!-- Drone id -->
     <arg name="drone_id"/>
     <arg name="drone_id_ns" value="drone$(arg drone_id)"/>
-    <arg name="num_drones"/>
     <arg name="init_x"/>
     <arg name="init_y"/>
     <arg name="init_z"/>

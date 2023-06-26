@@ -1,4 +1,5 @@
 <launch>
+    <arg name="px4_device" default="true"/>
     <!-- Drone id -->
     <arg name="drone_id"/>
     <arg name="drone_id_ns" value="drone$(arg drone_id)"/>
@@ -46,6 +47,8 @@
         <remap from="~planning/broadcast_traj_send" to = "/broadcast_traj_from_planner"/>
         <remap from="~planning/broadcast_traj_recv" to = "/broadcast_traj_to_planner"/>
         <remap from="~planning/heartbeat" to = "/drone_$(arg drone_id)_traj_server/heartbeat"/>
+
+        <remap from="~planner_state" to = "/$(arg drone_id_ns)/planner_state"/>
         
         <remap from="~odom_world" to="$(arg odometry_topic)"/>
         <!-- //////////////////// -->
@@ -76,6 +79,10 @@
         <!-- //////////////////// -->
         <!-- EGOReplanFSM params -->
         <!-- //////////////////// -->
+
+        <!-- apply_frame_origin_offset: Relevant for PX4 SITL where the vehicle pose always starts from (0,0,0)
+        For other simulation environments, set to false -->
+        <param name="fsm/apply_frame_origin_offset" value="$(arg px4_device)" type="bool"/>
         <!-- Transformation from world frame to UAV origin frame -->
         <param name="fsm/frame_offset_x" value="$(arg init_x)" type="double"/>
         <param name="fsm/frame_offset_y" value="$(arg init_y)" type="double"/>
@@ -92,6 +99,8 @@
         <!-- emergency_time: always set to 1.5 times greater than sensing horizon-->
         <param name="fsm/emergency_time" value="1.0" type="double"/>
         <param name="fsm/fail_safe" value="true"/>
+
+        <param name="fsm/pub_state_freq" value="2.0" type="double"/>
 
         <!-- //////////////////// -->
         <!-- GridMap params -->

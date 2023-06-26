@@ -16,9 +16,10 @@ SOURCE_WS="source $SCRIPT_DIR/../../../../devel/setup.bash &&"
 #####
 # Commands
 #####
-CMD_0="roslaunch gestelt_bringup rviz.launch config:=simple_sim"
+CMD_0="roslaunch gestelt_bringup rviz.launch config:=gz_sim"
 CMD_1="roslaunch gestelt_bringup simple_multi_uav.launch"
-CMD_3="rostopic pub /traj_server_event std_msgs/Int8 \"data: 0 \" "
+CMD_2="rosrun gestelt_bringup mission_startup_and_send_wp.py"
+# CMD_3="rostopic pub /traj_server_event std_msgs/Int8 \"data: 0 \" "
 
 # rostopic pub /traj_server_event std_msgs/Int8 "data: 0" 
 # rostopic pub /traj_server_event std_msgs/Int8 "data: 2" 
@@ -35,7 +36,7 @@ then
     sleep 2
     tmux send-keys -t $SESSION:0.1 "$SOURCE_WS $CMD_1" C-m 
     tmux send-keys -t $SESSION:0.2 "$SOURCE_WS $CMD_2" C-m 
-    tmux send-keys -t $SESSION:0.3 "$SOURCE_WS $CMD_3" 
+    # tmux send-keys -t $SESSION:0.3 "$SOURCE_WS $CMD_3" 
 fi
 
 # Attach session on the first window

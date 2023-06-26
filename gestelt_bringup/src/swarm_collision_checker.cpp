@@ -90,9 +90,9 @@ public:
   {
     if (!msg->states.empty()){
       for (auto collision : msg->states){
-        ROS_INFO("[Collision Checker] Collision detected between %s and %s at position (%f, %f, %f)!", 
-          collision.collision1_name.c_str(), collision.collision2_name.c_str(),
-          collision.contact_positions[0].x, collision.contact_positions[0].y, collision.contact_positions[0].z);
+        // ROS_INFO("[Collision Checker] Collision detected between %s and %s at position (%f, %f, %f)!", 
+        //   collision.collision1_name.c_str(), collision.collision2_name.c_str(),
+        //   collision.contact_positions[0].x, collision.contact_positions[0].y, collision.contact_positions[0].z);
 
         geometry_msgs::Point collision_point;
         collision_point.x = collision.contact_positions[0].x;

@@ -1,5 +1,5 @@
 <launch>
-  <arg name="num_drones" value="4"/>
+  <arg name="num_drones" value="5"/>
   <!-- size of map, change the size inflate x, y, z according to your application -->
   <arg name="map_size_x" value="80.0"/>
   <arg name="map_size_y" value="80.0"/>

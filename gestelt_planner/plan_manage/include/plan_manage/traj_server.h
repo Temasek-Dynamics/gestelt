@@ -16,6 +16,7 @@
 #include <mavros_msgs/SetMode.h>
 #include <std_msgs/Empty.h>
 #include <std_msgs/Int8.h>
+#include <std_msgs/String.h>
 #include <visualization_msgs/Marker.h>
 
 #include <traj_utils/PolyTraj.h>
@@ -78,6 +79,8 @@ public:
    * Callback for polynomial trajectories
   */
   void polyTrajCallback(traj_utils::PolyTrajPtr msg);
+
+  void plannerStateCB(const std_msgs::String::ConstPtr &msg);
 
   void UAVStateCb(const mavros_msgs::State::ConstPtr &msg);
 
@@ -273,6 +276,7 @@ private:
   ros::Publisher uav_path_pub_; // Publisher of actual UAV path
   ros::Publisher tracking_error_pub_; // Publisher of tracking error
   
+  ros::Subscriber planner_state_sub_; // Subscriber for polynomial trajectory
   ros::Subscriber poly_traj_sub_; // Subscriber for polynomial trajectory
   ros::Subscriber heartbeat_sub_; // Subscriber for heartbeat
   ros::Subscriber uav_state_sub_; // Subscriber for UAV State (MavROS)
@@ -293,6 +297,7 @@ private:
   ServerEvent server_event_{ServerEvent::EMPTY_E};
   ServerState server_state_{ServerState::INIT};
   mavros_msgs::State uav_current_state_;
+  std::string planner_state_;
 
   geometry_msgs::PoseStamped uav_pose_;
   nav_msgs::Odometry uav_odom_;

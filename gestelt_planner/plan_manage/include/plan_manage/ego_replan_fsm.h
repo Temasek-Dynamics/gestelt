@@ -9,6 +9,7 @@
 #include <ros/ros.h>
 #include <std_msgs/Empty.h>
 #include <std_msgs/Float64.h>
+#include <std_msgs/String.h>
 #include <vector>
 #include <visualization_msgs/Marker.h>
 
@@ -236,6 +237,7 @@ private:
   int drone_id_;
 
   /* parameters */
+  bool apply_frame_origin_offset_; // If true, applies a transformation from UAV origin frame to world
   geometry_msgs::Pose uav_origin_to_world_tf_; // Frame transformation from origin to world frame
   geometry_msgs::Pose world_to_uav_origin_tf_; // Frame transformation from world frame to origin
 
@@ -270,17 +272,22 @@ private:
 
   // Count number of FSM exec iterations
   int fsm_itr_num{0};
-
   /* ROS utils */
+
   ros::NodeHandle node_;
+
   // Timer to execute FSM callback
+  ros::Timer pub_state_timer_;
   ros::Timer tick_state_timer_;
   ros::Timer exec_state_timer_;
-  ros::Timer safety_timer_; // TODO remove
 
+  // Subscribers and publishers
   ros::Subscriber waypoint_sub_, odom_sub_, trigger_sub_, broadcast_ploytraj_sub_, mandatory_stop_sub_;
   ros::Subscriber waypoints_sub_;
+
   ros::Publisher poly_traj_pub_, broadcast_ploytraj_pub_, heartbeat_pub_, ground_height_pub_;
+
+  ros::Publisher state_pub_;
 
   /* planning utils */
   EGOPlannerManager::Ptr planner_manager_;
@@ -289,6 +296,12 @@ private:
 private: 
 
   /* Timer callbacks */
+
+  /**
+   * @brief Timer callback to publish current FSM State
+   * @param e 
+   */
+  void pubStateTimerCB(const ros::TimerEvent &e);
 
   /**
    * @brief Timer callback to tick State Machine
@@ -421,7 +434,7 @@ private:
 
   // Transform the trajectory from world frame to UAV frame
   void transformMINCOTrajectoryToUAVOrigin(traj_utils::MINCOTraj & MINCO_msg){
-
+    
     // Account for offset from UAV origin to world frame
     for (int i = 0; i < MINCO_msg.duration.size() - 1; i++)
     {
