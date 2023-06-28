@@ -28,7 +28,7 @@ nmcli dev wifi connect "wifi_name" password "wifi_password"
 # Install ROS at http://wiki.ros.org/noetic/Installation/Ubuntu
 
 # Install dependencies
-sudo apt-get install build-essential
+sudo apt-get install build-essential git -y
 
 # Copy .bashrc configuration file over
 export ROS_DISTRO="noetic"

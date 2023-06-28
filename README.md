@@ -22,10 +22,10 @@ A simple path planning framework for swarm robots. This is a work in progress, a
 export ROS_DISTRO="noetic"
 
 # Install ROS dependencies
-sudo apt install ros-${ROS_DISTRO}-tf2-sensor-msgs -y
+# sudo apt install ros-${ROS_DISTRO}-tf2-sensor-msgs -y
 sudo apt install ros-${ROS_DISTRO}-mavlink ros-${ROS_DISTRO}-mavros ros-${ROS_DISTRO}-mavros-msgs ros-${ROS_DISTRO}-mavros-extras -y
 # Install external dependencies
-sudo apt install tmux python3-vcstool xmlstarlet -y
+sudo apt install git build-essential tmux python3-vcstool xmlstarlet -y
 sudo apt install protobuf-compiler libeigen3-dev libopencv-dev libgoogle-glog-dev -y
 wget https://raw.githubusercontent.com/mavlink/mavros/master/mavros/scripts/install_geographiclib_datasets.sh
 sudo bash ./install_geographiclib_datasets.sh
@@ -39,7 +39,7 @@ mkdir -p ~/gestelt_ws/src/
 cd ~/gestelt_ws/src
 git clone https://github.com/JohnTGZ/gestelt.git
 cd gestelt
-vcs import < thirdparty.repos --recursive
+vcs import < simulators.repos --recursive
 ```
 
 3. Install PX4 firmware
