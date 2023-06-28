@@ -1,4 +1,8 @@
+# radxa_utils
+This package contains useful scripts and launch files to setup and test the radxa communications.
+
 # Setting up the Radxa
+
 ```bash
 
 # Install tools
@@ -41,4 +45,21 @@ alias sbash="source ~/.bashrc"
 # http://wiki.ros.org/ROS/NetworkSetup
 export ROS_MASTER_URI=http://PC_IP:11311
 
+```
+
+# Testing communications
+Assuming we just have 2 machines A (192.168.31.173) and B (192.168.31.166) connected to the same LAN.
+They all have to have the same ROS_MASTER_URI. In this case, the ROS_MASTER_URI is "http://192.168.31.173:11311". A is the talker and B is the listener.
+
+
+```bash
+# Ping each 
+
+# Use ifconfig to figure out their IPs within the LAN
+
+# On machine A:
+roslaunch radxa_utils talker.launch ros_master_uri:=http://192.168.31.173:11311 ros_ip:=192.168.31.173
+
+# On machine B:
+roslaunch radxa_utils listener.launch ros_master_uri:=http://192.168.31.173:11311 ros_ip:=192.168.31.166
 ```
