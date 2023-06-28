@@ -73,3 +73,4 @@
 22. (23/6/23) Added obstacle collision sensor to base_link of Raynor gazebo model. And added parsing and visualization of collision with obstacles.
 23. (23/6/23) Added launch files to record/playback rosbags of simulation runs.
 24. (26/6/23) Added option to launch files for running on Radxa
+25. (28/6/23) Add tested Radxa setup file

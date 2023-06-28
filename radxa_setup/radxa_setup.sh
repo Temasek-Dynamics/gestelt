@@ -2,10 +2,10 @@
 export ROS_DISTRO="noetic"
 
 # Install dependency packages
+sudo apt install git build-essential tmux python3-vcstool xmlstarlet -y
 sudo apt install ros-${ROS_DISTRO}-mavlink ros-${ROS_DISTRO}-mavros ros-${ROS_DISTRO}-mavros-msgs ros-${ROS_DISTRO}-mavros-extras -y
 sudo apt install ros-${ROS_DISTRO}-roslint ros-${ROS_DISTRO}-gazebo-msgs -y
-sudo apt install git build-essential tmux python3-vcstool xmlstarlet -y
-sudo apt install libopencv-dev ros-${ROS_DISTRO}-cv-bridge ros-${ROS_DISTRO}-pcl-ros -y
+sudo apt install libopencv-dev ros-${ROS_DISTRO}-cv-bridge ros-${ROS_DISTRO}-pcl-ros libeigen3-dev -y
 wget https://raw.githubusercontent.com/mavlink/mavros/master/mavros/scripts/install_geographiclib_datasets.sh
 sudo bash ./install_geographiclib_datasets.sh
 
