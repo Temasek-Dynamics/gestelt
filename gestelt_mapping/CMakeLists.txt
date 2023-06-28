@@ -13,7 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
 )
 
 find_package(
-  octomap REQUIRED
+  # octomap REQUIRED
 )
 
 ## System dependencies are found with CMake's conventions
@@ -154,12 +154,12 @@ include_directories(
 #   ${catkin_LIBRARIES}
 # )
 
-add_executable(simple_example src/simple_example.cpp)
-add_dependencies(simple_example ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-target_link_libraries(simple_example
-  ${catkin_LIBRARIES}
-  ${OCTOMAP_LIBRARIES}
-)
+# add_executable(simple_example src/simple_example.cpp)
+# add_dependencies(simple_example ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+# target_link_libraries(simple_example
+#   ${catkin_LIBRARIES}
+#   ${OCTOMAP_LIBRARIES}
+# )
 
 #############
 ## Install ##

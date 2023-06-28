@@ -54,7 +54,7 @@
   <build_export_depend>rospy</build_export_depend>
   <exec_depend>roscpp</exec_depend>
   <exec_depend>rospy</exec_depend>
-  <depend>octomap</depend>
+  <!-- <depend>octomap</depend> -->
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>
