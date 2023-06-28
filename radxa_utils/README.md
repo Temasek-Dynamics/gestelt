@@ -63,3 +63,15 @@ roslaunch radxa_utils talker.launch ros_master_uri:=http://192.168.31.173:11311 
 # On machine B:
 roslaunch radxa_utils listener.launch ros_master_uri:=http://192.168.31.173:11311 ros_ip:=192.168.31.166
 ```
+
+```bash
+# Matchine A
+export ROS_MASTER_URI=http://192.168.31.173:11311
+export ROS_HOSTNAME=192.168.31.173
+export ROS_IP=192.168.31.173
+
+# Matchine B
+export ROS_MASTER_URI=http://192.168.31.173:11311
+export ROS_HOSTNAME=192.168.31.166
+export ROS_IP=192.168.31.166
+```

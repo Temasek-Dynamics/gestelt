@@ -6,6 +6,7 @@
 
     <env name="ROS_MASTER_URI" value="$(arg ros_master_uri)"/>
     <env name="ROS_IP" value="$(arg ros_ip)"/>
+    <env name="ROS_HOSTNAME" value="$(arg ros_ip)"/>
 
     <node pkg="radxa_utils" type="talker" name="talker_0" output="screen" />
 
