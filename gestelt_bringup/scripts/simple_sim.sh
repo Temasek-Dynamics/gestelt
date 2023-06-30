@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SESSION="formation_sesh"
+SESSION="simple_sim"
 SESSIONEXISTS=$(tmux list-sessions | grep $SESSION)
 
 #####

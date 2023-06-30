@@ -1,4 +1,6 @@
 <launch>
+  <!-- Launches Gazebo environment and multiple PX4 SITL instances -->
+
   <!-- Gazebo parameters -->
   <arg name="world_name"/>
   <!-- Vehicle name used by PX4 configuration -->

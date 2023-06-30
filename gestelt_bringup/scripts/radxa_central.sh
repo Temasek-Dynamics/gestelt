@@ -1,6 +1,14 @@
 #!/bin/bash
 
-SESSION="gazebo_sim_multi_uav"
+if [ "$#" != 2 ]; then 
+    echo -e "usage: ./radxa_central ros_master_uri ros_ip\n"
+    return 1
+fi
+
+ros_master_uri=$1
+ros_ip=$2
+
+SESSION="radxa_central"
 SESSIONEXISTS=$(tmux list-sessions | grep $SESSION)
 
 #####
@@ -25,22 +33,21 @@ export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:$gestelt_bringup_DIR:$PX4_AUTOPILOT_RE
 # Commands
 #####
 CMD_0="
-roslaunch gestelt_bringup gz_multi_uav.launch world_name:=$SCRIPT_DIR/../simulation/worlds/ego_test.world
+roslaunch gestelt_bringup central_sim.launch world_name:=$SCRIPT_DIR/../simulation/worlds/empty.world 
+ros_master_uri:=${ros_master_uri} ros_ip:=${ros_ip}
 "
 
-# CMD_0="
-# roslaunch gestelt_bringup gz_multi_uav.launch  world_name:=$SCRIPT_DIR/../simulation/worlds/empty.world
-# "
-
 CMD_1="
-roslaunch gestelt_bringup rviz.launch config:=gz_sim
+roslaunch gestelt_bringup central_bridge.launch ros_master_uri:=${ros_master_uri} ros_ip:=${ros_ip}
 "
 
 CMD_2="
-roslaunch gestelt_bringup gz_multi_ego_planner.launch
+roslaunch gestelt_bringup rviz.launch config:=gz_sim ros_master_uri:=${ros_master_uri} ros_ip:=${ros_ip}
 "
 
-CMD_3="rosrun gestelt_bringup mission_startup_and_send_wp.py"
+CMD_3="
+roslaunch gestelt_bringup radxa_mission.launch ros_master_uri:=${ros_master_uri} ros_ip:=${ros_ip}
+"
 
 if [ "$SESSIONEXISTS" = "" ]
 then 
@@ -56,7 +63,8 @@ then
     tmux send-keys -t $SESSION:0.1 "$SOURCE_WS $CMD_1" C-m 
     sleep 1
     tmux send-keys -t $SESSION:0.2 "$SOURCE_WS $CMD_2" C-m 
-    tmux send-keys -t $SESSION:0.3 "$SOURCE_WS $CMD_3" C-m
+    tmux send-keys -t $SESSION:0.3 "$SOURCE_WS $CMD_3" C-m 
+
 fi
 
 # Attach session on the first window

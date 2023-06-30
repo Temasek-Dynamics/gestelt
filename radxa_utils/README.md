@@ -53,8 +53,6 @@ They all have to have the same ROS_MASTER_URI. In this case, the ROS_MASTER_URI 
 
 
 ```bash
-# Ping each 
-
 # Use ifconfig to figure out their IPs within the LAN
 
 # On machine A:
@@ -64,6 +62,7 @@ roslaunch radxa_utils talker.launch ros_master_uri:=http://192.168.31.173:11311 
 roslaunch radxa_utils listener.launch ros_master_uri:=http://192.168.31.173:11311 ros_ip:=192.168.31.166
 ```
 
+Setting environment variables manually
 ```bash
 # Matchine A
 export ROS_MASTER_URI=http://192.168.31.173:11311
@@ -74,4 +73,28 @@ export ROS_IP=192.168.31.173
 export ROS_MASTER_URI=http://192.168.31.173:11311
 export ROS_HOSTNAME=192.168.31.166
 export ROS_IP=192.168.31.166
+```
+
+# Quick Start
+
+## Single computer test
+```bash
+# On the central flight control computer
+cd ~/gestelt_ws/src/gestelt/gestelt_bringup/scripts
+./radxa_central.sh http://192.168.31.173:11311 192.168.31.173
+
+# On the UAV (ID 0)
+cd ~/gestelt_ws/src/gestelt/gestelt_bringup/scripts
+./radxa_uav.sh 0 http://192.168.31.173:11311 192.168.31.173
+```
+
+## Computer and radxa
+```bash
+# On the central flight control computer
+cd ~/gestelt_ws/src/gestelt/gestelt_bringup/scripts
+./radxa_central.sh http://192.168.31.173:11311 192.168.31.173
+
+# On the UAV (ID 0)
+cd ~/gestelt_ws/src/gestelt/gestelt_bringup/scripts
+./radxa_uav.sh 0 http://192.168.31.173:11311 192.168.31.166
 ```

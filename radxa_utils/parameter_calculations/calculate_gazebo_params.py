@@ -14,7 +14,7 @@ class TestValues:
         self.C_P_max = 0
         self.C_Q_max = 0
 
-    def read_csv(self, csv_filepath, num_experiments, num_rows, print_debug=False):
+    def read_csv(self, csv_filepath, num_experiments, num_rows, thrust_in_grams=False, print_debug=False):
         """
         num_experiments: Number of experiments
         num_rows: Number of rows per experiment
@@ -22,7 +22,7 @@ class TestValues:
 
         self.esc_in = np.ndarray(shape=(num_experiments, num_rows), dtype=float)
         self.n_in = np.ndarray(shape=(num_experiments, num_rows), dtype=float) # [rev/min]
-        self.n_in_rps = np.ndarray(shape=(num_experiments, num_rows), dtype=float) # [rev/s]
+        self.n_in_radians = np.ndarray(shape=(num_experiments, num_rows), dtype=float) # [rev/s]
         self.T_in = np.ndarray(shape=(num_experiments, num_rows), dtype=float)
         self.P_in = np.ndarray(shape=(num_experiments, num_rows), dtype=float)
 
@@ -46,9 +46,13 @@ class TestValues:
 
                 self.esc_in[arr_col, arr_row] = float(row["ESC signal (µs)"])
                 self.n_in[arr_col, arr_row] = float(row["Motor Optical Speed (RPM)"])
-                self.n_in_rps[arr_col, arr_row] = float(row["Motor Optical Speed (RPM)"]) / 60 # Convert from RPM to Rev per second
+                self.n_in_radians[arr_col, arr_row] = float(row["Motor Optical Speed (RPM)"]) * (2 * pi / 60 ) # Convert from RPM to Radians/second
                 self.P_in[arr_col, arr_row] = float(row["Electrical Power (W)"])
-                self.T_in[arr_col, arr_row] = float(row["Thrust (kgf)"]) * 9.80665 # Convert from kgf to N
+
+                if thrust_in_grams:
+                    self.T_in[arr_col, arr_row] = float(row["Thrust (g)"]) * 0.009806652 # Convert from g to N
+                else: 
+                    self.T_in[arr_col, arr_row] = float(row["Thrust (kgf)"]) * 9.80665 # Convert from kgf to N
 
                 # Reached end of current experiment, reset row counter
                 if (row_idx+1) % num_rows == 0:
@@ -87,22 +91,22 @@ class TestValues:
 
         plt.show()
 
-    def plot_T_against_rps(self, exp_num=0):
+    def plot_T_against_rad_per_sec(self, exp_num=0):
         """
         Plot thrust against revolutions per second
         exp_num: Experiment number
         """
         fig, ax = plt.subplots()
 
-        xp = np.linspace(0, 500, 100)
+        xp = np.linspace(750, 3250, 100)
 
-        z = np.polyfit(self.n_in_rps[exp_num], self.T_in[exp_num], 2)
-        print(f"For Thrust against RPS, polynomial coeffs: {z}")
+        z = np.polyfit(self.n_in_radians[exp_num], self.T_in[exp_num], 2)
+        print(f"For Thrust against Angular velocity (Rad/s), polynomial coeffs: {z}")
         z_poly = np.poly1d(z)
 
-        ax.plot(self.n_in_rps[exp_num], self.T_in[exp_num], '.', 
+        ax.plot(self.n_in_radians[exp_num], self.T_in[exp_num], '.', 
                 xp, z_poly(xp), '-')
-        ax.set_title("Thrust against RPS (revs / s)")
+        ax.set_title("Thrust against Angular velocity (Rad/s)")
         ax.grid(color = 'green', linestyle = '--', linewidth = 0.5)
 
         plt.show()
@@ -228,20 +232,21 @@ def main():
                        num_experiments=3, num_rows = 6, print_debug=False)
     # testvalue.read_csv("thrust_data_nin_1404_4850kv/StepsTest_2023-06-28_154851.csv", 
                     #    num_experiments=2, num_rows = 11, print_debug=True)
+    # testvalue.read_csv("thrust_data_nin_1404_4850kv/t_motor_f1404_kv4600_hq_3_3_3.csv", 
+                    #    num_experiments=1, num_rows = 11, thrust_in_grams=True, print_debug=False)
 
-    testvalue.get_coefficients()
+    # testvalue.get_coefficients()
 
     # print(f"C_P: {testvalue.C_P}")
     # print(f"C_Q: {testvalue.C_Q}")
-
     # Values taken from GWS 3x3 Prop: https://m-selig.ae.illinois.edu/props/volume-2/propDB-volume-2.html
-    print(f"moment_constant: {testvalue.get_moment_constant(C_P = 0.143404, C_T = 0.194753)}")
+    # print(f"moment_constant: {testvalue.get_moment_constant(C_P = 0.143404, C_T = 0.194753)}")
 
     #####
     # Plots
     #####
     # testvalue.plot_T_against_esc(exp_num=0)
-    testvalue.plot_T_against_rps(exp_num=0)
+    testvalue.plot_T_against_rad_per_sec(exp_num=0)
     # testvalue.plot_RPM_against_ESC(exp_num=1)
 
     # testvalue.plot_C_T()

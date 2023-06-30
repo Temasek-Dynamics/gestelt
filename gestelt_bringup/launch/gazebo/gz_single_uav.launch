@@ -1,4 +1,6 @@
 <launch>
+    <!-- Launches a PX4 SITL instance, spawns a vehicle in Gazebo, and publish TF Transforms for UAV-->
+
     <!-- Drone id -->
     <arg name="drone_id"/>
     <arg name="drone_id_ns" value="drone$(arg drone_id)"/>
@@ -44,7 +46,8 @@
       <arg     if="$(arg interactive)" name="px4_command_arg1" value="-d"/>
       <node name="sitl_$(arg drone_id)" pkg="px4" type="px4" output="screen" args="$(find px4)/build/px4_sitl_default/etc -s etc/init.d-posix/rcS -i $(arg drone_id) -w sitl_$(arg vehicle)_$(arg drone_id) $(arg px4_command_arg1)">
       </node>
-      <!-- spawn vehicle -->
+      
+      <!-- spawn vehicle in Gazebo -->
       <node name="$(arg vehicle)_$(arg drone_id)_spawn" output="screen" pkg="gazebo_ros" type="spawn_model" 
         args="-sdf -param model_description -model $(arg drone_id_ns) 
         -x $(arg init_x) -y $(arg init_y) -z $(arg init_z) -R 0.0 -P 0.0 -Y 0.0"/>

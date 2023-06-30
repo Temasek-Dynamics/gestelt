@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SESSION="quick_start_sesh"
+SESSION="test_gz_single"
 SESSIONEXISTS=$(tmux list-sessions | grep $SESSION)
 
 #####
