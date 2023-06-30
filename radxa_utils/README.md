@@ -98,3 +98,22 @@ cd ~/gestelt_ws/src/gestelt/gestelt_bringup/scripts
 cd ~/gestelt_ws/src/gestelt/gestelt_bringup/scripts
 ./radxa_uav.sh 0 http://192.168.31.173:11311 192.168.31.166
 ```
+
+# TODO
+Communicaiotn between different machines happen on a wifi network
+
+1. (PX4 SITL + Gazebo) <-> (Egoplanner on Radxa)   
+    - Latency in sending/receiving 
+        - grid map
+        - PVA commands
+2. (PX4 HITL + Gazebo + Egoplanner)
+    - 
+3. (PX4 HITL + Gazebo)<-> (Egoplanner on Radxa)
+4. (Gazebo) <-> (Radxa + PX4 HITL)
+
+# Issues
+1. All params must be uploaded by the master node (The parameter server exists on the master and all other node will read from the same parameter server)
+    - export ROS_MASTER_URI on all machines in the .bashrc script (which will be sourced on startup)
+2. Having PX4 SITL on the central computer will result in latency for the PVA commands sent to the drone
+    - Use a real PX4 to interface with Radxa
+3. Mesh file location is different on the host computer than on the UAV

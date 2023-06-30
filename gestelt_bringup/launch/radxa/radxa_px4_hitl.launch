@@ -1,0 +1,74 @@
+<launch>
+    <!-- Launches a PX4 SITL instance, spawns a vehicle in Gazebo, and publish TF Transforms for UAV-->
+    
+    <!-- ros_master_uri is the machine on which ROSCore is running -->
+    <arg name="ros_master_uri"/>
+    <!-- ros_ip is the ip of the current machine -->
+    <arg name="ros_ip"/>
+    <!-- Drone id -->
+    <arg name="drone_id"/>
+    <arg name="drone_id_ns" value="drone$(arg drone_id)"/>
+    <arg name="init_x"/>
+    <arg name="init_y"/>
+    <arg name="init_z"/>
+    <!-- Gazebo parameters -->
+    <arg name="vehicle"/>
+    <arg name="model"/>
+    <!-- PX4 configs -->
+    <arg name="est" default="ekf2"/>
+    <arg name="interactive" default="true"/>
+    
+    <env name="PX4_SIM_MODEL" value="gazebo-classic_$(arg vehicle)" />
+    <!-- Set ROS Environment variables -->
+    <env name="ROS_MASTER_URI" value="$(arg ros_master_uri)"/>
+    <env name="ROS_IP" value="$(arg ros_ip)"/>
+    <env name="ROS_HOSTNAME" value="$(arg ros_ip)"/>
+    <env name="PX4_SIM_HOST_ADDR" value="$(arg ros_ip)"/>
+
+    <!-- Add static transform from drone to it's origin -->
+    <node pkg="tf" type="static_transform_publisher" 
+      name="map_to_$(arg drone_id_ns)_origin_tf" 
+      args="$(arg init_x) $(arg init_y) $(arg init_z) 0 0 0 1 map $(arg drone_id_ns)_origin 100" />
+
+    <!-- Add static transform from base_link to camera_link -->
+    <node pkg="tf" type="static_transform_publisher" 
+      name="$(arg drone_id_ns)_base_link_to_cam_link_tf" 
+      args="0.08 0 0.02 0 0 0 1 $(arg drone_id_ns)_base_link $(arg drone_id_ns)_cam_link 100" />
+
+    <group ns="$(arg drone_id_ns)">
+      <!-- MAVROS and vehicle configs -->
+      <arg name="mavlink_udp_port" default="$(eval 14560 + arg('drone_id'))"/>
+      <arg name="mavlink_tcp_port" default="$(eval 4560 + arg('drone_id'))"/>
+      <arg name="fcu_addr" default="$(eval 14540 + arg('drone_id'))"/>
+      <arg name="fcu_port" default="$(eval 14580 + arg('drone_id'))"/>
+      <arg name="fcu_url" default="/dev/ttyACM0:57600" />
+      <!-- <arg name="fcu_url" default="udp://:14540@localhost:14557" /> -->
+
+      <!-- generate sdf vehicle model -->
+      <arg name="cmd" default="xmlstarlet ed -u '//plugin[@name=&quot;mavlink_interface&quot;]/mavlink_tcp_port' -v $(arg mavlink_tcp_port) -u '//plugin[@name=&quot;camera_controller&quot;]/frameName' -v $(arg drone_id_ns)_cam_link $(find gestelt_bringup)/simulation/models/$(arg model)/$(arg model).sdf"/>
+      <param command="$(arg cmd)" name="model_description"/>
+
+      <!-- spawn vehicle in Gazebo -->
+      <node name="$(arg vehicle)_$(arg drone_id)_spawn" output="screen" pkg="gazebo_ros" type="spawn_model" 
+        args="-sdf -param model_description -model $(arg drone_id_ns) 
+        -x $(arg init_x) -y $(arg init_y) -z $(arg init_z) -R 0.0 -P 0.0 -Y 0.0"/>
+
+      <!-- MAVROS -->
+      <node pkg="mavros" type="mavros_node" name="mavros" required="true" clear_params="true" output="screen">
+        <param name="fcu_url" value="$(arg fcu_url)" />
+        <param name="gcs_url" value="" />
+        <param name="target_system_id" value="$(eval 1 + arg('drone_id'))"/>
+        <param name="target_component_id" value="1" />
+        <param name="fcu_protocol" value="v2.0" />
+
+        <!-- load blacklist, config -->
+        <rosparam command="load" file="$(find gestelt_bringup)/config/px4_pluginlists.yaml" />
+        <rosparam command="load" file="$(find gestelt_bringup)/config/px4_config.yaml" />
+
+        <param name="global_position/frame_id" value="$(arg drone_id_ns)_origin"/>
+        <param name="local_position/frame_id" value="$(arg drone_id_ns)_origin"/>
+      </node>
+
+    </group>
+
+</launch>

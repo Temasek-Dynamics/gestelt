@@ -23,7 +23,7 @@
     <env name="ROS_MASTER_URI" value="$(arg ros_master_uri)"/>
     <env name="ROS_IP" value="$(arg ros_ip)"/>
     <env name="ROS_HOSTNAME" value="$(arg ros_ip)"/>
-
+    <env name="PX4_SIM_HOST_ADDR" value="$(arg ros_ip)"/>
 
     <!-- Add static transform from drone to it's origin -->
     <node pkg="tf" type="static_transform_publisher" 
@@ -41,7 +41,8 @@
       <arg name="mavlink_tcp_port" default="$(eval 4560 + arg('drone_id'))"/>
       <arg name="fcu_addr" default="$(eval 14540 + arg('drone_id'))"/>
       <arg name="fcu_port" default="$(eval 14580 + arg('drone_id'))"/>
-      <arg name="fcu_url" default="udp://:$(arg fcu_addr)@localhost:$(arg fcu_port)"/>
+      <!-- <arg name="fcu_url" default="udp://:$(arg fcu_addr)@localhost:$(arg fcu_port)"/> -->
+      <arg name="fcu_url" default="udp://:$(arg fcu_addr)@$(arg ros_ip):$(arg fcu_port)"/>
 
       <!-- generate sdf vehicle model -->
       <arg name="cmd" default="xmlstarlet ed -u '//plugin[@name=&quot;mavlink_interface&quot;]/mavlink_tcp_port' -v $(arg mavlink_tcp_port) -u '//plugin[@name=&quot;camera_controller&quot;]/frameName' -v $(arg drone_id_ns)_cam_link $(find gestelt_bringup)/simulation/models/$(arg model)/$(arg model).sdf"/>

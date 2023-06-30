@@ -1,0 +1,127 @@
+<launch>
+    <arg name="px4_device" default="true"/>
+    <!-- Drone id -->
+    <arg name="drone_id"/>
+    <arg name="drone_id_ns" value="drone$(arg drone_id)"/>
+    <arg name="num_drones"/>
+    <arg name="init_x"/>
+    <arg name="init_y"/>
+    <arg name="init_z"/>
+    <!-- size of map, change the size inflate x, y, z according to your application -->
+    <arg name="map_size_x"/>
+    <arg name="map_size_y"/>
+    <arg name="map_size_z"/>
+    <!-- Input/output topics -->
+    <arg name="command_topic"/>
+    <arg name="odometry_topic"/>
+    <arg name="pose_topic"/>
+    <arg name="depth_img_topic"/>
+    <arg name="point_cloud_topic"/>
+    <!-- number of moving objects -->
+    <arg name="obj_num" value="10" />
+    <!-- drone_origin_frame: For PX4 SITL, leave the default. 
+    For other forms of simulation, set it to the "world" frame -->
+    <arg name="drone_origin_frame" default="$(arg drone_id_ns)_origin" />
+
+    <!-- Ego Planner params -->
+    <include file="$(find gestelt_bringup)/launch/advanced_param.xml">
+        <arg name="px4_device" value="$(arg px4_device)"/>
+
+        <arg name="drone_id" value="$(arg drone_id)"/>
+        <arg name="num_drones" value="$(arg num_drones)" />
+        <arg name="init_x" value="$(arg init_x)"/>
+        <arg name="init_y" value="$(arg init_y)"/>
+        <arg name="init_z" value="$(arg init_z)"/>
+
+        <arg name="map_size_x_" value="$(arg map_size_x)"/>
+        <arg name="map_size_y_" value="$(arg map_size_y)"/>
+        <arg name="map_size_z_" value="$(arg map_size_z)"/>
+        <arg name="obj_num_set" value="$(arg obj_num)" />
+
+        <!-- grid_map/pose_type: Toggle between subscription to
+            1 ("grid_map/pose") or 
+            2 ("grid_map/odom") 
+            for use as camera pose/odom-->
+        <arg name="POSE_TYPE" value="1" />
+        <!-- grid_map/sensor_type: Toggle between subscription to
+            1 ("grid_map/cloud") or 
+            2 ("grid_map/depth") 
+            for use as camera sensor input -->
+        <arg name="SENSOR_TYPE" value="2" />
+        <arg name="gridmap_frame_id" value="$(arg drone_origin_frame)"/>
+            
+        <!-- Applies a camera to UAV body transformation to the depth camera input -->
+        <arg name="transform_camera_pose" value="true"/>
+
+        <!-- camera pose: transform of camera frame in the world frame -->
+        <!-- depth topic: depth image, 640x480 by default -->
+        <!-- don't set cloud_topic if you already set these ones! -->
+        <arg name="depth_topic" value="/$(arg drone_id_ns)/$(arg depth_img_topic)"/>
+        <!-- topic of point cloud measurement, such as from LIDAR  -->
+        <!-- don't set camera pose and depth, if you already set this one! -->
+        <arg name="cloud_topic" value="/$(arg drone_id_ns)/$(arg point_cloud_topic)"/>
+
+        <arg name="pose_topic" value="/$(arg drone_id_ns)/$(arg pose_topic)"/>
+        <arg name="odometry_topic" value="/$(arg drone_id_ns)/$(arg odometry_topic)"/>
+
+        <!-- intrinsic params of the depth camera, only valid if SENSOR_TYPE is 2 -->
+        <!-- The values here are for the libgazebo_ros_openni_kinect gazebo simulated camera -->
+        <arg name="cx" value="424.5"/>
+        <arg name="cy" value="240.5"/>
+        <arg name="fx" value="454.6857718666893"/>
+        <arg name="fy" value="454.6857718666893"/>
+
+        <!-- maximum velocity, acceleration and jerk the drone will reach -->
+        <arg name="max_vel" value="1.5" />
+        <arg name="max_acc" value="3.0" />
+        <arg name="max_jer" value="20.0" />
+        
+        <!-- thresh_no_replan_meter: Replan only if current position and local target exceeds this parameter -->
+        <arg name="thresh_no_replan_meter" value="1.0" />
+        <!-- thresh_replan_time: Replanning period (1/frequency)-->
+        <arg name="thresh_replan_time" value="0.5" />
+        <!--always set to 1.5 times grater than sensing horizon-->
+        <!-- sensing horizon here refers to the sensor range. e.g. about 4.5-5m for realsense d435 -->
+        <arg name="planning_horizon" value="7.5" />
+        <!-- TODO: What is this param? -->
+        <arg name="use_distinctive_trajs" value="false" />
+        <!-- 1: use 2D Nav Goal to select goal  -->
+        <!-- 2: Assign waypoints via a topic  -->
+        <arg name="flight_type" value="2" />
+
+    </include>
+
+    <!-- Trajectory server -->
+    <node pkg="ego_planner" name="drone_$(arg drone_id)_traj_server" type="traj_server_node" output="screen">
+        <param name="drone_id" value="$(arg drone_id)"/>
+        <param name="origin_frame" value="$(arg drone_origin_frame)"/>
+        <param name="drone_model_mesh" value="file://$(find gestelt_bringup)/simulation/meshes/fake_drone.dae"/>
+
+        <!-- Trajectory params -->
+        <param name="traj_server/time_forward" value="1.0" type="double"/>
+        <!-- Frequency to publish command -->
+        <param name="traj_server/pub_cmd_freq" value="25.0" type="double"/>
+        <param name="traj_server/state_machine_tick_freq" value="50.0" type="double"/>
+        <param name="traj_server/takeoff_height" value="2.0" type="double"/>
+
+        <param name="traj_server/max_poses_to_track" value="1000" type="int"/>
+
+        <!-- Subscribed Topics -->
+        <remap from="/planner_state" to="/$(arg drone_id_ns)/planner_state"/>
+
+        <remap from="~planning/trajectory" to="/drone_$(arg drone_id)_planning/trajectory"/>
+        <remap from="/mavros/state" to="/$(arg drone_id_ns)/mavros/state"/>
+        <remap from="/mavros/local_position/pose" to="/$(arg drone_id_ns)/$(arg pose_topic)"/>
+        <remap from="/mavros/local_position/odom" to="/$(arg drone_id_ns)/$(arg odometry_topic)"/>
+        <!-- Published Topics -->
+        <remap from="/mavros/setpoint_raw/local" to="/$(arg drone_id_ns)/$(arg command_topic)"/>
+        <remap from="/server_state" to="/$(arg drone_id_ns)/server_state"/>
+        <remap from="/uav_path" to="/$(arg drone_id_ns)/uav_path"/>
+        <remap from="/tracking_error" to="/$(arg drone_id_ns)/tracking_error"/>
+        <remap from="~model" to="/$(arg drone_id_ns)/model"/>
+        <!-- Service clients -->
+        <remap from="/mavros/cmd/arming" to="/$(arg drone_id_ns)/mavros/cmd/arming"/>
+        <remap from="/mavros/set_mode" to="/$(arg drone_id_ns)/mavros/set_mode"/>
+    </node>
+
+</launch>

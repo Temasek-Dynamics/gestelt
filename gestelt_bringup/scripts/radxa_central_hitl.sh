@@ -33,15 +33,20 @@ export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:$gestelt_bringup_DIR:$PX4_AUTOPILOT_RE
 # Commands
 #####
 CMD_0="
-roslaunch gestelt_bringup central_sim.launch world_name:=$SCRIPT_DIR/../simulation/worlds/empty.world ros_master_uri:=${ros_master_uri} ros_ip:=${ros_ip}
+roslaunch gestelt_bringup central_sim_hitl.launch world_name:=$SCRIPT_DIR/../simulation/worlds/empty.world ros_master_uri:=${ros_master_uri} ros_ip:=${ros_ip}
 "
+
+# CMD_1="
+# roslaunch gestelt_bringup central_bridge.launch ros_master_uri:=${ros_master_uri} ros_ip:=${ros_ip}
+# "
 
 CMD_1="
-roslaunch gestelt_bringup central_bridge.launch ros_master_uri:=${ros_master_uri} ros_ip:=${ros_ip}
+roslaunch gestelt_bringup rviz.launch config:=gz_sim ros_master_uri:=${ros_master_uri} ros_ip:=${ros_ip}
 "
 
+
 CMD_2="
-roslaunch gestelt_bringup rviz.launch config:=gz_sim ros_master_uri:=${ros_master_uri} ros_ip:=${ros_ip}
+roslaunch gestelt_bringup radxa_ego_planner.launch drone_id:=0 ros_master_uri:=${ros_master_uri} ros_ip:=${ros_ip}
 "
 
 CMD_3="
@@ -62,6 +67,7 @@ then
     tmux send-keys -t $SESSION:0.1 "$SOURCE_WS $CMD_1" C-m 
     sleep 1
     tmux send-keys -t $SESSION:0.2 "$SOURCE_WS $CMD_2" C-m 
+    sleep 1
     tmux send-keys -t $SESSION:0.3 "$SOURCE_WS $CMD_3" C-m 
 
 fi

@@ -6,8 +6,6 @@ using namespace Eigen;
 
 void TrajServer::init(ros::NodeHandle& nh)
 {
-  logInfo("Initializing");
-
   /* ROS Params*/
   nh.param("drone_id", drone_id_, 0);
   nh.param("origin_frame", origin_frame_, std::string("world"));
@@ -27,6 +25,8 @@ void TrajServer::init(ros::NodeHandle& nh)
   nh.param("traj_server/max_poses_to_track", max_poses_to_track_, 250);
 
   nh.param("traj_server/error_tracking_window", error_tracking_window_, 2.5);
+
+  logInfo("Initializing");
 
   /* Subscribers */
   poly_traj_sub_ = nh.subscribe("planning/trajectory", 10, &TrajServer::polyTrajCallback, this);
@@ -59,6 +59,8 @@ void TrajServer::init(ros::NodeHandle& nh)
   debug_timer_ = nh.createTimer(ros::Duration(1/debug_freq), &TrajServer::debugTimerCb, this);
 
   initModelMesh(drone_model_mesh_filepath);
+  
+  logInfo("Initialized model");
 }
 
 void TrajServer::initModelMesh(const std::string& drone_model_mesh_filepath){
@@ -219,6 +221,8 @@ void TrajServer::execTrajTimerCb(const ros::TimerEvent &e)
 void TrajServer::tickServerStateTimerCb(const ros::TimerEvent &e)
 {
   // logInfoThrottled(string_format("Current Server State: [%s]", StateToString(getServerState()).c_str()), 1.0);
+
+  logInfo("tickServerStateTimerCb");
 
   switch (getServerState())
   {
