@@ -35,12 +35,14 @@
 
   <!-- Drone 0 -->
   <include file="$(find gestelt_bringup)/launch/radxa/radxa_px4_sitl.launch">
-    <arg name="drone_id"   value="0"/>
-    <arg name="vehicle" default="$(arg vehicle)"/>
-    <arg name="model" default="$(arg model)"/>
-    <arg name="init_x"     value="1.0"/>
-    <arg name="init_y"     value="-1.0"/>
-    <arg name="init_z"     value="0.0"/>
+    <arg name="ros_master_uri"  value="$(arg ros_master_uri)"/>
+    <arg name="ros_ip"          value="$(arg ros_ip)"/>
+    <arg name="drone_id"        value="0"/>
+    <arg name="vehicle"         value="$(arg vehicle)"/>
+    <arg name="model"           value="$(arg model)"/>
+    <arg name="init_x"          value="1.0"/>
+    <arg name="init_y"          value="-1.0"/>
+    <arg name="init_z"          value="0.0"/>
   </include>
 
 </launch>

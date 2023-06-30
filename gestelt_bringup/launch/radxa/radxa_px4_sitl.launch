@@ -1,6 +1,10 @@
 <launch>
     <!-- Launches a PX4 SITL instance, spawns a vehicle in Gazebo, and publish TF Transforms for UAV-->
     
+    <!-- ros_master_uri is the machine on which ROSCore is running -->
+    <arg name="ros_master_uri"/>
+    <!-- ros_ip is the ip of the current machine -->
+    <arg name="ros_ip"/>
     <!-- Drone id -->
     <arg name="drone_id"/>
     <arg name="drone_id_ns" value="drone$(arg drone_id)"/>
@@ -13,7 +17,13 @@
     <!-- PX4 configs -->
     <arg name="est" default="ekf2"/>
     <arg name="interactive" default="true"/>
+    
     <env name="PX4_SIM_MODEL" value="gazebo-classic_$(arg vehicle)" />
+    <!-- Set ROS Environment variables -->
+    <env name="ROS_MASTER_URI" value="$(arg ros_master_uri)"/>
+    <env name="ROS_IP" value="$(arg ros_ip)"/>
+    <env name="ROS_HOSTNAME" value="$(arg ros_ip)"/>
+
 
     <!-- Add static transform from drone to it's origin -->
     <node pkg="tf" type="static_transform_publisher" 
