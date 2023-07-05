@@ -44,9 +44,7 @@ CMD_2="
 roslaunch gestelt_bringup rviz.launch config:=gz_sim ros_master_uri:=${ros_master_uri} ros_ip:=${ros_ip}
 "
 
-CMD_3="
-roslaunch gestelt_bringup radxa_mission.launch ros_master_uri:=${ros_master_uri} ros_ip:=${ros_ip}
-"
+CMD_3="roslaunch gestelt_bringup radxa_mission.launch ros_master_uri:=${ros_master_uri} ros_ip:=${ros_ip}"
 
 if [ "$SESSIONEXISTS" = "" ]
 then 
@@ -62,7 +60,7 @@ then
     tmux send-keys -t $SESSION:0.1 "$SOURCE_WS $CMD_1" C-m 
     sleep 1
     tmux send-keys -t $SESSION:0.2 "$SOURCE_WS $CMD_2" C-m 
-    tmux send-keys -t $SESSION:0.3 "$SOURCE_WS $CMD_3" C-m 
+    tmux send-keys -t $SESSION:0.3 "$SOURCE_WS $CMD_3" 
 
 fi
 

@@ -86,7 +86,7 @@ export ROS_IP=192.168.31.166
 ```bash
 # On the central flight control computer
 cd ~/gestelt_ws/src/gestelt/gestelt_bringup/scripts
-./radxa_central.sh http://192.168.31.173:11311 192.168.31.173
+./radxa_central_sitl.sh http://192.168.31.173:11311 192.168.31.173
 
 # On the UAV (ID 0)
 cd ~/gestelt_ws/src/gestelt/gestelt_bringup/scripts
@@ -97,7 +97,7 @@ cd ~/gestelt_ws/src/gestelt/gestelt_bringup/scripts
 ```bash
 # On the central flight control computer
 cd ~/gestelt_ws/src/gestelt/gestelt_bringup/scripts
-./radxa_central.sh http://192.168.31.173:11311 192.168.31.173
+./radxa_central_sitl.sh http://192.168.31.173:11311 192.168.31.173
 
 # On the UAV (ID 0)
 cd ~/gestelt_ws/src/gestelt/gestelt_bringup/scripts
