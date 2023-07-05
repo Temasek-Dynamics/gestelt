@@ -43,8 +43,13 @@ alias sbash="source ~/.bashrc"
 
 # Set up network
 # http://wiki.ros.org/ROS/NetworkSetup
-export ROS_MASTER_URI=http://PC_IP:11311
+export ROS_MASTER_URI=http://MASTER_IP:11311
+export ROS_HOSTNAME=OWN_IP
+export ROS_IP=OWN_IP
 
+# Convenience function
+alias pull_repo="git -C ~/gestelt_ws/src/gestelt/ pull"
+alias catkin_make_release="catkin_make -DCMAKE_BUILD_TYPE=Release -DCATKIN_BLACKLIST_PACKAGES="rviz_plugins""
 ```
 
 # Testing communications
@@ -100,7 +105,7 @@ cd ~/gestelt_ws/src/gestelt/gestelt_bringup/scripts
 ```
 
 # TODO
-Communicaiotn between different machines happen on a wifi network
+Communication between different machines happen on a wifi network
 
 1. (PX4 SITL + Gazebo) <-> (Egoplanner on Radxa)   
     - Latency in sending/receiving 
@@ -117,3 +122,26 @@ Communicaiotn between different machines happen on a wifi network
 2. Having PX4 SITL on the central computer will result in latency for the PVA commands sent to the drone
     - Use a real PX4 to interface with Radxa
 3. Mesh file location is different on the host computer than on the UAV
+
+
+# Metrics to measure
+MAKE SURE TO BUILD IN RELEASE MODE
+
+- Record metrics 
+    - Communications
+        - Signal strength
+        - Frequency of sending 
+        - Message size
+        - Latency
+    - Hardware (Radxa)
+        - CPU Usage
+        - Algo run time
+            - CPU Time
+                - CPU Time measures the amount of time that a single process has actively used a CPU to perform computations. It does not include the time that process has spent waiting for external events. System tracks the CPU time used by each process separately
+            - Processor Time
+                - Processor time measures the amount of time any CPU has been in use by any process. It is a basic system resource, since there's a limit to how much can exist in any given interval ( the elapsed time of the interval times the number of CPUs in the computer)
+            - https://www.gnu.org/software/libc/manual/html_node/Time-Basics.html
+    - Runs
+        - Success rate
+        - Maximum flight speed it can enable in sparse/dense environment
+        - Maximum number of UAVs it can handle

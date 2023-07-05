@@ -37,15 +37,18 @@
 
     <group ns="$(arg drone_id_ns)">
       <!-- MAVROS and vehicle configs -->
+
       <arg name="mavlink_udp_port" default="$(eval 14560 + arg('drone_id'))"/>
       <arg name="mavlink_tcp_port" default="$(eval 4560 + arg('drone_id'))"/>
+
       <arg name="fcu_addr" default="$(eval 14540 + arg('drone_id'))"/>
       <arg name="fcu_port" default="$(eval 14580 + arg('drone_id'))"/>
-      <arg name="fcu_url" default="/dev/ttyACM0:57600" />
-      <!-- <arg name="fcu_url" default="udp://:14540@localhost:14557" /> -->
+      <!-- <arg name="fcu_url" default="/dev/ttyACM0:57600" /> -->
+      <arg name="fcu_url" default="udp://:$(arg fcu_addr)@localhost:$(arg fcu_port)"/>
 
       <!-- generate sdf vehicle model -->
-      <arg name="cmd" default="xmlstarlet ed -u '//plugin[@name=&quot;mavlink_interface&quot;]/mavlink_tcp_port' -v $(arg mavlink_tcp_port) -u '//plugin[@name=&quot;camera_controller&quot;]/frameName' -v $(arg drone_id_ns)_cam_link $(find gestelt_bringup)/simulation/models/$(arg model)/$(arg model).sdf"/>
+      <!-- <arg name="cmd" default="xmlstarlet ed -u '//plugin[@name=&quot;mavlink_interface&quot;]/mavlink_tcp_port' -v $(arg mavlink_tcp_port) -u '//plugin[@name=&quot;mavlink_interface&quot;]/mavlink_udp_port' -v $(arg mavlink_udp_port) -u '//plugin[@name=&quot;camera_controller&quot;]/frameName' -v $(arg drone_id_ns)_cam_link $(find gestelt_bringup)/simulation/models/$(arg model)/$(arg model).sdf"/> -->
+      <arg name="cmd" default="xmlstarlet ed -u '//plugin[@name=&quot;camera_controller&quot;]/frameName' -v $(arg drone_id_ns)_cam_link $(find gestelt_bringup)/simulation/models/$(arg model)/$(arg model).sdf"/>
       <param command="$(arg cmd)" name="model_description"/>
 
       <!-- spawn vehicle in Gazebo -->
@@ -61,7 +64,6 @@
         <param name="target_component_id" value="1" />
         <param name="fcu_protocol" value="v2.0" />
 
-        <!-- load blacklist, config -->
         <rosparam command="load" file="$(find gestelt_bringup)/config/px4_pluginlists.yaml" />
         <rosparam command="load" file="$(find gestelt_bringup)/config/px4_config.yaml" />
 

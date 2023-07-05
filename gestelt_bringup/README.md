@@ -42,19 +42,6 @@ EMPTY_E,          // 5
         - Battery: 2S 7.4V
         - Propellers: 3 inch three-blade propellers
 
-    - Test on RADXA device
-        - Test message passing from separate networks
-        - How to handle launching remotely from flight control?
-    - Record metrics 
-        - Maximum possible speed
-        - Communications reqd – message size, frequency of sending
-        - Communications latency tolerated – milliseconds
-        - Algo run time on Radxa – milliseconds
-        - Success rate
-        - Maximum flight speed it can enable in sparse/dense environment
-        - Maximum number of UAVs it can handle
-
-
 ## Simulation
 - Explore weird phenomenom between drone_num/formation_num and path planning problems
     - When actual number of drones are 2 
@@ -70,9 +57,6 @@ EMPTY_E,          // 5
 - Add mutexes
 - For trajectory server, read the current state of the mavros/state topic before determining the starting state machine state.
 - Disabling of offboard mode for land state would be a good feature. Current challenge to implement it is to be able to reliably check that the drone has actually landed (Otherwise it will be stuck in AUTO.LOITER while hovering in the air, being unable to disarm).
-
-## Benchmarking/Diagnostics
-- Benchmark the replanning time for each drone's planner (are they close enough to the specified replanning frequency?)
 
 ## PID Tuning Guide
 - Tune PID 

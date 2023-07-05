@@ -222,8 +222,6 @@ void TrajServer::tickServerStateTimerCb(const ros::TimerEvent &e)
 {
   // logInfoThrottled(string_format("Current Server State: [%s]", StateToString(getServerState()).c_str()), 1.0);
 
-  logInfo("tickServerStateTimerCb");
-
   switch (getServerState())
   {
     case ServerState::INIT:
