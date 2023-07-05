@@ -215,7 +215,6 @@ void TrajServer::execTrajTimerCb(const ros::TimerEvent &e)
       // Do nothing, drone should stop all motors immediately
       break;
   }
-
 }
 
 void TrajServer::tickServerStateTimerCb(const ros::TimerEvent &e)

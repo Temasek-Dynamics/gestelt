@@ -107,14 +107,22 @@ cd ~/gestelt_ws/src/gestelt/gestelt_bringup/scripts
 # TODO
 Communication between different machines happen on a wifi network
 
-1. (PX4 SITL + Gazebo) <-> (Egoplanner on Radxa)   
-    - Latency in sending/receiving 
-        - grid map
-        - PVA commands
-2. (PX4 HITL + Gazebo + Egoplanner)
-    - 
-3. (PX4 HITL + Gazebo)<-> (Egoplanner on Radxa)
-4. (Gazebo) <-> (Radxa + PX4 HITL)
+1. (PX4 SITL + Gazebo on PC) <-> (Egoplanner on Radxa)   
+    - Bandwidth: Using `iperf`
+        - Bandwidth:
+            - TCP: 57.3 Mbits/sec 
+            - UDP: 90Mbits/sec - 101 Mbits/sec
+    - Latency: Using `sudo mtr --no-dns --report --report-cycles 60 IP_ADDR`. 
+        - Latency averages 14.8 ms. Best is 8.7 ms, Worst is 32.1 ms.
+    - Sources of large bandwidth
+        - Depth camera sensor data
+    - Potential solutions to reduce bandwidth required
+        - Compress depth image before sending over. Or only send point clouds over (Which have been compressed)
+2. (PX4 HITL) + (Gazebo + Egoplanner on PC)
+    - Can be done with Flywoo F405S
+    - Cannot be done with PX4 FMUV2 (Pixhawk 1 FCU). FCU's flash memory is too low to take off additional HITL modules.
+    
+3. (PX4 HITL) <-> (Gazebo on PC) <-> (Egoplanner on Radxa)
 
 # Issues
 1. All params must be uploaded by the master node (The parameter server exists on the master and all other node will read from the same parameter server)
@@ -123,18 +131,27 @@ Communication between different machines happen on a wifi network
     - Use a real PX4 to interface with Radxa
 3. Mesh file location is different on the host computer than on the UAV
 
-
 # Metrics to measure
 MAKE SURE TO BUILD IN RELEASE MODE
 
 - Record metrics 
     - Communications
-        - Signal strength
-        - Frequency of sending 
-        - Message size
-        - Latency
+        - Signal strength to wifi network
+            - `iw dev wlan0 link`
+        - Bandwidth (Network capacity), total messages sizes
+            - `sudo iftop`
+        - Network Speed 
+            - TCP Mode
+                - On PC A, set up server `iperf -s`, take note of tcp port number
+                - On PC B, set up client connecting to IP of PC A: `iperf -c PC_A_IP`
+            - UDP Mode
+                - On PC A, set up server `iperf -s -u`, take note of tcp port number
+                - On PC B, set up client connecting to IP of PC A: `iperf -c PC_A_IP -u -b 1000m`
+        - Network Latency
+            - use `sudo mtr --no-dns --report --report-cycles 60 IP_ADDR` or `ping`
     - Hardware (Radxa)
         - CPU Usage
+            - Using `htop`, it is shown to use around (55%, 30%, 30%, 30%) for the Radxa's 4 cores
         - Algo run time
             - CPU Time
                 - CPU Time measures the amount of time that a single process has actively used a CPU to perform computations. It does not include the time that process has spent waiting for external events. System tracks the CPU time used by each process separately
