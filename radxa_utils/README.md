@@ -108,12 +108,15 @@ cd ~/gestelt_ws/src/gestelt/gestelt_bringup/scripts
 Communication between different machines happen on a wifi network
 
 1. (PX4 SITL + Gazebo on PC) <-> (Egoplanner on Radxa)   
-    - Bandwidth: Using `iperf`
-        - Bandwidth:
-            - TCP: 57.3 Mbits/sec 
-            - UDP: 90Mbits/sec - 101 Mbits/sec
-    - Latency: Using `sudo mtr --no-dns --report --report-cycles 60 IP_ADDR`. 
-        - Latency averages 14.8 ms. Best is 8.7 ms, Worst is 32.1 ms.
+    -   Data
+        - Bandwidth: Using `iperf`
+            - Bandwidth:
+                - TCP: 57.3 Mbits/sec 
+                - UDP: 90Mbits/sec - 101 Mbits/sec
+        - Latency: Using `sudo mtr --no-dns --report --report-cycles 60 IP_ADDR`. 
+            - Latency averages 14.8 ms. Best is 8.7 ms, Worst is 32.1 ms.
+        - CPU Usage: Using `htop`
+            - it is shown to use around (55%, 30%, 30%, 30%) for the Radxa's 4 cores
     - Sources of large bandwidth
         - Depth camera sensor data
     - Potential solutions to reduce bandwidth required
@@ -149,15 +152,14 @@ MAKE SURE TO BUILD IN RELEASE MODE
                 - On PC B, set up client connecting to IP of PC A: `iperf -c PC_A_IP -u -b 1000m`
         - Network Latency
             - use `sudo mtr --no-dns --report --report-cycles 60 IP_ADDR` or `ping`
+        - ROS
+            - Measure message size for incoming point clouds
     - Hardware (Radxa)
         - CPU Usage
-            - Using `htop`, it is shown to use around (55%, 30%, 30%, 30%) for the Radxa's 4 cores
-        - Algo run time
-            - CPU Time
-                - CPU Time measures the amount of time that a single process has actively used a CPU to perform computations. It does not include the time that process has spent waiting for external events. System tracks the CPU time used by each process separately
-            - Processor Time
-                - Processor time measures the amount of time any CPU has been in use by any process. It is a basic system resource, since there's a limit to how much can exist in any given interval ( the elapsed time of the interval times the number of CPUs in the computer)
-            - https://www.gnu.org/software/libc/manual/html_node/Time-Basics.html
+            - Use `htop`
+        - CPU Runtime 
+            - Refer to the following for technical defintion of CPU Time https://www.gnu.org/software/libc/manual/html_node/Time-Basics.html
+            - Measure for planner, Depth map
     - Runs
         - Success rate
         - Maximum flight speed it can enable in sparse/dense environment
