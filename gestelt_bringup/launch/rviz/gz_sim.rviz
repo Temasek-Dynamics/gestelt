@@ -8,7 +8,6 @@ Panels:
         - /drone0_ego1/Planning1/goal_point1
         - /drone0_mavros1
         - /drone0_mavros1/Perception1/drone cloud1
-        - /drone0_mavros1/Localization1
         - /drone0_mavros1/Localization1//mavros/local_position/pose1
         - /drone2_ego1/Mapping1
         - /drone3_ego1/Mapping1
@@ -31,7 +30,7 @@ Panels:
   - Class: rviz/Time
     Name: Time
     SyncMode: 0
-    SyncSource: ""
+    SyncSource: occ
 Preferences:
   PromptSaveOnExit: true
 Toolbars:
@@ -92,7 +91,7 @@ Visualization Manager:
           Marker Topic: /drone0/model
           Name: model
           Namespaces:
-            {}
+            drone0: true
           Queue Size: 100
           Value: true
         - Class: rviz/Group
@@ -102,7 +101,7 @@ Visualization Manager:
               Marker Topic: /drone_0_ego_planner_node/goal_point
               Name: goal_point
               Namespaces:
-                {}
+                "": true
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
@@ -118,7 +117,7 @@ Visualization Manager:
               Marker Topic: /drone_0_ego_planner_node/optimal_list
               Name: optimal_list
               Namespaces:
-                {}
+                "": true
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
@@ -1063,7 +1062,7 @@ Visualization Manager:
       Marker Topic: /obstacle_collision_points
       Name: obstacle_collision
       Namespaces:
-        {}
+        "": true
       Queue Size: 100
       Value: true
   Enabled: true
@@ -1094,7 +1093,7 @@ Visualization Manager:
   Value: true
   Views:
     Current:
-      Angle: -1.5550005435943604
+      Angle: -1.5850005149841309
       Class: rviz/TopDownOrtho
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
@@ -1104,10 +1103,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Scale: 101.12348175048828
+      Scale: 60.643280029296875
       Target Frame: my_view
-      X: 0.1801769733428955
-      Y: -0.12471313029527664
+      X: 0.6087167263031006
+      Y: 0.12297606468200684
     Saved:
       - Class: rviz/FPS
         Enable Stereo Rendering:
@@ -1256,5 +1255,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1440
-  X: 303
-  Y: 102
+  X: -344
+  Y: 275

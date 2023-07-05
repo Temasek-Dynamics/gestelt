@@ -33,7 +33,7 @@
     args="0 0 0 0 0 0 1 world map 100" />
 
   <!-- Drone 0 -->
-  <include file="$(find gestelt_bringup)/launch/radxa/radxa_px4_sitl.launch">
+  <include file="$(find gestelt_bringup)/launch/radxa/sitl/radxa_px4_sitl.launch">
     <arg name="ros_master_uri"  value="$(arg ros_master_uri)"/>
     <arg name="ros_ip"          value="$(arg ros_ip)"/>
     <arg name="drone_id"        value="0"/>
