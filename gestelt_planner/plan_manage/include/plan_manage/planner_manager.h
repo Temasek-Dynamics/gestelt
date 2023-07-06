@@ -3,13 +3,14 @@
 
 #include <stdlib.h>
 
-#include <optimizer/poly_traj_optimizer.h>
-#include <traj_utils/DataDisp.h>
-#include <plan_env/grid_map.h>
-#include <traj_utils/plan_container.hpp>
 #include <ros/ros.h>
-#include <traj_utils/planning_visualization.h>
+
+#include <optimizer/poly_traj_optimizer.h>
 #include <optimizer/poly_traj_utils.hpp>
+#include <plan_env/grid_map.h>
+#include <traj_utils/DataDisp.h>
+#include <traj_utils/plan_container.hpp>
+#include <traj_utils/planning_visualization.h>
 
 namespace ego_planner
 {

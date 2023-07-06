@@ -22,6 +22,7 @@ find_package(catkin REQUIRED COMPONENTS
   message_generation
   cv_bridge
   trajectory_server_msgs
+  gestelt_utils
 )
 
 # catkin_package(CATKIN_DEPENDS message_runtime)

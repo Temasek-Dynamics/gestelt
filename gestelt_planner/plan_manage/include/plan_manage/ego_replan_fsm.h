@@ -23,7 +23,7 @@
 #include <traj_utils/PolyTraj.h>
 #include <traj_utils/MINCOTraj.h>
 
-#include <plan_manage/timebenchmark.h>
+#include <gestelt_utils/timebenchmark.h>
 
 #include <trajectory_server_msgs/Waypoints.h>
 #include <trajectory_server_msgs/TimeBenchmark.h>
@@ -282,6 +282,7 @@ private:
   ros::Timer pub_state_timer_;
   ros::Timer tick_state_timer_;
   ros::Timer exec_state_timer_;
+  ros::Timer pub_time_benchmark_timer_;
 
   // Subscribers and publishers
   ros::Subscriber waypoint_sub_, odom_sub_, trigger_sub_, broadcast_ploytraj_sub_, mandatory_stop_sub_;
@@ -295,7 +296,7 @@ private:
   /* planning utils */
   EGOPlannerManager::Ptr planner_manager_;
   PlanningVisualization::Ptr visualization_;
-  TimeBenchmark time_benchmark_; // Measures and stores CPU/Wall runtime
+  std::shared_ptr<TimeBenchmark> time_benchmark_; // Measures and stores CPU/Wall runtime
 
 private: 
 
@@ -328,6 +329,13 @@ private:
    * @param e 
    */
   void execStateTimerCB(const ros::TimerEvent &e);
+
+  /**
+   * @brief Timer callback to execute looping commands depending on the current state 
+   * 
+   * @param e 
+   */
+  void pubTimeBenchmarkTimerCB(const ros::TimerEvent &e);
 
   /**
    * @brief Emergency stop the drone

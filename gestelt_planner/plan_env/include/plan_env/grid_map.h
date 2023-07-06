@@ -24,6 +24,9 @@
 
 #include <plan_env/raycast.h>
 
+#include <trajectory_server_msgs/TimeBenchmark.h>
+#include <gestelt_utils/timebenchmark.h>
+
 #define logit(x) (log((x) / (1 - (x))))
 
 using namespace std;
@@ -163,7 +166,6 @@ public:
     INVALID_IDX = -10000
   };
 
-
   enum SensorType
   {
     SENSOR_CLOUD = 1,
@@ -204,6 +206,9 @@ public:
 
   // Initialize the GridMap class and it's callbacks
   void initMap(ros::NodeHandle &nh);
+
+  // Get time benchmark shared pointer
+  void initTimeBenchmark(std::shared_ptr<TimeBenchmark> time_benchmark);
 
   /** Helper methods */
   
@@ -311,6 +316,8 @@ private:
   // uniform_real_distribution<double> rand_noise_;
   // normal_distribution<double> rand_noise2_;
   // default_random_engine eng_;
+
+  std::shared_ptr<TimeBenchmark> time_benchmark_;
 };
 
 /* ============================== definition of inline function

@@ -11,10 +11,10 @@ struct Benchmark {
   double avg_planner_cpu_time;
   double avg_planner_wall_time;
 
-  std::deque<std::pair<double, double>> planner_total_cpu_time;
-  std::deque<std::pair<double, double>> planner_total_wall_time;
-  double avg_planner_total_cpu_time;
-  double avg_planner_total_wall_time;
+  std::deque<std::pair<double, double>> gridmap_update_occ_cpu_time;
+  std::deque<std::pair<double, double>> gridmap_update_occ_wall_time;
+  double avg_gridmap_update_occ_cpu_time;
+  double avg_gridmap_update_occ_wall_time;
 
   // Replan frequency
 
@@ -68,8 +68,8 @@ public:
         benchmarks_[drone_id].planner_cpu_time.pop_front();
         benchmarks_[drone_id].planner_wall_time.pop_front();
 
-        benchmarks_[drone_id].planner_total_cpu_time.pop_front();
-        benchmarks_[drone_id].planner_total_wall_time.pop_front();
+        benchmarks_[drone_id].gridmap_update_occ_cpu_time.pop_front();
+        benchmarks_[drone_id].gridmap_update_occ_wall_time.pop_front();
       }
     }
 
@@ -77,8 +77,8 @@ public:
     benchmarks_[drone_id].planner_cpu_time.push_back(std::make_pair(msg->planner_cpu_time, now));
     benchmarks_[drone_id].planner_wall_time.push_back(std::make_pair(msg->planner_wall_time, now));
 
-    benchmarks_[drone_id].planner_total_cpu_time.push_back(std::make_pair(msg->planner_total_cpu_time, now));
-    benchmarks_[drone_id].planner_total_wall_time.push_back(std::make_pair(msg->planner_total_wall_time, now));
+    benchmarks_[drone_id].gridmap_update_occ_cpu_time.push_back(std::make_pair(msg->gridmap_update_occ_cpu_time, now));
+    benchmarks_[drone_id].gridmap_update_occ_wall_time.push_back(std::make_pair(msg->gridmap_update_occ_wall_time, now));
   }
 
   // Aggreate all the benchmarks
@@ -89,8 +89,8 @@ public:
       benchmarks_[i].avg_planner_cpu_time = calculate_average(benchmarks_[i].planner_cpu_time);
       benchmarks_[i].avg_planner_wall_time = calculate_average(benchmarks_[i].planner_wall_time);
 
-      benchmarks_[i].avg_planner_total_cpu_time = calculate_average(benchmarks_[i].planner_total_cpu_time);
-      benchmarks_[i].avg_planner_total_wall_time = calculate_average(benchmarks_[i].planner_total_wall_time);
+      benchmarks_[i].avg_gridmap_update_occ_cpu_time = calculate_average(benchmarks_[i].gridmap_update_occ_cpu_time);
+      benchmarks_[i].avg_gridmap_update_occ_wall_time = calculate_average(benchmarks_[i].gridmap_update_occ_wall_time);
       
     }
 
@@ -109,8 +109,8 @@ public:
       ROS_INFO("=====");
       ROS_INFO("  Planner(Local) Avg Time: CPU: %f ms, Wall: %f ms", 
         benchmarks_[i].avg_planner_cpu_time, benchmarks_[i].avg_planner_wall_time);
-      ROS_INFO("  Planner(Total) Avg Time: CPU: %f ms, Wall: %f ms", 
-        benchmarks_[i].avg_planner_total_cpu_time, benchmarks_[i].avg_planner_total_wall_time);
+      ROS_INFO("  Update Occ Avg Time: CPU: %f ms, Wall: %f ms", 
+        benchmarks_[i].avg_gridmap_update_occ_cpu_time, benchmarks_[i].avg_gridmap_update_occ_wall_time);
       ROS_INFO("=====");
     }
   }

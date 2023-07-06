@@ -17,6 +17,9 @@ struct Stopwatch {
 };
 
 struct TimeBenchmark {
+    TimeBenchmark(){
+    }
+
     std::unordered_map<std::string, Stopwatch> stopwatches;
 
     /**

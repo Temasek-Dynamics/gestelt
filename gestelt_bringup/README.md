@@ -67,13 +67,13 @@ MAKE SURE TO BUILD IN RELEASE MODE
         - Maximum number of UAVs it can handle
 
 # Demo
-- PX4 HITL
-- Added time benchmark
+- Added time benchmark to planner and gridmap updateoccupancy
 - Create message type that shows debug information such as the metrics
+- PX4 HITL  
+    - Could not figure out how to interface from actual PX4 to gazebo
 
 # TODO
-- Add timebenchmark class to 
-    - gridmap
+- Ignore more unnecessary packages to allow radxa to build faster
 - Need to correct point cloud transformation
 - Measure sensor data subscribed by gridmap
     - depth image size

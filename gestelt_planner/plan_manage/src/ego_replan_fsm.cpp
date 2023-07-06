@@ -10,10 +10,21 @@ namespace ego_planner
     have_recv_pre_agent_ = false;
     flag_escape_emergency_ = true;
 
+
     /* initialize main modules */
     visualization_.reset(new PlanningVisualization(nh));
     planner_manager_.reset(new EGOPlannerManager);
     planner_manager_->initPlanModules(nh, visualization_);
+
+    /* Benchmarking */
+    time_benchmark_ = std::make_shared<TimeBenchmark> ();
+    time_benchmark_->add_ids({
+      std:vector<std::string>{
+        "planFromLocalTraj", 
+        "grid_map_update_occupancy", 
+      }
+    });
+    planner_manager_->grid_map_->initTimeBenchmark(time_benchmark_);
 
     /* ROS Params*/
     nh.param("fsm/apply_frame_origin_offset", apply_frame_origin_offset_, false);
@@ -56,7 +67,6 @@ namespace ego_planner
     nh.param("fsm/pub_state_freq", pub_state_freq, 2.0);
     nh.param("fsm/tick_state_freq", tick_state_freq, 100.0);
     nh.param("fsm/exec_state_freq", exec_state_freq, 20.0);
-
     nh.param("fsm/pub_heartbeat_freq", pub_hb_freq, 10.0);
 
     /* Timer callbacks */
@@ -64,7 +74,8 @@ namespace ego_planner
     pub_state_timer_ = nh.createTimer(ros::Duration(1/pub_state_freq), &EGOReplanFSM::pubStateTimerCB, this);
     tick_state_timer_ = nh.createTimer(ros::Duration(1/tick_state_freq), &EGOReplanFSM::tickStateTimerCB, this);
     exec_state_timer_ = nh.createTimer(ros::Duration(1/exec_state_freq), &EGOReplanFSM::execStateTimerCB, this);
-    
+    pub_time_benchmark_timer_ = nh.createTimer(ros::Duration(1/10.0), &EGOReplanFSM::pubTimeBenchmarkTimerCB, this);
+
     /* Subscribers */
     odom_sub_ = nh.subscribe("odom_world", 1, &EGOReplanFSM::odometryCallback, this);
     mandatory_stop_sub_ = nh.subscribe("mandatory_stop", 1, &EGOReplanFSM::mandatoryStopCallback, this);
@@ -98,19 +109,12 @@ namespace ego_planner
       logError(string_format("Wrong target_type_ value! target_type_=%i", target_type_));
     }
 
-    /* Benchmarking */
-    time_benchmark_.add_ids({
-      std:vector<std::string>{
-        "execStateTimerCB", 
-        "planFromLocalTraj", 
-      }
-    });
+
   }
 
   /**
    * Timer Callbacks
   */
-
 
   void EGOReplanFSM::pubHeartbeatTimerCB(const ros::TimerEvent &e)
   {
@@ -258,8 +262,6 @@ namespace ego_planner
   }
 
   void EGOReplanFSM::execStateTimerCB(const ros::TimerEvent &e){
-    std::string benchmark_id = "execStateTimerCB";
-    time_benchmark_.start_stopwatch(benchmark_id);
 
     switch (getServerState())
     {
@@ -384,14 +386,18 @@ namespace ego_planner
       }
     }
 
-    time_benchmark_.stop_stopwatch(benchmark_id);
+  }
+
+  void EGOReplanFSM::pubTimeBenchmarkTimerCB(const ros::TimerEvent &e) {
 
     // Publish time benchmarks
     trajectory_server_msgs::TimeBenchmark time_bench_msg;
-    time_bench_msg.planner_cpu_time = time_benchmark_.get_elapsed_cpu_time("planFromLocalTraj");
-    time_bench_msg.planner_wall_time = time_benchmark_.get_elapsed_wall_time("planFromLocalTraj");
-    time_bench_msg.planner_total_cpu_time = time_benchmark_.get_elapsed_cpu_time("execStateTimerCB");
-    time_bench_msg.planner_total_wall_time = time_benchmark_.get_elapsed_wall_time("execStateTimerCB");
+    time_bench_msg.planner_cpu_time = time_benchmark_->get_elapsed_cpu_time("planFromLocalTraj");
+    time_bench_msg.planner_wall_time = time_benchmark_->get_elapsed_wall_time("planFromLocalTraj");
+
+    time_bench_msg.gridmap_update_occ_cpu_time = time_benchmark_->get_elapsed_cpu_time("grid_map_update_occupancy");
+    time_bench_msg.gridmap_update_occ_wall_time = time_benchmark_->get_elapsed_wall_time("grid_map_update_occupancy");
+    
     time_benchmark_pub_.publish(time_bench_msg);
   }
 
@@ -666,7 +672,7 @@ namespace ego_planner
   bool EGOReplanFSM::planFromLocalTraj(const int trial_times /*=1*/)
   {
     std::string benchmark_id = "planFromLocalTraj";
-    time_benchmark_.start_stopwatch(benchmark_id);
+    time_benchmark_->start_stopwatch(benchmark_id);
 
     LocalTrajData *info = &planner_manager_->traj_.local_traj;
     double t_cur = ros::Time::now().toSec() - info->start_time;
@@ -695,7 +701,7 @@ namespace ego_planner
       }
     }
 
-    time_benchmark_.stop_stopwatch(benchmark_id);
+    time_benchmark_->stop_stopwatch(benchmark_id);
 
     return success;
   }

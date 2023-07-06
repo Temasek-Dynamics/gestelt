@@ -191,6 +191,10 @@ void GridMap::initMap(ros::NodeHandle &nh)
   // eng_ = default_random_engine(rd());
 }
 
+void GridMap::initTimeBenchmark(std::shared_ptr<TimeBenchmark> time_benchmark){
+  time_benchmark_ = time_benchmark;
+}
+
 /** Gridmap data manipulation methods*/
 
 void GridMap::resetBuffer()
@@ -398,6 +402,9 @@ void GridMap::fadingCallback(const ros::TimerEvent & /*event*/)
 
 void GridMap::updateOccupancyCallback(const ros::TimerEvent & /*event*/)
 {
+    std::string benchmark_id = "grid_map_update_occupancy";
+    time_benchmark_->start_stopwatch(benchmark_id);
+
   if (md_.last_occ_update_time_.toSec() < 1.0){
     md_.last_occ_update_time_ = ros::Time::now();
   }
@@ -450,6 +457,8 @@ void GridMap::updateOccupancyCallback(const ros::TimerEvent & /*event*/)
 
   md_.occ_need_update_ = false;
   md_.local_updated_ = false;
+
+  time_benchmark_->stop_stopwatch(benchmark_id);
 }
 
 /** Subscriber callbacks */

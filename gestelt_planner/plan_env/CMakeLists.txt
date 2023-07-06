@@ -7,14 +7,19 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g")
 
 find_package(OpenCV REQUIRED)
 
+set (ROS_LIBRARIES
+    roscpp
+    rospy
+    std_msgs
+    visualization_msgs
+    cv_bridge
+    message_filters
+    trajectory_server_msgs
+    gestelt_utils
+)
 
 find_package(catkin REQUIRED COMPONENTS
-  roscpp
-  rospy
-  std_msgs
-  visualization_msgs
-  cv_bridge
-  message_filters
+    ${ROS_LIBRARIES}
 )
 
 find_package(Eigen3 REQUIRED)
@@ -23,7 +28,7 @@ find_package(PCL 1.7 REQUIRED)
 catkin_package(
  INCLUDE_DIRS include
  LIBRARIES plan_env
- CATKIN_DEPENDS roscpp std_msgs
+ CATKIN_DEPENDS ${ROS_LIBRARIES}
 #  DEPENDS system_lib
 )
 
