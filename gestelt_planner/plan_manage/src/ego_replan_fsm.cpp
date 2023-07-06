@@ -63,18 +63,15 @@ namespace ego_planner
     formation_start << pos[0], pos[1], pos[2];
     waypoints_.setStartWP(formation_start);
 
-    double pub_state_freq, tick_state_freq, exec_state_freq, pub_hb_freq;
-    nh.param("fsm/pub_state_freq", pub_state_freq, 2.0);
+    double pub_state_freq, tick_state_freq, exec_state_freq;
+    nh.param("fsm/pub_state_freq", pub_state_freq, 10.0);
     nh.param("fsm/tick_state_freq", tick_state_freq, 100.0);
     nh.param("fsm/exec_state_freq", exec_state_freq, 20.0);
-    nh.param("fsm/pub_heartbeat_freq", pub_hb_freq, 10.0);
 
     /* Timer callbacks */
-    pub_hb_timer_ = nh.createTimer(ros::Duration(1/pub_hb_freq), &EGOReplanFSM::pubHeartbeatTimerCB, this);
     pub_state_timer_ = nh.createTimer(ros::Duration(1/pub_state_freq), &EGOReplanFSM::pubStateTimerCB, this);
     tick_state_timer_ = nh.createTimer(ros::Duration(1/tick_state_freq), &EGOReplanFSM::tickStateTimerCB, this);
     exec_state_timer_ = nh.createTimer(ros::Duration(1/exec_state_freq), &EGOReplanFSM::execStateTimerCB, this);
-    pub_time_benchmark_timer_ = nh.createTimer(ros::Duration(1/10.0), &EGOReplanFSM::pubTimeBenchmarkTimerCB, this);
 
     /* Subscribers */
     odom_sub_ = nh.subscribe("odom_world", 1, &EGOReplanFSM::odometryCallback, this);
@@ -116,17 +113,25 @@ namespace ego_planner
    * Timer Callbacks
   */
 
-  void EGOReplanFSM::pubHeartbeatTimerCB(const ros::TimerEvent &e)
+  void EGOReplanFSM::pubStateTimerCB(const ros::TimerEvent &e)
   {
     std_msgs::Empty heartbeat_msg;
     heartbeat_pub_.publish(heartbeat_msg);
-  }
 
-  void EGOReplanFSM::pubStateTimerCB(const ros::TimerEvent &e)
-  {
     std_msgs::String planner_state;
     planner_state.data = StateToString(getServerState());
     state_pub_.publish(planner_state);
+
+    // Publish time benchmarks
+    trajectory_server_msgs::TimeBenchmark time_bench_msg;
+    time_bench_msg.planner_cpu_time = time_benchmark_->get_elapsed_cpu_time("planFromLocalTraj");
+    time_bench_msg.planner_wall_time = time_benchmark_->get_elapsed_wall_time("planFromLocalTraj");
+
+    time_bench_msg.gridmap_update_occ_cpu_time = time_benchmark_->get_elapsed_cpu_time("grid_map_update_occupancy");
+    time_bench_msg.gridmap_update_occ_wall_time = time_benchmark_->get_elapsed_wall_time("grid_map_update_occupancy");
+    
+    time_benchmark_pub_.publish(time_bench_msg);
+
   }
 
   void EGOReplanFSM::tickStateTimerCB(const ros::TimerEvent &e)
@@ -388,18 +393,6 @@ namespace ego_planner
 
   }
 
-  void EGOReplanFSM::pubTimeBenchmarkTimerCB(const ros::TimerEvent &e) {
-
-    // Publish time benchmarks
-    trajectory_server_msgs::TimeBenchmark time_bench_msg;
-    time_bench_msg.planner_cpu_time = time_benchmark_->get_elapsed_cpu_time("planFromLocalTraj");
-    time_bench_msg.planner_wall_time = time_benchmark_->get_elapsed_wall_time("planFromLocalTraj");
-
-    time_bench_msg.gridmap_update_occ_cpu_time = time_benchmark_->get_elapsed_cpu_time("grid_map_update_occupancy");
-    time_bench_msg.gridmap_update_occ_wall_time = time_benchmark_->get_elapsed_wall_time("grid_map_update_occupancy");
-    
-    time_benchmark_pub_.publish(time_bench_msg);
-  }
 
   /**
    * Subscriber Callbacks

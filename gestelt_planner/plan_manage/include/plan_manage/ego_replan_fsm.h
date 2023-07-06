@@ -278,11 +278,9 @@ private:
   ros::NodeHandle node_;
 
   // Timer to execute FSM callback
-  ros::Timer pub_hb_timer_; // publish heartbeat timer
   ros::Timer pub_state_timer_;
   ros::Timer tick_state_timer_;
   ros::Timer exec_state_timer_;
-  ros::Timer pub_time_benchmark_timer_;
 
   // Subscribers and publishers
   ros::Subscriber waypoint_sub_, odom_sub_, trigger_sub_, broadcast_ploytraj_sub_, mandatory_stop_sub_;
@@ -301,12 +299,6 @@ private:
 private: 
 
   /* Timer callbacks */
-
-  /**
-   * @brief Timer callback to publish heartbeat
-   * @param e 
-   */
-  void pubHeartbeatTimerCB(const ros::TimerEvent &e);
 
   /**
    * @brief Timer callback to publish current FSM State and benchmark
@@ -329,13 +321,6 @@ private:
    * @param e 
    */
   void execStateTimerCB(const ros::TimerEvent &e);
-
-  /**
-   * @brief Timer callback to execute looping commands depending on the current state 
-   * 
-   * @param e 
-   */
-  void pubTimeBenchmarkTimerCB(const ros::TimerEvent &e);
 
   /**
    * @brief Emergency stop the drone
@@ -400,7 +385,6 @@ private:
    * @return ServerEvent 
    */
   ServerEvent safetyChecks();
-
 
   bool checkSensorTimeout();
   bool checkGroundHeight();

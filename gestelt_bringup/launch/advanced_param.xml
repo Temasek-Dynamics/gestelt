@@ -102,7 +102,7 @@
         <param name="fsm/emergency_time" value="1.0" type="double"/>
         <param name="fsm/fail_safe" value="true"/>
 
-        <param name="fsm/pub_state_freq" value="2.0" type="double"/>
+        <param name="fsm/pub_state_freq" value="10.0" type="double"/>
         <param name="fsm/pub_heartbeat_freq" value="10.0" type="double"/>
 
         <!-- //////////////////// -->

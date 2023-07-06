@@ -67,13 +67,16 @@ MAKE SURE TO BUILD IN RELEASE MODE
         - Maximum number of UAVs it can handle
 
 # Demo
-- Added time benchmark to planner and gridmap updateoccupancy
-- Create message type that shows debug information such as the metrics
+- Radxa 
+    - Problems with building executables, 4gb RAM gets filled up before build process can complete
+- Benchmarking
+    - Added time benchmark to planner and gridmap updateoccupancy
 - PX4 HITL  
     - Could not figure out how to interface from actual PX4 to gazebo
+    - Relied on SIH firmware
 
 # TODO
-- Ignore more unnecessary packages to allow radxa to build faster
+- Use catkin_make with lower number of jobs
 - Need to correct point cloud transformation
 - Measure sensor data subscribed by gridmap
     - depth image size
