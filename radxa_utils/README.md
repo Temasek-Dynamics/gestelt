@@ -132,4 +132,3 @@ Communication between different machines happen on a wifi network
     - Easy fix: Use the file path for the central computer
 2. Having PX4 SITL on the central computer will result in latency for the PVA commands sent to the drone
     - Use PX4 HITL with radxa
-

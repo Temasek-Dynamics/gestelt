@@ -95,7 +95,8 @@
     <node pkg="ego_planner" name="drone_$(arg drone_id)_traj_server" type="traj_server_node" output="screen">
         <param name="drone_id" value="$(arg drone_id)"/>
         <param name="origin_frame" value="$(arg drone_origin_frame)"/>
-        <param name="drone_model_mesh" value="file://$(find gestelt_bringup)/simulation/meshes/fake_drone.dae"/>
+        <!-- <param name="drone_model_mesh" value="file://$(find gestelt_bringup)/simulation/meshes/fake_drone.dae"/> -->
+        <param name="drone_model_mesh" value="/home/john/gestelt_ws/src/gestelt/gestelt_bringup/simulation/meshes/fake_drone.dae"/>
 
         <!-- Trajectory params -->
         <param name="traj_server/time_forward" value="1.0" type="double"/>
