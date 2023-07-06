@@ -19,6 +19,10 @@ public:
     nh.param("num_drones", num_drones_, 0);
     num_drones_--; // TODO: remove this after solving the num_drones issue
 
+    std::string collision_topic, pose_topic;
+    nh.param("collision_topic", collision_topic, std::string("collision_sensor"));
+    nh.param("pose_topic", pose_topic, std::string("mavros/local_position/pose"));
+
     nh.param("check_collision_freq", check_collision_freq_, 10.0);
     nh.param("collision_tolerance", col_tol_, 0.2);
 
@@ -31,14 +35,14 @@ public:
     // Subscribers
     for (int i = 0; i < num_drones_; i++) {
       // Add pose topic subscription
-      std::string pose_topic = std::string("/drone" + std::to_string(i) + "/mavros/local_position/pose");
+      std::string pose_topic_indiv = std::string("/drone" + std::to_string(i) + "/" + pose_topic);
 
       ros::Subscriber pose_sub = nh.subscribe<geometry_msgs::PoseStamped>(
-        pose_topic, 5, boost::bind(&SwarmCollisionChecker::poseCB, this, _1, i));
+        pose_topic_indiv, 5, boost::bind(&SwarmCollisionChecker::poseCB, this, _1, i));
       drones_pose_sub_.push_back(pose_sub);
 
       // Add collision sensor subscription
-      std::string collision_sensor_topic = std::string("/drone" + std::to_string(i) + "/collision_sensor");
+      std::string collision_sensor_topic = std::string("/drone" + std::to_string(i) + "/" + collision_topic);
 
       ros::Subscriber collision_sensor_sub = nh.subscribe<gazebo_msgs::ContactsState>(
         collision_sensor_topic, 5, boost::bind(&SwarmCollisionChecker::collisionCB, this, _1, i));

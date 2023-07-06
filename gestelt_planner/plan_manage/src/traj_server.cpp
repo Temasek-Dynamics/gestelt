@@ -23,8 +23,9 @@ void TrajServer::init(ros::NodeHandle& nh)
   nh.param("traj_server/debug_freq", debug_freq, 10.0);
 
   nh.param("traj_server/max_poses_to_track", max_poses_to_track_, 250);
-
   nh.param("traj_server/error_tracking_window", error_tracking_window_, 2.5);
+
+  nh.param("traj_server/planner_heartbeat_timeout", planner_heartbeat_timeout_, 0.5);
 
   logInfo("Initializing");
 
@@ -59,8 +60,6 @@ void TrajServer::init(ros::NodeHandle& nh)
   debug_timer_ = nh.createTimer(ros::Duration(1/debug_freq), &TrajServer::debugTimerCb, this);
 
   initModelMesh(drone_model_mesh_filepath);
-  
-  logInfo("Initialized model");
 }
 
 void TrajServer::initModelMesh(const std::string& drone_model_mesh_filepath){

@@ -52,12 +52,15 @@ namespace ego_planner
     formation_start << pos[0], pos[1], pos[2];
     waypoints_.setStartWP(formation_start);
 
-    double pub_state_freq, tick_state_freq, exec_state_freq;
+    double pub_state_freq, tick_state_freq, exec_state_freq, pub_hb_freq;
     nh.param("fsm/pub_state_freq", pub_state_freq, 2.0);
     nh.param("fsm/tick_state_freq", tick_state_freq, 100.0);
     nh.param("fsm/exec_state_freq", exec_state_freq, 20.0);
 
+    nh.param("fsm/pub_heartbeat_freq", pub_hb_freq, 10.0);
+
     /* Timer callbacks */
+    pub_hb_timer_ = nh.createTimer(ros::Duration(1/pub_hb_freq), &EGOReplanFSM::pubHeartbeatTimerCB, this);
     pub_state_timer_ = nh.createTimer(ros::Duration(1/pub_state_freq), &EGOReplanFSM::pubStateTimerCB, this);
     tick_state_timer_ = nh.createTimer(ros::Duration(1/tick_state_freq), &EGOReplanFSM::tickStateTimerCB, this);
     exec_state_timer_ = nh.createTimer(ros::Duration(1/exec_state_freq), &EGOReplanFSM::execStateTimerCB, this);
@@ -80,6 +83,7 @@ namespace ego_planner
     heartbeat_pub_ = nh.advertise<std_msgs::Empty>("planning/heartbeat", 10);
     ground_height_pub_ = nh.advertise<std_msgs::Float64>("/ground_height_measurement", 10);
     state_pub_ = nh.advertise<std_msgs::String>("planner_state", 10);
+    time_benchmark_pub_ = nh.advertise<trajectory_server_msgs::TimeBenchmark>("plan_time_benchmark", 10);
 
     if (target_type_ == TARGET_TYPE::MANUAL_TARGET)
     {
@@ -93,26 +97,38 @@ namespace ego_planner
     else{
       logError(string_format("Wrong target_type_ value! target_type_=%i", target_type_));
     }
+
+    /* Benchmarking */
+    time_benchmark_.add_ids({
+      std:vector<std::string>{
+        "execStateTimerCB", 
+        "planFromLocalTraj", 
+      }
+    });
   }
 
   /**
    * Timer Callbacks
   */
 
+
+  void EGOReplanFSM::pubHeartbeatTimerCB(const ros::TimerEvent &e)
+  {
+    std_msgs::Empty heartbeat_msg;
+    heartbeat_pub_.publish(heartbeat_msg);
+  }
+
   void EGOReplanFSM::pubStateTimerCB(const ros::TimerEvent &e)
   {
     std_msgs::String planner_state;
     planner_state.data = StateToString(getServerState());
-
     state_pub_.publish(planner_state);
   }
 
   void EGOReplanFSM::tickStateTimerCB(const ros::TimerEvent &e)
   {
     // logInfoThrottled(string_format("Current State: [%s]", StateToString(getServerState()).c_str()), 1.0);
-    std_msgs::Empty heartbeat_msg;
-    heartbeat_pub_.publish(heartbeat_msg);
-
+    
     static int fsm_num = 0;
     if (fsm_num++ == 500)
     {
@@ -242,6 +258,9 @@ namespace ego_planner
   }
 
   void EGOReplanFSM::execStateTimerCB(const ros::TimerEvent &e){
+    std::string benchmark_id = "execStateTimerCB";
+    time_benchmark_.start_stopwatch(benchmark_id);
+
     switch (getServerState())
     {
       case INIT:
@@ -364,6 +383,16 @@ namespace ego_planner
         break;
       }
     }
+
+    time_benchmark_.stop_stopwatch(benchmark_id);
+
+    // Publish time benchmarks
+    trajectory_server_msgs::TimeBenchmark time_bench_msg;
+    time_bench_msg.planner_cpu_time = time_benchmark_.get_elapsed_cpu_time("planFromLocalTraj");
+    time_bench_msg.planner_wall_time = time_benchmark_.get_elapsed_wall_time("planFromLocalTraj");
+    time_bench_msg.planner_total_cpu_time = time_benchmark_.get_elapsed_cpu_time("execStateTimerCB");
+    time_bench_msg.planner_total_wall_time = time_benchmark_.get_elapsed_wall_time("execStateTimerCB");
+    time_benchmark_pub_.publish(time_bench_msg);
   }
 
   /**
@@ -613,29 +642,32 @@ namespace ego_planner
   /**
    * Planning Methods
   */
-
   bool EGOReplanFSM::planFromGlobalTraj(const int trial_times /*=1*/) 
   {
-
     start_pt_ = odom_pos_;
     start_vel_ = odom_vel_;
     start_acc_.setZero();
 
     // If this is the first time planning has been called, then initialize a random polynomial
     bool flag_random_poly_init = (timesOfConsecutiveStateCalls().first == 1);
-
+    bool success = false;
     for (int i = 0; i < trial_times; i++)
     {
       if (callReboundReplan(true, flag_random_poly_init))
       {
-        return true;
+        success = true;
+        break;
       }
     }
-    return false;
+
+    return success;
   }
 
   bool EGOReplanFSM::planFromLocalTraj(const int trial_times /*=1*/)
   {
+    std::string benchmark_id = "planFromLocalTraj";
+    time_benchmark_.start_stopwatch(benchmark_id);
+
     LocalTrajData *info = &planner_manager_->traj_.local_traj;
     double t_cur = ros::Time::now().toSec() - info->start_time;
 
@@ -643,28 +675,29 @@ namespace ego_planner
     start_vel_ = info->traj.getVel(t_cur);
     start_acc_ = info->traj.getAcc(t_cur);
 
-    // Try replanning (2 + 'trial_times') number of times.
+    // Start without initializing new poly and no randomized poly
     bool success = callReboundReplan(false, false);
 
     if (!success)
     {
+      // Retry: Initialize new poly and no randomized poly
       success = callReboundReplan(true, false);
       if (!success)
       {
         for (int i = 0; i < trial_times; i++)
         {
-          success = callReboundReplan(true, true);
-          if (success)
+          // Retry: Initialize new poly and randomized poly
+          if (callReboundReplan(true, true)){
+            success = true;
             break;
-        }
-        if (!success)
-        {
-          return false;
+          }
         }
       }
     }
 
-    return true;
+    time_benchmark_.stop_stopwatch(benchmark_id);
+
+    return success;
   }
 
   bool EGOReplanFSM::callReboundReplan(bool flag_use_poly_init, bool flag_randomPolyTraj)
@@ -725,15 +758,18 @@ namespace ego_planner
       /*** display ***/
       constexpr double step_size_t = 0.1;
       int i_end = floor(planner_manager_->traj_.global_traj.duration / step_size_t);
-      // gloabl_traj is only used for visualization
-      vector<Eigen::Vector3d> gloabl_traj(i_end);
+      // global_traj is only used for visualization
+      vector<Eigen::Vector3d> global_traj(i_end);
       for (int i = 0; i < i_end; i++)
       {
-        gloabl_traj[i] = planner_manager_->traj_.global_traj.traj.getPos(i * step_size_t);
+        global_traj[i] = planner_manager_->traj_.global_traj.traj.getPos(i * step_size_t);
       }
 
       have_target_ = true;
       have_new_target_ = true;
+      
+      // visualization_->displayGoalPoint(end_pt_, Eigen::Vector4d(1, 0, 0, 1), 0.3, 0);
+      visualization_->displayGlobalPathList(global_traj, 0.1, 0);
 
       // TODO Refactor
       /*** FSM ***/
@@ -749,9 +785,6 @@ namespace ego_planner
         // If not in READY state, Go to PLAN_LOCAL_TRAJ
         setServerEvent(PLAN_LOCAL_TRAJ_E);
       }
-
-      // visualization_->displayGoalPoint(end_pt_, Eigen::Vector4d(1, 0, 0, 1), 0.3, 0);
-      visualization_->displayGlobalPathList(gloabl_traj, 0.1, 0);
     }
     else
     {

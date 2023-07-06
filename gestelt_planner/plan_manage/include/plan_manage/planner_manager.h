@@ -27,12 +27,46 @@ namespace ego_planner
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
     /* main planning interface */
+
     void initPlanModules(ros::NodeHandle &nh, PlanningVisualization::Ptr vis = NULL);
+
+    /**
+     * @brief Compute initial MJO trajectory
+     * 
+     * @param start_pt 
+     * @param start_vel 
+     * @param start_acc 
+     * @param local_target_pt 
+     * @param local_target_vel 
+     * @param flag_polyInit 
+     * @param flag_randomPolyTraj 
+     * @param ts 
+     * @param initMJO 
+     * @return true 
+     * @return false 
+     */
     bool computeInitState(
         const Eigen::Vector3d &start_pt, const Eigen::Vector3d &start_vel,
         const Eigen::Vector3d &start_acc, const Eigen::Vector3d &local_target_pt,
         const Eigen::Vector3d &local_target_vel, const bool flag_polyInit,
         const bool flag_randomPolyTraj, const double &ts, poly_traj::MinJerkOpt &initMJO);
+
+    /**
+     * @brief Compute and optimize a minimum jerk trajectory
+     * 
+     * @param start_pt 
+     * @param start_vel 
+     * @param start_acc 
+     * @param end_pt 
+     * @param end_vel 
+     * @param formation_start_pt 
+     * @param formation_end_pt 
+     * @param flag_polyInit 
+     * @param flag_randomPolyTraj 
+     * @param touch_goal 
+     * @return true 
+     * @return false 
+     */
     bool reboundReplan(
         const Eigen::Vector3d &start_pt, const Eigen::Vector3d &start_vel,
         const Eigen::Vector3d &start_acc, const Eigen::Vector3d &end_pt,
@@ -56,14 +90,19 @@ namespace ego_planner
         const Eigen::Vector3d &start_pos, const Eigen::Vector3d &start_vel,
         const Eigen::Vector3d &start_acc, const std::vector<Eigen::Vector3d> &waypoints,
         const Eigen::Vector3d &end_vel, const Eigen::Vector3d &end_acc);
+
     void getLocalTarget(
         const double planning_horizen,
         const Eigen::Vector3d &start_pt, const Eigen::Vector3d &global_end_pt,
         Eigen::Vector3d &local_target_pos, Eigen::Vector3d &local_target_vel,
         bool &touch_goal);
+
     bool EmergencyStop(Eigen::Vector3d stop_pos);
+
     bool checkCollision(int drone_id);
+
     bool setLocalTrajFromOpt(const poly_traj::MinJerkOpt &opt, const bool touch_goal);
+
     inline double getSwarmClearance(void) { 
       return ploy_traj_opt_->get_swarm_clearance_(); 
     }

@@ -10,6 +10,7 @@ set (ROS_LIBRARIES
   gazebo_msgs
   geometry_msgs
   visualization_msgs
+  trajectory_server_msgs
   tf2_ros
 )
 
@@ -53,5 +54,13 @@ add_dependencies(swarm_collision_checker
   ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS}
 )
 target_link_libraries(swarm_collision_checker
+  ${catkin_LIBRARIES}
+)
+
+add_executable(benchmark_aggregator src/benchmark_aggregator.cpp)
+add_dependencies(benchmark_aggregator 
+  ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS}
+)
+target_link_libraries(benchmark_aggregator
   ${catkin_LIBRARIES}
 )

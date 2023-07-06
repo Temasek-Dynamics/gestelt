@@ -48,6 +48,8 @@
         <remap from="~planning/broadcast_traj_recv" to = "/broadcast_traj_to_planner"/>
         <remap from="~planning/heartbeat" to = "/drone_$(arg drone_id)_traj_server/heartbeat"/>
 
+        <remap from="~plan_time_benchmark" to = "/drone$(arg drone_id)/plan_time_benchmark"/>
+
         <remap from="~planner_state" to = "/$(arg drone_id_ns)/planner_state"/>
         
         <remap from="~odom_world" to="$(arg odometry_topic)"/>
@@ -101,6 +103,7 @@
         <param name="fsm/fail_safe" value="true"/>
 
         <param name="fsm/pub_state_freq" value="2.0" type="double"/>
+        <param name="fsm/pub_heartbeat_freq" value="10.0" type="double"/>
 
         <!-- //////////////////// -->
         <!-- GridMap params -->

@@ -128,39 +128,8 @@ Communication between different machines happen on a wifi network
 3. (PX4 HITL) <-> (Gazebo on PC) <-> (Egoplanner on Radxa)
 
 # Issues
-1. All params must be uploaded by the master node (The parameter server exists on the master and all other node will read from the same parameter server)
-    - export ROS_MASTER_URI on all machines in the .bashrc script (which will be sourced on startup)
+1. Mesh file location is different on the host computer than on the UAV
+    - Easy fix: Use the file path for the central computer
 2. Having PX4 SITL on the central computer will result in latency for the PVA commands sent to the drone
-    - Use a real PX4 to interface with Radxa
-3. Mesh file location is different on the host computer than on the UAV
+    - Use PX4 HITL with radxa
 
-# Metrics to measure
-MAKE SURE TO BUILD IN RELEASE MODE
-
-- Record metrics 
-    - Communications
-        - Signal strength to wifi network
-            - `iw dev wlan0 link`
-        - Bandwidth (Network capacity), total messages sizes
-            - `sudo iftop`
-        - Network Speed 
-            - TCP Mode
-                - On PC A, set up server `iperf -s`, take note of tcp port number
-                - On PC B, set up client connecting to IP of PC A: `iperf -c PC_A_IP`
-            - UDP Mode
-                - On PC A, set up server `iperf -s -u`, take note of tcp port number
-                - On PC B, set up client connecting to IP of PC A: `iperf -c PC_A_IP -u -b 1000m`
-        - Network Latency
-            - use `sudo mtr --no-dns --report --report-cycles 60 IP_ADDR` or `ping`
-        - ROS
-            - Measure message size for incoming point clouds
-    - Hardware (Radxa)
-        - CPU Usage
-            - Use `htop`
-        - CPU Runtime 
-            - Refer to the following for technical defintion of CPU Time https://www.gnu.org/software/libc/manual/html_node/Time-Basics.html
-            - Measure for planner, Depth map
-    - Runs
-        - Success rate
-        - Maximum flight speed it can enable in sparse/dense environment
-        - Maximum number of UAVs it can handle

@@ -23,24 +23,63 @@ CANCEL_MISSION_E, // 3
 E_STOP_E,         // 4
 EMPTY_E,          // 5
 ```
- 
+
+# Metrics to measure
+MAKE SURE TO BUILD IN RELEASE MODE
+
+- Record metrics 
+    - Communications 
+        - Signal strength to wifi network
+            - `iw dev wlan0 link`
+        - Bandwidth (Network capacity), total messages sizes
+            - `sudo iftop`
+        - Network Speed 
+            - TCP Mode
+                - On PC A, set up server `iperf -s`, take note of tcp port number
+                - On PC B, set up client connecting to IP of PC A: `iperf -c PC_A_IP`
+            - UDP Mode
+                - On PC A, set up server `iperf -s -u`, take note of tcp port number
+                - On PC B, set up client connecting to IP of PC A: `iperf -c PC_A_IP -u -b 1000m`
+        - Network Latency
+            - use `sudo mtr --no-dns --report --report-cycles 60 IP_ADDR` or `ping`
+        - ROS
+            - Measure message size for incoming point clouds
+
+    - Hardware (Radxa)
+        - CPU Usage
+            - Use `htop`
+        - Wall time (aka 'real' time )
+            - Elapsed time from start to finish of the call. Includes time slices used by other processes and the time the process spends blocked (waiting for I/O to complete
+            )
+        - CPU Runtime (aka 'user' time)
+            - Amount of CPU time spent in user-mode code (outside the kernel) within the process. Only actual CPU time used in executing the process.
+        - System time
+            - Amount of time spent within the kernel, as opposed to library code. Could include I/O, allocating memory.
+        - Sometimes Sys + user > real, as multiple processors work in parallel.
+        - What is important to us is the 'real' time as we want to ensure that the planner is able to plan with a high enough frequency
+        - Measure for planner, Depth map
+
+    - Integration tests 
+        - Replan frequency
+        - Tracking error
+        - Success rate
+        - Maximum flight speed it can enable in sparse/dense environment
+        - Maximum number of UAVs it can handle
+
 # TODO
-    - Consider a mixed ecosystem approach
-        - Look at porting from ROS1 to ROS2
-            - Simulation
-            - Egoplanner Library
-            - Launch files
-            - gestelt_bringup executables
-        - Aim: 
-            - To be able to use third party libraries from ROS easily
-            - Reduce unnecessary components
-    - Perform physical tests to determine physical characteristics
-        - Use the actual mass in Gazebo params
-            - 0.25 g
-        - Motor coefficients
-            - Motor 6000V
-        - Battery: 2S 7.4V
-        - Propellers: 3 inch three-blade propellers
+- Add timebenchmark class to 
+    - planner
+    - gridmap
+- Measure point cloud size in gridmap
+- Create message type that shows debug information such as the metrics
+- Perform physical tests to determine physical characteristics
+    - Use the actual mass in Gazebo params
+        - 0.25 g
+    - Motor coefficients
+        - Motor 6000V
+    - Battery: 2S 7.4V
+    - Propellers: 3 inch three-blade propellers
+- Correct tracking error algo
 
 ## Simulation
 - Explore weird phenomenom between drone_num/formation_num and path planning problems
@@ -113,3 +152,18 @@ EMPTY_E,          // 5
 ## Issues
 - When rounding corners of obstacles, if the goal lies about a sharp turn around the corner, a trajectory with a sharp turn is planned, this could lead to issues if the obstacles is especially large as the drone will not be able to detect the other wall of the obstacle until it has turned around. 
 - When the agents are too close to each other and the replan fails upon detecting a potential collsion between swarm agents. This condition happens more often when the obstacle_inflation is increased to a significantly higher value (1.2) and drones are navigating through narrow corridors.
+
+# Future Roadmap
+- Consider a mixed ecosystem approach
+    - Look at porting from ROS1 to ROS2
+        - Simulation
+        - Egoplanner Library
+        - Launch files
+        - gestelt_bringup executables
+    - Aim: 
+        - To be able to use third party libraries from ROS easily
+        - Reduce unnecessary components
+- Trajectory Server
+    - Support Cancel/Start/Pause of waypoints execution
+    - Handle goals in obstacle regions (Cancel the goal?)
+    - Check if every UAV in formation has finished execution of current waypoint before planning for the next one

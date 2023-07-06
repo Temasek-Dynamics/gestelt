@@ -449,7 +449,6 @@ namespace ego_planner
 
     if (waypoints.size() > 1)
     {
-
       innerPts.resize(3, waypoints.size() - 1);
       for (int i = 0; i < (int)waypoints.size() - 1; ++i)
       {

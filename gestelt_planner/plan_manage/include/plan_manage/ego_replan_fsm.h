@@ -23,7 +23,10 @@
 #include <traj_utils/PolyTraj.h>
 #include <traj_utils/MINCOTraj.h>
 
+#include <plan_manage/timebenchmark.h>
+
 #include <trajectory_server_msgs/Waypoints.h>
+#include <trajectory_server_msgs/TimeBenchmark.h>
 
 using std::vector;
 
@@ -144,7 +147,6 @@ private:
   std::vector<Eigen::Vector3d> waypoints;
   size_t cur_wp_idx_;
 
-
   std::queue<Eigen::Vector3d> wp_queue_;
 };
 
@@ -243,7 +245,6 @@ private:
 
   int target_type_; // If value is 1, the goal is manually defined via a subscribed topic, else if 2, the goal is defined via pre-defined waypoints 
 
-  
   double min_replan_dist_; // Min distance to replan
   double replan_time_thresh_; // Timeout for replanning to occur
   
@@ -272,11 +273,12 @@ private:
 
   // Count number of FSM exec iterations
   int fsm_itr_num{0};
-  /* ROS utils */
 
+  /* ROS utils */
   ros::NodeHandle node_;
 
   // Timer to execute FSM callback
+  ros::Timer pub_hb_timer_; // publish heartbeat timer
   ros::Timer pub_state_timer_;
   ros::Timer tick_state_timer_;
   ros::Timer exec_state_timer_;
@@ -288,17 +290,25 @@ private:
   ros::Publisher poly_traj_pub_, broadcast_ploytraj_pub_, heartbeat_pub_, ground_height_pub_;
 
   ros::Publisher state_pub_;
+  ros::Publisher time_benchmark_pub_;
 
   /* planning utils */
   EGOPlannerManager::Ptr planner_manager_;
   PlanningVisualization::Ptr visualization_;
+  TimeBenchmark time_benchmark_; // Measures and stores CPU/Wall runtime
 
 private: 
 
   /* Timer callbacks */
 
   /**
-   * @brief Timer callback to publish current FSM State
+   * @brief Timer callback to publish heartbeat
+   * @param e 
+   */
+  void pubHeartbeatTimerCB(const ros::TimerEvent &e);
+
+  /**
+   * @brief Timer callback to publish current FSM State and benchmark
    * @param e 
    */
   void pubStateTimerCB(const ros::TimerEvent &e);
@@ -331,8 +341,8 @@ private:
   /**
    * @brief Plans a path using planner_manager_ methods
    * 
-   * @param flag_use_poly_init 
-   * @param flag_randomPolyTraj 
+   * @param flag_use_poly_init Intialize new polynomial if true
+   * @param flag_randomPolyTraj Randomize inner points if true
    * @return true 
    * @return false 
    */

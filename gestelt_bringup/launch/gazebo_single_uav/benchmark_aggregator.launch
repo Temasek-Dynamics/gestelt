@@ -1,0 +1,14 @@
+<launch>
+  <arg name="num_drones" value="2"/>
+
+  <node pkg="gestelt_bringup" type="benchmark_aggregator" 
+    name="benchmark_aggregator" output="screen">
+    <param name="~num_drones" value="$(arg num_drones)" />
+    
+    <param name="~plan_time_bench_topic" value="plan_time_benchmark" />
+
+    <param name="~time_window" value="5.0" />
+    <param name="~compute_frequency" value="1.0" />
+  </node>
+
+</launch>

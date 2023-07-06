@@ -85,13 +85,5 @@ cd ./gestelt_bringup/scripts
 ./radxa_uav.sh
 ```
 
-
-# Future Roadmap
-- Port to ROS2
-- Trajectory Server
-    - Support Cancel/Start/Pause of waypoints execution
-    - Handle goals in obstacle regions (Cancel the goal?)
-    - Check if every UAV in formation has finished execution of current waypoint before planning for the next one
-
 # Acknowledgements
 Plenty of inspiration was taken from the [EGO-Planner-V2 repo](https://github.com/ZJU-FAST-Lab/EGO-Planner-v2) from ZJU, without which, this would not have been possible.
