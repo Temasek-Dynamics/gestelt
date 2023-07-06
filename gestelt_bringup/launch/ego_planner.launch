@@ -47,7 +47,7 @@
             1 ("grid_map/cloud") or 
             2 ("grid_map/depth") 
             for use as camera sensor input -->
-        <arg name="SENSOR_TYPE" value="2" />
+        <arg name="SENSOR_TYPE" value="1" />
         <arg name="gridmap_frame_id" value="$(arg drone_origin_frame)"/>
             
         <!-- Applies a camera to UAV body transformation to the depth camera input -->

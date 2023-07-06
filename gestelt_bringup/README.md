@@ -66,12 +66,18 @@ MAKE SURE TO BUILD IN RELEASE MODE
         - Maximum flight speed it can enable in sparse/dense environment
         - Maximum number of UAVs it can handle
 
+# Demo
+- PX4 HITL
+- Added time benchmark
+- Create message type that shows debug information such as the metrics
+
 # TODO
 - Add timebenchmark class to 
-    - planner
     - gridmap
-- Measure point cloud size in gridmap
-- Create message type that shows debug information such as the metrics
+- Need to correct point cloud transformation
+- Measure sensor data subscribed by gridmap
+    - depth image size
+    - point cloud size 
 - Perform physical tests to determine physical characteristics
     - Use the actual mass in Gazebo params
         - 0.25 g

@@ -9,7 +9,7 @@
   <arg name="command_topic" value="mavros/setpoint_raw/local" />
   <arg name="odometry_topic" value="mavros/local_position/odom" />
   <arg name="pose_topic" value="mavros/local_position/pose" />
-  <arg name="point_cloud_topic" value="map" />
+  <arg name="point_cloud_topic" value="camera/depth/points" />
   <arg name="depth_img_topic" value="camera/depth/image_raw" />
 
   <!-- swarm topic transmitter bridge-->
@@ -42,5 +42,15 @@
     <arg name="point_cloud_topic" value="$(arg point_cloud_topic)"/>
     <arg name="command_topic" value="$(arg command_topic)" />
   </include>
+
+  <!-- <node pkg="gestelt_bringup" type="uav_tf_broadcaster" 
+    name="drone0_tf_broadcaster" output="screen">
+    <param name="~drone_id" value="0" />
+    <param name="~origin_frame" value="drone0_origin" />
+    <param name="~base_link_frame" value="drone0_base_link" />
+    <param name="~tf_broadcast_freq" value="50.0" />
+
+    <remap from="/mavros/local_position/pose" to="/drone0/mavros/local_position/pose"/>
+  </node> -->
 
 </launch>
