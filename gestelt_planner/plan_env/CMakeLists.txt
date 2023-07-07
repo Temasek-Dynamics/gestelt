@@ -14,6 +14,7 @@ set (ROS_LIBRARIES
     visualization_msgs
     cv_bridge
     message_filters
+    sensor_msgs
     trajectory_server_msgs
     gestelt_utils
 )

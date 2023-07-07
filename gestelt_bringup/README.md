@@ -24,63 +24,23 @@ E_STOP_E,         // 4
 EMPTY_E,          // 5
 ```
 
-# Metrics to measure
-MAKE SURE TO BUILD IN RELEASE MODE
-
-- Record metrics 
-    - Communications 
-        - Signal strength to wifi network
-            - `iw dev wlan0 link`
-        - Bandwidth (Network capacity), total messages sizes
-            - `sudo iftop`
-        - Network Speed 
-            - TCP Mode
-                - On PC A, set up server `iperf -s`, take note of tcp port number
-                - On PC B, set up client connecting to IP of PC A: `iperf -c PC_A_IP`
-            - UDP Mode
-                - On PC A, set up server `iperf -s -u`, take note of tcp port number
-                - On PC B, set up client connecting to IP of PC A: `iperf -c PC_A_IP -u -b 1000m`
-        - Network Latency
-            - use `sudo mtr --no-dns --report --report-cycles 60 IP_ADDR` or `ping`
-        - ROS
-            - Measure message size for incoming point clouds
-
-    - Hardware (Radxa)
-        - CPU Usage
-            - Use `htop`
-        - Wall time (aka 'real' time )
-            - Elapsed time from start to finish of the call. Includes time slices used by other processes and the time the process spends blocked (waiting for I/O to complete
-            )
-        - CPU Runtime (aka 'user' time)
-            - Amount of CPU time spent in user-mode code (outside the kernel) within the process. Only actual CPU time used in executing the process.
-        - System time
-            - Amount of time spent within the kernel, as opposed to library code. Could include I/O, allocating memory.
-        - Sometimes Sys + user > real, as multiple processors work in parallel.
-        - What is important to us is the 'real' time as we want to ensure that the planner is able to plan with a high enough frequency
-        - Measure for planner, Depth map
-
-    - Integration tests 
-        - Replan frequency
-        - Tracking error
-        - Success rate
-        - Maximum flight speed it can enable in sparse/dense environment
-        - Maximum number of UAVs it can handle
-
-# Demo
-- Radxa 
-    - Problems with building executables, 4gb RAM gets filled up before build process can complete
-- Benchmarking
-    - Added time benchmark to planner and gridmap updateoccupancy
-- PX4 HITL  
-    - Could not figure out how to interface from actual PX4 to gazebo
-    - Relied on SIH firmware
-
 # TODO
-- Use catkin_make with lower number of jobs
-- Need to correct point cloud transformation
-- Measure sensor data subscribed by gridmap
-    - depth image size
-    - point cloud size 
+- Gridmap
+    - Change gridmap to use PCL and octree search for occupancy grid.
+        - Depth image
+            - Reduce width and height (to 320 x 240)
+        - Point cloud
+            - Subscribe to point cloud from Gazebo
+                - Method A: Transform point cloud in separate node by publishing TFs (drone_origin frame -> base_link -> drone0_cam_link)
+                    - This method will have an issue within a distributed network
+                - Method B: Transform point cloud on gridmap node 
+    - Add back message filtering
+- Get rid of quadrotor_msgs 
+- Split egoplanner up to make it easier to build on radxa
+- To benchmark aggregator
+    - Add CPU usage
+    - Add network params
+    - Use ddynamic_reconfigure to toggle on/off benchmarking
 - Perform physical tests to determine physical characteristics
     - Use the actual mass in Gazebo params
         - 0.25 g
@@ -97,9 +57,6 @@ MAKE SURE TO BUILD IN RELEASE MODE
         - If num_drone == 3, the planned path is normal. 
 
 ## gridmap
-- Change gridmap to use PCL and octree search for occupancy grid
-- Add body to camera transform as a matrix ROS Param (Make sure that it is same as that in simulation)
-- Take in intrinsic params of camera via camera_info topic
 
 ## Trajectory Server
 - Add mutexes

@@ -10,7 +10,6 @@ namespace ego_planner
     have_recv_pre_agent_ = false;
     flag_escape_emergency_ = true;
 
-
     /* initialize main modules */
     visualization_.reset(new PlanningVisualization(nh));
     planner_manager_.reset(new EGOPlannerManager);

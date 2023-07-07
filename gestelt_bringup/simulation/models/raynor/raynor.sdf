@@ -373,23 +373,6 @@
 
     <!-- Camera link and joint -->
 
-    <!-- <include>
-      <uri>model://realsense_camera</uri>
-      <pose>0.1 0 0 0 0 0</pose>
-    </include>
-
-    <joint name="realsense_camera_joint" type="revolute">
-      <child>realsense_camera::link</child>
-      <parent>base_link</parent>
-      <axis>
-        <xyz>0 0 1</xyz>
-        <limit>
-          <upper>0</upper>
-          <lower>0</lower>
-        </limit>
-      </axis>
-    </joint> -->
-
     <link name="camera_link">
       <pose>0.08 0 0.02 0 0 0</pose>
       <inertial>
@@ -418,12 +401,12 @@
           <horizontal_fov>1.5009831567</horizontal_fov>
           <image>
             <format>R8G8B8</format>
-            <width>848</width>
-            <height>480</height>
+            <width>320</width>
+            <height>240</height>
           </image>
           <clip>
-            <near>0.001</near> <!-- Intel RealSense D455 -->
-            <far>65.535</far> <!-- Intel RealSense D455 -->
+            <near>0.01</near> <!-- Intel RealSense D455 -->
+            <far>4.5</far> <!-- Intel RealSense D455 -->
           </clip>
         </camera>
         <plugin filename="libgazebo_ros_openni_kinect.so" name="camera_controller">
@@ -431,8 +414,8 @@
           <robotNamespace></robotNamespace>
           <alwaysOn>true</alwaysOn>
           <updateRate>10</updateRate>
-          <pointCloudCutoff>0.2</pointCloudCutoff>
-          <pointCloudCutoffMax>65.535</pointCloudCutoffMax>
+          <pointCloudCutoff>0.01</pointCloudCutoff>
+          <pointCloudCutoffMax>4.5</pointCloudCutoffMax>
           <imageTopicName>rgb/image_raw</imageTopicName>
           <cameraInfoTopicName>rgb/camera_info</cameraInfoTopicName>
           <depthImageTopicName>depth/image_raw</depthImageTopicName>

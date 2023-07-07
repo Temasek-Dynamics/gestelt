@@ -74,3 +74,5 @@
 23. (23/6/23) Added launch files to record/playback rosbags of simulation runs.
 24. (26/6/23) Added option to launch files for running on Radxa
 25. (28/6/23) Add tested Radxa setup file
+26. (7/7/23) Tested Egoplanner with Radxa HITL and Gazebo simulation
+27. (7/7/23) To gridmap module, added subscription to camera_info for intrinsic parameters and added setting of extrinsic parameter via rosparams. 

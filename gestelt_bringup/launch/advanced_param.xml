@@ -23,7 +23,6 @@
     <arg name="depth_topic"/>
     <arg name="cloud_topic"/>
     <!-- Camera params -->
-    <arg name="transform_camera_pose"/>
     <arg name="cx"/>
     <arg name="cy"/>
     <arg name="fx"/>
@@ -56,12 +55,14 @@
         <!-- //////////////////// -->
         <!-- GridMap params -->
         <!-- //////////////////// -->
+        <remap from="~camera/depth/camera_info" to="/drone$(arg drone_id)/camera/depth/camera_info"/>
+
         <!-- grid_map/pose_type: Toggle between subscription to
             1 ("grid_map/pose") or 
             2 ("grid_map/odom") 
             for use as camera pose/odom-->
-        <param name="~grid_map/pose_type" value="$(arg POSE_TYPE)"/>
-        <remap from="~grid_map/odom" to="$(arg odometry_topic)"/>
+        <param name="~grid_map/pose_type" value = "$(arg POSE_TYPE)"/>
+        <remap from="~grid_map/odom" to = "$(arg odometry_topic)"/>
         <remap from="~grid_map/pose" to = "$(arg pose_topic)"/>
 
         <!-- grid_map/sensor_type: Toggle between subscription to
@@ -69,11 +70,8 @@
             2 ("grid_map/depth") 
             for use as camera sensor input -->
         <param name="~grid_map/sensor_type" value="$(arg SENSOR_TYPE)"/>
-        <remap from="~grid_map/cloud" to="$(arg cloud_topic)"/>
+        <remap from="~grid_map/cloud" to = "$(arg cloud_topic)"/>
         <remap from="~grid_map/depth" to = "$(arg depth_topic)"/>
-
-        <!-- If true, camera pose is transformed using a pre-defined translation/rotation matrix -->
-        <remap from="~grid_map/transform_camera_pose" to = "$(arg transform_camera_pose)"/>
 
         <!-- Frame ID to use for publishing (NOT for the input sensor data) -->
         <param name="grid_map/frame_id" value="$(arg gridmap_frame_id)"/>
@@ -119,11 +117,6 @@
         <param name="grid_map/obstacles_inflation" value="1.0" />
         <param name="grid_map/local_map_margin" value="10"/>
         <param name="grid_map/ground_height" value="-0.25"/>
-        <!-- camera parameter -->
-        <param name="grid_map/cx" value="$(arg cx)"/>
-        <param name="grid_map/cy" value="$(arg cy)"/>
-        <param name="grid_map/fx" value="$(arg fx)"/>
-        <param name="grid_map/fy" value="$(arg fy)"/>
         <!-- depth filter -->
         <param name="grid_map/use_depth_filter" value="true"/>
         <param name="grid_map/depth_filter_tolerance" value="0.15"/>
@@ -132,6 +125,13 @@
         <param name="grid_map/depth_filter_margin" value="2"/>
         <param name="grid_map/k_depth_scaling_factor" value="1000.0"/>
         <param name="grid_map/skip_pixel" value="2"/>
+        <!-- camera extrinsic parameters -->
+        <param name="grid_map/camera_to_body/roll" value="90.0"/>
+        <param name="grid_map/camera_to_body/pitch" value="180.0"/>
+        <param name="grid_map/camera_to_body/yaw" value="90.0"/>
+        <param name="grid_map/camera_to_body/t_x" value="0.0"/>
+        <param name="grid_map/camera_to_body/t_y" value="0.0"/>
+        <param name="grid_map/camera_to_body/t_z" value="0.0"/>
         <!-- local fusion -->
         <param name="grid_map/p_hit" value="0.65"/>
         <param name="grid_map/p_miss" value="0.35"/>

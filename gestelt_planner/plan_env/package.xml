@@ -26,9 +26,10 @@
   <exec_depend>rospy</exec_depend>
   <exec_depend>std_msgs</exec_depend>
   
+  <depend>sensor_msgs</depend>
   <depend>trajectory_server_msgs</depend>
-  <depend>gestelt_utils</depend>
   <depend>visualization_msgs</depend>
+  <depend>gestelt_utils</depend>
   <depend>cv_bridge</depend>
   <depend>message_filters</depend>
 

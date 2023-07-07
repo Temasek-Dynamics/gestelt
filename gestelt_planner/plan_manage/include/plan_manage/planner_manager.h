@@ -73,14 +73,19 @@ namespace ego_planner
         const Eigen::Vector3d &start_pos, const Eigen::Vector3d &start_vel,
         const Eigen::Vector3d &start_acc, const std::vector<Eigen::Vector3d> &waypoints,
         const Eigen::Vector3d &end_vel, const Eigen::Vector3d &end_acc);
+    
     void getLocalTarget(
         const double planning_horizen,
         const Eigen::Vector3d &start_pt, const Eigen::Vector3d &global_end_pt,
         Eigen::Vector3d &local_target_pos, Eigen::Vector3d &local_target_vel,
         bool &touch_goal);
+
     bool EmergencyStop(Eigen::Vector3d stop_pos);
+
     bool checkCollision(int drone_id);
+
     bool setLocalTrajFromOpt(const poly_traj::MinJerkOpt &opt, const bool touch_goal);
+    
     inline double getSwarmClearance(void) { 
       return ploy_traj_opt_->get_swarm_clearance_(); 
     }
