@@ -175,7 +175,7 @@ void GridMap::initMap(ros::NodeHandle &nh)
 
   // Initialize data structures
   pc_sensor_.reset(new pcl::PointCloud<pcl::PointXYZ>);
-  // octree_map_ = std::make_shared<pcl::octree::OctreePointCloudSearch<pcl::PointXYZ>>(0.1);
+  octree_map_ = std::make_shared<pcl::octree::OctreePointCloudSearch<pcl::PointXYZ>>(mp_.resolution_);
 
   ROS_INFO("AFTER INIT DATA STRUCT");
 }
@@ -565,8 +565,6 @@ void GridMap::cloudCallback(const sensor_msgs::PointCloud2ConstPtr &img)
 
   pcl::fromROSMsg(*img, *pc_sensor_);
 
-  float resolution = 1.0;
-  octree_map_.reset(new pcl::octree::OctreePointCloudSearch<pcl::PointXYZ>(resolution));
   octree_map_->setInputCloud(pc_sensor_);
   octree_map_->addPointsFromInputCloud();
 
