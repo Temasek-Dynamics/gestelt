@@ -47,7 +47,7 @@
             1 ("grid_map/cloud") or 
             2 ("grid_map/depth") 
             for use as camera sensor input -->
-        <arg name="SENSOR_TYPE" value="1" />
+        <arg name="SENSOR_TYPE" value="2" />
         <arg name="drone_origin_frame" value="$(arg drone_origin_frame)"/>
 
         <!-- camera pose: transform of camera frame in the world frame -->

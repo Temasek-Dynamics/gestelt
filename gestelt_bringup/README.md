@@ -33,13 +33,13 @@ EMPTY_E,          // 5
             - Voxel downsampling and publishing
     - Depth image
         - Reduce width and height (to 320 x 240)
+        - Rewrite function to create PC from depth map
+            - http://docs.ros.org/en/fuerte/api/rgbd2cloud/html/depth2cloud_8cpp_source.html
 
 # TODO
 - Gridmap
     - Add back message filtering
     - Depth image
-        - Rewrite function to create PC from depth map
-            - http://docs.ros.org/en/fuerte/api/rgbd2cloud/html/depth2cloud_8cpp_source.html
         - Compress, publish and subscribe using ImageTransport
     - Point cloud
         - Use eigen::affine3d for rotation/translation

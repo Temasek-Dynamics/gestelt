@@ -276,22 +276,22 @@ private:
   /**
    * @brief This timer causes the occupancy grid to decay over time
   */
-  void fadingTimerCB(const ros::TimerEvent & /*event*/);
+  // void fadingTimerCB(const ros::TimerEvent & /*event*/);
 
   /**
    * Depth image processing methods
   */
 
-  void projectDepthImage();
-  void raycastProcess();
-  Eigen::Vector3d closestPointInMap(const Eigen::Vector3d &pt, const Eigen::Vector3d &camera_pt);
+  // void projectDepthImage();
+  // void raycastProcess();
+  // Eigen::Vector3d closestPointInMap(const Eigen::Vector3d &pt, const Eigen::Vector3d &camera_pt);
 
   /**
    * Gridmap data manipulation methods
   */
 
   inline void inflatePoint(const Eigen::Vector3i &pt, int step, vector<Eigen::Vector3i> &pts);
-  int setCacheOccupancy(const Eigen::Vector3d &pos, const int& occ);
+  // int setCacheOccupancy(const Eigen::Vector3d &pos, const int& occ);
 
   void clearAndInflateLocalMap();
 
@@ -330,7 +330,7 @@ private:
 
   // Data structures for point cloud 
   // pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_map_body_; // Point cloud in body frame
-  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_map_global_;  // Point cloud in global frame
+  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_global_;  // Point cloud in global frame
   std::shared_ptr<pcl::octree::OctreePointCloudOccupancy<pcl::PointXYZ>> octree_map_; // In global frame
   std::shared_ptr<pcl::octree::OctreePointCloudOccupancy<pcl::PointXYZ>> octree_map_inflated_; // In global frame
 };
