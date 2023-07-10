@@ -30,7 +30,7 @@ include_directories(
     include 
     ${catkin_INCLUDE_DIRS}
     ${Eigen3_INCLUDE_DIRS} 
-    ${PCL_INCLUDE_DIRS}
+    # ${PCL_INCLUDE_DIRS}
 )
 
 add_library( path_searching 

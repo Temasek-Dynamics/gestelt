@@ -42,13 +42,14 @@ include_directories(
     ${OpenCV_INCLUDE_DIRS}
 )
 
-link_directories(${PCL_LIBRARY_DIRS})
+# link_directories(${PCL_LIBRARY_DIRS})
 
 add_library( plan_env 
     src/grid_map.cpp 
     src/raycast.cpp
-    )
+)
+
 target_link_libraries( plan_env
     ${catkin_LIBRARIES} 
     ${PCL_LIBRARIES}
-    )  
+)  

@@ -19,7 +19,7 @@
   <arg name="depth_img_topic"/>
 
   <!-- Broadcast UAV frames TF -->
-  <node pkg="gestelt_bringup" type="uav_tf_broadcaster" 
+  <!-- <node pkg="gestelt_bringup" type="uav_tf_broadcaster" 
     name="$(arg drone_id_ns)_tf_broadcaster" output="screen">
     <param name="~drone_id" value="$(arg drone_id)" />
     <param name="~origin_frame" value="$(arg drone_id_ns)_origin" />
@@ -27,7 +27,7 @@
     <param name="~tf_broadcast_freq" value="50.0" />
 
     <remap from="/mavros/local_position/pose" to="/$(arg drone_id_ns)/mavros/local_position/pose"/>
-  </node>
+  </node> -->
 
   <include file="$(find gestelt_bringup)/launch/ego_planner.launch">
     <arg name="drone_id"   value="$(arg drone_id)"/>

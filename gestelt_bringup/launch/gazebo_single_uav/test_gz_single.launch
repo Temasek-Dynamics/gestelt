@@ -21,7 +21,7 @@
   <node pkg="tf" type="static_transform_publisher" 
     name="world_to_map_tf" 
     args="0 0 0 0 0 0 1 world map 100" />
-
+z
   <!-- Drone 0 -->
   <include file="$(find gestelt_bringup)/launch/gazebo/gz_single_uav.launch">
     <arg name="drone_id"   value="0"/>

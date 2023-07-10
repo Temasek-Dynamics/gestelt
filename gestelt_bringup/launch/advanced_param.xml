@@ -16,7 +16,7 @@
     <!-- Sensor input type -->
     <arg name="POSE_TYPE"/>
     <arg name="SENSOR_TYPE"/>
-    <arg name="gridmap_frame_id" default="world"/>
+    <arg name="drone_origin_frame" default="world"/>
     <!-- Subscribed topics -->
     <arg name="odometry_topic"/>
     <arg name="pose_topic"/>
@@ -41,45 +41,12 @@
     <!-- <node pkg="ego_planner" name="ego_planner_node" type="ego_planner_node" output="screen" launch-prefix="valgrind"> -->
     <node pkg="ego_planner" name="drone_$(arg drone_id)_ego_planner_node" type="ego_planner_node" output="screen">
         <remap from="~mandatory_stop" to="/mandatory_stop_to_planner"/>
-        <remap from="~planning/trajectory" to = "/drone_$(arg drone_id)_planning/trajectory"/>
-        <remap from="~planning/data_display" to = "/drone_$(arg drone_id)_planning/data_display"/>
         <remap from="~planning/broadcast_traj_send" to = "/broadcast_traj_from_planner"/>
         <remap from="~planning/broadcast_traj_recv" to = "/broadcast_traj_to_planner"/>
-        <remap from="~planning/heartbeat" to = "/drone_$(arg drone_id)_traj_server/heartbeat"/>
-
-        <remap from="~plan_time_benchmark" to = "/drone$(arg drone_id)/plan_time_benchmark"/>
-
-        <remap from="~planner_state" to = "/$(arg drone_id_ns)/planner_state"/>
         
-        <remap from="~odom_world" to="$(arg odometry_topic)"/>
         <!-- //////////////////// -->
-        <!-- GridMap params -->
+        <!-- FSM params -->
         <!-- //////////////////// -->
-        <remap from="~camera/depth/camera_info" to="/drone$(arg drone_id)/camera/depth/camera_info"/>
-
-        <!-- grid_map/pose_type: Toggle between subscription to
-            1 ("grid_map/pose") or 
-            2 ("grid_map/odom") 
-            for use as camera pose/odom-->
-        <param name="~grid_map/pose_type" value = "$(arg POSE_TYPE)"/>
-        <remap from="~grid_map/odom" to = "$(arg odometry_topic)"/>
-        <remap from="~grid_map/pose" to = "$(arg pose_topic)"/>
-
-        <!-- grid_map/sensor_type: Toggle between subscription to
-            1 ("grid_map/cloud") or 
-            2 ("grid_map/depth") 
-            for use as camera sensor input -->
-        <param name="~grid_map/sensor_type" value="$(arg SENSOR_TYPE)"/>
-        <remap from="~grid_map/cloud" to = "$(arg cloud_topic)"/>
-        <remap from="~grid_map/depth" to = "$(arg depth_topic)"/>
-
-        <!-- Frame ID to use for publishing (NOT for the input sensor data) -->
-        <param name="grid_map/frame_id" value="$(arg gridmap_frame_id)"/>
-
-        <!-- //////////////////// -->
-        <!-- EGOReplanFSM params -->
-        <!-- //////////////////// -->
-
         <!-- apply_frame_origin_offset: Relevant for PX4 SITL where the vehicle pose always starts from (0,0,0)
         For other simulation environments, set to false -->
         <param name="fsm/apply_frame_origin_offset" value="$(arg px4_device)" type="bool"/>
@@ -103,28 +70,54 @@
         <param name="fsm/pub_state_freq" value="10.0" type="double"/>
         <param name="fsm/pub_heartbeat_freq" value="10.0" type="double"/>
 
+        <!-- Subscribed topics -->
+        <remap from="~odom_world" to="$(arg odometry_topic)"/>
+
+        <!-- Published topics -->
+        <remap from="~plan_time_benchmark" to = "/drone$(arg drone_id)/plan_time_benchmark"/>
+        <remap from="~planner_state" to = "/$(arg drone_id_ns)/planner_state"/>
+        <remap from="~planning/trajectory" to = "/drone_$(arg drone_id)_planning/trajectory"/>
+        <remap from="~planning/data_display" to = "/drone_$(arg drone_id)_planning/data_display"/>
+        <remap from="~planning/heartbeat" to = "/drone_$(arg drone_id)_traj_server/heartbeat"/>
+
         <!-- //////////////////// -->
         <!-- GridMap params -->
         <!-- //////////////////// -->
+        <!-- Frame ID to use for visualization -->
+        <param name="grid_map/global_frame_id" value="$(arg drone_origin_frame)"/>
+
+        <!-- grid_map/pose_type: Toggle between subscription to ("grid_map/pose") or  ("grid_map/odom") for use as camera pose/odom-->
+        <param name="~grid_map/pose_type" value = "$(arg POSE_TYPE)"/>
+        <remap from="~grid_map/odom" to = "$(arg odometry_topic)"/>
+        <remap from="~grid_map/pose" to = "$(arg pose_topic)"/>
+        <!-- grid_map/sensor_type: Toggle between subscription to ("grid_map/cloud") or ("grid_map/depth") for use as camera sensor input -->
+        <param name="~grid_map/sensor_type" value="$(arg SENSOR_TYPE)"/>
+        <remap from="~grid_map/cloud" to = "$(arg cloud_topic)"/>
+        <remap from="~grid_map/depth" to = "$(arg depth_topic)"/>
+
+        <remap from="~grid_map/camera_info" to="/drone$(arg drone_id)/camera/depth/camera_info"/>
+
         <param name="grid_map/resolution" value="0.1" />
+        <param name="grid_map/inflation" value="0.275" />
         <param name="grid_map/map_size_x" value="$(arg map_size_x_)" />
         <param name="grid_map/map_size_y" value="$(arg map_size_y_)" />
         <param name="grid_map/map_size_z" value="$(arg map_size_z_)" />
-        <param name="grid_map/local_update_range_x" value="5.5" />
+        <!-- <param name="grid_map/local_update_range_x" value="5.5" />
         <param name="grid_map/local_update_range_y" value="5.5" />
-        <param name="grid_map/local_update_range_z" value="4.5" />
-        <!-- The obstacles_inflation param affects the inflation zones of the obstacles -->
-        <param name="grid_map/obstacles_inflation" value="1.0" />
-        <param name="grid_map/local_map_margin" value="10"/>
+        <param name="grid_map/local_update_range_z" value="4.5" /> -->
+        <!-- Point cloud filter -->
+        <param name="grid_map/filter/use_cloud_filter" value="false" />
+        <param name="grid_map/filter/voxel_size" value="0.1" />
+        <!-- <param name="grid_map/local_map_margin" value="10"/> -->
         <param name="grid_map/ground_height" value="-0.25"/>
         <!-- depth filter -->
-        <param name="grid_map/use_depth_filter" value="true"/>
+        <!-- <param name="grid_map/use_depth_filter" value="true"/>
         <param name="grid_map/depth_filter_tolerance" value="0.15"/>
         <param name="grid_map/depth_filter_maxdist" value="5.0"/>
         <param name="grid_map/depth_filter_mindist" value="0.1"/>
         <param name="grid_map/depth_filter_margin" value="2"/>
         <param name="grid_map/k_depth_scaling_factor" value="1000.0"/>
-        <param name="grid_map/skip_pixel" value="2"/>
+        <param name="grid_map/skip_pixel" value="2"/> -->
         <!-- camera extrinsic parameters -->
         <param name="grid_map/camera_to_body/roll" value="90.0"/>
         <param name="grid_map/camera_to_body/pitch" value="180.0"/>
@@ -140,8 +133,9 @@
         <param name="grid_map/p_occ" value="0.80"/>
         <param name="grid_map/min_ray_length" value="0.1"/>
         <param name="grid_map/max_ray_length" value="4.5"/>
-        <param name="grid_map/visualization_truncate_height" value="4.0"/>
-        <param name="grid_map/show_occ_time" value="false"/>
+        <!-- //////////////////// -->
+        <!-- Manager params -->
+        <!-- //////////////////// -->
         <!-- planner manager -->
         <param name="manager/max_vel" value="$(arg max_vel)" type="double"/>
         <param name="manager/max_acc" value="$(arg max_acc)" type="double"/>
@@ -150,7 +144,9 @@
         <param name="manager/planning_horizon" value="$(arg planning_horizon)" type="double"/>
         <param name="manager/use_distinctive_trajs" value="$(arg use_distinctive_trajs)" type="bool"/>
         <param name="manager/drone_id" value="$(arg drone_id)"/>
-        <!-- trajectory optimization -->
+        <!-- //////////////////// -->
+        <!-- optimization params -->
+        <!-- //////////////////// -->
         <param name="optimization/constraint_points_perPiece" value="5" type="int"/>
         <param name="optimization/weight_obstacle" value="10000.0" type="double"/>
         <param name="optimization/weight_obstacle_soft" value="5000.0" type="double"/>

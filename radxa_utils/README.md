@@ -49,7 +49,7 @@ export ROS_IP=OWN_IP
 
 # Convenience function
 alias pull_repo="git -C ~/gestelt_ws/src/gestelt/ pull"
-alias ez_make="cd ~/gestelt_ws && catkin_make -DCMAKE_BUILD_TYPE=Release -DCATKIN_BLACKLIST_PACKAGES='rviz_plugins;manual_take_over;odom_visualization;pose_utils;uav_utils;drone_detect'"
+alias ez_make="cd ~/gestelt_ws && catkin_make -DCMAKE_BUILD_TYPE=Release -DCATKIN_BLACKLIST_PACKAGES='rviz_plugins;odom_visualization;'"
 alias cd_scripts="cd ~/gestelt_ws/src/gestelt/gestelt_bringup/scripts/"
 ```
 

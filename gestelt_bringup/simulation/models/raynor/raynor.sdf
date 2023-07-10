@@ -372,7 +372,6 @@
     </joint>
 
     <!-- Camera link and joint -->
-
     <link name="camera_link">
       <pose>0.08 0 0.02 0 0 0</pose>
       <inertial>
@@ -443,7 +442,6 @@
       </axis>
     </joint>
 
-
     <!-- <include>
       <uri>model://depth_camera</uri>
       <pose>0.1 0 0 0 0 0</pose>
@@ -461,7 +459,6 @@
     </joint> -->
 
     <!-- Plugins -->
-
     <plugin name='rosbag' filename='libgazebo_multirotor_base_plugin.so'>
       <robotNamespace/>
       <linkName>base_link</linkName>
@@ -760,6 +757,4 @@
     </plugin>
 
   </model>
-
-
 </sdf>

@@ -24,23 +24,40 @@ E_STOP_E,         // 4
 EMPTY_E,          // 5
 ```
 
+# Demo (13/7/23)
+- Gridmap
+    - Change gridmap to use PCL and octreeOccupancyGrid for occupancy grid.
+    - Point cloud
+        - Transform point cloud on gridmap node. 
+        - Downsample point clouds before sending
+            - Voxel downsampling and publishing
+    - Depth image
+        - Reduce width and height (to 320 x 240)
+
 # TODO
 - Gridmap
-    - Change gridmap to use PCL and octree search for occupancy grid.
-        - Depth image
-            - Reduce width and height (to 320 x 240)
-        - Point cloud
-            - Subscribe to point cloud from Gazebo
-                - Method A: Transform point cloud in separate node by publishing TFs (drone_origin frame -> base_link -> drone0_cam_link)
-                    - This method will have an issue within a distributed network
-                - Method B: Transform point cloud on gridmap node 
     - Add back message filtering
-- Get rid of quadrotor_msgs 
+    - Depth image
+        - Rewrite function to create PC from depth map
+            - http://docs.ros.org/en/fuerte/api/rgbd2cloud/html/depth2cloud_8cpp_source.html
+        - Compress, publish and subscribe using ImageTransport
+    - Point cloud
+        - Use eigen::affine3d for rotation/translation
+    - Compare compressed depth map to downsampled point cloud
+        - Bandwidth and delay
+
 - Split egoplanner up to make it easier to build on radxa
+    - Take out traj_server from plan_manage
+    - Get rid of quadrotor_msgs 
+    - Clean up cmakelists dependencies
+
 - To benchmark aggregator
     - Add CPU usage
     - Add network params
     - Use ddynamic_reconfigure to toggle on/off benchmarking
+    - https://stackoverflow.com/questions/63166/how-to-determine-cpu-and-memory-consumption-from-inside-a-process
+
+- Get the code working on the actual drone
 - Perform physical tests to determine physical characteristics
     - Use the actual mass in Gazebo params
         - 0.25 g

@@ -63,7 +63,7 @@
                     - Max XY Tracking error: 0.15
                     - Average XY Tracking error: 0.03 ~ 0.14
 18. Parameters to play with for reducing collision with obstacles
-    - grid_map/obstacles_inflation
+    - grid_map/inflation
         - Affects inflation of obstacles. This would be more visually intuitive, and creates a virtual cushion against planning too near to obstacles
     - obstacle_clearance
         - Somehow even with a relatively high value, the uav still plans a trajectory through tight corridors. COuld it it be due to it optimizing on a path provided by the global planner, and the global planner does not provide an alternative path because it does not take into account obstacle clearance?
