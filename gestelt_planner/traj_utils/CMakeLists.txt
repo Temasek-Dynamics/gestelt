@@ -14,7 +14,6 @@ find_package(catkin REQUIRED COMPONENTS
 )
 
 find_package(Eigen3 REQUIRED)
-# find_package(PCL 1.7 REQUIRED) #to help find Eigen
 
 # Generate messages in the 'msg' folder
 add_message_files(
@@ -44,8 +43,6 @@ include_directories(
     ${catkin_INCLUDE_DIRS}
     ${Eigen3_INCLUDE_DIRS} 
 )
-
-# link_directories(${PCL_LIBRARY_DIRS})
 
 add_library( traj_utils
     src/planning_visualization.cpp 

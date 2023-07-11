@@ -81,6 +81,9 @@ EMPTY_E,          // 5
 - Add mutexes
 - For trajectory server, read the current state of the mavros/state topic before determining the starting state machine state.
 - Disabling of offboard mode for land state would be a good feature. Current challenge to implement it is to be able to reliably check that the drone has actually landed (Otherwise it will be stuck in AUTO.LOITER while hovering in the air, being unable to disarm).
+- Support Cancel/Start/Pause of waypoints execution
+- Handle goals in obstacle regions (Cancel the goal?)
+- Check if every UAV in formation has finished execution of current waypoint before planning for the next one
 
 ## Issues
 - When rounding corners of obstacles, if the goal lies about a sharp turn around the corner, a trajectory with a sharp turn is planned, this could lead to issues if the obstacles is especially large as the drone will not be able to detect the other wall of the obstacle until it has turned around. 
@@ -96,7 +99,3 @@ EMPTY_E,          // 5
     - Aim: 
         - To be able to use third party libraries from ROS easily
         - Reduce unnecessary components
-- Trajectory Server
-    - Support Cancel/Start/Pause of waypoints execution
-    - Handle goals in obstacle regions (Cancel the goal?)
-    - Check if every UAV in formation has finished execution of current waypoint before planning for the next one

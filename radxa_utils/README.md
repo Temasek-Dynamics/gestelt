@@ -27,7 +27,7 @@ xz -v --decompress IMAGE_COMPRESSED
 sudo su
 nmcli r wifi on
 nmcli dev wifi
-nmcli dev wifi connect "wifi_name" password "wifi_password"
+nmcli dev wifi connect "wifi_name" password "wifi_password"                   
 
 # Install ROS at http://wiki.ros.org/noetic/Installation/Ubuntu
 
@@ -49,7 +49,7 @@ export ROS_IP=OWN_IP
 
 # Convenience function
 alias pull_repo="git -C ~/gestelt_ws/src/gestelt/ pull"
-alias ez_make="cd ~/gestelt_ws && catkin_make -DCMAKE_BUILD_TYPE=Release -DCATKIN_BLACKLIST_PACKAGES='rviz_plugins;odom_visualization;'"
+alias ez_make="cd ~/gestelt_ws && catkin_make -DCMAKE_BUILD_TYPE=Release -DCATKIN_BLACKLIST_PACKAGES='rviz_plugins;'"
 alias cd_scripts="cd ~/gestelt_ws/src/gestelt/gestelt_bringup/scripts/"
 ```
 
@@ -101,7 +101,7 @@ Communication between different machines happen on a wifi network
         - Bandwidth: Using `iperf`
             - Bandwidth:
                 - TCP: 57.3 Mbits/sec 
-                - UDP: 90Mbits/sec - 101 Mbits/sec
+                - UDP: 90Mbits/sec - 101 Mbits/sec: 
         - Latency: Using `sudo mtr --no-dns --report --report-cycles 60 IP_ADDR`
             - Latency averages 14.8 ms. Best is 8.7 ms, Worst is 32.1 ms.
         - CPU Usage: Using `htop`
