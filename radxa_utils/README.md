@@ -69,15 +69,32 @@ roslaunch radxa_utils listener.launch ros_master_uri:=http://192.168.1.112:11311
 
 Setting environment variables manually
 ```bash
-# Matchine A
-export ROS_MASTER_URI=http://192.168.1.112:11311
-export ROS_HOSTNAME=192.168.1.112
-export ROS_IP=192.168.1.112
+# Xiaomi network
+    # Central PC
+        export MASTER_IP=192.168.31.173
+        export SELF_IP=192.168.31.173
+    # UAV
+        export MASTER_IP=192.168.31.173
+        export SELF_IP=192.168.31.166
 
-# Matchine B
-export ROS_MASTER_URI=http://192.168.1.112:11311
-export ROS_HOSTNAME=192.168.1.134
-export ROS_IP=192.168.1.134
+# Nvidia network
+    # Central PC
+        export MASTER_IP=192.168.1.112
+        export SELF_IP=192.168.1.112
+    # UAV
+        export MASTER_IP=192.168.1.112
+        export SELF_IP=192.168.1.134
+
+
+# Matchine A (Central PC)
+export ROS_MASTER_URI=http://$MASTER_IP:11311
+export ROS_HOSTNAME=$SELF_IP
+export ROS_IP=$SELF_IP
+
+# Matchine B (UAV PC)
+export ROS_MASTER_URI=http://$MASTER_IP:11311
+export ROS_HOSTNAME=$SELF_IP
+export ROS_IP=$SELF_IP
 ```
 
 # Quick Start
@@ -86,94 +103,87 @@ export ROS_IP=192.168.1.134
 ```bash
 # On the central flight control computer
 cd ~/gestelt_ws/src/gestelt/gestelt_bringup/scripts
-./radxa_central_sitl.sh http://192.168.1.112:11311 192.168.1.112
+./radxa_central_sitl.sh 
 
 # On the UAV (ID 0)
 cd ~/gestelt_ws/src/gestelt/gestelt_bringup/scripts
-./radxa_uav.sh 0 http://192.168.1.112:11311 192.168.1.134
+./radxa_uav.sh 0
 ```
 
 # TODO
-Communication between different machines happen on a wifi network
-
-1. (PX4 SITL + Gazebo on PC) <-> (Egoplanner on Radxa)   
-    -   Data
-        - Bandwidth: Using `iperf`
-            - Bandwidth:
-                - TCP: 57.3 Mbits/sec 
-                - UDP: 90Mbits/sec - 101 Mbits/sec: 
-        - Latency: Using `sudo mtr --no-dns --report --report-cycles 60 IP_ADDR`
+1. (Egoplanner on Radxa) <--wireless--> (PX4 SITL and Gazebo on PC) 
+    - Xiaomi Network (Central PC and Radxa connected wirelessly to network)
+        - Bandwidth: 
+            - TCP: 57.3 Mbits/sec -> 7.1625 mb/s
+            - UDP: 90Mbits/sec - 101 Mbits/sec  -> 11.25 mb/s
+        - Latency
             - Latency averages 14.8 ms. Best is 8.7 ms, Worst is 32.1 ms.
-        - CPU Usage: Using `htop`
-            - it is shown to use around (55%, 30%, 30%, 30%) for the Radxa's 4 cores
-    - Sources of large bandwidth
-        - Depth camera sensor data
-    - Potential solutions to reduce bandwidth required
-        - Compress depth image before sending over. Or only send point clouds over (Which have been compressed)
+    - Nvidia Network (Central PC Wired to network, while Radxa is connected wirelessly)
+        - ROS Topics:
+            - On radxa
+                - /drone0/camera/depth/image_raw (840 * 640)
+                    - 2.4 ghz 
+                        - Delay: 0.75 (0.004)
+                        - Bandwidth: 2.88mb/s (16.65 mb/s)
+                    - 5.0 ghz
+                        - Delay:
+                        - Bandwidth:
+                - /drone0/mavros/local_position/pose
+                    - 2.4 ghz
+                        - Delay: 0.03 (0.006)
+                        - Bandwidth: 2.6 kb/s (2.6 kb/s)
+                    - 5.0 ghz
+                        - Delay:
+                        - Bandwidth:
+            - On PC
+                - /drone0/mavros/setpoint_raw/local
+                    - 2.4 ghz
+                        - Delay: 0.7 ()
+                        - Bandwidth: 2.5kb/s (2.7kb/s)
+                    - 5.0 ghz
+                        - Delay:
+                        - Bandwidth:
+                - /drone_0_ego_planner_node/grid_map/occupancy
+                    - 2.4 ghz
+                        - Delay: 2280 (2500)
+                        - Bandwidth: 68 kb/s (2.5kb/s)
+                    - 5.0 ghz
+                        - Delay:
+                        - Bandwidth:
 2. (PX4 HITL) + (Gazebo + Egoplanner on PC)
-    - Can be done with Flywoo F405S
     - Cannot be done with PX4 FMUV2 (Pixhawk 1 FCU). FCU's flash memory is too low to take off additional HITL modules.
-    
-3. (PX4 HITL) <-> (Gazebo on PC) <-> (Egoplanner on Radxa)
-
+    - Can be done with Flywoo F405S
+3. (PX4 Drone <--serial--> Egoplanner on Radxa) <--wireless--> (Gazebo on PC)
 
 # Metrics to measure
 MAKE SURE TO BUILD IN RELEASE MODE
 
-- Record metrics 
-    - Communications 
-        - Signal strength to wifi network
+- Explanation of metrics 
+    - Network 
+        - Signal strength 
             - `iw dev wlan0 link` or `watch -n1 iwconfig`
         - Bandwidth (Network capacity), total messages sizes
+            - Maximum rate that information can be transferred
             - `sudo iftop`
-        - Network Speed 
+        - Throughput 
+            - Actual rate that information is transferred
             - TCP Mode
                 - On PC A, set up server `iperf -s`, take note of tcp port number
                 - On PC B, set up client connecting to IP of PC A: `iperf -c PC_A_IP`
             - UDP Mode
                 - On PC A, set up server `iperf -s -u`, take note of tcp port number
                 - On PC B, set up client connecting to IP of PC A: `iperf -c PC_A_IP -u -b 1000m`
-        - Network Latency
+        - Latency
+            - Delay between sender and receiver decoding it. Function of signals travel time, and processing time at any nodes the information traverses 
             - use `sudo mtr --no-dns --report --report-cycles 60 IP_ADDR` or `ping`
+        - Jitter
+            - Variation in packet delay at the receiver of the information
         - ROS
             - Measure message size: `rostopic bw`
             - Measure frequency of publishing: `rostopic hz`
             - Measure delay: `rostopic delay`
-            - Topics of interest:
-                - On radxa
-                    - /drone0/camera/depth/image_raw (840 * 640)
-                        - 2.4 ghz
-                            - Delay: 0.75 (0.004)
-                            - Bandwidth: 2.88mb/s (16.65 mb/s)
-                        - 5.0 ghz
-                            - Delay:
-                            - Bandwidth:
-                    - /drone0/mavros/local_position/pose
-                        - 2.4 ghz
-                            - Delay: 0.03 (0.006)
-                            - Bandwidth: 2.6 kb/s (2.6 kb/s)
-                        - 5.0 ghz
-                            - Delay:
-                            - Bandwidth:
-                - On PC
-                    - /drone0/mavros/setpoint_raw/local
-                        - 2.4 ghz
-                            - Delay: 0.7 ()
-                            - Bandwidth: 2.5kb/s (2.7kb/s)
-                        - 5.0 ghz
-                            - Delay:
-                            - Bandwidth:
-                    - /drone_0_ego_planner_node/grid_map/occupancy
-                        - 2.4 ghz
-                            - Delay: 2280 (2500)
-                            - Bandwidth: 68 kb/s (2.5kb/s)
-                        - 5.0 ghz
-                            - Delay:
-                            - Bandwidth:
-
     - Hardware (Radxa)
-        - CPU Usage
-            - Use `htop`
+        - CPU Usage `htop`
         - Wall time (aka 'real' time )
             - Elapsed time from start to finish of the call. Includes time slices used by other processes and the time the process spends blocked (waiting for I/O to complete
             )

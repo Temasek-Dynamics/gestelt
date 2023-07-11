@@ -67,6 +67,15 @@ target_link_libraries(benchmark_aggregator
   ${catkin_LIBRARIES}
 )
 
+add_executable(hardware_monitor src/hardware_monitor.cpp)
+add_dependencies(hardware_monitor 
+  ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS}
+)
+target_link_libraries(hardware_monitor
+  ${catkin_LIBRARIES}
+)
+
+
 add_executable(cloud_downsampler src/cloud_downsampler.cpp)
 add_dependencies(cloud_downsampler 
   ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS}

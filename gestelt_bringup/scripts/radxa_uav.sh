@@ -1,13 +1,11 @@
 #!/bin/bash
 
-if [ "$#" != 3 ]; then 
-    echo -e "usage: ./radxa_uav uav_id ros_master_uri ros_ip\n"
+if [ "$#" != 1 ]; then 
+    echo -e "usage: ./radxa_uav uav_id \n"
     return 1
 fi
 
 uav_id=$1
-ros_master_uri=$2
-ros_ip=$3
 
 SESSION="radxa_uav"
 SESSIONEXISTS=$(tmux list-sessions | grep $SESSION)
@@ -28,7 +26,7 @@ source $SCRIPT_DIR/../../../../devel/setup.bash &&
 # Commands
 #####
 CMD_0="
-roslaunch gestelt_bringup radxa_ego_planner.launch drone_id:=${uav_id} ros_master_uri:=${ros_master_uri} ros_ip:=${ros_ip}
+roslaunch gestelt_bringup radxa_ego_planner.launch drone_id:=${uav_id} ros_master_uri:=$ROS_MASTER_URI ros_ip:=$ROS_IP
 "
 
 if [ "$SESSIONEXISTS" = "" ]

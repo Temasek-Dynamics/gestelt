@@ -44,6 +44,9 @@ EMPTY_E,          // 5
     - Take out traj_server from plan_manage
     - Clean up cmakelists dependencies
 
+- Benchmarking
+    - Add CPU usage
+
 # TODO
 - Gridmap
     - Depth image
@@ -54,10 +57,10 @@ EMPTY_E,          // 5
     - Look at using udp to send over point clouds or depth images
 
 - To benchmark aggregator
-    - Add CPU usage
-    - Add network params
-    - Use ddynamic_reconfigure to toggle on/off benchmarking
+    - Add network params 
+        - Bandwidth, latency, signal strength
     - https://stackoverflow.com/questions/63166/how-to-determine-cpu-and-memory-consumption-from-inside-a-process
+    - Use ddynamic_reconfigure to toggle on/off benchmarking
 
 - Get the code working on the actual drone
 - Perform physical tests to determine physical characteristics

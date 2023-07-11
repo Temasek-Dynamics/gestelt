@@ -1,12 +1,11 @@
 #!/bin/bash
 
-if [ "$#" != 2 ]; then 
-    echo -e "usage: ./radxa_central ros_master_uri ros_ip\n"
+if [ "$#" != 1 ]; then 
+    echo -e "usage: ./radxa_central ros_master_uri\n"
     return 1
 fi
 
 ros_master_uri=$1
-ros_ip=$2
 
 SESSION="radxa_central"
 SESSIONEXISTS=$(tmux list-sessions | grep $SESSION)
@@ -37,19 +36,19 @@ export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:$gestelt_bringup_DIR:$PX4_AUTOPILOT_RE
 # "
 
 CMD_0="
-roslaunch gestelt_bringup central_sim.launch world_name:=$SCRIPT_DIR/../simulation/worlds/ego_test.world ros_master_uri:=${ros_master_uri} ros_ip:=${ros_ip}
+roslaunch gestelt_bringup central_sim.launch world_name:=$SCRIPT_DIR/../simulation/worlds/ego_test.world ros_master_uri:=$ROS_MASTER_URI ros_ip:=$ROS_IP
 "
 
 
 CMD_1="
-roslaunch gestelt_bringup central_bridge.launch ros_master_uri:=${ros_master_uri} ros_ip:=${ros_ip}
+roslaunch gestelt_bringup central_bridge.launch ros_master_uri:=$ROS_MASTER_URI ros_ip:=$ROS_IP
 "
 
 CMD_2="
-roslaunch gestelt_bringup rviz.launch config:=gz_sim ros_master_uri:=${ros_master_uri} ros_ip:=${ros_ip}
+roslaunch gestelt_bringup rviz.launch config:=gz_sim ros_master_uri:=$ROS_MASTER_URI ros_ip:=$ROS_IP
 "
 
-CMD_3="roslaunch gestelt_bringup radxa_mission.launch ros_master_uri:=${ros_master_uri} ros_ip:=${ros_ip}"
+CMD_3="roslaunch gestelt_bringup radxa_mission.launch ros_master_uri:=$ROS_MASTER_URI ros_ip:=$ROS_IP"
 
 if [ "$SESSIONEXISTS" = "" ]
 then 
