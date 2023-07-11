@@ -16,7 +16,6 @@
 #include <optimizer/poly_traj_optimizer.h>
 #include <plan_env/grid_map.h>
 #include <geometry_msgs/PoseStamped.h>
-#include <quadrotor_msgs/GoalSet.h>
 #include <traj_utils/DataDisp.h>
 #include <plan_manage/planner_manager.h>
 #include <traj_utils/planning_visualization.h>

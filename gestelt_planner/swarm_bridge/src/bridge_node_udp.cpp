@@ -7,7 +7,6 @@
 #include <nav_msgs/Odometry.h>
 #include <std_msgs/Empty.h>
 #include <traj_utils/MINCOTraj.h>
-#include <quadrotor_msgs/GoalSet.h>
 #include <sensor_msgs/Joy.h>
 
 #include <unistd.h>
@@ -21,8 +20,8 @@
 using namespace std;
 
 int udp_server_fd_, udp_send_fd_;
-ros::Subscriber other_odoms_sub_, one_traj_sub_, mandatory_stop_sub_, goal_sub_, joy_sub_;
-ros::Publisher other_odoms_pub_, one_traj_pub_, mandatory_stop_pub_, goal_pub_, joy_pub_;
+ros::Subscriber other_odoms_sub_, one_traj_sub_ , joy_sub_;
+ros::Publisher other_odoms_pub_, one_traj_pub_, joy_pub_;
 string udp_ip_;
 int drone_id_;
 double odom_broadcast_freq_;
@@ -31,7 +30,6 @@ struct sockaddr_in addr_udp_send_;
 nav_msgs::Odometry odom_msg_;
 traj_utils::MINCOTraj MINCOTraj_msg_;
 std_msgs::Empty stop_msg_;
-quadrotor_msgs::GoalSet goal_msg_;
 sensor_msgs::Joy joy_msg_;
 
 enum MESSAGE_TYPE
@@ -173,28 +171,6 @@ void one_traj_sub_udp_cb(const traj_utils::MINCOTrajPtr &msg)
   }
 }
 
-void mandatory_stop_sub_udp_cb(const std_msgs::EmptyPtr &msg)
-{
-
-  int len = serializeTopic(MESSAGE_TYPE::STOP, *msg);
-
-  if (sendto(udp_send_fd_, udp_send_buf_, len, 0, (struct sockaddr *)&addr_udp_send_, sizeof(addr_udp_send_)) <= 0)
-  {
-    ROS_ERROR("UDP SEND ERROR (3)!!!");
-  }
-}
-
-void goal_sub_udp_cb(const quadrotor_msgs::GoalSetPtr &msg)
-{
-
-  int len = serializeTopic(MESSAGE_TYPE::GOAL, *msg);
-
-  if (sendto(udp_send_fd_, udp_send_buf_, len, 0, (struct sockaddr *)&addr_udp_send_, sizeof(addr_udp_send_)) <= 0)
-  {
-    ROS_ERROR("UDP SEND ERROR (4)!!!");
-  }
-}
-
 void joy_sub_udp_cb(const sensor_msgs::JoyPtr &msg)
 {
 
@@ -265,31 +241,14 @@ void udp_recv_fun()
     case MESSAGE_TYPE::STOP:
     {
 
-      if (valread == deserializeTopic(stop_msg_))
-      {
-        mandatory_stop_pub_.publish(stop_msg_);
-      }
-      else
-      {
-        ROS_ERROR("Received message length not matches the sent one (3)!!!");
-        continue;
-      }
+      ROS_ERROR("STOP Not implemented!!!");
 
       break;
     }
 
     case MESSAGE_TYPE::GOAL:
     {
-      
-      if (valread == deserializeTopic(goal_msg_))
-      {
-        goal_pub_.publish(goal_msg_);
-      }
-      else
-      {
-        ROS_ERROR("Received message length not matches the sent one (4)!!!");
-        continue;
-      }
+      ROS_ERROR("GOAL Not implemented!");
 
       break;
     }
@@ -339,12 +298,6 @@ int main(int argc, char **argv)
 
   one_traj_sub_ = nh.subscribe("/broadcast_traj_from_planner", 100, one_traj_sub_udp_cb, ros::TransportHints().tcpNoDelay());
   one_traj_pub_ = nh.advertise<traj_utils::MINCOTraj>("/broadcast_traj_to_planner", 100);
-
-  // mandatory_stop_sub_ = nh.subscribe("/mandatory_stop_from_users", 100, mandatory_stop_sub_udp_cb, ros::TransportHints().tcpNoDelay());
-  // mandatory_stop_pub_ = nh.advertise<std_msgs::Empty>("/mandatory_stop_to_planner", 100);
-
-  goal_sub_ = nh.subscribe("/goal_user2brig", 100, goal_sub_udp_cb, ros::TransportHints().tcpNoDelay());
-  goal_pub_ = nh.advertise<quadrotor_msgs::GoalSet>("/goal_brig2plner", 100);
 
   joy_sub_ = nh.subscribe("/joystick_from_users", 100, joy_sub_udp_cb, ros::TransportHints().tcpNoDelay());
   joy_pub_ = nh.advertise<sensor_msgs::Joy>("/joystick_from_bridge", 100);

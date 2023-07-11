@@ -755,8 +755,9 @@ namespace ego_planner
               cps_.direction[j].push_back(cps_.direction[j + 1].back());
             }
         }
-        else
-          ROS_WARN("Failed to generate direction. It doesn't matter.");
+        else{
+          ROS_WARN("[Poly Traj Optimizer] Failed to generate direction. It doesn't matter.");
+        }
       }
 
       force_stop_type_ = STOP_FOR_REBOUND;

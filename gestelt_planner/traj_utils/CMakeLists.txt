@@ -22,13 +22,13 @@ add_message_files(
   DataDisp.msg
   PolyTraj.msg
   MINCOTraj.msg
-  )
+)
   
 # Generate added messages and services with any dependencies listed here
 generate_messages(
   DEPENDENCIES
-  std_msgs
-  geometry_msgs
+    std_msgs
+    geometry_msgs
 )
 
 catkin_package(
@@ -49,7 +49,7 @@ include_directories(
 
 add_library( traj_utils
     src/planning_visualization.cpp 
-    )
+)
 target_link_libraries( traj_utils
     ${catkin_LIBRARIES} 
-    )  
+)  

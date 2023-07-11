@@ -6,8 +6,6 @@
 #include <nav_msgs/Odometry.h>
 #include <sensor_msgs/Joy.h>
 #include <traj_utils/MINCOTraj.h>
-#include <quadrotor_msgs/GoalSet.h>
-#include <sensor_msgs/PointCloud2.h>
 #include <unistd.h>
 #include "reliable_bridge.hpp"
 
@@ -16,9 +14,7 @@ using namespace std;
 std::vector<int> id_list_;
 std::vector<string> ip_list_;
 ros::Subscriber other_odoms_sub_, one_traj_sub_, joystick_sub_, goal_sub_, object_odoms_sub_;
-ros::Publisher other_odoms_pub_, one_traj_pub_, joystick_pub_, goal_pub_, object_odoms_pub_;
-ros::Subscriber goal_exploration_sub_,star_cvx_sub_,frontier_sub_;
-ros::Publisher goal_exploration_pub_,star_cvx_pub_,frontier_pub_;
+ros::Publisher other_odoms_pub_, one_traj_pub_, joystick_pub_, object_odoms_pub_;
 int self_id_;
 int self_id_in_bridge_;
 int drone_num_;
@@ -141,49 +137,6 @@ void joystick_sub_cb(const sensor_msgs::JoyPtr &msg)
   send_to_all_drone_except_me("/joystick",*msg);
 }
 
-void goal_sub_cb(const quadrotor_msgs::GoalSetPtr &msg)
-{
-  if (msg->drone_id==self_id_in_bridge_)
-  {
-    goal_pub_.publish(msg);  // Send to myself.
-    return;
-  }
-  
-  if(bridge->send_msg_to_one(msg->drone_id,"/goal",*msg)< 0)
-  {
-    ROS_ERROR("[Bridge] SEND ERROR (GOAL)!!!");
-  }
-}
-
-void goal_exploration_sub_cb(const quadrotor_msgs::GoalSetPtr &msg)
-{
-  if (bridge->send_msg_to_all("/goal_exploration",*msg))
-  {
-    ROS_ERROR("[Bridge] SEND ERROR (goal_exploration)!!!");
-  }
-
-}
-
-void star_cvx_sub_cb(const sensor_msgs::PointCloud2Ptr &msg)
-{
-  if (bridge->send_msg_to_all("/star_cvx",*msg))
-  {
-    ROS_ERROR("[Bridge] SEND ERROR (star_cvx)!!!");
-  }
-
-}
-
-void frontier_sub_cb(const sensor_msgs::PointCloud2Ptr &msg)
-{
-
-  if (bridge->send_msg_to_all("/frontier",*msg))
-  {
-    ROS_ERROR("[Bridge] SEND ERROR (frontier)!!!");
-  }
-
-}
-
-
 // Here is callback when the brodge received the data from others.
 void odom_bridge_cb(int ID, ros::SerializedMessage& m)
 {
@@ -199,12 +152,6 @@ void object_odom_bridge_cb(int ID, ros::SerializedMessage& m)
   object_odoms_pub_.publish(object_odom_msg_);
 }
 
-void goal_bridge_cb(int ID, ros::SerializedMessage& m)
-{
-  quadrotor_msgs::GoalSet goal_msg_;
-  ros::serialization::deserializeMessage(m,goal_msg_);
-  goal_pub_.publish(goal_msg_);
-}
 
 void traj_bridge_cb(int ID, ros::SerializedMessage& m)
 {
@@ -220,26 +167,6 @@ void joystick_bridge_cb(int ID, ros::SerializedMessage& m)
   joystick_pub_.publish(joystick_msg_);
 }
 
-void goal_exploration_bridge_cb(int ID, ros::SerializedMessage& m)
-{
-  quadrotor_msgs::GoalSet goal_msg_;
-  ros::serialization::deserializeMessage(m,goal_msg_);
-  goal_exploration_pub_.publish(goal_msg_);
-}
-
-void star_cvx_bridge_cb(int ID, ros::SerializedMessage& m)
-{
-  sensor_msgs::PointCloud2 point_msg_;
-  ros::serialization::deserializeMessage(m,point_msg_);
-  star_cvx_pub_.publish(point_msg_);
-}
-
-void frontier_bridge_cb(int ID, ros::SerializedMessage& m)
-{
-  sensor_msgs::PointCloud2 point_msg_;
-  ros::serialization::deserializeMessage(m,point_msg_);
-  frontier_pub_.publish(point_msg_);
-}
 
 
 int main(int argc, char **argv)
@@ -296,20 +223,7 @@ int main(int argc, char **argv)
   register_callbak_to_all_groundstation("/joystick",joystick_bridge_cb);
 
   goal_sub_ = nh.subscribe("/goal_user2brig", 100, goal_sub_cb, ros::TransportHints().tcpNoDelay());
-  goal_pub_ = nh.advertise<quadrotor_msgs::GoalSet>("/goal_brig2plner", 100);
   register_callbak_to_all_groundstation("/goal",goal_bridge_cb);
-
-  // goal_exploration_sub_ = nh.subscribe("/goal_with_id", 100, goal_exploration_sub_udp_cb, ros::TransportHints().tcpNoDelay());
-  // goal_exploration_pub_ = nh.advertise<quadrotor_msgs::GoalSet>("/goal_with_id_to_planner", 100);
-  // bridge->register_callback_for_all("/goal_exploration",goal_exploration_bridge_cb);
-
-  // star_cvx_sub_ = nh.subscribe("/free_map/star_cvx", 100, star_cvx_sub_udp_cb, ros::TransportHints().tcpNoDelay());
-  // star_cvx_pub_ = nh.advertise<sensor_msgs::PointCloud2>("/free_map/star_cvx_to_planner", 100);
-  // bridge->register_callback_for_all("/star_cvx",star_cvx_bridge_cb);
-
-  // frontier_sub_ = nh.subscribe("/frontier_pc", 100, frontier_sub_udp_cb, ros::TransportHints().tcpNoDelay());
-  // frontier_pub_ = nh.advertise<sensor_msgs::PointCloud2>("/frontier_pc_to_planner", 100);
-  // bridge->register_callback_for_all("/frontier",frontier_bridge_cb);
 
   ros::spin();
 

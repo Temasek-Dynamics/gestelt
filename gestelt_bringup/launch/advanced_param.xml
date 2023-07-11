@@ -22,11 +22,6 @@
     <arg name="pose_topic"/>
     <arg name="depth_topic"/>
     <arg name="cloud_topic"/>
-    <!-- Camera params -->
-    <arg name="cx"/>
-    <arg name="cy"/>
-    <arg name="fx"/>
-    <arg name="fy"/>
     <!-- Planner params -->
     <arg name="max_vel"/>
     <arg name="max_acc"/>
@@ -98,7 +93,7 @@
         <remap from="~grid_map/camera_info" to="/drone$(arg drone_id)/camera/depth/camera_info"/>
 
         <param name="grid_map/resolution" value="0.1" />
-        <param name="grid_map/inflation" value="0.275" />
+        <param name="grid_map/inflation" value="0.35" />
         <param name="grid_map/map_size_x" value="$(arg map_size_x_)" />
         <param name="grid_map/map_size_y" value="$(arg map_size_y_)" />
         <param name="grid_map/map_size_z" value="$(arg map_size_z_)" />

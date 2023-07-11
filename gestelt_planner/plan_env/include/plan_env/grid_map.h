@@ -26,12 +26,13 @@
 
 #include <message_filters/subscriber.h>
 #include <message_filters/sync_policies/approximate_time.h>
-#include <message_filters/sync_policies/exact_time.h>
+// #include <message_filters/sync_policies/exact_time.h>
 #include <message_filters/time_synchronizer.h>
-
+#include <message_filters/synchronizer.h>
 
 #define logit(x) (log((x) / (1 - (x))))
 
+// TODO: Remove
 using namespace std;
 
 // voxel hashing
@@ -61,7 +62,7 @@ struct MappingParameters
   Eigen::Vector3d local_update_range_;                  // Range w.r.t camera pose 
   double resolution_, resolution_inv_;                  
   double map_inflation_;
-  string global_frame_id_;
+  std::string global_frame_id_;
   int pose_type_;
   int sensor_type_;
 
@@ -137,14 +138,14 @@ struct MappingData
 
   bool init_depth_img_{false}; // First depth image received
   
-  vector<Eigen::Vector3d> proj_points_; // depth image projected point cloud
+  std::vector<Eigen::Vector3d> proj_points_; // depth image projected point cloud
   int proj_points_cnt{0}; // Number of pixels from input depth map that have been projected
 
   // flag buffers for speeding up raycasting
-  vector<short> count_hit_, count_hit_and_miss_;
-  vector<char> flag_traverse_, flag_rayend_;
+  std::vector<short> count_hit_, count_hit_and_miss_;
+  std::vector<char> flag_traverse_, flag_rayend_;
   char raycast_num_{0};
-  queue<Eigen::Vector3i> cache_voxel_;
+  std::queue<Eigen::Vector3i> cache_voxel_;
 
   // range of updating grid
   Eigen::Vector3i local_bound_min_, local_bound_max_;
@@ -164,7 +165,7 @@ public:
   // Get time benchmark shared pointer
   void initTimeBenchmark(std::shared_ptr<TimeBenchmark> time_benchmark);
 
-  enum
+  enum PoseType
   {
     POSE_STAMPED = 1,
     ODOMETRY = 2,
@@ -234,30 +235,27 @@ private:
    * Subscriber Callbacks
   */
 
-  // Subscriber callback to  base_link odom
-  void odomCallback(const nav_msgs::OdometryConstPtr &odom);
-
-  // Subscriber callback to base_link global pose
-  void poseCallback(const geometry_msgs::PoseStampedConstPtr &msg);
-
   // Subscriber callback to camera info 
   void cameraInfoCallback(const sensor_msgs::CameraInfoConstPtr &msg);
 
-  // Subscriber callback to depth image
-  void depthImgCallback(const sensor_msgs::ImageConstPtr &img);
+  // Subscriber callback to depth image and base_link odom
+  void depthOdomCB( const sensor_msgs::ImageConstPtr &msg_img, 
+                    const nav_msgs::OdometryConstPtr &msg_odom);
 
-  // Subscriber callback to cloud message
-  void cloudCallback(const sensor_msgs::PointCloud2ConstPtr &img);
+  // Subscriber callback to depth image and base_link pose
+  void depthPoseCB(const sensor_msgs::ImageConstPtr &msg_img,
+                    const geometry_msgs::PoseStampedConstPtr &msg_pose);
+
+  // Subscriber callback to point cloud and odom
+  void cloudOdomCB( const sensor_msgs::PointCloud2ConstPtr &msg_pc, 
+                    const nav_msgs::OdometryConstPtr &msg_odom);
+
+  // Subscriber callback to point cloud and pose
+  void cloudPoseCB(const sensor_msgs::PointCloud2ConstPtr &msg_pc,
+                    const geometry_msgs::PoseStampedConstPtr &msg_pose);
 
   // // VINS estimation callback
   // void extrinsicCallback(const nav_msgs::OdometryConstPtr &odom);
-
-  // // Subscriber callback to depth image and base_link odom
-  // void depthOdomCallback(const sensor_msgs::ImageConstPtr &img, const nav_msgs::OdometryConstPtr &odom);
-
-  // // Subscriber callback to depth image and base_link pose
-  // void depthPoseCallback(const sensor_msgs::ImageConstPtr &img,
-  //                        const geometry_msgs::PoseStampedConstPtr &pose);
 
   /**
    * Timer Callbacks
@@ -290,46 +288,60 @@ private:
    * Gridmap data manipulation methods
   */
 
-  inline void inflatePoint(const Eigen::Vector3i &pt, int step, vector<Eigen::Vector3i> &pts);
-  // int setCacheOccupancy(const Eigen::Vector3d &pos, const int& occ);
+  // inline void inflatePoint(const Eigen::Vector3i &pt, int step, std::vector<Eigen::Vector3i> &pts);
+  // // int setCacheOccupancy(const Eigen::Vector3d &pos, const int& occ);
 
-  void clearAndInflateLocalMap();
+  // void clearAndInflateLocalMap();
+
+  void poseToCamPose(const geometry_msgs::Pose &pose);
+
+  void cloudToCloudMap(const sensor_msgs::PointCloud2ConstPtr &msg);
+  void depthToCloudMap(const sensor_msgs::ImageConstPtr &msg);
 
 private: 
+  ros::NodeHandle node_;
 
-  // typedef message_filters::sync_policies::ExactTime<sensor_msgs::Image,
-  // nav_msgs::Odometry> SyncPolicyImageOdom; typedef
-  // message_filters::sync_policies::ExactTime<sensor_msgs::Image,
-  // geometry_msgs::PoseStamped> SyncPolicyImagePose;
   typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, nav_msgs::Odometry>
       SyncPolicyImageOdom;
   typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, geometry_msgs::PoseStamped>
       SyncPolicyImagePose;
-  typedef shared_ptr<message_filters::Synchronizer<SyncPolicyImagePose>> SynchronizerImagePose;
-  typedef shared_ptr<message_filters::Synchronizer<SyncPolicyImageOdom>> SynchronizerImageOdom;
+  typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::PointCloud2, nav_msgs::Odometry>
+      SyncPolicyCloudOdom;
+  typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::PointCloud2, geometry_msgs::PoseStamped>
+      SyncPolicyCloudPose;
 
-  ros::NodeHandle node_;
-  // shared_ptr<message_filters::Subscriber<sensor_msgs::Image>> depth_sub_;
-  // shared_ptr<message_filters::Subscriber<geometry_msgs::PoseStamped>> pose_sub_;
-  // shared_ptr<message_filters::Subscriber<nav_msgs::Odometry>> odom_sub_;
-  // SynchronizerImagePose sync_image_pose_;
-  // SynchronizerImageOdom sync_image_odom_;
+  // TODO: Tune the parameters http://wiki.ros.org/message_filters/ApproximateTime
+  //    Specify Inter message lower bound
+  //    Max interval duration
+  //    Age penalty
+  typedef std::shared_ptr<message_filters::Synchronizer<SyncPolicyImagePose>> SynchronizerImagePose;
+  typedef std::shared_ptr<message_filters::Synchronizer<SyncPolicyImageOdom>> SynchronizerImageOdom;
+  typedef std::shared_ptr<message_filters::Synchronizer<SyncPolicyCloudPose>> SynchronizerCloudPose;
+  typedef std::shared_ptr<message_filters::Synchronizer<SyncPolicyCloudOdom>> SynchronizerCloudOdom;
+
+  SynchronizerImagePose sync_image_pose_;
+  SynchronizerImageOdom sync_image_odom_;
+  SynchronizerCloudPose sync_cloud_pose_;
+  SynchronizerCloudOdom sync_cloud_odom_;
+
+  std::shared_ptr<message_filters::Subscriber<sensor_msgs::Image>> depth_sub_;
+  std::shared_ptr<message_filters::Subscriber<sensor_msgs::PointCloud2>> cloud_sub_;
+  std::shared_ptr<message_filters::Subscriber<geometry_msgs::PoseStamped>> pose_sub_;
+  std::shared_ptr<message_filters::Subscriber<nav_msgs::Odometry>> odom_sub_;
+
+  /* ROS Publishers, subscribers and Timers */
 
   ros::Subscriber camera_info_sub_;
 
-  ros::Subscriber cloud_sub_, depth_sub_;
-  ros::Subscriber odom_sub_, pose_sub_;
+  // ros::Subscriber extrinsic_sub_;
 
-  ros::Subscriber extrinsic_sub_;
-
-  ros::Publisher map_pub_, map_inf_pub_;
+  ros::Publisher map_pub_;
   ros::Timer occ_timer_, vis_timer_, fading_timer_;
 
-  // Benchmarking 
+  /* Benchmarking */
   std::shared_ptr<TimeBenchmark> time_benchmark_;
 
-  // Data structures for point cloud 
-  // pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_map_body_; // Point cloud in body frame
+  /* Data structures for point clouds */
   pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_global_;  // Point cloud in global frame
   std::shared_ptr<pcl::octree::OctreePointCloudOccupancy<pcl::PointXYZ>> octree_map_; // In global frame
   std::shared_ptr<pcl::octree::OctreePointCloudOccupancy<pcl::PointXYZ>> octree_map_inflated_; // In global frame

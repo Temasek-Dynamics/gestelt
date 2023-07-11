@@ -9,7 +9,6 @@ add_compile_options(-std=c++14)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   roscpp
-  rospy
   plan_env
   cv_bridge
   std_msgs
@@ -25,7 +24,7 @@ find_package(PCL 1.7 REQUIRED)
 catkin_package(
  INCLUDE_DIRS include
  LIBRARIES global_planner
- CATKIN_DEPENDS roscpp rospy plan_env
+ CATKIN_DEPENDS roscpp plan_env
 #  DEPENDS system_lib
 )
 

@@ -141,7 +141,7 @@ MAKE SURE TO BUILD IN RELEASE MODE
             - Measure delay: `rostopic delay`
             - Topics of interest:
                 - On radxa
-                    - /drone0/camera/depth/image_raw
+                    - /drone0/camera/depth/image_raw (840 * 640)
                         - 2.4 ghz
                             - Delay: 0.75 (0.004)
                             - Bandwidth: 2.88mb/s (16.65 mb/s)
@@ -192,6 +192,53 @@ MAKE SURE TO BUILD IN RELEASE MODE
         - Maximum flight speed it can enable in sparse/dense environment
         - Maximum number of UAVs it can handle
 
-
-
-# Replan 
+## PID Tuning Guide
+- Tune PID 
+    - Rate Controller
+        - ROLL
+            - MC_ROLLRATE_K: 1.0
+            - MC_ROLLRATE_P: 0.249
+                - Enhance damping of the roll channel, faster attenuation of the oscillation
+            - MC_ROLLRATE_D: 0.0046
+            - MC_ROLLRATE_I: 0.325
+        - PITCH
+            - MC_PITCHRATE_K: 1.0
+            - MC_PITCHRATE_P: 0.233
+            - MC_PITCHRATE_D: 0.0044
+            - MC_PITCHRATE_I: 0.3
+        - YAW
+            - MC_YAWRATE_K: 1.0
+            - MC_YAWRATE_P: 0.18
+            - MC_YAWRATE_I: 0.18
+    - Attitude Controller
+        - MC_ROLL_P
+            - 3.84
+            - To reduce amplitude of oscillation
+        - MC_PITCH_P
+            - 4.1
+        - MC_YAW_P
+            - 5.26
+    - Velocity Controller
+        - (horizontal)
+            - MPC_XY_VEL_P_ACC
+                - 3.25
+            - MPC_XY_VEL_I_ACC
+                - 0.4
+            - MPC_XY_VEL_D_ACC
+                - 0.2
+        - (vertical)
+            - MPC_Z_VEL_P_ACC
+                - 4.0
+            - MPC_Z_VEL_I_ACC
+                - 2.0
+            - MPC_Z_VEL_D_ACC
+                - 0.0
+    - Position Controller
+        - (horizontal)
+            - MPC_XY_P 
+                - 0.8
+                - Reduce position control gain
+        - (vertical)
+            - MPC_Z_P 
+                - 1.0
+                - Reduce overshoot of position.

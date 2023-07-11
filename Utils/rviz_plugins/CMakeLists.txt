@@ -12,7 +12,6 @@ catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES irobot_msgs
   DEPENDS system_lib
-          message_runtime
 )
 
 ###########

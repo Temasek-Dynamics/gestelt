@@ -1,5 +1,5 @@
 #include <ros/ros.h>
-#include <plan_manage/traj_server.h>
+#include <traj_server/traj_server.h>
 
 int main(int argc, char **argv)
 {

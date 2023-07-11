@@ -9,7 +9,6 @@ find_package(OpenCV REQUIRED)
 
 set (ROS_LIBRARIES
     roscpp
-    rospy
     std_msgs
     visualization_msgs
     cv_bridge

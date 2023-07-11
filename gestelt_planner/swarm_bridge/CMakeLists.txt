@@ -13,9 +13,7 @@ set(ENABLE_TCP false) # requires zmq, zmqpp
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   std_msgs
-  geometry_msgs
   traj_utils
-  # traj_opt # for traj2odom_node
   sensor_msgs
 )
 
@@ -49,12 +47,5 @@ if(ENABLE_TCP)
     )
 
 endif(ENABLE_TCP)
-
-# add_executable(traj2odom_node
-#   src/traj2odom_node.cpp 
-# )
-# target_link_libraries(traj2odom_node 
-#   ${catkin_LIBRARIES}
-# )
 
 

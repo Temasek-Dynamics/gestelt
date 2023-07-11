@@ -5,7 +5,6 @@ add_compile_options(-std=c++14)
 
 set (ROS_LIBRARIES
   roscpp
-  rospy
 )
 
 ## Find catkin macros and libraries

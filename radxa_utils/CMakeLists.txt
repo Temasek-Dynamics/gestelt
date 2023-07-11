@@ -10,7 +10,6 @@ add_compile_options(-std=c++11)
 
 set (ROS_PKGS
   roscpp
-  rospy
   std_msgs
 )
 
