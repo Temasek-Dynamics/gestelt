@@ -32,10 +32,8 @@
     <param name="~queue_size" value="5" />
     <param name="~voxel_size" value="0.1" />
 
-
     <remap from="~cloud_in" to="/drone0/$(arg point_cloud_topic)" />
     <remap from="~cloud_out" to="/drone0/$(arg point_cloud_topic_ds)" />
-
   </node>
 
   <!-- Drone 0 -->

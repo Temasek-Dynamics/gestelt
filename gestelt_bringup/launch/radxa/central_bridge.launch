@@ -5,10 +5,14 @@
   <arg name="ros_ip" default="localhost"/>
   <arg name="num_drones" value="2"/>
   
+  <arg name="point_cloud_topic" value="camera/depth/points" />
+  <arg name="point_cloud_topic_ds" value="camera/depth/points_downsampled" />
+
   <!-- Set ROS Environment variables -->
   <env name="ROS_MASTER_URI" value="$(arg ros_master_uri)"/>
   <env name="ROS_IP" value="$(arg ros_ip)"/>
   <env name="ROS_HOSTNAME" value="$(arg ros_ip)"/>
+
 
   <!--  swarm bridge re-broadcasts the trajectories of all drones -->
   <include file="$(find swarm_bridge)/launch/bridge_udp.launch">
@@ -22,6 +26,15 @@
     <param name="~num_drones" value="$(arg num_drones)" />
     <param name="~collision_tolerance" value="0.6" />
     <param name="~check_collision_freq" value="10.0" />
+  </node>
+
+  <node pkg="gestelt_bringup" type="cloud_downsampler" 
+    name="cloud_downsampler" output="screen">
+    <param name="~queue_size" value="5" />
+    <param name="~voxel_size" value="0.1" />
+
+    <remap from="~cloud_in" to="/drone0/$(arg point_cloud_topic)" />
+    <remap from="~cloud_out" to="/drone0/$(arg point_cloud_topic_ds)" />
   </node>
 
 </launch>
