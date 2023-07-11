@@ -280,7 +280,7 @@ private:
    * Depth image processing methods
   */
 
-  // void projectDepthImage();
+  void projectDepthImage();
   // void raycastProcess();
   // Eigen::Vector3d closestPointInMap(const Eigen::Vector3d &pt, const Eigen::Vector3d &camera_pt);
 

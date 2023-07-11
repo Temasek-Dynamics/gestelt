@@ -510,6 +510,68 @@ void GridMap::cloudToCloudMap(const sensor_msgs::PointCloud2ConstPtr &msg)
   octree_map_inflated_->setOccupiedVoxelsAtPointsFromCloud(cloud_global_);
 }
 
+// void GridMap::depthToCloudMap(const sensor_msgs::ImageConstPtr &msg)
+// {
+//   // TODO: Still necessary?
+//   if (!isValid()){
+//     md_.occ_need_update_ = false;
+//     return;
+//   }
+
+//   cloud_global_->header.stamp = msg->header.stamp.toNSec();
+//   cloud_global_->header.frame_id = mp_.global_frame_id_;
+
+//   cloud_global_->height = msg->height;
+//   cloud_global_->width = msg->width;
+
+//   cloud_global_->points.resize(msg->height * msg->width);
+//   cloud_global_->is_dense = false;
+
+//   int depth_idx = 0; // Index of depth img data
+  
+//   ROS_INFO("Total (Row, cols) = (%d, %d)", msg->height, msg->width);
+//   ROS_INFO("Step = %d", msg->step);
+//   ROS_INFO("is_bigendian? = %d", msg->is_bigendian);
+//   // 32FC1 means each pixel value is stored as one channel floating point with single precision
+//   ROS_INFO("encoding = %s", msg->encoding.c_str());
+//   ROS_INFO("data size = %ld", msg->data.size());
+
+//   // msg->step is the full row length in bytes
+//   // msg->width is the length of the row in pixels
+//   // pixel_byte_size is the number of bytes occupied by each pixel
+//   int pixel_byte_size = (msg->step)/(msg->width);
+
+//   int cloud_idx = 0;
+
+//   for (int v = 0; v < (int) msg->height; v++ ) { // Iterate through rows
+//     for (int u = 0; u < (int) msg->width; u++, depth_idx += pixel_byte_size, cloud_idx += 1){
+//       pcl::PointXYZ& pt = cloud_global_->points[cloud_idx];
+//       float depth_z = msg->data[depth_idx];
+
+//       float bad_point = std::numeric_limits<float>::quiet_NaN ();
+
+//       if (depth_z == 0 || depth_z == bad_point || depth_z == 255){
+//         pt.x = pt.y = pt.z = bad_point;
+//         // cloud_global_->is_dense = false;
+//       }
+//       else {
+//         // pt.z = depth_z * ( 4.5 / 255);
+//         // pt.x = (u - mp_.cx_) * pt.z / mp_.fx_;
+//         // pt.y = (v - mp_.cy_) * pt.z / mp_.fy_;
+//         pt.z = depth_z ;
+//         pt.x = (u - mp_.cx_) * pt.z / mp_.fx_;
+//         pt.y = (v - mp_.cy_) * pt.z / mp_.fy_;
+//       }
+//     }
+//   }
+
+//   pcl::transformPointCloud (*cloud_global_, *cloud_global_, md_.cam2global_);
+
+//   // Octree takes in cloud map in global frame
+//   octree_map_->setOccupiedVoxelsAtPointsFromCloud(cloud_global_);
+//   octree_map_inflated_->setOccupiedVoxelsAtPointsFromCloud(cloud_global_);
+// }
+
 void GridMap::depthToCloudMap(const sensor_msgs::ImageConstPtr &msg)
 {
   // TODO: Still necessary?
@@ -518,45 +580,57 @@ void GridMap::depthToCloudMap(const sensor_msgs::ImageConstPtr &msg)
     return;
   }
 
+  /* get depth image */
+  cv_bridge::CvImagePtr cv_ptr;
+  cv_ptr = cv_bridge::toCvCopy(msg, msg->encoding);
+
+  if (msg->encoding == sensor_msgs::image_encodings::TYPE_32FC1)
+  {
+    (cv_ptr->image).convertTo(cv_ptr->image, CV_16UC1, mp_.k_depth_scaling_factor_);
+  }
+  cv_ptr->image.copyTo(md_.depth_image_);
+
   cloud_global_->header.stamp = msg->header.stamp.toNSec();
   cloud_global_->header.frame_id = mp_.global_frame_id_;
 
-  cloud_global_->height = msg->height;
-  cloud_global_->width = msg->width;
+  cloud_global_->height = 1;
+  cloud_global_->width = md_.depth_image_.rows * md_.depth_image_.cols;
 
-  cloud_global_->points.resize (msg->height * msg->width);
-  cloud_global_->is_dense = true;
+  // cloud_global_->height = md_.depth_image_.cols;
+  // cloud_global_->width = md_.depth_image_.rows;
 
-  int depth_idx = 0; // Index of depth data
+  cloud_global_->points.resize(md_.depth_image_.rows * md_.depth_image_.cols);
+  cloud_global_->is_dense = false;
 
-  for (int v = 0; v < (int) msg->height; v++ ){ // Iterate through rows
-    for (int u = 0; u < (int) msg->width; u++, depth_idx++){ // Iterate through cols
-      pcl::PointXYZ& pt = cloud_global_->points[depth_idx];
+  uint16_t *row_ptr;
 
-      float depth_z = msg->data[depth_idx];
+  for (int v = 0; v < md_.depth_image_.rows; v++){
+    row_ptr = md_.depth_image_.ptr<uint16_t>(v);
+    for (int u = 0; u < md_.depth_image_.cols; u++, row_ptr++){
+      int cloud_idx = md_.depth_image_.cols * v + u;
 
-      float bad_point = std::numeric_limits<float>::quiet_NaN ();
+      Eigen::Vector3d pt;
 
-      if (depth_z == 0 || depth_z == bad_point || depth_z == 255){
-        pt.x = pt.y = pt.z = bad_point;
-        // cloud_global_->is_dense = false;
-      }
-      else {
-        // pt.z = depth_z * ( 4.5 / 255);
-        // pt.x = (u - mp_.cx_) * pt.z / mp_.fx_;
-        // pt.y = (v - mp_.cy_) * pt.z / mp_.fy_;
-        pt.x = (u - mp_.cx_) * depth_z / mp_.fx_;
-        pt.y = (v - mp_.cy_) * depth_z / mp_.fy_;
-        pt.z = depth_z ;
-      }
+      pt(2) = (*row_ptr) / 1000.0;
+      pt(0) = (u - mp_.cx_) * pt(2) / mp_.fx_;
+      pt(1) = (v - mp_.cy_) * pt(2) / mp_.fy_;
+
+      // pt = md_.cam_to_global_r_m_ * pt + md_.cam_pos_;
+
+      pcl::PointXYZ& pt_cloud = cloud_global_->points[cloud_idx];
+      pt_cloud.x = pt(0);
+      pt_cloud.y = pt(1);
+      pt_cloud.z = pt(2);
     }
   }
-  // pcl::transformPointCloud (*cloud_global_, *cloud_global_, md_.cam2global_);
+
+  pcl::transformPointCloud (*cloud_global_, *cloud_global_, md_.cam2global_);
 
   // Octree takes in cloud map in global frame
   octree_map_->setOccupiedVoxelsAtPointsFromCloud(cloud_global_);
   octree_map_inflated_->setOccupiedVoxelsAtPointsFromCloud(cloud_global_);
 }
+
 
 void GridMap::depthOdomCB( const sensor_msgs::ImageConstPtr &msg_img, 
                           const nav_msgs::OdometryConstPtr &msg_odom) 
@@ -617,113 +691,113 @@ void GridMap::cameraInfoCallback(const sensor_msgs::CameraInfoConstPtr &msg)
 
 /** Depth image processing methods */
 
-// void GridMap::projectDepthImage()
-// {
-//   md_.proj_points_cnt = 0;
+void GridMap::projectDepthImage()
+{
+  md_.proj_points_cnt = 0;
 
-//   uint16_t *row_ptr;
-//   int cols = md_.depth_image_.cols;
-//   int rows = md_.depth_image_.rows;
-//   int skip_pix = mp_.skip_pixel_;
+  uint16_t *row_ptr;
+  int cols = md_.depth_image_.cols;
+  int rows = md_.depth_image_.rows;
+  int skip_pix = mp_.skip_pixel_;
 
-//   if (!mp_.use_depth_filter_)
-//   {
-//     for (int v = 0; v < rows; v += skip_pix)
-//     {
-//       row_ptr = md_.depth_image_.ptr<uint16_t>(v);
+  if (!mp_.use_depth_filter_)
+  {
+    for (int v = 0; v < rows; v += skip_pix)
+    {
+      row_ptr = md_.depth_image_.ptr<uint16_t>(v);
 
-//       for (int u = 0; u < cols; u += skip_pix)
-//       {
-//         // projected point
-//         Eigen::Vector3d proj_pt;  
+      for (int u = 0; u < cols; u += skip_pix)
+      {
+        // projected point
+        Eigen::Vector3d proj_pt;  
 
-//         // Project 
-//         // u = fx * (xc / zc) + cx 
-//         //    where xc = proj_pt(0) && 
-//         //          zc = depth
-//         // v = fy * (yc / zc) + cy 
-//         //    where yc = proj_pt(1) && 
-//         //          zc = depth
+        // Project 
+        // u = fx * (xc / zc) + cx 
+        //    where xc = proj_pt(0) && 
+        //          zc = depth
+        // v = fy * (yc / zc) + cy 
+        //    where yc = proj_pt(1) && 
+        //          zc = depth
 
-//         // Get coordinates of projected points relative to camera optical frame
-//         // (x_c, y_c, z_c)
+        // Get coordinates of projected points relative to camera optical frame
+        // (x_c, y_c, z_c)
 
-//         // Depth (z coordinate) at each pixel
-//         double z_c = (*row_ptr++) / mp_.k_depth_scaling_factor_;
-//         // x and y coordiantes
-//         double x_c = (u - mp_.cx_) * z_c / mp_.fx_;
-//         double y_c = (v - mp_.cy_) * z_c / mp_.fy_;
+        // Depth (z coordinate) at each pixel
+        double z_c = (*row_ptr++) / mp_.k_depth_scaling_factor_;
+        // x and y coordiantes
+        double x_c = (u - mp_.cx_) * z_c / mp_.fx_;
+        double y_c = (v - mp_.cy_) * z_c / mp_.fy_;
 
-//         proj_pt << x_c, y_c, z_c;
+        proj_pt << x_c, y_c, z_c;
 
-//         proj_pt = md_.cam_to_global_r_m_ * proj_pt + md_.cam_pos_;
+        proj_pt = md_.cam_to_global_r_m_ * proj_pt + md_.cam_pos_;
 
-//         if (u == 320 && v == 240)
-//         {
-//           std::cout << "depth: " << z_c << std::endl;
-//         }
+        if (u == 320 && v == 240)
+        {
+          std::cout << "depth: " << z_c << std::endl;
+        }
 
-//         md_.proj_points_cnt++;
-//         md_.proj_points_[md_.proj_points_cnt] = proj_pt;
-//       }
-//     }
-//   }
-//   /* use depth filter */
-//   else
-//   {
-//     if (!md_.has_first_depth_){
-//       md_.has_first_depth_ = true;
-//     }
-//     else
-//     {
-//       Eigen::Vector3d pt_cur, pt_global, pt_reproj;
+        md_.proj_points_cnt++;
+        md_.proj_points_[md_.proj_points_cnt] = proj_pt;
+      }
+    }
+  }
+  /* use depth filter */
+  else
+  {
+    if (!md_.has_first_depth_){
+      md_.has_first_depth_ = true;
+    }
+    else
+    {
+      Eigen::Vector3d pt_cur, pt_global, pt_reproj;
 
-//       const double inv_factor = 1.0 / mp_.k_depth_scaling_factor_;
+      const double inv_factor = 1.0 / mp_.k_depth_scaling_factor_;
 
-//       // Iterate through rows
-//       for (int v = mp_.depth_filter_margin_; v < rows - mp_.depth_filter_margin_; v += mp_.skip_pixel_)
-//       {
-//         row_ptr = md_.depth_image_.ptr<uint16_t>(v) + mp_.depth_filter_margin_;
+      // Iterate through rows
+      for (int v = mp_.depth_filter_margin_; v < rows - mp_.depth_filter_margin_; v += mp_.skip_pixel_)
+      {
+        row_ptr = md_.depth_image_.ptr<uint16_t>(v) + mp_.depth_filter_margin_;
 
-//         // Iterate through columns
-//         for (int u = mp_.depth_filter_margin_; u < cols - mp_.depth_filter_margin_;
-//              u += mp_.skip_pixel_)
-//         {
-//           double z_c = (*row_ptr) * inv_factor;
-//           // depth = (*row_ptr) * inv_factor;
-//           row_ptr = row_ptr + mp_.skip_pixel_;
+        // Iterate through columns
+        for (int u = mp_.depth_filter_margin_; u < cols - mp_.depth_filter_margin_;
+             u += mp_.skip_pixel_)
+        {
+          double z_c = (*row_ptr) * inv_factor;
+          // depth = (*row_ptr) * inv_factor;
+          row_ptr = row_ptr + mp_.skip_pixel_;
 
-//           if (*row_ptr == 0)
-//           {
-//             z_c = mp_.max_ray_length_ + 0.1;
-//           }
-//           else if (z_c < mp_.depth_filter_mindist_)
-//           {
-//             continue;
-//           }
-//           else if (z_c > mp_.depth_filter_maxdist_)
-//           {
-//             z_c = mp_.max_ray_length_ + 0.1;
-//           }
+          if (*row_ptr == 0)
+          {
+            z_c = mp_.max_ray_length_ + 0.1;
+          }
+          else if (z_c < mp_.depth_filter_mindist_)
+          {
+            continue;
+          }
+          else if (z_c > mp_.depth_filter_maxdist_)
+          {
+            z_c = mp_.max_ray_length_ + 0.1;
+          }
 
-//           // Get coordinates of projected points relative to camera optical frame (x_c, y_c, z_c)
-//           double x_c = (u - mp_.cx_) * z_c / mp_.fx_;
-//           double y_c = (v - mp_.cy_) * z_c / mp_.fy_;
+          // Get coordinates of projected points relative to camera optical frame (x_c, y_c, z_c)
+          double x_c = (u - mp_.cx_) * z_c / mp_.fx_;
+          double y_c = (v - mp_.cy_) * z_c / mp_.fy_;
 
-//           pt_cur << x_c, y_c, z_c;
+          pt_cur << x_c, y_c, z_c;
 
-//           // point w.r.t global frame
-//           pt_global = md_.cam_to_global_r_m_ * pt_cur + md_.cam_pos_;
+          // point w.r.t global frame
+          pt_global = md_.cam_to_global_r_m_ * pt_cur + md_.cam_pos_;
 
-//           md_.proj_points_cnt++;
-//           md_.proj_points_[md_.proj_points_cnt] = pt_global;
+          md_.proj_points_cnt++;
+          md_.proj_points_[md_.proj_points_cnt] = pt_global;
 
-//         }
-//       }
-//     }
-//   }
+        }
+      }
+    }
+  }
 
-// }
+}
 
 // void GridMap::raycastProcess()
 // {
