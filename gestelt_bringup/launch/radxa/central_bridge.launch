@@ -13,7 +13,6 @@
   <env name="ROS_IP" value="$(arg ros_ip)"/>
   <env name="ROS_HOSTNAME" value="$(arg ros_ip)"/>
 
-
   <!--  swarm bridge re-broadcasts the trajectories of all drones -->
   <include file="$(find swarm_bridge)/launch/bridge_udp.launch">
     <arg name="drone_id" value="999"/>
@@ -28,6 +27,7 @@
     <param name="~check_collision_freq" value="10.0" />
   </node>
 
+  <!-- drone 0: Downsamples the input cloud -->
   <node pkg="gestelt_bringup" type="cloud_downsampler" 
     name="cloud_downsampler" output="screen">
     <param name="~queue_size" value="5" />
@@ -35,6 +35,16 @@
 
     <remap from="~cloud_in" to="/drone0/$(arg point_cloud_topic)" />
     <remap from="~cloud_out" to="/drone0/$(arg point_cloud_topic_ds)" />
+  </node>
+
+  <!-- drone 1: Downsamples the input cloud -->
+  <node pkg="gestelt_bringup" type="cloud_downsampler" 
+    name="cloud_downsampler" output="screen">
+    <param name="~queue_size" value="5" />
+    <param name="~voxel_size" value="0.1" />
+
+    <remap from="~cloud_in" to="/drone1/$(arg point_cloud_topic)" />
+    <remap from="~cloud_out" to="/drone1/$(arg point_cloud_topic_ds)" />
   </node>
 
 </launch>

@@ -3,8 +3,9 @@ This package contains useful scripts and launch files to setup and test the radx
 
 # Setting up the Radxa
 
-```bash
+## Installation of dependencies 
 
+```bash
 # Install tools
 sudo pip3 install pyamlboot
 
@@ -33,7 +34,11 @@ nmcli dev wifi connect "wifi_name" password "wifi_password"
 
 # Run setup script
 ./radxa_setup.sh
+```
 
+## Import to .bashrc
+
+```bash
 # Copy .bashrc configuration file over
 export ROS_DISTRO="noetic"
 source /opt/ros/noetic/setup.bash
@@ -43,9 +48,12 @@ alias sbash="source ~/.bashrc"
 
 # Set up network
 # http://wiki.ros.org/ROS/NetworkSetup
-export ROS_MASTER_URI=http://MASTER_IP:11311
-export ROS_HOSTNAME=OWN_IP
-export ROS_IP=OWN_IP
+export MASTER_IP=192.168.31.173
+export SELF_IP=192.168.31.173
+
+export ROS_MASTER_URI=http://$MASTER_IP:11311
+export ROS_HOSTNAME=$SELF_IP
+export ROS_IP=$SELF_IP
 
 # Convenience function
 alias pull_repo="git -C ~/gestelt_ws/src/gestelt/ pull"
@@ -53,20 +61,7 @@ alias ez_make="cd ~/gestelt_ws && catkin_make -DCMAKE_BUILD_TYPE=Release -DCATKI
 alias cd_scripts="cd ~/gestelt_ws/src/gestelt/gestelt_bringup/scripts/"
 ```
 
-# Testing communications
-Assuming we just have 2 machines A (192.168.1.112) and B (192.168.1.134) connected to the same LAN.
-They all have to have the same ROS_MASTER_URI. In this case, the ROS_MASTER_URI is "http://192.168.1.112:11311". A is the talker and B is the listener.
-
-```bash
-# Use ifconfig to figure out their IPs within the LAN
-
-# On machine A:
-roslaunch radxa_utils talker.launch ros_master_uri:=http://192.168.1.112:11311 ros_ip:=192.168.1.112
-
-# On machine B:
-roslaunch radxa_utils listener.launch ros_master_uri:=http://192.168.1.112:11311 ros_ip:=192.168.1.134
-```
-
+## Network setup
 Setting environment variables manually
 ```bash
 # Xiaomi network
@@ -99,18 +94,22 @@ export ROS_IP=$SELF_IP
 
 # Quick Start
 
-## Central Computer and radxa
+## Central Computer and radxa(s)
 ```bash
 # On the central flight control computer
 cd ~/gestelt_ws/src/gestelt/gestelt_bringup/scripts
 ./radxa_central_sitl.sh 
 
-# On the UAV (ID 0)
+# On UAV (ID 0)
 cd ~/gestelt_ws/src/gestelt/gestelt_bringup/scripts
 ./radxa_uav.sh 0
+
+# On UAV (ID 1)
+cd ~/gestelt_ws/src/gestelt/gestelt_bringup/scripts
+./radxa_uav.sh 1
 ```
 
-# TODO
+# Measured Metrics
 1. (Egoplanner on Radxa) <--wireless--> (PX4 SITL and Gazebo on PC) 
     - Xiaomi Network (Central PC and Radxa connected wirelessly to network)
         - Bandwidth: 

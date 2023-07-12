@@ -1,10 +1,5 @@
 #!/bin/bash
 
-if [ "$#" != 2 ]; then 
-    echo -e "usage: ./radxa_central ros_master_uri ros_ip\n"
-    return 1
-fi
-
 ros_master_uri=$1
 ros_ip=$2
 

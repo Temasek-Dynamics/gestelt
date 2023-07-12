@@ -2,7 +2,6 @@
 
 if [ "$#" != 1 ]; then 
     echo -e "usage: ./radxa_uav uav_id \n"
-    return 1
 fi
 
 uav_id=$1
