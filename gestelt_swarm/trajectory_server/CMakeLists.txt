@@ -1,5 +1,5 @@
-cmake_minimum_required(VERSION 2.8.3)
-project(ego_planner)
+cmake_minimum_required(VERSION 3.0.2)
+project(trajectory_server)
 
 set(CMAKE_BUILD_TYPE "Release")
 add_compile_options(-std=c++14)
@@ -9,11 +9,10 @@ set(ROS_LIBRARIES
   roscpp
   std_msgs
   geometry_msgs
-  trajectory_server_msgs
-  plan_env
+  mavros_msgs
   traj_opt
   traj_utils
-  swarm_benchmark
+  trajectory_server_msgs
 )
 
 find_package(Eigen3 REQUIRED)
@@ -23,7 +22,7 @@ find_package(catkin REQUIRED COMPONENTS
 
 catkin_package(
  INCLUDE_DIRS include
- LIBRARIES ${PROJECT_NAME}
+ LIBRARIES trajectory_server
  CATKIN_DEPENDS ${ROS_LIBRARIES}
 #  DEPENDS system_lib
 )
@@ -31,25 +30,19 @@ catkin_package(
 include_directories(
   include
   SYSTEM
-  # ${PROJECT_SOURCE_DIR}/include
   ${catkin_INCLUDE_DIRS} 
+  ${PROJECT_SOURCE_DIR}/include
   ${EIGEN3_INCLUDE_DIR}
 )
 
-add_library(${PROJECT_NAME}
-  src/ego_replan_fsm.cpp
-  src/planner_manager.cpp
+add_executable(traj_server_node 
+  src/traj_server_node.cpp
+  src/traj_server.cpp
 )
-target_link_libraries(${PROJECT_NAME} 
+target_link_libraries(traj_server_node 
   ${catkin_LIBRARIES}
   ${Eigen3_LIBRARIES}
 )
-
-add_executable(ego_planner_node
-  src/ego_planner_node.cpp 
-)
-target_link_libraries(ego_planner_node 
-  ${PROJECT_NAME}
-)
+# add_dependencies(traj_server ${${PROJECT_NAME}_EXPORTED_TARGETS})
 
 

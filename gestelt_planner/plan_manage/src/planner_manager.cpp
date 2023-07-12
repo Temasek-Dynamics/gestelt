@@ -2,7 +2,6 @@
 
 namespace ego_planner
 {
-
   // SECTION interfaces for setup and query
 
   EGOPlannerManager::EGOPlannerManager() {}

@@ -6,20 +6,11 @@ add_compile_options(-std=c++14)
 
 set(ROS_LIBRARIES
   roscpp
-  rospy
-  gazebo_msgs
-  geometry_msgs
-  visualization_msgs
-  trajectory_server_msgs
-  tf2_ros
 )
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(Eigen3 REQUIRED)
-find_package(PCL 1.7 REQUIRED)
-find_package(Boost REQUIRED)
 find_package(catkin REQUIRED COMPONENTS
   ${ROS_LIBRARIES}
 )
@@ -35,52 +26,3 @@ catkin_package(
 ###########
 ## Build ##
 ###########
-
-include_directories(
-  # include
-  ${catkin_INCLUDE_DIRS}
-  ${EIGEN3_INCLUDE_DIR} 
-  ${PCL_INCLUDE_DIRS}
-)
-
-add_executable(uav_tf_broadcaster src/uav_tf_broadcaster.cpp)
-add_dependencies(uav_tf_broadcaster 
-  ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS}
-)
-target_link_libraries(uav_tf_broadcaster
-  ${catkin_LIBRARIES}
-)
-
-add_executable(swarm_collision_checker src/swarm_collision_checker.cpp)
-add_dependencies(swarm_collision_checker 
-  ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS}
-)
-target_link_libraries(swarm_collision_checker
-  ${catkin_LIBRARIES}
-)
-
-add_executable(benchmark_aggregator src/benchmark_aggregator.cpp)
-add_dependencies(benchmark_aggregator 
-  ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS}
-)
-target_link_libraries(benchmark_aggregator
-  ${catkin_LIBRARIES}
-)
-
-add_executable(hardware_monitor src/hardware_monitor.cpp)
-add_dependencies(hardware_monitor 
-  ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS}
-)
-target_link_libraries(hardware_monitor
-  ${catkin_LIBRARIES}
-)
-
-
-add_executable(cloud_downsampler src/cloud_downsampler.cpp)
-add_dependencies(cloud_downsampler 
-  ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS}
-)
-target_link_libraries(cloud_downsampler
-  ${catkin_LIBRARIES}
-  ${PCL_LIBRARIES}
-)

@@ -20,7 +20,7 @@
   </include>
 
   <!-- Collision checker -->
-  <node pkg="gestelt_bringup" type="swarm_collision_checker" 
+  <node pkg="central_benchmark" type="swarm_collision_checker" 
     name="swarm_collision_checker" output="screen">
     <param name="~num_drones" value="$(arg num_drones)" />
     <param name="~collision_tolerance" value="0.6" />
@@ -28,8 +28,8 @@
   </node>
 
   <!-- drone 0: Downsamples the input cloud -->
-  <node pkg="gestelt_bringup" type="cloud_downsampler" 
-    name="cloud_downsampler" output="screen">
+  <node pkg="central_benchmark" type="cloud_downsampler" 
+    name="drone0_cloud_downsampler" output="screen">
     <param name="~queue_size" value="5" />
     <param name="~voxel_size" value="0.1" />
 
@@ -38,8 +38,8 @@
   </node>
 
   <!-- drone 1: Downsamples the input cloud -->
-  <node pkg="gestelt_bringup" type="cloud_downsampler" 
-    name="cloud_downsampler" output="screen">
+  <node pkg="central_benchmark" type="cloud_downsampler" 
+    name="drone1_cloud_downsampler" output="screen">
     <param name="~queue_size" value="5" />
     <param name="~voxel_size" value="0.1" />
 

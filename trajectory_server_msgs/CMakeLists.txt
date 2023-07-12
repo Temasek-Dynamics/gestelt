@@ -49,6 +49,6 @@ generate_messages(
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES trajectory_server_msgs
- CATKIN_DEPENDS message_runtime
+ CATKIN_DEPENDS ${MSG_DEP} message_runtime
 #  DEPENDS system_lib
 )

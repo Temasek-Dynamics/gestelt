@@ -1,8 +1,0 @@
-<launch>
-  <node pkg="gestelt_bringup" type="hardware_monitor" 
-    name="hardware_monitor" output="screen">
-    <param name="~num_cpus" value="20" />
-    <param name="~compute_frequency" value="1.0" />
-  </node>
-
-</launch>

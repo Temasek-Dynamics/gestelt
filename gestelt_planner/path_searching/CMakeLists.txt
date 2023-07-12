@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.3)
+cmake_minimum_required(VERSION 3.0.2)
 project(path_searching)
 
 set(CMAKE_BUILD_TYPE "Release")
@@ -7,9 +7,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g")
 
 set(ROS_LIBRARIES
   roscpp
-  std_msgs
   plan_env
-  cv_bridge
 )
 
 find_package(Eigen3 REQUIRED)

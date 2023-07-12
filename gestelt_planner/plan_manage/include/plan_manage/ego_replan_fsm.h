@@ -23,7 +23,7 @@
 
 #include <plan_manage/planner_manager.h>
 
-#include <gestelt_utils/timebenchmark.h>
+#include <swarm_benchmark/timebenchmark.h>
 
 #include <trajectory_server_msgs/Waypoints.h>
 #include <trajectory_server_msgs/TimeBenchmark.h>
