@@ -2,11 +2,12 @@ cmake_minimum_required(VERSION 2.8.3)
 project(traj_utils)
 
 set(CMAKE_BUILD_TYPE "Release")
-set(CMAKE_CXX_FLAGS "-std=c++11")
+set(CMAKE_CXX_FLAGS "-std=c++14")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g")
 # set(ENABLE_PRECOMPILED_HEADERS "OFF")
+add_compile_options(-std=c++14)
 
-find_package(catkin REQUIRED COMPONENTS
+set(ROS_LIBRARIES
   roscpp
   std_msgs
   geometry_msgs
@@ -14,6 +15,9 @@ find_package(catkin REQUIRED COMPONENTS
 )
 
 find_package(Eigen3 REQUIRED)
+find_package(catkin REQUIRED COMPONENTS
+  ${ROS_LIBRARIES}
+)
 
 # Generate messages in the 'msg' folder
 add_message_files(
@@ -31,10 +35,10 @@ generate_messages(
 )
 
 catkin_package(
- INCLUDE_DIRS include
- LIBRARIES traj_utils 
- CATKIN_DEPENDS message_runtime
-#  DEPENDS system_lib
+  INCLUDE_DIRS include
+  LIBRARIES traj_utils 
+  CATKIN_DEPENDS ${ROS_LIBRARIES}
+  #  DEPENDS system_lib
 )
 
 include_directories( 
@@ -49,4 +53,10 @@ add_library( traj_utils
 )
 target_link_libraries( traj_utils
     ${catkin_LIBRARIES} 
+    ${Eigen3_LIBRARIES}
 )  
+
+
+# add_dependencies(node 
+#   ${catkin_EXPORTED_TARGETS}
+# )

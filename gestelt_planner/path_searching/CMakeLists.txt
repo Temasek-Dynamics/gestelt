@@ -2,13 +2,10 @@ cmake_minimum_required(VERSION 2.8.3)
 project(path_searching)
 
 set(CMAKE_BUILD_TYPE "Release")
-ADD_COMPILE_OPTIONS(-std=c++11 )
-ADD_COMPILE_OPTIONS(-std=c++14 )
+add_compile_options(-std=c++14)
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g")
 
-find_package(Eigen3 REQUIRED)
-
-find_package(catkin REQUIRED COMPONENTS
+set(ROS_LIBRARIES
   roscpp
   std_msgs
   visualization_msgs
@@ -16,10 +13,15 @@ find_package(catkin REQUIRED COMPONENTS
   cv_bridge
 )
 
+find_package(Eigen3 REQUIRED)
+find_package(catkin REQUIRED COMPONENTS
+  ${ROS_LIBRARIES}
+)
+
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES path_searching
-  CATKIN_DEPENDS plan_env
+  CATKIN_DEPENDS ${ROS_LIBRARIES}
 #  DEPENDS system_lib
 )
 
@@ -35,4 +37,5 @@ add_library( path_searching
 )
 target_link_libraries( path_searching
   ${catkin_LIBRARIES} 
-)  
+  ${Eigen3_LIBRARIES}
+  )  

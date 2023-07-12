@@ -1,16 +1,15 @@
 cmake_minimum_required(VERSION 3.0.2)
 project(trajectory_server_msgs)
 
-## Compile as C++11, supported in ROS Kinetic and newer
-# add_compile_options(-std=c++11)
+add_compile_options(-std=c++14)
 
-## Find catkin macros and libraries
-## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
-## is used, also find other catkin packages
-find_package(catkin REQUIRED COMPONENTS
-  roscpp
+set(MSG_DEP
   std_msgs
   geometry_msgs
+)
+
+find_package(catkin REQUIRED COMPONENTS
+  ${MSG_DEP}
   message_generation
 )
 
@@ -44,34 +43,5 @@ add_message_files(
 ## Generate added messages and services with any dependencies listed here
 generate_messages(
   DEPENDENCIES
-  std_msgs
-  geometry_msgs
-)
-
-
-###################################
-## catkin specific configuration ##
-###################################
-## The catkin_package macro generates cmake config files for your package
-## Declare things to be passed to dependent projects
-## INCLUDE_DIRS: uncomment this if your package contains header files
-## LIBRARIES: libraries you create in this project that dependent projects also need
-## CATKIN_DEPENDS: catkin_packages dependent projects also need
-## DEPENDS: system dependencies of this project that dependent projects also need
-catkin_package(
-#  INCLUDE_DIRS include
-#  LIBRARIES trajectory_server_msgs
- CATKIN_DEPENDS message_runtime roscpp std_msgs
-#  DEPENDS system_lib
-)
-
-###########
-## Build ##
-###########
-
-## Specify additional locations of header files
-## Your package locations should be listed before other locations
-include_directories(
-# include
-  ${catkin_INCLUDE_DIRS}
+  ${MSG_DEP}
 )
