@@ -45,3 +45,10 @@ generate_messages(
   DEPENDENCIES
   ${MSG_DEP}
 )
+
+catkin_package(
+#  INCLUDE_DIRS include
+#  LIBRARIES trajectory_server_msgs
+ CATKIN_DEPENDS message_runtime
+#  DEPENDS system_lib
+)

@@ -8,7 +8,6 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g")
 set(ROS_LIBRARIES
   roscpp
   std_msgs
-  visualization_msgs
   plan_env
   cv_bridge
 )
@@ -38,4 +37,4 @@ add_library( path_searching
 target_link_libraries( path_searching
   ${catkin_LIBRARIES} 
   ${Eigen3_LIBRARIES}
-  )  
+)  

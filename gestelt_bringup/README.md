@@ -62,8 +62,11 @@ EMPTY_E,          // 5
     
 
 # TODO
-
 - Test with other virtual drones
+
+- Set optimization flags
+    - set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g")
+    - https://gcc.gnu.org/onlinedocs/gcc/Optimize-Options.html
 
 - Get the code working on the actual drone
 

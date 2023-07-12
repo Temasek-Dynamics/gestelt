@@ -9,14 +9,17 @@ add_compile_options(-std=c++14)
 
 set(ROS_LIBRARIES
   roscpp
+  message_generation
+)
+
+set(MSG_DEP
   std_msgs
   geometry_msgs
-  message_generation
 )
 
 find_package(Eigen3 REQUIRED)
 find_package(catkin REQUIRED COMPONENTS
-  ${ROS_LIBRARIES}
+  ${ROS_LIBRARIES} ${MSG_DEP}
 )
 
 # Generate messages in the 'msg' folder
@@ -30,14 +33,13 @@ add_message_files(
 # Generate added messages and services with any dependencies listed here
 generate_messages(
   DEPENDENCIES
-    std_msgs
-    geometry_msgs
+    ${MSG_DEP}
 )
 
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES traj_utils 
-  CATKIN_DEPENDS ${ROS_LIBRARIES}
+  CATKIN_DEPENDS ${ROS_LIBRARIES} message_runtime
   #  DEPENDS system_lib
 )
 

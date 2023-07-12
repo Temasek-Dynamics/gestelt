@@ -19,7 +19,6 @@
   <exec_depend>std_msgs</exec_depend>
   <exec_depend>plan_env</exec_depend>
 
-  <depend>visualization_msgs</depend>
   <depend>cv_bridge</depend>
 
   <!-- The export tag contains other, unspecified, tags -->
