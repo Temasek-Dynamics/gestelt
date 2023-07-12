@@ -6,16 +6,16 @@ using namespace octomap;
 
 void print_query_info(point3d query, OcTreeNode* node) {
   if (node != NULL) {
-    cout << "occupancy probability at " << query << ":\t " << node->getOccupancy() << endl;
+    std::cout << "occupancy probability at " << query << ":\t " << node->getOccupancy() <<std::endl;
   }
   else {
-    cout << "occupancy probability at " << query << ":\t is unknown" << endl;    
+    std::cout << "occupancy probability at " << query << ":\t is unknown" <<std::endl;    
   }
 }
 
 int main () {
-  cout << endl;
-  cout << "generating example map" << endl;
+  std::cout <<std::endl;
+  std::cout << "generating example map" <<std::endl;
 
   OcTree tree (0.1);  // create empty tree with resolution 0.1
 
@@ -41,8 +41,8 @@ int main () {
     }
   }
 
-  cout << endl;
-  cout << "performing some queries:" << endl;
+  std::cout <<std::endl;
+  std::cout << "performing some queries:" <<std::endl;
   
   point3d query (0., 0., 0.);
   OcTreeNode* result = tree.search (query);
@@ -56,10 +56,10 @@ int main () {
   result = tree.search (query);
   print_query_info(query, result);
 
-  cout << endl;
+  std::cout <<std::endl;
   tree.writeBinary("simple_tree.bt");
-  cout << "wrote example file simple_tree.bt" << endl << endl;
-  cout << "now you can use octovis to visualize: octovis simple_tree.bt"  << endl;
-  cout << "Hint: hit 'F'-key in viewer to see the freespace" << endl  << endl;  
+  std::cout << "wrote example file simple_tree.bt" <<std::endl <<std::endl;
+  std::cout << "now you can use octovis to visualize: octovis simple_tree.bt"  <<std::endl;
+  std::cout << "Hint: hit 'F'-key in viewer to see the freespace" <<std::endl  <<std::endl;  
 
 }

@@ -40,22 +40,22 @@ double AStar::getDiagHeu(GridNodePtr node1, GridNodePtr node2)
     double dz = abs(node1->index(2) - node2->index(2));
 
     double h = 0.0;
-    int diag = min(min(dx, dy), dz);
+    int diag = std::min(min(dx, dy), dz);
     dx -= diag;
     dy -= diag;
     dz -= diag;
 
     if (dx == 0)
     {
-        h = 1.0 * sqrt(3.0) * diag + sqrt(2.0) * min(dy, dz) + 1.0 * abs(dy - dz);
+        h = 1.0 * sqrt(3.0) * diag + sqrt(2.0) * std::min(dy, dz) + 1.0 * abs(dy - dz);
     }
     if (dy == 0)
     {
-        h = 1.0 * sqrt(3.0) * diag + sqrt(2.0) * min(dx, dz) + 1.0 * abs(dx - dz);
+        h = 1.0 * sqrt(3.0) * diag + sqrt(2.0) * std::min(dx, dz) + 1.0 * abs(dx - dz);
     }
     if (dz == 0)
     {
-        h = 1.0 * sqrt(3.0) * diag + sqrt(2.0) * min(dx, dy) + 1.0 * abs(dx - dy);
+        h = 1.0 * sqrt(3.0) * diag + sqrt(2.0) * std::min(dx, dy) + 1.0 * abs(dx - dy);
     }
     return h;
 }
@@ -100,7 +100,7 @@ bool AStar::ConvertToIndexAndAdjustStartEndPoints(Vector3d start_pt, Vector3d en
         do
         {
             start_pt = (start_pt - end_pt).normalized() * step_size_ + start_pt;
-            // cout << "start_pt=" << start_pt.transpose() << endl;
+            // std::cout << "start_pt=" << start_pt.transpose() << std::endl;
             if (!Coord2Index(start_pt, start_idx))
             {
                 return false;
@@ -121,7 +121,7 @@ bool AStar::ConvertToIndexAndAdjustStartEndPoints(Vector3d start_pt, Vector3d en
         do
         {
             end_pt = (end_pt - start_pt).normalized() * step_size_ + end_pt;
-            // cout << "end_pt=" << end_pt.transpose() << endl;
+            // std::cout << "end_pt=" << end_pt.transpose() << std::endl;
             if (!Coord2Index(end_pt, end_idx))
             {
                 return false;
@@ -158,7 +158,7 @@ ASTAR_RET AStar::AstarSearch(const double step_size, Vector3d start_pt, Vector3d
     }
 
     // if ( start_pt(0) > -1 && start_pt(0) < 0 )
-    //     cout << "start_pt=" << start_pt.transpose() << " end_pt=" << end_pt.transpose() << endl;
+    //     std::cout << "start_pt=" << start_pt.transpose() << " end_pt=" << end_pt.transpose() << std::endl;
 
     GridNodePtr startPtr = GridNodeMap_[start_idx(0)][start_idx(1)][start_idx(2)];
     GridNodePtr endPtr = GridNodeMap_[end_idx(0)][end_idx(1)][end_idx(2)];
@@ -189,7 +189,7 @@ ASTAR_RET AStar::AstarSearch(const double step_size, Vector3d start_pt, Vector3d
         openSet_.pop();
 
         // if ( num_iter < 10000 )
-        //     cout << "current=" << current->index.transpose() << endl;
+        //     std::cout << "current=" << current->index.transpose() << std::endl;
 
         if (current->index(0) == endPtr->index(0) && current->index(1) == endPtr->index(1) && current->index(2) == endPtr->index(2))
         {

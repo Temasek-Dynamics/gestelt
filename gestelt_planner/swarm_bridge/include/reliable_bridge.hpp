@@ -272,7 +272,7 @@ public:
             id_remap.emplace(std::make_pair(id_list[i], i));
 
             //The bind port number is 30000+self_id*100+other_device_id.
-            string url = "tcp://*:" + to_string(30000 +self_id*100 + id_list[i]);
+            string url = "tcp://*:" + std:: to_string(30000 +self_id*100 + id_list[i]);
             print_info("[Bridge]: Bind: %s", url.c_str());
             unique_ptr<zmqpp::socket> sender(new zmqpp::socket(context, zmqpp::socket_type::push));
             sender->bind(url); //for others connection
@@ -280,7 +280,7 @@ public:
 
             //build receivers map
             //The port number is 30000+other_device_id*100+self_ID. It will connect to other device.
-            url = "tcp://" + ip_list[i] + ":" + to_string(30000 + id_list[i]*100 + self_id);
+            url = "tcp://" + ip_list[i] + ":" + std:: to_string(30000 + id_list[i]*100 + self_id);
             print_info("[Bridge]: Connect: %s", url.c_str());
             unique_ptr<zmqpp::socket> receiver(new zmqpp::socket(context, zmqpp::socket_type::pull));
             receiver->connect(url); //connect to others

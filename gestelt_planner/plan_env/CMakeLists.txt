@@ -10,12 +10,11 @@ find_package(OpenCV REQUIRED)
 set (ROS_LIBRARIES
     roscpp
     std_msgs
-    visualization_msgs
-    cv_bridge
-    message_filters
     sensor_msgs
-    trajectory_server_msgs
+    message_filters
+    cv_bridge
     gestelt_utils
+    trajectory_server_msgs
 )
 
 find_package(catkin REQUIRED COMPONENTS
@@ -45,7 +44,6 @@ include_directories(
 
 add_library( plan_env 
     src/grid_map.cpp 
-    src/raycast.cpp
 )
 
 target_link_libraries( plan_env

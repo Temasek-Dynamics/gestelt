@@ -54,7 +54,7 @@ namespace ego_planner
       return;
     }
     std::vector<double> pos;
-    nh.getParam("formation/drone" + to_string(planner_manager_->pp_.drone_id), pos);
+    nh.getParam("formation/drone" + std:: to_string(planner_manager_->pp_.drone_id), pos);
     formation_pos_ << pos[0], pos[1], pos[2];
     nh.getParam("formation/start", pos);
 
@@ -799,7 +799,7 @@ namespace ego_planner
     /* determine if need to replan */
     LocalTrajData *info = &planner_manager_->traj_.local_traj;
     double t_cur = ros::Time::now().toSec() - info->start_time;
-    t_cur = min(info->duration, t_cur);
+    t_cur = std::min(info->duration, t_cur);
 
     // Get position at current time
     Eigen::Vector3d pos = info->traj.getPos(t_cur);
@@ -926,7 +926,7 @@ namespace ego_planner
 
     const double CLEARANCE = 0.8 * planner_manager_->getSwarmClearance();
     auto id_ratio = info->traj.locatePieceIdxWithRatio(t_cur);
-    // cout << "t_cur=" << t_cur << " info->duration=" << info->duration << endl;
+    // std::cout << "t_cur=" << t_cur << " info->duration=" << info->duration << std::endl;
     
     // i_start is piece index
     size_t i_start = floor((id_ratio.first + id_ratio.second) * planner_manager_->getCpsNumPrePiece());
@@ -938,7 +938,7 @@ namespace ego_planner
     }
 
     size_t j_start = 0; // idx of point within constraint piece
-    // cout << "i_start=" << i_start << " pts_chk.size()=" << pts_chk.size() << " pts_chk[i_start].size()=" << pts_chk[i_start].size() << endl;
+    // std::cout << "i_start=" << i_start << " pts_chk.size()=" << pts_chk.size() << " pts_chk[i_start].size()=" << pts_chk[i_start].size() << std::endl;
     for (; i_start < pts_chk.size(); ++i_start)
     {
       for (j_start = 0; j_start < pts_chk[i_start].size(); ++j_start)

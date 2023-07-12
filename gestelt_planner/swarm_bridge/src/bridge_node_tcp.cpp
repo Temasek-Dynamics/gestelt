@@ -185,7 +185,7 @@ int main(int argc, char **argv)
   ip_list_.resize(drone_num_ + ground_station_num_);
   for (int i = 0; i < drone_num_ + ground_station_num_; ++i)
   {
-    nh.param((i < drone_num_ ? "drone_ip_" + to_string(i) : "ground_station_ip_" + to_string(i-drone_num_)), ip_list_[i], string("127.0.0.1"));
+    nh.param((i < drone_num_ ? "drone_ip_" + std:: to_string(i) : "ground_station_ip_" + std:: to_string(i-drone_num_)), ip_list_[i], string("127.0.0.1"));
     id_list_[i]=i;
   }  
   self_id_in_bridge_ = self_id_;

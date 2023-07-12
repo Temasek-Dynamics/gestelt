@@ -54,7 +54,7 @@ int init_broadcast(const char *ip, const int port)
   int so_broadcast = 1;
   if (setsockopt(fd, SOL_SOCKET, SO_BROADCAST, &so_broadcast, sizeof(so_broadcast)) < 0)
   {
-    cout << "Error in setting Broadcast option";
+    std::cout << "Error in setting Broadcast option";
     exit(EXIT_FAILURE);
   }
 
@@ -309,7 +309,7 @@ int main(int argc, char **argv)
   // UDP connect
   udp_send_fd_ = init_broadcast(udp_ip_.c_str(), UDP_PORT);
 
-  cout << "[rosmsg_tcp_bridge] start running" << endl;
+  std::cout << "[rosmsg_tcp_bridge] start running" <<std::endl;
 
   ros::spin();
 

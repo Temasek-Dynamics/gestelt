@@ -78,41 +78,31 @@
         <!-- //////////////////// -->
         <!-- GridMap params -->
         <!-- //////////////////// -->
-        <!-- Frame ID to use for visualization -->
-        <param name="grid_map/global_frame_id" value="$(arg drone_origin_frame)"/>
-
-        <!-- grid_map/pose_type: Toggle between subscription to ("grid_map/pose") or  ("grid_map/odom") for use as camera pose/odom-->
-        <param name="~grid_map/pose_type" value = "$(arg POSE_TYPE)"/>
+        <!-- Subscribed topics -->
         <remap from="~grid_map/odom" to = "$(arg odometry_topic)"/>
         <remap from="~grid_map/pose" to = "$(arg pose_topic)"/>
-        <!-- grid_map/sensor_type: Toggle between subscription to ("grid_map/cloud") or ("grid_map/depth") for use as camera sensor input -->
-        <param name="~grid_map/sensor_type" value="$(arg SENSOR_TYPE)"/>
         <remap from="~grid_map/cloud" to = "$(arg cloud_topic)"/>
         <remap from="~grid_map/depth" to = "$(arg depth_topic)"/>
-
         <remap from="~grid_map/camera_info" to="/drone$(arg drone_id)/camera/depth/camera_info"/>
-
-        <param name="grid_map/resolution" value="0.1" />
-        <param name="grid_map/inflation" value="0.35" />
+        <!-- Maps params -->
+        <param name="grid_map/ground_height" value="-0.25"/>
         <param name="grid_map/map_size_x" value="$(arg map_size_x_)" />
         <param name="grid_map/map_size_y" value="$(arg map_size_y_)" />
         <param name="grid_map/map_size_z" value="$(arg map_size_z_)" />
-        <!-- <param name="grid_map/local_update_range_x" value="5.5" />
-        <param name="grid_map/local_update_range_y" value="5.5" />
-        <param name="grid_map/local_update_range_z" value="4.5" /> -->
-        <!-- Point cloud filter -->
-        <param name="grid_map/filter/use_cloud_filter" value="false" />
+        <param name="grid_map/global_frame_id" value="$(arg drone_origin_frame)"/>
+        <!-- Occupancy grid params -->
+        <param name="grid_map/occ_grid/resolution" value="0.1" />
+        <param name="grid_map/occ_grid/inflation" value="0.35" />
+        <!-- Point cloud downsampling params -->
+        <param name="grid_map/filter/downsample_cloud" value="false" />
+        <param name="grid_map/filter/depth_stride" value="4" />
         <param name="grid_map/filter/voxel_size" value="0.1" />
-        <!-- <param name="grid_map/local_map_margin" value="10"/> -->
-        <param name="grid_map/ground_height" value="-0.25"/>
-        <!-- depth filter -->
+        <!-- grid_map/pose_type: Toggle between subscription to ("grid_map/pose") or  ("grid_map/odom") for use as camera pose/odom-->
+        <!-- grid_map/sensor_type: Toggle between subscription to ("grid_map/cloud") or ("grid_map/depth") for use as camera sensor input -->
+        <param name="~grid_map/pose_type" value = "$(arg POSE_TYPE)"/>
+        <param name="~grid_map/sensor_type" value="$(arg SENSOR_TYPE)"/>
+        <!-- camera intrinsic parameters -->
         <param name="grid_map/k_depth_scaling_factor" value="1000.0"/>
-        <!-- <param name="grid_map/use_depth_filter" value="true"/>
-        <param name="grid_map/depth_filter_tolerance" value="0.15"/>
-        <param name="grid_map/depth_filter_maxdist" value="5.0"/>
-        <param name="grid_map/depth_filter_mindist" value="0.1"/>
-        <param name="grid_map/depth_filter_margin" value="2"/>
-        <param name="grid_map/skip_pixel" value="2"/> -->
         <!-- camera extrinsic parameters -->
         <param name="grid_map/camera_to_body/roll" value="90.0"/>
         <param name="grid_map/camera_to_body/pitch" value="180.0"/>
@@ -120,14 +110,6 @@
         <param name="grid_map/camera_to_body/t_x" value="0.0"/>
         <param name="grid_map/camera_to_body/t_y" value="0.0"/>
         <param name="grid_map/camera_to_body/t_z" value="0.0"/>
-        <!-- local fusion -->
-        <!-- <param name="grid_map/p_hit" value="0.65"/>
-        <param name="grid_map/p_miss" value="0.35"/>
-        <param name="grid_map/p_min" value="0.12"/>
-        <param name="grid_map/p_max" value="0.90"/>
-        <param name="grid_map/p_occ" value="0.80"/>
-        <param name="grid_map/min_ray_length" value="0.1"/>
-        <param name="grid_map/max_ray_length" value="4.5"/> -->
         <!-- //////////////////// -->
         <!-- Manager params -->
         <!-- //////////////////// -->

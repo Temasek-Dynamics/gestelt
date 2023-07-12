@@ -77,6 +77,8 @@
     "typeinfo": "cpp",
     "bit": "cpp",
     "*.ipp": "cpp",
-    "core": "cpp"
+    "core": "cpp",
+    "*.txx": "cpp",
+    "queue": "cpp"
   }
 }

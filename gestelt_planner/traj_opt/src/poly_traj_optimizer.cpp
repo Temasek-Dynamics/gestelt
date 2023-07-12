@@ -82,10 +82,10 @@ namespace ego_planner
           // Eigen::Vector3d last_pt = pts_check_[0][0].second;
           // for (size_t i = 0; i < pts_check_.size(); ++i)
           // {
-          //   cout << "--------------------" << endl;
+          //   std::cout << "--------------------" <<std::endl;
           //   for (size_t j = 0; j < pts_check_[i].size(); ++j)
           //   {
-          //     cout << pts_check_[i][j].first << " @ " << pts_check_[i][j].second.transpose() << " " << (pts_check_[i][j].second - last_pt).transpose() << endl;
+          //     std::cout << pts_check_[i][j].first << " @ " << pts_check_[i][j].second.transpose() << " " << (pts_check_[i][j].second - last_pt).transpose() <<std::endl;
           //     last_pt = pts_check_[i][j].second;
           //   }
           // }
@@ -107,11 +107,11 @@ namespace ego_planner
       {
         flag_force_return = true;
         rebound_times++; 
-        // cout << "iter=" << iter_num_ << ",time(ms)=" << time_ms << ",rebound." << endl;
+        // std::cout << "iter=" << iter_num_ << ",time(ms)=" << time_ms << ",rebound." <<std::endl;
       }
       else
       {
-        cout << "iter=" << iter_num_ << ",time(ms)=" << time_ms << ",error." << endl;
+        std::cout << "iter=" << iter_num_ << ",time(ms)=" << time_ms << ",error." <<std::endl;
         ROS_WARN("Solver error. Return = %d, %s. Skip this planning.", result, lbfgs::lbfgs_strerror(result));
       }
 
@@ -162,10 +162,10 @@ namespace ego_planner
         // Eigen::Vector3d last_pt = pts_check[0][0].second;
         // for (size_t i = 0; i < pts_check.size(); ++i)
         // {
-        //   cout << "--------------------" << endl;
+        //   std::cout << "--------------------" <<std::endl;
         //   for (size_t j = 0; j < pts_check[i].size(); ++j)
         //   {
-        //     cout << pts_check[i][j].first << " @ " << pts_check[i][j].second.transpose() << " " << (pts_check[i][j].second - last_pt).transpose() << endl;
+        //     std::cout << pts_check[i][j].first << " @ " << pts_check[i][j].second.transpose() << " " << (pts_check[i][j].second - last_pt).transpose() <<std::endl;
         //     last_pt = pts_check[i][j].second;
         //   }
         // }
@@ -177,8 +177,8 @@ namespace ego_planner
         if (id_cps_curr + 1 >= cps_num_prePiece_ * (id_piece_curr + 1))
         {
           ++id_piece_curr;
-          // cout << "id_piece_curr=" << id_piece_curr << endl;
-          // cout << "traj.getPieceNum()=" << traj.getPieceNum() << endl;
+          // std::cout << "id_piece_curr=" << id_piece_curr <<std::endl;
+          // std::cout << "traj.getPieceNum()=" << traj.getPieceNum() <<std::endl;
         }
         if (++id_cps_curr >= id_cps_end)
         {
@@ -186,7 +186,7 @@ namespace ego_planner
         }
       }
 
-      // cout << "pts_check.size()" << pts_check.size() << " id_cps_curr=" << id_cps_curr << endl;
+      // std::cout << "pts_check.size()" << pts_check.size() << " id_cps_curr=" << id_cps_curr <<std::endl;
       Eigen::Vector3d pt = traj.getPos(t);
       if (t < 1e-5 || pts_check[id_cps_curr].size() == 0 || (pt - pt_last).cwiseAbs().maxCoeff() > RES_2)
       {
@@ -358,7 +358,7 @@ namespace ego_planner
     {
       /*** Adjust segment length ***/
       num_points = segment_ids[i].second - segment_ids[i].first + 1;
-      //cout << "i = " << i << " first = " << segment_ids[i].first << " second = " << segment_ids[i].second << endl;
+      //cout << "i = " << i << " first = " << segment_ids[i].first << " second = " << segment_ids[i].second <<std::endl;
       if (num_points < minimum_points)
       {
         double add_points_each_side = (int)(((minimum_points - num_points) + 1.0f) / 2);
@@ -857,20 +857,20 @@ namespace ego_planner
           Eigen::Vector3d base_pt_reverse, base_vec_reverse;
           if (RichInfoSegs[i].first.base_point[j].size() != 1)
           {
-            cout << "RichInfoSegs[" << i << "].first.base_point[" << j << "].size()=" << RichInfoSegs[i].first.base_point[j].size() << endl;
+            std::cout << "RichInfoSegs[" << i << "].first.base_point[" << j << "].size()=" << RichInfoSegs[i].first.base_point[j].size() <<std::endl;
             ROS_ERROR("Wrong number of base_points!!! Should not be happen!.");
 
-            cout << setprecision(5);
-            cout << "cps_" << endl;
-            cout << " clearance=" << obs_clearance_ << " cps.size=" << cps_.cp_size << endl;
+            std::cout << std::setprecision(5);
+            std::cout << "cps_" <<std::endl;
+            std::cout << " clearance=" << obs_clearance_ << " cps.size=" << cps_.cp_size <<std::endl;
             for (int temp_i = 0; temp_i < cps_.cp_size; temp_i++)
             {
               if (cps_.base_point[temp_i].size() > 1 && cps_.base_point[temp_i].size() < 1000)
               {
                 ROS_ERROR("Should not happen!!!");
-                cout << "######" << cps_.points.col(temp_i).transpose() << endl;
+                std::cout << "######" << cps_.points.col(temp_i).transpose() <<std::endl;
                 for (size_t temp_j = 0; temp_j < cps_.base_point[temp_i].size(); temp_j++)
-                  cout << "      " << cps_.base_point[temp_i][temp_j].transpose() << " @ " << cps_.direction[temp_i][temp_j].transpose() << endl;
+                  std::cout << "      " << cps_.base_point[temp_i][temp_j].transpose() << " @ " << cps_.direction[temp_i][temp_j].transpose() <<std::endl;
               }
             }
 
@@ -928,7 +928,7 @@ namespace ego_planner
           else
           {
             ROS_WARN("base_point and control point are too close!");
-            cout << "base_point=" << RichInfoSegs[i].first.base_point[j][0].transpose() << " control point=" << RichInfoSegs[i].first.points.col(j).transpose() << endl;
+            std::cout << "base_point=" << RichInfoSegs[i].first.base_point[j][0].transpose() << " control point=" << RichInfoSegs[i].first.points.col(j).transpose() <<std::endl;
 
             segments.erase(segments.begin() + i);
             RichInfoSegs.erase(RichInfoSegs.begin() + i);
@@ -968,7 +968,7 @@ namespace ego_planner
           for (; l <= l_upbound; l += RESOLUTION)
           {
             Eigen::Vector3d base_pt_temp = base_pt_reverse + l * base_vec_reverse;
-            //cout << base_pt_temp.transpose() << endl;
+            //cout << base_pt_temp.transpose() <<std::endl;
             if (!grid_map_->getInflateOccupancy(base_pt_temp))
             {
               RichInfoSegs[i].second.base_point[0][0] = base_pt_temp;
@@ -994,7 +994,7 @@ namespace ego_planner
         else
         {
           ROS_WARN("base_point and control point are too close!, 2");
-          cout << "base_point=" << RichInfoSegs[i].first.base_point[0][0].transpose() << " control point=" << RichInfoSegs[i].first.points.col(0).transpose() << endl;
+          std::cout << "base_point=" << RichInfoSegs[i].first.base_point[0][0].transpose() << " control point=" << RichInfoSegs[i].first.points.col(0).transpose() <<std::endl;
 
           segments.erase(segments.begin() + i);
           RichInfoSegs.erase(RichInfoSegs.begin() + i);
@@ -1012,7 +1012,7 @@ namespace ego_planner
       return oneSeg;
     }
 
-    // cout << "A4" << endl;
+    // std::cout << "A4" <<std::endl;
 
     std::vector<int> selection(seg_upbound);
     std::fill(selection.begin(), selection.end(), 0);
@@ -1322,7 +1322,7 @@ namespace ego_planner
     double var;
     // lengthVarianceWithGradCost2p(cps_.points, K, gdp, var);
     distanceSqrVarianceWithGradCost2p(cps_.points,  gdp, var);
-    // cout << "var=" << var << endl;
+    // std::cout << "var=" << var <<std::endl;
 
     i_dp = 0;
     for (int i = 0; i < N; ++i)
@@ -1529,16 +1529,16 @@ namespace ego_planner
       }
 
       l += (swarm_p - O).dot(a) - formation_(0, id);
-      // cout << "swarm_p=" << swarm_p.transpose() << " O=" << O.transpose() << " a=" << a.transpose() << " id=" << id << " formation_(0, id)=" << formation_(0, id) << endl;
+      // std::cout << "swarm_p=" << swarm_p.transpose() << " O=" << O.transpose() << " a=" << a.transpose() << " id=" << id << " formation_(0, id)=" << formation_(0, id) <<std::endl;
       dl_dt += a.dot(swarm_v);
     }
     l /= (formation_num_-1);
     dl_dt /= (formation_num_-1);
 
-    // cout << "drone_id_=" << drone_id_ << endl;
-    // cout << "t=" << t << endl;
-    // cout << "l=" << l << endl;
-    // cout << "dl_dt=" << dl_dt << endl;
+    // std::cout << "drone_id_=" << drone_id_ <<std::endl;
+    // std::cout << "t=" << t <<std::endl;
+    // std::cout << "l=" << l <<std::endl;
+    // std::cout << "dl_dt=" << dl_dt <<std::endl;
 
     Eigen::Vector3d tar_p;
     tar_p.x() = (a(0) * (formation_(0, drone_id_) + l) - a(1) * formation_(1, drone_id_)) + O(0);
@@ -1661,7 +1661,7 @@ namespace ego_planner
     for (int i = 0; i < formation_num_; i++)
     {
       std::vector<double> pos;
-      nh.getParam("formation/drone" + to_string(i), pos);
+      nh.getParam("formation/drone" + std::to_string(i), pos);
       formation_.col(i) << pos[0], pos[1], pos[2];
     }
   }
@@ -1691,8 +1691,8 @@ namespace ego_planner
     FStart_ = formation_start_pt;
     FEnd_ = formation_end_pt;
 
-    // cout << "FStart_=" << FStart_.transpose() << endl;
-    // cout << "FEnd_=" << FEnd_.transpose() << endl;
+    // std::cout << "FStart_=" << FStart_.transpose() <<std::endl;
+    // std::cout << "FEnd_=" << FEnd_.transpose() <<std::endl;
   }
 
   void PolyTrajOptimizer::setConstraintPoints(ConstraintPoints cps) { cps_ = cps; }

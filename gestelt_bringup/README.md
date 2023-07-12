@@ -27,45 +27,63 @@ EMPTY_E,          // 5
 # Demo (13/7/23)
 - Gridmap
     - Change gridmap to use PCL and octreeOccupancyGrid for occupancy grid.
+    - Add message filtering to ensure that poses and point cloud are aligned
     - Point cloud
-        - Transform point cloud on gridmap node. 
-        - Downsample point clouds before sending
-            - Voxel downsampling and publishing
+        - Add transformation for point clouds to global uav frame
+        - Added voxel filter for downsampling point clouds
+            - Voxel downsampling and publishing (10cm size)
+                - (320 x 240) resolution
+                    - Before: 28.10 MB/s, after: 414.70KB/s
+                - (640 x 480) resolution
+                    - Before: 105 MB/s, after: ~ 400KB/s
+                - (848 x 480) resolution
+                    - Before: 140 MB/s, after: ~ 400KB/s
+                - Max bandwidth is proportional to density of obstacles in environment
     - Depth image
-        - Reduce width and height (to 320 x 240)
+        - Measure utilized bandwidth for different resolutions
+            - (848 x 480): 16.46MB/s 
+            - (640 x 480): 12.48MB/s
+            - (320 x 240): 3.52MB/s
         - Rewrite function to create PC from depth map
             - http://docs.ros.org/en/fuerte/api/rgbd2cloud/html/depth2cloud_8cpp_source.html
-    - Add message filtering to ensure that poses and point cloud are aligned
     - set ros::TransportHints()
-        - TCP_NODELAY: Improves the efficiency of TCP/IP networks by reducing the number of packets that need to be sent. For small messages: More efficient but higher latency. For big messages: More efficient and potentially lower latency
+        - Use TCP_NODELAY for image/point cloud topics: Improves the efficiency of TCP/IP networks by reducing the number of packets that need to be sent. For small messages: More efficient but higher latency. For big messages: More efficient and potentially lower latency
+        - Use UDP for pose messages topics
     
 - Remove unnecessary nodes and dependencies for an easier build on radxa
     - Get rid of quadrotor_msgs 
-    - Take out traj_server from plan_manage
+    - Separate traj_server from plan_manage
     - Clean up cmakelists dependencies
 
 - Benchmarking
     - Add CPU usage
     - https://stackoverflow.com/questions/63166/how-to-determine-cpu-and-memory-consumption-from-inside-a-process
+
+    
+
 # TODO
+
+- Test with other virtual drones
+
+- Get the code working on the actual drone
+
 - Gridmap
+    - Compare compressed depth map to downsampled point cloud
+        - Bandwidth and delay
+    - Implement pose timeout
+    - Rename `plan_env` to `gestelt_mapping`
     - Depth image
         - Find out how to create organized point clouds
         - Compress, publish and subscribe using ImageTransport
-    - Compare compressed depth map to downsampled point cloud
-        - Bandwidth and delay
-        - Does queue time affect latency
     - Look at using udp to send over point clouds or depth images
+    - Create map with decaying voxels
 
 - Benchmark
     - Add network params 
         - Bandwidth, latency, signal strength
     - Use ddynamic_reconfigure to toggle on/off benchmarking
 
-- Get the code working on the actual drone
 - Perform physical tests to determine physical characteristics
-    - Use the actual mass in Gazebo params
-        - 0.25 g
     - Motor coefficients
         - Motor 6000V
     - Battery: 2S 7.4V
@@ -86,7 +104,6 @@ EMPTY_E,          // 5
 - Disabling of offboard mode for land state would be a good feature. Current challenge to implement it is to be able to reliably check that the drone has actually landed (Otherwise it will be stuck in AUTO.LOITER while hovering in the air, being unable to disarm).
 - Support Cancel/Start/Pause of waypoints execution
 - Handle goals in obstacle regions (Cancel the goal?)
-- Check if every UAV in formation has finished execution of current waypoint before planning for the next one
 
 ## Issues
 - When rounding corners of obstacles, if the goal lies about a sharp turn around the corner, a trajectory with a sharp turn is planned, this could lead to issues if the obstacles is especially large as the drone will not be able to detect the other wall of the obstacle until it has turned around. 

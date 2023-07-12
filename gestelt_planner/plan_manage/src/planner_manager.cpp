@@ -246,9 +246,9 @@ namespace ego_planner
     // TODO_0 Uncomment
     // printf("\033[47;30m\n[drone %d replan %d]==============================================\033[0m\n",
     //        pp_.drone_id, count++);
-    // cout.precision(3);
-    // cout << "start: " << start_pt.transpose() << ", " << start_vel.transpose() << "\ngoal:" << local_target_pt.transpose() << ", " << local_target_vel.transpose()
-    //      << endl;
+    // std::cout.precision(3);
+    // std::cout << "start: " << start_pt.transpose() << ", " << start_vel.transpose() << "\ngoal:" << local_target_pt.transpose() << ", " << local_target_vel.transpose()
+    //      <<std::endl;
 
     ploy_traj_opt_->setIfTouchGoal(touch_goal);
     ploy_traj_opt_->setFStartFEnd(formation_start_pt, formation_end_pt);
@@ -256,7 +256,7 @@ namespace ego_planner
     if ((start_pt - local_target_pt).norm() < 0.2)
     { 
       // TODO_0 Uncomment
-      // cout << "Close to goal" << endl;
+      // std::cout << "Close to goal" << std::endl;
       // continous_failures_count_++;
       // return false;
     }
@@ -301,8 +301,8 @@ namespace ego_planner
     if (pp_.use_distinctive_trajs)
     {
       std::vector<ConstraintPoints> trajs = ploy_traj_opt_->distinctiveTrajs(segments);
-      cout << "\033[1;33m"
-           << "multi-trajs=" << trajs.size() << "\033[1;0m" << endl;
+      std::cout << "\033[1;33m"
+           << "multi-trajs=" << trajs.size() << "\033[1;0m" << std::endl;
 
       poly_traj::Trajectory initTraj = initMJO.getTraj();
       int PN = initTraj.getPieceNum();
@@ -320,7 +320,7 @@ namespace ego_planner
                                                cstr_pts, final_cost))
         {
 
-          cout << "traj " << trajs.size() - i << " success." << endl;
+          std::cout << "traj " << trajs.size() - i << " success." << std::endl;
 
           if (final_cost < min_cost)
           {
@@ -339,7 +339,7 @@ namespace ego_planner
         }
         else
         {
-          cout << "traj " << trajs.size() - i << " failed." << endl;
+          std::cout << "traj " << trajs.size() - i << " failed." << std::endl;
         }
       }
 
@@ -368,7 +368,7 @@ namespace ego_planner
     // // save and display planned results
 
     // TODO_0: Uncomment
-    // cout << "plan_success=" << flag_success << endl;
+    // std::cout << "plan_success=" << flag_success << std::endl;
     if (!flag_success)
     {
       visualization_->displayFailedList(cstr_pts, 0);
@@ -381,10 +381,10 @@ namespace ego_planner
     sum_time += (t_init + t_opt).toSec();
     count_success++;
 
-    // cout << "total time:\033[42m" << (t_init + t_opt).toSec()
+    // std::cout << "total time:\033[42m" << (t_init + t_opt).toSec()
     //      << "\033[0m,init:" << t_init.toSec()
     //      << ",optimize:" << t_opt.toSec()
-    //      << ",avg_time=" << sum_time / count_success << endl;
+    //      << ",avg_time=" << sum_time / count_success << std::endl;
 
     setLocalTrajFromOpt(best_MJO, touch_goal);
     visualization_->displayOptimalList(cstr_pts, 0);
@@ -417,8 +417,8 @@ namespace ego_planner
     double my_traj_start_time = traj_.local_traj.start_time;
     double other_traj_start_time = traj_.swarm_traj[drone_id].start_time;
 
-    double t_start = max(my_traj_start_time, other_traj_start_time);
-    double t_end = min(my_traj_start_time + traj_.local_traj.duration * 2 / 3,
+    double t_start = std::max(my_traj_start_time, other_traj_start_time);
+    double t_end = std::min(my_traj_start_time + traj_.local_traj.duration * 2 / 3,
                        other_traj_start_time + traj_.swarm_traj[drone_id].duration);
 
     for (double t = t_start; t < t_end; t += 0.03)
@@ -488,10 +488,10 @@ namespace ego_planner
       if (j == 2)
       {
         ROS_WARN("Global traj MaxVel = %f > set_max_vel", globalMJO.getTraj().getMaxVelRate());
-        cout << "headState=" << endl
-             << headState << endl;
-        cout << "tailState=" << endl
-             << tailState << endl;
+        std::cout << "headState=" << std::endl
+             << headState << std::endl;
+        std::cout << "tailState=" << std::endl
+             << tailState <<std::endl;
       }
 
       des_vel /= 1.5;

@@ -221,7 +221,7 @@ namespace ego_planner
                             double &costp);
 
   public:
-    typedef unique_ptr<PolyTrajOptimizer> Ptr;
+    typedef std::unique_ptr<PolyTrajOptimizer> Ptr;
   };
 
 } // namespace ego_planner

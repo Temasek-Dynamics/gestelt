@@ -112,7 +112,7 @@ namespace ego_planner
     int continous_failures_count_{0};
 
   public:
-    typedef unique_ptr<EGOPlannerManager> Ptr;
+    typedef std::unique_ptr<EGOPlannerManager> Ptr;
 
     // !SECTION
   };

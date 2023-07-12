@@ -175,22 +175,22 @@ public:
     double dz = abs(node_1->idx(2) - node_2->idx(2));
 
     double h = 0.0;
-    int diag = min(min(dx, dy), dz);
+    int diag = std::min(min(dx, dy), dz);
     dx -= diag;
     dy -= diag;
     dz -= diag;
 
     if (dx == 0)
     {
-      h = 1.0 * sqrt(3.0) * diag + sqrt(2.0) * min(dy, dz) + 1.0 * abs(dy - dz);
+      h = 1.0 * sqrt(3.0) * diag + sqrt(2.0) * std::min(dy, dz) + 1.0 * abs(dy - dz);
     }
     if (dy == 0)
     {
-      h = 1.0 * sqrt(3.0) * diag + sqrt(2.0) * min(dx, dz) + 1.0 * abs(dx - dz);
+      h = 1.0 * sqrt(3.0) * diag + sqrt(2.0) * std::min(dx, dz) + 1.0 * abs(dx - dz);
     }
     if (dz == 0)
     {
-      h = 1.0 * sqrt(3.0) * diag + sqrt(2.0) * min(dx, dy) + 1.0 * abs(dx - dy);
+      h = 1.0 * sqrt(3.0) * diag + sqrt(2.0) * std::min(dx, dy) + 1.0 * abs(dx - dy);
     }
     return h;
   }
@@ -262,7 +262,7 @@ public:
         || pos(1) < map_origin_(1) + epsilon 
         || pos(2) < map_origin_(2) + epsilon)
     {
-      // cout << "less than min range!" << endl;
+      // std::cout << "less than min range!" << std::endl;
       return false;
     }
     if (pos(0) > map_max_boundary_(0) - epsilon 
