@@ -1,8 +1,4 @@
 <launch>
-  <!-- ros_master_uri is the machine on which ROSCore is running -->
-  <arg name="ros_master_uri" default="http://localhost:11311"/>
-  <!-- ros_ip is the ip of the current machine -->
-  <arg name="ros_ip" default="localhost"/>
   <arg name="drone_id"/>
   <!-- num_drones must be at least 2 even if we are planning for a single drone -->
   <arg name="num_drones" value="2"/>
@@ -17,11 +13,6 @@
   <arg name="point_cloud_topic" value="camera/depth/points" />
   <arg name="point_cloud_topic_ds" value="camera/depth/points_downsampled" />
   <arg name="depth_img_topic" value="camera/depth/image_raw" />
-
-  <!-- Set ROS Environment variables -->
-  <env name="ROS_MASTER_URI" value="$(arg ros_master_uri)"/>
-  <env name="ROS_IP" value="$(arg ros_ip)"/>
-  <env name="ROS_HOSTNAME" value="$(arg ros_ip)"/>
 
   <include file="$(find gestelt_bringup)/launch/ego_planner.launch">
     <arg name="drone_id"   value="$(arg drone_id)"/>

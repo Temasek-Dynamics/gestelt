@@ -25,7 +25,7 @@ source $SCRIPT_DIR/../../../../devel/setup.bash &&
 # Commands
 #####
 CMD_0="
-roslaunch gestelt_bringup radxa_ego_planner.launch drone_id:=${uav_id} ros_master_uri:=$ROS_MASTER_URI ros_ip:=$ROS_IP
+roslaunch gestelt_bringup radxa_ego_planner.launch drone_id:=${uav_id} 
 "
 
 if [ "$SESSIONEXISTS" = "" ]
