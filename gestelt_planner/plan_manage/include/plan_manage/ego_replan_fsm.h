@@ -1,26 +1,27 @@
 #ifndef _REBO_REPLAN_FSM_H_
 #define _REBO_REPLAN_FSM_H_
 
-#include <Eigen/Eigen>
 #include <algorithm>
 #include <iostream>
-#include <nav_msgs/Path.h>
-#include <sensor_msgs/Imu.h>
+#include <vector>
+
+#include <Eigen/Eigen>
+
 #include <ros/ros.h>
 #include <std_msgs/Empty.h>
 #include <std_msgs/Float64.h>
 #include <std_msgs/String.h>
-#include <vector>
-#include <visualization_msgs/Marker.h>
-
-#include <optimizer/poly_traj_optimizer.h>
-#include <plan_env/grid_map.h>
 #include <geometry_msgs/PoseStamped.h>
+
 #include <traj_utils/DataDisp.h>
-#include <plan_manage/planner_manager.h>
 #include <traj_utils/planning_visualization.h>
 #include <traj_utils/PolyTraj.h>
 #include <traj_utils/MINCOTraj.h>
+
+#include <plan_env/grid_map.h>
+#include <optimizer/poly_traj_optimizer.h>
+
+#include <plan_manage/planner_manager.h>
 
 #include <gestelt_utils/timebenchmark.h>
 

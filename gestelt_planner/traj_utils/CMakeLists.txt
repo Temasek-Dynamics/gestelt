@@ -55,8 +55,3 @@ target_link_libraries( traj_utils
     ${catkin_LIBRARIES} 
     ${Eigen3_LIBRARIES}
 )  
-
-
-# add_dependencies(node 
-#   ${catkin_EXPORTED_TARGETS}
-# )

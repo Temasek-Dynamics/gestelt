@@ -1,7 +1,4 @@
-// #include <fstream>
 #include <plan_manage/planner_manager.h>
-#include <thread>
-#include "visualization_msgs/Marker.h" // zx-todo
 
 namespace ego_planner
 {
