@@ -76,3 +76,33 @@
 25. (28/6/23) Add tested Radxa setup file
 26. (7/7/23) Tested Egoplanner with Radxa HITL and Gazebo simulation
 27. (7/7/23) To gridmap module, added subscription to camera_info for intrinsic parameters and added setting of extrinsic parameter via rosparams. 
+28. (13/7/23) Gridmap
+    - Change gridmap to use PCL and octreeOccupancyGrid for occupancy grid.
+        - Previously they pre-allocated a 3d array sized by the entire map. This is memory intensive, but access might be faster. Octree might incur a small overhead for access (depending on the resolution) but definitely has better stability and APIs. 
+    - Add message filtering to ensure that poses and point cloud are aligned (http://wiki.ros.org/message_filters/ApproximateTime)
+    - Point cloud
+        - Add proper support to take in point clouds
+            - transformation for point clouds to global uav frame
+            - Added voxel filter for downsampling 
+                - Voxel downsampling and publishing (10cm voxel size)
+                    - (320 x 240) resolution
+                        - Before: 28.10 MB/s, after: 414.70KB/s
+                    - (640 x 480) resolution
+                        - Before: 105 MB/s, after: ~ 400KB/s
+                    - (848 x 480) resolution
+                        - Before: 140 MB/s, after: ~ 400KB/s
+                    - Max bandwidth is proportional to density of obstacles in environment
+    - Depth image
+        - Rewrite function to create PC from depth map
+            - http://docs.ros.org/en/fuerte/api/rgbd2cloud/html/depth2cloud_8cpp_source.html
+    - Improve communication  ros::TransportHints()
+        - Use TCP_NODELAY for image/point cloud topics: Improves the efficiency of TCP/IP networks by reducing the number of packets that need to be sent. For small messages: More efficient but higher latency. For big messages: More efficient and potentially lower latency
+        - Use UDP for pose messages topics
+        - Sensor_msgs type must use TCP as the ROS UDP messages provide no mechanism to reconstruct the fragmented images/point clouds
+29. (13/7/23) Improve build time on radxa by removing unnecessary dependencies 
+    - Get rid of quadrotor_msgs 
+    - Separate traj_server from plan_manage
+    - Clean up cmakelists dependencies
+    - Reorganize packages to ensure that radxa only builds the necessary packages
+30. (13/7/23) CPU Benchmarking
+    - Add CPU usage (https://stackoverflow.com/questions/63166/how-to-determine-cpu-and-memory-consumption-from-inside-a-process)
