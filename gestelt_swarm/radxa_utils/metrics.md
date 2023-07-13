@@ -7,33 +7,39 @@
     - Latency
         - Latency averages 14.8 ms. Best is 8.7 ms, Worst is 32.1 ms.
 
-
 # ROS Topic metrics
-- On radxa
+All tests conducted on 5 Ghz Wifi network
+- Radxa subscribed topics
+
+    - Point clouds (/drone0/camera/depth/points_downsampled)
+        - Delay: AVG 0.005, MAX 0.04
+        - Throughput: AVG 81 kb/s, MAX 440kb/s
+            - throughput is proportional to density of obstacles in environment
+
     - Depth Image (/drone0/camera/depth/image_raw)
         - (840 * 640)
-            - 2.4 ghz 
-                - Delay: 0.75 (0.004)
-                - Bandwidth: 2.88mb/s (16.65 mb/s)
+            - Delay: 0.75 
+            - Throughput: 2.88mb/s (Required 16.65 mb/s)
+        - (640 * 480)
+            - Delay: 
+            - Throughput: (Required 12.48MB/s)
         - (320 x 240)
-            - 5.0 ghz
-                - Delay: 0.027, Max 0.26 
-                - Bandwidth: 2.75 mb/s
-    - /drone0/mavros/local_position/pose
-        - 2.4 ghz
-            - Delay: 0.03 (0.006)
-            - Bandwidth: 2.6 kb/s (2.6 kb/s)
-        - 5.0 ghz
-            - Delay:
-            - Bandwidth:
-- On PC
-    - /drone0/mavros/setpoint_raw/local
-        - 2.4 ghz
-            - Delay: 0.7 ()
-            - Bandwidth: 2.5kb/s (2.7kb/s)
-        - 5.0 ghz
-            - Delay:
-            - Bandwidth:
+            - Delay: 0.027, Max 0.26 
+            - Throughput: 2.75 mb/s 
+
+    - Pose input (/drone0/mavros/local_position/pose)
+        - Delay: AVG -0.006, MAX 0.012
+        - Throughput: 2.82KB/s
+
+- PC subscribed topics
+
+    - PVA Commands (/drone0/mavros/setpoint_raw/local)
+        - Delay: AVG 0.015, MAX 0.04
+        - Throughput: 2.55KB/s
+
+    - Occupancy Grid (/drone_0_ego_planner_node/grid_map/occupancy)
+        - Delay: AVG , MAX
+        - Throughput: 
 
 # Metrics to measure
 MAKE SURE TO BUILD IN RELEASE MODE

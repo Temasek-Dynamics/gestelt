@@ -282,6 +282,9 @@ void GridMap::cloudToCloudMap(const sensor_msgs::PointCloud2ConstPtr &msg)
   // Change frame_id to the a global frame id, this is because we peformed the transformation to the frame
   cloud_global_->header.frame_id = mp_.global_frame_id_;
 
+  cloud_global_->height = 1;
+  cloud_global_->width = cloud_global_->points.size();
+
   // Octree takes in cloud map in global frame
   octree_map_->setOccupiedVoxelsAtPointsFromCloud(cloud_global_);
   octree_map_inflated_->setOccupiedVoxelsAtPointsFromCloud(cloud_global_);

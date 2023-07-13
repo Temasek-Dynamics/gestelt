@@ -3,18 +3,20 @@
 # Demo (13/7/23)
 - Gridmap
     - Change gridmap to use PCL and octreeOccupancyGrid for occupancy grid.
-    - Add message filtering to ensure that poses and point cloud are aligned
+        - Previously they pre-allocated a 3d array sized by the entire map. This is memory intensive, but access might be faster. Octree might incur a small overhead for access (depending on the resolution) but definitely has better stability and APIs. 
+    - Add message filtering to ensure that poses and point cloud are aligned (http://wiki.ros.org/message_filters/ApproximateTime)
     - Point cloud
-        - Add transformation for point clouds to global uav frame
-        - Added voxel filter for downsampling point clouds
-            - Voxel downsampling and publishing (10cm size)
-                - (320 x 240) resolution
-                    - Before: 28.10 MB/s, after: 414.70KB/s
-                - (640 x 480) resolution
-                    - Before: 105 MB/s, after: ~ 400KB/s
-                - (848 x 480) resolution
-                    - Before: 140 MB/s, after: ~ 400KB/s
-                - Max bandwidth is proportional to density of obstacles in environment
+        - Add proper support to take in point clouds
+            - transformation for point clouds to global uav frame
+            - Added voxel filter for downsampling 
+                - Voxel downsampling and publishing (10cm size)
+                    - (320 x 240) resolution
+                        - Before: 28.10 MB/s, after: 414.70KB/s
+                    - (640 x 480) resolution
+                        - Before: 105 MB/s, after: ~ 400KB/s
+                    - (848 x 480) resolution
+                        - Before: 140 MB/s, after: ~ 400KB/s
+                    - Max bandwidth is proportional to density of obstacles in environment
     - Depth image
         - Measure utilized bandwidth for different resolutions
             - (848 x 480): 16.46MB/s 
@@ -22,24 +24,30 @@
             - (320 x 240): 3.52MB/s
         - Rewrite function to create PC from depth map
             - http://docs.ros.org/en/fuerte/api/rgbd2cloud/html/depth2cloud_8cpp_source.html
-    - set ros::TransportHints()
+    - Improve communication  ros::TransportHints()
         - Use TCP_NODELAY for image/point cloud topics: Improves the efficiency of TCP/IP networks by reducing the number of packets that need to be sent. For small messages: More efficient but higher latency. For big messages: More efficient and potentially lower latency
         - Use UDP for pose messages topics
         - Sensor_msgs type must use TCP as the ROS UDP messages provide no mechanism to reconstruct the fragmented images/point clouds
     
-- Improve build time on radxa
+- Improve build time on radxa by removing unnecessary dependencies 
     - Get rid of quadrotor_msgs 
     - Separate traj_server from plan_manage
     - Clean up cmakelists dependencies
     - Reorganize packages to ensure that radxa only builds the necessary packages
 
 - Benchmarking
-    - Add CPU usage
-    - https://stackoverflow.com/questions/63166/how-to-determine-cpu-and-memory-consumption-from-inside-a-process
+    - Add CPU usage (https://stackoverflow.com/questions/63166/how-to-determine-cpu-and-memory-consumption-from-inside-a-process)
 
 - Compare compressed depth map to downsampled point cloud
-    - Using depth image (higher bandwidth req. at ~ 3.5 mb/s) as input ceases to work properly after a while as the delay gets increasingly longer
-    - Point clouds (lower bandwidth req. at ~ 400kb/s) as input 
+    - Using depth image (320 x 240) as input ceases to work properly after a while as the delay gets increasingly longer.
+        - (higher throughput req. at ~ 3.5 mb/s) 
+    - DOWNSAMPLED Point clouds as input works well, and there seems to be minimal delay.
+        - (lower throughput req. at ~ 400kb/s)
+
+- Moving forward
+    - Unable to build the flywoo firmware with the latest version of PX4, need to look into this issue first
+    - Potential to improve latency for streaming depth images and point clouds when using UDP, but need to use a different transport mechanism than ROS (Low level UDP sockets for e.g.).
+    - 
 
 # TODO
 - Test with other virtual drones
