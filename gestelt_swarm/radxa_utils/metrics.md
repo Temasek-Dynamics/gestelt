@@ -10,13 +10,15 @@
 
 # ROS Topic metrics
 - On radxa
-    - /drone0/camera/depth/image_raw (840 * 640)
-        - 2.4 ghz 
-            - Delay: 0.75 (0.004)
-            - Bandwidth: 2.88mb/s (16.65 mb/s)
-        - 5.0 ghz
-            - Delay:
-            - Bandwidth:
+    - Depth Image (/drone0/camera/depth/image_raw)
+        - (840 * 640)
+            - 2.4 ghz 
+                - Delay: 0.75 (0.004)
+                - Bandwidth: 2.88mb/s (16.65 mb/s)
+        - (320 x 240)
+            - 5.0 ghz
+                - Delay: 0.027, Max 0.26 
+                - Bandwidth: 2.75 mb/s
     - /drone0/mavros/local_position/pose
         - 2.4 ghz
             - Delay: 0.03 (0.006)

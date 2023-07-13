@@ -25,6 +25,7 @@
     - set ros::TransportHints()
         - Use TCP_NODELAY for image/point cloud topics: Improves the efficiency of TCP/IP networks by reducing the number of packets that need to be sent. For small messages: More efficient but higher latency. For big messages: More efficient and potentially lower latency
         - Use UDP for pose messages topics
+        - Sensor_msgs type must use TCP as the ROS UDP messages provide no mechanism to reconstruct the fragmented images/point clouds
     
 - Improve build time on radxa
     - Get rid of quadrotor_msgs 
@@ -36,6 +37,9 @@
     - Add CPU usage
     - https://stackoverflow.com/questions/63166/how-to-determine-cpu-and-memory-consumption-from-inside-a-process
 
+- Compare compressed depth map to downsampled point cloud
+    - Using depth image (higher bandwidth req. at ~ 3.5 mb/s) as input ceases to work properly after a while as the delay gets increasingly longer
+    - Point clouds (lower bandwidth req. at ~ 400kb/s) as input 
 
 # TODO
 - Test with other virtual drones
@@ -47,15 +51,13 @@
 - Get the code working on the actual drone
 
 - Gridmap
-    - Compare compressed depth map to downsampled point cloud
-        - Bandwidth and delay
     - Implement pose timeout
-    - Rename `plan_env` to `gestelt_mapping`
     - Depth image
         - Find out how to create organized point clouds
         - Compress, publish and subscribe using ImageTransport
     - Look at using udp to send over point clouds or depth images
     - Create map with decaying voxels
+    - Rename `plan_env` to `gestelt_mapping`
 
 - Benchmark
     - Add network params 

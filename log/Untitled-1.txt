@@ -1,0 +1,12 @@
+[drone0/sitl_0-7] process has died 
+[pid 250968, exit code 255, 
+
+cmd /home/john/gestelt_ws/PX4-Autopilot/build/px4_sitl_default/bin/px4 
+    /home/john/gestelt_ws/PX4-Autopilot/build/px4_sitl_default/etc 
+    -s etc/in it.d-posix/rcS 
+    -i 0 
+    -w sitl_iris_0 
+    -d __name:=sitl_0 
+    __log:=/home/john/.ros/log/dbd4ea50-209f-11ee-8560
+-a948c824d4c3/drone0-sitl_0-7.log].                
+log file: /home/john/.ros/log/dbd4ea50-209f-11ee-8560-a948c824d4c3/drone0-sitl_0-7*.log
