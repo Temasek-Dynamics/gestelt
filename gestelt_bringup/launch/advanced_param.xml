@@ -92,7 +92,7 @@
         <param name="grid_map/global_frame_id" value="$(arg drone_origin_frame)"/>
         <!-- Occupancy grid params -->
         <param name="grid_map/occ_grid/resolution" value="0.1" />
-        <param name="grid_map/occ_grid/inflation" value="0.35" />
+        <param name="grid_map/occ_grid/inflation" value="0.2" />
         <!-- Point cloud downsampling params -->
         <param name="grid_map/filter/downsample_cloud" value="false" />
         <param name="grid_map/filter/depth_stride" value="4" />
