@@ -1,16 +1,5 @@
 <launch>
   <!-- Launches a test mission -->
-
-  <!-- ros_master_uri is the machine on which ROSCore is running -->
-  <arg name="ros_master_uri" default="http://localhost:11311"/>
-  <!-- ros_ip is the ip of the current machine -->
-  <arg name="ros_ip" default="localhost"/>
-
-  <!-- Set ROS Environment variables -->
-  <env name="ROS_MASTER_URI" value="$(arg ros_master_uri)"/>
-  <env name="ROS_IP" value="$(arg ros_ip)"/>
-  <env name="ROS_HOSTNAME" value="$(arg ros_ip)"/>
-
   <node pkg="gestelt_bringup" type="single_mission.py" name="single_mission" />
 
 </launch>

@@ -336,6 +336,7 @@ void GridMap::depthToCloudMap(const sensor_msgs::ImageConstPtr &msg)
         pt.x = (u - mp_.cx_) * pt.z * mp_.fx_inv_;
         pt.y = (v - mp_.cy_) * pt.z * mp_.fy_inv_;
       }
+    
     }
   }
 
@@ -361,6 +362,8 @@ void GridMap::publishMap()
   }
   sensor_msgs::PointCloud2 cloud_msg;
   pcl::toROSMsg(*cloud_global_, cloud_msg);
+
+  cloud_msg.header.frame_id = mp_.global_frame_id_;
 
   occ_map_pub_.publish(cloud_msg);
 }

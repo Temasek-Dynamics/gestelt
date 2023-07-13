@@ -1,8 +1,4 @@
 <launch>
-  <!-- ros_master_uri is the machine on which ROSCore is running -->
-  <arg name="ros_master_uri" default="http://localhost:11311"/>
-  <!-- ros_ip is the ip of the current machine -->
-  <arg name="ros_ip" default="localhost"/>
   <!-- num_drones must be at least 2 even if we are planning for a single drone -->
   <arg name="num_drones" value="2"/>
   <!-- Gazebo parameters -->
@@ -12,11 +8,6 @@
   <!-- Actual model SDF to be spawned -->
   <arg name="model" default="raynor"/> 
   
-  <!-- Set ROS Environment variables -->
-  <env name="ROS_MASTER_URI" value="$(arg ros_master_uri)"/>
-  <env name="ROS_IP" value="$(arg ros_ip)"/>
-  <env name="ROS_HOSTNAME" value="$(arg ros_ip)"/>
-
   <!-- Gazebo simulation -->
   <include file="$(find gazebo_ros)/launch/empty_world.launch">
     <arg name="world_name" value="$(arg world_name)"/>
@@ -34,8 +25,6 @@
 
   <!-- Drone 0 -->
   <include file="$(find gestelt_bringup)/launch/radxa/sitl/radxa_px4_sitl.launch">
-    <arg name="ros_master_uri"  value="$(arg ros_master_uri)"/>
-    <arg name="ros_ip"          value="$(arg ros_ip)"/>
     <arg name="drone_id"        value="0"/>
     <arg name="vehicle"         value="$(arg vehicle)"/>
     <arg name="model"           value="$(arg model)"/>
@@ -46,8 +35,6 @@
 
   <!-- Drone 1 -->
   <!-- <include file="$(find gestelt_bringup)/launch/radxa/sitl/radxa_px4_sitl.launch">
-    <arg name="ros_master_uri"  value="$(arg ros_master_uri)"/>
-    <arg name="ros_ip"          value="$(arg ros_ip)"/>
     <arg name="drone_id"        value="1"/>
     <arg name="vehicle"         value="$(arg vehicle)"/>
     <arg name="model"           value="$(arg model)"/>

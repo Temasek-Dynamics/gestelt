@@ -1,17 +1,8 @@
 <launch>
-  <!-- ros_master_uri is the machine on which ROSCore is running -->
-  <arg name="ros_master_uri" default="http://localhost:11311"/>
-  <!-- ros_ip is the ip of the current machine -->
-  <arg name="ros_ip" default="localhost"/>
   <arg name="num_drones" value="2"/>
   
   <arg name="point_cloud_topic" value="camera/depth/points" />
   <arg name="point_cloud_topic_ds" value="camera/depth/points_downsampled" />
-
-  <!-- Set ROS Environment variables -->
-  <env name="ROS_MASTER_URI" value="$(arg ros_master_uri)"/>
-  <env name="ROS_IP" value="$(arg ros_ip)"/>
-  <env name="ROS_HOSTNAME" value="$(arg ros_ip)"/>
 
   <!--  swarm bridge re-broadcasts the trajectories of all drones -->
   <include file="$(find swarm_bridge)/launch/bridge_udp.launch">
