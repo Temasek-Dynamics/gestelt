@@ -1,5 +1,6 @@
 <launch>
   <!-- Launches a test mission -->
-  <node pkg="gestelt_bringup" type="single_mission.py" name="single_mission" />
+  <!-- <node pkg="gestelt_bringup" type="single_mission.py" name="single_mission" /> -->
+  <node pkg="gestelt_bringup" type="mission_startup_and_send_wp.py" name="mission_startup_and_send_wp" />
 
 </launch>

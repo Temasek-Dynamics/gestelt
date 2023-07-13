@@ -29,6 +29,12 @@
         - Use UDP for pose messages topics
         - Sensor_msgs type must use TCP as the ROS UDP messages provide no mechanism to reconstruct the fragmented images/point clouds
     
+    - Compare compressed depth map to downsampled point cloud
+        - Using depth image (320 x 240) as input ceases to work properly after a while as the delay gets increasingly longer.
+            - (higher throughput req. at ~ 3.5 mb/s) 
+        - DOWNSAMPLED Point clouds as input works well, and there seems to be minimal delay.
+            - (lower throughput req. at ~ 400kb/s)
+
 - Improve build time on radxa by removing unnecessary dependencies 
     - Get rid of quadrotor_msgs 
     - Separate traj_server from plan_manage
@@ -38,19 +44,15 @@
 - Benchmarking
     - Add CPU usage (https://stackoverflow.com/questions/63166/how-to-determine-cpu-and-memory-consumption-from-inside-a-process)
 
-- Compare compressed depth map to downsampled point cloud
-    - Using depth image (320 x 240) as input ceases to work properly after a while as the delay gets increasingly longer.
-        - (higher throughput req. at ~ 3.5 mb/s) 
-    - DOWNSAMPLED Point clouds as input works well, and there seems to be minimal delay.
-        - (lower throughput req. at ~ 400kb/s)
+- Test with other virtual drones
 
-- Moving forward
-    - Unable to build the flywoo firmware with the latest version of PX4, need to look into this issue first
+- Challenges
+    - Unable to build the flywoo firmware with the latest version of PX4. However, building it with the custom version of PX4 works. Should we look into how to port it to the latest version (so it remains relevant with any updates?)
+    - Increasing the frequency of the depth/point cloud topics so as to prevent mis-mapped point cloud topics
     - Potential to improve latency for streaming depth images and point clouds when using UDP, but need to use a different transport mechanism than ROS (Low level UDP sockets for e.g.).
     - 
 
 # TODO
-- Test with other virtual drones
 
 - Set optimization flags
     - set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g")

@@ -38,7 +38,7 @@ CMD_2="
 roslaunch gestelt_bringup rviz.launch config:=gz_sim 
 "
 
-CMD_3="roslaunch gestelt_bringup radxa_mission.launch "
+CMD_3="roslaunch gestelt_bringup radxa_mission.launch"
 
 if [ "$SESSIONEXISTS" = "" ]
 then 

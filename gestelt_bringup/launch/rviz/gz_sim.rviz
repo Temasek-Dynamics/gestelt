@@ -5,10 +5,11 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /Global Options1
-        - /drone0_ego1
-        - /drone0_ego1/Mapping1
         - /drone0_ego1/Mapping1/occ_grid_inf1/Autocompute Value Bounds1
+        - /drone0_ego1/Mapping1/occ_grid1
         - /drone0_mavros1/Localization1//mavros/local_position/pose1
+        - /drone1_ego1
+        - /drone1_ego1/Mapping1
         - /drone2_ego1/Mapping1
         - /drone3_ego1/Mapping1
       Splitter Ratio: 0.7029411792755127
@@ -30,7 +31,7 @@ Panels:
   - Class: rviz/Time
     Name: Time
     SyncMode: 0
-    SyncSource: ""
+    SyncSource: occ_grid
 Preferences:
   PromptSaveOnExit: true
 Toolbars:
@@ -109,7 +110,7 @@ Visualization Manager:
           Marker Topic: /drone0/model
           Name: model
           Namespaces:
-            {}
+            drone0: true
           Queue Size: 100
           Value: true
         - Class: rviz/Group
@@ -197,8 +198,8 @@ Visualization Manager:
             - Alpha: 0.10000000149011612
               Autocompute Intensity Bounds: true
               Autocompute Value Bounds:
-                Max Value: -0.12122424691915512
-                Min Value: -0.2916465401649475
+                Max Value: -0.3084432780742645
+                Min Value: -0.4591296315193176
                 Value: true
               Axis: Z
               Channel Name: intensity
@@ -348,7 +349,7 @@ Visualization Manager:
           Marker Topic: /drone1/model
           Name: model
           Namespaces:
-            {}
+            drone1: true
           Queue Size: 100
           Value: true
         - Class: rviz/Group
@@ -445,7 +446,7 @@ Visualization Manager:
               Color: 239; 41; 41
               Color Transformer: FlatColor
               Decay Time: 0
-              Enabled: true
+              Enabled: false
               Invert Rainbow: false
               Max Color: 255; 255; 255
               Min Color: 0; 0; 0
@@ -460,7 +461,7 @@ Visualization Manager:
               Unreliable: false
               Use Fixed Frame: true
               Use rainbow: true
-              Value: true
+              Value: false
           Enabled: true
           Name: Mapping
         - Alpha: 1
@@ -487,7 +488,7 @@ Visualization Manager:
           Topic: /drone1/uav_path
           Unreliable: false
           Value: true
-      Enabled: false
+      Enabled: true
       Name: drone1_ego
     - Class: rviz/Group
       Displays:
@@ -578,7 +579,7 @@ Visualization Manager:
               Value: false
           Enabled: true
           Name: Localization
-      Enabled: false
+      Enabled: true
       Name: drone1_mavros
     - Class: rviz/Group
       Displays:
@@ -587,7 +588,7 @@ Visualization Manager:
           Marker Topic: /drone2/model
           Name: Marker
           Namespaces:
-            {}
+            drone2: true
           Queue Size: 100
           Value: true
         - Class: rviz/Group
@@ -726,7 +727,7 @@ Visualization Manager:
           Topic: /drone2/uav_path
           Unreliable: false
           Value: true
-      Enabled: false
+      Enabled: true
       Name: drone2_ego
     - Class: rviz/Group
       Displays:
@@ -817,7 +818,7 @@ Visualization Manager:
               Value: false
           Enabled: true
           Name: Localization
-      Enabled: false
+      Enabled: true
       Name: drone2_mavros
     - Class: rviz/Group
       Displays:
@@ -965,7 +966,7 @@ Visualization Manager:
           Topic: /drone3/uav_path
           Unreliable: false
           Value: true
-      Enabled: false
+      Enabled: true
       Name: drone3_ego
     - Class: rviz/Group
       Displays:
@@ -1056,7 +1057,7 @@ Visualization Manager:
               Value: false
           Enabled: true
           Name: Localization
-      Enabled: false
+      Enabled: true
       Name: drone3_mavros
   Enabled: true
   Global Options:
@@ -1087,7 +1088,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/ThirdPersonFollower
-      Distance: 7.8936309814453125
+      Distance: 13.049086570739746
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -1095,17 +1096,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 0.612018346786499
-        Y: -1.7046761512756348
-        Z: -3.914233275281731e-07
+        X: 0.8410718441009521
+        Y: -3.132152795791626
+        Z: -1.345097643934423e-06
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.7447969913482666
+      Pitch: 0.3997970223426819
       Target Frame: my_view
-      Yaw: 3.4590065479278564
+      Yaw: 3.01900577545166
     Saved:
       - Class: rviz/FPS
         Enable Stereo Rendering:
@@ -1254,5 +1255,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1283
-  X: -108
-  Y: 140
+  X: 482
+  Y: 102

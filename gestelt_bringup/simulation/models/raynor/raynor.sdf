@@ -395,7 +395,7 @@
         </geometry>
       </visual>
       <sensor name="depth_camera" type="depth">
-        <update_rate>10</update_rate>
+        <update_rate>20</update_rate>
         <camera>
           <horizontal_fov>1.5009831567</horizontal_fov>
           <image>
@@ -412,7 +412,7 @@
           <cameraName>camera</cameraName>
           <robotNamespace></robotNamespace>
           <alwaysOn>true</alwaysOn>
-          <updateRate>10</updateRate>
+          <updateRate>20</updateRate>
           <pointCloudCutoff>0.01</pointCloudCutoff>
           <pointCloudCutoffMax>4.5</pointCloudCutoffMax>
           <imageTopicName>rgb/image_raw</imageTopicName>

@@ -38,8 +38,8 @@ All tests conducted on 5 Ghz Wifi network
         - Throughput: 2.55KB/s
 
     - Occupancy Grid (/drone_0_ego_planner_node/grid_map/occupancy)
-        - Delay: AVG , MAX
-        - Throughput: 
+        - Delay: AVG 0.08, MAX 0.128
+        - Throughput: 76.5KB/S, MAX 440kb/s
 
 # Metrics to measure
 MAKE SURE TO BUILD IN RELEASE MODE
