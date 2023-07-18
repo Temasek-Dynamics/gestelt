@@ -1,6 +1,11 @@
 # TODO
 - Get the code working on the actual drone
 
+- Benchmark
+    - Add network params 
+        - Bandwidth, latency, signal strength
+    - Use ddynamic_reconfigure to toggle on/off benchmarking
+
 - Radxa
     - Synchronize Radxa times
     - Set optimization flags
@@ -16,11 +21,6 @@
     - Look at using udp to send over point clouds or depth images
     - Create map with decaying voxels
     - Rename `plan_env` to `gestelt_mapping`
-
-- Benchmark
-    - Add network params 
-        - Bandwidth, latency, signal strength
-    - Use ddynamic_reconfigure to toggle on/off benchmarking
 
 - Perform physical tests to determine physical characteristics
     - Motor coefficients
