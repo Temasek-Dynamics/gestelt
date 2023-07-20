@@ -23,15 +23,13 @@ make flywoo_f405s_aio_default upload
     - NAV_RCL_ACT: Failsafe action (Disabled, loiter, return, land, disarm, terminate)
     - COM_RCL_EXCEPT: Disable RC loss failsafe in specific automatic modes (mission, hold, offboard)
 - GPS
-    - Might need to disable GPS
+    - COM_ARM_WO_GPS: Allow arming without GPS Values
 - Land mode
     - COM_DISARM_LAND: Select checkbox to specify that the vehicle will disarm after landing. The value must be non-zero but can be a fraction of a second.
     - MPC_LAND_SPEED: Rate of descent
 - Offboard loss failsafe
     - COM_OF_LOSS_T: Delay after loss of offboard connection before the failsafe is triggered.
     - COM_OBL_RC_ACT: 	Failsafe action if RC is available: Position mode, Altitude mode, Manual mode, Return mode, Land mode, Hold mode.
-- Failure detection:
-    - CBRK_FLIGHTTERM: this check is always enabled on takeoff, irrespective of the CBRK_FLIGHTTERM parameter. Failure detection during flight is deactivated by default. Enable by setting to 0.
 - Attitude Trigger:
     - FD_FAIL_P: Maximum allowed pitch (in degrees).
     - FD_FAIL_R: Maximum allowed roll (in degrees).
@@ -39,6 +37,12 @@ make flywoo_f405s_aio_default upload
     - FD_FAIL_R_TTRI: Time to exceed FD_FAIL_R for failure detection (default 0.3s).
 - Auto disarm timeouts
     - COM_DISARM_PRFLT: Timeout for auto disarm if vehicle is too slow to takeoff.
+- Arming/Disarming
+    - MAN_ARM_GESTURE: Enable arming/disarming via stick gestures
+- Checks:
+    - CBRK_FLIGHTTERM: this check is always enabled on takeoff, irrespective of the CBRK_FLIGHTTERM parameter. Failure detection during flight is deactivated by default. Enable by setting to 0.
+    - CBRK_SUPPLY_CHK: Set to 894281
+
 
 2. Set flight modes on transmitter
     - https://docs.px4.io/main/en/config/flight_mode.html
@@ -65,7 +69,7 @@ mavlink status streams
 ## Hardware 
 Refer to [gn405s_wiring_diagram](./images/gn405s_wiring_diagram.png)
 1. Serial Receiver
-    - 
+    - FM800 (FASST RX)
 2. Flywoo F405 AIO BOARD
     - MCU: STM32F405 BGA
     - Integrated ESCs
@@ -76,9 +80,11 @@ Refer to [gn405s_wiring_diagram](./images/gn405s_wiring_diagram.png)
 4. Motors
     - Flywoo NIN 1404 (4850 kV)
 5. Frame
-    - 
-6. Onboard computer
+    - TODO 
+6. Companion computer
     - Radxa Zero V1.5
+        - [GPIO Wiring](https://wiki.radxa.com/Zero/hardware/gpio)
+        - [Pin location](https://wiki.radxa.com/Zero)
 
 ## Others
 - [PX4 Tune meanings](https://docs.px4.io/v1.9.0/en/getting_started/tunes.html)
