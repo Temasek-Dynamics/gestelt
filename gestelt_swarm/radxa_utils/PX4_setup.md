@@ -42,7 +42,10 @@ make flywoo_f405s_aio_default upload
 - Checks:
     - CBRK_FLIGHTTERM: this check is always enabled on takeoff, irrespective of the CBRK_FLIGHTTERM parameter. Failure detection during flight is deactivated by default. Enable by setting to 0.
     - CBRK_SUPPLY_CHK: Set to 894281
-
+- Motor ordering:
+    - MOT_ORDERING: Set to 1 for betaflight
+- Sensor rotation:
+    - SENS_BOARD_ROT: Set to Yaw 270 degrees
 
 2. Set flight modes on transmitter
     - https://docs.px4.io/main/en/config/flight_mode.html
