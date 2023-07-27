@@ -1,5 +1,29 @@
 # TODO
-- Get the code working on the actual drone
+
+- Interface PX4 with radxa:
+    - Get mavlink topics
+    - Figure out permission denied
+    - Disable compass
+    - Add lidar to ekf
+
+- Use TF published from PX4. 
+    - Subscribe to /mavros/global_position/local instead of /mavros/local_position/pose
+
+- Integrate Vicon positioning with PX4 
+    - Feed the Vicon ground truth position to the PX4 local position and test the position mode of the drone
+        - Create object in Vicon software named as "droneX"
+        - Run vrpn_client_node on central computer.
+        - Method 1 (If mavros node on radxa is able to subscribe to topics published on other computers in same network)
+            - Central computer remap `/vrpn_client_node/droneX/pose` and publish to `droneX/mavros/vision_pose/pose`
+        - Method 2 
+            - Radxa OBC Subscribe to `/vrpn_client_node/droneX/pose` and publish to `droneX/mavros/vision_pose/pose`
+    - Check that this is able to localize the drone in position mode
+    - References:
+        - [mavros, px4_config params](http://wiki.ros.org/mavros)
+        - [mavros_extras, px4_config params](http://wiki.ros.org/mavros_extras#vision_pose_estimate)
+        - [px4 vicon guide](https://docs.px4.io/main/en/ros/external_position_estimation.html)
+        - [T-labs vicon guide](https://tlab-uav.github.io/tech-details/docs/systems/vicon/)
+    - Clone radxa device
 
 - Benchmark
     - Add network params 

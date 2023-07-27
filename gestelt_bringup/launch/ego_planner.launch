@@ -49,7 +49,7 @@
             for use as camera sensor input -->
         <arg name="SENSOR_TYPE" value="1" />
         <arg name="drone_origin_frame" value="$(arg drone_origin_frame)"/>
-
+        
         <!-- camera pose: transform of camera frame in the world frame -->
         <!-- depth topic: depth image, 640x480 by default -->
         <!-- cloud_topic: Point cloud topic   -->

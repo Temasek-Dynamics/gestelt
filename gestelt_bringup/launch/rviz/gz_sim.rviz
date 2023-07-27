@@ -5,15 +5,17 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /Global Options1
+        - /drone0_ego1/Mapping1
+        - /drone0_ego1/Mapping1/occ_grid_inf1
         - /drone0_ego1/Mapping1/occ_grid_inf1/Autocompute Value Bounds1
-        - /drone0_ego1/Mapping1/occ_grid1
-        - /drone0_mavros1
-        - /drone0_mavros1/Localization1
         - /drone0_mavros1/Localization1//mavros/local_position/pose1
-        - /drone1_ego1/Mapping1/occ1
-        - /drone2_ego1/Mapping1/occ1
+        - /drone1_ego1/Mapping1
+        - /drone1_ego1/Mapping1/occ_inflated1
+        - /drone2_ego1/Mapping1
+        - /drone2_ego1/Mapping1/occ_inflated1
+        - /drone2_mavros1/Perception1
         - /drone3_ego1/Mapping1
-        - /drone3_ego1/Mapping1/occ1
+        - /drone3_ego1/Mapping1/occ_inflated1
       Splitter Ratio: 0.46536797285079956
     Tree Height: 627
   - Class: rviz/Selection
@@ -33,7 +35,7 @@ Panels:
   - Class: rviz/Time
     Name: Time
     SyncMode: 0
-    SyncSource: ""
+    SyncSource: occ_grid_inf
 Preferences:
   PromptSaveOnExit: true
 Toolbars:
@@ -82,7 +84,7 @@ Visualization Manager:
           Marker Topic: /obstacle_collision_points
           Name: obstacle_collision
           Namespaces:
-            "": true
+            {}
           Queue Size: 100
           Value: true
         - Alpha: 0.5
@@ -112,7 +114,7 @@ Visualization Manager:
           Marker Topic: /drone0/model
           Name: model
           Namespaces:
-            {}
+            drone0: true
           Queue Size: 100
           Value: true
         - Class: rviz/Group
@@ -122,7 +124,7 @@ Visualization Manager:
               Marker Topic: /drone_0_ego_planner_node/goal_point
               Name: goal_point
               Namespaces:
-                {}
+                "": true
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
@@ -138,7 +140,7 @@ Visualization Manager:
               Marker Topic: /drone_0_ego_planner_node/optimal_list
               Name: optimal_list
               Namespaces:
-                {}
+                "": true
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
@@ -169,19 +171,19 @@ Visualization Manager:
           Name: Planning
         - Class: rviz/Group
           Displays:
-            - Alpha: 0.10000000149011612
+            - Alpha: 0.20000000298023224
               Autocompute Intensity Bounds: true
               Autocompute Value Bounds:
-                Max Value: 3.3186585903167725
-                Min Value: -0.07477661967277527
+                Max Value: 3.156107187271118
+                Min Value: -0.0815354660153389
                 Value: true
               Axis: Z
               Channel Name: intensity
               Class: rviz/PointCloud2
               Color: 114; 159; 207
-              Color Transformer: AxisColor
-              Decay Time: 3
-              Enabled: false
+              Color Transformer: FlatColor
+              Decay Time: 0
+              Enabled: true
               Invert Rainbow: false
               Max Color: 255; 255; 255
               Min Color: 0; 0; 0
@@ -190,18 +192,18 @@ Visualization Manager:
               Queue Size: 5
               Selectable: true
               Size (Pixels): 3
-              Size (m): 0.3499999940395355
+              Size (m): 0.10000000149011612
               Style: Flat Squares
               Topic: /drone_0_ego_planner_node/grid_map/occupancy
               Unreliable: false
               Use Fixed Frame: true
               Use rainbow: true
-              Value: false
+              Value: true
             - Alpha: 0.10000000149011612
               Autocompute Intensity Bounds: true
               Autocompute Value Bounds:
-                Max Value: 0.8389017581939697
-                Min Value: 0.3019815683364868
+                Max Value: 2.9155771732330322
+                Min Value: -0.20394854247570038
                 Value: true
               Axis: Z
               Channel Name: intensity
@@ -209,7 +211,7 @@ Visualization Manager:
               Color: 114; 159; 207
               Color Transformer: AxisColor
               Decay Time: 3
-              Enabled: true
+              Enabled: false
               Invert Rainbow: false
               Max Color: 255; 255; 255
               Min Color: 0; 0; 0
@@ -224,7 +226,7 @@ Visualization Manager:
               Unreliable: false
               Use Fixed Frame: true
               Use rainbow: true
-              Value: true
+              Value: false
           Enabled: true
           Name: Mapping
         - Alpha: 1
@@ -351,7 +353,7 @@ Visualization Manager:
           Marker Topic: /drone1/model
           Name: model
           Namespaces:
-            {}
+            drone1: true
           Queue Size: 100
           Value: true
         - Class: rviz/Group
@@ -361,7 +363,7 @@ Visualization Manager:
               Marker Topic: /drone_1_ego_planner_node/goal_point
               Name: goal_point
               Namespaces:
-                {}
+                "": true
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
@@ -377,7 +379,7 @@ Visualization Manager:
               Marker Topic: /drone_1_ego_planner_node/optimal_list
               Name: optimal_traj
               Namespaces:
-                {}
+                "": true
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
@@ -408,7 +410,7 @@ Visualization Manager:
           Name: Planning
         - Class: rviz/Group
           Displays:
-            - Alpha: 0.6000000238418579
+            - Alpha: 0.20000000298023224
               Autocompute Intensity Bounds: true
               Autocompute Value Bounds:
                 Max Value: 2.8399999141693115
@@ -420,7 +422,7 @@ Visualization Manager:
               Color: 114; 159; 207
               Color Transformer: FlatColor
               Decay Time: 0
-              Enabled: false
+              Enabled: true
               Invert Rainbow: false
               Max Color: 255; 255; 255
               Min Color: 0; 0; 0
@@ -429,18 +431,18 @@ Visualization Manager:
               Queue Size: 10
               Selectable: true
               Size (Pixels): 3
-              Size (m): 0.03999999910593033
+              Size (m): 0.10000000149011612
               Style: Squares
-              Topic: /drone_1_ego_planner_node/grid_map/occupancy_inflate
+              Topic: /drone_1_ego_planner_node/grid_map/occupancy
               Unreliable: false
               Use Fixed Frame: true
               Use rainbow: true
-              Value: false
+              Value: true
             - Alpha: 0.20000000298023224
               Autocompute Intensity Bounds: true
               Autocompute Value Bounds:
-                Max Value: 2.8399999141693115
-                Min Value: 0.03999999910593033
+                Max Value: -0.10330941528081894
+                Min Value: -0.13483954966068268
                 Value: true
               Axis: Z
               Channel Name: intensity
@@ -448,7 +450,7 @@ Visualization Manager:
               Color: 85; 87; 83
               Color Transformer: FlatColor
               Decay Time: 1
-              Enabled: true
+              Enabled: false
               Invert Rainbow: false
               Max Color: 255; 255; 255
               Min Color: 0; 0; 0
@@ -463,7 +465,7 @@ Visualization Manager:
               Unreliable: false
               Use Fixed Frame: true
               Use rainbow: true
-              Value: true
+              Value: false
           Enabled: true
           Name: Mapping
         - Alpha: 1
@@ -590,12 +592,12 @@ Visualization Manager:
           Marker Topic: /drone2/model
           Name: Marker
           Namespaces:
-            {}
+            drone2: true
           Queue Size: 100
           Value: true
         - Class: rviz/Group
           Displays:
-            - Alpha: 0.6000000238418579
+            - Alpha: 0.20000000298023224
               Autocompute Intensity Bounds: true
               Autocompute Value Bounds:
                 Max Value: 2.8399999141693115
@@ -607,7 +609,7 @@ Visualization Manager:
               Color: 114; 159; 207
               Color Transformer: FlatColor
               Decay Time: 0
-              Enabled: false
+              Enabled: true
               Invert Rainbow: false
               Max Color: 255; 255; 255
               Min Color: 0; 0; 0
@@ -616,26 +618,26 @@ Visualization Manager:
               Queue Size: 10
               Selectable: true
               Size (Pixels): 3
-              Size (m): 0.03999999910593033
+              Size (m): 0.10000000149011612
               Style: Squares
-              Topic: /drone_2_ego_planner_node/grid_map/occupancy_inflate
+              Topic: /drone_2_ego_planner_node/grid_map/occupancy
               Unreliable: false
               Use Fixed Frame: true
               Use rainbow: true
-              Value: false
+              Value: true
             - Alpha: 0.20000000298023224
               Autocompute Intensity Bounds: true
               Autocompute Value Bounds:
-                Max Value: 2.8399999141693115
-                Min Value: 0.03999999910593033
+                Max Value: 1.1042009592056274
+                Min Value: -0.4378455579280853
                 Value: true
               Axis: Z
               Channel Name: intensity
               Class: rviz/PointCloud2
               Color: 85; 87; 83
-              Color Transformer: FlatColor
+              Color Transformer: AxisColor
               Decay Time: 1
-              Enabled: true
+              Enabled: false
               Invert Rainbow: false
               Max Color: 255; 255; 255
               Min Color: 0; 0; 0
@@ -650,7 +652,7 @@ Visualization Manager:
               Unreliable: false
               Use Fixed Frame: true
               Use rainbow: true
-              Value: true
+              Value: false
           Enabled: true
           Name: Mapping
         - Class: rviz/Group
@@ -660,7 +662,7 @@ Visualization Manager:
               Marker Topic: /drone_2_ego_planner_node/goal_point
               Name: goal_point
               Namespaces:
-                {}
+                "": true
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
@@ -676,7 +678,7 @@ Visualization Manager:
               Marker Topic: /drone_2_ego_planner_node/optimal_list
               Name: optimal_traj
               Namespaces:
-                {}
+                "": true
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
@@ -829,12 +831,12 @@ Visualization Manager:
           Marker Topic: /drone3/model
           Name: Marker
           Namespaces:
-            {}
+            drone3: true
           Queue Size: 100
           Value: true
         - Class: rviz/Group
           Displays:
-            - Alpha: 0.6000000238418579
+            - Alpha: 0.20000000298023224
               Autocompute Intensity Bounds: true
               Autocompute Value Bounds:
                 Max Value: 2.8399999141693115
@@ -846,7 +848,7 @@ Visualization Manager:
               Color: 114; 159; 207
               Color Transformer: FlatColor
               Decay Time: 0
-              Enabled: false
+              Enabled: true
               Invert Rainbow: false
               Max Color: 255; 255; 255
               Min Color: 0; 0; 0
@@ -855,26 +857,26 @@ Visualization Manager:
               Queue Size: 10
               Selectable: true
               Size (Pixels): 3
-              Size (m): 0.03999999910593033
+              Size (m): 0.10000000149011612
               Style: Squares
-              Topic: /drone_3_ego_planner_node/grid_map/occupancy_inflate
+              Topic: /drone_3_ego_planner_node/grid_map/occupancy
               Unreliable: false
               Use Fixed Frame: true
               Use rainbow: true
-              Value: false
+              Value: true
             - Alpha: 0.20000000298023224
               Autocompute Intensity Bounds: true
               Autocompute Value Bounds:
-                Max Value: 2.8399999141693115
-                Min Value: 0.03999999910593033
+                Max Value: 3.287222146987915
+                Min Value: -0.11619491875171661
                 Value: true
               Axis: Z
               Channel Name: intensity
               Class: rviz/PointCloud2
               Color: 85; 87; 83
-              Color Transformer: FlatColor
+              Color Transformer: AxisColor
               Decay Time: 1
-              Enabled: true
+              Enabled: false
               Invert Rainbow: false
               Max Color: 255; 255; 255
               Min Color: 0; 0; 0
@@ -889,7 +891,7 @@ Visualization Manager:
               Unreliable: false
               Use Fixed Frame: true
               Use rainbow: true
-              Value: true
+              Value: false
           Enabled: true
           Name: Mapping
         - Class: rviz/Group
@@ -899,7 +901,7 @@ Visualization Manager:
               Marker Topic: /drone_3_ego_planner_node/goal_point
               Name: goal_point
               Namespaces:
-                {}
+                "": true
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
@@ -915,7 +917,7 @@ Visualization Manager:
               Marker Topic: /drone_3_ego_planner_node/optimal_list
               Name: optimal_traj
               Namespaces:
-                {}
+                "": true
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
@@ -1089,26 +1091,20 @@ Visualization Manager:
   Value: true
   Views:
     Current:
-      Class: rviz/ThirdPersonFollower
-      Distance: 20.221384048461914
+      Angle: -1.5950002670288086
+      Class: rviz/TopDownOrtho
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
-      Field of View: 0.7853981852531433
-      Focal Point:
-        X: -4.458705425262451
-        Y: 4.684003829956055
-        Z: -1.1878619261551648e-05
-      Focal Shape Fixed Size: true
-      Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.4747964143753052
+      Scale: 47.47377395629883
       Target Frame: my_view
-      Yaw: 3.049003839492798
+      X: 1.0673590898513794
+      Y: 0.3874736428260803
     Saved:
       - Class: rviz/FPS
         Enable Stereo Rendering:
@@ -1243,11 +1239,11 @@ Visualization Manager:
         Yaw: 5.702403545379639
 Window Geometry:
   Displays:
-    collapsed: true
+    collapsed: false
   Height: 948
-  Hide Left Dock: true
+  Hide Left Dock: false
   Hide Right Dock: false
-  QMainWindow State: 000000ff00000000fd0000000400000000000001d10000035afc020000003afb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073000000003d000002b0000000c900fffffffc000002f3000000a40000000000fffffffa000000000100000002fb0000000a0049006d0061006700650000000000ffffffff0000000000000000fb0000000a005600690065007700730000000000000001d70000010000fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb0000000c00430061006d00650072006100000001d1000000b50000000000000000fb0000000a006400650070007400680000000265000000c00000000000000000fb0000000a0049006d00610067006500000002590000013e0000000000000000fb0000000a0049006d00610067006501000003f4000001190000000000000000fb0000000a0064006500700074006800000004a2000000ac0000000000000000fb0000000a0064006500700074006800000001ef000001b60000000000000000fb0000000a0064006500700074006800000004b9000000950000000000000000fb0000000a006400650070007400680000000481000000cd0000000000000000fb0000000a006400650070007400680000000429000001250000000000000000fb0000000a0064006500700074006800000003b7000000af0000000000000000fb0000000a0064006500700074006800000003d5000000b50000000000000000fb0000000a006400650070007400680000000444000001260000000000000000fb0000000a00640065007000740068000000041f0000014b0000000000000000fb0000000a0064006500700074006800000001b8000000160000000000000000fb0000000a0064006500700074006800000001c1000000160000000000000000fb0000000a0064006500700074006800000004b1000000550000000000000000fb0000000a006400650070007400680000000505000000650000000000000000fb0000000a006400650070007400680000000502000000680000000000000000fb0000000a0064006500700074006800000004f9000000710000000000000000fb0000000a0064006500700074006800000003dd0000018d0000000000000000fb0000000a0064006500700074006800000004de0000008c0000000000000000fb0000000a0064006500700074006800000004cc0000009e0000000000000000fb0000000a00640065007000740068000000048a000000c40000000000000000fb0000000a0064006500700074006800000004aa000000c00000000000000000fb0000000a0049006d00610067006500000003fa000001540000000000000000fb0000000a0049006d00610067006501000002e1000002890000000000000000fb0000000a006400650070007400680000000495000000d50000000000000000fb0000000a0064006500700074006800000001b60000001b0000000000000000fb0000000a0064006500700074006800000001c10000002f0000000000000000fb0000000a0064006500700074006800000001d3000000300000000000000000fb0000000a0064006500700074006800000001e6000000320000000000000000fb0000000a0064006500700074006800000004dc0000008e0000000000000000fb0000000a0064006500700074006800000004f4000000760000000000000000fb0000000a0064006500700074006800000004f2000000780000000000000000fb0000000a006400650070007400680000000503000000670000000000000000fb0000000a006400650070007400680000000509000000610000000000000000fb0000000a006400650070007400680000000511000000590000000000000000fb0000000a006400650070007400680000000517000000530000000000000000fb0000000a00640065007000740068000000051d0000004d0000000000000000fb0000000a00640065007000740068000000051d0000004d0000000000000000fb0000000a006400650070007400680000000526000000440000000000000000fb0000000a00640065007000740068000000052b0000003f0000000000000000fb0000000a00640065007000740068000000052b0000003f0000000000000000fb0000000a00640065007000740068000000052f0000003b0000000000000000fb0000000a006400650070007400680000000532000000380000000000000000fb0000000a006400650070007400680000000536000000340000000000000000fb0000001800640065007000740068005f00630061006d00650072006100000002f8000000af0000000000000000fb0000000a0049006d00610067006501000002d0000000c70000000000000000fb0000000a0049006d00610067006501000002880000010f0000000000000000000000010000010f00000385fc0200000002fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000006100000003bfc0100000002fb0000000800540069006d00650000000000000006100000041800fffffffb0000000800540069006d00650100000000000004500000000000000000000003c00000035a00000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd0000000400000000000001d10000035afc020000003afb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073010000003d000002b0000000c900fffffffc000002f3000000a4000000a400fffffffa000000010100000002fb0000000a0049006d0061006700650000000000ffffffff0000000000000000fb0000000a005600690065007700730100000000000001d70000010000fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb0000000c00430061006d00650072006100000001d1000000b50000000000000000fb0000000a006400650070007400680000000265000000c00000000000000000fb0000000a0049006d00610067006500000002590000013e0000000000000000fb0000000a0049006d00610067006501000003f4000001190000000000000000fb0000000a0064006500700074006800000004a2000000ac0000000000000000fb0000000a0064006500700074006800000001ef000001b60000000000000000fb0000000a0064006500700074006800000004b9000000950000000000000000fb0000000a006400650070007400680000000481000000cd0000000000000000fb0000000a006400650070007400680000000429000001250000000000000000fb0000000a0064006500700074006800000003b7000000af0000000000000000fb0000000a0064006500700074006800000003d5000000b50000000000000000fb0000000a006400650070007400680000000444000001260000000000000000fb0000000a00640065007000740068000000041f0000014b0000000000000000fb0000000a0064006500700074006800000001b8000000160000000000000000fb0000000a0064006500700074006800000001c1000000160000000000000000fb0000000a0064006500700074006800000004b1000000550000000000000000fb0000000a006400650070007400680000000505000000650000000000000000fb0000000a006400650070007400680000000502000000680000000000000000fb0000000a0064006500700074006800000004f9000000710000000000000000fb0000000a0064006500700074006800000003dd0000018d0000000000000000fb0000000a0064006500700074006800000004de0000008c0000000000000000fb0000000a0064006500700074006800000004cc0000009e0000000000000000fb0000000a00640065007000740068000000048a000000c40000000000000000fb0000000a0064006500700074006800000004aa000000c00000000000000000fb0000000a0049006d00610067006500000003fa000001540000000000000000fb0000000a0049006d00610067006501000002e1000002890000000000000000fb0000000a006400650070007400680000000495000000d50000000000000000fb0000000a0064006500700074006800000001b60000001b0000000000000000fb0000000a0064006500700074006800000001c10000002f0000000000000000fb0000000a0064006500700074006800000001d3000000300000000000000000fb0000000a0064006500700074006800000001e6000000320000000000000000fb0000000a0064006500700074006800000004dc0000008e0000000000000000fb0000000a0064006500700074006800000004f4000000760000000000000000fb0000000a0064006500700074006800000004f2000000780000000000000000fb0000000a006400650070007400680000000503000000670000000000000000fb0000000a006400650070007400680000000509000000610000000000000000fb0000000a006400650070007400680000000511000000590000000000000000fb0000000a006400650070007400680000000517000000530000000000000000fb0000000a00640065007000740068000000051d0000004d0000000000000000fb0000000a00640065007000740068000000051d0000004d0000000000000000fb0000000a006400650070007400680000000526000000440000000000000000fb0000000a00640065007000740068000000052b0000003f0000000000000000fb0000000a00640065007000740068000000052b0000003f0000000000000000fb0000000a00640065007000740068000000052f0000003b0000000000000000fb0000000a006400650070007400680000000532000000380000000000000000fb0000000a006400650070007400680000000536000000340000000000000000fb0000001800640065007000740068005f00630061006d00650072006100000002f8000000af0000000000000000fb0000000a0049006d00610067006501000002d0000000c70000000000000000fb0000000a0049006d00610067006501000002880000010f0000000000000000000000010000010f00000385fc0200000002fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000006100000003bfc0100000002fb0000000800540069006d00650000000000000006100000041800fffffffb0000000800540069006d00650100000000000004500000000000000000000001e90000035a00000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Selection:
     collapsed: false
   Time:
@@ -1255,7 +1251,7 @@ Window Geometry:
   Tool Properties:
     collapsed: false
   Views:
-    collapsed: true
+    collapsed: false
   Width: 960
-  X: 0
+  X: 960
   Y: 27
