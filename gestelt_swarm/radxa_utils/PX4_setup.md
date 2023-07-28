@@ -49,8 +49,9 @@ make flywoo_f405s_aio_default upload
 
 - EKF:
     - SYS_MC_EST_GROUP: Set to EKF2
-    - EKF2_HGT_MODE: Set to 2
+    - EKF2_HGT_MODE: Set to 2 (If lidar is used)
     - EKF2_MAG_CHECK: Set to 0
+    - EKF2_MAG_TYPE: If no magnetometer, set to NONE. Else AUTOMATIC
 
 - Serial ports
     - baud rates:
@@ -66,7 +67,6 @@ make flywoo_f405s_aio_default upload
         - MAV_0_MODE: 2 (ONBOARD)
         - MAV_0_RATE: 0 (Half maximum)
         - MAV_0_FORWARD: 0 (DISABLED)
-
         - MAV_1_CONFIG: 0
 
 - Lidar: 
