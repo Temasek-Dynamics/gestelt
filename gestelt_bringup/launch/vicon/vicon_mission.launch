@@ -1,0 +1,4 @@
+<launch>
+  <!-- Launches a test mission -->
+  <node pkg="gestelt_bringup" type="vicon_mission.py" name="vicon_mission" />
+</launch>

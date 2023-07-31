@@ -95,13 +95,12 @@ make flywoo_f405s_aio_default upload
 2. Connection between FCU and Radxa
     - FCU: Connected as MAV_0_CONFIG to one of the UART (should be UART4, which is registered as TEL2 in PX4)
     - Radxa: Connected to UART_AO_A (/dev/ttyAML0)
-3. Testing: 
-    - `roslaunch mavros apm.launch fcu_url:=/dev/ttyAML0:921600`
-    - ls /dev/ttyAML0
-
-
+3. Launch mavros bridge
+    - Might need to perform the following in root mode. Enter with `sudo su`
+    - `roslaunch mavros apm.launch fcu_url:=/dev/ttyAML0:230400`
 
 - References:
+    - https://wiki.radxa.com/Zero/dev/serial-console
     - https://docs.px4.io/main/en/companion_computer/pixhawk_rpi.html
     - https://docs.px4.io/main/en/companion_computer/pixhawk_companion.html
 

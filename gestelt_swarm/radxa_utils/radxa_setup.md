@@ -1,11 +1,4 @@
 
-# Flashing Ubuntu onto Radxa
-1. Hold down boot button on radxa and connect to PC
-2. `lsusb` should show Amlogic, Inc. 
-3. `sudo boot-g12.py rz-udisk-loader.bin` should expose the Radxa as a mountable disk
-4. Follow [this guide to remove autoboot countdown](https://github.com/matthewoots/documentation/blob/main/radxa-zero/radxa-remove-autoboot-countdown.md)
-    - Notes: use the `git checkout radxa-zero-v2021.07` branch for u-boot
-
 # Installation of dependencies 
 
 ```bash
@@ -75,21 +68,20 @@ Setting environment variables manually
         export MASTER_IP=192.168.31.173
         export SELF_IP=192.168.31.166
 
-# Nvidia network
-    # Central PC
-        export MASTER_IP=192.168.1.112
-        export SELF_IP=192.168.1.112
-    # UAV
-        export MASTER_IP=192.168.1.112
-        export SELF_IP=192.168.1.134
-
-
 # To any machine
 export ROS_MASTER_URI=http://$MASTER_IP:11311
 export ROS_HOSTNAME=$SELF_IP
 export ROS_IP=$SELF_IP
-
 ```
+
+# Remove autoboot on radxa
+1. Hold down boot button on radxa and connect to PC
+2. `lsusb` should show Amlogic, Inc. 
+3. `sudo boot-g12.py rz-udisk-loader.bin` should expose the Radxa as a mountable disk
+4. Follow [this guide to remove autoboot countdown](https://github.com/matthewoots/documentation/blob/main/radxa-zero/radxa-remove-autoboot-countdown.md)
+    - Notes: use the `git checkout radxa-zero-v2021.07` branch for u-boot
+
+
 
 # Clone an image on Radxa
 1. https://github.com/matthewoots/documentation/blob/main/radxa-zero/radxa-flash-backup-image.md

@@ -1,0 +1,54 @@
+<launch>
+    <!-- Launches a PX4 SITL instance, spawns a vehicle in Gazebo, and publish TF Transforms for UAV-->
+    
+    <!-- Drone id -->
+    <arg name="drone_id"/>
+    <arg name="drone_id_ns" value="drone$(arg drone_id)"/>
+    <arg name="init_x"/>
+    <arg name="init_y"/>
+    <arg name="init_z"/>
+    <!-- Gazebo parameters -->
+    <arg name="vehicle"/>
+    <arg name="model"/>
+
+    <!-- Add static transform from drone to it's origin -->
+    <node pkg="tf" type="static_transform_publisher" 
+      name="map_to_$(arg drone_id_ns)_origin_tf" 
+      args="$(arg init_x) $(arg init_y) $(arg init_z) 0 0 0 1 map $(arg drone_id_ns)_origin 100" />
+
+    <!-- Add static transform from base_link to camera_link -->
+    <node pkg="tf" type="static_transform_publisher" 
+      name="$(arg drone_id_ns)_base_link_to_cam_link_tf" 
+      args="0.08 0 0.02 0 0 0 1 $(arg drone_id_ns)_base_link $(arg drone_id_ns)_cam_link 100" />
+
+    <group ns="$(arg drone_id_ns)">
+      <arg name="fcu_url" value="/dev/ttyAML0:230400" />
+      <arg name="gcs_url" value="udp://@192.168.31.194" />
+
+      <!-- MAVROS -->
+      <node pkg="mavros" type="mavros_node" name="mavros" required="true" clear_params="true" output="screen">
+        <param name="fcu_url" value="$(arg fcu_url)" />
+        <param name="gcs_url" value="$(arg gcs_url)" />
+        <param name="target_system_id" value="$(eval 1 + arg('drone_id'))"/>
+        <param name="target_component_id" value="1" />
+        <param name="fcu_protocol" value="v2.0" />
+
+        <!-- load blacklist, config -->
+        <rosparam command="load" file="$(find gestelt_bringup)/config/px4_pluginlists.yaml" />
+        <rosparam command="load" file="$(find gestelt_bringup)/config/px4_config.yaml" />
+
+        <param name="global_position/frame_id" value="$(arg drone_id_ns)_origin"/>
+        <param name="global_position/child_frame_id" value="$(arg drone_id_ns)_base_link"/>
+        <param name="global_position/tf/frame_id" value="$(arg drone_id_ns)_origin"/>
+        <param name="global_position/tf/global_frame_id" value="world"/>
+        <param name="global_position/tf/child_frame_id" value="$(arg drone_id_ns)_base_link"/>
+
+        <param name="local_position/frame_id" value="$(arg drone_id_ns)_origin"/>
+        <param name="local_position/child_frame_id" value="$(arg drone_id_ns)_base_link"/>
+        <param name="local_position/tf/frame_id" value="$(arg drone_id_ns)_origin"/>
+        <param name="local_position/tf/child_frame_id" value="$(arg drone_id_ns)_base_link"/>
+      </node>
+
+    </group>
+
+</launch>

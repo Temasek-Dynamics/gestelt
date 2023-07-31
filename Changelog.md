@@ -106,3 +106,4 @@
     - Reorganize packages to ensure that radxa only builds the necessary packages
 30. (13/7/23) CPU Benchmarking
     - Add CPU usage (https://stackoverflow.com/questions/63166/how-to-determine-cpu-and-memory-consumption-from-inside-a-process)
+31. (31/7/23) Added launch file including interface of Radxa with PX4

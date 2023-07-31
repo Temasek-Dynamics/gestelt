@@ -1,9 +1,7 @@
 # TODO
+- Update PID params for PX4
 
 - Interface PX4 with radxa:
-    - Get mavlink topics
-    - Figure out permission denied
-    - Disable compass
     - Add lidar to ekf
 
 - Use TF published from PX4. 
@@ -17,6 +15,7 @@
             - Central computer remap `/vrpn_client_node/droneX/pose` and publish to `droneX/mavros/vision_pose/pose`
         - Method 2 
             - Radxa OBC Subscribe to `/vrpn_client_node/droneX/pose` and publish to `droneX/mavros/vision_pose/pose`
+        - `vicon_central.sh` and `vicon_uav.sh`
     - Check that this is able to localize the drone in position mode
     - References:
         - [mavros, px4_config params](http://wiki.ros.org/mavros)

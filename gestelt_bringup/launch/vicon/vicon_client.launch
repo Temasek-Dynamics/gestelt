@@ -1,8 +1,8 @@
 <launch>
+  <arg name="num_drones" value="2"/>
   <arg name="server" default="localhost"/>
-  <arg name="drone_id"/>
-  <arg name="drone_id_ns" value="drone$(arg drone_id)"/>
-
+  
+  <!-- Vicon node -->
   <node pkg="vrpn_client_ros" type="vrpn_client_node" name="vrpn_client_node" output="screen">
     <rosparam subst_value="true">
       server: $(arg server)
@@ -21,7 +21,7 @@
       #- FirstTracker
       #- SecondTracker
     </rosparam>
-    <remap from="/vrpn_client_node/$(arg drone_id_ns)/pose" to="/mavros/vision_pose/pose" /> 
+    <remap from="/vrpn_client_node/drone0/pose" to="/mavros/vision_pose/pose" /> 
   </node>
 
 </launch>
