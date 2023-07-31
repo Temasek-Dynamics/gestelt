@@ -1,8 +1,6 @@
 # TODO
-- Update PID params for PX4
-
 - Interface PX4 with radxa:
-    - Add lidar to ekf
+    - Add VIO to ekf
 
 - Use TF published from PX4. 
     - Subscribe to /mavros/global_position/local instead of /mavros/local_position/pose
