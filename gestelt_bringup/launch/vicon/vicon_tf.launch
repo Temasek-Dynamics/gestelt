@@ -1,0 +1,13 @@
+<launch>
+  
+    <!-- Add static transform from world to map -->
+    <node pkg="tf" type="static_transform_publisher" 
+        name="world_to_map_tf" 
+        args="0 0 0 0 0 0 1 world map 100" />
+
+    <!-- Add static transform from drone to it's origin -->
+    <node pkg="tf" type="static_transform_publisher" 
+        name="map_to_drone0_origin_tf" 
+        args="0 0 0 0 0 0 1 map drone0_origin 100" />
+
+</launch>

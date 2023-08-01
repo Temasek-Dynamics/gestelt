@@ -8,7 +8,10 @@ Panels:
         - /drone0_ego1/Mapping1
         - /drone0_ego1/Mapping1/occ_grid_inf1
         - /drone0_ego1/Mapping1/occ_grid_inf1/Autocompute Value Bounds1
+        - /drone0_mavros1
+        - /drone0_mavros1/Localization1
         - /drone0_mavros1/Localization1//mavros/local_position/pose1
+        - /drone0_mavros1/Localization1//mavros/local_position/pose1/Status1
         - /drone1_ego1/Mapping1
         - /drone1_ego1/Mapping1/occ_inflated1
         - /drone2_ego1/Mapping1
@@ -35,7 +38,7 @@ Panels:
   - Class: rviz/Time
     Name: Time
     SyncMode: 0
-    SyncSource: occ_grid_inf
+    SyncSource: ""
 Preferences:
   PromptSaveOnExit: true
 Toolbars:
@@ -114,7 +117,7 @@ Visualization Manager:
           Marker Topic: /drone0/model
           Name: model
           Namespaces:
-            drone0: true
+            {}
           Queue Size: 100
           Value: true
         - Class: rviz/Group
@@ -124,7 +127,7 @@ Visualization Manager:
               Marker Topic: /drone_0_ego_planner_node/goal_point
               Name: goal_point
               Namespaces:
-                "": true
+                {}
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
@@ -140,7 +143,7 @@ Visualization Manager:
               Marker Topic: /drone_0_ego_planner_node/optimal_list
               Name: optimal_list
               Namespaces:
-                "": true
+                {}
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
@@ -353,7 +356,7 @@ Visualization Manager:
           Marker Topic: /drone1/model
           Name: model
           Namespaces:
-            drone1: true
+            {}
           Queue Size: 100
           Value: true
         - Class: rviz/Group
@@ -363,7 +366,7 @@ Visualization Manager:
               Marker Topic: /drone_1_ego_planner_node/goal_point
               Name: goal_point
               Namespaces:
-                "": true
+                {}
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
@@ -379,7 +382,7 @@ Visualization Manager:
               Marker Topic: /drone_1_ego_planner_node/optimal_list
               Name: optimal_traj
               Namespaces:
-                "": true
+                {}
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
@@ -592,7 +595,7 @@ Visualization Manager:
           Marker Topic: /drone2/model
           Name: Marker
           Namespaces:
-            drone2: true
+            {}
           Queue Size: 100
           Value: true
         - Class: rviz/Group
@@ -662,7 +665,7 @@ Visualization Manager:
               Marker Topic: /drone_2_ego_planner_node/goal_point
               Name: goal_point
               Namespaces:
-                "": true
+                {}
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
@@ -678,7 +681,7 @@ Visualization Manager:
               Marker Topic: /drone_2_ego_planner_node/optimal_list
               Name: optimal_traj
               Namespaces:
-                "": true
+                {}
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
@@ -831,7 +834,7 @@ Visualization Manager:
           Marker Topic: /drone3/model
           Name: Marker
           Namespaces:
-            drone3: true
+            {}
           Queue Size: 100
           Value: true
         - Class: rviz/Group
@@ -901,7 +904,7 @@ Visualization Manager:
               Marker Topic: /drone_3_ego_planner_node/goal_point
               Name: goal_point
               Namespaces:
-                "": true
+                {}
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
@@ -917,7 +920,7 @@ Visualization Manager:
               Marker Topic: /drone_3_ego_planner_node/optimal_list
               Name: optimal_traj
               Namespaces:
-                "": true
+                {}
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
@@ -1063,6 +1066,22 @@ Visualization Manager:
           Name: Localization
       Enabled: true
       Name: drone3_mavros
+    - Alpha: 1
+      Axes Length: 1
+      Axes Radius: 0.10000000149011612
+      Class: rviz/Pose
+      Color: 255; 25; 0
+      Enabled: true
+      Head Length: 0.30000001192092896
+      Head Radius: 0.10000000149011612
+      Name: Pose
+      Queue Size: 10
+      Shaft Length: 1
+      Shaft Radius: 0.05000000074505806
+      Shape: Arrow
+      Topic: /drone0/mavros/vision_pose/pose
+      Unreliable: false
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 255; 255; 255
@@ -1101,10 +1120,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Scale: 47.47377395629883
+      Scale: 89.71477508544922
       Target Frame: my_view
-      X: 1.0673590898513794
-      Y: 0.3874736428260803
+      X: 1.2460027933120728
+      Y: -0.06283912807703018
     Saved:
       - Class: rviz/FPS
         Enable Stereo Rendering:

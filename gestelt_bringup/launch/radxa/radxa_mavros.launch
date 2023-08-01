@@ -4,17 +4,9 @@
     <!-- Drone id -->
     <arg name="drone_id"/>
     <arg name="drone_id_ns" value="drone$(arg drone_id)"/>
-    <arg name="init_x"/>
-    <arg name="init_y"/>
-    <arg name="init_z"/>
-    <!-- Gazebo parameters -->
-    <arg name="vehicle"/>
-    <arg name="model"/>
-
-    <!-- Add static transform from drone to it's origin -->
-    <node pkg="tf" type="static_transform_publisher" 
-      name="map_to_$(arg drone_id_ns)_origin_tf" 
-      args="$(arg init_x) $(arg init_y) $(arg init_z) 0 0 0 1 map $(arg drone_id_ns)_origin 100" />
+    <arg name="init_x" default="0.0"/>
+    <arg name="init_y" default="0.0"/>
+    <arg name="init_z" default="0.0"/>
 
     <!-- Add static transform from base_link to camera_link -->
     <node pkg="tf" type="static_transform_publisher" 

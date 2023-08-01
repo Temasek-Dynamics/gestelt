@@ -55,8 +55,8 @@ make flywoo_f405s_aio_default upload
 
 - Serial ports
     - baud rates:
-        - SER_TEL1_BAUD: 57600 
-        - SER_TEL2_BAUD: 921600
+        - SER_TEL1_BAUD: 230400 
+        - SER_TEL2_BAUD: 230400
         - SER_UART6_BAUD: 9600
     - GPS:
         - GPS_1_CONFIG: Set to 0
@@ -70,13 +70,13 @@ make flywoo_f405s_aio_default upload
         - MAV_1_CONFIG: 0
 
 - Lidar: 
+    - EKF2_RNG_AID: Set to 1 to allow estimator to make use of range sensor even when it is not the primary height source
     - Position offset
         - EKF2_RNG_POS_X, EKF2_RNG_POS_Y, EKF2_RNG_POS_Z 
     - Other values
         - EKF2_RNG_SFE, EKF2_RNG_DELAY, EKF2_RNG_NOISE
 - VICON:
-    - 
-
+    - EKF2_AID_MASK: Need to set to enable fusion with vision. Set to 152
 
 - Reference: 
     - [V1.9 Reference](https://dev.px4.io/v1.9.0_noredirect/en/advanced/parameter_reference.html)
@@ -111,14 +111,11 @@ make flywoo_f405s_aio_default upload
 ## Interface with VICON
 1. Add object within Vicon Tracker software
 2. Make sure to enable Object Tracking Mode 
-3. Restart the software
-
 
 ### Params:
 1. VICON IP: 192.168.31.248
-2. Central computer IP: 192.168.31.22
+2. Central computer IP: 192.168.31.22 or 192.168.31.173
 3. Radxa IP: 192.168.31.166
-
 
 ## Troubleshooting
 ```bash

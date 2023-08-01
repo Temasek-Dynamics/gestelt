@@ -1,13 +1,9 @@
 # TODO
 - Integrate Vicon positioning with PX4 
-    - Check odom loopback
+    - Syncrhonize time between radxa and PX4
+        - http://www.ubuntugeek.com/network-time-protocol-ntp-server-and-clients-setup-in-ubuntu.html
+    - Check the local position of the drone
     - Check that this is able to localize the drone in position mode
-
-    - References:
-        - [mavros, px4_config params](http://wiki.ros.org/mavros)
-        - [mavros_extras, px4_config params](http://wiki.ros.org/mavros_extras#vision_pose_estimate)
-        - [px4 vicon guide](https://docs.px4.io/main/en/ros/external_position_estimation.html)
-        - [T-labs vicon guide](https://tlab-uav.github.io/tech-details/docs/systems/vicon/)
 
 - Create startup script for radxa
     - Should startup mavros script and egoplanner

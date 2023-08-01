@@ -81,6 +81,16 @@ export ROS_IP=$SELF_IP
 4. Follow [this guide to remove autoboot countdown](https://github.com/matthewoots/documentation/blob/main/radxa-zero/radxa-remove-autoboot-countdown.md)
     - Notes: use the `git checkout radxa-zero-v2021.07` branch for u-boot
 
+# Synchronize time between ubuntu machines (radxas and central computer)
+
+
+# Useful commands
+
+## Copy source code over to radxa
+```bash
+# Copy with override
+scp -r ~/gestelt_ws/src/gestelt rock@192.168.31.166:/home/rock/gestelt_ws/src/ 
+```
 
 
 # Clone an image on Radxa
