@@ -74,6 +74,8 @@ make flywoo_f405s_aio_default upload
         - EKF2_RNG_POS_X, EKF2_RNG_POS_Y, EKF2_RNG_POS_Z 
     - Other values
         - EKF2_RNG_SFE, EKF2_RNG_DELAY, EKF2_RNG_NOISE
+- VICON:
+    - 
 
 
 - Reference: 
@@ -84,6 +86,7 @@ make flywoo_f405s_aio_default upload
         - UART 2 <-> TEL1/101 (/dev/ttyS1)
         - UART 4 <-> TEL2/102 (/dev/ttyS2)
         - UART 6 <-> UART6 (/dev/ttyS3)
+    - [VICON with PX4](https://docs.px4.io/main/en/ros/external_position_estimation.html)
 
 2. Set flight modes on transmitter
     - https://docs.px4.io/main/en/config/flight_mode.html
@@ -97,12 +100,24 @@ make flywoo_f405s_aio_default upload
     - Radxa: Connected to UART_AO_A (/dev/ttyAML0)
 3. Launch mavros bridge
     - Might need to perform the following in root mode. Enter with `sudo su`
+    - `source /home/rock/.bashrc`
     - `roslaunch mavros apm.launch fcu_url:=/dev/ttyAML0:230400`
 
 - References:
     - https://wiki.radxa.com/Zero/dev/serial-console
     - https://docs.px4.io/main/en/companion_computer/pixhawk_rpi.html
     - https://docs.px4.io/main/en/companion_computer/pixhawk_companion.html
+
+## Interface with VICON
+1. Add object within Vicon Tracker software
+2. Make sure to enable Object Tracking Mode 
+3. Restart the software
+
+
+### Params:
+1. VICON IP: 192.168.31.248
+2. Central computer IP: 192.168.31.22
+3. Radxa IP: 192.168.31.166
 
 
 ## Troubleshooting
