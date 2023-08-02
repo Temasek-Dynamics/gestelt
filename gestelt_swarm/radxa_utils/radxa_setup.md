@@ -29,7 +29,7 @@ nmcli dev wifi connect "wifi_name" password "wifi_password"
 # Install ROS at http://wiki.ros.org/noetic/Installation/Ubuntu
 
 # Run setup script
-./radxa_setup.sh
+./scripts/radxa_setup.sh
 ```
 
 # Append the following to .bashrc
@@ -83,6 +83,84 @@ export ROS_IP=$SELF_IP
 
 # Synchronize time between ubuntu machines (radxas and central computer)
 
+## Set up an NTP server central computer
+1. Install ntp
+```bash
+sudo apt install ntp
+``` 
+
+2. Add the following as pool servers
+```bash
+pool 0.sg.pool.ntp.org iburst
+pool 1.sg.pool.ntp.org iburst
+pool 2.sg.pool.ntp.org iburst
+pool 3.sg.pool.ntp.org iburst
+```
+
+3. Check that server is up and running
+```bash
+sudo service ntp status
+```
+
+4. Configure firewall to allow access to ntp server from clients
+```bash
+sudo ufw allow from any to any port 123 proto udp
+```
+
+## Set up an NTP client on client computer (Radxa), using central computer as host
+1. Set up time zone
+```bash 
+sudo timedatectl set-timezone Singapore
+```
+
+2. Install chrony
+```bash 
+sudo apt update
+sudo apt install chrony -y
+sudo systemctl start chronyd
+```
+
+3. Specify host name
+```bash
+sudo nano /etc/hosts
+# Add IP_ADDR HOST_NAME
+```
+
+4. 
+```bash
+# Check status
+sudo systemctl status chronyd
+chronyc activity
+chronyc sourcestats -v
+```
+
+5. Set NTP host
+```bash
+sudo nano /etc/chrony/chrony.conf
+# Add the line: server NTP-server-host
+sudo timedatectl set-ntp true
+sudo systemctl restart chronyd
+# Enable chronyd on boot
+systemctl enable chronyd
+```
+
+6. Check NTP Status
+```bash
+sudo chronyc clients
+chronyc sources
+chronyc tracking
+```
+
+# Run script on startup on Radxa
+This is useful if we want to run mavros and the flight manager nodes on startup.
+```bash
+crontab -e 
+# Add the line: @reboot sh SCRIPT_TO_RUN
+# Example: @reboot sh /home/rock/gestelt_ws/src/gestelt/gestelt_swarm/radxa_utils/scripts/radxa_startup.sh
+```
+
+# Clone an image on Radxa
+1. https://github.com/matthewoots/documentation/blob/main/radxa-zero/radxa-flash-backup-image.md
 
 # Useful commands
 
@@ -91,7 +169,3 @@ export ROS_IP=$SELF_IP
 # Copy with override
 scp -r ~/gestelt_ws/src/gestelt rock@192.168.31.166:/home/rock/gestelt_ws/src/ 
 ```
-
-
-# Clone an image on Radxa
-1. https://github.com/matthewoots/documentation/blob/main/radxa-zero/radxa-flash-backup-image.md
