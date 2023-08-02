@@ -1,15 +1,12 @@
 # TODO
 - Integrate Vicon positioning with PX4 
-    - Syncrhonize time between radxa and PX4
-        - http://www.ubuntugeek.com/network-time-protocol-ntp-server-and-clients-setup-in-ubuntu.html
-    - Check the local position of the drone
     - Check that this is able to localize the drone in position mode
-
-- Create startup script for radxa
-    - Should startup mavros script and egoplanner
 
 - Use TF published from PX4. 
     - Subscribe to `/mavros/global_position/local` instead of `/mavros/local_position/pose`
+
+- Create startup script for radxa
+    - Should startup mavros script and egoplanner
 
 - Clone radxa device
 
@@ -58,7 +55,13 @@
 - When rounding corners of obstacles, if the goal lies about a sharp turn around the corner, a trajectory with a sharp turn is planned, this could lead to issues if the obstacles is especially large as the drone will not be able to detect the other wall of the obstacle until it has turned around. 
 - When the agents are too close to each other and the replan fails upon detecting a potential collsion between swarm agents. This condition happens more often when the obstacle_inflation is increased to a significantly higher value (1.2) and drones are navigating through narrow corridors.
 
+
 # Future Roadmap
+- Push a swarm through cluttered environments at 5m/s
+- Things to try out:
+    - Share compresssed position/vecoity
+    - SOTA Trajectory tracker (vs PID)
+
 - Consider a mixed ecosystem approach
     - Look at porting from ROS1 to ROS2
         - Simulation

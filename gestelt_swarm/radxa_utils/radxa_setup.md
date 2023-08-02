@@ -89,7 +89,7 @@ export ROS_IP=$SELF_IP
 sudo apt install ntp
 ``` 
 
-2. Add the following as pool servers
+2. Add the following as pool servers using `sudo vim /etc/ntp.conf `
 ```bash
 pool 0.sg.pool.ntp.org iburst
 pool 1.sg.pool.ntp.org iburst
@@ -122,7 +122,7 @@ sudo systemctl start chronyd
 
 3. Specify host name
 ```bash
-sudo nano /etc/hosts
+sudo vim /etc/hosts
 # Add IP_ADDR HOST_NAME
 ```
 
@@ -136,7 +136,7 @@ chronyc sourcestats -v
 
 5. Set NTP host
 ```bash
-sudo nano /etc/chrony/chrony.conf
+sudo vim /etc/chrony/chrony.conf
 # Add the line: server NTP-server-host
 sudo timedatectl set-ntp true
 sudo systemctl restart chronyd
