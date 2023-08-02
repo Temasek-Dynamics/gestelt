@@ -5,15 +5,16 @@
 - Use TF published from PX4. 
     - Subscribe to `/mavros/global_position/local` instead of `/mavros/local_position/pose`
 
-- Create startup script for radxa
-    - Should startup mavros script and egoplanner
-
-- Clone radxa device
-
 - Benchmark
     - Add network params 
         - Bandwidth, latency, signal strength
     - Use ddynamic_reconfigure to toggle on/off benchmarking
+
+- Radxa 
+    - Create startup script for radxa
+        - Should startup mavros script and egoplanner
+    - Clone radxa device
+
 
 - Radxa
     - Synchronize Radxa times
