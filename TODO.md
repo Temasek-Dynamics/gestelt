@@ -1,15 +1,12 @@
 # TODO
 - Integrate Vicon positioning with PX4 
-    - Syncrhonize time between radxa and PX4
-        - http://www.ubuntugeek.com/network-time-protocol-ntp-server-and-clients-setup-in-ubuntu.html
-    - Check the local position of the drone
     - Check that this is able to localize the drone in position mode
-
-- Create startup script for radxa
-    - Should startup mavros script and egoplanner
 
 - Use TF published from PX4. 
     - Subscribe to `/mavros/global_position/local` instead of `/mavros/local_position/pose`
+
+- Create startup script for radxa
+    - Should startup mavros script and egoplanner
 
 - Clone radxa device
 

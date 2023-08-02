@@ -19,3 +19,6 @@ cd gestelt
 # Build workspace
 cd ~/gestelt_ws/
 catkin_make -DCMAKE_BUILD_TYPE=Release -DCATKIN_BLACKLIST_PACKAGES="rviz_plugins"
+
+# Add your usergroup to dialout
+sudo usermod -a -G dialout $USER

@@ -107,3 +107,6 @@
 30. (13/7/23) CPU Benchmarking
     - Add CPU usage (https://stackoverflow.com/questions/63166/how-to-determine-cpu-and-memory-consumption-from-inside-a-process)
 31. (31/7/23) Added launch file including interface of Radxa with PX4, as well as taking in pose input from VICON system
+    - Add instructions to synchronize time between radxa and PX4
+        - http://www.ubuntugeek.com/network-time-protocol-ntp-server-and-clients-setup-in-ubuntu.html
+    - 

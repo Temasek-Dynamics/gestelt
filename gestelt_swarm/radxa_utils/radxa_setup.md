@@ -169,3 +169,10 @@ crontab -e
 # Copy with override
 scp -r ~/gestelt_ws/src/gestelt rock@192.168.31.166:/home/rock/gestelt_ws/src/ 
 ```
+
+
+# Troubleshooting
+1. Permission denied when accessing serial port
+- Make sure Baud rate matches what is set as PX4 params
+- Make sure your user (default is "rock") is added to the dialout group through `sudo usermod -a -G dialout $USER`
+2. 
