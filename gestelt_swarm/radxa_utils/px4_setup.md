@@ -81,7 +81,7 @@ make flywoo_f405s_aio_default upload
     - Other values
         - EKF2_RNG_SFE, EKF2_RNG_DELAY, EKF2_RNG_NOISE
 - VICON:
-    - EKF2_AID_MASK: Need to set to enable fusion with vision. Set to 152
+    - EKF2_AID_MASK: Need to set to enable fusion with vision. 
 
 - Reference: 
     - [V1.9 Reference](https://dev.px4.io/v1.9.0_noredirect/en/advanced/parameter_reference.html)
