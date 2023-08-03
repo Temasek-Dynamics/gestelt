@@ -15,7 +15,7 @@
 
     <group ns="$(arg drone_id_ns)">
       <arg name="fcu_url" value="/dev/ttyAML0:230400" />
-      <arg name="gcs_url" value="udp://@192.168.31.194" />
+      <arg name="gcs_url" value="udp://@192.168.31.22" />
 
       <!-- MAVROS -->
       <node pkg="mavros" type="mavros_node" name="mavros" required="true" clear_params="true" output="screen">

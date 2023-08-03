@@ -55,19 +55,24 @@ make flywoo_f405s_aio_default upload
 
 - Serial ports
     - baud rates:
-        - SER_TEL1_BAUD: 230400 
-        - SER_TEL2_BAUD: 230400
-        - SER_UART6_BAUD: 9600
+        - SER_TEL1_BAUD: 9600 #Used for Lidar
+        - SER_TEL2_BAUD: 230400 #Used for companion computer
+        - SER_UART6_BAUD: 57600 #Used for telemetry
     - GPS:
         - GPS_1_CONFIG: Set to 0
     - Lidar
         - SENS_TFMINI_CFG: Set to TEL1/101 (UART 2, /dev/ttyS1)
     - Mavlink:
-        - MAV_0_CONFIG: TEL2/102 (UART 4, /dev/ttyS2)
-        - MAV_0_MODE: 2 (ONBOARD)
-        - MAV_0_RATE: 0 (Half maximum)
-        - MAV_0_FORWARD: 0 (DISABLED)
-        - MAV_1_CONFIG: 0
+        - Connection to companion computer 
+            - MAV_0_CONFIG: TEL2/102 (UART 4, /dev/ttyS2)
+            - MAV_0_MODE: 2 (ONBOARD)
+            - MAV_0_RATE: 0 (Half maximum)
+            - MAV_0_FORWARD: 0 (DISABLED)
+        - Connection to 
+            - MAV_1_CONFIG: UART6 
+            - MAV_1_MODE: Normal
+            - MAV_1_RATE: 1200 Byte/s
+            - MAV_1_FORWARD: True
 
 - Lidar: 
     - EKF2_RNG_AID: Set to 1 to allow estimator to make use of range sensor even when it is not the primary height source
