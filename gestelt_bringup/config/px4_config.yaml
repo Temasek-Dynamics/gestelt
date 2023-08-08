@@ -19,6 +19,7 @@ sys:
   disable_diag: false # disable all sys_status diagnostics, except heartbeat
 
 # sys_time
+#   System time plugin. Does time syncronization on PX4.
 time:
   time_ref_source: "fcu"  # time_reference source
   timesync_mode: MAVLINK
@@ -34,6 +35,7 @@ tdr_radio:
 # None
 
 # command
+#   Send COMMAND_LONG to FCU (Arming, set_gome, takeoff, land etc.)
 cmd:
   use_comp_id_system_control: false # quirk for some old FCUs
 
@@ -41,9 +43,11 @@ cmd:
 # None
 
 # ftp
+#   Support plugin for MAVLink-FTP
 # None
 
 # global_position
+#   Publish global position information fused by FCU and raw GPS data.
 global_position:
   frame_id: "map"             # origin frame
   child_frame_id: "base_link" # body-fixed frame
@@ -169,6 +173,7 @@ distance_sensor:
     orientation: PITCH_270
 
 # image_pub
+#   Publishes images from PX4Flow module
 image:
   frame_id: "px4flow"
 
@@ -242,6 +247,7 @@ px4flow:
   ranger_max_range: 5.0     # meters
 
 # vision_pose_estimate
+#   Sends VISION_POSITION_ESTIMATE to FCU from PoseStamped topic.
 vision_pose:
   tf:
     listen: false           # enable tf listener (disable topic subscribers)
@@ -250,11 +256,13 @@ vision_pose:
     rate_limit: 10.0
 
 # vision_speed_estimate
+#   Sends vision speed estimates to FCU
 vision_speed:
   listen_twist: true    # enable listen to twist topic, else listen to vec3d topic
   twist_cov: true       # enable listen to twist with covariance topic
 
 # vibration
+#   Publish VIBRATION message data
 vibration:
   frame_id: "base_link"
 

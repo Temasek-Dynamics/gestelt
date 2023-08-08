@@ -19,39 +19,20 @@ make flywoo_f405s_aio_default upload
 1. Set Parameters
 - RC 
     - COM_RC_IN_MODE: Set to 1 to disable RC Checks
-    - COM_FAIL_ACT_T: Failsafe reaction delay
-    - NAV_RCL_ACT: Failsafe action (Disabled, loiter, return, land, disarm, terminate)
-    - COM_RCL_EXCEPT: Disable RC loss failsafe in specific automatic modes (mission, hold, offboard)
 - GPS
     - COM_ARM_WO_GPS: Allow arming without GPS Values
 - Land mode
-    - COM_DISARM_LAND: Select checkbox to specify that the vehicle will disarm after landing. The value must be non-zero but can be a fraction of a second.
     - MPC_LAND_SPEED: Rate of descent
-- Offboard loss failsafe
-    - COM_OF_LOSS_T: Delay after loss of offboard connection before the failsafe is triggered.
-    - COM_OBL_RC_ACT: 	Failsafe action if RC is available: Position mode, Altitude mode, Manual mode, Return mode, Land mode, Hold mode.
-- Attitude Trigger:
-    - FD_FAIL_P: Maximum allowed pitch (in degrees).
-    - FD_FAIL_R: Maximum allowed roll (in degrees).
-    - FD_FAIL_P_TTRI: Time to exceed FD_FAIL_P for failure detection (default 0.3s).
-    - FD_FAIL_R_TTRI: Time to exceed FD_FAIL_R for failure detection (default 0.3s).
 - Auto disarm timeouts
     - COM_DISARM_PRFLT: Timeout for auto disarm if vehicle is too slow to takeoff.
 - Arming/Disarming
     - MAN_ARM_GESTURE: Enable arming/disarming via stick gestures
 - Checks:
-    - CBRK_FLIGHTTERM: this check is always enabled on takeoff, irrespective of the CBRK_FLIGHTTERM parameter. Failure detection during flight is deactivated by default. Enable by setting to 0.
     - CBRK_SUPPLY_CHK: Set to 894281
 - Motor ordering:
     - MOT_ORDERING: Set to 1 for betaflight
 - Sensor rotation:
     - SENS_BOARD_ROT: Set to Yaw 270 degrees
-
-- EKF:
-    - SYS_MC_EST_GROUP: Set to EKF2
-    - EKF2_HGT_MODE: Set to 2 (If lidar is used)
-    - EKF2_MAG_CHECK: Set to 0
-    - EKF2_MAG_TYPE: If no magnetometer, set to NONE. Else AUTOMATIC
 
 - Serial ports
     - baud rates:
@@ -74,14 +55,27 @@ make flywoo_f405s_aio_default upload
             - MAV_1_RATE: 1200 Byte/s
             - MAV_1_FORWARD: True
 
-- Lidar: 
+- Lidar/Range finder: 
     - EKF2_RNG_AID: Set to 1 to allow estimator to make use of range sensor even when it is not the primary height source
     - Position offset
         - EKF2_RNG_POS_X, EKF2_RNG_POS_Y, EKF2_RNG_POS_Z 
     - Other values
         - EKF2_RNG_SFE, EKF2_RNG_DELAY, EKF2_RNG_NOISE
+    - EKF2_MIN_RNG: Set to 0.4cm (or whatever your sensor reading tells you). This is the expected rangefinder value when on the ground.
+
 - VICON:
     - EKF2_AID_MASK: Need to set to enable fusion with vision. 
+    - EKF2_EV_NOISE_MD: Set to true. This is so that we can use noise values from PX4 parameters directly.
+    
+- EKF2:
+    - SYS_MC_EST_GROUP: Set to EKF2
+    - EKF2_HGT_MODE: Set to 2 (If lidar is used)
+    - EKF2_MAG_CHECK: Set to 0
+    - EKF2_MAG_TYPE: If no magnetometer, set to NONE. Else AUTOMATIC
+
+- Position control:
+    - MPC_ALT_HOLD: Set to 2 (requires distance sensor)
+
 
 - Reference: 
     - [V1.9 Reference](https://dev.px4.io/v1.9.0_noredirect/en/advanced/parameter_reference.html)
@@ -121,6 +115,7 @@ make flywoo_f405s_aio_default upload
 1. VICON IP: 192.168.31.248
 2. Central computer IP: 192.168.31.22 or 192.168.31.173
 3. Radxa IP: 192.168.31.166
+4. GCS IP: 192.168.31.61
 
 ## Troubleshooting
 ```bash

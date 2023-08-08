@@ -1,6 +1,14 @@
 # TODO
+
+- Create ENU->FRD frame for vicon. 
+
 - Integrate Vicon positioning with PX4 
-    - Check that this is able to localize the drone in position mode
+    - Test position mode:
+        - Check that this is able to localize the drone in position mode
+    - Test Offboard mode
+        - 
+    - Set vicon noise values from computer
+    - Try with vision speed?
 
 - Use TF published from PX4. 
     - Subscribe to `/mavros/global_position/local` instead of `/mavros/local_position/pose`
@@ -15,9 +23,7 @@
         - Should startup mavros script and egoplanner
     - Clone radxa device
 
-
 - Radxa
-    - Synchronize Radxa times
     - Set optimization flags
         - set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g")
         - https://gcc.gnu.org/onlinedocs/gcc/Optimize-Options.html

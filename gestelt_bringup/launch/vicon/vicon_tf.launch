@@ -5,6 +5,11 @@
         name="world_to_map_tf" 
         args="0 0 0 0 0 0 1 world map 100" />
 
+    <!-- Add static transform from map_ENU to map_FRD -->
+    <node pkg="tf" type="static_transform_publisher" 
+        name="world_to_map_ned_tf" 
+        args="0 0 0 0.7071068 0.7071068 0 0 map map_ned 100" />
+
     <!-- Add static transform from drone to it's origin -->
     <node pkg="tf" type="static_transform_publisher" 
         name="map_to_drone0_origin_tf" 
