@@ -1,31 +1,98 @@
+# Radxa Setup
 
-# Installation of dependencies 
+## Flashing Ubuntu OS onto Radxa
+1. Install the following tools:
+    ```bash
+    sudo apt update
+    sudo apt install python3-pip
+    sudo pip3 install pyamlboot
+    ```
+
+2. Erase eMMC   
+    - Press down boot button on Radxa before powering it on and connecting it to the PC.
+    - Download `radxa-zero-erase-emmc.bin` AND `rz-udisk-loader.bin`
+    - Run `sudo boot-g12.py radxa-zero-erase-emmc.bin`
+        - This will automatically erase eMMC, then present eMMC as a USB storage device.
+        - A successful erase should show something like:
+        ```
+        Firmware Version :
+        ROM: 3.2 Stage: 0.0
+        Need Password: 0 Password OK: 1
+        Writing radxa-zero-erase-emmc.bin at 0xfffa0000...
+        [DONE]
+        Running at 0xfffa0000...
+        [DONE]
+        AMLC dataSize=16384, offset=65536, seq=0...
+        [DONE]
+        AMLC dataSize=49152, offset=393216, seq=1...
+        [DONE]
+        AMLC dataSize=16384, offset=229376, seq=2...
+        [DONE]
+        AMLC dataSize=49152, offset=245760, seq=3...
+        [DONE]
+        AMLC dataSize=16384, offset=65536, seq=4...
+        [DONE]
+        AMLC dataSize=49152, offset=393216, seq=5...
+        [DONE]
+        AMLC dataSize=16384, offset=229376, seq=6...
+        [DONE]
+        AMLC dataSize=49152, offset=245760, seq=7...
+        [DONE]
+        [BL2 END]
+        ```
+    - Run `sudo boot-g12.py radxa-zero-erase-emmc.bin`
+    - [Reference](https://wiki.radxa.com/Zero/install/eMMC_erase)
+
+3. Install [Balena Etcher](https://github.com/balena-io/etcher)
+
+4. Flash Ubuntu OS onto Radxa
+    - Download images from [here](), the file name should be something like `radxa-zero-ubuntu-focal-server-arm64-XXX-mbr.img`
+    - Decompress images using `xz -v --decompress IMAGE_COMPRESSED`
+    - Use BalenaEtcher to mount the image. After step 2 (erasing the eMMC), the radxa eMMC should appear as a flashable device
+
+5. Remove autoboot on radxa
+    - Hold down boot button on radxa and connect to PC
+    - `sudo boot-g12.py rz-udisk-loader.bin` should expose the Radxa as a mountable disk
+    - Install dependencies: 
+        - `sudo apt-get install -y wget bc nano mc build-essential autoconf libtool cmake pkg-config git python-dev swig libpcre3-dev libnode-dev gawk wget diffstat bison flex device-tree-compiler libncurses5-dev gcc-aarch64-linux-gnu g++-aarch64-linux-gnu binfmt-support binfmt-support qemu-user-static gcc-aarch64-linux-gnu gcc-arm-linux-gnueabihf fastboot`
+    - Git clone 2 packages
+        - `git clone  --branch radxa-zero-v2021.07 https://github.com/radxa/u-boot.git`
+        - `git clone https://github.com/radxa/fip.git`
+    - Edit the radxa zero config in the u-boot repo
+        - `nano u-boot/configs/radxa-zero_defconfig`
+        - Add "CONFIG_BOOTDELAY=-2" before "#CONFIG_DISPLAY_CPUINFO is not set"
+    - Compile from `u-boot`
+        ```bash
+        cd u-boot
+        export ARCH=arm
+        export CROSS_COMPILE=aarch64-linux-gnu-
+        make radxa-zero_defconfig
+        make
+        ```
+    - Compile from `fip/radxa-zero`
+        ```bash
+        cp u-boot.bin ../fip/radxa-zero/bl33.bin
+        cd ../fip/radxa-zero
+        make
+        ```
+    - Use dd to write over the eMMC
+        - Use dmesg to figure out what `sdX` is Radxa
+        - `sudo dd if=u-boot.bin of=/dev/sdX bs=512 seek=1`
+    - [Reference](https://github.com/matthewoots/documentation/blob/main/radxa-zero/radxa-remove-autoboot-countdown.md)
+
+## Setting up on Radxa
+1. Connect to a wifi network
 
 ```bash
-# Install tools
-sudo pip3 install pyamlboot
-
-# Use lsusb command to check if radxa is connected
-lsusb
-# Use dmesg to find the device filepath
-sudo dmesg
-
-# To erase the eMMC 
-# https://wiki.radxa.com/Zero/install/eMMC_erase
-sudo boot-g12.py radxa-zero-erase-emmc.bin
-
-# Get images from https://wiki.radxa.com/Zero/downloads
-xz -v --decompress IMAGE_COMPRESSED
-
-# Flash the image using balena etcher
-
 # Proceed on activating WIFI using https://wiki.radxa.com/Zero/Ubuntu
 # Root username and pasword is rock/rock
 sudo su
 nmcli r wifi on
 nmcli dev wifi
 nmcli dev wifi connect "wifi_name" password "wifi_password"                   
+```
 
+```bash
 # Install ROS at http://wiki.ros.org/noetic/Installation/Ubuntu
 
 # Run setup script
@@ -73,13 +140,6 @@ export ROS_MASTER_URI=http://$MASTER_IP:11311
 export ROS_HOSTNAME=$SELF_IP
 export ROS_IP=$SELF_IP
 ```
-
-# Remove autoboot on radxa
-1. Hold down boot button on radxa and connect to PC
-2. `lsusb` should show Amlogic, Inc. 
-3. `sudo boot-g12.py rz-udisk-loader.bin` should expose the Radxa as a mountable disk
-4. Follow [this guide to remove autoboot countdown](https://github.com/matthewoots/documentation/blob/main/radxa-zero/radxa-remove-autoboot-countdown.md)
-    - Notes: use the `git checkout radxa-zero-v2021.07` branch for u-boot
 
 # Synchronize time between ubuntu machines (radxas and central computer)
 
