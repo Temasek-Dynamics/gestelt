@@ -40,7 +40,7 @@ make flywoo_f405s_aio_default upload
         - SER_TEL2_BAUD: 230400 #Used for companion computer
         - SER_UART6_BAUD: 57600 #Used for telemetry
     - GPS:
-        - GPS_1_CONFIG: Set to 0
+        - GPS_1_CONFIG: Set to 0 #Disabled
     - Lidar
         - SENS_TFMINI_CFG: Set to TEL1/101 (UART 2, /dev/ttyS1)
     - Mavlink:
@@ -75,7 +75,7 @@ make flywoo_f405s_aio_default upload
 
 - Position control:
     - MPC_ALT_HOLD: Set to 2 (requires distance sensor)
-
+    - MPC_THR_HOVER: Set to % required to achieve hover
 
 - Reference: 
     - [V1.9 Reference](https://dev.px4.io/v1.9.0_noredirect/en/advanced/parameter_reference.html)

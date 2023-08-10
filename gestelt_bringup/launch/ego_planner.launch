@@ -1,5 +1,6 @@
 <launch>
-    <arg name="px4_device" default="true"/>
+    <!-- px4_device param applies a frame offset (for the 'droneX_origin' frame to work around px4 origin limitations -->
+    <arg name="px4_device" default="true"/> 
     <!-- Drone id -->
     <arg name="drone_id"/>
     <arg name="drone_id_ns" value="drone$(arg drone_id)"/>
@@ -19,8 +20,8 @@
     <arg name="point_cloud_topic"/>
     <!-- number of moving objects -->
     <arg name="obj_num" value="10" />
-    <!-- drone_origin_frame: For PX4 SITL, leave the default. 
-    For other forms of simulation, set it to the "world" frame -->
+    <!-- drone_origin_frame: For PX4 SITL, leave it as default. 
+    For other forms of simulation, might have to change it -->
     <arg name="drone_origin_frame" default="$(arg drone_id_ns)_origin" />
 
     <!-- Ego Planner params -->
@@ -92,7 +93,7 @@
         <!-- Frequency for timers -->
         <param name="traj_server/pub_cmd_freq" value="25.0" type="double"/>
         <param name="traj_server/state_machine_tick_freq" value="50.0" type="double"/>
-        <param name="traj_server/takeoff_height" value="2.0" type="double"/>
+        <param name="traj_server/takeoff_height" value="1.0" type="double"/>
 
         <!-- Subscribed Topics -->
         <remap from="~planning/trajectory" to="/drone_$(arg drone_id)_planning/trajectory"/>

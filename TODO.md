@@ -1,17 +1,17 @@
 # TODO
-
-- Create ENU->FRD frame for vicon. 
-
 - Integrate Vicon positioning with PX4 
-    - Test position mode:
-        - Check that this is able to localize the drone in position mode
     - Test Offboard mode
-        - 
+        - Test in simulation beforehand
+    - Solve laser range finder issue
     - Set vicon noise values from computer
     - Try with vision speed?
+    - Create fake environment node
+    - Change parameters for trajectory server/ego planner to param config files
 
-- Use TF published from PX4. 
-    - Subscribe to `/mavros/global_position/local` instead of `/mavros/local_position/pose`
+- Documentation
+    - Vicon system and PX4 params
+    - TF tree structure
+    - SAFMC drone params
 
 - Benchmark
     - Add network params 

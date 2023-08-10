@@ -1,6 +1,6 @@
 <launch>
   <arg name="num_drones" value="2"/>
-  
+  <arg name="rviz_config" default="default"/>
   <arg name="point_cloud_topic" value="camera/depth/points" />
   <arg name="point_cloud_topic_ds" value="camera/depth/points_downsampled" />
 
@@ -11,12 +11,12 @@
   </include>
 
   <!-- Collision checker -->
-  <node pkg="central_benchmark" type="swarm_collision_checker" 
+  <!-- <node pkg="central_benchmark" type="swarm_collision_checker" 
     name="swarm_collision_checker" output="screen">
     <param name="~num_drones" value="$(arg num_drones)" />
     <param name="~collision_tolerance" value="0.6" />
     <param name="~check_collision_freq" value="10.0" />
-  </node>
+  </node> -->
 
   <!-- drone 0: Downsamples the input cloud -->
   <node pkg="central_benchmark" type="cloud_downsampler" 
@@ -57,5 +57,9 @@
     <remap from="~cloud_in" to="/drone3/$(arg point_cloud_topic)" />
     <remap from="~cloud_out" to="/drone3/$(arg point_cloud_topic_ds)" />
   </node>
+
+  <!-- RVIZ -->
+  <node name="rviz" pkg="rviz" type="rviz" required="true" 
+    args="-d $(find gestelt_bringup)/launch/rviz/$(arg rviz_config).rviz"/>
 
 </launch>

@@ -1,4 +1,5 @@
 <launch>
+  <!-- Launches Gazebo environment and multiple PX4 SITL instances -->
   <!-- Gazebo parameters -->
   <arg name="world_name"/>
   <!-- Vehicle name used by PX4 configuration -->
@@ -23,7 +24,7 @@
     args="0 0 0 0 0 0 1 world map 100" />
 
   <!-- Drone 0 -->
-  <include file="$(find gestelt_bringup)/launch/gazebo/gz_single_uav.launch">
+  <include file="$(find gestelt_bringup)/launch/gazebo/gz_single_uav.xml">
     <arg name="drone_id"   value="0"/>
     <arg name="vehicle" default="$(arg vehicle)"/>
     <arg name="model" default="$(arg model)"/>

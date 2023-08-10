@@ -1,6 +1,6 @@
 <launch>
-  <!-- num_drones must be at least 2 even if we are planning for a single drone -->
-  <arg name="num_drones" value="5"/>
+  <!-- Launches Gazebo environment and multiple PX4 SITL instances -->
+
   <!-- Gazebo parameters -->
   <arg name="world_name"/>
   <!-- Vehicle name used by PX4 configuration -->
@@ -14,6 +14,7 @@
     <arg name="paused" value="false"/>
     <arg name="use_sim_time" value="true"/>
     <arg name="gui" value="true"/>
+    <arg name="headless" value="false"/>
     <arg name="debug" value="false"/>
     <arg name="verbose" value="true"/>
   </include>
@@ -24,40 +25,40 @@
     args="0 0 0 0 0 0 1 world map 100" />
 
   <!-- Drone 0 -->
-  <include file="$(find gestelt_bringup)/launch/radxa/sitl/radxa_px4_sitl.launch">
-    <arg name="drone_id"        value="0"/>
-    <arg name="vehicle"         value="$(arg vehicle)"/>
-    <arg name="model"           value="$(arg model)"/>
-    <arg name="init_x"          value="1.0"/>
-    <arg name="init_y"          value="-1.0"/>
-    <arg name="init_z"          value="0.0"/>
+  <include file="$(find gestelt_bringup)/launch/gazebo/gz_single_uav.xml">
+    <arg name="drone_id"   value="0"/>
+    <arg name="vehicle" default="$(arg vehicle)"/>
+    <arg name="model" default="$(arg model)"/>
+    <arg name="init_x"     value="1.0"/>
+    <arg name="init_y"     value="-1.0"/>
+    <arg name="init_z"     value="0.0"/>
   </include>
 
   <!-- Drone 1 -->
-  <include file="$(find gestelt_bringup)/launch/radxa/sitl/radxa_px4_sitl.launch">
-    <arg name="drone_id"        value="1"/>
-    <arg name="vehicle"         value="$(arg vehicle)"/>
-    <arg name="model"           value="$(arg model)"/>
+  <include file="$(find gestelt_bringup)/launch/gazebo/gz_single_uav.xml">
+    <arg name="drone_id"   value="1"/>
+    <arg name="vehicle" default="$(arg vehicle)"/>
+    <arg name="model" default="$(arg model)"/>
     <arg name="init_x"     value="1.0"/>
     <arg name="init_y"     value="1.0"/>
     <arg name="init_z"     value="0.0"/>
   </include>
 
   <!-- Drone 2 -->
-  <include file="$(find gestelt_bringup)/launch/radxa/sitl/radxa_px4_sitl.launch">
-    <arg name="drone_id"        value="2"/>
-    <arg name="vehicle"         value="$(arg vehicle)"/>
-    <arg name="model"           value="$(arg model)"/>
+  <include file="$(find gestelt_bringup)/launch/gazebo/gz_single_uav.xml">
+    <arg name="drone_id"   value="2"/>
+    <arg name="vehicle" default="$(arg vehicle)"/>
+    <arg name="model" default="$(arg model)"/>
     <arg name="init_x"     value="-1.0"/>
     <arg name="init_y"     value="-1.0"/>
     <arg name="init_z"     value="0.0"/>
   </include>
 
   <!-- Drone 3 -->
-  <include file="$(find gestelt_bringup)/launch/radxa/sitl/radxa_px4_sitl.launch">
-    <arg name="drone_id"        value="3"/>
-    <arg name="vehicle"         value="$(arg vehicle)"/>
-    <arg name="model"           value="$(arg model)"/>
+  <include file="$(find gestelt_bringup)/launch/gazebo/gz_single_uav.xml">
+    <arg name="drone_id"   value="3"/>
+    <arg name="vehicle" default="$(arg vehicle)"/>
+    <arg name="model" default="$(arg model)"/>
     <arg name="init_x"     value="-1.0"/>
     <arg name="init_y"     value="1.0"/>
     <arg name="init_z"     value="0.0"/>

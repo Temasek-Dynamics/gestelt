@@ -1,12 +1,12 @@
 #!/bin/bash
 
-SESSION="radxa_central"
+SESSION="central_sitl"
 SESSIONEXISTS=$(tmux list-sessions | grep $SESSION)
 
 #####
 # Directories
 #####
-SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )/.."
 gestelt_bringup_DIR="$SCRIPT_DIR/.."
 PX4_AUTOPILOT_REPO_DIR="$SCRIPT_DIR/../../../../PX4-Autopilot"
 
@@ -35,10 +35,10 @@ roslaunch gestelt_bringup central_bridge.launch
 "
 
 CMD_2="
-roslaunch gestelt_bringup rviz.launch config:=gz_sim 
+roslaunch gestelt_bringup rviz.launch rviz_config:=gz_sim 
 "
 
-CMD_3="roslaunch gestelt_bringup radxa_mission.launch"
+CMD_3="roslaunch gestelt_bringup offboard_mission.launch"
 
 if [ "$SESSIONEXISTS" = "" ]
 then 

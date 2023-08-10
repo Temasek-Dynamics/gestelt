@@ -1,7 +1,6 @@
 <launch>
-  <arg name="drone_id"/>
   <!-- num_drones must be at least 2 even if we are planning for a single drone -->
-  <arg name="num_drones" value="5"/>
+  <arg name="num_drones" value="2"/>
   <!-- size of map, change the size inflate x, y, z according to your application -->
   <arg name="map_size_x" value="80.0"/>
   <arg name="map_size_y" value="80.0"/>
@@ -14,8 +13,9 @@
   <arg name="point_cloud_topic_ds" value="camera/depth/points_downsampled" />
   <arg name="depth_img_topic" value="camera/depth/image_raw" />
 
+  <!-- Drone 0 -->
   <include file="$(find gestelt_bringup)/launch/ego_planner.launch">
-    <arg name="drone_id"   value="$(arg drone_id)"/>
+    <arg name="drone_id"   value="0"/>
     <arg name="init_x"     value="1.0"/>
     <arg name="init_y"     value="-1.0"/>
     <arg name="init_z"     value="0.0"/>

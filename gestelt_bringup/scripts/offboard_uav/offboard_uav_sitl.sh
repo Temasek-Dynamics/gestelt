@@ -12,7 +12,7 @@ SESSIONEXISTS=$(tmux list-sessions | grep $SESSION)
 #####
 # Directories
 #####
-SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )/.."
 
 #####
 # Sourcing
@@ -25,7 +25,7 @@ source $SCRIPT_DIR/../../../../devel/setup.bash &&
 # Commands
 #####
 CMD_0="
-roslaunch gestelt_bringup radxa_ego_planner.launch drone_id:=${uav_id} 
+roslaunch gestelt_bringup offboard_ego_planner.launch drone_id:=${uav_id} 
 "
 
 if [ "$SESSIONEXISTS" = "" ]

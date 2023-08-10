@@ -1,12 +1,12 @@
 #!/bin/bash
 
-SESSION="radxa_uav"
+SESSION="central_sim_uav"
 SESSIONEXISTS=$(tmux list-sessions | grep $SESSION)
 
 #####
 # Directories
 #####
-SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )/.."
 
 #####
 # Sourcing
@@ -19,13 +19,13 @@ source $SCRIPT_DIR/../../../../devel/setup.bash &&
 # Commands
 #####
 CMD_0="
-roslaunch gestelt_bringup radxa_ego_planner.launch drone_id:=1
+roslaunch gestelt_bringup offboard_ego_planner.launch drone_id:=1
 "
 CMD_1="
-roslaunch gestelt_bringup radxa_ego_planner.launch drone_id:=2
+roslaunch gestelt_bringup offboard_ego_planner.launch drone_id:=2
 "
 CMD_2="
-roslaunch gestelt_bringup radxa_ego_planner.launch drone_id:=3
+roslaunch gestelt_bringup offboard_ego_planner.launch drone_id:=3
 "
 
 if [ "$SESSIONEXISTS" = "" ]

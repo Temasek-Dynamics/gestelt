@@ -1,18 +1,13 @@
 #!/bin/bash
 
-if [ "$#" != 1 ]; then 
-    echo -e "usage: ./radxa_uav uav_id \n"
-fi
-
-uav_id=$1
-
-SESSION="radxa_uav"
+SESSION="radxa_central"
 SESSIONEXISTS=$(tmux list-sessions | grep $SESSION)
 
 #####
 # Directories
 #####
-SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )/.."
+gestelt_bringup_DIR="$SCRIPT_DIR/.."
 
 #####
 # Sourcing
@@ -25,12 +20,16 @@ source $SCRIPT_DIR/../../../../devel/setup.bash &&
 # Commands
 #####
 CMD_0="
-roslaunch gestelt_bringup radxa_ego_planner.launch drone_id:=${uav_id} 
+roslaunch gestelt_bringup vicon_client.launch 
 "
 
 CMD_1="
-roslaunch gestelt_bringup radxa_mavros.launch drone_id:=${uav_id} 
+roslaunch gestelt_bringup vicon_sim.launch 
 "
+
+CMD_2="roslaunch gestelt_bringup vicon_central.launch rviz_config:=gz_sim"
+
+CMD_3="rosrun gestelt_bringup vicon_set_offboard.py"
 
 if [ "$SESSIONEXISTS" = "" ]
 then 
@@ -43,6 +42,8 @@ then
 
     tmux send-keys -t $SESSION:0.0 "$SOURCE_WS $CMD_0" C-m 
     tmux send-keys -t $SESSION:0.1 "$SOURCE_WS $CMD_1" C-m 
+    tmux send-keys -t $SESSION:0.2 "$SOURCE_WS $CMD_2" C-m 
+    tmux send-keys -t $SESSION:0.2 "$SOURCE_WS $CMD_3" 
 fi
 
 # Attach session on the first window

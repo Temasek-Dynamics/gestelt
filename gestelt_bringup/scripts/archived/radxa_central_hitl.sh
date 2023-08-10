@@ -41,11 +41,11 @@ roslaunch gestelt_bringup rviz.launch config:=gz_sim ros_master_uri:=${ros_maste
 
 
 CMD_2="
-roslaunch gestelt_bringup radxa_ego_planner.launch drone_id:=0 ros_master_uri:=${ros_master_uri} ros_ip:=${ros_ip}
+roslaunch gestelt_bringup offboard_ego_planner.launch drone_id:=0 ros_master_uri:=${ros_master_uri} ros_ip:=${ros_ip}
 "
 
 CMD_3="
-roslaunch gestelt_bringup radxa_mission.launch ros_master_uri:=${ros_master_uri} ros_ip:=${ros_ip}
+roslaunch gestelt_bringup offboard_mission.launch ros_master_uri:=${ros_master_uri} ros_ip:=${ros_ip}
 "
 
 if [ "$SESSIONEXISTS" = "" ]

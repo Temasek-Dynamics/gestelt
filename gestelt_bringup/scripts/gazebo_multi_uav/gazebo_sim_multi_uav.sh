@@ -6,7 +6,7 @@ SESSIONEXISTS=$(tmux list-sessions | grep $SESSION)
 #####
 # Directories
 #####
-SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )/.."
 gestelt_bringup_DIR="$SCRIPT_DIR/.."
 PX4_AUTOPILOT_REPO_DIR="$SCRIPT_DIR/../../../../PX4-Autopilot"
 
@@ -25,15 +25,15 @@ export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:$gestelt_bringup_DIR:$PX4_AUTOPILOT_RE
 # Commands
 #####
 CMD_0="
-roslaunch gestelt_bringup gz_multi_uav.launch world_name:=$SCRIPT_DIR/../simulation/worlds/ego_test.world
+roslaunch gestelt_bringup gz_multi_sim.launch world_name:=$SCRIPT_DIR/../simulation/worlds/ego_test.world
 "
 
 # CMD_0="
-# roslaunch gestelt_bringup gz_multi_uav.launch  world_name:=$SCRIPT_DIR/../simulation/worlds/empty.world
+# roslaunch gestelt_bringup gz_multi_sim.launch  world_name:=$SCRIPT_DIR/../simulation/worlds/empty.world
 # "
 
 CMD_1="
-roslaunch gestelt_bringup rviz.launch config:=gz_sim
+roslaunch gestelt_bringup gz_central.launch rviz_config:=gz_sim
 "
 
 CMD_2="

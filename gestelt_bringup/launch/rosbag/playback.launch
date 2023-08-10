@@ -1,5 +1,5 @@
 <launch>
-  <arg name="config" default="gz_sim"/>
+  <arg name="rviz_config" default="gz_sim"/>
 
   <arg name="path" default="/tmp/"/>
   <arg name="file0" default="ego_planner_tf.bag"/>
@@ -9,7 +9,7 @@
   <arg name="file4" default="ego_planner_drone_3.bag"/>
 
   <node name="rviz" pkg="rviz" type="rviz" required="true" 
-    args="-d $(find gestelt_bringup)/launch/rviz/$(arg config).rviz" />
+    args="-d $(find gestelt_bringup)/launch/rviz/$(arg rviz_config).rviz" />
 
   <node pkg="rosbag" type="play" name="player" output="screen" 
     args="--clock 
