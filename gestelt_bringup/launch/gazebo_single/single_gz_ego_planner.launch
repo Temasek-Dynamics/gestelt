@@ -11,6 +11,7 @@
   <arg name="pose_topic" value="mavros/local_position/pose" />
   <arg name="point_cloud_topic" value="camera/depth/points" />
   <arg name="point_cloud_topic_ds" value="camera/depth/points_downsampled" />
+  <arg name="point_cloud_topic_test" value="camera/depth/points_test" />
   <arg name="depth_img_topic" value="camera/depth/image_raw" />
 
   <!-- Drone 0 -->
@@ -26,7 +27,7 @@
     <arg name="pose_topic" value="$(arg pose_topic)"/>
     <arg name="odometry_topic" value="$(arg odometry_topic)"/>
     <arg name="depth_img_topic" value="$(arg depth_img_topic)"/>
-    <arg name="point_cloud_topic" value="$(arg point_cloud_topic_ds)"/>
+    <arg name="point_cloud_topic" value="$(arg point_cloud_topic_test)"/>
     <arg name="command_topic" value="$(arg command_topic)" />
   </include>
 

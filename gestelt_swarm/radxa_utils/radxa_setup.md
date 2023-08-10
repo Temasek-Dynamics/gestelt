@@ -170,7 +170,6 @@ crontab -e
 scp -r ~/gestelt_ws/src/gestelt rock@192.168.31.166:/home/rock/gestelt_ws/src/ 
 ```
 
-
 # Troubleshooting
 1. Permission denied when accessing serial port
 - Make sure Baud rate matches what is set as PX4 params

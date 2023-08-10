@@ -1,0 +1,35 @@
+<launch>
+  <arg name="drone_id"/>
+  <arg name="drone_id_ns" value="drone$(arg drone_id)"/>
+  <arg name="map_filepath" value="$(find px4sim1)/../data/sample.pcd" />
+
+  <!-- Input/output topics -->
+  <arg name="pose_topic" value="mavros/local_position/pose" />
+  <arg name="point_cloud_topic_test" value="camera/depth/points_test" />
+
+  <!-- Global map publisher -->
+  <node pkg="px4sim1" type="map_publisher" name="map_publisher" output="screen">
+      <param name="map/path" value="$(arg map_filepath)"/>
+  </node>
+			
+  <!-- Fake sensor data node -->
+  <node pkg="px4sim1" type="fake_map" name="fake_map_$(arg drone_id_ns)" output="screen">
+    <!-- Subscriber to uav pose -->
+    <remap from="uav/pose" to="/$(arg drone_id_ns)/$(arg pose_topic)"/>
+    <!-- Publisher of uav sensor cloud -->
+    <remap from="uav/sensor_cloud" to="/$(arg drone_id_ns)/$(arg point_cloud_topic_test)"/>
+    <!-- Publisher of uav model -->
+    <remap from="uav/model" to="/$(arg drone_id_ns)/fake_map_model"/>
+
+    <rosparam command="load" file="$(find gestelt_bringup)/config/simulation_parameters.yaml" />
+    <rosparam command="load" file="$(find gestelt_bringup)/config/map_parameters.yaml" />
+
+    <param name="uav/mesh_resource" value="file://$(find px4sim1)/../meshes/fake_drone.dae" />
+    <param name="uav/id" value="$(arg drone_id_ns)"/>
+    <!-- <param name="uav/sensor_cloud_frame" value="$(arg drone_id_ns)_base_link"/> -->
+    <param name="uav/sensor_cloud_frame" value="world"/>
+
+    <param name="map/filepath" value="$(arg map_filepath)"/>
+  </node>
+
+</launch>

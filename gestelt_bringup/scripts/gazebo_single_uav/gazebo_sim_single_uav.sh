@@ -24,8 +24,12 @@ export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:$gestelt_bringup_DIR:$PX4_AUTOPILOT_RE
 #####
 # Commands
 #####
+# CMD_0="
+# roslaunch gestelt_bringup single_gz_sim.launch world_name:=$SCRIPT_DIR/../simulation/worlds/ego_test.world
+# "
+
 CMD_0="
-roslaunch gestelt_bringup single_gz_sim.launch world_name:=$SCRIPT_DIR/../simulation/worlds/ego_test.world
+roslaunch gestelt_bringup single_gz_sim.launch world_name:=$SCRIPT_DIR/../simulation/worlds/empty.world
 "
 
 CMD_1="
@@ -50,7 +54,6 @@ then
     tmux send-keys -t $SESSION:0.0 "$SOURCE_PX4_AUTOPILOT $CMD_0" C-m 
     sleep 3
     tmux send-keys -t $SESSION:0.1 "$SOURCE_WS $CMD_1" C-m 
-    sleep 1
     tmux send-keys -t $SESSION:0.2 "$SOURCE_WS $CMD_2" C-m 
     tmux send-keys -t $SESSION:0.3 "$SOURCE_WS $CMD_3" 
 fi

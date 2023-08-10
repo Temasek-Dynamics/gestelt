@@ -15,17 +15,22 @@
 12. Create script for takeoff, switching to mission mode and sending waypoints.
 13. Fix frame transformation issue that comes with PX4 firmware
     - Each UAV has their own origin frame relative to the world (Why? PX4 will always start from (0,0,0) in any given frame, so we create our own origin frame for each drone and provide an offset from world for said frame)
-        - Input 
-            - Sensor 
-                - NO TRANSFORM
-                    - Input Odom (Already in UAV frame)
-            - User 
+        - Input Data
+            - Sensor input
+                - Odom
+                    - NO TRANSFORM
+                        - Input Odom (Already in UAV frame)
+                - Point Cloud
+                    - Received camera frame
+                    - TRANSFORM
+                        - Transform from camera frame to world frame
+            - User input
                 - TRANSFORM
                     - Received waypoints (WORLD -> UAV Origin frame)
             - Plans
                 - TRANSFORM
                     - Other drone's MINCO trajectories (World -> UAV Origin frame)
-        - Output 
+        - Output Data
             - NO TRANSFORM
                 - Planned trajectory (not MINCO) (Already in UAV frame)
                     - Passed to trajectory server
@@ -109,4 +114,5 @@
 31. (31/7/23) Added launch file including interface of Radxa with PX4, as well as taking in pose input from VICON system
     - Add instructions to synchronize time between radxa and PX4
         - http://www.ubuntugeek.com/network-time-protocol-ntp-server-and-clients-setup-in-ubuntu.html
-    - 
+32. (8/8/23) Added documentation on tweaking the PX4 for usage with the Vicon system
+33. (10/8/23) Added fake sensor data node for simulating virtual obstacles on an actual drone.

@@ -1,0 +1,15 @@
+# map parameters
+map:
+  map_rate: 12
+  # in meters, this should be the same as the resolution of the global map
+  resolution: 0.2
+  horizontal:
+    # number of laser lines in horizontal
+    laser_line_num: 80
+    # in degree, the horizontal angle range
+    laser_range_dgr: 100.0
+  vertical:
+    # number of laser lines in vertical
+    laser_line_num: 15
+    # in degree, vertical angle range
+    laser_range_dgr: 40.0

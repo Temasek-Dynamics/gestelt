@@ -18,7 +18,7 @@ make flywoo_f405s_aio_default upload
 ## Parameters
 1. Set Parameters
 - RC 
-    - COM_RC_IN_MODE: Set to 1 to disable RC Checks
+    - COM_RC_IN_MODE: Set to enable RC checks (if testing with a single drone)
 - GPS
     - COM_ARM_WO_GPS: Allow arming without GPS Values
 - Land mode
@@ -54,6 +54,10 @@ make flywoo_f405s_aio_default upload
             - MAV_1_MODE: Normal
             - MAV_1_RATE: 1200 Byte/s
             - MAV_1_FORWARD: True
+
+- Battery
+    - Set the number of cells
+    - Set the voltage divider value (There is a bug that it cannot be changed if the initial value is -1.0, so set it to a random positive value first. Then calculate it with the real value)
 
 - Lidar/Range finder: 
     - EKF2_RNG_AID: Set to 1 to allow estimator to make use of range sensor even when it is not the primary height source

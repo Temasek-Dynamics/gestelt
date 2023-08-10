@@ -1,7 +1,6 @@
 # TODO
 - Integrate Vicon positioning with PX4 
     - Test Offboard mode
-        - Test in simulation beforehand
     - Solve laser range finder issue
     - Set vicon noise values from computer
     - Try with vision speed?
