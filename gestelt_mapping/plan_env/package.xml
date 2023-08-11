@@ -21,6 +21,7 @@
   <depend>swarm_benchmark</depend>
   <depend>cv_bridge</depend>
   <depend>message_filters</depend>
+  <depend>tf2_ros</depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>

@@ -89,7 +89,7 @@
         <param name="grid_map/map_size_x" value="$(arg map_size_x_)" />
         <param name="grid_map/map_size_y" value="$(arg map_size_y_)" />
         <param name="grid_map/map_size_z" value="$(arg map_size_z_)" />
-        <param name="grid_map/global_frame_id" value="$(arg drone_origin_frame)"/>
+        <param name="grid_map/global_frame" value="$(arg drone_origin_frame)"/>
         <!-- Occupancy grid params -->
         <param name="grid_map/occ_grid/resolution" value="0.1" />
         <param name="grid_map/occ_grid/inflation" value="0.2" />
@@ -103,6 +103,11 @@
         <param name="~grid_map/sensor_type" value="$(arg SENSOR_TYPE)"/>
         <!-- camera intrinsic parameters -->
         <param name="grid_map/k_depth_scaling_factor" value="1000.0"/>
+
+        <!-- grid_map/use_tf if set to true will use the tf to determine camera position -->
+        <param name="grid_map/use_tf" value="true"/>
+        <param name="grid_map/cam_frame" value="$(arg drone_id_ns)_cam_link"/>
+
         <!-- camera extrinsic parameters -->
         <param name="grid_map/camera_to_body/roll" value="90.0"/>
         <param name="grid_map/camera_to_body/pitch" value="180.0"/>

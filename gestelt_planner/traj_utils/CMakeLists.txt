@@ -47,7 +47,7 @@ include_directories(
     SYSTEM 
     include 
     ${catkin_INCLUDE_DIRS}
-    ${Eigen3_INCLUDE_DIRS} 
+    ${EIGEN3_INCLUDE_DIRS} 
 )
 
 add_library( traj_utils
@@ -55,5 +55,5 @@ add_library( traj_utils
 )
 target_link_libraries( traj_utils
     ${catkin_LIBRARIES} 
-    ${Eigen3_LIBRARIES}
+    ${EIGEN3_LIBRARIES}
 )  

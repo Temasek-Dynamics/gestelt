@@ -20,6 +20,8 @@
 #include <nav_msgs/Odometry.h>
 #include <sensor_msgs/CameraInfo.h>
 
+#include <tf2_ros/transform_listener.h>
+
 #include <swarm_benchmark/timebenchmark.h>
 
 struct MappingParameters
@@ -30,7 +32,6 @@ struct MappingParameters
   double occ_inflation_; // Voxel size for occupancy grid with inflation
   int pose_type_; // Type of pose input (pose or odom)
   int sensor_type_; // Type of sensor (cloud or depth image)
-  std::string global_frame_id_; // frame id to display occupancy grid in
 
   double pose_timeout_; // Timeout for pose update before emergency stop is activated
 
@@ -46,6 +47,11 @@ struct MappingParameters
   /* visualization and computation time display */
   double ground_height_; // Lowest possible height (z-axis)
 
+  // If use_tf_ is true, Use '/tf' to get camera transformation relative to world frame,
+  // else, use camera pose for the camera-to-world transformation.
+  bool use_tf_;
+  std::string cam_frame_;
+  std::string global_frame_; // frame id to display occupancy grid in
 };
 
 // intermediate mapping data for fusion
@@ -73,7 +79,7 @@ struct MappingData
 
   // TODO: Use this to flag timeout
   // True if depth and odom has timed out
-  bool flag_depth_odom_timeout_{false};
+  bool flag_sensor_timeout_{false};
 
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 };
@@ -118,18 +124,27 @@ public:
 
   /* Gridmap conversion methods */
 
-  // Get occupancy value of given position in inflated Occupancy grid
-  void poseToCamPose(const geometry_msgs::Pose &pose);
+  // Get camera-to-global frame transformation
+  void getCamToGlobalTF(const geometry_msgs::Pose &pose, const std::string& cam_frame);
+  
+  // Take in point cloud as octree map. Transformation from camera-to-global frame is 
+  // done here
   void cloudToCloudMap(const sensor_msgs::PointCloud2ConstPtr &msg);
+
+  // Take in depth image as octree map.  Transformation from camera-to-global frame is 
+  // done here
   void depthToCloudMap(const sensor_msgs::ImageConstPtr &msg);
 
   /** Helper methods */
+  
+  // Checks if camera pose is valid
   bool isPoseValid();
 
-  // Get map origin resolution
+  // Get occupancy grid resolution
   inline double getResolution() { return mp_.occ_resolution_; }
 
-  bool getOdomDepthTimeout() { return md_.flag_depth_odom_timeout_; }
+  // Get odometry depth timeout
+  bool getPoseDepthTimeout() { return md_.flag_sensor_timeout_; }
 
   /** Publisher methods */
   void publishMap();
@@ -206,6 +221,10 @@ private:
   ros::Publisher occ_map_pub_;
   ros::Timer vis_timer_;
 
+  // TF transformation 
+  tf2_ros::Buffer tfBuffer_;
+  std::unique_ptr<tf2_ros::TransformListener> tfListener_;
+
   /* Benchmarking */
   std::shared_ptr<TimeBenchmark> time_benchmark_;
 
@@ -233,7 +252,6 @@ inline int GridMap::getOccupancy(const Eigen::Vector3d &pos)
 
 inline int GridMap::getInflateOccupancy(const Eigen::Vector3d &pos)
 {
-
   pcl::PointXYZ search_pt(pos(0), pos(1), pos(2));
   return octree_map_inflated_->isVoxelOccupiedAtPoint(search_pt) ? 1 : 0;
 }

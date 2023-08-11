@@ -1,5 +1,11 @@
 # Gestelt setup
 
+## Requirements
+1. Operating System/Frameworks
+    - Ubuntu 20.04 (ROS Noetic)
+
+## Installation instructions
+
 1. Install binaries
 ```bash 
 export ROS_DISTRO="noetic"
@@ -8,7 +14,7 @@ export ROS_DISTRO="noetic"
 # sudo apt install ros-${ROS_DISTRO}-tf2-sensor-msgs -y
 sudo apt install ros-${ROS_DISTRO}-mavlink ros-${ROS_DISTRO}-mavros ros-${ROS_DISTRO}-mavros-msgs ros-${ROS_DISTRO}-mavros-extras -y
 # Install external dependencies
-sudo apt install git build-essential tmux python3-vcstool xmlstarlet -y
+sudo apt install git build-essential tmux python3-catkin-tools python3-vcstool xmlstarlet -y
 sudo apt install libopencv-dev ros-${ROS_DISTRO}-cv-bridge ros-${ROS_DISTRO}-pcl-ros libeigen3-dev -y
 wget https://raw.githubusercontent.com/mavlink/mavros/master/mavros/scripts/install_geographiclib_datasets.sh
 sudo bash ./install_geographiclib_datasets.sh
@@ -38,7 +44,7 @@ cp -r ~/gestelt_ws/src/gestelt/gestelt_bringup/simulation/models/raynor ~/gestel
 make distclean
 ```
 
-4. Building 
+4. Building the workspace
 ```bash
 # Assuming your workspace is named as follows
 cd ~/gestelt_ws/
@@ -50,4 +56,34 @@ catkin_make -DCMAKE_BUILD_TYPE=Release
 ```
 
 5. Setting up the Offboard computer
-We assume that Radxa is being used as the offboard computer. Refer to [radxa_setup](./radxa_setup/README.md) for more instructions.
+We assume that Radxa is being used as the offboard computer. Refer to [radxa_setup](./radxa_setup.md) for more instructions.
+
+6. Setting up PX4 (Flywoo board)
+Refer to [px4_setup](./px4_setup.md) for more instructions.
+
+7. Vicon setup
+Use the vicon if you would like to get the vehicle ground truth. Refer to [vicon_setup](./vicon_setup.md) for more instructions.
+
+## Quick start
+```bash
+cd ~/gestelt_ws/src/gestelt_bringup/gestelt_bringup/scripts
+# Simulation using simple quad simulator
+./simple_sim.sh
+# Simulation using gazebo
+./gazebo_sim_multi_uav.sh
+```
+
+```bash
+# Taking off
+rostopic pub /traj_server_event std_msgs/Int8 "data: 0" --once
+# Taking Mission
+rostopic pub /traj_server_event std_msgs/Int8 "data: 2" --once
+
+TAKEOFF_E,        // 0
+LAND_E,           // 1
+MISSION_E,        // 2
+CANCEL_MISSION_E, // 3
+E_STOP_E,         // 4
+EMPTY_E,          // 5
+```
+

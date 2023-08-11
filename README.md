@@ -1,46 +1,8 @@
 # gestelt
 A simple path planning framework for swarm robots. This is a work in progress, and a lot of existing components are refactored parts of the work done by ZJU in [EGO-Planner-V2 repo](https://github.com/ZJU-FAST-Lab/EGO-Planner-v2).
 
-# Requirements
-1. Operating System/Frameworks
-    - Ubuntu 20.04 (ROS Noetic)
-2. Tools
-    - vcstool: For repo setup 
-    - xmlstarlet: For multi-vehicle simulation
-3. Simulation
-    - Gazebo Classic (Version 11)
-    - PX4-Autopilot (Main branch)
-    - Simple Quad Simulator
-4. Other packages:
-    - MavROS 
-    - plotjuggler (For visualization of data over time)
-    - Listed in "Setup" section
-
 # Setup
-Refer to [setup.md](./setup.md)
-
-# Quick start
-```bash
-cd ~/gestelt_ws/src/gestelt_bringup/gestelt_bringup/scripts
-# Simulation using simple quad simulator
-./simple_sim.sh
-# Simulation using gazebo
-./gazebo_sim_multi_uav.sh
-```
-
-```bash
-# Taking off
-rostopic pub /traj_server_event std_msgs/Int8 "data: 0" --once
-# Taking Mission
-rostopic pub /traj_server_event std_msgs/Int8 "data: 2" --once
-
-TAKEOFF_E,        // 0
-LAND_E,           // 1
-MISSION_E,        // 2
-CANCEL_MISSION_E, // 3
-E_STOP_E,         // 4
-EMPTY_E,          // 5
-```
+Refer to [general_setup.md](./docs/general_setup.md)
 
 # Acknowledgements
 Plenty of inspiration was taken from the [EGO-Planner-V2 repo](https://github.com/ZJU-FAST-Lab/EGO-Planner-v2) from ZJU, without which, this would not have been possible.

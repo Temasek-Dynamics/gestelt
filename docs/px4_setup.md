@@ -1,6 +1,6 @@
 # PX4 setup
 
-# Building the firmware
+## Building the firmware
 1. Build the board firmware 
 ```bash 
 # Clone the custom version of PX4 
@@ -14,8 +14,8 @@ make flywoo_f405s_aio_default
 make flywoo_f405s_aio_default upload
 ```
 
-# Configuration
-## Parameters
+## Configuration
+### PX4 Parameters
 1. Set Parameters
 - RC 
     - COM_RC_IN_MODE: Set to enable RC checks (if testing with a single drone)
@@ -60,12 +60,12 @@ make flywoo_f405s_aio_default upload
     - Set the voltage divider value (There is a bug that it cannot be changed if the initial value is -1.0, so set it to a random positive value first. Then calculate it with the real value)
 
 - Lidar/Range finder: 
-    - EKF2_RNG_AID: Set to 1 to allow estimator to make use of range sensor even when it is not the primary height source
-    - Position offset
+    - EKF2_RNG_AID: Set to 0 to disallow use of range sensor.
+    - Position offset should be 0.0
         - EKF2_RNG_POS_X, EKF2_RNG_POS_Y, EKF2_RNG_POS_Z 
     - Other values
         - EKF2_RNG_SFE, EKF2_RNG_DELAY, EKF2_RNG_NOISE
-    - EKF2_MIN_RNG: Set to 0.4cm (or whatever your sensor reading tells you). This is the expected rangefinder value when on the ground.
+    - EKF2_MIN_RNG: In units of meters. Set to 0.04m (or whatever your sensor reading tells you when your drone is on the ground). This is the expected rangefinder value when on the ground.
 
 - VICON:
     - EKF2_AID_MASK: Need to set to enable fusion with vision. 

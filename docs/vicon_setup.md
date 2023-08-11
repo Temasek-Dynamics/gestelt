@@ -10,10 +10,4 @@
 1. Make sure the drone starts from the origin of the room. Orientation does not matter.
 2. Uses PX4 vision_pose_estimate topic
 
-# Checks
-- Frame transformations
-    - Vicon provides pose in ENU/FLU
-    - Need to change "odom" plugin params? Transform from map frame to base_link_frd?
-
-- Consider sending odometry to "/mavros/odometry/out", using topics from /pose and /twist
 

@@ -895,7 +895,7 @@ namespace ego_planner
 
   bool EGOReplanFSM::checkSensorTimeout()
   {
-    if (planner_manager_->grid_map_->getOdomDepthTimeout())
+    if (planner_manager_->grid_map_->getPoseDepthTimeout())
     {
       logError("Depth Image/Pose Timeout! EMERGENCY_STOP");
       enable_fail_safe_ = false;

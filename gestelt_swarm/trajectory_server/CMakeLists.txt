@@ -41,7 +41,7 @@ add_executable(traj_server_node
 )
 target_link_libraries(traj_server_node 
   ${catkin_LIBRARIES}
-  ${Eigen3_LIBRARIES}
+  ${EIGEN3_LIBRARIES}
 )
 # add_dependencies(traj_server ${${PROJECT_NAME}_EXPORTED_TARGETS})
 

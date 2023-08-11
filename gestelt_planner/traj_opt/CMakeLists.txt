@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.3)
+cmake_minimum_required(VERSION 3.0.2)
 project(traj_opt)
 
 set(CMAKE_BUILD_TYPE "Release")
@@ -29,7 +29,7 @@ include_directories(
     SYSTEM 
     include 
     ${catkin_INCLUDE_DIRS}
-    ${Eigen3_INCLUDE_DIRS} 
+    ${EIGEN3_INCLUDE_DIRS} 
 )
 
 add_library(traj_opt 
@@ -37,5 +37,5 @@ add_library(traj_opt
 )
 target_link_libraries(traj_opt
     ${catkin_LIBRARIES} 
-    ${Eigen3_LIBRARIES}
+    ${EIGEN3_LIBRARIES}
 )  

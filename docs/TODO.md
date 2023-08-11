@@ -5,6 +5,7 @@
     - Set vicon noise values from computer
     - Try with vision speed?
     - Create fake environment node
+        - modify getCamToGlobalPose
     - Change parameters for trajectory server/ego planner to param config files
 
 - Documentation
@@ -30,6 +31,7 @@
 - Gridmap
     - Solve bug with `cloud.points.size () == cloud.width * cloud.height assertion failure
     - Implement pose timeout
+        - flag_sensor_timeout_
     - Depth image
         - Find out how to create organized point clouds
         - Compress, publish and subscribe using ImageTransport

@@ -26,7 +26,7 @@ include_directories(
     SYSTEM 
     include 
     ${catkin_INCLUDE_DIRS}
-    ${Eigen3_INCLUDE_DIRS} 
+    ${EIGEN3_INCLUDE_DIRS} 
 )
 
 add_library( path_searching 
@@ -34,5 +34,5 @@ add_library( path_searching
 )
 target_link_libraries( path_searching
   ${catkin_LIBRARIES} 
-  ${Eigen3_LIBRARIES}
+  ${EIGEN3_LIBRARIES}
 )  

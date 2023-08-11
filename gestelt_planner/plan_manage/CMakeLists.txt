@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.3)
+cmake_minimum_required(VERSION 3.0.2)
 project(ego_planner)
 
 set(CMAKE_BUILD_TYPE "Release")
@@ -42,7 +42,7 @@ add_library(${PROJECT_NAME}
 )
 target_link_libraries(${PROJECT_NAME} 
   ${catkin_LIBRARIES}
-  ${Eigen3_LIBRARIES}
+  ${EIGEN3_LIBRARIES}
 )
 
 add_executable(ego_planner_node
