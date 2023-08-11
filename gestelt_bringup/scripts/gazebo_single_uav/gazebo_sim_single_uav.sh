@@ -40,7 +40,7 @@ CMD_2="
 roslaunch gestelt_bringup single_gz_ego_planner.launch
 "
 
-CMD_3="rosrun gestelt_bringup single_set_offboard.py"
+CMD_3="roslaunch gestelt_bringup single_mission.launch"
 
 if [ "$SESSIONEXISTS" = "" ]
 then 

@@ -271,6 +271,24 @@ void GridMap::getCamToGlobalTF(const geometry_msgs::Pose &pose, const std::strin
 
     // posestamped.pose.orientation = transform.transform.rotation;
 
+    Eigen::Quaterniond body_q = Eigen::Quaterniond(transform.transform.rotation.w,
+                                                  transform.transform.rotation.x,
+                                                  transform.transform.rotation.y,
+                                                  transform.transform.rotation.z);
+    Eigen::Matrix3d body_r_m = body_q.toRotationMatrix();
+    // Body of uav to global frame
+    md_.cam2global_.block<3, 3>(0, 0) = body_r_m;
+    md_.cam2global_(0, 3) = transform.transform.translation.x;
+    md_.cam2global_(1, 3) = transform.transform.translation.y;
+    md_.cam2global_(2, 3) = transform.transform.translation.z;
+    md_.cam2global_(3, 3) = 1.0;
+
+    // Converts camera to global frame
+    md_.cam_pos_(0) = md_.cam2global_(0, 3);
+    md_.cam_pos_(1) = md_.cam2global_(1, 3);
+    md_.cam_pos_(2) = md_.cam2global_(2, 3);
+    md_.cam_to_global_r_m_ = md_.cam2global_.block<3, 3>(0, 0);
+
   }
   else {
     // Transform camera frame to that of the uav

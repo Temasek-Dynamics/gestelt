@@ -106,7 +106,8 @@
 
         <!-- grid_map/use_tf if set to true will use the tf to determine camera position -->
         <param name="grid_map/use_tf" value="true"/>
-        <param name="grid_map/cam_frame" value="$(arg drone_id_ns)_cam_link"/>
+        <!-- <param name="grid_map/cam_frame" value="$(arg drone_id_ns)_cam_link"/> -->
+        <param name="grid_map/cam_frame" value="world"/>
 
         <!-- camera extrinsic parameters -->
         <param name="grid_map/camera_to_body/roll" value="90.0"/>
