@@ -116,3 +116,4 @@
         - http://www.ubuntugeek.com/network-time-protocol-ntp-server-and-clients-setup-in-ubuntu.html
 32. (8/8/23) Added documentation on tweaking the PX4 for usage with the Vicon system
 33. (10/8/23) Added fake sensor data node for simulating virtual obstacles on an actual drone.
+34. (11/8/23) Updated gridmap with additional option to use tf instead of pose to get camera to world transform
