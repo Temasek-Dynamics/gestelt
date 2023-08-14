@@ -21,21 +21,27 @@
                     - NO TRANSFORM
                         - Input Odom (Already in UAV frame)
                 - Point Cloud
-                    - Received camera frame
+                    - Received in camera frame
                     - TRANSFORM
-                        - Transform from camera frame to world frame
+                        - Need to transform (CAMERA -> UAV Origin frame)
             - User input
                 - TRANSFORM
-                    - Received waypoints (WORLD -> UAV Origin frame)
+                    - Waypoints 
+                        - Received in WORLD frame
+                        - Need to transform (WORLD -> UAV Origin frame)
             - Plans
                 - TRANSFORM
-                    - Other drone's MINCO trajectories (World -> UAV Origin frame)
+                    - Other drones' MINCO Trajectories
+                        - Received in WORLD frame
+                        - Need to transform (WORLD -> UAV Origin frame)
         - Output Data
             - NO TRANSFORM
-                - Planned trajectory (not MINCO) (Already in UAV frame)
+                - Planned trajectory (not MINCO) 
+                    - Originally in (UAV frame)
                     - Passed to trajectory server
             - TRANSFROM
-                - Broadcasted Trajectories (UAV Origin -> world frame)
+                - Broadcasted Trajectories 
+                    - Need to transform (UAV Origin -> WORLD)
                     - Passed to other planner servers
 14. Tested with 4 drones
 15. Refactor code to make it cleaner, easier to modify for additional functionality in the future

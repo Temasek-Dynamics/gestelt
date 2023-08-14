@@ -47,11 +47,9 @@ struct MappingParameters
   /* visualization and computation time display */
   double ground_height_; // Lowest possible height (z-axis)
 
-  // If use_tf_ is true, Use '/tf' to get camera transformation relative to world frame,
-  // else, use camera pose for the camera-to-world transformation.
-  bool use_tf_;
   std::string cam_frame_;
-  std::string global_frame_; // frame id to display occupancy grid in
+  std::string global_frame_; // frame id of global reference 
+  std::string uav_origin_frame_; // frame id of UAV origin
 };
 
 // intermediate mapping data for fusion
@@ -93,6 +91,7 @@ public:
   {
     POSE_STAMPED = 1,
     ODOMETRY = 2,
+    TF = 3,
     INVALID_IDX = -10000
   };
 
@@ -100,6 +99,7 @@ public:
   {
     SENSOR_CLOUD = 1,
     SENSOR_DEPTH = 2,
+    SENSOR_CLOUD_ONLY = 3,
   };
 
   /* Initialization methods */
@@ -125,7 +125,7 @@ public:
   /* Gridmap conversion methods */
 
   // Get camera-to-global frame transformation
-  void getCamToGlobalTF(const geometry_msgs::Pose &pose, const std::string& cam_frame);
+  void getCamToGlobalPose(const geometry_msgs::Pose &pose);
   
   // Take in point cloud as octree map. Transformation from camera-to-global frame is 
   // done here
@@ -179,6 +179,9 @@ private:
   void cloudPoseCB(const sensor_msgs::PointCloud2ConstPtr &msg_pc,
                     const geometry_msgs::PoseStampedConstPtr &msg_pose);
 
+  // Subscriber callback to point cloud only
+  void cloudOnlyCB(const sensor_msgs::PointCloud2ConstPtr &msg_pc);
+
   /**
    * Timer Callbacks
   */
@@ -187,6 +190,11 @@ private:
    * @brief This timer publishes a visualization of the occupancy grid
   */
   void visTimerCB(const ros::TimerEvent & /*event*/);
+
+  /**
+   * @brief This timer looks up the transform between camera and origin frame
+  */
+  void getTFTimerCB(const ros::TimerEvent & /*event*/);
 
 private: 
   ros::NodeHandle node_;
@@ -217,9 +225,11 @@ private:
   std::shared_ptr<message_filters::Subscriber<nav_msgs::Odometry>> odom_sub_;
 
   ros::Subscriber camera_info_sub_;
+  ros::Subscriber cloud_only_sub_;
 
   ros::Publisher occ_map_pub_;
-  ros::Timer vis_timer_;
+  ros::Timer vis_timer_; // Timer for visualization
+  ros::Timer get_tf_timer_; // Timer for getting TF
 
   // TF transformation 
   tf2_ros::Buffer tfBuffer_;
@@ -229,9 +239,9 @@ private:
   std::shared_ptr<TimeBenchmark> time_benchmark_;
 
   /* Data structures for point clouds */
-  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_global_;  // Point cloud in global frame
-  std::shared_ptr<pcl::octree::OctreePointCloudOccupancy<pcl::PointXYZ>> octree_map_; // In global frame
-  std::shared_ptr<pcl::octree::OctreePointCloudOccupancy<pcl::PointXYZ>> octree_map_inflated_; // In global frame
+  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_origin_;  // Point cloud in origin frame
+  std::shared_ptr<pcl::octree::OctreePointCloudOccupancy<pcl::PointXYZ>> octree_map_; // In uav origin frame
+  std::shared_ptr<pcl::octree::OctreePointCloudOccupancy<pcl::PointXYZ>> octree_map_inflated_; // In uav origin frame
 
   pcl::VoxelGrid<pcl::PointXYZ> vox_grid_;
 };

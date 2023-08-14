@@ -28,9 +28,9 @@ void GridMap::initMap(ros::NodeHandle &nh)
   node_.param("grid_map/k_depth_scaling_factor", mp_.k_depth_scaling_factor_, 1000.0);
   double cam2body_roll, cam2body_pitch, cam2body_yaw, cam2body_t_x, cam2body_t_y, cam2body_t_z;
 
-  node_.param("grid_map/use_tf", mp_.use_tf_, false);
   node_.param("grid_map/cam_frame", mp_.cam_frame_, std::string("cam_link"));
   node_.param("grid_map/global_frame", mp_.global_frame_, std::string("world"));
+  node_.param("grid_map/uav_origin_frame", mp_.uav_origin_frame_, std::string("world"));
 
   /* Camera extrinsic parameters  */
   node_.param("grid_map/camera_to_body/roll", cam2body_roll, 0.0);
@@ -47,6 +47,12 @@ void GridMap::initMap(ros::NodeHandle &nh)
   camera_info_sub_ = node_.subscribe<sensor_msgs::CameraInfo>(
     "grid_map/camera_info", 1, &GridMap::cameraInfoCallback, this);
 
+  occ_map_pub_ = node_.advertise<sensor_msgs::PointCloud2>("grid_map/occupancy", 10);
+
+  /* Initialize ROS Timers */
+  vis_timer_ = node_.createTimer(ros::Duration(0.1), &GridMap::visTimerCB, this);
+  get_tf_timer_ = node_.createTimer(ros::Duration(0.02), &GridMap::getTFTimerCB, this, false, false);
+
   if (mp_.sensor_type_ == SensorType::SENSOR_CLOUD)
   {
     ROS_INFO("[%s] Point clouds as input", node_name_.c_str());
@@ -57,6 +63,11 @@ void GridMap::initMap(ros::NodeHandle &nh)
     ROS_INFO("[%s] Depth image as input", node_name_.c_str());
     depth_sub_.reset(new message_filters::Subscriber<sensor_msgs::Image>(
       node_, "grid_map/depth", queue_size, ros::TransportHints().tcpNoDelay()));
+  }
+  else if (mp_.sensor_type_ == SensorType::SENSOR_CLOUD_ONLY) {
+    ROS_INFO("[%s] Point clouds (TF) as input", node_name_.c_str());
+    cloud_only_sub_ = node_.subscribe<sensor_msgs::PointCloud2>(
+      "grid_map/cloud", 10, &GridMap::cloudOnlyCB, this);
   }
   else {
     ROS_ERROR("[%s] Unknown SENSOR_TYPE", node_name_.c_str());
@@ -75,11 +86,16 @@ void GridMap::initMap(ros::NodeHandle &nh)
     odom_sub_.reset(new message_filters::Subscriber<nav_msgs::Odometry>(
       node_, "grid_map/odom", queue_size, ros::TransportHints().udp()));
   }
+  else if (mp_.pose_type_ == PoseType::TF)
+  {
+    ROS_INFO("[%s] TF as camera pose input", node_name_.c_str());
+    tfListener_.reset(new tf2_ros::TransformListener(tfBuffer_));
+    get_tf_timer_.start();
+  }
   else {
     ROS_ERROR("[%s] Unknown POSE_TYPE", node_name_.c_str());
     ros::shutdown();
   }
-
 
   if (mp_.pose_type_ == PoseType::POSE_STAMPED) {
     if (mp_.sensor_type_ == SensorType::SENSOR_CLOUD) {
@@ -93,7 +109,7 @@ void GridMap::initMap(ros::NodeHandle &nh)
       sync_image_pose_->registerCallback(boost::bind(&GridMap::depthPoseCB, this, _1, _2));
     }
   }
-  else { // Odom
+  else if (mp_.pose_type_ == PoseType::ODOMETRY) { // Odom
     if (mp_.sensor_type_ == SensorType::SENSOR_CLOUD) {
       sync_cloud_odom_.reset(new message_filters::Synchronizer<SyncPolicyCloudOdom>(
           SyncPolicyCloudOdom(queue_size), *cloud_sub_, *odom_sub_));
@@ -105,11 +121,6 @@ void GridMap::initMap(ros::NodeHandle &nh)
       sync_image_odom_->registerCallback(boost::bind(&GridMap::depthOdomCB, this, _1, _2));
     }
   }
-
-  occ_map_pub_ = node_.advertise<sensor_msgs::PointCloud2>("grid_map/occupancy", 10);
-
-  /* Initialize ROS Timers */
-  vis_timer_ = node_.createTimer(ros::Duration(0.1), &GridMap::visTimerCB, this);
 
   /* Set initial values for raycasting */
   mp_.map_origin_ = Eigen::Vector3d(-x_size / 2.0, -y_size / 2.0, mp_.ground_height_);
@@ -142,7 +153,7 @@ void GridMap::initMap(ros::NodeHandle &nh)
   // Initialize data structures for occupancy map and point clouds
   // vox_grid_.setLeafSize(mp_.voxel_size_, mp_.voxel_size_, mp_.voxel_size_);
 
-  cloud_global_.reset(new pcl::PointCloud<pcl::PointXYZ>);
+  cloud_origin_.reset(new pcl::PointCloud<pcl::PointXYZ>);
   octree_map_ = std::make_shared<pcl::octree::OctreePointCloudOccupancy<pcl::PointXYZ>>(mp_.occ_resolution_);
   octree_map_inflated_  = std::make_shared<pcl::octree::OctreePointCloudOccupancy<pcl::PointXYZ>>(mp_.occ_inflation_);
 
@@ -153,10 +164,6 @@ void GridMap::initMap(ros::NodeHandle &nh)
   octree_map_inflated_->defineBoundingBox (
     -mp_.map_size_(0), -mp_.map_size_(1), -mp_.map_size_(2), 
     mp_.map_size_(0), mp_.map_size_(1), mp_.map_size_(2));
-
-  // Transformations
-  tfListener_.reset(new tf2_ros::TransformListener(tfBuffer_));
-
 
 }
 
@@ -171,25 +178,41 @@ void GridMap::visTimerCB(const ros::TimerEvent & /*event*/)
   publishMap();
 }
 
-bool GridMap::isPoseValid() {
-  if (!md_.has_pose_){
-    ROS_ERROR_NAMED(node_name_, "No pose/odom received");
-    return false;
-  }
+void GridMap::getTFTimerCB(const ros::TimerEvent & /*event*/) 
+{
+  geometry_msgs::TransformStamped cam_to_origin_tf;
 
-  if (isnan(md_.cam_pos_(0)) || isnan(md_.cam_pos_(1)) || isnan(md_.cam_pos_(2))){
-    ROS_ERROR_NAMED(node_name_, "Nan camera pose");
-    return false;
-  }
-
-  if (!isInMap(md_.cam_pos_))
+  try
   {
-    ROS_ERROR("Camera pose: (%.2f, %.2f, %.2f) is not within map boundary", 
-      md_.cam_pos_(0), md_.cam_pos_(1), md_.cam_pos_(2));
-    return false;
+    // Get camera to origin frame transform
+    cam_to_origin_tf = tfBuffer_.lookupTransform(mp_.uav_origin_frame_, mp_.cam_frame_, ros::Time(0));
+  }
+  catch (const tf2::TransformException &ex)
+  {
+    ROS_ERROR_STREAM(
+        "[Gridmap]: Error in lookupTransform of " << mp_.cam_frame_ << " in " << mp_.uav_origin_frame_);
+    ROS_WARN("%s",ex.what());
+    md_.has_pose_ = false;
+    return;
   }
 
-  return true;
+  // Body of uav to global frame
+  md_.cam2global_.block<3, 3>(0, 0) = Eigen::Quaterniond(cam_to_origin_tf.transform.rotation.w,
+                                        cam_to_origin_tf.transform.rotation.x,
+                                        cam_to_origin_tf.transform.rotation.y,
+                                        cam_to_origin_tf.transform.rotation.z).toRotationMatrix();
+  md_.cam2global_(0, 3) = cam_to_origin_tf.transform.translation.x;
+  md_.cam2global_(1, 3) = cam_to_origin_tf.transform.translation.y;
+  md_.cam2global_(2, 3) = cam_to_origin_tf.transform.translation.z;
+  md_.cam2global_(3, 3) = 1.0;
+
+  // Converts camera to global frame
+  md_.cam_pos_(0) = md_.cam2global_(0, 3);
+  md_.cam_pos_(1) = md_.cam2global_(1, 3);
+  md_.cam_pos_(2) = md_.cam2global_(2, 3);
+  md_.cam_to_global_r_m_ = md_.cam2global_.block<3, 3>(0, 0);
+
+  md_.has_pose_ = true;
 }
 
 /** Subscriber callbacks */
@@ -197,28 +220,33 @@ bool GridMap::isPoseValid() {
 void GridMap::depthOdomCB( const sensor_msgs::ImageConstPtr &msg_img, 
                           const nav_msgs::OdometryConstPtr &msg_odom) 
 {
-  getCamToGlobalTF(msg_odom->pose.pose, mp_.cam_frame_);
+  getCamToGlobalPose(msg_odom->pose.pose);
   depthToCloudMap(msg_img);
 }
 
 void GridMap::depthPoseCB( const sensor_msgs::ImageConstPtr &msg_img,
                             const geometry_msgs::PoseStampedConstPtr &msg_pose)
 {
-  getCamToGlobalTF(msg_pose->pose, mp_.cam_frame_);
+  getCamToGlobalPose(msg_pose->pose);
   depthToCloudMap(msg_img);
 }
 
 void GridMap::cloudOdomCB( const sensor_msgs::PointCloud2ConstPtr &msg_pc, 
                             const nav_msgs::OdometryConstPtr &msg_odom)
 {
-  getCamToGlobalTF(msg_odom->pose.pose, mp_.cam_frame_);
+  getCamToGlobalPose(msg_odom->pose.pose);
   cloudToCloudMap(msg_pc);
 }
 
 void GridMap::cloudPoseCB( const sensor_msgs::PointCloud2ConstPtr &msg_pc,
                             const geometry_msgs::PoseStampedConstPtr &msg_pose)
 {
-  getCamToGlobalTF(msg_pose->pose, mp_.cam_frame_);
+  getCamToGlobalPose(msg_pose->pose);
+  cloudToCloudMap(msg_pc);
+}
+
+void GridMap::cloudOnlyCB( const sensor_msgs::PointCloud2ConstPtr &msg_pc) 
+{
   cloudToCloudMap(msg_pc);
 }
 
@@ -242,81 +270,35 @@ void GridMap::cameraInfoCallback(const sensor_msgs::CameraInfoConstPtr &msg)
 
 /* Gridmap conversion methods */
 
-void GridMap::getCamToGlobalTF(const geometry_msgs::Pose &pose, const std::string& cam_frame)
+void GridMap::getCamToGlobalPose(const geometry_msgs::Pose &pose)
 {
-  if (mp_.use_tf_){
+  // Transform camera frame to that of the uav
+  Eigen::Quaterniond body_q = Eigen::Quaterniond(pose.orientation.w,
+                                                pose.orientation.x,
+                                                pose.orientation.y,
+                                                pose.orientation.z);
+  Eigen::Matrix3d body_r_m = body_q.toRotationMatrix();
+  // Body of uav to global frame
+  md_.body2global_.block<3, 3>(0, 0) = body_r_m;
+  md_.body2global_(0, 3) = pose.position.x;
+  md_.body2global_(1, 3) = pose.position.y;
+  md_.body2global_(2, 3) = pose.position.z;
+  md_.body2global_(3, 3) = 1.0;
 
-    geometry_msgs::TransformStamped transform;
-
-    try
-    {
-      // Get camera to global frame transform
-      transform = tfBuffer_.lookupTransform(mp_.global_frame_, mp_.cam_frame_, ros::Time(0));
-    }
-    catch (const tf2::TransformException &ex)
-    {
-      ROS_ERROR_STREAM(
-          "Gridmap: Error in lookupTransform of " << mp_.cam_frame_ << " in " << mp_.global_frame_);
-      ROS_WARN("%s",ex.what());
-      md_.has_pose_ = false;
-      return;
-    }
-
-    // posestamped.header.frame_id = transform.header.frame_id;
-    // posestamped.header.stamp = transform.header.stamp; 
-
-    // posestamped.pose.position.x = transform.transform.translation.x;
-    // posestamped.pose.position.y = transform.transform.translation.y;
-    // posestamped.pose.position.z = transform.transform.translation.z;
-
-    // posestamped.pose.orientation = transform.transform.rotation;
-
-    Eigen::Quaterniond body_q = Eigen::Quaterniond(transform.transform.rotation.w,
-                                                  transform.transform.rotation.x,
-                                                  transform.transform.rotation.y,
-                                                  transform.transform.rotation.z);
-    Eigen::Matrix3d body_r_m = body_q.toRotationMatrix();
-    // Body of uav to global frame
-    md_.cam2global_.block<3, 3>(0, 0) = body_r_m;
-    md_.cam2global_(0, 3) = transform.transform.translation.x;
-    md_.cam2global_(1, 3) = transform.transform.translation.y;
-    md_.cam2global_(2, 3) = transform.transform.translation.z;
-    md_.cam2global_(3, 3) = 1.0;
-
-    // Converts camera to global frame
-    md_.cam_pos_(0) = md_.cam2global_(0, 3);
-    md_.cam_pos_(1) = md_.cam2global_(1, 3);
-    md_.cam_pos_(2) = md_.cam2global_(2, 3);
-    md_.cam_to_global_r_m_ = md_.cam2global_.block<3, 3>(0, 0);
-
-  }
-  else {
-    // Transform camera frame to that of the uav
-    Eigen::Quaterniond body_q = Eigen::Quaterniond(pose.orientation.w,
-                                                  pose.orientation.x,
-                                                  pose.orientation.y,
-                                                  pose.orientation.z);
-    Eigen::Matrix3d body_r_m = body_q.toRotationMatrix();
-    // Body of uav to global frame
-    md_.body2global_.block<3, 3>(0, 0) = body_r_m;
-    md_.body2global_(0, 3) = pose.position.x;
-    md_.body2global_(1, 3) = pose.position.y;
-    md_.body2global_(2, 3) = pose.position.z;
-    md_.body2global_(3, 3) = 1.0;
-
-    // Converts camera to global frame
-    md_.cam2global_ = md_.body2global_ * md_.cam2body_;
-    md_.cam_pos_(0) = md_.cam2global_(0, 3);
-    md_.cam_pos_(1) = md_.cam2global_(1, 3);
-    md_.cam_pos_(2) = md_.cam2global_(2, 3);
-    md_.cam_to_global_r_m_ = md_.cam2global_.block<3, 3>(0, 0);
-  }
+  // Converts camera to global frame
+  md_.cam2global_ = md_.body2global_ * md_.cam2body_;
+  md_.cam_pos_(0) = md_.cam2global_(0, 3);
+  md_.cam_pos_(1) = md_.cam2global_(1, 3);
+  md_.cam_pos_(2) = md_.cam2global_(2, 3);
+  md_.cam_to_global_r_m_ = md_.cam2global_.block<3, 3>(0, 0);
 
   md_.has_pose_ = true;
 }
 
 void GridMap::cloudToCloudMap(const sensor_msgs::PointCloud2ConstPtr &msg)
 {
+  // Point cloud is assumed to be in frame id of the sensor
+
   if (!isPoseValid()){
     return;
   }
@@ -326,27 +308,27 @@ void GridMap::cloudToCloudMap(const sensor_msgs::PointCloud2ConstPtr &msg)
     return;
   }
 
-  pcl::fromROSMsg(*msg, *cloud_global_);
+  pcl::fromROSMsg(*msg, *cloud_origin_);
 
-  // Transform point cloud from camera frame to global frame
-  pcl::transformPointCloud (*cloud_global_, *cloud_global_, md_.cam2global_);
+  // Transform point cloud from camera frame to uav origin frame
+  pcl::transformPointCloud (*cloud_origin_, *cloud_origin_, md_.cam2global_);
 
   // Downsample point cloud
   if (mp_.downsample_cloud_){
-    vox_grid_.setInputCloud(cloud_global_);
-    vox_grid_.filter(*cloud_global_);
+    vox_grid_.setInputCloud(cloud_origin_);
+    vox_grid_.filter(*cloud_origin_);
   }
 
-  // Change frame_id to the a global frame id, this is because we did a camera-to-global
+  // Change frame_id to the uav origin frame, this is because we did a camera-to-origin
   // transformation 
-  cloud_global_->header.frame_id = mp_.global_frame_;
+  cloud_origin_->header.frame_id = mp_.uav_origin_frame_;
 
-  cloud_global_->height = 1;
-  cloud_global_->width = cloud_global_->points.size();
+  cloud_origin_->height = 1;
+  cloud_origin_->width = cloud_origin_->points.size();
 
   // Octree takes in cloud map in global frame
-  octree_map_->setOccupiedVoxelsAtPointsFromCloud(cloud_global_);
-  octree_map_inflated_->setOccupiedVoxelsAtPointsFromCloud(cloud_global_);
+  octree_map_->setOccupiedVoxelsAtPointsFromCloud(cloud_origin_);
+  octree_map_inflated_->setOccupiedVoxelsAtPointsFromCloud(cloud_origin_);
 }
 
 void GridMap::depthToCloudMap(const sensor_msgs::ImageConstPtr &msg)
@@ -368,14 +350,14 @@ void GridMap::depthToCloudMap(const sensor_msgs::ImageConstPtr &msg)
 
   // pcl header.stamp must have the timestamp in microseconds or TF will not
   // be able to resolve the transformation
-  cloud_global_->header.stamp = msg->header.stamp.toNSec() * 1e-3;
-  cloud_global_->header.frame_id = mp_.global_frame_;
+  cloud_origin_->header.stamp = msg->header.stamp.toNSec() * 1e-3;
+  cloud_origin_->header.frame_id = mp_.uav_origin_frame_;
 
-  cloud_global_->height = 1;
-  cloud_global_->width = (md_.depth_image_.cols * md_.depth_image_.rows) / (mp_.depth_stride_ * mp_.depth_stride_);
+  cloud_origin_->height = 1;
+  cloud_origin_->width = (md_.depth_image_.cols * md_.depth_image_.rows) / (mp_.depth_stride_ * mp_.depth_stride_);
 
-  cloud_global_->points.resize(cloud_global_->width);
-  cloud_global_->is_dense = true;
+  cloud_origin_->points.resize(cloud_origin_->width);
+  cloud_origin_->is_dense = true;
 
   uint16_t *row_ptr;
 
@@ -385,13 +367,13 @@ void GridMap::depthToCloudMap(const sensor_msgs::ImageConstPtr &msg)
     row_ptr = md_.depth_image_.ptr<uint16_t>(v);
     for (int u = 0; u < md_.depth_image_.cols; u+=mp_.depth_stride_, row_ptr+=mp_.depth_stride_, cloud_idx++){
 
-      pcl::PointXYZ& pt = cloud_global_->points[cloud_idx];
+      pcl::PointXYZ& pt = cloud_origin_->points[cloud_idx];
 
       float bad_point = std::numeric_limits<float>::quiet_NaN ();
 
       if (*row_ptr == 0 || *row_ptr == bad_point || *row_ptr == 255){
         pt.x = pt.y = pt.z = bad_point;
-        // cloud_global_->is_dense = false;
+        // cloud_origin_->is_dense = false;
       }
       else{
         pt.z = (*row_ptr) / 1000.0;
@@ -404,15 +386,38 @@ void GridMap::depthToCloudMap(const sensor_msgs::ImageConstPtr &msg)
 
   // Downsample point cloud
   if (mp_.downsample_cloud_){
-    vox_grid_.setInputCloud(cloud_global_);
-    vox_grid_.filter(*cloud_global_);
+    vox_grid_.setInputCloud(cloud_origin_);
+    vox_grid_.filter(*cloud_origin_);
   }
 
-  pcl::transformPointCloud(*cloud_global_, *cloud_global_, md_.cam2global_);
+  pcl::transformPointCloud(*cloud_origin_, *cloud_origin_, md_.cam2global_);
 
   // Octree takes in cloud map in global frame
-  octree_map_->setOccupiedVoxelsAtPointsFromCloud(cloud_global_);
-  octree_map_inflated_->setOccupiedVoxelsAtPointsFromCloud(cloud_global_);
+  octree_map_->setOccupiedVoxelsAtPointsFromCloud(cloud_origin_);
+  octree_map_inflated_->setOccupiedVoxelsAtPointsFromCloud(cloud_origin_);
+}
+
+/* Checks */
+
+bool GridMap::isPoseValid() {
+  if (!md_.has_pose_){
+    ROS_ERROR_NAMED(node_name_, "No pose/odom received");
+    return false;
+  }
+
+  if (isnan(md_.cam_pos_(0)) || isnan(md_.cam_pos_(1)) || isnan(md_.cam_pos_(2))){
+    ROS_ERROR_NAMED(node_name_, "Nan camera pose");
+    return false;
+  }
+
+  if (!isInMap(md_.cam_pos_))
+  {
+    ROS_ERROR("Camera pose: (%.2f, %.2f, %.2f) is not within map boundary", 
+      md_.cam_pos_(0), md_.cam_pos_(1), md_.cam_pos_(2));
+    return false;
+  }
+
+  return true;
 }
 
 /** Publishers */
@@ -423,9 +428,9 @@ void GridMap::publishMap()
     return;
   }
   sensor_msgs::PointCloud2 cloud_msg;
-  pcl::toROSMsg(*cloud_global_, cloud_msg);
+  pcl::toROSMsg(*cloud_origin_, cloud_msg);
 
-  cloud_msg.header.frame_id = mp_.global_frame_;
+  // cloud_msg.header.frame_id = mp_.uav_origin_frame_;
 
   occ_map_pub_.publish(cloud_msg);
 }

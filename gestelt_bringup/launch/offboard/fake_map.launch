@@ -11,7 +11,7 @@
   <node pkg="px4sim1" type="map_publisher" name="map_publisher" output="screen">
       <param name="map/path" value="$(arg map_filepath)"/>
   </node>
-			
+
   <!-- Fake sensor data node -->
   <node pkg="px4sim1" type="fake_map" name="fake_map_$(arg drone_id_ns)" output="screen">
     <!-- Subscriber to uav pose -->
@@ -27,7 +27,9 @@
     <param name="uav/mesh_resource" value="file://$(find px4sim1)/../meshes/fake_drone.dae" />
     <param name="uav/id" value="$(arg drone_id_ns)"/>
     <!-- <param name="uav/sensor_cloud_frame" value="$(arg drone_id_ns)_base_link"/> -->
-    <param name="uav/sensor_cloud_frame" value="world"/>
+    <param name="uav/global_frame" value="world"/>
+    <param name="uav/origin_frame" value="$(arg drone_id_ns)_origin"/>
+    <param name="uav/sensor_frame" value="$(arg drone_id_ns)_cam_link"/>
 
     <param name="map/filepath" value="$(arg map_filepath)"/>
   </node>
