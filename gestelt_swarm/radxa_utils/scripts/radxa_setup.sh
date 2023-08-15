@@ -1,6 +1,8 @@
 #!/bin/bash
 export ROS_DISTRO="noetic"
 
+sudo apt-get update
+
 # Install ROS-Noetic
 sudo sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list'
 sudo apt install curl -y

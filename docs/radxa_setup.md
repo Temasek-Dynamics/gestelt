@@ -1,6 +1,6 @@
 # Radxa Setup
 
-## Flashing Ubuntu OS onto Radxa
+## A: Flashing Ubuntu OS onto Radxa
 1. Install the following tools on your main computer:
     ```bash
     sudo apt update
@@ -13,46 +13,9 @@
     - Download `radxa-zero-erase-emmc.bin` AND `rz-udisk-loader.bin`
     - Run `sudo boot-g12.py radxa-zero-erase-emmc.bin`
         - This will automatically erase eMMC, then present eMMC as a USB storage device.
-        - A successful erase should show something like:
-        ```
-        Firmware Version :
-        ROM: 3.2 Stage: 0.0
-        Need Password: 0 Password OK: 1
-        Writing radxa-zero-erase-emmc.bin at 0xfffa0000...
-        [DONE]
-        Running at 0xfffa0000...
-        [DONE]
-        AMLC dataSize=16384, offset=65536, seq=0...
-        [DONE]
-        AMLC dataSize=49152, offset=393216, seq=1...
-        [DONE]
-        AMLC dataSize=16384, offset=229376, seq=2...
-        [DONE]
-        AMLC dataSize=49152, offset=245760, seq=3...
-        [DONE]
-        AMLC dataSize=16384, offset=65536, seq=4...
-        [DONE]
-        AMLC dataSize=49152, offset=393216, seq=5...
-        [DONE]
-        AMLC dataSize=16384, offset=229376, seq=6...
-        [DONE]
-        AMLC dataSize=49152, offset=245760, seq=7...
-        [DONE]
-        [BL2 END]
-        ```
-    - Run `sudo boot-g12.py radxa-zero-erase-emmc.bin`
     - [Reference](https://wiki.radxa.com/Zero/install/eMMC_erase)
 
-3. Install [Balena Etcher](https://github.com/balena-io/etcher)
-
-4. Flash Ubuntu OS onto Radxa
-    - Download images from [here](), the file name should be something like `radxa-zero-ubuntu-focal-server-arm64-XXX-mbr.img`
-    - Decompress images using `xz -v --decompress IMAGE_COMPRESSED`
-    - Use BalenaEtcher to mount the image. After step 2 (erasing the eMMC), the radxa eMMC should appear as a flashable device
-
-5. Remove autoboot on radxa
-    - Hold down boot button on radxa and connect to PC
-    - `sudo boot-g12.py rz-udisk-loader.bin` should expose the Radxa as a mountable disk
+3. Remove autoboot on radxa
     - Install dependencies: 
         - `sudo apt-get install -y wget bc nano mc build-essential autoconf libtool cmake pkg-config git python-dev swig libpcre3-dev libnode-dev gawk wget diffstat bison flex device-tree-compiler libncurses5-dev gcc-aarch64-linux-gnu g++-aarch64-linux-gnu binfmt-support binfmt-support qemu-user-static gcc-aarch64-linux-gnu gcc-arm-linux-gnueabihf fastboot`
     - Git clone 2 packages
@@ -75,29 +38,57 @@
         cd ../fip/radxa-zero
         make
         ```
-    - Use dd to write over the eMMC
-        - Use dmesg to figure out what `sdX` is Radxa
-        - `sudo dd if=u-boot.bin of=/dev/sdX bs=512 seek=1`
+    - Copy u-boot.bin over
+        -Use dd to write over the eMMC
+            - Hold down boot button on radxa and connect to PC. Run 
+                - `sudo boot-g12.py rz-udisk-loader.bin` to expose the Radxa as a mountable disk
+            - Use dmesg/lsblk to figure out what `sdX` is Radxa
+            - In fip/radxa-zero, run `sudo dd if=u-boot.bin of=/dev/sdX bs=512 seek=1` to copy the files over
+        - Sideload 
+            - Hold down boot button on radxa and connect to PC
+            - `sudo boot-g12.py /path/to/fip/radxa-zero/u-boot.bin`
+    - Reboot device
     - [Reference](https://github.com/matthewoots/documentation/blob/main/radxa-zero/radxa-remove-autoboot-countdown.md)
 
-6. Connect to a wifi network
+
+4. Install [Balena Etcher](https://github.com/balena-io/etcher)
+
+5. Flash Ubuntu OS onto Radxa
+    - Download images from [here](https://wiki.radxa.com/Zero/downloads), the file name should be something like `radxa-zero-ubuntu-focal-server-arm64-XXX-mbr.img`
+    - Decompress images using `xz -v --decompress IMAGE_COMPRESSED`
+    - Use BalenaEtcher to mount the image. After step 2 (erasing the eMMC), the radxa eMMC should appear as a flashable device
+
+6. Disable debug port on OBC. This is so that the Flight controller unit can communicate with the radxa
+```bash
+vim /etc/ssh/sshd_config
+# change ChallengeResponseAuthentication to no
+sudo systemcyl reload sshd
+
+vim /boot/uEnv.txt
+# Remove line with console=ttyAML0,115200
+```
+
+7. Connect to a wifi network
 
 ```bash
 # Proceed on activating WIFI using https://wiki.radxa.com/Zero/Ubuntu
 # Root username and pasword is rock/rock
 sudo su
-nmcli r wifi on
-nmcli dev wifi
-nmcli dev wifi connect "wifi_name" password "wifi_password"                   
+sudo nmcli r wifi on
+sudo nmcli dev wifi
+sudo nmcli dev wifi connect "wifi_name" password "wifi_password"                   
 ```
 
-7. Install ROS and dependencies
+8. Install ROS and dependencies
 ```bash
+# Copy radxa_setup.sh script over to the radxa 
+scp path/to/radxa_setup.sh rock@IP_ADDR:/home/rock/radxa_setup.sh
+
 # Run setup script
 ./scripts/radxa_setup.sh
 ```
 
-8. Synchronize time between ubuntu machines (radxas and central computer)
+9. Synchronize time between ubuntu machines (radxas and central computer)
     - On host computer 
         1. Install ntp
         ```bash
@@ -166,7 +157,7 @@ nmcli dev wifi connect "wifi_name" password "wifi_password"
         chronyc tracking
         ```
 
-9. MAVROS set-up
+10. MAVROS set-up
     - Enable publishing of TF for the `global_position` plugin in `px4_config.yaml`. This provides us with the TF between map and drone base_link frame:
     ```yaml
     global_position:
@@ -181,13 +172,40 @@ nmcli dev wifi connect "wifi_name" password "wifi_password"
 ## Useful info
 
 ### Clone an image on Radxa
-1. https://github.com/matthewoots/documentation/blob/main/radxa-zero/radxa-flash-backup-image.md
+```bash
+# Hold boot button and connect radxa to pc, run the following command
+sudo boot-g12.py rz-udisk-loader.bin
 
-### Copy source code over to radxa
+# Get device name, should be something like "/dev/sdX" where X is a letter
+lsblk -p
+
+# Copy device image
+export SD_CARD_DEVICE_NAME=/dev/sdX
+export IMAGE_FILE_NAME=~/Downloads/gestelt_os_15_8_23.img
+
+sudo dd bs=4M if=$SD_CARD_DEVICE_NAME of=$IMAGE_FILE_NAME conv=fsync
+sudo chown $USER: $IMAGE_FILE_NAME
+
+# Installation of PiShrink
+cd ~
+wget https://raw.githubusercontent.com/Drewsif/PiShrink/master/pishrink.sh
+chmod +x pishrink.sh
+sudo mv pishrink.sh /usr/local/sbin/pishrink
+sudo pishrink $IMAGE_FILE_NAME
+
+cd ~/Downloads/
+tar -czf $IMAGE_NAME.tar.gz $IMAGE_NAME.img
+
+# Proceed to load image onto board using BalenaEtcher or other methods
+```
+[Reference](https://github.com/matthewoots/documentation/blob/main/radxa-zero/radxa-flash-backup-image.md)
+
+### Copy files over to radxa
 ```bash
 # Copy with override
-scp -r ~/gestelt_ws/src/gestelt rock@192.168.31.166:/home/rock/gestelt_ws/src/ 
+scp -r path/to/dir rock@IP_ADDR:path/to/dir
 ```
+
 ### Run script on startup on Radxa
 This is useful if we want to run mavros and the flight manager nodes on startup.
 ```bash
@@ -196,8 +214,17 @@ crontab -e
 # Example: @reboot sh /home/rock/gestelt_ws/src/gestelt/gestelt_swarm/radxa_utils/scripts/radxa_startup.sh
 ```
 
+### Set wireless network priority
+```bash
+nmcli -f NAME,UUID,AUTOCONNECT,AUTOCONNECT-PRIORITY c
+
+nmcli connection modify WIFINAME connection.autoconnect-priority 10
+```
+
 # Troubleshooting
 1. Permission denied when accessing serial port
-- Make sure Baud rate matches what is set as PX4 params
-- Make sure your user (default is "rock") is added to the dialout group through `sudo usermod -a -G dialout $USER`
-2. 
+    - Make sure Baud rate matches what is set as PX4 params
+    - Make sure your user (default is "rock") is added to the dialout group through `sudo usermod -a -G dialout $USER`
+2. Unable to boot up Radxa.
+    - Did you miss out on any installation steps?
+    - If not, proceed to reflash the bootloader.  

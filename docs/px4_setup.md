@@ -16,7 +16,14 @@ make flywoo_f405s_aio_default upload
 
 ## Configuration
 ### PX4 Parameters
-1. Set Parameters
+1. Set up radio 
+
+2. Calibrate sensors
+
+3. Test motors (without propellers), make sure they are spinning in the right direction
+    - IMPORTANT: If you are using a flywoo board with native support for betaflight, it is necessary to set the `MOT_ORDERING` param to 1.
+
+4. Set Parameters
 - RC 
     - COM_RC_IN_MODE: Set to enable RC checks (if testing with a single drone)
 - GPS
