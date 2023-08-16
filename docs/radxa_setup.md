@@ -129,7 +129,7 @@ scp path/to/radxa_setup.sh rock@IP_ADDR:/home/rock/radxa_setup.sh
         3. Specify host name. Set iburst to ensure that it synchronizes as soon as it establishes a connection with the host.
         ```bash
         sudo vim /etc/hosts
-        # Add IP_ADDR HOST_NAME 
+        # Add "IP_ADDR HOST_NAME"  
         ```
 
         4. 
