@@ -39,14 +39,14 @@
         make
         ```
     - Copy u-boot.bin over
-        -Use dd to write over the eMMC
-            - Hold down boot button on radxa and connect to PC. Run 
+        - Sideload (Safer option) 
+            - Hold down boot button on radxa and connect to PC, then run:
+                - `sudo boot-g12.py /path/to/fip/radxa-zero/u-boot.bin`
+        - (ONLY AS LAST RESORT) Use dd to write over the eMMC
+            - Hold down boot button on radxa and connect to PC. Run:
                 - `sudo boot-g12.py rz-udisk-loader.bin` to expose the Radxa as a mountable disk
             - Use dmesg/lsblk to figure out what `sdX` is Radxa
             - In fip/radxa-zero, run `sudo dd if=u-boot.bin of=/dev/sdX bs=512 seek=1` to copy the files over
-        - Sideload 
-            - Hold down boot button on radxa and connect to PC
-            - `sudo boot-g12.py /path/to/fip/radxa-zero/u-boot.bin`
     - Reboot device
     - [Reference](https://github.com/matthewoots/documentation/blob/main/radxa-zero/radxa-remove-autoboot-countdown.md)
 
@@ -183,7 +183,7 @@ lsblk -p
 export SD_CARD_DEVICE_NAME=/dev/sdX
 export IMAGE_FILE_NAME=~/Downloads/gestelt_os_15_8_23.img
 
-sudo dd bs=4M if=$SD_CARD_DEVICE_NAME of=$IMAGE_FILE_NAME conv=fsync
+sudo dd bs=4M if=$SD_CARD_DEVICE_NAME of=$IMAGE_FILE_NAME conv=fsync status=progress
 sudo chown $USER: $IMAGE_FILE_NAME
 
 # Installation of PiShrink
@@ -193,7 +193,7 @@ chmod +x pishrink.sh
 sudo mv pishrink.sh /usr/local/sbin/pishrink
 sudo pishrink $IMAGE_FILE_NAME
 
-cd ~/Downloads/
+# Compress image if necessary 
 tar -czf $IMAGE_NAME.tar.gz $IMAGE_NAME.img
 
 # Proceed to load image onto board using BalenaEtcher or other methods
@@ -227,4 +227,4 @@ nmcli connection modify WIFINAME connection.autoconnect-priority 10
     - Make sure your user (default is "rock") is added to the dialout group through `sudo usermod -a -G dialout $USER`
 2. Unable to boot up Radxa.
     - Did you miss out on any installation steps?
-    - If not, proceed to reflash the bootloader.  
+    - If not, proceed to reflash the bootloader. This is done by pressing the boot button on radxa and connecting it to the PC. You would then run the following command: `sudo boot-g12.py /path/to/fip/radxa-zero/u-boot.bin` 
