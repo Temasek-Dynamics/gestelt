@@ -204,6 +204,8 @@ tar -czf $IMAGE_NAME.tar.gz $IMAGE_NAME.img
 ```bash
 # Copy with override
 scp -r path/to/dir rock@IP_ADDR:path/to/dir
+
+scp -r /home/john/gestelt_ws/src/gestelt/gestelt_bringup/ rock@192.168.31.133:/home/rock/gestelt_ws/src/gestelt/gestelt_bringup
 ```
 
 ### Run script on startup on Radxa

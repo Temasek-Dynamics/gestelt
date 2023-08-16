@@ -9,6 +9,8 @@ num_drones = 1
 
 # Publisher of server events to trigger change of states for trajectory server 
 server_event_pub = rospy.Publisher('/traj_server_event', Int8, queue_size=10)
+# Publisher of server events to trigger change of states for trajectory server 
+waypoints_pub = rospy.Publisher('/waypoints', Waypoints, queue_size=10)
 
 # Dictionary of UAV states
 server_states = {}
@@ -48,6 +50,13 @@ def create_pose(x, y, z):
 
     return pose
 
+def pub_waypoints(waypoints):
+    wp_msg = Waypoints()
+    wp_msg.waypoints.header.frame_id = "world"
+    wp_msg.waypoints.poses = waypoints
+
+    waypoints_pub.publish(wp_msg)
+
 def main():
     rospy.init_node('mission_startup', anonymous=True)
     rate = rospy.Rate(5) # 20hz
@@ -72,12 +81,14 @@ def main():
         print("tick!")
         rate.sleep()
 
-    print(f"Mission Mode succeeded")
-
     # Send waypoints to UAVs
     print(f"Sending waypoints to UAVs")
     waypoints = []
-
+    # Square formation with length L
+    waypoints.append(create_pose(0.5, 0, 1))
+    waypoints.append(create_pose(0, 0, 1))
+    waypoints.append(create_pose(-0.5, 0, 1))
+    pub_waypoints(waypoints)
 
 if __name__ == '__main__':
     main()
