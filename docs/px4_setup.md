@@ -23,7 +23,9 @@ make flywoo_f405s_aio_default upload
 3. Test motors (without propellers), make sure they are spinning in the right direction
     - IMPORTANT: If you are using a flywoo board with native support for betaflight, it is necessary to set the `MOT_ORDERING` param to 1.
 
-4. Set Parameters
+4. Tune PID. Make sure to eliminate any obvious vibrations or it will lead to negative effects on motor health, EKF2 fusion etc.
+
+5. Set Parameters
 - RC 
     - COM_RC_IN_MODE: Set to enable RC checks (if testing with a single drone)
 - GPS
@@ -125,7 +127,7 @@ make flywoo_f405s_aio_default upload
 ### Params:
 1. VICON IP: 192.168.31.248
 2. Central computer IP: 192.168.31.22 or 192.168.31.173
-3. Radxa IP: 192.168.31.166
+3. Radxa IP: 192.168.31.205
 4. GCS IP: 192.168.31.61
 
 ## Troubleshooting
