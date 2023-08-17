@@ -29,7 +29,7 @@ roslaunch gestelt_bringup vicon_sim.launch
 
 CMD_2="roslaunch gestelt_bringup vicon_central.launch rviz_config:=gz_sim"
 
-CMD_3="rosrun gestelt_bringup vicon_set_offboard.py"
+CMD_3="roslaunch gestelt_bringup vicon_mission.launch"
 
 if [ "$SESSIONEXISTS" = "" ]
 then 

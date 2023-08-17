@@ -1,11 +1,14 @@
 # TODO
-- Integrate Vicon positioning with PX4 
-    - Test Offboard mode
-    - Solve laser range finder issue
+- Fix issues with fake map
+
+- Vicon improvements:
+    - Check logs and see vicon delay
     - Set vicon noise values from computer
-    - Try with vision speed?
-    - Create fake environment node
-        - modify getCamToGlobalPose
+
+- Allow trajectory server to take in waypoint commands from elsewhere
+
+- Additional improvements
+    - Solve laser range finder issue
     - Change parameters for trajectory server/ego planner to param config files
 
 - Documentation

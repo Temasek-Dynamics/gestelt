@@ -8,8 +8,6 @@ from std_msgs.msg import Int8
 num_drones = 1
 
 # Publisher of server events to trigger change of states for trajectory server 
-server_event_pub = rospy.Publisher('/traj_server_event', Int8, queue_size=10)
-# Publisher of server events to trigger change of states for trajectory server 
 waypoints_pub = rospy.Publisher('/waypoints', Waypoints, queue_size=10)
 
 # Dictionary of UAV states
@@ -26,16 +24,6 @@ def check_traj_server_states(des_traj_server_state):
         if server_state[1].traj_server_state != des_traj_server_state:
             return False
     return True
-
-def publish_server_event(event_enum):
-    server_event_pub.publish(Int8(event_enum))
-
-def get_server_state_callback():
-    msg = rospy.wait_for_message(f"/drone0/server_state", State, timeout=5.0)
-    server_states[str(msg.drone_id)] = msg
-    # print("==================")
-    # print(msg)
-    # print("==================")
 
 def create_pose(x, y, z):
     pose = Pose()
@@ -57,29 +45,25 @@ def pub_waypoints(waypoints):
 
     waypoints_pub.publish(wp_msg)
 
+def get_server_state_callback():
+    for drone_id in range(0, num_drones):
+        msg = rospy.wait_for_message(f"/drone{drone_id}/server_state", State, timeout=5.0)
+        server_states[str(msg.drone_id)] = msg
+        # print("==================")
+        # print(msg)
+        # print("==================")
+
 def main():
     rospy.init_node('mission_startup', anonymous=True)
-    rate = rospy.Rate(5) # 20hz
 
-    print("Setting to HOVER mode!")
-    # Take off 
-    while not rospy.is_shutdown():
-        get_server_state_callback()
-        if check_traj_server_states("HOVER"):
-            break
-        publish_server_event(0)
-        print("tick!")
-        rate.sleep()
+    print(f"Collecting UAV states...")
+    get_server_state_callback()
 
-    print("Setting to MISSION mode!")
-    # Switch to mission mode
-    while not rospy.is_shutdown():
-        get_server_state_callback()
-        if check_traj_server_states("MISSION"):
-            break
-        publish_server_event(2)
-        print("tick!")
-        rate.sleep()
+    print(f"Checking that all UAVs are in MISSION mode!")
+    # Check that all vehicles are in mission state
+    if not check_traj_server_states("MISSION"):
+        print(f"Not all vehicles in MISSION mode. Aborting send waypoints!")
+        return
 
     # Send waypoints to UAVs
     print(f"Sending waypoints to UAVs")
