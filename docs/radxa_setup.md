@@ -89,73 +89,83 @@ scp path/to/radxa_setup.sh rock@IP_ADDR:/home/rock/radxa_setup.sh
 ```
 
 9. Synchronize time between ubuntu machines (radxas and central computer)
-    - On host computer 
-        1. Install ntp
+    - On host computer (Chrony)
+        1. Install chrony
         ```bash
-        sudo apt install ntp
-        ``` 
+            sudo apt install chrony firewalld -y
+            systemctl start chronyd
+            # Enable on boot
+            systemctl enable chronyd 
+        ```
+        
+        2.  Configure Chrony NTP Server
+            - `sudo vim /etc/chrony/chrony.conf`
+                ```bash
+                    # add the following:
+                    local stratum 10
+                    allow 192.168.0.0/16
+                ```
+            - Save changes
+                ```bash
+                    systemctl restart chronyd
+                    firewall-cmd --add-service=ntp –permanent
+                    firewall-cmd --permanent --zone=public --add-port=123/udp
+                ```
 
-        2. Add the following as pool servers using `sudo vim /etc/ntp.conf `
+        3. More commands
         ```bash
-        pool 0.sg.pool.ntp.org iburst
-        pool 1.sg.pool.ntp.org iburst
-        pool 2.sg.pool.ntp.org iburst
-        pool 3.sg.pool.ntp.org iburst
+            # systemctl
+            systemctl status chronyd
+
+            # chronyc
+            chronyc -n sources 
+            chronyc sources -v
+            chronyc sourcestats -v
+            chronyc tracking
+            chronyc activity
+
+            # chronyc (host)
+            chronyc clients
+
+            # timedatectl
+            timedatectl status
+            timedatectl set-ntp 0
         ```
 
-        3. Check that server is up and running
-        ```bash
-        sudo service ntp status
-        ```
-
-        4. Configure firewall to allow access to ntp server from clients
-        ```bash
-        sudo ufw allow from any to any port 123 proto udp
-        ```
-
-    - On client computer
+    - On client computer (using chrony)
         1. Set up time zone
         ```bash 
-        sudo timedatectl set-timezone Singapore
+            sudo timedatectl set-timezone Singapore
         ```
 
         2. Install chrony
-        ```bash 
-        sudo apt update
-        sudo apt install chrony -y
-        sudo systemctl start chronyd
+        ```bash
+            sudo apt update
+            sudo apt install chrony -y
+            sudo systemctl start chronyd
         ```
 
-        3. Specify host name. Set iburst to ensure that it synchronizes as soon as it establishes a connection with the host.
+        3. Add host name. 
         ```bash
-        sudo vim /etc/hosts
-        # Add "IP_ADDR HOST_NAME"  
-        ```
-
-        4. 
-        ```bash
-        # Check status
-        sudo systemctl status chronyd
-        chronyc activity
-        chronyc sourcestats -v
+            sudo vim /etc/hosts
+            # Add "IP_ADDR HOST_NAME"  
         ```
 
         5. Set NTP host
         ```bash
-        sudo vim /etc/chrony/chrony.conf
-        # Add the line: server NTP-server-host iburst
-        sudo timedatectl set-ntp true
-        sudo systemctl restart chronyd
-        # Enable chronyd on boot
-        systemctl enable chronyd
+            sudo vim /etc/chrony/chrony.conf
+            # Add the line: server NTP-server-host iburst
+            sudo timedatectl set-ntp true
+            sudo systemctl restart chronyd
+            # Enable chronyd on boot
+            systemctl enable chronyd
         ```
 
-        6. Check NTP Status
+        6. Set time date manually
         ```bash
-        sudo chronyc clients
-        chronyc sources
-        chronyc tracking
         ```
+
+
 
 10. MAVROS set-up
     - Enable publishing of TF for the `global_position` plugin in `px4_config.yaml`. This provides us with the TF between map and drone base_link frame:
