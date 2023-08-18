@@ -108,11 +108,11 @@ scp path/to/radxa_setup.sh rock@IP_ADDR:/home/rock/radxa_setup.sh
         - Client computer
             1. modify the ntp config: `sudo vim /etc/ntp.conf` and add the following lines
                 ```bash
-                    # Add the local ntp server as a master
+                    # Add the local ntp server as a master, please DO NOT ever add 'prefer' keyword, it will not work
                     server master0 iburst
                 ```
             2. Restart ntp: `sudo /etc/init.d/ntp restart`
-            3. Monitor connections: `ntpq -c lpeer`
+            3. Monitor connections to peer: `ntpq -c lpeer`
         
         - [Reference: how-do-i-setup-a-local-ntp-server](https://askubuntu.com/questions/14558/how-do-i-setup-a-local-ntp-server)
 
