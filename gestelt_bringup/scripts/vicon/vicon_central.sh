@@ -29,7 +29,9 @@ roslaunch gestelt_bringup vicon_sim.launch
 
 CMD_2="roslaunch gestelt_bringup vicon_central.launch rviz_config:=gz_sim"
 
-CMD_3="roslaunch gestelt_bringup vicon_mission.launch"
+CMD_3="roslaunch gestelt_bringup fake_map.launch drone_id:=0"
+
+CMD_4="roslaunch gestelt_bringup vicon_mission.launch"
 
 if [ "$SESSIONEXISTS" = "" ]
 then 
@@ -39,13 +41,17 @@ then
     tmux split-window -t $SESSION:0.0 -v
     tmux split-window -t $SESSION:0.1 -h
     tmux split-window -t $SESSION:0.0 -h
+    tmux split-window -t $SESSION:0.3 -v
+
 
     tmux send-keys -t $SESSION:0.0 "$SOURCE_WS $CMD_0" C-m 
     sleep 1
     tmux send-keys -t $SESSION:0.1 "$SOURCE_WS $CMD_1" C-m 
     sleep 1
     tmux send-keys -t $SESSION:0.2 "$SOURCE_WS $CMD_2" C-m 
-    tmux send-keys -t $SESSION:0.3 "$SOURCE_WS $CMD_3" 
+    tmux send-keys -t $SESSION:0.3 "$SOURCE_WS $CMD_3" C-m
+    tmux send-keys -t $SESSION:0.4 "$SOURCE_WS $CMD_4" 
+
 fi
 
 # Attach session on the first window
