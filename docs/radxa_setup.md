@@ -89,31 +89,50 @@ scp path/to/radxa_setup.sh rock@IP_ADDR:/home/rock/radxa_setup.sh
 ```
 
 9. Synchronize time between ubuntu machines (radxas and central computer)
-    - On host computer (Chrony)
-        1. Install chrony
-        ```bash
-            systemctl start chronyd
-            # Enable on boot
-            systemctl enable chronyd 
-        ```
-        
-        2.  Configure Chrony NTP Server
-            - `sudo vim /etc/chrony/chrony.conf`
-                ```bash
-                    # add the following:
-                    local stratum 10
-                    allow 192.168.0.0/16
-                ```
-            - Save changes
-                ```bash
-                    systemctl restart chronyd
-                ```
+    - Make sure ntp daemon is installed on both host and client computer: `sudo apt-get install ntp`
+    - Host computer
+        1. modify the ntp config: `sudo vim /etc/ntp.conf` and add the following lines
+            ```bash
+                # Add local clock as server in the event there is no internet connection
+                server 127.127.1.0
+                # fudge forces the system to treat local clock as a ntp server
+                fudge 127.127.1.0 stratum 10
+                # Restrict access to only within the local network subnet
+                restrict 192.168.31.0 mask 255.255.255.0 nomodify notrap
+            ```
+        2. Restart ntp: `sudo /etc/init.d/ntp restart`
+        3. Monitor system log to see if you can synchronize with a time server: `tail -f /var/log/syslog`
 
-        3. More commands
+    - Client computer
+        1. modify the ntp config: `sudo vim /etc/ntp.conf` and add the following lines
+            ```bash
+                # Add the local ntp server as a master, please DO NOT ever add 'prefer' keyword, it will not work
+                server master0 iburst
+            ```
+        2. Restart ntp: `sudo /etc/init.d/ntp restart`
+        3. Monitor connections to peer: `ntpq -c lpeer`
+    
+    - [Reference: how-do-i-setup-a-local-ntp-server](https://askubuntu.com/questions/14558/how-do-i-setup-a-local-ntp-server)
+
+
+    - More commands
         ```bash
+            #####
+            # ntp
+            #####
+            # Restart ntp server
+            sudo /etc/init.d/ntp restart
+
+            # Check for synchronization 
+            tail -f /var/log/syslog
+
+            # Check list of peers
+            ntpq -c lpeer
+
             # systemctl
             systemctl status chronyd
-
+            sudo systemctl restart chronyd
+            
             # chronyc
             chronyc -n sources 
             chronyc sources -v
@@ -126,43 +145,12 @@ scp path/to/radxa_setup.sh rock@IP_ADDR:/home/rock/radxa_setup.sh
 
             # timedatectl
             timedatectl status
-            timedatectl set-ntp 0
+            timedatectl set-ntp 1
+            timedatectl set-local-rtc 1
+
+            # To manually set time, disable ntp first 'timedatectl set-ntp 0'
+            timedatectl set-time '2023-08-18 15:05:30'
         ```
-
-    - On client computer (using chrony)
-        1. Set up time zone
-        ```bash 
-            sudo timedatectl set-timezone Singapore
-        ```
-
-        2. Install chrony
-        ```bash
-            sudo apt update
-            sudo apt install chrony -y
-            sudo systemctl start chronyd
-        ```
-
-        3. Add host name. 
-        ```bash
-            sudo vim /etc/hosts
-            # Add "IP_ADDR HOST_NAME"  
-        ```
-
-        5. Set NTP host
-        ```bash
-            sudo vim /etc/chrony/chrony.conf
-            # Add the line: server NTP-server-host iburst
-            sudo timedatectl set-ntp true
-            sudo systemctl restart chronyd
-            # Enable chronyd on boot
-            systemctl enable chronyd
-        ```
-
-        6. Set time date manually
-        ```bash
-        ```
-
-
 
 10. MAVROS set-up
     - Enable publishing of TF for the `global_position` plugin in `px4_config.yaml`. This provides us with the TF between map and drone base_link frame:
