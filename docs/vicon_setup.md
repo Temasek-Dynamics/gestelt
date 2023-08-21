@@ -11,3 +11,7 @@
 2. Uses PX4 vision_pose_estimate topic
 
 
+## Troubleshooting
+1. Firewalls have been known to cause problems when establishing connection between the VRPN server and clients, so maybe try disabling them first if you have connection issues
+2. Check that the vicon computer is connected to the same wifi network
+3. 

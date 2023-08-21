@@ -92,7 +92,6 @@ scp path/to/radxa_setup.sh rock@IP_ADDR:/home/rock/radxa_setup.sh
     - On host computer (Chrony)
         1. Install chrony
         ```bash
-            sudo apt install chrony firewalld -y
             systemctl start chronyd
             # Enable on boot
             systemctl enable chronyd 
@@ -108,8 +107,6 @@ scp path/to/radxa_setup.sh rock@IP_ADDR:/home/rock/radxa_setup.sh
             - Save changes
                 ```bash
                     systemctl restart chronyd
-                    firewall-cmd --add-service=ntp –permanent
-                    firewall-cmd --permanent --zone=public --add-port=123/udp
                 ```
 
         3. More commands
