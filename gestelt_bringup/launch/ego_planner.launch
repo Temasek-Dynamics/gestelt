@@ -93,11 +93,11 @@
         <param name="traj_server/max_poses_to_track" value="1000" type="int"/>
 
         <!-- Position command limits, anything exceeding this will switch the mode to hovering state -->
-        <param name="traj_server/pos_limit/max_x" value="2.0" type="double"/>
-        <param name="traj_server/pos_limit/min_x" value="-2.0" type="double"/>
-        <param name="traj_server/pos_limit/max_y" value="2.5" type="double"/>
-        <param name="traj_server/pos_limit/min_y" value="-2.5" type="double"/>
-        <param name="traj_server/pos_limit/max_z" value="2.0" type="double"/>
+        <param name="traj_server/pos_limit/max_x" value="2.3" type="double"/>
+        <param name="traj_server/pos_limit/min_x" value="-2.3" type="double"/>
+        <param name="traj_server/pos_limit/max_y" value="2.3" type="double"/>
+        <param name="traj_server/pos_limit/min_y" value="-2.3" type="double"/>
+        <param name="traj_server/pos_limit/max_z" value="2.2" type="double"/>
         <param name="traj_server/pos_limit/min_z" value="-0.3" type="double"/>
 
         <!-- Frequency for timers -->
