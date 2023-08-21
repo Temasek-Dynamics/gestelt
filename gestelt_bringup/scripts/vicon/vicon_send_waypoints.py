@@ -67,13 +67,14 @@ def main():
 
     # Send waypoints to UAVs
     print(f"Sending waypoints to UAVs")
+    z_pos = 0.75
     waypoints = []
     for i in range(2):
-        waypoints.append(create_pose(2, 2, 1))
-        waypoints.append(create_pose(2, -2, 1))
-        waypoints.append(create_pose(-2, -2, 1))
-        waypoints.append(create_pose(-2, 2, 1))
-    waypoints.append(create_pose(0, 0, 1))
+        waypoints.append(create_pose(1.5, 1.5, z_pos))
+        waypoints.append(create_pose(1.5, -1.5, z_pos))
+        waypoints.append(create_pose(-1.5, -1.5, z_pos))
+        waypoints.append(create_pose(-1.5, 1.5, z_pos))
+    waypoints.append(create_pose(0, 0, z_pos))
     pub_waypoints(waypoints)
 
 if __name__ == '__main__':

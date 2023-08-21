@@ -153,8 +153,8 @@
         <rosparam param="formation/drone5">[ -1, -0.5, 0]</rosparam>
         <rosparam param="formation/drone6">[ -1,  0.5, 0]</rosparam> -->
         <rosparam param="formation/start">[0, 0, 0]</rosparam>
-        <!-- <rosparam param="formation/drone0">[  0, 0, 0]</rosparam> -->
-        <rosparam param="formation/drone0">[  1, -1, 0]</rosparam>
+        <rosparam param="formation/drone0">[  0, 0, 0]</rosparam>
+        <!-- <rosparam param="formation/drone0">[  1, -1, 0]</rosparam> -->
         <rosparam param="formation/drone1">[  1,  1, 0]</rosparam>
         <rosparam param="formation/drone2">[  -1, -1, 0]</rosparam>
         <rosparam param="formation/drone3">[  -1,  1, 0]</rosparam>
