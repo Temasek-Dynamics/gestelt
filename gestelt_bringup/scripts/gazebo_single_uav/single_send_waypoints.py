@@ -77,7 +77,7 @@ def main():
         waypoints.append(create_pose(-d, d, 1))
         waypoints.append(create_pose(-d, -d, 1))
         waypoints.append(create_pose(d, -d, 1))
-        waypoints.append(create_pose(0, 0, 1))
+    waypoints.append(create_pose(0, 0, 1))
     pub_waypoints(waypoints)
 
 if __name__ == '__main__':

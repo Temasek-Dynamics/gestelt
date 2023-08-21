@@ -1,32 +1,34 @@
 # TODO
 - Fix issues with fake map
+    - Test fake map
 
-- Vicon improvements:
-    - Check logs and see vicon delay
-    - Set vicon noise values from computer
+- Allow trajectory server to take in waypoint commands from elsewhere like PBTM
 
-- Allow trajectory server to take in waypoint commands from elsewhere
-
-- Additional improvements
-    - Solve laser range finder issue
-    - Change parameters for trajectory server/ego planner to param config files
+- Improvements
+    - Sensor
+        - Solve laser range finder issue
+    - Vicon improvements:
+        - Check logs and see vicon delay
+        - Set vicon noise values from computer
+    - Software
+        - Change parameters for trajectory server/ego planner to param config files
 
 - Documentation
     - Vicon system and PX4 params
     - TF tree structure
-    - SAFMC drone params
+
+- Ego Planner
+    - Split up into multiple packages to make builds faster on radxa
+    - Add feature to dynamically set formation number
 
 - Benchmark
     - Add network params 
         - Bandwidth, latency, signal strength
-    - Use ddynamic_reconfigure to toggle on/off benchmarking
 
 - Radxa 
     - Create startup script for radxa
         - Should startup mavros script and egoplanner
     - Clone radxa device
-
-- Radxa
     - Set optimization flags
         - set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g")
         - https://gcc.gnu.org/onlinedocs/gcc/Optimize-Options.html
@@ -47,6 +49,7 @@
         - Motor 6000V
     - Battery: 2S 7.4V
     - Propellers: 3 inch three-blade propellers
+
 - Correct tracking error algo
 
 ## Simulation
@@ -66,19 +69,11 @@
 - When rounding corners of obstacles, if the goal lies about a sharp turn around the corner, a trajectory with a sharp turn is planned, this could lead to issues if the obstacles is especially large as the drone will not be able to detect the other wall of the obstacle until it has turned around. 
 - When the agents are too close to each other and the replan fails upon detecting a potential collsion between swarm agents. This condition happens more often when the obstacle_inflation is increased to a significantly higher value (1.2) and drones are navigating through narrow corridors.
 
-
 # Future Roadmap
 - Push a swarm through cluttered environments at 5m/s
 - Things to try out:
     - Share compresssed position/vecoity
     - SOTA Trajectory tracker (vs PID)
 
-- Consider a mixed ecosystem approach
-    - Look at porting from ROS1 to ROS2
-        - Simulation
-        - Egoplanner Library
-        - Launch files
-        - gestelt_bringup executables
-    - Aim: 
-        - To be able to use third party libraries from ROS easily
-        - Reduce unnecessary components
+- Add DDS message output
+    - Port to ROS2

@@ -76,8 +76,12 @@ cd ~/gestelt_ws/src/gestelt_bringup/gestelt_bringup/scripts
 ```bash
 # Taking off
 rostopic pub /traj_server_event std_msgs/Int8 "data: 0" --once
+# Landing
+rostopic pub /traj_server_event std_msgs/Int8 "data: 1" --once
 # Taking Mission
 rostopic pub /traj_server_event std_msgs/Int8 "data: 2" --once
+# Cancel Mission
+rostopic pub /traj_server_event std_msgs/Int8 "data: 3" --once
 
 TAKEOFF_E,        // 0
 LAND_E,           // 1
