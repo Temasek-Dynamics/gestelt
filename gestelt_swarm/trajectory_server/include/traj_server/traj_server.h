@@ -44,7 +44,7 @@ enum ServerEvent
   TAKEOFF_E,        // 0
   LAND_E,           // 1
   MISSION_E,        // 2
-  CANCEL_MISSION_E, // 3
+  HOVER_E,          // 3
   E_STOP_E,         // 4
   EMPTY_E,          // 5
 };
@@ -60,6 +60,12 @@ std::string string_format( const std::string& format, Args ... args )
     return std::string( buf.get(), buf.get() + size - 1 ); // We don't want the '\0' inside
 }
 
+struct SafetyLimits{
+  double min_x{0}, max_x{0};
+  double min_y{0}, max_y{0};
+  double min_z{0}, max_z{0};
+};
+
 class TrajServer{
 public:
   /* Initialization methods */
@@ -69,7 +75,6 @@ public:
   void initModelMesh(const std::string& drone_model_mesh_filepath);
 
   /* ROS Callbacks */
-
   /**
    * Callback for heartbeat from Ego Planner
   */
@@ -218,19 +223,29 @@ public:
       && !uav_current_state_.armed;
   }
 
+  /**
+   * @brief Check if the given position is within the position safety limits
+   * 
+   * @param position_limits 
+   * @param p 
+   * @return true 
+   * @return false 
+   */
+  bool checkPositionLimits(SafetyLimits position_limits, Vector3d p);
+
   /** @brief StateToString interprets the input server state **/
   const std::string StateToString(ServerState state)
   {
       switch (state)
       {
-          case ServerState::INIT:   return "INIT";
-          case ServerState::IDLE:   return "IDLE";
-          case ServerState::TAKEOFF:   return "TAKEOFF";
-          case ServerState::LAND: return "LAND";
-          case ServerState::HOVER:   return "HOVER";
-          case ServerState::MISSION:   return "MISSION";
+          case ServerState::INIT:     return "INIT";
+          case ServerState::IDLE:     return "IDLE";
+          case ServerState::TAKEOFF:  return "TAKEOFF";
+          case ServerState::LAND:     return "LAND";
+          case ServerState::HOVER:    return "HOVER";
+          case ServerState::MISSION:  return "MISSION";
           case ServerState::E_STOP:   return "E_STOP";
-          default:      return "[Unknown State]";
+          default:                    return "[Unknown State]";
       }
   }
 
@@ -239,12 +254,13 @@ public:
   {
       switch (event)
       {
-          case ServerEvent::TAKEOFF_E:   return "TAKEOFF";
-          case ServerEvent::LAND_E: return "LAND";
-          case ServerEvent::MISSION_E:   return "MISSION";
-          case ServerEvent::EMPTY_E:   return "EMPTY";
+          case ServerEvent::TAKEOFF_E:  return "TAKEOFF";
+          case ServerEvent::LAND_E:     return "LAND";
+          case ServerEvent::MISSION_E:  return "MISSION";
+          case ServerEvent::HOVER_E:    return "HOVER";
+          case ServerEvent::EMPTY_E:    return "EMPTY";
           case ServerEvent::E_STOP_E:   return "E_STOP";
-          default:      return "[Unknown Event]";
+          default:                      return "[Unknown Event]";
       }
   }
 
@@ -334,6 +350,8 @@ private:
 
   int max_poses_to_track_; // Maximum size of latest UAV path poses to display
   double error_tracking_window_; // Maximum size of latest UAV path poses to display
+
+  SafetyLimits position_limits_;
 
 private:
   void logInfo(const std::string& str){

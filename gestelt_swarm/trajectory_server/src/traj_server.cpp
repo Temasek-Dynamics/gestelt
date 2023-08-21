@@ -27,6 +27,13 @@ void TrajServer::init(ros::NodeHandle& nh)
 
   nh.param("traj_server/planner_heartbeat_timeout", planner_heartbeat_timeout_, 0.5);
 
+  nh.param("traj_server/pos_limit/max_x", position_limits_.max_x, -1.0);
+  nh.param("traj_server/pos_limit/min_x", position_limits_.min_x, -1.0);
+  nh.param("traj_server/pos_limit/max_y", position_limits_.max_y, -1.0);
+  nh.param("traj_server/pos_limit/min_y", position_limits_.min_y, -1.0);
+  nh.param("traj_server/pos_limit/max_z", position_limits_.max_z, -1.0);
+  nh.param("traj_server/pos_limit/min_z", position_limits_.min_z, -1.0);
+  
   logInfo("Initializing");
 
   /* Subscribers */
@@ -250,7 +257,7 @@ void TrajServer::tickServerStateTimerCb(const ros::TimerEvent &e)
         case MISSION_E:
           logWarn("[IDLE] IGNORED EVENT. Please TAKEOFF first before setting MISSION mode");
           break;
-        case CANCEL_MISSION_E:
+        case HOVER_E:
           logWarn("[IDLE] IGNORED EVENT. No mission to cancel");
           break;
         case E_STOP_E:
@@ -277,7 +284,7 @@ void TrajServer::tickServerStateTimerCb(const ros::TimerEvent &e)
         case MISSION_E:
           logWarn("[TAKEOFF] IGNORED EVENT. Wait until UAV needs to take off before accepting mission command");
           break;
-        case CANCEL_MISSION_E:
+        case HOVER_E:
           logWarn("[TAKEOFF] IGNORED EVENT. No mission to cancel");
           break;
         case E_STOP_E:
@@ -318,7 +325,7 @@ void TrajServer::tickServerStateTimerCb(const ros::TimerEvent &e)
         case MISSION_E:
           logWarn("[LAND] IGNORED EVENT. UAV is landing, it needs to take off before accepting mission command");
           break;
-        case CANCEL_MISSION_E:
+        case HOVER_E:
           logWarn("[LAND] IGNORED EVENT. No mission to cancel");
           break;
         case E_STOP_E:
@@ -356,7 +363,7 @@ void TrajServer::tickServerStateTimerCb(const ros::TimerEvent &e)
           logInfo("[HOVER] UAV entering [MISSION] mode.");
           setServerState(ServerState::MISSION);
           break;
-        case CANCEL_MISSION_E:
+        case HOVER_E:
           logWarn("[HOVER] IGNORED EVENT. No mission to cancel");
           break;
         case E_STOP_E:
@@ -378,13 +385,15 @@ void TrajServer::tickServerStateTimerCb(const ros::TimerEvent &e)
           logWarn("[MISSION] IGNORED EVENT. UAV already took off. Currently in [MISSION] mode");
           break;
         case LAND_E:
-          logWarn("[MISSION] IGNORED EVENT. Please cancel mission first");
+          logWarn("[MISSION] Mission cancelled! Landing...");
+          endMission();
+          setServerState(ServerState::LAND);
           break;
         case MISSION_E:
           logWarn("[MISSION] IGNORED EVENT. UAV already in [MISSION] mode");
           break;
-        case CANCEL_MISSION_E:
-          logWarn("[MISSION] Mission cancelled!");
+        case HOVER_E:
+          logWarn("[MISSION] Mission cancelled! Hovering...");
           endMission();
           setServerState(ServerState::HOVER);
           break;
@@ -582,6 +591,11 @@ void TrajServer::execMission()
     last_mission_vel_ = vel;
 
     uint16_t type_mask = 2048; // Ignore yaw rate
+
+    if (!checkPositionLimits(position_limits_, pos)) {
+      // If position safety limit check failed, switch to hovering mode
+      setServerEvent(ServerEvent::HOVER_E);
+    }
 
     publishCmd(pos, vel, acc, jer, yaw_yawdot.first, yaw_yawdot.second, type_mask);
   }
@@ -807,6 +821,31 @@ std::pair<double, double> TrajServer::calculate_yaw(double t_cur, Eigen::Vector3
   yaw_yawdot.second = yaw_temp;
 
   return yaw_yawdot;
+}
+
+bool TrajServer::checkPositionLimits(SafetyLimits position_limits, Vector3d p){
+  if (p(0) < position_limits.min_x || p(0) > position_limits.max_x){
+    logError(string_format("Commanded x position (%f) exceeded x limits (%f-%f)", 
+      p(0), position_limits.min_x, position_limits.max_x));
+
+    return false;
+  }
+  else if (p(1) < position_limits.min_y || p(1) > position_limits.max_y) {
+
+    logError(string_format("Commanded y position (%f) exceeded y limits (%f-%f)", 
+      p(1), position_limits.min_y, position_limits.max_y));
+
+    return false;
+  }
+  else if (p(2) < position_limits.min_z || p(2) > position_limits.max_z) {
+
+    logError(string_format("Commanded z position (%f) exceeded z limits (%f-%f)", 
+      p(2), position_limits.min_z, position_limits.max_z));
+
+    return false;
+  }
+
+  return true;
 }
 
 void TrajServer::setServerState(ServerState des_state)

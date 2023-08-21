@@ -94,7 +94,7 @@
         <param name="grid_map/cam_frame" value="$(arg drone_id_ns)_cam_link"/>
         <!-- Occupancy grid params -->
         <param name="grid_map/occ_grid/resolution" value="0.1" />
-        <param name="grid_map/occ_grid/inflation" value="0.2" />
+        <param name="grid_map/occ_grid/inflation" value="0.1" />
         <!-- Point cloud downsampling params -->
         <param name="grid_map/filter/downsample_cloud" value="false" />
         <param name="grid_map/filter/depth_stride" value="4" />
@@ -106,7 +106,6 @@
         <!-- camera intrinsic parameters -->
         <param name="grid_map/k_depth_scaling_factor" value="1000.0"/>
 
-
         <!-- camera extrinsic parameters -->
         <param name="grid_map/camera_to_body/roll" value="90.0"/>
         <param name="grid_map/camera_to_body/pitch" value="180.0"/>
@@ -117,6 +116,7 @@
         <!-- //////////////////// -->
         <!-- Manager params -->
         <!-- //////////////////// -->
+        <param name="manager/drone_id" value="$(arg drone_id)"/>
         <!-- planner manager -->
         <param name="manager/max_vel" value="$(arg max_vel)" type="double"/>
         <param name="manager/max_acc" value="$(arg max_acc)" type="double"/>
@@ -124,7 +124,6 @@
         <param name="manager/feasibility_tolerance" value="0.05" type="double"/>
         <param name="manager/planning_horizon" value="$(arg planning_horizon)" type="double"/>
         <param name="manager/use_distinctive_trajs" value="$(arg use_distinctive_trajs)" type="bool"/>
-        <param name="manager/drone_id" value="$(arg drone_id)"/>
         <!-- //////////////////// -->
         <!-- optimization params -->
         <!-- //////////////////// -->
@@ -137,8 +136,8 @@
         <param name="optimization/weight_time" value="10.0" type="double"/>
         <param name="optimization/weight_formation" value="100" type="double"/>
         <!-- The obstacle_clearance param seems to have no effect? -->
-        <param name="optimization/obstacle_clearance" value="0.5" type="double"/>
-        <param name="optimization/obstacle_clearance_soft" value="0.7" type="double"/>
+        <param name="optimization/obstacle_clearance" value="0.4" type="double"/>
+        <param name="optimization/obstacle_clearance_soft" value="0.6" type="double"/>
         <param name="optimization/swarm_clearance" value="0.5" type="double"/>
         <param name="optimization/max_vel" value="$(arg max_vel)" type="double"/>
         <param name="optimization/max_acc" value="$(arg max_acc)" type="double"/>
@@ -154,8 +153,8 @@
         <rosparam param="formation/drone5">[ -1, -0.5, 0]</rosparam>
         <rosparam param="formation/drone6">[ -1,  0.5, 0]</rosparam> -->
         <rosparam param="formation/start">[0, 0, 0]</rosparam>
-        <rosparam param="formation/drone0">[  0, 0, 0]</rosparam>
-        <!-- <rosparam param="formation/drone0">[  1, -1, 0]</rosparam> -->
+        <!-- <rosparam param="formation/drone0">[  0, 0, 0]</rosparam> -->
+        <rosparam param="formation/drone0">[  1, -1, 0]</rosparam>
         <rosparam param="formation/drone1">[  1,  1, 0]</rosparam>
         <rosparam param="formation/drone2">[  -1, -1, 0]</rosparam>
         <rosparam param="formation/drone3">[  -1,  1, 0]</rosparam>

@@ -44,13 +44,13 @@
             2 ("grid_map/odom") or
             3 ("/tf") 
             for use as camera pose/odom-->
-        <arg name="POSE_TYPE" value="1" />
+        <arg name="POSE_TYPE" value="3" />
         <!-- grid_map/sensor_type: Toggle between subscription to
             1 ("grid_map/cloud") or 
             2 ("grid_map/depth") or 
             3 ("grid_map/cloud") [For use with POSE_TYPE 3]
             for use as camera sensor input -->
-        <arg name="SENSOR_TYPE" value="1" />
+        <arg name="SENSOR_TYPE" value="3" />
         <arg name="drone_origin_frame" value="$(arg drone_origin_frame)"/>
         
         <!-- camera pose: transform of camera frame in the world frame -->
@@ -91,6 +91,14 @@
         <!-- Trajectory params -->
         <param name="traj_server/time_forward" value="1.0" type="double"/>
         <param name="traj_server/max_poses_to_track" value="1000" type="int"/>
+
+        <!-- Position command limits, anything exceeding this will switch the mode to hovering state -->
+        <param name="traj_server/pos_limit/max_x" value="5.0" type="double"/>
+        <param name="traj_server/pos_limit/min_x" value="-5.0" type="double"/>
+        <param name="traj_server/pos_limit/max_y" value="5.5" type="double"/>
+        <param name="traj_server/pos_limit/min_y" value="-5.5" type="double"/>
+        <param name="traj_server/pos_limit/max_z" value="2.25" type="double"/>
+        <param name="traj_server/pos_limit/min_z" value="-0.3" type="double"/>
 
         <!-- Frequency for timers -->
         <param name="traj_server/pub_cmd_freq" value="25.0" type="double"/>

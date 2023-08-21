@@ -4,7 +4,7 @@
   <arg name="map_size_x" value="80.0"/>
   <arg name="map_size_y" value="80.0"/>
   <arg name="map_size_z" value=" 3.0"/>
-  <arg name="map_path" value="$(find px4sim1)/../data/sample.pcd" />
+  <arg name="map_path" value="$(find simple_quad_sim)/../data/sample.pcd" />
   <!-- Input/output topics -->
   <arg name="command_topic" value="mavros/setpoint_raw/local" />
   <arg name="odometry_topic" value="mavros/local_position/odom" />
@@ -13,7 +13,7 @@
   <arg name="depth_img_topic" value="dummy_topic" />
 
   <!-- Global map publisher -->
-  <node pkg="px4sim1" type="map_publisher" name="map_publisher" output="screen">
+  <node pkg="simple_quad_sim" type="map_publisher" name="map_publisher" output="screen">
       <param name="map/path" value="$(arg map_path)"/>
   </node>
 

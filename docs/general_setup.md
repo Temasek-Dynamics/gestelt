@@ -78,15 +78,15 @@ cd ~/gestelt_ws/src/gestelt_bringup/gestelt_bringup/scripts
 rostopic pub /traj_server_event std_msgs/Int8 "data: 0" --once
 # Landing
 rostopic pub /traj_server_event std_msgs/Int8 "data: 1" --once
-# Taking Mission
+# Switch to Mission mode
 rostopic pub /traj_server_event std_msgs/Int8 "data: 2" --once
-# Cancel Mission
+# Switch to hover mode
 rostopic pub /traj_server_event std_msgs/Int8 "data: 3" --once
 
 TAKEOFF_E,        // 0
 LAND_E,           // 1
 MISSION_E,        // 2
-CANCEL_MISSION_E, // 3
+HOVER_E,          // 3
 E_STOP_E,         // 4
 EMPTY_E,          // 5
 ```

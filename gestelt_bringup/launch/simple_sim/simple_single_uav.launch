@@ -39,10 +39,10 @@
 
     <!-- Simulated quadcopter -->
     <group ns="$(arg drone_id_ns)">
-        <node pkg="px4sim1" type="px4_quad_node" name="px4_quad_node" output="screen">
-            <rosparam command="load" file="$(find px4sim1)/../config/simulation_parameters.yaml" />
-            <rosparam command="load" file="$(find px4sim1)/../config/map_parameters.yaml" />
-            <param name="agent/mesh_resource" value="file://$(find px4sim1)/../meshes/fake_drone.dae" />
+        <node pkg="simple_quad_sim" type="px4_quad_node" name="px4_quad_node" output="screen">
+            <rosparam command="load" file="$(find simple_quad_sim)/../config/simulation_parameters.yaml" />
+            <rosparam command="load" file="$(find simple_quad_sim)/../config/map_parameters.yaml" />
+            <param name="agent/mesh_resource" value="file://$(find simple_quad_sim)/../meshes/fake_drone.dae" />
             <param name="agent/id" value="$(arg drone_id_ns)"/>
             <param name="agent/start_x" value="$(arg init_x)"/>
             <param name="agent/start_y" value="$(arg init_y)"/>

@@ -16,7 +16,7 @@ namespace ego_planner
     planner_manager_->initPlanModules(nh, visualization_);
 
     /* Benchmarking */
-    time_benchmark_ = std::make_shared<TimeBenchmark> ();
+    time_benchmark_ = std::make_shared<TimeBenchmark>();
     time_benchmark_->add_ids({
       std:vector<std::string>{
         "planFromLocalTraj", 
@@ -81,7 +81,6 @@ namespace ego_planner
                                                                   &EGOReplanFSM::RecvBroadcastMINCOTrajCallback,
                                                                   this,
                                                                   ros::TransportHints().tcpNoDelay());
-
     trigger_sub_ = nh.subscribe("/traj_start_trigger", 1, &EGOReplanFSM::triggerCallback, this);
 
     /* Publishers */
@@ -104,8 +103,6 @@ namespace ego_planner
     else{
       logError(string_format("Wrong target_type_ value! target_type_=%i", target_type_));
     }
-
-
   }
 
   /**
@@ -719,8 +716,8 @@ namespace ego_planner
     if (plan_success)
     {
       // Get data from local trajectory and store in PolyTraj and MINCOTraj 
-      traj_utils::PolyTraj poly_msg;
-      traj_utils::MINCOTraj MINCO_msg;
+      traj_utils::PolyTraj poly_msg; 
+      traj_utils::MINCOTraj MINCO_msg; 
 
       polyTraj2ROSMsg(poly_msg, MINCO_msg);
 
@@ -728,8 +725,8 @@ namespace ego_planner
         transformMINCOTrajectoryToWorld(MINCO_msg);
       }
 
-      poly_traj_pub_.publish(poly_msg); // Publish to corresponding drone for execution
-      broadcast_ploytraj_pub_.publish(MINCO_msg); // Broadcast to all other drones for replanning to optimize in avoiding swarm collision
+      poly_traj_pub_.publish(poly_msg); // (In drone origin frame) Publish to corresponding drone for execution
+      broadcast_ploytraj_pub_.publish(MINCO_msg); // (In world frame) Broadcast to all other drones for replanning to optimize in avoiding swarm collision
     }
 
     return plan_success;
