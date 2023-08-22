@@ -124,4 +124,4 @@
 33. (10/8/23) Added fake sensor data node for simulating virtual obstacles on an actual drone.
 34. (11/8/23) Updated gridmap with additional option to use tf instead of pose to get camera to world transform
 35. (16/8/23) Successfully tested offboard mode, added scripts for testing offboard and mission for single drone.
-36. (21/8/23) Corrected fake_map transformations
+36. (21/8/23) Corrected fake_map transformations and successfully tested fake_map node

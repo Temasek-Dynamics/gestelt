@@ -1,6 +1,7 @@
 # TODO
-- Fix issues with fake map
-    - Test fake map
+- Constrain the trajectories of the uav to be within the bounds of the map
+    - Set map size
+    - Edit point cloud file to include ceiling and floor
 
 - Allow trajectory server to take in waypoint commands from elsewhere like PBTM
 
