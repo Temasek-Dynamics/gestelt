@@ -2,9 +2,9 @@
   <!-- num_drones must be at least 2 even if we are planning for a single drone -->
   <arg name="num_drones" value="2"/>
   <!-- size of map, change the size inflate x, y, z according to your application -->
-  <arg name="map_size_x" value="80.0"/>
-  <arg name="map_size_y" value="80.0"/>
-  <arg name="map_size_z" value=" 3.0"/>
+  <arg name="map_size_x" value="4.5"/>
+  <arg name="map_size_y" value="4.5"/>
+  <arg name="map_size_z" value=" 2.5"/>
   <!-- Input/output topics -->
   <arg name="command_topic" value="mavros/setpoint_raw/local" />
   <arg name="odometry_topic" value="mavros/local_position/odom" />

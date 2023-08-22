@@ -175,7 +175,7 @@ Visualization Manager:
               Marker Topic: /drone_0_ego_planner_node/goal_point
               Name: goal_point
               Namespaces:
-                {}
+                "": true
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
@@ -191,7 +191,7 @@ Visualization Manager:
               Marker Topic: /drone_0_ego_planner_node/optimal_list
               Name: optimal_list
               Namespaces:
-                {}
+                "": true
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
@@ -1247,7 +1247,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 9.83280086517334
+      Distance: 10.697854042053223
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -1255,17 +1255,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 1.3447294235229492
-        Y: -1.8404775857925415
-        Z: 1.9753246307373047
+        X: 0.23812523484230042
+        Y: -0.5074164867401123
+        Z: 1.7216876745224
       Focal Shape Fixed Size: false
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.5697963237762451
+      Pitch: 1.2297967672348022
       Target Frame: my_view
-      Yaw: 3.0571937561035156
+      Yaw: 3.5221924781799316
     Saved:
       - Class: rviz/FPS
         Enable Stereo Rendering:
