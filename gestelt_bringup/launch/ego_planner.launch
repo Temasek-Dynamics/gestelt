@@ -34,9 +34,9 @@
         <arg name="init_y" value="$(arg init_y)"/>
         <arg name="init_z" value="$(arg init_z)"/>
 
-        <arg name="map_size_x_" value="$(arg map_size_x)"/>
-        <arg name="map_size_y_" value="$(arg map_size_y)"/>
-        <arg name="map_size_z_" value="$(arg map_size_z)"/>
+        <arg name="map_size_x_" value="$(eval map_size_x - 0.2)"/>
+        <arg name="map_size_y_" value="$(eval map_size_y - 0.2)"/>
+        <arg name="map_size_z_" value="$(eval map_size_z - 0.2)"/>
         <arg name="obj_num_set" value="$(arg obj_num)" />
 
         <!-- grid_map/pose_type: Toggle between subscription to
