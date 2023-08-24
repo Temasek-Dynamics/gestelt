@@ -5,8 +5,8 @@
 
   <!-- Input/output topics -->
   <arg name="pose_topic" value="mavros/local_position/pose" />
-  <!-- <arg name="point_cloud_topic_test" value="camera/depth/points" /> -->
-  <arg name="point_cloud_topic_test" value="camera/depth/points_test" />
+  <arg name="point_cloud_topic_test" value="camera/depth/points" />
+  <!-- <arg name="point_cloud_topic_test" value="camera/depth/points_test" /> -->
 
   <!-- Global map publisher -->
   <node pkg="simple_quad_sim" type="map_publisher" name="map_publisher" output="screen">
