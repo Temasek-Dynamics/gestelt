@@ -4,38 +4,23 @@
   <arg name="map_size_x" value="80.0"/>
   <arg name="map_size_y" value="80.0"/>
   <arg name="map_size_z" value=" 3.0"/>
-  <arg name="map_path" value="$(find simple_quad_sim)/../data/sample.pcd" />
+  <arg name="map_filepath" value="$(find gestelt_bringup)/simulation/fake_map_worlds/dense_map.pcd" />
   <!-- Input/output topics -->
   <arg name="command_topic" value="mavros/setpoint_raw/local" />
   <arg name="odometry_topic" value="mavros/local_position/odom" />
   <arg name="pose_topic" value="mavros/local_position/pose" />
-  <arg name="point_cloud_topic" value="map" />
-  <arg name="depth_img_topic" value="dummy_topic" />
-
-  <!-- Global map publisher -->
-  <node pkg="simple_quad_sim" type="map_publisher" name="map_publisher" output="screen">
-      <param name="map/path" value="$(arg map_path)"/>
-  </node>
-
-  <!-- swarm topic transmitter bridge-->
-  <include file="$(find swarm_bridge)/launch/bridge_udp.launch">
-    <arg name="drone_id" value="999"/>
-    <arg name="broadcast_ip" value="127.0.0.255"/>
-  </include>
-			
-  <!-- Add static transform from world to map -->
-  <node pkg="tf" type="static_transform_publisher" 
-    name="world_to_map_tf" 
-    args="0 0 0 0 0 0 1 world map 100" />
+  <arg name="point_cloud_topic" value="camera/depth/points" />
+  <arg name="point_cloud_topic_ds" value="camera/depth/points_downsampled" />
+  <arg name="depth_img_topic" value="camera/depth/image_raw" />
 
   <!-- Drone 0 -->
-  <include file="$(find gestelt_bringup)/launch/simple_sim/simple_single_uav.launch">
+  <include file="$(find gestelt_bringup)/launch/simple_sim/fake_drone_single.launch">
     <arg name="drone_id"   value="0"/>
     <arg name="num_drones" value="$(arg num_drones)"/>
-    <arg name="init_x"     value="-1.0"/>
+    <arg name="init_x"     value="1.0"/>
     <arg name="init_y"     value="-1.0"/>
     <arg name="init_z"     value="0.0"/>
-    <arg name="map_path" value="$(arg map_path)" />
+    <arg name="map_filepath" value="$(arg map_filepath)"/>
     <arg name="map_size_x" value="$(arg map_size_x)"/>
     <arg name="map_size_y" value="$(arg map_size_y)"/>
     <arg name="map_size_z" value="$(arg map_size_z)"/>
@@ -47,13 +32,13 @@
   </include>
   
   <!-- Drone 1 -->
-  <include file="$(find gestelt_bringup)/launch/simple_sim/simple_single_uav.launch">
+  <include file="$(find gestelt_bringup)/launch/simple_sim/fake_drone_single.launch">
     <arg name="drone_id"   value="1"/>
     <arg name="num_drones" value="$(arg num_drones)"/>
     <arg name="init_x"     value="1.0"/>
     <arg name="init_y"     value="1.0"/>
     <arg name="init_z"     value="0.0"/>
-    <arg name="map_path" value="$(arg map_path)" />
+    <arg name="map_filepath" value="$(arg map_filepath)"/>
     <arg name="map_size_x" value="$(arg map_size_x)"/>
     <arg name="map_size_y" value="$(arg map_size_y)"/>
     <arg name="map_size_z" value="$(arg map_size_z)"/>
@@ -65,13 +50,13 @@
   </include>
 
   <!-- Drone 2 -->
-  <include file="$(find gestelt_bringup)/launch/simple_sim/simple_single_uav.launch">
+  <include file="$(find gestelt_bringup)/launch/simple_sim/fake_drone_single.launch">
     <arg name="drone_id"   value="2"/>
     <arg name="num_drones" value="$(arg num_drones)"/>
-    <arg name="init_x"     value="1.0"/>
+    <arg name="init_x"     value="-1.0"/>
     <arg name="init_y"     value="-1.0"/>
     <arg name="init_z"     value="0.0"/>
-    <arg name="map_path" value="$(arg map_path)" />
+    <arg name="map_filepath" value="$(arg map_filepath)"/>
     <arg name="map_size_x" value="$(arg map_size_x)"/>
     <arg name="map_size_y" value="$(arg map_size_y)"/>
     <arg name="map_size_z" value="$(arg map_size_z)"/>
@@ -83,13 +68,13 @@
   </include>
 
   <!-- Drone 3 -->
-  <include file="$(find gestelt_bringup)/launch/simple_sim/simple_single_uav.launch">
+  <include file="$(find gestelt_bringup)/launch/simple_sim/fake_drone_single.launch">
     <arg name="drone_id"   value="3"/>
     <arg name="num_drones" value="$(arg num_drones)"/>
     <arg name="init_x"     value="-1.0"/>
     <arg name="init_y"     value="1.0"/>
     <arg name="init_z"     value="0.0"/>
-    <arg name="map_path" value="$(arg map_path)" />
+    <arg name="map_filepath" value="$(arg map_filepath)"/>
     <arg name="map_size_x" value="$(arg map_size_x)"/>
     <arg name="map_size_y" value="$(arg map_size_y)"/>
     <arg name="map_size_z" value="$(arg map_size_z)"/>

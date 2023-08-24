@@ -15,8 +15,6 @@
     <arg name="interactive" default="true"/>
     <env name="PX4_SIM_MODEL" value="gazebo-classic_$(arg vehicle)" />
 
-    <!-- <env name="GAZEBO_MODEL_PATH" value="${GAZEBO_MODEL_PATH}:$(find gestelt_bringup)/simulation/models"/> -->
-
     <!-- Add static transform from drone to it's origin -->
     <node pkg="tf" type="static_transform_publisher" 
       name="map_to_$(arg drone_id_ns)_origin_tf" 

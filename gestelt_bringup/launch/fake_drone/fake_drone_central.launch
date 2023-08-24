@@ -1,0 +1,20 @@
+<launch>
+  <arg name="map_filepath" value="$(find gestelt_bringup)/simulation/fake_map_worlds/dense_map.pcd" />
+
+  <!-- Global map publisher -->
+  <node pkg="simple_quad_sim" type="map_publisher" name="map_publisher" output="screen">
+      <param name="map/path" value="$(arg map_path)"/>
+  </node>
+
+  <!-- swarm topic transmitter bridge-->
+  <include file="$(find swarm_bridge)/launch/bridge_udp.launch">
+    <arg name="drone_id" value="999"/>
+    <arg name="broadcast_ip" value="127.0.0.255"/>
+  </include>
+			
+  <!-- Add static transform from world to map -->
+  <node pkg="tf" type="static_transform_publisher" 
+    name="world_to_map_tf" 
+    args="0 0 0 0 0 0 1 world map 100" />
+
+</launch>

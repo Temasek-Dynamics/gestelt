@@ -1,9 +1,11 @@
 # TODO
-- Constrain the trajectories of the uav to be within the bounds of the map
-    - Set map size
-    - Edit point cloud file to include ceiling and floor
+- Add simulated drones (with no dynamics)
 
-- Allow trajectory server to take in waypoint commands from elsewhere like PBTM
+- Logging of mavlink topics and ROS topics to analyze issues 
+
+- Documentation
+    - Vicon system and PX4 params
+    - TF tree structure
 
 - Improvements
     - Sensor
@@ -14,19 +16,19 @@
     - Software
         - Change parameters for trajectory server/ego planner to param config files
 
-- Documentation
-    - Vicon system and PX4 params
-    - TF tree structure
-
 - Ego Planner
     - Split up into multiple packages to make builds faster on radxa
     - Add feature to dynamically set formation number
+
+- Port to ROS2
 
 - Benchmark
     - Add network params 
         - Bandwidth, latency, signal strength
 
 - Radxa 
+
+
     - Create startup script for radxa
         - Should startup mavros script and egoplanner
     - Clone radxa device
@@ -75,6 +77,5 @@
 - Things to try out:
     - Share compresssed position/vecoity
     - SOTA Trajectory tracker (vs PID)
-
 - Add DDS message output
     - Port to ROS2

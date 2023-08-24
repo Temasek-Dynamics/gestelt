@@ -20,8 +20,7 @@
     <!-- Publisher of uav sensor cloud -->
     <remap from="uav/sensor_cloud" to="/$(arg drone_id_ns)/$(arg point_cloud_topic_test)"/>
 
-    <rosparam command="load" file="$(find gestelt_bringup)/config/simulation_parameters.yaml" />
-    <rosparam command="load" file="$(find gestelt_bringup)/config/map_parameters.yaml" />
+    <rosparam command="load" file="$(find gestelt_bringup)/config/fake_laser_params.yaml" />
 
     <param name="uav/id" value="$(arg drone_id_ns)"/>
     <param name="uav/global_frame" value="world"/>

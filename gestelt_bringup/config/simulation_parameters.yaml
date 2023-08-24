@@ -1,4 +1,0 @@
-# simulation parameters
-uav:
-  simulation_rate: 100
-  sensing_range: 5.0

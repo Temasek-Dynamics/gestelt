@@ -1,0 +1,10 @@
+# simulation parameters
+uav:
+  # Hz, frequency at which to update simulation
+  sim_update_frequency: 100
+  # Hz, frequency at which to publish pose, this cannot be higher than sim_refresh_frequency
+  pose_pub_frequency: 50
+  # Hz, frequency at which to broadcast tf, this cannot be higher than sim_refresh_frequency
+  tf_broadcast_frequency: 50
+  # Units in seconds, PX4 default timeout is 500 ms between offboard commands
+  offboard_timeout: 0.5
