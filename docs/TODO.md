@@ -1,7 +1,12 @@
 # TODO
 - Add simulated drones (with no dynamics)
+    - Merge with main
+    - Test broadcasting on xiaomi network
+    - Add decay to map
 
-- Logging of mavlink topics and ROS topics to analyze issues 
+    - Add remote launching on machines
+
+    - Logging of mavlink topics and ROS topics to analyze issues 
 
 - Documentation
     - Vicon system and PX4 params

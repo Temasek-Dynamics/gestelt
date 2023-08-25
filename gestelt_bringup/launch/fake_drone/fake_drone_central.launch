@@ -1,20 +1,20 @@
 <launch>
-  <arg name="map_filepath" value="$(find gestelt_bringup)/simulation/fake_map_worlds/dense_map.pcd" />
+  <arg name="num_drones" default="5"/>
+  <arg name="rviz_config" default="default"/>
+  <arg name="cloud_topic" default="camera/depth/points" />
+  <arg name="cloud_topic_ds" default="camera/depth/points_downsampled" />
+  <arg name="map_filepath" default="$(find gestelt_bringup)/simulation/fake_map_worlds/dense_map.pcd" />
 
   <!-- Global map publisher -->
-  <node pkg="simple_quad_sim" type="map_publisher" name="map_publisher" output="screen">
-      <param name="map/path" value="$(arg map_path)"/>
+  <node pkg="fake_map" type="fake_map_publisher" name="fake_map_publisher" output="screen">
+      <param name="map/path" value="$(arg map_filepath)"/>
   </node>
 
-  <!-- swarm topic transmitter bridge-->
-  <include file="$(find swarm_bridge)/launch/bridge_udp.launch">
-    <arg name="drone_id" value="999"/>
-    <arg name="broadcast_ip" value="127.0.0.255"/>
+  <include file="$(find gestelt_bringup)/launch/sitl/sitl_central.launch">
+    <arg name="num_drones" value="$(arg num_drones)"/>
+    <arg name="rviz_config" value="$(arg rviz_config)"/>
+    <arg name="cloud_topic" value="$(arg cloud_topic)"/>
+    <arg name="cloud_topic_ds" value="$(arg cloud_topic)"/>
   </include>
-			
-  <!-- Add static transform from world to map -->
-  <node pkg="tf" type="static_transform_publisher" 
-    name="world_to_map_tf" 
-    args="0 0 0 0 0 0 1 world map 100" />
 
 </launch>

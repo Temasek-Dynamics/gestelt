@@ -31,11 +31,12 @@ def publish_server_event(event_enum):
     server_event_pub.publish(Int8(event_enum))
 
 def get_server_state_callback():
-    msg = rospy.wait_for_message(f"/drone0/server_state", State, timeout=5.0)
-    server_states[str(msg.drone_id)] = msg
-    # print("==================")
-    # print(msg)
-    # print("==================")
+    for drone_id in range(0, num_drones):
+        msg = rospy.wait_for_message(f"/drone{drone_id}/server_state", State, timeout=5.0)
+        server_states[str(msg.drone_id)] = msg
+        # print("==================")
+        # print(msg)
+        # print("==================")
 
 def create_pose(x, y, z):
     pose = Pose()
@@ -61,40 +62,48 @@ def main():
     rospy.init_node('mission_startup', anonymous=True)
     rate = rospy.Rate(5) # 20hz
 
-    if check_traj_server_states("MISSION"):
-        pass
-    else:
-        print("Setting to HOVER mode!")
-        # Take off 
-        while not rospy.is_shutdown():
-            get_server_state_callback()
-            if check_traj_server_states("HOVER"):
-                break
-            publish_server_event(0)
-            print("tick!")
-            rate.sleep()
+    print("Setting to HOVER mode!")
+    # Take off 
+    while not rospy.is_shutdown():
+        get_server_state_callback()
+        if check_traj_server_states("HOVER"):
+            break
+        publish_server_event(0)
+        print("tick!")
+        rate.sleep()
 
-        print("Setting to MISSION mode!")
-        # Switch to mission mode
-        while not rospy.is_shutdown():
-            get_server_state_callback()
-            if check_traj_server_states("MISSION"):
-                break
-            publish_server_event(2)
-            print("tick!")
-            rate.sleep()
+    print("Setting to MISSION mode!")
+    # Switch to mission mode
+    while not rospy.is_shutdown():
+        get_server_state_callback()
+        if check_traj_server_states("MISSION"):
+            break
+        publish_server_event(2)
+        print("tick!")
+        rate.sleep()
 
     # Send waypoints to UAVs
     print(f"Sending waypoints to UAVs")
     waypoints = []
-    z_pos = 0.75
+    # Square formation with length L
+    # length = 12
+    # d = length/2
+    # for i in range(10):
+    #     waypoints.append(create_pose(d, 0, 1))
+    #     waypoints.append(create_pose(d, d, 1))
+    #     waypoints.append(create_pose(-d, d, 1))
+    #     waypoints.append(create_pose(-d, -d, 1))
+    #     waypoints.append(create_pose(d, -d, 1))
+    #     waypoints.append(create_pose(0, 0, 1))
     d = 1.25
-    for i in range(5):
-        waypoints.append(create_pose(d, d, z_pos))
-        waypoints.append(create_pose(d, -d, z_pos))
-        waypoints.append(create_pose(-d, -d, z_pos))
-        waypoints.append(create_pose(-d, d, z_pos))
-    waypoints.append(create_pose(0, 0, z_pos))
+    z = 0.75
+    for i in range(10):
+        waypoints.append(create_pose(d, d, z))
+        waypoints.append(create_pose(-d, d, z))
+        waypoints.append(create_pose(-d, -d, z))
+        waypoints.append(create_pose(d, -d, z))
+    waypoints.append(create_pose(0, 0, z))
+
     pub_waypoints(waypoints)
 
 if __name__ == '__main__':

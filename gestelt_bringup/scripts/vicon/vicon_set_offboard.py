@@ -74,10 +74,5 @@ def main():
 
     print(f"Mission Mode succeeded")
 
-    # Send waypoints to UAVs
-    print(f"Sending waypoints to UAVs")
-    waypoints = []
-
-
 if __name__ == '__main__':
     main()

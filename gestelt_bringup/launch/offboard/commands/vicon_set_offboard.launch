@@ -1,4 +1,0 @@
-<launch>
-  <!-- Launches a test mission -->
-  <node pkg="gestelt_bringup" name="vicon_set_offboard" type="vicon_set_offboard.py" />
-</launch>

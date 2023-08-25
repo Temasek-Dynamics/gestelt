@@ -1,15 +1,12 @@
 #!/bin/bash
 
-ros_master_uri=$1
-ros_ip=$2
-
-SESSION="radxa_central"
+SESSION="gz_sim_single_uav"
 SESSIONEXISTS=$(tmux list-sessions | grep $SESSION)
 
 #####
 # Directories
 #####
-SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )/.."
 gestelt_bringup_DIR="$SCRIPT_DIR/.."
 PX4_AUTOPILOT_REPO_DIR="$SCRIPT_DIR/../../../../PX4-Autopilot"
 
@@ -28,25 +25,21 @@ export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:$gestelt_bringup_DIR:$PX4_AUTOPILOT_RE
 # Commands
 #####
 CMD_0="
-roslaunch gestelt_bringup central_sim_hitl.launch world_name:=$SCRIPT_DIR/../simulation/worlds/empty.world ros_master_uri:=${ros_master_uri} ros_ip:=${ros_ip}
+roslaunch gestelt_bringup single_uav_sim.launch world_name:=$SCRIPT_DIR/../simulation/worlds/ego_test.world
 "
-
-# CMD_1="
-# roslaunch gestelt_bringup central.launch ros_master_uri:=${ros_master_uri} ros_ip:=${ros_ip}
+# CMD_0="
+# roslaunch gestelt_bringup single_uav_sim.launch world_name:=$SCRIPT_DIR/../simulation/worlds/empty.world
 # "
 
 CMD_1="
-roslaunch gestelt_bringup rviz.launch config:=gz_sim ros_master_uri:=${ros_master_uri} ros_ip:=${ros_ip}
+roslaunch gestelt_bringup sitl_central.launch rviz_config:=gz_sim
 "
-
 
 CMD_2="
-roslaunch gestelt_bringup offboard_ego_planner.launch drone_id:=0 ros_master_uri:=${ros_master_uri} ros_ip:=${ros_ip}
+roslaunch gestelt_bringup single_ego_planner.launch
 "
 
-CMD_3="
-roslaunch gestelt_bringup offboard_mission.launch ros_master_uri:=${ros_master_uri} ros_ip:=${ros_ip}
-"
+CMD_3="roslaunch gestelt_bringup single_mission.launch"
 
 if [ "$SESSIONEXISTS" = "" ]
 then 
@@ -60,11 +53,8 @@ then
     tmux send-keys -t $SESSION:0.0 "$SOURCE_PX4_AUTOPILOT $CMD_0" C-m 
     sleep 3
     tmux send-keys -t $SESSION:0.1 "$SOURCE_WS $CMD_1" C-m 
-    # sleep 1
-    # tmux send-keys -t $SESSION:0.2 "$SOURCE_WS $CMD_2" C-m 
-    # sleep 1
-    # tmux send-keys -t $SESSION:0.3 "$SOURCE_WS $CMD_3" C-m 
-
+    tmux send-keys -t $SESSION:0.2 "$SOURCE_WS $CMD_2" C-m 
+    tmux send-keys -t $SESSION:0.3 "$SOURCE_WS $CMD_3" 
 fi
 
 # Attach session on the first window

@@ -7,4 +7,4 @@ uav:
   # Hz, frequency at which to broadcast tf, this cannot be higher than sim_refresh_frequency
   tf_broadcast_frequency: 50
   # Units in seconds, PX4 default timeout is 500 ms between offboard commands
-  offboard_timeout: 0.5
+  offboard_timeout: 2.0

@@ -13,20 +13,25 @@ FakeMap::FakeMap(ros::NodeHandle &nodeHandle) : _nh(nodeHandle) {
 	double sensor_refresh_freq;
 
 	/* ROS Params */
+	_nh.param<std::string>("map/filepath", map_filepath_, "");
+
 	_nh.param<std::string>("uav/id", _id, "");
-	_nh.param<double>("uav/tf_listen_freq", tf_listen_freq, -1.0);
 	_nh.param<std::string>("uav/global_frame", global_frame_, "world");
 	_nh.param<std::string>("uav/origin_frame", uav_origin_frame_, "world");
 	_nh.param<std::string>("uav/sensor_frame", sensor_frame_, "camera_link");
+	_nh.param<double>("uav/tf_listen_freq", tf_listen_freq, -1.0);
 
 	_nh.param<double>("fake_laser/sensing_range", _sensing_range, -1.0);
-	_nh.param<std::string>("fake_laser/filepath", map_filepath_, "");
-	_nh.param<double>("fake_laser/refresh_rate", sensor_refresh_freq, 0.0);
+	_nh.param<double>("fake_laser/sensor_refresh_freq", sensor_refresh_freq, 0.0);
 	_nh.param<double>("fake_laser/resolution", _resolution, 0.0);
 	_nh.param<int>("fake_laser/horizontal/laser_line_num", _hrz_laser_line_num, 0);
 	_nh.param<int>("fake_laser/vertical/laser_line_num", _vtc_laser_line_num, 0);
 	_nh.param<double>("fake_laser/horizontal/laser_range_dgr", _hrz_laser_range_dgr, 0.0);
 	_nh.param<double>("fake_laser/vertical/laser_range_dgr", _vtc_laser_range_dgr, 0.0);
+
+	std::cout << "tf_listen_freq: " << tf_listen_freq << std::endl;
+	std::cout << "sensor_refresh_freq: " << sensor_refresh_freq << std::endl;
+
 
 	std::string copy_id = _id; 
 	std::string uav_id_char = copy_id.erase(0,5); // removes first 5 character
@@ -44,11 +49,11 @@ FakeMap::FakeMap(ros::NodeHandle &nodeHandle) : _nh(nodeHandle) {
 	 * Timers that handles drone state at each time frame 
 	*/
 	tf_listen_timer_ = _nh.createTimer(
-		ros::Duration(1/tf_listen_freq), 
+		ros::Duration(1.0/tf_listen_freq), 
 		&FakeMap::TFListenCB, this, false, false);
 
 	sensor_refresh_timer_ = _nh.createTimer(
-		ros::Duration(1/sensor_refresh_freq), 
+		ros::Duration(1.0/sensor_refresh_freq), 
 		&FakeMap::sensorRefreshTimerCB, this, false, false);
 
 	printf("[quad] %sdrone%d%s pcd path: %s\n", KGRN, uav_id, KNRM, map_filepath_.c_str());

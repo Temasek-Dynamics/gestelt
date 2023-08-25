@@ -1,0 +1,43 @@
+<launch>
+  <arg name="map_filepath" default="$(find gestelt_bringup)/simulation/fake_map_worlds/dense_map.pcd" />
+
+  <!-- Input/output topics -->
+  <arg name="pose_topic" default="mavros/local_position/pose" />
+  <!-- <arg name="cloud_topic_fake" value="camera/depth/points" /> -->
+  <arg name="cloud_topic_fake" default="camera/depth/points_fake" />
+  <arg name="cloud_topic_ds" default="camera/depth/points_downsampled" />
+
+  <!-- Global map publisher -->
+  <node pkg="fake_map" type="fake_map_publisher" name="fake_map_publisher" output="screen">
+      <param name="map/path" value="$(arg map_filepath)"/>
+  </node>
+
+  <include file="$(find gestelt_bringup)/launch/sitl/gazebo/single_fake_map.xml">
+    <arg name="drone_id" value ="0"/>
+    <arg name="pose_topic" value="$(arg pose_topic)" />
+    <arg name="cloud_topic_fake" value="$(arg cloud_topic_fake)" />
+    <arg name="cloud_topic_ds" value="$(arg cloud_topic_ds)" />
+  </include>
+
+  <include file="$(find gestelt_bringup)/launch/sitl/gazebo/single_fake_map.xml">
+    <arg name="drone_id" value ="1"/>
+    <arg name="pose_topic" value="$(arg pose_topic)" />
+    <arg name="cloud_topic_fake" value="$(arg cloud_topic_fake)" />
+    <arg name="cloud_topic_ds" value="$(arg cloud_topic_ds)" />
+  </include>
+
+  <include file="$(find gestelt_bringup)/launch/sitl/gazebo/single_fake_map.xml">
+    <arg name="drone_id" value ="2"/>
+    <arg name="pose_topic" value="$(arg pose_topic)" />
+    <arg name="cloud_topic_fake" value="$(arg cloud_topic_fake)" />
+    <arg name="cloud_topic_ds" value="$(arg cloud_topic_ds)" />
+  </include>
+
+  <!-- <include file="$(find gestelt_bringup)/launch/sitl/gazebo/single_fake_map.xml">
+    <arg name="drone_id" value ="3"/>
+    <arg name="pose_topic" value="$(arg pose_topic)" />
+    <arg name="cloud_topic_fake" value="$(arg cloud_topic_fake)" />
+    <arg name="cloud_topic_ds" value="$(arg cloud_topic_ds)" />
+  </include> -->
+
+</launch>

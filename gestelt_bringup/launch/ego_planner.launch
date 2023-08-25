@@ -17,7 +17,7 @@
     <arg name="odometry_topic"/>
     <arg name="pose_topic"/>
     <arg name="depth_img_topic"/>
-    <arg name="point_cloud_topic"/>
+    <arg name="cloud_topic"/>
     <!-- number of moving objects -->
     <arg name="obj_num" value="10" />
     <!-- drone_origin_frame: For PX4 SITL, leave it as default. 
@@ -34,9 +34,9 @@
         <arg name="init_y" value="$(arg init_y)"/>
         <arg name="init_z" value="$(arg init_z)"/>
 
-        <arg name="map_size_x_" value="$(eval map_size_x - 0.2)"/>
-        <arg name="map_size_y_" value="$(eval map_size_y - 0.2)"/>
-        <arg name="map_size_z_" value="$(eval map_size_z - 0.2)"/>
+        <arg name="map_size_x_" value="$(eval map_size_x - 0.15)"/>
+        <arg name="map_size_y_" value="$(eval map_size_y - 0.15)"/>
+        <arg name="map_size_z_" value="$(eval map_size_z - 0.15)"/>
         <arg name="obj_num_set" value="$(arg obj_num)" />
 
         <!-- grid_map/pose_type: Toggle between subscription to
@@ -57,7 +57,7 @@
         <!-- depth topic: depth image, 640x480 by default -->
         <!-- cloud_topic: Point cloud topic   -->
         <arg name="depth_topic" value="/$(arg drone_id_ns)/$(arg depth_img_topic)"/>
-        <arg name="cloud_topic" value="/$(arg drone_id_ns)/$(arg point_cloud_topic)"/>
+        <arg name="cloud_topic" value="/$(arg drone_id_ns)/$(arg cloud_topic)"/>
 
         <arg name="pose_topic" value="/$(arg drone_id_ns)/$(arg pose_topic)"/>
         <arg name="odometry_topic" value="/$(arg drone_id_ns)/$(arg odometry_topic)"/>
@@ -93,9 +93,10 @@
         <param name="traj_server/max_poses_to_track" value="1000" type="int"/>
 
         <!-- Position command limits, anything exceeding this will switch the mode to hovering state -->
+        <!-- This is relative to uav origin frame -->
         <param name="traj_server/pos_limit/max_x" value="$(eval 0.5 * map_size_x - init_x)" type="double"/>
         <param name="traj_server/pos_limit/min_x" value="$(eval -0.5 * map_size_x - init_x)" type="double"/>
-        <param name="traj_server/pos_limit/max_y" value="$(eval 0.5 * map_size_y  - init_y)" type="double"/>
+        <param name="traj_server/pos_limit/max_y" value="$(eval 0.5 * map_size_y - init_y)" type="double"/>
         <param name="traj_server/pos_limit/min_y" value="$(eval -0.5 * map_size_y - init_y)" type="double"/>
         <param name="traj_server/pos_limit/max_z" value="$(arg map_size_z)" type="double"/>
         <param name="traj_server/pos_limit/min_z" value="-0.1" type="double"/>

@@ -5,7 +5,7 @@ from trajectory_server_msgs.msg import State, Waypoints
 from geometry_msgs.msg import Pose
 from std_msgs.msg import Int8
 
-num_drones = 2
+num_drones = 1
 
 # Publisher of server events to trigger change of states for trajectory server 
 server_event_pub = rospy.Publisher('/traj_server_event', Int8, queue_size=10)
@@ -61,40 +61,38 @@ def main():
     rospy.init_node('mission_startup', anonymous=True)
     rate = rospy.Rate(5) # 20hz
 
-    if check_traj_server_states("MISSION"):
-        pass
-    else:
-        print("Setting to HOVER mode!")
-        # Take off 
-        while not rospy.is_shutdown():
-            get_server_state_callback()
-            if check_traj_server_states("HOVER"):
-                break
-            publish_server_event(0)
-            print("tick!")
-            rate.sleep()
+    print("Setting to HOVER mode!")
+    # Take off 
+    while not rospy.is_shutdown():
+        get_server_state_callback()
+        if check_traj_server_states("HOVER"):
+            break
+        publish_server_event(0)
+        print("tick!")
+        rate.sleep()
 
-        print("Setting to MISSION mode!")
-        # Switch to mission mode
-        while not rospy.is_shutdown():
-            get_server_state_callback()
-            if check_traj_server_states("MISSION"):
-                break
-            publish_server_event(2)
-            print("tick!")
-            rate.sleep()
+    print("Setting to MISSION mode!")
+    # Switch to mission mode
+    while not rospy.is_shutdown():
+        get_server_state_callback()
+        if check_traj_server_states("MISSION"):
+            break
+        publish_server_event(2)
+        print("tick!")
+        rate.sleep()
 
     # Send waypoints to UAVs
     print(f"Sending waypoints to UAVs")
     waypoints = []
-    z_pos = 0.75
+    # Square formation with length L
     d = 1.25
-    for i in range(5):
-        waypoints.append(create_pose(d, d, z_pos))
-        waypoints.append(create_pose(d, -d, z_pos))
-        waypoints.append(create_pose(-d, -d, z_pos))
-        waypoints.append(create_pose(-d, d, z_pos))
-    waypoints.append(create_pose(0, 0, z_pos))
+    z = 0.75
+    for i in range(10):
+        waypoints.append(create_pose(d, d, z))
+        waypoints.append(create_pose(-d, d, z))
+        waypoints.append(create_pose(-d, -d, z))
+        waypoints.append(create_pose(d, -d, z))
+    waypoints.append(create_pose(0, 0, z))
     pub_waypoints(waypoints)
 
 if __name__ == '__main__':

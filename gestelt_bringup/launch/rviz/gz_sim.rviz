@@ -5,18 +5,12 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /Global Options1
-        - /drone0_ego1
         - /drone0_ego1/Mapping1
-        - /drone0_ego1/Mapping1/occ_grid_inf1
         - /drone0_ego1/Mapping1/occ_grid_inf1/Autocompute Value Bounds1
         - /drone0_mavros1/Localization1//mavros/local_position/pose1
         - /drone1_ego1/Mapping1
-        - /drone1_ego1/Mapping1/occ_inflated1
-        - /drone2_ego1/Mapping1
-        - /drone2_ego1/Mapping1/occ_inflated1
         - /drone2_mavros1/Perception1
-        - /drone3_ego1/Mapping1
-        - /drone3_ego1/Mapping1/occ_inflated1
+        - /drone3_ego1/Mapping1/occ_grid_inf1
       Splitter Ratio: 0.46536797285079956
     Tree Height: 560
   - Class: rviz/Selection
@@ -60,23 +54,19 @@ Visualization Manager:
       Frame Timeout: 15
       Frames:
         All Enabled: false
-        base_link:
-          Value: false
-        base_link_frd:
-          Value: false
         drone0_base_link:
           Value: false
         drone0_cam_link:
           Value: true
         drone0_origin:
           Value: true
+        drone1_base_link:
+          Value: true
+        drone1_cam_link:
+          Value: true
+        drone1_origin:
+          Value: true
         map:
-          Value: false
-        map_ned:
-          Value: false
-        odom:
-          Value: false
-        odom_ned:
           Value: false
         world:
           Value: true
@@ -87,20 +77,16 @@ Visualization Manager:
       Show Axes: true
       Show Names: true
       Tree:
-        base_link:
-          base_link_frd:
-            {}
-        odom:
-          odom_ned:
-            {}
         world:
           map:
             drone0_origin:
               drone0_base_link:
                 drone0_cam_link:
                   {}
-            map_ned:
-              {}
+            drone1_origin:
+              drone1_base_link:
+                drone1_cam_link:
+                  {}
       Update Interval: 0
       Value: true
     - Class: rviz/Group
@@ -175,7 +161,7 @@ Visualization Manager:
               Marker Topic: /drone_0_ego_planner_node/goal_point
               Name: goal_point
               Namespaces:
-                "": true
+                {}
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
@@ -191,7 +177,7 @@ Visualization Manager:
               Marker Topic: /drone_0_ego_planner_node/optimal_list
               Name: optimal_list
               Namespaces:
-                "": true
+                {}
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
@@ -250,34 +236,6 @@ Visualization Manager:
               Use Fixed Frame: true
               Use rainbow: true
               Value: true
-            - Alpha: 0.10000000149011612
-              Autocompute Intensity Bounds: true
-              Autocompute Value Bounds:
-                Max Value: 2.9155771732330322
-                Min Value: -0.20394854247570038
-                Value: true
-              Axis: Z
-              Channel Name: intensity
-              Class: rviz/PointCloud2
-              Color: 114; 159; 207
-              Color Transformer: AxisColor
-              Decay Time: 3
-              Enabled: false
-              Invert Rainbow: false
-              Max Color: 255; 255; 255
-              Min Color: 0; 0; 0
-              Name: occ_grid
-              Position Transformer: XYZ
-              Queue Size: 5
-              Selectable: true
-              Size (Pixels): 3
-              Size (m): 0.10000000149011612
-              Style: Flat Squares
-              Topic: /drone_0_ego_planner_node/grid_map/occupancy
-              Unreliable: false
-              Use Fixed Frame: true
-              Use rainbow: true
-              Value: false
           Enabled: true
           Name: Mapping
         - Alpha: 1
@@ -404,7 +362,7 @@ Visualization Manager:
           Marker Topic: /drone1/model
           Name: model
           Namespaces:
-            {}
+            drone1: true
           Queue Size: 100
           Value: true
         - Class: rviz/Group
@@ -461,11 +419,11 @@ Visualization Manager:
           Name: Planning
         - Class: rviz/Group
           Displays:
-            - Alpha: 0.20000000298023224
+            - Alpha: 1
               Autocompute Intensity Bounds: true
               Autocompute Value Bounds:
-                Max Value: 2.8399999141693115
-                Min Value: 0.03999999910593033
+                Max Value: 3.156107187271118
+                Min Value: -0.0815354660153389
                 Value: true
               Axis: Z
               Channel Name: intensity
@@ -477,37 +435,9 @@ Visualization Manager:
               Invert Rainbow: false
               Max Color: 255; 255; 255
               Min Color: 0; 0; 0
-              Name: occ_inflated
+              Name: occ_grid_inf
               Position Transformer: XYZ
-              Queue Size: 10
-              Selectable: true
-              Size (Pixels): 3
-              Size (m): 0.10000000149011612
-              Style: Squares
-              Topic: /drone_1_ego_planner_node/grid_map/occupancy
-              Unreliable: false
-              Use Fixed Frame: true
-              Use rainbow: true
-              Value: true
-            - Alpha: 0.20000000298023224
-              Autocompute Intensity Bounds: true
-              Autocompute Value Bounds:
-                Max Value: -0.10330941528081894
-                Min Value: -0.13483954966068268
-                Value: true
-              Axis: Z
-              Channel Name: intensity
-              Class: rviz/PointCloud2
-              Color: 85; 87; 83
-              Color Transformer: FlatColor
-              Decay Time: 1
-              Enabled: false
-              Invert Rainbow: false
-              Max Color: 255; 255; 255
-              Min Color: 0; 0; 0
-              Name: occ
-              Position Transformer: XYZ
-              Queue Size: 10
+              Queue Size: 5
               Selectable: true
               Size (Pixels): 3
               Size (m): 0.10000000149011612
@@ -516,7 +446,7 @@ Visualization Manager:
               Unreliable: false
               Use Fixed Frame: true
               Use rainbow: true
-              Value: false
+              Value: true
           Enabled: true
           Name: Mapping
         - Alpha: 1
@@ -543,7 +473,7 @@ Visualization Manager:
           Topic: /drone1/uav_path
           Unreliable: false
           Value: true
-      Enabled: false
+      Enabled: true
       Name: drone1_ego
     - Class: rviz/Group
       Displays:
@@ -648,11 +578,11 @@ Visualization Manager:
           Value: true
         - Class: rviz/Group
           Displays:
-            - Alpha: 0.20000000298023224
+            - Alpha: 1
               Autocompute Intensity Bounds: true
               Autocompute Value Bounds:
-                Max Value: 2.8399999141693115
-                Min Value: 0.03999999910593033
+                Max Value: 3.156107187271118
+                Min Value: -0.0815354660153389
                 Value: true
               Axis: Z
               Channel Name: intensity
@@ -664,37 +594,9 @@ Visualization Manager:
               Invert Rainbow: false
               Max Color: 255; 255; 255
               Min Color: 0; 0; 0
-              Name: occ_inflated
+              Name: occ_grid_inf
               Position Transformer: XYZ
-              Queue Size: 10
-              Selectable: true
-              Size (Pixels): 3
-              Size (m): 0.10000000149011612
-              Style: Squares
-              Topic: /drone_2_ego_planner_node/grid_map/occupancy
-              Unreliable: false
-              Use Fixed Frame: true
-              Use rainbow: true
-              Value: true
-            - Alpha: 0.20000000298023224
-              Autocompute Intensity Bounds: true
-              Autocompute Value Bounds:
-                Max Value: 1.1042009592056274
-                Min Value: -0.4378455579280853
-                Value: true
-              Axis: Z
-              Channel Name: intensity
-              Class: rviz/PointCloud2
-              Color: 85; 87; 83
-              Color Transformer: AxisColor
-              Decay Time: 1
-              Enabled: false
-              Invert Rainbow: false
-              Max Color: 255; 255; 255
-              Min Color: 0; 0; 0
-              Name: occ
-              Position Transformer: XYZ
-              Queue Size: 10
+              Queue Size: 5
               Selectable: true
               Size (Pixels): 3
               Size (m): 0.10000000149011612
@@ -703,7 +605,7 @@ Visualization Manager:
               Unreliable: false
               Use Fixed Frame: true
               Use rainbow: true
-              Value: false
+              Value: true
           Enabled: true
           Name: Mapping
         - Class: rviz/Group
@@ -782,7 +684,7 @@ Visualization Manager:
           Topic: /drone2/uav_path
           Unreliable: false
           Value: true
-      Enabled: false
+      Enabled: true
       Name: drone2_ego
     - Class: rviz/Group
       Displays:
@@ -887,11 +789,11 @@ Visualization Manager:
           Value: true
         - Class: rviz/Group
           Displays:
-            - Alpha: 0.20000000298023224
+            - Alpha: 1
               Autocompute Intensity Bounds: true
               Autocompute Value Bounds:
-                Max Value: 2.8399999141693115
-                Min Value: 0.03999999910593033
+                Max Value: 3.156107187271118
+                Min Value: -0.0815354660153389
                 Value: true
               Axis: Z
               Channel Name: intensity
@@ -903,37 +805,9 @@ Visualization Manager:
               Invert Rainbow: false
               Max Color: 255; 255; 255
               Min Color: 0; 0; 0
-              Name: occ_inflated
+              Name: occ_grid_inf
               Position Transformer: XYZ
-              Queue Size: 10
-              Selectable: true
-              Size (Pixels): 3
-              Size (m): 0.10000000149011612
-              Style: Squares
-              Topic: /drone_3_ego_planner_node/grid_map/occupancy
-              Unreliable: false
-              Use Fixed Frame: true
-              Use rainbow: true
-              Value: true
-            - Alpha: 0.20000000298023224
-              Autocompute Intensity Bounds: true
-              Autocompute Value Bounds:
-                Max Value: 3.287222146987915
-                Min Value: -0.11619491875171661
-                Value: true
-              Axis: Z
-              Channel Name: intensity
-              Class: rviz/PointCloud2
-              Color: 85; 87; 83
-              Color Transformer: AxisColor
-              Decay Time: 1
-              Enabled: false
-              Invert Rainbow: false
-              Max Color: 255; 255; 255
-              Min Color: 0; 0; 0
-              Name: occ
-              Position Transformer: XYZ
-              Queue Size: 10
+              Queue Size: 5
               Selectable: true
               Size (Pixels): 3
               Size (m): 0.10000000149011612
@@ -942,7 +816,7 @@ Visualization Manager:
               Unreliable: false
               Use Fixed Frame: true
               Use rainbow: true
-              Value: false
+              Value: true
           Enabled: true
           Name: Mapping
         - Class: rviz/Group
@@ -1021,7 +895,7 @@ Visualization Manager:
           Topic: /drone3/uav_path
           Unreliable: false
           Value: true
-      Enabled: false
+      Enabled: true
       Name: drone3_ego
     - Class: rviz/Group
       Displays:
@@ -1152,14 +1026,6 @@ Visualization Manager:
       Name: vicon_test
     - Class: rviz/Group
       Displays:
-        - Class: rviz/Marker
-          Enabled: false
-          Marker Topic: /drone0/fake_map_model
-          Name: fake_model
-          Namespaces:
-            {}
-          Queue Size: 100
-          Value: false
         - Alpha: 1
           Autocompute Intensity Bounds: true
           Autocompute Value Bounds:
@@ -1200,22 +1066,106 @@ Visualization Manager:
           Color: 239; 41; 41
           Color Transformer: FlatColor
           Decay Time: 0
-          Enabled: true
+          Enabled: false
           Invert Rainbow: false
           Max Color: 255; 255; 255
           Min Color: 0; 0; 0
-          Name: point_cloud_test
+          Name: drone0_fake_cloud
           Position Transformer: XYZ
           Queue Size: 10
           Selectable: true
           Size (Pixels): 3
           Size (m): 0.10000000149011612
           Style: Flat Squares
-          Topic: /drone0/camera/depth/points_test
+          Topic: /drone0/camera/depth/points_fake
           Unreliable: false
           Use Fixed Frame: true
           Use rainbow: true
-          Value: true
+          Value: false
+        - Alpha: 1
+          Autocompute Intensity Bounds: true
+          Autocompute Value Bounds:
+            Max Value: 10
+            Min Value: -10
+            Value: true
+          Axis: Z
+          Channel Name: intensity
+          Class: rviz/PointCloud2
+          Color: 239; 41; 41
+          Color Transformer: FlatColor
+          Decay Time: 0
+          Enabled: false
+          Invert Rainbow: false
+          Max Color: 255; 255; 255
+          Min Color: 0; 0; 0
+          Name: drone1_fake_cloud
+          Position Transformer: XYZ
+          Queue Size: 10
+          Selectable: true
+          Size (Pixels): 3
+          Size (m): 0.10000000149011612
+          Style: Flat Squares
+          Topic: /drone1/camera/depth/points_fake
+          Unreliable: false
+          Use Fixed Frame: true
+          Use rainbow: true
+          Value: false
+        - Alpha: 1
+          Autocompute Intensity Bounds: true
+          Autocompute Value Bounds:
+            Max Value: 10
+            Min Value: -10
+            Value: true
+          Axis: Z
+          Channel Name: intensity
+          Class: rviz/PointCloud2
+          Color: 239; 41; 41
+          Color Transformer: FlatColor
+          Decay Time: 0
+          Enabled: false
+          Invert Rainbow: false
+          Max Color: 255; 255; 255
+          Min Color: 0; 0; 0
+          Name: drone2_fake_cloud
+          Position Transformer: XYZ
+          Queue Size: 10
+          Selectable: true
+          Size (Pixels): 3
+          Size (m): 0.10000000149011612
+          Style: Flat Squares
+          Topic: /drone2/camera/depth/points_fake
+          Unreliable: false
+          Use Fixed Frame: true
+          Use rainbow: true
+          Value: false
+        - Alpha: 1
+          Autocompute Intensity Bounds: true
+          Autocompute Value Bounds:
+            Max Value: 10
+            Min Value: -10
+            Value: true
+          Axis: Z
+          Channel Name: intensity
+          Class: rviz/PointCloud2
+          Color: 239; 41; 41
+          Color Transformer: FlatColor
+          Decay Time: 0
+          Enabled: false
+          Invert Rainbow: false
+          Max Color: 255; 255; 255
+          Min Color: 0; 0; 0
+          Name: drone3_fake_cloud
+          Position Transformer: XYZ
+          Queue Size: 10
+          Selectable: true
+          Size (Pixels): 3
+          Size (m): 0.10000000149011612
+          Style: Flat Squares
+          Topic: /drone3/camera/depth/points_fake
+          Unreliable: false
+          Use Fixed Frame: true
+          Use rainbow: true
+          Value: false
       Enabled: true
       Name: fake_map
   Enabled: true
@@ -1247,7 +1197,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 10.697854042053223
+      Distance: 8.940299987792969
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -1255,17 +1205,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 0.23812523484230042
-        Y: -0.5074164867401123
-        Z: 1.7216876745224
+        X: 0.20536775887012482
+        Y: -0.6416929960250854
+        Z: 2.016479253768921
       Focal Shape Fixed Size: false
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.2297967672348022
+      Pitch: 0.32479703426361084
       Target Frame: my_view
-      Yaw: 3.5221924781799316
+      Yaw: 3.7040622234344482
     Saved:
       - Class: rviz/FPS
         Enable Stereo Rendering:

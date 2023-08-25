@@ -11,7 +11,7 @@ FakeDrone::FakeDrone(ros::NodeHandle &nodeHandle) : _nh(nodeHandle) {
 	_nh.param<double>("uav/tf_broadcast_frequency", tf_broadcast_freq_, -1.0);
 
 	_nh.param<std::string>("uav/origin_frame", uav_origin_frame_, "world");
-	_nh.param<std::string>("uav/base_link_frame", base_link_frame_, "camera_link");
+	_nh.param<std::string>("uav/base_link_frame", base_link_frame_, "base_link");
 
 	_nh.param<double>("uav/offboard_timeout", offboard_timeout_, -1.0);
 	_nh.param<double>("uav/init_x", init_pos_(0), 0.0);
@@ -150,13 +150,13 @@ void FakeDrone::simUpdateTimer(const ros::TimerEvent &)
 	// when UAV have not received any commands, UAV will hover
 	if (isOffboardCmdTimeout(offboard_timeout_))
 	{
-		if (mavros_state_.custom_mode.compare("AUTO.LOITER") != 0)
-		{
-			mavros_state_.custom_mode = "AUTO.LOITER";
-			printf("%sdrone%d%s mode switch to %s%s%s! \n", 
-				KGRN, uav_id, KNRM, 
-				KBLU, mavros_state_.custom_mode.c_str(), KNRM);
-		}
+		// if (mavros_state_.custom_mode.compare("AUTO.LOITER") != 0)
+		// {
+		// 	mavros_state_.custom_mode = "AUTO.LOITER";
+		// 	printf("%sdrone%d%s mode switch to %s%s%s! \n", 
+		// 		KGRN, uav_id, KNRM, 
+		// 		KBLU, mavros_state_.custom_mode.c_str(), KNRM);
+		// }
 		stopAndHover(cmd_des_);
 		setStateFromCmd(state_cur_, cmd_des_);
 	}
