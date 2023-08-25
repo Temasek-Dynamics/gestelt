@@ -2,8 +2,8 @@
     <!-- Drone id -->
     <arg name="drone_id"/>
     <arg name="drone_id_ns" value="drone$(arg drone_id)"/>
-    <arg name="init_x" default="0.5"/>
-    <arg name="init_y" default="-0.5"/>
+    <arg name="init_x" default="0.0"/>
+    <arg name="init_y" default="0.0"/>
     <arg name="init_z" default="0.0"/>
 
     <!-- Add static transform from drone to it's origin -->

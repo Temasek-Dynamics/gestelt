@@ -10,7 +10,7 @@
   <arg name="cloud_topic_ds" value="camera/depth/points_downsampled" />
 
   <!-- Global map publisher -->
-  <node pkg="fake_map" type="map_publisher" name="map_publisher" output="screen">
+  <node pkg="fake_map" type="fake_map_publisher" name="fake_map_publisher" output="screen">
       <param name="map/path" value="$(arg map_filepath)"/>
   </node>
 

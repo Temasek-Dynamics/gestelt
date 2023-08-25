@@ -5,7 +5,7 @@ from trajectory_server_msgs.msg import State, Waypoints
 from geometry_msgs.msg import Pose
 from std_msgs.msg import Int8
 
-num_drones = 2
+num_drones = 1
 
 # Publisher of server events to trigger change of states for trajectory server 
 server_event_pub = rospy.Publisher('/traj_server_event', Int8, queue_size=10)

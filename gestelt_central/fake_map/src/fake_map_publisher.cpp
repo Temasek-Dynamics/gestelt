@@ -19,7 +19,7 @@
 
 int main(int argc, char **argv)
 {
-    ros::init(argc, argv, "map_publisher");
+    ros::init(argc, argv, "fake_map_publisher");
     ros::NodeHandle nh("~");
 
     double map_pub_freq;

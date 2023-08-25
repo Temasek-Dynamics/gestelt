@@ -135,7 +135,7 @@ export ROS_IP=$SELF_IP
 
 # Convenience function
 alias pull_repo="git -C ~/gestelt_ws/src/gestelt/ pull"
-alias ez_make="cd ~/gestelt_ws && catkin_make -DCMAKE_BUILD_TYPE=Release -DCATKIN_BLACKLIST_PACKAGES='rviz_plugins;swarm_bridge;central_benchmark;'"
+alias ez_make="cd ~/gestelt_ws && catkin_make -DCMAKE_BUILD_TYPE=Release -DCATKIN_BLACKLIST_PACKAGES='rviz_plugins;swarm_bridge;'"
 alias cd_scripts="cd /home/rock/gestelt_ws/src/gestelt/gestelt_bringup/scripts/"
 alias check_network_priority="nmcli -f NAME,UUID,AUTOCONNECT,AUTOCONNECT-PRIORITY c"
 alias uav_startup="cd_scripts && cd vicon && ./offboard_uav.sh 0"
