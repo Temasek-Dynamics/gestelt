@@ -13,8 +13,8 @@
   <include file="$(find gestelt_bringup)/launch/sitl/sitl_central.launch">
     <arg name="num_drones" value="$(arg num_drones)"/>
     <arg name="rviz_config" value="$(arg rviz_config)"/>
-    <arg name="cloud_topic" value="$(arg cloud_topic)"/>
-    <arg name="cloud_topic_ds" value="$(arg cloud_topic)"/>
+    <arg name="cloud_topic_downsample_in" value="$(arg cloud_topic)"/>
+    <arg name="cloud_topic_downsample_out" value="$(arg cloud_topic_ds)"/>
   </include>
 
 </launch>

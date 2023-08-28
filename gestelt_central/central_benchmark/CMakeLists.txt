@@ -1,8 +1,9 @@
 cmake_minimum_required(VERSION 3.0.2)
 project(central_benchmark)
 
-## Compile as C++11, supported in ROS Kinetic and newer
+set(CMAKE_BUILD_TYPE "Release")
 add_compile_options(-std=c++14)
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g")
 
 set(ROS_LIBRARIES
   roscpp
@@ -49,9 +50,11 @@ add_executable(benchmark_aggregator src/benchmark_aggregator.cpp)
 target_link_libraries(benchmark_aggregator
   ${catkin_LIBRARIES}
 )
+add_dependencies(benchmark_aggregator ${catkin_EXPORTED_TARGETS})
 
 add_executable(cloud_downsampler src/cloud_downsampler.cpp)
 target_link_libraries(cloud_downsampler
   ${catkin_LIBRARIES}
   ${PCL_LIBRARIES}
 )
+

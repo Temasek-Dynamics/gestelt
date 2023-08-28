@@ -90,6 +90,8 @@ scp path/to/radxa_setup.sh rock@IP_ADDR:/home/rock/radxa_setup.sh
 
 9. Synchronize time between ubuntu machines (radxas and central computer)
     - Make sure ntp daemon is installed on both host and client computer: `sudo apt-get install ntp`
+    - (Optional) Add network alias to /etc/hosts
+
     - Host computer
         1. modify the ntp config: `sudo vim /etc/ntp.conf` and add the following lines
             ```bash

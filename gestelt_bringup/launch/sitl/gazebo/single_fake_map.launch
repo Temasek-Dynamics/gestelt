@@ -2,12 +2,9 @@
   <arg name="drone_id"/>
   <arg name="drone_id_ns" value="drone$(arg drone_id)"/>
   <arg name="map_filepath" default="$(find gestelt_bringup)/simulation/fake_map_worlds/dense_map.pcd" />
-
   <!-- Input/output topics -->
-  <arg name="pose_topic" default="mavros/local_position/pose" />
   <!-- <arg name="cloud_topic_fake" value="camera/depth/points" /> -->
   <arg name="cloud_topic_fake" default="camera/depth/points_fake" />
-  <arg name="cloud_topic_ds" default="camera/depth/points_downsampled" />
 
   <!-- Global map publisher -->
   <node pkg="fake_map" type="fake_map_publisher" name="fake_map_publisher" output="screen">
@@ -17,9 +14,6 @@
   <!-- Fake sensor data node -->
   <node pkg="fake_map" type="fake_map_node" name="fake_map_node_$(arg drone_id_ns)" output="screen">
     <param name="map/filepath" value="$(arg map_filepath)"/>
-
-    <!-- Subscriber to uav pose -->
-    <!-- <remap from="uav/pose" to="/$(arg drone_id_ns)/$(arg pose_topic)"/> -->
     <!-- Publisher of uav sensor cloud -->
     <remap from="uav/sensor_cloud" to="/$(arg drone_id_ns)/$(arg cloud_topic_fake)"/>
 

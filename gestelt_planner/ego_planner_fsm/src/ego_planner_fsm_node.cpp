@@ -1,7 +1,6 @@
 #include <csignal>
-#include <ros/ros.h>
 
-#include <plan_manage/ego_replan_fsm.h>
+#include <ego_replan_fsm/ego_replan_fsm.h>
 
 void SignalHandler(int signal) {
   if(ros::isInitialized() && ros::isStarted() && ros::ok() && !ros::isShuttingDown()){
@@ -16,7 +15,7 @@ int main(int argc, char **argv)
   signal(SIGINT, SignalHandler);
   signal(SIGTERM,SignalHandler);
 
-  ros::init(argc, argv, "ego_planner_node");
+  ros::init(argc, argv, "ego_planner_fsm_node");
   ros::NodeHandle nh("~");
 
   EGOReplanFSM rebo_replan;

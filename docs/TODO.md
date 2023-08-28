@@ -1,11 +1,13 @@
 # TODO
+- Move sensor/pose configs one level up, and move some topics one level down
+
 - Add simulated drones (with no dynamics)
     - Merge with main
     - Test broadcasting on xiaomi network
+    - Issues:
+        - Origin frame does not work in real life
     - Add decay to map
-
     - Add remote launching on machines
-
     - Logging of mavlink topics and ROS topics to analyze issues 
 
 - Documentation
@@ -22,7 +24,6 @@
         - Change parameters for trajectory server/ego planner to param config files
 
 - Ego Planner
-    - Split up into multiple packages to make builds faster on radxa
     - Add feature to dynamically set formation number
 
 - Port to ROS2
@@ -32,14 +33,8 @@
         - Bandwidth, latency, signal strength
 
 - Radxa 
-
-
     - Create startup script for radxa
         - Should startup mavros script and egoplanner
-    - Clone radxa device
-    - Set optimization flags
-        - set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g")
-        - https://gcc.gnu.org/onlinedocs/gcc/Optimize-Options.html
 
 - Gridmap
     - Solve bug with `cloud.points.size () == cloud.width * cloud.height assertion failure
@@ -50,7 +45,6 @@
         - Compress, publish and subscribe using ImageTransport
     - Look at using udp to send over point clouds or depth images
     - Create map with decaying voxels
-    - Rename `plan_env` to `gestelt_mapping`
 
 - Perform physical tests to determine physical characteristics
     - Motor coefficients

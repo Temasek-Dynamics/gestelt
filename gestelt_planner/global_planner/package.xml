@@ -13,7 +13,7 @@
   <build_export_depend>roscpp</build_export_depend>
   <exec_depend>roscpp</exec_depend>
 
-  <depend>plan_env</depend>
+  <depend>grid_map</depend>
   <depend>std_msgs</depend>
   <depend>cv_bridge</depend>
   <depend>geometry_msgs</depend>

@@ -6,47 +6,34 @@
   <arg name="map_size_z" value=" 2.0"/>
   <arg name="map_filepath" value="$(find gestelt_bringup)/simulation/fake_map_worlds/dense_map.pcd" />
   <!-- Input/output topics -->
-  <arg name="command_topic" value="mavros/setpoint_raw/local" />
-  <arg name="odometry_topic" value="mavros/local_position/odom" />
-  <arg name="pose_topic" value="mavros/local_position/pose" />
-  <arg name="cloud_topic" value="camera/depth/points" />
-  <arg name="cloud_topic_ds" value="camera/depth/points_downsampled" />
-  <arg name="depth_img_topic" value="camera/depth/image_raw" />
+  <arg name="cloud_topic" default="camera/depth/points_downsampled" />
 
   <!-- Drone 0 -->
   <include file="$(find gestelt_bringup)/launch/fake_drone/fake_drone_single.xml">
     <arg name="drone_id"   value="0"/>
-    <arg name="num_drones" value="$(arg num_drones)"/>
     <arg name="init_x"     value="0.5"/>
     <arg name="init_y"     value="-0.5"/>
     <arg name="init_z"     value="0.0"/>
+    <arg name="num_drones" value="$(arg num_drones)"/>
     <arg name="map_filepath" value="$(arg map_filepath)"/>
     <arg name="map_size_x" value="$(arg map_size_x)"/>
     <arg name="map_size_y" value="$(arg map_size_y)"/>
     <arg name="map_size_z" value="$(arg map_size_z)"/>
-    <arg name="pose_topic" value="$(arg pose_topic)"/>
-    <arg name="odometry_topic" value="$(arg odometry_topic)"/>
-    <arg name="depth_img_topic" value="$(arg depth_img_topic)"/>
     <arg name="cloud_topic" value="$(arg cloud_topic)"/>
-    <arg name="command_topic" value="$(arg command_topic)" />
   </include>
   
   <!-- Drone 1 -->
   <include file="$(find gestelt_bringup)/launch/fake_drone/fake_drone_single.xml">
     <arg name="drone_id"   value="1"/>
-    <arg name="num_drones" value="$(arg num_drones)"/>
     <arg name="init_x"     value="0.5"/>
     <arg name="init_y"     value="0.5"/>
     <arg name="init_z"     value="0.0"/>
     <arg name="map_filepath" value="$(arg map_filepath)"/>
+    <arg name="num_drones" value="$(arg num_drones)"/>
     <arg name="map_size_x" value="$(arg map_size_x)"/>
     <arg name="map_size_y" value="$(arg map_size_y)"/>
     <arg name="map_size_z" value="$(arg map_size_z)"/>
-    <arg name="pose_topic" value="$(arg pose_topic)"/>
-    <arg name="odometry_topic" value="$(arg odometry_topic)"/>
-    <arg name="depth_img_topic" value="$(arg depth_img_topic)"/>
     <arg name="cloud_topic" value="$(arg cloud_topic)"/>
-    <arg name="command_topic" value="$(arg command_topic)" />
   </include>
 
 </launch>

@@ -17,6 +17,9 @@
     <arg name="POSE_TYPE"/>
     <arg name="SENSOR_TYPE"/>
     <arg name="drone_origin_frame" default="world"/>
+    <arg name="global_frame" default="world"/>
+    <arg name="cam_frame" default="cam_link"/>
+    
     <!-- Subscribed topics -->
     <arg name="odometry_topic"/>
     <arg name="pose_topic"/>
@@ -33,8 +36,8 @@
     <!-- Goal definition  -->
     <arg name="flight_type"/>
 
-    <!-- <node pkg="ego_planner" name="ego_planner_node" type="ego_planner_node" output="screen" launch-prefix="valgrind"> -->
-    <node pkg="ego_planner" name="drone_$(arg drone_id)_ego_planner_node" type="ego_planner_node" output="screen">
+    <!-- <node pkg="ego_planner_fsm" name="ego_planner_fsm_node" type="ego_planner_fsm_node" output="screen" launch-prefix="valgrind"> -->
+    <node pkg="ego_planner_fsm" name="drone_$(arg drone_id)_ego_planner_node" type="ego_planner_fsm_node" output="screen">
         <remap from="~mandatory_stop" to="/mandatory_stop_to_planner"/>
         <remap from="~planning/broadcast_traj_send" to = "/broadcast_traj_from_planner"/>
         <remap from="~planning/broadcast_traj_recv" to = "/broadcast_traj_to_planner"/>
@@ -78,6 +81,8 @@
         <!-- //////////////////// -->
         <!-- GridMap params -->
         <!-- //////////////////// -->
+        <!-- Published topics -->
+        <remap from="~grid_map/occupancy" to = "$(arg drone_id_ns)/grid_map/occupancy"/>
         <!-- Subscribed topics -->
         <remap from="~grid_map/odom" to = "$(arg odometry_topic)"/>
         <remap from="~grid_map/pose" to = "$(arg pose_topic)"/>
@@ -89,9 +94,9 @@
         <param name="grid_map/map_size_x" value="$(arg map_size_x_)" />
         <param name="grid_map/map_size_y" value="$(arg map_size_y_)" />
         <param name="grid_map/map_size_z" value="$(arg map_size_z_)" />
-        <param name="grid_map/global_frame" value="world"/>
+        <param name="grid_map/global_frame" value="$(arg global_frame)"/>
         <param name="grid_map/uav_origin_frame" value="$(arg drone_origin_frame)"/>
-        <param name="grid_map/cam_frame" value="$(arg drone_id_ns)_cam_link"/>
+        <param name="grid_map/cam_frame" value="$(arg drone_id_ns)_$(arg cam_frame)"/>
         <!-- Occupancy grid params -->
         <param name="grid_map/occ_grid/resolution" value="0.1" />
         <param name="grid_map/occ_grid/inflation" value="0.1" />
@@ -99,10 +104,20 @@
         <param name="grid_map/filter/downsample_cloud" value="false" />
         <param name="grid_map/filter/depth_stride" value="4" />
         <param name="grid_map/filter/voxel_size" value="0.1" />
-        <!-- grid_map/pose_type: Toggle between subscription to ("grid_map/pose") or  ("grid_map/odom") for use as camera pose/odom-->
-        <!-- grid_map/sensor_type: Toggle between subscription to ("grid_map/cloud") or ("grid_map/depth") for use as camera sensor input -->
+
+        <!-- grid_map/pose_type: Toggle between subscription to
+            1 ("grid_map/pose") or 
+            2 ("grid_map/odom") or
+            3 ("/tf") 
+            for use as camera pose/odom-->
         <param name="~grid_map/pose_type" value = "$(arg POSE_TYPE)"/>
+        <!-- grid_map/sensor_type: Toggle between subscription to
+            1 ("grid_map/cloud") or 
+            2 ("grid_map/depth") or 
+            3 ("grid_map/cloud") [For use with POSE_TYPE 3]
+            for use as camera sensor input -->
         <param name="~grid_map/sensor_type" value="$(arg SENSOR_TYPE)"/>
+
         <!-- camera intrinsic parameters -->
         <param name="grid_map/k_depth_scaling_factor" value="1000.0"/>
 

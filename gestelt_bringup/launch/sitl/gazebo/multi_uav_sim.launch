@@ -49,13 +49,13 @@
   </include>
 
   <!-- Drone 3 -->
-  <!-- <include file="$(find gestelt_bringup)/launch/sitl/px4_sitl.xml">
+  <include file="$(find gestelt_bringup)/launch/sitl/px4_sitl.xml">
     <arg name="drone_id"   value="3"/>
     <arg name="vehicle" default="$(arg vehicle)"/>
     <arg name="model" default="$(arg model)"/>
     <arg name="init_x"     value="-0.5"/>
     <arg name="init_y"     value="0.5"/>
     <arg name="init_z"     value="0.0"/>
-  </include> -->
+  </include>
 
 </launch>

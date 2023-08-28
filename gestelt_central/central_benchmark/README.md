@@ -74,7 +74,6 @@ EMPTY_E,          // 5
     - Compare compressed depth map to downsampled point cloud
         - Bandwidth and delay
     - Implement pose timeout
-    - Rename `plan_env` to `gestelt_mapping`
     - Depth image
         - Find out how to create organized point clouds
         - Compress, publish and subscribe using ImageTransport

@@ -33,11 +33,11 @@ roslaunch gestelt_bringup multi_fake_map.launch
 "
 
 CMD_2="
-roslaunch gestelt_bringup sitl_central.launch rviz_config:=gz_sim
+roslaunch gestelt_bringup sitl_central.launch rviz_config:=gz_sim cloud_topic_downsample_in:=camera/depth/points_fake 
 "
 
 CMD_3="
-roslaunch gestelt_bringup multi_ego_planner.launch
+roslaunch gestelt_bringup multi_ego_planner.launch POSE_TYPE:=3 SENSOR_TYPE:=3
 "
 
 CMD_4="rosrun gestelt_bringup multi_mission.py"

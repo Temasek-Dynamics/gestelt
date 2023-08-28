@@ -6,7 +6,7 @@ add_compile_options(-std=c++14)
 
 set(ROS_LIBRARIES
   roscpp
-  plan_env
+  grid_map
   cv_bridge
   std_msgs
   geometry_msgs

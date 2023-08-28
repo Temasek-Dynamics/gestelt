@@ -8,7 +8,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g")
 set(ROS_LIBRARIES
     roscpp
     std_msgs
-    plan_env
+    grid_map
     path_searching
     traj_utils
 )

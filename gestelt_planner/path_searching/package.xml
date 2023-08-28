@@ -10,11 +10,10 @@
 
   <buildtool_depend>catkin</buildtool_depend>
   <build_depend>roscpp</build_depend>
-  <build_depend>plan_env</build_depend>
   <build_export_depend>roscpp</build_export_depend>
-  <build_export_depend>plan_env</build_export_depend>
   <exec_depend>roscpp</exec_depend>
-  <exec_depend>plan_env</exec_depend>
+
+  <depend>grid_map</depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>

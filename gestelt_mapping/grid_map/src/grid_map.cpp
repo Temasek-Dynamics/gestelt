@@ -1,4 +1,4 @@
-#include "plan_env/grid_map.h"
+#include "grid_map/grid_map.h"
 
 void GridMap::initMap(ros::NodeHandle &nh)
 {

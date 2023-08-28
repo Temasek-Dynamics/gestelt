@@ -2,7 +2,7 @@
 #define _PLANNER_COMMON_H_
 
 // Common helper methods for planners
-#include <plan_env/grid_map.h>
+#include <grid_map/grid_map.h>
 #include <limits>
 #include <Eigen/Eigen>
 #include <pcl/octree/octree_search.h>

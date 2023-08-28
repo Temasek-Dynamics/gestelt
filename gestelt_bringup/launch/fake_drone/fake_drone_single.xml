@@ -12,11 +12,14 @@
     <arg name="map_size_z"/>
     <arg name="map_filepath"/>
     <!-- Input/output topics -->
-    <arg name="command_topic"/>
-    <arg name="odometry_topic"/>
-    <arg name="pose_topic"/>
-    <arg name="depth_img_topic"/>
-    <arg name="cloud_topic"/>
+    <arg name="command_topic" default="mavros/setpoint_raw/local" />
+    <arg name="odometry_topic" default="mavros/local_position/odom" />
+    <arg name="pose_topic" default="mavros/local_position/pose" />
+    <arg name="depth_img_topic" default="camera/depth/image_raw" />
+    <arg name="cloud_topic" default="camera/depth/points" />
+    <!-- Use value 3 for fake_map, Use value 1 for actual map -->
+    <arg name="POSE_TYPE" default="3" />
+    <arg name="SENSOR_TYPE" default="3" />
 
     <!-- Add static transform from drone to it's origin -->
     <node pkg="tf" type="static_transform_publisher" 
@@ -46,8 +49,6 @@
 
     <!-- Fake sensor data node -->
     <node pkg="fake_map" type="fake_map_node" name="fake_map_$(arg drone_id_ns)" output="screen">
-        <!-- Subscriber to uav pose -->
-        <!-- <remap from="uav/pose" to="/$(arg drone_id_ns)/$(arg pose_topic)"/> -->
         <!-- Publisher of uav sensor cloud -->
         <remap from="uav/sensor_cloud" to="/$(arg drone_id_ns)/$(arg cloud_topic)"/>
 
@@ -59,9 +60,9 @@
         <param name="map/filepath" value="$(arg map_filepath)"/>
     </node>
 
+    <!-- Ego planner -->
     <include file="$(find gestelt_bringup)/launch/ego_planner.launch">
         <arg name="px4_device" value="false" />
-        <arg name="drone_origin_frame" value="world" />
 
         <arg name="drone_id"   value="$(arg drone_id)"/>
         <arg name="init_x"     value="$(arg init_x)"/>
@@ -71,11 +72,9 @@
         <arg name="map_size_x" value="$(arg map_size_x)"/>
         <arg name="map_size_y" value="$(arg map_size_y)"/>
         <arg name="map_size_z" value="$(arg map_size_z)"/>
-        <arg name="pose_topic" value="$(arg pose_topic)"/>
-        <arg name="odometry_topic" value="$(arg odometry_topic)"/>
-        <arg name="depth_img_topic" value="$(arg depth_img_topic)"/>
         <arg name="cloud_topic" value="$(arg cloud_topic)"/>
-        <arg name="command_topic" value="$(arg command_topic)" />
+        <arg name="POSE_TYPE" value="$(arg POSE_TYPE)" />
+        <arg name="SENSOR_TYPE" value="$(arg SENSOR_TYPE)" />
     </include>
 
 </launch>

@@ -13,11 +13,13 @@
     <arg name="map_size_y"/>
     <arg name="map_size_z"/>
     <!-- Input/output topics -->
-    <arg name="command_topic"/>
-    <arg name="odometry_topic"/>
-    <arg name="pose_topic"/>
-    <arg name="depth_img_topic"/>
-    <arg name="cloud_topic"/>
+    <arg name="command_topic" default="mavros/setpoint_raw/local" />
+    <arg name="odometry_topic" default="mavros/local_position/odom" />
+    <arg name="pose_topic" default="mavros/local_position/pose" />
+    <arg name="depth_img_topic" default="camera/depth/image_raw" />
+    <arg name="cloud_topic" default="camera/depth/points" />
+    <arg name="POSE_TYPE" />
+    <arg name="SENSOR_TYPE" />
     <!-- number of moving objects -->
     <arg name="obj_num" value="10" />
     <!-- drone_origin_frame: For PX4 SITL, leave it as default. 
@@ -27,6 +29,7 @@
     <!-- Ego Planner params -->
     <include file="$(find gestelt_bringup)/launch/advanced_param.xml">
         <arg name="px4_device" value="$(arg px4_device)"/>
+        <arg name="drone_origin_frame" value="$(arg drone_origin_frame)"/>
 
         <arg name="drone_id" value="$(arg drone_id)"/>
         <arg name="num_drones" value="$(arg num_drones)" />
@@ -39,19 +42,8 @@
         <arg name="map_size_z_" value="$(eval map_size_z - 0.15)"/>
         <arg name="obj_num_set" value="$(arg obj_num)" />
 
-        <!-- grid_map/pose_type: Toggle between subscription to
-            1 ("grid_map/pose") or 
-            2 ("grid_map/odom") or
-            3 ("/tf") 
-            for use as camera pose/odom-->
-        <arg name="POSE_TYPE" value="3" />
-        <!-- grid_map/sensor_type: Toggle between subscription to
-            1 ("grid_map/cloud") or 
-            2 ("grid_map/depth") or 
-            3 ("grid_map/cloud") [For use with POSE_TYPE 3]
-            for use as camera sensor input -->
-        <arg name="SENSOR_TYPE" value="3" />
-        <arg name="drone_origin_frame" value="$(arg drone_origin_frame)"/>
+        <arg name="POSE_TYPE" value="$(arg POSE_TYPE)" />
+        <arg name="SENSOR_TYPE" value="$(arg SENSOR_TYPE)" />
         
         <!-- camera pose: transform of camera frame in the world frame -->
         <!-- depth topic: depth image, 640x480 by default -->

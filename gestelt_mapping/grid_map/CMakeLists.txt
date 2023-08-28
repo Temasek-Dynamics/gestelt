@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(plan_env)
+project(grid_map)
 
 set(CMAKE_BUILD_TYPE "Release")
 add_compile_options(-std=c++14)
@@ -25,7 +25,7 @@ find_package(Eigen3 REQUIRED)
 
 catkin_package(
  INCLUDE_DIRS include
- LIBRARIES plan_env
+ LIBRARIES grid_map
  CATKIN_DEPENDS ${ROS_LIBRARIES}
 #  DEPENDS system_lib
 )
@@ -42,11 +42,11 @@ include_directories(
 # add_definitions(${PCL_DEFINITIONS})
 # link_directories(${PCL_LIBRARY_DIRS})
 
-add_library(plan_env 
+add_library(grid_map 
     src/grid_map.cpp 
 )
 
-target_link_libraries(plan_env
+target_link_libraries(grid_map
     ${catkin_LIBRARIES} 
     ${PCL_LIBRARIES}
     ${EIGEN3_LIBRARIES}

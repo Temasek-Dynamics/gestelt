@@ -1,8 +1,11 @@
 cmake_minimum_required(VERSION 3.0.2)
 project(fake_map)
 
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_FLAGS "-std=c++17")
+# set(CMAKE_CXX_STANDARD 17)
+# set(CMAKE_CXX_FLAGS "-std=c++17")
+set(CMAKE_BUILD_TYPE "Release")
+add_compile_options(-std=c++14)
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g")
 
 set (ROS_PKGS
   geometry_msgs

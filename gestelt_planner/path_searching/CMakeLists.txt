@@ -7,7 +7,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g")
 
 set(ROS_LIBRARIES
   roscpp
-  plan_env
+  grid_map
 )
 
 find_package(Eigen3 REQUIRED)

@@ -1,5 +1,5 @@
-#ifndef _PLANNER_MANAGER_H_
-#define _PLANNER_MANAGER_H_
+#ifndef _EGO_PLANNER_MANAGER_H_
+#define _EGO_PLANNER_MANAGER_H_
 
 #include <stdlib.h>
 
@@ -14,7 +14,7 @@
 #include <optimizer/poly_traj_optimizer.h>
 #include <optimizer/poly_traj_utils.hpp>
 
-#include <plan_env/grid_map.h>
+#include <grid_map/grid_map.h>
 
 namespace ego_planner
 {
@@ -123,4 +123,4 @@ namespace ego_planner
   };
 } // namespace ego_planner
 
-#endif
+#endif // _EGO_PLANNER_MANAGER_H_

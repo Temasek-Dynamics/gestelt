@@ -1,8 +1,8 @@
 <launch>
   <arg name="num_drones" default="5"/>
   <arg name="rviz_config" default="default"/>
-  <arg name="cloud_topic" default="camera/depth/points_fake" />
-  <arg name="cloud_topic_ds" default="camera/depth/points_downsampled" />
+  <arg name="cloud_topic_downsample_in" default="camera/depth/points" />
+  <arg name="cloud_topic_downsample_out" default="camera/depth/points_downsampled" />
 
   <!-- swarm topic transmitter bridge-->
   <include file="$(find swarm_bridge)/launch/bridge_udp.launch">
@@ -34,8 +34,8 @@
     <param name="~queue_size" value="5" />
     <param name="~voxel_size" value="0.1" />
 
-    <remap from="~cloud_in" to="/drone0/$(arg cloud_topic)" />
-    <remap from="~cloud_out" to="/drone0/$(arg cloud_topic_ds)" />
+    <remap from="~cloud_in" to="/drone0/$(arg cloud_topic_downsample_in)" />
+    <remap from="~cloud_out" to="/drone0/$(arg cloud_topic_downsample_out)" />
   </node>
 
   <!-- drone 1: Downsamples the input cloud -->
@@ -44,8 +44,8 @@
     <param name="~queue_size" value="5" />
     <param name="~voxel_size" value="0.1" />
 
-    <remap from="~cloud_in" to="/drone1/$(arg cloud_topic)" />
-    <remap from="~cloud_out" to="/drone1/$(arg cloud_topic_ds)" />
+    <remap from="~cloud_in" to="/drone1/$(arg cloud_topic_downsample_in)" />
+    <remap from="~cloud_out" to="/drone1/$(arg cloud_topic_downsample_out)" />
   </node>
 
   <!-- drone 2: Downsamples the input cloud -->
@@ -54,8 +54,8 @@
     <param name="~queue_size" value="5" />
     <param name="~voxel_size" value="0.1" />
 
-    <remap from="~cloud_in" to="/drone2/$(arg cloud_topic)" />
-    <remap from="~cloud_out" to="/drone2/$(arg cloud_topic_ds)" />
+    <remap from="~cloud_in" to="/drone2/$(arg cloud_topic_downsample_in)" />
+    <remap from="~cloud_out" to="/drone2/$(arg cloud_topic_downsample_out)" />
   </node>
 
   <!-- drone 3: Downsamples the input cloud -->
@@ -64,8 +64,8 @@
     <param name="~queue_size" value="5" />
     <param name="~voxel_size" value="0.1" />
 
-    <remap from="~cloud_in" to="/drone3/$(arg cloud_topic)" />
-    <remap from="~cloud_out" to="/drone3/$(arg cloud_topic_ds)" />
+    <remap from="~cloud_in" to="/drone3/$(arg cloud_topic_downsample_in)" />
+    <remap from="~cloud_out" to="/drone3/$(arg cloud_topic_downsample_out)" />
   </node>
 
 </launch>

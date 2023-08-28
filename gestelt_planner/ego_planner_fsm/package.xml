@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>traj_opt</name>
-  <version>0.0.0</version>
-  <description>The traj_opt package</description>
+  <name>ego_planner_fsm</name>
+  <version>0.0.1</version>
+  <description>The ego_planner_fsm package</description>
 
   <maintainer email="iszhouxin@zju.edu.cn">iszhouxin</maintainer>
 
@@ -13,17 +13,24 @@
   <build_depend>std_msgs</build_depend>
   <build_depend>grid_map</build_depend>
   <build_depend>path_searching</build_depend>
+  <build_depend>traj_opt</build_depend>
   <build_depend>traj_utils</build_depend>
+
   <build_export_depend>roscpp</build_export_depend>
   <build_export_depend>std_msgs</build_export_depend>
-  <build_export_depend>grid_map</build_export_depend>
-  <build_export_depend>path_searching</build_export_depend>
-  <build_export_depend>traj_utils</build_export_depend>
+
   <exec_depend>roscpp</exec_depend>
   <exec_depend>std_msgs</exec_depend>
   <exec_depend>grid_map</exec_depend>
   <exec_depend>path_searching</exec_depend>
+  <exec_depend>traj_opt</exec_depend>
   <exec_depend>traj_utils</exec_depend>
+
+  <depend>geometry_msgs</depend>
+  <depend>trajectory_server_msgs</depend>
+  <depend>swarm_benchmark</depend>
+
+  <depend>ego_planner_manager</depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>
@@ -31,3 +38,6 @@
 
   </export>
 </package>
+
+
+<!-- catkin_make -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=Yes -->

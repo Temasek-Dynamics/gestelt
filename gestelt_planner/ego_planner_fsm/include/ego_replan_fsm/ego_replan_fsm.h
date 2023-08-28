@@ -1,9 +1,7 @@
-#ifndef _REBO_REPLAN_FSM_H_
-#define _REBO_REPLAN_FSM_H_
+#ifndef _EGO_PLANNER_FSM_H_
+#define _EGO_PLANNER_FSM_H_
 
 #include <algorithm>
-#include <iostream>
-#include <vector>
 
 #include <Eigen/Eigen>
 
@@ -13,15 +11,10 @@
 #include <std_msgs/String.h>
 #include <geometry_msgs/PoseStamped.h>
 
-#include <traj_utils/DataDisp.h>
-#include <traj_utils/planning_visualization.h>
 #include <traj_utils/PolyTraj.h>
 #include <traj_utils/MINCOTraj.h>
 
-#include <plan_env/grid_map.h>
-#include <optimizer/poly_traj_optimizer.h>
-
-#include <plan_manage/planner_manager.h>
+#include <ego_planner_manager/ego_planner_manager.h>
 
 #include <swarm_benchmark/timebenchmark.h>
 
@@ -538,4 +531,4 @@ private:
 
 } // namespace ego_planner
 
-#endif
+#endif // _EGO_PLANNER_FSM_H_
