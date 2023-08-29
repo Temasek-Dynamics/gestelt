@@ -1,6 +1,4 @@
 <launch>
-    <!-- px4_device param applies a frame offset (for the 'droneX_origin' frame to work around px4 origin limitations -->
-    <arg name="px4_device" default="true"/> 
     <!-- Drone id -->
     <arg name="drone_id"/>
     <arg name="drone_id_ns" value="drone$(arg drone_id)"/>
@@ -28,14 +26,10 @@
 
     <!-- Ego Planner params -->
     <include file="$(find gestelt_bringup)/launch/advanced_param.xml">
-        <arg name="px4_device" value="$(arg px4_device)"/>
         <arg name="drone_origin_frame" value="$(arg drone_origin_frame)"/>
 
         <arg name="drone_id" value="$(arg drone_id)"/>
         <arg name="num_drones" value="$(arg num_drones)" />
-        <arg name="init_x" value="$(arg init_x)"/>
-        <arg name="init_y" value="$(arg init_y)"/>
-        <arg name="init_z" value="$(arg init_z)"/>
 
         <arg name="map_size_x_" value="$(eval map_size_x - 0.15)"/>
         <arg name="map_size_y_" value="$(eval map_size_y - 0.15)"/>
@@ -70,7 +64,7 @@
         <arg name="use_distinctive_trajs" value="false" />
         <!-- 1: use 2D Nav Goal to select goal  -->
         <!-- 2: Assign waypoints via a topic  -->
-        <arg name="flight_type" value="2" />
+        <arg name="waypoint_type" value="2" />
     </include>
 
     <!-- Trajectory server -->

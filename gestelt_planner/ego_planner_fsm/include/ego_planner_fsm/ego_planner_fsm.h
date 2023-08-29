@@ -232,11 +232,13 @@ private:
   int drone_id_;
 
   /* parameters */
-  bool apply_frame_origin_offset_; // If true, applies a transformation from UAV origin frame to world
-  geometry_msgs::Pose uav_origin_to_world_tf_; // Frame transformation from origin to world frame
-  geometry_msgs::Pose world_to_uav_origin_tf_; // Frame transformation from world frame to origin
+  double tf_lookup_timeout_{15.0};
+  std::string uav_origin_frame_, global_frame_;
 
-  int target_type_; // If value is 1, the goal is manually defined via a subscribed topic, else if 2, the goal is defined via pre-defined waypoints 
+  Eigen::Vector3d uav_origin_to_world_tf_; // Position (x,y,z) of drone world to origin frame
+  Eigen::Vector3d world_to_uav_origin_tf_; // Position (x,y,z) of drone origin to world frame
+
+  int waypoint_type_; // If value is 1, the goal is manually defined via a subscribed topic, else if 2, the goal is defined via pre-defined waypoints 
 
   double min_replan_dist_; // Min distance to replan
   double replan_time_thresh_; // Timeout for replanning to occur
@@ -271,9 +273,9 @@ private:
   ros::NodeHandle node_;
 
   // Timer to execute FSM callback
-  ros::Timer pub_state_timer_;
-  ros::Timer tick_state_timer_;
-  ros::Timer exec_state_timer_;
+  ros::Timer pub_state_timer_; // Timer for publishing state
+  ros::Timer tick_state_timer_; // Timer for changing states in state machine  
+  ros::Timer exec_state_timer_; // Timer for executing actions based on current state
 
   // Subscribers and publishers
   ros::Subscriber waypoint_sub_, odom_sub_, trigger_sub_, broadcast_ploytraj_sub_, mandatory_stop_sub_;
@@ -288,6 +290,10 @@ private:
   EGOPlannerManager::Ptr planner_manager_;
   PlanningVisualization::Ptr visualization_;
   std::shared_ptr<TimeBenchmark> time_benchmark_; // Measures and stores CPU/Wall runtime
+
+  // TF transformation 
+  tf2_ros::Buffer tfBuffer_;
+  std::unique_ptr<tf2_ros::TransformListener> tfListener_;
 
 private: 
 
@@ -409,41 +415,43 @@ private:
   bool measureGroundHeight(double &height);
 
   // Transform the trajectory from UAV frame to world frame
-  void transformMINCOTrajectoryToWorld(traj_utils::MINCOTraj & MINCO_msg){
+  void transformMINCOFromOriginToWorld(traj_utils::MINCOTraj & MINCO_msg){
+
+    MINCO_msg.start_p[0] += uav_origin_to_world_tf_(0);
+    MINCO_msg.start_p[1] += uav_origin_to_world_tf_(1);
+    MINCO_msg.start_p[2] += uav_origin_to_world_tf_(2);
 
     // Account for offset from UAV origin to world frame
     for (int i = 0; i < MINCO_msg.duration.size() - 1; i++)
     {
-      MINCO_msg.inner_x[i] += uav_origin_to_world_tf_.position.x;
-      MINCO_msg.inner_y[i] += uav_origin_to_world_tf_.position.y;
-      MINCO_msg.inner_z[i] += uav_origin_to_world_tf_.position.z;
+      MINCO_msg.inner_x[i] += uav_origin_to_world_tf_(0);
+      MINCO_msg.inner_y[i] += uav_origin_to_world_tf_(1);
+      MINCO_msg.inner_z[i] += uav_origin_to_world_tf_(2);
     }
-    MINCO_msg.start_p[0] += uav_origin_to_world_tf_.position.x;
-    MINCO_msg.start_p[1] += uav_origin_to_world_tf_.position.y;
-    MINCO_msg.start_p[2] += uav_origin_to_world_tf_.position.z;
 
-    MINCO_msg.end_p[0] += uav_origin_to_world_tf_.position.x;
-    MINCO_msg.end_p[1] += uav_origin_to_world_tf_.position.y;
-    MINCO_msg.end_p[2] += uav_origin_to_world_tf_.position.z;
+    MINCO_msg.end_p[0] += uav_origin_to_world_tf_(0);
+    MINCO_msg.end_p[1] += uav_origin_to_world_tf_(1);
+    MINCO_msg.end_p[2] += uav_origin_to_world_tf_(2);
   }
 
   // Transform the trajectory from world frame to UAV frame
-  void transformMINCOTrajectoryToUAVOrigin(traj_utils::MINCOTraj & MINCO_msg){
+  void transformMINCOFromWorldToOrigin(traj_utils::MINCOTraj & MINCO_msg){
     
+    MINCO_msg.start_p[0] += world_to_uav_origin_tf_(0);
+    MINCO_msg.start_p[1] += world_to_uav_origin_tf_(1);
+    MINCO_msg.start_p[2] += world_to_uav_origin_tf_(2);
+
     // Account for offset from UAV origin to world frame
     for (int i = 0; i < MINCO_msg.duration.size() - 1; i++)
     {
-      MINCO_msg.inner_x[i] += world_to_uav_origin_tf_.position.x;
-      MINCO_msg.inner_y[i] += world_to_uav_origin_tf_.position.y;
-      MINCO_msg.inner_z[i] += world_to_uav_origin_tf_.position.z;
+      MINCO_msg.inner_x[i] += world_to_uav_origin_tf_(0);
+      MINCO_msg.inner_y[i] += world_to_uav_origin_tf_(1);
+      MINCO_msg.inner_z[i] += world_to_uav_origin_tf_(2);
     }
-    MINCO_msg.start_p[0] += world_to_uav_origin_tf_.position.x;
-    MINCO_msg.start_p[1] += world_to_uav_origin_tf_.position.y;
-    MINCO_msg.start_p[2] += world_to_uav_origin_tf_.position.z;
 
-    MINCO_msg.end_p[0] += world_to_uav_origin_tf_.position.x;
-    MINCO_msg.end_p[1] += world_to_uav_origin_tf_.position.y;
-    MINCO_msg.end_p[2] += world_to_uav_origin_tf_.position.z;
+    MINCO_msg.end_p[0] += world_to_uav_origin_tf_(0);
+    MINCO_msg.end_p[1] += world_to_uav_origin_tf_(1);
+    MINCO_msg.end_p[2] += world_to_uav_origin_tf_(2);
   }
   
   /* State Machine handling methods */

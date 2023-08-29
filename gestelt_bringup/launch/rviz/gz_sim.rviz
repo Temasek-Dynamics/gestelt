@@ -11,6 +11,7 @@ Panels:
         - /drone1_ego1/Mapping1/occ_grid_inf1
         - /drone2_mavros1/Perception1
         - /drone3_ego1/Mapping1/occ_grid_inf1
+        - /fake_map1
       Splitter Ratio: 0.5853132009506226
     Tree Height: 627
   - Class: rviz/Selection
@@ -54,10 +55,6 @@ Visualization Manager:
       Frame Timeout: 15
       Frames:
         All Enabled: false
-        base_link:
-          Value: false
-        base_link_frd:
-          Value: false
         drone0_base_link:
           Value: false
         drone0_cam_link:
@@ -70,25 +67,7 @@ Visualization Manager:
           Value: true
         drone1_origin:
           Value: true
-        drone2_base_link:
-          Value: true
-        drone2_cam_link:
-          Value: true
-        drone2_origin:
-          Value: true
-        drone3_base_link:
-          Value: true
-        drone3_cam_link:
-          Value: true
-        drone3_origin:
-          Value: true
         map:
-          Value: false
-        map_ned:
-          Value: false
-        odom:
-          Value: false
-        odom_ned:
           Value: false
         world:
           Value: true
@@ -99,12 +78,6 @@ Visualization Manager:
       Show Axes: true
       Show Names: true
       Tree:
-        base_link:
-          base_link_frd:
-            {}
-        odom:
-          odom_ned:
-            {}
         world:
           map:
             drone0_origin:
@@ -115,16 +88,6 @@ Visualization Manager:
               drone1_base_link:
                 drone1_cam_link:
                   {}
-            drone2_origin:
-              drone2_base_link:
-                drone2_cam_link:
-                  {}
-            drone3_origin:
-              drone3_base_link:
-                drone3_cam_link:
-                  {}
-            map_ned:
-              {}
       Update Interval: 0
       Value: true
     - Class: rviz/Group
@@ -159,7 +122,7 @@ Visualization Manager:
           Marker Topic: /obstacle_collision_points
           Name: obstacle_collision
           Namespaces:
-            "": true
+            {}
           Queue Size: 100
           Value: true
         - Alpha: 0.5
@@ -199,7 +162,7 @@ Visualization Manager:
               Marker Topic: /drone_0_ego_planner_node/goal_point
               Name: goal_point
               Namespaces:
-                "": true
+                {}
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
@@ -215,7 +178,7 @@ Visualization Manager:
               Marker Topic: /drone_0_ego_planner_node/optimal_list
               Name: optimal_list
               Namespaces:
-                "": true
+                {}
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
@@ -410,7 +373,7 @@ Visualization Manager:
               Marker Topic: /drone_1_ego_planner_node/goal_point
               Name: goal_point
               Namespaces:
-                "": true
+                {}
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
@@ -426,7 +389,7 @@ Visualization Manager:
               Marker Topic: /drone_1_ego_planner_node/optimal_list
               Name: optimal_traj
               Namespaces:
-                "": true
+                {}
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
@@ -611,7 +574,7 @@ Visualization Manager:
           Marker Topic: /drone2/model
           Name: Marker
           Namespaces:
-            drone2: true
+            {}
           Queue Size: 100
           Value: true
         - Class: rviz/Group
@@ -653,7 +616,7 @@ Visualization Manager:
               Marker Topic: /drone_2_ego_planner_node/goal_point
               Name: goal_point
               Namespaces:
-                "": true
+                {}
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
@@ -669,7 +632,7 @@ Visualization Manager:
               Marker Topic: /drone_2_ego_planner_node/optimal_list
               Name: optimal_traj
               Namespaces:
-                "": true
+                {}
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
@@ -722,7 +685,7 @@ Visualization Manager:
           Topic: /drone2/uav_path
           Unreliable: false
           Value: true
-      Enabled: true
+      Enabled: false
       Name: drone2_ego
     - Class: rviz/Group
       Displays:
@@ -822,7 +785,7 @@ Visualization Manager:
           Marker Topic: /drone3/model
           Name: Marker
           Namespaces:
-            drone3: true
+            {}
           Queue Size: 100
           Value: true
         - Class: rviz/Group
@@ -933,7 +896,7 @@ Visualization Manager:
           Topic: /drone3/uav_path
           Unreliable: false
           Value: true
-      Enabled: true
+      Enabled: false
       Name: drone3_ego
     - Class: rviz/Group
       Displays:
@@ -1064,7 +1027,7 @@ Visualization Manager:
       Name: vicon_test
     - Class: rviz/Group
       Displays:
-        - Alpha: 1
+        - Alpha: 0.6000000238418579
           Autocompute Intensity Bounds: true
           Autocompute Value Bounds:
             Max Value: 10
@@ -1204,7 +1167,119 @@ Visualization Manager:
           Use Fixed Frame: true
           Use rainbow: true
           Value: false
-      Enabled: false
+        - Alpha: 1
+          Autocompute Intensity Bounds: true
+          Autocompute Value Bounds:
+            Max Value: 10
+            Min Value: -10
+            Value: true
+          Axis: Z
+          Channel Name: intensity
+          Class: rviz/PointCloud2
+          Color: 239; 41; 41
+          Color Transformer: FlatColor
+          Decay Time: 0
+          Enabled: true
+          Invert Rainbow: false
+          Max Color: 255; 255; 255
+          Min Color: 0; 0; 0
+          Name: drone0_downsampled
+          Position Transformer: XYZ
+          Queue Size: 10
+          Selectable: true
+          Size (Pixels): 3
+          Size (m): 0.10000000149011612
+          Style: Flat Squares
+          Topic: /drone0/camera/depth/points_fake
+          Unreliable: false
+          Use Fixed Frame: true
+          Use rainbow: true
+          Value: true
+        - Alpha: 1
+          Autocompute Intensity Bounds: true
+          Autocompute Value Bounds:
+            Max Value: 10
+            Min Value: -10
+            Value: true
+          Axis: Z
+          Channel Name: intensity
+          Class: rviz/PointCloud2
+          Color: 239; 41; 41
+          Color Transformer: FlatColor
+          Decay Time: 0
+          Enabled: false
+          Invert Rainbow: false
+          Max Color: 255; 255; 255
+          Min Color: 0; 0; 0
+          Name: drone1_downsampled
+          Position Transformer: XYZ
+          Queue Size: 10
+          Selectable: true
+          Size (Pixels): 3
+          Size (m): 0.10000000149011612
+          Style: Flat Squares
+          Topic: /drone1/camera/depth/points_downsampled
+          Unreliable: false
+          Use Fixed Frame: true
+          Use rainbow: true
+          Value: false
+        - Alpha: 1
+          Autocompute Intensity Bounds: true
+          Autocompute Value Bounds:
+            Max Value: 10
+            Min Value: -10
+            Value: true
+          Axis: Z
+          Channel Name: intensity
+          Class: rviz/PointCloud2
+          Color: 239; 41; 41
+          Color Transformer: FlatColor
+          Decay Time: 0
+          Enabled: false
+          Invert Rainbow: false
+          Max Color: 255; 255; 255
+          Min Color: 0; 0; 0
+          Name: drone2_downsampled
+          Position Transformer: XYZ
+          Queue Size: 10
+          Selectable: true
+          Size (Pixels): 3
+          Size (m): 0.10000000149011612
+          Style: Flat Squares
+          Topic: /drone0/camera/depth/points_fake
+          Unreliable: false
+          Use Fixed Frame: true
+          Use rainbow: true
+          Value: false
+        - Alpha: 1
+          Autocompute Intensity Bounds: true
+          Autocompute Value Bounds:
+            Max Value: 10
+            Min Value: -10
+            Value: true
+          Axis: Z
+          Channel Name: intensity
+          Class: rviz/PointCloud2
+          Color: 239; 41; 41
+          Color Transformer: FlatColor
+          Decay Time: 0
+          Enabled: false
+          Invert Rainbow: false
+          Max Color: 255; 255; 255
+          Min Color: 0; 0; 0
+          Name: drone3_downsampled
+          Position Transformer: XYZ
+          Queue Size: 10
+          Selectable: true
+          Size (Pixels): 3
+          Size (m): 0.10000000149011612
+          Style: Flat Squares
+          Topic: /drone0/camera/depth/points_fake
+          Unreliable: false
+          Use Fixed Frame: true
+          Use rainbow: true
+          Value: false
+      Enabled: true
       Name: fake_map
   Enabled: true
   Global Options:
@@ -1235,7 +1310,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 7.37614631652832
+      Distance: 13.237701416015625
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -1243,17 +1318,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 0.28576749563217163
-        Y: -0.5530731678009033
-        Z: 2.5235021114349365
+        X: 1.2582751512527466
+        Y: -0.6409846544265747
+        Z: 3.221346139907837
       Focal Shape Fixed Size: false
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.6297974586486816
+      Pitch: 1.0447971820831299
       Target Frame: my_view
-      Yaw: 4.069074630737305
+      Yaw: 3.1490697860717773
     Saved:
       - Class: rviz/FPS
         Enable Stereo Rendering:

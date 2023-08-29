@@ -1,8 +1,5 @@
 # TODO
-- Move sensor/pose configs one level up, and move some topics one level down
-
 - Add simulated drones (with no dynamics)
-    - Merge with main
     - Test broadcasting on xiaomi network
     - Issues:
         - Origin frame does not work in real life

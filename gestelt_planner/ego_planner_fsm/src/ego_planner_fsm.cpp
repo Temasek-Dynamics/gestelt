@@ -1,5 +1,5 @@
 
-#include <ego_replan_fsm/ego_replan_fsm.h>
+#include <ego_planner_fsm/ego_planner_fsm.h>
 
 namespace ego_planner
 {
@@ -25,21 +25,8 @@ namespace ego_planner
     });
     planner_manager_->grid_map_->initTimeBenchmark(time_benchmark_);
 
-    /* ROS Params*/
-    nh.param("fsm/apply_frame_origin_offset", apply_frame_origin_offset_, false);
-
-    // This applies an offset to all trajectories received and sent so that they are relative to the world frame
-    nh.param("fsm/frame_offset_x", uav_origin_to_world_tf_.position.x, 0.0);
-    nh.param("fsm/frame_offset_y", uav_origin_to_world_tf_.position.y, 0.0);
-    nh.param("fsm/frame_offset_z", uav_origin_to_world_tf_.position.z, 0.0);
-
-    // Reverse signs so that the transformation is from UAV origin frame to world frame
-    world_to_uav_origin_tf_.position.x = -uav_origin_to_world_tf_.position.x;
-    world_to_uav_origin_tf_.position.y = -uav_origin_to_world_tf_.position.y;
-    world_to_uav_origin_tf_.position.z = -uav_origin_to_world_tf_.position.z;
-
     /*  fsm param  */
-    nh.param("fsm/flight_type", target_type_, -1);
+    nh.param("fsm/waypoint_type", waypoint_type_, -1);
     nh.param("fsm/thresh_replan_time", replan_time_thresh_, -1.0);
     nh.param("fsm/thresh_no_replan_meter", min_replan_dist_, -1.0);
     nh.param("fsm/planning_horizon", planning_horizen_, -1.0);
@@ -67,13 +54,16 @@ namespace ego_planner
     nh.param("fsm/tick_state_freq", tick_state_freq, 100.0);
     nh.param("fsm/exec_state_freq", exec_state_freq, 20.0);
 
+    // std::string odom_topic;
+    // nh.param("grid_map/odom", odom_topic, std::string("odom"));
+
     /* Timer callbacks */
     pub_state_timer_ = nh.createTimer(ros::Duration(1/pub_state_freq), &EGOReplanFSM::pubStateTimerCB, this);
     tick_state_timer_ = nh.createTimer(ros::Duration(1/tick_state_freq), &EGOReplanFSM::tickStateTimerCB, this);
     exec_state_timer_ = nh.createTimer(ros::Duration(1/exec_state_freq), &EGOReplanFSM::execStateTimerCB, this);
 
     /* Subscribers */
-    odom_sub_ = nh.subscribe("odom_world", 1, &EGOReplanFSM::odometryCallback, this);
+    odom_sub_ = nh.subscribe("fsm_odom", 1, &EGOReplanFSM::odometryCallback, this);
     mandatory_stop_sub_ = nh.subscribe("mandatory_stop", 1, &EGOReplanFSM::mandatoryStopCallback, this);
 
     // Use MINCO trajectory to minimize the message size in wireless communication
@@ -91,18 +81,48 @@ namespace ego_planner
     state_pub_ = nh.advertise<std_msgs::String>("planner_state", 10);
     time_benchmark_pub_ = nh.advertise<trajectory_server_msgs::TimeBenchmark>("plan_time_benchmark", 10);
 
-    if (target_type_ == TARGET_TYPE::MANUAL_TARGET)
+    if (waypoint_type_ == TARGET_TYPE::MANUAL_TARGET)
     {
       waypoint_sub_ = nh.subscribe("/goal", 1, &EGOReplanFSM::waypointCallback, this);
     }
-    else if (target_type_ == TARGET_TYPE::PRESET_TARGET)
+    else if (waypoint_type_ == TARGET_TYPE::PRESET_TARGET)
     {
       // Subscribe to waypoints 
       waypoints_sub_ = nh.subscribe("/waypoints", 1, &EGOReplanFSM::waypointsCB, this);
     }
     else{
-      logError(string_format("Wrong target_type_ value! target_type_=%i", target_type_));
+      logError(string_format("Invalid waypoint type value! target_type=%i, it is either 1 or 2", waypoint_type_));
     }
+
+    /* Get Transformation from origin to world frame and vice versa */
+    nh.param("grid_map/uav_origin_frame", uav_origin_frame_, std::string("world"));
+    nh.param("grid_map/global_frame", global_frame_, std::string("world"));
+
+    tf_lookup_timeout_ = 15.0;
+
+    tfListener_.reset(new tf2_ros::TransformListener(tfBuffer_));
+
+    geometry_msgs::TransformStamped transform;
+    try
+    {
+      transform = tfBuffer_.lookupTransform(global_frame_, uav_origin_frame_, ros::Time(0), ros::Duration(tf_lookup_timeout_));
+    }
+    catch (const tf2::TransformException &ex)
+    {
+      ROS_ERROR_THROTTLE(1,
+          "[Swarm Collision Checker]: Error in lookupTransform of %s in %s", uav_origin_frame_.c_str(), global_frame_.c_str());
+      ROS_WARN_THROTTLE(1, "%s",ex.what());
+      ros::shutdown();
+    }
+
+    world_to_uav_origin_tf_(0) = transform.transform.translation.x;
+    world_to_uav_origin_tf_(1) = transform.transform.translation.y;
+    world_to_uav_origin_tf_(2) = transform.transform.translation.z;
+
+    // Reverse signs so that the transformation is from UAV origin frame to world frame
+    uav_origin_to_world_tf_(0) = -world_to_uav_origin_tf_(0);
+    uav_origin_to_world_tf_(1) = -world_to_uav_origin_tf_(1);
+    uav_origin_to_world_tf_(2) = -world_to_uav_origin_tf_(2);
   }
 
   /**
@@ -479,9 +499,7 @@ namespace ego_planner
         planner_manager_->traj_.swarm_traj.push_back(blank);
       }
     }
-    if (apply_frame_origin_offset_){
-      transformMINCOTrajectoryToUAVOrigin(minco_traj);
-    }
+    transformMINCOFromWorldToOrigin(minco_traj);
 
     /* Store data */
     planner_manager_->traj_.swarm_traj[recv_id].drone_id = recv_id;
@@ -558,19 +576,12 @@ namespace ego_planner
 
   void EGOReplanFSM::waypointCallback(const geometry_msgs::PoseStampedPtr &msg)
   {
-    Eigen::Vector3d wp;
+    Eigen::Vector3d wp(
+        msg->pose.position.x,
+        msg->pose.position.y,
+        msg->pose.position.z);
 
-    if (apply_frame_origin_offset_){
-      wp << msg->pose.position.x + world_to_uav_origin_tf_.position.x,
-            msg->pose.position.y + world_to_uav_origin_tf_.position.y,
-            1.0 + world_to_uav_origin_tf_.position.z;
-
-    }
-    else {
-      wp << msg->pose.position.x,
-            msg->pose.position.y,
-            1.0;
-    }
+    wp += world_to_uav_origin_tf_;
 
     waypoints_.reset();
 
@@ -598,31 +609,22 @@ namespace ego_planner
       logError("Received empty waypoints");
       return;
     }
-    if (msg->waypoints.header.frame_id != "world")
+    if (msg->waypoints.header.frame_id != "world" && msg->waypoints.header.frame_id != "map" )
     {
-      logError("Only waypoint goals in 'world' frame are accepted, ignoring waypoints.");
+      logError("Only waypoint goals in 'world' or 'map' frame are accepted, ignoring waypoints.");
       return;
     }
 
     waypoints_.reset();
 
-    // Transform received waypoints from world to UAV origin frame
     for (auto pose : msg->waypoints.poses) {
-      if (apply_frame_origin_offset_){
-        waypoints_.addWP(Eigen::Vector3d{
-          pose.position.x + world_to_uav_origin_tf_.position.x,
-          pose.position.y + world_to_uav_origin_tf_.position.y,
-          pose.position.z + world_to_uav_origin_tf_.position.z
-        });
-      }
-      else {
-        waypoints_.addWP(Eigen::Vector3d{
+      Eigen::Vector3d wp(
           pose.position.x,
           pose.position.y,
-          pose.position.z
-        });
-      }
+          pose.position.z);
 
+      // Transform received waypoints from world to UAV origin frame
+      waypoints_.addWP(wp + world_to_uav_origin_tf_);
     }
 
     for (size_t i = 0; i < waypoints_.getSize(); i++)
@@ -721,9 +723,7 @@ namespace ego_planner
 
       polyTraj2ROSMsg(poly_msg, MINCO_msg);
 
-      if (apply_frame_origin_offset_){
-        transformMINCOTrajectoryToWorld(MINCO_msg);
-      }
+      transformMINCOFromOriginToWorld(MINCO_msg);
 
       poly_traj_pub_.publish(poly_msg); // (In drone origin frame) Publish to corresponding drone for execution
       broadcast_ploytraj_pub_.publish(MINCO_msg); // (In world frame) Broadcast to all other drones for replanning to optimize in avoiding swarm collision
@@ -810,7 +810,7 @@ namespace ego_planner
     // Exceeded timeout to replan
     bool replan_time_exceeded = t_cur > replan_time_thresh_ ;
 
-    if (target_type_ == TARGET_TYPE::PRESET_TARGET) 
+    if (waypoint_type_ == TARGET_TYPE::PRESET_TARGET) 
     {
       // GOAL Reached and current time exceeded duration
       if (within_goal_tol && (t_cur > (info->duration - 1e-2)))
@@ -988,7 +988,7 @@ namespace ego_planner
 
                 if (dist < CLEARANCE)
                 {
-                  logWarn(string_format("Clearance between drone %d and drone %d is %f, too close!",
+                  logWarn(string_format("Clearance between drones %d and %d is %f, too close!",
                           planner_manager_->pp_.drone_id, (int)id, dist));
 
                   potential_agent_to_agent_collision_ = ((t - t_cur) < emergency_time_);
@@ -1168,9 +1168,7 @@ namespace ego_planner
 
     polyTraj2ROSMsg(poly_msg, MINCO_msg);
 
-    if (apply_frame_origin_offset_){
-      transformMINCOTrajectoryToWorld(MINCO_msg);
-    }
+    transformMINCOFromOriginToWorld(MINCO_msg);
 
     poly_traj_pub_.publish(poly_msg); // Publish to own trajectory server under current drone_id for execution
     broadcast_ploytraj_pub_.publish(MINCO_msg); // Broadcast to all other drones for replanning to optimize in avoiding swarm collision

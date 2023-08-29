@@ -319,7 +319,7 @@ private:
   nav_msgs::Odometry uav_odom_;
   std::deque<geometry_msgs::PoseStamped> uav_poses_;
   boost::shared_ptr<poly_traj::Trajectory> traj_;
-  Eigen::Vector3d last_mission_pos_, last_mission_vel_;
+  Eigen::Vector3d last_mission_pos_{0.0, 0.0, 0.0}, last_mission_vel_{0.0, 0.0, 0.0};
 
   double last_mission_yaw_{0.0}, last_mission_yaw_dot_{0.0};
 

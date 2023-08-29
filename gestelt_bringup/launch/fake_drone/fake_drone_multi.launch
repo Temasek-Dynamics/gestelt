@@ -1,10 +1,10 @@
 <launch>
-  <arg name="num_drones" value="5"/>
+  <arg name="num_drones" value="3"/>
   <!-- size of map, change the size inflate x, y, z according to your application -->
   <arg name="map_size_x" value="5.0"/>
   <arg name="map_size_y" value="5.0"/>
   <arg name="map_size_z" value=" 2.0"/>
-  <arg name="map_filepath" value="$(find gestelt_bringup)/simulation/fake_map_worlds/dense_map.pcd" />
+  <arg name="map_filepath" value="$(find gestelt_bringup)/simulation/fake_map_worlds/almost_empty_map.pcd" />
   <!-- Input/output topics -->
   <arg name="cloud_topic" default="camera/depth/points_downsampled" />
 

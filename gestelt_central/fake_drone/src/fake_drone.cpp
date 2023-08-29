@@ -18,7 +18,7 @@ FakeDrone::FakeDrone(ros::NodeHandle &nodeHandle) : _nh(nodeHandle) {
 	_nh.param<double>("uav/init_y", init_pos_(1), 0.0);
 	_nh.param<double>("uav/init_z", init_pos_(2), 0.0);
 
-	node_name_ = "Quad " + _id;
+	node_name_ = "FakeDrone_" + _id;
 
 	std::string copy_id = _id; 
 	std::string uav_id_char = copy_id.erase(0,5); // removes first 5 character
@@ -36,9 +36,6 @@ FakeDrone::FakeDrone(ros::NodeHandle &nodeHandle) : _nh(nodeHandle) {
 		"/mavros/local_position/pose", 10);
 
 	mavros_state_pub_ = _nh.advertise<mavros_msgs::State>("/" + _id + "/mavros/state", 10, true);
-
-	// TODO: Add tf2 broadcasts
-
 
 	/**
 	 * Timers that handles drone state at each time frame 
@@ -147,23 +144,25 @@ bool FakeDrone::setModeCb(mavros_msgs::SetMode::Request &req,
 
 void FakeDrone::simUpdateTimer(const ros::TimerEvent &)
 {
-	// when UAV have not received any commands, UAV will hover
-	if (isOffboardCmdTimeout(offboard_timeout_))
-	{
-		// if (mavros_state_.custom_mode.compare("AUTO.LOITER") != 0)
-		// {
-		// 	mavros_state_.custom_mode = "AUTO.LOITER";
-		// 	printf("%sdrone%d%s mode switch to %s%s%s! \n", 
-		// 		KGRN, uav_id, KNRM, 
-		// 		KBLU, mavros_state_.custom_mode.c_str(), KNRM);
-		// }
-		stopAndHover(cmd_des_);
-		setStateFromCmd(state_cur_, cmd_des_);
-	}
-	else
-	{
-		setStateFromCmd(state_cur_, cmd_des_);
-	}
+	// // when UAV have not received any commands, UAV will hover
+	// if (isOffboardCmdTimeout(offboard_timeout_))
+	// {
+	// 	// if (mavros_state_.custom_mode.compare("AUTO.LOITER") != 0)
+	// 	// {
+	// 	// 	mavros_state_.custom_mode = "AUTO.LOITER";
+	// 	// 	printf("%sdrone%d%s mode switch to %s%s%s! \n", 
+	// 	// 		KGRN, uav_id, KNRM, 
+	// 	// 		KBLU, mavros_state_.custom_mode.c_str(), KNRM);
+	// 	// }
+	// 	stopAndHover(cmd_des_);
+	// 	setStateFromCmd(state_cur_, cmd_des_);
+	// }
+	// else
+	// {
+	// 	setStateFromCmd(state_cur_, cmd_des_);
+	// }
+
+	setStateFromCmd(state_cur_, cmd_des_);
 
 	if ((ros::Time::now() - last_mavros_state_pub_time_).toSec() > (1/pose_pub_freq_))
 	{
@@ -173,10 +172,10 @@ void FakeDrone::simUpdateTimer(const ros::TimerEvent &)
 
 	if ((ros::Time::now() - last_pose_pub_time_).toSec() > (1/pose_pub_freq_))
 	{
-		odom_mutex_.lock();
+		state_mutex_.lock();
 		odom_pub_.publish(state_cur_.odom);
 		pose_pub_.publish(state_cur_.pose);
-		odom_mutex_.unlock();
+		state_mutex_.unlock();
 
 		last_pose_pub_time_ = ros::Time::now();
 	}
@@ -241,7 +240,7 @@ Eigen::Quaterniond FakeDrone::calcUAVOrientation(
 
 void FakeDrone::setStateFromCmd(FakeDrone::State& state, const FakeDrone::Command& cmd ){
 	cmd_mutex_.lock();
-	odom_mutex_.lock();
+	state_mutex_.lock();
 
 	// Set odom
 	state.odom.header.stamp = ros::Time::now();
@@ -266,13 +265,16 @@ void FakeDrone::setStateFromCmd(FakeDrone::State& state, const FakeDrone::Comman
 	state.pose.pose.orientation.y = cmd.q.y();
 	state.pose.pose.orientation.z = cmd.q.z();
 
-	odom_mutex_.unlock();
+	state_mutex_.unlock();
 	cmd_mutex_.unlock();
 }
 
 void FakeDrone::stopAndHover(FakeDrone::Command& cmd)
 {	
 	geometry_msgs::Vector3 empty_vec3;
+	empty_vec3.x = 0;
+	empty_vec3.y = 0;
+	empty_vec3.z = 0;
 	cmd.pos_targ.velocity = geometry_msgs::Vector3();
 	cmd.pos_targ.acceleration_or_force = geometry_msgs::Vector3();
 	cmd.q = calcUAVOrientation(cmd.pos_targ.acceleration_or_force, cmd.yaw);

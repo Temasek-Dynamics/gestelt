@@ -22,6 +22,7 @@
     <param name="~num_drones" value="$(arg num_drones)" />
     <param name="~collision_tolerance" value="0.6" />
     <param name="~check_collision_freq" value="10.0" />
+    <param name="~tf_lookup_timeout" value="10.0" />
   </node> -->
 
   <!-- RVIZ -->

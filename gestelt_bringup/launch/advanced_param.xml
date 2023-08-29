@@ -1,13 +1,9 @@
 <launch>
-    <arg name="px4_device" default="true"/>
     <!-- Drone id -->
     <arg name="drone_id"/>
     <arg name="drone_id_ns" value="drone$(arg drone_id)"/>
     <!-- Drone formation params -->
     <arg name="num_drones"/>
-    <arg name="init_x"/>
-    <arg name="init_y"/>
-    <arg name="init_z"/>
     <!-- Map params -->
     <arg name="map_size_x_"/>
     <arg name="map_size_y_"/>
@@ -34,7 +30,7 @@
     <arg name="thresh_replan_time"/>
     <arg name="thresh_no_replan_meter"/>
     <!-- Goal definition  -->
-    <arg name="flight_type"/>
+    <arg name="waypoint_type"/>
 
     <!-- <node pkg="ego_planner_fsm" name="ego_planner_fsm_node" type="ego_planner_fsm_node" output="screen" launch-prefix="valgrind"> -->
     <node pkg="ego_planner_fsm" name="drone_$(arg drone_id)_ego_planner_node" type="ego_planner_fsm_node" output="screen">
@@ -45,31 +41,23 @@
         <!-- //////////////////// -->
         <!-- FSM params -->
         <!-- //////////////////// -->
-        <!-- apply_frame_origin_offset: Relevant for PX4 SITL where the vehicle pose always starts from (0,0,0)
-        For other simulation environments, set to false -->
-        <param name="fsm/apply_frame_origin_offset" value="$(arg px4_device)" type="bool"/>
-        <!-- Transformation from world frame to UAV origin frame -->
-        <param name="fsm/frame_offset_x" value="$(arg init_x)" type="double"/>
-        <param name="fsm/frame_offset_y" value="$(arg init_y)" type="double"/>
-        <param name="fsm/frame_offset_z" value="$(arg init_z)" type="double"/>
-
-        <!-- flight_type: 1 for manual publishing of goals, 2 for preset waypoints, as defined by fsm/waypointX param -->
-        <param name="fsm/flight_type" value="$(arg flight_type)" type="int"/>
+        <!-- waypoint_type: 1 for manual publishing of goals, 2 for preset waypoints, as defined by fsm/waypointX param -->
+        <param name="fsm/waypoint_type" value="$(arg waypoint_type)" type="int"/>
         <!-- thresh_replan_time: Replanning period (1/frequency)-->
         <param name="fsm/thresh_replan_time" value="$(arg thresh_replan_time)" type="double"/>
         <!-- thresh_no_replan_meter: Replan only if current position and local target exceeds this parameter -->
         <param name="fsm/thresh_no_replan_meter" value="$(arg thresh_no_replan_meter)" type="double"/>
         <!-- planning_horizon: Distance to plan for local target -->
         <param name="fsm/planning_horizon" value="$(arg planning_horizon)" type="double"/>
-        <!-- emergency_time: always set to 1.5 times greater than sensing horizon-->
-        <param name="fsm/emergency_time" value="1.0" type="double"/>
+         <!-- emergency_time: always set to 1.5 times greater than sensing horizon-->
+        <param name="fsm/emergency_time" value="3.0" type="double"/>
         <param name="fsm/fail_safe" value="true"/>
 
         <param name="fsm/pub_state_freq" value="10.0" type="double"/>
         <param name="fsm/pub_heartbeat_freq" value="10.0" type="double"/>
 
         <!-- Subscribed topics -->
-        <remap from="~odom_world" to="$(arg odometry_topic)"/>
+        <remap from="~fsm_odom" to="$(arg odometry_topic)"/>
 
         <!-- Published topics -->
         <remap from="~plan_time_benchmark" to = "/drone$(arg drone_id)/plan_time_benchmark"/>

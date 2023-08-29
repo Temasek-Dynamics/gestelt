@@ -25,6 +25,8 @@ public:
 
     nh.param("check_collision_freq", check_collision_freq_, 10.0);
     nh.param("collision_tolerance", col_tol_, 0.2);
+    
+    nh.param("tf_lookup_timeout", tf_lookup_timeout_, 10.0);
 
     // Create an pre-allocated world_to_drone_base_ vector of size num_drones
     for (int i = 0; i < num_drones_; i++){
@@ -54,7 +56,6 @@ public:
     obs_collision_pub_ = nh.advertise<visualization_msgs::Marker>("/obstacle_collision_points", 10);
 
     // Timers
-    // pub_camera_pose_timer_ = nh.createTimer(ros::Duration(1/30), &SwarmCollisionChecker::pubCameraPoseTimerCb, this);
     broadcast_tf_timer_ = nh.createTimer(ros::Duration(1/check_collision_freq_), &SwarmCollisionChecker::checkCollisionTimerCb, this);
 
     // Transformations
@@ -191,13 +192,13 @@ public:
 
     try
     {
-      transform = tfBuffer_.lookupTransform(refFrame, childFrame, ros::Time(0));
+      transform = tfBuffer_.lookupTransform(refFrame, childFrame, ros::Time(0), ros::Duration(tf_lookup_timeout_));
     }
     catch (const tf2::TransformException &ex)
     {
-      ROS_ERROR_STREAM(
-          "Error in lookupTransform of " << childFrame << " in " << refFrame);
-      ROS_WARN("%s",ex.what());
+      ROS_ERROR_THROTTLE(1,
+          "[Swarm Collision Checker]: Error in lookupTransform of %s in %s", childFrame.c_str(), refFrame.c_str());
+      ROS_WARN_THROTTLE(1, "%s",ex.what());
       return false;
     }
     
@@ -225,17 +226,16 @@ private:
   std::vector<ros::Subscriber> collision_sensor_sub_; // Subscribers to collision sensor of each UAV agent
 
   // Publishers
-  // ros::Publisher camera_pos_pub_;
   ros::Publisher swarm_collision_pub_;
   ros::Publisher obs_collision_pub_;
 
   // Timers
-  // ros::Timer pub_camera_pose_timer_;
   ros::Timer broadcast_tf_timer_;
 
   // Params
   double check_collision_freq_;
   double col_tol_;
+  double tf_lookup_timeout_;
 
   // Flags
 

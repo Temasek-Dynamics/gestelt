@@ -39,9 +39,9 @@
 
         <rosparam command="load" file="$(find gestelt_bringup)/config/fake_drone_params.yaml" />
         <param name="uav/id" value="$(arg drone_id_ns)"/>
-        <param name="uav/init_x" value="$(arg init_x)"/>
-        <param name="uav/init_y" value="$(arg init_y)"/>
-        <param name="uav/init_z" value="$(arg init_z)"/>
+        <param name="uav/init_x" value="0"/>
+        <param name="uav/init_y" value="0"/>
+        <param name="uav/init_z" value="0"/>
 
         <param name="uav/origin_frame" value="$(arg drone_id_ns)_origin"/>
         <param name="uav/base_link_frame" value="$(arg drone_id_ns)_base_link"/>
@@ -62,8 +62,6 @@
 
     <!-- Ego planner -->
     <include file="$(find gestelt_bringup)/launch/ego_planner.launch">
-        <arg name="px4_device" value="false" />
-
         <arg name="drone_id"   value="$(arg drone_id)"/>
         <arg name="init_x"     value="$(arg init_x)"/>
         <arg name="init_y"     value="$(arg init_y)"/>

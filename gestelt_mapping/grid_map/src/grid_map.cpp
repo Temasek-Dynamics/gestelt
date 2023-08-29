@@ -189,9 +189,9 @@ void GridMap::getTFTimerCB(const ros::TimerEvent & /*event*/)
   }
   catch (const tf2::TransformException &ex)
   {
-    ROS_ERROR_STREAM(
-        "[Gridmap]: Error in lookupTransform of " << mp_.cam_frame_ << " in " << mp_.uav_origin_frame_);
-    ROS_WARN("%s",ex.what());
+    ROS_ERROR_THROTTLE(1, 
+        "[Gridmap]: Error in lookupTransform of %s in %s", mp_.cam_frame_.c_str(), mp_.uav_origin_frame_.c_str());
+    ROS_WARN_THROTTLE(1, "%s",ex.what());
     md_.has_pose_ = false;
     return;
   }
@@ -304,8 +304,8 @@ void GridMap::cloudToCloudMap(const sensor_msgs::PointCloud2ConstPtr &msg)
   }
 
   if (msg->data.empty()){
-    ROS_ERROR_THROTTLE_NAMED(1.0, node_name_, "Empty point cloud received");
-    return;
+    ROS_WARN_THROTTLE(1.0, "[grid_map]: Empty point cloud received");
+    // return;
   }
 
   pcl::fromROSMsg(*msg, *cloud_origin_);
@@ -401,19 +401,19 @@ void GridMap::depthToCloudMap(const sensor_msgs::ImageConstPtr &msg)
 
 bool GridMap::isPoseValid() {
   if (!md_.has_pose_){
-    ROS_ERROR_NAMED(node_name_, "No pose/odom received");
+    ROS_ERROR_NAMED("[%s] No pose/odom received", node_name_.c_str());
     return false;
   }
 
   if (isnan(md_.cam_pos_(0)) || isnan(md_.cam_pos_(1)) || isnan(md_.cam_pos_(2))){
-    ROS_ERROR_NAMED(node_name_, "Nan camera pose");
+    ROS_ERROR_NAMED("[%s] Camera pose has NAN value", node_name_.c_str());
     return false;
   }
 
   if (!isInMap(md_.cam_pos_))
   {
-    ROS_ERROR("Camera pose: (%.2f, %.2f, %.2f) is not within map boundary", 
-      md_.cam_pos_(0), md_.cam_pos_(1), md_.cam_pos_(2));
+    ROS_ERROR("[%s] Camera pose (%.2f, %.2f, %.2f) is not within map boundary", 
+      node_name_.c_str(), md_.cam_pos_(0), md_.cam_pos_(1), md_.cam_pos_(2));
     return false;
   }
 
@@ -429,8 +429,6 @@ void GridMap::publishMap()
   }
   sensor_msgs::PointCloud2 cloud_msg;
   pcl::toROSMsg(*cloud_origin_, cloud_msg);
-
-  // cloud_msg.header.frame_id = mp_.uav_origin_frame_;
 
   occ_map_pub_.publish(cloud_msg);
 }

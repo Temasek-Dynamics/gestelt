@@ -190,9 +190,9 @@ void FakeMap::getCamLinkTF()
     }
     catch (const tf2::TransformException &ex)
     {
-      ROS_ERROR_STREAM(
-          "[Fake map]: Error in lookupTransform of " << sensor_frame_ << " in " << global_frame_);
-      ROS_WARN("%s",ex.what());
+      ROS_ERROR_THROTTLE(1,
+          "[Fake map]: Error in lookupTransform of %s in %s", sensor_frame_.c_str(), global_frame_.c_str());
+      ROS_WARN_THROTTLE(1, "%s",ex.what());
 	  lookup_success = false;
     }
 	got_tf_ = lookup_success;

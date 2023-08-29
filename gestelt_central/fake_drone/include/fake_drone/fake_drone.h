@@ -85,7 +85,7 @@ class FakeDrone
         FakeDrone::Command cmd_des_; // Desired command
 
         std::mutex cmd_mutex_;
-        std::mutex odom_mutex_;
+        std::mutex state_mutex_;
 
         ros::Time last_pose_pub_time_; // Last timestamp that pose was published
         ros::Time last_tf_broadcast_time_; // Last timestamp that tf was broadcasted

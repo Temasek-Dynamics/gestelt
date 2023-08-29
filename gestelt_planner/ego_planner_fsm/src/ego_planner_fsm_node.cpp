@@ -1,6 +1,6 @@
 #include <csignal>
 
-#include <ego_replan_fsm/ego_replan_fsm.h>
+#include <ego_planner_fsm/ego_planner_fsm.h>
 
 void SignalHandler(int signal) {
   if(ros::isInitialized() && ros::isStarted() && ros::ok() && !ros::isShuttingDown()){
