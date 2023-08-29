@@ -422,7 +422,7 @@ private:
     MINCO_msg.start_p[2] += uav_origin_to_world_tf_(2);
 
     // Account for offset from UAV origin to world frame
-    for (int i = 0; i < MINCO_msg.duration.size() - 1; i++)
+    for (long unsigned int i = 0; i < MINCO_msg.duration.size() - 1; i++)
     {
       MINCO_msg.inner_x[i] += uav_origin_to_world_tf_(0);
       MINCO_msg.inner_y[i] += uav_origin_to_world_tf_(1);
@@ -442,7 +442,7 @@ private:
     MINCO_msg.start_p[2] += world_to_uav_origin_tf_(2);
 
     // Account for offset from UAV origin to world frame
-    for (int i = 0; i < MINCO_msg.duration.size() - 1; i++)
+    for (long unsigned int i = 0; i < MINCO_msg.duration.size() - 1; i++)
     {
       MINCO_msg.inner_x[i] += world_to_uav_origin_tf_(0);
       MINCO_msg.inner_y[i] += world_to_uav_origin_tf_(1);

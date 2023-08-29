@@ -96,7 +96,7 @@ def main():
     #     waypoints.append(create_pose(d, -d, 1))
     #     waypoints.append(create_pose(0, 0, 1))
 
-    d = 1.0
+    d = 1.5
     z = 0.75
     for i in range(10):
         waypoints.append(create_pose(d, d, z))

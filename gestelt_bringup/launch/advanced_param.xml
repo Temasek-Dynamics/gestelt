@@ -15,7 +15,6 @@
     <arg name="drone_origin_frame" default="world"/>
     <arg name="global_frame" default="world"/>
     <arg name="cam_frame" default="cam_link"/>
-    
     <!-- Subscribed topics -->
     <arg name="odometry_topic"/>
     <arg name="pose_topic"/>
@@ -49,12 +48,13 @@
         <param name="fsm/thresh_no_replan_meter" value="$(arg thresh_no_replan_meter)" type="double"/>
         <!-- planning_horizon: Distance to plan for local target -->
         <param name="fsm/planning_horizon" value="$(arg planning_horizon)" type="double"/>
-         <!-- emergency_time: always set to 1.5 times greater than sensing horizon-->
-        <param name="fsm/emergency_time" value="3.0" type="double"/>
+        <!-- Always set to 1.5 times greater than sensing horizon-->
+        <param name="fsm/emergency_time" value="1.0" type="double"/>
         <param name="fsm/fail_safe" value="true"/>
 
         <param name="fsm/pub_state_freq" value="10.0" type="double"/>
         <param name="fsm/pub_heartbeat_freq" value="10.0" type="double"/>
+        <param name="fsm/tf_lookup_timeout" value="60.0" type="double"/>
 
         <!-- Subscribed topics -->
         <remap from="~fsm_odom" to="$(arg odometry_topic)"/>
@@ -108,7 +108,6 @@
 
         <!-- camera intrinsic parameters -->
         <param name="grid_map/k_depth_scaling_factor" value="1000.0"/>
-
         <!-- camera extrinsic parameters -->
         <param name="grid_map/camera_to_body/roll" value="90.0"/>
         <param name="grid_map/camera_to_body/pitch" value="180.0"/>
@@ -139,8 +138,8 @@
         <param name="optimization/weight_time" value="10.0" type="double"/>
         <param name="optimization/weight_formation" value="100" type="double"/>
         <!-- The obstacle_clearance param seems to have no effect? -->
-        <param name="optimization/obstacle_clearance" value="0.4" type="double"/>
-        <param name="optimization/obstacle_clearance_soft" value="0.6" type="double"/>
+        <param name="optimization/obstacle_clearance" value="0.1" type="double"/>
+        <param name="optimization/obstacle_clearance_soft" value="0.5" type="double"/>
         <param name="optimization/swarm_clearance" value="0.5" type="double"/>
         <param name="optimization/max_vel" value="$(arg max_vel)" type="double"/>
         <param name="optimization/max_acc" value="$(arg max_acc)" type="double"/>

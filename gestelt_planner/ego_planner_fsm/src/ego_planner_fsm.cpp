@@ -54,6 +54,7 @@ namespace ego_planner
     nh.param("fsm/tick_state_freq", tick_state_freq, 100.0);
     nh.param("fsm/exec_state_freq", exec_state_freq, 20.0);
 
+
     // std::string odom_topic;
     // nh.param("grid_map/odom", odom_topic, std::string("odom"));
 
@@ -97,8 +98,7 @@ namespace ego_planner
     /* Get Transformation from origin to world frame and vice versa */
     nh.param("grid_map/uav_origin_frame", uav_origin_frame_, std::string("world"));
     nh.param("grid_map/global_frame", global_frame_, std::string("world"));
-
-    tf_lookup_timeout_ = 15.0;
+    nh.param("fsm/tf_lookup_timeout", tf_lookup_timeout_, 60.0);
 
     tfListener_.reset(new tf2_ros::TransformListener(tfBuffer_));
 
@@ -110,19 +110,19 @@ namespace ego_planner
     catch (const tf2::TransformException &ex)
     {
       ROS_ERROR_THROTTLE(1,
-          "[Swarm Collision Checker]: Error in lookupTransform of %s in %s", uav_origin_frame_.c_str(), global_frame_.c_str());
+          "[Ego Planner FSM]: Error in lookupTransform of %s in %s", uav_origin_frame_.c_str(), global_frame_.c_str());
       ROS_WARN_THROTTLE(1, "%s",ex.what());
       ros::shutdown();
     }
 
-    world_to_uav_origin_tf_(0) = transform.transform.translation.x;
-    world_to_uav_origin_tf_(1) = transform.transform.translation.y;
-    world_to_uav_origin_tf_(2) = transform.transform.translation.z;
+    uav_origin_to_world_tf_(0) = transform.transform.translation.x;
+    uav_origin_to_world_tf_(1) = transform.transform.translation.y;
+    uav_origin_to_world_tf_(2) = transform.transform.translation.z;
 
     // Reverse signs so that the transformation is from UAV origin frame to world frame
-    uav_origin_to_world_tf_(0) = -world_to_uav_origin_tf_(0);
-    uav_origin_to_world_tf_(1) = -world_to_uav_origin_tf_(1);
-    uav_origin_to_world_tf_(2) = -world_to_uav_origin_tf_(2);
+    world_to_uav_origin_tf_(0) = -uav_origin_to_world_tf_(0);
+    world_to_uav_origin_tf_(1) = -uav_origin_to_world_tf_(1);
+    world_to_uav_origin_tf_(2) = -uav_origin_to_world_tf_(2);
   }
 
   /**

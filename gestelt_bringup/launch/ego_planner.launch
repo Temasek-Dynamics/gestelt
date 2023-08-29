@@ -50,13 +50,13 @@
 
         <!-- maximum velocity, acceleration and jerk the drone will reach -->
         <arg name="max_vel" value="1.5" />
-        <arg name="max_acc" value="3.0" />
+        <arg name="max_acc" value="6.0" />
         <arg name="max_jer" value="20.0" />
         
         <!-- thresh_no_replan_meter: Replan only if current position and local target exceeds this parameter -->
-        <arg name="thresh_no_replan_meter" value="1.0" />
+        <arg name="thresh_no_replan_meter" value="0.5" />
         <!-- thresh_replan_time: Replanning period (1/frequency)-->
-        <arg name="thresh_replan_time" value="0.5" />
+        <arg name="thresh_replan_time" value="0.25" />
         <!--always set to 1.5 times grater than sensing horizon-->
         <!-- sensing horizon here refers to the sensor range. e.g. about 4.5-5m for realsense d435 -->
         <arg name="planning_horizon" value="7.5" />
@@ -80,11 +80,18 @@
 
         <!-- Position command limits, anything exceeding this will switch the mode to hovering state -->
         <!-- This is relative to uav origin frame -->
-        <param name="traj_server/pos_limit/max_x" value="$(eval 0.5 * map_size_x - init_x)" type="double"/>
+        <!-- <param name="traj_server/pos_limit/max_x" value="$(eval 0.5 * map_size_x - init_x)" type="double"/>
         <param name="traj_server/pos_limit/min_x" value="$(eval -0.5 * map_size_x - init_x)" type="double"/>
         <param name="traj_server/pos_limit/max_y" value="$(eval 0.5 * map_size_y - init_y)" type="double"/>
         <param name="traj_server/pos_limit/min_y" value="$(eval -0.5 * map_size_y - init_y)" type="double"/>
         <param name="traj_server/pos_limit/max_z" value="$(arg map_size_z)" type="double"/>
+        <param name="traj_server/pos_limit/min_z" value="-0.1" type="double"/> -->
+
+        <param name="traj_server/pos_limit/max_x" value="50.0" type="double"/>
+        <param name="traj_server/pos_limit/min_x" value="-50.0" type="double"/>
+        <param name="traj_server/pos_limit/max_y" value="50.0" type="double"/>
+        <param name="traj_server/pos_limit/min_y" value="-50.0" type="double"/>
+        <param name="traj_server/pos_limit/max_z" value="3.0" type="double"/>
         <param name="traj_server/pos_limit/min_z" value="-0.1" type="double"/>
 
         <!-- Frequency for timers -->

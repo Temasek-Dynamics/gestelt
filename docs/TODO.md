@@ -11,6 +11,9 @@
     - Vicon system and PX4 params
     - TF tree structure
 
+- Fix formation and num_drones issue
+    - Get rid of num_drones, be able to dynamically add/remove agents
+
 - Improvements
     - Sensor
         - Solve laser range finder issue

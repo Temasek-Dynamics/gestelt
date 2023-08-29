@@ -238,7 +238,7 @@ namespace ego_planner
       const bool flag_randomPolyTraj, const bool touch_goal)
   {
 
-    static int count = 0;
+    // static int count = 0;
     // TODO_0 Uncomment
     // printf("\033[47;30m\n[drone %d replan %d]==============================================\033[0m\n",
     //        pp_.drone_id, count++);
