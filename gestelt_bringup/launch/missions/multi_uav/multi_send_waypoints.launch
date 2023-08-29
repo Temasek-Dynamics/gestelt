@@ -1,0 +1,4 @@
+<launch>
+  <!-- Launches a test mission -->
+  <node pkg="gestelt_bringup" name="multi_send_waypoints" type="multi_send_waypoints.py" />
+</launch>

@@ -1,0 +1,54 @@
+<launch>
+  <arg name="map_filepath" default="$(find gestelt_bringup)/simulation/fake_map_worlds/dense_map.pcd" />
+  <!-- num_drones must be at least 2 even if we are planning for a single drone -->
+  <arg name="num_drones" value="3"/>
+  <!-- size of map, change the size inflate x, y, z according to your application -->
+  <arg name="map_size_x" value="4.5"/>
+  <arg name="map_size_y" value="4.5"/>
+  <arg name="map_size_z" value=" 2.5"/>
+  <!-- Input/output topics -->
+  <arg name="command_topic" value="mavros/setpoint_raw/local" />
+  <arg name="odometry_topic" value="mavros/local_position/odom" />
+  <arg name="pose_topic" value="mavros/local_position/pose" />
+  <arg name="cloud_topic" value="camera/depth/points" />
+  <arg name="cloud_topic_fake" value="camera/depth/points_fake" />
+  <arg name="cloud_topic_ds" value="camera/depth/points_downsampled" />
+  <arg name="depth_img_topic" value="camera/depth/image_raw" />
+
+  <!-- Drone 1 Ego planner -->
+  <include file="$(find gestelt_bringup)/launch/ego_planner.launch">
+    <arg name="drone_id"   value="1"/>
+    <arg name="init_x"     value="0.5"/>
+    <arg name="init_y"     value="0.5"/>
+    <arg name="init_z"     value="0.0"/>
+    <arg name="num_drones" value="$(arg num_drones)"/>
+    <arg name="map_size_x" value="$(arg map_size_x)"/>
+    <arg name="map_size_y" value="$(arg map_size_y)"/>
+    <arg name="map_size_z" value="$(arg map_size_z)"/>
+    <arg name="pose_topic" value="$(arg pose_topic)"/>
+    <arg name="odometry_topic" value="$(arg odometry_topic)"/>
+    <arg name="depth_img_topic" value="$(arg depth_img_topic)"/>
+    <arg name="cloud_topic" value="$(arg cloud_topic_ds)"/>
+    <arg name="command_topic" value="$(arg command_topic)" />
+  </include>
+
+  <!-- Drone 1 Fake map-->
+  <include file="$(find gestelt_bringup)/launch/sitl/gazebo/single_fake_map.xml">
+    <arg name="drone_id" value ="1"/>
+    <arg name="pose_topic" value="$(arg pose_topic)" />
+    <arg name="cloud_topic_fake" value="$(arg cloud_topic_fake)" />
+    <arg name="cloud_topic_ds" value="$(arg cloud_topic_ds)" />
+    <arg name="map_filepath" value="$(arg map_filepath)" />
+  </include>
+
+  <!-- Drone 1 cloud downsampler -->
+  <node pkg="central_benchmark" type="cloud_downsampler" 
+    name="drone1_cloud_downsampler" output="screen">
+    <param name="~queue_size" value="5" />
+    <param name="~voxel_size" value="0.1" />
+
+    <remap from="~cloud_in" to="/drone1/$(arg cloud_topic)" />
+    <remap from="~cloud_out" to="/drone1/$(arg cloud_topic_ds)" />
+  </node>
+
+</launch>

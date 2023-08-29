@@ -1,0 +1,4 @@
+<launch>
+  <!-- Launches a test mission -->
+  <node pkg="gestelt_bringup" name="single_set_offboard" type="single_set_offboard.py" />
+</launch>

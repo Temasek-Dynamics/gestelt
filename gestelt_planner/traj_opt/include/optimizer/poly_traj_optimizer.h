@@ -2,11 +2,11 @@
 #define _POLY_TRAJ_OPTIMIZER_H_
 
 #include <Eigen/Eigen>
-#include <path_searching/dyn_a_star.h>
-#include <plan_env/grid_map.h>
 #include <ros/ros.h>
-#include "optimizer/lbfgs.hpp"
+#include <grid_map/grid_map.h>
+#include <path_searching/dyn_a_star.h>
 #include <traj_utils/plan_container.hpp>
+#include "optimizer/lbfgs.hpp"
 #include "poly_traj_utils.hpp"
 
 namespace ego_planner
@@ -221,7 +221,7 @@ namespace ego_planner
                             double &costp);
 
   public:
-    typedef unique_ptr<PolyTrajOptimizer> Ptr;
+    typedef std::unique_ptr<PolyTrajOptimizer> Ptr;
   };
 
 } // namespace ego_planner

@@ -77,6 +77,9 @@
     "typeinfo": "cpp",
     "bit": "cpp",
     "*.ipp": "cpp",
-    "core": "cpp"
-  }
+    "core": "cpp",
+    "*.txx": "cpp",
+    "queue": "cpp"
+  },
+  "cmake.sourceDirectory": "/home/john/gestelt_ws/src/gestelt/gestelt_swarm/swarm_benchmark"
 }

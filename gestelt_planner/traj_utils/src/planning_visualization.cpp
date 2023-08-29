@@ -8,7 +8,7 @@ namespace ego_planner
   {
     node = nh;
 
-    nh.param("grid_map/frame_id", origin_frame_, std::string("world"));
+    nh.param("grid_map/uav_origin_frame", origin_frame_, std::string("world"));
 
     goal_point_pub = nh.advertise<visualization_msgs::Marker>("goal_point", 2);
     global_list_pub = nh.advertise<visualization_msgs::Marker>("global_list", 2);

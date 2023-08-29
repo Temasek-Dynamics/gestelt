@@ -4,49 +4,14 @@
   <version>0.0.0</version>
   <description>The gestelt_bringup package</description>
 
-  <!-- One maintainer tag required, multiple allowed, one person per tag -->
-  <!-- Example:  -->
   <maintainer email="johntgz@nus.edu.sg">John Tan </maintainer>
-
-  <!-- One license tag required, multiple allowed, one license per tag -->
-  <!-- Commonly used license strings: -->
-  <!--   BSD, MIT, Boost Software License, GPLv2, GPLv3, LGPLv2.1, LGPLv3 -->
-  <license>TODO</license>
-
-  <!-- Url tags are optional, but multiple are allowed, one per tag -->
-  <!-- Optional attribute type can be: website, bugtracker, or repository -->
-  <!-- Example: -->
-  <!-- <url type="website">http://wiki.ros.org/gestelt_bringup</url> -->
-
-  <!-- Author tags are optional, multiple are allowed, one per tag -->
-  <!-- Authors do not have to be maintainers, but could be -->
-  <!-- Example: -->
+  <license>MIT</license>
   <author email="johntgz@nus.edu.sg">John Tan</author>
 
   <buildtool_depend>catkin</buildtool_depend>
   <build_depend>roscpp</build_depend>
-  <build_depend>rospy</build_depend>
-  <build_depend>mavros_msgs</build_depend>
-  <build_depend>std_msgs</build_depend>
   <build_export_depend>roscpp</build_export_depend>
-  <build_export_depend>rospy</build_export_depend>
-  <build_export_depend>std_msgs</build_export_depend>
   <exec_depend>roscpp</exec_depend>
-  <exec_depend>rospy</exec_depend>
-  <exec_depend>std_msgs</exec_depend>
-  <exec_depend>mavros_msgs</exec_depend>
-
-  <depend>geometry_msgs</depend>
-  <depend>gazebo_msgs</depend> 
-  <depend>visualization_msgs</depend> 
-  <depend>tf2_ros</depend> 
-  <depend>eigen</depend>
-
-  <!-- <depend>sensor_msgs</depend>
-  <depend>nav_msgs</depend>
-  <depend>tf2_sensor_msgs</depend>
-  <depend>tf</depend>
-  <depend>tf2_ros</depend> -->
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>

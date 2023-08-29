@@ -1,6 +1,6 @@
 <launch>
-  <arg name="config" default="default"/>
+  <arg name="rviz_config" default="default"/>
 
   <node name="rviz" pkg="rviz" type="rviz" required="true" 
-    args="-d $(find gestelt_bringup)/launch/rviz/$(arg config).rviz"/>
+    args="-d $(find gestelt_bringup)/launch/rviz/$(arg rviz_config).rviz"/>
 </launch>

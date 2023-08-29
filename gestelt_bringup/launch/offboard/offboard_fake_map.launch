@@ -1,0 +1,36 @@
+<launch>
+  <arg name="drone_id"/>
+  <arg name="drone_id_ns" value="drone$(arg drone_id)"/>
+  <arg name="map_filepath" value="$(find gestelt_bringup)/simulation/fake_map_worlds/dense_map.pcd" />
+
+  <!-- Input/output topics -->
+  <arg name="pose_topic" value="mavros/local_position/pose" />
+  <!-- <arg name="cloud_topic_fake" value="camera/depth/points" /> -->
+  <arg name="cloud_topic_fake" value="camera/depth/points_fake" />
+  <arg name="cloud_topic_ds" value="camera/depth/points_downsampled" />
+
+  <!-- Global map publisher -->
+  <node pkg="fake_map" type="fake_map_publisher" name="fake_map_publisher" output="screen">
+      <param name="map/path" value="$(arg map_filepath)"/>
+  </node>
+
+  <!-- Drone 0 Fake map-->
+  <include file="$(find gestelt_bringup)/launch/sitl/gazebo/single_fake_map.xml">
+    <arg name="drone_id" value ="0"/>
+    <arg name="pose_topic" value="$(arg pose_topic)" />
+    <arg name="cloud_topic_fake" value="$(arg cloud_topic_fake)" />
+    <arg name="cloud_topic_ds" value="$(arg cloud_topic_ds)" />
+    <arg name="map_filepath" value="$(arg map_filepath)" />
+  </include>
+
+  <!-- drone 0: Downsamples the input cloud -->
+  <node pkg="central_benchmark" type="cloud_downsampler" 
+    name="$(arg drone_id_ns)_cloud_downsampler" output="screen">
+    <param name="~queue_size" value="5" />
+    <param name="~voxel_size" value="0.1" />
+
+    <remap from="~cloud_in" to="/$(arg drone_id_ns)/$(arg cloud_topic_fake)" />
+    <remap from="~cloud_out" to="/$(arg drone_id_ns)/$(arg cloud_topic_ds)" />
+  </node>
+
+</launch>

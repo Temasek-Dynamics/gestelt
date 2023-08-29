@@ -1,0 +1,20 @@
+# map parameters
+fake_laser:
+  # Units in meters, Cut-off range of laser lines
+  sensing_range: 5.0
+  # Units in Hz
+  sensor_refresh_freq: 30
+  # Units in meters, this should be the same as the resolution of the global map
+  resolution: 0.1
+
+  horizontal:
+    # Number of horizontal laser lines 
+    laser_line_num: 80
+    # Units in degree, the horizontal angle range
+    laser_range_dgr: 100.0
+  
+  vertical:
+    # Number of vertical laser lines 
+    laser_line_num: 15
+    # Units in degree, vertical angle range
+    laser_range_dgr: 40.0
