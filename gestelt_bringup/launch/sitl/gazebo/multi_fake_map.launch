@@ -12,21 +12,25 @@
   <include file="$(find gestelt_bringup)/launch/sitl/gazebo/single_fake_map.xml">
     <arg name="drone_id" value ="0"/>
     <arg name="cloud_topic_fake" value="$(arg cloud_topic_fake)" />
+    <arg name="map_filepath" value="$(arg map_filepath)" />
   </include>
 
   <include file="$(find gestelt_bringup)/launch/sitl/gazebo/single_fake_map.xml">
     <arg name="drone_id" value ="1"/>
     <arg name="cloud_topic_fake" value="$(arg cloud_topic_fake)" />
+    <arg name="map_filepath" value="$(arg map_filepath)" />
   </include>
 
   <include file="$(find gestelt_bringup)/launch/sitl/gazebo/single_fake_map.xml">
     <arg name="drone_id" value ="2"/>
     <arg name="cloud_topic_fake" value="$(arg cloud_topic_fake)" />
+    <arg name="map_filepath" value="$(arg map_filepath)" />
   </include>
 
   <include file="$(find gestelt_bringup)/launch/sitl/gazebo/single_fake_map.xml">
     <arg name="drone_id" value ="3"/>
     <arg name="cloud_topic_fake" value="$(arg cloud_topic_fake)" />
+    <arg name="map_filepath" value="$(arg map_filepath)" />
   </include>
 
 </launch>

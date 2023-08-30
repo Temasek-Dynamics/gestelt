@@ -7,7 +7,7 @@
   <!-- swarm topic transmitter bridge-->
   <include file="$(find swarm_bridge)/launch/bridge_udp.launch">
     <arg name="drone_id" value="999"/>
-    <arg name="broadcast_ip" value="192.0.0.255"/>
+    <arg name="broadcast_ip" value="192.168.31.255"/>
   </include>
 
   <!-- Add static transform from world to map -->

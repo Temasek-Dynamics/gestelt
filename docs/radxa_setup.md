@@ -202,10 +202,27 @@ tar -czf $IMAGE_NAME.tar.gz $IMAGE_NAME.img
 # Copy with override
 scp -r path/to/dir rock@IP_ADDR:path/to/dir
 
-scp -r /home/john/gestelt_ws/src/gestelt/gestelt_bringup/ rock@192.168.31.133:/home/rock/gestelt_ws/src/gestelt/
+scp -r /home/john/gestelt_ws/src/gestelt/gestelt_bringup/ rock@192.168.31.205:/home/rock/gestelt_ws/src/gestelt/
 
-scp -r /home/john/gestelt_ws/src/gestelt/ rock@192.168.31.133:/home/rock/gestelt_ws/src/
+scp -r /home/john/gestelt_ws/src/gestelt/ rock@192.168.31.205:/home/rock/gestelt_ws/src/
 ```
+
+### Generate ssh keys to make your life easier
+```bash
+# On central computer, generate a public key
+ssh-keygen -t ecdsa -b 521
+# Copy public key over to robot
+ssh-copy-id -i ~/.ssh/id_ecdsa rock@ROBOT_IP
+```
+On central computer, setup ssh config file. Save as `~/.ssh/config`
+```bash
+Host robot
+    User rock
+    Hostname ROBOT_IP
+    IdentityFile ~/.ssh/id_ecdsa
+    ForwardX11 yes
+```
+Now you can access the Radxa using `ssh robot`
 
 ### Run script on startup on Radxa
 This is useful if we want to run mavros and the flight manager nodes on startup.
