@@ -17,9 +17,7 @@
   <!-- Drone 0 Fake map-->
   <include file="$(find gestelt_bringup)/launch/sitl/gazebo/single_fake_map.xml">
     <arg name="drone_id" value ="0"/>
-    <arg name="pose_topic" value="$(arg pose_topic)" />
     <arg name="cloud_topic_fake" value="$(arg cloud_topic_fake)" />
-    <arg name="cloud_topic_ds" value="$(arg cloud_topic_ds)" />
     <arg name="map_filepath" value="$(arg map_filepath)" />
   </include>
 

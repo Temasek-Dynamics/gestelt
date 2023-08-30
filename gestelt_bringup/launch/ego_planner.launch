@@ -80,19 +80,19 @@
 
         <!-- Position command limits, anything exceeding this will switch the mode to hovering state -->
         <!-- This is relative to uav origin frame -->
-        <!-- <param name="traj_server/pos_limit/max_x" value="$(eval 0.5 * map_size_x - init_x)" type="double"/>
+        <param name="traj_server/pos_limit/max_x" value="$(eval 0.5 * map_size_x - init_x)" type="double"/>
         <param name="traj_server/pos_limit/min_x" value="$(eval -0.5 * map_size_x - init_x)" type="double"/>
         <param name="traj_server/pos_limit/max_y" value="$(eval 0.5 * map_size_y - init_y)" type="double"/>
         <param name="traj_server/pos_limit/min_y" value="$(eval -0.5 * map_size_y - init_y)" type="double"/>
         <param name="traj_server/pos_limit/max_z" value="$(arg map_size_z)" type="double"/>
-        <param name="traj_server/pos_limit/min_z" value="-0.1" type="double"/> -->
+        <param name="traj_server/pos_limit/min_z" value="-0.1" type="double"/>
 
-        <param name="traj_server/pos_limit/max_x" value="50.0" type="double"/>
+        <!-- <param name="traj_server/pos_limit/max_x" value="50.0" type="double"/>
         <param name="traj_server/pos_limit/min_x" value="-50.0" type="double"/>
         <param name="traj_server/pos_limit/max_y" value="50.0" type="double"/>
         <param name="traj_server/pos_limit/min_y" value="-50.0" type="double"/>
         <param name="traj_server/pos_limit/max_z" value="3.0" type="double"/>
-        <param name="traj_server/pos_limit/min_z" value="-0.1" type="double"/>
+        <param name="traj_server/pos_limit/min_z" value="-0.1" type="double"/> -->
 
         <!-- Frequency for timers -->
         <param name="traj_server/pub_cmd_freq" value="25.0" type="double"/>

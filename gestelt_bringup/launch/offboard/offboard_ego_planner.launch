@@ -1,19 +1,18 @@
 <launch>
   <arg name="drone_id"/>
   <!-- num_drones must be at least 2 even if we are planning for a single drone -->
-  <arg name="num_drones" value="3"/>
+  <arg name="num_drones" value="5"/>
   <!-- size of map, change the size inflate x, y, z according to your application -->
   <arg name="map_size_x" value="4.5"/>
   <arg name="map_size_y" value="4.5"/>
-  <arg name="map_size_z" value=" 2.5"/>
+  <arg name="map_size_z" value=" 2.25"/>
   <!-- Input/output topics -->
-  <arg name="command_topic" value="mavros/setpoint_raw/local" />
-  <arg name="odometry_topic" value="mavros/local_position/odom" />
-  <arg name="pose_topic" value="mavros/local_position/pose" />
-  <arg name="cloud_topic" value="camera/depth/points" />
-  <arg name="cloud_topic_ds" value="camera/depth/points_downsampled" />
-  <arg name="depth_img_topic" value="camera/depth/image_raw" />
+  <arg name="cloud_topic" value="camera/depth/points_downsampled" />
+  <!-- POSE_TYPE/SENSOR_TYPE: Use value of 1 for actual map, 3 for fake_map-->
+  <arg name="POSE_TYPE" default="3" />
+  <arg name="SENSOR_TYPE" default="3" />
 
+  <!-- Drone 0 -->
   <include file="$(find gestelt_bringup)/launch/ego_planner.launch">
     <arg name="drone_id"   value="$(arg drone_id)"/>
     <arg name="init_x"     value="0.0"/>
@@ -23,11 +22,9 @@
     <arg name="map_size_x" value="$(arg map_size_x)"/>
     <arg name="map_size_y" value="$(arg map_size_y)"/>
     <arg name="map_size_z" value="$(arg map_size_z)"/>
-    <arg name="pose_topic" value="$(arg pose_topic)"/>
-    <arg name="odometry_topic" value="$(arg odometry_topic)"/>
-    <arg name="depth_img_topic" value="$(arg depth_img_topic)"/>
-    <arg name="cloud_topic" value="$(arg cloud_topic_ds)"/>
-    <arg name="command_topic" value="$(arg command_topic)" />
+    <arg name="cloud_topic" value="$(arg cloud_topic)"/>
+    <arg name="POSE_TYPE" value="$(arg POSE_TYPE)" />
+    <arg name="SENSOR_TYPE" value="$(arg SENSOR_TYPE)" />
   </include>
 
 </launch>
