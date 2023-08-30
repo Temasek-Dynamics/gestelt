@@ -13,6 +13,7 @@
 
 - Fix formation and num_drones issue
     - Get rid of num_drones, be able to dynamically add/remove agents
+    -  Add feature to dynamically set formation number
 
 - Improvements
     - Sensor
@@ -22,9 +23,6 @@
         - Set vicon noise values from computer
     - Software
         - Change parameters for trajectory server/ego planner to param config files
-
-- Ego Planner
-    - Add feature to dynamically set formation number
 
 - Port to ROS2
 
@@ -45,6 +43,7 @@
         - Compress, publish and subscribe using ImageTransport
     - Look at using udp to send over point clouds or depth images
     - Create map with decaying voxels
+        - Start by visualizing the underlying stored octree first
 
 - Perform physical tests to determine physical characteristics
     - Motor coefficients
