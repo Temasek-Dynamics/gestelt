@@ -1,7 +1,7 @@
 <launch>
   <arg name="drone_id"/>
   <arg name="drone_id_ns" value="drone$(arg drone_id)"/>
-  <arg name="map_filepath" value="$(find gestelt_bringup)/simulation/fake_map_worlds/almost_empty_map.pcd" />
+  <arg name="map_filepath" value="$(find gestelt_bringup)/simulation/fake_map_worlds/dense_map.pcd" />
 
   <!-- Input/output topics -->
   <arg name="pose_topic" value="mavros/local_position/pose" />
