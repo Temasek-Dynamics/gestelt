@@ -240,9 +240,9 @@ nmcli connection modify WIFINAME connection.autoconnect-priority 10
 ```
 
 # Troubleshooting
-1. Permission denied when accessing serial port
-    - Make sure Baud rate matches what is set as PX4 params
-    - Make sure your user (default is "rock") is added to the dialout group through `sudo usermod -a -G dialout $USER`
+1. Permission denied when accessing serial port of FCU from MAVROS on Radxa
+    - Make sure Baud rate when launching MAVROS matches what is set as PX4 params
+    - Make sure your current user (on Radxa) is added to the dialout group through `sudo usermod -a -G dialout $USER`
 2. Unable to boot up Radxa.
     - Did you miss out on any installation steps?
     - If not, proceed to reflash the bootloader. This is done by pressing the boot button on radxa and connecting it to the PC. You would then run the following command: `sudo boot-g12.py /path/to/fip/radxa-zero/u-boot.bin` 
