@@ -560,7 +560,7 @@ namespace ego_planner
       // If the number of trajectories exceed or are same as current drone id
       if ((int)planner_manager_->traj_.swarm_traj.size() >= planner_manager_->pp_.drone_id)
       {
-        // For each drone id
+        // For each drone id up to current drone id
         for (int i = 0; i < planner_manager_->pp_.drone_id; ++i)
         {
           // If the drone_id of the i-th swarm trajectory is not the same as the i-th value, then break out

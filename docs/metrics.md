@@ -41,6 +41,15 @@ All tests conducted on 5 Ghz Wifi network
         - Delay: AVG 0.08, MAX 0.128
         - Throughput: 76.5KB/S, MAX 440kb/s
 
+# Integration Tests
+    - Replan wall time
+        - 
+    - Replan frequency
+    - Maximum flight speed it can enable in sparse/dense environment
+    - Maximum number of UAVs it can handle
+    - Tracking error
+    - Success rate
+
 # Metrics to measure
 MAKE SURE TO BUILD IN RELEASE MODE
 
@@ -81,11 +90,11 @@ MAKE SURE TO BUILD IN RELEASE MODE
         - Measure frequency of publishing: `rostopic hz`
         - Measure delay: `rostopic delay`
     - Integration tests 
+        - Maximum flight speed it can enable in sparse/dense environment
+        - Maximum number of UAVs it can handle
         - Replan frequency
         - Tracking error
         - Success rate
-        - Maximum flight speed it can enable in sparse/dense environment
-        - Maximum number of UAVs it can handle
 
 ## PID Tuning Guide
 - Tune PID 

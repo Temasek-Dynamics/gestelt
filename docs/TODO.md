@@ -1,30 +1,24 @@
 # TODO
+- Dynamics of vehicles
+
+- Fix swarm_collision_checker
+
 - Add simulated drones (with no dynamics)
-    - Test broadcasting on xiaomi network
     - Issues:
-        - Origin frame does not work in real life
-    - Add decay to map
-    - Add remote launching on machines
+        - Origin frame does not work in real life (Could it be due to vicon publishing in map frame?)
     - Logging of mavlink topics and ROS topics to analyze issues 
 
-- Documentation
-    - Vicon system and PX4 params
-    - TF tree structure
+- Improvements
+    - Vicon improvements:
+        - Check logs and see vicon delay
+    - Software
+        - Change parameters for trajectory server/ego planner to param config files
+
+- Port to DDS
 
 - Fix formation and num_drones issue
     - Get rid of num_drones, be able to dynamically add/remove agents
     -  Add feature to dynamically set formation number
-
-- Improvements
-    - Sensor
-        - Solve laser range finder issue
-    - Vicon improvements:
-        - Check logs and see vicon delay
-        - Set vicon noise values from computer
-    - Software
-        - Change parameters for trajectory server/ego planner to param config files
-
-- Port to ROS2
 
 - Benchmark
     - Add network params 
@@ -35,6 +29,7 @@
         - Should startup mavros script and egoplanner
 
 - Gridmap
+    - Add decay to map
     - Solve bug with `cloud.points.size () == cloud.width * cloud.height assertion failure
     - Implement pose timeout
         - flag_sensor_timeout_

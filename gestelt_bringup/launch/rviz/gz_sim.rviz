@@ -6,14 +6,13 @@ Panels:
       Expanded:
         - /Global Options1
         - /drone0_ego1
+        - /drone0_ego1/Mapping1
         - /drone0_ego1/Mapping1/occ_grid_inf1
         - /drone0_ego1/Mapping1/occ_grid_inf1/Autocompute Value Bounds1
-        - /drone0_mavros1
         - /drone0_mavros1/Localization1//mavros/local_position/pose1
         - /drone1_ego1/Mapping1/occ_grid_inf1
         - /drone2_mavros1/Perception1
         - /drone3_ego1/Mapping1/occ_grid_inf1
-        - /fake_map1
       Splitter Ratio: 0.5853132009506226
     Tree Height: 627
   - Class: rviz/Selection
@@ -60,8 +59,6 @@ Visualization Manager:
         base_link:
           Value: true
         base_link_frd:
-          Value: true
-        drone0:
           Value: true
         drone0_base_link:
           Value: false
@@ -112,8 +109,6 @@ Visualization Manager:
             {}
         world:
           map:
-            drone0:
-              {}
             drone0_origin:
               drone0_base_link:
                 drone0_cam_link:
@@ -1323,7 +1318,7 @@ Visualization Manager:
           Use Fixed Frame: true
           Use rainbow: true
           Value: true
-      Enabled: true
+      Enabled: false
       Name: fake_map
   Enabled: true
   Global Options:
@@ -1370,9 +1365,9 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.7547981142997742
+      Pitch: 0.23479852080345154
       Target Frame: my_view
-      Yaw: 1.769067645072937
+      Yaw: 2.3740692138671875
     Saved:
       - Class: rviz/FPS
         Enable Stereo Rendering:

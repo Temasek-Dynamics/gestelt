@@ -62,7 +62,7 @@ public:
     tfListener_.reset(new tf2_ros::TransformListener(tfBuffer_));
 
     // Sleep so that TF tree is set up during system startup
-    ros::Duration(5.0).sleep();
+    ros::Duration(10.0).sleep();
 
     // Get transforms from world to drone origin frames
     for (int i = 0; i < num_drones_; i++) {
@@ -76,6 +76,8 @@ public:
       }
       world_to_drone_origin_tfs_.push_back(world_to_origin_tf);
     }
+
+    ROS_INFO("[Drone Collision Checker]: Initialized");
 
   }
 

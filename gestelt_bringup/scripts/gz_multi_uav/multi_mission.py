@@ -86,24 +86,25 @@ def main():
     print(f"Sending waypoints to UAVs")
     waypoints = []
     # Square formation with length L
-    # length = 12
-    # d = length/2
-    # for i in range(10):
-    #     waypoints.append(create_pose(d, 0, 1))
-    #     waypoints.append(create_pose(d, d, 1))
-    #     waypoints.append(create_pose(-d, d, 1))
-    #     waypoints.append(create_pose(-d, -d, 1))
-    #     waypoints.append(create_pose(d, -d, 1))
-    #     waypoints.append(create_pose(0, 0, 1))
 
-    d = 1.5
-    z = 0.75
+    length = 12
+    d = length/2
     for i in range(10):
-        waypoints.append(create_pose(d, d, z))
-        waypoints.append(create_pose(-d, d, z))
-        waypoints.append(create_pose(-d, -d, z))
-        waypoints.append(create_pose(d, -d, z))
-    waypoints.append(create_pose(0, 0, z))
+        waypoints.append(create_pose(d, 0, 1))
+        waypoints.append(create_pose(d, d, 1))
+        waypoints.append(create_pose(-d, d, 1))
+        waypoints.append(create_pose(-d, -d, 1))
+        waypoints.append(create_pose(d, -d, 1))
+        waypoints.append(create_pose(0, 0, 1))
+
+    # d = 1.5
+    # z = 0.75
+    # for i in range(10):
+    #     waypoints.append(create_pose(d, d, z))
+    #     waypoints.append(create_pose(-d, d, z))
+    #     waypoints.append(create_pose(-d, -d, z))
+    #     waypoints.append(create_pose(d, -d, z))
+    # waypoints.append(create_pose(0, 0, z))
 
     pub_waypoints(waypoints)
 
