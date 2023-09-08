@@ -86,7 +86,7 @@ def main():
     waypoints = []
     # Square formation with length L
     d = 1.25
-    z = 0.75
+    z = 2.0
     for i in range(10):
         waypoints.append(create_pose(d, d, z))
         waypoints.append(create_pose(-d, d, z))
