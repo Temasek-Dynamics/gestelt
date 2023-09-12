@@ -69,7 +69,6 @@ struct SafetyLimits{
 class TrajServer{
 public:
   /* Initialization methods */
-
   void init(ros::NodeHandle& nh);
 
   void initModelMesh(const std::string& drone_model_mesh_filepath);

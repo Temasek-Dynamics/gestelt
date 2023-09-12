@@ -7,7 +7,6 @@ import csv
 
 
 def main():
-
     kv = 4850 #RPM/
     # Air density (rho) at sea level (101 kPa), Temperature of 30 degree celcius, relative humidity of 50%
     rho = 1.152 # [kg / m3] 

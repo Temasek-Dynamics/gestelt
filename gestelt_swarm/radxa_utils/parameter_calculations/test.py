@@ -3,8 +3,6 @@
 from math import pi
 import numpy as np
 import matplotlib.pyplot as plt
-import csv
-
 
 def main():
     x = np.array([0.0, 1.0, 2.0, 3.0,  4.0,  5.0])
