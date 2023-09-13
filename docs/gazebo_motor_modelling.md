@@ -17,8 +17,12 @@
 
 # Maximum rotation rate [ rad/s]
 rot_max = kv * V_max * efficiency * (2*pi/60) 
-  - kv = 4850, 80% efficiency, V_max = 11.1V 
-    - rot_max = 4850 * 11.1 * 0.60 * (2*pi/60) = 3383 rad/s
+  - kv = 4850, 60% efficiency, V_max = 11.1V 
+
+    - rot_max = 4850 * 11.1 * 0.60 * (2*pi/60) 
+      = 3383 rad/s
+      = 32301 rev / minute
+
 
 # Thrust coefficient 
 ## Experimental

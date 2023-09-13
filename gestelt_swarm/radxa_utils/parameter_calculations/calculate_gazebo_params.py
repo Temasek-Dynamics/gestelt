@@ -31,6 +31,7 @@ class TestValues:
             self.thrust_in_newtons = np.ndarray(shape=data_in_shape, dtype=float) # Thrust [N]
             self.n_in = np.ndarray(shape=data_in_shape, dtype=float) # Motor speed [rev/min]
             self.n_in_radians = np.ndarray(shape=data_in_shape, dtype=float) # Motor speed [rad/s]
+            self.n_in_rps = np.ndarray(shape=data_in_shape, dtype=float) # Motor speed [rev/s]
             self.P_in = np.ndarray(shape=data_in_shape, dtype=float) # Electrical Power [W] 
 
             print(f'Column names are {", ".join(rows[0])}')
@@ -47,6 +48,7 @@ class TestValues:
 
                 self.n_in[0, row_idx - 1] = float(row["Motor Optical Speed (RPM)"])
                 self.n_in_radians[0, row_idx - 1] = float(row["Motor Optical Speed (RPM)"]) * (2*pi / 60 ) # Convert from RPM to Radians/second
+                self.n_in_rps[0, row_idx - 1] = float(row["Motor Optical Speed (RPM)"]) / 60 # Convert from RPM to Revolutions/second
                 self.P_in[0, row_idx - 1] = float(row["Electrical Power (W)"])
 
             if print_debug:
@@ -56,20 +58,24 @@ class TestValues:
         """
         Plot thrust against revolutions per second
         """
+        x = self.n_in_rps[0]
+        y = self.thrust_in_newtons[0]
+
         fig, ax = plt.subplots()
         ax.grid(color = 'green', linestyle = '--', linewidth = 0.5)
         # ax.set_title("Thrust (N) against Angular velocity (Rad/s)")
         ax.set_xlabel("Angular velocity (Rad/s)", fontweight= 'bold')
         ax.set_ylabel("Thrust (N)", fontweight= 'bold')
 
-        xp = np.linspace(750, 3250, 100)
+        # xp = np.linspace(750, 3250, 100)
+        xp = np.linspace(0, 500, 100)
         
         # Fit 2nd order polynomial
-        z = np.polyfit(self.n_in_radians[0], self.thrust_in_newtons[0], 2)
+        z = np.polyfit(x, y, 2)
         print(f"For Thrust (N) against Angular velocity (Rad/s), polynomial coeffs: {z}")
         z_poly = np.poly1d(z)
 
-        ax.plot(self.n_in_radians[0], self.thrust_in_newtons[0], '.', 
+        ax.plot(x, y, '.', 
                 xp, z_poly(xp), '-')
 
         # ax.plot(self.n_in_radians, self.thrust_in_newtons, '.')
@@ -80,20 +86,24 @@ class TestValues:
         """
         Plot thrust against revolutions per second
         """
+        x = self.n_in_rps[0]
+        y = self.torque_in[0]
+
         fig, ax = plt.subplots()
         ax.grid(color = 'green', linestyle = '--', linewidth = 0.5)
         # ax.set_title("Torque (N.m) against Angular velocity (Rad/s)")
         ax.set_xlabel("Angular velocity (Rad/s)", fontweight= 'bold')
         ax.set_ylabel("Torque (N.m)", fontweight= 'bold')
 
-        xp = np.linspace(750, 3250, 100)
+        # xp = np.linspace(750, 3250, 100)
+        xp = np.linspace(0, 500, 100)
 
         # Fit 2nd order polynomial
-        z = np.polyfit(self.n_in_radians[0], self.torque_in[0], 2)
+        z = np.polyfit(x, y, 2)
         print(f"For Torque (N.m) against Angular velocity (Rad/s), polynomial coeffs: {z}")
         z_poly = np.poly1d(z)
 
-        ax.plot(self.n_in_radians[0], self.torque_in[0], '.', 
+        ax.plot(x, y, '.', 
                 xp, z_poly(xp), '-')
 
         plt.show()
@@ -245,8 +255,8 @@ def main():
     #####
     # Plots
     #####
-    # testvalue.plotThrust_AngVel()
-    testvalue.plotTorque_AngVel()
+    testvalue.plotThrust_AngVel()
+    # testvalue.plotTorque_AngVel()
 
 if __name__ == '__main__':
     main()
