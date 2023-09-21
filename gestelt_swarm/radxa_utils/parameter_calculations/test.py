@@ -5,27 +5,19 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 def main():
-    x = np.array([0.0, 1.0, 2.0, 3.0,  4.0,  5.0])
-    y = np.array([0.0, 0.8, 0.9, 0.1, -0.8, -1.0])
 
-    xp = np.linspace(-2, 6, 50)
+    x = np.array([1150, 1200, 1250, 1300, 1350, 1400, 1450, 1500, 1550, 1600])
+    y = np.array([6690, 10316, 13510, 16476, 19112, 21518, 23676, 25601, 27317, 28892])
 
-    z_2 = np.polyfit(x, y, 2)
-    print(f"z_2: {z_2}")
-    z_2_y = [z_2[0] * val**2 + z_2[1] * val + z_2[2] for val in xp] 
+    xp = np.linspace(1000, 1800, 100)
 
-    z_3 = np.polyfit(x, y, 3)
-    print(f"z_3: {z_3}")
-    z_3_poly = np.poly1d(z_3)
+    z = np.polyfit(x, y, 2)
+    z_poly = np.poly1d(z)
 
-    z_30 = np.polyfit(x, y, 30)
-    print(f"z_30: {z_30}")
-    z_30_poly = np.poly1d(z_30)
-
+    print(f"Points of interest on polynomial: ({1650}, {z_poly(1650)}) and ({1700}, {z_poly(1750)})")
 
     fig, ax = plt.subplots()
-    ax.plot(x, y, '.', xp, z_3_poly(xp), '-', xp, z_30_poly(xp), '--')
-    plt.ylim(-2,2)
+    ax.plot(x, y, '.', xp, z_poly(xp), '-')
     plt.show() 
 
 if __name__ == '__main__':

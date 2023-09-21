@@ -14,7 +14,6 @@
 - Torque coefficient 
   - k_q, C_Q= 4.7345e-09
 
-
 # Maximum rotation rate [ rad/s]
 rot_max = kv * V_max * efficiency * (2*pi/60) 
   - kv = 4850, 60% efficiency, V_max = 11.1V 
@@ -53,7 +52,6 @@ Rolling Moment Coefficient = Using SST turbulence model from reference, and bent
 
 From (https://github.com/engcang/mavros-gazebo-application/tree/master/px4_model_making#-motor)
 
-
 ## Masses
 *Base includes motors, range sensor, radxa SBC and FCU.
 
@@ -73,7 +71,12 @@ Battery holder: 6.5g
 Radxa holder: 5g
 
 ## Calculating Mass Moment of inertia 
-
+There are a few methods of calculting the Mass MOI. 
+1. Solidworks.
+  - Assemble the model, make sure all the parts have the right mass. If not, then use override mass properties to set the right mass
+  - You can use simple geometrical models to emulate the motors, propellers if you do not have the MOI for them
+2. Bifilar method
+  - 
 
 ### References 
 1. [How to Find Mass Moment of Inertia | Mechanics Statics | (Solved Examples)](https://www.youtube.com/watch?v=Bls5KnQOWkY)

@@ -35,7 +35,7 @@ vcs import < simulators.repos --recursive
 ```bash
 # cd to PX4-Autopilot repo
 cd ~/gestelt_ws/PX4-Autopilot
-bash ./Tools/setup/ubuntu.sh --no-nuttx
+bash ./Tools/setup/ubuntu.sh 
 # Make SITL target for Gazebo simulation
 DONT_RUN=1 make px4_sitl_default gazebo-classic
 cp -r ~/gestelt_ws/src/gestelt/gestelt_bringup/simulation/models/raynor ~/gestelt_ws/PX4-Autopilot/Tools/simulation/gazebo-classic/sitl_gazebo-classic/models/

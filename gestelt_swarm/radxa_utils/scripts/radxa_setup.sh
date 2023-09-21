@@ -25,5 +25,5 @@ sudo usermod -a -G dialout $USER
 cd ~/
 mkdir -p ~/gestelt_ws/src/
 cd ~/gestelt_ws/src
-git clone https://github.com/JohnTGZ/gestelt.git --branch sitl
+git clone https://github.com/JohnTGZ/gestelt.git 
 cd gestelt

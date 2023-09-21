@@ -1,4 +1,3 @@
-<!-- DO NOT EDIT: Generated from iris.sdf.jinja -->
 <sdf version='1.6'>
   <model name='iris'>
     <link name='base_link'>

@@ -129,23 +129,117 @@ make flywoo_f405s_aio_default upload
 4. GCS IP: 192.168.31.61
 
 ## Troubleshooting
+
+### PX4
 ```bash
-# Communication
+#####
+# Status
+#####
+# List topics
 uorb status
 mavlink status streams
-
 # List processes
 top
 
 # List all modules
 ls /bin/
 
-# Listen to topics
-listener TOPIC 
+#####
+# Listening
+#####
 
-# Modules
+# Listen to uorb topics
+listener TOPIC 
+# Common topics:
+# actuator_outputs
+# actuator_outputs_sim
+# actuator_motors
+
+# Listen to mavlink topics
+Use the MAVLink inspector in QGroundControl
+
+#####
+# Interacting with Modules
+#####
 ## Distance sensor
 tfmini status
 ## Sensors
 sensors status
+```
+
+### PX4 SITL: A detailed introduction to creating new models
+
+#### How actuator command work in SITL (Simulation-In-The-Loop)
+PX4 sitl will send actuator commands via uorb to the [`SimulatorMavlink`](https://github.com/PX4/PX4-Autopilot/blob/main/src/modules/simulation/simulator_mavlink/SimulatorMavlink.cpp) on the [`HIL_ACTUATOR_CONTROLS`](https://mavlink.io/en/messages/common.html#HIL_ACTUATOR_CONTROLS) message. The values of the controls are from -1 to 1. `SimulatorMavlink` should then publish the array of controls (each corresponding to a motor) as a mavlink message.
+[gazebo_mavlink_interface.cpp](https://github.com/PX4/PX4-SITL_gazebo-classic/blob/main/src/gazebo_mavlink_interface.cpp) subscribes to this mavlink message and scales the actuator controls value (from -1 to 1) by a factor defined by the `input_scaling` parameter. This can be seen [here](https://github.com/PX4/PX4-SITL_gazebo-classic/blob/20ded0757b4f2cb362833538716caf1e938b162a/src/gazebo_mavlink_interface.cpp#L1190). 
+
+What results is the reference input, which will be published as a Gazebo message of type `mav_msgs::msgs::CommandMotorSpeed`.
+[gazebo_motor_model.cpp]() subscribes to the reference input topic defined by the `motorSpeedPubTopic` parameter and outputs the final force vector of the motor in gazebo.
+
+#### Creating a new model
+We will need to change the following parameters:
+1. Objects making up drone model
+  - Mass
+  - Mass moment of inertia (Can be obtained from solidworks model under `mass properties`)
+2. `libgazebo_mavlink_interface` plugin (Controls the actuator interface)
+  - Under each channel in `control_channels`, for each motor make sure that `input_scaling` is set to the maximum angular velocity (in rad/s) of the drone. 
+    - Practically, we would want to set the maximum angular velocity based on the maximum allowable continuous current specified on the UAS. 
+  - Source code found in [SimulatorMavlink.cpp](https://github.com/PX4/PX4-Autopilot/blob/main/src/modules/simulation/simulator_mavlink/SimulatorMavlink.cpp)
+3. `libgazebo_motor_model` plugin (Set the motor and propeller coefficients)
+  - `maxRotVelocity`: Maximum angular velocity in rad/s
+  - `motorConstant`: Also known as K_T or C_T in the literature, the motor constant coefficient. The thrust of each motor, `T = rot_velocity^2 * motorConstant`. The units of `motorConstant` are in `[kg][m]`.
+  - `momentConstant`: This is calculated as C_T/C_M, where C_M is the moment constant coefficient. The units of `motorConstant` are in `[m]`.
+
+#### Additional Info
+- [SimulatorMavlink.cpp](https://github.com/PX4/PX4-Autopilot/blob/main/src/modules/simulation/simulator_mavlink/SimulatorMavlink.cpp) handles UORB messages from the PX4 SITL instance and publishes to mavlink messages. 
+Note that [ESC_STATUS](https://mavlink.io/en/messages/common.html#ESC_STATUS) message published from PX4 SITL will not be accurate, as the [maximum RPM value is hardcoded](https://github.com/PX4/PX4-Autopilot/blob/d1266c856fbd759cbc6cf583c5221aab49962b30/src/modules/simulation/simulator_mavlink/SimulatorMavlink.cpp#L159) as well as the current. 
+- [gazebo_motor_model.cpp]() subscribes to motor command from the topic defined by the `motorSpeedPubTopic` parameter, takes the command and puts it through a filter, after which it will set the final angular velocity of the motor joint accordingly accordingly. 
+
+### Gazebo simulation
+To change Gazebo world physics parameters
+[Gazebo Physics Parameters](https://classic.gazebosim.org/tutorials?tut=physics_params&cat=physics)
+Some level of damping and stiffness is required
+```xml
+      <collision name='...'>
+        ...
+        <surface>
+          <contact>
+            <ode>
+              <min_depth>0.001</min_depth>
+              <max_vel>0</max_vel>
+              <kp>1e15</kp>
+              <kd>1e13</kd>
+            </ode>
+          </contact>
+        </surface>
+      </collision>
+```
+
+Seems like there is no documented way to switch physics engine from ODE despite some sources saying that it is supported.
+
+
+### PX4 SITL Troubleshooting
+```bash
+
+git submodule update --recursive
+
+###############
+# Multi-robot with scripts
+###############
+# Tools/simulation/gazebo-classic/sitl_multiple_run.sh [-m <model>] [-n <number_of_vehicles>] [-w <world>] [-s <script>] [-t <target>] [-l <label>]
+Tools/simulation/gazebo-classic/sitl_multiple_run.sh -m iris -n 2 -w empty 
+
+###############
+# Multi-robot with 
+###############
+source Tools/simulation/gazebo-classic/setup_gazebo.bash $(pwd) $(pwd)/build/px4_sitl_default
+export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:$(pwd):$(pwd)/Tools/simulation/gazebo-classic/sitl_gazebo-classic
+
+roslaunch px4 multi_uav_mavros_sitl.launch
+
+roslaunch px4 px4.launch
+
+# https://docs.px4.io/main/en/simulation/ros_interface.html
+
+cp ~/gestelt_ws/px4_bk/PX4-Autopilot/build/px4_sitl_default/bin/px4 ~/gestelt_ws/PX4-Autopilot/build/px4_sitl_default/bin/
 ```

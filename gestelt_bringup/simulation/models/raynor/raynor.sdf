@@ -1,11 +1,11 @@
 <?xml version="1.0" ?>
-<sdf version='1.6'>
+<sdf version='1.7'>
   <model name='raynor'>
     <link name='base_link'>
       <pose>0 0 0 0 0 0</pose>
       <inertial>
         <pose>0 0 0 0 0 0</pose>
-        <mass>0.190</mass>
+        <mass>0.29</mass>
         <inertia>
           <!-- <ixx>0.0029125</ixx>
           <iyy>0.0029125</iyy>
@@ -30,6 +30,8 @@
             <ode>
               <min_depth>0.001</min_depth>
               <max_vel>0</max_vel>
+              <!-- <kp>1e15</kp>
+              <kd>1e13</kd> -->
             </ode>
           </contact>
           <friction>
@@ -75,7 +77,7 @@
       <pose>0 0 0 0 0 0</pose>
       <inertial>
         <pose>0 0 0 0 0 0</pose>
-        <mass>0.001</mass>
+        <mass>0.01</mass>
         <inertia>
           <ixx>1e-05</ixx>
           <ixy>0</ixy>
@@ -86,7 +88,7 @@
         </inertia>
       </inertial>
     </link>
-    <joint name='/imu_joint' type='revolute'>
+    <joint name='/imu_joint' type='fixed'>
       <child>/imu_link</child>
       <parent>base_link</parent>
       <axis>
@@ -360,10 +362,10 @@
 
     <!-- Camera link and joint -->
     <link name="camera_link">
-      <pose>0.05 0 0.034 0 0 0</pose>
+      <pose>0.05 0 0.035 0 0 0</pose>
       <inertial>
-        <pose>0.01 0.025 0.025 0 0 0</pose>
-        <mass>0.0001</mass>
+        <pose>-0.05 0.0 -0.035 0 0 0</pose>
+        <mass>0.01</mass>
         <inertia>
           <ixx>4.15e-6</ixx>
           <ixy>0</ixy>
@@ -391,8 +393,8 @@
             <height>240</height>
           </image>
           <clip>
-            <near>0.01</near> <!-- Intel RealSense D455 -->
-            <far>4.5</far> <!-- Intel RealSense D455 -->
+            <near>0.01</near>
+            <far>4.5</far>
           </clip>
         </camera>
         <plugin filename="libgazebo_ros_openni_kinect.so" name="camera_controller">
@@ -416,34 +418,24 @@
         </plugin>
       </sensor>
     </link>
-
-    <joint name="depth_camera_joint" type="revolute">
+    <joint name="depth_camera_joint" type="fixed">
       <child>camera_link</child>
       <parent>base_link</parent>
       <axis>
-        <xyz>0 0 1</xyz>
+        <xyz>1 0 0</xyz>
         <limit>
-          <upper>0</upper>
           <lower>0</lower>
+          <upper>0</upper>
+          <effort>0</effort>
+          <velocity>0</velocity>
         </limit>
+        <dynamics>
+          <spring_reference>0</spring_reference>
+          <spring_stiffness>0</spring_stiffness>
+        </dynamics>
+        <use_parent_model_frame>1</use_parent_model_frame>
       </axis>
     </joint>
-
-    <!-- <include>
-      <uri>model://depth_camera</uri>
-      <pose>0.1 0 0 0 0 0</pose>
-    </include>
-    <joint name="depth_camera_joint" type="revolute">
-      <child>depth_camera::link</child>
-      <parent>base_link</parent>
-      <axis>
-        <xyz>0 0 1</xyz>
-        <limit>
-          <upper>0</upper>
-          <lower>0</lower>
-        </limit>
-      </axis>
-    </joint> -->
 
     <!-- Plugins -->
     <plugin name='rosbag' filename='libgazebo_multirotor_base_plugin.so'>
@@ -464,17 +456,16 @@
       <timeConstantUp>0.0125</timeConstantUp>
       <!-- timeConstantDown is time taken for motor to decelerate and reach 63-70% of desired vel, is fed to the first order filter -->
       <timeConstantDown>0.025</timeConstantDown>
-      <!-- maxRotVelocity is in rad/s -->
-      <maxRotVelocity>4510</maxRotVelocity>
-      <!-- motorConstant = (Thrust_coeff * density * rotor_diam**4) / (2 * pi)**2 -->
-      <!-- Thurst of each motor = rotor_speed^2 * motorConstant -->
-      <!-- The thrust is further scaled by the wind speed-->
-      <!-- momentConstant is used to calculate rotor torque magnitude -->
-      <motorConstant>6.0e-7</motorConstant>
-      <momentConstant>0.0162</momentConstant>
+      <!-- maxRotVelocity (units of [rad/s]) -->
+      <maxRotVelocity>2700</maxRotVelocity>
+      <!-- motorConstant (units of [rad/s]) -->
+      <!-- Thrust of each motor = rotor_speed^2 * motorConstant -->
+      <motorConstant>3.383e-07</motorConstant>
+      <!-- momentConstant (units of [m]) is used to calculate rotor torque magnitude -->
+      <momentConstant>8.8e-3</momentConstant>
       <!-- rotorDragCoefficient accounts for the H-force due to the perpendicular air velocity, resulting in drag -->
       <rotorDragCoefficient>8.06428e-05</rotorDragCoefficient>
-      <!-- rollingMomentCoefficient accounts torque from the motors themselves -->
+      <!-- rollingMomentCoefficient accounts for torque from the motors themselves -->
       <rollingMomentCoefficient>1e-06</rollingMomentCoefficient>
       <rotorVelocitySlowdownSim>10</rotorVelocitySlowdownSim>
       <commandSubTopic>/gazebo/command/motor_speed</commandSubTopic>
@@ -488,9 +479,9 @@
       <turningDirection>ccw</turningDirection>
       <timeConstantUp>0.0125</timeConstantUp>
       <timeConstantDown>0.025</timeConstantDown>
-      <maxRotVelocity>4510</maxRotVelocity>
-      <motorConstant>6.0e-7</motorConstant>
-      <momentConstant>0.0162</momentConstant>
+      <maxRotVelocity>2700</maxRotVelocity>
+      <motorConstant>3.383e-07</motorConstant>
+      <momentConstant>8.8e-3</momentConstant>
       <rotorDragCoefficient>8.06428e-05</rotorDragCoefficient>
       <rollingMomentCoefficient>1e-06</rollingMomentCoefficient>
       <rotorVelocitySlowdownSim>10</rotorVelocitySlowdownSim>
@@ -505,9 +496,9 @@
       <turningDirection>cw</turningDirection>
       <timeConstantUp>0.0125</timeConstantUp>
       <timeConstantDown>0.025</timeConstantDown>
-      <maxRotVelocity>4510</maxRotVelocity>
-      <motorConstant>6.0e-7</motorConstant>
-      <momentConstant>0.0162</momentConstant>
+      <maxRotVelocity>2700</maxRotVelocity>
+      <motorConstant>3.383e-07</motorConstant>
+      <momentConstant>8.8e-3</momentConstant>
       <rotorDragCoefficient>8.06428e-05</rotorDragCoefficient>
       <rollingMomentCoefficient>1e-06</rollingMomentCoefficient>
       <rotorVelocitySlowdownSim>10</rotorVelocitySlowdownSim>
@@ -522,9 +513,9 @@
       <turningDirection>cw</turningDirection>
       <timeConstantUp>0.0125</timeConstantUp>
       <timeConstantDown>0.025</timeConstantDown>
-      <maxRotVelocity>4510</maxRotVelocity>
-      <motorConstant>6.0e-7</motorConstant>
-      <momentConstant>0.0162</momentConstant>
+      <maxRotVelocity>2700</maxRotVelocity>
+      <motorConstant>3.383e-07</motorConstant>
+      <momentConstant>8.8e-3</momentConstant>
       <rotorDragCoefficient>8.06428e-05</rotorDragCoefficient>
       <rollingMomentCoefficient>1e-06</rollingMomentCoefficient>
       <rotorVelocitySlowdownSim>10</rotorVelocitySlowdownSim>
@@ -534,13 +525,76 @@
     <!-- GPS -->
     <include>
       <uri>model://gps</uri>
-      <pose>0 0 0.05 0 0 0</pose>
+      <pose>0 0 0 0 0 0</pose>
       <name>gps0</name>
     </include>
     <joint name='gps0_joint' type='fixed'>
       <child>gps0::link</child>
       <parent>base_link</parent>
+      <axis>
+        <xyz>1 0 0</xyz>
+        <limit>
+          <lower>0</lower>
+          <upper>0</upper>
+          <effort>0</effort>
+          <velocity>0</velocity>
+        </limit>
+        <dynamics>
+          <spring_reference>0</spring_reference>
+          <spring_stiffness>0</spring_stiffness>
+        </dynamics>
+        <use_parent_model_frame>1</use_parent_model_frame>
+      </axis>
     </joint>
+
+    <!-- <link name="gps0">
+      <pose>0 0 0 0 0 0</pose>
+      <inertial>
+        <pose>0 0 0 0 0 0</pose>
+        <mass>0.001</mass>
+        <inertia>
+          <ixx>1e-05</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>1e-05</iyy>
+          <iyz>0</iyz>
+          <izz>1e-05</izz>
+        </inertia>
+      </inertial>
+      <visual name="visual">
+        <geometry>
+          <cylinder>
+            <radius>0.01</radius>
+            <length>0.002</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <script>
+            <name>Gazebo/Black</name>
+          </script>
+        </material>
+      </visual>
+      <sensor name="gps" type="gps">
+        <pose>0 0 0 0 0 0</pose>
+        <update_rate>5.0</update_rate>
+        <always_on>true</always_on>
+        <visualize>false</visualize>
+        <plugin name="gps_plugin" filename="libgazebo_gps_plugin.so">
+          <robotNamespace></robotNamespace>
+          <gpsNoise>true</gpsNoise>
+          <gpsXYRandomWalk>2.0</gpsXYRandomWalk>
+          <gpsZRandomWalk>4.0</gpsZRandomWalk>
+          <gpsXYNoiseDensity>2.0e-4</gpsXYNoiseDensity>
+          <gpsZNoiseDensity>4.0e-4</gpsZNoiseDensity>
+          <gpsVXYNoiseDensity>0.2</gpsVXYNoiseDensity>
+          <gpsVZNoiseDensity>0.4</gpsVZNoiseDensity>
+        </plugin>
+      </sensor>
+    </link>
+    <joint name='gps0_joint' type='fixed'>
+      <child>gps0_link</child>
+      <parent>base_link</parent>
+    </joint> -->
 
     <!-- Other sensors -->
     <plugin name='groundtruth_plugin' filename='libgazebo_groundtruth_plugin.so'>
@@ -587,7 +641,7 @@
         <channel name='rotor1'>
           <input_index>0</input_index>
           <input_offset>0</input_offset>
-          <input_scaling>1000</input_scaling>
+          <input_scaling>2700</input_scaling>
           <zero_position_disarmed>0</zero_position_disarmed>
           <zero_position_armed>100</zero_position_armed>
           <joint_control_type>velocity</joint_control_type>
@@ -595,7 +649,7 @@
         <channel name='rotor2'>
           <input_index>1</input_index>
           <input_offset>0</input_offset>
-          <input_scaling>1000</input_scaling>
+          <input_scaling>2700</input_scaling>
           <zero_position_disarmed>0</zero_position_disarmed>
           <zero_position_armed>100</zero_position_armed>
           <joint_control_type>velocity</joint_control_type>
@@ -603,7 +657,7 @@
         <channel name='rotor3'>
           <input_index>2</input_index>
           <input_offset>0</input_offset>
-          <input_scaling>1000</input_scaling>
+          <input_scaling>2700</input_scaling>
           <zero_position_disarmed>0</zero_position_disarmed>
           <zero_position_armed>100</zero_position_armed>
           <joint_control_type>velocity</joint_control_type>
@@ -611,7 +665,7 @@
         <channel name='rotor4'>
           <input_index>3</input_index>
           <input_offset>0</input_offset>
-          <input_scaling>1000</input_scaling>
+          <input_scaling>2700</input_scaling>
           <zero_position_disarmed>0</zero_position_disarmed>
           <zero_position_armed>100</zero_position_armed>
           <joint_control_type>velocity</joint_control_type>
@@ -694,6 +748,13 @@
       <accelerometerBiasCorrelationTime>300.0</accelerometerBiasCorrelationTime>
       <accelerometerTurnOnBiasSigma>0.196</accelerometerTurnOnBiasSigma>
     </plugin>
+
+    <gazebo reference='gps0_joint'>
+      <disableFixedJointLumping>true</disableFixedJointLumping>
+    </gazebo>
+    <gazebo reference='gps0_joint'>
+      <disableFixedJointLumping>true</disableFixedJointLumping>
+    </gazebo>
 
   </model>
 </sdf>
