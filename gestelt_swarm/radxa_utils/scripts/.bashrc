@@ -119,6 +119,7 @@ fi
 # ROS-related
 export ROS_DISTRO="noetic"
 source /opt/ros/noetic/setup.bash
+alias killbill="killall -9 gazebo; killall -9 gzserver; killall -9 gzclient; killall -9 rosmaster; tmux kill-server;"
 alias sros="source /opt/ros/noetic/setup.bash"
 alias sws="source devel/setup.bash"
 alias sbash="source /home/rock/.bashrc"

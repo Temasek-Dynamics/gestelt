@@ -6,6 +6,7 @@
   <arg name="vehicle" default="iris"/>
   <!-- Actual model SDF to be spawned -->
   <arg name="model" default="raynor"/> 
+  <arg name="physics" default="ode"/> 
 
   <!-- Gazebo simulation -->
   <include file="$(find gazebo_ros)/launch/empty_world.launch">
@@ -16,6 +17,7 @@
     <arg name="headless" value="false"/>
     <arg name="debug" value="false"/>
     <arg name="verbose" value="true"/>
+    <arg name="physics" value="$(arg physics)"/>
   </include>
   
   <!-- Drone 0 -->
@@ -44,7 +46,7 @@
     <arg name="vehicle" default="$(arg vehicle)"/>
     <arg name="model" default="$(arg model)"/>
     <arg name="init_x"     value="-0.5"/>
-    <arg name="init_y"     value="-0.5"/>
+    <arg name="init_y"     value="0.5"/>
     <arg name="init_z"     value="0.0"/>
   </include>
 
@@ -54,7 +56,37 @@
     <arg name="vehicle" default="$(arg vehicle)"/>
     <arg name="model" default="$(arg model)"/>
     <arg name="init_x"     value="-0.5"/>
-    <arg name="init_y"     value="0.5"/>
+    <arg name="init_y"     value="-0.5"/>
+    <arg name="init_z"     value="0.0"/>
+  </include>
+
+  <!-- Drone 4 -->
+  <include file="$(find gestelt_bringup)/launch/sitl/px4_sitl.xml">
+    <arg name="drone_id"   value="4"/>
+    <arg name="vehicle" default="$(arg vehicle)"/>
+    <arg name="model" default="$(arg model)"/>
+    <arg name="init_x"     value="0.0"/>
+    <arg name="init_y"     value="-1.0"/>
+    <arg name="init_z"     value="0.0"/>
+  </include>
+
+  <!-- Drone 5 -->
+  <include file="$(find gestelt_bringup)/launch/sitl/px4_sitl.xml">
+    <arg name="drone_id"   value="5"/>
+    <arg name="vehicle" default="$(arg vehicle)"/>
+    <arg name="model" default="$(arg model)"/>
+    <arg name="init_x"     value="1.0"/>
+    <arg name="init_y"     value="0.0"/>
+    <arg name="init_z"     value="0.0"/>
+  </include>
+
+  <!-- Drone 6 -->
+  <include file="$(find gestelt_bringup)/launch/sitl/px4_sitl.xml">
+    <arg name="drone_id"   value="6"/>
+    <arg name="vehicle" default="$(arg vehicle)"/>
+    <arg name="model" default="$(arg model)"/>
+    <arg name="init_x"     value="0.0"/>
+    <arg name="init_y"     value="1.0"/>
     <arg name="init_z"     value="0.0"/>
   </include>
 
