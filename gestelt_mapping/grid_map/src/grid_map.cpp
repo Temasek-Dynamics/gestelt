@@ -427,6 +427,13 @@ void GridMap::publishMap()
   if (occ_map_pub_.getNumSubscribers() == 0){
     return;
   }
+  // std::vector<pcl::PointXYZ, Eigen::aligned_allocator<pcl::PointXYZ> > voxelCenters;
+  // int num_occupied_cells = octree_map_inflated_->getOccupiedVoxelCenters(voxelCenters);
+  // ROS_ERROR("num_occupied_cells: %d", num_occupied_cells);
+  // ROS_ERROR("voxelCenters.size(): %ld", voxelCenters.size());
+
+  // auto input_cloud = octree_map_inflated_->getInputCloud();
+
   sensor_msgs::PointCloud2 cloud_msg;
   pcl::toROSMsg(*cloud_origin_, cloud_msg);
 

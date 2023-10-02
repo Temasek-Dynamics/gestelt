@@ -115,12 +115,14 @@ public:
   
   /* Gridmap access methods */
 
-  // True if the position camera pose is currently within the map boundaries
+  // True if the position is currently within the map boundaries
   inline bool isInMap(const Eigen::Vector3d &pos);
   // Get occupancy value of given position in Occupancy grid
   inline int getOccupancy(const Eigen::Vector3d &pos);
   // Get occupancy value of given position in inflated Occupancy grid
   inline int getInflateOccupancy(const Eigen::Vector3d &pos);
+  // True if the position is currently within the map boundaries
+  inline bool isInInflatedMap(const Eigen::Vector3d &pos);
 
   /* Gridmap conversion methods */
 
@@ -262,6 +264,10 @@ inline int GridMap::getOccupancy(const Eigen::Vector3d &pos)
 
 inline int GridMap::getInflateOccupancy(const Eigen::Vector3d &pos)
 {
+  if (!isInInflatedMap(pos)){
+    return 0;
+  }
+
   pcl::PointXYZ search_pt(pos(0), pos(1), pos(2));
   return octree_map_inflated_->isVoxelOccupiedAtPoint(search_pt) ? 1 : 0;
 }
@@ -270,6 +276,16 @@ inline bool GridMap::isInMap(const Eigen::Vector3d &pos)
 {
   double min_x, min_y, min_z, max_x, max_y, max_z;
   octree_map_->getBoundingBox(min_x, min_y, min_z, max_x, max_y, max_z);
+
+  return (pos(0) >= min_x && pos(0) <= max_x)
+    && (pos(1) >= min_y && pos(1) <= max_y)
+    && (pos(2) >= min_z && pos(2) <= max_z);
+}
+
+inline bool GridMap::isInInflatedMap(const Eigen::Vector3d &pos)
+{
+  double min_x, min_y, min_z, max_x, max_y, max_z;
+  octree_map_inflated_->getBoundingBox(min_x, min_y, min_z, max_x, max_y, max_z);
 
   return (pos(0) >= min_x && pos(0) <= max_x)
     && (pos(1) >= min_y && pos(1) <= max_y)

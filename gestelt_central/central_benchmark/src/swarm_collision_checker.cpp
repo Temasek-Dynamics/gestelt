@@ -80,13 +80,8 @@ public:
         ros::shutdown();
       }
       world_to_drone_origin_tfs_.push_back(world_to_origin_tf);
-
     }
-    ROS_INFO("Size of world_to_drone_origin_tfs_: %ld", world_to_drone_origin_tfs_.size());
-    ROS_INFO("Size of world_to_drone_base_: %ld", world_to_drone_base_.size());
-    ROS_INFO("Size of drones_pose_sub_: %ld", drones_pose_sub_.size());
-    ROS_INFO("Size of collision_sensor_sub_: %ld", collision_sensor_sub_.size());
-
+    
     ROS_INFO("[Drone Collision Checker]: Initialized");
   }
 
