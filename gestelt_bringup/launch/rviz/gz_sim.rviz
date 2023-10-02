@@ -6,15 +6,14 @@ Panels:
       Expanded:
         - /Global Options1
         - /drone0_ego1
-        - /drone0_ego1/Mapping1
-        - /drone0_ego1/Mapping1/occ_grid_inf1
+        - /drone0_ego1/Planning1
         - /drone0_ego1/Mapping1/occ_grid_inf1/Autocompute Value Bounds1
         - /drone0_mavros1/Localization1//mavros/local_position/pose1
         - /drone1_ego1/Mapping1/occ_grid_inf1
         - /drone2_mavros1/Perception1
         - /drone3_ego1/Mapping1/occ_grid_inf1
       Splitter Ratio: 0.5853132009506226
-    Tree Height: 627
+    Tree Height: 441
   - Class: rviz/Selection
     Name: Selection
   - Class: rviz/Tool Properties
@@ -84,6 +83,30 @@ Visualization Manager:
           Value: true
         drone3_origin:
           Value: true
+        drone4_base_link:
+          Value: true
+        drone4_cam_link:
+          Value: true
+        drone4_origin:
+          Value: true
+        drone5_base_link:
+          Value: true
+        drone5_cam_link:
+          Value: true
+        drone5_origin:
+          Value: true
+        drone6_base_link:
+          Value: true
+        drone6_cam_link:
+          Value: true
+        drone6_origin:
+          Value: true
+        drone7_base_link:
+          Value: true
+        drone7_cam_link:
+          Value: true
+        drone7_origin:
+          Value: true
         map:
           Value: false
         map_ned:
@@ -124,6 +147,22 @@ Visualization Manager:
             drone3_origin:
               drone3_base_link:
                 drone3_cam_link:
+                  {}
+            drone4_origin:
+              drone4_base_link:
+                drone4_cam_link:
+                  {}
+            drone5_origin:
+              drone5_base_link:
+                drone5_cam_link:
+                  {}
+            drone6_origin:
+              drone6_base_link:
+                drone6_cam_link:
+                  {}
+            drone7_origin:
+              drone7_base_link:
+                drone7_cam_link:
                   {}
             map_ned:
               {}
@@ -201,7 +240,7 @@ Visualization Manager:
               Marker Topic: /drone_0_ego_planner_node/goal_point
               Name: goal_point
               Namespaces:
-                "": true
+                {}
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
@@ -217,7 +256,7 @@ Visualization Manager:
               Marker Topic: /drone_0_ego_planner_node/optimal_list
               Name: optimal_list
               Namespaces:
-                "": true
+                {}
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
@@ -412,7 +451,7 @@ Visualization Manager:
               Marker Topic: /drone_1_ego_planner_node/goal_point
               Name: goal_point
               Namespaces:
-                "": true
+                {}
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
@@ -428,7 +467,7 @@ Visualization Manager:
               Marker Topic: /drone_1_ego_planner_node/optimal_list
               Name: optimal_traj
               Namespaces:
-                "": true
+                {}
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
@@ -487,7 +526,7 @@ Visualization Manager:
               Use Fixed Frame: true
               Use rainbow: true
               Value: true
-          Enabled: true
+          Enabled: false
           Name: Mapping
         - Alpha: 1
           Buffer Length: 1
@@ -646,7 +685,7 @@ Visualization Manager:
               Use Fixed Frame: true
               Use rainbow: true
               Value: true
-          Enabled: true
+          Enabled: false
           Name: Mapping
         - Class: rviz/Group
           Displays:
@@ -655,7 +694,7 @@ Visualization Manager:
               Marker Topic: /drone_2_ego_planner_node/goal_point
               Name: goal_point
               Namespaces:
-                "": true
+                {}
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
@@ -671,7 +710,7 @@ Visualization Manager:
               Marker Topic: /drone_2_ego_planner_node/optimal_list
               Name: optimal_traj
               Namespaces:
-                "": true
+                {}
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
@@ -857,7 +896,7 @@ Visualization Manager:
               Use Fixed Frame: true
               Use rainbow: true
               Value: true
-          Enabled: true
+          Enabled: false
           Name: Mapping
         - Class: rviz/Group
           Displays:
@@ -866,7 +905,7 @@ Visualization Manager:
               Marker Topic: /drone_3_ego_planner_node/goal_point
               Name: goal_point
               Namespaces:
-                "": true
+                {}
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
@@ -882,7 +921,7 @@ Visualization Manager:
               Marker Topic: /drone_3_ego_planner_node/optimal_list
               Name: optimal_traj
               Namespaces:
-                "": true
+                {}
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
@@ -1320,6 +1359,38 @@ Visualization Manager:
           Value: true
       Enabled: false
       Name: fake_map
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /drone_4_ego_planner_node/optimal_list
+      Name: 4_optimal_list
+      Namespaces:
+        {}
+      Queue Size: 100
+      Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /drone_5_ego_planner_node/optimal_list
+      Name: 5_optimal_list
+      Namespaces:
+        {}
+      Queue Size: 100
+      Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /drone_6_ego_planner_node/optimal_list
+      Name: 6_optimal_list
+      Namespaces:
+        {}
+      Queue Size: 100
+      Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /drone_7_ego_planner_node/optimal_list
+      Name: 7_optimal_list
+      Namespaces:
+        {}
+      Queue Size: 100
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 255; 255; 255
@@ -1349,7 +1420,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 19.959896087646484
+      Distance: 22.135419845581055
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -1357,9 +1428,9 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 0.4298238754272461
-        Y: -0.739397406578064
-        Z: 3.220515727996826
+        X: 1.7164735794067383
+        Y: 0.5152726173400879
+        Z: 2.7801294326782227
       Focal Shape Fixed Size: false
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
@@ -1367,7 +1438,7 @@ Visualization Manager:
       Near Clip Distance: 0.009999999776482582
       Pitch: 1.5697963237762451
       Target Frame: my_view
-      Yaw: 3.144071102142334
+      Yaw: 3.1240692138671875
     Saved:
       - Class: rviz/FPS
         Enable Stereo Rendering:

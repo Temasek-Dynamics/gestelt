@@ -25,8 +25,8 @@
     <arg name="drone_id"   value="0"/>
     <arg name="vehicle" default="$(arg vehicle)"/>
     <arg name="model" default="$(arg model)"/>
-    <arg name="init_x"     value="0.5"/>
-    <arg name="init_y"     value="-0.5"/>
+    <arg name="init_x"     value="1.0"/>
+    <arg name="init_y"     value="0.0"/>
     <arg name="init_z"     value="0.0"/>
   </include>
 
@@ -35,8 +35,8 @@
     <arg name="drone_id"   value="1"/>
     <arg name="vehicle" default="$(arg vehicle)"/>
     <arg name="model" default="$(arg model)"/>
-    <arg name="init_x"     value="0.5"/>
-    <arg name="init_y"     value="0.5"/>
+    <arg name="init_x"     value="0.0"/>
+    <arg name="init_y"     value="-1.0"/>
     <arg name="init_z"     value="0.0"/>
   </include>
 
@@ -45,8 +45,8 @@
     <arg name="drone_id"   value="2"/>
     <arg name="vehicle" default="$(arg vehicle)"/>
     <arg name="model" default="$(arg model)"/>
-    <arg name="init_x"     value="-0.5"/>
-    <arg name="init_y"     value="0.5"/>
+    <arg name="init_x"     value="-1.0"/>
+    <arg name="init_y"     value="0.0"/>
     <arg name="init_z"     value="0.0"/>
   </include>
 
@@ -55,8 +55,8 @@
     <arg name="drone_id"   value="3"/>
     <arg name="vehicle" default="$(arg vehicle)"/>
     <arg name="model" default="$(arg model)"/>
-    <arg name="init_x"     value="-0.5"/>
-    <arg name="init_y"     value="-0.5"/>
+    <arg name="init_x"     value="0.0"/>
+    <arg name="init_y"     value="1.0"/>
     <arg name="init_z"     value="0.0"/>
   </include>
 
@@ -65,7 +65,7 @@
     <arg name="drone_id"   value="4"/>
     <arg name="vehicle" default="$(arg vehicle)"/>
     <arg name="model" default="$(arg model)"/>
-    <arg name="init_x"     value="0.0"/>
+    <arg name="init_x"     value="1.0"/>
     <arg name="init_y"     value="-1.0"/>
     <arg name="init_z"     value="0.0"/>
   </include>
@@ -75,8 +75,8 @@
     <arg name="drone_id"   value="5"/>
     <arg name="vehicle" default="$(arg vehicle)"/>
     <arg name="model" default="$(arg model)"/>
-    <arg name="init_x"     value="1.0"/>
-    <arg name="init_y"     value="0.0"/>
+    <arg name="init_x"     value="-1.0"/>
+    <arg name="init_y"     value="-1.0"/>
     <arg name="init_z"     value="0.0"/>
   </include>
 
@@ -85,7 +85,17 @@
     <arg name="drone_id"   value="6"/>
     <arg name="vehicle" default="$(arg vehicle)"/>
     <arg name="model" default="$(arg model)"/>
-    <arg name="init_x"     value="0.0"/>
+    <arg name="init_x"     value="-1.0"/>
+    <arg name="init_y"     value="1.0"/>
+    <arg name="init_z"     value="0.0"/>
+  </include>
+
+  <!-- Drone 7 -->
+  <include file="$(find gestelt_bringup)/launch/sitl/px4_sitl.xml">
+    <arg name="drone_id"   value="7"/>
+    <arg name="vehicle" default="$(arg vehicle)"/>
+    <arg name="model" default="$(arg model)"/>
+    <arg name="init_x"     value="1.0"/>
     <arg name="init_y"     value="1.0"/>
     <arg name="init_z"     value="0.0"/>
   </include>

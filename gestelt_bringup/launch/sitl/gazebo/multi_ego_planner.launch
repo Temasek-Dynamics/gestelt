@@ -1,6 +1,6 @@
 <launch>
   <!-- num_drones must be at least 2 even if we are planning for a single drone -->
-  <arg name="num_drones" default="8"/>
+  <arg name="num_drones" default="9"/>
   <!-- size of map, change the size inflate x, y, z according to your application -->
   <!-- <arg name="map_size_x" default="4.5"/>
   <arg name="map_size_y" default="4.5"/>
@@ -17,8 +17,8 @@
   <!-- Drone 0 -->
   <include file="$(find gestelt_bringup)/launch/ego_planner.launch">
     <arg name="drone_id"   value="0"/>
-    <arg name="init_x"     value="0.5"/>
-    <arg name="init_y"     value="-0.5"/>
+    <arg name="init_x"     value="1.0"/>
+    <arg name="init_y"     value="0.0"/>
     <arg name="init_z"     value="0.0"/>
     <arg name="num_drones" value="$(arg num_drones)"/>
     <arg name="map_size_x" value="$(arg map_size_x)"/>
@@ -32,8 +32,8 @@
   <!-- Drone 1 -->
   <include file="$(find gestelt_bringup)/launch/ego_planner.launch">
     <arg name="drone_id"   value="1"/>
-    <arg name="init_x"     value="0.5"/>
-    <arg name="init_y"     value="0.5"/>
+    <arg name="init_x"     value="0.0"/>
+    <arg name="init_y"     value="-1.0"/>
     <arg name="init_z"     value="0.0"/>
     <arg name="num_drones" value="$(arg num_drones)"/>
     <arg name="map_size_x" value="$(arg map_size_x)"/>
@@ -47,8 +47,8 @@
   <!-- Drone 2 -->
   <include file="$(find gestelt_bringup)/launch/ego_planner.launch">
     <arg name="drone_id"   value="2"/>
-    <arg name="init_x"     value="-0.5"/>
-    <arg name="init_y"     value="0.5"/>
+    <arg name="init_x"     value="-1.0"/>
+    <arg name="init_y"     value="0.0"/>
     <arg name="init_z"     value="0.0"/>
     <arg name="num_drones" value="$(arg num_drones)"/>
     <arg name="map_size_x" value="$(arg map_size_x)"/>
@@ -62,8 +62,8 @@
   <!-- Drone 3 -->
   <include file="$(find gestelt_bringup)/launch/ego_planner.launch">
     <arg name="drone_id"   value="3"/>
-    <arg name="init_x"     value="-0.5"/>
-    <arg name="init_y"     value="-0.5"/>
+    <arg name="init_x"     value="0.0"/>
+    <arg name="init_y"     value="1.0"/>
     <arg name="init_z"     value="0.0"/>
     <arg name="num_drones" value="$(arg num_drones)"/>
     <arg name="map_size_x" value="$(arg map_size_x)"/>
@@ -77,7 +77,7 @@
   <!-- Drone 4 -->
   <include file="$(find gestelt_bringup)/launch/ego_planner.launch">
     <arg name="drone_id"   value="4"/>
-    <arg name="init_x"     value="0.0"/>
+    <arg name="init_x"     value="1.0"/>
     <arg name="init_y"     value="-1.0"/>
     <arg name="init_z"     value="0.0"/>
     <arg name="num_drones" value="$(arg num_drones)"/>
@@ -92,8 +92,8 @@
   <!-- Drone 5 -->
   <include file="$(find gestelt_bringup)/launch/ego_planner.launch">
     <arg name="drone_id"   value="5"/>
-    <arg name="init_x"     value="1.0"/>
-    <arg name="init_y"     value="0.0"/>
+    <arg name="init_x"     value="-1.0"/>
+    <arg name="init_y"     value="-1.0"/>
     <arg name="init_z"     value="0.0"/>
     <arg name="num_drones" value="$(arg num_drones)"/>
     <arg name="map_size_x" value="$(arg map_size_x)"/>
@@ -107,7 +107,22 @@
   <!-- Drone 6 -->
   <include file="$(find gestelt_bringup)/launch/ego_planner.launch">
     <arg name="drone_id"   value="6"/>
-    <arg name="init_x"     value="0.0"/>
+    <arg name="init_x"     value="-1.0"/>
+    <arg name="init_y"     value="1.0"/>
+    <arg name="init_z"     value="0.0"/>
+    <arg name="num_drones" value="$(arg num_drones)"/>
+    <arg name="map_size_x" value="$(arg map_size_x)"/>
+    <arg name="map_size_y" value="$(arg map_size_y)"/>
+    <arg name="map_size_z" value="$(arg map_size_z)"/>
+    <arg name="cloud_topic" value="$(arg cloud_topic)"/>
+    <arg name="POSE_TYPE" value="$(arg POSE_TYPE)" />
+    <arg name="SENSOR_TYPE" value="$(arg SENSOR_TYPE)" />
+  </include>
+
+  <!-- Drone 7 -->
+  <include file="$(find gestelt_bringup)/launch/ego_planner.launch">
+    <arg name="drone_id"   value="7"/>
+    <arg name="init_x"     value="1.0"/>
     <arg name="init_y"     value="1.0"/>
     <arg name="init_z"     value="0.0"/>
     <arg name="num_drones" value="$(arg num_drones)"/>

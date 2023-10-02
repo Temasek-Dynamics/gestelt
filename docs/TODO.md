@@ -1,6 +1,4 @@
 # TODO
-- Dynamics of vehicles
-
 - Fix swarm_collision_checker
 
 - Add simulated drones (with no dynamics)

@@ -17,7 +17,6 @@ public:
   void init(ros::NodeHandle& nh) {
 
     nh.param("num_drones", num_drones_, 0);
-    num_drones_--; // TODO: remove this after solving the num_drones issue
 
     std::string collision_topic, pose_topic;
     nh.param("collision_topic", collision_topic, std::string("collision_sensor"));
@@ -31,6 +30,10 @@ public:
     // Create an pre-allocated world_to_drone_base_ vector of size num_drones
     for (int i = 0; i < num_drones_; i++){
       geometry_msgs::PoseStamped pose;
+      pose.pose.position.x = 0;
+      pose.pose.position.y = 0;
+      pose.pose.position.z = 0;
+
       world_to_drone_base_.push_back(pose);
     }
 
@@ -67,7 +70,9 @@ public:
     // Get transforms from world to drone origin frames
     for (int i = 0; i < num_drones_; i++) {
       std::string drone_origin_frame = "drone" + std::to_string(i) + "_origin";
-    
+
+      ROS_INFO("Getting transform for %s in world", drone_origin_frame.c_str());
+
       geometry_msgs::PoseStamped world_to_origin_tf;
 
       if (!getTransform("world", drone_origin_frame, world_to_origin_tf)){
@@ -75,15 +80,20 @@ public:
         ros::shutdown();
       }
       world_to_drone_origin_tfs_.push_back(world_to_origin_tf);
+
     }
+    ROS_INFO("Size of world_to_drone_origin_tfs_: %ld", world_to_drone_origin_tfs_.size());
+    ROS_INFO("Size of world_to_drone_base_: %ld", world_to_drone_base_.size());
+    ROS_INFO("Size of drones_pose_sub_: %ld", drones_pose_sub_.size());
+    ROS_INFO("Size of collision_sensor_sub_: %ld", collision_sensor_sub_.size());
 
     ROS_INFO("[Drone Collision Checker]: Initialized");
-
   }
 
   // Subscribe to robot pose
   void poseCB(const geometry_msgs::PoseStamped::ConstPtr &msg, int drone_id)
   {
+    
     world_to_drone_base_[drone_id].header.stamp = msg->header.stamp;
     world_to_drone_base_[drone_id].header.frame_id = msg->header.frame_id;
 
