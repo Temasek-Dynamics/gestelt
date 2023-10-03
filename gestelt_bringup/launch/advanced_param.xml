@@ -82,6 +82,10 @@
         <param name="grid_map/map_size_x" value="$(arg map_size_x_)" />
         <param name="grid_map/map_size_y" value="$(arg map_size_y_)" />
         <param name="grid_map/map_size_z" value="$(arg map_size_z_)" />
+        <param name="grid_map/local_map_size_x" value="5.5" />
+        <param name="grid_map/local_map_size_y" value="5.5" />
+        <param name="grid_map/local_map_size_z" value="2.0" />
+
         <param name="grid_map/global_frame" value="$(arg global_frame)"/>
         <param name="grid_map/uav_origin_frame" value="$(arg drone_origin_frame)"/>
         <param name="grid_map/cam_frame" value="$(arg drone_id_ns)_$(arg cam_frame)"/>

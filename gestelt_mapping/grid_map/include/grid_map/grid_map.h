@@ -9,6 +9,7 @@
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/octree/octree_pointcloud_occupancy.h>
 #include <pcl/filters/voxel_grid.h>
+#include <pcl/filters/passthrough.h>
 
 #include <ros/ros.h>
 
@@ -28,6 +29,7 @@ struct MappingParameters
 {
   /* map properties */
   Eigen::Vector3d map_origin_, map_size_; // Origin and size of occupancy grid 
+  Eigen::Vector3d local_map_size_; // Origin and size of occupancy grid 
   double occ_resolution_; // Voxel size for occupancy grid without inflation                  
   double occ_inflation_; // Voxel size for occupancy grid with inflation
   int pose_type_; // Type of pose input (pose or odom)
@@ -107,6 +109,9 @@ public:
   GridMap() {}
   ~GridMap() {}
 
+  // Reset map data
+  void reset();
+
   // Initialize the GridMap class and it's callbacks
   void initMap(ros::NodeHandle &nh);
 
@@ -136,6 +141,9 @@ public:
   // Take in depth image as octree map.  Transformation from camera-to-global frame is 
   // done here
   void depthToCloudMap(const sensor_msgs::ImageConstPtr &msg);
+
+  // Update the local map
+  void updateLocalMap();
 
   /** Helper methods */
   
@@ -241,11 +249,14 @@ private:
   std::shared_ptr<TimeBenchmark> time_benchmark_;
 
   /* Data structures for point clouds */
-  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_origin_;  // Point cloud in origin frame
+  pcl::PointCloud<pcl::PointXYZ>::Ptr local_map_origin_;  // Point cloud map in UAV origin frame
   std::shared_ptr<pcl::octree::OctreePointCloudOccupancy<pcl::PointXYZ>> octree_map_; // In uav origin frame
   std::shared_ptr<pcl::octree::OctreePointCloudOccupancy<pcl::PointXYZ>> octree_map_inflated_; // In uav origin frame
 
-  pcl::VoxelGrid<pcl::PointXYZ> vox_grid_;
+  pcl::VoxelGrid<pcl::PointXYZ> vox_grid_filter_; // Voxel filter
+  pcl::PassThrough<pcl::PointXYZ> pass_x_filter_; // passthrough filter for x
+  pcl::PassThrough<pcl::PointXYZ> pass_y_filter_; // passthrough filter for y
+
 };
 
 /* ============================== definition of inline function
@@ -265,7 +276,7 @@ inline int GridMap::getOccupancy(const Eigen::Vector3d &pos)
 inline int GridMap::getInflateOccupancy(const Eigen::Vector3d &pos)
 {
   if (!isInInflatedMap(pos)){
-    return 0;
+    return -1;
   }
 
   pcl::PointXYZ search_pt(pos(0), pos(1), pos(2));
