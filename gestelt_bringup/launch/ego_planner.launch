@@ -74,10 +74,11 @@
         <!-- <param name="drone_model_mesh" value="file://$(find gestelt_bringup)/simulation/meshes/fake_drone.dae"/> -->
         <param name="drone_model_mesh" value="file:///home/john/gestelt_ws/src/gestelt/gestelt_bringup/simulation/meshes/fake_drone.dae"/>
 
+        <param name="traj_server/mode" value="1" type="int"/>
+
         <!-- Trajectory params -->
         <param name="traj_server/time_forward" value="1.0" type="double"/>
         <param name="traj_server/max_poses_to_track" value="1000" type="int"/>
-
         <!-- Position command limits, anything exceeding this will switch the mode to hovering state -->
         <!-- This is relative to uav origin frame -->
         <!-- <param name="traj_server/pos_limit/max_x" value="$(eval 0.5 * map_size_x - init_x)" type="double"/>

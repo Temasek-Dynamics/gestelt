@@ -8,6 +8,7 @@
 #include <optimizer/poly_traj_utils.hpp>
 
 #include <geometry_msgs/PoseStamped.h>
+#include <geometry_msgs/Vector3.h>
 #include <nav_msgs/Odometry.h>
 #include <nav_msgs/Path.h>
 #include <mavros_msgs/PositionTarget.h>
@@ -17,6 +18,7 @@
 #include <std_msgs/Empty.h>
 #include <std_msgs/Int8.h>
 #include <std_msgs/String.h>
+#include <trajectory_msgs/MultiDOFJointTrajectory.h>
 #include <visualization_msgs/Marker.h>
 
 #include <traj_utils/PolyTraj.h>
@@ -47,6 +49,12 @@ enum ServerEvent
   HOVER_E,          // 3
   E_STOP_E,         // 4
   EMPTY_E,          // 5
+};
+
+enum TrajMode
+{
+  POLYTRAJ,                 // From egoswarm
+  MULTIDOFJOINTTRAJECTORY,  // From mav_trajectory_generation
 };
 
 template<typename ... Args>
@@ -80,18 +88,38 @@ public:
   void heartbeatCallback(std_msgs::EmptyPtr msg);
 
   /**
-   * Callback for polynomial trajectories
+   * Callback for polynomial trajectories from egoswarms
   */
   void polyTrajCallback(traj_utils::PolyTrajPtr msg);
 
+  /**
+   * @brief Callback for trajectory points from mav_trajectory_generation  
+   */
+  void multiDOFJointTrajectoryCb(const trajectory_msgs::MultiDOFJointTrajectory::ConstPtr &msg);
+
+  /**
+   * @brief Callback for trajectory planner state 
+   */
   void plannerStateCB(const std_msgs::String::ConstPtr &msg);
 
+  /**
+   * @brief Callback for Mavros state 
+   */
   void UAVStateCb(const mavros_msgs::State::ConstPtr &msg);
 
+  /**
+   * @brief Callback for UAV Pose
+   */
   void UAVPoseCB(const geometry_msgs::PoseStamped::ConstPtr &msg);
 
+  /**
+   * @brief Callback for UAV Odometry
+   */
   void UAVOdomCB(const nav_msgs::Odometry::ConstPtr &msg);
 
+  /**
+   * @brief Callback for externally triggered server events
+   */
   void serverEventCb(const std_msgs::Int8::ConstPtr & msg);
 
   /**
@@ -232,6 +260,18 @@ public:
    */
   bool checkPositionLimits(SafetyLimits position_limits, Vector3d p);
 
+  /**
+   * @brief Convert geometry_msgs/Vector3 to Eigen::Vector3d
+   * 
+   * @param geom_vect 
+   * @param eigen_vect 
+   */
+  void geomMsgsVector3ToEigenVector3(const geometry_msgs::Vector3& geom_vect, Eigen::Vector3d& eigen_vect);
+
+  double quaternionToYaw(const geometry_msgs::Quaternion& quat);
+
+  /* FSM Methods */
+
   /** @brief StateToString interprets the input server state **/
   const std::string StateToString(ServerState state)
   {
@@ -292,7 +332,9 @@ private:
   ros::Publisher tracking_error_pub_; // Publisher of tracking error
   
   ros::Subscriber planner_state_sub_; // Subscriber for polynomial trajectory
-  ros::Subscriber poly_traj_sub_; // Subscriber for polynomial trajectory
+  
+  ros::Subscriber traj_sub_; // Subscriber for trajectory
+
   ros::Subscriber heartbeat_sub_; // Subscriber for heartbeat
   ros::Subscriber uav_state_sub_; // Subscriber for UAV State (MavROS)
   ros::Subscriber pose_sub_; // Subscriber for UAV State (MavROS)
@@ -351,6 +393,8 @@ private:
   double error_tracking_window_; // Maximum size of latest UAV path poses to display
 
   SafetyLimits position_limits_;
+
+  int traj_mode_; // Trajectory Server Mode. This affects the trajectory message type expected by the trajectory server. 
 
 private:
   void logInfo(const std::string& str){
