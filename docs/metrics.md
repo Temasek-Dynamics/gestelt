@@ -51,11 +51,16 @@ All tests conducted on 5 Ghz Wifi network
         - Throughput: 76.5KB/S, MAX 440kb/s
 
 # Integration Tests
-    - Replan wall time
-    - Replan frequency
+    - Tracking error
+        - With orientation 
+            - Square
+            - Circle
+            - Lemniscate
+        - Without orientation
+    - Replanning 
+        - wall time
     - Maximum flight speed it can enable in sparse/dense environment
     - Maximum number of UAVs it can handle
-    - Tracking error
     - Success rate
 
 # Metrics to measure

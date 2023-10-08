@@ -36,10 +36,12 @@ roslaunch gestelt_bringup sitl_central.launch rviz_config:=gz_sim
 "
 
 CMD_2="
-roslaunch gestelt_bringup single_ego_planner.launch
+roslaunch gestelt_bringup trajectory_server.launch
 "
 
-CMD_3="roslaunch gestelt_bringup single_mission.launch"
+CMD_3="roslaunch gestelt_bringup single_set_offboard.launch"
+
+CMD_4="roslaunch gestelt_bringup traj_tracking.launch"
 
 if [ "$SESSIONEXISTS" = "" ]
 then 
@@ -49,12 +51,14 @@ then
     tmux split-window -t $SESSION:0.0 -v
     tmux split-window -t $SESSION:0.1 -h
     tmux split-window -t $SESSION:0.0 -h
+    tmux split-window -t $SESSION:0.2 -h
 
     tmux send-keys -t $SESSION:0.0 "$SOURCE_PX4_AUTOPILOT $CMD_0" C-m 
     sleep 3
     tmux send-keys -t $SESSION:0.1 "$SOURCE_WS $CMD_1" C-m 
     tmux send-keys -t $SESSION:0.2 "$SOURCE_WS $CMD_2" C-m 
-    tmux send-keys -t $SESSION:0.3 "$SOURCE_WS $CMD_3" 
+    tmux send-keys -t $SESSION:0.3 "$SOURCE_WS $CMD_3" C-m
+    tmux send-keys -t $SESSION:0.4 "$SOURCE_WS $CMD_4" C-m
 fi
 
 # Attach session on the first window

@@ -11,6 +11,8 @@ Panels:
         - /drone1_ego1/Mapping1/occ_grid_inf1
         - /drone2_mavros1/Perception1
         - /drone3_ego1/Mapping1/occ_grid_inf1
+        - /Path1
+        - /MarkerArray1
       Splitter Ratio: 0.5853132009506226
     Tree Height: 627
   - Class: rviz/Selection
@@ -30,7 +32,7 @@ Panels:
   - Class: rviz/Time
     Name: Time
     SyncMode: 0
-    SyncSource: occ_grid_inf
+    SyncSource: ""
 Preferences:
   PromptSaveOnExit: true
 Toolbars:
@@ -246,7 +248,7 @@ Visualization Manager:
               Value: true
           Enabled: true
           Name: Mapping
-        - Alpha: 1
+        - Alpha: 0.699999988079071
           Buffer Length: 1
           Class: rviz/Path
           Color: 138; 226; 52
@@ -481,7 +483,7 @@ Visualization Manager:
           Topic: /drone1/uav_path
           Unreliable: false
           Value: true
-      Enabled: true
+      Enabled: false
       Name: drone1_ego
     - Class: rviz/Group
       Displays:
@@ -692,7 +694,7 @@ Visualization Manager:
           Topic: /drone2/uav_path
           Unreliable: false
           Value: true
-      Enabled: true
+      Enabled: false
       Name: drone2_ego
     - Class: rviz/Group
       Displays:
@@ -903,7 +905,7 @@ Visualization Manager:
           Topic: /drone3/uav_path
           Unreliable: false
           Value: true
-      Enabled: true
+      Enabled: false
       Name: drone3_ego
     - Class: rviz/Group
       Displays:
@@ -1289,35 +1291,70 @@ Visualization Manager:
       Enabled: false
       Name: fake_map
     - Class: rviz/Marker
-      Enabled: true
+      Enabled: false
       Marker Topic: /drone_4_ego_planner_node/optimal_list
       Name: 4_optimal_list
       Namespaces:
         {}
       Queue Size: 100
-      Value: true
+      Value: false
     - Class: rviz/Marker
-      Enabled: true
+      Enabled: false
       Marker Topic: /drone_5_ego_planner_node/optimal_list
       Name: 5_optimal_list
       Namespaces:
         {}
       Queue Size: 100
-      Value: true
+      Value: false
     - Class: rviz/Marker
-      Enabled: true
+      Enabled: false
       Marker Topic: /drone_6_ego_planner_node/optimal_list
       Name: 6_optimal_list
       Namespaces:
         {}
       Queue Size: 100
-      Value: true
+      Value: false
     - Class: rviz/Marker
-      Enabled: true
+      Enabled: false
       Marker Topic: /drone_7_ego_planner_node/optimal_list
       Name: 7_optimal_list
       Namespaces:
         {}
+      Queue Size: 100
+      Value: false
+    - Alpha: 1
+      Buffer Length: 1
+      Class: rviz/Path
+      Color: 204; 0; 0
+      Enabled: true
+      Head Diameter: 0.30000001192092896
+      Head Length: 0.20000000298023224
+      Length: 0.30000001192092896
+      Line Style: Billboards
+      Line Width: 0.10000000149011612
+      Name: Path
+      Offset:
+        X: 0
+        Y: 0
+        Z: 0
+      Pose Color: 255; 85; 255
+      Pose Style: None
+      Queue Size: 10
+      Radius: 0.029999999329447746
+      Shaft Diameter: 0.10000000149011612
+      Shaft Length: 0.10000000149011612
+      Topic: /drone0/mavros/setpoint_trajectory/desired
+      Unreliable: false
+      Value: true
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /trajectory_markers
+      Name: MarkerArray
+      Namespaces:
+        acceleration: true
+        path: true
+        pose: true
+        velocity: true
       Queue Size: 100
       Value: true
   Enabled: true
@@ -1349,7 +1386,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 7.960660934448242
+      Distance: 7.511936187744141
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -1357,17 +1394,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 1.1310707330703735
-        Y: -0.5519744753837585
-        Z: 1.8221849203109741
+        X: 0.2617768943309784
+        Y: 0.19639599323272705
+        Z: 1.9698058366775513
       Focal Shape Fixed Size: false
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.6997970938682556
+      Pitch: 0.11479713767766953
       Target Frame: my_view
-      Yaw: 3.1040689945220947
+      Yaw: 3.3840668201446533
     Saved:
       - Class: rviz/FPS
         Enable Stereo Rendering:

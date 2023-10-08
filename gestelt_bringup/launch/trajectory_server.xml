@@ -1,0 +1,68 @@
+<launch>
+    <!-- Drone id -->
+    <arg name="drone_id"/>
+    <arg name="drone_id_ns" value="drone$(arg drone_id)"/>
+    <arg name="init_x"/>
+    <arg name="init_y"/>
+    <arg name="init_z"/>
+    <!-- size of map, change the size inflate x, y, z according to your application -->
+    <arg name="map_size_x"/>
+    <arg name="map_size_y"/>
+    <arg name="map_size_z"/>
+    <!-- Input/output topics -->
+    <arg name="command_topic" default="mavros/setpoint_raw/local" />
+    <arg name="odometry_topic" default="mavros/local_position/odom" />
+    <arg name="pose_topic" default="mavros/local_position/pose" />
+    <arg name="drone_origin_frame" default="$(arg drone_id_ns)_origin" />
+
+    <!-- Trajectory server -->
+    <node pkg="trajectory_server" name="drone_$(arg drone_id)_traj_server" type="traj_server_node" output="screen">
+        <param name="drone_id" value="$(arg drone_id)"/>
+        <param name="origin_frame" value="$(arg drone_origin_frame)"/>
+        <!-- <param name="drone_model_mesh" value="file://$(find gestelt_bringup)/simulation/meshes/fake_drone.dae"/> -->
+        <param name="drone_model_mesh" value="file:///home/john/gestelt_ws/src/gestelt/gestelt_bringup/simulation/meshes/fake_drone.dae"/>
+
+        <!-- Trajectory params -->
+        <param name="traj_server/time_forward" value="1.0" type="double"/>
+        <param name="traj_server/max_poses_to_track" value="1000" type="int"/>
+        <!-- Position command limits, anything exceeding this will switch the mode to hovering state -->
+        <!-- This is relative to uav origin frame -->
+        <!-- <param name="traj_server/pos_limit/max_x" value="$(eval 0.5 * map_size_x - init_x)" type="double"/>
+        <param name="traj_server/pos_limit/min_x" value="$(eval -0.5 * map_size_x - init_x)" type="double"/>
+        <param name="traj_server/pos_limit/max_y" value="$(eval 0.5 * map_size_y - init_y)" type="double"/>
+        <param name="traj_server/pos_limit/min_y" value="$(eval -0.5 * map_size_y - init_y)" type="double"/>
+        <param name="traj_server/pos_limit/max_z" value="$(arg map_size_z)" type="double"/>
+        <param name="traj_server/pos_limit/min_z" value="-0.1" type="double"/> -->
+
+        <param name="traj_server/pos_limit/max_x" value="50.0" type="double"/>
+        <param name="traj_server/pos_limit/min_x" value="-50.0" type="double"/>
+        <param name="traj_server/pos_limit/max_y" value="50.0" type="double"/>
+        <param name="traj_server/pos_limit/min_y" value="-50.0" type="double"/>
+        <param name="traj_server/pos_limit/max_z" value="10.0" type="double"/>
+        <param name="traj_server/pos_limit/min_z" value="-0.1" type="double"/>
+
+        <!-- Frequency for timers -->
+        <param name="traj_server/pub_cmd_freq" value="25.0" type="double"/>
+        <param name="traj_server/state_machine_tick_freq" value="50.0" type="double"/>
+        <param name="traj_server/takeoff_height" value="0.75" type="double"/>
+
+        <!-- Trajectory mode 0 for egoswarm polytraj. Mode 1 for mav_trajectory_generation sampled points -->
+        <param name="traj_server/mode" value="1" type="int"/>
+        <!-- Subscribed Topics -->
+        <remap from="~planning/trajectory" to="/drone_$(arg drone_id)_planning/trajectory"/>
+        <remap from="/planner_state" to="/$(arg drone_id_ns)/planner_state"/>
+        <remap from="/mavros/state" to="/$(arg drone_id_ns)/mavros/state"/>
+        <remap from="/mavros/local_position/pose" to="/$(arg drone_id_ns)/$(arg pose_topic)"/>
+        <remap from="/mavros/local_position/odom" to="/$(arg drone_id_ns)/$(arg odometry_topic)"/>
+        <!-- Published Topics -->
+        <remap from="/mavros/setpoint_raw/local" to="/$(arg drone_id_ns)/$(arg command_topic)"/>
+        <remap from="/server_state" to="/$(arg drone_id_ns)/server_state"/>
+        <remap from="/uav_path" to="/$(arg drone_id_ns)/uav_path"/>
+        <remap from="/tracking_error" to="/$(arg drone_id_ns)/tracking_error"/>
+        <remap from="~model" to="/$(arg drone_id_ns)/model"/>
+        <!-- Service clients -->
+        <remap from="/mavros/cmd/arming" to="/$(arg drone_id_ns)/mavros/cmd/arming"/>
+        <remap from="/mavros/set_mode" to="/$(arg drone_id_ns)/mavros/set_mode"/>
+    </node>
+
+</launch>

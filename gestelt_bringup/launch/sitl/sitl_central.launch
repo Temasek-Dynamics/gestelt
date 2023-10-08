@@ -4,6 +4,10 @@
   <arg name="cloud_topic_downsample_in" default="camera/depth/points" />
   <arg name="cloud_topic_downsample_out" default="camera/depth/points_downsampled" />
 
+  <!-- RVIZ -->
+  <node name="rviz" pkg="rviz" type="rviz" required="true" 
+    args="-d $(find gestelt_bringup)/launch/rviz/$(arg rviz_config).rviz"/>
+
   <!-- swarm topic transmitter bridge-->
   <include file="$(find swarm_bridge)/launch/bridge_udp.launch">
     <arg name="drone_id" value="999"/>
@@ -24,10 +28,6 @@
     <param name="~check_collision_freq" value="10.0" />
     <param name="~tf_lookup_timeout" value="60.0" />
   </node>
-
-  <!-- RVIZ -->
-  <node name="rviz" pkg="rviz" type="rviz" required="true" 
-    args="-d $(find gestelt_bringup)/launch/rviz/$(arg rviz_config).rviz"/>
 
   <!-- drone 0: Downsamples the input cloud -->
   <node pkg="central_benchmark" type="cloud_downsampler" 

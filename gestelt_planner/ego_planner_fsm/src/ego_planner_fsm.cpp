@@ -54,7 +54,6 @@ namespace ego_planner
     nh.param("fsm/tick_state_freq", tick_state_freq, 100.0);
     nh.param("fsm/exec_state_freq", exec_state_freq, 20.0);
 
-
     // std::string odom_topic;
     // nh.param("grid_map/odom", odom_topic, std::string("odom"));
 

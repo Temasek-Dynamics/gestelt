@@ -2,6 +2,8 @@
 -Metrics collection
     - Trajectory Tracking
         - Create a few test trajectories and track the errors
+            - Add waypoint computation as message
+    - Get CPU load benchmarking
 
 - Grid_map
     - Remove all octree elements outside of local map bound

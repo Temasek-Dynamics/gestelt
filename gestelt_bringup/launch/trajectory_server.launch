@@ -1,0 +1,31 @@
+<launch>
+    <arg name="drone_id" default="0"/>
+    <arg name="drone_id_ns" value="drone$(arg drone_id)"/>
+    <arg name="drone_origin_frame" default="$(arg drone_id_ns)_origin" />
+    <!-- Input/output topics -->
+    <arg name="command_topic" default="mavros/setpoint_raw/local" />
+    <arg name="odometry_topic" default="mavros/local_position/odom" />
+    <arg name="pose_topic" default="mavros/local_position/pose" />
+
+    <include file="$(find gestelt_bringup)/launch/trajectory_server.xml">
+        <!-- drone_origin_frame: For PX4 SITL, leave it as default. 
+        For other forms of simulation, might have to change it -->
+        <arg name="drone_origin_frame" value="$(arg drone_origin_frame)" />
+        <arg name="drone_id" value="$(arg drone_id)"/>
+
+        <arg name="init_x" value="0.5"/>
+        <arg name="init_y" value="-0.5"/>
+        <arg name="init_z" value="0.0"/>
+
+        <!-- size of map, change the size inflate x, y, z according to your application -->
+        <arg name="map_size_x" value="80.0"/>
+        <arg name="map_size_y" value="80.0"/>
+        <arg name="map_size_z" value="80.0"/>
+
+        <!-- Input/output topics -->
+        <arg name="command_topic"   value="$(arg command_topic)" />
+        <arg name="odometry_topic"   value="$(arg odometry_topic)" />
+        <arg name="pose_topic"   value="$(arg pose_topic)" />
+    </include>
+
+</launch>
