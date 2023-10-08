@@ -79,7 +79,10 @@
     "*.ipp": "cpp",
     "core": "cpp",
     "*.txx": "cpp",
-    "queue": "cpp"
+    "queue": "cpp",
+    "camera": "cpp",
+    "graphicscontext": "cpp",
+    "viewport": "cpp"
   },
   "cmake.sourceDirectory": "/home/john/gestelt_ws/src/gestelt/gestelt_swarm/swarm_benchmark"
 }

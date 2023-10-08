@@ -1,5 +1,5 @@
 <?xml version="1.0" ?>
-<sdf version="1.5">
+<sdf version="1.7">
   <world name="default">
     <!-- A global light source -->
     <include>
@@ -9,26 +9,63 @@
     <include>
       <uri>model://ground_plane</uri>
     </include>
-    <physics name='default_physics' default='0' type='ode'>
-      <gravity>0 0 -9.8066</gravity>
+
+    <physics default='1' type='ode'>
       <ode>
         <solver>
           <type>quick</type>
-          <iters>10</iters>
-          <sor>1.3</sor>
-          <use_dynamic_moi_rescaling>0</use_dynamic_moi_rescaling>
+          <iters>25</iters>
+          <sor>1.0</sor>
+          <use_dynamic_moi_rescaling>1</use_dynamic_moi_rescaling>
         </solver>
         <constraints>
-          <cfm>0</cfm>
-          <erp>0.2</erp>
-          <contact_max_correcting_vel>100</contact_max_correcting_vel>
+          <cfm>0.2</cfm>
+          <erp>0.8</erp>
+          <contact_max_correcting_vel>0.1</contact_max_correcting_vel>
           <contact_surface_layer>0.001</contact_surface_layer>
         </constraints>
       </ode>
-      <max_step_size>0.004</max_step_size>
+
+      <dart>
+        <collision_detector>ode</collision_detector>
+        <solver>
+          <solver_type>pgs</solver_type>
+        </solver>
+      </dart>
+
+      <bullet>
+        <solver>
+          <type>sequential_impulse</type>
+          <min_step_size>0.0001</min_step_size>
+          <iters>100</iters>
+          <sor>1.000000</sor>
+        </solver>
+        <constraints>
+          <cfm>0.000000</cfm>
+          <erp>0.800000</erp>
+          <split_impulse>true</split_impulse>
+          <split_impulse_penetration_threshold>-0.01</split_impulse_penetration_threshold>
+          <contact_surface_layer>0.01000</contact_surface_layer>
+        </constraints>
+      </bullet>
+      
+      <simbody>
+        <accuracy>0.001</accuracy>
+        <max_transient_velocity>0.01</max_transient_velocity>
+        <contact>
+          <stiffness>1e8</stiffness>
+          <dissipation>10</dissipation>
+          <static_friction>0.15</static_friction>
+          <dynamic_friction>0.1</dynamic_friction>
+          <viscous_friction>0.0</viscous_friction>
+        </contact>
+      </simbody>
+
+      <max_step_size>0.001</max_step_size>
+      <real_time_update_rate>1000</real_time_update_rate>
+
       <real_time_factor>1</real_time_factor>
-      <real_time_update_rate>250</real_time_update_rate>
-      <magnetic_field>6.0e-6 2.3e-5 -4.2e-5</magnetic_field>
     </physics>
+
   </world>
 </sdf>

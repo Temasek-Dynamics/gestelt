@@ -52,7 +52,6 @@ All tests conducted on 5 Ghz Wifi network
 
 # Integration Tests
     - Replan wall time
-        - 
     - Replan frequency
     - Maximum flight speed it can enable in sparse/dense environment
     - Maximum number of UAVs it can handle

@@ -215,12 +215,26 @@ Some level of damping and stiffness is required
       </collision>
 ```
 
-Seems like there is no documented way to switch physics engine from ODE despite some sources saying that it is supported.
+#### Use dart with gazebo
+1. Do source installation of DART: https://dartsim.github.io/install_dart_on_ubuntu.html 
+  - NOTE: You will have to build from the latest version of DART
+2. Full installation of Gazebo from source: https://classic.gazebosim.org/tutorials?tut=install_from_source&ver=4.0&cat=install
+  - For noetic, we use the Gazebo 11 branch
+  - If you have installed in `usr/local/`, and gazebo throws the error `gazebo: error while loading shared libraries: libgazebo_common.so.1: cannot open shared object file: No such file or directory`, you will have to run the foollowing commands to put `/usr/local/lib` into the load path.
+    ```
+      echo '/usr/local/lib' | sudo tee /etc/ld.so.conf.d/gazebo.conf
+      sudo ldconfig
+    ```
+3. Build `gazebo_ros_pkgs` from source for interfacing ROS with Gazebo: https://classic.gazebosim.org/tutorials?tut=ros_installing&cat=connect_ros 
+  - You can't install from Debian packages because when Gazebo is compiled from source, Ubuntu's package manager apt is unable to find Gazebo. Therefore building `gazebo_ros_pkgs` from source is required.
+4. How to use DART: https://dartsim.github.io/faq.html
 
+References:
+1. SDF Format for specifying physics engines: http://sdformat.org/spec?elem=physics
+2. Examples: https://classic.gazebosim.org/tutorials?tut=haptix_world_sim_api&cat=haptix
 
 ### PX4 SITL Troubleshooting
 ```bash
-
 git submodule update --recursive
 
 ###############

@@ -6,6 +6,7 @@
   <arg name="vehicle" default="iris"/>
   <!-- Actual model SDF to be spawned -->
   <arg name="model" default="raynor"/> 
+  <arg name="physics" default="ode"/> 
 
   <!-- Gazebo simulation -->
   <include file="$(find gazebo_ros)/launch/empty_world.launch">
@@ -16,6 +17,7 @@
     <arg name="headless" value="false"/>
     <arg name="debug" value="false"/>
     <arg name="verbose" value="true"/>
+    <arg name="physics" value="$(arg physics)"/>
   </include>
 
   <!-- Drone 0 -->
@@ -25,7 +27,7 @@
     <arg name="model" default="$(arg model)"/>
     <arg name="init_x"     value="0.5"/>
     <arg name="init_y"     value="-0.5"/>
-    <arg name="init_z"     value="0.0"/>
+    <arg name="init_z"     value="0.001"/>
   </include>
 
 </launch>

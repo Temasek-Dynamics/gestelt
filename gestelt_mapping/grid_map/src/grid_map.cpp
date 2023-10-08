@@ -7,10 +7,15 @@ void GridMap::initMap(ros::NodeHandle &nh)
 
   /* Map parameters */
   double x_size, y_size, z_size;
+  double local_x_size, local_y_size, local_z_size;
   node_.param("grid_map/ground_height", mp_.ground_height_, 0.0);
   node_.param("grid_map/map_size_x", x_size, -1.0);
   node_.param("grid_map/map_size_y", y_size, -1.0);
   node_.param("grid_map/map_size_z", z_size, -1.0);
+
+  node_.param("grid_map/local_map_size_x", local_x_size, -1.0);
+  node_.param("grid_map/local_map_size_y", local_y_size, -1.0);
+  node_.param("grid_map/local_map_size_z", local_z_size, -1.0);
 
   node_.param("grid_map/occ_grid/resolution", mp_.occ_resolution_, -1.0);
   node_.param("grid_map/occ_grid/inflation", mp_.occ_inflation_, -1.0);
@@ -51,7 +56,7 @@ void GridMap::initMap(ros::NodeHandle &nh)
 
   /* Initialize ROS Timers */
   vis_timer_ = node_.createTimer(ros::Duration(0.1), &GridMap::visTimerCB, this);
-  get_tf_timer_ = node_.createTimer(ros::Duration(0.02), &GridMap::getTFTimerCB, this, false, false);
+  get_tf_timer_ = node_.createTimer(ros::Duration(0.01), &GridMap::getTFTimerCB, this, false, false);
 
   if (mp_.sensor_type_ == SensorType::SENSOR_CLOUD)
   {
@@ -125,6 +130,7 @@ void GridMap::initMap(ros::NodeHandle &nh)
   /* Set initial values for raycasting */
   mp_.map_origin_ = Eigen::Vector3d(-x_size / 2.0, -y_size / 2.0, mp_.ground_height_);
   mp_.map_size_ = Eigen::Vector3d(x_size, y_size, z_size);
+  mp_.local_map_size_ = Eigen::Vector3d(local_x_size, local_y_size, local_z_size);
 
   // // Initialize camera to body matrices
   // Eigen::Affine3d cam2body_tf = Eigen::Affine3d::Identity();
@@ -149,23 +155,72 @@ void GridMap::initMap(ros::NodeHandle &nh)
   md_.cam_to_global_r_m_ <<  1.0, 0.0, 0.0,
                       0.0, 1.0, 0.0,
                       0.0, 0.0, 1.0;
-  
-  // Initialize data structures for occupancy map and point clouds
-  // vox_grid_.setLeafSize(mp_.voxel_size_, mp_.voxel_size_, mp_.voxel_size_);
 
-  cloud_origin_.reset(new pcl::PointCloud<pcl::PointXYZ>);
-  octree_map_ = std::make_shared<pcl::octree::OctreePointCloudOccupancy<pcl::PointXYZ>>(mp_.occ_resolution_);
-  octree_map_inflated_  = std::make_shared<pcl::octree::OctreePointCloudOccupancy<pcl::PointXYZ>>(mp_.occ_inflation_);
-
-  octree_map_->defineBoundingBox (
-    -mp_.map_size_(0), -mp_.map_size_(1), -mp_.map_size_(2), 
-    mp_.map_size_(0), mp_.map_size_(1), mp_.map_size_(2));
-
-  octree_map_inflated_->defineBoundingBox (
-    -mp_.map_size_(0), -mp_.map_size_(1), -mp_.map_size_(2), 
-    mp_.map_size_(0), mp_.map_size_(1), mp_.map_size_(2));
-
+  reset();
 }
+
+void GridMap::updateLocalMap(){
+  if (!isPoseValid()){
+    return;
+  }
+
+  double x_min = -mp_.local_map_size_(0) + md_.cam_pos_(0);
+  double x_max = mp_.local_map_size_(0) + md_.cam_pos_(0);
+
+  double y_min = -mp_.local_map_size_(1) + md_.cam_pos_(1);
+  double y_max = mp_.local_map_size_(1) + md_.cam_pos_(1);
+
+  double z_min = -mp_.local_map_size_(2) + md_.cam_pos_(2);
+  double z_max = mp_.local_map_size_(2) + md_.cam_pos_(2);
+
+  pass_x_filter_.setFilterLimits (x_min, x_max);
+  pass_y_filter_.setFilterLimits (y_min, y_max);
+
+  // Filter anything outside local map bounds
+  pass_x_filter_.setInputCloud (local_map_origin_);
+  pass_x_filter_.filter (*local_map_origin_);
+  pass_y_filter_.setInputCloud (local_map_origin_);
+  pass_y_filter_.filter (*local_map_origin_);
+
+//   octree_map_inflated_->defineBoundingBox(
+//     x_min, y_min, z_min, 
+//     x_max, y_max, z_max);
+}
+
+void GridMap::reset(){
+
+  // Initialize data structures for occupancy map and point clouds
+  vox_grid_filter_.setLeafSize(mp_.voxel_size_, mp_.voxel_size_, mp_.voxel_size_);
+
+  // Initialize passthrough filter
+  pass_x_filter_.setFilterFieldName ("x");
+  pass_x_filter_.setFilterLimits (-mp_.local_map_size_(0), mp_.local_map_size_(0));
+  pass_x_filter_.setNegative (false); // only keep points WITHIN given range
+
+  pass_y_filter_.setFilterFieldName ("y");
+  pass_y_filter_.setFilterLimits (-mp_.local_map_size_(1), mp_.local_map_size_(1));
+  pass_y_filter_.setNegative (false); // only keep points WITHIN given range
+
+  local_map_origin_.reset(new pcl::PointCloud<pcl::PointXYZ>);
+  // Change frame_id to the uav origin frame, this is because we did a camera-to-origin transformation 
+  local_map_origin_->header.frame_id = mp_.uav_origin_frame_;
+
+  octree_map_inflated_  = std::make_shared<pcl::octree::OctreePointCloudOccupancy<pcl::PointXYZ>>(
+    mp_.occ_inflation_);
+  octree_map_inflated_->defineBoundingBox (
+    -mp_.local_map_size_(0), -mp_.local_map_size_(1), -mp_.local_map_size_(2), 
+    mp_.local_map_size_(0), mp_.local_map_size_(1), mp_.local_map_size_(2));
+
+  octree_map_inflated_->setInputCloud(local_map_origin_);
+
+  octree_map_ = std::make_shared<pcl::octree::OctreePointCloudOccupancy<pcl::PointXYZ>>(
+    mp_.occ_resolution_);
+  octree_map_->defineBoundingBox (
+    -mp_.local_map_size_(0), -mp_.local_map_size_(1), -mp_.local_map_size_(2), 
+    mp_.local_map_size_(0), mp_.local_map_size_(1), mp_.local_map_size_(2));
+  octree_map_->setInputCloud(local_map_origin_);
+}
+
 
 void GridMap::initTimeBenchmark(std::shared_ptr<TimeBenchmark> time_benchmark){
   time_benchmark_ = time_benchmark;
@@ -297,38 +352,48 @@ void GridMap::getCamToGlobalPose(const geometry_msgs::Pose &pose)
 
 void GridMap::cloudToCloudMap(const sensor_msgs::PointCloud2ConstPtr &msg)
 {
-  // Point cloud is assumed to be in frame id of the sensor
+  // Input Point cloud is assumed to be in frame id of the sensor
 
   if (!isPoseValid()){
     return;
   }
+
+  // Remove anything outside of local map bounds
+  updateLocalMap();
 
   if (msg->data.empty()){
     ROS_WARN_THROTTLE(1.0, "[grid_map]: Empty point cloud received");
     // return;
   }
 
-  pcl::fromROSMsg(*msg, *cloud_origin_);
+  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud;  // Point cloud in origin frame
+  cloud.reset(new pcl::PointCloud<pcl::PointXYZ>);
+
+  pcl::fromROSMsg(*msg, *cloud);
 
   // Transform point cloud from camera frame to uav origin frame
-  pcl::transformPointCloud (*cloud_origin_, *cloud_origin_, md_.cam2global_);
+  pcl::transformPointCloud (*cloud, *cloud, md_.cam2global_);
 
   // Downsample point cloud
   if (mp_.downsample_cloud_){
-    vox_grid_.setInputCloud(cloud_origin_);
-    vox_grid_.filter(*cloud_origin_);
+    vox_grid_filter_.setInputCloud(cloud);
+    vox_grid_filter_.filter(*cloud);
   }
 
-  // Change frame_id to the uav origin frame, this is because we did a camera-to-origin
-  // transformation 
-  cloud_origin_->header.frame_id = mp_.uav_origin_frame_;
+  // Iterate through all the points in the point cloud 
+  for (size_t i = 0; i < cloud->points.size(); i++){
+    const pcl::PointXYZ p_i = cloud->points[i];
+    if (!octree_map_inflated_->isVoxelOccupiedAtPoint(p_i)){
+      // If point is not occupied, add to octree map
+      octree_map_->addPointToCloud(p_i, local_map_origin_);
+    }
+  }
+  // Update octree with points from input cloud
+  octree_map_inflated_->setOccupiedVoxelsAtPointsFromCloud(local_map_origin_);
+  // octree_map_inflated_->addPointsFromInputCloud();
 
-  cloud_origin_->height = 1;
-  cloud_origin_->width = cloud_origin_->points.size();
-
-  // Octree takes in cloud map in global frame
-  octree_map_->setOccupiedVoxelsAtPointsFromCloud(cloud_origin_);
-  octree_map_inflated_->setOccupiedVoxelsAtPointsFromCloud(cloud_origin_);
+  // local_map_origin_->height = 1;
+  // local_map_origin_->width = local_map_origin_->points.size();
 }
 
 void GridMap::depthToCloudMap(const sensor_msgs::ImageConstPtr &msg)
@@ -350,14 +415,14 @@ void GridMap::depthToCloudMap(const sensor_msgs::ImageConstPtr &msg)
 
   // pcl header.stamp must have the timestamp in microseconds or TF will not
   // be able to resolve the transformation
-  cloud_origin_->header.stamp = msg->header.stamp.toNSec() * 1e-3;
-  cloud_origin_->header.frame_id = mp_.uav_origin_frame_;
+  local_map_origin_->header.stamp = msg->header.stamp.toNSec() * 1e-3;
+  local_map_origin_->header.frame_id = mp_.uav_origin_frame_;
 
-  cloud_origin_->height = 1;
-  cloud_origin_->width = (md_.depth_image_.cols * md_.depth_image_.rows) / (mp_.depth_stride_ * mp_.depth_stride_);
+  local_map_origin_->height = 1;
+  local_map_origin_->width = (md_.depth_image_.cols * md_.depth_image_.rows) / (mp_.depth_stride_ * mp_.depth_stride_);
 
-  cloud_origin_->points.resize(cloud_origin_->width);
-  cloud_origin_->is_dense = true;
+  local_map_origin_->points.resize(local_map_origin_->width);
+  local_map_origin_->is_dense = true;
 
   uint16_t *row_ptr;
 
@@ -367,13 +432,13 @@ void GridMap::depthToCloudMap(const sensor_msgs::ImageConstPtr &msg)
     row_ptr = md_.depth_image_.ptr<uint16_t>(v);
     for (int u = 0; u < md_.depth_image_.cols; u+=mp_.depth_stride_, row_ptr+=mp_.depth_stride_, cloud_idx++){
 
-      pcl::PointXYZ& pt = cloud_origin_->points[cloud_idx];
+      pcl::PointXYZ& pt = local_map_origin_->points[cloud_idx];
 
       float bad_point = std::numeric_limits<float>::quiet_NaN ();
 
       if (*row_ptr == 0 || *row_ptr == bad_point || *row_ptr == 255){
         pt.x = pt.y = pt.z = bad_point;
-        // cloud_origin_->is_dense = false;
+        // local_map_origin_->is_dense = false;
       }
       else{
         pt.z = (*row_ptr) / 1000.0;
@@ -386,15 +451,15 @@ void GridMap::depthToCloudMap(const sensor_msgs::ImageConstPtr &msg)
 
   // Downsample point cloud
   if (mp_.downsample_cloud_){
-    vox_grid_.setInputCloud(cloud_origin_);
-    vox_grid_.filter(*cloud_origin_);
+    vox_grid_filter_.setInputCloud(local_map_origin_);
+    vox_grid_filter_.filter(*local_map_origin_);
   }
 
-  pcl::transformPointCloud(*cloud_origin_, *cloud_origin_, md_.cam2global_);
+  pcl::transformPointCloud(*local_map_origin_, *local_map_origin_, md_.cam2global_);
 
   // Octree takes in cloud map in global frame
-  octree_map_->setOccupiedVoxelsAtPointsFromCloud(cloud_origin_);
-  octree_map_inflated_->setOccupiedVoxelsAtPointsFromCloud(cloud_origin_);
+  octree_map_->setOccupiedVoxelsAtPointsFromCloud(local_map_origin_);
+  octree_map_inflated_->setOccupiedVoxelsAtPointsFromCloud(local_map_origin_);
 }
 
 /* Checks */
@@ -427,8 +492,16 @@ void GridMap::publishMap()
   if (occ_map_pub_.getNumSubscribers() == 0){
     return;
   }
+
+  std::vector<pcl::PointXYZ, Eigen::aligned_allocator<pcl::PointXYZ> > voxelCenters;
+  int num_occupied_cells = octree_map_inflated_->getOccupiedVoxelCenters(voxelCenters);
+  ROS_ERROR("num_occupied_cells: %d", num_occupied_cells);
+  ROS_ERROR("voxelCenters.size(): %ld", voxelCenters.size());
+
+  auto input_cloud = octree_map_inflated_->getInputCloud();
+
   sensor_msgs::PointCloud2 cloud_msg;
-  pcl::toROSMsg(*cloud_origin_, cloud_msg);
+  pcl::toROSMsg(*input_cloud, cloud_msg);
 
   occ_map_pub_.publish(cloud_msg);
 }

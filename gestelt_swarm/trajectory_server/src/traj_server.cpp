@@ -34,10 +34,16 @@ void TrajServer::init(ros::NodeHandle& nh)
   nh.param("traj_server/pos_limit/max_z", position_limits_.max_z, -1.0);
   nh.param("traj_server/pos_limit/min_z", position_limits_.min_z, -1.0);
   
-  logInfo("Initializing");
+  nh.param("traj_server/mode", traj_mode_, 0);
 
   /* Subscribers */
-  poly_traj_sub_ = nh.subscribe("planning/trajectory", 10, &TrajServer::polyTrajCallback, this);
+  if (traj_mode_ == TrajMode::POLYTRAJ) {
+    traj_sub_ = nh.subscribe("planning/trajectory", 10, &TrajServer::polyTrajCallback, this);
+  }
+  else if (traj_mode_ == TrajMode::MULTIDOFJOINTTRAJECTORY) {
+    traj_sub_ = nh.subscribe("planning/trajectory", 10, &TrajServer::multiDOFJointTrajectoryCb, this);
+  }
+
   heartbeat_sub_ = nh.subscribe("heartbeat", 10, &TrajServer::heartbeatCallback, this);
   uav_state_sub_ = nh.subscribe<mavros_msgs::State>("/mavros/state", 10, &TrajServer::UAVStateCb, this);
   planner_state_sub_ = nh.subscribe("/planner_state", 10, &TrajServer::plannerStateCB, this);
@@ -67,6 +73,8 @@ void TrajServer::init(ros::NodeHandle& nh)
   debug_timer_ = nh.createTimer(ros::Duration(1/debug_freq), &TrajServer::debugTimerCb, this);
 
   initModelMesh(drone_model_mesh_filepath);
+
+  logInfo("Initialized");
 }
 
 void TrajServer::initModelMesh(const std::string& drone_model_mesh_filepath){
@@ -135,6 +143,36 @@ void TrajServer::polyTrajCallback(traj_utils::PolyTrajPtr msg)
   // traj_id_ = msg->traj_id;
 
   startMission();
+}
+
+void TrajServer::multiDOFJointTrajectoryCb(const trajectory_msgs::MultiDOFJointTrajectory::ConstPtr &msg)
+{
+  if (!getServerState() == ServerState::MISSION){ 
+    logError("Executing Joint Trajectory while not in MISSION mode. Ignoring!");
+    return;
+  }
+
+  // msg.joint_names: contain "base_link"
+  // msg.points: Contains only a single point
+  // msg.points[0].time_from_start: current_sample_time_
+
+  std::string frame_id = msg->joint_names[0];
+
+  Eigen::Vector3d pos(Eigen::Vector3d::Zero()), vel(Eigen::Vector3d::Zero()), 
+                  acc(Eigen::Vector3d::Zero()), jer(Eigen::Vector3d::Zero());
+  std::pair<double, double> yaw_yawdot(0, 0);
+
+  geomMsgsVector3ToEigenVector3(msg->points[0].transforms[0].translation, pos);
+  geomMsgsVector3ToEigenVector3(msg->points[0].velocities[0].linear, vel);
+
+  geomMsgsVector3ToEigenVector3(msg->points[0].accelerations[0].linear, acc);
+
+  yaw_yawdot.first = quaternionToYaw(msg->points[0].transforms[0].rotation);
+  yaw_yawdot.second = msg->points[0].velocities[0].angular.z; //yaw rate
+
+  uint16_t type_mask = 2048; // Ignore yaw rate
+
+  publishCmd(pos, vel, acc, jer, yaw_yawdot.first, yaw_yawdot.second, type_mask);
 }
 
 void TrajServer::plannerStateCB(const std_msgs::String::ConstPtr &msg)
@@ -571,7 +609,7 @@ void TrajServer::execMission()
   // Time elapsed since start of trajectory
   double t_cur = (time_now - start_time_).toSec();
 
-  Eigen::Vector3d pos(Eigen::Vector3d::Zero()), vel(Eigen::Vector3d::Zero()), acc(Eigen::Vector3d::Zero()), jer(Eigen::Vector3d::Zero()), pos_f;
+  Eigen::Vector3d pos(Eigen::Vector3d::Zero()), vel(Eigen::Vector3d::Zero()), acc(Eigen::Vector3d::Zero()), jer(Eigen::Vector3d::Zero());
   std::pair<double, double> yaw_yawdot(0, 0);
 
   static ros::Time time_last = ros::Time::now();
@@ -677,9 +715,7 @@ void TrajServer::publishCmd(
   pos_cmd.yaw = yaw;
   pos_cmd.yaw_rate = yaw_rate;
   pos_cmd_raw_pub_.publish(pos_cmd);
-
 }
-
 
 /* Helper methods */
 
@@ -847,6 +883,24 @@ bool TrajServer::checkPositionLimits(SafetyLimits position_limits, Vector3d p){
 
   return true;
 }
+
+void TrajServer::geomMsgsVector3ToEigenVector3(const geometry_msgs::Vector3& geom_vect, Eigen::Vector3d& eigen_vect){
+  eigen_vect(0) = geom_vect.x;
+  eigen_vect(1) = geom_vect.x;
+  eigen_vect(2) = geom_vect.x;
+}
+
+double TrajServer::quaternionToYaw(const geometry_msgs::Quaternion& quat){
+  tf2::Quaternion uav_quat_tf;
+  tf2::convert(quat, uav_quat_tf);
+  tf2::Matrix3x3 m(uav_quat_tf);
+  double roll, pitch, yaw;
+  m.getRPY(roll, pitch, yaw);
+
+  return yaw;
+}
+
+/* FSM Methods */
 
 void TrajServer::setServerState(ServerState des_state)
 {
