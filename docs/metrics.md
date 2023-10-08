@@ -26,14 +26,23 @@ All tests conducted on 5 Ghz Wifi network
         - (320 x 240)
             - Delay: 0.027, Max 0.26 
             - Throughput: 2.75 mb/s 
-
     - Pose input (/drone0/mavros/local_position/pose)
+        - Frequency: 30 Hz
         - Delay: AVG -0.006, MAX 0.012
         - Throughput: 2.82KB/s
 
+    - Broadcasted Trajectoroies (/broadcast_traj_to_planner)
+        - Frequency: 3 Hz
+        - Throughput: 400Bytes/s
+
 - PC subscribed topics
 
+    - Subscribed Trajectories (/broadcast_traj_from_planner)
+        - Frequency: 3 Hz
+        - Throughput: 400Bytes/s
+
     - PVA Commands (/drone0/mavros/setpoint_raw/local)
+        - Frequency: 25 Hz
         - Delay: AVG 0.015, MAX 0.04
         - Throughput: 2.55KB/s
 

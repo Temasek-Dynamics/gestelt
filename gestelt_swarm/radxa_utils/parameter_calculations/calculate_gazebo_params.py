@@ -104,14 +104,12 @@ def main():
     #####
     # Plots
     #####
-
     fig, axs = plt.subplots(2,2, figsize=(15, 15))
 
     C_T = testvalue.plotGraph(axs[0,0], x_key="Motor Optical Speed (rad/s)", y_key = "Thrust (N)", poly_fit_order=2, x_lim=[500,3500])
     C_M = testvalue.plotGraph(axs[0,1], x_key="Motor Optical Speed (rad/s)", y_key = "Torque (N·m)", poly_fit_order=2, x_lim=[500,3500])
     testvalue.plotGraph(axs[1,0], x_key="Motor Optical Speed (rad/s)", y_key = "Motor Efficiency", poly_fit_order=2, x_lim=[500,3500])
     testvalue.plotGraph(axs[1,1], x_key="Motor Optical Speed (rad/s)", y_key = "Current (A)", poly_fit_order=3, x_lim=[500,3500])
-
 
     #####
     # 
