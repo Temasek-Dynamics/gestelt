@@ -26,6 +26,7 @@ void TrajServer::init(ros::NodeHandle& nh)
   nh.param("traj_server/error_tracking_window", error_tracking_window_, 2.5);
 
   nh.param("traj_server/planner_heartbeat_timeout", planner_heartbeat_timeout_, 0.5);
+  nh.param("traj_server/ignore_heartbeat", ignore_heartbeat_, false);
 
   nh.param("traj_server/pos_limit/max_x", position_limits_.max_x, -1.0);
   nh.param("traj_server/pos_limit/min_x", position_limits_.min_x, -1.0);
@@ -35,6 +36,7 @@ void TrajServer::init(ros::NodeHandle& nh)
   nh.param("traj_server/pos_limit/min_z", position_limits_.min_z, -1.0);
   
   nh.param("traj_server/mode", traj_mode_, 0);
+
 
   /* Subscribers */
   if (traj_mode_ == TrajMode::POLYTRAJ) {
@@ -147,10 +149,12 @@ void TrajServer::polyTrajCallback(traj_utils::PolyTrajPtr msg)
 
 void TrajServer::multiDOFJointTrajectoryCb(const trajectory_msgs::MultiDOFJointTrajectory::ConstPtr &msg)
 {
-  if (!getServerState() == ServerState::MISSION){ 
+  if (getServerState() != ServerState::MISSION){ 
     logError("Executing Joint Trajectory while not in MISSION mode. Ignoring!");
     return;
   }
+
+  startMission();
 
   // msg.joint_names: contain "base_link"
   // msg.points: Contains only a single point
@@ -158,21 +162,17 @@ void TrajServer::multiDOFJointTrajectoryCb(const trajectory_msgs::MultiDOFJointT
 
   std::string frame_id = msg->joint_names[0];
 
-  Eigen::Vector3d pos(Eigen::Vector3d::Zero()), vel(Eigen::Vector3d::Zero()), 
-                  acc(Eigen::Vector3d::Zero()), jer(Eigen::Vector3d::Zero());
-  std::pair<double, double> yaw_yawdot(0, 0);
+  // Eigen::Vector3d pos(Eigen::Vector3d::Zero()), vel(Eigen::Vector3d::Zero()), 
+  //                 acc(Eigen::Vector3d::Zero()), jer(Eigen::Vector3d::Zero());
+  // std::pair<double, double> yaw_yawdot(0, 0);
 
-  geomMsgsVector3ToEigenVector3(msg->points[0].transforms[0].translation, pos);
-  geomMsgsVector3ToEigenVector3(msg->points[0].velocities[0].linear, vel);
+  geomMsgsVector3ToEigenVector3(msg->points[0].transforms[0].translation, last_mission_pos_);
+  geomMsgsVector3ToEigenVector3(msg->points[0].velocities[0].linear, last_mission_vel_);
 
-  geomMsgsVector3ToEigenVector3(msg->points[0].accelerations[0].linear, acc);
+  geomMsgsVector3ToEigenVector3(msg->points[0].accelerations[0].linear, last_mission_acc_);
 
-  yaw_yawdot.first = quaternionToYaw(msg->points[0].transforms[0].rotation);
-  yaw_yawdot.second = msg->points[0].velocities[0].angular.z; //yaw rate
-
-  uint16_t type_mask = 2048; // Ignore yaw rate
-
-  publishCmd(pos, vel, acc, jer, yaw_yawdot.first, yaw_yawdot.second, type_mask);
+  last_mission_yaw_ = quaternionToYaw(msg->points[0].transforms[0].rotation);
+  last_mission_yaw_dot_ = msg->points[0].velocities[0].angular.z; //yaw rate
 }
 
 void TrajServer::plannerStateCB(const std_msgs::String::ConstPtr &msg)
@@ -246,7 +246,7 @@ void TrajServer::execTrajTimerCb(const ros::TimerEvent &e)
         execHover();
       }
       else {
-        if (isPlannerHeartbeatTimeout()){
+        if (!ignore_heartbeat_ && isPlannerHeartbeatTimeout()){
           logErrorThrottled("[traj_server] Lost heartbeat from the planner.", 1.0);
           execHover();
         }
@@ -587,9 +587,9 @@ void TrajServer::execHover()
 {
   uint16_t type_mask = 2552; // Ignore Velocity, Acceleration
   Eigen::Vector3d pos;
-  pos << last_mission_pos_(0), last_mission_pos_(1), last_mission_pos_(2);
+  pos = last_mission_pos_;
 
-  if (last_mission_pos_(0) < 0.1){
+  if (pos(2) < 0.1){
     pos(2) = takeoff_height_;
   }
 
@@ -598,55 +598,64 @@ void TrajServer::execHover()
 
 void TrajServer::execMission()
 {
-  /* no publishing before receive traj_ and have heartbeat */
-  if (heartbeat_time_.toSec() <= 1e-5)
-  {
-    logErrorThrottled("[traj_server] No heartbeat from the planner received", 1.0);
-    return;
-  }
-
-  ros::Time time_now = ros::Time::now();
-  // Time elapsed since start of trajectory
-  double t_cur = (time_now - start_time_).toSec();
-
-  Eigen::Vector3d pos(Eigen::Vector3d::Zero()), vel(Eigen::Vector3d::Zero()), acc(Eigen::Vector3d::Zero()), jer(Eigen::Vector3d::Zero());
-  std::pair<double, double> yaw_yawdot(0, 0);
-
-  static ros::Time time_last = ros::Time::now();
-  // IF time elapsed is below duration of trajectory, then continue to send command
-  if (t_cur >= 0.0 && t_cur < traj_duration_)
-  {
-    pos = traj_->getPos(t_cur);
-    vel = traj_->getVel(t_cur);
-    acc = traj_->getAcc(t_cur);
-    jer = traj_->getJer(t_cur);
-
-    /*** calculate yaw ***/
-    yaw_yawdot = calculate_yaw(t_cur, pos, (time_now - time_last).toSec());
-
-    time_last = time_now;
-    last_mission_pos_ = pos;
-    last_mission_vel_ = vel;
-
-    uint16_t type_mask = 2048; // Ignore yaw rate
-
-    if (!checkPositionLimits(position_limits_, pos)) {
-      // If position safety limit check failed, switch to hovering mode
-      setServerEvent(ServerEvent::HOVER_E);
+  if (traj_mode_ == TrajMode::POLYTRAJ){
+    /* no publishing before receive traj_ and have heartbeat */
+    if (heartbeat_time_.toSec() <= 1e-5)
+    {
+      logErrorThrottled("[traj_server] No heartbeat from the planner received", 1.0);
+      return;
     }
 
-    publishCmd(pos, vel, acc, jer, yaw_yawdot.first, yaw_yawdot.second, type_mask);
+    ros::Time time_now = ros::Time::now();
+    // Time elapsed since start of trajectory
+    double t_cur = (time_now - start_time_).toSec();
+
+    Eigen::Vector3d pos(Eigen::Vector3d::Zero()), vel(Eigen::Vector3d::Zero()), acc(Eigen::Vector3d::Zero()), jer(Eigen::Vector3d::Zero());
+    std::pair<double, double> yaw_yawdot(0, 0);
+
+    static ros::Time time_last = ros::Time::now();
+    // IF time elapsed is below duration of trajectory, then continue to send command
+    if (t_cur >= 0.0 && t_cur < traj_duration_)
+    {
+      pos = traj_->getPos(t_cur);
+      vel = traj_->getVel(t_cur);
+      acc = traj_->getAcc(t_cur);
+      jer = traj_->getJer(t_cur);
+
+      /*** calculate yaw ***/
+      yaw_yawdot = calculate_yaw(t_cur, pos, (time_now - time_last).toSec());
+
+      time_last = time_now;
+      last_mission_pos_ = pos;
+      last_mission_vel_ = vel;
+
+      uint16_t type_mask = 2048; // Ignore yaw rate
+
+      if (!checkPositionLimits(position_limits_, pos)) {
+        // If position safety limit check failed, switch to hovering mode
+        setServerEvent(ServerEvent::HOVER_E);
+      }
+
+      publishCmd(pos, vel, acc, jer, yaw_yawdot.first, yaw_yawdot.second, type_mask);
+    }
+    // IF time elapsed is longer then duration of trajectory, then nothing is done
+    else if (t_cur >= traj_duration_) // Finished trajectory
+    {
+      // logWarn("t_cur exceeds traj_duration! No commands to send");
+      endMission();
+    }
+    else {
+      logWarn(string_format("Invalid time, current time is negative at %d!",t_cur));
+    }
+    
   }
-  // IF time elapsed is longer then duration of trajectory, then nothing is done
-  else if (t_cur >= traj_duration_) // Finished trajectory
-  {
-    // logWarn("t_cur exceeds traj_duration! No commands to send");
-    endMission();
+  else if (traj_mode_ == TrajMode::MULTIDOFJOINTTRAJECTORY){
+    uint16_t type_mask = 2048; // Ignore yaw rate
+
+    publishCmd(last_mission_pos_, last_mission_vel_, 
+              last_mission_acc_, last_mission_jerk_, 
+              last_mission_yaw_, last_mission_yaw_dot_, type_mask);
   }
-  else {
-    logWarn(string_format("Invalid time, current time is negative at %d!",t_cur));
-  }
-  
 }
 
 void TrajServer::startMission(){

@@ -5,6 +5,8 @@
             - Add waypoint computation as message
     - Get CPU load benchmarking
 
+- Can we put all the drones in the same world frame?
+
 - Grid_map
     - Remove all octree elements outside of local map bound
 

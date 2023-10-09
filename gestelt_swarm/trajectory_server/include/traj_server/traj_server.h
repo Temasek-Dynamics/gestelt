@@ -360,8 +360,9 @@ private:
   nav_msgs::Odometry uav_odom_;
   std::deque<geometry_msgs::PoseStamped> uav_poses_;
   boost::shared_ptr<poly_traj::Trajectory> traj_;
-  Eigen::Vector3d last_mission_pos_{0.0, 0.0, 0.0}, last_mission_vel_{0.0, 0.0, 0.0};
 
+  Eigen::Vector3d last_mission_pos_{0.0, 0.0, 0.0}, last_mission_vel_{0.0, 0.0, 0.0};
+  Eigen::Vector3d last_mission_acc_{0.0, 0.0, 0.0}, last_mission_jerk_{0.0, 0.0, 0.0};
   double last_mission_yaw_{0.0}, last_mission_yaw_dot_{0.0};
 
   // Pair of error value and timestamp (in seconds)
@@ -384,6 +385,7 @@ private:
   double sm_tick_freq_; 
 
   double planner_heartbeat_timeout_{0.5}; // Planner heartbeat timeout
+  bool ignore_heartbeat_{false}; // Ignore planner heartbeat. Even if planner has no heartbeat, assume it is working.
 
   double takeoff_height_{0.0}; // Default height to take off to
   double landed_height_{0.05}; // We assume that the ground is even (z = 0)

@@ -39,7 +39,7 @@ CMD_2="
 roslaunch gestelt_bringup trajectory_server.launch
 "
 
-CMD_3="roslaunch gestelt_bringup single_set_offboard.launch"
+CMD_3="roslaunch gestelt_bringup square_mission.launch"
 
 CMD_4="roslaunch gestelt_bringup traj_tracking.launch"
 

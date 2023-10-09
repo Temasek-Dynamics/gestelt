@@ -37,7 +37,7 @@
         - Output Data
             - NO TRANSFORM
                 - Planned trajectory (not MINCO) 
-                    - Originally in (UAV frame)
+                    - Originally in (UAV Origin frame)
                     - Passed to trajectory server
             - TRANSFROM
                 - Broadcasted Trajectories 

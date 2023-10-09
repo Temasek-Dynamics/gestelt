@@ -1,0 +1,32 @@
+repositories:
+  ../mav_trajectory_generation/mav_trajectory_generation:
+    type: git
+    url: https://github.com/ethz-asl/mav_trajectory_generation.git
+    version: master
+  ../mav_trajectory_generation/catkin_simple:
+    type: git
+    url: https://github.com/catkin/catkin_simple.git
+    version: master
+  ../mav_trajectory_generation/eigen_catkin:
+    type: git
+    url: https://github.com/ethz-asl/eigen_catkin.git
+    version: master
+  ../mav_trajectory_generation/eigen_checks:
+    type: git
+    url: https://github.com/ethz-asl/eigen_checks.git
+    version: master
+  ../mav_trajectory_generation/glog_catkin:
+    type: git
+    url: https://github.com/ethz-asl/glog_catkin.git
+    version: master
+  ../mav_trajectory_generation/mav_comm:
+    type: git
+    url: https://github.com/ethz-asl/mav_comm.git
+    version: master
+  ../mav_trajectory_generation/nlopt:
+    type: git
+    url: https://github.com/ethz-asl/nlopt.git
+    version: master
+
+
+

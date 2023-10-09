@@ -13,7 +13,7 @@
     </node> -->
 
     <!--- Trajectory planner -->
-    <node name="trajectory_planner" pkg="mav_trajectory_generation_example" type="trajectory_generation_example" output="screen">
+    <node name="trajectory_planner" pkg="trajectory_planner" type="trajectory_generator" output="screen">
         <param name="/max_v" value="1.5" type="double"/>
         <param name="/max_a" value="6.0" type="double"/>
         <!-- subscribed topics -->
@@ -23,7 +23,7 @@
     </node>
 
     <!--- Trajectory sampler -->
-    <node name="trajectory_sampler" pkg="mav_trajectory_generation_ros" type="trajectory_sampler_node" output="screen">
+    <node name="trajectory_sampler" pkg="trajectory_planner" type="trajectory_sampler" output="screen">
         <!-- subscribed topics -->
         <remap from="path_segments_4D" to="/$(arg drone_id_ns)/sample_trajectory"/>
         <!-- published topics -->
