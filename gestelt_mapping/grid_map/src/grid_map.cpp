@@ -170,8 +170,8 @@ void GridMap::updateLocalMap(){
   double y_min = -mp_.local_map_size_(1) + md_.cam_pos_(1);
   double y_max = mp_.local_map_size_(1) + md_.cam_pos_(1);
 
-  double z_min = -mp_.local_map_size_(2) + md_.cam_pos_(2);
-  double z_max = mp_.local_map_size_(2) + md_.cam_pos_(2);
+  // double z_min = -mp_.local_map_size_(2) + md_.cam_pos_(2);
+  // double z_max = mp_.local_map_size_(2) + md_.cam_pos_(2);
 
   pass_x_filter_.setFilterLimits (x_min, x_max);
   pass_y_filter_.setFilterLimits (y_min, y_max);
@@ -182,9 +182,6 @@ void GridMap::updateLocalMap(){
   pass_y_filter_.setInputCloud (local_map_origin_);
   pass_y_filter_.filter (*local_map_origin_);
 
-//   octree_map_inflated_->defineBoundingBox(
-//     x_min, y_min, z_min, 
-//     x_max, y_max, z_max);
 }
 
 void GridMap::reset(){
@@ -493,10 +490,10 @@ void GridMap::publishMap()
     return;
   }
 
-  std::vector<pcl::PointXYZ, Eigen::aligned_allocator<pcl::PointXYZ> > voxelCenters;
-  int num_occupied_cells = octree_map_inflated_->getOccupiedVoxelCenters(voxelCenters);
-  ROS_ERROR("num_occupied_cells: %d", num_occupied_cells);
-  ROS_ERROR("voxelCenters.size(): %ld", voxelCenters.size());
+  // std::vector<pcl::PointXYZ, Eigen::aligned_allocator<pcl::PointXYZ> > voxelCenters;
+  // int num_occupied_cells = octree_map_inflated_->getOccupiedVoxelCenters(voxelCenters);
+  // ROS_ERROR("num_occupied_cells: %d", num_occupied_cells);
+  // ROS_ERROR("voxelCenters.size(): %ld", voxelCenters.size());
 
   auto input_cloud = octree_map_inflated_->getInputCloud();
 

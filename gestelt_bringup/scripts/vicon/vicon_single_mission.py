@@ -61,28 +61,31 @@ def main():
     rospy.init_node('mission_startup', anonymous=True)
     rate = rospy.Rate(5) # 20hz
 
-    if check_traj_server_states("MISSION"):
-        pass
-    else:
-        print("Setting to HOVER mode!")
-        # Take off 
-        while not rospy.is_shutdown():
-            get_server_state_callback()
-            if check_traj_server_states("HOVER"):
-                break
-            publish_server_event(0)
-            print("tick!")
-            rate.sleep()
+    HOVER_MODE = False
+    MISSION_MODE = False
 
-        print("Setting to MISSION mode!")
-        # Switch to mission mode
-        while not rospy.is_shutdown():
-            get_server_state_callback()
-            if check_traj_server_states("MISSION"):
-                break
+    while not rospy.is_shutdown():
+        get_server_state_callback()
+
+        if check_traj_server_states("MISSION"):
+            MISSION_MODE = True
+        if check_traj_server_states("HOVER"):
+            HOVER_MODE = True
+        
+        if (MISSION_MODE):
+            # Already in MISSION 
+            break
+        elif (not HOVER_MODE):
+            # IDLE -> TAKE OFF -> HOVER
+            print("Setting to HOVER mode!")
+            publish_server_event(0)
+        elif (HOVER_MODE):
+            # HOVER -> MISSION
+            print("Setting to MISSION mode!")
             publish_server_event(2)
-            print("tick!")
-            rate.sleep()
+
+        print("tick!")
+        rate.sleep()
 
     # Send waypoints to UAVs
     print(f"Sending waypoints to UAVs")

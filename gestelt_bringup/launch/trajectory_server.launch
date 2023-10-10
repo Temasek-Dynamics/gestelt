@@ -8,13 +8,15 @@
     <arg name="pose_topic" default="mavros/local_position/pose" />
 
     <include file="$(find gestelt_bringup)/launch/trajectory_server.xml">
+        <arg name="drone_id" value="$(arg drone_id)"/>
+        
+        <arg name="server_mode" value="0" />
         <!-- drone_origin_frame: For PX4 SITL, leave it as default. 
         For other forms of simulation, might have to change it -->
         <arg name="drone_origin_frame" value="$(arg drone_origin_frame)" />
-        <arg name="drone_id" value="$(arg drone_id)"/>
 
         <arg name="init_x" value="0.5"/>
-        <arg name="init_y" value="-0.5"/>
+        <arg name="init_y" value="0.0"/>
         <arg name="init_z" value="0.0"/>
 
         <!-- size of map, change the size inflate x, y, z according to your application -->

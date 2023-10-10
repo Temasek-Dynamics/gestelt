@@ -68,11 +68,11 @@
     </include>
 
     <include file="$(find gestelt_bringup)/launch/trajectory_server.xml">
+        <arg name="drone_id" value="$(arg drone_id)"/>
+        <arg name="server_mode" value="0" />
         <!-- drone_origin_frame: For PX4 SITL, leave it as default. 
         For other forms of simulation, might have to change it -->
         <arg name="drone_origin_frame" value="$(arg drone_origin_frame)" />
-        <!-- Drone id -->
-        <arg name="drone_id" value="$(arg drone_id)"/>
         <arg name="init_x" value="$(arg init_x)"/>
         <arg name="init_y" value="$(arg init_y)"/>
         <arg name="init_z" value="$(arg init_z)"/>
