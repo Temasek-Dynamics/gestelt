@@ -375,6 +375,7 @@ private:
   ros::Time start_time_;
   ros::Time heartbeat_time_{0};
 
+  bool first_pose_{true};
   bool mission_completed_{true};
   // bool heartbeat_timeout_{true};
 

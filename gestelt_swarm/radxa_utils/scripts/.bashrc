@@ -119,7 +119,6 @@ fi
 # ROS-related
 export ROS_DISTRO="noetic"
 source /opt/ros/noetic/setup.bash
-alias killbill="killall -9 gazebo; killall -9 gzserver; killall -9 gzclient; killall -9 rosmaster; tmux kill-server;"
 alias sros="source /opt/ros/noetic/setup.bash"
 alias sws="source devel/setup.bash"
 alias sbash="source /home/rock/.bashrc"
@@ -136,8 +135,10 @@ export ROS_IP=$SELF_IP
 
 # Convenience function
 alias pull_repo="git -C ~/gestelt_ws/src/gestelt/ pull"
-alias ez_make="cd ~/gestelt_ws && catkin_make -DCMAKE_BUILD_TYPE=Release -DCATKIN_BLACKLIST_PACKAGES='rviz_plugins;swarm_bridge;'"
+alias ez_make="cd ~/gestelt_ws && catkin_make -DCMAKE_BUILD_TYPE=Release -DCATKIN_BLACKLIST_PACKAGES='rviz_plugins;swarm_bridge;trajectory_planner;'"
 alias cd_scripts="cd /home/rock/gestelt_ws/src/gestelt/gestelt_bringup/scripts/"
 alias check_network_priority="nmcli -f NAME,UUID,AUTOCONNECT,AUTOCONNECT-PRIORITY c"
 alias uav_startup="cd_scripts && cd vicon && ./offboard_uav.sh 0"
 alias restart_ntp="sudo service ntp stop && sudo ntpd -gq && sudo service ntp start"
+alias killbill="killall -9 rosmaster; tmux kill-server;"
+

@@ -17,4 +17,4 @@ fake_laser:
     # Number of vertical laser lines 
     laser_line_num: 15
     # Units in degree, vertical angle range
-    laser_range_dgr: 40.0
+    laser_range_dgr: 65.0

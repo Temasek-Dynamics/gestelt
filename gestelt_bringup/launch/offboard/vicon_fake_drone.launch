@@ -1,19 +1,21 @@
 <launch>
   <arg name="num_drones" value="5"/>
   <!-- size of map, change the size inflate x, y, z according to your application -->
-  <arg name="map_size_x" value="4.5"/>
-  <arg name="map_size_y" value="4.5"/>
-  <arg name="map_size_z" value=" 2.0"/>
-  <arg name="map_filepath" value="$(find gestelt_bringup)/simulation/fake_map_worlds/dense_map.pcd" />
+  <arg name="map_size_x" value="5.0"/>
+  <arg name="map_size_y" value="5.0"/>
+  <arg name="map_size_z" value="2.5"/>
+  <arg name="map_filepath" value="$(find gestelt_bringup)/simulation/fake_map_worlds/demo_map.pcd" />
   <!-- Input/output topics -->
   <arg name="cloud_topic" default="camera/depth/points_downsampled" />
+
+  <param name="/use_sim_time" value="false" />
 
   <!-- Drone 1 -->
   <include file="$(find gestelt_bringup)/launch/fake_drone/fake_drone_single.xml">
     <arg name="drone_id"   value="1"/>
-    <arg name="init_x"     value="0.5"/>
-    <arg name="init_y"     value="0.5"/>
-    <arg name="init_z"     value="0.0"/>
+    <arg name="init_x"     value="0.45"/>
+    <arg name="init_y"     value="-0.45"/>
+    <arg name="init_z"     value="0.25"/>
     <arg name="map_filepath" value="$(arg map_filepath)"/>
     <arg name="num_drones" value="$(arg num_drones)"/>
     <arg name="map_size_x" value="$(arg map_size_x)"/>
@@ -25,9 +27,9 @@
   <!-- Drone 2 -->
   <include file="$(find gestelt_bringup)/launch/fake_drone/fake_drone_single.xml">
     <arg name="drone_id"   value="2"/>
-    <arg name="init_x"     value="-0.5"/>
-    <arg name="init_y"     value="-0.5"/>
-    <arg name="init_z"     value="0.0"/>
+    <arg name="init_x"     value="-0.45"/>
+    <arg name="init_y"     value="-0.45"/>
+    <arg name="init_z"     value="0.25"/>
     <arg name="map_filepath" value="$(arg map_filepath)"/>
     <arg name="num_drones" value="$(arg num_drones)"/>
     <arg name="map_size_x" value="$(arg map_size_x)"/>
@@ -39,9 +41,9 @@
   <!-- Drone 3 -->
   <include file="$(find gestelt_bringup)/launch/fake_drone/fake_drone_single.xml">
     <arg name="drone_id"   value="3"/>
-    <arg name="init_x"     value="-0.5"/>
-    <arg name="init_y"     value="0.5"/>
-    <arg name="init_z"     value="0.0"/>
+    <arg name="init_x"     value="-0.45"/>
+    <arg name="init_y"     value="0.45"/>
+    <arg name="init_z"     value="0.25"/>
     <arg name="map_filepath" value="$(arg map_filepath)"/>
     <arg name="num_drones" value="$(arg num_drones)"/>
     <arg name="map_size_x" value="$(arg map_size_x)"/>

@@ -40,7 +40,6 @@ roslaunch gestelt_bringup single_ego_planner.launch POSE_TYPE:=3 SENSOR_TYPE:=3
 
 CMD_4="roslaunch gestelt_bringup single_mission.launch"
 
-
 if [ "$SESSIONEXISTS" = "" ]
 then 
 

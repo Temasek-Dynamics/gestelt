@@ -3,9 +3,9 @@
   <!-- num_drones must be at least 2 even if we are planning for a single drone -->
   <arg name="num_drones" value="5"/>
   <!-- size of map, change the size inflate x, y, z according to your application -->
-  <arg name="map_size_x" value="4.5"/>
-  <arg name="map_size_y" value="4.5"/>
-  <arg name="map_size_z" value=" 2.25"/>
+  <arg name="map_size_x" value="5.0"/>
+  <arg name="map_size_y" value="5.0"/>
+  <arg name="map_size_z" value="2.5"/>
   <!-- Input/output topics -->
   <arg name="cloud_topic" value="camera/depth/points_downsampled" />
   <!-- POSE_TYPE/SENSOR_TYPE: Use value of 1 for actual map, 3 for fake_map-->

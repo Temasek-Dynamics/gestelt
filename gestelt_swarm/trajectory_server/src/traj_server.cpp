@@ -188,6 +188,12 @@ void TrajServer::UAVStateCb(const mavros_msgs::State::ConstPtr &msg)
 
 void TrajServer::UAVPoseCB(const geometry_msgs::PoseStamped::ConstPtr &msg)
 {
+  if (first_pose_){
+    last_mission_pos_(0) = uav_pose_.pose.position.x;
+    last_mission_pos_(1) = uav_pose_.pose.position.y;
+    first_pose_ = false;
+  }
+
   uav_pose_ = *msg; 
   uav_poses_.push_back(uav_pose_);
 
@@ -576,7 +582,11 @@ void TrajServer::execLand()
 void TrajServer::execTakeOff()
 { 
   Eigen::Vector3d pos;
-  pos << uav_pose_.pose.position.x, uav_pose_.pose.position.y, takeoff_height_;
+  
+  pos = last_mission_pos_;
+  pos(2) = takeoff_height_;
+
+  // pos << uav_pose_.pose.position.x, uav_pose_.pose.position.y, takeoff_height_;
   uint16_t type_mask = 2552; // Ignore Velocity, Acceleration
 
   publishCmd(pos, Vector3d::Zero(), Vector3d::Zero(), Vector3d::Zero(), last_mission_yaw_, 0, type_mask);

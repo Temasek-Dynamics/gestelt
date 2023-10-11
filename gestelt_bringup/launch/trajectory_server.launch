@@ -15,7 +15,7 @@
         For other forms of simulation, might have to change it -->
         <arg name="drone_origin_frame" value="$(arg drone_origin_frame)" />
 
-        <arg name="init_x" value="0.5"/>
+        <arg name="init_x" value="0.0"/>
         <arg name="init_y" value="0.0"/>
         <arg name="init_z" value="0.0"/>
 

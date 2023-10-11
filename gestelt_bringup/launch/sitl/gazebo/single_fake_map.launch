@@ -1,7 +1,7 @@
 <launch>
   <arg name="drone_id"/>
   <arg name="drone_id_ns" value="drone$(arg drone_id)"/>
-  <arg name="map_filepath" default="$(find gestelt_bringup)/simulation/fake_map_worlds/demo_map_1.pcd" />
+  <arg name="map_filepath" default="$(find gestelt_bringup)/simulation/fake_map_worlds/demo_map.pcd" />
   <!-- Input/output topics -->
   <!-- <arg name="cloud_topic_fake" value="camera/depth/points" /> -->
   <arg name="cloud_topic_fake" default="camera/depth/points_fake" />

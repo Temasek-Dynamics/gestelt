@@ -31,11 +31,19 @@ def publish_server_event(event_enum):
     server_event_pub.publish(Int8(event_enum))
 
 def get_server_state_callback():
-    msg = rospy.wait_for_message(f"/drone0/server_state", State, timeout=5.0)
-    server_states[str(msg.drone_id)] = msg
-    # print("==================")
-    # print(msg)
-    # print("==================")
+    for drone_id in range(0, num_drones):
+        msg = rospy.wait_for_message(f"/drone{drone_id}/server_state", State, timeout=5.0)
+        server_states[str(msg.drone_id)] = msg
+        # print("==================")
+        # print(msg)
+        # print("==================")
+
+# def get_server_state_callback():
+#     msg = rospy.wait_for_message(f"/drone0/server_state", State, timeout=5.0)
+#     server_states[str(msg.drone_id)] = msg
+#     # print("==================")
+#     # print(msg)
+#     # print("==================")
 
 def create_pose(x, y, z):
     pose = Pose()
@@ -90,14 +98,18 @@ def main():
     # Send waypoints to UAVs
     print(f"Sending waypoints to UAVs")
     waypoints = []
-    z_pos = 0.75
-    d = 1.25
-    for i in range(5):
-        waypoints.append(create_pose(d, d, z_pos))
-        waypoints.append(create_pose(d, -d, z_pos))
-        waypoints.append(create_pose(-d, -d, z_pos))
-        waypoints.append(create_pose(-d, d, z_pos))
-    waypoints.append(create_pose(0, 0, z_pos))
+    # Square formation with length L
+    max_x = 1.4
+    max_y = 1.4
+    min_x = -1.4
+    min_y = -1.4
+    z = 1.0
+    for i in range(10):
+        waypoints.append(create_pose(max_x, min_y, z))
+        waypoints.append(create_pose(max_x, max_y, z))
+        waypoints.append(create_pose(min_x, max_y, z))
+        waypoints.append(create_pose(min_x, min_y, z))
+    waypoints.append(create_pose(0, 0, z))
     pub_waypoints(waypoints)
 
 if __name__ == '__main__':

@@ -82,16 +82,16 @@
         <param name="grid_map/map_size_x" value="$(arg map_size_x_)" />
         <param name="grid_map/map_size_y" value="$(arg map_size_y_)" />
         <param name="grid_map/map_size_z" value="$(arg map_size_z_)" />
-        <param name="grid_map/local_map_size_x" value="5.5" />
-        <param name="grid_map/local_map_size_y" value="5.5" />
-        <param name="grid_map/local_map_size_z" value="2.0" />
+        <param name="grid_map/local_map_size_x" value="2.5" />
+        <param name="grid_map/local_map_size_y" value="2.5" />
+        <param name="grid_map/local_map_size_z" value="3.5" />
 
         <param name="grid_map/global_frame" value="$(arg global_frame)"/>
         <param name="grid_map/uav_origin_frame" value="$(arg drone_origin_frame)"/>
         <param name="grid_map/cam_frame" value="$(arg drone_id_ns)_$(arg cam_frame)"/>
         <!-- Occupancy grid params -->
         <param name="grid_map/occ_grid/resolution" value="0.1" />
-        <param name="grid_map/occ_grid/inflation" value="0.15" />
+        <param name="grid_map/occ_grid/inflation" value="0.1" />
         <!-- Point cloud downsampling params -->
         <param name="grid_map/filter/downsample_cloud" value="false" />
         <param name="grid_map/filter/depth_stride" value="4" />
@@ -151,10 +151,10 @@
         <param name="formation/num" value="$(arg num_drones)"/>
         <rosparam param="formation/start">[0, 0, 0]</rosparam>
         <!-- <rosparam param="formation/drone0">[  0, 0, 0]</rosparam> -->
-        <rosparam param="formation/drone0">[ 0.5, 0.0, 0]</rosparam>
-        <rosparam param="formation/drone1">[ 0.0, -0.5, 0]</rosparam>
-        <rosparam param="formation/drone2">[ -0.5, 0.0, 0]</rosparam>
-        <rosparam param="formation/drone3">[ 0.0, 0.5, 0]</rosparam>
+        <rosparam param="formation/drone0">[ 0.35, -0.35, 0]</rosparam>
+        <rosparam param="formation/drone1">[ -0.35, -0.35, 0]</rosparam>
+        <rosparam param="formation/drone2">[ -0.35, 0.35, 0]</rosparam>
+        <rosparam param="formation/drone3">[ 0.35, 0.35, 0]</rosparam>
         
         <rosparam param="formation/drone4">[ 1.0, -1.0, 0]</rosparam>
         <rosparam param="formation/drone5">[ -1.0, -1.0, 0]</rosparam>
@@ -167,5 +167,4 @@
         <rosparam param="formation/drone11">[ 2.0, 0.0, 0]</rosparam>
 
     </node>
-    
 </launch>
