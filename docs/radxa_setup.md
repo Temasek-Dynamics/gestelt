@@ -17,7 +17,7 @@
 
 3. Remove autoboot on radxa
     - Install dependencies: 
-        - `sudo apt-get install -y wget bc nano mc build-essential autoconf libtool cmake pkg-config git python-dev swig libpcre3-dev libnode-dev gawk wget diffstat bison flex device-tree-compiler libncurses5-dev gcc-aarch64-linux-gnu g++-aarch64-linux-gnu binfmt-support binfmt-support qemu-user-static gcc-aarch64-linux-gnu gcc-arm-linux-gnueabihf fastboot`
+        - `sudo apt-get install -y wget bc nano mc build-essential autoconf libtool cmake pkg-config git python-dev swig libpcre3-dev libnode-dev gawk wget diffstat bison flex device-tree-compiler libncurses5-dev gcc-aarch64-linux-gnu g++-aarch64-linux-gnu binfmt-support binfmt-support qemu-user-static gcc-aarch64-linux-gnu gcc-arm-linux-gnueabihf gcc-aarch64-linux-gnu fastboot`
     - Git clone 2 packages
         - `git clone  --branch radxa-zero-v2021.07 https://github.com/radxa/u-boot.git`
         - `git clone https://github.com/radxa/fip.git`
@@ -32,7 +32,7 @@
         make radxa-zero_defconfig
         make
         ```
-    - Compile from `fip/radxa-zero`
+    - Compile from `fip/radxa-zero`. Note: "make" here will have no output as it is disabled
         ```bash
         cp u-boot.bin ../fip/radxa-zero/bl33.bin
         cd ../fip/radxa-zero
@@ -49,7 +49,6 @@
             - In fip/radxa-zero, run `sudo dd if=u-boot.bin of=/dev/sdX bs=512 seek=1` to copy the files over
     - Reboot device
     - [Reference](https://github.com/matthewoots/documentation/blob/main/radxa-zero/radxa-remove-autoboot-countdown.md)
-
 
 4. Install [Balena Etcher](https://github.com/balena-io/etcher)
 

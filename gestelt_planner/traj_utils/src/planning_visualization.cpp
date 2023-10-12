@@ -217,6 +217,7 @@ namespace ego_planner
     displayMarkerList(init_list_pub, init_pts, scale, color, id);
   }
 
+
   void PlanningVisualization::displayOptimalList(Eigen::MatrixXd optimal_pts, int id)
   {
 

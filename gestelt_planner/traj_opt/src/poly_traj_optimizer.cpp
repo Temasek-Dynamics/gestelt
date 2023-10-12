@@ -469,7 +469,8 @@ namespace ego_planner
         }
       }
 
-      /* Corner case: the segment length is too short. Here the control points may outside the A* path, leading to opposite gradient direction. So I have to take special care of it */
+      /* Corner case: the segment length is too short. 
+      Here the control points may outside the A* path, leading to opposite gradient direction. So I have to take special care of it */
       if (segment_ids[i].second - segment_ids[i].first == 1)
       {
         Eigen::Vector3d ctrl_pts_law(init_points.col(segment_ids[i].second) - init_points.col(segment_ids[i].first)), intersection_point;
@@ -546,6 +547,8 @@ namespace ego_planner
         // ROS_ERROR("Failed to generate direction! segment_id=%d", i);
       }
     }
+
+    visualization_->displayAStarList(a_star_pathes, 0);
 
     segments = final_segment_ids;
     return CHK_RET::FINISH;
@@ -1673,6 +1676,11 @@ namespace ego_planner
     a_star_.reset(new AStar);
     a_star_->initGridMap(grid_map_, Eigen::Vector3i(100, 100, 100));
 
+  }
+
+  void PolyTrajOptimizer::setVisualizer(PlanningVisualization::Ptr vis)
+  {
+    visualization_ = vis;
   }
 
   void PolyTrajOptimizer::setControlPoints(const Eigen::MatrixXd &points)

@@ -6,6 +6,7 @@
 #include <grid_map/grid_map.h>
 #include <path_searching/dyn_a_star.h>
 #include <traj_utils/plan_container.hpp>
+#include <traj_utils/planning_visualization.h>
 #include "optimizer/lbfgs.hpp"
 #include "poly_traj_utils.hpp"
 
@@ -67,6 +68,7 @@ namespace ego_planner
   private:
     GridMap::Ptr grid_map_;
     AStar::Ptr a_star_;
+    PlanningVisualization::Ptr visualization_;
 
     poly_traj::MinJerkOpt jerkOpt_;
     SwarmTrajData *swarm_trajs_{NULL}; // Can not use shared_ptr and no need to free
@@ -118,6 +120,7 @@ namespace ego_planner
     /* set variables */
     void setParam(ros::NodeHandle &nh);
     void setEnvironment(const GridMap::Ptr &map);
+    void setVisualizer(PlanningVisualization::Ptr vis);
     void setControlPoints(const Eigen::MatrixXd &points);
     void setSwarmTrajs(SwarmTrajData *swarm_trajs_ptr);
     void setDroneId(const int drone_id);

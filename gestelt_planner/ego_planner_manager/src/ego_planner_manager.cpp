@@ -28,6 +28,8 @@ namespace ego_planner
 
     visualization_ = vis;
 
+    ploy_traj_opt_->setVisualizer(visualization_);
+
     ploy_traj_opt_->setSwarmTrajs(&traj_.swarm_traj);
     ploy_traj_opt_->setDroneId(pp_.drone_id);
   }
