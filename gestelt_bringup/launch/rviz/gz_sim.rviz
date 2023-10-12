@@ -36,7 +36,7 @@ Panels:
   - Class: rviz/Time
     Name: Time
     SyncMode: 0
-    SyncSource: drone1_downsampled
+    SyncSource: drone0_downsampled
 Preferences:
   PromptSaveOnExit: true
 Toolbars:
@@ -1433,7 +1433,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 12.207160949707031
+      Distance: 9.506265640258789
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -1441,17 +1441,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 0.767916738986969
-        Y: -0.17717942595481873
-        Z: 0.8377382755279541
+        X: -0.383433997631073
+        Y: 1.2305771112442017
+        Z: 0.8711468577384949
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.3347960710525513
+      Pitch: 0.7597972750663757
       Target Frame: my_view
-      Yaw: 3.2750184535980225
+      Yaw: 5.330038070678711
     Saved:
       - Class: rviz/FPS
         Enable Stereo Rendering:
