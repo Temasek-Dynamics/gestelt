@@ -78,6 +78,7 @@
         <remap from="~grid_map/depth" to = "$(arg depth_topic)"/>
         <remap from="~grid_map/camera_info" to="/drone$(arg drone_id)/camera/depth/camera_info"/>
         <!-- Maps params -->
+        <remap from="~grid_map/sensor/max_range" to = "5.0"/>
         <param name="grid_map/ground_height" value="-0.25"/>
         <param name="grid_map/map_size_x" value="$(arg map_size_x_)" />
         <param name="grid_map/map_size_y" value="$(arg map_size_y_)" />

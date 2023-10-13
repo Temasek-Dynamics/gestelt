@@ -9,6 +9,7 @@
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/octree/octree_pointcloud_occupancy.h>
 #include <pcl/filters/voxel_grid.h>
+#include <pcl/filters/passthrough.h>
 
 #include <ros/ros.h>
 
@@ -24,10 +25,14 @@
 
 #include <swarm_benchmark/timebenchmark.h>
 
+#include <octomap/octomap.h>
+#include <octomap/OcTree.h>
+
 struct MappingParameters
 {
   /* map properties */
   Eigen::Vector3d map_origin_, map_size_; // Origin and size of occupancy grid 
+  Eigen::Vector3d local_map_size_; // Origin and size of occupancy grid 
   double occ_resolution_; // Voxel size for occupancy grid without inflation                  
   double occ_inflation_; // Voxel size for occupancy grid with inflation
   int pose_type_; // Type of pose input (pose or odom)
@@ -38,6 +43,7 @@ struct MappingParameters
   /* camera parameters */
   double cx_, cy_, fx_, fy_, fx_inv_, fy_inv_; // Intrinsic camera parameters
   double k_depth_scaling_factor_; // Scaling factor for depth value of depth image
+  double max_range;
 
   /* Cloud downsampler parameters */
   bool downsample_cloud_; // True if downsampling cloud before input to octree occupancy
@@ -107,6 +113,9 @@ public:
   GridMap() {}
   ~GridMap() {}
 
+  // Reset map data
+  void reset();
+
   // Initialize the GridMap class and it's callbacks
   void initMap(ros::NodeHandle &nh);
 
@@ -115,12 +124,14 @@ public:
   
   /* Gridmap access methods */
 
-  // True if the position camera pose is currently within the map boundaries
+  // True if the position is currently within the map boundaries
   inline bool isInMap(const Eigen::Vector3d &pos);
   // Get occupancy value of given position in Occupancy grid
   inline int getOccupancy(const Eigen::Vector3d &pos);
   // Get occupancy value of given position in inflated Occupancy grid
   inline int getInflateOccupancy(const Eigen::Vector3d &pos);
+  // True if the position is currently within the map boundaries
+  inline bool isInInflatedMap(const Eigen::Vector3d &pos);
 
   /* Gridmap conversion methods */
 
@@ -134,6 +145,15 @@ public:
   // Take in depth image as octree map.  Transformation from camera-to-global frame is 
   // done here
   void depthToCloudMap(const sensor_msgs::ImageConstPtr &msg);
+
+  // Convert PCL Point cloud to Octomap
+  void pclToOctomapPC(const pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_cloud , octomap::Pointcloud& octomap_cloud);
+  
+  // Retrieve occupied cells in Octree as a PCL Point cloud
+  void octreeToPclPC(std::shared_ptr<octomap::OcTree> octree, pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_cloud);
+
+  // Update the local map
+  void updateLocalMap();
 
   /** Helper methods */
   
@@ -239,11 +259,16 @@ private:
   std::shared_ptr<TimeBenchmark> time_benchmark_;
 
   /* Data structures for point clouds */
-  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_origin_;  // Point cloud in origin frame
-  std::shared_ptr<pcl::octree::OctreePointCloudOccupancy<pcl::PointXYZ>> octree_map_; // In uav origin frame
-  std::shared_ptr<pcl::octree::OctreePointCloudOccupancy<pcl::PointXYZ>> octree_map_inflated_; // In uav origin frame
+  pcl::PointCloud<pcl::PointXYZ>::Ptr local_map_origin_;  // Point cloud map in UAV origin frame
+  // std::shared_ptr<pcl::octree::OctreePointCloudOccupancy<pcl::PointXYZ>> octree_map_; // In uav origin frame
+  // std::shared_ptr<pcl::octree::OctreePointCloudOccupancy<pcl::PointXYZ>> octree_map_inflated_; // In uav origin frame
 
-  pcl::VoxelGrid<pcl::PointXYZ> vox_grid_;
+  std::shared_ptr<octomap::OcTree> octree_;
+
+  pcl::VoxelGrid<pcl::PointXYZ> vox_grid_filter_; // Voxel filter
+  pcl::PassThrough<pcl::PointXYZ> pass_x_filter_; // passthrough filter for x
+  pcl::PassThrough<pcl::PointXYZ> pass_y_filter_; // passthrough filter for y
+
 };
 
 /* ============================== definition of inline function
@@ -256,24 +281,51 @@ inline int GridMap::getOccupancy(const Eigen::Vector3d &pos)
     return -1;
   }
 
-  pcl::PointXYZ search_pt(pos(0), pos(1), pos(2));
-  return octree_map_->isVoxelOccupiedAtPoint(search_pt) ? 1 : 0;
+  octomap::point3d octo_pos(pos(0), pos(1), pos(2));
+  octomap::OcTreeNode* node = octree_->search(octo_pos);
+
+  if (node && octree_->isNodeOccupied(node)){
+    return 1;
+  }
+  return 0;
+
+  // pcl::PointXYZ search_pt(pos(0), pos(1), pos(2));
+  // return octree_->isVoxelOccupiedAtPoint(search_pt) ? 1 : 0;
 }
 
 inline int GridMap::getInflateOccupancy(const Eigen::Vector3d &pos)
 {
-  pcl::PointXYZ search_pt(pos(0), pos(1), pos(2));
-  return octree_map_inflated_->isVoxelOccupiedAtPoint(search_pt) ? 1 : 0;
+  if (!isInInflatedMap(pos)){
+    return -1;
+  }
+
+  octomap::point3d octo_pos(pos(0), pos(1), pos(2));
+
+  octomap::OcTreeNode* node = octree_->search(octo_pos);
+
+  if (node && octree_->isNodeOccupied(node)){
+    return 1;
+  }
+  return 0;
 }
 
 inline bool GridMap::isInMap(const Eigen::Vector3d &pos)
 {
-  double min_x, min_y, min_z, max_x, max_y, max_z;
-  octree_map_->getBoundingBox(min_x, min_y, min_z, max_x, max_y, max_z);
+  // double min_x, min_y, min_z, max_x, max_y, max_z;
+  // octree_->getBoundingBox(min_x, min_y, min_z, max_x, max_y, max_z);
 
-  return (pos(0) >= min_x && pos(0) <= max_x)
-    && (pos(1) >= min_y && pos(1) <= max_y)
-    && (pos(2) >= min_z && pos(2) <= max_z);
+  // return (pos(0) >= min_x && pos(0) <= max_x)
+  //   && (pos(1) >= min_y && pos(1) <= max_y)
+  //   && (pos(2) >= min_z && pos(2) <= max_z);
+    
+  octomap::point3d octo_pos(pos(0), pos(1), pos(2));
+  return octree_->inBBX(octo_pos);
+}
+
+inline bool GridMap::isInInflatedMap(const Eigen::Vector3d &pos)
+{
+  octomap::point3d octo_pos(pos(0), pos(1), pos(2));
+  return octree_->inBBX(octo_pos);
 }
 
 #endif

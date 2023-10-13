@@ -16,6 +16,8 @@ set(ROS_LIBRARIES
     trajectory_server_msgs
 )
 
+find_package(octomap REQUIRED)
+
 find_package(PCL 1.7 REQUIRED)
 find_package(catkin REQUIRED COMPONENTS
     ${ROS_LIBRARIES}
@@ -37,6 +39,7 @@ include_directories(
     ${EIGEN3_INCLUDE_DIRS} 
     ${PCL_INCLUDE_DIRS}
     ${OpenCV_INCLUDE_DIRS}
+    ${OCTOMAP_INCLUDE_DIRS}
 )
 
 # add_definitions(${PCL_DEFINITIONS})
@@ -50,4 +53,5 @@ target_link_libraries(grid_map
     ${catkin_LIBRARIES} 
     ${PCL_LIBRARIES}
     ${EIGEN3_LIBRARIES}
+    ${OCTOMAP_LIBRARIES}
 )  

@@ -8,6 +8,7 @@
 - Can we put all the drones in the same world frame?
 
 - Grid_map
+    - Messagefilter to align timestamp of point cloud and TF 
     - Remove all octree elements outside of local map bound
 
 - Actual deployment
