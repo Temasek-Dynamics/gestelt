@@ -10,6 +10,7 @@
 - Grid_map
     - Messagefilter to align timestamp of point cloud and TF 
     - Remove all octree elements outside of local map bound
+    - Parallerization? Figure out how octomap uses openMP to parallerize ray casting
 
 - Actual deployment
     - Issues:
