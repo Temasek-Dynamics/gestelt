@@ -1,5 +1,7 @@
 #include "grid_map/grid_map.h"
 
+/** Initialization methods */
+
 void GridMap::initMap(ros::NodeHandle &nh)
 {
   node_ = nh;
@@ -19,8 +21,8 @@ void GridMap::initMap(ros::NodeHandle &nh)
 
   node_.param("grid_map/keep_global_map", mp_.keep_global_map_, false);
 
-  node_.param("grid_map/occ_grid/resolution", mp_.occ_resolution_, -1.0);
-  node_.param("grid_map/occ_grid/inflation", mp_.occ_inflation_, -1.0);
+  node_.param("grid_map/occ_grid/resolution", mp_.resolution_, -1.0);
+  node_.param("grid_map/occ_grid/inflation", mp_.inflation_, -1.0);
 
   /* Point cloud filter */
   node_.param("grid_map/filter/depth_stride", mp_.depth_stride_, 4);
@@ -59,8 +61,10 @@ void GridMap::initMap(ros::NodeHandle &nh)
 
   /* Initialize ROS Timers */
   vis_timer_ = node_.createTimer(ros::Duration(0.1), &GridMap::visTimerCB, this);
-  get_tf_timer_ = node_.createTimer(ros::Duration(0.01), &GridMap::getTFTimerCB, this, false, false);
+  // TO REMOVE
+  // get_tf_timer_ = node_.createTimer(ros::Duration(0.01), &GridMap::getTFTimerCB, this, false, false);
 
+  // From sensor type, determine what type of sensor message to subscribe to
   if (mp_.sensor_type_ == SensorType::SENSOR_CLOUD)
   {
     ROS_INFO("[%s] Point clouds as input", node_name_.c_str());
@@ -72,41 +76,40 @@ void GridMap::initMap(ros::NodeHandle &nh)
     depth_sub_.reset(new message_filters::Subscriber<sensor_msgs::Image>(
       node_, "grid_map/depth", queue_size, ros::TransportHints().tcpNoDelay()));
   }
-  else if (mp_.sensor_type_ == SensorType::SENSOR_CLOUD_ONLY) {
-    ROS_INFO("[%s] Point clouds (TF) as input", node_name_.c_str());
-    cloud_only_sub_ = node_.subscribe<sensor_msgs::PointCloud2>(
-      "grid_map/cloud", 10, &GridMap::cloudOnlyCB, this);
-  }
   else {
     ROS_ERROR("[%s] Unknown SENSOR_TYPE", node_name_.c_str());
     ros::shutdown();
   }
 
-  if (mp_.pose_type_ == PoseType::POSE_STAMPED)
+  // From pose type, determine what type of localization message to subscribe to
+  if (mp_.pose_type_ == PoseType::POSE_STAMPED) // Pose
   {
     ROS_INFO("[%s] Pose as camera pose input", node_name_.c_str());
     pose_sub_.reset(new message_filters::Subscriber<geometry_msgs::PoseStamped>(
       node_, "grid_map/pose", queue_size, ros::TransportHints().udp()));
   }
-  else if (mp_.pose_type_ == PoseType::ODOMETRY)
+  else if (mp_.pose_type_ == PoseType::ODOMETRY) // Odom
   {
     ROS_INFO("[%s] Odometry as camera pose input", node_name_.c_str());
     odom_sub_.reset(new message_filters::Subscriber<nav_msgs::Odometry>(
       node_, "grid_map/odom", queue_size, ros::TransportHints().udp()));
   }
-  else if (mp_.pose_type_ == PoseType::TF)
+  else if (mp_.pose_type_ == PoseType::TF) // TF
   {
     ROS_INFO("[%s] TF as camera pose input", node_name_.c_str());
     tfListener_.reset(new tf2_ros::TransformListener(tfBuffer_));
-    get_tf_timer_.start();
+    // TO REMOVE
+    // get_tf_timer_.start();
+    tf_cloud_filter_.reset(new tf2_ros::MessageFilter<sensor_msgs::PointCloud2>(*cloud_sub_, tfBuffer_, mp_.global_frame_, 5, 0));
   }
-  else {
+  else { // UNKNOWN
     ROS_ERROR("[%s] Unknown POSE_TYPE", node_name_.c_str());
     ros::shutdown();
   }
 
-  if (mp_.pose_type_ == PoseType::POSE_STAMPED) {
-    if (mp_.sensor_type_ == SensorType::SENSOR_CLOUD) {
+  // From pose and sensor type, determine the pose/sensor pairing 
+  if (mp_.pose_type_ == PoseType::POSE_STAMPED) { // Pose
+    if (mp_.sensor_type_ == SensorType::SENSOR_CLOUD) { // Point cloud
       sync_cloud_pose_.reset(new message_filters::Synchronizer<SyncPolicyCloudPose>(
           SyncPolicyCloudPose(queue_size), *cloud_sub_, *pose_sub_));
       sync_cloud_pose_->registerCallback(boost::bind(&GridMap::cloudPoseCB, this, _1, _2));
@@ -118,7 +121,7 @@ void GridMap::initMap(ros::NodeHandle &nh)
     }
   }
   else if (mp_.pose_type_ == PoseType::ODOMETRY) { // Odom
-    if (mp_.sensor_type_ == SensorType::SENSOR_CLOUD) {
+    if (mp_.sensor_type_ == SensorType::SENSOR_CLOUD) { // Point cloud
       sync_cloud_odom_.reset(new message_filters::Synchronizer<SyncPolicyCloudOdom>(
           SyncPolicyCloudOdom(queue_size), *cloud_sub_, *odom_sub_));
       sync_cloud_odom_->registerCallback(boost::bind(&GridMap::cloudOdomCB, this, _1, _2));
@@ -128,6 +131,9 @@ void GridMap::initMap(ros::NodeHandle &nh)
           SyncPolicyImageOdom(queue_size), *depth_sub_, *odom_sub_));
       sync_image_odom_->registerCallback(boost::bind(&GridMap::depthOdomCB, this, _1, _2));
     }
+  }
+  else if (mp_.pose_type_ == PoseType::TF) { // TF
+    tf_cloud_filter_->registerCallback( boost::bind(&GridMap::cloudTFCB, this, _1) );
   }
 
   /* Set initial values for raycasting */
@@ -150,9 +156,7 @@ void GridMap::initMap(ros::NodeHandle &nh)
                       0.0, 1.0, 0.0,
                       0.0, 0.0, 1.0;
 
-  ROS_INFO("Before reset");
   reset();
-  ROS_INFO("After reset");
 }
 
 void GridMap::reset(){
@@ -175,36 +179,12 @@ void GridMap::reset(){
   ROS_INFO("Before octree");
 
   // Set up octree data structure
-  octree_ = std::make_shared<octomap::OcTree>(mp_.occ_resolution_);
+  octree_ = std::make_shared<octomap::OcTree>(mp_.resolution_);
   octomap::point3d bbx_min(-mp_.global_map_size_(0), -mp_.global_map_size_(1), -mp_.global_map_size_(2));
   octomap::point3d bbx_max(mp_.global_map_size_(0), mp_.global_map_size_(1), mp_.global_map_size_(2));
   octree_->setBBXMin(bbx_min);
   octree_->setBBXMax(bbx_max);
   octree_->useBBXLimit(true);
-}
-
-void GridMap::updateLocalMap(){
-  if (!isPoseValid()){
-    return;
-  }
-  
-  // Update bounds of local map 
-  md_.local_map_min_(0) = -mp_.local_map_size_(0) + md_.cam_pos_(0);
-  md_.local_map_max_(0) = mp_.local_map_size_(0) + md_.cam_pos_(0);
-
-  md_.local_map_min_(1) = -mp_.local_map_size_(1) + md_.cam_pos_(1);
-  md_.local_map_max_(1) = mp_.local_map_size_(1) + md_.cam_pos_(1);
-
-  md_.local_map_min_(2) = -mp_.local_map_size_(2) + md_.cam_pos_(2);
-  md_.local_map_max_(2) = mp_.local_map_size_(2) + md_.cam_pos_(2);
-
-  // Update bounds of octomap
-  if (!mp_.keep_global_map_){
-    octomap::point3d bbx_min(md_.local_map_min_(0), md_.local_map_min_(1), md_.local_map_min_(2));
-    octomap::point3d bbx_max(md_.local_map_max_(0), md_.local_map_max_(1), md_.local_map_max_(2));
-    octree_->setBBXMin(bbx_min);
-    octree_->setBBXMax(bbx_max);
-  }
 }
 
 void GridMap::initTimeBenchmark(std::shared_ptr<TimeBenchmark> time_benchmark){
@@ -221,42 +201,42 @@ void GridMap::visTimerCB(const ros::TimerEvent & /*event*/)
   ROS_INFO_STREAM_THROTTLE(1.0, "Octree Bounding Box: " << octree_->getBBXMin() << ", " << octree_->getBBXMax());
 }
 
-void GridMap::getTFTimerCB(const ros::TimerEvent & /*event*/) 
-{
-  geometry_msgs::TransformStamped cam_to_origin_tf;
+// void GridMap::getTFTimerCB(const ros::TimerEvent & /*event*/) 
+// {
+//   geometry_msgs::TransformStamped cam_to_origin_tf;
 
-  try
-  {
-    // Get camera to origin frame transform
-    cam_to_origin_tf = tfBuffer_.lookupTransform(mp_.uav_origin_frame_, mp_.cam_frame_, ros::Time(0));
-  }
-  catch (const tf2::TransformException &ex)
-  {
-    ROS_ERROR_THROTTLE(1, 
-        "[Gridmap]: Error in lookupTransform of %s in %s", mp_.cam_frame_.c_str(), mp_.uav_origin_frame_.c_str());
-    ROS_WARN_THROTTLE(1, "%s",ex.what());
-    md_.has_pose_ = false;
-    return;
-  }
+//   try
+//   {
+//     // Get camera to origin frame transform
+//     cam_to_origin_tf = tfBuffer_.lookupTransform(mp_.uav_origin_frame_, mp_.cam_frame_, ros::Time(0));
+//   }
+//   catch (const tf2::TransformException &ex)
+//   {
+//     ROS_ERROR_THROTTLE(1, 
+//         "[Gridmap]: Error in lookupTransform of %s in %s", mp_.cam_frame_.c_str(), mp_.uav_origin_frame_.c_str());
+//     ROS_WARN_THROTTLE(1, "%s",ex.what());
+//     md_.has_pose_ = false;
+//     return;
+//   }
 
-  // Body of uav to global frame
-  md_.cam2global_.block<3, 3>(0, 0) = Eigen::Quaterniond(cam_to_origin_tf.transform.rotation.w,
-                                        cam_to_origin_tf.transform.rotation.x,
-                                        cam_to_origin_tf.transform.rotation.y,
-                                        cam_to_origin_tf.transform.rotation.z).toRotationMatrix();
-  md_.cam2global_(0, 3) = cam_to_origin_tf.transform.translation.x;
-  md_.cam2global_(1, 3) = cam_to_origin_tf.transform.translation.y;
-  md_.cam2global_(2, 3) = cam_to_origin_tf.transform.translation.z;
-  md_.cam2global_(3, 3) = 1.0;
+//   // Body of uav to global frame
+//   md_.cam2global_.block<3, 3>(0, 0) = Eigen::Quaterniond(cam_to_origin_tf.transform.rotation.w,
+//                                         cam_to_origin_tf.transform.rotation.x,
+//                                         cam_to_origin_tf.transform.rotation.y,
+//                                         cam_to_origin_tf.transform.rotation.z).toRotationMatrix();
+//   md_.cam2global_(0, 3) = cam_to_origin_tf.transform.translation.x;
+//   md_.cam2global_(1, 3) = cam_to_origin_tf.transform.translation.y;
+//   md_.cam2global_(2, 3) = cam_to_origin_tf.transform.translation.z;
+//   md_.cam2global_(3, 3) = 1.0;
 
-  // Converts camera to global frame
-  md_.cam_pos_(0) = md_.cam2global_(0, 3);
-  md_.cam_pos_(1) = md_.cam2global_(1, 3);
-  md_.cam_pos_(2) = md_.cam2global_(2, 3);
-  md_.cam_to_global_r_m_ = md_.cam2global_.block<3, 3>(0, 0);
+//   // Converts camera to global frame
+//   md_.cam_pos_(0) = md_.cam2global_(0, 3);
+//   md_.cam_pos_(1) = md_.cam2global_(1, 3);
+//   md_.cam_pos_(2) = md_.cam2global_(2, 3);
+//   md_.cam_to_global_r_m_ = md_.cam2global_.block<3, 3>(0, 0);
 
-  md_.has_pose_ = true;
-}
+//   md_.has_pose_ = true;
+// }
 
 /** Subscriber callbacks */
 
@@ -288,8 +268,44 @@ void GridMap::cloudPoseCB( const sensor_msgs::PointCloud2ConstPtr &msg_pc,
   cloudToCloudMap(msg_pc);
 }
 
-void GridMap::cloudOnlyCB( const sensor_msgs::PointCloud2ConstPtr &msg_pc) 
+void GridMap::cloudTFCB( const sensor_msgs::PointCloud2ConstPtr &msg_pc) 
 {
+  geometry_msgs::TransformStamped cam_to_origin_tf;
+
+  try
+  {
+    // Get camera to origin frame transform
+    cam_to_origin_tf = tfBuffer_.lookupTransform(mp_.uav_origin_frame_, mp_.cam_frame_, ros::Time(0));
+  }
+  catch (const tf2::TransformException &ex)
+  {
+    ROS_ERROR_THROTTLE(1, 
+        "[Gridmap]: Error in lookupTransform of %s in %s", mp_.cam_frame_.c_str(), mp_.uav_origin_frame_.c_str());
+    ROS_WARN_THROTTLE(1, "%s",ex.what());
+    md_.has_pose_ = false;
+    return;
+  }
+
+  // TODO: Convert cam_to_origin_tf to pose stamped and use getCamToGlobalPose
+
+  // Body of uav to global frame
+  md_.cam2global_.block<3, 3>(0, 0) = Eigen::Quaterniond(cam_to_origin_tf.transform.rotation.w,
+                                        cam_to_origin_tf.transform.rotation.x,
+                                        cam_to_origin_tf.transform.rotation.y,
+                                        cam_to_origin_tf.transform.rotation.z).toRotationMatrix();
+  md_.cam2global_(0, 3) = cam_to_origin_tf.transform.translation.x;
+  md_.cam2global_(1, 3) = cam_to_origin_tf.transform.translation.y;
+  md_.cam2global_(2, 3) = cam_to_origin_tf.transform.translation.z;
+  md_.cam2global_(3, 3) = 1.0;
+
+  // Converts camera to global frame
+  md_.cam_pos_(0) = md_.cam2global_(0, 3);
+  md_.cam_pos_(1) = md_.cam2global_(1, 3);
+  md_.cam_pos_(2) = md_.cam2global_(2, 3);
+  md_.cam_to_global_r_m_ = md_.cam2global_.block<3, 3>(0, 0);
+
+  md_.has_pose_ = true;
+
   cloudToCloudMap(msg_pc);
 }
 
@@ -312,6 +328,30 @@ void GridMap::cameraInfoCallback(const sensor_msgs::CameraInfoConstPtr &msg)
 }
 
 /* Gridmap conversion methods */
+
+void GridMap::updateLocalMap(){
+  if (!isPoseValid()){
+    return;
+  }
+  
+  // Update bounds of local map 
+  md_.local_map_min_(0) = -mp_.local_map_size_(0) + md_.cam_pos_(0);
+  md_.local_map_max_(0) = mp_.local_map_size_(0) + md_.cam_pos_(0);
+
+  md_.local_map_min_(1) = -mp_.local_map_size_(1) + md_.cam_pos_(1);
+  md_.local_map_max_(1) = mp_.local_map_size_(1) + md_.cam_pos_(1);
+
+  md_.local_map_min_(2) = -mp_.local_map_size_(2) + md_.cam_pos_(2);
+  md_.local_map_max_(2) = mp_.local_map_size_(2) + md_.cam_pos_(2);
+
+  // Update bounds of octomap
+  if (!mp_.keep_global_map_){
+    octomap::point3d bbx_min(md_.local_map_min_(0), md_.local_map_min_(1), md_.local_map_min_(2));
+    octomap::point3d bbx_max(md_.local_map_max_(0), md_.local_map_max_(1), md_.local_map_max_(2));
+    octree_->setBBXMin(bbx_min);
+    octree_->setBBXMax(bbx_max);
+  }
+}
 
 void GridMap::getCamToGlobalPose(const geometry_msgs::Pose &pose)
 {

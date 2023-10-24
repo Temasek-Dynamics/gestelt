@@ -21,11 +21,13 @@
 #include <sensor_msgs/CameraInfo.h>
 
 #include <tf2_ros/transform_listener.h>
+#include <tf2_ros/message_filter.h>
 
 #include <swarm_benchmark/timebenchmark.h>
 
 #include <octomap/octomap.h>
 #include <octomap/OcTree.h>
+
 
 struct MappingParameters
 {
@@ -34,8 +36,8 @@ struct MappingParameters
   Eigen::Vector3d global_map_size_; //  Size of global occupancy grid 
   Eigen::Vector3d local_map_size_; //  Size of local occupancy grid 
 
-  double occ_resolution_; // Voxel size for occupancy grid without inflation                  
-  double occ_inflation_; // Voxel size for occupancy grid with inflation
+  double resolution_; // Voxel size for occupancy grid without inflation                  
+  double inflation_; // Voxel size for occupancy grid with inflation
   int pose_type_; // Type of pose input (pose or odom)
   int sensor_type_; // Type of sensor (cloud or depth image)
 
@@ -59,6 +61,7 @@ struct MappingParameters
   std::string uav_origin_frame_; // frame id of UAV origin
 
   bool keep_global_map_{false}; // If true, octomap will not discard any nodes outside of the local map bounds. We will map the entire area but at the cost of additional memory.
+
 };
 
 // intermediate mapping data for fusion
@@ -96,6 +99,22 @@ struct MappingData
 
 class GridMap
 {
+
+// Custom type definition for message filters
+typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, nav_msgs::Odometry>
+    SyncPolicyImageOdom;
+typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, geometry_msgs::PoseStamped>
+    SyncPolicyImagePose;
+typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::PointCloud2, nav_msgs::Odometry>
+    SyncPolicyCloudOdom;
+typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::PointCloud2, geometry_msgs::PoseStamped>
+    SyncPolicyCloudPose;
+
+typedef std::shared_ptr<message_filters::Synchronizer<SyncPolicyImagePose>> SynchronizerImagePose;
+typedef std::shared_ptr<message_filters::Synchronizer<SyncPolicyImageOdom>> SynchronizerImageOdom;
+typedef std::shared_ptr<message_filters::Synchronizer<SyncPolicyCloudPose>> SynchronizerCloudPose;
+typedef std::shared_ptr<message_filters::Synchronizer<SyncPolicyCloudOdom>> SynchronizerCloudOdom;
+
 public:
   typedef std::shared_ptr<GridMap> Ptr;
 
@@ -142,6 +161,9 @@ public:
 
   /* Gridmap conversion methods */
 
+  // Create inflation sphere for inflating the octomap
+  void setInflation(const double& inflation_radius, const double& map_res);
+
   // Get camera-to-global frame transformation
   void getCamToGlobalPose(const geometry_msgs::Pose &pose);
   
@@ -168,7 +190,7 @@ public:
   bool isPoseValid();
 
   // Get occupancy grid resolution
-  double getResolution() { return mp_.occ_resolution_; }
+  double getResolution() { return mp_.resolution_; }
 
   // Get odometry depth timeout
   bool getPoseDepthTimeout() { return md_.flag_sensor_timeout_; }
@@ -206,8 +228,8 @@ private:
   void cloudPoseCB(const sensor_msgs::PointCloud2ConstPtr &msg_pc,
                     const geometry_msgs::PoseStampedConstPtr &msg_pose);
 
-  // Subscriber callback to point cloud only
-  void cloudOnlyCB(const sensor_msgs::PointCloud2ConstPtr &msg_pc);
+  // Subscriber callback to point cloud and TF
+  void cloudTFCB(const sensor_msgs::PointCloud2ConstPtr &msg_pc);
 
   /**
    * Timer Callbacks
@@ -227,20 +249,8 @@ private:
   ros::NodeHandle node_;
 
   /* ROS Publishers, subscribers and Timers */
-  typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, nav_msgs::Odometry>
-      SyncPolicyImageOdom;
-  typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, geometry_msgs::PoseStamped>
-      SyncPolicyImagePose;
-  typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::PointCloud2, nav_msgs::Odometry>
-      SyncPolicyCloudOdom;
-  typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::PointCloud2, geometry_msgs::PoseStamped>
-      SyncPolicyCloudPose;
 
-  typedef std::shared_ptr<message_filters::Synchronizer<SyncPolicyImagePose>> SynchronizerImagePose;
-  typedef std::shared_ptr<message_filters::Synchronizer<SyncPolicyImageOdom>> SynchronizerImageOdom;
-  typedef std::shared_ptr<message_filters::Synchronizer<SyncPolicyCloudPose>> SynchronizerCloudPose;
-  typedef std::shared_ptr<message_filters::Synchronizer<SyncPolicyCloudOdom>> SynchronizerCloudOdom;
-
+  // Message filters for point cloud/depth camera and pose/odom
   SynchronizerImagePose sync_image_pose_;
   SynchronizerImageOdom sync_image_odom_;
   SynchronizerCloudPose sync_cloud_pose_;
@@ -251,6 +261,9 @@ private:
   std::shared_ptr<message_filters::Subscriber<geometry_msgs::PoseStamped>> pose_sub_;
   std::shared_ptr<message_filters::Subscriber<nav_msgs::Odometry>> odom_sub_;
 
+  // Message filters for point cloud and tf
+  std::shared_ptr<tf2_ros::MessageFilter<sensor_msgs::PointCloud2>> tf_cloud_filter_;
+
   ros::Subscriber camera_info_sub_;
   ros::Subscriber cloud_only_sub_;
 
@@ -260,7 +273,7 @@ private:
 
   // TF transformation 
   tf2_ros::Buffer tfBuffer_;
-  std::unique_ptr<tf2_ros::TransformListener> tfListener_;
+  std::shared_ptr<tf2_ros::TransformListener> tfListener_;
 
   /* Benchmarking */
   std::shared_ptr<TimeBenchmark> time_benchmark_;
@@ -299,15 +312,18 @@ int GridMap::getInflateOccupancy(const Eigen::Vector3d &pos)
     return -1;
   }
 
-  // Number of cells to check
-  // mp_.occ_resolution_
-
-  // Search inflated space
-  octomap::OcTreeNode* node = octree_->search(pos(0), pos(1), pos(2));
-
-  if (node && octree_->isNodeOccupied(node)){
-    return 1;
+  // Search inflated space of given position
+  for(float x = pos(0) - mp_.inflation_; x <= pos(0) + mp_.inflation_; x += mp_.resolution_){
+    for(float y = pos(1) - mp_.inflation_; y <= pos(1) + mp_.inflation_; y += mp_.resolution_){
+      for(float z = pos(2) - mp_.inflation_; z <= pos(2) + mp_.inflation_; z += mp_.resolution_){
+        octomap::OcTreeNode* node = octree_->search(x, y, z);
+        if (node && octree_->isNodeOccupied(node)){
+          return 1;
+        }
+      }
+    }
   }
+
   return 0;
 }
 

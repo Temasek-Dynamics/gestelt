@@ -10,4 +10,4 @@ For simulation and deployment on a physical drone, PX4 is the firmware of choice
 Refer to [general_setup.md](./docs/general_setup.md)
 
 # Acknowledgements
-Plenty of inspiration was taken from the [EGO-Planner-V2 repo](https://github.com/ZJU-FAST-Lab/EGO-Planner-v2) from ZJU, without which, this would not have been possible.
+- Plenty of inspiration was taken from the [EGO-Planner-V2 repo](https://github.com/ZJU-FAST-Lab/EGO-Planner-v2) from ZJU, without which, this would not have been possible.

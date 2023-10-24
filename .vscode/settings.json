@@ -119,7 +119,9 @@
     "block": "cpp",
     "nodevisitor": "cpp",
     "timer": "cpp",
-    "uniform": "cpp"
+    "uniform": "cpp",
+    "codecvt": "cpp",
+    "future": "cpp"
   },
   "cmake.sourceDirectory": "/home/john/gestelt_ws/src/gestelt/gestelt_swarm/swarm_benchmark"
 }
