@@ -1,6 +1,11 @@
 # PX4 setup
 
 ## Building the firmware
+0. Building and uploading the bootloader
+```bash
+
+```
+
 1. Build the board firmware 
 ```bash 
 # Clone the custom version of PX4 
@@ -13,6 +18,17 @@ make flywoo_f405s_aio_default
 ```bash
 make flywoo_f405s_aio_default upload
 ```
+
+### Troubleshooting
+1. If you get the following error, `the git tag '137b7a4a8a' does not match the expected format.`:
+
+Make sure you create a git tag like so:
+```bash
+git tag v1.13.0-0.1.0
+```
+2. Unable to detect flywoo board from QGroundControl, and doing `dmesg` shows `USB disconnect` for the Flywoo FCU.
+- Install modemanager 
+
 
 ## Configuration
 ### PX4 Parameters
@@ -266,3 +282,4 @@ roslaunch px4 px4.launch
 
 cp ~/gestelt_ws/px4_bk/PX4-Autopilot/build/px4_sitl_default/bin/px4 ~/gestelt_ws/PX4-Autopilot/build/px4_sitl_default/bin/
 ```
+
