@@ -7,8 +7,12 @@
 
 - Can we put all the drones in the same world frame?
 
+- RVIZ GUI for take off and landing
+
 - Grid_map
+    - Messagefilter to align timestamp of point cloud and TF 
     - Remove all octree elements outside of local map bound
+    - Parallerization? Figure out how octomap uses openMP to parallerize ray casting
 
 - Actual deployment
     - Issues:

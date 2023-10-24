@@ -398,7 +398,7 @@ namespace lbfgs
     a = (u) - (v);                               \
     (qm) = (v) + (dv) / ((dv) - (du)) * a;
 
-    inline void *vecalloc(size_t size)
+    void *vecalloc(size_t size)
     {
         void *memblock = malloc(size);
         if (memblock)
@@ -408,17 +408,17 @@ namespace lbfgs
         return memblock;
     }
 
-    inline void vecfree(void *memblock)
+    void vecfree(void *memblock)
     {
         free(memblock);
     }
 
-    inline void veccpy(double *y, const double *x, const int n)
+    void veccpy(double *y, const double *x, const int n)
     {
         memcpy(y, x, sizeof(double) * n);
     }
 
-    inline void vecncpy(double *y, const double *x, const int n)
+    void vecncpy(double *y, const double *x, const int n)
     {
         int i;
 
@@ -428,7 +428,7 @@ namespace lbfgs
         }
     }
 
-    inline void vecadd(double *y, const double *x, const double c, const int n)
+    void vecadd(double *y, const double *x, const double c, const int n)
     {
         int i;
 
@@ -438,7 +438,7 @@ namespace lbfgs
         }
     }
 
-    inline void vecdiff(double *z, const double *x, const double *y, const int n)
+    void vecdiff(double *z, const double *x, const double *y, const int n)
     {
         int i;
 
@@ -448,7 +448,7 @@ namespace lbfgs
         }
     }
 
-    inline void vecscale(double *y, const double c, const int n)
+    void vecscale(double *y, const double c, const int n)
     {
         int i;
 
@@ -458,7 +458,7 @@ namespace lbfgs
         }
     }
 
-    inline void vecdot(double *s, const double *x, const double *y, const int n)
+    void vecdot(double *s, const double *x, const double *y, const int n)
     {
         int i;
         *s = 0.;
@@ -468,13 +468,13 @@ namespace lbfgs
         }
     }
 
-    inline void vec2norm(double *s, const double *x, const int n)
+    void vec2norm(double *s, const double *x, const int n)
     {
         vecdot(s, x, x, n);
         *s = (double)sqrt(*s);
     }
 
-    inline void vec2norminv(double *s, const double *x, const int n)
+    void vec2norminv(double *s, const double *x, const int n)
     {
         vec2norm(s, x, n);
         *s = (double)(1.0 / *s);
@@ -511,7 +511,7 @@ namespace lbfgs
      *      guaranteed sufficient decrease. ACM Transactions on Mathematical
      *      Software (TOMS), Vol 20, No 3, pp. 286-307, 1994.
      */
-    inline int update_trial_interval(double *x,
+    int update_trial_interval(double *x,
                                      double *fx,
                                      double *dx,
                                      double *y,
@@ -740,7 +740,7 @@ namespace lbfgs
         return 0;
     }
 
-    inline int line_search_morethuente(int n,
+    int line_search_morethuente(int n,
                                        double *x,
                                        double *f,
                                        double *g,
@@ -990,7 +990,7 @@ namespace lbfgs
      *
      *  @param  param       The pointer to the parameter structure.
      */
-    inline void lbfgs_load_default_parameters(lbfgs_parameter_t *param)
+    void lbfgs_load_default_parameters(lbfgs_parameter_t *param)
     {
         memcpy(param, &_default_param, sizeof(*param));
     }
@@ -1050,7 +1050,7 @@ namespace lbfgs
      *                      minimization process terminates without an error. A
      *                      non-zero value indicates an error.
      */
-    inline int lbfgs_optimize(int n,
+    int lbfgs_optimize(int n,
                               double *x,
                               double *ptr_fx,
                               lbfgs_evaluate_t proc_evaluate,
@@ -1386,7 +1386,7 @@ namespace lbfgs
      *
      *  @param err          A value returned by lbfgs_optimize().
      */
-    inline const char *lbfgs_strerror(int err)
+    const char *lbfgs_strerror(int err)
     {
         switch (err)
         {

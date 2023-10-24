@@ -141,7 +141,7 @@ public:
           nb_idx(1) = (cur_node->idx)(1) + dy;
           nb_idx(2) = (cur_node->idx)(2) + dz;
           
-          if (!isInMap(nb_idx) || isOccupied(nb_idx)){
+          if (!isInGlobalMap(nb_idx) || isOccupied(nb_idx)){
             continue;
           }
 
@@ -198,7 +198,7 @@ public:
   // Convert from 3d position to gridmap index
   bool posToIdx(const Vector3d& pos, Vector3i& idx) {
     ROS_INFO("PosToIdx: Pos(%f, %f, %f)", pos(0), pos(1), pos(2));
-    if (!isInMap(pos)){
+    if (!isInGlobalMap(pos)){
       return false;
     }
 
@@ -211,7 +211,7 @@ public:
   }
 
   bool idxToPos(const Vector3i& idx, Vector3d& pos){
-    if (!isInMap(idx)){
+    if (!isInGlobalMap(idx)){
       return false;
     }
 
@@ -240,7 +240,7 @@ public:
     return false;
   }
 
-  bool isInMap(const Vector3i& idx){
+  bool isInGlobalMap(const Vector3i& idx){
     if (idx(0) < 0 || idx(1) < 0 || idx(2) < 0)
     {
       return false;
@@ -257,7 +257,7 @@ public:
     return true;
   }
 
-  bool isInMap(const Vector3d& pos){
+  bool isInGlobalMap(const Vector3d& pos){
     if (pos(0) < map_origin_(0) + epsilon 
         || pos(1) < map_origin_(1) + epsilon 
         || pos(2) < map_origin_(2) + epsilon)

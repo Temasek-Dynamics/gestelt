@@ -28,27 +28,27 @@ namespace poly_traj
         Piece(double dur, const CoefficientMat &cMat)
             : duration(dur), coeffMat(cMat) {}
 
-        inline int getDim() const
+        int getDim() const
         {
             return 3;
         }
 
-        inline int getOrder() const
+        int getOrder() const
         {
             return 5;
         }
 
-        inline double getDuration() const
+        double getDuration() const
         {
             return duration;
         }
 
-        inline const CoefficientMat &getCoeffMat() const
+        const CoefficientMat &getCoeffMat() const
         {
             return coeffMat;
         }
 
-        inline VelCoefficientMat getVelCoeffMat() const
+        VelCoefficientMat getVelCoeffMat() const
         {
             VelCoefficientMat velCoeffMat;
             int n = 1;
@@ -60,7 +60,7 @@ namespace poly_traj
             return velCoeffMat;
         }
 
-        inline Eigen::Vector3d getPos(const double &t) const
+        Eigen::Vector3d getPos(const double &t) const
         {
             Eigen::Vector3d pos(0.0, 0.0, 0.0);
             double tn = 1.0;
@@ -72,7 +72,7 @@ namespace poly_traj
             return pos;
         }
 
-        inline Eigen::Vector3d getVel(const double &t) const
+        Eigen::Vector3d getVel(const double &t) const
         {
             Eigen::Vector3d vel(0.0, 0.0, 0.0);
             double tn = 1.0;
@@ -86,7 +86,7 @@ namespace poly_traj
             return vel;
         }
 
-        inline Eigen::Vector3d getAcc(const double &t) const
+        Eigen::Vector3d getAcc(const double &t) const
         {
             Eigen::Vector3d acc(0.0, 0.0, 0.0);
             double tn = 1.0;
@@ -102,7 +102,7 @@ namespace poly_traj
             return acc;
         }
 
-        inline Eigen::Vector3d getJer(const double &t) const
+        Eigen::Vector3d getJer(const double &t) const
         {
             Eigen::Vector3d jer(0.0, 0.0, 0.0);
             double tn = 1.0;
@@ -120,7 +120,7 @@ namespace poly_traj
             return jer;
         }
 
-        inline CoefficientMat normalizePosCoeffMat() const
+        CoefficientMat normalizePosCoeffMat() const
         {
             CoefficientMat nPosCoeffsMat;
             double t = 1.0;
@@ -132,7 +132,7 @@ namespace poly_traj
             return nPosCoeffsMat;
         }
 
-        inline VelCoefficientMat normalizeVelCoeffMat() const
+        VelCoefficientMat normalizeVelCoeffMat() const
         {
             VelCoefficientMat nVelCoeffMat;
             int n = 1;
@@ -146,7 +146,7 @@ namespace poly_traj
             return nVelCoeffMat;
         }
 
-        inline AccCoefficientMat normalizeAccCoeffMat() const
+        AccCoefficientMat normalizeAccCoeffMat() const
         {
             AccCoefficientMat nAccCoeffMat;
             int n = 2;
@@ -162,7 +162,7 @@ namespace poly_traj
             return nAccCoeffMat;
         }
 
-        inline double getMaxVelRate() const
+        double getMaxVelRate() const
         {
             Eigen::MatrixXd nVelCoeffMat = normalizeVelCoeffMat();
             Eigen::VectorXd coeff = RootFinder::polySqr(nVelCoeffMat.row(0)) +
@@ -211,7 +211,7 @@ namespace poly_traj
             }
         }
 
-        inline double getMaxAccRate() const
+        double getMaxAccRate() const
         {
             Eigen::MatrixXd nAccCoeffMat = normalizeAccCoeffMat();
             Eigen::VectorXd coeff = RootFinder::polySqr(nAccCoeffMat.row(0)) +
@@ -260,7 +260,7 @@ namespace poly_traj
             }
         }
 
-        inline bool checkMaxVelRate(const double &maxVelRate) const
+        bool checkMaxVelRate(const double &maxVelRate) const
         {
             double sqrMaxVelRate = maxVelRate * maxVelRate;
             if (getVel(0.0).squaredNorm() >= sqrMaxVelRate ||
@@ -280,7 +280,7 @@ namespace poly_traj
             }
         }
 
-        inline bool checkMaxAccRate(const double &maxAccRate) const
+        bool checkMaxAccRate(const double &maxAccRate) const
         {
             double sqrMaxAccRate = maxAccRate * maxAccRate;
             if (getAcc(0.0).squaredNorm() >= sqrMaxAccRate ||
@@ -302,7 +302,7 @@ namespace poly_traj
         }
 
         // GaaiLam
-        inline bool project_pt(const Eigen::Vector3d &pt,
+        bool project_pt(const Eigen::Vector3d &pt,
                                double &tt, Eigen::Vector3d &pro_pt)
         {
             // 2*(p-p0)^T * \dot{p} = 0
@@ -353,7 +353,7 @@ namespace poly_traj
             return min_dist > 0;
         }
 
-        inline bool intersection_plane(const Eigen::Vector3d p,
+        bool intersection_plane(const Eigen::Vector3d p,
                                        const Eigen::Vector3d v,
                                        double &tt, Eigen::Vector3d &pt) const
         {
@@ -405,12 +405,12 @@ namespace poly_traj
             }
         }
 
-        inline int getPieceNum() const
+        int getPieceNum() const
         {
             return pieces.size();
         }
 
-        inline Eigen::VectorXd getDurations() const
+        Eigen::VectorXd getDurations() const
         {
             int N = getPieceNum();
             Eigen::VectorXd durations(N);
@@ -421,7 +421,7 @@ namespace poly_traj
             return durations;
         }
 
-        inline double getTotalDuration() const
+        double getTotalDuration() const
         {
             int N = getPieceNum();
             double totalDuration = 0.0;
@@ -432,7 +432,7 @@ namespace poly_traj
             return totalDuration;
         }
 
-        inline Eigen::MatrixXd getPositions() const
+        Eigen::MatrixXd getPositions() const
         {
             int N = getPieceNum();
             Eigen::MatrixXd positions(3, N + 1);
@@ -444,68 +444,68 @@ namespace poly_traj
             return positions;
         }
 
-        inline const Piece &operator[](int i) const
+        const Piece &operator[](int i) const
         {
             return pieces[i];
         }
 
-        inline Piece &operator[](int i)
+        Piece &operator[](int i)
         {
             return pieces[i];
         }
 
-        inline void clear(void)
+        void clear(void)
         {
             pieces.clear();
             return;
         }
 
-        inline Pieces::const_iterator begin() const
+        Pieces::const_iterator begin() const
         {
             return pieces.begin();
         }
 
-        inline Pieces::const_iterator end() const
+        Pieces::const_iterator end() const
         {
             return pieces.end();
         }
 
-        inline Pieces::iterator begin()
+        Pieces::iterator begin()
         {
             return pieces.begin();
         }
 
-        inline Pieces::iterator end()
+        Pieces::iterator end()
         {
             return pieces.end();
         }
 
-        inline void reserve(const int &n)
+        void reserve(const int &n)
         {
             pieces.reserve(n);
             return;
         }
 
-        inline void emplace_back(const Piece &piece)
+        void emplace_back(const Piece &piece)
         {
             pieces.emplace_back(piece);
             return;
         }
 
-        inline void emplace_back(const double &dur,
+        void emplace_back(const double &dur,
                                  const CoefficientMat &cMat)
         {
             pieces.emplace_back(dur, cMat);
             return;
         }
 
-        inline void append(const Trajectory &traj)
+        void append(const Trajectory &traj)
         {
             pieces.insert(pieces.end(), traj.begin(), traj.end());
             return;
         }
 
-        inline int locatePieceIdx(double &t) const
+        int locatePieceIdx(double &t) const
         {
             int N = getPieceNum();
             int idx;
@@ -525,31 +525,31 @@ namespace poly_traj
             return idx;
         }
 
-        inline Eigen::Vector3d getPos(double t) const
+        Eigen::Vector3d getPos(double t) const
         {
             int pieceIdx = locatePieceIdx(t);
             return pieces[pieceIdx].getPos(t);
         }
 
-        inline Eigen::Vector3d getVel(double t) const
+        Eigen::Vector3d getVel(double t) const
         {
             int pieceIdx = locatePieceIdx(t);
             return pieces[pieceIdx].getVel(t);
         }
 
-        inline Eigen::Vector3d getAcc(double t) const
+        Eigen::Vector3d getAcc(double t) const
         {
             int pieceIdx = locatePieceIdx(t);
             return pieces[pieceIdx].getAcc(t);
         }
 
-        inline Eigen::Vector3d getJer(double t) const
+        Eigen::Vector3d getJer(double t) const
         {
             int pieceIdx = locatePieceIdx(t);
             return pieces[pieceIdx].getJer(t);
         }
 
-        inline Eigen::Vector3d getJuncPos(int juncIdx) const
+        Eigen::Vector3d getJuncPos(int juncIdx) const
         {
             if (juncIdx != getPieceNum())
             {
@@ -561,7 +561,7 @@ namespace poly_traj
             }
         }
 
-        inline Eigen::Vector3d getJuncVel(int juncIdx) const
+        Eigen::Vector3d getJuncVel(int juncIdx) const
         {
             if (juncIdx != getPieceNum())
             {
@@ -573,7 +573,7 @@ namespace poly_traj
             }
         }
 
-        inline Eigen::Vector3d getJuncAcc(int juncIdx) const
+        Eigen::Vector3d getJuncAcc(int juncIdx) const
         {
             if (juncIdx != getPieceNum())
             {
@@ -585,7 +585,7 @@ namespace poly_traj
             }
         }
 
-        inline double getMaxVelRate() const
+        double getMaxVelRate() const
         {
             int N = getPieceNum();
             double maxVelRate = -INFINITY;
@@ -598,7 +598,7 @@ namespace poly_traj
             return maxVelRate;
         }
 
-        inline double getMaxAccRate() const
+        double getMaxAccRate() const
         {
             int N = getPieceNum();
             double maxAccRate = -INFINITY;
@@ -611,7 +611,7 @@ namespace poly_traj
             return maxAccRate;
         }
 
-        inline bool checkMaxVelRate(const double &maxVelRate) const
+        bool checkMaxVelRate(const double &maxVelRate) const
         {
             int N = getPieceNum();
             bool feasible = true;
@@ -622,7 +622,7 @@ namespace poly_traj
             return feasible;
         }
 
-        inline bool checkMaxAccRate(const double &maxAccRate) const
+        bool checkMaxAccRate(const double &maxAccRate) const
         {
             int N = getPieceNum();
             bool feasible = true;
@@ -634,12 +634,12 @@ namespace poly_traj
         }
 
         // GaaiLam
-        inline Piece getPiece(int i) const
+        Piece getPiece(int i) const
         {
             return pieces[i];
         }
 
-        inline bool project_pt(const Eigen::Vector3d &pt,
+        bool project_pt(const Eigen::Vector3d &pt,
                                int &ii, double &tt, Eigen::Vector3d &pro_pt)
         {
             bool find_project_pt = false;
@@ -661,7 +661,7 @@ namespace poly_traj
             }
             return find_project_pt;
         }
-        inline bool intersection_plane(const Eigen::Vector3d p,
+        bool intersection_plane(const Eigen::Vector3d p,
                                        const Eigen::Vector3d v,
                                        int &ii, double &tt, Eigen::Vector3d &pt)
         {
@@ -677,7 +677,7 @@ namespace poly_traj
             return false;
         }
 
-        inline std::vector<Eigen::Vector3d> way_points()
+        std::vector<Eigen::Vector3d> way_points()
         {
             std::vector<Eigen::Vector3d> pts;
             for (int i = 0; i < getPieceNum(); ++i)
@@ -695,7 +695,7 @@ namespace poly_traj
          * @return std::pair<int, double> Returns a pair with index as the first value 
          * and ratio of current time to the whole piece as the second value
          */
-        inline std::pair<int, double> locatePieceIdxWithRatio(double &t) const
+        std::pair<int, double> locatePieceIdxWithRatio(double &t) const
         {
             int N = getPieceNum();
             int idx;
@@ -720,7 +720,7 @@ namespace poly_traj
             return idx_ratio;
         }
 
-        inline Eigen::Vector3d getPoswithIdxRatio(double t, std::pair<int, double> &idx_ratio) const
+        Eigen::Vector3d getPoswithIdxRatio(double t, std::pair<int, double> &idx_ratio) const
         {
             idx_ratio = locatePieceIdxWithRatio(t);
             return pieces[idx_ratio.first].getPos(t);
@@ -739,7 +739,7 @@ namespace poly_traj
     public:
         // The size of A, as well as the lower/upper
         // banded width p/q are needed
-        inline void create(const int &n, const int &p, const int &q)
+        void create(const int &n, const int &p, const int &q)
         {
             // In case of re-creating before destroying
             destroy();
@@ -752,7 +752,7 @@ namespace poly_traj
             return;
         }
 
-        inline void destroy()
+        void destroy()
         {
             if (ptrData != nullptr)
             {
@@ -762,7 +762,7 @@ namespace poly_traj
             return;
         }
 
-        inline void operator=(const BandedSystem &bs)
+        void operator=(const BandedSystem &bs)
         {
             ptrData = nullptr;
             create(bs.N, bs.lowerBw, bs.upperBw);
@@ -777,26 +777,26 @@ namespace poly_traj
 
     public:
         // Reset the matrix to zero
-        inline void reset(void)
+        void reset(void)
         {
             std::fill_n(ptrData, N * (lowerBw + upperBw + 1), 0.0);
             return;
         }
 
         // The band matrix is stored as suggested in "Matrix Computation"
-        inline const double &operator()(const int &i, const int &j) const
+        const double &operator()(const int &i, const int &j) const
         {
             return ptrData[(i - j + upperBw) * N + j];
         }
 
-        inline double &operator()(const int &i, const int &j)
+        double &operator()(const int &i, const int &j)
         {
             return ptrData[(i - j + upperBw) * N + j];
         }
 
         // This function conducts banded LU factorization in place
         // Note that NO PIVOT is applied on the matrix "A" for efficiency!!!
-        inline void factorizeLU()
+        void factorizeLU()
         {
             int iM, jM;
             double cVl;
@@ -833,7 +833,7 @@ namespace poly_traj
         // This function solves Ax=b, then stores x in b
         // The input b is required to be N*m, i.e.,
         // m vectors to be solved.
-        inline void solve(Eigen::MatrixXd &b) const
+        void solve(Eigen::MatrixXd &b) const
         {
             int iM;
             for (int j = 0; j <= N - 1; j++)
@@ -865,7 +865,7 @@ namespace poly_traj
         // This function solves ATx=b, then stores x in b
         // The input b is required to be N*m, i.e.,
         // m vectors to be solved.
-        inline void solveAdj(Eigen::MatrixXd &b) const
+        void solveAdj(Eigen::MatrixXd &b) const
         {
             int iM;
             for (int j = 0; j <= N - 1; j++)
@@ -900,7 +900,7 @@ namespace poly_traj
     class MinJerkOpt
     {
     public:
-        inline void operator=(const MinJerkOpt &mjo)
+        void operator=(const MinJerkOpt &mjo)
         {
             N = mjo.N;
             headPVA = mjo.headPVA;
@@ -933,7 +933,7 @@ namespace poly_traj
 
     private:
         template <typename EIGENVEC>
-        inline void addGradJbyT(EIGENVEC &gdT) const
+        void addGradJbyT(EIGENVEC &gdT) const
         {
             for (int i = 0; i < N; i++)
             {
@@ -948,7 +948,7 @@ namespace poly_traj
         }
 
         template <typename EIGENMAT>
-        inline void addGradJbyC(EIGENMAT &gdC) const
+        void addGradJbyC(EIGENMAT &gdC) const
         {
             for (int i = 0; i < N; i++)
             {
@@ -965,14 +965,14 @@ namespace poly_traj
             return;
         }
 
-        inline void solveAdjGradC(Eigen::MatrixXd &gdC) const
+        void solveAdjGradC(Eigen::MatrixXd &gdC) const
         {
             A.solveAdj(gdC);
             return;
         }
 
         template <typename EIGENVEC>
-        inline void addPropCtoT(const Eigen::MatrixXd &adjGdC, EIGENVEC &gdT) const
+        void addPropCtoT(const Eigen::MatrixXd &adjGdC, EIGENVEC &gdT) const
         {
             Eigen::MatrixXd B1(6, 3), B2(3, 3);
 
@@ -1022,7 +1022,7 @@ namespace poly_traj
         }
 
         template <typename EIGENMAT>
-        inline void addPropCtoP(const Eigen::MatrixXd &adjGdC, EIGENMAT &gdInP) const
+        void addPropCtoP(const Eigen::MatrixXd &adjGdC, EIGENMAT &gdInP) const
         {
             for (int i = 0; i < N - 1; i++)
             {
@@ -1033,7 +1033,7 @@ namespace poly_traj
         }
 
         template <typename EIGENVEC>
-        inline void addTimeIntPenalty(const Eigen::VectorXi cons,
+        void addTimeIntPenalty(const Eigen::VectorXi cons,
                                       const Eigen::VectorXi &idxHs,
                                       const std::vector<Eigen::MatrixXd> &cfgHs,
                                       const double vmax,
@@ -1140,7 +1140,7 @@ namespace poly_traj
         }
 
     public:
-        inline void reset(const Eigen::Matrix3d &headState,
+        void reset(const Eigen::Matrix3d &headState,
                           const Eigen::Matrix3d &tailState,
                           const int &pieceNum)
         {
@@ -1155,7 +1155,7 @@ namespace poly_traj
             return;
         }
 
-        inline void generate(const Eigen::MatrixXd &inPs,
+        void generate(const Eigen::MatrixXd &inPs,
                              const Eigen::VectorXd &ts)
         {
             if (inPs.cols() == 0)
@@ -1264,32 +1264,32 @@ namespace poly_traj
             }
         }
 
-        inline const Eigen::MatrixXd &get_b() const
+        const Eigen::MatrixXd &get_b() const
         {
             return b;
         }
 
-        inline const Eigen::VectorXd &get_T1() const
+        const Eigen::VectorXd &get_T1() const
         {
             return T1;
         }
 
-        inline Eigen::MatrixXd &get_gdC()
+        Eigen::MatrixXd &get_gdC()
         {
             return gdC;
         }
 
-        // inline Eigen::MatrixXd get_gdT() const
+        // Eigen::MatrixXd get_gdT() const
         // {
         //     return gdT;
         // }
 
-        // inline Eigen::MatrixXd get_gdT(size_t i) const
+        // Eigen::MatrixXd get_gdT(size_t i) const
         // {
         //     return gdT(i);
         // }
 
-        inline double getTrajJerkCost() const
+        double getTrajJerkCost() const
         {
             double objective = 0.0;
             for (int i = 0; i < N; i++)
@@ -1304,7 +1304,7 @@ namespace poly_traj
             return objective;
         }
 
-        inline Trajectory getTraj(void) const
+        Trajectory getTraj(void) const
         {
             Trajectory traj;
             traj.reserve(N);
@@ -1315,7 +1315,7 @@ namespace poly_traj
             return traj;
         }
 
-        inline Eigen::MatrixXd getInitConstraintPoints(const int K) const
+        Eigen::MatrixXd getInitConstraintPoints(const int K) const
         {
             Eigen::MatrixXd pts(3, N * K + 1);
             Eigen::Vector3d pos;
@@ -1354,7 +1354,7 @@ namespace poly_traj
         }
 
         template <typename EIGENVEC, typename EIGENMAT>
-        inline void getGrad2TP(EIGENVEC &gdT,
+        void getGrad2TP(EIGENVEC &gdT,
                                EIGENMAT &gdInPs)
         {
             solveAdjGradC(gdC);
@@ -1363,7 +1363,7 @@ namespace poly_traj
         }
 
         template <typename EIGENVEC>
-        inline void initGradCost(EIGENVEC &gdT,
+        void initGradCost(EIGENVEC &gdT,
                                  double &cost)
         {
             // printf( "gdInPs=%d\n", gdInPs.size() );
@@ -1376,7 +1376,7 @@ namespace poly_traj
         }
 
         template <typename EIGENVEC, typename EIGENMAT>
-        inline void evalTrajCostGrad(const Eigen::VectorXi &cons,
+        void evalTrajCostGrad(const Eigen::VectorXi &cons,
                                      const Eigen::VectorXi &idxHs,
                                      const std::vector<Eigen::MatrixXd> &cfgHs,
                                      const double &vmax,

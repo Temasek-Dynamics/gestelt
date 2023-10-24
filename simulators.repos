@@ -3,10 +3,6 @@ repositories:
     type: git
     url: https://github.com/PX4/PX4-Autopilot.git
     version: bb0f2875a94960a4c7a937e9786946b10415e252
-  ../simple_quad_simulator:
-    type: git
-    url: https://github.com/JohnTGZ/simple_quad_simulator.git
-    version: master
   ../vrpn_client_ros:
     type: git
     url: https://github.com/ros-drivers/vrpn_client_ros.git

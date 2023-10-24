@@ -5,9 +5,9 @@
     <!-- Drone formation params -->
     <arg name="num_drones"/>
     <!-- Map params -->
-    <arg name="map_size_x_"/>
-    <arg name="map_size_y_"/>
-    <arg name="map_size_z_"/>
+    <arg name="map_size_x"/>
+    <arg name="map_size_y"/>
+    <arg name="map_size_z"/>
     <arg name="obj_num_set"/>
     <!-- Sensor input type -->
     <arg name="POSE_TYPE"/>
@@ -78,13 +78,14 @@
         <remap from="~grid_map/depth" to = "$(arg depth_topic)"/>
         <remap from="~grid_map/camera_info" to="/drone$(arg drone_id)/camera/depth/camera_info"/>
         <!-- Maps params -->
+        <param name="~grid_map/sensor/max_range" value="5.0"/>
         <param name="grid_map/ground_height" value="-0.25"/>
-        <param name="grid_map/map_size_x" value="$(arg map_size_x_)" />
-        <param name="grid_map/map_size_y" value="$(arg map_size_y_)" />
-        <param name="grid_map/map_size_z" value="$(arg map_size_z_)" />
-        <param name="grid_map/local_map_size_x" value="2.5" />
-        <param name="grid_map/local_map_size_y" value="2.5" />
-        <param name="grid_map/local_map_size_z" value="3.5" />
+        <param name="grid_map/map_size_x" value="$(arg map_size_x)" />
+        <param name="grid_map/map_size_y" value="$(arg map_size_y)" />
+        <param name="grid_map/map_size_z" value="$(arg map_size_z)" />
+        <param name="grid_map/local_map_size_x" value="1.5" />
+        <param name="grid_map/local_map_size_y" value="1.5" />
+        <param name="grid_map/local_map_size_z" value="2.5" />
 
         <param name="grid_map/global_frame" value="$(arg global_frame)"/>
         <param name="grid_map/uav_origin_frame" value="$(arg drone_origin_frame)"/>

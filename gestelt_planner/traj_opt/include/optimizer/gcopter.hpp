@@ -28,27 +28,27 @@ public:
     Piece(double dur, const CoefficientMat &cMat)
         : duration(dur), coeffMat(cMat) {}
 
-    inline int getDim() const
+    int getDim() const
     {
         return 3;
     }
 
-    inline int getOrder() const
+    int getOrder() const
     {
         return 3;
     }
 
-    inline double getDuration() const
+    double getDuration() const
     {
         return duration;
     }
 
-    inline const CoefficientMat &getCoeffMat() const
+    const CoefficientMat &getCoeffMat() const
     {
         return coeffMat;
     }
 
-    inline Eigen::Vector3d getPos(const double &t) const
+    Eigen::Vector3d getPos(const double &t) const
     {
         return coeffMat.col(3) +
                t * (coeffMat.col(2) +
@@ -56,25 +56,25 @@ public:
                          t * coeffMat.col(0)));
     }
 
-    inline Eigen::Vector3d getVel(const double &t) const
+    Eigen::Vector3d getVel(const double &t) const
     {
         return coeffMat.col(2) +
                (2.0 * t) * (coeffMat.col(1) +
                             (1.5 * t) * coeffMat.col(0));
     }
 
-    inline Eigen::Vector3d getAcc(const double &t) const
+    Eigen::Vector3d getAcc(const double &t) const
     {
         return 2.0 * (coeffMat.col(1) +
                       (3.0 * t) * coeffMat.col(0));
     }
 
-    inline Eigen::Vector3d getJer(const double &t) const
+    Eigen::Vector3d getJer(const double &t) const
     {
         return 6.0 * coeffMat.col(0);
     }
 
-    inline double getMaxVelRate() const
+    double getMaxVelRate() const
     {
         VelCoefficientMat nVelCoeffMat;
         nVelCoeffMat.col(2) = duration * coeffMat.col(2);
@@ -118,17 +118,17 @@ public:
         }
     }
 
-    inline double getMaxAccRate() const
+    double getMaxAccRate() const
     {
         return std::sqrt(std::max(getAcc(0.0).squaredNorm(), getAcc(duration).squaredNorm()));
     }
 
-    inline double getMaxJerRate() const
+    double getMaxJerRate() const
     {
         return getJer(0.0).norm();
     }
 
-    inline bool checkMaxVelRate(const double &maxVelRate) const
+    bool checkMaxVelRate(const double &maxVelRate) const
     {
         double sqrMaxVelRate = maxVelRate * maxVelRate;
         if (getVel(0.0).squaredNorm() >= sqrMaxVelRate ||
@@ -151,7 +151,7 @@ public:
         }
     }
 
-    inline bool checkMaxAccRate(const double &maxAccRate) const
+    bool checkMaxAccRate(const double &maxAccRate) const
     {
         return getMaxAccRate() <= maxAccRate;
     }
@@ -177,12 +177,12 @@ public:
         }
     }
 
-    inline int getPieceNum() const
+    int getPieceNum() const
     {
         return pieces.size();
     }
 
-    inline Eigen::VectorXd getDurations() const
+    Eigen::VectorXd getDurations() const
     {
         int N = getPieceNum();
         Eigen::VectorXd durations(N);
@@ -193,7 +193,7 @@ public:
         return durations;
     }
 
-    inline double getTotalDuration() const
+    double getTotalDuration() const
     {
         int N = getPieceNum();
         double totalDuration = 0.0;
@@ -204,7 +204,7 @@ public:
         return totalDuration;
     }
 
-    inline Eigen::MatrixXd getPositions() const
+    Eigen::MatrixXd getPositions() const
     {
         int N = getPieceNum();
         Eigen::MatrixXd positions(3, N + 1);
@@ -216,68 +216,68 @@ public:
         return positions;
     }
 
-    inline const Piece &operator[](int i) const
+    const Piece &operator[](int i) const
     {
         return pieces[i];
     }
 
-    inline Piece &operator[](int i)
+    Piece &operator[](int i)
     {
         return pieces[i];
     }
 
-    inline void clear(void)
+    void clear(void)
     {
         pieces.clear();
         return;
     }
 
-    inline Pieces::const_iterator begin() const
+    Pieces::const_iterator begin() const
     {
         return pieces.begin();
     }
 
-    inline Pieces::const_iterator end() const
+    Pieces::const_iterator end() const
     {
         return pieces.end();
     }
 
-    inline Pieces::iterator begin()
+    Pieces::iterator begin()
     {
         return pieces.begin();
     }
 
-    inline Pieces::iterator end()
+    Pieces::iterator end()
     {
         return pieces.end();
     }
 
-    inline void reserve(const int &n)
+    void reserve(const int &n)
     {
         pieces.reserve(n);
         return;
     }
 
-    inline void emplace_back(const Piece &piece)
+    void emplace_back(const Piece &piece)
     {
         pieces.emplace_back(piece);
         return;
     }
 
-    inline void emplace_back(const double &dur,
+    void emplace_back(const double &dur,
                              const CoefficientMat &cMat)
     {
         pieces.emplace_back(dur, cMat);
         return;
     }
 
-    inline void append(const Trajectory &traj)
+    void append(const Trajectory &traj)
     {
         pieces.insert(pieces.end(), traj.begin(), traj.end());
         return;
     }
 
-    inline int locatePieceIdx(double &t) const
+    int locatePieceIdx(double &t) const
     {
         int N = getPieceNum(); // Get total size of pieces
         int idx;
@@ -298,31 +298,31 @@ public:
     }
 
     // Get position at time t
-    inline Eigen::Vector3d getPos(double t) const
+    Eigen::Vector3d getPos(double t) const
     {
         int pieceIdx = locatePieceIdx(t);
         return pieces[pieceIdx].getPos(t);
     }
 
-    inline Eigen::Vector3d getVel(double t) const
+    Eigen::Vector3d getVel(double t) const
     {
         int pieceIdx = locatePieceIdx(t);
         return pieces[pieceIdx].getVel(t);
     }
 
-    inline Eigen::Vector3d getAcc(double t) const
+    Eigen::Vector3d getAcc(double t) const
     {
         int pieceIdx = locatePieceIdx(t);
         return pieces[pieceIdx].getAcc(t);
     }
 
-    inline Eigen::Vector3d getJer(double t) const
+    Eigen::Vector3d getJer(double t) const
     {
         int pieceIdx = locatePieceIdx(t);
         return pieces[pieceIdx].getJer(t);
     }
 
-    inline Eigen::Vector3d getJuncPos(int juncIdx) const
+    Eigen::Vector3d getJuncPos(int juncIdx) const
     {
         if (juncIdx != getPieceNum())
         {
@@ -334,7 +334,7 @@ public:
         }
     }
 
-    inline Eigen::Vector3d getJuncVel(int juncIdx) const
+    Eigen::Vector3d getJuncVel(int juncIdx) const
     {
         if (juncIdx != getPieceNum())
         {
@@ -346,7 +346,7 @@ public:
         }
     }
 
-    inline Eigen::Vector3d getJuncAcc(int juncIdx) const
+    Eigen::Vector3d getJuncAcc(int juncIdx) const
     {
         if (juncIdx != getPieceNum())
         {
@@ -358,7 +358,7 @@ public:
         }
     }
 
-    inline double getMaxVelRate() const
+    double getMaxVelRate() const
     {
         int N = getPieceNum();
         double maxVelRate = -INFINITY;
@@ -371,7 +371,7 @@ public:
         return maxVelRate;
     }
 
-    inline double getMaxAccRate() const
+    double getMaxAccRate() const
     {
         int N = getPieceNum();
         double maxAccRate = -INFINITY;
@@ -384,7 +384,7 @@ public:
         return maxAccRate;
     }
 
-    inline bool checkMaxVelRate(const double &maxVelRate) const
+    bool checkMaxVelRate(const double &maxVelRate) const
     {
         int N = getPieceNum();
         bool feasible = true;
@@ -395,7 +395,7 @@ public:
         return feasible;
     }
 
-    inline bool checkMaxAccRate(const double &maxAccRate) const
+    bool checkMaxAccRate(const double &maxAccRate) const
     {
         int N = getPieceNum();
         bool feasible = true;
@@ -417,7 +417,7 @@ class BandedSystem
 public:
     // The size of A, as well as the lower/upper
     // banded width p/q are needed
-    inline void create(const int &n, const int &p, const int &q)
+    void create(const int &n, const int &p, const int &q)
     {
         // In case of re-creating before destroying
         destroy();
@@ -430,7 +430,7 @@ public:
         return;
     }
 
-    inline void destroy()
+    void destroy()
     {
         if (ptrData != nullptr)
         {
@@ -449,26 +449,26 @@ private:
 
 public:
     // Reset the matrix to zero
-    inline void reset(void)
+    void reset(void)
     {
         std::fill_n(ptrData, N * (lowerBw + upperBw + 1), 0.0);
         return;
     }
 
     // The band matrix is stored as suggested in "Matrix Computation"
-    inline const double &operator()(const int &i, const int &j) const
+    const double &operator()(const int &i, const int &j) const
     {
         return ptrData[(i - j + upperBw) * N + j];
     }
 
-    inline double &operator()(const int &i, const int &j)
+    double &operator()(const int &i, const int &j)
     {
         return ptrData[(i - j + upperBw) * N + j];
     }
 
     // This function conducts banded LU factorization in place
     // Note that NO PIVOT is applied on the matrix "A" for efficiency!!!
-    inline void factorizeLU()
+    void factorizeLU()
     {
         int iM, jM;
         double cVl;
@@ -505,7 +505,7 @@ public:
     // This function solves Ax=b, then stores x in b
     // The input b is required to be N*m, i.e.,
     // m vectors to be solved.
-    inline void solve(Eigen::MatrixXd &b) const
+    void solve(Eigen::MatrixXd &b) const
     {
         int iM;
         for (int j = 0; j <= N - 1; j++)
@@ -537,7 +537,7 @@ public:
     // This function solves ATx=b, then stores x in b
     // The input b is required to be N*m, i.e.,
     // m vectors to be solved.
-    inline void solveAdj(Eigen::MatrixXd &b) const
+    void solveAdj(Eigen::MatrixXd &b) const
     {
         int iM;
         for (int j = 0; j <= N - 1; j++)
@@ -588,7 +588,7 @@ private:
 
 private:
     template <typename EIGENVEC>
-    inline void addGradJbyT(EIGENVEC &gdT) const
+    void addGradJbyT(EIGENVEC &gdT) const
     {
         for (int i = 0; i < N; i++)
         {
@@ -600,7 +600,7 @@ private:
     }
 
     template <typename EIGENMAT>
-    inline void addGradJbyC(EIGENMAT &gdC) const
+    void addGradJbyC(EIGENMAT &gdC) const
     {
         for (int i = 0; i < N; i++)
         {
@@ -613,14 +613,14 @@ private:
         return;
     }
 
-    inline void solveAdjGradC(Eigen::MatrixXd &gdC) const
+    void solveAdjGradC(Eigen::MatrixXd &gdC) const
     {
         A.solveAdj(gdC);
         return;
     }
 
     template <typename EIGENVEC>
-    inline void addPropCtoT(const Eigen::MatrixXd &adjGdC, EIGENVEC &gdT) const
+    void addPropCtoT(const Eigen::MatrixXd &adjGdC, EIGENVEC &gdT) const
     {
 
         Eigen::Matrix<double, 4, 3> B1;
@@ -659,7 +659,7 @@ private:
     }
 
     template <typename EIGENMAT>
-    inline void addPropCtoP(const Eigen::MatrixXd &adjGdC, EIGENMAT &gdInP) const
+    void addPropCtoP(const Eigen::MatrixXd &adjGdC, EIGENMAT &gdInP) const
     {
         for (int i = 0; i < N - 1; i++)
         {
@@ -669,7 +669,7 @@ private:
     }
 
     template <typename EIGENVEC>
-    inline void addTimeIntPenalty(const Eigen::VectorXi cons,
+    void addTimeIntPenalty(const Eigen::VectorXi cons,
                                   const Eigen::VectorXi &idxHs,
                                   const std::vector<Eigen::MatrixXd> &cfgHs,
                                   const double vmax,
@@ -774,7 +774,7 @@ private:
     }
 
 public:
-    inline void reset(const Eigen::Matrix<double, 3, 2> &headState,
+    void reset(const Eigen::Matrix<double, 3, 2> &headState,
                       const Eigen::Matrix<double, 3, 2> &tailState,
                       const int &pieceNum)
     {
@@ -788,7 +788,7 @@ public:
         return;
     }
 
-    inline void generate(const Eigen::MatrixXd &inPs,
+    void generate(const Eigen::MatrixXd &inPs,
                          const Eigen::VectorXd &ts)
     {
         T1 = ts;
@@ -842,7 +842,7 @@ public:
         return;
     }
 
-    inline double getTrajAccCost() const
+    double getTrajAccCost() const
     {
         double objective = 0.0;
         for (int i = 0; i < N; i++)
@@ -855,7 +855,7 @@ public:
     }
 
     template <typename EIGENVEC, typename EIGENMAT>
-    inline void evalTrajCostGrad(const Eigen::VectorXi &cons,
+    void evalTrajCostGrad(const Eigen::VectorXi &cons,
                                  const Eigen::VectorXi &idxHs,
                                  const std::vector<Eigen::MatrixXd> &cfgHs,
                                  const double &vmax,
@@ -880,7 +880,7 @@ public:
         addPropCtoP(gdC, gdInPs);
     }
 
-    inline Trajectory getTraj(void) const
+    Trajectory getTraj(void) const
     {
         Trajectory traj;
         traj.reserve(N);
@@ -945,7 +945,7 @@ public:
 
 // private:
 //     template <typename EIGENVEC>
-//     static inline void forwardT(const EIGENVEC &t,
+//     static void forwardT(const EIGENVEC &t,
 //                                 Eigen::VectorXd &vecT,
 //                                 bool soft,
 //                                 const double &sT,
@@ -998,7 +998,7 @@ public:
 //     }
 
 //     template <typename EIGENVEC>
-//     static inline void backwardT(const Eigen::VectorXd &vecT,
+//     static void backwardT(const Eigen::VectorXd &vecT,
 //                                  EIGENVEC &t,
 //                                  bool soft,
 //                                  bool c2)
@@ -1043,7 +1043,7 @@ public:
 //     }
 
 //     template <typename EIGENVEC>
-//     static inline void forwardP(const EIGENVEC &p,
+//     static void forwardP(const EIGENVEC &p,
 //                                 const Eigen::VectorXi &idVs,
 //                                 const std::vector<Eigen::MatrixXd> &cfgPolyVs,
 //                                 Eigen::MatrixXd &inP)
@@ -1063,7 +1063,7 @@ public:
 //         return;
 //     }
 
-//     static inline double objectiveNLS(void *ptrPOBs,
+//     static double objectiveNLS(void *ptrPOBs,
 //                                       const double *x,
 //                                       double *grad,
 //                                       const int n)
@@ -1091,7 +1091,7 @@ public:
 //     }
 
 //     template <typename EIGENVEC>
-//     static inline void backwardP(const Eigen::MatrixXd &inP,
+//     static void backwardP(const Eigen::MatrixXd &inP,
 //                                  const Eigen::VectorXi &idVs,
 //                                  const std::vector<Eigen::MatrixXd> &cfgPolyVs,
 //                                  EIGENVEC &p)
@@ -1131,7 +1131,7 @@ public:
 //     }
 
 //     template <typename EIGENVEC>
-//     static inline void addLayerTGrad(const Eigen::VectorXd &t,
+//     static void addLayerTGrad(const Eigen::VectorXd &t,
 //                                      EIGENVEC &gradT,
 //                                      bool soft,
 //                                      const double &sT,
@@ -1212,7 +1212,7 @@ public:
 //     }
 
 //     template <typename EIGENVEC_0, typename EIGENVEC_1>
-//     static inline void addLayerPGrad(EIGENVEC_0 &p,
+//     static void addLayerPGrad(EIGENVEC_0 &p,
 //                                      const Eigen::VectorXi &idVs,
 //                                      const std::vector<Eigen::MatrixXd> &cfgPolyVs,
 //                                      const Eigen::MatrixXd &gradInPs,
@@ -1245,7 +1245,7 @@ public:
 //         return;
 //     }
 
-//     static inline void splitToFineT(const Eigen::VectorXd &cT,
+//     static void splitToFineT(const Eigen::VectorXd &cT,
 //                                     const Eigen::VectorXi &intervs,
 //                                     Eigen::VectorXd &fT)
 //     {
@@ -1261,7 +1261,7 @@ public:
 //         return;
 //     }
 
-//     static inline void mergeToCoarseGradT(const Eigen::VectorXi &intervs,
+//     static void mergeToCoarseGradT(const Eigen::VectorXi &intervs,
 //                                           Eigen::VectorXd &fineGdT)
 //     {
 //         int M = intervs.size();
@@ -1276,7 +1276,7 @@ public:
 //         return;
 //     }
 
-//     static inline double objectiveFunc(void *ptrObj,
+//     static double objectiveFunc(void *ptrObj,
 //                                        const double *x,
 //                                        double *grad,
 //                                        const int n)
@@ -1317,7 +1317,7 @@ public:
 //     }
 
 // public:
-//     inline void gridMesh(const Eigen::Matrix<double, 3, 2> &iState,
+//     void gridMesh(const Eigen::Matrix<double, 3, 2> &iState,
 //                          const Eigen::Matrix<double, 3, 2> &fState,
 //                          const std::vector<Eigen::MatrixXd> &cfgPolyVs,
 //                          const double &gridResolution,
@@ -1345,7 +1345,7 @@ public:
 //         return;
 //     }
 
-//     inline bool extractVs(const std::vector<Eigen::MatrixXd> &hPs,
+//     bool extractVs(const std::vector<Eigen::MatrixXd> &hPs,
 //                           std::vector<Eigen::MatrixXd> &vPs) const
 //     {
 //         const int M = hPs.size() - 1;
@@ -1394,7 +1394,7 @@ public:
 //         return true;
 //     }
 
-//     inline bool setup(const double &rh,
+//     bool setup(const double &rh,
 //                       const double &st,
 //                       const Eigen::MatrixXd &iniState,
 //                       const Eigen::MatrixXd &finState,
@@ -1490,7 +1490,7 @@ public:
 //         return true;
 //     }
 
-//     inline void setInitial(const std::vector<Eigen::MatrixXd> &cfgPolyVs,
+//     void setInitial(const std::vector<Eigen::MatrixXd> &cfgPolyVs,
 //                            const Eigen::VectorXi &intervs,
 //                            Eigen::VectorXd &vecT,
 //                            Eigen::MatrixXd &vecInP) const
@@ -1532,7 +1532,7 @@ public:
 //         return;
 //     }
 
-//     inline double optimize(Trajectory &traj,
+//     double optimize(Trajectory &traj,
 //                            const double &relCostTol)
 //     {
 //         double *x = new double[dimFreeT + dimFreeP];
