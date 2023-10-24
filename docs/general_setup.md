@@ -15,9 +15,11 @@ export ROS_DISTRO="noetic"
 sudo apt install ros-${ROS_DISTRO}-mavlink ros-${ROS_DISTRO}-mavros ros-${ROS_DISTRO}-mavros-msgs ros-${ROS_DISTRO}-mavros-extras -y
 # Install external dependencies
 sudo apt install git build-essential tmux python3-catkin-tools python3-vcstool xmlstarlet -y
-sudo apt install libopencv-dev ros-${ROS_DISTRO}-cv-bridge ros-${ROS_DISTRO}-pcl-ros libeigen3-dev -y
+sudo apt install libopencv-dev ros-${ROS_DISTRO}-cv-bridge ros-${ROS_DISTRO}-pcl-ros libeigen3-dev libgoogle-glog-dev -y
 wget https://raw.githubusercontent.com/mavlink/mavros/master/mavros/scripts/install_geographiclib_datasets.sh
 sudo bash ./install_geographiclib_datasets.sh
+# Install tools for VICON 
+sudo apt-get install ros-${ROS_DISTRO}-vrpn-client-ros
 # Extra tools for debugging
 sudo snap install plotjuggler
 ```
@@ -29,6 +31,7 @@ cd ~/gestelt_ws/src
 git clone https://github.com/JohnTGZ/gestelt.git
 cd gestelt
 vcs import < simulators.repos --recursive
+vcs import < thirdparty.repos --recursive
 ```
 
 3. Install PX4 firmware
@@ -40,7 +43,7 @@ bash ./Tools/setup/ubuntu.sh
 DONT_RUN=1 make px4_sitl_default gazebo-classic
 cp -r ~/gestelt_ws/src/gestelt/gestelt_bringup/simulation/models/raynor ~/gestelt_ws/PX4-Autopilot/Tools/simulation/gazebo-classic/sitl_gazebo-classic/models/
 
-# If you screw up the PX4 Autopilot build at any point, clean up the build files via the following command:
+# IF you screw up the PX4 Autopilot build at any point, clean up the build files via the following command:
 make distclean
 ```
 
@@ -65,13 +68,15 @@ Refer to [px4_setup](./px4_setup.md) for more instructions.
 Use the vicon if you would like to get the vehicle ground truth. Refer to [vicon_setup](./vicon_setup.md) for more instructions.
 
 ## Quick start
+1. Start up simulation scripts
 ```bash
-cd ~/gestelt_ws/src/gestelt_bringup/gestelt_bringup/scripts
-# Simulation using simple quad simulator
-./simple_sim.sh
-# Simulation using gazebo
-./gazebo_sim_multi_uav.sh
+# Multi vehicle simulation using gazebo
+~/gestelt_ws/src/gestelt/gestelt_bringup/scripts/gz_multi_uav/gz_sim_multi_uav.sh
+# Single vehicle simulation using gazebo
+~/gestelt_ws/src/gestelt/gestelt_bringup/scripts/gz_single_uav/gz_sim_single_uav.sh
+
 ```
+2. This should start up a Tmux terminal, and one of the windows should show an option to run the trajectory server.
 
 ```bash
 # Taking off
@@ -82,11 +87,6 @@ rostopic pub /traj_server_event std_msgs/Int8 "data: 1" --once
 rostopic pub /traj_server_event std_msgs/Int8 "data: 2" --once
 # Switch to hover mode
 rostopic pub /traj_server_event std_msgs/Int8 "data: 3" --once
-
-TAKEOFF_E,        // 0
-LAND_E,           // 1
-MISSION_E,        // 2
-HOVER_E,          // 3
-E_STOP_E,         // 4
-EMPTY_E,          // 5
+# EMERGENCY STOP!
+rostopic pub /traj_server_event std_msgs/Int8 "data: 4" --once
 ```

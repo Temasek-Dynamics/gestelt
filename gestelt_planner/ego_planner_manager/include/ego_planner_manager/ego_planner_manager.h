@@ -91,7 +91,7 @@ namespace ego_planner
 
     bool setLocalTrajFromOpt(const poly_traj::MinJerkOpt &opt, const bool touch_goal);
     
-    inline double getSwarmClearance(void) { 
+    double getSwarmClearance(void) { 
       return ploy_traj_opt_->get_swarm_clearance_(); 
     }
 
@@ -100,10 +100,10 @@ namespace ego_planner
      * 
      * @return int Number of distinctive constraint points per piece
      */
-    inline int getCpsNumPrePiece(void) { 
+    int getCpsNumPrePiece(void) { 
       return ploy_traj_opt_->get_cps_num_prePiece_(); 
     }
-    // inline PtsChk_t getPtsCheck(void) { return ploy_traj_opt_->get_pts_check_(); }
+    // PtsChk_t getPtsCheck(void) { return ploy_traj_opt_->get_pts_check_(); }
 
     PlanParameters pp_;
     GridMap::Ptr grid_map_;

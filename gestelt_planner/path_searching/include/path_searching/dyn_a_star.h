@@ -53,21 +53,21 @@ class AStar
 private:
 	GridMap::Ptr grid_map_;
 
-	inline void coord2gridIndexFast(const double x, const double y, const double z, int &id_x, int &id_y, int &id_z);
+	void coord2gridIndexFast(const double x, const double y, const double z, int &id_x, int &id_y, int &id_z);
 
 	double getDiagHeu(GridNodePtr node1, GridNodePtr node2);
 	double getManhHeu(GridNodePtr node1, GridNodePtr node2);
 	double getEuclHeu(GridNodePtr node1, GridNodePtr node2);
-	inline double getHeu(GridNodePtr node1, GridNodePtr node2);
+	double getHeu(GridNodePtr node1, GridNodePtr node2);
 
 	bool ConvertToIndexAndAdjustStartEndPoints(const Eigen::Vector3d start_pt, const Eigen::Vector3d end_pt, Eigen::Vector3i &start_idx, Eigen::Vector3i &end_idx);
 
-	inline Eigen::Vector3d Index2Coord(const Eigen::Vector3i &index) const;
-	inline bool Coord2Index(const Eigen::Vector3d &pt, Eigen::Vector3i &idx) const;
+	Eigen::Vector3d Index2Coord(const Eigen::Vector3i &index) const;
+	bool Coord2Index(const Eigen::Vector3d &pt, Eigen::Vector3i &idx) const;
 
 	//bool (*checkOccupancyPtr)( const Eigen::Vector3d &pos );
 
-	inline int checkOccupancy(const Eigen::Vector3d &pos) { 
+	int checkOccupancy(const Eigen::Vector3d &pos) { 
 		return grid_map_->getInflateOccupancy(pos); 
 	}
 
@@ -98,17 +98,17 @@ public:
 	std::vector<Eigen::Vector3d> getPath();
 };
 
-inline double AStar::getHeu(GridNodePtr node1, GridNodePtr node2)
+double AStar::getHeu(GridNodePtr node1, GridNodePtr node2)
 {
 	return tie_breaker_ * getDiagHeu(node1, node2);
 }
 
-inline Eigen::Vector3d AStar::Index2Coord(const Eigen::Vector3i &index) const
+Eigen::Vector3d AStar::Index2Coord(const Eigen::Vector3i &index) const
 {
 	return ((index - CENTER_IDX_).cast<double>() * step_size_) + center_;
 };
 
-inline bool AStar::Coord2Index(const Eigen::Vector3d &pt, Eigen::Vector3i &idx) const
+bool AStar::Coord2Index(const Eigen::Vector3d &pt, Eigen::Vector3i &idx) const
 {
 	// (pt - center_) * inv_step_size_ = num_cells
 	// 

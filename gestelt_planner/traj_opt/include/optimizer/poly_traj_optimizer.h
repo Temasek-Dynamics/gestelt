@@ -54,7 +54,7 @@ namespace ego_planner
       }
     }
 
-    static inline int two_thirds_id(Eigen::MatrixXd &points, const bool touch_goal)
+    static int two_thirds_id(Eigen::MatrixXd &points, const bool touch_goal)
     {
       return touch_goal ? points.cols() - 1 : points.cols() - 1 - (points.cols() - 2) / 3;
     }
@@ -129,10 +129,10 @@ namespace ego_planner
     void setConstraintPoints(ConstraintPoints cps);
 
     /* helper functions */
-    inline const ConstraintPoints &getControlPoints(void) { return cps_; }
-    inline const poly_traj::MinJerkOpt &getMinJerkOpt(void) { return jerkOpt_; }
-    inline int get_cps_num_prePiece_(void) { return cps_num_prePiece_; }
-    inline double get_swarm_clearance_(void) { return swarm_clearance_; }
+    const ConstraintPoints &getControlPoints(void) { return cps_; }
+    const poly_traj::MinJerkOpt &getMinJerkOpt(void) { return jerkOpt_; }
+    int get_cps_num_prePiece_(void) { return cps_num_prePiece_; }
+    double get_swarm_clearance_(void) { return swarm_clearance_; }
 
     /* main planning API */
     bool optimizeTrajectory(const Eigen::MatrixXd &iniState, const Eigen::MatrixXd &finState,

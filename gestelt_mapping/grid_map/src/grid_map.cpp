@@ -17,6 +17,8 @@ void GridMap::initMap(ros::NodeHandle &nh)
   node_.param("grid_map/local_map_size_y", local_y_size, -1.0);
   node_.param("grid_map/local_map_size_z", local_z_size, -1.0);
 
+  node_.param("grid_map/keep_global_map", mp_.keep_global_map_, false);
+
   node_.param("grid_map/occ_grid/resolution", mp_.occ_resolution_, -1.0);
   node_.param("grid_map/occ_grid/inflation", mp_.occ_inflation_, -1.0);
 
@@ -130,17 +132,8 @@ void GridMap::initMap(ros::NodeHandle &nh)
 
   /* Set initial values for raycasting */
   mp_.map_origin_ = Eigen::Vector3d(-x_size / 2.0, -y_size / 2.0, mp_.ground_height_);
-  mp_.map_size_ = Eigen::Vector3d(x_size, y_size, z_size);
+  mp_.global_map_size_ = Eigen::Vector3d(x_size, y_size, z_size);
   mp_.local_map_size_ = Eigen::Vector3d(local_x_size, local_y_size, local_z_size);
-
-  // // Initialize camera to body matrices
-  // Eigen::Affine3d cam2body_tf = Eigen::Affine3d::Identity();
-  // cam2body_tf.translation() << cam2body_t_x, cam2body_t_y, cam2body_t_z;
-  // cam2body_tf.rotate(Eigen::AngleAxisd(cam2body_roll * (M_PI/180.0), Eigen::Vector3d::UnitX()));
-  // cam2body_tf.rotate(Eigen::AngleAxisd(cam2body_pitch * (M_PI/180.0), Eigen::Vector3d::UnitY()));
-  // cam2body_tf.rotate(Eigen::AngleAxisd(cam2body_yaw * (M_PI/180.0), Eigen::Vector3d::UnitZ()));
-
-  // md_.cam2body_ = cam2body_tf.matrix();
 
   // Initialize camera to body matrices
   double c2b_r = (M_PI/180.0) * cam2body_roll;
@@ -157,32 +150,9 @@ void GridMap::initMap(ros::NodeHandle &nh)
                       0.0, 1.0, 0.0,
                       0.0, 0.0, 1.0;
 
+  ROS_INFO("Before reset");
   reset();
-}
-
-void GridMap::updateLocalMap(){
-  if (!isPoseValid()){
-    return;
-  }
-
-  double x_min = -mp_.local_map_size_(0) + md_.cam_pos_(0);
-  double x_max = mp_.local_map_size_(0) + md_.cam_pos_(0);
-
-  double y_min = -mp_.local_map_size_(1) + md_.cam_pos_(1);
-  double y_max = mp_.local_map_size_(1) + md_.cam_pos_(1);
-
-  // double z_min = -mp_.local_map_size_(2) + md_.cam_pos_(2);
-  // double z_max = mp_.local_map_size_(2) + md_.cam_pos_(2);
-
-  pass_x_filter_.setFilterLimits (x_min, x_max);
-  pass_y_filter_.setFilterLimits (y_min, y_max);
-
-  // Filter anything outside local map bounds
-  pass_x_filter_.setInputCloud (local_map_origin_);
-  pass_x_filter_.filter (*local_map_origin_);
-  pass_y_filter_.setInputCloud (local_map_origin_);
-  pass_y_filter_.filter (*local_map_origin_);
-
+  ROS_INFO("After reset");
 }
 
 void GridMap::reset(){
@@ -190,43 +160,52 @@ void GridMap::reset(){
   // Initialize data structures for occupancy map and point clouds
   vox_grid_filter_.setLeafSize(mp_.voxel_size_, mp_.voxel_size_, mp_.voxel_size_);
 
-  // Initialize passthrough filter
-  pass_x_filter_.setFilterFieldName ("x");
-  pass_x_filter_.setFilterLimits (-mp_.local_map_size_(0), mp_.local_map_size_(0));
-  pass_x_filter_.setNegative (false); // only keep points WITHIN given range
+  ROS_INFO("Before local_map_origin_");
 
-  pass_y_filter_.setFilterFieldName ("y");
-  pass_y_filter_.setFilterLimits (-mp_.local_map_size_(1), mp_.local_map_size_(1));
-  pass_y_filter_.setNegative (false); // only keep points WITHIN given range
-
-  local_map_origin_.reset(new pcl::PointCloud<pcl::PointXYZ>);
   // Change frame_id to the uav origin frame, this is because we did a camera-to-origin transformation 
+  local_map_origin_.reset(new pcl::PointCloud<pcl::PointXYZ>);
   local_map_origin_->header.frame_id = mp_.uav_origin_frame_;
 
-  octree_ = std::make_shared<octomap::OcTree>(mp_.occ_resolution_);
+  ROS_INFO("Before global_map_global_");
 
-  octomap::point3d bbx_min(-mp_.map_size_(0), -mp_.map_size_(1), -mp_.map_size_(2));
-  octomap::point3d bbx_max(mp_.map_size_(0), mp_.map_size_(1), mp_.map_size_(2));
+  // Change frame_id to the global frame, this point cloud is for visualization purposes
+  global_map_global_.reset(new pcl::PointCloud<pcl::PointXYZ>);
+  global_map_global_->header.frame_id = mp_.global_frame_;
+
+  ROS_INFO("Before octree");
+
+  // Set up octree data structure
+  octree_ = std::make_shared<octomap::OcTree>(mp_.occ_resolution_);
+  octomap::point3d bbx_min(-mp_.global_map_size_(0), -mp_.global_map_size_(1), -mp_.global_map_size_(2));
+  octomap::point3d bbx_max(mp_.global_map_size_(0), mp_.global_map_size_(1), mp_.global_map_size_(2));
   octree_->setBBXMin(bbx_min);
   octree_->setBBXMax(bbx_max);
   octree_->useBBXLimit(true);
-
-  // octree_map_inflated_  = std::make_shared<pcl::octree::OctreePointCloudOccupancy<pcl::PointXYZ>>(
-  //   mp_.occ_inflation_);
-  // octree_map_inflated_->defineBoundingBox (
-  //   -mp_.local_map_size_(0), -mp_.local_map_size_(1), -mp_.local_map_size_(2), 
-  //   mp_.local_map_size_(0), mp_.local_map_size_(1), mp_.local_map_size_(2));
-
-  // octree_map_inflated_->setInputCloud(local_map_origin_);
-
-  // octree_map_ = std::make_shared<pcl::octree::OctreePointCloudOccupancy<pcl::PointXYZ>>(
-  //   mp_.occ_resolution_);
-  // octree_map_->defineBoundingBox (
-  //   -mp_.local_map_size_(0), -mp_.local_map_size_(1), -mp_.local_map_size_(2), 
-  //   mp_.local_map_size_(0), mp_.local_map_size_(1), mp_.local_map_size_(2));
-  // octree_map_->setInputCloud(local_map_origin_);
 }
 
+void GridMap::updateLocalMap(){
+  if (!isPoseValid()){
+    return;
+  }
+  
+  // Update bounds of local map 
+  md_.local_map_min_(0) = -mp_.local_map_size_(0) + md_.cam_pos_(0);
+  md_.local_map_max_(0) = mp_.local_map_size_(0) + md_.cam_pos_(0);
+
+  md_.local_map_min_(1) = -mp_.local_map_size_(1) + md_.cam_pos_(1);
+  md_.local_map_max_(1) = mp_.local_map_size_(1) + md_.cam_pos_(1);
+
+  md_.local_map_min_(2) = -mp_.local_map_size_(2) + md_.cam_pos_(2);
+  md_.local_map_max_(2) = mp_.local_map_size_(2) + md_.cam_pos_(2);
+
+  // Update bounds of octomap
+  if (!mp_.keep_global_map_){
+    octomap::point3d bbx_min(md_.local_map_min_(0), md_.local_map_min_(1), md_.local_map_min_(2));
+    octomap::point3d bbx_max(md_.local_map_max_(0), md_.local_map_max_(1), md_.local_map_max_(2));
+    octree_->setBBXMin(bbx_min);
+    octree_->setBBXMax(bbx_max);
+  }
+}
 
 void GridMap::initTimeBenchmark(std::shared_ptr<TimeBenchmark> time_benchmark){
   time_benchmark_ = time_benchmark;
@@ -237,6 +216,9 @@ void GridMap::initTimeBenchmark(std::shared_ptr<TimeBenchmark> time_benchmark){
 void GridMap::visTimerCB(const ros::TimerEvent & /*event*/)
 {
   publishMap();
+  ROS_INFO_THROTTLE(1.0, "No. of Point clouds: %ld", global_map_global_->points.size());
+  ROS_INFO_THROTTLE(1.0, "Octree memory usage: %ld kilobytes", octree_->memoryUsage()/1000);
+  ROS_INFO_STREAM_THROTTLE(1.0, "Octree Bounding Box: " << octree_->getBBXMin() << ", " << octree_->getBBXMax());
 }
 
 void GridMap::getTFTimerCB(const ros::TimerEvent & /*event*/) 
@@ -392,26 +374,6 @@ void GridMap::cloudToCloudMap(const sensor_msgs::PointCloud2ConstPtr &msg)
   pclToOctomapPC(cloud, octomap_cloud);
 
   octree_->insertPointCloud(octomap_cloud, sensor_origin, mp_.max_range);
-
-  // // Iterate through all the points in the point cloud 
-  // for (size_t i = 0; i < cloud->points.size(); i++){
-  //   octomap::point3d endpoint(cloud->points[i].x, cloud->points[i].y, cloud->points[i].z);
-
-  //   const pcl::PointXYZ p_i = cloud->points[i];
-
-  //   // if (!octree_map_inflated_->isVoxelOccupiedAtPoint(p_i)){
-  //   //   // If point is not occupied, add to octree map
-  //   //   octree_map_->addPointToCloud(p_i, local_map_origin_);
-  //   // }
-  // }
-
-  // Update octree with points from input cloud
-
-  // octree_map_inflated_->setOccupiedVoxelsAtPointsFromCloud(local_map_origin_);
-  // octree_map_inflated_->addPointsFromInputCloud();
-
-  // local_map_origin_->height = 1;
-  // local_map_origin_->width = local_map_origin_->points.size();
 }
 
 void GridMap::depthToCloudMap(const sensor_msgs::ImageConstPtr &msg)
@@ -434,7 +396,6 @@ void GridMap::depthToCloudMap(const sensor_msgs::ImageConstPtr &msg)
   // pcl header.stamp must have the timestamp in microseconds or TF will not
   // be able to resolve the transformation
   local_map_origin_->header.stamp = msg->header.stamp.toNSec() * 1e-3;
-  local_map_origin_->header.frame_id = mp_.uav_origin_frame_;
 
   local_map_origin_->height = 1;
   local_map_origin_->width = (md_.depth_image_.cols * md_.depth_image_.rows) / (mp_.depth_stride_ * mp_.depth_stride_);
@@ -474,13 +435,9 @@ void GridMap::depthToCloudMap(const sensor_msgs::ImageConstPtr &msg)
   }
 
   pcl::transformPointCloud(*local_map_origin_, *local_map_origin_, md_.cam2global_);
-
-  // Octree takes in cloud map in global frame
-  // octree_map_->setOccupiedVoxelsAtPointsFromCloud(local_map_origin_);
-  // octree_map_inflated_->setOccupiedVoxelsAtPointsFromCloud(local_map_origin_);
 }
 
-void pclToOctomapPC(const pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_cloud , octomap::Pointcloud& octomap_cloud) {
+void GridMap::pclToOctomapPC(const pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_cloud , octomap::Pointcloud& octomap_cloud) {
   // Iterate through all the points in the point cloud 
   for (size_t i = 0; i < pcl_cloud->points.size(); i++){
     octomap::point3d endpoint(pcl_cloud->points[i].x, pcl_cloud->points[i].y, pcl_cloud->points[i].z);
@@ -488,8 +445,9 @@ void pclToOctomapPC(const pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_cloud , octoma
   }
 }
 
-void octreeToPclPC(std::shared_ptr<octomap::OcTree> tree, pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_cloud) {
+void GridMap::octreeToPclPC(std::shared_ptr<octomap::OcTree> tree, pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_cloud) {
   std::vector<octomap::point3d> pcl;
+  pcl_cloud->points.clear();
   for (octomap::OcTree::iterator it = tree->begin(); it != tree->end(); ++it)
   {
     if(tree->isNodeOccupied(*it))
@@ -517,7 +475,7 @@ bool GridMap::isPoseValid() {
     return false;
   }
 
-  if (!isInMap(md_.cam_pos_))
+  if (!isInGlobalMap(md_.cam_pos_))
   {
     ROS_ERROR("[%s] Camera pose (%.2f, %.2f, %.2f) is not within map boundary", 
       node_name_.c_str(), md_.cam_pos_(0), md_.cam_pos_(1), md_.cam_pos_(2));
@@ -535,18 +493,10 @@ void GridMap::publishMap()
     return;
   }
 
-  // std::vector<pcl::PointXYZ, Eigen::aligned_allocator<pcl::PointXYZ> > voxelCenters;
-  // int num_occupied_cells = octree_map_inflated_->getOccupiedVoxelCenters(voxelCenters);
-  // ROS_ERROR("num_occupied_cells: %d", num_occupied_cells);
-  // ROS_ERROR("voxelCenters.size(): %ld", voxelCenters.size());
-
-  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud;  // Point cloud in origin frame
-  cloud.reset(new pcl::PointCloud<pcl::PointXYZ>);
-
-  octreeToPclPC(octree_, cloud);
+  octreeToPclPC(octree_, global_map_global_);
 
   sensor_msgs::PointCloud2 cloud_msg;
-  pcl::toROSMsg(*cloud, cloud_msg);
+  pcl::toROSMsg(*global_map_global_, cloud_msg);
 
   occ_map_pub_.publish(cloud_msg);
 }

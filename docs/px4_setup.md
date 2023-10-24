@@ -100,10 +100,19 @@ make flywoo_f405s_aio_default upload
     - [V1.9 Reference](https://dev.px4.io/v1.9.0_noredirect/en/advanced/parameter_reference.html)
     - [tfmini module refence](https://dev.px4.io/v1.9.0_noredirect/en/middleware/modules_driver_distance_sensor.html)
     - For serial porting, refer to file `boards/flywoo/f405s_aio/nuttx-config/include/board.h`
-        - UART 1, /dev/ttyS0
-        - UART 2 <-> TEL1/101 (/dev/ttyS1)
-        - UART 4 <-> TEL2/102 (/dev/ttyS2)
-        - UART 6 <-> UART6 (/dev/ttyS3)
+        - [PINOUT] <-> <Firmware Port> <-> (PX4 Mapping) <-> |USB Port| <-> {Hardware Connected} 
+        - [TX/RX1] <-> <UART 1> <-> (N/A) <->      |/dev/ttyS0|  <-> {Not used}
+        - [TX/RX2] <-> <UART 2> <-> (TEL1/101) <-> |/dev/ttyS1|  <-> {Not used}
+        - [TX/RX3] <-> <UART 3> <-> (N/A) <->      |N/A|         <-> {Not used}
+        - [TX/RX4] <-> <UART 4> <-> (TEL2/102) <-> |/dev/ttyS2| <->  {Companion computer}
+        - [TX/RX6] <-> <UART 6> <-> (UART6) <->    |/dev/ttyS3| <->  {Lidar}
+        - [VTX] <->    <UART 5> <-> (N/A) <->      |N/A|        <->  {Not used, dedicated for VTX SBUS}
+
+        - [SPI1] <-> {MPU6000 ICM42688P IMU}
+        - [SPI2] <-> {SD Card}
+        - [SPI3] <-> {BMP280 Barometer}
+        - [I2C] <-> {GPS/Compass}
+
     - [VICON with PX4](https://docs.px4.io/main/en/ros/external_position_estimation.html)
 
 ## Interface with Radxa
