@@ -241,7 +241,7 @@ namespace ego_planner
   {
 
     // static int count = 0;
-    // TODO_0 Uncomment
+    // TODO Uncomment
     // printf("\033[47;30m\n[drone %d replan %d]==============================================\033[0m\n",
     //        pp_.drone_id, count++);
     // std::cout.precision(3);
@@ -253,7 +253,7 @@ namespace ego_planner
 
     if ((start_pt - local_target_pt).norm() < 0.2)
     { 
-      // TODO_0 Uncomment
+      // TODO Uncomment
       // std::cout << "Close to goal" << std::endl;
       // continous_failures_count_++;
       // return false;

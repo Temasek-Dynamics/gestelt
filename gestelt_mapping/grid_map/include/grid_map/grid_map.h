@@ -130,7 +130,6 @@ public:
   {
     SENSOR_CLOUD = 1,
     SENSOR_DEPTH = 2,
-    SENSOR_CLOUD_ONLY = 3,
   };
 
   /* Initialization methods */

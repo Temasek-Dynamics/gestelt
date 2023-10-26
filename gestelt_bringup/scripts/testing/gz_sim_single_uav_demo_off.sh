@@ -31,7 +31,7 @@ roslaunch gestelt_bringup single_uav_sim.launch world_name:=$SCRIPT_DIR/../simul
 CMD_1="roslaunch gestelt_bringup single_fake_map.launch drone_id:=0"
 
 CMD_2="
-roslaunch gestelt_bringup single_ego_planner.launch POSE_TYPE:=3 SENSOR_TYPE:=3
+roslaunch gestelt_bringup single_ego_planner.launch POSE_TYPE:=3 SENSOR_TYPE:=1
 "
 
 CMD_3="
