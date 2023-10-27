@@ -29,7 +29,7 @@ export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:$gestelt_bringup_DIR:$PX4_AUTOPILOT_RE
 # roslaunch gestelt_bringup vicon_drone1_sim.launch world_name:=$SCRIPT_DIR/../simulation/worlds/ego_test.world
 # "
 
-CMD_1="roslaunch gestelt_bringup vicon_fake_drone.launch"
+CMD_1="roslaunch gestelt_bringup demo_fake_drone.launch"
 
 
 CMD_2="

@@ -39,15 +39,14 @@ rostopic pub /traj_server_event std_msgs/Int8 "data: 3" --once
 
 ## On central computer
 ```bash
-cd_scripts 
-cd testing
-./gz_sim_single_uav_demo_ctl.sh
+cd_scripts && cd demo
+./demo_ctl.sh
 # When ready, launhc the mission
 ```
 
-## On actual drone
+## To simulate the actual drone
 ```bash
-cd_scripts 
-cd testing
-./gz_sim_single_uav_demo_off.sh
+cd_scripts && cd demo
+./gz_sim_single_uav_demo_off_0.sh
+./gz_sim_single_uav_demo_off_1.sh
 ```

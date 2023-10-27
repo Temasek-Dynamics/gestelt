@@ -127,3 +127,4 @@
 36. (21/8/23) Corrected fake_map transformations and successfully tested fake_map node
 37. (24/8/23) Moved `fake_map` and `fake_drone` packages into `gestelt_central`, added launch files for their bringup. 
 38. (26/8/23) Added a geofence safety feature to prevent drone commands from exceeding a predefined bounded volume.
+29. (27/10/23) Added mutex locks to trajectory server for threadsafe access of planed trajectories and their corresponding commands.

@@ -70,4 +70,6 @@ target_link_libraries(trajectory_generator
 add_executable(trajectory_sampler
   src/trajectory_sampler.cpp
 )
-target_link_libraries(trajectory_sampler ${catkin_LIBRARIES})
+target_link_libraries(trajectory_sampler 
+  ${catkin_LIBRARIES}
+)

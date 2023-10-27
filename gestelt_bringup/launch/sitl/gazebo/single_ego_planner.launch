@@ -10,12 +10,16 @@
   <!-- Use value 3 for fake_map, Use value 1 for actual map -->
   <arg name="POSE_TYPE" default="1" />
   <arg name="SENSOR_TYPE" default="1" />
+  <!-- Agent configuration -->
+  <arg name="drone_id" default="0"/>
+  <arg name="init_x" default="0.0"/>
+  <arg name="init_y" default="0.0"/>
 
   <!-- Drone 0 -->
   <include file="$(find gestelt_bringup)/launch/ego_planner.launch">
-    <arg name="drone_id"   value="0"/>
-    <arg name="init_x"     value="0.0"/>
-    <arg name="init_y"     value="0.0"/>
+    <arg name="drone_id"   value="$(arg drone_id)"/>
+    <arg name="init_x"     value="$(arg init_x)"/>
+    <arg name="init_y"     value="$(arg init_y)"/>
     <arg name="init_z"     value="0.0"/>
     <arg name="num_drones" value="$(arg num_drones)"/>
     <arg name="map_size_x" value="$(arg map_size_x)"/>
