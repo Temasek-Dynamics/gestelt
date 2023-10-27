@@ -25,7 +25,7 @@ export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:$gestelt_bringup_DIR:$PX4_AUTOPILOT_RE
 # Commands
 #####
 CMD_0="
-roslaunch gestelt_bringup single_uav_sim.launch drone_id:=0 init_x:=0.4 init_y:=0.4 world_name:=$SCRIPT_DIR/../simulation/worlds/empty.world
+roslaunch gestelt_bringup single_uav_sim.launch drone_id:=0 init_x:=0.4 init_y:=0.4 
 "
 
 CMD_1="roslaunch gestelt_bringup single_fake_map.launch drone_id:=0"
@@ -34,10 +34,8 @@ CMD_2="
 roslaunch gestelt_bringup single_ego_planner.launch drone_id:=0 init_x:=0.4 init_y:=0.4 POSE_TYPE:=3 SENSOR_TYPE:=1
 "
 
-
 if [ "$SESSIONEXISTS" = "" ]
 then 
-
     tmux new-session -d -s $SESSION
 
     tmux split-window -t $SESSION:0.0 -v

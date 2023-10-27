@@ -5,13 +5,12 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /Global Options1
+        - /drone0_ego1
         - /drone0_ego1/Mapping1/occ_grid_inf1/Autocompute Value Bounds1
         - /drone0_mavros1/Localization1//mavros/local_position/pose1
+        - /drone1_ego1
         - /drone1_ego1/Mapping1/occ_grid_inf1
-        - /drone1_mavros1
-        - /drone2_ego1
         - /drone2_mavros1/Perception1
-        - /fake_map1/drone0_downsampled1
         - /MarkerArray1/Namespaces1
       Splitter Ratio: 0.5853132009506226
     Tree Height: 627
@@ -56,6 +55,16 @@ Visualization Manager:
       Frame Timeout: 15
       Frames:
         All Enabled: false
+        base_link:
+          Value: true
+        base_link_frd:
+          Value: true
+        drone0_base_link:
+          Value: true
+        drone0_cam_link:
+          Value: true
+        drone0_origin:
+          Value: true
         drone1_base_link:
           Value: true
         drone1_cam_link:
@@ -76,6 +85,12 @@ Visualization Manager:
           Value: true
         map:
           Value: false
+        map_ned:
+          Value: true
+        odom:
+          Value: true
+        odom_ned:
+          Value: true
         world:
           Value: true
       Marker Alpha: 1
@@ -85,8 +100,18 @@ Visualization Manager:
       Show Axes: true
       Show Names: true
       Tree:
+        base_link:
+          base_link_frd:
+            {}
+        odom:
+          odom_ned:
+            {}
         world:
           map:
+            drone0_origin:
+              drone0_base_link:
+                drone0_cam_link:
+                  {}
             drone1_origin:
               drone1_base_link:
                 drone1_cam_link:
@@ -99,6 +124,8 @@ Visualization Manager:
               drone3_base_link:
                 drone3_cam_link:
                   {}
+            map_ned:
+              {}
       Update Interval: 0
       Value: true
     - Class: rviz/Group
@@ -163,7 +190,7 @@ Visualization Manager:
           Marker Topic: /drone0/model
           Name: model
           Namespaces:
-            {}
+            drone0: true
           Queue Size: 100
           Value: true
         - Class: rviz/Group
@@ -173,7 +200,7 @@ Visualization Manager:
               Marker Topic: /drone_0_ego_planner_node/goal_point
               Name: goal_point
               Namespaces:
-                {}
+                "": true
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
@@ -189,7 +216,7 @@ Visualization Manager:
               Marker Topic: /drone_0_ego_planner_node/optimal_list
               Name: optimal_list
               Namespaces:
-                {}
+                "": true
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
@@ -384,7 +411,7 @@ Visualization Manager:
               Marker Topic: /drone_1_ego_planner_node/goal_point
               Name: goal_point
               Namespaces:
-                {}
+                "": true
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
@@ -400,7 +427,7 @@ Visualization Manager:
               Marker Topic: /drone_1_ego_planner_node/optimal_list
               Name: optimal_traj
               Namespaces:
-                {}
+                "": true
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
@@ -459,7 +486,7 @@ Visualization Manager:
               Use Fixed Frame: true
               Use rainbow: true
               Value: true
-          Enabled: true
+          Enabled: false
           Name: Mapping
         - Alpha: 1
           Buffer Length: 1
@@ -576,7 +603,7 @@ Visualization Manager:
               Value: false
           Enabled: true
           Name: Localization
-      Enabled: false
+      Enabled: true
       Name: drone1_mavros
     - Class: rviz/Group
       Displays:
@@ -618,7 +645,7 @@ Visualization Manager:
               Use Fixed Frame: true
               Use rainbow: true
               Value: true
-          Enabled: true
+          Enabled: false
           Name: Mapping
         - Class: rviz/Group
           Displays:
@@ -627,7 +654,7 @@ Visualization Manager:
               Marker Topic: /drone_2_ego_planner_node/goal_point
               Name: goal_point
               Namespaces:
-                {}
+                "": true
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
@@ -643,7 +670,7 @@ Visualization Manager:
               Marker Topic: /drone_2_ego_planner_node/optimal_list
               Name: optimal_traj
               Namespaces:
-                {}
+                "": true
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
@@ -829,7 +856,7 @@ Visualization Manager:
               Use Fixed Frame: true
               Use rainbow: true
               Value: true
-          Enabled: true
+          Enabled: false
           Name: Mapping
         - Class: rviz/Group
           Displays:
@@ -838,7 +865,7 @@ Visualization Manager:
               Marker Topic: /drone_3_ego_planner_node/goal_point
               Name: goal_point
               Namespaces:
-                {}
+                "": true
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
@@ -854,7 +881,7 @@ Visualization Manager:
               Marker Topic: /drone_3_ego_planner_node/optimal_list
               Name: optimal_traj
               Namespaces:
-                {}
+                "": true
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
@@ -1034,7 +1061,7 @@ Visualization Manager:
           Topic: /drone0/mavros/vision_pose/pose
           Unreliable: false
           Value: false
-      Enabled: true
+      Enabled: false
       Name: vicon_test
     - Class: rviz/Group
       Displays:
@@ -1401,7 +1428,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 5.750032424926758
+      Distance: 13.062785148620605
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -1409,17 +1436,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 0.767916738986969
-        Y: -0.17717942595481873
-        Z: 0.8377382755279541
+        X: -0.5081743001937866
+        Y: -1.0165259838104248
+        Z: 0.6214315891265869
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.6247979998588562
+      Pitch: 1.5497963428497314
       Target Frame: my_view
-      Yaw: 3.0450165271759033
+      Yaw: 3.3650124073028564
     Saved:
       - Class: rviz/FPS
         Enable Stereo Rendering:
