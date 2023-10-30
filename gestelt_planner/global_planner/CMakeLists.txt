@@ -7,11 +7,11 @@ add_compile_options(-std=c++14)
 set(ROS_LIBRARIES
   roscpp
   grid_map
-  cv_bridge
+  # cv_bridge
   std_msgs
   geometry_msgs
   visualization_msgs
-  )
+)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)

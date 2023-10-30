@@ -176,9 +176,9 @@ void GridMap::reset(){
   octree_->useBBXLimit(true);
 }
 
-void GridMap::initTimeBenchmark(std::shared_ptr<TimeBenchmark> time_benchmark){
-  time_benchmark_ = time_benchmark;
-}
+// void GridMap::initTimeBenchmark(std::shared_ptr<TimeBenchmark> time_benchmark){
+//   time_benchmark_ = time_benchmark;
+// }
 
 /** Timer callbacks */
 
@@ -378,63 +378,63 @@ void GridMap::cloudToCloudMap(const sensor_msgs::PointCloud2 &msg)
 
 void GridMap::depthToCloudMap(const sensor_msgs::ImageConstPtr &msg)
 {
-  // TODO: Still necessary?
-  if (!isPoseValid()){
-    return;
-  }
+  // // TODO: Still necessary?
+  // if (!isPoseValid()){
+  //   return;
+  // }
 
-  /* get depth image */
-  cv_bridge::CvImagePtr cv_ptr;
-  cv_ptr = cv_bridge::toCvCopy(msg, msg->encoding);
+  // /* get depth image */
+  // cv_bridge::CvImagePtr cv_ptr;
+  // cv_ptr = cv_bridge::toCvCopy(msg, msg->encoding);
 
-  if (msg->encoding == sensor_msgs::image_encodings::TYPE_32FC1)
-  {
-    (cv_ptr->image).convertTo(cv_ptr->image, CV_16UC1, mp_.k_depth_scaling_factor_);
-  }
-  cv_ptr->image.copyTo(md_.depth_image_);
+  // if (msg->encoding == sensor_msgs::image_encodings::TYPE_32FC1)
+  // {
+  //   (cv_ptr->image).convertTo(cv_ptr->image, CV_16UC1, mp_.k_depth_scaling_factor_);
+  // }
+  // cv_ptr->image.copyTo(md_.depth_image_);
 
-  // pcl header.stamp must have the timestamp in microseconds or TF will not
-  // be able to resolve the transformation
-  local_map_origin_->header.stamp = msg->header.stamp.toNSec() * 1e-3;
+  // // pcl header.stamp must have the timestamp in microseconds or TF will not
+  // // be able to resolve the transformation
+  // local_map_origin_->header.stamp = msg->header.stamp.toNSec() * 1e-3;
 
-  local_map_origin_->height = 1;
-  local_map_origin_->width = (md_.depth_image_.cols * md_.depth_image_.rows) / (mp_.depth_stride_ * mp_.depth_stride_);
+  // local_map_origin_->height = 1;
+  // local_map_origin_->width = (md_.depth_image_.cols * md_.depth_image_.rows) / (mp_.depth_stride_ * mp_.depth_stride_);
 
-  local_map_origin_->points.resize(local_map_origin_->width);
-  local_map_origin_->is_dense = true;
+  // local_map_origin_->points.resize(local_map_origin_->width);
+  // local_map_origin_->is_dense = true;
 
-  uint16_t *row_ptr;
+  // uint16_t *row_ptr;
 
-  int cloud_idx = 0;
+  // int cloud_idx = 0;
 
-  for (int v = 0; v < md_.depth_image_.rows; v+=mp_.depth_stride_){
-    row_ptr = md_.depth_image_.ptr<uint16_t>(v);
-    for (int u = 0; u < md_.depth_image_.cols; u+=mp_.depth_stride_, row_ptr+=mp_.depth_stride_, cloud_idx++){
+  // for (int v = 0; v < md_.depth_image_.rows; v+=mp_.depth_stride_){
+  //   row_ptr = md_.depth_image_.ptr<uint16_t>(v);
+  //   for (int u = 0; u < md_.depth_image_.cols; u+=mp_.depth_stride_, row_ptr+=mp_.depth_stride_, cloud_idx++){
 
-      pcl::PointXYZ& pt = local_map_origin_->points[cloud_idx];
+  //     pcl::PointXYZ& pt = local_map_origin_->points[cloud_idx];
 
-      float bad_point = std::numeric_limits<float>::quiet_NaN ();
+  //     float bad_point = std::numeric_limits<float>::quiet_NaN ();
 
-      if (*row_ptr == 0 || *row_ptr == bad_point || *row_ptr == 255){
-        pt.x = pt.y = pt.z = bad_point;
-        // local_map_origin_->is_dense = false;
-      }
-      else{
-        pt.z = (*row_ptr) / 1000.0;
-        pt.x = (u - mp_.cx_) * pt.z * mp_.fx_inv_;
-        pt.y = (v - mp_.cy_) * pt.z * mp_.fy_inv_;
-      }
+  //     if (*row_ptr == 0 || *row_ptr == bad_point || *row_ptr == 255){
+  //       pt.x = pt.y = pt.z = bad_point;
+  //       // local_map_origin_->is_dense = false;
+  //     }
+  //     else{
+  //       pt.z = (*row_ptr) / 1000.0;
+  //       pt.x = (u - mp_.cx_) * pt.z * mp_.fx_inv_;
+  //       pt.y = (v - mp_.cy_) * pt.z * mp_.fy_inv_;
+  //     }
     
-    }
-  }
+  //   }
+  // }
 
-  // Downsample point cloud
-  if (mp_.downsample_cloud_){
-    vox_grid_filter_.setInputCloud(local_map_origin_);
-    vox_grid_filter_.filter(*local_map_origin_);
-  }
+  // // Downsample point cloud
+  // if (mp_.downsample_cloud_){
+  //   vox_grid_filter_.setInputCloud(local_map_origin_);
+  //   vox_grid_filter_.filter(*local_map_origin_);
+  // }
 
-  pcl::transformPointCloud(*local_map_origin_, *local_map_origin_, md_.cam2origin_);
+  // pcl::transformPointCloud(*local_map_origin_, *local_map_origin_, md_.cam2origin_);
 }
 
 void GridMap::pclToOctomapPC(const pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_cloud , octomap::Pointcloud& octomap_cloud) {
@@ -499,4 +499,69 @@ void GridMap::publishMap()
   pcl::toROSMsg(*global_map_origin_, cloud_msg);
 
   occ_map_pub_.publish(cloud_msg);
+}
+
+
+
+/** GRidmap operations */
+
+int GridMap::getOccupancy(const Eigen::Vector3d &pos)
+{
+  // If not in map or not in octree bounding box. return -1 
+  if (!isInGlobalMap(pos)){
+    return -1;
+  }
+
+  octomap::point3d octo_pos(pos(0), pos(1), pos(2));
+  octomap::OcTreeNode* node = octree_->search(octo_pos);
+
+  if (node && octree_->isNodeOccupied(node)){
+    return 1;
+  }
+  return 0;
+}
+
+int GridMap::getInflateOccupancy(const Eigen::Vector3d &pos)
+{
+  if (!isInGlobalMap(pos)){
+    return -1;
+  }
+
+  // Search inflated space of given position
+  for(float x = pos(0) - mp_.inflation_; x <= pos(0) + mp_.inflation_; x += mp_.resolution_){
+    for(float y = pos(1) - mp_.inflation_; y <= pos(1) + mp_.inflation_; y += mp_.resolution_){
+      for(float z = pos(2) - mp_.inflation_; z <= pos(2) + mp_.inflation_; z += mp_.resolution_){
+        octomap::OcTreeNode* node = octree_->search(x, y, z);
+        if (node && octree_->isNodeOccupied(node)){
+          return 1;
+        }
+      }
+    }
+  }
+
+  return 0;
+}
+
+bool GridMap::isInGlobalMap(const Eigen::Vector3d &pos)
+{
+  if (pos(0) <= -mp_.global_map_size_(0) || pos(0) >= mp_.global_map_size_(0)
+    || pos(1) <= -mp_.global_map_size_(1) || pos(1) >= mp_.global_map_size_(1)
+    || pos(2) <= -mp_.global_map_size_(2) || pos(2) >= mp_.global_map_size_(2))
+  {
+    return false;
+  }
+
+  return true;
+}
+
+bool GridMap::isInLocalMap(const Eigen::Vector3d &pos)
+{
+  if (pos(0) <= md_.local_map_min_(0) || pos(0) >= md_.local_map_max_(0)
+    || pos(1) <= md_.local_map_min_(1) || pos(1) >= md_.local_map_max_(1)
+    || pos(2) <= md_.local_map_min_(2) || pos(2) >= md_.local_map_max_(2))
+  {
+    return false;
+  }
+
+  return true;
 }

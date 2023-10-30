@@ -1,12 +1,11 @@
-#ifndef ROOT_FINDER_HPP
-#define ROOT_FINDER_HPP
+#ifndef _ROOT_FINDER_HPP_
+#define _ROOT_FINDER_HPP_
 
 #define _USE_MATH_DEFINES
 #include <cfloat>
 #include <cmath>
 #include <set>
 #include <Eigen/Eigen>
-
 namespace RootFinderParam
 {
 constexpr size_t highestOrder = 64;
@@ -1087,4 +1086,4 @@ inline std::set<double> solvePolynomial(const Eigen::VectorXd &coeffs, double lb
 
 } // namespace RootFinder
 
-#endif
+#endif //_ROOT_FINDER_HPP_

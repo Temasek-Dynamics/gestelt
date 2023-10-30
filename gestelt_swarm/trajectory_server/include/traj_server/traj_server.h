@@ -1,3 +1,6 @@
+#ifndef _TRAJECTORY_SERVER_H_
+#define _TRAJECTORY_SERVER_H_
+
 #include <numeric>
 #include <deque>
 
@@ -456,3 +459,4 @@ private:
 
 };
 
+#endif //_TRAJECTORY_SERVER_H_

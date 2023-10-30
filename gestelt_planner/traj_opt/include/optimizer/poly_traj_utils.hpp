@@ -1,4 +1,5 @@
-#pragma once
+#ifndef _POLY_TRAJ_UTILS_H_
+#define _POLY_TRAJ_UTILS_H_
 
 #include "root_finder.hpp"
 
@@ -1407,3 +1408,5 @@ namespace poly_traj
     };
 
 } // namespace poly_traj
+
+#endif //_POLY_TRAJ_UTILS_H_

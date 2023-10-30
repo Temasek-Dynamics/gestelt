@@ -39,7 +39,7 @@ generate_messages(
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES traj_utils 
-  CATKIN_DEPENDS ${ROS_LIBRARIES} message_runtime
+  CATKIN_DEPENDS message_runtime
   #  DEPENDS system_lib
 )
 
@@ -55,5 +55,5 @@ add_library( traj_utils
 )
 target_link_libraries( traj_utils
     ${catkin_LIBRARIES} 
-    ${EIGEN3_LIBRARIES}
+    # ${EIGEN3_LIBRARIES}
 )  

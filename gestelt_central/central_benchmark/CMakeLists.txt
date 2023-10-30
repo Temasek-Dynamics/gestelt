@@ -46,11 +46,11 @@ target_link_libraries(swarm_collision_checker
   ${catkin_LIBRARIES}
 )
 
-add_executable(benchmark_aggregator src/benchmark_aggregator.cpp)
-target_link_libraries(benchmark_aggregator
-  ${catkin_LIBRARIES}
-)
-add_dependencies(benchmark_aggregator ${catkin_EXPORTED_TARGETS})
+# add_executable(benchmark_aggregator src/benchmark_aggregator.cpp)
+# target_link_libraries(benchmark_aggregator
+#   ${catkin_LIBRARIES}
+# )
+# add_dependencies(benchmark_aggregator ${catkin_EXPORTED_TARGETS})
 
 add_executable(cloud_downsampler src/cloud_downsampler.cpp)
 target_link_libraries(cloud_downsampler

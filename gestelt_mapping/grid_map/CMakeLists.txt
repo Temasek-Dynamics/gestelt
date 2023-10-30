@@ -11,9 +11,14 @@ set(ROS_LIBRARIES
     std_msgs
     sensor_msgs
     message_filters
-    cv_bridge
-    swarm_benchmark
+    # cv_bridge
+    # swarm_benchmark
     trajectory_server_msgs
+)
+
+set(ROS_DEPENDS
+    roscpp
+    std_msgs
 )
 
 find_package(octomap REQUIRED)
@@ -22,13 +27,13 @@ find_package(PCL 1.7 REQUIRED)
 find_package(catkin REQUIRED COMPONENTS
     ${ROS_LIBRARIES}
 )
-find_package(OpenCV REQUIRED)
+# find_package(OpenCV REQUIRED)
 find_package(Eigen3 REQUIRED)
 
 catkin_package(
  INCLUDE_DIRS include
  LIBRARIES grid_map
- CATKIN_DEPENDS ${ROS_LIBRARIES}
+ CATKIN_DEPENDS ${ROS_DEPENDS}
 #  DEPENDS system_lib
 )
 
@@ -38,7 +43,7 @@ include_directories(
     ${catkin_INCLUDE_DIRS}
     ${EIGEN3_INCLUDE_DIRS} 
     ${PCL_INCLUDE_DIRS}
-    ${OpenCV_INCLUDE_DIRS}
+    # ${OpenCV_INCLUDE_DIRS}
     ${OCTOMAP_INCLUDE_DIRS}
 )
 

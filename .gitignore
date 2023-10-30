@@ -30,7 +30,7 @@ devel_isolated/
 .cproject
 
 # vscode
-.vscode
+*.vscode
 
 # qcreator stuff
 CMakeLists.txt.user

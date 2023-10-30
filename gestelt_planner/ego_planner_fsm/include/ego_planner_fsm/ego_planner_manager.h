@@ -7,12 +7,11 @@
 
 #include <ros/ros.h>
 
-#include <traj_utils/DataDisp.h>
+// #include <traj_utils/DataDisp.h>
 #include <traj_utils/plan_container.hpp>
 #include <traj_utils/planning_visualization.h>
 
 #include <optimizer/poly_traj_optimizer.h>
-#include <optimizer/poly_traj_utils.hpp>
 
 #include <grid_map/grid_map.h>
 

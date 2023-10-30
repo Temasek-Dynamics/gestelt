@@ -1,5 +1,5 @@
-#ifndef GCOPTER_HPP
-#define GCOPTER_HPP
+#ifndef _GCOPTER_HPP_
+#define _GCOPTER_HPP_
 
 #include "root_finder.hpp"
 #include "lbfgs.hpp"
@@ -1574,4 +1574,4 @@ public:
 //     }
 // };
 
-#endif
+#endif //_GCOPTER_HPP_

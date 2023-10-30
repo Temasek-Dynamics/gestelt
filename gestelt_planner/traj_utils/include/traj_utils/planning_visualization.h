@@ -64,4 +64,4 @@ namespace ego_planner
     // void displayNewArrow(ros::Publisher& guide_vector_pub, ego_planner::PolyTrajOptimizer::Ptr optimizer);
   };
 } // namespace ego_planner
-#endif
+#endif // _PLANNING_VISUALIZATION_H_

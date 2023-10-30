@@ -282,3 +282,28 @@ vector<Vector3d> AStar::getPath()
     reverse(path.begin(), path.end());
     return path;
 }
+
+double AStar::getHeu(GridNodePtr node1, GridNodePtr node2)
+{
+	return tie_breaker_ * getDiagHeu(node1, node2);
+}
+
+Eigen::Vector3d AStar::Index2Coord(const Eigen::Vector3i &index) const
+{
+	return ((index - CENTER_IDX_).cast<double>() * step_size_) + center_;
+};
+
+bool AStar::Coord2Index(const Eigen::Vector3d &pt, Eigen::Vector3i &idx) const
+{
+	// (pt - center_) * inv_step_size_ = num_cells
+	// 
+	idx = ((pt - center_) * inv_step_size_ + Eigen::Vector3d(0.5, 0.5, 0.5)).cast<int>() + CENTER_IDX_;
+
+	if (idx(0) < 0 || idx(0) >= POOL_SIZE_(0) || idx(1) < 0 || idx(1) >= POOL_SIZE_(1) || idx(2) < 0 || idx(2) >= POOL_SIZE_(2))
+	{
+		ROS_ERROR("Ran out of pool, index=%d %d %d", idx(0), idx(1), idx(2));
+		return false;
+	}
+
+	return true;
+};

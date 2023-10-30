@@ -11,6 +11,12 @@ set(ROS_LIBRARIES
     grid_map
     path_searching
     traj_utils
+    # cv_bridge
+)
+
+
+set(ROS_DEPENDS
+    grid_map
 )
 
 find_package(Eigen3 REQUIRED)
@@ -21,7 +27,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
  INCLUDE_DIRS include
  LIBRARIES traj_opt
- CATKIN_DEPENDS ${ROS_LIBRARIES} 
+ CATKIN_DEPENDS ${ROS_DEPENDS} 
 #  DEPENDS system_lib
 )
 
@@ -37,5 +43,5 @@ add_library(traj_opt
 )
 target_link_libraries(traj_opt
     ${catkin_LIBRARIES} 
-    ${EIGEN3_LIBRARIES}
+    # ${EIGEN3_LIBRARIES}
 )  

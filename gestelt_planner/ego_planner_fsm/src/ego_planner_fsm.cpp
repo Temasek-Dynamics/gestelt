@@ -16,14 +16,14 @@ namespace ego_planner
     planner_manager_->initPlanModules(nh, visualization_);
 
     /* Benchmarking */
-    time_benchmark_ = std::make_shared<TimeBenchmark>();
-    time_benchmark_->add_ids({
-      std:vector<std::string>{
-        "planFromLocalTraj", 
-        "grid_map_update_occupancy", 
-      }
-    });
-    planner_manager_->grid_map_->initTimeBenchmark(time_benchmark_);
+    // time_benchmark_ = std::make_shared<TimeBenchmark>();
+    // time_benchmark_->add_ids({
+    //   std:vector<std::string>{
+    //     "planFromLocalTraj", 
+    //     "grid_map_update_occupancy", 
+    //   }
+    // });
+    // planner_manager_->grid_map_->initTimeBenchmark(time_benchmark_);
 
     /*  fsm param  */
     nh.param("fsm/waypoint_type", waypoint_type_, -1);
@@ -79,7 +79,7 @@ namespace ego_planner
     heartbeat_pub_ = nh.advertise<std_msgs::Empty>("planning/heartbeat", 10);
     ground_height_pub_ = nh.advertise<std_msgs::Float64>("/ground_height_measurement", 10);
     state_pub_ = nh.advertise<std_msgs::String>("planner_state", 10);
-    time_benchmark_pub_ = nh.advertise<trajectory_server_msgs::TimeBenchmark>("plan_time_benchmark", 10);
+    // time_benchmark_pub_ = nh.advertise<trajectory_server_msgs::TimeBenchmark>("plan_time_benchmark", 10);
 
     if (waypoint_type_ == TARGET_TYPE::MANUAL_TARGET)
     {
@@ -138,14 +138,14 @@ namespace ego_planner
     state_pub_.publish(planner_state);
 
     // Publish time benchmarks
-    trajectory_server_msgs::TimeBenchmark time_bench_msg;
-    time_bench_msg.planner_cpu_time = time_benchmark_->get_elapsed_cpu_time("planFromLocalTraj");
-    time_bench_msg.planner_wall_time = time_benchmark_->get_elapsed_wall_time("planFromLocalTraj");
+    // trajectory_server_msgs::TimeBenchmark time_bench_msg;
+    // time_bench_msg.planner_cpu_time = time_benchmark_->get_elapsed_cpu_time("planFromLocalTraj");
+    // time_bench_msg.planner_wall_time = time_benchmark_->get_elapsed_wall_time("planFromLocalTraj");
 
-    time_bench_msg.gridmap_update_occ_cpu_time = time_benchmark_->get_elapsed_cpu_time("grid_map_update_occupancy");
-    time_bench_msg.gridmap_update_occ_wall_time = time_benchmark_->get_elapsed_wall_time("grid_map_update_occupancy");
+    // time_bench_msg.gridmap_update_occ_cpu_time = time_benchmark_->get_elapsed_cpu_time("grid_map_update_occupancy");
+    // time_bench_msg.gridmap_update_occ_wall_time = time_benchmark_->get_elapsed_wall_time("grid_map_update_occupancy");
     
-    time_benchmark_pub_.publish(time_bench_msg);
+    // time_benchmark_pub_.publish(time_bench_msg);
 
   }
 
@@ -660,8 +660,8 @@ namespace ego_planner
 
   bool EGOReplanFSM::planFromLocalTraj(const int trial_times /*=1*/)
   {
-    std::string benchmark_id = "planFromLocalTraj";
-    time_benchmark_->start_stopwatch(benchmark_id);
+    // std::string benchmark_id = "planFromLocalTraj";
+    // time_benchmark_->start_stopwatch(benchmark_id);
 
     LocalTrajData *info = &planner_manager_->traj_.local_traj;
     double t_cur = ros::Time::now().toSec() - info->start_time;
@@ -690,7 +690,7 @@ namespace ego_planner
       }
     }
 
-    time_benchmark_->stop_stopwatch(benchmark_id);
+    // time_benchmark_->stop_stopwatch(benchmark_id);
 
     return success;
   }

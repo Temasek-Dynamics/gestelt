@@ -8,6 +8,11 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g")
 set(ROS_LIBRARIES
   roscpp
   grid_map
+  # cv_bridge
+)
+
+set(ROS_DEPENDS
+  grid_map
 )
 
 find_package(Eigen3 REQUIRED)
@@ -18,7 +23,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES path_searching
-  CATKIN_DEPENDS ${ROS_LIBRARIES}
+  CATKIN_DEPENDS ${ROS_DEPENDS}
 #  DEPENDS system_lib
 )
 
@@ -34,5 +39,5 @@ add_library( path_searching
 )
 target_link_libraries( path_searching
   ${catkin_LIBRARIES} 
-  ${EIGEN3_LIBRARIES}
+  # ${EIGEN3_LIBRARIES}
 )  

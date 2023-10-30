@@ -2,7 +2,7 @@
 #define _GRID_MAP_H
 
 #include <Eigen/Eigen>
-#include <cv_bridge/cv_bridge.h>
+// #include <cv_bridge/cv_bridge.h>
 
 #include <pcl/point_cloud.h>
 #include <pcl/common/transforms.h>
@@ -25,11 +25,10 @@
 // #include "tf2_geometry_msgs/tf2_geometry_msgs.h"
 // #include <tf2/transform_datatypes.h>
 
-#include <swarm_benchmark/timebenchmark.h>
+// #include <swarm_benchmark/timebenchmark.h>
 
 #include <octomap/octomap.h>
 #include <octomap/OcTree.h>
-
 
 struct MappingParameters
 {
@@ -87,7 +86,7 @@ struct MappingData
   Eigen::Vector3d local_map_max_; // maximum 3d bound of local map in (x,y,z)
 
   // depth image data
-  cv::Mat depth_image_;
+  // cv::Mat depth_image_;
 
   // True if pose has been received
   bool has_pose_{false};
@@ -146,7 +145,7 @@ public:
   void initMap(ros::NodeHandle &nh);
 
   // Get time benchmark shared pointer
-  void initTimeBenchmark(std::shared_ptr<TimeBenchmark> time_benchmark);
+  // void initTimeBenchmark(std::shared_ptr<TimeBenchmark> time_benchmark);
   
   /* Gridmap access methods */
 
@@ -272,7 +271,7 @@ private:
   std::shared_ptr<tf2_ros::TransformListener> tfListener_;
 
   /* Benchmarking */
-  std::shared_ptr<TimeBenchmark> time_benchmark_;
+  // std::shared_ptr<TimeBenchmark> time_benchmark_;
 
   /* Data structures for point clouds */
   pcl::PointCloud<pcl::PointXYZ>::Ptr local_map_origin_;  // Point cloud local map in UAV origin frame
@@ -283,69 +282,5 @@ private:
   pcl::VoxelGrid<pcl::PointXYZ> vox_grid_filter_; // Voxel filter
 };
 
-/* ============================== definition of inline function
- * ============================== */
 
-int GridMap::getOccupancy(const Eigen::Vector3d &pos)
-{
-  // If not in map or not in octree bounding box. return -1 
-  if (!isInGlobalMap(pos)){
-    return -1;
-  }
-
-  octomap::point3d octo_pos(pos(0), pos(1), pos(2));
-  octomap::OcTreeNode* node = octree_->search(octo_pos);
-
-  if (node && octree_->isNodeOccupied(node)){
-    return 1;
-  }
-  return 0;
-}
-
-int GridMap::getInflateOccupancy(const Eigen::Vector3d &pos)
-{
-  if (!isInGlobalMap(pos)){
-    return -1;
-  }
-
-  // Search inflated space of given position
-  for(float x = pos(0) - mp_.inflation_; x <= pos(0) + mp_.inflation_; x += mp_.resolution_){
-    for(float y = pos(1) - mp_.inflation_; y <= pos(1) + mp_.inflation_; y += mp_.resolution_){
-      for(float z = pos(2) - mp_.inflation_; z <= pos(2) + mp_.inflation_; z += mp_.resolution_){
-        octomap::OcTreeNode* node = octree_->search(x, y, z);
-        if (node && octree_->isNodeOccupied(node)){
-          return 1;
-        }
-      }
-    }
-  }
-
-  return 0;
-}
-
-bool GridMap::isInGlobalMap(const Eigen::Vector3d &pos)
-{
-  if (pos(0) <= -mp_.global_map_size_(0) || pos(0) >= mp_.global_map_size_(0)
-    || pos(1) <= -mp_.global_map_size_(1) || pos(1) >= mp_.global_map_size_(1)
-    || pos(2) <= -mp_.global_map_size_(2) || pos(2) >= mp_.global_map_size_(2))
-  {
-    return false;
-  }
-
-  return true;
-}
-
-bool GridMap::isInLocalMap(const Eigen::Vector3d &pos)
-{
-  if (pos(0) <= md_.local_map_min_(0) || pos(0) >= md_.local_map_max_(0)
-    || pos(1) <= md_.local_map_min_(1) || pos(1) >= md_.local_map_max_(1)
-    || pos(2) <= md_.local_map_min_(2) || pos(2) >= md_.local_map_max_(2))
-  {
-    return false;
-  }
-
-  return true;
-}
-
-
-#endif
+#endif //_GRID_MAP_H

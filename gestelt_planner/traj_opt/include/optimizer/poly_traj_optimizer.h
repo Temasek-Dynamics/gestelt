@@ -228,4 +228,4 @@ namespace ego_planner
   };
 
 } // namespace ego_planner
-#endif
+#endif //_POLY_TRAJ_OPTIMIZER_H_

@@ -15,7 +15,7 @@
 
   <depend>grid_map</depend>
   <depend>std_msgs</depend>
-  <depend>cv_bridge</depend>
+  <!-- <depend>cv_bridge</depend> -->
   <depend>geometry_msgs</depend>
   <depend>visualization_msgs</depend>
 
