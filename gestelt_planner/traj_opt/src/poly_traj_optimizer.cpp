@@ -1157,6 +1157,7 @@ namespace ego_planner
     }
   }
 
+  /* mappings between real world time and unconstrained virtual time */
   template <typename EIGENVEC>
   void PolyTrajOptimizer::VirtualT2RealT(const EIGENVEC &VT, Eigen::VectorXd &RT)
   {

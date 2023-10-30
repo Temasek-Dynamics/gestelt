@@ -32,9 +32,7 @@ CMD_1="roslaunch gestelt_bringup gazebo.launch world_name:=$SCRIPT_DIR/../simula
 
 CMD_2="roslaunch gestelt_bringup demo_fake_drone.launch"
 
-CMD_3="
-roslaunch gestelt_bringup vicon_multi_misson.launch
-"
+CMD_3="roslaunch gestelt_bringup vicon_multi_misson.launch"
 
 if [ "$SESSIONEXISTS" = "" ]
 then 

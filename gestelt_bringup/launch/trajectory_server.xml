@@ -2,9 +2,6 @@
     <!-- Drone id -->
     <arg name="drone_id"/>
     <arg name="drone_id_ns" value="drone$(arg drone_id)"/>
-    <arg name="init_x"/>
-    <arg name="init_y"/>
-    <arg name="init_z"/>
     <!-- size of map, change the size inflate x, y, z according to your application -->
     <arg name="map_size_x"/>
     <arg name="map_size_y"/>
@@ -26,7 +23,7 @@
 
         <!-- Trajectory params -->
         <param name="traj_server/time_forward" value="1.0" type="double"/>
-        <param name="traj_server/max_poses_to_track" value="1000" type="int"/>
+        <param name="traj_server/max_poses_to_track" value="5000" type="int"/>
         <!-- Position command limits, anything exceeding this will switch the mode to hovering state -->
         <!-- This is relative to uav origin frame -->
         <!-- <param name="traj_server/pos_limit/max_x" value="$(eval 0.5 * map_size_x - init_x)" type="double"/>

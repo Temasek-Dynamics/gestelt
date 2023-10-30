@@ -46,7 +46,7 @@ class TrajectorySamplerNode {
 
  private:
   void pathSegmentsCallback(
-      const mav_planning_msgs::PolynomialTrajectory& segments_message);
+      const mav_planning_msgs::PolynomialTrajectory4D& segments_message);
   void pathSegments4DCallback(
       const mav_planning_msgs::PolynomialTrajectory4D& segments_message);
   bool stopSamplingCallback(std_srvs::Empty::Request& request,

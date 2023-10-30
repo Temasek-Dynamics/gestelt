@@ -54,7 +54,7 @@
         <arg name="max_jer" value="20.0" />
         
         <!-- thresh_no_replan_meter: Replan only if current position and local target exceeds this parameter -->
-        <arg name="thresh_no_replan_meter" value="0.3" />
+        <arg name="thresh_no_replan_meter" value="0.25" />
         <!-- thresh_replan_time: Replanning period -->
         <arg name="thresh_replan_time" value="0.5" />
         <!--always set to 1.5 times grater than sensing horizon-->
@@ -73,9 +73,6 @@
         <!-- drone_origin_frame: For PX4 SITL, leave it as default. 
         For other forms of simulation, might have to change it -->
         <arg name="drone_origin_frame" value="$(arg drone_origin_frame)" />
-        <arg name="init_x" value="$(arg init_x)"/>
-        <arg name="init_y" value="$(arg init_y)"/>
-        <arg name="init_z" value="$(arg init_z)"/>
         <!-- size of map, change the size inflate x, y, z according to your application -->
         <arg name="map_size_x" value="$(arg map_size_x)"/>
         <arg name="map_size_y" value="$(arg map_size_y)"/>

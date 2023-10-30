@@ -22,6 +22,8 @@
 
 #include <tf2_ros/transform_listener.h>
 #include <tf2_ros/message_filter.h>
+// #include "tf2_geometry_msgs/tf2_geometry_msgs.h"
+// #include <tf2/transform_datatypes.h>
 
 #include <swarm_benchmark/timebenchmark.h>
 
@@ -68,18 +70,18 @@ struct MappingParameters
 
 struct MappingData
 {
-  // camera position in global frame 
+  // camera position in uav origin frame 
   Eigen::Vector3d cam_pos_{0.0, 0.0, 0.0};
 
-  // Rotation matrix of camera to global frame
-  Eigen::Matrix3d cam_to_global_r_m_;
+  // Rotation matrix of camera to UAV origin frame
+  Eigen::Matrix3d cam_to_origin_r_m_;
 
   // Transformation matrix of camera to body frame
   Eigen::Matrix4d cam2body_;
-  // Transformation matrix of body to global frame
-  Eigen::Matrix4d body2global_;
-  // Transformation matrix of camera to global frame
-  Eigen::Matrix4d cam2global_;
+  // Transformation matrix of body to UAV origin frame
+  Eigen::Matrix4d body2origin_;
+  // Transformation matrix of camera to UAV origin frame
+  Eigen::Matrix4d cam2origin_;
 
   Eigen::Vector3d local_map_min_; // minimum 3d bound of local map in (x,y,z)
   Eigen::Vector3d local_map_max_; // maximum 3d bound of local map in (x,y,z)
@@ -168,7 +170,7 @@ public:
   
   // Take in point cloud as octree map. Transformation from camera-to-global frame is 
   // done here
-  void cloudToCloudMap(const sensor_msgs::PointCloud2ConstPtr &msg);
+  void cloudToCloudMap(const sensor_msgs::PointCloud2 &msg);
 
   // Take in depth image as octree map.  Transformation from camera-to-global frame is 
   // done here
@@ -239,10 +241,6 @@ private:
   */
   void visTimerCB(const ros::TimerEvent & /*event*/);
 
-  /**
-   * @brief This timer looks up the transform between camera and origin frame
-  */
-  void getTFTimerCB(const ros::TimerEvent & /*event*/);
 
 private: 
   ros::NodeHandle node_;
@@ -268,7 +266,6 @@ private:
 
   ros::Publisher occ_map_pub_;
   ros::Timer vis_timer_; // Timer for visualization
-  ros::Timer get_tf_timer_; // Timer for getting TF
 
   // TF transformation 
   tf2_ros::Buffer tfBuffer_;
@@ -278,8 +275,8 @@ private:
   std::shared_ptr<TimeBenchmark> time_benchmark_;
 
   /* Data structures for point clouds */
-  pcl::PointCloud<pcl::PointXYZ>::Ptr local_map_origin_;  // Point cloud map in UAV origin frame
-  pcl::PointCloud<pcl::PointXYZ>::Ptr global_map_global_;  // Point cloud map in global frame
+  pcl::PointCloud<pcl::PointXYZ>::Ptr local_map_origin_;  // Point cloud local map in UAV origin frame
+  pcl::PointCloud<pcl::PointXYZ>::Ptr global_map_origin_;  // Point cloud global map in UAV Origin frame
 
   std::shared_ptr<octomap::OcTree> octree_; // Octree data structure
 
