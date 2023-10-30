@@ -12,6 +12,9 @@ void TrajServer::init(ros::NodeHandle& nh)
   std::string drone_model_mesh_filepath;
   nh.param("drone_model_mesh", drone_model_mesh_filepath, std::string(""));
 
+  nh.param("traj_server/max_yaw_dot", YAW_DOT_MAX_PER_SEC, 2 * M_PI);
+  nh.param("traj_server/max_yaw_acc", YAW_DOT_DOT_MAX_PER_SEC, 5 * M_PI);
+
   nh.param("traj_server/takeoff_height", takeoff_height_, 1.0);
   nh.param("traj_server/time_forward", time_forward_, -1.0);
   nh.param("traj_server/pub_cmd_freq", pub_cmd_freq_, 25.0);
@@ -37,13 +40,15 @@ void TrajServer::init(ros::NodeHandle& nh)
   
   nh.param("traj_server/mode", traj_mode_, 0);
 
-
   /* Subscribers */
   if (traj_mode_ == TrajMode::POLYTRAJ) {
     traj_sub_ = nh.subscribe("planning/trajectory", 10, &TrajServer::polyTrajCallback, this);
   }
   else if (traj_mode_ == TrajMode::MULTIDOFJOINTTRAJECTORY) {
     traj_sub_ = nh.subscribe("planning/trajectory", 10, &TrajServer::multiDOFJointTrajectoryCb, this);
+  }
+  else if (traj_mode_ == TrajMode::TWIST) {
+    traj_sub_ = nh.subscribe("planning/trajectory", 10, &TrajServer::twistCb, this);
   }
 
   heartbeat_sub_ = nh.subscribe("heartbeat", 10, &TrajServer::heartbeatCallback, this);
@@ -76,6 +81,14 @@ void TrajServer::init(ros::NodeHandle& nh)
 
   initModelMesh(drone_model_mesh_filepath);
 
+  // Initialize ignore flags for mavros position target command
+  IGNORE_POS = mavros_msgs::PositionTarget::IGNORE_PX | mavros_msgs::PositionTarget::IGNORE_PY | mavros_msgs::PositionTarget::IGNORE_PZ;
+  IGNORE_VEL = mavros_msgs::PositionTarget::IGNORE_VX | mavros_msgs::PositionTarget::IGNORE_VY | mavros_msgs::PositionTarget::IGNORE_VZ;
+  IGNORE_ACC = mavros_msgs::PositionTarget::IGNORE_AFX | mavros_msgs::PositionTarget::IGNORE_AFY | mavros_msgs::PositionTarget::IGNORE_AFZ;
+  USE_FORCE = mavros_msgs::PositionTarget::FORCE;
+  IGNORE_YAW = mavros_msgs::PositionTarget::IGNORE_YAW;
+  IGNORE_YAW_RATE = mavros_msgs::PositionTarget::IGNORE_YAW_RATE;
+
   logInfo("Initialized");
 }
 
@@ -107,6 +120,8 @@ void TrajServer::heartbeatCallback(std_msgs::EmptyPtr msg)
 
 void TrajServer::polyTrajCallback(traj_utils::PolyTrajPtr msg)
 {
+  std::lock_guard<std::mutex> cmd_guard(cmd_mutex_);
+
   if (msg->order != 5)
   {
     logError("[traj_server] Only support trajectory order equals 5 now!");
@@ -144,6 +159,8 @@ void TrajServer::polyTrajCallback(traj_utils::PolyTrajPtr msg)
   traj_duration_ = traj_->getTotalDuration();
   // traj_id_ = msg->traj_id;
 
+  cur_type_mask_ = 0 | IGNORE_YAW_RATE; // ignore yaw rate
+
   startMission();
 }
 
@@ -154,25 +171,68 @@ void TrajServer::multiDOFJointTrajectoryCb(const trajectory_msgs::MultiDOFJointT
     return;
   }
 
-  startMission();
+  std::lock_guard<std::mutex> cmd_guard(cmd_mutex_);
 
+  // We only take the first piont of the trajectory
+  // Message breakdown:
   // msg.joint_names: contain "base_link"
   // msg.points: Contains only a single point
   // msg.points[0].time_from_start: current_sample_time_
 
   std::string frame_id = msg->joint_names[0];
+  
+  cur_type_mask_ = IGNORE_YAW_RATE; // Ignore yaw_rate 
 
-  // Eigen::Vector3d pos(Eigen::Vector3d::Zero()), vel(Eigen::Vector3d::Zero()), 
-  //                 acc(Eigen::Vector3d::Zero()), jer(Eigen::Vector3d::Zero());
-  // std::pair<double, double> yaw_yawdot(0, 0);
+  // Create rotation frame from NED To ROS
+  // Initialize camera to body matrices
+  double c2b_r = (M_PI/180.0) * 180;
+  double c2b_p = (M_PI/180.0) * 0;
+  double c2b_y = (M_PI/180.0) * 0;
 
-  geomMsgsVector3ToEigenVector3(msg->points[0].transforms[0].translation, last_mission_pos_);
-  geomMsgsVector3ToEigenVector3(msg->points[0].velocities[0].linear, last_mission_vel_);
+  Eigen::Matrix3d rot_mat;
 
-  geomMsgsVector3ToEigenVector3(msg->points[0].accelerations[0].linear, last_mission_acc_);
+  rot_mat << cos(c2b_y) * cos(c2b_p),    -sin(c2b_y) * cos(c2b_r) + cos(c2b_y) * sin(c2b_p) * sin(c2b_r),    sin(c2b_y) * sin(c2b_r) + cos(c2b_y) * sin(c2b_p) * cos(c2b_r), 
+             sin(c2b_y) * cos(c2b_p),     cos(c2b_y) * cos(c2b_r) + sin(c2b_y) * sin(c2b_p) * sin(c2b_r),    -cos(c2b_y) * sin(c2b_r) + sin(c2b_y) * sin(c2b_p) * cos(c2b_r),
+             -sin(c2b_p),                  cos(c2b_p) * sin(c2b_r),                                            cos(c2b_p) * cos(c2b_y);
 
-  last_mission_yaw_ = quaternionToYaw(msg->points[0].transforms[0].rotation);
-  last_mission_yaw_dot_ = msg->points[0].velocities[0].angular.z; //yaw rate
+  // Check if position exists, else ignore
+  if (msg->points[0].transforms.empty()){
+    cur_type_mask_ |= IGNORE_POS;
+  }
+  else {
+    geomMsgsVector3ToEigenVector3(msg->points[0].transforms[0].translation, last_mission_pos_);
+    // last_mission_yaw_ = quaternionToYaw(msg->points[0].transforms[0].rotation);
+
+    last_mission_pos_ = rot_mat * last_mission_pos_;
+
+  }
+
+  // Check if velocity exists, else ignore
+  if (msg->points[0].velocities.empty()){
+    cur_type_mask_ |= IGNORE_VEL;
+  }
+  else {
+    geomMsgsVector3ToEigenVector3(msg->points[0].velocities[0].linear, last_mission_vel_);
+    last_mission_yaw_dot_ = msg->points[0].velocities[0].angular.z; //yaw rate
+  }
+
+  // Check if acceleration exists, else ignore
+  if (msg->points[0].accelerations.empty()){
+    cur_type_mask_ |= IGNORE_ACC;
+  }
+  else {
+    geomMsgsVector3ToEigenVector3(msg->points[0].accelerations[0].linear, last_mission_acc_);
+  }
+
+  startMission();
+}
+
+void TrajServer::twistCb(const geometry_msgs::Twist::ConstPtr &msg)
+{
+  geomMsgsVector3ToEigenVector3(msg->linear, last_mission_vel_);
+  last_mission_yaw_dot_ = msg->angular.z; //yaw rate
+
+  cur_type_mask_ = 2048;
 }
 
 void TrajServer::plannerStateCB(const std_msgs::String::ConstPtr &msg)
@@ -572,30 +632,30 @@ void TrajServer::debugTimerCb(const ros::TimerEvent &e){
 
 void TrajServer::execLand()
 {
+  cur_type_mask_ = IGNORE_VEL | IGNORE_ACC | IGNORE_YAW_RATE ; // Ignore Velocity, Acceleration and yaw rate
+
   Eigen::Vector3d pos;
   pos << uav_pose_.pose.position.x, uav_pose_.pose.position.y, landed_height_;
-  uint16_t type_mask = 2552; // Ignore Velocity, Acceleration
 
-  publishCmd(pos, Vector3d::Zero(), Vector3d::Zero(), Vector3d::Zero(), last_mission_yaw_, 0, type_mask);
+  publishCmd(pos, Vector3d::Zero(), Vector3d::Zero(), Vector3d::Zero(), last_mission_yaw_, 0, cur_type_mask_);
 }
 
 void TrajServer::execTakeOff()
 { 
+  cur_type_mask_ = IGNORE_VEL | IGNORE_ACC | IGNORE_YAW_RATE ; // Ignore Velocity, Acceleration and yaw rate
+  
   Eigen::Vector3d pos;
   
   pos = last_mission_pos_;
   pos(2) = takeoff_height_;
 
-  // pos << uav_pose_.pose.position.x, uav_pose_.pose.position.y, takeoff_height_;
-  uint16_t type_mask = 2552; // Ignore Velocity, Acceleration
-
-  publishCmd(pos, Vector3d::Zero(), Vector3d::Zero(), Vector3d::Zero(), last_mission_yaw_, 0, type_mask);
+  publishCmd(pos, Vector3d::Zero(), Vector3d::Zero(), Vector3d::Zero(), last_mission_yaw_, 0, cur_type_mask_);
 
 }
 
 void TrajServer::execHover()
 {
-  uint16_t type_mask = 2552; // Ignore Velocity, Acceleration
+  cur_type_mask_ = IGNORE_VEL | IGNORE_ACC | IGNORE_YAW_RATE ; // Ignore Velocity, Acceleration and yaw rate
   Eigen::Vector3d pos;
   pos = last_mission_pos_;
 
@@ -603,11 +663,12 @@ void TrajServer::execHover()
     pos(2) = takeoff_height_;
   }
 
-  publishCmd(pos, Vector3d::Zero(), Vector3d::Zero(), Vector3d::Zero(), last_mission_yaw_, 0, type_mask);
+  publishCmd(pos, Vector3d::Zero(), Vector3d::Zero(), Vector3d::Zero(), last_mission_yaw_, 0, cur_type_mask_);
 }
 
 void TrajServer::execMission()
 {
+  std::lock_guard<std::mutex> cmd_guard(cmd_mutex_);
   if (traj_mode_ == TrajMode::POLYTRAJ){
     /* no publishing before receive traj_ and have heartbeat */
     if (heartbeat_time_.toSec() <= 1e-5)
@@ -639,14 +700,12 @@ void TrajServer::execMission()
       last_mission_pos_ = pos;
       last_mission_vel_ = vel;
 
-      uint16_t type_mask = 2048; // Ignore yaw rate
-
       if (!checkPositionLimits(position_limits_, pos)) {
         // If position safety limit check failed, switch to hovering mode
         setServerEvent(ServerEvent::HOVER_E);
       }
 
-      publishCmd(pos, vel, acc, jer, yaw_yawdot.first, yaw_yawdot.second, type_mask);
+      publishCmd(pos, vel, acc, jer, yaw_yawdot.first, yaw_yawdot.second, cur_type_mask_);
     }
     // IF time elapsed is longer then duration of trajectory, then nothing is done
     else if (t_cur >= traj_duration_) // Finished trajectory
@@ -654,18 +713,22 @@ void TrajServer::execMission()
       // logWarn("t_cur exceeds traj_duration! No commands to send");
       endMission();
     }
-    else {
+    else { // Time is negative
       logWarn(string_format("Invalid time, current time is negative at %d!",t_cur));
     }
     
   }
   else if (traj_mode_ == TrajMode::MULTIDOFJOINTTRAJECTORY){
-    uint16_t type_mask = 2048; // Ignore yaw rate
-
     publishCmd(last_mission_pos_, last_mission_vel_, 
               last_mission_acc_, last_mission_jerk_, 
-              last_mission_yaw_, last_mission_yaw_dot_, type_mask);
+              last_mission_yaw_, last_mission_yaw_dot_, cur_type_mask_);
   }
+  else if (traj_mode_ == TrajMode::TWIST) {
+    publishCmd(last_mission_pos_, last_mission_vel_, 
+              last_mission_acc_, last_mission_jerk_, 
+              last_mission_yaw_, last_mission_yaw_dot_, cur_type_mask_);
+  }
+
 }
 
 void TrajServer::startMission(){
@@ -715,12 +778,6 @@ void TrajServer::publishCmd(
   pos_cmd.header.frame_id = origin_frame_;
   pos_cmd.coordinate_frame = mavros_msgs::PositionTarget::FRAME_LOCAL_NED;
   pos_cmd.type_mask = type_mask;
-  // pos_cmd.type_mask = 1024; // Ignore Yaw
-  // pos_cmd.type_mask = 2048; // ignore yaw_rate
-  // pos_cmd.type_mask = 2496; // Ignore Acceleration
-  // pos_cmd.type_mask = 3520; // Ignore Acceleration and Yaw
-  // pos_cmd.type_mask = 2552; // Ignore Acceleration, Velocity, 
-  // pos_cmd.type_mask = 3576; // Ignore Acceleration, Velocity and Yaw
 
   pos_cmd.position.x = p(0);
   pos_cmd.position.y = p(1);
@@ -819,8 +876,6 @@ bool TrajServer::toggle_offboard_mode(bool toggle)
 
 std::pair<double, double> TrajServer::calculate_yaw(double t_cur, Eigen::Vector3d &pos, double dt)
 {
-  constexpr double YAW_DOT_MAX_PER_SEC = 2 * M_PI;
-  constexpr double YAW_DOT_DOT_MAX_PER_SEC = 5 * M_PI;
   std::pair<double, double> yaw_yawdot(0, 0);
 
   Eigen::Vector3d dir = t_cur + time_forward_ <= traj_duration_

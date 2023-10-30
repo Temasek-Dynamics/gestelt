@@ -92,7 +92,7 @@
         <param name="grid_map/cam_frame" value="$(arg drone_id_ns)_$(arg cam_frame)"/>
         <!-- Occupancy grid params -->
         <param name="grid_map/occ_grid/resolution" value="0.1" />
-        <param name="grid_map/occ_grid/inflation" value="0.1" />
+        <param name="grid_map/occ_grid/inflation" value="0.2" />
         <!-- Point cloud downsampling params -->
         <param name="grid_map/filter/downsample_cloud" value="false" />
         <param name="grid_map/filter/depth_stride" value="4" />
@@ -144,7 +144,7 @@
         <param name="optimization/weight_formation" value="100" type="double"/>
         <param name="optimization/obstacle_clearance" value="0.35" type="double"/>
         <param name="optimization/obstacle_clearance_soft" value="0.5" type="double"/>
-        <param name="optimization/swarm_clearance" value="0.15" type="double"/>
+        <param name="optimization/swarm_clearance" value="0.35" type="double"/>
         <param name="optimization/max_vel" value="$(arg max_vel)" type="double"/>
         <param name="optimization/max_acc" value="$(arg max_acc)" type="double"/>
         <param name="optimization/max_jer" value="$(arg max_jer)" type="double"/>
@@ -152,10 +152,10 @@
         <param name="formation/num" value="$(arg num_drones)"/>
         <rosparam param="formation/start">[0, 0, 0]</rosparam>
         <!-- <rosparam param="formation/drone0">[  0, 0, 0]</rosparam> -->
-        <rosparam param="formation/drone0">[ 0.35, -0.35, 0]</rosparam>
-        <rosparam param="formation/drone1">[ -0.35, -0.35, 0]</rosparam>
-        <rosparam param="formation/drone2">[ -0.35, 0.35, 0]</rosparam>
-        <rosparam param="formation/drone3">[ 0.35, 0.35, 0]</rosparam>
+        <rosparam param="formation/drone0">[ 0.4, 0.4, 0]</rosparam>
+        <rosparam param="formation/drone1">[ 0.4, -0.4, 0]</rosparam>
+        <rosparam param="formation/drone2">[ -0.4, -0.4, 0]</rosparam>
+        <rosparam param="formation/drone3">[ -0.4, 0.4, 0]</rosparam>
         
         <rosparam param="formation/drone4">[ 1.0, -1.0, 0]</rosparam>
         <rosparam param="formation/drone5">[ -1.0, -1.0, 0]</rosparam>

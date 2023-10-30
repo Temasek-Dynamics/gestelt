@@ -10,7 +10,8 @@
     <include file="$(find gestelt_bringup)/launch/trajectory_server.xml">
         <arg name="drone_id" value="$(arg drone_id)"/>
         
-        <arg name="server_mode" value="0" />
+        <!-- Trajectory mode 0 for egoswarm polytraj. Mode 1 for mav_trajectory_generation sampled points -->
+        <arg name="server_mode" value="1" />
         <!-- drone_origin_frame: For PX4 SITL, leave it as default. 
         For other forms of simulation, might have to change it -->
         <arg name="drone_origin_frame" value="$(arg drone_origin_frame)" />

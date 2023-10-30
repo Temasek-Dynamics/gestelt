@@ -327,7 +327,7 @@ namespace ego_planner
         }
         else 
         {
-          logError(string_format("Replan failed upon detecting potential collision"));
+          logError(string_format("Plan from local trajectory failed, possibly from potential collision!"));
           if (potential_agent_to_agent_collision_)
           {
             logError(string_format("Potential agent to agent collision detected, ESTOP has been disabled from activation for debugging"));
@@ -336,7 +336,6 @@ namespace ego_planner
             // setServerEvent(EMERGENCY_STOP_E);
           }
         }
-
         break;
       }
 

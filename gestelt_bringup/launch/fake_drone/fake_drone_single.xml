@@ -19,7 +19,7 @@
     <arg name="cloud_topic" default="camera/depth/points" />
     <!-- Use value 3 for fake_map, Use value 1 for actual map -->
     <arg name="POSE_TYPE" default="3" />
-    <arg name="SENSOR_TYPE" default="3" />
+    <arg name="SENSOR_TYPE" default="1" />
 
     <!-- Add static transform from drone to it's origin -->
     <node pkg="tf" type="static_transform_publisher" 

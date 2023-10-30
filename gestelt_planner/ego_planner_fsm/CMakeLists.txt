@@ -15,6 +15,7 @@ set(ROS_LIBRARIES
   traj_utils
   swarm_benchmark
   ego_planner_manager
+  path_searching
 )
 
 find_package(Eigen3 REQUIRED)
@@ -47,6 +48,7 @@ add_executable(ego_planner_fsm_node
   src/ego_planner_fsm_node.cpp 
 )
 target_link_libraries(ego_planner_fsm_node 
+  ${catkin_LIBRARIES}
   ${PROJECT_NAME}
 )
 

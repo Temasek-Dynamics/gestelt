@@ -37,7 +37,7 @@ roslaunch gestelt_bringup sitl_central.launch rviz_config:=gz_sim cloud_topic_do
 "
 
 CMD_3="
-roslaunch gestelt_bringup multi_ego_planner.launch POSE_TYPE:=3 SENSOR_TYPE:=3
+roslaunch gestelt_bringup multi_ego_planner.launch POSE_TYPE:=3 SENSOR_TYPE:=1
 "
 
 CMD_4="rosrun gestelt_bringup multi_mission.py"

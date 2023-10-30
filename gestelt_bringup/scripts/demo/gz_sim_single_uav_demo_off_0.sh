@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SESSION="gz_sim_single_uav_fake_map"
+SESSION="gz_sim_single_uav_demo_off_0"
 SESSIONEXISTS=$(tmux list-sessions | grep $SESSION)
 
 #####
@@ -25,37 +25,28 @@ export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:$gestelt_bringup_DIR:$PX4_AUTOPILOT_RE
 # Commands
 #####
 CMD_0="
-roslaunch gestelt_bringup single_uav_sim.launch world_name:=$SCRIPT_DIR/../simulation/worlds/empty.world
+roslaunch gestelt_bringup single_uav_sim.launch drone_id:=0 init_x:=0.4 init_y:=0.4 
 "
 
 CMD_1="roslaunch gestelt_bringup single_fake_map.launch drone_id:=0"
 
 CMD_2="
-roslaunch gestelt_bringup sitl_central.launch rviz_config:=gz_sim cloud_topic_downsample_in:=camera/depth/points_fake
+roslaunch gestelt_bringup single_ego_planner.launch drone_id:=0 init_x:=0.4 init_y:=0.4 POSE_TYPE:=3 SENSOR_TYPE:=1
 "
-
-CMD_3="
-roslaunch gestelt_bringup single_ego_planner.launch POSE_TYPE:=3 SENSOR_TYPE:=1
-"
-
-CMD_4="roslaunch gestelt_bringup single_mission.launch"
 
 if [ "$SESSIONEXISTS" = "" ]
 then 
-
     tmux new-session -d -s $SESSION
 
     tmux split-window -t $SESSION:0.0 -v
     tmux split-window -t $SESSION:0.1 -h
     tmux split-window -t $SESSION:0.0 -h
-    tmux split-window -t $SESSION:0.3 -h
 
     tmux send-keys -t $SESSION:0.0 "$SOURCE_PX4_AUTOPILOT $CMD_0" C-m 
     sleep 3
     tmux send-keys -t $SESSION:0.1 "$SOURCE_WS $CMD_1" C-m 
     tmux send-keys -t $SESSION:0.2 "$SOURCE_WS $CMD_2" C-m 
-    tmux send-keys -t $SESSION:0.3 "$SOURCE_WS $CMD_3" C-m
-    tmux send-keys -t $SESSION:0.4 "$SOURCE_WS $CMD_4" 
+    # tmux send-keys -t $SESSION:0.3 "$SOURCE_WS $CMD_3"
 fi
 
 # Attach session on the first window

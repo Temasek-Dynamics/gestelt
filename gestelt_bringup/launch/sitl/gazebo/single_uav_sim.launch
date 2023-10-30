@@ -1,33 +1,23 @@
 <launch>
-  <!-- Launches Gazebo environment and multiple PX4 SITL instances -->
-  <!-- Gazebo parameters -->
-  <arg name="world_name"/>
+  <!-- Spawns Gazebo model and PX4 SITL instances -->
+
   <!-- Vehicle name used by PX4 configuration -->
   <arg name="vehicle" default="iris"/>
   <!-- Actual model SDF to be spawned -->
   <arg name="model" default="raynor"/> 
-  <arg name="physics" default="ode"/> 
+  <!-- agent configuration -->
+  <arg name="drone_id" default="0"/> 
+  <arg name="init_x" default="0.0"/> 
+  <arg name="init_y" default="0.0"/> 
 
-  <!-- Gazebo simulation -->
-  <include file="$(find gazebo_ros)/launch/empty_world.launch">
-    <arg name="world_name" value="$(arg world_name)"/>
-    <arg name="paused" value="false"/>
-    <arg name="use_sim_time" value="true"/>
-    <arg name="gui" value="true"/>
-    <arg name="headless" value="false"/>
-    <arg name="debug" value="false"/>
-    <arg name="verbose" value="true"/>
-    <arg name="physics" value="$(arg physics)"/>
-  </include>
-
-  <!-- Drone 0 -->
+  <!-- Drone in gazebo with mavros plugin -->
   <include file="$(find gestelt_bringup)/launch/sitl/px4_sitl.xml">
-    <arg name="drone_id"   value="0"/>
+    <arg name="drone_id"   value="$(arg drone_id)"/>
     <arg name="vehicle" default="$(arg vehicle)"/>
     <arg name="model" default="$(arg model)"/>
-    <arg name="init_x"     value="0.0"/>
-    <arg name="init_y"     value="0.0"/>
-    <arg name="init_z"     value="0.001"/>
+    <arg name="init_x"     value="$(arg init_x)"/>
+    <arg name="init_y"     value="$(arg init_y)"/>
+    <arg name="init_z"     value="0.0"/>
   </include>
 
 </launch>

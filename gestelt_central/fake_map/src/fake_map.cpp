@@ -32,7 +32,6 @@ FakeMap::FakeMap(ros::NodeHandle &nodeHandle) : _nh(nodeHandle) {
 	std::cout << "tf_listen_freq: " << tf_listen_freq << std::endl;
 	std::cout << "sensor_refresh_freq: " << sensor_refresh_freq << std::endl;
 
-
 	std::string copy_id = _id; 
 	std::string uav_id_char = copy_id.erase(0,5); // removes first 5 character
 	uav_id = std::stoi(uav_id_char);

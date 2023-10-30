@@ -55,6 +55,7 @@ enum TrajMode
 {
   POLYTRAJ,                 // From egoswarm
   MULTIDOFJOINTTRAJECTORY,  // From mav_trajectory_generation
+  TWIST,  // From reactive planners
 };
 
 template<typename ... Args>
@@ -96,6 +97,11 @@ public:
    * @brief Callback for trajectory points from mav_trajectory_generation  
    */
   void multiDOFJointTrajectoryCb(const trajectory_msgs::MultiDOFJointTrajectory::ConstPtr &msg);
+
+  /**
+   * @brief Callback for twist commands
+   */
+  void twistCb(const geometry_msgs::Twist::ConstPtr &msg);
 
   /**
    * @brief Callback for trajectory planner state 
@@ -379,6 +385,18 @@ private:
   bool mission_completed_{true};
   // bool heartbeat_timeout_{true};
 
+  // Values set from mavros_msgs/PositionTarget message constants
+  uint16_t IGNORE_POS;
+  uint16_t IGNORE_VEL;
+  uint16_t IGNORE_ACC;
+  uint16_t USE_FORCE;
+  uint16_t IGNORE_YAW;
+  uint16_t IGNORE_YAW_RATE;
+
+  uint16_t cur_type_mask_{0}; // Current type mask
+
+  std::mutex cmd_mutex_; // mutex for PVA Commands
+
   /* Params */ 
   std::string node_name_{"traj_server"};
   double time_forward_; // Used to calculate yaw 
@@ -395,9 +413,13 @@ private:
   int max_poses_to_track_; // Maximum size of latest UAV path poses to display
   double error_tracking_window_; // Maximum size of latest UAV path poses to display
 
+  double YAW_DOT_MAX_PER_SEC{ 2 * M_PI};
+  double YAW_DOT_DOT_MAX_PER_SEC{ 5 * M_PI};
+
   SafetyLimits position_limits_;
 
   int traj_mode_; // Trajectory Server Mode. This affects the trajectory message type expected by the trajectory server. 
+
 
 private:
   void logInfo(const std::string& str){
