@@ -127,7 +127,9 @@
         <!-- planner manager -->
         <param name="manager/max_vel" value="$(arg max_vel)" type="double"/>
         <param name="manager/max_acc" value="$(arg max_acc)" type="double"/>
+        <!-- polyTraj_piece_length: distance between adjacent B-spline control points-->
         <param name="manager/polyTraj_piece_length" value="1.5" type="double"/>
+        <!-- feasibility_tolerance: permitted ratio of vel/acc exceeding limits -->
         <param name="manager/feasibility_tolerance" value="0.05" type="double"/>
         <param name="manager/planning_horizon" value="$(arg planning_horizon)" type="double"/>
         <param name="manager/use_distinctive_trajs" value="$(arg use_distinctive_trajs)" type="bool"/>
@@ -152,10 +154,10 @@
         <param name="formation/num" value="$(arg num_drones)"/>
         <rosparam param="formation/start">[0, 0, 0]</rosparam>
         <!-- <rosparam param="formation/drone0">[  0, 0, 0]</rosparam> -->
-        <rosparam param="formation/drone0">[ 0.4, 0.4, 0]</rosparam>
-        <rosparam param="formation/drone1">[ 0.4, -0.4, 0]</rosparam>
-        <rosparam param="formation/drone2">[ -0.4, -0.4, 0]</rosparam>
-        <rosparam param="formation/drone3">[ -0.4, 0.4, 0]</rosparam>
+        <rosparam param="formation/drone0">[ 0.35, -0.35, 0]</rosparam>
+        <rosparam param="formation/drone1">[ -0.35, -0.35, 0]</rosparam>
+        <rosparam param="formation/drone2">[ -0.35, 0.35, 0]</rosparam>
+        <rosparam param="formation/drone3">[ 0.35, 0.35, 0]</rosparam>
         
         <rosparam param="formation/drone4">[ 1.0, -1.0, 0]</rosparam>
         <rosparam param="formation/drone5">[ -1.0, -1.0, 0]</rosparam>

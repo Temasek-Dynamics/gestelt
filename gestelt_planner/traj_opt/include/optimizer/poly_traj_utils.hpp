@@ -1162,12 +1162,13 @@ namespace poly_traj
             {
 
                 T1(0) = ts(0);
-                double t1_inv = 1.0 / T1(0);
-                double t2_inv = t1_inv * t1_inv;
-                double t3_inv = t2_inv * t1_inv;
+                double t1_inv = 1.0 / T1(0);      // 1/t
+                double t2_inv = t1_inv * t1_inv;  // 1/(t^2)
+                double t3_inv = t2_inv * t1_inv;  // 1/(t^3)
                 double t4_inv = t2_inv * t2_inv;
                 double t5_inv = t4_inv * t1_inv;
                 CoefficientMat coeffMatReversed;
+                // 0.5 * (A_f - A_i)/(t^3) - 3 * (V_f - V_i)/(t^4) + 6 * (P_f - P_i)/(t^5) 
                 coeffMatReversed.col(5) = 0.5 * (tailPVA.col(2) - headPVA.col(2)) * t3_inv -
                                           3.0 * (headPVA.col(1) + tailPVA.col(1)) * t4_inv +
                                           6.0 * (tailPVA.col(0) - headPVA.col(0)) * t5_inv;
@@ -1185,6 +1186,7 @@ namespace poly_traj
             else
             {
                 T1 = ts;
+                // cwiseProduct: coefficient-wise product
                 T2 = T1.cwiseProduct(T1);
                 T3 = T2.cwiseProduct(T1);
                 T4 = T2.cwiseProduct(T2);
@@ -1308,7 +1310,7 @@ namespace poly_traj
         {
             Trajectory traj;
             traj.reserve(N);
-            for (int i = 0; i < N; i++)
+            for (int i = 0; i < N; i++) // For each polynomial segment
             {
                 traj.emplace_back(T1(i), b.block<6, 3>(6 * i, 0).transpose().rowwise().reverse());
             }
