@@ -24,7 +24,7 @@
     <!-- Add static transform from drone to it's origin -->
     <node pkg="tf" type="static_transform_publisher" 
       name="map_to_$(arg drone_id_ns)_origin_tf" 
-      args="$(arg init_x) $(arg init_y) $(arg init_z) 0 0 0 1 map $(arg drone_id_ns)_origin 100" />
+      args="$(arg init_x) $(arg init_y) 0 0 0 0 1 map $(arg drone_id_ns)_origin 100" />
 
     <!-- Add static transform from base_link to camera_link -->
     <node pkg="tf" type="static_transform_publisher" 
@@ -41,7 +41,7 @@
         <param name="uav/id" value="$(arg drone_id_ns)"/>
         <param name="uav/init_x" value="0"/>
         <param name="uav/init_y" value="0"/>
-        <param name="uav/init_z" value="0"/>
+        <param name="uav/init_z" value="$(arg init_z)"/>
 
         <param name="uav/origin_frame" value="$(arg drone_id_ns)_origin"/>
         <param name="uav/base_link_frame" value="$(arg drone_id_ns)_base_link"/>

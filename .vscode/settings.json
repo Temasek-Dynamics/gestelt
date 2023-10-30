@@ -80,7 +80,8 @@
         "block": "cpp",
         "nodevisitor": "cpp",
         "timer": "cpp",
-        "uniform": "cpp"
+        "uniform": "cpp",
+        "plane": "cpp"
     },
     "python.autoComplete.extraPaths": [
         "/home/john/gestelt_ws/devel/lib/python3/dist-packages",
