@@ -16,10 +16,6 @@
         For other forms of simulation, might have to change it -->
         <arg name="drone_origin_frame" value="$(arg drone_origin_frame)" />
 
-        <arg name="init_x" value="0.0"/>
-        <arg name="init_y" value="0.0"/>
-        <arg name="init_z" value="0.0"/>
-
         <!-- size of map, change the size inflate x, y, z according to your application -->
         <arg name="map_size_x" value="80.0"/>
         <arg name="map_size_y" value="80.0"/>

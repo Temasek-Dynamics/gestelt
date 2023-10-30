@@ -3,9 +3,6 @@
     <arg name="drone_id"/>
     <arg name="drone_id_ns" value="drone$(arg drone_id)"/>
     <arg name="num_drones"/>
-    <arg name="init_x"/>
-    <arg name="init_y"/>
-    <arg name="init_z"/>
     <!-- size of map, change the size inflate x, y, z according to your application -->
     <arg name="map_size_x"/>
     <arg name="map_size_y"/>
