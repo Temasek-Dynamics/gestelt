@@ -1,0 +1,50 @@
+{
+  "configurations": [
+    {
+      "browse": {
+        "databaseFilename": "${default}",
+        "limitSymbolsToIncludedHeaders": false
+      },
+      "includePath": [
+        "/home/john/gazebo_ros/devel/include/**",
+        "/opt/ros/noetic/include/**",
+        "/home/john/gestelt_ws/devel/include/**",
+        "/home/john/gestelt_ws/src/mavros_controllers/controller_msgs/include/**",
+        "/home/john/gestelt_ws/src/gestelt/gestelt_planner/ego_planner_fsm/include/**",
+        "/home/john/gestelt_ws/src/gestelt/gestelt_planner/ego_planner_manager/include/**",
+        "/home/john/gestelt_ws/src/eigen_checks/include/**",
+        "/home/john/gestelt_ws/src/gestelt/gestelt_central/fake_drone/include/**",
+        "/home/john/gestelt_ws/src/gestelt/gestelt_central/fake_map/include/**",
+        "/home/john/gazebo_ros/src/gazebo_ros_pkgs/gazebo_plugins/include/**",
+        "/home/john/gazebo_ros/src/gazebo_ros_pkgs/gazebo_ros/include/**",
+        "/home/john/gazebo_ros/src/gazebo_ros_pkgs/gazebo_ros_control/include/**",
+        "/home/john/gestelt_ws/src/mavros_controllers/geometric_controller/include/**",
+        "/home/john/gestelt_ws/src/gestelt/gestelt_mapping/grid_map/include/**",
+        "/home/john/gestelt_ws/src/mav_comm/mav_msgs/include/**",
+        "/home/john/gestelt_ws/src/mav_comm/mav_planning_msgs/include/**",
+        "/home/john/gestelt_ws/src/mav_trajectory_generation/mav_trajectory_generation/include/**",
+        "/home/john/gestelt_ws/src/mav_trajectory_generation/mav_trajectory_generation_example/include/**",
+        "/home/john/gestelt_ws/src/mav_trajectory_generation/mav_trajectory_generation_ros/include/**",
+        "/home/john/gestelt_ws/src/mav_trajectory_generation/mav_visualization/include/**",
+        "/home/john/gestelt_ws/src/nlopt/include/**",
+        "/home/john/gestelt_ws/src/gestelt/gestelt_planner/path_searching/include/**",
+        "/home/john/gestelt_ws/src/simple_quad_simulator/ros1/include/**",
+        "/home/john/gestelt_ws/src/gestelt/gestelt_swarm/swarm_benchmark/include/**",
+        "/home/john/gestelt_ws/src/gestelt/gestelt_central/swarm_bridge/include/**",
+        "/home/john/gestelt_ws/src/gestelt/gestelt_planner/traj_opt/include/**",
+        "/home/john/gestelt_ws/src/gestelt/gestelt_planner/traj_utils/include/**",
+        "/home/john/gestelt_ws/src/gestelt/gestelt_central/trajectory_planner/include/**",
+        "/home/john/gestelt_ws/src/mavros_controllers/trajectory_publisher/include/**",
+        "/home/john/gestelt_ws/src/gestelt/gestelt_swarm/trajectory_server/include/**",
+        "/home/john/gestelt_ws/src/vrpn_client_ros/include/**",
+        "/usr/include/**"
+      ],
+      "name": "ROS",
+      "intelliSenseMode": "gcc-x64",
+      "compilerPath": "/usr/bin/gcc",
+      "cStandard": "gnu11",
+      "cppStandard": "c++14"
+    }
+  ],
+  "version": 4
+}

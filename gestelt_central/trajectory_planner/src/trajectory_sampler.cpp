@@ -34,9 +34,9 @@ TrajectorySamplerNode::TrajectorySamplerNode(const ros::NodeHandle& nh,
   command_pub_ = nh_.advertise<trajectory_msgs::MultiDOFJointTrajectory>(
       mav_msgs::default_topics::COMMAND_TRAJECTORY, 1);
   trajectory_sub_ = nh_.subscribe(
-      "path_segments", 10, &TrajectorySamplerNode::pathSegmentsCallback, this);
-  trajectory4D_sub_ = nh_.subscribe(
-      "path_segments_4D", 10, &TrajectorySamplerNode::pathSegments4DCallback, this);
+      "path_segments_4D", 1000, &TrajectorySamplerNode::pathSegmentsCallback, this);
+  // trajectory4D_sub_ = nh_.subscribe(
+  //     "path_segments_4D", 1000, &TrajectorySamplerNode::pathSegments4DCallback, this);
   stop_srv_ = nh_.advertiseService(
       "stop_sampling", &TrajectorySamplerNode::stopSamplingCallback, this);
   position_hold_client_ =
@@ -52,7 +52,7 @@ TrajectorySamplerNode::TrajectorySamplerNode(const ros::NodeHandle& nh,
 TrajectorySamplerNode::~TrajectorySamplerNode() { publish_timer_.stop(); }
 
 void TrajectorySamplerNode::pathSegmentsCallback(
-    const mav_planning_msgs::PolynomialTrajectory& segments_message) {
+    const mav_planning_msgs::PolynomialTrajectory4D& segments_message) {
   if (segments_message.segments.empty()) {
     ROS_WARN("Trajectory sampler: received empty waypoint message");
     return;

@@ -76,6 +76,20 @@
         "typeindex": "cpp",
         "typeinfo": "cpp",
         "variant": "cpp",
-        "polytope": "cpp"
-    }
+        "polytope": "cpp",
+        "block": "cpp",
+        "nodevisitor": "cpp",
+        "timer": "cpp",
+        "uniform": "cpp"
+    },
+    "python.autoComplete.extraPaths": [
+        "/home/john/gestelt_ws/devel/lib/python3/dist-packages",
+        "/home/john/gazebo_ros/devel/lib/python3/dist-packages",
+        "/opt/ros/noetic/lib/python3/dist-packages"
+    ],
+    "python.analysis.extraPaths": [
+        "/home/john/gestelt_ws/devel/lib/python3/dist-packages",
+        "/home/john/gazebo_ros/devel/lib/python3/dist-packages",
+        "/opt/ros/noetic/lib/python3/dist-packages"
+    ]
 }

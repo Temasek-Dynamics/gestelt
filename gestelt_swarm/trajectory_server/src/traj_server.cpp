@@ -183,13 +183,28 @@ void TrajServer::multiDOFJointTrajectoryCb(const trajectory_msgs::MultiDOFJointT
   
   cur_type_mask_ = IGNORE_YAW_RATE; // Ignore yaw_rate 
 
+  // Create rotation frame from NED To ROS
+  // Initialize camera to body matrices
+  double c2b_r = (M_PI/180.0) * 180;
+  double c2b_p = (M_PI/180.0) * 0;
+  double c2b_y = (M_PI/180.0) * 0;
+
+  Eigen::Matrix3d rot_mat;
+
+  rot_mat << cos(c2b_y) * cos(c2b_p),    -sin(c2b_y) * cos(c2b_r) + cos(c2b_y) * sin(c2b_p) * sin(c2b_r),    sin(c2b_y) * sin(c2b_r) + cos(c2b_y) * sin(c2b_p) * cos(c2b_r), 
+             sin(c2b_y) * cos(c2b_p),     cos(c2b_y) * cos(c2b_r) + sin(c2b_y) * sin(c2b_p) * sin(c2b_r),    -cos(c2b_y) * sin(c2b_r) + sin(c2b_y) * sin(c2b_p) * cos(c2b_r),
+             -sin(c2b_p),                  cos(c2b_p) * sin(c2b_r),                                            cos(c2b_p) * cos(c2b_y);
+
   // Check if position exists, else ignore
   if (msg->points[0].transforms.empty()){
     cur_type_mask_ |= IGNORE_POS;
   }
   else {
     geomMsgsVector3ToEigenVector3(msg->points[0].transforms[0].translation, last_mission_pos_);
-    last_mission_yaw_ = quaternionToYaw(msg->points[0].transforms[0].rotation);
+    // last_mission_yaw_ = quaternionToYaw(msg->points[0].transforms[0].rotation);
+
+    last_mission_pos_ = rot_mat * last_mission_pos_;
+
   }
 
   // Check if velocity exists, else ignore
