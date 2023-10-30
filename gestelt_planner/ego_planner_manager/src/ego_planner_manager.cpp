@@ -48,15 +48,15 @@ namespace ego_planner
       flag_first_call = false;
 
       /* basic params */
-      Eigen::Matrix3d headState, tailState;
+      Eigen::Matrix3d headState, tailState; //headstate and tailstate contains the start and end Position, Velocity and Acceleration
       Eigen::MatrixXd innerPs;
-      Eigen::VectorXd piece_dur_vec;
+      Eigen::VectorXd piece_dur_vec; // Duration of each piece
       int piece_nums;
       constexpr double init_of_init_totaldur = 2.0;
       headState << start_pt, start_vel, start_acc;
       tailState << local_target_pt, local_target_vel, Eigen::Vector3d::Zero();
 
-      /* determined or random inner point */
+      /* Non-random inner point */
       if (!flag_randomPolyTraj)
       {
         if (innerPs.cols() != 0)
@@ -68,25 +68,27 @@ namespace ego_planner
         piece_dur_vec.resize(1);
         piece_dur_vec(0) = init_of_init_totaldur;
       }
+      // random inner point
       else
       {
+        // Get horizontal and vertical direction
         Eigen::Vector3d horizen_dir = ((start_pt - local_target_pt).cross(Eigen::Vector3d(0, 0, 1))).normalized();
         Eigen::Vector3d vertical_dir = ((start_pt - local_target_pt).cross(horizen_dir)).normalized();
         innerPs.resize(3, 1);
-        innerPs = (start_pt + local_target_pt) / 2 +
-                  (((double)rand()) / RAND_MAX - 0.5) *
-                      (start_pt - local_target_pt).norm() *
-                      horizen_dir * 0.8 * (-0.978 / (continous_failures_count_ + 0.989) + 0.989) +
-                  (((double)rand()) / RAND_MAX - 0.5) *
-                      (start_pt - local_target_pt).norm() *
-                      vertical_dir * 0.4 * (-0.978 / (continous_failures_count_ + 0.989) + 0.989);
+        innerPs = (start_pt + local_target_pt) / 2 
+                  + (((double)rand()) / RAND_MAX - 0.5) 
+                  *  (start_pt - local_target_pt).norm() 
+                  *  horizen_dir * 0.8 * (-0.978 / (continous_failures_count_ + 0.989) + 0.989) 
+                  + (((double)rand()) / RAND_MAX - 0.5) 
+                  *  (start_pt - local_target_pt).norm() 
+                  *  vertical_dir * 0.4 * (-0.978 / (continous_failures_count_ + 0.989) + 0.989);
 
         piece_nums = 2;
         piece_dur_vec.resize(2);
         piece_dur_vec = Eigen::Vector2d(init_of_init_totaldur / 2, init_of_init_totaldur / 2);
       }
 
-      /* generate the init of init trajectory */
+      /* generate the preliminary init trajectory */
       initMJO.reset(headState, tailState, piece_nums);
       initMJO.generate(innerPs, piece_dur_vec);
       poly_traj::Trajectory initTraj = initMJO.getTraj();
@@ -95,6 +97,7 @@ namespace ego_planner
       piece_nums = round((headState.col(0) - tailState.col(0)).norm() / pp_.polyTraj_piece_length);
       if (piece_nums < 2)
         piece_nums = 2;
+      // segment duration assumed to be equal
       double piece_dur = init_of_init_totaldur / (double)piece_nums;
       piece_dur_vec.resize(piece_nums);
       piece_dur_vec = Eigen::VectorXd::Constant(piece_nums, ts);
@@ -115,6 +118,7 @@ namespace ego_planner
     }
     else /*** case 2: initialize from previous optimal trajectory ***/
     {
+      // last_glb_t_of_lc_tgt: The corresponding global trajectory time of the last local target
       if (traj_.global_traj.last_glb_t_of_lc_tgt < 0.0)
       {
         ROS_ERROR("You are initialzing a trajectory from a previous optimal trajectory, but no previous trajectories up to now.");
@@ -263,6 +267,8 @@ namespace ego_planner
     ros::Duration t_init, t_opt;
 
     /*** STEP 1: INIT ***/
+
+    // ts: time duration of segement
     double ts = pp_.polyTraj_piece_length / pp_.max_vel_;
 
     poly_traj::MinJerkOpt initMJO;
@@ -462,12 +468,14 @@ namespace ego_planner
 
     globalMJO.reset(headState, tailState, waypoints.size());
 
+    // TODO Why is max_vel divided by 1.5?
     double des_vel = pp_.max_vel_ / 1.5;
     Eigen::VectorXd time_vec(waypoints.size());
 
     // Try replanning up to 2 times if the velocity constraints are not fulfilled
     for (int j = 0; j < 2; ++j)
     {
+      // for each plan segment, calculate time using desired velocity
       for (size_t i = 0; i < waypoints.size(); ++i)
       {
         time_vec(i) = (i == 0) ? (waypoints[0] - start_pos).norm() / des_vel
@@ -483,7 +491,7 @@ namespace ego_planner
         break;
       }
 
-      if (j == 2)
+      if (j == 2) // on final try
       {
         ROS_WARN("Global traj MaxVel = %f > set_max_vel", globalMJO.getTraj().getMaxVelRate());
         std::cout << "headState=" << std::endl
@@ -492,6 +500,7 @@ namespace ego_planner
              << tailState <<std::endl;
       }
 
+      // Reduce desired velocity by a factor of 1.5 and try again
       des_vel /= 1.5;
     }
 
