@@ -11,6 +11,7 @@
 export ROS_DISTRO="noetic"
 
 # Install ROS dependencies
+sudo apt-get install ros-noetic-octomap -y
 # sudo apt install ros-${ROS_DISTRO}-tf2-sensor-msgs -y
 sudo apt install ros-${ROS_DISTRO}-mavlink ros-${ROS_DISTRO}-mavros ros-${ROS_DISTRO}-mavros-msgs ros-${ROS_DISTRO}-mavros-extras -y
 # Install external dependencies
