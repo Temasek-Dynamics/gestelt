@@ -33,12 +33,12 @@
         <param name="traj_server/pos_limit/max_z" value="$(arg map_size_z)" type="double"/>
         <param name="traj_server/pos_limit/min_z" value="-0.1" type="double"/> -->
 
-        <param name="traj_server/pos_limit/max_x" value="50.0" type="double"/>
-        <param name="traj_server/pos_limit/min_x" value="-50.0" type="double"/>
-        <param name="traj_server/pos_limit/max_y" value="50.0" type="double"/>
-        <param name="traj_server/pos_limit/min_y" value="-50.0" type="double"/>
-        <param name="traj_server/pos_limit/max_z" value="10.0" type="double"/>
-        <param name="traj_server/pos_limit/min_z" value="-0.1" type="double"/>
+        <param name="traj_server/pos_limit/min_x" value="-5.5" type="double"/>
+        <param name="traj_server/pos_limit/min_y" value="-5.5" type="double"/>
+        <param name="traj_server/pos_limit/min_z" value="-0.5" type="double"/>
+        <param name="traj_server/pos_limit/max_x" value="5.5" type="double"/>
+        <param name="traj_server/pos_limit/max_y" value="5.5" type="double"/>
+        <param name="traj_server/pos_limit/max_z" value="3.0" type="double"/>
 
         <!-- Heartbeat -->
         <param name="traj_server/planner_heartbeat_timeout" value="0.5" type="double"/>

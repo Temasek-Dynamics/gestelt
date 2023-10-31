@@ -267,7 +267,7 @@ ASTAR_RET AStar::AstarSearch(const double step_size, Vector3d start_pt, Vector3d
     ros::Time time_2 = ros::Time::now();
 
     if ((time_2 - time_1).toSec() > 0.1){
-        ROS_WARN("Time consume in A star path finding is %.3fs, iter=%d", (time_2 - time_1).toSec(), num_iter);
+        ROS_WARN("  Time consume in A star path finding is %.3fs, iter=%d", (time_2 - time_1).toSec(), num_iter);
     }
 
     return ASTAR_RET::SEARCH_ERR;

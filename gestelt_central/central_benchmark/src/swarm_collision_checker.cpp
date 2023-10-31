@@ -59,7 +59,7 @@ public:
     obs_collision_pub_ = nh.advertise<visualization_msgs::Marker>("/obstacle_collision_points", 10);
 
     // Timers
-    broadcast_tf_timer_ = nh.createTimer(ros::Duration(1/check_collision_freq_), &SwarmCollisionChecker::checkCollisionTimerCb, this);
+    check_collision_timer_ = nh.createTimer(ros::Duration(1/check_collision_freq_), &SwarmCollisionChecker::checkCollisionTimerCb, this);
 
     // Transformations
     tfListener_.reset(new tf2_ros::TransformListener(tfBuffer_));
@@ -82,13 +82,17 @@ public:
       world_to_drone_origin_tfs_.push_back(world_to_origin_tf);
     }
     
-    ROS_INFO("[Drone Collision Checker]: Initialized");
+    ROS_INFO("[Collision Checker]: Initialized");
   }
 
   // Subscribe to robot pose
   void poseCB(const geometry_msgs::PoseStamped::ConstPtr &msg, int drone_id)
   {
-    
+    ROS_INFO("[Collision Checker]: Pose callback for drone %d", drone_id);
+    if (drone_id > world_to_drone_base_.size()){
+      ROS_ERROR("[Collision Checker]: drone_id %d >  world_to_drone_base_.size() %ld", drone_id, world_to_drone_base_.size());
+      return;
+    }
     world_to_drone_base_[drone_id].header.stamp = msg->header.stamp;
     world_to_drone_base_[drone_id].header.frame_id = msg->header.frame_id;
 
@@ -100,6 +104,8 @@ public:
   // Subscribe to collision sensor topic
   void collisionCB(const gazebo_msgs::ContactsState::ConstPtr &msg, int drone_id)
   {
+    ROS_INFO("[Collision Checker]: Collision callback for drone %d", drone_id);
+
     if (!msg->states.empty()){
       for (auto collision : msg->states){
         // ROS_INFO("[Collision Checker] Collision detected between %s and %s at position (%f, %f, %f)!", 
@@ -131,6 +137,8 @@ public:
   }
 
   void checkCollisionTimerCb(const ros::TimerEvent &e){
+    ROS_INFO("[Collision Checker]: checkCollisionTimerCb");
+
     // Checks for collision between every pair of drone. Iterates for num_drones_**2 times 
     for (int i = 0; i < num_drones_; i++) {
       for (int j = i+1; j < num_drones_; j++) {
@@ -181,9 +189,9 @@ public:
 
     sphere_ls.color = color;
 
-    sphere_ls.scale.x = 0.4;
-    sphere_ls.scale.y = 0.4;
-    sphere_ls.scale.z = 0.4;
+    sphere_ls.scale.x = 0.3;
+    sphere_ls.scale.y = 0.3;
+    sphere_ls.scale.z = 0.3;
 
     for (auto collision_point : collision_points){
       sphere_ls.points.push_back(collision_point);
@@ -237,7 +245,7 @@ private:
   ros::Publisher obs_collision_pub_;
 
   // Timers
-  ros::Timer broadcast_tf_timer_;
+  ros::Timer check_collision_timer_;
 
   // Params
   double check_collision_freq_;

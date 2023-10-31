@@ -139,14 +139,14 @@
         <param name="optimization/constraint_points_perPiece" value="5" type="int"/>
         <param name="optimization/weight_obstacle" value="10000.0" type="double"/>
         <param name="optimization/weight_obstacle_soft" value="5000.0" type="double"/>
-        <param name="optimization/weight_swarm" value="10000.0" type="double"/>
+        <param name="optimization/weight_swarm" value="50000.0" type="double"/>
         <param name="optimization/weight_feasibility" value="10000.0" type="double"/>
         <param name="optimization/weight_sqrvariance" value="10000.0" type="double"/>
         <param name="optimization/weight_time" value="10.0" type="double"/>
         <param name="optimization/weight_formation" value="100" type="double"/>
         <param name="optimization/obstacle_clearance" value="0.35" type="double"/>
         <param name="optimization/obstacle_clearance_soft" value="0.5" type="double"/>
-        <param name="optimization/swarm_clearance" value="0.35" type="double"/>
+        <param name="optimization/swarm_clearance" value="0.4" type="double"/>
         <param name="optimization/max_vel" value="$(arg max_vel)" type="double"/>
         <param name="optimization/max_acc" value="$(arg max_acc)" type="double"/>
         <param name="optimization/max_jer" value="$(arg max_jer)" type="double"/>

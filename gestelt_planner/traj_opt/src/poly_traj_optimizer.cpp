@@ -764,6 +764,9 @@ namespace ego_planner
       }
 
       force_stop_type_ = STOP_FOR_REBOUND;
+
+      visualization_->displayAStarList(a_star_pathes, 0);
+      
       return true;
     }
 

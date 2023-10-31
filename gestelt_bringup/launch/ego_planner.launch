@@ -53,7 +53,7 @@
         <!-- thresh_no_replan_meter: Replan only if current position and local target exceeds this parameter -->
         <arg name="thresh_no_replan_meter" value="0.25" />
         <!-- thresh_replan_time: Replanning period -->
-        <arg name="thresh_replan_time" value="0.5" />
+        <arg name="thresh_replan_time" value="0.1" />
         <!--always set to 1.5 times grater than sensing horizon-->
         <!-- sensing horizon here refers to the sensor range. e.g. about 4.5-5m for realsense d435 -->
         <arg name="planning_horizon" value="7.5" />
