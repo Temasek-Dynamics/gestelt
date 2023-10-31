@@ -25,7 +25,7 @@ export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:$gestelt_bringup_DIR:$PX4_AUTOPILOT_RE
 # Commands
 #####
 CMD_0="
-roslaunch gestelt_bringup single_uav_sim.launch drone_id:=1 init_x:=0.4 init_y:=-0.4
+roslaunch gestelt_bringup single_uav_sim.launch drone_id:=1 init_x:=0.5 init_y:=-0.5
 "
 
 CMD_1="roslaunch gestelt_bringup single_fake_map.launch drone_id:=1"

@@ -18,8 +18,8 @@
   <!-- Drone 2 -->
   <include file="$(find gestelt_bringup)/launch/fake_drone/fake_drone_single.xml">
     <arg name="drone_id"   value="2"/>
-    <arg name="init_x"     value="-0.4"/>
-    <arg name="init_y"     value="-0.4"/>
+    <arg name="init_x"     value="-0.5"/>
+    <arg name="init_y"     value="-0.5"/>
     <arg name="init_z"     value="0.5"/>
     <arg name="map_filepath" value="$(arg map_filepath)"/>
     <arg name="num_drones" value="$(arg num_drones)"/>
@@ -32,8 +32,8 @@
   <!-- Drone 3 -->
   <include file="$(find gestelt_bringup)/launch/fake_drone/fake_drone_single.xml">
     <arg name="drone_id"   value="3"/>
-    <arg name="init_x"     value="-0.4"/>
-    <arg name="init_y"     value="0.4"/>
+    <arg name="init_x"     value="-0.5"/>
+    <arg name="init_y"     value="0.5"/>
     <arg name="init_z"     value="0.5"/>
     <arg name="map_filepath" value="$(arg map_filepath)"/>
     <arg name="num_drones" value="$(arg num_drones)"/>

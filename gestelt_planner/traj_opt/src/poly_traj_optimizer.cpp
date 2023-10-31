@@ -1675,7 +1675,7 @@ namespace ego_planner
     grid_map_ = map;
 
     a_star_.reset(new AStar);
-    a_star_->initGridMap(grid_map_, Eigen::Vector3i(100, 100, 100));
+    a_star_->initGridMap(grid_map_, Eigen::Vector3i(200, 200, 200));
 
   }
 

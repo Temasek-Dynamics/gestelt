@@ -6,11 +6,6 @@
   <!-- <arg name="cloud_topic_fake" value="camera/depth/points" /> -->
   <arg name="cloud_topic_fake" default="camera/depth/points_fake" />
 
-  <!-- Global map publisher -->
-  <node pkg="fake_map" type="fake_map_publisher" name="fake_map_publisher" output="screen">
-      <param name="map/path" value="$(arg map_filepath)"/>
-  </node>
-
   <!-- Fake sensor data node -->
   <node pkg="fake_map" type="fake_map_node" name="fake_map_node_$(arg drone_id_ns)" output="screen">
     <param name="map/filepath" value="$(arg map_filepath)"/>

@@ -153,7 +153,8 @@ ASTAR_RET AStar::AstarSearch(const double step_size, Vector3d start_pt, Vector3d
     Vector3i start_idx, end_idx;
     if (!ConvertToIndexAndAdjustStartEndPoints(start_pt, end_pt, start_idx, end_idx))
     {
-        ROS_ERROR("Unable to handle the initial or end point, force return!");
+        ROS_ERROR("Unable to handle the initial (%f, %f, %f) or end point (%f, %f, %f), force return!",
+            start_pt(0), start_pt(1), start_pt(2), end_pt(0), end_pt(1), end_pt(2));
         return ASTAR_RET::INIT_ERR;
     }
 
@@ -258,7 +259,7 @@ ASTAR_RET AStar::AstarSearch(const double step_size, Vector3d start_pt, Vector3d
         ros::Time time_2 = ros::Time::now();
         if ((time_2 - time_1).toSec() > 0.2)
         {
-            ROS_WARN("Failed in A star path searching !!! 0.2 seconds time limit exceeded.");
+            ROS_WARN("  Failed in A star path searching !!! 0.2 seconds time limit exceeded.");
             return ASTAR_RET::SEARCH_ERR;
         }
     }

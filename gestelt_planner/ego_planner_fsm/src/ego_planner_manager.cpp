@@ -130,7 +130,7 @@ namespace ego_planner
       double t_to_lc_end = traj_.local_traj.duration - passed_t_on_lctraj;
       if ( t_to_lc_end < 0 )
       {
-        ROS_INFO("t_to_lc_end < 0, exit and wait for another call.");
+        ROS_INFO("Drone %d: t_to_lc_end < 0, exit and wait for another call.", pp_.drone_id);
         return false;
       }
       double t_to_lc_tgt = t_to_lc_end +

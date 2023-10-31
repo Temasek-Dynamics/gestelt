@@ -5,7 +5,6 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /Global Options1
-        - /drone0_ego1
         - /drone0_ego1/Mapping1/occ_grid_inf1/Autocompute Value Bounds1
         - /drone0_mavros1/Localization1//mavros/local_position/pose1
         - /drone1_ego1
@@ -278,7 +277,7 @@ Visualization Manager:
               Use Fixed Frame: true
               Use rainbow: true
               Value: true
-          Enabled: false
+          Enabled: true
           Name: Mapping
         - Alpha: 0.699999988079071
           Buffer Length: 1
@@ -395,7 +394,7 @@ Visualization Manager:
               Value: false
           Enabled: true
           Name: Localization
-      Enabled: true
+      Enabled: false
       Name: drone0_mavros
     - Class: rviz/Group
       Displays:
@@ -648,7 +647,7 @@ Visualization Manager:
               Use Fixed Frame: true
               Use rainbow: true
               Value: true
-          Enabled: true
+          Enabled: false
           Name: Mapping
         - Class: rviz/Group
           Displays:
@@ -1383,7 +1382,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 9.176874160766602
+      Distance: 6.426609992980957
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -1391,17 +1390,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: -0.5436404347419739
-        Y: -0.15613731741905212
-        Z: -0.1318226158618927
+        X: 0.4432765245437622
+        Y: -1.22491455078125
+        Z: -0.09343236684799194
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.5697963237762451
+      Pitch: 1.3347965478897095
       Target Frame: my_view
-      Yaw: 4.395016193389893
+      Yaw: 2.520007610321045
     Saved:
       - Class: rviz/FPS
         Enable Stereo Rendering:

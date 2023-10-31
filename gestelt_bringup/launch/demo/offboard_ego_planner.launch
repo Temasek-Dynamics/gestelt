@@ -15,9 +15,9 @@
   <!-- Drone 0 -->
   <include file="$(find gestelt_bringup)/launch/ego_planner.launch">
     <arg name="drone_id"   value="$(arg drone_id)"/>
-    <arg name="init_x"     value="0.0"/>
+    <!-- <arg name="init_x"     value="0.0"/>
     <arg name="init_y"     value="0.0"/>
-    <arg name="init_z"     value="0.0"/>
+    <arg name="init_z"     value="0.0"/> -->
     <arg name="num_drones" value="$(arg num_drones)"/>
     <arg name="map_size_x" value="$(arg map_size_x)"/>
     <arg name="map_size_y" value="$(arg map_size_y)"/>

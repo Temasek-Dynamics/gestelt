@@ -166,6 +166,8 @@ namespace ego_planner
       {
         switch (getServerEvent())
         {
+          case EMPTY_E:
+            break;
           case READY_E:
             setServerState(ServerState::READY);
             break;
@@ -174,6 +176,7 @@ namespace ego_planner
             setServerState(ServerState::EMERGENCY_STOP);
             break;
           default:
+            logFatal(string_format("INIT: INVALID STATE TRANSITION! %d", getServerEvent()));
             break;
         }
         break;
@@ -183,6 +186,8 @@ namespace ego_planner
       {
         switch (getServerEvent())
         {
+          case EMPTY_E:
+            break;
           case PLAN_GLOBAL_TRAJ_E:
             setServerState(ServerState::PLAN_GLOBAL_TRAJ);
             break;
@@ -191,6 +196,7 @@ namespace ego_planner
             setServerState(ServerState::EMERGENCY_STOP);
             break;
           default:
+            logFatal(string_format("READY: INVALID STATE TRANSITION! %d", getServerEvent()));
             break;
         }
         break;
@@ -200,6 +206,8 @@ namespace ego_planner
       {
         switch (getServerEvent())
         {
+          case EMPTY_E:
+            break;
           case EXEC_TRAJ_E:
             setServerState(ServerState::EXEC_TRAJ);
             break;
@@ -208,9 +216,9 @@ namespace ego_planner
             setServerState(ServerState::EMERGENCY_STOP);
             break;
           default:
+            logFatal(string_format("PLAN_GLOBAL_TRAJ: INVALID STATE TRANSITION! %d", getServerEvent()));
             break;
         }
-
         break;
       }
 
@@ -219,17 +227,26 @@ namespace ego_planner
 
         switch (getServerEvent())
         {
+          case EMPTY_E:
+            break;
           case EXEC_TRAJ_E:
             setServerState(ServerState::EXEC_TRAJ);
             break;
+          case PLAN_LOCAL_TRAJ_E:
+            setServerState(ServerState::PLAN_LOCAL_TRAJ);
+            break;
+          case PLAN_GLOBAL_TRAJ_E:
+            setServerState(ServerState::PLAN_LOCAL_TRAJ);
+            break;
+
           case EMERGENCY_STOP_E:
             logFatal("EMERGENCY STOP ACTIVATED!");
             setServerState(ServerState::EMERGENCY_STOP);
             break;
           default:
+            logFatal(string_format("PLAN_LOCAL_TRAJ: INVALID STATE TRANSITION! %d", getServerEvent()));
             break;
         }
-
         break;
       }
 
@@ -237,6 +254,8 @@ namespace ego_planner
       {
         switch (getServerEvent())
         {
+          case EMPTY_E:
+            break;
           case READY_E:
             setServerState(ServerState::READY);
             break;
@@ -248,17 +267,18 @@ namespace ego_planner
             setServerState(ServerState::EMERGENCY_STOP);
             break;
           default:
+            logFatal(string_format("EXEC_TRAJ: INVALID STATE TRANSITION! %d", getServerEvent()));
             break;
         }
-
         break;
       }
-
 
       case PLAN_NEW_GLOBAL_TRAJ:
       {
         switch (getServerEvent())
         {
+          case EMPTY_E:
+            break;
           case EXEC_TRAJ_E:
             setServerState(ServerState::EXEC_TRAJ);
             break;
@@ -267,6 +287,7 @@ namespace ego_planner
             setServerState(ServerState::EMERGENCY_STOP);
             break;
           default:
+            logFatal(string_format("PLAN_NEW_GLOBAL_TRAJ: INVALID STATE TRANSITION! %d", getServerEvent()));
             break;
         }
 
@@ -275,7 +296,15 @@ namespace ego_planner
 
       case EMERGENCY_STOP:
       {
-        // Do nothing, vehicle requires restarting
+        switch (getServerEvent())
+        {
+          case PLAN_NEW_GLOBAL_TRAJ_E:
+            setServerState(ServerState::PLAN_NEW_GLOBAL_TRAJ);
+            break;
+          default:
+            logFatal(string_format("EMERGENCY_STOP: INVALID STATE TRANSITION! %d", getServerEvent()));
+            break;
+        }
         break;
       }
     }
@@ -313,6 +342,7 @@ namespace ego_planner
           else
           {
             logError("Failed to generate the first global trajectory! Retrying.");
+            setServerEvent(PLAN_GLOBAL_TRAJ_E);
           }
         }
 
@@ -321,20 +351,15 @@ namespace ego_planner
 
       case PLAN_LOCAL_TRAJ:
       {
-        if (planFromLocalTraj(3))
+        if (planFromLocalTraj(2))
         {
           setServerEvent(EXEC_TRAJ_E);
         }
         else 
         {
-          logError(string_format("Plan from local trajectory failed, possibly from potential collision!"));
-          if (potential_agent_to_agent_collision_)
-          {
-            logError(string_format("Potential agent to agent collision detected, ESTOP has been disabled from activation for debugging"));
-
-            // logError(string_format("Potential agent to agent collision detected, activating ESTOP"));
-            // setServerEvent(EMERGENCY_STOP_E);
-          }
+          logInfo("Restart planning from global trajectory!");
+          // setServerEvent(PLAN_LOCAL_TRAJ_E);
+          setServerEvent(PLAN_GLOBAL_TRAJ_E);
         }
         break;
       }
@@ -395,18 +420,16 @@ namespace ego_planner
         }
         else
         {
-          if (enable_fail_safe_ && odom_vel_.norm() < 0.1){
+          if (enable_fail_safe_ && odom_vel_.norm() < 0.2){
             setServerEvent(PLAN_NEW_GLOBAL_TRAJ_E);
           }
         }
-
         flag_escape_emergency_ = false;
         break;
       }
     }
 
   }
-
 
   /**
    * Subscriber Callbacks
@@ -910,6 +933,8 @@ namespace ego_planner
 
   bool EGOReplanFSM::checkTrajectoryClearance()
   {
+    bool traj_not_clear{false};
+
     LocalTrajData *info = &planner_manager_->traj_.local_traj;
     
     if (info->traj_id <= 0){ // Return if no local trajectory yet
@@ -953,18 +978,21 @@ namespace ego_planner
       const bool target_near_goal = ((local_target_pt_ - end_pt_).norm() < 1e-2);
       size_t i_end = target_near_goal ? pts_chk.size() : pts_chk.size() * 3 / 4;
 
+      potential_agent_to_agent_collision_ = false;
+
       // Iterate through each piece index
       for (size_t i = i_start; i < i_end; ++i)
       {
-        // Iterate through each point within piece index
+        // Iterate through each point in piece 
         for (size_t j = j_start; j < pts_chk[i].size(); ++j)
         {
 
           double t = pts_chk[i][j].first; // time
           Eigen::Vector3d pos = pts_chk[i][j].second; //position
-          bool in_obs_grid = planner_manager_->grid_map_->getInflateOccupancy(pos); // Indicates if occupancy grid is occupied
+          // Check if trajectory is in occupied cell
+          bool in_obs_grid = planner_manager_->grid_map_->getInflateOccupancy(pos); 
 
-          if (!in_obs_grid){
+          if (!in_obs_grid){ // Trajectory point not inside obstacle
             // Iterate through trajectories of other agents
             for (size_t id = 0; id < planner_manager_->traj_.swarm_traj.size(); id++)
             {
@@ -990,20 +1018,37 @@ namespace ego_planner
                           planner_manager_->pp_.drone_id, (int)id, dist));
 
                   potential_agent_to_agent_collision_ = ((t - t_cur) < emergency_time_);
-                  return true;
+                  traj_not_clear = true;
+
+                  if (t - t_cur < emergency_time_) // Time to collision is less than threshold
+                  {
+                    ROS_WARN("Current traj in collision with other agents. Emergency time to collision %f is less than %f", (t - t_cur), emergency_time_);
+                    setServerEvent(EMERGENCY_STOP_E);
+                  }
+
+                  goto end;
                 }
               }
             }
           }
           else {
-            return true;
-          }
+            traj_not_clear = true;
 
+            if (t - t_cur < emergency_time_) // Time to collision is less than threshold
+            {
+              ROS_WARN("Current traj in collision with obstacles. Emergency time to collision %f is less than %f", (t - t_cur), emergency_time_);
+              setServerEvent(EMERGENCY_STOP_E);
+            }
+
+            goto end;
+          }
         }
         j_start = 0;
       }
 
-      return EMPTY_E;
+      end:;
+
+      return traj_not_clear;
   }
 
   /**

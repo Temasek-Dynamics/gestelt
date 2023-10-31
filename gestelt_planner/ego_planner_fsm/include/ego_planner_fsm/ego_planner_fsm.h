@@ -182,13 +182,13 @@ private:
   /* State machine events */
   enum ServerEvent
   {
-    EMPTY_E,             // 1
-    READY_E,      // 2
-    PLAN_NEW_GLOBAL_TRAJ_E,     // 3
+    EMPTY_E,                // 1
+    READY_E,                // 2
+    PLAN_NEW_GLOBAL_TRAJ_E, // 3
     PLAN_LOCAL_TRAJ_E,      // 4
-    EXEC_TRAJ_E,        // 5
-    EMERGENCY_STOP_E,   // 6
-    PLAN_GLOBAL_TRAJ_E // 7
+    EXEC_TRAJ_E,            // 5
+    EMERGENCY_STOP_E,       // 6
+    PLAN_GLOBAL_TRAJ_E      // 7
   };
 
   /** @brief StateToString interprets the input server state **/
