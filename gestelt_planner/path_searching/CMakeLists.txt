@@ -8,7 +8,6 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g")
 set(ROS_LIBRARIES
   roscpp
   grid_map
-  # cv_bridge
 )
 
 set(ROS_DEPENDS

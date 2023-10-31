@@ -17,6 +17,8 @@ set(ROS_LIBRARIES
 
 set(ROS_DEPENDS
     grid_map
+    path_searching
+    traj_utils
 )
 
 find_package(Eigen3 REQUIRED)

@@ -11,9 +11,12 @@ set(ROS_LIBRARIES
   geometry_msgs
   mavros_msgs
   traj_opt
-  traj_utils
+  # traj_utils
   trajectory_server_msgs
 )
+
+# set(ROS_DEPENDS
+# )
 
 find_package(Eigen3 REQUIRED)
 find_package(catkin REQUIRED COMPONENTS
@@ -23,7 +26,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
  INCLUDE_DIRS include
  LIBRARIES trajectory_server
- CATKIN_DEPENDS ${ROS_LIBRARIES}
+#  CATKIN_DEPENDS ${ROS_DEPENDS}
 #  DEPENDS system_lib
 )
 

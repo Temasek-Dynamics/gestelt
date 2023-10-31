@@ -13,6 +13,10 @@ set(ROS_LIBRARIES
   visualization_msgs
 )
 
+# set (ROS_DEPENDS
+
+# )
+
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
@@ -28,7 +32,7 @@ find_package(PCL 1.7 REQUIRED)
 catkin_package(
  INCLUDE_DIRS include
  LIBRARIES global_planner
- CATKIN_DEPENDS ${ROS_LIBRARIES}
+#  CATKIN_DEPENDS ${ROS_DEPENDS}
 #  DEPENDS system_lib
 )
 

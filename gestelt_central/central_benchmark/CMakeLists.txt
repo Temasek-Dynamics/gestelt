@@ -15,6 +15,9 @@ set(ROS_LIBRARIES
   tf2_ros
 )
 
+# set(ROS_DEPENDS
+# )
+
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
@@ -27,7 +30,7 @@ catkin_package(
 #  INCLUDE_DIRS 
   # include
 #  LIBRARIES central_benchmark
- CATKIN_DEPENDS ${ROS_LIBRARIES}
+#  CATKIN_DEPENDS ${ROS_DEPENDS}
 #  DEPENDS Eigen 
 )
 

@@ -7,19 +7,22 @@ set(CMAKE_BUILD_TYPE "Release")
 add_compile_options(-std=c++14)
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g")
 
-set (ROS_PKGS
+set (ROS_LIBRARIES
+  roscpp
   geometry_msgs
   pcl_ros
-  roscpp
   sensor_msgs
   tf2_ros
 )
+
+# set (ROS_DEPENDS
+# )
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
-  ${ROS_PKGS}
+  ${ROS_LIBRARIES}
 )
 
 find_package(Eigen3 REQUIRED)
@@ -36,7 +39,7 @@ find_package(PCL REQUIRED)
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
  INCLUDE_DIRS include
- CATKIN_DEPENDS ${ROS_PKGS}
+#  CATKIN_DEPENDS ${ROS_DEPENDS}
 )
 
 ###########

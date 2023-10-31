@@ -9,6 +9,9 @@ set (ROS_LIBRARIES
   roscpp
 )
 
+# set (ROS_DEPENDS
+# )
+
 find_package(catkin REQUIRED COMPONENTS
   ${ROS_LIBRARIES}
 )
@@ -17,7 +20,7 @@ catkin_package(
  INCLUDE_DIRS 
   include
  LIBRARIES ${PROJECT_NAME}
- CATKIN_DEPENDS ${ROS_LIBRARIES}
+#  CATKIN_DEPENDS ${ROS_DEPENDS}
 #  DEPENDS Eigen Boost
 )
 

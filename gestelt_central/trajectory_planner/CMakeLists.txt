@@ -12,6 +12,10 @@ set (ROS_PKGS
   trajectory_server_msgs
 )
 
+# set (ROS_DEPENDS
+
+# )
+
 find_package(catkin REQUIRED COMPONENTS
   ${ROS_PKGS}
 )
@@ -25,7 +29,7 @@ find_package(Eigen3 REQUIRED)
 ###################################
 catkin_package(
  INCLUDE_DIRS include
- CATKIN_DEPENDS ${ROS_PKGS}
+#  CATKIN_DEPENDS ${ROS_DEPENDS}
 )
 
 ###########

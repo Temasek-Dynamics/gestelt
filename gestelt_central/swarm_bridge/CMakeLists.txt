@@ -16,7 +16,7 @@ find_package(catkin REQUIRED COMPONENTS
 )
 
 catkin_package(
- CATKIN_DEPENDS traj_utils
+#  CATKIN_DEPENDS traj_utils
 )
 
 include_directories(

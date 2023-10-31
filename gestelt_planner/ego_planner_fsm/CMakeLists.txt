@@ -10,21 +10,17 @@ set(ROS_LIBRARIES
   roscpp
   std_msgs
   geometry_msgs
+  tf2_ros
   trajectory_server_msgs
-  grid_map
+  # grid_map
   traj_opt
-  traj_utils
+  # traj_utils
+  # path_searching
   # swarm_benchmark
-  path_searching
 )
 
-set(ROS_DEPENDS
-  grid_map
-  traj_opt
-  traj_utils
-  path_searching
-)
-
+# set(ROS_DEPENDS
+# )
 
 find_package(Eigen3 REQUIRED)
 find_package(catkin REQUIRED COMPONENTS
@@ -33,8 +29,8 @@ find_package(catkin REQUIRED COMPONENTS
 
 catkin_package(
  INCLUDE_DIRS include
-#  LIBRARIES ${PROJECT_NAME}
- CATKIN_DEPENDS ${ROS_DEPENDS}
+ LIBRARIES ${PROJECT_NAME}
+#  CATKIN_DEPENDS ${ROS_DEPENDS}
 )
 
 include_directories(

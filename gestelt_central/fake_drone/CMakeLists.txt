@@ -4,20 +4,23 @@ project(fake_drone)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS "-std=c++17")
 
-set (ROS_PKGS
+set (ROS_LIBRARIES
   geometry_msgs
   roscpp
   tf2_ros
 )
 
+# set (ROS_DEPENDS
+# )
+
 find_package(catkin REQUIRED COMPONENTS
-  ${ROS_PKGS}
+  ${ROS_LIBRARIES}
 )
 find_package(Eigen3 REQUIRED)
 
 catkin_package(
  INCLUDE_DIRS include
- CATKIN_DEPENDS ${ROS_PKGS}
+#  CATKIN_DEPENDS ${ROS_DEPENDS}
 )
 
 ###########

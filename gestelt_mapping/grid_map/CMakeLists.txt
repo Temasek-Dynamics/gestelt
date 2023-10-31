@@ -16,10 +16,9 @@ set(ROS_LIBRARIES
     trajectory_server_msgs
 )
 
-set(ROS_DEPENDS
-    roscpp
-    std_msgs
-)
+# set(ROS_DEPENDS
+#     roscpp
+# )
 
 find_package(octomap REQUIRED)
 
@@ -33,8 +32,8 @@ find_package(Eigen3 REQUIRED)
 catkin_package(
  INCLUDE_DIRS include
  LIBRARIES grid_map
- CATKIN_DEPENDS ${ROS_DEPENDS}
-#  DEPENDS system_lib
+#  CATKIN_DEPENDS ${ROS_DEPENDS}
+ DEPENDS PCL
 )
 
 include_directories( 

@@ -26,11 +26,10 @@
   <exec_depend>traj_opt</exec_depend>
   <exec_depend>traj_utils</exec_depend>
 
+  <depend>tf2_ros</depend>
   <depend>geometry_msgs</depend>
   <depend>trajectory_server_msgs</depend>
   <!-- <depend>swarm_benchmark</depend> -->
-
-  <depend>ego_planner_manager</depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>

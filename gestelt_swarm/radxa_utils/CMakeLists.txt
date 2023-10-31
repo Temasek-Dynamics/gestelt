@@ -8,6 +8,10 @@ set (ROS_LIBRARIES
   std_msgs
 )
 
+# set (ROS_DEPENDS
+
+# )
+
 find_package(catkin REQUIRED COMPONENTS
   ${ROS_LIBRARIES}
 )
@@ -32,7 +36,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES gestelt_mapping
-  CATKIN_DEPENDS ${ROS_LIBRARIES}
+  # CATKIN_DEPENDS ${ROS_DEPENDS}
 #  DEPENDS system_lib
 )
 

@@ -19,8 +19,8 @@ catkin_package(
 #  INCLUDE_DIRS 
   # include
 #  LIBRARIES gestelt_bringup
- CATKIN_DEPENDS ${ROS_LIBRARIES}
- DEPENDS Eigen Boost
+#  CATKIN_DEPENDS  
+#  DEPENDS 
 )
 
 ###########
