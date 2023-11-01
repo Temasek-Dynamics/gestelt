@@ -548,7 +548,9 @@ namespace ego_planner
       }
     }
 
-    visualization_->displayAStarList(a_star_pathes, 0);
+    if (!a_star_pathes.empty()){
+      visualization_->displayAStarList(a_star_pathes, 0);
+    }
 
     segments = final_segment_ids;
     return CHK_RET::FINISH;
@@ -765,7 +767,9 @@ namespace ego_planner
 
       force_stop_type_ = STOP_FOR_REBOUND;
 
-      visualization_->displayAStarList(a_star_pathes, 0);
+      if (!a_star_pathes.empty()){
+        visualization_->displayAStarList(a_star_pathes, 0);
+      }
       
       return true;
     }

@@ -24,7 +24,8 @@
   <node pkg="central_benchmark" type="swarm_collision_checker" 
     name="swarm_collision_checker" output="screen">
     <param name="~num_drones" value="$(arg num_drones)" />
-    <param name="~collision_tolerance" value="0.3" />
+    <param name="~collision_tolerance_fatal" value="0.3" />
+    <param name="~collision_tolerance_warn" value="0.4" />
     <param name="~check_collision_freq" value="15.0" />
     <param name="~tf_lookup_timeout" value="60.0" />
   </node>

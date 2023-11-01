@@ -307,10 +307,10 @@ void GridMap::updateLocalMap(){
 
   // Update bounds of octomap
   if (!mp_.keep_global_map_){
-    octomap::point3d bbx_min(md_.local_map_min_(0), md_.local_map_min_(1), md_.local_map_min_(2));
-    octomap::point3d bbx_max(md_.local_map_max_(0), md_.local_map_max_(1), md_.local_map_max_(2));
-    octree_->setBBXMin(bbx_min);
-    octree_->setBBXMax(bbx_max);
+    // octomap::point3d bbx_min(md_.local_map_min_(0), md_.local_map_min_(1), md_.local_map_min_(2));
+    // octomap::point3d bbx_max(md_.local_map_max_(0), md_.local_map_max_(1), md_.local_map_max_(2));
+    // octree_->setBBXMin(bbx_min);
+    // octree_->setBBXMax(bbx_max);
   }
 }
 
@@ -450,6 +450,9 @@ void GridMap::octreeToPclPC(std::shared_ptr<octomap::OcTree> tree, pcl::PointClo
   pcl_cloud->points.clear();
   for (octomap::OcTree::iterator it = tree->begin(); it != tree->end(); ++it)
   {
+    if (it == NULL){
+      continue;
+    }
     if(tree->isNodeOccupied(*it))
     {
       octomap::point3d occ_point = it.getCoordinate();
@@ -514,8 +517,10 @@ int GridMap::getOccupancy(const Eigen::Vector3d &pos)
 
   octomap::point3d octo_pos(pos(0), pos(1), pos(2));
   octomap::OcTreeNode* node = octree_->search(octo_pos);
-
-  if (node && octree_->isNodeOccupied(node)){
+  if (node == NULL){
+    return 0;
+  }
+  if (octree_->isNodeOccupied(node)){
     return 1;
   }
   return 0;
@@ -532,7 +537,10 @@ int GridMap::getInflateOccupancy(const Eigen::Vector3d &pos)
     for(float y = pos(1) - mp_.inflation_; y <= pos(1) + mp_.inflation_; y += mp_.resolution_){
       for(float z = pos(2) - mp_.inflation_; z <= pos(2) + mp_.inflation_; z += mp_.resolution_){
         octomap::OcTreeNode* node = octree_->search(x, y, z);
-        if (node && octree_->isNodeOccupied(node)){
+        if (node == NULL){
+          return 0;
+        }
+        if (octree_->isNodeOccupied(node)){
           return 1;
         }
       }
@@ -544,9 +552,9 @@ int GridMap::getInflateOccupancy(const Eigen::Vector3d &pos)
 
 bool GridMap::isInGlobalMap(const Eigen::Vector3d &pos)
 {
-  if (pos(0) <= -mp_.global_map_size_(0) || pos(0) >= mp_.global_map_size_(0)
-    || pos(1) <= -mp_.global_map_size_(1) || pos(1) >= mp_.global_map_size_(1)
-    || pos(2) <= -mp_.global_map_size_(2) || pos(2) >= mp_.global_map_size_(2))
+  if (pos(0) <= -mp_.global_map_size_(0)/2 || pos(0) >= mp_.global_map_size_(0)/2
+    || pos(1) <= -mp_.global_map_size_(1)/2 || pos(1) >= mp_.global_map_size_(1)/2
+    || pos(2) <= -mp_.global_map_size_(2)/2 || pos(2) >= mp_.global_map_size_(2)/2)
   {
     return false;
   }

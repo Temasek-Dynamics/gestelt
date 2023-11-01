@@ -287,3 +287,7 @@ camera:
   frame_id: "base_link"
 
 # vim:set ts=2 sw=2 et:
+
+# copter_visualization:
+#   local_position: "mavros/local_position/local"
+#   local_setpoint: "mavros/setpoint_position/local"

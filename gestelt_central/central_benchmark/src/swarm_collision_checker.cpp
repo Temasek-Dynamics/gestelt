@@ -23,7 +23,8 @@ public:
     nh.param("pose_topic", pose_topic, std::string("mavros/local_position/pose"));
 
     nh.param("check_collision_freq", check_collision_freq_, 10.0);
-    nh.param("collision_tolerance", col_tol_, 0.2);
+    nh.param("collision_tolerance_fatal", col_tol_fatal_, 0.3);
+    nh.param("collision_tolerance_warn", col_tol_warn_, 0.4);
     
     nh.param("tf_lookup_timeout", tf_lookup_timeout_, 10.0);
 
@@ -55,7 +56,8 @@ public:
     }
 
     // Publishers
-    swarm_collision_pub_ = nh.advertise<visualization_msgs::Marker>("/swarm_collision_points", 10);
+    swarm_collision_fatal_pub_ = nh.advertise<visualization_msgs::Marker>("/swarm_collisions_fatal", 10);
+    swarm_collision_warn_pub_ = nh.advertise<visualization_msgs::Marker>("/swarm_collisions_warning", 10);
     obs_collision_pub_ = nh.advertise<visualization_msgs::Marker>("/obstacle_collision_points", 10);
 
     // Timers
@@ -65,7 +67,7 @@ public:
     tfListener_.reset(new tf2_ros::TransformListener(tfBuffer_));
 
     // Sleep so that TF tree is set up during system startup
-    ros::Duration(10.0).sleep();
+    ros::Duration(20.0).sleep();
 
     // Get transforms from world to drone origin frames
     for (int i = 0; i < num_drones_; i++) {
@@ -88,7 +90,7 @@ public:
   // Subscribe to robot pose
   void poseCB(const geometry_msgs::PoseStamped::ConstPtr &msg, int drone_id)
   {
-    ROS_INFO("[Collision Checker]: Pose callback for drone %d", drone_id);
+    // ROS_INFO("[Collision Checker]: Pose callback for drone %d", drone_id);
     if (drone_id > world_to_drone_base_.size()){
       ROS_ERROR("[Collision Checker]: drone_id %d >  world_to_drone_base_.size() %ld", drone_id, world_to_drone_base_.size());
       return;
@@ -104,7 +106,7 @@ public:
   // Subscribe to collision sensor topic
   void collisionCB(const gazebo_msgs::ContactsState::ConstPtr &msg, int drone_id)
   {
-    ROS_INFO("[Collision Checker]: Collision callback for drone %d", drone_id);
+    // ROS_INFO("[Collision Checker]: Collision callback for drone %d", drone_id);
 
     if (!msg->states.empty()){
       for (auto collision : msg->states){
@@ -120,7 +122,7 @@ public:
         obs_collision_points_.push_back(collision_point);
 
         if (obs_collision_points_.size() > 500){
-          // Prevent swarm_collision_points_ from getting too large
+          // Prevent obs_collision_points_ from getting too large
           obs_collision_points_.pop_front();
         }
       }
@@ -147,32 +149,53 @@ public:
         double dy = fabs(world_to_drone_base_[i].pose.position.y - world_to_drone_base_[j].pose.position.y);
         double dz = fabs(world_to_drone_base_[i].pose.position.z - world_to_drone_base_[j].pose.position.z);
 
-        if ((Eigen::Vector3d(dx, dy, dz)).norm() <= col_tol_) 
+        if ((Eigen::Vector3d(dx, dy, dz)).norm() <= col_tol_warn_)
         {
-          // If collision occured, the collision point is an average of the 2 drone's position
-          geometry_msgs::Point collision_point;
-          collision_point.x = (world_to_drone_base_[i].pose.position.x + world_to_drone_base_[j].pose.position.x)/2;
-          collision_point.y = (world_to_drone_base_[i].pose.position.y + world_to_drone_base_[j].pose.position.y)/2;
-          collision_point.z = (world_to_drone_base_[i].pose.position.z + world_to_drone_base_[j].pose.position.z)/2;
-        
-          swarm_collision_points_.push_back(collision_point);
+            // If collision occured, the collision point is an average of the 2 drone's position
+            geometry_msgs::Point collision_point;
+            collision_point.x = (world_to_drone_base_[i].pose.position.x + world_to_drone_base_[j].pose.position.x)/2;
+            collision_point.y = (world_to_drone_base_[i].pose.position.y + world_to_drone_base_[j].pose.position.y)/2;
+            collision_point.z = (world_to_drone_base_[i].pose.position.z + world_to_drone_base_[j].pose.position.z)/2;
 
-          if (swarm_collision_points_.size() > 500){
-            // Prevent swarm_collision_points_ from getting too large
-            swarm_collision_points_.pop_front();
+          // If distance between 2 drones within fatal collision threshold,
+          // Add to list of fatal collision points
+          if ((Eigen::Vector3d(dx, dy, dz)).norm() <= col_tol_fatal_) 
+          {
+            swarm_fatal_col_points_.push_back(collision_point);
+
+            if (swarm_fatal_col_points_.size() > 500){
+              // Prevent swarm_fatal_col_points_ from getting too large
+              swarm_fatal_col_points_.pop_front();
+            }
+          } 
+          else {
+            swarm_warn_col_points_.push_back(collision_point);
+
+            if (swarm_warn_col_points_.size() > 500){
+              // Prevent swarm_warn_col_points_ from getting too large
+              swarm_warn_col_points_.pop_front();
+            }
           }
-        } 
+        }
+
       }
     }
 
-    std_msgs::ColorRGBA sphere_color;
-    sphere_color.r = 1.0;
-    sphere_color.g = 0.0;
-    sphere_color.b = 0.0;
-    sphere_color.a = 0.8;
+    std_msgs::ColorRGBA fatal_col_sphere_color, warn_col_sphere_color;
+    fatal_col_sphere_color.r = 1.0;
+    fatal_col_sphere_color.g = 0.0;
+    fatal_col_sphere_color.b = 0.0;
+    fatal_col_sphere_color.a = 0.6;
+
+    // Warn collision sphere is yellow
+    warn_col_sphere_color.r = 1.0;
+    warn_col_sphere_color.g = 1.0;
+    warn_col_sphere_color.b = 0.0;
+    warn_col_sphere_color.a = 0.3;
     
     // Publish point visualization at which inter-agent collision occured
-    swarm_collision_pub_.publish(createSphereList(0, swarm_collision_points_, sphere_color));
+    swarm_collision_fatal_pub_.publish(createSphereList(0, swarm_fatal_col_points_, fatal_col_sphere_color));
+    swarm_collision_warn_pub_.publish(createSphereList(1, swarm_warn_col_points_, warn_col_sphere_color));
   }
 
   visualization_msgs::Marker createSphereList(const int& id, const std::deque<geometry_msgs::Point>& collision_points, const std_msgs::ColorRGBA& color) {
@@ -241,7 +264,8 @@ private:
   std::vector<ros::Subscriber> collision_sensor_sub_; // Subscribers to collision sensor of each UAV agent
 
   // Publishers
-  ros::Publisher swarm_collision_pub_;
+  ros::Publisher swarm_collision_fatal_pub_;
+  ros::Publisher swarm_collision_warn_pub_;
   ros::Publisher obs_collision_pub_;
 
   // Timers
@@ -249,7 +273,9 @@ private:
 
   // Params
   double check_collision_freq_;
-  double col_tol_;
+  double col_tol_fatal_; // Fatal collision threshold
+  double col_tol_warn_; // Warning collision threshold. Not collided but too close
+
   double tf_lookup_timeout_;
 
   // Flags
@@ -258,7 +284,10 @@ private:
   std::vector<geometry_msgs::PoseStamped> world_to_drone_origin_tfs_; // Position of all drone origin frames relative to world frame
   std::vector<geometry_msgs::PoseStamped> world_to_drone_base_; // Position of all drones base links relative to world frame
 
-  std::deque<geometry_msgs::Point> swarm_collision_points_; // Position of all collision points
+  std::deque<geometry_msgs::Point> swarm_fatal_col_points_; // Position of all fatal collision points
+
+  std::deque<geometry_msgs::Point> swarm_warn_col_points_; // Position of all warning collision points
+
   std::deque<geometry_msgs::Point> obs_collision_points_; // Position of all collision points
 };
 

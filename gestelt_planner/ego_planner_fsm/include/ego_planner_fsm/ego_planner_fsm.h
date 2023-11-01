@@ -263,6 +263,8 @@ private:
   ServerEvent server_event_{ServerEvent::EMPTY_E};
   int continously_called_times_{0};
 
+  int retry_plan_local_traj_num_{0}; //Number of retries
+
   Eigen::Vector3d start_pt_, start_vel_, start_acc_;   // start state
   Eigen::Vector3d end_pt_;                             // goal state
   Eigen::Vector3d local_target_pt_, local_target_vel_; // local target state
@@ -494,6 +496,7 @@ private:
     return event;
   }
 
+  
 private:
 
   /* Logging functions */

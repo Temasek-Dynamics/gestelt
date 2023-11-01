@@ -99,10 +99,14 @@ def main():
     print(f"Sending waypoints to UAVs")
     waypoints = []
     # Square formation with length L
-    max_x = 1.4
-    max_y = 1.4
-    min_x = -1.4
-    min_y = -1.4
+    # max_x = 1.25
+    # max_y = 1.25
+    # min_x = -1.25
+    # min_y = -1.25
+    max_x = 1.3
+    max_y = 1.3
+    min_x = -1.3
+    min_y = -1.3
     z = 1.0
     for i in range(10):
         waypoints.append(create_pose(max_x, min_y, z))
