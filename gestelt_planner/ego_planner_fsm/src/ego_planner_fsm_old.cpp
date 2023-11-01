@@ -166,8 +166,6 @@ namespace ego_planner
       {
         switch (getServerEvent())
         {
-          case EMPTY_E:
-            break;
           case READY_E:
             setServerState(ServerState::READY);
             break;
@@ -176,7 +174,6 @@ namespace ego_planner
             setServerState(ServerState::EMERGENCY_STOP);
             break;
           default:
-            logFatal(string_format("INIT: INVALID STATE TRANSITION! %d", getServerEvent()));
             break;
         }
         break;
@@ -186,8 +183,6 @@ namespace ego_planner
       {
         switch (getServerEvent())
         {
-          case EMPTY_E:
-            break;
           case PLAN_GLOBAL_TRAJ_E:
             setServerState(ServerState::PLAN_GLOBAL_TRAJ);
             break;
@@ -196,7 +191,6 @@ namespace ego_planner
             setServerState(ServerState::EMERGENCY_STOP);
             break;
           default:
-            logFatal(string_format("READY: INVALID STATE TRANSITION! %d", getServerEvent()));
             break;
         }
         break;
@@ -206,22 +200,17 @@ namespace ego_planner
       {
         switch (getServerEvent())
         {
-          case EMPTY_E:
-            break;
           case EXEC_TRAJ_E:
             setServerState(ServerState::EXEC_TRAJ);
-            break;
-          case PLAN_GLOBAL_TRAJ_E:
-            setServerState(ServerState::PLAN_GLOBAL_TRAJ);
             break;
           case EMERGENCY_STOP_E:
             logFatal("EMERGENCY STOP ACTIVATED!");
             setServerState(ServerState::EMERGENCY_STOP);
             break;
           default:
-            logFatal(string_format("PLAN_GLOBAL_TRAJ: INVALID STATE TRANSITION! %d", getServerEvent()));
             break;
         }
+
         break;
       }
 
@@ -230,26 +219,14 @@ namespace ego_planner
 
         switch (getServerEvent())
         {
-          case EMPTY_E:
-            break;
           case EXEC_TRAJ_E:
             setServerState(ServerState::EXEC_TRAJ);
-            break;
-          case PLAN_LOCAL_TRAJ_E:
-            setServerState(ServerState::PLAN_LOCAL_TRAJ);
-            break;
-          case PLAN_GLOBAL_TRAJ_E:
-            setServerState(ServerState::PLAN_GLOBAL_TRAJ);
-            break;
-          case PLAN_NEW_GLOBAL_TRAJ_E:
-            setServerState(ServerState::PLAN_NEW_GLOBAL_TRAJ);
             break;
           case EMERGENCY_STOP_E:
             logFatal("EMERGENCY STOP ACTIVATED!");
             setServerState(ServerState::EMERGENCY_STOP);
             break;
           default:
-            logFatal("PLAN_LOCAL_TRAJ: INVALID STATE TRANSITION!");
             break;
         }
 
@@ -260,23 +237,17 @@ namespace ego_planner
       {
         switch (getServerEvent())
         {
-          case EMPTY_E:
-            break;
           case READY_E:
             setServerState(ServerState::READY);
             break;
           case PLAN_LOCAL_TRAJ_E:
             setServerState(ServerState::PLAN_LOCAL_TRAJ);
             break;
-          case PLAN_GLOBAL_TRAJ_E:
-            setServerState(ServerState::PLAN_GLOBAL_TRAJ);
-            break;
           case EMERGENCY_STOP_E:
             logFatal("EMERGENCY STOP ACTIVATED!");
             setServerState(ServerState::EMERGENCY_STOP);
             break;
           default:
-            logFatal("EXEC_TRAJ: INVALID STATE TRANSITION!");
             break;
         }
 
@@ -288,20 +259,14 @@ namespace ego_planner
       {
         switch (getServerEvent())
         {
-          case EMPTY_E:
-            break;
           case EXEC_TRAJ_E:
             setServerState(ServerState::EXEC_TRAJ);
-            break;
-          case PLAN_NEW_GLOBAL_TRAJ_E:
-            setServerState(ServerState::PLAN_NEW_GLOBAL_TRAJ);
             break;
           case EMERGENCY_STOP_E:
             logFatal("EMERGENCY STOP ACTIVATED!");
             setServerState(ServerState::EMERGENCY_STOP);
             break;
           default:
-            logFatal("PLAN_NEW_GLOBAL_TRAJ: INVALID STATE TRANSITION!");
             break;
         }
 
@@ -310,15 +275,7 @@ namespace ego_planner
 
       case EMERGENCY_STOP:
       {
-        switch (getServerEvent())
-        {
-          case PLAN_NEW_GLOBAL_TRAJ_E:
-            setServerState(ServerState::PLAN_NEW_GLOBAL_TRAJ);
-            break;
-          default:
-            logFatal(string_format("EMERGENCY_STOP: INVALID STATE TRANSITION! %d", getServerEvent()));
-            break;
-        }
+        // Do nothing, vehicle requires restarting
         break;
       }
     }
@@ -356,23 +313,7 @@ namespace ego_planner
           else
           {
             logError("Failed to generate the first global trajectory! Retrying.");
-            setServerEvent(PLAN_GLOBAL_TRAJ_E);
           }
-        }
-
-        break;
-      }
-
-      case PLAN_NEW_GLOBAL_TRAJ:
-      {
-        if (planFromGlobalTraj(10)) 
-        {
-          setServerEvent(EXEC_TRAJ_E);
-          flag_escape_emergency_ = true; // TODO Refactor
-        }
-        else 
-        {
-          setServerEvent(PLAN_NEW_GLOBAL_TRAJ_E);
         }
 
         break;
@@ -380,23 +321,20 @@ namespace ego_planner
 
       case PLAN_LOCAL_TRAJ:
       {
-        if (planFromLocalTraj(1))
+        if (planFromLocalTraj(3))
         {
           setServerEvent(EXEC_TRAJ_E);
-          retry_plan_local_traj_num_ = 0;
         }
         else 
         {
-          setServerEvent(PLAN_LOCAL_TRAJ_E);
+          logError(string_format("Plan from local trajectory failed, possibly from potential collision!"));
+          if (potential_agent_to_agent_collision_)
+          {
+            logError(string_format("Potential agent to agent collision detected, ESTOP has been disabled from activation for debugging"));
 
-          // if (retry_plan_local_traj_num_ > 50){
-          //   setServerEvent(PLAN_NEW_GLOBAL_TRAJ_E);
-          // }
-          // else {
-          //   logError(string_format("Plan from local trajectory failed, retrying!"));
-          //   setServerEvent(PLAN_LOCAL_TRAJ_E);
-          // }
-          // retry_plan_local_traj_num_++;
+            // logError(string_format("Potential agent to agent collision detected, activating ESTOP"));
+            // setServerEvent(EMERGENCY_STOP_E);
+          }
         }
         break;
       }
@@ -411,23 +349,20 @@ namespace ego_planner
 
         if (checkTrajectoryClearance())
         {
-          if (potential_agent_to_agent_collision_)
-          {
-            // logError(string_format("Potential agent to agent collision detected, ESTOP has been disabled from activation for debugging"));
-            logError(string_format("Potential agent to agent collision detected, activating ESTOP"));
-            setServerEvent(EMERGENCY_STOP_E);
-          }
-          else {
-            logInfo(string_format("Replanning to avoid collision."));
-            setServerEvent(PLAN_LOCAL_TRAJ_E);
-          }
+          logInfo(string_format("Replanning to avoid collision."));
+          setServerEvent(PLAN_LOCAL_TRAJ_E);
           break;
         }
+
+        // if (checkGroundHeight){
+        //   setServerEvent(PLAN_LOCAL_TRAJ_E);
+        //   break;
+        // }
 
         std::pair<bool,bool> GoalReachedAndReplanNeededCheck = isGoalReachedAndReplanNeeded();
 
         if (GoalReachedAndReplanNeededCheck.first) {
-          logError("Final Goal reached!");
+          logError("Goal reached!");
           // The navigation task completed 
           setServerEvent(READY_E);
           break;
@@ -441,6 +376,17 @@ namespace ego_planner
         break;
       }
 
+      case PLAN_NEW_GLOBAL_TRAJ:
+      {
+        if (planFromGlobalTraj(10)) 
+        {
+          setServerEvent(EXEC_TRAJ_E);
+          flag_escape_emergency_ = true; // TODO Refactor
+        }
+
+        break;
+      }
+
       case EMERGENCY_STOP:
       {
         if (flag_escape_emergency_) // Avoiding repeated calls to callEmergencyStop
@@ -449,17 +395,18 @@ namespace ego_planner
         }
         else
         {
-          if (enable_fail_safe_ && odom_vel_.norm() < 0.2){
-            logError("Failsafe activated! Generating new global plan!");
+          if (enable_fail_safe_ && odom_vel_.norm() < 0.1){
             setServerEvent(PLAN_NEW_GLOBAL_TRAJ_E);
           }
         }
+
         flag_escape_emergency_ = false;
         break;
       }
     }
 
   }
+
 
   /**
    * Subscriber Callbacks
@@ -600,9 +547,9 @@ namespace ego_planner
     /* Check Collision */
     if (planner_manager_->checkCollision(recv_id))
     {
-      logError(string_format("Imminent COLLISION between self and drone %d", recv_id));
+      logError(string_format("Imminent COLLISION between ownself and drone %d", recv_id));
       // TODO: What state is it expected to be in? EXEC_TRAJ?
-      // setServerState(PLAN_LOCAL_TRAJ);
+      setServerState(PLAN_LOCAL_TRAJ);
     }
 
     /* Check if receive agents have lower drone id */
@@ -797,10 +744,7 @@ namespace ego_planner
         odom_pos_, Eigen::Vector3d::Zero(), Eigen::Vector3d::Zero(),
         one_pt_wps, Eigen::Vector3d::Zero(), Eigen::Vector3d::Zero());
 
-    // Display formation goal
-    visualization_->displayGoalPoint(next_wp, Eigen::Vector4d(0, 0.5, 0.5, 1), 0.2, 0);
-    // Display own goal
-    visualization_->displayGoalPoint(end_pt_, Eigen::Vector4d(0.5, 0, 0.5, 1), 0.2, 1);
+    visualization_->displayGoalPoint(next_wp, Eigen::Vector4d(0, 0.5, 0.5, 1), 0.3, 0);
 
     if (plan_success)
     {
@@ -822,8 +766,6 @@ namespace ego_planner
 
       // TODO Refactor
       /*** FSM ***/
-
-      // If current state is not READY, then 
       if (getServerState() != READY)
       {
         // If already executing a trajectory then wait for it to finish
@@ -834,7 +776,7 @@ namespace ego_planner
           ros::Duration(0.001).sleep();
         }
         // If not in READY state, Go to PLAN_LOCAL_TRAJ
-        setServerEvent(PLAN_LOCAL_TRAJ_E); 
+        setServerEvent(PLAN_LOCAL_TRAJ_E);
       }
     }
     else
@@ -1011,12 +953,10 @@ namespace ego_planner
       const bool target_near_goal = ((local_target_pt_ - end_pt_).norm() < 1e-2);
       size_t i_end = target_near_goal ? pts_chk.size() : pts_chk.size() * 3 / 4;
 
-      potential_agent_to_agent_collision_ = false;
-
       // Iterate through each piece index
       for (size_t i = i_start; i < i_end; ++i)
       {
-        // Iterate through each point in piece 
+        // Iterate through each point within piece index
         for (size_t j = j_start; j < pts_chk[i].size(); ++j)
         {
 
@@ -1063,7 +1003,7 @@ namespace ego_planner
         j_start = 0;
       }
 
-      return false;
+      return EMPTY_E;
   }
 
   /**
