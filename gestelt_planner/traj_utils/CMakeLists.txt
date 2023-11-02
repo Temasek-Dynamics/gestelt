@@ -55,5 +55,5 @@ add_library( traj_utils
 )
 target_link_libraries( traj_utils
     ${catkin_LIBRARIES} 
-    # ${EIGEN3_LIBRARIES}
+    ${EIGEN3_LIBRARIES}
 )  

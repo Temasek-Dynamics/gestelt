@@ -21,7 +21,6 @@ set(ROS_LIBRARIES
 # )
 
 find_package(octomap REQUIRED)
-
 find_package(PCL 1.7 REQUIRED)
 find_package(catkin REQUIRED COMPONENTS
     ${ROS_LIBRARIES}

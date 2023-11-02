@@ -25,7 +25,7 @@ source $SCRIPT_DIR/../../../../devel/setup.bash &&
 # Commands
 #####
 CMD_0="
-roslaunch gestelt_bringup offboard_ego_planner.launch drone_id:=${uav_id} 
+roslaunch gestelt_bringup offboard_ego_planner.launch drone_id:=${uav_id} POSE_TYPE:=3 SENSOR_TYPE:=1
 "
 
 CMD_1="

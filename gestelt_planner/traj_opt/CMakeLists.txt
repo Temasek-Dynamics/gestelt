@@ -45,5 +45,5 @@ add_library(traj_opt
 )
 target_link_libraries(traj_opt
     ${catkin_LIBRARIES} 
-    # ${EIGEN3_LIBRARIES}
+    ${EIGEN3_LIBRARIES}
 )  

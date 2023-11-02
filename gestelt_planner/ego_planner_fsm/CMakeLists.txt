@@ -47,6 +47,7 @@ add_executable(ego_planner_fsm_node
 )
 target_link_libraries(ego_planner_fsm_node 
   ${catkin_LIBRARIES}
+  ${EIGEN3_LIBRARIES}
 )
 
 
