@@ -139,7 +139,7 @@ alias ez_config="cd ~/gestelt_ws && catkin config --blacklist global_planner swa
 alias ez_build="cd ~/gestelt_ws && catkin build"
 alias cd_scripts="cd /home/rock/gestelt_ws/src/gestelt/gestelt_bringup/scripts/"
 alias check_network_priority="nmcli -f NAME,UUID,AUTOCONNECT,AUTOCONNECT-PRIORITY c"
-alias uav_startup="cd_scripts && cd vicon && ./offboard_uav.sh 0"
+alias uav_startup="cd_scripts && cd vicon && ./offboard.sh 0"
 alias restart_ntp="sudo service ntp stop && sudo ntpd -gq && sudo service ntp start"
 alias killbill="killall -9 rosmaster; tmux kill-server;"
 

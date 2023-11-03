@@ -64,7 +64,7 @@ cd_scripts && cd demo
 ./gz_sim_single_uav_demo_off_1.sh
 ```
 
-
 ## Connection tests
-1. Can connect to FCU via Mavros?
+1. Make sure self IP is correct
+2. Can connect to FCU via Mavros?
 
