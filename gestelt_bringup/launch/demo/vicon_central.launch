@@ -1,5 +1,5 @@
 <launch>
-  <arg name="num_drones" default="5"/>
+  <arg name="num_drones" default="4"/>
   <arg name="rviz_config" default="default"/>
   <arg name="cloud_topic" default="camera/depth/points" />
   <arg name="cloud_topic_ds" default="camera/depth/points_downsampled" />

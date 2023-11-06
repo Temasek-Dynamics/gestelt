@@ -18,7 +18,7 @@
     <!-- number of moving objects -->
     <arg name="obj_num" value="10" />
     <!-- drone_origin_frame: For PX4 SITL, leave it as default. 
-    For other forms of simulation, might have to change it -->
+    For actual deployment, put as world -->
     <arg name="drone_origin_frame" default="$(arg drone_id_ns)_origin" />
 
     <!-- Ego Planner params -->

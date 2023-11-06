@@ -17,14 +17,19 @@
     <arg name="pose_topic" default="mavros/local_position/pose" />
     <arg name="depth_img_topic" default="camera/depth/image_raw" />
     <arg name="cloud_topic" default="camera/depth/points" />
+    <arg name="cloud_topic_fake" value="camera/depth/points_fake" />
+    <arg name="cloud_topic_ds" value="camera/depth/points_downsampled" />
     <!-- Use value 3 for fake_map, Use value 1 for actual map -->
     <arg name="POSE_TYPE" default="3" />
     <arg name="SENSOR_TYPE" default="1" />
+    <!-- drone_origin_frame: For PX4 SITL, leave it as default. 
+    For actual deployment, put as world -->
+    <arg name="drone_origin_frame" default="world" />
 
     <!-- Add static transform from drone to it's origin -->
-    <node pkg="tf" type="static_transform_publisher" 
+    <!-- <node pkg="tf" type="static_transform_publisher" 
       name="map_to_$(arg drone_id_ns)_origin_tf" 
-      args="$(arg init_x) $(arg init_y) 0 0 0 0 1 map $(arg drone_id_ns)_origin 100" />
+      args="$(arg init_x) $(arg init_y) 0 0 0 0 1 map $(arg drone_id_ns)_origin 100" /> -->
 
     <!-- Add static transform from base_link to camera_link -->
     <node pkg="tf" type="static_transform_publisher" 
@@ -39,40 +44,49 @@
 
         <rosparam command="load" file="$(find gestelt_bringup)/config/fake_drone_params.yaml" />
         <param name="uav/id" value="$(arg drone_id_ns)"/>
-        <param name="uav/init_x" value="0"/>
-        <param name="uav/init_y" value="0"/>
+        <param name="uav/init_x" value="$(arg init_x)"/>
+        <param name="uav/init_y" value="$(arg init_y)"/>
         <param name="uav/init_z" value="$(arg init_z)"/>
 
-        <param name="uav/origin_frame" value="$(arg drone_id_ns)_origin"/>
+        <param name="uav/origin_frame" value="$(arg drone_origin_frame)"/>
         <param name="uav/base_link_frame" value="$(arg drone_id_ns)_base_link"/>
     </node>
 
     <!-- Fake sensor data node -->
     <node pkg="fake_map" type="fake_map_node" name="fake_map_$(arg drone_id_ns)" output="screen">
-        <!-- Publisher of uav sensor cloud -->
-        <remap from="uav/sensor_cloud" to="/$(arg drone_id_ns)/$(arg cloud_topic)"/>
+      <param name="map/filepath" value="$(arg map_filepath)"/>
+      <!-- Publisher of uav sensor cloud -->
+      <remap from="uav/sensor_cloud" to="/$(arg drone_id_ns)/$(arg cloud_topic_fake)"/>
 
-        <rosparam command="load" file="$(find gestelt_bringup)/config/fake_laser_params.yaml" />
-        <param name="uav/id" value="$(arg drone_id_ns)"/>
-        <param name="uav/global_frame" value="world"/>
-        <param name="uav/origin_frame" value="$(arg drone_id_ns)_origin"/>
-        <param name="uav/sensor_frame" value="$(arg drone_id_ns)_cam_link"/>
-        <param name="map/filepath" value="$(arg map_filepath)"/>
+      <rosparam command="load" file="$(find gestelt_bringup)/config/fake_laser_params.yaml" />
+      <param name="uav/id" value="$(arg drone_id_ns)"/>
+      <param name="uav/global_frame" value="world"/>
+      <param name="uav/origin_frame" value="$(arg drone_origin_frame)"/>
+      <param name="uav/sensor_frame" value="$(arg drone_id_ns)_cam_link"/>
+      <param name="uav/tf_listen_freq" value="30.0"/>
+    </node>
+
+    <!-- Downsamples the input cloud -->
+    <node pkg="central_benchmark" type="cloud_downsampler" 
+      name="$(arg drone_id_ns)_cloud_downsampler" output="screen">
+      <param name="~queue_size" value="3" />
+      <param name="~voxel_size" value="0.1" />
+
+      <remap from="~cloud_in" to="/$(arg drone_id_ns)/$(arg cloud_topic_fake)" />
+      <remap from="~cloud_out" to="/$(arg drone_id_ns)/$(arg cloud_topic_ds)" />
     </node>
 
     <!-- Ego planner -->
     <include file="$(find gestelt_bringup)/launch/ego_planner.launch">
-        <arg name="drone_id"   value="$(arg drone_id)"/>
-        <!-- <arg name="init_x"     value="$(arg init_x)"/>
-        <arg name="init_y"     value="$(arg init_y)"/>
-        <arg name="init_z"     value="$(arg init_z)"/> -->
-        <arg name="num_drones" value="$(arg num_drones)"/>
-        <arg name="map_size_x" value="$(arg map_size_x)"/>
-        <arg name="map_size_y" value="$(arg map_size_y)"/>
-        <arg name="map_size_z" value="$(arg map_size_z)"/>
-        <arg name="cloud_topic" value="$(arg cloud_topic)"/>
-        <arg name="POSE_TYPE" value="$(arg POSE_TYPE)" />
-        <arg name="SENSOR_TYPE" value="$(arg SENSOR_TYPE)" />
+      <arg name="drone_id"   value="$(arg drone_id)"/>
+      <arg name="num_drones" value="$(arg num_drones)"/>
+      <arg name="map_size_x" value="$(arg map_size_x)"/>
+      <arg name="map_size_y" value="$(arg map_size_y)"/>
+      <arg name="map_size_z" value="$(arg map_size_z)"/>
+      <arg name="cloud_topic" value="$(arg cloud_topic_ds)"/>
+      <arg name="POSE_TYPE" value="$(arg POSE_TYPE)" />
+      <arg name="SENSOR_TYPE" value="$(arg SENSOR_TYPE)" />
+      <arg name="drone_origin_frame" value="$(arg drone_origin_frame)" />
     </include>
 
 </launch>

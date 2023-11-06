@@ -7,19 +7,19 @@
   <arg name="map_size_y" value="5.0"/>
   <arg name="map_size_z" value="2.5"/>
   <!-- Input/output topics -->
-  <arg name="cloud_topic" value="camera/depth/points_downsampled" />
+  <arg name="cloud_topic_ds" value="camera/depth/points_downsampled" />
   <!-- POSE_TYPE/SENSOR_TYPE: Use value of 1 for actual map, 3 for fake_map-->
   <arg name="POSE_TYPE" default="3" />
   <arg name="SENSOR_TYPE" default="1" />
 
-  <!-- Drone 0 -->
+  <!-- Ego planner -->
   <include file="$(find gestelt_bringup)/launch/ego_planner.launch">
     <arg name="drone_id"   value="$(arg drone_id)"/>
     <arg name="num_drones" value="$(arg num_drones)"/>
     <arg name="map_size_x" value="$(arg map_size_x)"/>
     <arg name="map_size_y" value="$(arg map_size_y)"/>
     <arg name="map_size_z" value="$(arg map_size_z)"/>
-    <arg name="cloud_topic" value="$(arg cloud_topic)"/>
+    <arg name="cloud_topic" value="$(arg cloud_topic_ds)"/>
     <arg name="POSE_TYPE" value="$(arg POSE_TYPE)" />
     <arg name="SENSOR_TYPE" value="$(arg SENSOR_TYPE)" />
     <arg name="drone_origin_frame" value="world" />
