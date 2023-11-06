@@ -3,8 +3,12 @@
 ## Building the firmware
 0. Building and uploading the bootloader
 ```bash
-
+git clone https://github.com/PX4/PX4-Bootloader.git
+cd ./PX4-Bootloader
+make omnibusf4sd_bl
+# bootloader file with ".hex" extension in PX4-Bootloader/build/omnibusf4sd_bl/omnibusf4sd_bl.hex
 ```
+Then go on to upload bootloader using betaflight configurator, "update firmware" and update the bootloader on the board. The FCU must have it's bootloader button pressed before connecting via USB to the host computer in order to enter DFU mode.
 
 1. Build the board firmware 
 ```bash 
@@ -50,11 +54,13 @@ git tag v1.13.0-0.1.0
       MAV_0_MODE: 2 (ONBOARD)
       MAV_0_RATE: 0 (Half maximum)
       MAV_0_FORWARD: 0 (DISABLED)
+      MAV_SYS_ID: (THIS NUMBER AFFECTS COMMUNICATION VIA MAVROS, SET TO MATCHING "target_system_id" on MAVROS)
     Connection to Lidar:
       MAV_1_CONFIG: UART6 
       MAV_1_MODE: Normal
       MAV_1_RATE: 1200 Byte/s
       MAV_1_FORWARD: True
+
 
 ################
 # Lidar/Range finder
@@ -152,6 +158,14 @@ git tag v1.13.0-0.1.0
 2. Central computer IP: 192.168.31.22 or 192.168.31.173
 3. Radxa IP: 192.168.31.205
 4. GCS IP: 192.168.31.61
+
+### Transmitter-Receiver Binding (XSR Faast):
+1. Hold bind button (while Receiver has no power)
+2. Enter binding  mode on transmitter
+3. Provide power to receiver 
+4. If connection is successful, the receiver should have a solid green light
+5. Restart receiver
+Failsafe set to no pulse
 
 ## Troubleshooting
 
@@ -269,7 +283,7 @@ git submodule update --recursive
 Tools/simulation/gazebo-classic/sitl_multiple_run.sh -m iris -n 2 -w empty 
 
 ###############
-# Multi-robot with 
+# Multi-robot with roslaunch
 ###############
 source Tools/simulation/gazebo-classic/setup_gazebo.bash $(pwd) $(pwd)/build/px4_sitl_default
 export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:$(pwd):$(pwd)/Tools/simulation/gazebo-classic/sitl_gazebo-classic
