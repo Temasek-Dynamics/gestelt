@@ -423,7 +423,7 @@ private:
 
   int traj_mode_; // Trajectory Server Mode. This affects the trajectory message type expected by the trajectory server. 
 
-
+  int num_pose_msgs_{0};
 private:
   void logInfo(const std::string& str){
     ROS_INFO_NAMED(node_name_, "UAV_%i: %s", drone_id_, str.c_str());

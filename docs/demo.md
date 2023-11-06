@@ -17,8 +17,10 @@ sudo nmcli dev wifi connect "wifi_name"
 ### Offboard computer (Drone)
 ```bash 
 # Drone 0 (192.168.31.205)
+ssh rock@192.168.31.205
 uav_startup 0 
 # Drone 1 (192.168.31.150)
+ssh rock@192.168.31.150
 uav_startup 1
 ```
 
@@ -26,7 +28,7 @@ uav_startup 1
 1. Start ROSCore
 2. Start Vicon central
 ```bash 
-cd_scripts 
+cd_scripts && cd vicon
 ./vicon_central.sh
 ```
 
@@ -37,6 +39,7 @@ rostopic pub /traj_server_event std_msgs/Int8 "data: 1" --once
 # Switch to hover mode
 rostopic pub /traj_server_event std_msgs/Int8 "data: 3" --once
 # Emergency stop
+rostopic pub /traj_server_event std_msgs/Int8 "data: 4" --once
 ```
 
 ### Copying bringup files
