@@ -28,6 +28,9 @@ public:
     
     nh.param("tf_lookup_timeout", tf_lookup_timeout_, 10.0);
 
+    nh.param("drone_origin_frame", drone_origin_frame_, std::string("world"));
+
+
     // Create an pre-allocated world_to_drone_base_ vector of size num_drones
     for (int i = 0; i < num_drones_; i++){
       geometry_msgs::PoseStamped pose;
@@ -71,13 +74,12 @@ public:
 
     // Get transforms from world to drone origin frames
     for (int i = 0; i < num_drones_; i++) {
-      std::string drone_origin_frame = "drone" + std::to_string(i) + "_origin";
-
-      ROS_INFO("Getting transform for %s in world", drone_origin_frame.c_str());
+      // std::string drone_origin_frame = "drone" + std::to_string(i) + "_origin";
+      // ROS_INFO("Getting transform for %s in world", drone_origin_frame.c_str());
 
       geometry_msgs::PoseStamped world_to_origin_tf;
 
-      if (!getTransform("world", drone_origin_frame, world_to_origin_tf)){
+      if (!getTransform("world", drone_origin_frame_, world_to_origin_tf)){
         ROS_ERROR("[Collision Checker] Failed to get transform from world to drone origin frame, shutting down.");
         ros::shutdown();
       }
@@ -95,6 +97,10 @@ public:
       ROS_ERROR("[Collision Checker]: drone_id %d >  world_to_drone_base_.size() %ld", drone_id, world_to_drone_base_.size());
       return;
     }
+    if (world_to_drone_origin_tfs_.size() < num_drones_){
+      return;
+    }
+
     world_to_drone_base_[drone_id].header.stamp = msg->header.stamp;
     world_to_drone_base_[drone_id].header.frame_id = msg->header.frame_id;
 
@@ -139,7 +145,9 @@ public:
   }
 
   void checkCollisionTimerCb(const ros::TimerEvent &e){
-    ROS_INFO("[Collision Checker]: checkCollisionTimerCb");
+    if (world_to_drone_base_.size() < num_drones_ ){
+      return; 
+    }
 
     // Checks for collision between every pair of drone. Iterates for num_drones_**2 times 
     for (int i = 0; i < num_drones_; i++) {
@@ -277,8 +285,8 @@ private:
   double col_tol_warn_; // Warning collision threshold. Not collided but too close
 
   double tf_lookup_timeout_;
+  std::string drone_origin_frame_;
 
-  // Flags
 
   // Stored data
   std::vector<geometry_msgs::PoseStamped> world_to_drone_origin_tfs_; // Position of all drone origin frames relative to world frame
@@ -286,7 +294,7 @@ private:
 
   std::deque<geometry_msgs::Point> swarm_fatal_col_points_; // Position of all fatal collision points
 
-  std::deque<geometry_msgs::Point> swarm_warn_col_points_; // Position of all warning collision points
+  std::deque<geometry_msgs::Point> swarm_warn_col_points_; // Position of al l warning collision points
 
   std::deque<geometry_msgs::Point> obs_collision_points_; // Position of all collision points
 };
