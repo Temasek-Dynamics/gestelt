@@ -47,7 +47,7 @@
         <!-- Frequency for timers -->
         <param name="traj_server/pub_cmd_freq" value="25.0" type="double"/>
         <param name="traj_server/state_machine_tick_freq" value="50.0" type="double"/>
-        <param name="traj_server/takeoff_height" value="0.75" type="double"/>
+        <param name="traj_server/takeoff_height" value="1.5" type="double"/>
 
         <!-- Trajectory mode 0 for egoswarm polytraj. Mode 1 for mav_trajectory_generation sampled points -->
         <param name="traj_server/mode" value="$(arg server_mode)" type="int"/>
