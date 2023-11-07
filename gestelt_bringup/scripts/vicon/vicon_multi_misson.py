@@ -107,7 +107,7 @@ def main():
     max_y = 1.3
     min_x = -1.3
     min_y = -1.3
-    z = 1.5
+    z = 1.25
     for i in range(10):
         waypoints.append(create_pose(max_x, min_y, z))
         waypoints.append(create_pose(max_x, max_y, z))

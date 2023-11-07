@@ -33,12 +33,12 @@
         <param name="traj_server/pos_limit/max_z" value="$(arg map_size_z)" type="double"/>
         <param name="traj_server/pos_limit/min_z" value="-0.1" type="double"/> -->
 
-        <param name="traj_server/pos_limit/min_x" value="-5.5" type="double"/>
-        <param name="traj_server/pos_limit/min_y" value="-5.5" type="double"/>
-        <param name="traj_server/pos_limit/min_z" value="-0.5" type="double"/>
-        <param name="traj_server/pos_limit/max_x" value="5.5" type="double"/>
-        <param name="traj_server/pos_limit/max_y" value="5.5" type="double"/>
-        <param name="traj_server/pos_limit/max_z" value="3.0" type="double"/>
+        <param name="traj_server/pos_limit/min_x" value="-6.0" type="double"/>
+        <param name="traj_server/pos_limit/min_y" value="-6.0" type="double"/>
+        <param name="traj_server/pos_limit/min_z" value="-1.5" type="double"/>
+        <param name="traj_server/pos_limit/max_x" value="6.0" type="double"/>
+        <param name="traj_server/pos_limit/max_y" value="6.0" type="double"/>
+        <param name="traj_server/pos_limit/max_z" value="5.0" type="double"/>
 
         <!-- Heartbeat -->
         <param name="traj_server/planner_heartbeat_timeout" value="0.5" type="double"/>
@@ -47,7 +47,7 @@
         <!-- Frequency for timers -->
         <param name="traj_server/pub_cmd_freq" value="25.0" type="double"/>
         <param name="traj_server/state_machine_tick_freq" value="50.0" type="double"/>
-        <param name="traj_server/takeoff_height" value="1.5" type="double"/>
+        <param name="traj_server/takeoff_height" value="1.25" type="double"/>
 
         <!-- Trajectory mode 0 for egoswarm polytraj. Mode 1 for mav_trajectory_generation sampled points -->
         <param name="traj_server/mode" value="$(arg server_mode)" type="int"/>
