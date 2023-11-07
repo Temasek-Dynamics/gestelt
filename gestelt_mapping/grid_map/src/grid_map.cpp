@@ -504,10 +504,7 @@ void GridMap::publishMap()
   occ_map_pub_.publish(cloud_msg);
 }
 
-
-
-/** GRidmap operations */
-
+/** Gridmap operations */
 int GridMap::getOccupancy(const Eigen::Vector3d &pos)
 {
   // If not in map or not in octree bounding box. return -1 

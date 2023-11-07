@@ -50,7 +50,6 @@ scp -r /home/john/gestelt_ws/src/gestelt/gestelt_bringup/ rock@192.168.31.205:/h
 scp -r /home/john/gestelt_ws/src/gestelt/gestelt_bringup/ rock@192.168.31.150:/home/rock/gestelt_ws/src/gestelt/
 ```
 
-
 # Demo Preparation tests
 
 ## On central computer

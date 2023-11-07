@@ -1,22 +1,40 @@
 # TODO
+Grid map
+- inflate points for visualization
+
+Add instructions on how to run 
+ - With pictures
+ - Vicon
+- Add instructions on how to send custom commands
+- Use config files for params
+
+Simulation
+- Can we put all the drones in the same world frame?
+- remove formation_num
+- Is there a way to abstract away planning and replanning?
+- test swarm navigation in a large map to check if formation flying still holds
+
+Fix swarm collision checker:
+- malloc(): corrupted top size for swarm collision checker
+
+Add gn405s ICM support for official repo (Use omnibus bootloader)
+test trajectory tracker
+
 -Metrics collection
     - Trajectory Tracking
         - Create a few test trajectories and track the errors
             - Add waypoint computation as message
     - Get CPU load benchmarking
 
-- Can we put all the drones in the same world frame?
-
 - RVIZ GUI for take off and landing
 
 - Grid_map
-    - Messagefilter to align timestamp of point cloud and TF 
+    - Apply passtheough filter on point cloud obtained from octomap 
+    https://github.com/OctoMap/octomap/issues/283
     - Remove all octree elements outside of local map bound
     - Parallerization? Figure out how octomap uses openMP to parallerize ray casting
 
 - Actual deployment
-    - Issues:
-        - Origin frame does not work in real life (Could it be due to vicon publishing in map frame?)
     - Logging of mavlink topics and ROS topics to analyze issues
 
 - Fix formation and num_drones issue
@@ -26,10 +44,6 @@
 - Benchmark
     - Add network params 
         - Bandwidth, latency, signal strength
-
-- Radxa 
-    - Create startup script for radxa
-        - Should startup mavros script and egoplanner
 
 - Port to ROS 2
 
