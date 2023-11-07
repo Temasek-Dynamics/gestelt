@@ -252,8 +252,9 @@ void TrajServer::UAVPoseCB(const geometry_msgs::PoseStamped::ConstPtr &msg)
     last_mission_pos_(0) = uav_pose_.pose.position.x;
     last_mission_pos_(1) = uav_pose_.pose.position.y;
     num_pose_msgs_++;
-    if (num_pose_msgs_ > 1000){
+    if (num_pose_msgs_ > 100){
       first_pose_ = false;
+      ROS_INFO("Taking off pose locked to (%f, %f)", last_mission_pos_(0), last_mission_pos_(1));
     }
   }
 

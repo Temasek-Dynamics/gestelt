@@ -3,6 +3,7 @@
   <arg name="rviz_config" default="default"/>
   <arg name="cloud_topic" default="camera/depth/points" />
   <arg name="cloud_topic_ds" default="camera/depth/points_downsampled" />
+  <param name="/use_sim_time" value="false" />
 
   <!-- swarm topic transmitter bridge-->
   <include file="$(find swarm_bridge)/launch/bridge_udp.launch">

@@ -2,6 +2,7 @@
     <!-- Drone id -->
     <arg name="drone_id"/>
     <arg name="drone_id_ns" value="drone$(arg drone_id)"/>
+    <param name="/use_sim_time" value="false" />
 
     <!-- Add static transform from base_link to camera_link -->
     <node pkg="tf" type="static_transform_publisher" 

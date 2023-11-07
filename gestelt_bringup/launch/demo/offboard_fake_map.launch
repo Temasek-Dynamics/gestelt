@@ -9,6 +9,7 @@
   <!-- drone_origin_frame: For PX4 SITL, leave it as default. 
   For actual deployment, put as world -->
   <arg name="drone_origin_frame" default="world" />
+  <param name="/use_sim_time" value="false" />
 
   <!-- Fake sensor data node -->
   <node pkg="fake_map" type="fake_map_node" name="fake_map_node_$(arg drone_id_ns)" output="screen">
