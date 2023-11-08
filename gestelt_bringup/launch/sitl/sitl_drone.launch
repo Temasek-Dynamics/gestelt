@@ -1,0 +1,39 @@
+<!-- Spawns Gazebo model and PX4 SITL instances -->
+
+<launch>
+  <!-- initial position -->
+  <arg name="init_x" default="0.0"/>
+  <arg name="init_y" default="0.0"/>
+  <!-- world_filename_rel is defined relative to gestelt_bringup/simulations/worlds -->
+  <arg name="world_filename_rel" default="empty.world" />
+  <!-- world_filename_abs is absolute filepath -->
+  <arg name="world_filename_abs" default="$(find gestelt_bringup)/simulation/worlds/$(arg world_filename_rel)" />
+
+  <!-- Gazebo simulation -->
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="world_name" value="$(arg world_name)"/>
+    <arg name="paused" value="false"/>
+    <arg name="use_sim_time" value="true"/>
+    <arg name="gui" value="true"/>
+    <arg name="headless" value="false"/>
+    <arg name="debug" value="false"/>
+    <arg name="verbose" value="true"/>
+    <arg name="physics" value="ode"/>
+  </include>
+
+  <!-- Spawn drone in gazebo with mavros plugin -->
+  <include file="$(find gestelt_bringup)/launch/sitl/include/px4_sitl.xml">
+    <arg name="vehicle" default="iris"/>
+    <arg name="model"   default="raynor"/>
+    <arg name="init_x"  value="$(arg init_x)"/>
+    <arg name="init_y"  value="$(arg init_y)"/>
+    <arg name="init_z"  value="0.0"/>
+  </include>
+
+  <!-- Add static transform from world to map -->
+  <node pkg="tf" type="static_transform_publisher" 
+    name="world_to_map_tf" 
+    args="0 0 0 0 0 0 1 world map 100">
+  </node>
+
+</launch>

@@ -54,9 +54,9 @@ make distclean
 cd ~/gestelt_ws/
 
 # Building for debugging/development
-catkin_make 
+catkin build 
 # Building for release mode (For use on Radxa)
-catkin_make -DCMAKE_BUILD_TYPE=Release
+catkin build -DCMAKE_BUILD_TYPE=Release
 ```
 
 5. Setting up the Offboard computer

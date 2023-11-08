@@ -1,4 +1,0 @@
-<launch>
-  <!-- Launches a test mission -->
-  <node pkg="gestelt_bringup" name="fake_mission" type="fake_mission.py" />
-</launch>

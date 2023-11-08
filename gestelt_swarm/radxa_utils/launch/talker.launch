@@ -1,3 +1,0 @@
-<launch>
-    <node pkg="radxa_utils" type="talker" name="talker_0" output="screen" />
-</launch>

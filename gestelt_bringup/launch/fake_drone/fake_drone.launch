@@ -1,0 +1,28 @@
+<!-- Spawns a fake drone for testing architecture and algorithms-->
+
+<launch>
+  <!-- initial position -->
+  <arg name="init_x" default="0.0"/>
+  <arg name="init_y" default="0.0"/>
+  <!-- Mavros topics -->
+  <arg name="command_topic" default="mavros/setpoint_raw/local" />
+  <arg name="odometry_topic" default="mavros/local_position/odom" />
+  <arg name="pose_topic" default="mavros/local_position/pose" />
+
+  <!-- Simulated quadcopter -->
+  <node pkg="fake_drone" type="fake_drone" name="fake_drone" output="screen">
+      <remap from="mavros/setpoint_raw/local" to="/$(arg command_topic)"/>
+      <remap from="mavros/local_position/odom" to="/$(arg odometry_topic)"/>
+      <remap from="mavros/local_position/pose" to="/$(arg pose_topic)"/>
+
+      <rosparam command="load" file="$(find gestelt_bringup)/config/fake_drone_params.yaml" />
+      <param name="uav/id" value="0"/>
+      <param name="uav/init_x" value="$(arg init_x)"/>
+      <param name="uav/init_y" value="$(arg init_y)"/>
+      <param name="uav/init_z" value="0.0"/>
+
+      <param name="uav/origin_frame" value="world"/>
+      <param name="uav/base_link_frame" value="base_link"/>
+  </node>
+
+</launch>

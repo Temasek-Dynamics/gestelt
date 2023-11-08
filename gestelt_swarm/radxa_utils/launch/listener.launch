@@ -1,3 +1,0 @@
-<launch>
-    <node pkg="radxa_utils" type="listener" name="listener_0" output="screen"/>
-</launch>

@@ -1,0 +1,67 @@
+<!-- Launches a PX4 SITL instance, spawns a vehicle in Gazebo-->
+
+<launch>
+    <!-- Drone id -->
+    <arg name="init_x"/>
+    <arg name="init_y"/>
+    <arg name="init_z"/>
+    <!-- Gazebo parameters -->
+    <arg name="vehicle"/>
+    <arg name="model"/>
+    <!-- PX4 configs -->
+    <arg name="est" default="ekf2"/>
+    <arg name="interactive" default="true"/>
+    <env name="PX4_SIM_MODEL" value="gazebo-classic_$(arg vehicle)" />
+
+    <!-- Add static transform from base_link to camera_link -->
+    <node pkg="tf" type="static_transform_publisher" 
+      name="base_link_to_cam_link_tf" 
+      args="0.08 0 0.02 0 0 0 1 base_link cam_link 100" />
+
+    <!-- MAVROS and vehicle configs -->
+    <arg name="mavlink_udp_port" default="14560"/>
+    <arg name="mavlink_tcp_port" default="4560"/>
+    <arg name="fcu_addr" default="14540"/>
+    <arg name="fcu_port" default="14580"/>
+    <arg name="fcu_url" default="udp://:$(arg fcu_addr)@localhost:$(arg fcu_port)"/>
+
+    <!-- generate sdf vehicle model -->
+    <arg name="cmd" default="xmlstarlet ed -u '//plugin[@name=&quot;mavlink_interface&quot;]/mavlink_tcp_port' -v $(arg mavlink_tcp_port) -u '//plugin[@name=&quot;camera_controller&quot;]/frameName' -v cam_link $(find gestelt_bringup)/simulation/models/$(arg model)/$(arg model).sdf"/>
+
+    <param command="$(arg cmd)" name="model_description"/>
+    <!-- PX4 SITL -->
+    <arg unless="$(arg interactive)" name="px4_command_arg1" value=""/>
+    <arg     if="$(arg interactive)" name="px4_command_arg1" value="-d"/>
+    <node name="sitl" pkg="px4" type="px4" output="screen" args="$(find px4)/build/px4_sitl_default/etc -s etc/init.d-posix/rcS -i 0 -w sitl_$(arg vehicle)_0 $(arg px4_command_arg1)">
+    </node>
+    
+    <!-- spawn vehicle in Gazebo -->
+    <node name="$(arg vehicle)_spawn" output="screen" pkg="gazebo_ros" type="spawn_model" 
+      args="-sdf -param model_description -model drone -x $(arg init_x) -y $(arg init_y) -z $(arg init_z) -R 0.0 -P 0.0 -Y 0.0"/>
+  
+    <!-- MAVROS -->
+    <node pkg="mavros" type="mavros_node" name="mavros" required="true" clear_params="true" output="screen">
+      <param name="fcu_url" value="$(arg fcu_url)" />
+      <param name="gcs_url" value="" />
+      <param name="target_system_id" value="1"/>
+      <param name="target_component_id" value="1" />
+      <param name="fcu_protocol" value="v2.0" />
+
+      <!-- load mavros plugins and blacklist -->
+      <rosparam command="load" file="$(find gestelt_bringup)/config/px4_pluginlists.yaml" />
+      <rosparam command="load" file="$(find gestelt_bringup)/config/px4_config.yaml" />
+
+      <param name="local_position/frame_id" value="world"/>
+      <param name="local_position/tf/send" value="true"/>
+      <param name="local_position/tf/frame_id" value="world"/>
+      <param name="local_position/tf/child_frame_id" value="base_link"/>
+
+      <!-- <param name="global_position/frame_id" value="world"/>
+      <param name="global_position/child_frame_id" value="base_link"/>
+      <param name="global_position/tf/frame_id" value="world"/>
+      <param name="global_position/tf/global_frame_id" value="world"/>
+      <param name="global_position/tf/child_frame_id" value="base_link"/> -->
+
+    </node>
+
+</launch>
