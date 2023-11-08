@@ -26,12 +26,12 @@ export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:$gestelt_bringup_DIR:$PX4_AUTOPILOT_RE
 #####
 # Start Gazebo and PX4 SITL instances
 CMD_0="
-roslaunch gestelt_bringup sitl_drone.launch
+roslaunch gestelt_bringup sitl_drone.launch 
 "
 
 # Start up drone commander (Handles taking off, execution of mission and landing etc.)
 CMD_1="
-roslaunch uav_commander uav_commander_node.launch rviz_config:=gz_sim
+roslaunch trajectory_server trajectory_server_node.launch rviz_config:=gz_sim
 "
 
 # Start up minimum snap trajectory planner and sampler 
@@ -40,7 +40,7 @@ roslaunch trajectory_planner trajectory_planner_node.launch
 "
 
 # Start up script to send commands
-CMD_3="roslaunch gestelt_bringup square_mission.launch"
+CMD_3="roslaunch gestelt_bringup mission.launch"
 
 if [ "$SESSIONEXISTS" = "" ]
 then 
@@ -52,8 +52,9 @@ then
     tmux split-window -t $SESSION:0.0 -h
 
     tmux send-keys -t $SESSION:0.0 "$SOURCE_PX4_AUTOPILOT $CMD_0" C-m 
-    sleep 3
+    sleep 2
     tmux send-keys -t $SESSION:0.1 "$SOURCE_WS $CMD_1" C-m 
+    sleep 1
     tmux send-keys -t $SESSION:0.2 "$SOURCE_WS $CMD_2" C-m 
     tmux send-keys -t $SESSION:0.3 "$SOURCE_WS $CMD_3" 
 fi

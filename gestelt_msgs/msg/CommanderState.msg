@@ -1,0 +1,5 @@
+int32 drone_id
+string traj_server_state
+string planner_server_state
+string uav_state
+bool armed

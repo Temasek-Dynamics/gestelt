@@ -21,6 +21,9 @@
 #include <std_msgs/String.h>
 #include <trajectory_msgs/MultiDOFJointTrajectory.h>
 
+#include <gestelt_msgs/CommanderCommand.h>
+#include <gestelt_msgs/CommanderState.h>
+
 #include <visualization_msgs/Marker.h>
 
 using namespace Eigen;
@@ -113,7 +116,7 @@ private: // Class Methods
   /**
    * @brief Callback for externally triggered server events
    */
-  void serverCommandCb(const std_msgs::Int8::ConstPtr & msg);
+  void serverCommandCb(const gestelt_msgs::CommanderCommand::ConstPtr & msg);
 
   /**
    * Timer callback to extract PVA commands from subscribed plan for executing trajectory.
@@ -343,11 +346,13 @@ private: // Member variables
   int drone_id_{0}; // ID of drone being commanded by trajectory server instance
   std::string origin_frame_; // frame that the drone originated from i.e. it's local pose is (0,0,0) w.r.t to this frame.
 
-  /* Publishers, Subscribers and Timers */
+  /* Publisher  */
   ros::Publisher pos_cmd_raw_pub_; // Publisher of commands for PX4 
   ros::Publisher uav_path_pub_; // Publisher of UAV pose history
+  ros::Publisher server_state_pub_; // Publisher of current uav and server state
   
-  ros::Subscriber traj_sub_; // Subscriber for trajectory
+  /* Subscriber */
+  ros::Subscriber plan_traj_sub_; // Subscriber for planner trajectory
 
   ros::Subscriber planner_hb_sub_; // Subscriber to planner heartbeat
   ros::Subscriber uav_state_sub_; // Subscriber to UAV State (MavROS)
@@ -356,6 +361,7 @@ private: // Member variables
   // TODO: make this a service server
   ros::Subscriber command_server_sub_; // Subscriber to trajectory server commands
 
+  /* Timer */
   ros::Timer exec_traj_timer_; // Timer to generate PVA commands for trajectory execution
   ros::Timer tick_state_timer_; // Timer to tick the state machine 
   ros::Timer debug_timer_; // Timer to publish debug data

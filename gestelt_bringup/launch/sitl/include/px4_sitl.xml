@@ -51,16 +51,16 @@
       <rosparam command="load" file="$(find gestelt_bringup)/config/px4_pluginlists.yaml" />
       <rosparam command="load" file="$(find gestelt_bringup)/config/px4_config.yaml" />
 
-      <param name="local_position/frame_id" value="world"/>
+      <!-- <param name="local_position/frame_id" value="world"/>
       <param name="local_position/tf/send" value="true"/>
       <param name="local_position/tf/frame_id" value="world"/>
-      <param name="local_position/tf/child_frame_id" value="base_link"/>
+      <param name="local_position/tf/child_frame_id" value="base_link"/> -->
 
-      <!-- <param name="global_position/frame_id" value="world"/>
+      <param name="global_position/frame_id" value="world"/>
       <param name="global_position/child_frame_id" value="base_link"/>
       <param name="global_position/tf/frame_id" value="world"/>
       <param name="global_position/tf/global_frame_id" value="world"/>
-      <param name="global_position/tf/child_frame_id" value="base_link"/> -->
+      <param name="global_position/tf/child_frame_id" value="base_link"/>
 
     </node>
 

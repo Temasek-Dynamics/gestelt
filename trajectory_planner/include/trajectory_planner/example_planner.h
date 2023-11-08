@@ -13,7 +13,7 @@
 #include <mav_trajectory_generation_ros/ros_visualization.h>
 #include <mav_trajectory_generation_ros/ros_conversions.h>
 
-#include <trajectory_server_msgs/Waypoints.h>
+#include <gestelt_msgs/Goals.h>
 
 class ExamplePlanner {
  public:
@@ -21,7 +21,7 @@ class ExamplePlanner {
 
   void uavOdomCallback(const nav_msgs::Odometry::ConstPtr& pose);
 
-  void waypointsCB(const trajectory_server_msgs::WaypointsPtr &msg);
+  void waypointsCB(const gestelt_msgs::GoalsPtr &msg);
 
   void setMaxSpeed(double max_v);
 
@@ -50,7 +50,7 @@ class ExamplePlanner {
   ros::Publisher pub_markers_;
   ros::Publisher pub_trajectory_;
   ros::Subscriber sub_odom_;
-  ros::Subscriber waypoints_sub_;
+  ros::Subscriber goal_waypoints_sub_;
   
   ros::NodeHandle& nh_;
   Eigen::Affine3d current_pose_;
@@ -61,8 +61,8 @@ class ExamplePlanner {
   double max_ang_v_;
   double max_ang_a_;
 
-  std::vector<Eigen::Vector3d> waypoints_;
-  Eigen::Vector3d world_to_uav_origin_tf_; // Position (x,y,z) of drone origin to world frame
+  std::vector<Eigen::Vector3d> goal_waypoints_;
+  std::string trajectory_frame_id_; //frame id of planned trajectory
 };
 
 #endif // TRAJECTORY_PLANNER_H

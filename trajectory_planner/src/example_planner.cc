@@ -15,6 +15,8 @@ ExamplePlanner::ExamplePlanner(ros::NodeHandle& nh) :
     ROS_WARN("[example_planner] param max_a not found");
   }
 
+  nh.param("trajectory_frame", trajectory_frame_id_, std::string("world"));
+
   // create publisher for RVIZ markers
   pub_markers_ =
       nh.advertise<visualization_msgs::MarkerArray>("trajectory_markers", 0);
@@ -26,9 +28,8 @@ ExamplePlanner::ExamplePlanner(ros::NodeHandle& nh) :
   sub_odom_ =
       nh.subscribe("uav_pose", 1, &ExamplePlanner::uavOdomCallback, this);
 
-  waypoints_sub_ = nh.subscribe("/waypoints", 1, &ExamplePlanner::waypointsCB, this);
+  goal_waypoints_sub_ = nh.subscribe("/waypoints", 1, &ExamplePlanner::waypointsCB, this);
 
-  world_to_uav_origin_tf_ << 0.0, 0.0, 0.0;
 }
 
 // Callback to get current Pose of UAV
@@ -36,13 +37,13 @@ void ExamplePlanner::uavOdomCallback(const nav_msgs::Odometry::ConstPtr& odom) {
   // store current position in our planner
   tf::poseMsgToEigen(odom->pose.pose, current_pose_);
 
-  // store current vleocity
+  // store current velocity
   tf::vectorMsgToEigen(odom->twist.twist.linear, current_velocity_);
 }
 
 // Callback to get waypoints
-void ExamplePlanner::waypointsCB(const trajectory_server_msgs::WaypointsPtr &msg){
-  waypoints_.clear();
+void ExamplePlanner::waypointsCB(const gestelt_msgs::GoalsPtr &msg){
+  goal_waypoints_.clear(); // Clear existing goal waypoints
 
   ROS_INFO("[Trajectory Planner] No. of waypoints: %ld", msg->waypoints.poses.size());
 
@@ -53,11 +54,11 @@ void ExamplePlanner::waypointsCB(const trajectory_server_msgs::WaypointsPtr &msg
         pose.position.z);
 
     // Transform received waypoints from world to UAV origin frame
-    waypoints_.push_back(wp + world_to_uav_origin_tf_);
+    goal_waypoints_.push_back(wp);
   }
 
   mav_trajectory_generation::Trajectory trajectory;
-  planTrajectory(waypoints_, &trajectory);
+  planTrajectory(goal_waypoints_, &trajectory);
   publishTrajectory(trajectory);
 }
 
@@ -226,7 +227,7 @@ bool ExamplePlanner::publishTrajectory(const mav_trajectory_generation::Trajecto
   visualization_msgs::MarkerArray markers;
   double distance =
       0.0; // Distance by which to seperate additional markers. Set 0.0 to disable.
-  std::string frame_id = "drone0_origin";
+  std::string frame_id = trajectory_frame_id_;
 
   mav_trajectory_generation::drawMavTrajectory(trajectory,
                                                distance,
@@ -238,7 +239,7 @@ bool ExamplePlanner::publishTrajectory(const mav_trajectory_generation::Trajecto
   mav_planning_msgs::PolynomialTrajectory4D msg;
   mav_trajectory_generation::trajectoryToPolynomialTrajectoryMsg(trajectory,
                                                                  &msg);
-  msg.header.frame_id = "drone0_origin";
+  msg.header.frame_id = trajectory_frame_id_;
   pub_trajectory_.publish(msg);
 
   ROS_INFO("[Trajectory Planner] No. of segments: %ld", msg.segments.size());

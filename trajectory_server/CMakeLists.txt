@@ -10,6 +10,7 @@ set(ROS_LIBRARIES
   std_msgs
   geometry_msgs
   mavros_msgs
+  gestelt_msgs
 )
 
 # set(ROS_DEPENDS

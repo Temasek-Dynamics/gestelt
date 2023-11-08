@@ -9,7 +9,7 @@ set (ROS_PKGS
   mav_trajectory_generation_ros
   nav_msgs
   eigen_conversions
-  trajectory_server_msgs
+  gestelt_msgs
 )
 
 # set (ROS_DEPENDS

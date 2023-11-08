@@ -12,16 +12,17 @@
         <param name="/max_a" value="6.0" type="double"/>
         <!-- subscribed topics -->
         <remap from="uav_pose" to="/$(arg odometry_topic)"/>
+        <remap from="/waypoints" to="/planner/goals"/>
         <!-- published topics -->
-        <remap from="trajectory" to="/sample_trajectory"/>
+        <remap from="trajectory" to="/planner/sample_trajectory"/>
     </node>
 
     <!--- Trajectory sampler -->
     <node name="trajectory_sampler" pkg="trajectory_planner" type="trajectory_sampler" output="screen">
         <!-- subscribed topics -->
-        <remap from="path_segments_4D" to="/sample_trajectory"/>
+        <remap from="path_segments_4D" to="/planner/sample_trajectory"/>
         <!-- published topics -->
-        <remap from="command/trajectory" to="/planning/trajectory"/>
+        <remap from="command/trajectory" to="/planner/trajectory"/>
     </node>
 
 </launch>

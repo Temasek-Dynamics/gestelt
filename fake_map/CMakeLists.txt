@@ -84,3 +84,11 @@ target_link_libraries(fake_map_publisher
   ${catkin_LIBRARIES}
   ${PCL_LIBRARIES}
 )
+
+add_executable (fake_map_generator
+  src/fake_map_generator.cpp
+)
+target_link_libraries(fake_map_generator
+  ${catkin_LIBRARIES}
+  ${PCL_LIBRARIES}
+)

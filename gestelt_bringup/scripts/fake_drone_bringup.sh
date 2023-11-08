@@ -40,7 +40,7 @@ roslaunch trajectory_planner trajectory_planner_node.launch
 "
 
 # Start up script to send commands
-CMD_3="roslaunch gestelt_bringup square_mission.launch"
+CMD_3="roslaunch gestelt_bringup mission.launch"
 
 if [ "$SESSIONEXISTS" = "" ]
 then 

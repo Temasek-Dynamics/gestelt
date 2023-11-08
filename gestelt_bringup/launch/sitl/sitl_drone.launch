@@ -11,7 +11,7 @@
 
   <!-- Gazebo simulation -->
   <include file="$(find gazebo_ros)/launch/empty_world.launch">
-    <arg name="world_name" value="$(arg world_name)"/>
+    <arg name="world_name" value="$(arg world_filename_abs)"/>
     <arg name="paused" value="false"/>
     <arg name="use_sim_time" value="true"/>
     <arg name="gui" value="true"/>
@@ -35,5 +35,9 @@
     name="world_to_map_tf" 
     args="0 0 0 0 0 0 1 world map 100">
   </node>
+
+  <!-- RVIZ -->
+  <node name="rviz" pkg="rviz" type="rviz" required="true" 
+    args="-d $(find gestelt_bringup)/launch/rviz/gz_sim.rviz"/>
 
 </launch>

@@ -11,7 +11,7 @@ For simulation and deployment on a physical drone, PX4 is the firmware of choice
 ```bash
 mkdir -p ~/gestelt_ws/src/
 cd ~/gestelt_ws/src
-git clone https://github.com/JohnTGZ/gestelt.git
+git clone https://github.com/JohnTGZ/gestelt.git -b min_snap
 cd gestelt
 vcs import < simulators.repos --recursive
 vcs import < thirdparty.repos --recursive
@@ -43,4 +43,34 @@ catkin build
 catkin build -DCMAKE_BUILD_TYPE=Release
 ```
 
+# Quick start
+There are 2 scripts you can use to run an example simulation. 
+
+## 1. Run PX4 SITL with Gazebo. 
+The first script runs a simulated PX4 SITL instance with Gazebo, with physics. This should be tested before deployment on an actual drone. It runs the following:
+1. Gazebo simulation environment.
+2. Trajectory Server.
+3. Minimum Snap Trajectory Planner and Sampler.
+4. Mission commands.
+```bash
+cd ~/gestelt_ws/src/gestelt/gestelt_bringup/scripts
+# Run the script, the script sources all the relevant workspaces so you don't have to worry about sourcing. 
+./sitl_drone_bringup.sh
+
+# To kill everything, use the following command
+killall -9 gazebo; killall -9 gzserver; killall -9 gzclient; killall -9 rosmaster; tmux kill-server;
+
+# IF you want to add a shortcut to kill the simulation you can add the following to ~/.bashrc
+alias killbill="killall -9 gazebo; killall -9 gzserver; killall -9 gzclient; killall -9 rosmaster; tmux kill-server;
+```
+
+## 2. Run a fake physics-less drone simulation
+The second one is a fake drone with no physics and be used to test the architecture or algorithm. It runs the following:
+1. Fake drone simulation.
+2. Trajectory Server.
+3. Minimum Snap Trajectory Planner and Sampler.
+4. Mission commands.
+
 # Acknowledgements
+1. [EGO-Planner-V2 repo](https://github.com/ZJU-FAST-Lab/EGO-Planner-v2)
+2. [ETHZ-ASL/mav_trajectory_generation](https://github.com/ethz-asl/mav_trajectory_generation)

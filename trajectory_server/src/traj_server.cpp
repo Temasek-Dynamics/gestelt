@@ -15,7 +15,7 @@ void TrajServer::init(ros::NodeHandle& nh)
   // Operational params
   nh.param("traj_server/takeoff_height", takeoff_height_, 1.0);
   nh.param("traj_server/planner_heartbeat_timeout", planner_heartbeat_timeout_, 0.5);
-  nh.param("traj_server/ignore_heartbeat", ignore_heartbeat_, false);
+  nh.param("traj_server/ignore_planner_heartbeat", ignore_heartbeat_, false);
 
   // Safety bounding box params
   nh.param("traj_server/enable_safety_box", enable_safety_box_, true);
@@ -39,12 +39,11 @@ void TrajServer::init(ros::NodeHandle& nh)
   /////////////////
   /* Subscribers */
   /////////////////
-
   // Subscription to commands
-  command_server_sub_ = nh.subscribe<std_msgs::Int8>("/traj_server_command", 10, &TrajServer::serverCommandCb, this);
+  command_server_sub_ = nh.subscribe<gestelt_msgs::CommanderCommand>("/traj_server/command", 10, &TrajServer::serverCommandCb, this);
 
   // Subscription to planner
-  traj_sub_ = nh.subscribe("/planner/trajectory", 10, &TrajServer::multiDOFJointTrajectoryCb, this);
+  plan_traj_sub_ = nh.subscribe("/planner/trajectory", 10, &TrajServer::multiDOFJointTrajectoryCb, this);
   planner_hb_sub_ = nh.subscribe("/planner/heartbeat", 10, &TrajServer::plannerHeartbeatCb, this);
 
   // Subscription to UAV (via MavROS)
@@ -57,6 +56,7 @@ void TrajServer::init(ros::NodeHandle& nh)
   /////////////////
   pos_cmd_raw_pub_ = nh.advertise<mavros_msgs::PositionTarget>("/mavros/setpoint_raw/local", 50);
   uav_path_pub_ = nh.advertise<nav_msgs::Path>("/uav_path_trajectory", 50);
+  server_state_pub_ = nh.advertise<gestelt_msgs::CommanderState>("/traj_server/state", 50);
 
   /////////////////
   /* Service clients */
@@ -100,17 +100,17 @@ void TrajServer::multiDOFJointTrajectoryCb(const trajectory_msgs::MultiDOFJointT
 
   std::lock_guard<std::mutex> cmd_guard(cmd_mutex_);
 
-  // // Create rotation frame from NED To ROS
-  // // Initialize camera to body matrices
-  // double c2b_r = (M_PI/180.0) * 180;
-  // double c2b_p = (M_PI/180.0) * 0;
-  // double c2b_y = (M_PI/180.0) * 0;
+  // Create rotation frame from NED To ROS
+  // Initialize camera to body matrices
+  double c2b_r = (M_PI/180.0) * 180; // roll
+  double c2b_p = (M_PI/180.0) * 0;   // pitch
+  double c2b_y = (M_PI/180.0) * 90;   // yaw
 
-  // Eigen::Matrix3d rot_mat;
+  Eigen::Matrix3d rot_mat;
 
-  // rot_mat << cos(c2b_y) * cos(c2b_p),    -sin(c2b_y) * cos(c2b_r) + cos(c2b_y) * sin(c2b_p) * sin(c2b_r),    sin(c2b_y) * sin(c2b_r) + cos(c2b_y) * sin(c2b_p) * cos(c2b_r), 
-  //            sin(c2b_y) * cos(c2b_p),     cos(c2b_y) * cos(c2b_r) + sin(c2b_y) * sin(c2b_p) * sin(c2b_r),    -cos(c2b_y) * sin(c2b_r) + sin(c2b_y) * sin(c2b_p) * cos(c2b_r),
-  //            -sin(c2b_p),                  cos(c2b_p) * sin(c2b_r),                                            cos(c2b_p) * cos(c2b_y);
+  rot_mat << cos(c2b_y) * cos(c2b_p),    -sin(c2b_y) * cos(c2b_r) + cos(c2b_y) * sin(c2b_p) * sin(c2b_r),    sin(c2b_y) * sin(c2b_r) + cos(c2b_y) * sin(c2b_p) * cos(c2b_r), 
+             sin(c2b_y) * cos(c2b_p),     cos(c2b_y) * cos(c2b_r) + sin(c2b_y) * sin(c2b_p) * sin(c2b_r),    -cos(c2b_y) * sin(c2b_r) + sin(c2b_y) * sin(c2b_p) * cos(c2b_r),
+             -sin(c2b_p),                  cos(c2b_p) * sin(c2b_r),                                            cos(c2b_p) * cos(c2b_y);
 
 
   // We only take the first point of the trajectory
@@ -173,7 +173,7 @@ void TrajServer::UAVPoseCB(const geometry_msgs::PoseStamped::ConstPtr &msg)
   uav_pose_ = *msg; 
   uav_poses_.push_back(uav_pose_);
 
-  if (uav_poses_.size() > uav_pose_history_size_) {
+  if (uav_poses_.size() > uint16_t(uav_pose_history_size_)) {
     uav_poses_.pop_front(); // Remove the oldest pose
   }
 
@@ -184,13 +184,13 @@ void TrajServer::UAVOdomCB(const nav_msgs::Odometry::ConstPtr &msg)
   uav_odom_ = *msg;
 }
 
-void TrajServer::serverCommandCb(const std_msgs::Int8::ConstPtr & msg)
+void TrajServer::serverCommandCb(const gestelt_msgs::CommanderCommand::ConstPtr & msg)
 {
-  if (msg->data < 0 || msg->data > ServerEvent::EMPTY_E){
-    logError("Invalid server event, ignoring...");
+  if (msg->command < 0 || msg->command > ServerEvent::EMPTY_E){
+    logError("Invalid server command, ignoring...");
   }
-  
-  setServerEvent(ServerEvent(msg->data));
+
+  setServerEvent(ServerEvent(msg->command));
 }
 
 /* Timer Callbacks */
@@ -430,6 +430,18 @@ void TrajServer::tickServerStateTimerCb(const ros::TimerEvent &e)
 }
 
 void TrajServer::debugTimerCb(const ros::TimerEvent &e){
+  // Publish current Commander state
+  gestelt_msgs::CommanderState state_msg;
+
+  state_msg.drone_id = drone_id_;
+  state_msg.traj_server_state = StateToString(getServerState());
+  state_msg.planner_server_state = "UNIMPLEMENTED";
+  state_msg.uav_state = uav_current_state_.mode;
+  state_msg.armed = uav_current_state_.armed;
+
+  server_state_pub_.publish(state_msg);
+
+  // Publish UAV Pose history
   nav_msgs::Path uav_path;
   uav_path.header.stamp = ros::Time::now();
   uav_path.header.frame_id = origin_frame_; 

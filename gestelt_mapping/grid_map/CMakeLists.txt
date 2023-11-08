@@ -11,9 +11,6 @@ set(ROS_LIBRARIES
     std_msgs
     sensor_msgs
     message_filters
-    # cv_bridge
-    # swarm_benchmark
-    trajectory_server_msgs
 )
 
 # set(ROS_DEPENDS

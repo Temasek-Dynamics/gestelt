@@ -1,16 +1,14 @@
 #!/usr/bin/env python3
 
 import rospy
-from trajectory_server_msgs.msg import State, Waypoints
+from gestelt_msgs.msg import CommanderState, Goals, CommanderCommand
 from geometry_msgs.msg import Pose
 from std_msgs.msg import Int8
 
-num_drones = 1
-
 # Publisher of server events to trigger change of states for trajectory server 
-server_event_pub = rospy.Publisher('/traj_server_event', Int8, queue_size=10)
+server_event_pub = rospy.Publisher('/traj_server/command', CommanderCommand, queue_size=10)
 # Publisher of server events to trigger change of states for trajectory server 
-waypoints_pub = rospy.Publisher('/waypoints', Waypoints, queue_size=10)
+waypoints_pub = rospy.Publisher('/planner/goals', Goals, queue_size=10)
 
 # Dictionary of UAV states
 server_states = {}
@@ -27,11 +25,14 @@ def check_traj_server_states(des_traj_server_state):
             return False
     return True
 
-def publish_server_event(event_enum):
-    server_event_pub.publish(Int8(event_enum))
+def publishCommand(event_enum):
+    commander_cmd = CommanderCommand()
+    commander_cmd.command = event_enum
+
+    server_event_pub.publish(commander_cmd)
 
 def get_server_state_callback():
-    msg = rospy.wait_for_message(f"/drone0/server_state", State, timeout=5.0)
+    msg = rospy.wait_for_message(f"/traj_server/state", CommanderState, timeout=5.0)
     server_states[str(msg.drone_id)] = msg
     # print("==================")
     # print(msg)
@@ -51,7 +52,7 @@ def create_pose(x, y, z):
     return pose
 
 def pub_waypoints(waypoints):
-    wp_msg = Waypoints()
+    wp_msg = Goals()
     wp_msg.waypoints.header.frame_id = "world"
     wp_msg.waypoints.poses = waypoints
 
@@ -78,11 +79,11 @@ def main():
         elif (not HOVER_MODE):
             # IDLE -> TAKE OFF -> HOVER
             print("Setting to HOVER mode!")
-            publish_server_event(0)
+            publishCommand(CommanderCommand.TAKEOFF)
         elif (HOVER_MODE):
             # HOVER -> MISSION
             print("Setting to MISSION mode!")
-            publish_server_event(2)
+            publishCommand(CommanderCommand.MISSION)
 
         print("tick!")
         rate.sleep()
@@ -90,18 +91,7 @@ def main():
     # Send waypoints to UAVs
     print(f"Sending waypoints to UAVs")
     waypoints = []
-    # Square formation with length L
-    max_x = 1.5
-    max_y = 1.5
-    min_x = -1.5
-    min_y = -1.5
-    z = 1.0
-    for i in range(10):
-        waypoints.append(create_pose(max_x, min_y, z))
-        waypoints.append(create_pose(max_x, max_y, z))
-        waypoints.append(create_pose(min_x, max_y, z))
-        waypoints.append(create_pose(min_x, min_y, z))
-    waypoints.append(create_pose(0, 0, z))
+    waypoints.append(create_pose(1.0, 3.0, 2.0))
     pub_waypoints(waypoints)
 
 if __name__ == '__main__':

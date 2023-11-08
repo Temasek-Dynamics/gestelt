@@ -9,8 +9,6 @@
     <arg name="odometry_topic" default="/mavros/local_position/odom" />
     <arg name="pose_topic" default="/mavros/local_position/pose" />
     <arg name="drone_origin_frame" default="world" />
-    <!-- Trajectory mode 0 for egoswarm polytraj. Mode 1 for mav_trajectory_generation sampled points -->
-    <arg name="server_mode" default="0" />
 
     <!-- Trajectory server -->
     <node pkg="trajectory_server" name="trajectory_server" type="traj_server_node" output="screen">
@@ -34,7 +32,7 @@
         <param name="traj_server/safety_box/max_z" value="5.0" type="double"/>
 
         <!-- Subscribed Topics -->
-        <remap from="/planning/trajectory" to="/planning/trajectory"/>
+        <!-- <remap from="/planner/trajectory" to="/planner/trajectory"/> -->
         <!-- <remap from="/mavros/state" to="/mavros/state"/>
         <remap from="/mavros/local_position/pose" to="$(arg pose_topic)"/>
         <remap from="/mavros/local_position/odom" to="$(arg odometry_topic)"/> -->
@@ -48,8 +46,8 @@
         <remap from="/mavros/set_mode" to="/mavros/set_mode"/> -->
 
         <!-- Planner Heartbeat -->
-        <!-- <param name="traj_server/planner_heartbeat_timeout" value="0.5" type="double"/>
-        <param name="traj_server/ignore_heartbeat" value="true" type="bool"/> -->
+        <!-- <param name="traj_server/planner_heartbeat_timeout" value="0.5" type="double"/> -->
+        <param name="traj_server/ignore_planner_heartbeat" value="true" type="bool"/>
 
         <!-- Frequency for timers -->
         <!-- <param name="traj_server/pub_cmd_freq" value="25.0" type="double"/>

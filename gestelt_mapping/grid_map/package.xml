@@ -17,7 +17,6 @@
   <exec_depend>std_msgs</exec_depend>
   
   <depend>sensor_msgs</depend>
-  <depend>trajectory_server_msgs</depend>
   <!-- <depend>swarm_benchmark</depend> -->
   <!-- <depend>cv_bridge</depend> -->
   <depend>message_filters</depend>
