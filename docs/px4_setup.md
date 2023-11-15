@@ -1,16 +1,16 @@
 # PX4 setup
 
 ## Building the firmware
-0. Building and uploading the bootloader
+1. Building and uploading the bootloader
 ```bash
 git clone https://github.com/PX4/PX4-Bootloader.git
 cd ./PX4-Bootloader
 make omnibusf4sd_bl
 # bootloader file with ".hex" extension in PX4-Bootloader/build/omnibusf4sd_bl/omnibusf4sd_bl.hex
 ```
-Then go on to upload bootloader using betaflight configurator, "update firmware" and update the bootloader on the board. The FCU must have it's bootloader button pressed before connecting via USB to the host computer in order to enter DFU mode.
+Please refer to ["PX4 Bootloader Flashing onto Betaflight Systems"](https://docs.px4.io/main/en/advanced_config/bootloader_update_from_betaflight.html) for flashing of bootloader onto the FCU
 
-1. Build the board firmware 
+2. Build the board firmware 
 ```bash 
 # Clone the custom version of PX4 
 git clone https://github.com/matthewoots/PX4-Autopilot.git
@@ -18,7 +18,7 @@ cd ./PX4-Autopilot/
 # Default build for Flywoo F405 AIO
 make flywoo_f405s_aio_default
 ```
-2. Upload firmware
+3. Upload firmware
 ```bash
 make flywoo_f405s_aio_default upload
 ```
