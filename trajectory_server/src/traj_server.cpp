@@ -101,16 +101,21 @@ void TrajServer::multiDOFJointTrajectoryCb(const trajectory_msgs::MultiDOFJointT
   std::lock_guard<std::mutex> cmd_guard(cmd_mutex_);
 
   // Create rotation frame from NED To ROS
-  // Initialize camera to body matrices
-  double c2b_r = (M_PI/180.0) * 180; // roll
-  double c2b_p = (M_PI/180.0) * 0;   // pitch
-  double c2b_y = (M_PI/180.0) * 90;   // yaw
+  double roll_deg = 180; // roll (x) (Degrees)
+  double pitch_deg = 0;   // pitch (y)
+  double yaw_deg =  90;   // yaw (z)
+
+  // euler in radians
+  double roll = (M_PI/180.0) * roll_deg; 
+  double pitch = (M_PI/180.0) * pitch_deg;  
+  double yaw = (M_PI/180.0) * yaw_deg; 
 
   Eigen::Matrix3d rot_mat;
 
-  rot_mat << cos(c2b_y) * cos(c2b_p),    -sin(c2b_y) * cos(c2b_r) + cos(c2b_y) * sin(c2b_p) * sin(c2b_r),    sin(c2b_y) * sin(c2b_r) + cos(c2b_y) * sin(c2b_p) * cos(c2b_r), 
-             sin(c2b_y) * cos(c2b_p),     cos(c2b_y) * cos(c2b_r) + sin(c2b_y) * sin(c2b_p) * sin(c2b_r),    -cos(c2b_y) * sin(c2b_r) + sin(c2b_y) * sin(c2b_p) * cos(c2b_r),
-             -sin(c2b_p),                  cos(c2b_p) * sin(c2b_r),                                            cos(c2b_p) * cos(c2b_y);
+  // Anti-Clockwise rotation is positive
+  rot_mat << cos(yaw) * cos(pitch),    -sin(yaw) * cos(roll) + cos(yaw) * sin(pitch) * sin(roll),    sin(yaw) * sin(roll) + cos(yaw) * sin(pitch) * cos(roll), 
+             sin(yaw) * cos(pitch),     cos(yaw) * cos(roll) + sin(yaw) * sin(pitch) * sin(roll),    -cos(yaw) * sin(roll) + sin(yaw) * sin(pitch) * cos(roll),
+             -sin(pitch),                  cos(pitch) * sin(roll),                                            cos(pitch) * cos(yaw);
 
 
   // We only take the first point of the trajectory

@@ -32,8 +32,7 @@
     <!-- PX4 SITL -->
     <arg unless="$(arg interactive)" name="px4_command_arg1" value=""/>
     <arg     if="$(arg interactive)" name="px4_command_arg1" value="-d"/>
-    <!-- <node name="sitl" pkg="px4" type="px4" output="screen" args="$(find px4)/build/px4_sitl_default/etc -s etc/init.d-posix/rcS -i 0 $(arg px4_command_arg1) -w $(find px4)/build/px4_sitl_default/rootfs"> -->
-    <node name="sitl" pkg="px4" type="px4" output="screen" args="$(find px4)/build/px4_sitl_default/etc -s etc/init.d-posix/rcS -i 0 $(arg px4_command_arg1)">
+    <node name="sitl" pkg="px4" type="px4" output="screen" args="$(find px4)/build/px4_sitl_default/etc -s etc/init.d-posix/rcS -i 0 $(arg px4_command_arg1) -w $(find px4)/build/px4_sitl_default/rootfs">
     </node>
     
     <!-- spawn vehicle in Gazebo -->

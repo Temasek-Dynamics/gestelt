@@ -14,6 +14,7 @@ sudo apt install ros-noetic-desktop-full
 
 # Install other dependencies
 sudo apt install git build-essential tmux python3-catkin-tools python3-vcstool xmlstarlet -y
+sudo apt install ros-${ROS_DISTRO}-mavlink ros-${ROS_DISTRO}-mavros ros-${ROS_DISTRO}-mavros-msgs ros-${ROS_DISTRO}-mavros-extras -y
 ```
 
 2. Clone repositories
@@ -32,7 +33,6 @@ vcs import < thirdparty.repos --recursive
 cd ~/gestelt_ws/PX4-Autopilot
 bash ./Tools/setup/ubuntu.sh 
 # Make SITL target for Gazebo simulation
-DONT_RUN=1 make px4_sitl_default gazebo-classic
 DONT_RUN=1 make px4_sitl gazebo-classic
 
 # Copy the custom drone model over
@@ -73,6 +73,17 @@ killall -9 gazebo; killall -9 gzserver; killall -9 gzclient; killall -9 rosmaste
 # IF you want to add a shortcut to kill the simulation you can add the following to ~/.bashrc
 alias killbill="killall -9 gazebo; killall -9 gzserver; killall -9 gzclient; killall -9 rosmaster; tmux kill-server;
 ```
+5. If you want to change the planning setpoints:
+- The mission source code is in [mission.py](gestelt_bringup/src/mission.py)
+    - Here, the quadrotor is commanded to take off, enter mission mode and are given goal points.
+- The trajectory planner source code is in [example_planner.cc](trajectory_planner/src/example_planner.cc)
+    - Here, given a goal point, a minimum snap trajectory is planned
+- The trajectory sampler source code is in [trajectory_sampler.cpp](trajectory_planner/src/trajectory_sampler.cpp)
+    - Here, given a minimum snap trajectory, the points are sampled and sent to the Trajectory server.
+- The trajectory execution source code is in [traj_server.cpp](trajectory_server/src/traj_server.cpp)
+    - Here, each individual setpoint is converted to PVA commands and sent to the quadrotor.
+    - The function in charge of converting the minimum snap point to PVA point is `void TrajServer::multiDOFJointTrajectoryCb(const trajectory_msgs::MultiDOFJointTrajectory::ConstPtr &msg)`
+- Refer to the architecture above for more information on how they are connected.
 
 ## 2. Run a fake physics-less drone simulation
 The second one is a fake drone with no physics and be used to test the architecture or algorithm. It runs the following:

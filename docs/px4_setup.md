@@ -18,14 +18,17 @@ Please refer to ["PX4 Bootloader Flashing onto Betaflight Systems"](https://docs
 2. Build the board firmware 
 ```bash 
 # Clone the custom version of PX4 
-git clone https://github.com/matthewoots/PX4-Autopilot.git
+git clone https://github.com/JohnTGZ/PX4-Autopilot.git --recursive -b f405-v1.13.0
 cd ./PX4-Autopilot/
-# Default build for Flywoo F405 AIO
-make flywoo_f405s_aio_default
+make flywoo_f405s_aio
 ```
+
 3. Upload firmware
 ```bash
-make flywoo_f405s_aio_default upload
+# MPU6000 Build (Old out of production flywoo gn405s AIO)
+make flywoo_f405s_aio_mpu6000 upload
+# ICM42688P Build (New flywoo gn405s AIO)
+make flywoo_f405s_aio_icm42688p upload
 ```
 
 ### Troubleshooting
@@ -35,9 +38,7 @@ Make sure you create a git tag like so:
 ```bash
 git tag v1.13.0-0.1.0
 ```
-2. Unable to detect flywoo board from QGroundControl, and doing `dmesg` shows `USB disconnect` for the Flywoo FCU.
-- Install modemanager 
-
+2. Unable to detect flywoo board from QGroundControl, and doing `dmesg` shows `USB disconnect` for the Flywoo FCU. Refer to [link](https://docs.qgroundcontrol.com/master/en/getting_started/download_and_install.html#ubuntu)
 
 ## Configuration
 ### PX4 Parameters
