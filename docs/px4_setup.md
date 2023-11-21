@@ -3,10 +3,15 @@
 ## Building the firmware
 1. Building and uploading the bootloader
 ```bash
+# Install dfu-util 
+sudo apt install dfu-util
+# Clone the PX4 bootloader repository
 git clone https://github.com/PX4/PX4-Bootloader.git
 cd ./PX4-Bootloader
 make omnibusf4sd_bl
 # bootloader file with ".hex" extension in PX4-Bootloader/build/omnibusf4sd_bl/omnibusf4sd_bl.hex
+dfu-util -a 0 --dfuse-address 0x08000000:force:mass-erase:leave -D build/omnibusf4sd_bl/omnibusf4sd_bl.bin
+dfu-util -a 0 --dfuse-address 0x08000000 -D  build/omnibusf4sd_bl/omnibusf4sd_bl.bin
 ```
 Please refer to ["PX4 Bootloader Flashing onto Betaflight Systems"](https://docs.px4.io/main/en/advanced_config/bootloader_update_from_betaflight.html) for flashing of bootloader onto the FCU
 
@@ -180,6 +185,9 @@ mavlink status streams
 # List processes
 top
 
+# Get diagnostic messages
+dmesg
+
 # List all modules
 ls /bin/
 
@@ -271,29 +279,3 @@ Some level of damping and stiffness is required
 References:
 1. SDF Format for specifying physics engines: http://sdformat.org/spec?elem=physics
 2. Examples: https://classic.gazebosim.org/tutorials?tut=haptix_world_sim_api&cat=haptix
-
-### PX4 SITL Troubleshooting
-```bash
-git submodule update --recursive
-
-###############
-# Multi-robot with scripts
-###############
-# Tools/simulation/gazebo-classic/sitl_multiple_run.sh [-m <model>] [-n <number_of_vehicles>] [-w <world>] [-s <script>] [-t <target>] [-l <label>]
-Tools/simulation/gazebo-classic/sitl_multiple_run.sh -m iris -n 2 -w empty 
-
-###############
-# Multi-robot with roslaunch
-###############
-source Tools/simulation/gazebo-classic/setup_gazebo.bash $(pwd) $(pwd)/build/px4_sitl_default
-export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:$(pwd):$(pwd)/Tools/simulation/gazebo-classic/sitl_gazebo-classic
-
-roslaunch px4 multi_uav_mavros_sitl.launch
-
-roslaunch px4 px4.launch
-
-# https://docs.px4.io/main/en/simulation/ros_interface.html
-
-cp ~/gestelt_ws/px4_bk/PX4-Autopilot/build/px4_sitl_default/bin/px4 ~/gestelt_ws/PX4-Autopilot/build/px4_sitl_default/bin/
-```
-

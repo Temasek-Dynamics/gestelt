@@ -7,7 +7,16 @@ For simulation and deployment on a physical drone, PX4 is the firmware of choice
 <img src="docs/pictures/gestelt_architecture_24_10.png" alt="Gestelt Architecture" style="width: 1200px;"/>
 
 # Installation and Setup for Simulation
-1. Clone repositories
+1. Install dependencies
+```bash
+# Install ROS (if not done)
+sudo apt install ros-noetic-desktop-full
+
+# Install other dependencies
+sudo apt install git build-essential tmux python3-catkin-tools python3-vcstool xmlstarlet -y
+```
+
+2. Clone repositories
 ```bash
 mkdir -p ~/gestelt_ws/src/
 cd ~/gestelt_ws/src
@@ -17,13 +26,14 @@ vcs import < simulators.repos --recursive
 vcs import < thirdparty.repos --recursive
 ```
 
-2. Install PX4 firmware
+3. Install PX4 firmware
 ```bash
 # cd to PX4-Autopilot repo
 cd ~/gestelt_ws/PX4-Autopilot
 bash ./Tools/setup/ubuntu.sh 
 # Make SITL target for Gazebo simulation
 DONT_RUN=1 make px4_sitl_default gazebo-classic
+DONT_RUN=1 make px4_sitl gazebo-classic
 
 # Copy the custom drone model over
 cp -r ~/gestelt_ws/src/gestelt/gestelt_bringup/simulation/models/raynor ~/gestelt_ws/PX4-Autopilot/Tools/simulation/gazebo-classic/sitl_gazebo-classic/models/
@@ -32,13 +42,13 @@ cp -r ~/gestelt_ws/src/gestelt/gestelt_bringup/simulation/models/raynor ~/gestel
 make distclean
 ```
 
-3. Building the workspace
+4. Building the workspace
 ```bash
 # Assuming your workspace is named as follows
 cd ~/gestelt_ws/
 
 # Building for debugging/development
-catkin build 
+catkin build
 # Building for release mode (For use on Radxa)
 catkin build -DCMAKE_BUILD_TYPE=Release
 ```
