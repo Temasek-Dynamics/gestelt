@@ -2,7 +2,7 @@
 
 import rospy
 from gestelt_msgs.msg import CommanderState, Goals, CommanderCommand
-from geometry_msgs.msg import Pose
+from geometry_msgs.msg import Pose, Accel
 from std_msgs.msg import Int8
 
 # Publisher of server events to trigger change of states for trajectory server 
@@ -50,12 +50,19 @@ def create_pose(x, y, z):
     pose.orientation.w = 1
 
     return pose
+def create_accel(acc_x,acc_y,acc_z):
+    acc = Accel()
+    acc.linear.x = acc_x
+    acc.linear.y = acc_y
+    acc.linear.z = acc_z
 
-def pub_waypoints(waypoints):
+    return acc
+
+def pub_waypoints(waypoints,accels):
     wp_msg = Goals()
     wp_msg.waypoints.header.frame_id = "world"
     wp_msg.waypoints.poses = waypoints
-
+    wp_msg.accelerations= accels
     waypoints_pub.publish(wp_msg)
 
 def main():
@@ -94,7 +101,14 @@ def main():
     waypoints.append(create_pose(3.0, 0.0, 2.0))
     waypoints.append(create_pose(5.0, 0.0, 2.0))
     # waypoints.append(create_pose(1.0, -6.0, 4.0))
-    pub_waypoints(waypoints)
+    
+    # the number of accelerations must be equal to the number of waypoints
+    accel_list = []
+    accel_list.append(create_accel(0.0,10.0,0.0))
+    accel_list.append(create_accel(0.0,0.0,0.0))
+    # accel_list.append(create_accel(0.0,0.0,0.0))
+
+    pub_waypoints(waypoints,accel_list)
 
 if __name__ == '__main__':
     main()
