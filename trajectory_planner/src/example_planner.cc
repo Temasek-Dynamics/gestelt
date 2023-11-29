@@ -46,7 +46,7 @@ void ExamplePlanner::waypointsCB(const gestelt_msgs::GoalsPtr &msg){
   goal_waypoints_.clear(); // Clear existing goal waypoints
 
   ROS_INFO("[Trajectory Planner] No. of waypoints: %ld", msg->waypoints.poses.size());
-
+   
   for (auto pose : msg->waypoints.poses) {
     Eigen::Vector3d wp(
         pose.position.x,
@@ -55,6 +55,7 @@ void ExamplePlanner::waypointsCB(const gestelt_msgs::GoalsPtr &msg){
 
     // Transform received waypoints from world to UAV origin frame
     goal_waypoints_.push_back(wp);
+    ROS_INFO("MSG waypoints: %f, %f, %f", wp[0], wp[1], wp[2]);
   }
 
   mav_trajectory_generation::Trajectory trajectory;
@@ -90,7 +91,7 @@ bool ExamplePlanner::planTrajectory(const std::vector<Eigen::Vector3d>& wp_pos,
                       current_velocity_);
   vertices.push_back(start);
 
-  for (size_t i = 1; i < wp_pos.size() - 1; i++ ){
+  for (size_t i = 0; i < wp_pos.size() - 1; i++ ){
     mav_trajectory_generation::Vertex middle_wp(dimension);
 
     middle_wp.addConstraint(mav_trajectory_generation::derivative_order::POSITION, wp_pos[i]);
@@ -100,6 +101,8 @@ bool ExamplePlanner::planTrajectory(const std::vector<Eigen::Vector3d>& wp_pos,
   /******* Configure end point *******/
   end.makeStartOrEnd(wp_pos.back(),
                      derivative_to_optimize);
+  end.addConstraint(mav_trajectory_generation::derivative_order::VELOCITY,
+                    Eigen::Vector3d::Zero());
   vertices.push_back(end);
 
   // setimate initial segment times
