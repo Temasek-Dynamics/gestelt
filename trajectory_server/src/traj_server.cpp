@@ -101,9 +101,9 @@ void TrajServer::multiDOFJointTrajectoryCb(const trajectory_msgs::MultiDOFJointT
   std::lock_guard<std::mutex> cmd_guard(cmd_mutex_);
 
   // Create rotation frame from NED To ROS
-  double roll_deg = 180; // roll (x) (Degrees)
-  double pitch_deg = 0;   // pitch (y)
-  double yaw_deg =  90;   // yaw (z)
+  double roll_deg = 0; // roll (x) (Degrees)180
+  double pitch_deg = 0;   // pitch (y)0
+  double yaw_deg =  0;   // yaw (z)90
 
   // euler in radians
   double roll = (M_PI/180.0) * roll_deg; 
@@ -650,8 +650,8 @@ bool TrajServer::checkPositionLimits(SafetyLimits position_limits, Vector3d p){
 
 void TrajServer::geomMsgsVector3ToEigenVector3(const geometry_msgs::Vector3& geom_vect, Eigen::Vector3d& eigen_vect){
   eigen_vect(0) = geom_vect.x;
-  eigen_vect(1) = geom_vect.x;
-  eigen_vect(2) = geom_vect.x;
+  eigen_vect(1) = geom_vect.y;
+  eigen_vect(2) = geom_vect.z;
 }
 
 Eigen::Vector3d TrajServer::quaternionToRPY(const geometry_msgs::Quaternion& quat){
