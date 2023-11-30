@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-
+import numpy as np
 import rospy
 from gestelt_msgs.msg import CommanderState, Goals, CommanderCommand
 from geometry_msgs.msg import Pose, Accel
@@ -96,15 +96,22 @@ def main():
         rate.sleep()
 
     # Send waypoints to UAVs
+    # frame is ENU
     print(f"Sending waypoints to UAVs")
     waypoints = []
-    waypoints.append(create_pose(3.0, 0.0, 2.0))
-    waypoints.append(create_pose(5.0, 0.0, 2.0))
+    waypoints.append(create_pose(3.0, 2.0, 3.0))
+    waypoints.append(create_pose(5.0, 2.0, 3.0))
     # waypoints.append(create_pose(1.0, -6.0, 4.0))
     
     # the number of accelerations must be equal to the number of waypoints
     accel_list = []
-    accel_list.append(create_accel(0.0,10.0,0.0))
+    
+    g=-9.81 #m/s^2
+    f=0.3*g #N
+    angle=30
+    
+    angle_rad=angle*np.pi/180
+    accel_list.append(create_accel(0.0,f*np.sin(angle_rad),g+f*np.cos(angle_rad)))
     accel_list.append(create_accel(0.0,0.0,0.0))
     # accel_list.append(create_accel(0.0,0.0,0.0))
 

@@ -119,8 +119,19 @@ bool ExamplePlanner::planTrajectory(const std::vector<Eigen::Vector3d>& wp_pos,
 
   // setimate initial segment times
   std::vector<double> segment_times;
-  segment_times = estimateSegmentTimes(vertices, max_v_, max_a_);
-
+  // segment_times = estimateSegmentTimes(vertices, max_v_, max_a_);
+ 
+  // // enlarge the segement_time
+  // for (size_t i = 0; i < segment_times.size(); ++i) {
+  //       segment_times[i] *= 1.5;
+  //   } 
+  double time_factor=4;// useless
+  segment_times = estimateSegmentTimesVelocityRamp(vertices, max_v_, max_a_,time_factor);
+  
+  // enlarge the segement_time
+  // for (size_t i = 0; i < segment_times.size(); ++i) {
+  //       segment_times[i] *= 0.8;
+  //   } 
   /*
   * Linear optimization
   */
