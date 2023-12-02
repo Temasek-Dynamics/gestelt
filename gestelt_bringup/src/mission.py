@@ -2,14 +2,14 @@
 import numpy as np
 import rospy
 from gestelt_msgs.msg import CommanderState, Goals, CommanderCommand
-from geometry_msgs.msg import Pose, Accel
+from geometry_msgs.msg import Pose, Accel,PoseArray
 from std_msgs.msg import Int8
 
 # Publisher of server events to trigger change of states for trajectory server 
 server_event_pub = rospy.Publisher('/traj_server/command', CommanderCommand, queue_size=10)
 # Publisher of server events to trigger change of states for trajectory server 
 waypoints_pub = rospy.Publisher('/planner/goals', Goals, queue_size=10)
-
+waypoints_pos_pub = rospy.Publisher('/planner/goals_pos', PoseArray, queue_size=10)
 # Dictionary of UAV states
 server_states = {}
 
@@ -60,10 +60,17 @@ def create_accel(acc_x,acc_y,acc_z):
 
 def pub_waypoints(waypoints,accels):
     wp_msg = Goals()
+    wp_pos_msg=PoseArray()
+
     wp_msg.waypoints.header.frame_id = "world"
+    wp_pos_msg.header.frame_id = "world"
+
     wp_msg.waypoints.poses = waypoints
+    wp_pos_msg.poses = waypoints
+
     wp_msg.accelerations= accels
     waypoints_pub.publish(wp_msg)
+    waypoints_pos_pub.publish(wp_pos_msg)
 
 def main():
     rospy.init_node('mission_startup', anonymous=True)
@@ -111,11 +118,11 @@ def main():
     angle=30
     
     angle_rad=angle*np.pi/180
-    accel_list.append(create_accel(0.0,f*np.sin(angle_rad),g+f*np.cos(angle_rad)))
+    accel_list.append(create_accel(0.0,-f*np.sin(angle_rad),g+f*np.cos(angle_rad)))
     accel_list.append(create_accel(0.0,0.0,0.0))
     # accel_list.append(create_accel(0.0,0.0,0.0))
 
     pub_waypoints(waypoints,accel_list)
-
+    rospy.spin()
 if __name__ == '__main__':
     main()
