@@ -46,9 +46,9 @@ void ExamplePlanner::waypointsCB(const gestelt_msgs::GoalsPtr &msg){
   goal_waypoints_.clear(); // Clear existing goal waypoints
   goal_waypoints_acc_.clear(); // Clear existing goal waypoints acc
 
-  ROS_INFO("[Trajectory Planner] No. of waypoints: %ld", msg->waypoints.poses.size());
+  ROS_INFO("[Trajectory Planner] No. of waypoints: %ld", msg->waypoints.size());
    
-  for (auto pose : msg->waypoints.poses) {
+  for (auto pose : msg->waypoints) {
     Eigen::Vector3d wp(
         pose.position.x,
         pose.position.y,
@@ -121,17 +121,13 @@ bool ExamplePlanner::planTrajectory(const std::vector<Eigen::Vector3d>& wp_pos,
   std::vector<double> segment_times;
   // segment_times = estimateSegmentTimes(vertices, max_v_, max_a_);
  
-  // // enlarge the segement_time
-  // for (size_t i = 0; i < segment_times.size(); ++i) {
-  //       segment_times[i] *= 1.5;
-  //   } 
   double time_factor=4;// useless
   segment_times = estimateSegmentTimesVelocityRamp(vertices, max_v_, max_a_,time_factor);
   
   // enlarge the segement_time
-  // for (size_t i = 0; i < segment_times.size(); ++i) {
-  //       segment_times[i] *= 0.8;
-  //   } 
+  for (size_t i = 0; i < segment_times.size(); ++i) {
+        segment_times[i] *= 1.5;
+    } 
   /*
   * Linear optimization
   */

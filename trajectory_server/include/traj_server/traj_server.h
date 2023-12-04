@@ -171,7 +171,7 @@ private: // Class Methods
     // Returns true if time since last trajectory message is within timeout,
     // meaning that mission trajectory messages are still being received.
     // Else, return false
-    return (ros::Time::now() - last_traj_msg_time_).toSec() > traj_msg_timeout_;
+    return (ros::Time::now() - last_traj_msg_time_).toSec() < traj_msg_timeout_;
   }
 
   /**

@@ -146,7 +146,7 @@ void TrajServer::multiDOFJointTrajectoryCb(const trajectory_msgs::MultiDOFJointT
   else {
     geomMsgsVector3ToEigenVector3(msg->points[0].velocities[0].linear, last_mission_vel_);
     last_mission_yaw_dot_ = msg->points[0].velocities[0].angular.z; //yaw rate
-    ROS_INFO("received velocity: %f, %f, %f", last_mission_vel_(0), last_mission_vel_(1), last_mission_vel_(2));
+    // ROS_INFO("received velocity: %f, %f, %f", last_mission_vel_(0), last_mission_vel_(1), last_mission_vel_(2));
   }
 
   // Check if acceleration exists, else ignore
@@ -155,8 +155,9 @@ void TrajServer::multiDOFJointTrajectoryCb(const trajectory_msgs::MultiDOFJointT
   }
   else {
     geomMsgsVector3ToEigenVector3(msg->points[0].accelerations[0].linear, last_mission_acc_);
-    ROS_INFO("received acceleration: %f, %f, %f", last_mission_acc_(0), last_mission_acc_(1), last_mission_acc_(2));
+    // ROS_INFO("received acceleration: %f, %f, %f", last_mission_acc_(0), last_mission_acc_(1), last_mission_acc_(2));
   }
+  // ROS_INFO("mission_type_mask_: %d", mission_type_mask_);
 }
 
 void TrajServer::UAVStateCb(const mavros_msgs::State::ConstPtr &msg)
@@ -204,7 +205,11 @@ void TrajServer::serverCommandCb(const gestelt_msgs::CommanderCommand::ConstPtr 
 
 void TrajServer::execTrajTimerCb(const ros::TimerEvent &e)
 {
+  // has received vel value
+  ROS_INFO("execTrajTimerCb received velocity: %f, %f, %f", last_mission_vel_(0), last_mission_vel_(1), last_mission_vel_(2));
+
   switch (getServerState()){
+    
     case ServerState::INIT:
       // Do nothing, drone is not initialized
       break;
@@ -228,14 +233,18 @@ void TrajServer::execTrajTimerCb(const ros::TimerEvent &e)
     case ServerState::MISSION:
       if (!isExecutingMission()){
         logInfoThrottled("Waiting for mission", 5.0);
+        ROS_INFO("in waiting for mission");
         execHover();
       }
       else {
+        ROS_INFO("ServerState received velocity: %f, %f, %f", last_mission_vel_(0), last_mission_vel_(1), last_mission_vel_(2));
+
         if (!ignore_heartbeat_ && isPlannerHeartbeatTimeout()){
           logErrorThrottled("[traj_server] Lost heartbeat from the planner.", 1.0);
+          ROS_INFO("in lost heartbeat"); 
           execHover();
         }
-
+        ROS_INFO("final ServerState::MISSION,mission_vel: %f, %f, %f", last_mission_vel_(0), last_mission_vel_(1), last_mission_vel_(2));
         execMission();
       }
       break;
@@ -503,7 +512,7 @@ void TrajServer::execHover()
 void TrajServer::execMission()
 {
   std::lock_guard<std::mutex> cmd_guard(cmd_mutex_);
-
+  ROS_INFO("execMission() mission_vel: %f, %f, %f", last_mission_vel_(0), last_mission_vel_(1), last_mission_vel_(2));
   publishCmd( last_mission_pos_, last_mission_vel_, 
               last_mission_acc_, last_mission_jerk_, 
               last_mission_yaw_, last_mission_yaw_dot_, 
@@ -540,6 +549,8 @@ void TrajServer::publishCmd(
   pos_cmd.acceleration_or_force.z = a(2);
   pos_cmd.yaw = yaw;
   pos_cmd.yaw_rate = yaw_rate;
+  ROS_INFO("Velocity for final command: %f, %f, %f", v(0), v(1), v(2));
+  // ROS_INFO("Acceleration for final command: %f, %f, %f", a(0), a(1), a(2));
   pos_cmd_raw_pub_.publish(pos_cmd);
 }
 

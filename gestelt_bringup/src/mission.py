@@ -2,14 +2,17 @@
 import numpy as np
 import rospy
 from gestelt_msgs.msg import CommanderState, Goals, CommanderCommand
-from geometry_msgs.msg import Pose, Accel,PoseArray
+from geometry_msgs.msg import Pose, Accel,PoseArray,AccelStamped
 from std_msgs.msg import Int8
-
+import math
 # Publisher of server events to trigger change of states for trajectory server 
 server_event_pub = rospy.Publisher('/traj_server/command', CommanderCommand, queue_size=10)
 # Publisher of server events to trigger change of states for trajectory server 
 waypoints_pub = rospy.Publisher('/planner/goals', Goals, queue_size=10)
+
+# for visualization
 waypoints_pos_pub = rospy.Publisher('/planner/goals_pos', PoseArray, queue_size=10)
+waypoints_acc_pub = rospy.Publisher('/planner/goals_acc', AccelStamped, queue_size=10)
 # Dictionary of UAV states
 server_states = {}
 
@@ -55,23 +58,27 @@ def create_accel(acc_x,acc_y,acc_z):
     acc.linear.x = acc_x
     acc.linear.y = acc_y
     acc.linear.z = acc_z
-
+    
     return acc
 
 def pub_waypoints(waypoints,accels):
     wp_msg = Goals()
     wp_pos_msg=PoseArray()
-
-    wp_msg.waypoints.header.frame_id = "world"
+    wp_acc_msg=AccelStamped()
+    
+    wp_msg.header.frame_id = "world"
+    # wp_msg.waypoints.header.frame_id = "world"
     wp_pos_msg.header.frame_id = "world"
+    wp_acc_msg.header.frame_id = "world"
 
-    wp_msg.waypoints.poses = waypoints
+    wp_msg.waypoints = waypoints
     wp_pos_msg.poses = waypoints
+    wp_acc_msg.accel=accels[0]
 
     wp_msg.accelerations= accels
     waypoints_pub.publish(wp_msg)
     waypoints_pos_pub.publish(wp_pos_msg)
-
+    waypoints_acc_pub.publish(wp_acc_msg)
 def main():
     rospy.init_node('mission_startup', anonymous=True)
     rate = rospy.Rate(5) # 20hz
@@ -106,19 +113,22 @@ def main():
     # frame is ENU
     print(f"Sending waypoints to UAVs")
     waypoints = []
-    waypoints.append(create_pose(3.0, 2.0, 3.0))
-    waypoints.append(create_pose(5.0, 2.0, 3.0))
+    waypoints.append(create_pose(3.0,2.0, 3.0))
+    waypoints.append(create_pose(5.0,2.0, 3.0))
     # waypoints.append(create_pose(1.0, -6.0, 4.0))
     
     # the number of accelerations must be equal to the number of waypoints
     accel_list = []
     
     g=-9.81 #m/s^2
-    f=0.3*g #N
-    angle=30
+    f=0.3*(-g) #N
+    angle=60
     
-    angle_rad=angle*np.pi/180
+    angle_rad=math.radians(angle)
+
+    # frame need to verify
     accel_list.append(create_accel(0.0,-f*np.sin(angle_rad),g+f*np.cos(angle_rad)))
+    # accel_list.append(create_accel(0.0,-10*g,g))
     accel_list.append(create_accel(0.0,0.0,0.0))
     # accel_list.append(create_accel(0.0,0.0,0.0))
 
