@@ -11,7 +11,7 @@
   <arg name="fcu_protocol" default="v2.0" />
   <arg name="respawn_mavros" default="false" />
   
-  <node pkg="geometric_controller" type="geometric_controller_node" name="geometric_controller" output="screen">
+  <node pkg="se3_controller" type="geometric_controller_node" name="geometric_controller" output="screen">
   		<param name="mav_name" type="string" value="$(arg mav_name)" />
           <remap from="command/bodyrate_command" to="/mavros/setpoint_raw/attitude"/>
           <param name="ctrl_mode" value="$(arg command_input)" />
@@ -39,7 +39,7 @@
 
   <!-- Launch rqt_reconfigure -->
   <node pkg="rqt_reconfigure" type="rqt_reconfigure" output="screen" name="rqt_reconfigure" />
-
+<!-- 
   <include file="$(find mavros)/launch/node.launch">
       <arg name="pluginlists_yaml" value="$(find mavros)/launch/px4_pluginlists.yaml" />
       <arg name="config_yaml" value="$(find mavros)/launch/px4_config.yaml" />
@@ -51,14 +51,14 @@
       <arg name="log_output" value="$(arg log_output)" />
       <arg name="fcu_protocol" value="$(arg fcu_protocol)" />
       <arg name="respawn_mavros" default="$(arg respawn_mavros)" />
-  </include>
+  </include> -->
 
-  <include file="$(find px4)/launch/posix_sitl.launch">
+  <!-- <include file="$(find px4)/launch/posix_sitl.launch">
       <arg name="vehicle" value="$(arg mav_name)"/>
-  </include>
+  </include> -->
 
-  <group if="$(arg visualization)">
+  <!-- <group if="$(arg visualization)">
       <node type="rviz" name="rviz" pkg="rviz" args="-d $(find geometric_controller)/launch/config_file.rviz" />
-  </group>
+  </group> -->
 
 </launch>
