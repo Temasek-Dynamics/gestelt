@@ -112,9 +112,10 @@ def main():
     # Send waypoints to UAVs
     # frame is ENU
     print(f"Sending waypoints to UAVs")
+    gate_center=[3.0,2.0,3.0]   
     waypoints = []
-    waypoints.append(create_pose(3.0,2.0, 3.0))
-    waypoints.append(create_pose(5.0,2.0, 3.0))
+    waypoints.append(create_pose(gate_center[0],gate_center[1],gate_center[2]))
+    waypoints.append(create_pose(gate_center[0]+2,gate_center[1],gate_center[2]))
     # waypoints.append(create_pose(1.0, -6.0, 4.0))
     
     # the number of accelerations must be equal to the number of waypoints
@@ -122,10 +123,11 @@ def main():
     
     g=-9.81 #m/s^2
     f=0.3*(-g) #N
-    angle=60
+    angle=30
     
     angle_rad=math.radians(angle)
 
+    
     # frame need to verify
     accel_list.append(create_accel(0.0,-f*np.sin(angle_rad),g+f*np.cos(angle_rad)))
     # accel_list.append(create_accel(0.0,-10*g,g))
