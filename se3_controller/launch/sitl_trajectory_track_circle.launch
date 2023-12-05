@@ -30,12 +30,12 @@
           <param name="Kv_z" value="10.0"/>
   </node>
 
-  <node pkg="trajectory_publisher" type="trajectory_publisher" name="trajectory_publisher" output="screen">
+  <!-- <node pkg="trajectory_publisher" type="trajectory_publisher" name="trajectory_publisher" output="screen">
         <param name="trajectory_type" value="1" />
         <param name="shape_omega" value="1.2" />
         <param name="initpos_z" value="2.0" />
         <param name="reference_type" value="2" />
-  </node>
+  </node> -->
 
   <!-- Launch rqt_reconfigure -->
   <node pkg="rqt_reconfigure" type="rqt_reconfigure" output="screen" name="rqt_reconfigure" />

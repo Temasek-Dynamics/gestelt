@@ -57,7 +57,8 @@ void TrajServer::init(ros::NodeHandle& nh)
   pos_cmd_raw_pub_ = nh.advertise<mavros_msgs::PositionTarget>("/mavros/setpoint_raw/local", 50);
   uav_path_pub_ = nh.advertise<nav_msgs::Path>("/uav_path_trajectory", 50);
   server_state_pub_ = nh.advertise<gestelt_msgs::CommanderState>("/traj_server/state", 50);
-
+  reference_pub_ = nh.advertise<geometry_msgs::TwistStamped>("reference/setpoint_test", 50);
+  flat_reference_pub_ = nh.advertise<controller_msgs::FlatTarget>("reference/flatsetpoint_test", 50);
   /////////////////
   /* Service clients */
   /////////////////
@@ -517,6 +518,15 @@ void TrajServer::execMission()
               last_mission_acc_, last_mission_jerk_, 
               last_mission_yaw_, last_mission_yaw_dot_, 
               mission_type_mask_);
+  
+  pubflatrefState( last_mission_pos_, last_mission_vel_, 
+              last_mission_acc_, last_mission_jerk_, 
+              last_mission_yaw_, last_mission_yaw_dot_, 
+              mission_type_mask_);
+
+  // pubrefState( last_mission_pos_, last_mission_vel_);
+
+
 }
 
 /* Publisher methods */
@@ -553,7 +563,39 @@ void TrajServer::publishCmd(
   // ROS_INFO("Acceleration for final command: %f, %f, %f", a(0), a(1), a(2));
   pos_cmd_raw_pub_.publish(pos_cmd);
 }
+void TrajServer::pubflatrefState( Vector3d p, Vector3d v, Vector3d a, Vector3d j, double yaw, double yaw_rate, uint16_t type_mask)
+{
+  controller_msgs::FlatTarget msg;
 
+  msg.header.stamp = ros::Time::now();
+  msg.header.frame_id = origin_frame_;
+  msg.type_mask = 2;  //PVA
+  msg.position.x = p(0);
+  msg.position.y = p(1);
+  msg.position.z = p(2);
+  msg.velocity.x = v(0);
+  msg.velocity.y = v(1);
+  msg.velocity.z = v(2);
+  msg.acceleration.x = a(0);
+  msg.acceleration.y = a(1);
+  msg.acceleration.z = a(2);
+  flat_reference_pub_.publish(msg);
+}
+
+
+void TrajServer::pubrefState(Vector3d p, Vector3d v) {
+  geometry_msgs::TwistStamped msg;
+
+  msg.header.stamp = ros::Time::now();
+  msg.header.frame_id = origin_frame_;
+  msg.twist.angular.x = p(0);
+  msg.twist.angular.y = p(1);
+  msg.twist.angular.z = p(2);
+  msg.twist.linear.x = v(0);
+  msg.twist.linear.y = v(1);
+  msg.twist.linear.z = v(2);
+  reference_pub_.publish(msg);
+}
 /* Helper methods */
 
 bool TrajServer::toggleOffboardMode(bool toggle)

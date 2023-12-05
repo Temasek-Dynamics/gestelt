@@ -26,6 +26,9 @@
 
 #include <visualization_msgs/Marker.h>
 
+
+#include "controller_msgs/FlatTarget.h"
+#include <geometry_msgs/TwistStamped.h>
 using namespace Eigen;
 
 /* State machine  */
@@ -219,6 +222,15 @@ private: // Class Methods
     Vector3d j, double yaw, double yaw_rate, 
     uint16_t type_mask = 0);
 
+  void pubflatrefState(
+    Vector3d p, Vector3d v, Vector3d a, 
+    Vector3d j, double yaw, double yaw_rate, 
+    uint16_t type_mask = 0);
+
+  void pubrefState(
+    Vector3d p, Vector3d v);
+
+
   /* Helper methods */
 
   std::pair<double, double> calculate_yaw(double t_cur, Eigen::Vector3d &pos, double dt);
@@ -350,6 +362,8 @@ private: // Member variables
   ros::Publisher pos_cmd_raw_pub_; // Publisher of commands for PX4 
   ros::Publisher uav_path_pub_; // Publisher of UAV pose history
   ros::Publisher server_state_pub_; // Publisher of current uav and server state
+  ros::Publisher flat_reference_pub_; // Publisher of flat reference for controller
+  ros::Publisher reference_pub_; // Publisher of reference velocity for controller
   
   /* Subscriber */
   ros::Subscriber plan_traj_sub_; // Subscriber for planner trajectory

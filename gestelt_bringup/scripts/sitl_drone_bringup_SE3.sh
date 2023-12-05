@@ -43,17 +43,17 @@ roslaunch gestelt_bringup sitl_drone.launch
 "
 
 # # Start up drone commander (Handles taking off, execution of mission and landing etc.)
-# CMD_1="
-# roslaunch trajectory_server trajectory_server_node.launch rviz_config:=gz_sim
-# "
+CMD_1="
+roslaunch trajectory_server trajectory_server_node.launch rviz_config:=gz_sim
+"
 
-# # Start up minimum snap trajectory planner and sampler 
-# CMD_2="
-# roslaunch trajectory_planner trajectory_planner_node.launch
-# "
+# Start up minimum snap trajectory planner and sampler 
+CMD_2="
+roslaunch trajectory_planner trajectory_planner_node.launch
+"
 
-# # Start up script to send commands
-# CMD_3="roslaunch gestelt_bringup mission.launch"
+# Start up script to send commands
+CMD_3="roslaunch gestelt_bringup mission.launch"
 
 
 # SE3
@@ -68,14 +68,17 @@ then
     tmux split-window -t $SESSION:0.0 -v
     tmux split-window -t $SESSION:0.1 -h
     tmux split-window -t $SESSION:0.0 -h
+    tmux split-window -t $SESSION:0.1 -h
 
     tmux send-keys -t $SESSION:0.0 "$SOURCE_PX4_AUTOPILOT $CMD_0" C-m 
     sleep 2
-    tmux send-keys -t $SESSION:0.1 "$SOURCE_PX4_AUTOPILOT $CMD_4" C-m 
-    # sleep 1
-    # tmux send-keys -t $SESSION:0.2 "$SOURCE_WS $CMD_2" C-m 
-    # sleep 1
-    # tmux send-keys -t $SESSION:0.3 "$SOURCE_WS $CMD_3" C-m
+    tmux send-keys -t $SESSION:0.1 "$SOURCE_PX4_AUTOPILOT" C-m 
+    sleep 1
+    tmux send-keys -t $SESSION:0.2 "$SOURCE_WS $CMD_1" C-m 
+    sleep 1
+    tmux send-keys -t $SESSION:0.3 "$SOURCE_WS $CMD_2" C-m 
+    sleep 1
+    tmux send-keys -t $SESSION:0.4 "$SOURCE_WS $CMD_3" C-m
 fi
 
 # Attach session on the first window
