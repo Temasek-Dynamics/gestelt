@@ -57,8 +57,8 @@ void TrajServer::init(ros::NodeHandle& nh)
   pos_cmd_raw_pub_ = nh.advertise<mavros_msgs::PositionTarget>("/mavros/setpoint_raw/local", 50);
   uav_path_pub_ = nh.advertise<nav_msgs::Path>("/uav_path_trajectory", 50);
   server_state_pub_ = nh.advertise<gestelt_msgs::CommanderState>("/traj_server/state", 50);
-  reference_pub_ = nh.advertise<geometry_msgs::TwistStamped>("reference/setpoint_test", 50);
-  flat_reference_pub_ = nh.advertise<controller_msgs::FlatTarget>("reference/flatsetpoint_test", 50);
+  // reference_pub_ = nh.advertise<geometry_msgs::TwistStamped>("/reference/setpoint_test", 50);
+  flat_reference_pub_ = nh.advertise<controller_msgs::FlatTarget>("/reference/flatsetpoint", 50);
   /////////////////
   /* Service clients */
   /////////////////
@@ -570,32 +570,32 @@ void TrajServer::pubflatrefState( Vector3d p, Vector3d v, Vector3d a, Vector3d j
   msg.header.stamp = ros::Time::now();
   msg.header.frame_id = origin_frame_;
   msg.type_mask = 2;  //PVA
-  msg.position.x = p(0);
-  msg.position.y = p(1);
-  msg.position.z = p(2);
-  msg.velocity.x = v(0);
-  msg.velocity.y = v(1);
-  msg.velocity.z = v(2);
-  msg.acceleration.x = a(0);
-  msg.acceleration.y = a(1);
-  msg.acceleration.z = a(2);
+  msg.position.x = p.x();
+  msg.position.y = p.y();
+  msg.position.z = p.z();
+  msg.velocity.x = v.x();
+  msg.velocity.y = v.y();
+  msg.velocity.z = v.z();
+  msg.acceleration.x = a.x();
+  msg.acceleration.y = a.y();
+  msg.acceleration.z = a.z();
   flat_reference_pub_.publish(msg);
 }
 
 
-void TrajServer::pubrefState(Vector3d p, Vector3d v) {
-  geometry_msgs::TwistStamped msg;
+// void TrajServer::pubrefState(Vector3d p, Vector3d v) {
+//   geometry_msgs::TwistStamped msg;
 
-  msg.header.stamp = ros::Time::now();
-  msg.header.frame_id = origin_frame_;
-  msg.twist.angular.x = p(0);
-  msg.twist.angular.y = p(1);
-  msg.twist.angular.z = p(2);
-  msg.twist.linear.x = v(0);
-  msg.twist.linear.y = v(1);
-  msg.twist.linear.z = v(2);
-  reference_pub_.publish(msg);
-}
+//   msg.header.stamp = ros::Time::now();
+//   msg.header.frame_id = origin_frame_;
+//   msg.twist.angular.x = p(0);
+//   msg.twist.angular.y = p(1);
+//   msg.twist.angular.z = p(2);
+//   msg.twist.linear.x = v(0);
+//   msg.twist.linear.y = v(1);
+//   msg.twist.linear.z = v(2);
+//   reference_pub_.publish(msg);
+// }
 /* Helper methods */
 
 bool TrajServer::toggleOffboardMode(bool toggle)
