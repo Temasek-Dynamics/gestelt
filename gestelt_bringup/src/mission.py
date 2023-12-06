@@ -119,8 +119,8 @@ def main():
     waypoints = []
     waypoints.append(create_pose(0.0,-0.5,1.0)) # 0.0,-0.5,1
     waypoints.append(create_pose(0.5,-0.5,1.0)) # 0.5,-0.5,1
-    waypoints.append(create_pose(0.5,0.0,1.0)) # 0.5,0.0,1
-    waypoints.append(create_pose(0.0,0.0,1.0)) # 0.0,0.0,1
+    # waypoints.append(create_pose(0.5,0.0,1.0)) # 0.5,0.0,1
+    # waypoints.append(create_pose(0.0,0.0,1.0)) # 0.0,0.0,1
     # waypoints.append(create_pose(1.0, -6.0, 4.0))
     
     # the number of accelerations must be equal to the number of waypoints
