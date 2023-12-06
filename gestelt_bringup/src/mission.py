@@ -5,6 +5,7 @@ from gestelt_msgs.msg import CommanderState, Goals, CommanderCommand
 from geometry_msgs.msg import Pose, Accel,PoseArray,AccelStamped
 from std_msgs.msg import Int8
 import math
+import time
 # Publisher of server events to trigger change of states for trajectory server 
 server_event_pub = rospy.Publisher('/traj_server/command', CommanderCommand, queue_size=10)
 # Publisher of server events to trigger change of states for trajectory server 
@@ -73,7 +74,8 @@ def pub_waypoints(waypoints,accels):
 
     wp_msg.waypoints = waypoints
     wp_pos_msg.poses = waypoints
-    wp_acc_msg.accel=accels[0]
+    if len(accels)>0:
+        wp_acc_msg.accel=accels[0]
 
     wp_msg.accelerations= accels
     waypoints_pub.publish(wp_msg)
@@ -96,6 +98,7 @@ def main():
         
         if (MISSION_MODE):
             # Already in MISSION 
+            time.sleep(5)
             break
         elif (not HOVER_MODE):
             # IDLE -> TAKE OFF -> HOVER
@@ -112,10 +115,12 @@ def main():
     # Send waypoints to UAVs
     # frame is ENU
     print(f"Sending waypoints to UAVs")
-    gate_center=[0.0,-1.5,1.5]    #3.0,2.0,3.0
+    gate_center=[0.0,-0.5,1.0]    #3.0,2.0,3.0   #0.0,-1.5,1.5 issue one
     waypoints = []
-    waypoints.append(create_pose(gate_center[0],gate_center[1],gate_center[2]))
-    # waypoints.append(create_pose(gate_center[0]+2,gate_center[1],gate_center[2]))
+    waypoints.append(create_pose(0.0,-0.5,1.0)) # 0.0,-0.5,1
+    waypoints.append(create_pose(0.5,-0.5,1.0)) # 0.5,-0.5,1
+    waypoints.append(create_pose(0.5,0.0,1.0)) # 0.5,0.0,1
+    waypoints.append(create_pose(0.0,0.0,1.0)) # 0.0,0.0,1
     # waypoints.append(create_pose(1.0, -6.0, 4.0))
     
     # the number of accelerations must be equal to the number of waypoints
@@ -131,9 +136,10 @@ def main():
     # frame need to verify
     # accel_list.append(create_accel(0.0,-f*np.sin(angle_rad),g+f*np.cos(angle_rad)))
     # accel_list.append(create_accel(0.0,-10*g,g))
-    accel_list.append(create_accel(0.0,0.0,0.0))
     # accel_list.append(create_accel(0.0,0.0,0.0))
-
+    # accel_list.append(create_accel(0.0,0.0,0.0))
+    # accel_list.append(create_accel(0.0,0.0,0.0))
+    # accel_list.append(create_accel(0.0,0.0,0.0))
     pub_waypoints(waypoints,accel_list)
     rospy.spin()
 if __name__ == '__main__':
