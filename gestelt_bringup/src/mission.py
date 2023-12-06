@@ -123,7 +123,7 @@ def main():
     
     g=-9.81 #m/s^2
     f=0.3*(-g) #N
-    angle=60
+    angle=90
     
     angle_rad=math.radians(angle)
 
