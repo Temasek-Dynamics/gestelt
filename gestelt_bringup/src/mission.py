@@ -81,7 +81,7 @@ def pub_waypoints(waypoints,accels):
     waypoints_acc_pub.publish(wp_acc_msg)
 def main():
     rospy.init_node('mission_startup', anonymous=True)
-    rate = rospy.Rate(5) # 20hz
+    rate = rospy.Rate(5) # hz 20hz
 
     HOVER_MODE = False
     MISSION_MODE = False
@@ -112,7 +112,7 @@ def main():
     # Send waypoints to UAVs
     # frame is ENU
     print(f"Sending waypoints to UAVs")
-    gate_center=[0.0,-1.5,0.5]    #3.0,2.0,3.0
+    gate_center=[0.0,-1.5,1.5]    #3.0,2.0,3.0
     waypoints = []
     waypoints.append(create_pose(gate_center[0],gate_center[1],gate_center[2]))
     # waypoints.append(create_pose(gate_center[0]+2,gate_center[1],gate_center[2]))

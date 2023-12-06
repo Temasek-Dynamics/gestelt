@@ -9,7 +9,10 @@
     <arg name="odometry_topic" default="/mavros/local_position/odom" />
     <arg name="pose_topic" default="/mavros/local_position/pose" />
     <arg name="drone_origin_frame" default="world" />
-
+    
+    <!-- rosBag file path -->
+    <arg name="bag_file_prefix" default="~/gestelt/data/flight_data" />
+    
     <!-- Trajectory server -->
     <node pkg="trajectory_server" name="trajectory_server" type="traj_server_node" output="screen">
         <param name="drone_id" value="$(arg drone_id)"/>
@@ -55,5 +58,8 @@
         <param name="traj_server/debug_freq" value="10.0" type="double"/> -->
 
     </node>
-
-</launch>
+    
+    <!-- <node name="record_bag" pkg="rosbag" type="record" args="-a -d 60" output="screen">
+        <param name="bag_filename" value="$(arg bag_file_prefix).bag" />
+    </node> -->
+  </launch>

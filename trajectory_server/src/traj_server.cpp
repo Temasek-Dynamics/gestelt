@@ -549,8 +549,9 @@ void TrajServer::publishCmd(
   pos_cmd.acceleration_or_force.z = a(2);
   pos_cmd.yaw = yaw;
   pos_cmd.yaw_rate = yaw_rate;
-  // ROS_INFO("Velocity for final command: %f, %f, %f", v(0), v(1), v(2));
-  // ROS_INFO("Acceleration for final command: %f, %f, %f", a(0), a(1), a(2));
+  ROS_INFO("Position for final command: %f, %f, %f", p(0), p(1), p(2));
+  ROS_INFO("Velocity for final command: %f, %f, %f", v(0), v(1), v(2));
+  ROS_INFO("Acceleration for final command: %f, %f, %f", a(0), a(1), a(2));
   pos_cmd_raw_pub_.publish(pos_cmd);
 }
 
