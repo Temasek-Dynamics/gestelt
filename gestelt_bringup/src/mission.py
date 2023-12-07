@@ -115,13 +115,16 @@ def main():
     # Send waypoints to UAVs
     # frame is ENU
     print(f"Sending waypoints to UAVs")
-    gate_center=[0.0,-0.5,1.0]    #3.0,2.0,3.0   #0.0,-1.5,1.5 issue one
     waypoints = []
+    # waypoints.append(create_pose(3.0,2.0,3.0)) # 3.0,2.0,3
+    # waypoints.append(create_pose(5.0,2.0,3.0))# 5.0,2.0,3
+    
+    #FOR SLOW MOTION TEST
     waypoints.append(create_pose(0.0,-0.5,1.0)) # 0.0,-0.5,1
     waypoints.append(create_pose(0.0,-1.0,1.0)) # 0.5,-0.5,1
-    # waypoints.append(create_pose(0.5,0.0,1.0)) # 0.5,0.0,1
+    waypoints.append(create_pose(0.5,0.0,1.0)) # 0.5,0.0,1
     waypoints.append(create_pose(0.0,0.0,1.0)) # 0.0,0.0,1
-    # waypoints.append(create_pose(1.0, -6.0, 4.0))
+    
     
     # the number of accelerations must be equal to the number of waypoints
     accel_list = []
@@ -135,11 +138,10 @@ def main():
     
     # frame need to verify
     # accel_list.append(create_accel(0.0,-f*np.sin(angle_rad),g+f*np.cos(angle_rad)))
-    # accel_list.append(create_accel(0.0,-10*g,g))
-    # accel_list.append(create_accel(0.0,0.0,0.0))
-    # accel_list.append(create_accel(0.0,0.0,0.0))
-    # accel_list.append(create_accel(0.0,0.0,0.0))
-    # accel_list.append(create_accel(0.0,0.0,0.0))
+    accel_list.append(create_accel(0.0,0.0,0.0))
+    accel_list.append(create_accel(0.0,0.0,0.0))
+    accel_list.append(create_accel(0.0,0.0,0.0))
+    accel_list.append(create_accel(0.0,0.0,0.0))
     pub_waypoints(waypoints,accel_list)
     rospy.spin()
 if __name__ == '__main__':
