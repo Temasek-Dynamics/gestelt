@@ -218,7 +218,7 @@ Visualization Manager:
       Enabled: true
       Head Diameter: 0.30000001192092896
       Head Length: 0.20000000298023224
-      Length: 0.30000001192092896
+      Length: 0.10000000149011612
       Line Style: Lines
       Line Width: 0.029999999329447746
       Name: uav_path
@@ -227,7 +227,7 @@ Visualization Manager:
         Y: 0
         Z: 0
       Pose Color: 255; 85; 255
-      Pose Style: None
+      Pose Style: Axes
       Queue Size: 10
       Radius: 0.029999999329447746
       Shaft Diameter: 0.10000000149011612
@@ -314,7 +314,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/XYOrbit
-      Distance: 5.694398880004883
+      Distance: 4.0312604904174805
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -322,17 +322,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 0.3818507194519043
-        Y: 0.4808301329612732
-        Z: 2.655281150509836e-07
+        X: 1.7316722869873047
+        Y: -0.6075742244720459
+        Z: 9.807838523556711e-07
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.3353981673717499
+      Pitch: 0.1953987181186676
       Target Frame: my_view
-      Yaw: 3.82038950920105
+      Yaw: 3.095390796661377
     Saved:
       - Class: rviz/FPS
         Enable Stereo Rendering:

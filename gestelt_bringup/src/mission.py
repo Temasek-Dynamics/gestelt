@@ -98,7 +98,7 @@ def main():
         
         if (MISSION_MODE):
             # Already in MISSION 
-            time.sleep(5)
+            # time.sleep(5)
             break
         elif (not HOVER_MODE):
             # IDLE -> TAKE OFF -> HOVER
@@ -119,25 +119,32 @@ def main():
     # waypoints.append(create_pose(3.0,2.0,3.0)) # 3.0,2.0,3
     # waypoints.append(create_pose(5.0,2.0,3.0))# 5.0,2.0,3
     
-    #FOR SLOW MOTION TEST
-    waypoints.append(create_pose(0.0,-0.5,1.0)) # 0.0,-0.5,1
-    waypoints.append(create_pose(0.5,-0.5,1.0)) # 0.5,-0.5,1
-    waypoints.append(create_pose(0.5,0.0,1.0)) # 0.5,0.0,1
-    waypoints.append(create_pose(0.0,0.0,1.0)) # 0.0,0.0,1
+    waypoints.append(create_pose(0.0,-0.6,1.5)) # 3.0,2.0,3
+    waypoints.append(create_pose(0.0,-1.2,1.5))# 5.0,2.0,3
+
     
+    #FOR SLOW MOTION TEST
+    # waypoints.append(create_pose(-0.5,-0.5,1.5)) # 0.0,-0.5,1
+    # waypoints.append(create_pose(0.5,-0.5,1.5)) # 0.5,-0.5,1
+    # waypoints.append(create_pose(0.5,0.5,0.5)) # 0.5,0.0,1
+    # waypoints.append(create_pose(-0.5,0.5,0.5)) # 0.0,0.0,1
+    # waypoints.append(create_pose(-0.5,-0.5,1.0)) # 0.0,-0.5,1
+    # waypoints.append(create_pose(0.0,0.0,1.0)) # 0.0,0.0,1
     
     # the number of accelerations must be equal to the number of waypoints
     accel_list = []
     
     g=-9.81 #m/s^2
     f=0.3*(-g) #N
-    angle=30
+    angle=10
     
     angle_rad=math.radians(angle)
 
     
     # frame need to verify
-    # accel_list.append(create_accel(0.0,-f*np.sin(angle_rad),g+f*np.cos(angle_rad)))
+    accel_list.append(create_accel(0.0,-f*np.sin(angle_rad),g+f*np.cos(angle_rad)))
+    accel_list.append(create_accel(0.0,0.0,0.0))
+    # accel_list.append(create_accel(0.0,0.0,0.0))
     # accel_list.append(create_accel(0.0,0.0,0.0))
     # accel_list.append(create_accel(0.0,0.0,0.0))
     # accel_list.append(create_accel(0.0,0.0,0.0))
