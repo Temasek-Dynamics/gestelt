@@ -21,8 +21,9 @@ find_package(catkin REQUIRED COMPONENTS
 add_message_files(
   FILES
   CommanderCommand.msg
+  CommanderGoals.msg
   CommanderState.msg
-  Goals.msg
+  CommanderTrajectory.msg
 )
 
 ## Generate services in the 'srv' folder
