@@ -98,7 +98,7 @@ def main():
         
         if (MISSION_MODE):
             # Already in MISSION 
-            # time.sleep(5)
+            time.sleep(5)
             break
         elif (not HOVER_MODE):
             # IDLE -> TAKE OFF -> HOVER
@@ -138,10 +138,10 @@ def main():
     
     # frame need to verify
     # accel_list.append(create_accel(0.0,-f*np.sin(angle_rad),g+f*np.cos(angle_rad)))
-    accel_list.append(create_accel(0.0,0.0,0.0))
-    accel_list.append(create_accel(0.0,0.0,0.0))
-    accel_list.append(create_accel(0.0,0.0,0.0))
-    accel_list.append(create_accel(0.0,0.0,0.0))
+    # accel_list.append(create_accel(0.0,0.0,0.0))
+    # accel_list.append(create_accel(0.0,0.0,0.0))
+    # accel_list.append(create_accel(0.0,0.0,0.0))
+    # accel_list.append(create_accel(0.0,0.0,0.0))
     pub_waypoints(waypoints,accel_list)
     rospy.spin()
 if __name__ == '__main__':
