@@ -98,7 +98,7 @@ def main():
         
         if (MISSION_MODE):
             # Already in MISSION 
-            time.sleep(5)
+            # time.sleep(5)
             break
         elif (not HOVER_MODE):
             # IDLE -> TAKE OFF -> HOVER
@@ -121,7 +121,7 @@ def main():
     
     #FOR SLOW MOTION TEST
     waypoints.append(create_pose(0.0,-0.5,1.0)) # 0.0,-0.5,1
-    waypoints.append(create_pose(0.0,-1.0,1.0)) # 0.5,-0.5,1
+    waypoints.append(create_pose(0.5,-0.5,1.0)) # 0.5,-0.5,1
     waypoints.append(create_pose(0.5,0.0,1.0)) # 0.5,0.0,1
     waypoints.append(create_pose(0.0,0.0,1.0)) # 0.0,0.0,1
     
