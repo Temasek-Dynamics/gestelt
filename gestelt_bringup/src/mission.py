@@ -116,11 +116,9 @@ def main():
     # frame is ENU
     print(f"Sending waypoints to UAVs")
     waypoints = []
-    # waypoints.append(create_pose(3.0,2.0,3.0)) # 3.0,2.0,3
-    # waypoints.append(create_pose(5.0,2.0,3.0))# 5.0,2.0,3
+    waypoints.append(create_pose(3.0,2.0,3.0)) # 3.0,2.0,3
+    waypoints.append(create_pose(5.0,2.0,3.0))# 5.0,2.0,3
     
-    waypoints.append(create_pose(0.0,-0.6,1.5)) # 3.0,2.0,3
-    waypoints.append(create_pose(0.0,-1.2,1.5))# 5.0,2.0,3
 
     
     #FOR SLOW MOTION TEST
@@ -136,7 +134,7 @@ def main():
     
     g=-9.81 #m/s^2
     f=0.3*(-g) #N
-    angle=10
+    angle=60
     
     angle_rad=math.radians(angle)
 
