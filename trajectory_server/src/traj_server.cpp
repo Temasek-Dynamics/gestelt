@@ -650,8 +650,8 @@ bool TrajServer::checkPositionLimits(SafetyLimits position_limits, Vector3d p){
 
 void TrajServer::geomMsgsVector3ToEigenVector3(const geometry_msgs::Vector3& geom_vect, Eigen::Vector3d& eigen_vect){
   eigen_vect(0) = geom_vect.x;
-  eigen_vect(1) = geom_vect.x;
-  eigen_vect(2) = geom_vect.x;
+  eigen_vect(1) = geom_vect.y;
+  eigen_vect(2) = geom_vect.z;
 }
 
 Eigen::Vector3d TrajServer::quaternionToRPY(const geometry_msgs::Quaternion& quat){

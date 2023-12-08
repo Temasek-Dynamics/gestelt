@@ -44,21 +44,32 @@ void ExamplePlanner::uavOdomCallback(const nav_msgs::Odometry::ConstPtr& odom) {
 // Callback to get waypoints
 void ExamplePlanner::waypointsCB(const gestelt_msgs::GoalsPtr &msg){
   goal_waypoints_.clear(); // Clear existing goal waypoints
+  goal_waypoints_acc_.clear(); // Clear existing goal waypoints acc
 
   ROS_INFO("[Trajectory Planner] No. of waypoints: %ld", msg->waypoints.poses.size());
-
+   
   for (auto pose : msg->waypoints.poses) {
     Eigen::Vector3d wp(
         pose.position.x,
         pose.position.y,
         pose.position.z);
-
     // Transform received waypoints from world to UAV origin frame
     goal_waypoints_.push_back(wp);
+    ROS_INFO("MSG waypoints: %f, %f, %f", wp[0], wp[1], wp[2]);
+  }
+
+  for (auto acc : msg->accelerations) {
+    Eigen::Vector3d wp_acc(
+        acc.linear.x,
+        acc.linear.y, 
+        acc.linear.z);
+    // Transform received waypoints from world to UAV origin frame
+    goal_waypoints_acc_.push_back(wp_acc);
+    ROS_INFO("MSG_ACC waypoints: %f, %f, %f", wp_acc[0], wp_acc[1], wp_acc[2]);
   }
 
   mav_trajectory_generation::Trajectory trajectory;
-  planTrajectory(goal_waypoints_, &trajectory);
+  planTrajectory(goal_waypoints_,goal_waypoints_acc_, &trajectory);
   publishTrajectory(trajectory);
 }
 
@@ -70,6 +81,7 @@ void ExamplePlanner::setMaxSpeed(const double max_v) {
 // Plans a trajectory from the current position to the a goal position and velocity
 // we neglect attitude here for simplicity
 bool ExamplePlanner::planTrajectory(const std::vector<Eigen::Vector3d>& wp_pos,
+                                    const std::vector<Eigen::Vector3d>& wp_acc,
                                     mav_trajectory_generation::Trajectory* trajectory) {
 
   // 3 Dimensional trajectory => through carteisan space, no orientation
@@ -90,16 +102,19 @@ bool ExamplePlanner::planTrajectory(const std::vector<Eigen::Vector3d>& wp_pos,
                       current_velocity_);
   vertices.push_back(start);
 
-  for (size_t i = 1; i < wp_pos.size() - 1; i++ ){
+  for (size_t i = 0; i < wp_pos.size() - 1; i++ ){
     mav_trajectory_generation::Vertex middle_wp(dimension);
 
     middle_wp.addConstraint(mav_trajectory_generation::derivative_order::POSITION, wp_pos[i]);
+    middle_wp.addConstraint(mav_trajectory_generation::derivative_order::ACCELERATION, wp_acc[i]);
     vertices.push_back(middle_wp);
   }
 
   /******* Configure end point *******/
   end.makeStartOrEnd(wp_pos.back(),
                      derivative_to_optimize);
+  end.addConstraint(mav_trajectory_generation::derivative_order::VELOCITY,
+                    Eigen::Vector3d::Zero());
   vertices.push_back(end);
 
   // setimate initial segment times
@@ -154,73 +169,73 @@ bool ExamplePlanner::planTrajectory(const std::vector<Eigen::Vector3d>& wp_pos,
 
 // Plans a trajectory from the current position to the a goal position and velocity
 // we neglect attitude here for simplicity
-bool ExamplePlanner::planTrajectory(const Eigen::VectorXd& goal_pos,
-                                    const Eigen::VectorXd& goal_vel,
-                                    mav_trajectory_generation::Trajectory* trajectory) {
+// bool ExamplePlanner::planTrajectory(const Eigen::VectorXd& goal_pos,
+//                                     const Eigen::VectorXd& goal_vel,
+//                                     mav_trajectory_generation::Trajectory* trajectory) {
 
-  // 3 Dimensional trajectory => through carteisan space, no orientation
-  const int dimension = 3;
+//   // 3 Dimensional trajectory => through carteisan space, no orientation
+//   const int dimension = 3;
 
-  // Array for all waypoints and their constrains
-  mav_trajectory_generation::Vertex::Vector vertices;
+//   // Array for all waypoints and their constrains
+//   mav_trajectory_generation::Vertex::Vector vertices;
 
-  // Optimze up to 4th order derivative (SNAP)
-  const int derivative_to_optimize =
-      mav_trajectory_generation::derivative_order::SNAP;
+//   // Optimze up to 4th order derivative (SNAP)
+//   const int derivative_to_optimize =
+//       mav_trajectory_generation::derivative_order::SNAP;
 
-  // we have 2 vertices:
-  // Start = current position
-  // end = desired position and velocity
-  mav_trajectory_generation::Vertex start(dimension), end(dimension);
+//   // we have 2 vertices:
+//   // Start = current position
+//   // end = desired position and velocity
+//   mav_trajectory_generation::Vertex start(dimension), end(dimension);
 
-  /******* Configure start point *******/
-  // set start point constraints to current position and set all derivatives to zero
-  start.makeStartOrEnd(current_pose_.translation(),
-                       derivative_to_optimize);
+//   /******* Configure start point *******/
+//   // set start point constraints to current position and set all derivatives to zero
+//   start.makeStartOrEnd(current_pose_.translation(),
+//                        derivative_to_optimize);
 
-  // set start point's velocity to be constrained to current velocity
-  start.addConstraint(mav_trajectory_generation::derivative_order::VELOCITY,
-                      current_velocity_);
+//   // set start point's velocity to be constrained to current velocity
+//   start.addConstraint(mav_trajectory_generation::derivative_order::VELOCITY,
+//                       current_velocity_);
 
-  // add waypoint to list
-  vertices.push_back(start);
+//   // add waypoint to list
+//   vertices.push_back(start);
 
-  /******* Configure end point *******/
-  // set end point constraints to desired position and set all derivatives to zero
-  end.makeStartOrEnd(goal_pos,
-                     derivative_to_optimize);
+//   /******* Configure end point *******/
+//   // set end point constraints to desired position and set all derivatives to zero
+//   end.makeStartOrEnd(goal_pos,
+//                      derivative_to_optimize);
 
-  // set start point's velocity to be constrained to current velocity
-  end.addConstraint(mav_trajectory_generation::derivative_order::VELOCITY,
-                    goal_vel);
+//   // set start point's velocity to be constrained to current velocity
+//   end.addConstraint(mav_trajectory_generation::derivative_order::VELOCITY,
+//                     goal_vel);
 
-  // add waypoint to list
-  vertices.push_back(end);
+//   // add waypoint to list
+//   vertices.push_back(end);
 
-  // setimate initial segment times
-  std::vector<double> segment_times;
-  segment_times = estimateSegmentTimes(vertices, max_v_, max_a_);
+//   // setimate initial segment times
+//   std::vector<double> segment_times;
+//   segment_times = estimateSegmentTimes(vertices, max_v_, max_a_);
 
-  // Set up polynomial solver with default params
-  mav_trajectory_generation::NonlinearOptimizationParameters parameters;
+//   // Set up polynomial solver with default params
+//   mav_trajectory_generation::NonlinearOptimizationParameters parameters;
 
-  // set up optimization problem
-  const int N = 10;
-  mav_trajectory_generation::PolynomialOptimizationNonLinear<N> opt(dimension, parameters);
-  opt.setupFromVertices(vertices, segment_times, derivative_to_optimize);
+//   // set up optimization problem
+//   const int N = 10;
+//   mav_trajectory_generation::PolynomialOptimizationNonLinear<N> opt(dimension, parameters);
+//   opt.setupFromVertices(vertices, segment_times, derivative_to_optimize);
 
-  // constrain velocity and acceleration
-  opt.addMaximumMagnitudeConstraint(mav_trajectory_generation::derivative_order::VELOCITY, max_v_);
-  opt.addMaximumMagnitudeConstraint(mav_trajectory_generation::derivative_order::ACCELERATION, max_a_);
+//   // constrain velocity and acceleration
+//   opt.addMaximumMagnitudeConstraint(mav_trajectory_generation::derivative_order::VELOCITY, max_v_);
+//   opt.addMaximumMagnitudeConstraint(mav_trajectory_generation::derivative_order::ACCELERATION, max_a_);
 
-  // solve trajectory
-  opt.optimize();
+//   // solve trajectory
+//   opt.optimize();
 
-  // get trajectory as polynomial parameters
-  opt.getTrajectory(&(*trajectory));
+//   // get trajectory as polynomial parameters
+//   opt.getTrajectory(&(*trajectory));
 
-  return true;
-}
+//   return true;
+// }
 
 bool ExamplePlanner::publishTrajectory(const mav_trajectory_generation::Trajectory& trajectory){
   // send trajectory as markers to display them in RVIZ
@@ -246,4 +261,3 @@ bool ExamplePlanner::publishTrajectory(const mav_trajectory_generation::Trajecto
 
   return true;
 }
-

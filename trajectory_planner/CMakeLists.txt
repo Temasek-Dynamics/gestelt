@@ -58,8 +58,8 @@ include_directories(
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
 add_executable(trajectory_generator
-  src/example_planner.cc
-  src/example_planner_node.cc
+  src/example_planner_6dof.cc
+  src/example_planner_6dof_node.cc
 )
 
 ## Add cmake target dependencies of the executable

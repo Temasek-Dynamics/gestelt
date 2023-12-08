@@ -34,6 +34,7 @@
   <depend>mav_trajectory_generation_ros</depend>
   <depend>nav_msgs</depend>
   <depend>eigen_conversions</depend>
+  <depend>gestelt_msgs</depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>

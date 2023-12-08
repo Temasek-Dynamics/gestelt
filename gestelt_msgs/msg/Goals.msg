@@ -1,4 +1,3 @@
-std_msgs/Header header
+Header header
 
-# Goal waypoints
-geometry_msgs/PoseArray waypoints
+geometry_msgs/Pose[] waypoints

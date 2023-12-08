@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
 
 import rospy
-from gestelt_msgs.msg import CommanderState, Goals, CommanderCommand
-from geometry_msgs.msg import Pose
+import math
+from gestelt_msgs.msg import CommanderState, Goals, CommanderCommand, PosGoals
+from geometry_msgs.msg import Pose, Accel, PoseArray
 from std_msgs.msg import Int8
+import numpy as np
+import transforms3d as t3d
+import time
 
 # Publisher of server events to trigger change of states for trajectory server 
 server_event_pub = rospy.Publisher('/traj_server/command', CommanderCommand, queue_size=10)
@@ -38,30 +42,59 @@ def get_server_state_callback():
     # print(msg)
     # print("==================")
 
-def create_pose(x, y, z):
+# def create_pose(x, y, z):
+#     pose = Pose()
+#     pose.position.x = x
+#     pose.position.y = y
+#     pose.position.z = z
+
+#     pose.orientation.x = 0
+#     pose.orientation.y = 0
+#     pose.orientation.z = 0
+#     pose.orientation.w = 1
+
+#     return pose
+# def create_accel(acc_x,acc_y,acc_z):
+#     acc = Accel()
+#     acc.linear.x = acc_x
+#     acc.linear.y = acc_y
+#     acc.linear.z = acc_z
+
+#     return acc
+
+def create_pose(x, y, z, roll, pitch, yaw):
     pose = Pose()
     pose.position.x = x
     pose.position.y = y
     pose.position.z = z
-
-    pose.orientation.x = 0
-    pose.orientation.y = 0
-    pose.orientation.z = 0
-    pose.orientation.w = 1
-
+    roll = np.radians(roll)
+    pitch = np.radians(pitch)
+    yaw = np.radians(yaw)
+    rotation_matrix = t3d.euler.euler2mat(roll, pitch, yaw, 'sxyz')
+    quaternion = t3d.quaternions.mat2quat(rotation_matrix)
+    pose.orientation.w = quaternion[0]
+    pose.orientation.x = quaternion[1]
+    pose.orientation.y = quaternion[2]
+    pose.orientation.z = quaternion[3]
     return pose
+
 
 def pub_waypoints(waypoints):
     wp_msg = Goals()
-    wp_msg.waypoints.header.frame_id = "world"
-    wp_msg.waypoints.poses = waypoints
+    wp_msg.header.frame_id = "world"
+    wp_msg.waypoints = waypoints
+    for waypoint in wp_msg.waypoints:
+        rospy.loginfo(f"Position: {waypoint.position}")
+        rospy.loginfo(f"Orientation: {waypoint.orientation}")
 
     waypoints_pub.publish(wp_msg)
+
 
 def main():
     rospy.init_node('mission_startup', anonymous=True)
     rate = rospy.Rate(5) # 20hz
-
+    degrees = 70
+    g = 9.81
     HOVER_MODE = False
     MISSION_MODE = False
 
@@ -74,6 +107,7 @@ def main():
             HOVER_MODE = True
         
         if (MISSION_MODE):
+            time.sleep(5)
             # Already in MISSION 
             break
         elif (not HOVER_MODE):
@@ -91,8 +125,18 @@ def main():
     # Send waypoints to UAVs
     print(f"Sending waypoints to UAVs")
     waypoints = []
-    waypoints.append(create_pose(1.0, 3.0, 2.0))
-    pub_waypoints(waypoints)
+    waypoints.append(create_pose(3.0, 3.0, 2.0, math.radians(70), 0, 0))
+    # waypoints.append(create_pose(5.0, 1.0, 3.0, 0, 0, 0))
+    # waypoints.append(create_pose(1.0, -6.0, 4.0))
+    
+    # # the number of accelerations must be equal to the number of waypoints
+    # accel_list = []
+    # # accel_list.append(create_accel(0 ,0 ,0))
+    # accel_list.append(create_accel(0.0, 2.0 * math.cos(math.radians(degrees)), 9.81 - 2*math.sin(math.radians(degrees))))
+    # accel_list.append(create_accel(0.0,0.0,0.0))
+    # accel_list.append(create_accel(0.0,0.0,0.0))
 
+    pub_waypoints(waypoints)
+    rospy.spin()
 if __name__ == '__main__':
     main()

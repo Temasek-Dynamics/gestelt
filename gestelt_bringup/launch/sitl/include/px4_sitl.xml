@@ -11,7 +11,8 @@
     <!-- PX4 configs -->
     <arg name="est" default="ekf2"/>
     <arg name="interactive" default="false"/>
-    <env name="PX4_SIM_MODEL" value="gazebo-classic_$(arg vehicle)" />
+<!--  <env name="PX4_SIM_MODEL" value="gazebo-classic_$(arg vehicle)" />-->
+    <env name="PX4_SIM_MODEL" value="$(arg vehicle)" />
 
     <!-- Add static transform from base_link to camera_link -->
     <node pkg="tf" type="static_transform_publisher" 

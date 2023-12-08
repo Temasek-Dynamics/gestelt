@@ -12,7 +12,8 @@
 
 #include <mav_trajectory_generation_ros/ros_visualization.h>
 #include <mav_trajectory_generation_ros/ros_conversions.h>
-
+#include <tf2/LinearMath/Matrix3x3.h>
+#include <tf2/LinearMath/Quaternion.h>
 #include <gestelt_msgs/Goals.h>
 
 class ExamplePlanner {
@@ -21,28 +22,40 @@ class ExamplePlanner {
 
   void uavOdomCallback(const nav_msgs::Odometry::ConstPtr& pose);
 
-  void waypointsCB(const gestelt_msgs::GoalsPtr &msg);
+  void waypointsCB(const gestelt_msgs::GoalsPtr &waypoints);
 
   void setMaxSpeed(double max_v);
 
   // Plans a trajectory to take off from the current position and
   // fly to the given altitude (while maintaining x,y, and yaw).
-  bool planTrajectory(const std::vector<Eigen::Vector3d>& wp_pos,
-                      mav_trajectory_generation::Trajectory* trajectory);
+  // bool planTrajectory(const std::vector<Eigen::Vector3d>& wp_pos,
+                      // const std::vector<Eigen::Vector3d>& wp_acc,
+                      // mav_trajectory_generation::Trajectory* trajectory);
                       
+  bool planTrajectory(
+    const std::vector<Eigen::Vector3d>& goal_pos_linear, 
+    const std::vector<Eigen::Vector3d>& goal_pos_angular,  
+    mav_trajectory_generation::Trajectory* trajectory);
+;
 
   // Plans a trajectory to take off from the current position and
   // fly to the given altitude (while maintaining x,y, and yaw).
-  bool planTrajectory(const Eigen::VectorXd& goal_pos,
-                      const Eigen::VectorXd& goal_vel,
-                      mav_trajectory_generation::Trajectory* trajectory);
+  // bool planTrajectory(const Eigen::VectorXd& goal_pos,
+  //                     const Eigen::VectorXd& goal_vel,
+  //                     mav_trajectory_generation::Trajectory* trajectory);
 
-  bool planTrajectory(const Eigen::VectorXd& goal_pos,
-                      const Eigen::VectorXd& goal_vel,
-                      const Eigen::VectorXd& start_pos,
-                      const Eigen::VectorXd& start_vel,
-                      double v_max, double a_max,
-                      mav_trajectory_generation::Trajectory* trajectory);
+  bool planTrajectory_1(const Eigen::Vector3d& goal_pos,
+                                    const Eigen::Vector3d& start_pos,
+                                    const Eigen::Vector3d& start_vel,
+                                    double v_max, double a_max,
+                                    mav_trajectory_generation::Trajectory* trajectory);
+
+  // bool planTrajectory(const Eigen::VectorXd& goal_pos,
+  //                     const Eigen::VectorXd& goal_vel,
+  //                     const Eigen::VectorXd& start_pos,
+  //                     const Eigen::VectorXd& start_vel,
+  //                     double v_max, double a_max,
+  //                     mav_trajectory_generation::Trajectory* trajectory);
                       
   bool publishTrajectory(const mav_trajectory_generation::Trajectory& trajectory);
 
@@ -61,7 +74,8 @@ class ExamplePlanner {
   double max_ang_v_;
   double max_ang_a_;
 
-  std::vector<Eigen::Vector3d> goal_waypoints_;
+  std::vector<Eigen::Vector3d> goal_waypoints_linear_;
+  std::vector<Eigen::Vector3d> goal_waypoints_angular_;
   std::string trajectory_frame_id_; //frame id of planned trajectory
 };
 
