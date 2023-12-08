@@ -1,4 +1,4 @@
 <launch>
   <!-- Launches a test mission -->
-  <node pkg="gestelt_bringup" name="mission" type="mission.py" />
+  <node pkg="gestelt_bringup" name="mission" type="circular_mission.py" />
 </launch>
