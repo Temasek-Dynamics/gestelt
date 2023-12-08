@@ -6,7 +6,6 @@ from geometry_msgs.msg import Pose, Accel,PoseArray,AccelStamped
 from std_msgs.msg import Int8
 import math
 import time
-
 # Publisher of server events to trigger change of states for trajectory server 
 server_event_pub = rospy.Publisher('/traj_server/command', CommanderCommand, queue_size=10)
 # Publisher of server events to trigger change of states for trajectory server 
@@ -75,7 +74,8 @@ def pub_waypoints(waypoints,accels):
 
     wp_msg.waypoints = waypoints
     wp_pos_msg.poses = waypoints
-    wp_acc_msg.accel=accels[0]
+    if len(accels)>0:
+        wp_acc_msg.accel=accels[0]
 
     wp_msg.accelerations= accels
     waypoints_pub.publish(wp_msg)
@@ -83,7 +83,7 @@ def pub_waypoints(waypoints,accels):
     waypoints_acc_pub.publish(wp_acc_msg)
 def main():
     rospy.init_node('mission_startup', anonymous=True)
-    rate = rospy.Rate(5) # 20hz
+    rate = rospy.Rate(5) # hz 20hz
 
     HOVER_MODE = False
     MISSION_MODE = False
@@ -98,7 +98,7 @@ def main():
         
         if (MISSION_MODE):
             # Already in MISSION 
-            time.sleep(10)
+            # time.sleep(5)
             break
         elif (not HOVER_MODE):
             # IDLE -> TAKE OFF -> HOVER
@@ -116,29 +116,40 @@ def main():
     # frame is ENU
     print(f"Sending waypoints to UAVs")
     waypoints = []
-    radius = 2
-    num_points = 100
+    accel_list = []
+
+    # waypoints.append(create_pose(3.0,2.0,3.0)) # 3.0,2.0,3
+    # waypoints.append(create_pose(5.0,2.0,3.0))# 5.0,2.0,3
+    radius = 1
+    num_points = 50
     for i in range(num_points):
-        waypoints.append(create_pose(radius * math.sin(math.radians(i * 360 / num_points)), radius * math.cos(math.radians(i * 360 / num_points)), 2))
-        # waypoints.append(create_pose(2.0, 4.0, 6.0))
-    # waypoints.append(create_pose(1.0, -6.0, 4.0))
+        waypoints.append(create_pose(radius * math.cos(math.radians(i * 360 / num_points)), 
+                                     radius * math.sin(math.radians(i * 360 / num_points)),
+                                     1 + i * 1 / num_points))
+        accel_list.append(create_accel(0.0, 0.0, 0.0))  
+    #FOR SLOW MOTION TEST
+    # waypoints.append(create_pose(0.0,-0.5,1.0)) # 0.0,-0.5,1
+    # waypoints.append(create_pose(0.5,-0.5,1.0)) # 0.5,-0.5,1
+    # waypoints.append(create_pose(0.5,0.0,1.0)) # 0.5,0.0,1
+    # waypoints.append(create_pose(0.0,0.0,1.0)) # 0.0,0.0,1
+    
     
     # the number of accelerations must be equal to the number of waypoints
-    accel_list = []
     
-    g=-9.81 #m/s^2
-    f=0.3*(-g) #N
-    angle=60
+    # g=-9.81 #m/s^2
+    # f=0.3*(-g) #N
+    # angle=30
     
-    angle_rad=math.radians(angle)
+    # angle_rad=math.radians(angle)
 
+    
     # frame need to verify
     # accel_list.append(create_accel(0.0,-f*np.sin(angle_rad),g+f*np.cos(angle_rad)))
-    # accel_list.append(create_accel(0.0,-10*g,g))
-    accel_list.append(create_accel(0.0,0.0,0.0))
-    accel_list.append(create_accel(0.0,0.0,0.0))
-
-    pub_waypoints(waypoints,accel_list)
+          
+    # accel_list.append(create_accel(0.0,0.0,0.0))
+    # accel_list.append(create_accel(0.0,0.0,0.0))
+    # accel_list.append(create_accel(0.0,0.0,0.0))
+    pub_waypoints(waypoints, accel_list)
     rospy.spin()
 if __name__ == '__main__':
     main()

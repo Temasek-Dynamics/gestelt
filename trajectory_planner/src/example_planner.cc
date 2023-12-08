@@ -106,7 +106,7 @@ bool ExamplePlanner::planTrajectory(const std::vector<Eigen::Vector3d>& wp_pos,
     mav_trajectory_generation::Vertex middle_wp(dimension);
 
     middle_wp.addConstraint(mav_trajectory_generation::derivative_order::POSITION, wp_pos[i]);
-    // middle_wp.addConstraint(mav_trajectory_generation::derivative_order::ACCELERATION, wp_acc[i]);
+    // middle_wp.addConstraint(mav_trajectory_generation::derivative_order::VELOCITY, wp_acc[i]);
     vertices.push_back(middle_wp);
   }
 
