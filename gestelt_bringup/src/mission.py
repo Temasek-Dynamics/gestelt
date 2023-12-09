@@ -116,8 +116,8 @@ def main():
     # frame is ENU
     print(f"Sending waypoints to UAVs")
     waypoints = []
-    waypoints.append(create_pose(3.0,2.0,3.0)) # 3.0,2.0,3
-    waypoints.append(create_pose(5.0,2.0,3.0))# 5.0,2.0,3
+    waypoints.append(create_pose(3.0,2.0,2.0)) # 3.0,2.0,3
+    waypoints.append(create_pose(5.0,2.0,2.0))# 5.0,2.0,3
     
 
     

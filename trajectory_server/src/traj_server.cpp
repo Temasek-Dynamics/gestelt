@@ -27,7 +27,7 @@ void TrajServer::init(ros::NodeHandle& nh)
   nh.param("traj_server/safety_box/min_z", safety_box_.min_z, -1.0);
 
   // Frequency params
-  nh.param("traj_server/pub_cmd_freq", pub_cmd_freq_, 25.0); // frequency to publish commands
+  nh.param("traj_server/pub_cmd_freq", pub_cmd_freq_, 100.0); // frequency to publish commands
   double state_machine_tick_freq; // Frequency to tick the state machine transitions
   nh.param("traj_server/state_machine_tick_freq", state_machine_tick_freq, 50.0);
   double debug_freq; // Frequency to publish debug information
