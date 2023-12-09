@@ -334,11 +334,6 @@ Visualization Manager:
       Target Frame: my_view
       Yaw: 1.5153894424438477
     Saved:
-      - Class: rviz/FPS
-        Enable Stereo Rendering:
-          Stereo Eye Separation: 0.05999999865889549
-          Stereo Focal Distance: 1
-          Swap Stereo Eyes: false
           Value: false
         Invert Z Axis: false
         Name: FPS

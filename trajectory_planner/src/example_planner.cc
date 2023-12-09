@@ -126,10 +126,10 @@ bool ExamplePlanner::planTrajectory(const std::vector<Eigen::Vector3d>& wp_pos,
   segment_times = estimateSegmentTimesVelocityRamp(vertices, max_v_, max_a_);
   
   // enlarge the segement_time
-  for (size_t i = 0; i < segment_times.size(); ++i) {
-        ROS_INFO("segment_times: %f", segment_times[i]);
-        segment_times[i] *= 1.5;
-    } 
+  // for (size_t i = 0; i < segment_times.size(); ++i) {
+  //       ROS_INFO("segment_times: %f", segment_times[i]);
+  //       segment_times[i] *= 1.5;
+  //   } 
   
   /*
   * Linear optimization
