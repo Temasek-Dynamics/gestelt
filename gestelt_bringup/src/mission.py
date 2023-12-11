@@ -116,8 +116,8 @@ def main():
     # frame is ENU
     print(f"Sending waypoints to UAVs")
     waypoints = []
-    waypoints.append(create_pose(3.0,2.0,2.0)) # 3.0,2.0,3
-    waypoints.append(create_pose(5.0,2.0,2.0))# 5.0,2.0,3
+    waypoints.append(create_pose(2.0,2.0,1.5)) # 3.0,2.0,3
+    waypoints.append(create_pose(4.0,2.0,1.5))# 5.0,2.0,3
     
 
     
@@ -134,7 +134,7 @@ def main():
     
     g=-9.81 #m/s^2
     f=0.3*(-g) #N
-    angle=60
+    angle=90
     
     angle_rad=math.radians(angle)
 
