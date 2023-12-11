@@ -127,6 +127,8 @@ def main():
                                      radius * math.sin(math.radians(i * 360 / num_points)),
                                      1 + i * 1 / num_points))
         accel_list.append(create_accel(0.0, 0.0, 0.0))  
+
+    waypoints.append(create_pose(0, 0, 0))
     #FOR SLOW MOTION TEST
     # waypoints.append(create_pose(0.0,-0.5,1.0)) # 0.0,-0.5,1
     # waypoints.append(create_pose(0.5,-0.5,1.0)) # 0.5,-0.5,1
