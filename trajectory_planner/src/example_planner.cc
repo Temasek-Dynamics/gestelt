@@ -115,8 +115,8 @@ bool ExamplePlanner::planTrajectory(const std::vector<Eigen::Vector3d>& wp_pos,
   /******* Configure end point *******/
   end.makeStartOrEnd(wp_pos.back(),
                      derivative_to_optimize);
-  // end.addConstraint(mav_trajectory_generation::derivative_order::VELOCITY,
-  //                   Eigen::Vector3d::Zero());
+  end.addConstraint(mav_trajectory_generation::derivative_order::VELOCITY,
+                    Eigen::Vector3d::Zero());
   vertices.push_back(end);
 
   // setimate initial segment times
