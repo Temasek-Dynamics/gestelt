@@ -70,9 +70,9 @@ then
     tmux split-window -t $SESSION:0.0 -h
     # tmux split-window -t $SESSION:0.1 -h
 
-    # tmux send-keys -t $SESSION:0.0 "$SOURCE_PX4_AUTOPILOT $CMD_0" C-m 
+    tmux send-keys -t $SESSION:0.0 "$SOURCE_PX4_AUTOPILOT $CMD_0" C-m 
     sleep 2
-    tmux send-keys -t $SESSION:0.1 "$SOURCE_PX4_AUTOPILOT $CMD_4" C-m 
+    tmux send-keys -t $SESSION:0.1 "$SOURCE_PX4_AUTOPILOT $CMD_4" C-m
     sleep 1
     tmux send-keys -t $SESSION:0.1 "$SOURCE_WS " C-m 
     sleep 1
