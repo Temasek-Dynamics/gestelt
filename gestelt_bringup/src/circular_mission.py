@@ -120,13 +120,13 @@ def main():
 
     # waypoints.append(create_pose(3.0,2.0,3.0)) # 3.0,2.0,3
     # waypoints.append(create_pose(5.0,2.0,3.0))# 5.0,2.0,3
-    radius = 1.5
+    radius = 1
     num_points = 100
     for i in range(num_points):
         waypoints.append(create_pose(radius * math.cos(math.radians(i * 360 / num_points)) - radius, 
                                      radius * math.sin(math.radians(i * 360 / num_points)),
                                      1))
-        accel_list.append(create_accel(0.0, 0.0, 0.0))  
+        # accel_list.append(create_accel(0.0, 0.0, 0.0))  
 
     # waypoints.append(create_pose(0, 0, 0))
     #FOR SLOW MOTION TEST
