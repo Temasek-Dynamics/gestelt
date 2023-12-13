@@ -175,7 +175,7 @@ void TrajServer::UAVPoseCB(const geometry_msgs::PoseStamped::ConstPtr &msg)
     num_pose_msgs_++;
     if (num_pose_msgs_ > 100){
       first_pose_ = false;
-      ROS_INFO("Taking off pose locked to (%f, %f)", last_mission_pos_(0), last_mission_pos_(1));
+      // ROS_INFO("Taking off pose locked to (%f, %f)", last_mission_pos_(0), last_mission_pos_(1));
     }
   }
 
@@ -235,7 +235,7 @@ void TrajServer::execTrajTimerCb(const ros::TimerEvent &e)
       if (!isExecutingMission()){
         logInfoThrottled("Waiting for mission", 5.0);
         // ROS_INFO("in waiting for mission");
-        execHover();
+        // execHover();
       }
       else {
         // ROS_INFO("ServerState received velocity: %f, %f, %f", last_mission_vel_(0), last_mission_vel_(1), last_mission_vel_(2));
@@ -559,9 +559,9 @@ void TrajServer::publishCmd(
   pos_cmd.acceleration_or_force.z = a(2);
   pos_cmd.yaw = yaw;
   pos_cmd.yaw_rate = yaw_rate;
-  ROS_INFO("Position for final command: %f, %f, %f", p(0), p(1), p(2));
-  ROS_INFO("Velocity for final command: %f, %f, %f", v(0), v(1), v(2));
-  ROS_INFO("Acceleration for final command: %f, %f, %f", a(0), a(1), a(2));
+  // ROS_INFO("Position for final command: %f, %f, %f", p(0), p(1), p(2));
+  // ROS_INFO("Velocity for final command: %f, %f, %f", v(0), v(1), v(2));
+  // ROS_INFO("Acceleration for final command: %f, %f, %f", a(0), a(1), a(2));
   pos_cmd_raw_pub_.publish(pos_cmd);
 }
 void TrajServer::pubflatrefState( Vector3d p, Vector3d v, Vector3d a, Vector3d j, double yaw, double yaw_rate, uint16_t type_mask)

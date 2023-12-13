@@ -1,6 +1,6 @@
 <launch>
   <!-- Launches a test mission -->
-  <node pkg="gestelt_bringup" name="mission" type="mission.py" />
+  <node pkg="gestelt_bringup" name="mission" type="setpoint_mission.py" />
 
    <!-- Start rosbag to record setpoint_raw and local_position -->
    <!-- path have to be absolute path-->
