@@ -1,4 +1,7 @@
 <launch>
   <!-- Launches a test mission -->
   <node pkg="gestelt_bringup" name="mission" type="circular_mission.py" />
+
+  <node pkg="rosbag" name="record" type="record" output="screen"
+  args="-o /home/AF/gestelt_ws/data /mavros/local_position/pose /mavros/setpoint_raw/local"/>
 </launch>
