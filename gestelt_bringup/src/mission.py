@@ -117,13 +117,17 @@ def main():
     print(f"Sending waypoints to UAVs")
     waypoints = []
 
-    waypoints.append(create_pose(0.0,1.0,1.5)) # 3.0,2.0,3
+    # side length 5m
+    # MATLAB TASK
+    # waypoints.append(create_pose(2.0,2.0,1.5))# 5.0,2.0,3
+    # waypoints.append(create_pose(4.0,2.0,1.5))# 5.0,2.0,3
 
+    # 12/12 test
+    waypoints.append(create_pose(0.0,2.0,1.5)) # 3.0,2.0,3
     waypoints.append(create_pose(0.0,-0.0,1.5)) # 3.0,2.0,3
     waypoints.append(create_pose(0.0,-2.0,1.5))# 5.0,2.0,3
-    
 
-    
+    # 7/12 test
     #FOR SLOW MOTION TEST
     # waypoints.append(create_pose(-0.5,-0.5,1.5)) # 0.0,-0.5,1
     # waypoints.append(create_pose(0.5,-0.5,1.5)) # 0.5,-0.5,1
@@ -143,9 +147,13 @@ def main():
 
     
     # frame need to verify
+    # MATLAB task
+    # accel_list.append(create_accel(0.0,-f*np.sin(angle_rad),g+f*np.cos(angle_rad)))
+
     accel_list.append(create_accel(0.0,0.0,0.0))
     accel_list.append(create_accel(-f*np.sin(angle_rad),0.0,g+f*np.cos(angle_rad)))
     accel_list.append(create_accel(0.0,0.0,0.0))
+    
     # accel_list.append(create_accel(0.0,0.0,0.0))
     # accel_list.append(create_accel(0.0,0.0,0.0))
     # accel_list.append(create_accel(0.0,0.0,0.0))
