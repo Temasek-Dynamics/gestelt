@@ -124,14 +124,14 @@ def main():
             
             setpoint.velocity.x = 3
             setpoint.velocity.y = 3
-            setpoint.velocity.z = 0
+            setpoint.velocity.z = 3
             last_pos_x +=setpoint.velocity.x*(1/pub_freq)
             last_pos_y +=setpoint.velocity.y*(1/pub_freq)
             last_pos_z +=setpoint.velocity.z*(1/pub_freq)
             
             setpoint.position.x = last_pos_x
             setpoint.position.y = last_pos_y
-            setpoint.position.z = 1.5
+            setpoint.position.z = last_pos_z+1.5
            
             setpoint.acceleration_or_force.x = 0
             setpoint.acceleration_or_force.y = 0

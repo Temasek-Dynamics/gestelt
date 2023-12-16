@@ -98,7 +98,7 @@ def main():
         
         if (MISSION_MODE):
             # Already in MISSION 
-            # time.sleep(5)
+            time.sleep(5)
             break
         elif (not HOVER_MODE):
             # IDLE -> TAKE OFF -> HOVER
@@ -123,9 +123,9 @@ def main():
     # waypoints.append(create_pose(4.0,2.0,1.5))# 5.0,2.0,3
 
     # 12/12 test
-    waypoints.append(create_pose(0.0,2.0,1.5)) # 3.0,2.0,3
-    waypoints.append(create_pose(0.0,-0.0,1.5)) # 3.0,2.0,3
-    waypoints.append(create_pose(0.0,-2.0,1.5))# 5.0,2.0,3
+    waypoints.append(create_pose(0.0,2.0,1.2)) # 3.0,2.0,3
+    # waypoints.append(create_pose(0.0,-0.0,1.2)) # 3.0,2.0,3
+    # waypoints.append(create_pose(0.0,-2.0,1.2))# 5.0,2.0,3
 
     # 7/12 test
     #FOR SLOW MOTION TEST
@@ -151,8 +151,8 @@ def main():
     # accel_list.append(create_accel(0.0,-f*np.sin(angle_rad),g+f*np.cos(angle_rad)))
 
     accel_list.append(create_accel(0.0,0.0,0.0))
-    accel_list.append(create_accel(-f*np.sin(angle_rad),0.0,g+f*np.cos(angle_rad)))
-    accel_list.append(create_accel(0.0,0.0,0.0))
+    # accel_list.append(create_accel(-f*np.sin(angle_rad),0.0,g+f*np.cos(angle_rad)))
+    # accel_list.append(create_accel(0.0,0.0,0.0))
     
     # accel_list.append(create_accel(0.0,0.0,0.0))
     # accel_list.append(create_accel(0.0,0.0,0.0))
