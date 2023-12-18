@@ -27,8 +27,7 @@ repositories:
     type: git
     url: https://github.com/ethz-asl/nlopt.git
     version: master
-
-  ../mavros_controllers
+  ../mavros_controllers:
     type: git
     url: https://github.com/Jaeyoung-Lim/mavros_controllers.git
     version: master
