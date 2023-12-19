@@ -60,6 +60,7 @@ cd ~/gestelt_ws/
 
 # Building for debugging/development
 catkin config --merge-devel
+catkin clean
 catkin build
 # Building for release mode (For use on Radxa)
 catkin build -DCMAKE_BUILD_TYPE=Release
