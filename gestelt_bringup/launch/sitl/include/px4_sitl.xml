@@ -74,6 +74,17 @@
         <param name="local_position/tf/send" value="true"/>
         <param name="local_position/tf/frame_id" value="$(arg drone_id_ns)_origin"/>
         <param name="local_position/tf/child_frame_id" value="$(arg drone_id_ns)_base_link"/>
+
+        <param name="copter_visualization/local_position" value="$(arg drone_id_ns)/mavros/local_position/local"/>
+        <param name="copter_visualization/local_setpoint" value="$(arg drone_id_ns)/mavros/setpoint_position/local"/>
+
+        <param name="copter_visualization/track_markers" value="$(arg drone_id_ns)/track_markers"/>
+        <param name="copter_visualization/vehicle_markers" value="$(arg drone_id_ns)/vehicle_markers"/>
+        <param name="copter_visualization/wp_markers" value="$(arg drone_id_ns)/wp_markers"/>
+        
+        <param name="copter_visualization/fixed_frame_id" value="$(arg drone_id_ns)_origin"/>
+        <param name="copter_visualization/child_frame_id" value="$(arg drone_id_ns)_base_link"/>
+
       </node>
 
     </group>

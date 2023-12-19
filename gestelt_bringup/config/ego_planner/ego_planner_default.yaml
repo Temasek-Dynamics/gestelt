@@ -33,7 +33,7 @@ grid_map/local_map_size_y: 1.5
 grid_map/local_map_size_z: 2.5 
 
 grid_map/sensor/max_range: 5.0
-grid_map/ground_height: -0.25
+grid_map/ground_height: 0.0
 
 grid_map/occ_grid/resolution: 0.1 
 grid_map/occ_grid/inflation: 0.2 
