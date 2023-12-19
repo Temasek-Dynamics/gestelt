@@ -11,7 +11,7 @@ set(ROS_LIBRARIES
   gazebo_msgs
   geometry_msgs
   visualization_msgs
-  trajectory_server_msgs
+  gestelt_msgs
   tf2_ros
 )
 

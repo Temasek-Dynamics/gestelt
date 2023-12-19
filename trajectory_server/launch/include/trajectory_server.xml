@@ -33,7 +33,7 @@
         
         <!-- Published Topics -->
         <remap from="/mavros/setpoint_raw/local" to="/$(arg drone_id_ns)/$(arg command_topic)"/>
-        <remap from="/server_state" to="/$(arg drone_id_ns)/server_state"/>
+        <remap from="/traj_server/state" to="/$(arg drone_id_ns)/traj_server/state"/>
         <remap from="/uav_path" to="/$(arg drone_id_ns)/uav_path"/>
         <remap from="~model" to="/$(arg drone_id_ns)/model"/>
 

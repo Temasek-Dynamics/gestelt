@@ -2,7 +2,7 @@
 #include <numeric>
 #include <deque>
 
-#include <trajectory_server_msgs/TimeBenchmark.h>
+#include <gestelt_msgs/TimeBenchmark.h>
 
 struct Benchmark {
   
@@ -42,7 +42,7 @@ public:
       // Add time benchmark topic subscription
       std::string plan_t_bench_topic_indiv = std::string("/drone" + std::to_string(i) + "/" + plan_t_bench_topic);
 
-      ros::Subscriber plan_time_sub = nh.subscribe<trajectory_server_msgs::TimeBenchmark>(
+      ros::Subscriber plan_time_sub = nh.subscribe<gestelt_msgs::TimeBenchmark>(
         plan_t_bench_topic_indiv, 5, boost::bind(&BenchmarkAggregator::planTimeBenchCB, this, _1, i));
       plan_time_bench_sub_.push_back(plan_time_sub);
 
@@ -51,14 +51,14 @@ public:
     }
 
     // Publishers
-    // benchmark_aggregation_pub_ = nh.advertise<<trajectory_server_msgs::BenchmarkAggregation>("/benchmark_aggregation", 10);
+    // benchmark_aggregation_pub_ = nh.advertise<<gestelt_msgs::BenchmarkAggregation>("/benchmark_aggregation", 10);
 
     // Timers
     aggregate_timer_ = nh.createTimer(ros::Duration(1/comp_freq_), &BenchmarkAggregator::aggrerateTimerCB, this);
 
   }
 
-  void planTimeBenchCB(const trajectory_server_msgs::TimeBenchmark::ConstPtr &msg, int drone_id)
+  void planTimeBenchCB(const gestelt_msgs::TimeBenchmark::ConstPtr &msg, int drone_id)
   {
     double now = ros::Time::now().toSec();
 

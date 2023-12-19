@@ -88,7 +88,7 @@ namespace ego_planner
     else if (waypoint_type_ == TARGET_TYPE::PRESET_TARGET)
     {
       // Subscribe to waypoints 
-      waypoints_sub_ = nh.subscribe("/waypoints", 1, &EGOReplanFSM::waypointsCB, this);
+      waypoints_sub_ = nh.subscribe("planner/goals", 1, &EGOReplanFSM::waypointsCB, this);
     }
     else{
       logError(string_format("Invalid waypoint type value! target_type=%i, it is either 1 or 2", waypoint_type_));

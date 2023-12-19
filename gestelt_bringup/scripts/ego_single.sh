@@ -43,15 +43,12 @@ roslaunch gestelt_bringup ego_planner.launch drone_id:=0
 
 # Start up 
 CMD_2="
-roslaunch gestelt_bringup ego_central.launch rviz_config:=gz_sim
+roslaunch gestelt_bringup ego_central.launch rviz_config:=ego
 "
 
 # Start up script to send commands
-CMD_3="roslaunch gestelt_bringup mission.launch"
+CMD_3="roslaunch gestelt_bringup mission_ego.launch"
 
-# disarm drone
-# CMD_4="rosservice call /drone_commander/disarm"
-# CMD_4="rosrun mavros mavparam set COM_RCL_EXCEPT 4"
 if [ "$SESSIONEXISTS" = "" ]
 then 
 
@@ -67,7 +64,7 @@ then
     sleep 1
     tmux send-keys -t $SESSION:0.2 "$SOURCE_WS $CMD_2" C-m 
     sleep 1
-    tmux send-keys -t $SESSION:0.3 "$SOURCE_WS $CMD_3" C-m
+    tmux send-keys -t $SESSION:0.3 "$SOURCE_WS $CMD_3"
 fi
 
 # Attach session on the first window

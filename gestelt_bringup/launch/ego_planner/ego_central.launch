@@ -3,6 +3,12 @@
   <arg name="cloud_topic_downsample_in" default="camera/depth/points" />
   <arg name="cloud_topic_downsample_out" default="camera/depth/points_downsampled" />
 
+  <!-- Add static transform from world to map -->
+  <node pkg="tf" type="static_transform_publisher" 
+    name="world_to_map_tf" 
+    args="0 0 0 0 0 0 1 world map 100">
+  </node>
+
   <!-- RVIZ -->
   <node name="rviz" pkg="rviz" type="rviz" required="true" 
     args="-d $(find gestelt_bringup)/launch/rviz/$(arg rviz_config).rviz"/>
@@ -12,12 +18,6 @@
     <arg name="drone_id" value="999"/>
     <arg name="broadcast_ip" value="127.0.0.255"/>
   </include>
-
-  <!-- Add static transform from world to map -->
-  <node pkg="tf" type="static_transform_publisher" 
-    name="world_to_map_tf" 
-    args="0 0 0 0 0 0 1 world map 100">
-  </node>
 
   <!-- drone 0: Downsamples the input cloud -->
   <node pkg="central_benchmark" type="cloud_downsampler" 

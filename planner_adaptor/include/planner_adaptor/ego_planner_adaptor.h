@@ -24,6 +24,7 @@ public:
    * @return false 
    */
   virtual void forwardGoals(const std::vector<Eigen::Vector3d> &goal_waypoints){
+
     gestelt_msgs::Goals goals_msg;
     goals_msg.header.frame_id="world";
 
@@ -43,6 +44,7 @@ public:
    * 
    */
   void planTrajectoryCB(traj_utils::PolyTrajPtr msg){
+
     if (msg->order != 5)
     {
       // Only support trajectory order equals 5 now!
@@ -80,10 +82,10 @@ public:
   }
 
   virtual void samplePlanTimerCB(const ros::TimerEvent &e){
-    /* no publishing before receive traj_ and have heartbeat */
-    if (isPlannerHBTimeout())
+    // No heartbeat from the planner received
+    // or plan has not been received
+    if (isPlannerHBTimeout() || !traj_)
     {
-      // No heartbeat from the planner received
       return;
     }
 
@@ -92,6 +94,7 @@ public:
     double t_cur = (time_now - plan_start_time_).toSec();
 
     Eigen::Vector3d pos(Eigen::Vector3d::Zero()), vel(Eigen::Vector3d::Zero()), acc(Eigen::Vector3d::Zero()), jer(Eigen::Vector3d::Zero());
+    Eigen::Quaterniond quat{0,0,0,1};
     std::pair<double, double> yaw_yawdot(0, 0);
 
     time_last_ = ros::Time::now();
@@ -106,6 +109,8 @@ public:
       /*** calculate yaw ***/
       yaw_yawdot = calculate_yaw(t_cur, pos, (time_now - time_last_).toSec());
 
+      quat = RPYToQuaternion(0.0, 0.0, yaw_yawdot.first);
+
       time_last_ = time_now;
     }
     // IF time elapsed is longer then duration of trajectory, then nothing is done
@@ -116,7 +121,7 @@ public:
     }
 
     // Send sampled point to Trajectory Server
-    forwardExecTrajectory(pos, vel, acc, jer, type_mask_);
+    forwardExecTrajectory(pos, quat, vel, acc, jer, type_mask_);
   }
 
   std::pair<double, double> calculate_yaw(double t_cur, Eigen::Vector3d &pos, double dt)
@@ -176,6 +181,15 @@ public:
     yaw_yawdot.second = yaw_temp;
 
     return yaw_yawdot;
+  }
+
+  Eigen::Quaterniond RPYToQuaternion(const double& roll, const double& pitch, const double& yaw){
+    Eigen::Quaterniond q;
+    q = Eigen::AngleAxisd(roll, Eigen::Vector3d::UnitX())
+        * Eigen::AngleAxisd(pitch, Eigen::Vector3d::UnitY())
+        * Eigen::AngleAxisd(yaw, Eigen::Vector3d::UnitZ());
+    
+    return q;
   }
 
 private:

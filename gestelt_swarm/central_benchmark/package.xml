@@ -27,7 +27,7 @@
   <depend>geometry_msgs</depend>
   <depend>gazebo_msgs</depend> 
   <depend>visualization_msgs</depend> 
-  <depend>trajectory_server_msgs</depend>
+  <depend>gestelt_msgs</depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>

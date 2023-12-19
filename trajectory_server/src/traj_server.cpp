@@ -601,7 +601,7 @@ void TrajServer::geomMsgsVector3ToEigenVector3(const geometry_msgs::Vector3& geo
 
 Eigen::Vector3d TrajServer::quaternionToRPY(const geometry_msgs::Quaternion& quat){
   // Quaternionf q << quat.x, quat.y, quat.z, quat.w;
-  Quaterniond q(quat.w, quat.x, quat.y, quat.z);
+  Eigen::Quaterniond q(quat.w, quat.x, quat.y, quat.z);
 
   Vector3d euler = q.toRotationMatrix().eulerAngles(0, 1, 2); // In roll, pitch and yaw
 

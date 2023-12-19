@@ -89,6 +89,7 @@ public:
    */
   virtual void forwardExecTrajectory(
     const Eigen::Vector3d& pos, 
+    const Eigen::Quaterniond& quat, 
     const Eigen::Vector3d& vel, 
     const Eigen::Vector3d& acc, 
     const Eigen::Vector3d& jerk,
@@ -104,6 +105,11 @@ public:
     exec_traj_msg.transform.translation.x = pos(0);
     exec_traj_msg.transform.translation.y = pos(1);
     exec_traj_msg.transform.translation.z = pos(2);
+
+    exec_traj_msg.transform.rotation.x = quat.x();
+    exec_traj_msg.transform.rotation.y = quat.y();
+    exec_traj_msg.transform.rotation.z = quat.z();
+    exec_traj_msg.transform.rotation.w = quat.w();
     
     exec_traj_msg.velocity.linear.x = vel(0);
     exec_traj_msg.velocity.linear.y = vel(1);
