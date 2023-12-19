@@ -15,6 +15,8 @@ sudo apt install ros-noetic-desktop-full
 # Install other dependencies
 sudo apt install git build-essential tmux python3-catkin-tools python3-vcstool xmlstarlet -y
 sudo apt install ros-${ROS_DISTRO}-mavlink ros-${ROS_DISTRO}-mavros ros-${ROS_DISTRO}-mavros-msgs ros-${ROS_DISTRO}-mavros-extras -y
+wget https://raw.githubusercontent.com/mavlink/mavros/master/mavros/scripts/install_geographiclib_datasets.sh
+sudo bash ./install_geographiclib_datasets.sh
 ```
 
 2. Clone repositories
