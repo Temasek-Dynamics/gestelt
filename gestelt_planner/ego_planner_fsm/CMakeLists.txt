@@ -11,12 +11,8 @@ set(ROS_LIBRARIES
   std_msgs
   geometry_msgs
   tf2_ros
-  trajectory_server_msgs
-  # grid_map
+  gestelt_msgs
   traj_opt
-  # traj_utils
-  # path_searching
-  # swarm_benchmark
 )
 
 # set(ROS_DEPENDS

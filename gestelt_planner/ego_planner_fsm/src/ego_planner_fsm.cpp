@@ -64,26 +64,26 @@ namespace ego_planner
 
     /* Subscribers */
     odom_sub_ = nh.subscribe("fsm_odom", 1, &EGOReplanFSM::odometryCallback, this);
-    mandatory_stop_sub_ = nh.subscribe("mandatory_stop", 1, &EGOReplanFSM::mandatoryStopCallback, this);
+    mandatory_stop_sub_ = nh.subscribe("/mandatory_stop_to_planner", 1, &EGOReplanFSM::mandatoryStopCallback, this);
 
     // Use MINCO trajectory to minimize the message size in wireless communication
-    broadcast_ploytraj_sub_ = nh.subscribe<traj_utils::MINCOTraj>("planning/broadcast_traj_recv", 100,
+    broadcast_ploytraj_sub_ = nh.subscribe<traj_utils::MINCOTraj>("/broadcast_traj_to_planner", 100,
                                                                   &EGOReplanFSM::RecvBroadcastMINCOTrajCallback,
                                                                   this,
                                                                   ros::TransportHints().tcpNoDelay());
     trigger_sub_ = nh.subscribe("/traj_start_trigger", 1, &EGOReplanFSM::triggerCallback, this);
 
     /* Publishers */
-    broadcast_ploytraj_pub_ = nh.advertise<traj_utils::MINCOTraj>("planning/broadcast_traj_send", 10);
-    poly_traj_pub_ = nh.advertise<traj_utils::PolyTraj>("planning/trajectory", 10);
-    heartbeat_pub_ = nh.advertise<std_msgs::Empty>("planning/heartbeat", 10);
+    broadcast_ploytraj_pub_ = nh.advertise<traj_utils::MINCOTraj>("/broadcast_traj_from_planner", 10);
+    poly_traj_pub_ = nh.advertise<traj_utils::PolyTraj>("planner/trajectory", 10);
+    heartbeat_pub_ = nh.advertise<std_msgs::Empty>("planner/heartbeat", 10);
     ground_height_pub_ = nh.advertise<std_msgs::Float64>("/ground_height_measurement", 10);
-    state_pub_ = nh.advertise<std_msgs::String>("planner_state", 10);
-    // time_benchmark_pub_ = nh.advertise<trajectory_server_msgs::TimeBenchmark>("plan_time_benchmark", 10);
+    state_pub_ = nh.advertise<std_msgs::String>("planner/state", 10);
+    // time_benchmark_pub_ = nh.advertise<gestelt_msgs::TimeBenchmark>("plan_time_benchmark", 10);
 
     if (waypoint_type_ == TARGET_TYPE::MANUAL_TARGET)
     {
-      waypoint_sub_ = nh.subscribe("/goal", 1, &EGOReplanFSM::waypointCallback, this);
+      waypoint_sub_ = nh.subscribe("/goal", 1, &EGOReplanFSM::waypointCB, this);
     }
     else if (waypoint_type_ == TARGET_TYPE::PRESET_TARGET)
     {
@@ -138,7 +138,7 @@ namespace ego_planner
     state_pub_.publish(planner_state);
 
     // Publish time benchmarks
-    // trajectory_server_msgs::TimeBenchmark time_bench_msg;
+    // gestelt_msgs::TimeBenchmark time_bench_msg;
     // time_bench_msg.planner_cpu_time = time_benchmark_->get_elapsed_cpu_time("planFromLocalTraj");
     // time_bench_msg.planner_wall_time = time_benchmark_->get_elapsed_wall_time("planFromLocalTraj");
 
@@ -572,7 +572,7 @@ namespace ego_planner
     }
   }
 
-  void EGOReplanFSM::waypointCallback(const geometry_msgs::PoseStampedPtr &msg)
+  void EGOReplanFSM::waypointCB(const geometry_msgs::PoseStampedPtr &msg)
   {
     Eigen::Vector3d wp(
         msg->pose.position.x,
@@ -595,19 +595,19 @@ namespace ego_planner
     planNextWaypoint(waypoints_.getStartWP(), waypoints_.getLast());
   }
 
-  void EGOReplanFSM::waypointsCB(const trajectory_server_msgs::WaypointsPtr &msg)
+  void EGOReplanFSM::waypointsCB(const gestelt_msgs::GoalsPtr &msg)
   {
     if (!have_odom_)
     {
       logError("No odom received, rejecting waypoints!");
       return;
     }
-    if (msg->waypoints.poses.size() <= 0)
+    if (msg->transforms.size() <= 0)
     {
       logError("Received empty waypoints");
       return;
     }
-    if (msg->waypoints.header.frame_id != "world" && msg->waypoints.header.frame_id != "map" )
+    if (msg->header.frame_id != "world" && msg->header.frame_id != "map" )
     {
       logError("Only waypoint goals in 'world' or 'map' frame are accepted, ignoring waypoints.");
       return;
@@ -615,14 +615,9 @@ namespace ego_planner
 
     waypoints_.reset();
 
-    for (auto pose : msg->waypoints.poses) {
-      Eigen::Vector3d wp(
-          pose.position.x,
-          pose.position.y,
-          pose.position.z);
-
+    for (auto& pos : msg->transforms) {
       // Transform received waypoints from world to UAV origin frame
-      waypoints_.addWP(wp + world_to_uav_origin_tf_);
+      waypoints_.addWP(Eigen::Vector3d{pos.translation.x, pos.translation.y, pos.translation.z} + world_to_uav_origin_tf_);
     }
 
     for (size_t i = 0; i < waypoints_.getSize(); i++)

@@ -1,0 +1,45 @@
+<launch>
+    <arg name="cfg_filepath"/>
+
+    <!-- Drone id -->
+    <arg name="drone_id"/>
+    <arg name="drone_id_ns" value="drone$(arg drone_id)"/>
+    <!-- Input/output topics -->
+    <arg name="command_topic" default="mavros/setpoint_raw/local" />
+    <arg name="odometry_topic" default="mavros/local_position/odom" />
+    <arg name="pose_topic" default="mavros/local_position/pose" />
+    <arg name="drone_origin_frame" default="world" />
+
+    <!-- Trajectory server -->
+    <node pkg="trajectory_server" name="$(arg drone_id_ns)_traj_server" type="traj_server_node" output="screen">
+        <rosparam command="load" file="$(arg cfg_filepath)" />
+        
+        <param name="drone_id" value="$(arg drone_id)"/>
+        
+        <param name="origin_frame" value="$(arg drone_origin_frame)"/>
+        <!-- <param name="drone_model_mesh" value="file://$(find gestelt_bringup)/simulation/meshes/fake_drone.dae"/> -->
+        <param name="drone_model_mesh" value="file:///home/john/gestelt_ws/src/gestelt/gestelt_bringup/simulation/meshes/fake_drone.dae"/>
+
+        <!-- Subscribed Topics -->
+        <remap from="/planner_adaptor/exec_trajectory" to="/$(arg drone_id_ns)/planner_adaptor/exec_trajectory"/>
+        
+        <remap from="/traj_server/command" to="/$(arg drone_id_ns)/traj_server/command"/>
+
+        <remap from="/mavros/state" to="/$(arg drone_id_ns)/mavros/state"/>
+        <remap from="/mavros/local_position/pose" to="/$(arg drone_id_ns)/$(arg pose_topic)"/>
+        <remap from="/mavros/local_position/odom" to="/$(arg drone_id_ns)/$(arg odometry_topic)"/>
+        
+        <remap from="/planner/state" to="/$(arg drone_id_ns)/planner/state"/>
+        
+        <!-- Published Topics -->
+        <remap from="/mavros/setpoint_raw/local" to="/$(arg drone_id_ns)/$(arg command_topic)"/>
+        <remap from="/server_state" to="/$(arg drone_id_ns)/server_state"/>
+        <remap from="/uav_path" to="/$(arg drone_id_ns)/uav_path"/>
+        <remap from="~model" to="/$(arg drone_id_ns)/model"/>
+
+        <!-- Service clients -->
+        <remap from="/mavros/cmd/arming" to="/$(arg drone_id_ns)/mavros/cmd/arming"/>
+        <remap from="/mavros/set_mode" to="/$(arg drone_id_ns)/mavros/set_mode"/>
+    </node>
+
+</launch>

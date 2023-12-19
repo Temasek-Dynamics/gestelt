@@ -1,0 +1,91 @@
+<launch>
+    <arg name="cfg_filepath"/>
+
+    <!-- Drone id -->
+    <arg name="drone_id"/>
+    <arg name="drone_id_ns" value="drone$(arg drone_id)"/>
+
+    <!-- Drone formation params -->
+    <arg name="num_drones"/>
+
+    <!-- Sensor input type -->
+    <arg name="POSE_TYPE"/>
+    <arg name="SENSOR_TYPE"/>
+    <arg name="drone_origin_frame" default="world"/>
+    <arg name="global_frame" default="world"/>
+    <arg name="cam_frame" default="cam_link"/>
+    
+    <!-- Subscribed topics -->
+    <arg name="odometry_topic"/>
+    <arg name="pose_topic"/>
+    <arg name="depth_topic"/>
+    <arg name="cloud_topic"/>
+
+    <!-- <node pkg="ego_planner_fsm" name="ego_planner_fsm_node" type="ego_planner_fsm_node" output="screen" launch-prefix="valgrind"> -->
+    <node pkg="ego_planner_fsm" name="$(arg drone_id_ns)_ego_planner_node" type="ego_planner_fsm_node" output="screen">
+        <rosparam command="load" file="$(arg cfg_filepath)" />
+
+        <param name="manager/drone_id" value="$(arg drone_id)"/>
+
+        <!-- ///// -->
+        <!-- FSM -->
+        <!-- ///// -->
+        <!-- Subscribed topics -->
+        <remap from="~fsm_odom" to="$(arg odometry_topic)"/>
+
+        <!-- Published topics -->
+        <remap from="~planner/state" to = "/$(arg drone_id_ns)/planner/state"/>
+        <remap from="~planner/trajectory" to = "/$(arg drone_id_ns)/planner_adaptor/plan_trajectory"/>
+        <remap from="~planner/heartbeat" to = "/$(arg drone_id_ns)/planner/heartbeat"/>
+
+        <!-- ///// -->
+        <!-- Mapping -->
+        <!-- ///// -->
+        <!-- Published topics -->
+        <remap from="~grid_map/occupancy" to = "$(arg drone_id_ns)/grid_map/occupancy"/>
+        <!-- Subscribed topics -->
+        <remap from="~grid_map/odom" to = "$(arg odometry_topic)"/>
+        <remap from="~grid_map/pose" to = "$(arg pose_topic)"/>
+        <remap from="~grid_map/cloud" to = "$(arg cloud_topic)"/>
+        <remap from="~grid_map/depth" to = "$(arg depth_topic)"/>
+        <remap from="~grid_map/camera_info" to="/$(arg drone_id_ns)/camera/depth/camera_info"/>
+        
+        <!-- Frame params -->
+        <param name="grid_map/global_frame" value="$(arg global_frame)"/>
+        <param name="grid_map/uav_origin_frame" value="$(arg drone_origin_frame)"/>
+        <param name="grid_map/cam_frame" value="$(arg drone_id_ns)_$(arg cam_frame)"/>
+
+        <!-- grid_map/pose_type: Toggle between subscription to
+            1 ("grid_map/pose") or 
+            2 ("grid_map/odom") or
+            3 ("/tf") 
+            for use as camera pose/odom-->
+        <param name="~grid_map/pose_type" value = "$(arg POSE_TYPE)"/>
+        <!-- grid_map/sensor_type: Toggle between subscription to
+            1 ("grid_map/cloud") or 
+            2 ("grid_map/depth") or 
+            3 ("grid_map/cloud") [For use with POSE_TYPE 3]
+            for use as camera sensor input -->
+        <param name="~grid_map/sensor_type" value="$(arg SENSOR_TYPE)"/>
+
+        <!-- formation: Affects the target position of the drone relative to the goal-->
+        <param name="formation/num" value="$(arg num_drones)"/>
+        <rosparam param="formation/start">[0, 0, 0]</rosparam>
+        <!-- <rosparam param="formation/drone0">[  0, 0, 0]</rosparam> -->
+        <rosparam param="formation/drone0">[ 0.45, -0.45, 0]</rosparam>
+        <rosparam param="formation/drone1">[ -0.45, -0.45, 0]</rosparam>
+        <rosparam param="formation/drone2">[ -0.45, 0.45, 0]</rosparam>
+        <rosparam param="formation/drone3">[ 0.45, 0.45, 0]</rosparam>
+        
+        <rosparam param="formation/drone4">[ 1.0, -1.0, 0]</rosparam>
+        <rosparam param="formation/drone5">[ -1.0, -1.0, 0]</rosparam>
+        <rosparam param="formation/drone6">[ -1.0, 1.0, 0]</rosparam>
+        <rosparam param="formation/drone7">[ 1.0, 1.0, 0]</rosparam>
+
+        <rosparam param="formation/drone8">[ 0.0, -2.0, 0]</rosparam>
+        <rosparam param="formation/drone9">[ -2.0, 0.0, 0]</rosparam>
+        <rosparam param="formation/drone10">[ 0.0, 2.0, 0]</rosparam>
+        <rosparam param="formation/drone11">[ 2.0, 0.0, 0]</rosparam>
+
+    </node>
+</launch>

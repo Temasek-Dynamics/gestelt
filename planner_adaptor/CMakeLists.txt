@@ -7,9 +7,10 @@ add_compile_options(-std=c++14)
 set(ROS_LIBRARIES
   roscpp
   std_msgs
-  # geometry_msgs
+  geometry_msgs
   gestelt_msgs
-  trajectory_msgs
+  traj_opt
+  traj_utils
 )
 
 # set (ROS_DEPENDS
@@ -28,7 +29,7 @@ find_package(Eigen3 REQUIRED)
 ###################################
 catkin_package(
  INCLUDE_DIRS include
- LIBRARIES planner_adaptor
+#  LIBRARIES planner_adaptor
 #  CATKIN_DEPENDS ${ROS_DEPENDS}
 #  DEPENDS system_lib
 )
@@ -45,22 +46,10 @@ include_directories(
   ${EIGEN3_INCLUDE_DIRS} 
 )
 
-# ## Declare a C++ library
-# add_library(${PROJECT_NAME}
-#   # src/planner_base.cpp
-#   src/a_star.cpp
-# )
-
-# ## Specify libraries to link a library or executable target against
-# target_link_libraries(${PROJECT_NAME}
-#   ${catkin_LIBRARIES}
-# )
-
-# add_executable(a_star src/a_star_node.cpp)
-# add_dependencies(a_star 
-#   ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS}
-# )
-# target_link_libraries(a_star
-#   ${catkin_LIBRARIES}
-#   ${PROJECT_NAME}
-# )
+add_executable(ego_planner_adaptor_node src/ego_planner_adaptor_node.cpp)
+add_dependencies(ego_planner_adaptor_node 
+  ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS}
+)
+target_link_libraries(ego_planner_adaptor_node
+  ${catkin_LIBRARIES}
+)

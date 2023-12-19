@@ -17,11 +17,10 @@
 #include <ego_planner_fsm/ego_planner_manager.h>
 
 #include <tf2_ros/transform_listener.h>
-
 // #include <swarm_benchmark/timebenchmark.h>
 
-#include <trajectory_server_msgs/Waypoints.h>
-// #include <trajectory_server_msgs/TimeBenchmark.h>
+#include <gestelt_msgs/Goals.h>
+// #include <gestelt_msgs/TimeBenchmark.h>
 
 using std::vector;
 
@@ -398,14 +397,14 @@ private:
    * 
    * @param msg 
    */
-  void waypointCallback(const geometry_msgs::PoseStampedPtr &msg);
+  void waypointCB(const geometry_msgs::PoseStampedPtr &msg);
 
   /**
    * @brief Multiple waypoints callback
    * 
    * @param msg 
    */
-  void waypointsCB(const trajectory_server_msgs::WaypointsPtr &msg);
+  void waypointsCB(const gestelt_msgs::GoalsPtr &msg);
 
   void mandatoryStopCallback(const std_msgs::Empty &msg);
   void odometryCallback(const nav_msgs::OdometryConstPtr &msg);

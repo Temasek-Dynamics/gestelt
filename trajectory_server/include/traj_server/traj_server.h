@@ -21,8 +21,9 @@
 #include <std_msgs/String.h>
 #include <trajectory_msgs/MultiDOFJointTrajectory.h>
 
-#include <gestelt_msgs/CommanderCommand.h>
+#include <gestelt_msgs/Command.h>
 #include <gestelt_msgs/CommanderState.h>
+#include <gestelt_msgs/ExecTrajectory.h>
 
 #include <visualization_msgs/Marker.h>
 
@@ -84,19 +85,9 @@ private: // Class Methods
   /* ROS Callbacks */
 
   /**
-  * @brief Callback for heartbeat from Planner
-  */
-  void plannerHeartbeatCb(std_msgs::EmptyPtr msg);
-
-  /**
    * @brief Callback for trajectory points from mav_trajectory_generation  
    */
-  void multiDOFJointTrajectoryCb(const trajectory_msgs::MultiDOFJointTrajectory::ConstPtr &msg);
-
-  /**
-   * @brief Callback for trajectory planner state 
-   */
-  void plannerStateCB(const std_msgs::String::ConstPtr &msg);
+  void execTrajCb(const gestelt_msgs::ExecTrajectory::ConstPtr &msg);
 
   /**
    * @brief Callback for Mavros state 
@@ -116,7 +107,7 @@ private: // Class Methods
   /**
    * @brief Callback for externally triggered server events
    */
-  void serverCommandCb(const gestelt_msgs::CommanderCommand::ConstPtr & msg);
+  void serverCommandCb(const gestelt_msgs::Command::ConstPtr & msg);
 
   /**
    * Timer callback to extract PVA commands from subscribed plan for executing trajectory.
@@ -137,7 +128,6 @@ private: // Class Methods
    * Timer callback to publish debug data such as UAV path, tracking error etc.
   */
   void debugTimerCb(const ros::TimerEvent &e);
-
 
   /* Trajectory execution methods */
 
@@ -194,13 +184,6 @@ private: // Class Methods
     return abs(uav_pose_.pose.position.z - takeoff_height_) < take_off_landing_tol_;
   }
 
-  /**
-   * Check if heartbeat from planner has timed out
-  */
-  inline bool isPlannerHeartbeatTimeout(){
-    return (ros::Time::now() - heartbeat_time_).toSec() > planner_heartbeat_timeout_;
-  }
-
   /* Publisher methods */
 
   /**
@@ -220,8 +203,6 @@ private: // Class Methods
     uint16_t type_mask = 0);
 
   /* Helper methods */
-
-  std::pair<double, double> calculate_yaw(double t_cur, Eigen::Vector3d &pos, double dt);
 
   /**
    * Send request for PX4 to switch to offboard mode and arm
@@ -352,7 +333,7 @@ private: // Member variables
   ros::Publisher server_state_pub_; // Publisher of current uav and server state
   
   /* Subscriber */
-  ros::Subscriber plan_traj_sub_; // Subscriber for planner trajectory
+  ros::Subscriber exec_traj_sub_; // Subscriber for planner trajectory
 
   ros::Subscriber planner_hb_sub_; // Subscriber to planner heartbeat
   ros::Subscriber uav_state_sub_; // Subscriber to UAV State (MavROS)
@@ -384,19 +365,10 @@ private: // Member variables
   // Last received mission yaw and yaw rate
   double last_mission_yaw_{0.0}, last_mission_yaw_dot_{0.0};
 
-  // Pair of error value and timestamp (in seconds)
-  std::deque<std::pair<double, double>> err_xy_vec;
-  std::deque<std::pair<double, double>> err_xy_dot_vec;
-  std::deque<std::pair<double, double>> err_yaw_vec;
-
   /* Flags */ 
-  ros::Time start_time_;
-  ros::Time heartbeat_time_{0};
-
   ros::Time last_traj_msg_time_{0}; // Time of last trajectory message
 
   bool first_pose_{true};
-  bool mission_completed_{true};
 
   // Values set from mavros_msgs/PositionTarget message constants
   uint16_t IGNORE_POS; // Ignore position in typemask
@@ -414,9 +386,6 @@ private: // Member variables
   std::string node_name_{"traj_server"};
   double pub_cmd_freq_; // Frequency to publish PVA commands
   double sm_tick_freq_; // Frequency of state machine ticks
-
-  double planner_heartbeat_timeout_{0.5}; // Planner heartbeat timeout
-  bool ignore_heartbeat_{false}; // Ignore planner heartbeat. Even if planner has no heartbeat, assume it is working.
 
   double takeoff_height_{0.0}; // Default height to take off to 
   double landed_height_{0.1}; // We assume that the ground is even (z = 0)

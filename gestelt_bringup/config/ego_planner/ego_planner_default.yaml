@@ -1,0 +1,83 @@
+#####
+# FSM params 
+#####
+# waypoint_type: 1 for manual publishing of single goals, 2 for sending multiple waypoints 
+fsm/waypoint_type: 2
+# thresh_replan_time: Replanning period (1/frequency)
+fsm/thresh_replan_time: 0.1
+# thresh_no_replan_meter: Replan only if current position and local target exceeds this parameter 
+fsm/thresh_no_replan_meter: 0.25
+# planning_horizon: Distance to plan for local target. Always set to 1.5 times greater than sensing horizon
+fsm/planning_horizon: 7.5
+fsm/emergency_time: 1.0
+fsm/fail_safe: true
+
+# fsm/pub_state_freq: Frequency to publish the state
+fsm/pub_state_freq: 10.0
+# fsm/pub_heartbeat_freq: Frequency to publish planner heartbeat
+fsm/pub_heartbeat_freq: 10.0
+# fsm/pub_heartbeat_freq: Timeout for TF lookup
+fsm/tf_lookup_timeout: 60.0
+
+#####
+# Mapping params
+#####
+# grid_map/global_frame: "world"
+
+
+grid_map/map_size_x: 80.0
+grid_map/map_size_y: 80.0
+grid_map/map_size_z: 20.0
+grid_map/local_map_size_x: 1.5 
+grid_map/local_map_size_y: 1.5 
+grid_map/local_map_size_z: 2.5 
+
+grid_map/sensor/max_range: 5.0
+grid_map/ground_height: -0.25
+
+grid_map/occ_grid/resolution: 0.1 
+grid_map/occ_grid/inflation: 0.2 
+grid_map/filter/downsample_cloud: false 
+grid_map/filter/depth_stride: 4 
+grid_map/filter/voxel_size: 0.1
+
+# camera intrinsic parameters 
+grid_map/k_depth_scaling_factor: 1000.0
+# camera extrinsic parameters 
+grid_map/camera_to_body/roll: 90.0
+grid_map/camera_to_body/pitch: 180.0
+grid_map/camera_to_body/yaw: 90.0
+grid_map/camera_to_body/t_x: 0.0
+grid_map/camera_to_body/t_y: 0.0
+grid_map/camera_to_body/t_z: 0.0
+
+#####
+# Manager params 
+#####
+# When changing maximum velocity and acceleration, make sure to change those on the optimization params too
+manager/max_vel: 1.5
+manager/max_acc: 6.0
+# polyTraj_piece_length: distance between adjacent B-spline control points
+manager/polyTraj_piece_length: 1.5
+# feasibility_tolerance: permitted ratio of vel/acc exceeding limits 
+manager/feasibility_tolerance: 0.05 
+manager/planning_horizon: 7.5
+manager/use_distinctive_trajs: false
+
+#####
+# Optimization params
+#####
+optimization/constraint_points_perPiece: 5 
+optimization/weight_obstacle: 10000.0 
+optimization/weight_obstacle_soft: 5000.0 
+optimization/weight_swarm: 50000.0 
+optimization/weight_feasibility: 10000.0 
+optimization/weight_sqrvariance: 10000.0 
+optimization/weight_time: 10.0 
+optimization/weight_formation: 100 
+optimization/obstacle_clearance: 0.35 
+optimization/obstacle_clearance_soft: 0.5 
+optimization/swarm_clearance: 0.4 
+optimization/max_vel: 1.5
+optimization/max_acc: 6.0
+optimization/max_jer: 20.0

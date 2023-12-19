@@ -16,7 +16,9 @@
   <depend>std_msgs</depend>
   <depend>trajectory_msgs</depend>
   <depend>gestelt_msgs</depend>
-  <!-- <depend>geometry_msgs</depend> -->
+  <depend>geometry_msgs</depend>
+  <depend>traj_opt</depend>
+  <depend>traj_utils</depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>

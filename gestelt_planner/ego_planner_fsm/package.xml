@@ -28,7 +28,7 @@
 
   <depend>tf2_ros</depend>
   <depend>geometry_msgs</depend>
-  <depend>trajectory_server_msgs</depend>
+  <depend>gestelt_msgs</depend>
   <!-- <depend>swarm_benchmark</depend> -->
 
   <!-- The export tag contains other, unspecified, tags -->

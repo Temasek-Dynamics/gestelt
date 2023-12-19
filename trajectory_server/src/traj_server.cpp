@@ -14,8 +14,6 @@ void TrajServer::init(ros::NodeHandle& nh)
 
   // Operational params
   nh.param("traj_server/takeoff_height", takeoff_height_, 1.0);
-  nh.param("traj_server/planner_heartbeat_timeout", planner_heartbeat_timeout_, 0.5);
-  nh.param("traj_server/ignore_planner_heartbeat", ignore_heartbeat_, false);
 
   // Safety bounding box params
   nh.param("traj_server/enable_safety_box", enable_safety_box_, true);
@@ -40,11 +38,10 @@ void TrajServer::init(ros::NodeHandle& nh)
   /* Subscribers */
   /////////////////
   // Subscription to commands
-  command_server_sub_ = nh.subscribe<gestelt_msgs::CommanderCommand>("/traj_server/command", 10, &TrajServer::serverCommandCb, this);
+  command_server_sub_ = nh.subscribe<gestelt_msgs::Command>("/traj_server/command", 10, &TrajServer::serverCommandCb, this);
 
-  // Subscription to planner
-  plan_traj_sub_ = nh.subscribe("/planner/trajectory", 10, &TrajServer::multiDOFJointTrajectoryCb, this);
-  planner_hb_sub_ = nh.subscribe("/planner/heartbeat", 10, &TrajServer::plannerHeartbeatCb, this);
+  // Subscription to planner adaptor
+  exec_traj_sub_ = nh.subscribe<gestelt_msgs::ExecTrajectory>("/planner_adaptor/exec_trajectory", 10, &TrajServer::execTrajCb, this);
 
   // Subscription to UAV (via MavROS)
   uav_state_sub_ = nh.subscribe<mavros_msgs::State>("/mavros/state", 10, &TrajServer::UAVStateCb, this);
@@ -84,12 +81,7 @@ void TrajServer::init(ros::NodeHandle& nh)
 
 /* Subscriber Callbacks */
 
-void TrajServer::plannerHeartbeatCb(std_msgs::EmptyPtr msg)
-{
-  heartbeat_time_ = ros::Time::now();
-}
-
-void TrajServer::multiDOFJointTrajectoryCb(const trajectory_msgs::MultiDOFJointTrajectory::ConstPtr &msg)
+void TrajServer::execTrajCb(const gestelt_msgs::ExecTrajectory::ConstPtr &msg)
 {
   if (getServerState() != ServerState::MISSION){ 
     logError("Executing Joint Trajectory while not in MISSION mode. Ignoring!");
@@ -100,64 +92,20 @@ void TrajServer::multiDOFJointTrajectoryCb(const trajectory_msgs::MultiDOFJointT
 
   std::lock_guard<std::mutex> cmd_guard(cmd_mutex_);
 
-  // Create rotation frame from NED To ROS
-  double roll_deg = 0; // roll (x) (Degrees)180
-  double pitch_deg = 0;   // pitch (y)0
-  double yaw_deg =  0;   // yaw (z)90
-
-  // euler in radians
-  double roll = (M_PI/180.0) * roll_deg; 
-  double pitch = (M_PI/180.0) * pitch_deg;  
-  double yaw = (M_PI/180.0) * yaw_deg; 
-
-  Eigen::Matrix3d rot_mat;
-
-  // Anti-Clockwise rotation is positive
-  rot_mat << cos(yaw) * cos(pitch),    -sin(yaw) * cos(roll) + cos(yaw) * sin(pitch) * sin(roll),    sin(yaw) * sin(roll) + cos(yaw) * sin(pitch) * cos(roll), 
-             sin(yaw) * cos(pitch),     cos(yaw) * cos(roll) + sin(yaw) * sin(pitch) * sin(roll),    -cos(yaw) * sin(roll) + sin(yaw) * sin(pitch) * cos(roll),
-             -sin(pitch),                  cos(pitch) * sin(roll),                                            cos(pitch) * cos(yaw);
-
-
-  // We only take the first point of the trajectory
-  // Message breakdown:
-  // msg.joint_names: contain "base_link"
-  // msg.points: Contains only a single point
-  // msg.points[0].time_from_start: current_sample_time_
-
-  std::string frame_id = msg->joint_names[0];
+  // std::string frame_id = msg->header.frame_id;
   
-  mission_type_mask_ = 0; // Don't ignore anything
+  mission_type_mask_ = msg->type_mask; 
 
-  // Check if position exists, else ignore
-  if (msg->points[0].transforms.empty()){
-    mission_type_mask_ |= IGNORE_POS;
-  }
-  else {
-    geomMsgsVector3ToEigenVector3(msg->points[0].transforms[0].translation, last_mission_pos_);
-    last_mission_yaw_ = quaternionToRPY(msg->points[0].transforms[0].rotation)(2);
+  geomMsgsVector3ToEigenVector3(msg->transform.translation, last_mission_pos_);
+  last_mission_yaw_ = quaternionToRPY(msg->transform.rotation)(2); // yaw
 
-    // last_mission_pos_ = rot_mat * last_mission_pos_;
-  }
+  geomMsgsVector3ToEigenVector3(msg->velocity.linear, last_mission_vel_);
+  last_mission_yaw_dot_ = msg->velocity.angular.z; //yaw rate
+  // ROS_INFO("received velocity: %f, %f, %f", last_mission_vel_(0), last_mission_vel_(1), last_mission_vel_(2));
 
-  // Check if velocity exists, else ignore
-  if (msg->points[0].velocities.empty()){
-    mission_type_mask_ |= IGNORE_VEL;
-  }
-  else {
-    geomMsgsVector3ToEigenVector3(msg->points[0].velocities[0].linear, last_mission_vel_);
-    last_mission_yaw_dot_ = msg->points[0].velocities[0].angular.z; //yaw rate
-    // ROS_INFO("received velocity: %f, %f, %f", last_mission_vel_(0), last_mission_vel_(1), last_mission_vel_(2));
-  }
+  geomMsgsVector3ToEigenVector3(msg->acceleration.linear, last_mission_acc_);
+  // ROS_INFO("received acceleration: %f, %f, %f", last_mission_acc_(0), last_mission_acc_(1), last_mission_acc_(2));
 
-  // Check if acceleration exists, else ignore
-  if (msg->points[0].accelerations.empty()){
-    mission_type_mask_ |= IGNORE_ACC;
-  }
-  else {
-    geomMsgsVector3ToEigenVector3(msg->points[0].accelerations[0].linear, last_mission_acc_);
-    // ROS_INFO("received acceleration: %f, %f, %f", last_mission_acc_(0), last_mission_acc_(1), last_mission_acc_(2));
-  }
-  // ROS_INFO("mission_type_mask_: %d", mission_type_mask_);
 }
 
 void TrajServer::UAVStateCb(const mavros_msgs::State::ConstPtr &msg)
@@ -192,7 +140,7 @@ void TrajServer::UAVOdomCB(const nav_msgs::Odometry::ConstPtr &msg)
   uav_odom_ = *msg;
 }
 
-void TrajServer::serverCommandCb(const gestelt_msgs::CommanderCommand::ConstPtr & msg)
+void TrajServer::serverCommandCb(const gestelt_msgs::Command::ConstPtr & msg)
 {
   if (msg->command < 0 || msg->command > ServerEvent::EMPTY_E){
     logError("Invalid server command, ignoring...");
@@ -231,20 +179,11 @@ void TrajServer::execTrajTimerCb(const ros::TimerEvent &e)
       break;
     
     case ServerState::MISSION:
-      if (!isExecutingMission()){
-        logInfoThrottled("Waiting for mission", 5.0);
-        // ROS_INFO("in waiting for mission");
+      if (!isExecutingMission()){ // isExecutingMission() is true if last exec trajectory message did not exceed timeout
+        logInfoThrottled("No Mission Received, waiting...", 2.0);
         execHover();
       }
       else {
-        // ROS_INFO("ServerState received velocity: %f, %f, %f", last_mission_vel_(0), last_mission_vel_(1), last_mission_vel_(2));
-
-        if (!ignore_heartbeat_ && isPlannerHeartbeatTimeout()){
-          logErrorThrottled("[traj_server] Lost heartbeat from the planner.", 1.0);
-          ROS_INFO("in lost heartbeat"); 
-          execHover();
-        }
-        // ROS_INFO("final ServerState::MISSION,mission_vel: %f, %f, %f", last_mission_vel_(0), last_mission_vel_(1), last_mission_vel_(2));
         execMission();
       }
       break;
@@ -475,8 +414,7 @@ void TrajServer::execLand()
   Eigen::Vector3d pos;
   pos << uav_pose_.pose.position.x, uav_pose_.pose.position.y, landed_height_;
 
-  publishCmd( pos, Vector3d::Zero(), 
-              Vector3d::Zero(), Vector3d::Zero(), 
+  publishCmd( pos, Vector3d::Zero(), Vector3d::Zero(), Vector3d::Zero(), 
               last_mission_yaw_, 0, 
               type_mask);
 }
@@ -488,8 +426,7 @@ void TrajServer::execTakeOff()
   Eigen::Vector3d pos = last_mission_pos_;
   pos(2) = takeoff_height_;
 
-  publishCmd( pos, Vector3d::Zero(), 
-              Vector3d::Zero(), Vector3d::Zero(), 
+  publishCmd( pos, Vector3d::Zero(), Vector3d::Zero(), Vector3d::Zero(), 
               last_mission_yaw_, 0, 
               type_mask);
 }
@@ -499,12 +436,10 @@ void TrajServer::execHover()
   int type_mask = IGNORE_VEL | IGNORE_ACC | IGNORE_YAW_RATE ; // Ignore Velocity, Acceleration and yaw rate
   Eigen::Vector3d pos = last_mission_pos_;
 
-  if (pos(2) < 0.1){
-    pos(2) = takeoff_height_;
-  }
+  // ensure that hover z position does not fall below 0.2m
+  pos(2) = pos(2) < 0.2 ? 0.2 : pos(2);
 
-  publishCmd( pos, Vector3d::Zero(), 
-              Vector3d::Zero(), Vector3d::Zero(), 
+  publishCmd( pos, Vector3d::Zero(), Vector3d::Zero(), Vector3d::Zero(), 
               last_mission_yaw_, 0, 
               type_mask);
 }
@@ -513,8 +448,7 @@ void TrajServer::execMission()
 {
   std::lock_guard<std::mutex> cmd_guard(cmd_mutex_);
   // ROS_INFO("execMission() mission_vel: %f, %f, %f", last_mission_vel_(0), last_mission_vel_(1), last_mission_vel_(2));
-  publishCmd( last_mission_pos_, last_mission_vel_, 
-              last_mission_acc_, last_mission_jerk_, 
+  publishCmd( last_mission_pos_, last_mission_vel_, last_mission_acc_, last_mission_jerk_, 
               last_mission_yaw_, last_mission_yaw_dot_, 
               mission_type_mask_);
 }
@@ -524,11 +458,9 @@ void TrajServer::execMission()
 void TrajServer::publishCmd(
   Vector3d p, Vector3d v, Vector3d a, Vector3d j, double yaw, double yaw_rate, uint16_t type_mask)
 {
-  if (enable_safety_box_){
-    if (!checkPositionLimits(safety_box_, p)) {
-      // If position safety limit check failed, switch to hovering mode
-      setServerEvent(ServerEvent::HOVER_E);
-    }
+  if (enable_safety_box_ && !checkPositionLimits(safety_box_, p)) {
+    // If position safety limit check failed, switch to hovering mode
+    setServerEvent(ServerEvent::HOVER_E);
   }
 
   mavros_msgs::PositionTarget pos_cmd;

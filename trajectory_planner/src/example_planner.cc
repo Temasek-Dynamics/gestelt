@@ -46,16 +46,17 @@ void ExamplePlanner::waypointsCB(const gestelt_msgs::GoalsPtr &msg){
   goal_waypoints_.clear(); // Clear existing goal waypoints
   goal_waypoints_acc_.clear(); // Clear existing goal waypoints acc
 
-  ROS_INFO("[Trajectory Planner] No. of waypoints: %ld", msg->waypoints.size());
+  ROS_INFO("[Trajectory Planner] No. of waypoints: %ld", msg->transforms.size());
    
-  for (auto pose : msg->waypoints) {
-    Eigen::Vector3d wp(
-        pose.position.x,
-        pose.position.y,
-        pose.position.z);
+  for (auto pos : msg->transforms) {
     // Transform received waypoints from world to UAV origin frame
-    goal_waypoints_.push_back(wp);
-    ROS_INFO("MSG waypoints: %f, %f, %f", wp[0], wp[1], wp[2]);
+    goal_waypoints_.push_back(Eigen::Vector3d{
+        pos.translation.x,
+        pos.translation.y,
+        pos.translation.z});
+    ROS_INFO("MSG waypoints: %f, %f, %f", pos.translation.x,
+        pos.translation.y,
+        pos.translation.z);
   }
 
   for (auto acc : msg->accelerations) {
@@ -86,7 +87,7 @@ bool ExamplePlanner::planTrajectory(const std::vector<Eigen::Vector3d>& wp_pos,
 
   // 3 Dimensional trajectory => through carteisan space, no orientation
   const int dimension = 3;
-  // Optimze up to 4th order derivative (SNAP)
+  // Optimize up to 4th order derivative (SNAP)
   const int derivative_to_optimize =
       mav_trajectory_generation::derivative_order::SNAP;
 
