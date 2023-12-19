@@ -21,7 +21,7 @@ sudo apt install ros-${ROS_DISTRO}-mavlink ros-${ROS_DISTRO}-mavros ros-${ROS_DI
 ```bash
 mkdir -p ~/gestelt_ws/src/
 cd ~/gestelt_ws/src
-git clone https://github.com/JohnTGZ/gestelt.git -b min_snap
+git clone https://github.com/JohnTGZ/gestelt.git -b min_snap_tianchensun
 cd gestelt
 vcs import < simulators.repos --recursive
 vcs import < thirdparty.repos --recursive
@@ -59,6 +59,7 @@ make distclean
 cd ~/gestelt_ws/
 
 # Building for debugging/development
+catkin config --merge-devel
 catkin build
 # Building for release mode (For use on Radxa)
 catkin build -DCMAKE_BUILD_TYPE=Release
