@@ -12,8 +12,8 @@ public:
   EgoPlannerAdaptor(){};
 
   virtual void init_planner_specific_topics(ros::NodeHandle& nh){
-    planner_goals_pub_ = nh.advertise<gestelt_msgs::Goals>("/planner/goals", 5); 
-    plan_traj_sub_ = nh.subscribe("/planner/trajectory", 10, &EgoPlannerAdaptor::planTrajectoryCB, this);
+    planner_goals_pub_ = nh.advertise<gestelt_msgs::Goals>("planner/goals", 5); 
+    plan_traj_sub_ = nh.subscribe("planner/trajectory", 10, &EgoPlannerAdaptor::planTrajectoryCB, this);
   }
 
   /**

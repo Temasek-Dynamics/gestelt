@@ -11,7 +11,6 @@
     /$(arg drone_id_ns)_ego_planner_node/grid_map/occupancy
     /$(arg drone_id_ns)_ego_planner_node/optimal_list
     /$(arg drone_id_ns)_ego_planner_node/goal_point
-    /$(arg drone_id_ns)/uav_path
     /$(arg drone_id_ns)/$(arg pose_topic)
     /$(arg drone_id_ns)/model
     ">

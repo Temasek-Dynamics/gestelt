@@ -4,22 +4,11 @@
     <!-- Drone id -->
     <arg name="drone_id"/>
     <arg name="drone_id_ns" value="drone$(arg drone_id)"/>
-
+    
     <!-- Trajectory server -->
-    <node pkg="planner_adaptor" name="$(arg drone_id_ns)_ego_planner_adaptor" 
-        type="ego_planner_adaptor_node" output="screen" >
+    <node pkg="planner_adaptor" name="ego_planner_adaptor" 
+        type="ego_planner_adaptor_node" output="screen" ns="$(arg drone_id_ns)" >
         <rosparam command="load" file="$(arg cfg_filepath)" />
-
-        <!-- Subscribed topics -->
-        <!-- <remap from="/planner_adaptor/goals" to="/planner_adaptor/goals"/> -->
-        <remap from="/planner/heartbeat" to = "/$(arg drone_id_ns)/planner/heartbeat"/>
-        <remap from="/planner/trajectory" to = "/$(arg drone_id_ns)/planner/trajectory"/>
-
-        <!-- Published topics -->
-        <remap from="/traj_server/command" to="/$(arg drone_id_ns)/traj_server/command"/>
-        <remap from="/planner/goals" to = "/$(arg drone_id_ns)/planner/goals"/>
-        <remap from="/planner_adaptor/exec_trajectory" to="/$(arg drone_id_ns)/planner_adaptor/exec_trajectory"/>
-
     </node>
 
 </launch>

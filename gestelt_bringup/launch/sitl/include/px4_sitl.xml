@@ -74,16 +74,23 @@
         <param name="local_position/tf/send" value="true"/>
         <param name="local_position/tf/frame_id" value="$(arg drone_id_ns)_origin"/>
         <param name="local_position/tf/child_frame_id" value="$(arg drone_id_ns)_base_link"/>
+      </node>
 
-        <param name="copter_visualization/local_position" value="$(arg drone_id_ns)/mavros/local_position/local"/>
-        <param name="copter_visualization/local_setpoint" value="$(arg drone_id_ns)/mavros/setpoint_position/local"/>
+      <!-- Drone Visualization -->
+      <node pkg="mavros_extras" type="visualization" name="mavros_visualization" required="false" output="screen">
 
-        <param name="copter_visualization/track_markers" value="$(arg drone_id_ns)/track_markers"/>
-        <param name="copter_visualization/vehicle_markers" value="$(arg drone_id_ns)/vehicle_markers"/>
-        <param name="copter_visualization/wp_markers" value="$(arg drone_id_ns)/wp_markers"/>
+        <remap from="local_position" to="mavros/local_position/pose"/>
+        <remap from="local_setpoint" to="mavros/setpoint_position/local"/>
         
-        <param name="copter_visualization/fixed_frame_id" value="$(arg drone_id_ns)_origin"/>
-        <param name="copter_visualization/child_frame_id" value="$(arg drone_id_ns)_base_link"/>
+        <param name="fixed_frame_id" value="$(arg drone_id_ns)_origin"/>
+        <param name="child_frame_id" value="$(arg drone_id_ns)_base_link"/>
+
+        <param name="marker_scale" value="1.0"/>
+        <param name="num_rotors" value="4"/>
+        <param name="arm_len" value="0.085"/>
+        <param name="body_width" value="0.1"/>
+        <param name="body_height" value="0.11"/>
+        <param name="max_track_size" value="1000"/>
 
       </node>
 

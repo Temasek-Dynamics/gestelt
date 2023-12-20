@@ -3,11 +3,12 @@
 int main(int argc, char **argv)
 {
   ros::init(argc, argv, "ego_planner_adaptor");
-  ros::NodeHandle nh("~");
+  ros::NodeHandle nh;
+  ros::NodeHandle pnh("~");
 
   EgoPlannerAdaptor ego_planner_adaptor;
 
-  ego_planner_adaptor.init(nh);
+  ego_planner_adaptor.init(nh, pnh);
 
   ros::MultiThreadedSpinner spinner(2);
   spinner.spin();

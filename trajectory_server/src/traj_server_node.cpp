@@ -3,11 +3,12 @@
 int main(int argc, char **argv)
 {
   ros::init(argc, argv, "traj_server");
-  ros::NodeHandle nh("~");
+  ros::NodeHandle nh;
+  ros::NodeHandle pnh("~");
 
-  TrajServer traj_server;
+  TrajectoryServer traj_server;
 
-  traj_server.init(nh);
+  traj_server.init(nh, pnh);
 
   ros::MultiThreadedSpinner spinner(2);
   spinner.spin();

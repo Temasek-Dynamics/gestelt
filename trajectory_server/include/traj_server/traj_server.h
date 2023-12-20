@@ -75,10 +75,10 @@ struct SafetyLimits{
   double min_z{0}, max_z{0};
 };
 
-class TrajServer{
+class TrajectoryServer{
 public:
   /* Initialization methods */
-  void init(ros::NodeHandle& nh);
+  void init(ros::NodeHandle& nh, ros::NodeHandle& pnh);
 
 private: // Class Methods
 
@@ -329,7 +329,6 @@ private: // Member variables
 
   /* Publisher  */
   ros::Publisher pos_cmd_raw_pub_; // Publisher of commands for PX4 
-  ros::Publisher uav_path_pub_; // Publisher of UAV pose history
   ros::Publisher server_state_pub_; // Publisher of current uav and server state
   
   /* Subscriber */
@@ -357,7 +356,6 @@ private: // Member variables
 
   geometry_msgs::PoseStamped uav_pose_; // Current pose of UAV
   nav_msgs::Odometry uav_odom_; // Current odometry of UAV
-  std::deque<geometry_msgs::PoseStamped> uav_poses_; // History of UAV poses
 
   // Last received mission PVAJ (position, velocity, acceleration, Jerk)
   Eigen::Vector3d last_mission_pos_{0.0, 0.0, 0.0}, last_mission_vel_{0.0, 0.0, 0.0};
@@ -390,8 +388,6 @@ private: // Member variables
   double takeoff_height_{0.0}; // Default height to take off to 
   double landed_height_{0.1}; // We assume that the ground is even (z = 0)
   double take_off_landing_tol_{0.1}; // tolerance within desired take off or landing 
-
-  int uav_pose_history_size_; // Maximum UAV pose history size
 
   double traj_msg_timeout_{0.2}; 
 

@@ -91,24 +91,23 @@ def main():
 
     # length = 12
     # d = length/2
-    d = 10.5
-
-    for i in range(10):
-        transforms.append(create_transform(d, 0, 1))
-        transforms.append(create_transform(d, d, 1))
-        transforms.append(create_transform(-d, d, 1))
-        transforms.append(create_transform(-d, -d, 1))
-        transforms.append(create_transform(d, -d, 1))
-        transforms.append(create_transform(0, 0, 1))
-
-    # d = 1.5
-    # z = 0.75
+    # d = 10.5
     # for i in range(10):
-    #     waypoints.append(create_transform(d, d, z))
-    #     waypoints.append(create_transform(-d, d, z))
-    #     waypoints.append(create_transform(-d, -d, z))
-    #     waypoints.append(create_transform(d, -d, z))
-    # waypoints.append(create_transform(0, 0, z))
+    #     transforms.append(create_transform(d, 0, 1))
+    #     transforms.append(create_transform(d, d, 1))
+    #     transforms.append(create_transform(-d, d, 1))
+    #     transforms.append(create_transform(-d, -d, 1))
+    #     transforms.append(create_transform(d, -d, 1))
+    #     transforms.append(create_transform(0, 0, 1))
+
+    d = 1.5
+    z = 0.75
+    for i in range(10):
+        transforms.append(create_transform(d, d, z))
+        transforms.append(create_transform(-d, d, z))
+        transforms.append(create_transform(-d, -d, z))
+        transforms.append(create_transform(d, -d, z))
+    transforms.append(create_transform(0, 0, z))
 
     pub_goals(transforms)
 

@@ -219,13 +219,13 @@ mocap:
   use_tf: false   # ~mocap/tf
   use_pose: true  # ~mocap/pose
 
-# mount_control
-mount:
-  debounce_s: 4.0
-  err_threshold_deg: 10.0
-  negate_measured_roll: false
-  negate_measured_pitch: false
-  negate_measured_yaw: false
+# # mount_control
+# mount:
+#   debounce_s: 4.0
+#   err_threshold_deg: 10.0
+#   negate_measured_roll: false
+#   negate_measured_pitch: false
+#   negate_measured_yaw: false
 
 # odom
 odometry:
@@ -233,12 +233,12 @@ odometry:
     odom_parent_id_des: "map"    # desired parent frame rotation of the FCU's odometry
     odom_child_id_des: "base_link"    # desired child frame rotation of the FCU's odometry
 
-# px4flow
-px4flow:
-  frame_id: "px4flow"
-  ranger_fov: 0.118682      # 6.8 degrees at 5 meters, 31 degrees at 1 meter
-  ranger_min_range: 0.3     # meters
-  ranger_max_range: 5.0     # meters
+# # px4flow
+# px4flow:
+#   frame_id: "px4flow"
+#   ranger_fov: 0.118682      # 6.8 degrees at 5 meters, 31 degrees at 1 meter
+#   ranger_min_range: 0.3     # meters
+#   ranger_max_range: 5.0     # meters
 
 # vision_pose_estimate
 #   Sends VISION_POSITION_ESTIMATE to FCU from PoseStamped topic.
@@ -281,24 +281,3 @@ vibration:
 #   frame_id: "base_link"
 
 # vim:set ts=2 sw=2 et:
-
-copter_visualization:
-  # Subscribed topics
-  local_position: "mavros/local_position/local"
-  local_setpoint: "mavros/setpoint_position/local"
-  # Published topics
-  track_markers: "track_markers"
-  vehicle_marker: "vehicle_markers"
-  wp_markers: "wp_markers"
-  # Parameters
-  fixed_frame_id: "map"
-  child_frame_id: "base_link"
-  marker_scale: 1.0
-  num_rotors: 4
-  arm_len: 0.085
-  body_width: 0.085
-  body_height: 0.11
-  max_track_size: 1000
-
-
-

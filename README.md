@@ -82,7 +82,7 @@ alias killbill="killall -9 gazebo; killall -9 gzserver; killall -9 gzclient; kil
     - Here, given a minimum snap trajectory, the points are sampled and sent to the Trajectory server.
 - The trajectory execution source code is in [traj_server.cpp](trajectory_server/src/traj_server.cpp)
     - Here, each individual setpoint is converted to PVA commands and sent to the quadrotor.
-    - The function in charge of converting the minimum snap point to PVA point is `void TrajServer::multiDOFJointTrajectoryCb(const trajectory_msgs::MultiDOFJointTrajectory::ConstPtr &msg)`
+    - The function in charge of converting the minimum snap point to PVA point is `void TrajectoryServer::multiDOFJointTrajectoryCb(const trajectory_msgs::MultiDOFJointTrajectory::ConstPtr &msg)`
 - Refer to the architecture above for more information on how they are connected.
 
 ## 2. Run a fake physics-less drone simulation

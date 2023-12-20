@@ -4,69 +4,68 @@ using namespace Eigen;
 
 /* Initialization methods */
 
-void TrajServer::init(ros::NodeHandle& nh)
+void TrajectoryServer::init(ros::NodeHandle& nh, ros::NodeHandle& pnh)
 {
+  
   /////////////////
   /* ROS Params*/
   /////////////////
-  nh.param("drone_id", drone_id_, 0);
-  nh.param("origin_frame", origin_frame_, std::string("world"));
+  pnh.param("drone_id", drone_id_, 0);
+  pnh.param("origin_frame", origin_frame_, std::string("world"));
 
   // Operational params
-  nh.param("traj_server/takeoff_height", takeoff_height_, 1.0);
+  pnh.param("takeoff_height", takeoff_height_, 1.0);
+  ROS_INFO("TAKE OFF HEIGHT: %f", takeoff_height_);
 
   // Safety bounding box params
-  nh.param("traj_server/enable_safety_box", enable_safety_box_, true);
-  nh.param("traj_server/safety_box/max_x", safety_box_.max_x, -1.0);
-  nh.param("traj_server/safety_box/min_x", safety_box_.min_x, -1.0);
-  nh.param("traj_server/safety_box/max_y", safety_box_.max_y, -1.0);
-  nh.param("traj_server/safety_box/min_y", safety_box_.min_y, -1.0);
-  nh.param("traj_server/safety_box/max_z", safety_box_.max_z, -1.0);
-  nh.param("traj_server/safety_box/min_z", safety_box_.min_z, -1.0);
+  pnh.param("enable_safety_box", enable_safety_box_, true);
+  pnh.param("safety_box/max_x", safety_box_.max_x, -1.0);
+  pnh.param("safety_box/min_x", safety_box_.min_x, -1.0);
+  pnh.param("safety_box/max_y", safety_box_.max_y, -1.0);
+  pnh.param("safety_box/min_y", safety_box_.min_y, -1.0);
+  pnh.param("safety_box/max_z", safety_box_.max_z, -1.0);
+  pnh.param("safety_box/min_z", safety_box_.min_z, -1.0);
 
   // Frequency params
-  nh.param("traj_server/pub_cmd_freq", pub_cmd_freq_, 25.0); // frequency to publish commands
+  pnh.param("pub_cmd_freq", pub_cmd_freq_, 25.0); // frequency to publish commands
   double state_machine_tick_freq; // Frequency to tick the state machine transitions
-  nh.param("traj_server/state_machine_tick_freq", state_machine_tick_freq, 50.0);
+  pnh.param("state_machine_tick_freq", state_machine_tick_freq, 50.0);
   double debug_freq; // Frequency to publish debug information
-  nh.param("traj_server/debug_freq", debug_freq, 10.0);
+  pnh.param("debug_freq", debug_freq, 10.0);
 
-  // Debug display params
-  nh.param("traj_server/uav_pose_history_size", uav_pose_history_size_, 250);
 
   /////////////////
   /* Subscribers */
   /////////////////
   // Subscription to commands
-  command_server_sub_ = nh.subscribe<gestelt_msgs::Command>("/traj_server/command", 10, &TrajServer::serverCommandCb, this);
+  command_server_sub_ = nh.subscribe<gestelt_msgs::Command>("traj_server/command", 10, &TrajectoryServer::serverCommandCb, this);
 
   // Subscription to planner adaptor
-  exec_traj_sub_ = nh.subscribe<gestelt_msgs::ExecTrajectory>("/planner_adaptor/exec_trajectory", 10, &TrajServer::execTrajCb, this);
+  exec_traj_sub_ = nh.subscribe<gestelt_msgs::ExecTrajectory>("planner_adaptor/exec_trajectory", 10, &TrajectoryServer::execTrajCb, this);
 
   // Subscription to UAV (via MavROS)
-  uav_state_sub_ = nh.subscribe<mavros_msgs::State>("/mavros/state", 10, &TrajServer::UAVStateCb, this);
-  pose_sub_ = nh.subscribe<geometry_msgs::PoseStamped>("/mavros/local_position/pose", 1, &TrajServer::UAVPoseCB, this);
-  odom_sub_ = nh.subscribe<nav_msgs::Odometry>("/mavros/local_position/odom", 1, &TrajServer::UAVOdomCB, this);
+  uav_state_sub_ = nh.subscribe<mavros_msgs::State>("mavros/state", 10, &TrajectoryServer::UAVStateCb, this);
+  pose_sub_ = nh.subscribe<geometry_msgs::PoseStamped>("mavros/local_position/pose", 1, &TrajectoryServer::UAVPoseCB, this);
+  odom_sub_ = nh.subscribe<nav_msgs::Odometry>("mavros/local_position/odom", 1, &TrajectoryServer::UAVOdomCB, this);
 
   /////////////////
   /* Publishers */
   /////////////////
-  pos_cmd_raw_pub_ = nh.advertise<mavros_msgs::PositionTarget>("/mavros/setpoint_raw/local", 50);
-  uav_path_pub_ = nh.advertise<nav_msgs::Path>("/uav_path_trajectory", 50);
-  server_state_pub_ = nh.advertise<gestelt_msgs::CommanderState>("/traj_server/state", 50);
+  pos_cmd_raw_pub_ = nh.advertise<mavros_msgs::PositionTarget>("mavros/setpoint_raw/local", 50);
+  server_state_pub_ = nh.advertise<gestelt_msgs::CommanderState>("traj_server/state", 50);
 
   /////////////////
   /* Service clients */
   /////////////////
-  arming_client = nh.serviceClient<mavros_msgs::CommandBool>("/mavros/cmd/arming");
-  set_mode_client = nh.serviceClient<mavros_msgs::SetMode>("/mavros/set_mode");
+  arming_client = nh.serviceClient<mavros_msgs::CommandBool>("mavros/cmd/arming");
+  set_mode_client = nh.serviceClient<mavros_msgs::SetMode>("mavros/set_mode");
 
   /////////////////
   /* Timer callbacks */
   /////////////////
-  exec_traj_timer_ = nh.createTimer(ros::Duration(1/pub_cmd_freq_), &TrajServer::execTrajTimerCb, this);
-  tick_state_timer_ = nh.createTimer(ros::Duration(1/state_machine_tick_freq), &TrajServer::tickServerStateTimerCb, this);
-  debug_timer_ = nh.createTimer(ros::Duration(1/debug_freq), &TrajServer::debugTimerCb, this);
+  exec_traj_timer_ = nh.createTimer(ros::Duration(1/pub_cmd_freq_), &TrajectoryServer::execTrajTimerCb, this);
+  tick_state_timer_ = nh.createTimer(ros::Duration(1/state_machine_tick_freq), &TrajectoryServer::tickServerStateTimerCb, this);
+  debug_timer_ = nh.createTimer(ros::Duration(1/debug_freq), &TrajectoryServer::debugTimerCb, this);
 
   // Initialize ignore flags for mavros position target command
   IGNORE_POS = mavros_msgs::PositionTarget::IGNORE_PX | mavros_msgs::PositionTarget::IGNORE_PY | mavros_msgs::PositionTarget::IGNORE_PZ;
@@ -81,7 +80,7 @@ void TrajServer::init(ros::NodeHandle& nh)
 
 /* Subscriber Callbacks */
 
-void TrajServer::execTrajCb(const gestelt_msgs::ExecTrajectory::ConstPtr &msg)
+void TrajectoryServer::execTrajCb(const gestelt_msgs::ExecTrajectory::ConstPtr &msg)
 {
   if (getServerState() != ServerState::MISSION){ 
     logError("Executing Joint Trajectory while not in MISSION mode. Ignoring!");
@@ -108,13 +107,13 @@ void TrajServer::execTrajCb(const gestelt_msgs::ExecTrajectory::ConstPtr &msg)
 
 }
 
-void TrajServer::UAVStateCb(const mavros_msgs::State::ConstPtr &msg)
+void TrajectoryServer::UAVStateCb(const mavros_msgs::State::ConstPtr &msg)
 {
   // logInfoThrottled(string_format("State: Mode[%s], Connected[%d], Armed[%d]", msg->mode.c_str(), msg->connected, msg->armed), 1.0);
   uav_current_state_ = *msg;
 }
 
-void TrajServer::UAVPoseCB(const geometry_msgs::PoseStamped::ConstPtr &msg)
+void TrajectoryServer::UAVPoseCB(const geometry_msgs::PoseStamped::ConstPtr &msg)
 {
   if (first_pose_){
     last_mission_pos_(0) = uav_pose_.pose.position.x;
@@ -127,20 +126,15 @@ void TrajServer::UAVPoseCB(const geometry_msgs::PoseStamped::ConstPtr &msg)
   }
 
   uav_pose_ = *msg; 
-  uav_poses_.push_back(uav_pose_);
-
-  if (uav_poses_.size() > uint16_t(uav_pose_history_size_)) {
-    uav_poses_.pop_front(); // Remove the oldest pose
-  }
 
 }
 
-void TrajServer::UAVOdomCB(const nav_msgs::Odometry::ConstPtr &msg)
+void TrajectoryServer::UAVOdomCB(const nav_msgs::Odometry::ConstPtr &msg)
 {
   uav_odom_ = *msg;
 }
 
-void TrajServer::serverCommandCb(const gestelt_msgs::Command::ConstPtr & msg)
+void TrajectoryServer::serverCommandCb(const gestelt_msgs::Command::ConstPtr & msg)
 {
   if (msg->command < 0 || msg->command > ServerEvent::EMPTY_E){
     logError("Invalid server command, ignoring...");
@@ -151,7 +145,7 @@ void TrajServer::serverCommandCb(const gestelt_msgs::Command::ConstPtr & msg)
 
 /* Timer Callbacks */
 
-void TrajServer::execTrajTimerCb(const ros::TimerEvent &e)
+void TrajectoryServer::execTrajTimerCb(const ros::TimerEvent &e)
 {
   // has received vel value
   // ROS_INFO("execTrajTimerCb received velocity: %f, %f, %f", last_mission_vel_(0), last_mission_vel_(1), last_mission_vel_(2));
@@ -195,7 +189,7 @@ void TrajServer::execTrajTimerCb(const ros::TimerEvent &e)
   }
 }
 
-void TrajServer::tickServerStateTimerCb(const ros::TimerEvent &e)
+void TrajectoryServer::tickServerStateTimerCb(const ros::TimerEvent &e)
 {
   // logInfoThrottled(string_format("Current Server State: [%s]", StateToString(getServerState()).c_str()), 1.0);
 
@@ -384,7 +378,7 @@ void TrajServer::tickServerStateTimerCb(const ros::TimerEvent &e)
   }
 }
 
-void TrajServer::debugTimerCb(const ros::TimerEvent &e){
+void TrajectoryServer::debugTimerCb(const ros::TimerEvent &e){
   // Publish current Commander state
   gestelt_msgs::CommanderState state_msg;
 
@@ -396,18 +390,11 @@ void TrajServer::debugTimerCb(const ros::TimerEvent &e){
 
   server_state_pub_.publish(state_msg);
 
-  // Publish UAV Pose history
-  nav_msgs::Path uav_path;
-  uav_path.header.stamp = ros::Time::now();
-  uav_path.header.frame_id = origin_frame_; 
-  uav_path.poses = std::vector<geometry_msgs::PoseStamped>(uav_poses_.begin(), uav_poses_.end());
-
-  uav_path_pub_.publish(uav_path);
 }
 
 /* Trajectory execution methods */
 
-void TrajServer::execLand()
+void TrajectoryServer::execLand()
 {
   int type_mask = IGNORE_VEL | IGNORE_ACC | IGNORE_YAW_RATE ; // Ignore Velocity, Acceleration and yaw rate
 
@@ -419,7 +406,7 @@ void TrajServer::execLand()
               type_mask);
 }
 
-void TrajServer::execTakeOff()
+void TrajectoryServer::execTakeOff()
 { 
   int type_mask = IGNORE_VEL | IGNORE_ACC | IGNORE_YAW_RATE ; // Ignore Velocity, Acceleration and yaw rate
   
@@ -431,7 +418,7 @@ void TrajServer::execTakeOff()
               type_mask);
 }
 
-void TrajServer::execHover()
+void TrajectoryServer::execHover()
 {
   int type_mask = IGNORE_VEL | IGNORE_ACC | IGNORE_YAW_RATE ; // Ignore Velocity, Acceleration and yaw rate
   Eigen::Vector3d pos = last_mission_pos_;
@@ -444,7 +431,7 @@ void TrajServer::execHover()
               type_mask);
 }
 
-void TrajServer::execMission()
+void TrajectoryServer::execMission()
 {
   std::lock_guard<std::mutex> cmd_guard(cmd_mutex_);
   // ROS_INFO("execMission() mission_vel: %f, %f, %f", last_mission_vel_(0), last_mission_vel_(1), last_mission_vel_(2));
@@ -455,7 +442,7 @@ void TrajServer::execMission()
 
 /* Publisher methods */
 
-void TrajServer::publishCmd(
+void TrajectoryServer::publishCmd(
   Vector3d p, Vector3d v, Vector3d a, Vector3d j, double yaw, double yaw_rate, uint16_t type_mask)
 {
   if (enable_safety_box_ && !checkPositionLimits(safety_box_, p)) {
@@ -488,7 +475,7 @@ void TrajServer::publishCmd(
 
 /* Helper methods */
 
-bool TrajServer::toggleOffboardMode(bool toggle)
+bool TrajectoryServer::toggleOffboardMode(bool toggle)
   {
     bool arm_val = false;
     std::string set_mode_val = "AUTO.LOITER"; 
@@ -567,24 +554,24 @@ bool TrajServer::toggleOffboardMode(bool toggle)
     return true;
   }
 
-bool TrajServer::checkPositionLimits(SafetyLimits position_limits, Vector3d p){
+bool TrajectoryServer::checkPositionLimits(SafetyLimits position_limits, Vector3d p){
 
   if (p(0) < position_limits.min_x || p(0) > position_limits.max_x){
-    logError(string_format("Commanded x position (%f) exceeded x limits (%f-%f)", 
+    logError(string_format("Commanded x position (%f) exceeded limits (%f,%f)", 
       p(0), position_limits.min_x, position_limits.max_x));
 
     return false;
   }
   else if (p(1) < position_limits.min_y || p(1) > position_limits.max_y) {
 
-    logError(string_format("Commanded y position (%f) exceeded y limits (%f-%f)", 
+    logError(string_format("Commanded y position (%f) exceeded limits (%f,%f)", 
       p(1), position_limits.min_y, position_limits.max_y));
 
     return false;
   }
   else if (p(2) < position_limits.min_z || p(2) > position_limits.max_z) {
 
-    logError(string_format("Commanded z position (%f) exceeded z limits (%f-%f)", 
+    logError(string_format("Commanded z position (%f) exceeded limits (%f,%f)", 
       p(2), position_limits.min_z, position_limits.max_z));
 
     return false;
@@ -593,13 +580,13 @@ bool TrajServer::checkPositionLimits(SafetyLimits position_limits, Vector3d p){
   return true;
 }
 
-void TrajServer::geomMsgsVector3ToEigenVector3(const geometry_msgs::Vector3& geom_vect, Eigen::Vector3d& eigen_vect){
+void TrajectoryServer::geomMsgsVector3ToEigenVector3(const geometry_msgs::Vector3& geom_vect, Eigen::Vector3d& eigen_vect){
   eigen_vect(0) = geom_vect.x;
   eigen_vect(1) = geom_vect.y;
   eigen_vect(2) = geom_vect.z;
 }
 
-Eigen::Vector3d TrajServer::quaternionToRPY(const geometry_msgs::Quaternion& quat){
+Eigen::Vector3d TrajectoryServer::quaternionToRPY(const geometry_msgs::Quaternion& quat){
   // Quaternionf q << quat.x, quat.y, quat.z, quat.w;
   Eigen::Quaterniond q(quat.w, quat.x, quat.y, quat.z);
 

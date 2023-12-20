@@ -21,20 +21,20 @@ public:
    * 
    * @param nh 
    */
-  virtual void init(ros::NodeHandle& nh){
-    nh.param("planner_hb_timeout", planner_heartbeat_timeout_, 0.5);
-    nh.param("ignore_hb_checks", ignore_heartbeat_checks_, false);
+  virtual void init(ros::NodeHandle& nh, ros::NodeHandle& pnh){
+    pnh.param("planner_hb_timeout", planner_heartbeat_timeout_, 0.5);
+    pnh.param("ignore_hb_checks", ignore_heartbeat_checks_, false);
     double checks_freq, sample_plan_freq;
-    nh.param("checks_freq", checks_freq, 10.0);
-    nh.param("sample_plan_freq", sample_plan_freq, 30.0);
+    pnh.param("checks_freq", checks_freq, 10.0);
+    pnh.param("sample_plan_freq", sample_plan_freq, 30.0);
 
     // Subscribers
-    heartbeat_sub_ = nh.subscribe("/planner/heartbeat", 10, &PlannerAdaptor::plannerHeartbeatCB, this); // Subscription to hearbeat from the planner
     adaptor_goals_sub_ = nh.subscribe("/planner_adaptor/goals", 10, &PlannerAdaptor::goalsCB, this); // Subscription to user-defined goals, these goals are processed and sent to the planner
+    heartbeat_sub_ = nh.subscribe("planner/heartbeat", 10, &PlannerAdaptor::plannerHeartbeatCB, this); // Subscription to hearbeat from the planner
 
     // Publishers
-    traj_server_cmd_pub_ = nh.advertise<gestelt_msgs::Command>("/traj_server/command", 1); // Publishes commands to trajectory server
-    exec_traj_pub_ = nh.advertise<gestelt_msgs::ExecTrajectory>("/planner_adaptor/exec_trajectory", 5); // Trajectory points to be published to Trajectory Server
+    traj_server_cmd_pub_ = nh.advertise<gestelt_msgs::Command>("traj_server/command", 1); // Publishes commands to trajectory server
+    exec_traj_pub_ = nh.advertise<gestelt_msgs::ExecTrajectory>("planner_adaptor/exec_trajectory", 5); // Trajectory points to be published to Trajectory Server
 
     // Timers
     checks_timer_ = nh.createTimer(ros::Duration(1/checks_freq), &PlannerAdaptor::checksTimerCB, this); // Timer for checking planner heartbeat.
