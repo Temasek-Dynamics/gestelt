@@ -735,6 +735,9 @@ namespace ego_planner
 
     std::vector<Eigen::Vector3d> one_pt_wps;
     one_pt_wps.push_back(end_pt_);
+
+    // Plan global trajectory starting from agent's current position
+    // with 0 starting/ending acceleration and velocity. With a single waypoint
     bool plan_success = planner_manager_->planGlobalTrajWaypoints(
         odom_pos_, Eigen::Vector3d::Zero(), Eigen::Vector3d::Zero(),
         one_pt_wps, Eigen::Vector3d::Zero(), Eigen::Vector3d::Zero());
@@ -758,21 +761,6 @@ namespace ego_planner
       
       // visualization_->displayGoalPoint(end_pt_, Eigen::Vector4d(1, 0, 0, 1), 0.3, 0);
       visualization_->displayGlobalPathList(global_traj, 0.1, 0);
-
-      // TODO Refactor
-      /*** FSM ***/
-      if (getServerState() != READY)
-      {
-        // If already executing a trajectory then wait for it to finish
-        // Wait for Server to enter execute trajectory phase
-        while (getServerState() != EXEC_TRAJ)
-        {
-          ros::spinOnce();
-          ros::Duration(0.001).sleep();
-        }
-        // If not in READY state, Go to PLAN_LOCAL_TRAJ
-        setServerEvent(PLAN_LOCAL_TRAJ_E);
-      }
     }
     else
     {
@@ -1052,7 +1040,7 @@ namespace ego_planner
     poly_msg.coef_y.resize(6 * piece_num);
     poly_msg.coef_z.resize(6 * piece_num);
 
-    // For each point
+    // For each segment
     for (int i = 0; i < piece_num; ++i)
     {
       // Assign timestamp

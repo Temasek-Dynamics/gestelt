@@ -448,7 +448,7 @@ namespace ego_planner
     Eigen::Matrix<double, 3, 3> headState, tailState;
     headState << start_pos, start_vel, start_acc;
     tailState << waypoints.back(), end_vel, end_acc;
-    Eigen::MatrixXd innerPts;
+    Eigen::MatrixXd innerPts; // vector of 3d positions 
 
     if (waypoints.size() > 1)
     {
@@ -456,13 +456,6 @@ namespace ego_planner
       for (int i = 0; i < (int)waypoints.size() - 1; ++i)
       {
         innerPts.col(i) = waypoints[i];
-      }
-    }
-    else
-    {
-      if (innerPts.size() != 0)
-      {
-        ROS_ERROR("innerPts.size() != 0");
       }
     }
 
@@ -475,6 +468,7 @@ namespace ego_planner
     // Try replanning up to 2 times if the velocity constraints are not fulfilled
     for (int j = 0; j < 2; ++j)
     {
+      // TODO: Refactor
       // for each plan segment, calculate time using desired velocity
       for (size_t i = 0; i < waypoints.size(); ++i)
       {
@@ -482,8 +476,10 @@ namespace ego_planner
                                : (waypoints[i] - waypoints[i - 1]).norm() / des_vel;
       }
 
+      // Generate a minimum snap trajectory
       globalMJO.generate(innerPts, time_vec);
 
+      // check if any point in trajectory exceeds maximum velocity
       if (globalMJO.getTraj().getMaxVelRate() < pp_.max_vel_ ||
           start_vel.norm() > pp_.max_vel_ ||
           end_vel.norm() > pp_.max_vel_)

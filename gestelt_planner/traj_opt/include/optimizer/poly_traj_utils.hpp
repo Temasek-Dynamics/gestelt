@@ -65,6 +65,7 @@ namespace poly_traj
         {
             Eigen::Vector3d pos(0.0, 0.0, 0.0);
             double tn = 1.0;
+
             for (int i = 5; i >= 0; i--)
             {
                 pos += tn * coeffMat.col(i);
@@ -528,7 +529,9 @@ namespace poly_traj
 
         Eigen::Vector3d getPos(double t) const
         {
+            // locate the piece that time t belongs to
             int pieceIdx = locatePieceIdx(t);
+            // within that piece, get the postion at time t
             return pieces[pieceIdx].getPos(t);
         }
 
@@ -1156,19 +1159,34 @@ namespace poly_traj
             return;
         }
 
+        /**
+         * @brief 
+         * 
+         * @param inPs innerpoints
+         * @param ts time vector
+         */
         void generate(const Eigen::MatrixXd &inPs,
                              const Eigen::VectorXd &ts)
         {
+            // Default case: Single goal waypoint
             if (inPs.cols() == 0)
             {
-
-                T1(0) = ts(0);
+                T1(0) = ts(0); // Starting time
                 double t1_inv = 1.0 / T1(0);      // 1/t
                 double t2_inv = t1_inv * t1_inv;  // 1/(t^2)
                 double t3_inv = t2_inv * t1_inv;  // 1/(t^3)
-                double t4_inv = t2_inv * t2_inv;
-                double t5_inv = t4_inv * t1_inv;
-                CoefficientMat coeffMatReversed;
+                double t4_inv = t2_inv * t2_inv;  // 1/(t^4)
+                double t5_inv = t4_inv * t1_inv;  // 1/(t^5)
+                CoefficientMat coeffMatReversed; // Of type Eigen::Matrix<double, 3, 6>
+
+                // headPVA.col(0) = start pos (3x1)
+                // headPVA.col(1) = start vel (3x1)
+                // headPVA.col(2) = start acc (3x1)
+
+                // tailPVA.col(0) = end pos (3x1)
+                // tailPVA.col(1) = end vel (3x1)
+                // tailPVA.col(2) = end acc (3x1)
+
                 // 0.5 * (A_f - A_i)/(t^3) - 3 * (V_f - V_i)/(t^4) + 6 * (P_f - P_i)/(t^5) 
                 coeffMatReversed.col(5) = 0.5 * (tailPVA.col(2) - headPVA.col(2)) * t3_inv -
                                           3.0 * (headPVA.col(1) + tailPVA.col(1)) * t4_inv +
@@ -1313,6 +1331,8 @@ namespace poly_traj
             traj.reserve(N);
             for (int i = 0; i < N; i++) // For each polynomial segment
             {
+                // Block of size (6,3) at (0,0), (6,0), ... (6*(N-1), 0)
+                // Reverse rowwise (i.e. left to right -> right to left)
                 traj.emplace_back(T1(i), b.block<6, 3>(6 * i, 0).transpose().rowwise().reverse());
             }
             return traj;
