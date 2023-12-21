@@ -76,7 +76,7 @@ namespace ego_planner
     // PtsChk_t pts_check_;
 
     int drone_id_;
-    int cps_num_prePiece_;   // number of distinctive constraint points per piece
+    int cps_num_perPiece_;   // number of distinctive constraint points per piece
     int variable_num_;       // optimization variables
     int piece_num_;          // poly traj piece numbers
     int iter_num_;           // iteration of the solver
@@ -131,7 +131,12 @@ namespace ego_planner
     /* helper functions */
     const ConstraintPoints &getControlPoints(void) { return cps_; }
     const poly_traj::MinJerkOpt &getMinJerkOpt(void) { return jerkOpt_; }
-    int get_cps_num_prePiece_(void) { return cps_num_prePiece_; }
+    /**
+     * @brief Get the number of constraint points per piece
+     * 
+     * @return int 
+     */
+    int get_cps_num_perPiece_(void) { return cps_num_perPiece_; }
     double get_swarm_clearance_(void) { return swarm_clearance_; }
 
     /* main planning API */
@@ -139,12 +144,21 @@ namespace ego_planner
                             const Eigen::MatrixXd &initInnerPts, const Eigen::VectorXd &initT,
                             Eigen::MatrixXd &optimal_points, double &final_cost);
 
-    bool computePointsToCheck(poly_traj::Trajectory &traj, int id_end, PtsChk_t &pts_check);
+    /**
+     * @brief Get points along trajectory to check
+     * 
+     * @param traj Trajectory to check
+     * @param num_pieces number of pieces to check
+     * @param pts_check Vector of points to check
+     * @return true 
+     * @return false 
+     */
+    bool computePointsToCheck(poly_traj::Trajectory &traj, int num_pieces, PtsChk_t &pts_check);
 
     std::vector<std::pair<int, int>> finelyCheckConstraintPointsOnly(Eigen::MatrixXd &init_points);
 
     /**
-     * @brief check collision and set {p,v} pairs to constraint points
+     * @brief Check for collision along path and set {p,v} pairs to constraint points
      * 
      */
     CHK_RET finelyCheckAndSetConstraintPoints(std::vector<std::pair<int, int>> &segments,

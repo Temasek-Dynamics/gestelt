@@ -124,21 +124,22 @@ namespace ego_planner
     return flag_success;
   }
 
-
   bool PolyTrajOptimizer::computePointsToCheck(
       poly_traj::Trajectory &traj,
-      int id_cps_end, PtsChk_t &pts_check)
+      int num_pieces, PtsChk_t &pts_check)
   {
     pts_check.clear();
-    pts_check.resize(id_cps_end);
-    const double RES = grid_map_->getResolution(), RES_2 = RES / 2;
-    // const double DURATION = traj.getDurations().sum();
+    pts_check.resize(num_pieces);
+    const double RES = grid_map_->getResolution();
+    const double RES_2 = RES / 2;
+
     Eigen::VectorXd durations = traj.getDurations();
-    Eigen::VectorXd t_seg_start(durations.size() + 1);
+    Eigen::VectorXd t_seg_start(durations.size() + 1); // Store starting time of each segment
     t_seg_start(0) = 0;
-    for (int i = 0; i < durations.size(); ++i)
+    for (int i = 0; i < durations.size(); ++i){
       t_seg_start(i + 1) = t_seg_start(i) + durations(i);
-    const double DURATION = durations.sum();
+    }
+    const double TOTAL_TRAJ_DURATION = durations.sum(); // total duration of trajectory
     double t = 0.0, t_step = RES / max_vel_;
     Eigen::Vector3d pt_last = traj.getPos(0.0);
     // pts_check[0].push_back(pt_last);
@@ -146,7 +147,7 @@ namespace ego_planner
 
     while (true)
     {
-      if (t > DURATION)
+      if (t > TOTAL_TRAJ_DURATION) // Total trajectory duration is negative
       {
         if (touch_goal_ && pts_check.size() > 0)
         {
@@ -154,33 +155,24 @@ namespace ego_planner
         }
         else
         {
-          ROS_ERROR("UAV_%d: Failed to get points list to check. touch_goal_=%d, pts_check.size()=%d", drone_id_, touch_goal_, (int)pts_check.size());
+          ROS_ERROR("drone %d: [PolyTrajOptimizer::computePointsToCheck] Failed to get points list to check. touch_goal_=%d, pts_check.size()=%d", drone_id_, touch_goal_, (int)pts_check.size());
           pts_check.clear();
           return false;
         }
-
-        // Eigen::Vector3d last_pt = pts_check[0][0].second;
-        // for (size_t i = 0; i < pts_check.size(); ++i)
-        // {
-        //   std::cout << "--------------------" <<std::endl;
-        //   for (size_t j = 0; j < pts_check[i].size(); ++j)
-        //   {
-        //     std::cout << pts_check[i][j].first << " @ " << pts_check[i][j].second.transpose() << " " << (pts_check[i][j].second - last_pt).transpose() <<std::endl;
-        //     last_pt = pts_check[i][j].second;
-        //   }
-        // }
       }
 
-      const double next_t_stp = t_seg_start(id_piece_curr) + durations(id_piece_curr) / cps_num_prePiece_ * ((id_cps_curr + 1) - cps_num_prePiece_ * id_piece_curr);
+
+      const double next_t_stp = t_seg_start(id_piece_curr) + durations(id_piece_curr) / cps_num_perPiece_ * ((id_cps_curr + 1) - cps_num_perPiece_ * id_piece_curr);
       if (t >= next_t_stp)
       {
-        if (id_cps_curr + 1 >= cps_num_prePiece_ * (id_piece_curr + 1))
+        if (id_cps_curr + 1 >= cps_num_perPiece_ * (id_piece_curr + 1))
         {
           ++id_piece_curr;
           // std::cout << "id_piece_curr=" << id_piece_curr <<std::endl;
           // std::cout << "traj.getPieceNum()=" << traj.getPieceNum() <<std::endl;
         }
-        if (++id_cps_curr >= id_cps_end)
+        // if end of path, break
+        if (++id_cps_curr >= num_pieces)
         {
           break;
         }
@@ -188,6 +180,10 @@ namespace ego_planner
 
       // std::cout << "pts_check.size()" << pts_check.size() << " id_cps_curr=" << id_cps_curr <<std::endl;
       Eigen::Vector3d pt = traj.getPos(t);
+
+      // IF time is close to 0, 
+      //    OR size of current point check array is 0
+      //    OR distance between last and current point is more than map resolution/2
       if (t < 1e-5 || pts_check[id_cps_curr].size() == 0 || (pt - pt_last).cwiseAbs().maxCoeff() > RES_2)
       {
         pts_check[id_cps_curr].emplace_back(std::pair<double, Eigen::Vector3d>(t, pt));
@@ -207,7 +203,7 @@ namespace ego_planner
       const bool flag_first_init /*= true*/)
   {
 
-    Eigen::MatrixXd init_points = pt_data.getInitConstraintPoints(cps_num_prePiece_);
+    Eigen::MatrixXd init_points = pt_data.getInitConstraintPoints(cps_num_perPiece_);
     poly_traj::Trajectory traj = pt_data.getTraj();
 
     if (flag_first_init)
@@ -224,20 +220,24 @@ namespace ego_planner
     int same_occ_state_times = ENOUGH_INTERVAL + 1;
     bool occ, last_occ = false;
     bool flag_got_start = false, flag_got_end = false, flag_got_end_maybe = false;
-    int i_end = ConstraintPoints::two_thirds_id(init_points, touch_goal_); // only check closed 2/3 points.
+    // only check closed 2/3 points.
+    int i_end = ConstraintPoints::two_thirds_id(init_points, touch_goal_); // number of pieces to check
 
-    PtsChk_t pts_check;
+    // Get points along trajectory to check for collision
+    PtsChk_t pts_check; // Vector of constraint pieces. Within each piece is a vector of (timestamp, point position).
     if (!computePointsToCheck(traj, i_end, pts_check))
     {
       return CHK_RET::ERR;
     }
 
-    for (int i = 0; i < i_end; ++i)
+    for (int i = 0; i < i_end; ++i) // for each piece 
     {
-      for (size_t j = 0; j < pts_check[i].size(); ++j)
+      for (size_t j = 0; j < pts_check[i].size(); ++j) // for each point
       {
-        occ = grid_map_->getInflateOccupancy(pts_check[i][j].second);
+        // get occupancy value at position
+        occ = grid_map_->getInflateOccupancy(pts_check[i][j].second); 
 
+        // Case 1: IF occupied and was not previously occupied
         if (occ && !last_occ)
         {
           if (same_occ_state_times > ENOUGH_INTERVAL || i == 0)
@@ -245,20 +245,25 @@ namespace ego_planner
             in_id = i;
             flag_got_start = true;
           }
-          same_occ_state_times = 0;
+          same_occ_state_times = 0; 
           flag_got_end_maybe = false; // terminate in advance
         }
+        // Case 2: IF not occupied and was previously occupied
         else if (!occ && last_occ)
         {
           out_id = i + 1;
           flag_got_end_maybe = true;
           same_occ_state_times = 0;
         }
+        // Case 3: IF not occupied and not previously occupied
         else
         {
           ++same_occ_state_times;
         }
 
+        // IF flag_got_end_maybe = true
+        //    AND (same_occ_state_times > ENOUGH_INTERVAL)
+        //      OR (i == i_end - 1)
         if (flag_got_end_maybe && (same_occ_state_times > ENOUGH_INTERVAL || (i == i_end - 1)))
         {
           flag_got_end_maybe = false;
@@ -1125,7 +1130,7 @@ namespace ego_planner
 
     opt->initAndGetSmoothnessGradCost2PT(gradT, smoo_cost); // Smoothness cost
 
-    opt->addPVAGradCost2CT(gradT, obs_swarm_feas_qvar_costs, opt->cps_num_prePiece_); // Time int cost
+    opt->addPVAGradCost2CT(gradT, obs_swarm_feas_qvar_costs, opt->cps_num_perPiece_); // Time int cost
 
     if (opt->iter_num_ > 3 && smoo_cost / opt->piece_num_ < 10.0) // 10.0 is an experimental value that indicates the trajectory is smooth enough.
     {
@@ -1649,7 +1654,7 @@ namespace ego_planner
   /* helper functions */
   void PolyTrajOptimizer::setParam(ros::NodeHandle &nh)
   {
-    nh.param("optimization/constraint_points_perPiece", cps_num_prePiece_, -1);
+    nh.param("optimization/constraint_points_perPiece", cps_num_perPiece_, -1);
     nh.param("optimization/weight_obstacle", wei_obs_, -1.0);
     nh.param("optimization/weight_obstacle_soft", wei_obs_soft_, -1.0);
     nh.param("optimization/weight_swarm", wei_swarm_, -1.0);

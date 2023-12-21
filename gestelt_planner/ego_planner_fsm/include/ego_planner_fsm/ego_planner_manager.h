@@ -48,8 +48,8 @@ namespace ego_planner
      * @param end_vel 
      * @param formation_start_pt 
      * @param formation_end_pt 
-     * @param flag_polyInit 
-     * @param flag_randomPolyTraj 
+     * @param flag_polyInit Intialize new polynomial if true
+     * @param flag_randomPolyTraj Randomize inner points if true
      * @param touch_goal 
      * @return true 
      * @return false 
@@ -79,7 +79,7 @@ namespace ego_planner
         const Eigen::Vector3d &end_vel, const Eigen::Vector3d &end_acc);
     
     void getLocalTarget(
-        const double planning_horizen,
+        const double planning_horizon,
         const Eigen::Vector3d &start_pt, const Eigen::Vector3d &global_end_pt,
         Eigen::Vector3d &local_target_pos, Eigen::Vector3d &local_target_vel,
         bool &touch_goal);
@@ -100,7 +100,7 @@ namespace ego_planner
      * @return int Number of distinctive constraint points per piece
      */
     int getCpsNumPrePiece(void) { 
-      return ploy_traj_opt_->get_cps_num_prePiece_(); 
+      return ploy_traj_opt_->get_cps_num_perPiece_(); 
     }
     // PtsChk_t getPtsCheck(void) { return ploy_traj_opt_->get_pts_check_(); }
 

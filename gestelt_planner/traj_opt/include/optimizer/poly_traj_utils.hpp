@@ -921,15 +921,15 @@ namespace poly_traj
         ~MinJerkOpt() { A.destroy(); }
 
     private:
-        int N;
-        Eigen::Matrix3d headPVA;
-        Eigen::Matrix3d tailPVA;
-        Eigen::VectorXd T1;
+        int N; // Number of pieces
+        Eigen::Matrix3d headPVA; // Start PVA
+        Eigen::Matrix3d tailPVA; // Goal PVA
+        Eigen::VectorXd T1; // Time duration of each piece
         BandedSystem A;
-        Eigen::MatrixXd b;
+        Eigen::MatrixXd b; // Coefficient matrix. Coeffcients of 5th order polynomial [c_5, ... c_0] = b * [P_i; V_i; A_i; P_f; V_f; A_f]
 
         // Temp variables
-        Eigen::VectorXd T2;
+        Eigen::VectorXd T2; // T1 * T1
         Eigen::VectorXd T3;
         Eigen::VectorXd T4;
         Eigen::VectorXd T5;
@@ -1171,36 +1171,83 @@ namespace poly_traj
             // Default case: Single goal waypoint
             if (inPs.cols() == 0)
             {
-                T1(0) = ts(0); // Starting time
+                T1(0) = ts(0); // time duration
                 double t1_inv = 1.0 / T1(0);      // 1/t
                 double t2_inv = t1_inv * t1_inv;  // 1/(t^2)
                 double t3_inv = t2_inv * t1_inv;  // 1/(t^3)
                 double t4_inv = t2_inv * t2_inv;  // 1/(t^4)
                 double t5_inv = t4_inv * t1_inv;  // 1/(t^5)
-                CoefficientMat coeffMatReversed; // Of type Eigen::Matrix<double, 3, 6>
+                // CoefficientMat coeffMatReversed; // Of type Eigen::Matrix<double, 3, 6>
 
-                // headPVA.col(0) = start pos (3x1)
-                // headPVA.col(1) = start vel (3x1)
-                // headPVA.col(2) = start acc (3x1)
+                Eigen::Matrix<double, 6, 3> coeffMat;
 
-                // tailPVA.col(0) = end pos (3x1)
-                // tailPVA.col(1) = end vel (3x1)
-                // tailPVA.col(2) = end acc (3x1)
+                // headPVA.col(0) = start pos (3x1), col(1) = start vel (3x1), col(2) = start acc (3x1)
+                // tailPVA.col(0) = end pos (3x1), col(1) = end vel (3x1), col(2) = end acc (3x1)
+                
+                // Condition for a minimum jerk trajectory according to the Euler-Lagrange equation is that
+                // 6th derivative of position P must be 0
+                // Hence the trajectory follows a 5-th order polynomial of the form 
+                // c_5*(t^5) + c_4*(t^4) + c_3*(t^3) + c_2*(t^2) + c_1*(t) + c_0
+                
+                /* The 5-th order polynomial equation is given in b = Ax as follows: */
+                // [P_i; V_i; A_i; P_f; V_f; A_f] = [
+                //      [0,        0,          0,      0,      0, 1],
+                //      [0,        0,          0,      0,      1, 0],
+                //      [0,        0,          0,      2,      0, 0],
+                //      [t**5,     t**4,       t**3,   t**2,   t, 1],
+                //      [5*t**4,   4*t**3,     3*t**2, 2*t,    1, 0],
+                //      [20*t**3,  12*t**2,    6*t,    2,      0, 0], 
+                // ] 
+                // * [c_5, c_4, c_3, c_2, c_1, c_0]
 
-                // 0.5 * (A_f - A_i)/(t^3) - 3 * (V_f - V_i)/(t^4) + 6 * (P_f - P_i)/(t^5) 
-                coeffMatReversed.col(5) = 0.5 * (tailPVA.col(2) - headPVA.col(2)) * t3_inv -
-                                          3.0 * (headPVA.col(1) + tailPVA.col(1)) * t4_inv +
-                                          6.0 * (tailPVA.col(0) - headPVA.col(0)) * t5_inv;
-                coeffMatReversed.col(4) = (-tailPVA.col(2) + 1.5 * headPVA.col(2)) * t2_inv +
-                                          (8.0 * headPVA.col(1) + 7.0 * tailPVA.col(1)) * t3_inv +
-                                          15.0 * (-tailPVA.col(0) + headPVA.col(0)) * t4_inv;
-                coeffMatReversed.col(3) = (0.5 * tailPVA.col(2) - 1.5 * headPVA.col(2)) * t1_inv -
+                /* We the invert the A, and get the equation as x = inv(A) * b as follows: */
+                // [c_5, c_4, c_3, c_2, c_1, c_0] = [
+                //      [-6/t**5, -3/t**4, -1/(2*t**3), 6/t**5, -3/t**4, 1/(2*t**3)], 
+                //      [15/t**4, 8/t**3, 3/(2*t**2), -15/t**4, 7/t**3, -1/t**2], 
+                //      [-10/t**3, -6/t**2, -3/(2*t), 10/t**3, -4/t**2, 1/(2*t)], 
+                //      [0, 0, 1/2, 0, 0, 0], 
+                //      [0, 1, 0, 0, 0, 0], 
+                //      [1, 0, 0, 0, 0, 0]]
+                // ] 
+                // * [P_i; V_i; A_i; P_f; V_f; A_f]
+                // = [
+                //     [A_f/(2*t**3) - A_i/(2*t**3) + 6*P_f/t**5 - 6*P_i/t**5 - 3*V_f/t**4 - 3*V_i/t**4], 
+                //     [-A_f/t**2 + 3*A_i/(2*t**2) - 15*P_f/t**4 + 15*P_i/t**4 + 7*V_f/t**3 + 8*V_i/t**3], 
+                //     [A_f/(2*t) - 3*A_i/(2*t) + 10*P_f/t**3 - 10*P_i/t**3 - 4*V_f/t**2 - 6*V_i/t**2], 
+                //     [A_i/2], 
+                //     [V_i], 
+                //     [P_i]
+                // ]
+
+                // Note that in coefficients [c_5, c_4, c_3, c_2, c_1, c_0], each coefficient is a 3x1 vector
+
+                // coeffMatReversed.col(5) = 0.5 * (tailPVA.col(2) - headPVA.col(2)) * t3_inv -
+                //                           3.0 * (headPVA.col(1) + tailPVA.col(1)) * t4_inv +
+                //                           6.0 * (tailPVA.col(0) - headPVA.col(0)) * t5_inv;
+                // coeffMatReversed.col(4) = (-tailPVA.col(2) + 1.5 * headPVA.col(2)) * t2_inv +
+                //                           (8.0 * headPVA.col(1) + 7.0 * tailPVA.col(1)) * t3_inv +
+                //                           15.0 * (-tailPVA.col(0) + headPVA.col(0)) * t4_inv;
+                // coeffMatReversed.col(3) = (0.5 * tailPVA.col(2) - 1.5 * headPVA.col(2)) * t1_inv -
+                //                           (6.0 * headPVA.col(1) + 4.0 * tailPVA.col(1)) * t2_inv +
+                //                           10.0 * (tailPVA.col(0) - headPVA.col(0)) * t3_inv;
+                // coeffMatReversed.col(2) = 0.5 * headPVA.col(2);
+                // coeffMatReversed.col(1) = headPVA.col(1);
+                // coeffMatReversed.col(0) = headPVA.col(0);
+                // b = coeffMatReversed.transpose();  
+
+                coeffMat.row(0) = (headPVA.col(0)).transpose();
+                coeffMat.row(1) = (headPVA.col(1));
+                coeffMat.row(2) = (0.5 * headPVA.col(2)).transpose();
+                coeffMat.row(3) = ((0.5 * tailPVA.col(2) - 1.5 * headPVA.col(2)) * t1_inv -
                                           (6.0 * headPVA.col(1) + 4.0 * tailPVA.col(1)) * t2_inv +
-                                          10.0 * (tailPVA.col(0) - headPVA.col(0)) * t3_inv;
-                coeffMatReversed.col(2) = 0.5 * headPVA.col(2);
-                coeffMatReversed.col(1) = headPVA.col(1);
-                coeffMatReversed.col(0) = headPVA.col(0);
-                b = coeffMatReversed.transpose();
+                                          10.0 * (tailPVA.col(0) - headPVA.col(0)) * t3_inv).transpose();
+                coeffMat.row(4) = ((-tailPVA.col(2) + 1.5 * headPVA.col(2)) * t2_inv +
+                                          (8.0 * headPVA.col(1) + 7.0 * tailPVA.col(1)) * t3_inv +
+                                          15.0 * (-tailPVA.col(0) + headPVA.col(0)) * t4_inv).transpose();
+                coeffMat.row(5) = (0.5 * (tailPVA.col(2) - headPVA.col(2)) * t3_inv -
+                                          3.0 * (headPVA.col(1) + tailPVA.col(1)) * t4_inv +
+                                          6.0 * (tailPVA.col(0) - headPVA.col(0)) * t5_inv).transpose();
+                b = coeffMat;
             }
             else
             {
@@ -1333,37 +1380,46 @@ namespace poly_traj
             {
                 // Block of size (6,3) at (0,0), (6,0), ... (6*(N-1), 0)
                 // Reverse rowwise (i.e. left to right -> right to left)
+
+                // To trajectory, append (time duration of each piece, 5th order polynomial coefficients)
                 traj.emplace_back(T1(i), b.block<6, 3>(6 * i, 0).transpose().rowwise().reverse());
             }
             return traj;
         }
-
+        
+        /**
+         * @brief Get the initial Constraint Points, which is simply the positions along the trajectory
+         * 
+         * @param K Number of constraint points per piece
+         * @return Eigen::MatrixXd 
+         */
         Eigen::MatrixXd getInitConstraintPoints(const int K) const
-        {
-            Eigen::MatrixXd pts(3, N * K + 1);
+        {   
+            Eigen::MatrixXd pts(3, N * K + 1); // Each column of pts is a 3d position value
             Eigen::Vector3d pos;
             Eigen::Matrix<double, 6, 1> beta0;
             double s1, s2, s3, s4, s5;
             double step;
             int i_dp = 0;
 
-            for (int i = 0; i < N; ++i)
+            for (int i = 0; i < N; ++i) // For each piece
             {
                 const auto &c = b.block<6, 3>(i * 6, 0);
-                step = T1(i) / K;
-                s1 = 0.0;
+                step = T1(i) / K; // step is time duration / number of constraint points
+                s1 = 0.0; // Time stamp
                 double t = 0;
                 // innerLoop = K;
 
-                for (int j = 0; j <= K; ++j)
+                for (int j = 0; j <= K; ++j) // For each constraint point
                 {
                     s2 = s1 * s1;
                     s3 = s2 * s1;
                     s4 = s2 * s2;
                     s5 = s4 * s1;
                     beta0 << 1.0, s1, s2, s3, s4, s5;
+                    // pos = c_5*(t**5) + c_4*(t**4) + c_3*(t**3) + c_2*(t**2) + c_1*(t) + c_0
                     pos = c.transpose() * beta0;
-                    pts.col(i_dp) = pos;
+                    pts.col(i_dp) = pos; 
 
                     s1 += step;
                     if (j != K || (j == K && i == N - 1))

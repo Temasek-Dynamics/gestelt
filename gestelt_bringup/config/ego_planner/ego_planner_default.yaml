@@ -57,7 +57,7 @@ grid_map/camera_to_body/t_z: 0.0
 # When changing maximum velocity and acceleration, make sure to change those on the optimization params too
 manager/max_vel: 1.5
 manager/max_acc: 6.0
-# polyTraj_piece_length: distance between adjacent B-spline control points
+# polyTraj_piece_length: distance between adjacent spline control points
 manager/polyTraj_piece_length: 1.5
 # feasibility_tolerance: permitted ratio of vel/acc exceeding limits 
 manager/feasibility_tolerance: 0.05 

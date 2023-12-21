@@ -29,7 +29,7 @@ namespace ego_planner
     nh.param("fsm/waypoint_type", waypoint_type_, -1);
     nh.param("fsm/thresh_replan_time", replan_time_thresh_, -1.0);
     nh.param("fsm/thresh_no_replan_meter", min_replan_dist_, -1.0);
-    nh.param("fsm/planning_horizon", planning_horizen_, -1.0);
+    nh.param("fsm/planning_horizon", planning_horizon_, -1.0);
     nh.param("fsm/emergency_time", emergency_time_, 1.0);
     nh.param("fsm/fail_safe", enable_fail_safe_, true);
 
@@ -71,7 +71,6 @@ namespace ego_planner
                                                                   &EGOReplanFSM::RecvBroadcastMINCOTrajCallback,
                                                                   this,
                                                                   ros::TransportHints().tcpNoDelay());
-    trigger_sub_ = nh.subscribe("/traj_start_trigger", 1, &EGOReplanFSM::triggerCallback, this);
 
     /* Publishers */
     broadcast_ploytraj_pub_ = nh.advertise<traj_utils::MINCOTraj>("/broadcast_traj_from_planner", 10);
@@ -432,12 +431,6 @@ namespace ego_planner
     have_odom_ = true;
   }
 
-  void EGOReplanFSM::triggerCallback(const geometry_msgs::PoseStampedPtr &msg)
-  {
-    have_trigger_ = true;
-    logInfo("Execution of goals triggered!");
-  }
-
   void EGOReplanFSM::RecvBroadcastMINCOTrajCallback(const traj_utils::MINCOTrajConstPtr &msg)
   {
     traj_utils::MINCOTraj minco_traj = *msg;
@@ -639,7 +632,7 @@ namespace ego_planner
     start_acc_.setZero();
 
     // If this is the first time planning has been called, then initialize a random polynomial
-    bool flag_random_poly_init = (timesOfConsecutiveStateCalls().first == 1);
+    bool flag_random_poly_init = (continously_called_times_ == 1);
     bool success = false;
     for (int i = 0; i < trial_times; i++)
     {
@@ -692,18 +685,18 @@ namespace ego_planner
 
   bool EGOReplanFSM::callReboundReplan(bool flag_use_poly_init, bool flag_randomPolyTraj)
   {
-    // Get local target position and velocity 
+    // Get local target position and velocity, with planning horizon
     planner_manager_->getLocalTarget(
-        planning_horizen_, start_pt_, end_pt_,
+        planning_horizon_, start_pt_, end_pt_,
         local_target_pt_, local_target_vel_,
         touch_goal_);
 
+    bool flag_polyInit = (have_new_target_ || flag_use_poly_init);
     bool plan_success = planner_manager_->reboundReplan(
         start_pt_, start_vel_, 
         start_acc_, local_target_pt_, 
-        local_target_vel_, 
-        waypoints_.getStartWP(), waypoints_.getNextWP(), 
-        (have_new_target_ || flag_use_poly_init),
+        local_target_vel_, waypoints_.getStartWP(), 
+        waypoints_.getNextWP(), flag_polyInit,
         flag_randomPolyTraj, touch_goal_);
 
     have_new_target_ = false;
@@ -1007,21 +1000,12 @@ namespace ego_planner
     {
       msg += ", waiting for target";
     }
-    // if (!have_trigger_)
-    // {
-    //   msg += ", waiting for trigger";
-    // }
     if (planner_manager_->pp_.drone_id >= 1 && !have_recv_pre_agent_)
     {
       msg += ", haven't receive traj from previous drone";
     }
 
     logInfo(msg);
-  }
-
-  std::pair<int, EGOReplanFSM::ServerState> EGOReplanFSM::timesOfConsecutiveStateCalls()
-  {
-    return std::pair<int, ServerState>(continously_called_times_, getServerState());
   }
 
   void EGOReplanFSM::polyTraj2ROSMsg(traj_utils::PolyTraj &poly_msg, traj_utils::MINCOTraj &MINCO_msg)

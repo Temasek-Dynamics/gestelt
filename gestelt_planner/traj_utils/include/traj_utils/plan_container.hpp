@@ -20,12 +20,10 @@ namespace ego_planner
     double global_start_time; // world time
     double duration;
 
-    /* Global traj time. 
-       The corresponding global trajectory time of the current local target.
+    /* Global trajectory time of the current local target.
        Used in local target selection process */
     double glb_t_of_lc_tgt;
-    /* Global traj time. 
-       The corresponding global trajectory time of the last local target.
+    /* Global trajectory time of the last local target.
        Used in initial-path-from-last-optimal-trajectory generation process */
     double last_glb_t_of_lc_tgt;
   };
@@ -90,9 +88,9 @@ namespace ego_planner
     double max_vel_, max_acc_;     // physical limits
     double polyTraj_piece_length;  // distance between adjacient B-spline control points
     double feasibility_tolerance_; // permitted ratio of vel/acc exceeding limits
-    double planning_horizen_;
-    bool use_distinctive_trajs;
-    bool touch_goal;
+    double planning_horizon_; // Distance to plan ahead
+    bool use_distinctive_trajs; 
+    bool touch_goal; // Local target is global target
     // Denotes if it is a single drone or a swarm
     int drone_id; // single drone: drone_id <= 0, swarm: drone_id >= 1
 

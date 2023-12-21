@@ -249,15 +249,18 @@ private:
   Eigen::Vector3d formation_pos_; // Position of drone relative to formation origin
 
   // Max planning distance for the local target
-  double planning_horizen_;
+  double planning_horizon_;
   double emergency_time_; // Threshold time to deal with potential collision
   bool enable_fail_safe_; 
   bool flag_escape_emergency_; // Used to prevent repeated execution of estop functions
   bool potential_agent_to_agent_collision_{false}; // Indicates potential collision with other agents in the near future
 
-  // Indicates that all agents within a swarm have a provided trajectory
-  bool have_recv_pre_agent_; 
-  bool have_trigger_, have_target_, have_odom_, have_new_target_, touch_goal_;
+  
+  bool have_recv_pre_agent_; // Indicates all agents in swarm have provided a trajectory
+  bool have_target_; // Have a target
+  bool have_odom_; // Have received odom
+  bool have_new_target_; // Have a new target
+  bool touch_goal_; // local target is same as global target
   ServerState current_state_{ServerState::INIT};
   ServerEvent server_event_{ServerEvent::EMPTY_E};
   int continously_called_times_{0};
@@ -279,7 +282,7 @@ private:
   ros::Timer exec_state_timer_; // Timer for executing actions based on current state
 
   // Subscribers and publishers
-  ros::Subscriber waypoint_sub_, odom_sub_, trigger_sub_, broadcast_ploytraj_sub_, mandatory_stop_sub_;
+  ros::Subscriber waypoint_sub_, odom_sub_, broadcast_ploytraj_sub_, mandatory_stop_sub_;
   ros::Subscriber waypoints_sub_;
 
   ros::Publisher poly_traj_pub_, broadcast_ploytraj_pub_, heartbeat_pub_, ground_height_pub_;
@@ -408,7 +411,6 @@ private:
 
   void mandatoryStopCallback(const std_msgs::Empty &msg);
   void odometryCallback(const nav_msgs::OdometryConstPtr &msg);
-  void triggerCallback(const geometry_msgs::PoseStampedPtr &msg);
   void RecvBroadcastMINCOTrajCallback(const traj_utils::MINCOTrajConstPtr &msg);
   
   /* Helper methods */
@@ -457,9 +459,6 @@ private:
   
   /* State Machine handling methods */
   
-  // TODO: Refactor this
-  std::pair<int, EGOReplanFSM::ServerState> timesOfConsecutiveStateCalls();
-
   void printFSMExecState();
 
   ServerState getServerState(){
