@@ -636,7 +636,7 @@ namespace ego_planner
     bool success = false;
     for (int i = 0; i < trial_times; i++)
     {
-      if (callReboundReplan(true, flag_random_poly_init))
+      if (getLocalTargetAndReboundReplan(true, flag_random_poly_init))
       {
         success = true;
         break;
@@ -659,18 +659,18 @@ namespace ego_planner
     start_acc_ = info->traj.getAcc(t_cur);
 
     // Start without initializing new poly and no randomized poly
-    bool success = callReboundReplan(false, false);
+    bool success = getLocalTargetAndReboundReplan(false, false);
 
     if (!success)
     {
       // Retry: Initialize new poly and no randomized poly
-      success = callReboundReplan(true, false);
+      success = getLocalTargetAndReboundReplan(true, false);
       if (!success)
       {
         for (int i = 0; i < trial_times; i++)
         {
           // Retry: Initialize new poly and randomized poly
-          if (callReboundReplan(true, true)){
+          if (getLocalTargetAndReboundReplan(true, true)){
             success = true;
             break;
           }
@@ -683,7 +683,7 @@ namespace ego_planner
     return success;
   }
 
-  bool EGOReplanFSM::callReboundReplan(bool flag_use_poly_init, bool flag_randomPolyTraj)
+  bool EGOReplanFSM::getLocalTargetAndReboundReplan(bool flag_use_poly_init, bool flag_randomPolyTraj)
   {
     // Get local target position and velocity, with planning horizon
     planner_manager_->getLocalTarget(
@@ -1014,7 +1014,7 @@ namespace ego_planner
     auto data = &planner_manager_->traj_.local_traj;
 
     Eigen::VectorXd durs = data->traj.getDurations();
-    int piece_num = data->traj.getPieceNum();
+    int piece_num = data->traj.getPieceSize();
     poly_msg.drone_id = planner_manager_->pp_.drone_id;
     poly_msg.traj_id = data->traj_id;
     poly_msg.start_time = ros::Time(data->start_time);

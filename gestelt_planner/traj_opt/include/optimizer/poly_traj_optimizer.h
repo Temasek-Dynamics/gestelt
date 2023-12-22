@@ -18,8 +18,8 @@ namespace ego_planner
   public:
     int cp_size; // deformation points
     Eigen::MatrixXd points;
-    std::vector<std::vector<Eigen::Vector3d>> base_point; // The point at the start of the direction vector (collision point)
-    std::vector<std::vector<Eigen::Vector3d>> direction;  // Direction vector, must be normalized.
+    std::vector<std::vector<Eigen::Vector3d>> base_point; // p of the {p,v} pair. The point at the start of the direction vector (collision point)
+    std::vector<std::vector<Eigen::Vector3d>> direction;  // v of the {p,v} pair. Direction vector, must be normalized.
     std::vector<bool> flag_temp;                          // A flag that used in many places. Initialize it everytime before using it.
 
     void resize_cp(const int size_set)
@@ -130,7 +130,12 @@ namespace ego_planner
 
     /* helper functions */
     const ConstraintPoints &getControlPoints(void) { return cps_; }
+
+    /**
+     * Returns the minimum jerk optimizer object
+    */
     const poly_traj::MinJerkOpt &getMinJerkOpt(void) { return jerkOpt_; }
+
     /**
      * @brief Get the number of constraint points per piece
      * 
@@ -140,6 +145,20 @@ namespace ego_planner
     double get_swarm_clearance_(void) { return swarm_clearance_; }
 
     /* main planning API */
+
+    /**
+     * @brief Optimize a trajectory given boundary conditions, inner points and segment durations.
+     * 
+     * 
+     * @param iniState Initial state
+     * @param finState Final state
+     * @param initInnerPts Inner points
+     * @param initT Time duration at each point
+     * @param init_cstr_pts Initial constraint points
+     * @param final_cost 
+     * @return true 
+     * @return false 
+     */
     bool optimizeTrajectory(const Eigen::MatrixXd &iniState, const Eigen::MatrixXd &finState,
                             const Eigen::MatrixXd &initInnerPts, const Eigen::VectorXd &initT,
                             Eigen::MatrixXd &optimal_points, double &final_cost);

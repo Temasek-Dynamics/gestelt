@@ -177,14 +177,14 @@ public:
         }
     }
 
-    int getPieceNum() const
+    int getPieceSize() const
     {
         return pieces.size();
     }
 
     Eigen::VectorXd getDurations() const
     {
-        int N = getPieceNum();
+        int N = getPieceSize();
         Eigen::VectorXd durations(N);
         for (int i = 0; i < N; i++)
         {
@@ -195,7 +195,7 @@ public:
 
     double getTotalDuration() const
     {
-        int N = getPieceNum();
+        int N = getPieceSize();
         double totalDuration = 0.0;
         for (int i = 0; i < N; i++)
         {
@@ -206,7 +206,7 @@ public:
 
     Eigen::MatrixXd getPositions() const
     {
-        int N = getPieceNum();
+        int N = getPieceSize();
         Eigen::MatrixXd positions(3, N + 1);
         for (int i = 0; i < N; i++)
         {
@@ -279,7 +279,7 @@ public:
 
     int locatePieceIdx(double &t) const
     {
-        int N = getPieceNum(); // Get total size of pieces
+        int N = getPieceSize(); // Get total size of pieces
         int idx;
         double dur;
         for (idx = 0;
@@ -324,7 +324,7 @@ public:
 
     Eigen::Vector3d getJuncPos(int juncIdx) const
     {
-        if (juncIdx != getPieceNum())
+        if (juncIdx != getPieceSize())
         {
             return pieces[juncIdx].getCoeffMat().col(5);
         }
@@ -336,7 +336,7 @@ public:
 
     Eigen::Vector3d getJuncVel(int juncIdx) const
     {
-        if (juncIdx != getPieceNum())
+        if (juncIdx != getPieceSize())
         {
             return pieces[juncIdx].getCoeffMat().col(4);
         }
@@ -348,7 +348,7 @@ public:
 
     Eigen::Vector3d getJuncAcc(int juncIdx) const
     {
-        if (juncIdx != getPieceNum())
+        if (juncIdx != getPieceSize())
         {
             return pieces[juncIdx].getCoeffMat().col(3) * 2.0;
         }
@@ -360,7 +360,7 @@ public:
 
     double getMaxVelRate() const
     {
-        int N = getPieceNum();
+        int N = getPieceSize();
         double maxVelRate = -INFINITY;
         double tempNorm;
         for (int i = 0; i < N; i++)
@@ -373,7 +373,7 @@ public:
 
     double getMaxAccRate() const
     {
-        int N = getPieceNum();
+        int N = getPieceSize();
         double maxAccRate = -INFINITY;
         double tempNorm;
         for (int i = 0; i < N; i++)
@@ -386,7 +386,7 @@ public:
 
     bool checkMaxVelRate(const double &maxVelRate) const
     {
-        int N = getPieceNum();
+        int N = getPieceSize();
         bool feasible = true;
         for (int i = 0; i < N && feasible; i++)
         {
@@ -397,7 +397,7 @@ public:
 
     bool checkMaxAccRate(const double &maxAccRate) const
     {
-        int N = getPieceNum();
+        int N = getPieceSize();
         bool feasible = true;
         for (int i = 0; i < N && feasible; i++)
         {

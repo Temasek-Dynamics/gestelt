@@ -335,17 +335,17 @@ private:
   bool callEmergencyStop(Eigen::Vector3d stop_pos);
 
   /**
-   * @brief Plans a path using planner_manager_ methods
+   * @brief Get a local target and calls the reboundReplan method on the planner manager
    * 
    * @param flag_use_poly_init Intialize new polynomial if true
    * @param flag_randomPolyTraj Randomize inner points if true
    * @return true 
    * @return false 
    */
-  bool callReboundReplan(bool flag_use_poly_init, bool flag_randomPolyTraj);
+  bool getLocalTargetAndReboundReplan(bool flag_use_poly_init, bool flag_randomPolyTraj);
 
   /**
-   * @brief Used when no local trajectory is present, calls callReboundReplan
+   * @brief Used when no local trajectory is present, calls getLocalTargetAndReboundReplan
    * 
    * @param trial_times 
    * @return true 
@@ -354,7 +354,7 @@ private:
   bool planFromGlobalTraj(const int trial_times = 1);
 
   /**
-   * @brief Used when a local trajectory has already being planned, calls callReboundReplan
+   * @brief Used when a local trajectory has already being planned, calls getLocalTargetAndReboundReplan
    * 
    * @param trial_times 
    * @return true 

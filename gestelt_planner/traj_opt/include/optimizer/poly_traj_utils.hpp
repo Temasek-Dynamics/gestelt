@@ -407,14 +407,24 @@ namespace poly_traj
             }
         }
 
-        int getPieceNum() const
+        /**
+         * @brief Get the size of each piece i.e. the number of points in a piece
+         * 
+         * @return int 
+         */
+        int getPieceSize() const
         {
             return pieces.size();
         }
-
+        
+        /**
+         * @brief Get a vector of duration of every point
+         * 
+         * @return Eigen::VectorXd 
+         */
         Eigen::VectorXd getDurations() const
         {
-            int N = getPieceNum();
+            int N = getPieceSize();
             Eigen::VectorXd durations(N);
             for (int i = 0; i < N; i++)
             {
@@ -423,9 +433,14 @@ namespace poly_traj
             return durations;
         }
 
+        /**
+         * @brief Get the total duration of the trajectory
+         * 
+         * @return double 
+         */
         double getTotalDuration() const
         {
-            int N = getPieceNum();
+            int N = getPieceSize();
             double totalDuration = 0.0;
             for (int i = 0; i < N; i++)
             {
@@ -436,7 +451,7 @@ namespace poly_traj
 
         Eigen::MatrixXd getPositions() const
         {
-            int N = getPieceNum();
+            int N = getPieceSize();
             Eigen::MatrixXd positions(3, N + 1);
             for (int i = 0; i < N; i++)
             {
@@ -509,7 +524,7 @@ namespace poly_traj
 
         int locatePieceIdx(double &t) const
         {
-            int N = getPieceNum();
+            int N = getPieceSize();
             int idx;
             double dur;
             for (idx = 0;
@@ -552,46 +567,52 @@ namespace poly_traj
             int pieceIdx = locatePieceIdx(t);
             return pieces[pieceIdx].getJer(t);
         }
-
-        Eigen::Vector3d getJuncPos(int juncIdx) const
+        
+        /**
+         * @brief Get the position at the start of the piece
+         * 
+         * @param pieceIdx 
+         * @return Eigen::Vector3d 
+         */
+        Eigen::Vector3d getJuncPos(int pieceIdx) const
         {
-            if (juncIdx != getPieceNum())
+            if (pieceIdx != getPieceSize())
             {
-                return pieces[juncIdx].getCoeffMat().col(5);
+                return pieces[pieceIdx].getCoeffMat().col(5);
             }
             else
             {
-                return pieces[juncIdx - 1].getPos(pieces[juncIdx - 1].getDuration());
+                return pieces[pieceIdx - 1].getPos(pieces[pieceIdx - 1].getDuration());
             }
         }
 
-        Eigen::Vector3d getJuncVel(int juncIdx) const
+        Eigen::Vector3d getJuncVel(int pieceIdx) const
         {
-            if (juncIdx != getPieceNum())
+            if (pieceIdx != getPieceSize())
             {
-                return pieces[juncIdx].getCoeffMat().col(4);
+                return pieces[pieceIdx].getCoeffMat().col(4);
             }
             else
             {
-                return pieces[juncIdx - 1].getVel(pieces[juncIdx - 1].getDuration());
+                return pieces[pieceIdx - 1].getVel(pieces[pieceIdx - 1].getDuration());
             }
         }
 
-        Eigen::Vector3d getJuncAcc(int juncIdx) const
+        Eigen::Vector3d getJuncAcc(int pieceIdx) const
         {
-            if (juncIdx != getPieceNum())
+            if (pieceIdx != getPieceSize())
             {
-                return pieces[juncIdx].getCoeffMat().col(3) * 2.0;
+                return pieces[pieceIdx].getCoeffMat().col(3) * 2.0;
             }
             else
             {
-                return pieces[juncIdx - 1].getAcc(pieces[juncIdx - 1].getDuration());
+                return pieces[pieceIdx - 1].getAcc(pieces[pieceIdx - 1].getDuration());
             }
         }
 
         double getMaxVelRate() const
         {
-            int N = getPieceNum();
+            int N = getPieceSize();
             double maxVelRate = -INFINITY;
             double tempNorm;
             for (int i = 0; i < N; i++)
@@ -604,7 +625,7 @@ namespace poly_traj
 
         double getMaxAccRate() const
         {
-            int N = getPieceNum();
+            int N = getPieceSize();
             double maxAccRate = -INFINITY;
             double tempNorm;
             for (int i = 0; i < N; i++)
@@ -617,7 +638,7 @@ namespace poly_traj
 
         bool checkMaxVelRate(const double &maxVelRate) const
         {
-            int N = getPieceNum();
+            int N = getPieceSize();
             bool feasible = true;
             for (int i = 0; i < N && feasible; i++)
             {
@@ -628,7 +649,7 @@ namespace poly_traj
 
         bool checkMaxAccRate(const double &maxAccRate) const
         {
-            int N = getPieceNum();
+            int N = getPieceSize();
             bool feasible = true;
             for (int i = 0; i < N && feasible; i++)
             {
@@ -647,7 +668,7 @@ namespace poly_traj
                                int &ii, double &tt, Eigen::Vector3d &pro_pt)
         {
             bool find_project_pt = false;
-            for (int i = 0; i < getPieceNum(); ++i)
+            for (int i = 0; i < getPieceSize(); ++i)
             {
                 auto piece = pieces[i];
                 if (piece.project_pt(pt, tt, pro_pt))
@@ -669,7 +690,7 @@ namespace poly_traj
                                        const Eigen::Vector3d v,
                                        int &ii, double &tt, Eigen::Vector3d &pt)
         {
-            for (int i = 0; i < getPieceNum(); ++i)
+            for (int i = 0; i < getPieceSize(); ++i)
             {
                 const auto &piece = pieces[i];
                 if (piece.intersection_plane(p, v, tt, pt))
@@ -684,7 +705,7 @@ namespace poly_traj
         std::vector<Eigen::Vector3d> way_points()
         {
             std::vector<Eigen::Vector3d> pts;
-            for (int i = 0; i < getPieceNum(); ++i)
+            for (int i = 0; i < getPieceSize(); ++i)
             {
                 pts.push_back(pieces[i].getPos(0));
             }
@@ -701,7 +722,7 @@ namespace poly_traj
          */
         std::pair<int, double> locatePieceIdxWithRatio(double &t) const
         {
-            int N = getPieceNum();
+            int N = getPieceSize();
             int idx;
             double dur;
             double time_within_piece = t;

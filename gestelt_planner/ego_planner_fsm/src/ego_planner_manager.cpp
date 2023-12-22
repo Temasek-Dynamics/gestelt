@@ -248,8 +248,9 @@ namespace ego_planner
     Eigen::MatrixXd cps = opt.getInitConstraintPoints(getCpsNumPrePiece());
     PtsChk_t pts_to_check;
     bool ret = ploy_traj_opt_->computePointsToCheck(traj, ConstraintPoints::two_thirds_id(cps, touch_goal), pts_to_check);
-    if (ret)
+    if (ret){
       traj_.setLocalTraj(traj, pts_to_check, ros::Time::now().toSec());
+    }
 
     return ret;
   }
@@ -284,7 +285,7 @@ namespace ego_planner
     ros::Time t_start = ros::Time::now();
     ros::Duration t_init, t_opt;
 
-    /*** STEP 1: INIT ***/
+    /*** STEP 1: INIT. Get initial trajectory and {p,v} pairs ***/
 
     // t_seg_dur: time duration of segment = distance between control points / maximum velocity
     double t_seg_dur = pp_.polyTraj_piece_length / pp_.max_vel_;
@@ -300,9 +301,11 @@ namespace ego_planner
     }
 
     Eigen::MatrixXd cstr_pts = initMJO.getInitConstraintPoints(ploy_traj_opt_->get_cps_num_perPiece_());
-    vector<std::pair<int, int>> segments;
+    vector<std::pair<int, int>> segments; // segments are only needed for distinctive trajectories
 
-    // Perform A star search
+    // Check for collision along path and set {p,v} pairs to constraint points.
+    // The collision free path for the segments in collision is determined using AStar search
+    // Returns a vector of pairs (seg_start_idx, seg_end_idx)
     if (ploy_traj_opt_->finelyCheckAndSetConstraintPoints(segments, initMJO, true) == PolyTrajOptimizer::CHK_RET::ERR)
     {
       return false;
@@ -310,7 +313,7 @@ namespace ego_planner
 
     t_init = ros::Time::now() - t_start;
 
-    std::vector<Eigen::Vector3d> point_set;
+    std::vector<Eigen::Vector3d> point_set; //Used for visualization: set of constraint points
     for (int i = 0; i < cstr_pts.cols(); ++i){
       point_set.push_back(cstr_pts.col(i));
     }
@@ -320,7 +323,7 @@ namespace ego_planner
 
     /*** STEP 2: OPTIMIZE ***/
     bool flag_success = false;
-    vector<vector<Eigen::Vector3d>> vis_trajs;
+    vector<vector<Eigen::Vector3d>> vis_trajs; // Trajectory for visualization
     poly_traj::MinJerkOpt best_MJO;
 
     if (pp_.use_distinctive_trajs)
@@ -330,12 +333,12 @@ namespace ego_planner
            << "multi-trajs=" << trajs.size() << "\033[1;0m" << std::endl;
 
       poly_traj::Trajectory initTraj = initMJO.getTraj();
-      int PN = initTraj.getPieceNum();
+      int P_sz = initTraj.getPieceSize();
       Eigen::MatrixXd all_pos = initTraj.getPositions();
-      Eigen::MatrixXd innerPts = all_pos.block(0, 1, 3, PN - 1);
+      Eigen::MatrixXd innerPts = all_pos.block(0, 1, 3, P_sz - 1);
       Eigen::Matrix<double, 3, 3> headState, tailState;
       headState << initTraj.getJuncPos(0), initTraj.getJuncVel(0), initTraj.getJuncAcc(0);
-      tailState << initTraj.getJuncPos(PN), initTraj.getJuncVel(PN), initTraj.getJuncAcc(PN);
+      tailState << initTraj.getJuncPos(P_sz), initTraj.getJuncVel(P_sz), initTraj.getJuncAcc(P_sz);
       double final_cost, min_cost = 999999.0;
       for (int i = trajs.size() - 1; i >= 0; i--)
       {
@@ -375,13 +378,14 @@ namespace ego_planner
     else
     {
       poly_traj::Trajectory initTraj = initMJO.getTraj();
-      int PN = initTraj.getPieceNum();
+      int P_sz = initTraj.getPieceSize();
       Eigen::MatrixXd all_pos = initTraj.getPositions();
-      Eigen::MatrixXd innerPts = all_pos.block(0, 1, 3, PN - 1);
+      // Get innerPts, a block of size (3, P_sz-1) from column 1 onwards. This excludes the first point.
+      Eigen::MatrixXd innerPts = all_pos.block(0, 1, 3, P_sz - 1);
       Eigen::Matrix<double, 3, 3> headState, tailState;
       headState << initTraj.getJuncPos(0), initTraj.getJuncVel(0), initTraj.getJuncAcc(0);
-      tailState << initTraj.getJuncPos(PN), initTraj.getJuncVel(PN), initTraj.getJuncAcc(PN);
-      double final_cost;
+      tailState << initTraj.getJuncPos(P_sz), initTraj.getJuncVel(P_sz), initTraj.getJuncAcc(P_sz);
+      double final_cost; // Not used
       flag_success = ploy_traj_opt_->optimizeTrajectory(headState, tailState,
                                                         innerPts, initTraj.getDurations(),
                                                         cstr_pts, final_cost);
