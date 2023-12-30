@@ -128,7 +128,7 @@ def main():
         
         if (MISSION_MODE):
             # Already in MISSION 
-            # time.sleep(5)
+            time.sleep(5)
             break
         elif (not HOVER_MODE):
             # IDLE -> TAKE OFF -> HOVER
@@ -164,7 +164,7 @@ def main():
     
     g=-9.81 #m/s^2
     f=0.3*(-g) #N
-    angle=30
+    angle=60
     angle_rad=math.radians(angle)
 
     
@@ -172,6 +172,8 @@ def main():
     # MATLAB task
     # accel_list.append(create_accel(0.0,-f*np.sin(angle_rad),g+f*np.cos(angle_rad)))
 
+    # (0.0,0.0,0.0))
+    # (None,None,None)) means no constraint
     accel_list.append(create_accel(None,None,None))
     accel_list.append(create_accel(-f*np.sin(angle_rad),0.0,g+f*np.cos(angle_rad)))
     accel_list.append(create_accel(None,None,None))
