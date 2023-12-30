@@ -44,6 +44,7 @@ void ExamplePlanner::uavOdomCallback(const nav_msgs::Odometry::ConstPtr& odom) {
 // Callback to get waypoints
 void ExamplePlanner::waypointsCB(const gestelt_msgs::GoalsPtr &msg){
   goal_waypoints_.clear(); // Clear existing goal waypoints
+  goal_waypoints_vel_.clear(); // Clear existing goal waypoints vel
   goal_waypoints_acc_.clear(); // Clear existing goal waypoints acc
 
   ROS_INFO("[Trajectory Planner] No. of waypoints: %ld", msg->waypoints.size());
@@ -57,6 +58,15 @@ void ExamplePlanner::waypointsCB(const gestelt_msgs::GoalsPtr &msg){
     goal_waypoints_.push_back(wp);
     ROS_INFO("MSG waypoints: %f, %f, %f", wp[0], wp[1], wp[2]);
   }
+  for (auto vel : msg->velocities) {
+    Eigen::Vector3d wp_vel(
+        vel.linear.x,
+        vel.linear.y,
+        vel.linear.z);
+    // Transform received waypoints from world to UAV origin frame
+    goal_waypoints_vel_.push_back(wp_vel);
+    ROS_INFO("MSG_VEL waypoints: %f, %f, %f", wp_vel[0], wp_vel[1], wp_vel[2]);
+  }
 
   for (auto acc : msg->accelerations) {
     Eigen::Vector3d wp_acc(
@@ -69,7 +79,7 @@ void ExamplePlanner::waypointsCB(const gestelt_msgs::GoalsPtr &msg){
   }
 
   mav_trajectory_generation::Trajectory trajectory;
-  planTrajectory(goal_waypoints_,goal_waypoints_acc_, &trajectory);
+  planTrajectory(goal_waypoints_,goal_waypoints_vel_, goal_waypoints_acc_,msg, &trajectory);
   publishTrajectory(trajectory);
 }
 
@@ -81,7 +91,9 @@ void ExamplePlanner::setMaxSpeed(const double max_v) {
 // Plans a trajectory from the current position to the a goal position and velocity
 // we neglect attitude here for simplicity
 bool ExamplePlanner::planTrajectory(const std::vector<Eigen::Vector3d>& wp_pos,
+                                    const std::vector<Eigen::Vector3d>& wp_vel,
                                     const std::vector<Eigen::Vector3d>& wp_acc,
+                                    const gestelt_msgs::GoalsPtr &msg,
                                     mav_trajectory_generation::Trajectory* trajectory) {
 
   // 3 Dimensional trajectory => through carteisan space, no orientation
@@ -106,9 +118,17 @@ bool ExamplePlanner::planTrajectory(const std::vector<Eigen::Vector3d>& wp_pos,
     mav_trajectory_generation::Vertex middle_wp(dimension);
 
     middle_wp.addConstraint(mav_trajectory_generation::derivative_order::POSITION, wp_pos[i]);
-    if (wp_acc.size() > 0){
+
+    // velocity constraint
+    if (wp_vel.size() > 0 && msg->velocities_mask[i].data == false ){
+      middle_wp.addConstraint(mav_trajectory_generation::derivative_order::VELOCITY, wp_vel[i]);
+    }
+
+    //acceleration constraint
+    if (wp_acc.size() > 0 && msg->accelerations_mask[i].data == false){
       middle_wp.addConstraint(mav_trajectory_generation::derivative_order::ACCELERATION, wp_acc[i]);
     }
+
     vertices.push_back(middle_wp);
   }
 

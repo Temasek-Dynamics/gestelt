@@ -28,7 +28,9 @@ class ExamplePlanner {
   // Plans a trajectory to take off from the current position and
   // fly to the given altitude (while maintaining x,y, and yaw).
   bool planTrajectory(const std::vector<Eigen::Vector3d>& wp_pos,
+                      const std::vector<Eigen::Vector3d>& wp_vel,
                       const std::vector<Eigen::Vector3d>& wp_acc,
+                      const gestelt_msgs::GoalsPtr &msg,
                       mav_trajectory_generation::Trajectory* trajectory);
                       
 
@@ -63,6 +65,7 @@ class ExamplePlanner {
   double max_ang_a_;
 
   std::vector<Eigen::Vector3d> goal_waypoints_;
+  std::vector<Eigen::Vector3d> goal_waypoints_vel_;
   std::vector<Eigen::Vector3d> goal_waypoints_acc_;
   std::string trajectory_frame_id_; //frame id of planned trajectory
 };

@@ -27,7 +27,7 @@ void TrajServer::init(ros::NodeHandle& nh)
   nh.param("traj_server/safety_box/min_z", safety_box_.min_z, -1.0);
 
   // Frequency params
-  nh.param("traj_server/pub_cmd_freq", pub_cmd_freq_, 100.0); // frequency to publish commands
+  nh.param("traj_server/pub_cmd_freq", pub_cmd_freq_, 25.0); // frequency to publish commands
   double state_machine_tick_freq; // Frequency to tick the state machine transitions
   nh.param("traj_server/state_machine_tick_freq", state_machine_tick_freq, 50.0);
   double debug_freq; // Frequency to publish debug information
@@ -135,8 +135,8 @@ void TrajServer::multiDOFJointTrajectoryCb(const trajectory_msgs::MultiDOFJointT
   }
   else {
     geomMsgsVector3ToEigenVector3(msg->points[0].transforms[0].translation, last_mission_pos_);
-    last_mission_yaw_ = quaternionToRPY(msg->points[0].transforms[0].rotation)(2);
-
+    // last_mission_yaw_ = quaternionToRPY(msg->points[0].transforms[0].rotation)(2);
+   
     // last_mission_pos_ = rot_mat * last_mission_pos_;
   }
 
@@ -208,7 +208,9 @@ void TrajServer::execTrajTimerCb(const ros::TimerEvent &e)
 {
   // has received vel value
   // ROS_INFO("execTrajTimerCb received velocity: %f, %f, %f", last_mission_vel_(0), last_mission_vel_(1), last_mission_vel_(2));
-
+  last_mission_yaw_ = -M_PI/2;
+  // ROS_INFO("last_mission_yaw: %f", last_mission_yaw_);
+  
   switch (getServerState()){
     
     case ServerState::INIT:
@@ -488,7 +490,7 @@ void TrajServer::execTakeOff()
   
   Eigen::Vector3d pos = last_mission_pos_;
   pos(2) = takeoff_height_;
-
+  
   publishCmd( pos, Vector3d::Zero(), 
               Vector3d::Zero(), Vector3d::Zero(), 
               last_mission_yaw_, 0, 
@@ -513,6 +515,8 @@ void TrajServer::execHover()
 void TrajServer::execMission()
 {
   std::lock_guard<std::mutex> cmd_guard(cmd_mutex_);
+
+  mission_type_mask_ = IGNORE_YAW_RATE; // Ignore yaw rate 
   // ROS_INFO("execMission() mission_vel: %f, %f, %f", last_mission_vel_(0), last_mission_vel_(1), last_mission_vel_(2));
   publishCmd( last_mission_pos_, last_mission_vel_, 
               last_mission_acc_, last_mission_jerk_, 

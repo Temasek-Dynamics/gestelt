@@ -2,8 +2,8 @@
 import numpy as np
 import rospy
 from gestelt_msgs.msg import CommanderState, Goals, CommanderCommand
-from geometry_msgs.msg import Pose, Accel,PoseArray,AccelStamped
-from std_msgs.msg import Int8
+from geometry_msgs.msg import Pose, Accel,PoseArray,AccelStamped, Twist
+from std_msgs.msg import Int8, Bool
 import math
 import time
 # Publisher of server events to trigger change of states for trajectory server 
@@ -50,34 +50,64 @@ def create_pose(x, y, z):
 
     pose.orientation.x = 0
     pose.orientation.y = 0
-    pose.orientation.z = 0
-    pose.orientation.w = 1
+    pose.orientation.z = -0.707
+    pose.orientation.w = 0.707
 
     return pose
 def create_accel(acc_x,acc_y,acc_z):
     acc = Accel()
-    acc.linear.x = acc_x
-    acc.linear.y = acc_y
-    acc.linear.z = acc_z
-    
-    return acc
+    acc_mask = Bool()
+    if acc_x !=None:
+        acc.linear.x = acc_x
+        acc.linear.y = acc_y
+        acc.linear.z = acc_z
+        acc_mask.data=False
+    else:
+        acc_mask.data=True
+    return acc,acc_mask
+def create_vel(vel_x,vel_y,vel_z):
+    vel = Twist()
+    vel_mask = Bool()
+    if vel_x !=None:
+        vel.linear.x = vel_x
+        vel.linear.y = vel_y
+        vel.linear.z = vel_z
+        vel_mask.data=False
+    else:
+        vel_mask.data=True
+    return vel,vel_mask
 
-def pub_waypoints(waypoints,accels):
+def pub_waypoints(waypoints,accels,vels):
     wp_msg = Goals()
     wp_pos_msg=PoseArray()
     wp_acc_msg=AccelStamped()
-    
+  
+
     wp_msg.header.frame_id = "world"
     # wp_msg.waypoints.header.frame_id = "world"
     wp_pos_msg.header.frame_id = "world"
     wp_acc_msg.header.frame_id = "world"
 
     wp_msg.waypoints = waypoints
+    wp_msg.accelerations= [accel[0] for accel in accels]
+    wp_msg.velocities= [vel[0] for vel in vels]
+
+    wp_msg.accelerations_mask=[accel[1] for accel in accels]
+    wp_msg.velocities_mask=[vel[1] for vel in vels]
+    
+
+
+    # for waypoints and acceleration vector visualization
     wp_pos_msg.poses = waypoints
     if len(accels)>0:
-        wp_acc_msg.accel=accels[0]
+        wp_acc_msg.accel=accels[0][0]
+    
+    rospy.loginfo("accels: %s",wp_msg.accelerations)
+    rospy.loginfo("vels: %s",wp_msg.velocities)
 
-    wp_msg.accelerations= accels
+    rospy.loginfo("accels mask: %s",wp_msg.accelerations_mask)
+    rospy.loginfo("vels mask: %s",wp_msg.velocities_mask)
+
     waypoints_pub.publish(wp_msg)
     waypoints_pos_pub.publish(wp_pos_msg)
     waypoints_acc_pub.publish(wp_acc_msg)
@@ -98,7 +128,7 @@ def main():
         
         if (MISSION_MODE):
             # Already in MISSION 
-            time.sleep(5)
+            # time.sleep(5)
             break
         elif (not HOVER_MODE):
             # IDLE -> TAKE OFF -> HOVER
@@ -123,18 +153,11 @@ def main():
     # waypoints.append(create_pose(4.0,2.0,1.5))# 5.0,2.0,3
 
     # 12/12 test
-    waypoints.append(create_pose(0.0,2.0,1.2)) # 3.0,2.0,3
-    # waypoints.append(create_pose(0.0,-0.0,1.2)) # 3.0,2.0,3
-    # waypoints.append(create_pose(0.0,-2.0,1.2))# 5.0,2.0,3
+    waypoints.append(create_pose(0.0,2.0,1.5)) # 3.0,2.0,3
+    waypoints.append(create_pose(0.0,-0.0,1.5)) # 3.0,2.0,3
+    waypoints.append(create_pose(0.0,-2.0,1.5))# 5.0,2.0,3
 
-    # 7/12 test
-    #FOR SLOW MOTION TEST
-    # waypoints.append(create_pose(-0.5,-0.5,1.5)) # 0.0,-0.5,1
-    # waypoints.append(create_pose(0.5,-0.5,1.5)) # 0.5,-0.5,1
-    # waypoints.append(create_pose(0.5,0.5,0.5)) # 0.5,0.0,1
-    # waypoints.append(create_pose(-0.5,0.5,0.5)) # 0.0,0.0,1
-    # waypoints.append(create_pose(-0.5,-0.5,1.0)) # 0.0,-0.5,1
-    # waypoints.append(create_pose(0.0,0.0,1.0)) # 0.0,0.0,1
+
     
     # the number of accelerations must be equal to the number of waypoints
     accel_list = []
@@ -142,7 +165,6 @@ def main():
     g=-9.81 #m/s^2
     f=0.3*(-g) #N
     angle=30
-    
     angle_rad=math.radians(angle)
 
     
@@ -150,16 +172,19 @@ def main():
     # MATLAB task
     # accel_list.append(create_accel(0.0,-f*np.sin(angle_rad),g+f*np.cos(angle_rad)))
 
-    accel_list.append(create_accel(0.0,0.0,0.0))
-    # accel_list.append(create_accel(-f*np.sin(angle_rad),0.0,g+f*np.cos(angle_rad)))
-    # accel_list.append(create_accel(0.0,0.0,0.0))
+    accel_list.append(create_accel(None,None,None))
+    accel_list.append(create_accel(-f*np.sin(angle_rad),0.0,g+f*np.cos(angle_rad)))
+    accel_list.append(create_accel(None,None,None))
     
-    # accel_list.append(create_accel(0.0,0.0,0.0))
-    # accel_list.append(create_accel(0.0,0.0,0.0))
-    # accel_list.append(create_accel(0.0,0.0,0.0))
-    # accel_list.append(create_accel(0.0,0.0,0.0))
-    # accel_list.append(create_accel(0.0,0.0,0.0))
-    pub_waypoints(waypoints,accel_list)
+    
+    # velocites constraint
+    vel_list = []
+    vel_list.append(create_vel(0.0,0.0,0.0))
+    vel_list.append(create_vel(None,None,None))
+    vel_list.append(create_vel(0.0,0.0,0.0))
+   
+    
+    pub_waypoints(waypoints,accel_list,vel_list)
     rospy.spin()
 if __name__ == '__main__':
     main()
