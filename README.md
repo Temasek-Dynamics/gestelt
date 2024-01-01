@@ -1,7 +1,7 @@
 # gestelt
-A swarm-focused path planning framework. 
+A Receding Horizon Planning (RHP) framework with a focus on inter-robot navigation in cluttered environments. 
 
-For simulation and deployment on a physical drone, PX4 is the firmware of choice, although it is possible to remap the topics for use with Ardupilot or any other Mavlink-compatible firmware.
+For simulation and deployment on a physical drone, PX4 is the firmware of choice, although it is possible to remap the topics for use with Ardupilot or any other Mavlink-compatible system.
 
 # Architecture
 <img src="docs/pictures/gestelt_architecture_24_10.png" alt="Gestelt Architecture" style="width: 1200px;"/>
