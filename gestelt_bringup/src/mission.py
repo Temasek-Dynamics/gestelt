@@ -100,7 +100,7 @@ def pub_waypoints(waypoints,accels,vels):
     # for waypoints and acceleration vector visualization
     wp_pos_msg.poses = waypoints
     if len(accels)>0:
-        wp_acc_msg.accel=accels[0][0]
+        wp_acc_msg.accel=accels[1][0]
     
     rospy.loginfo("accels: %s",wp_msg.accelerations)
     rospy.loginfo("vels: %s",wp_msg.velocities)

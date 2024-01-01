@@ -160,7 +160,7 @@ public:
 	 * Set the integral term in xy to 0.
 	 * @see _vel_int
 	 */
-	void resetIntegral() { _vel_int.setZero(); }
+	void resetIntegral() { _vel_int.setZero(); _pos_int.setZero();_pos_int(2)=0;}
 
 	/**
 	 * Get the controllers output local position setpoint
