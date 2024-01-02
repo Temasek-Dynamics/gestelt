@@ -224,7 +224,7 @@ void PositionControl::_RPTControl(const float dt)
 	// z outer-loop controller
 	float wn_z = 0.5f;
 	float sigma_z = 1.1f * 1.5f;
-	float eps_z = 1.0f * 0.2f;
+	float eps_z = 1.0f * 0.3f;
 	float ki_z = 0.8f * 1.5f;
 	float F_z[5];
 
