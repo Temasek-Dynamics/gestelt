@@ -1,0 +1,45 @@
+<!-- Spawns a fake drone for testing architecture and algorithms-->
+
+<launch>
+  <!-- <arg name="cfg_filepath" default="" /> -->
+
+  <!-- Mavros topics -->
+  <arg name="command_topic" default="mavros/setpoint_raw/local" />
+  <arg name="odometry_topic" default="mavros/local_position/odom" />
+  <arg name="pose_topic" default="mavros/local_position/pose" />
+
+  <arg name="drone_origin_frame" default="$(arg drone_id_ns)_origin"/>
+  <arg name="drone_base_link_frame" default="$(arg drone_id_ns)_base_link"/>
+
+  <!-- Static TF from drone to it's origin -->
+  <node pkg="tf" type="static_transform_publisher" 
+    name="map_to_$(arg drone_id_ns)_origin_tf" 
+    args="$(arg init_x) $(arg init_y) $(arg init_z) 0 0 0 1 map $(arg drone_id_ns)_origin 100" />
+
+  <!-- Static TF from base_link to camera_link -->
+  <node pkg="tf" type="static_transform_publisher" 
+    name="$(arg drone_id_ns)_base_link_to_cam_link_tf" 
+    args="0.08 0 0.02 0 0 0 1 $(arg drone_id_ns)_base_link $(arg drone_id_ns)_cam_link 100" />
+
+  <group ns="$(arg drone_id_ns)">
+
+    <!-- Simulated quadcopter -->
+    <node pkg="global_planner" type="a_star_planner_node" name="a_star_planner_test" required="true" output="screen">
+        <!-- <rosparam command="load" file="$(arg cfg_filepath)" /> -->
+
+        <remap from="mavros/setpoint_raw/local" to="$(arg command_topic)"/>
+        <remap from="mavros/local_position/odom" to="$(arg odometry_topic)"/>
+        <remap from="mavros/local_position/pose" to="$(arg pose_topic)"/>
+
+        <param name="uav/id" value="$(arg drone_id)"/>
+        <param name="uav/init_x" value="$(arg init_x)"/>
+        <param name="uav/init_y" value="$(arg init_y)"/>
+        <param name="uav/init_z" value="$(arg init_z)"/>
+
+        <param name="uav/origin_frame" value="$(arg drone_origin_frame)"/>
+        <param name="uav/base_link_frame" value="$(arg drone_base_link_frame)"/>
+    </node>
+
+  </group>
+
+</launch>

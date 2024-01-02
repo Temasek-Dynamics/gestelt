@@ -33,10 +33,10 @@ include_directories(
   ${EIGEN3_INCLUDE_DIR}
 )
 
-add_executable (fake_drone 
+add_executable (fake_drone_node
   src/fake_drone_node.cpp
   src/fake_drone.cpp
 )
-target_link_libraries(fake_drone
+target_link_libraries(fake_drone_node
   ${catkin_LIBRARIES}
 )

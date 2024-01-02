@@ -1,47 +1,39 @@
 #include <fake_drone/fake_drone.h>
 
-FakeDrone::FakeDrone(ros::NodeHandle &nodeHandle) : _nh(nodeHandle) {
+FakeDrone::FakeDrone(ros::NodeHandle& nh, ros::NodeHandle& pnh) {
 
 	double sim_update_freq;
 
 	/* ROS Params */
-	_nh.param<std::string>("uav/id", _id, "");
-	_nh.param<double>("uav/sim_update_frequency", sim_update_freq, -1.0);
-	_nh.param<double>("uav/pose_pub_frequency", pose_pub_freq_, -1.0);
-	_nh.param<double>("uav/tf_broadcast_frequency", tf_broadcast_freq_, -1.0);
+	pnh.param<int>("uav/id", uav_id_, 0);
+	pnh.param<double>("uav/sim_update_frequency", sim_update_freq, -1.0);
+	pnh.param<double>("uav/pose_pub_frequency", pose_pub_freq_, -1.0);
+	pnh.param<double>("uav/tf_broadcast_frequency", tf_broadcast_freq_, -1.0);
 
-	_nh.param<std::string>("uav/origin_frame", uav_origin_frame_, "world");
-	_nh.param<std::string>("uav/base_link_frame", base_link_frame_, "base_link");
+	pnh.param<std::string>("uav/origin_frame", uav_origin_frame_, "world");
+	pnh.param<std::string>("uav/base_link_frame", base_link_frame_, "base_link");
 
-	_nh.param<double>("uav/offboard_timeout", offboard_timeout_, -1.0);
-	_nh.param<double>("uav/init_x", init_pos_(0), 0.0);
-	_nh.param<double>("uav/init_y", init_pos_(1), 0.0);
-	_nh.param<double>("uav/init_z", init_pos_(2), 0.0);
+	pnh.param<double>("uav/offboard_timeout", offboard_timeout_, -1.0);
+	pnh.param<double>("uav/init_x", init_pos_(0), 0.0);
+	pnh.param<double>("uav/init_y", init_pos_(1), 0.0);
+	pnh.param<double>("uav/init_z", init_pos_(2), 0.0);
 
-	node_name_ = "FakeDrone_" + _id;
+	node_name_ = "fake_drone" + std::to_string(uav_id_);
 
-	std::string copy_id = _id; 
-	std::string uav_id_char = copy_id.erase(0,5); // removes first 5 character
-	uav_id = std::stoi(uav_id_char);
+	setpoint_raw_local_sub_ = nh.subscribe<mavros_msgs::PositionTarget>(
+		"mavros/setpoint_raw/local", 5, &FakeDrone::setpointRawCmdCb, this);
+	odom_pub_ = nh.advertise<nav_msgs::Odometry>(
+		"mavros/local_position/odom", 10);
+	pose_pub_ = nh.advertise<geometry_msgs::PoseStamped>(
+		"mavros/local_position/pose", 10);
 
-	/** Subscriber that receives raw control setpoints via mavros */
-	setpoint_raw_local_sub_ = _nh.subscribe<mavros_msgs::PositionTarget>(
-		"/mavros/setpoint_raw/local", 5, &FakeDrone::setpointRawCmdCb, this);
-
-	/** Publisher that publishes odometry data */
-	odom_pub_ = _nh.advertise<nav_msgs::Odometry>(
-		"/mavros/local_position/odom", 10);
-	/** Publisher that publishes pose data */
-	pose_pub_ = _nh.advertise<geometry_msgs::PoseStamped>(
-		"/mavros/local_position/pose", 10);
-
-	mavros_state_pub_ = _nh.advertise<mavros_msgs::State>("/" + _id + "/mavros/state", 10, true);
+	mavros_state_pub_ = nh.advertise<mavros_msgs::State>("mavros/state", 10, true);
 
 	/**
 	 * Timers that handles drone state at each time frame 
 	*/
 
-	sim_update_timer_ = _nh.createTimer(
+	sim_update_timer_ = nh.createTimer(
 		ros::Duration(1/sim_update_freq), 
 		&FakeDrone::simUpdateTimer, this, false, false);
 
@@ -49,10 +41,10 @@ FakeDrone::FakeDrone(ros::NodeHandle &nodeHandle) : _nh(nodeHandle) {
 	 * Service servers
 	*/
 
-	arming_srv_server_ = _nh.advertiseService("/" + _id + "/mavros/cmd/arming", 
+	arming_srv_server_ = nh.advertiseService("mavros/cmd/arming", 
 		&FakeDrone::armSrvCb, this);
 
-	set_mode_srv_server_ = _nh.advertiseService("/" + _id + "/mavros/set_mode", 
+	set_mode_srv_server_ = nh.advertiseService("mavros/set_mode", 
 		&FakeDrone::setModeCb, this);
 
 	// Set initial position
@@ -71,11 +63,11 @@ FakeDrone::FakeDrone(ros::NodeHandle &nodeHandle) : _nh(nodeHandle) {
 	// std::uniform_real_distribution<double> dis(0.0, 1.0);
 	// color_vect_ = Eigen::Vector4d(dis(generator), dis(generator), dis(generator), 0.5);
 
-	printf("[quad] %sdrone%d%s start_pose [%s%.2lf %.2lf %.2lf%s]! \n", 
-		KGRN, uav_id, KNRM,
+	printf("[fake_drone] %sdrone%d%s start_pose [%s%.2lf %.2lf %.2lf%s]! \n", 
+		KGRN, uav_id_, KNRM,
 		KBLU, init_pos_(0), init_pos_(1), init_pos_(2), KNRM);
 
-	printf("[quad] %sdrone%d%s created! \n", KGRN, uav_id, KNRM);
+	printf("[fake_drone] %sdrone%d%s created! \n", KGRN, uav_id_, KNRM);
 	
 	last_pose_pub_time_ = ros::Time::now();
 	last_tf_broadcast_time_ = ros::Time::now();
@@ -151,7 +143,7 @@ void FakeDrone::simUpdateTimer(const ros::TimerEvent &)
 	// 	// {
 	// 	// 	mavros_state_.custom_mode = "AUTO.LOITER";
 	// 	// 	printf("%sdrone%d%s mode switch to %s%s%s! \n", 
-	// 	// 		KGRN, uav_id, KNRM, 
+	// 	// 		KGRN, uav_id_, KNRM, 
 	// 	// 		KBLU, mavros_state_.custom_mode.c_str(), KNRM);
 	// 	// }
 	// 	stopAndHover(cmd_des_);

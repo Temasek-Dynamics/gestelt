@@ -1,6 +1,7 @@
 <!-- Spawns Gazebo model and PX4 SITL instances -->
 
 <launch>
+  <arg name="drone_id" default="0"/>
   <!-- initial position -->
   <arg name="init_x" default="0.0"/>
   <arg name="init_y" default="0.0"/>

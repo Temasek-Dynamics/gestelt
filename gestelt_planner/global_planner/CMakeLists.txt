@@ -7,7 +7,6 @@ add_compile_options(-std=c++14)
 set(ROS_LIBRARIES
   roscpp
   grid_map
-  # cv_bridge
   std_msgs
   geometry_msgs
   visualization_msgs
@@ -49,22 +48,22 @@ include_directories(
   ${PCL_INCLUDE_DIRS}
 )
 
-# ## Declare a C++ library
-# add_library(${PROJECT_NAME}
-#   # src/planner_base.cpp
-#   src/a_star.cpp
-# )
+## Declare a C++ library
+add_library(a_star_lib 
+  # src/planner_base.cpp
+  src/a_star.cpp
+)
 
-# ## Specify libraries to link a library or executable target against
-# target_link_libraries(${PROJECT_NAME}
-#   ${catkin_LIBRARIES}
-# )
+## Specify libraries to link a library or executable target against
+target_link_libraries(a_star_lib
+  ${catkin_LIBRARIES}
+)
 
-# add_executable(a_star src/a_star_node.cpp)
-# add_dependencies(a_star 
-#   ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS}
-# )
-# target_link_libraries(a_star
-#   ${catkin_LIBRARIES}
-#   ${PROJECT_NAME}
-# )
+add_executable(a_star_planner_node src/a_star_node.cpp)
+add_dependencies(a_star_planner_node
+  ${a_star_lib_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS}
+)
+target_link_libraries(a_star_planner_node
+  ${catkin_LIBRARIES}
+  a_star_lib
+)

@@ -52,8 +52,6 @@ class FakeDrone
            nav_msgs::Odometry odom;
         };
 
-        ros::NodeHandle _nh;
-
         // Name given to node
         std::string node_name_; 
 
@@ -69,8 +67,7 @@ class FakeDrone
         ros::Timer sim_update_timer_; // TImer to update simulation
         
         /* Params */
-        int uav_id;
-        std::string _id; 
+        int uav_id_;
 
         std::string uav_origin_frame_, base_link_frame_;
 
@@ -106,7 +103,7 @@ class FakeDrone
 
     public:
 
-        FakeDrone(ros::NodeHandle &nodeHandle);
+        FakeDrone(ros::NodeHandle &nh, ros::NodeHandle &pnh);
 
         ~FakeDrone();
 
