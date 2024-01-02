@@ -31,8 +31,6 @@ struct GridNode
     this->idx = idx;
   }
 
-	// int rounds{0}; // Distinguish every call
-
 	Eigen::Vector3i idx;
 	double g_cost{inf}, f_cost{inf};
 	std::shared_ptr<GridNode> parent{nullptr};

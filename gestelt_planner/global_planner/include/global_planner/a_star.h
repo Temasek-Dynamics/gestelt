@@ -10,47 +10,12 @@ public:
     nh.param("enable_debug", debug_, true);
     nh.param("uav_origin_frame", uav_origin_frame_, std::string("drone0_origin"));
 
-    set_start_sub_ = nh.subscribe("/plan_set_start", 10, &AStarPlanner::setStartCb, this);
-    set_goal_sub_ = nh.subscribe("/plan_set_goal", 10, &AStarPlanner::setGoalCb, this);
-
-    trigger_plan_sub_ = nh.subscribe("/trigger_plan", 10, &AStarPlanner::triggerPlanCb, this);
-
     gridmap_sub_ = nh.subscribe("/gridmap", 10, &AStarPlanner::gridmapSubCb, this);
 
     plan_viz_pub_ = nh.advertise<visualization_msgs::Marker>("/plan", 10);
     closed_list_viz_pub_ = nh.advertise<visualization_msgs::Marker>("/closed_list", 10);
 
     grid_map_.reset(new pcl::PointCloud<pcl::PointXYZ>);
-
-    start_pose_(0) = 0.0;
-    start_pose_(1) = 0.0;
-    start_pose_(2) = 1.0;
-
-    goal_pose_(0) = 4.0;
-    goal_pose_(1) = 0.0;
-    goal_pose_(2) = 1.0;
-
-  }
-
-  void setStartCb(const geometry_msgs::PoseStamped::ConstPtr &msg) {
-    ROS_INFO("Start has been set!");
-    start_pose_(0) = msg->pose.position.x;
-    start_pose_(1) = msg->pose.position.y;
-    start_pose_(2) = msg->pose.position.z;
-  }
-
-  void setGoalCb(const geometry_msgs::PoseStamped::ConstPtr &msg) {
-    ROS_INFO("Goal has been set!");
-    goal_pose_(0) = msg->pose.position.x;
-    goal_pose_(1) = msg->pose.position.y;
-    goal_pose_(2) = msg->pose.position.z;
-  }
-
-  void triggerPlanCb(const std_msgs::Empty::ConstPtr &msg) {
-    ROS_INFO("Planning triggered!");
-    if (generate_plan(start_pose_, goal_pose_)){
-      common_->publishPath(this->getPath(), plan_viz_pub_);
-    }
   }
 
   void gridmapSubCb(const sensor_msgs::PointCloud2::ConstPtr &msg){
@@ -234,7 +199,6 @@ private:
   std::vector<Eigen::Vector3d> pos_path_; // Path with position of nodes
 
   // ROS Subscribers
-  ros::Subscriber set_start_sub_, set_goal_sub_;
   ros::Subscriber trigger_plan_sub_;
   ros::Subscriber gridmap_sub_;
 
@@ -251,8 +215,6 @@ private:
   bool grid_map_init_{false};
 
   /* Temporarily stored data */
-  Eigen::Vector3d start_pose_, goal_pose_;
-
   pcl::PointCloud<pcl::PointXYZ>::Ptr grid_map_;
 
   /* Path planner data structures */
