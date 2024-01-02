@@ -335,12 +335,12 @@ void PositionControl::_accelerationControl()
 		// but is the same direction of the Gravity since both are in the down frame
 		body_z = Vector3f(-_acc_sp(0), -_acc_sp(1), -_acc_sp(2)+CONSTANTS_ONE_G).normalized();
 	}
-	// else if (_acc_sp(2)>=CONSTANTS_ONE_G && _acc_sp(2)<2*CONSTANTS_ONE_G)
-	// {
-	// 	body_z = Vector3f(-_acc_sp(0), -_acc_sp(1), 0).normalized();
-	// 	_acc_sp(2) = CONSTANTS_ONE_G;
+	else if (_acc_sp(2)>=CONSTANTS_ONE_G && _acc_sp(2)<100) //100 is the value for drone does not take off
+	{
+		body_z = Vector3f(-_acc_sp(0), -_acc_sp(1), -_acc_sp(2)+CONSTANTS_ONE_G).normalized();
+		_acc_sp(2) = CONSTANTS_ONE_G;
 
-	// }
+	}
 	else
 	{
 		body_z = Vector3f(-_acc_sp(0), -_acc_sp(1), CONSTANTS_ONE_G).normalized();

@@ -153,10 +153,10 @@ def main():
     # waypoints.append(create_pose(4.0,2.0,1.5))# 5.0,2.0,3
 
     # 12/12 test
-    waypoints.append(create_pose(0.0,2.0,1.5)) # 3.0,2.0,3
-    waypoints.append(create_pose(0.0,-0.0,1.5)) # 3.0,2.0,3
-    waypoints.append(create_pose(0.0,-2.0,1.5))# 5.0,2.0,3
-    waypoints.append(create_pose(0.0,0.0,1.5))# 5.0,2.0,3
+    waypoints.append(create_pose(0.0,2.0,1.2)) # 3.0,2.0,3
+    waypoints.append(create_pose(0.0,-0.0,1.2)) # 3.0,2.0,3
+    waypoints.append(create_pose(0.0,-2.0,1.2))# 5.0,2.0,3
+    waypoints.append(create_pose(0.0,0.0,1.2))# 5.0,2.0,3
 
     
     # the number of accelerations must be equal to the number of waypoints
@@ -164,7 +164,7 @@ def main():
     
     g=-9.81 #m/s^2
     f=0.3*(-g) #N
-    angle=30
+    angle=90
     angle_rad=math.radians(angle)
 
     
