@@ -1,21 +1,32 @@
-
 #include <front_end_planner/front_end_planner.h>
 
 void FrontEndPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
-{
-
+{ 
+  ROS_INFO("Initialized front end planner");
   double planner_freq;
-  pnh.param("planner_frequency", planner_freq, -1.0);
-  pnh.param("goal_tolerance", squared_goal_tol_, -1.0);
+  pnh.param("frontend/planner_frequency", planner_freq, -1.0);
+  pnh.param("frontend/goal_tolerance", squared_goal_tol_, -1.0);
   squared_goal_tol_ *= squared_goal_tol_; 
   
-  odom_sub_ = nh.subscribe("odom", 1, &FrontEndPlanner::odometryCB, this);
-  goal_sub_ = nh.subscribe("planner/goals", 1, &FrontEndPlanner::goalsCB, this);
+  odom_sub_ = nh.subscribe("odom", 5, &FrontEndPlanner::odometryCB, this);
+  goal_sub_ = nh.subscribe("planner/goals", 5, &FrontEndPlanner::goalsCB, this);
 
-  debug_start_sub_ = nh.subscribe("debug/plan_start", 1, &FrontEndPlanner::debugStartCB, this);
-  debug_goal_sub_ = nh.subscribe("debug/plan_goal", 1, &FrontEndPlanner::debugGoalCB, this);
+  debug_start_sub_ = nh.subscribe("debug/plan_start", 5, &FrontEndPlanner::debugStartCB, this);
+  debug_goal_sub_ = nh.subscribe("debug/plan_goal", 5, &FrontEndPlanner::debugGoalCB, this);
 
-  plan_timer_ = nh.createTimer(ros::Duration(1/planner_freq), &FrontEndPlanner::planTimerCB, this);
+  plan_on_demand_sub_ = nh.subscribe("plan_on_demand", 5, &FrontEndPlanner::planOnDemandCB, this);
+
+  front_end_plan_viz_pub_ = nh.advertise<visualization_msgs::Marker>("plan_viz", 10);
+  closed_list_viz_pub_ = nh.advertise<visualization_msgs::Marker>("closed_list_viz", 10);
+
+  // plan_timer_ = nh.createTimer(ros::Duration(1/planner_freq), &FrontEndPlanner::planTimerCB, this);
+
+  // Initialize map
+  map_.reset(new GridMap);
+  map_->initMap(nh);
+
+  // Initialize front end planner 
+  front_end_planner_ = std::make_unique<AStarPlanner>(map_);
 }
 
 /**
@@ -24,6 +35,10 @@ void FrontEndPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
 
 void FrontEndPlanner::planTimerCB(const ros::TimerEvent &e)
 {
+  generatePlan();
+}
+
+void FrontEndPlanner::generatePlan(){
   // Check if waypoint queue is empty
   if (waypoints_.empty()){
     return;
@@ -37,18 +52,38 @@ void FrontEndPlanner::planTimerCB(const ros::TimerEvent &e)
   // Generate a plan
   start_pos_ = cur_pos_;
   goal_pos_ = waypoints_.nextWP();
-  // plan = front_end_planner_->plan(start_pos_, goal_pos_);
+  if (!front_end_planner_->generatePlan(start_pos_, goal_pos_)){
+    ROS_ERROR("[FrontEndPlanner] Path generation failed!");
+    publishVizClosedList(front_end_planner_->getClosedList(), "world");
+    return;
+  }
+  std::vector<Eigen::Vector3d> path = front_end_planner_->getPathPos();
 
-  // Refine plan
-  // plan_refined = sfc_planner_->refine(plan);
+  // Generate Safe flight corridor
+  // plan_refined = sfc_planner_->generateSFC(plan);
+  ROS_INFO("Size of path: %ld", path.size());
 
-  // Publish plan
-  // front_end_plan_pub_.publish(plan_refined);
+  // Publish front end plan
+  publishVizPath(path, "world");
+  publishVizClosedList(front_end_planner_->getClosedList(), "world");
 }
 
 /**
  * Subscriber Callbacks
 */
+
+/**
+ * @brief Callback to generate plan on demand
+ * 
+ * @param msg 
+ */
+void FrontEndPlanner::planOnDemandCB(const std_msgs::EmptyConstPtr& msg){
+  ROS_INFO("Planning on demand triggered! from (%f, %f, %f) to (%f, %f, %f)",
+    cur_pos_(0), cur_pos_(1), cur_pos_(2),
+    waypoints_.nextWP()(0), waypoints_.nextWP()(1), waypoints_.nextWP()(2)
+  );
+  generatePlan();
+}
 
 void FrontEndPlanner::odometryCB(const nav_msgs::OdometryConstPtr &msg)
 {
@@ -57,7 +92,7 @@ void FrontEndPlanner::odometryCB(const nav_msgs::OdometryConstPtr &msg)
   cur_vel_= Eigen::Vector3d{msg->twist.twist.linear.x, msg->twist.twist.linear.y, msg->twist.twist.linear.z};
 }
 
-void FrontEndPlanner::goalsCB(const gestelt_msgs::GoalsPtr &msg)
+void FrontEndPlanner::goalsCB(const gestelt_msgs::GoalsConstPtr &msg)
 {
   if (msg->transforms.size() <= 0)
   {
@@ -87,21 +122,29 @@ void FrontEndPlanner::goalsCB(const gestelt_msgs::GoalsPtr &msg)
 
 }
 
-void FrontEndPlanner::debugStartCB(const geometry_msgs::PoseStampedPtr &msg)
+void FrontEndPlanner::debugStartCB(const geometry_msgs::PoseConstPtr &msg)
 {
+  ROS_INFO("Received debug start (%f, %f, %f)", 
+        msg->position.x,
+        msg->position.y,
+        msg->position.z);
   cur_pos_ = Eigen::Vector3d{
-        msg->pose.position.x,
-        msg->pose.position.y,
-        msg->pose.position.z};
+        msg->position.x,
+        msg->position.y,
+        msg->position.z};
 }
 
-void FrontEndPlanner::debugGoalCB(const geometry_msgs::PoseStampedPtr &msg)
+void FrontEndPlanner::debugGoalCB(const geometry_msgs::PoseConstPtr &msg)
 {
+  ROS_INFO("Received debug goal (%f, %f, %f)", 
+        msg->position.x,
+        msg->position.y,
+        msg->position.z);
   waypoints_.reset();
   waypoints_.addWP(Eigen::Vector3d{
-        msg->pose.position.x,
-        msg->pose.position.y,
-        msg->pose.position.z});
+        msg->position.x,
+        msg->position.y,
+        msg->position.z});
 }
 
 /* Checking methods */
@@ -116,6 +159,5 @@ bool FrontEndPlanner::isGoalReached(const Eigen::Vector3d& pos, const Eigen::Vec
 
 bool FrontEndPlanner::isPlanFeasible(const Eigen::Vector3d& waypoints){
   // Check occupancy of every waypoint
-
+  return true;
 }
-

@@ -24,7 +24,6 @@ fsm/tf_lookup_timeout: 60.0
 #####
 # grid_map/global_frame: "world"
 
-
 grid_map/map_size_x: 80.0
 grid_map/map_size_y: 80.0
 grid_map/map_size_z: 20.0

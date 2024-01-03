@@ -1685,7 +1685,7 @@ namespace ego_planner
     }
   }
 
-  void PolyTrajOptimizer::setEnvironment(const GridMap::Ptr &map)
+  void PolyTrajOptimizer::setEnvironment(const std::shared_ptr<GridMap> &map)
   {
     grid_map_ = map;
 

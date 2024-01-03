@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.0.2)
 project(front_end_planner)
 
-ADD_COMPILE_OPTIONS(-std=c++11 )
+add_compile_options(-std=c++14)
 
 set(ROS_LIBRARIES
   roscpp
@@ -9,8 +9,8 @@ set(ROS_LIBRARIES
   geometry_msgs
   nav_msgs
   gestelt_msgs
-
-)
+  global_planner
+) 
 
 # set(ROS_DEPENDS
 # )
@@ -29,9 +29,10 @@ catkin_package(
 include_directories(
   include
   SYSTEM
-  ${catkin_INCLUDE_DIRS} ${PROJECT_SOURCE_DIR}/include
+  ${catkin_INCLUDE_DIRS} 
+  ${PROJECT_SOURCE_DIR}/include
   ${EIGEN3_INCLUDE_DIR}
-)
+  )
 
 add_executable(front_end_planner_node
   src/front_end_planner_node.cpp 

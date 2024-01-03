@@ -1,0 +1,22 @@
+<!-- Spawns a fake drone for testing architecture and algorithms-->
+<launch>
+  <arg name="drone_id" default="0"/>
+  <arg name="drone_id_ns" value="drone$(arg drone_id)"/>
+
+  <arg name="cfg_filepath" default="" />
+  <arg name="odometry_topic" default="mavros/local_position/odom" />
+
+  <!-- Simulated quadcopter -->
+  <group ns="$(arg drone_id_ns)">
+    <node pkg="front_end_planner" type="front_end_planner_node" name="front_end_planner_test" required="true" output="screen">
+        <rosparam command="load" file="$(arg cfg_filepath)" />
+
+        <remap from="odom" to="$(arg odometry_topic)"/>
+        <remap from="planner/goals" to="planner/goals"/>
+    </node>
+  </group>
+
+</launch>
+
+
+

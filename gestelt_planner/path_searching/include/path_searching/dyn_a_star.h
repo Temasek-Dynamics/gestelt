@@ -51,7 +51,7 @@ public:
 class AStar
 {
 private:
-	GridMap::Ptr grid_map_;
+	std::shared_ptr<GridMap> grid_map_;
 
 	void coord2gridIndexFast(const double x, const double y, const double z, int &id_x, int &id_y, int &id_z);
 
@@ -91,7 +91,7 @@ public:
 	AStar(){};
 	~AStar();
 
-	void initGridMap(GridMap::Ptr occ_map, const Eigen::Vector3i pool_size);
+	void initGridMap(std::shared_ptr<GridMap> occ_map, const Eigen::Vector3i pool_size);
 
 	ASTAR_RET AstarSearch(const double step_size, Eigen::Vector3d start_pt, Eigen::Vector3d end_pt);
 

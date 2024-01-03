@@ -11,6 +11,8 @@ Panels:
         - /drone0_mavros1/Localization1//mavros/local_position/pose1
         - /drone2_mavros1/Perception1
         - /plan_viz1
+        - /Marker1
+        - /Marker1/Status1
       Splitter Ratio: 0.6323529481887817
     Tree Height: 380
   - Class: rviz/Selection
@@ -40,13 +42,13 @@ Visualization Manager:
   Displays:
     - Alpha: 1
       Class: rviz/Axes
-      Enabled: false
+      Enabled: true
       Length: 0.30000001192092896
       Name: Axes
       Radius: 0.05000000074505806
       Reference Frame: <Fixed Frame>
       Show Trail: false
-      Value: false
+      Value: true
     - Class: rviz/TF
       Enabled: false
       Filter (blacklist): ""
@@ -1343,6 +1345,14 @@ Visualization Manager:
       Use Fixed Frame: true
       Use rainbow: true
       Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /drone0/closed_list_viz
+      Name: Marker
+      Namespaces:
+        {}
+      Queue Size: 100
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 255; 255; 255
@@ -1372,7 +1382,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 16.153879165649414
+      Distance: 5.9320878982543945
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -1388,9 +1398,9 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.39479687809944153
+      Pitch: 0.8147969245910645
       Target Frame: my_view
-      Yaw: 4.48508358001709
+      Yaw: 4.285081386566162
     Saved:
       - Class: rviz/FPS
         Enable Stereo Rendering:
@@ -1539,5 +1549,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1440
-  X: 216
-  Y: 27
+  X: 279
+  Y: 37

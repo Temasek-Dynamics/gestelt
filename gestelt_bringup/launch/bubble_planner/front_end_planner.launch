@@ -1,0 +1,13 @@
+<launch>
+  <arg name="drone_id" default="0"/>
+  <arg name="drone_id_ns" value="drone$(arg drone_id)"/>
+  <arg name="front_end_planner_cfg_filepath" default="$(find gestelt_bringup)/config/front_end.yaml"/>
+
+  <!-- Planner -->
+  <include file="$(find front_end_planner)/launch/include/front_end_planner.xml">
+      <arg name="cfg_filepath" value="$(arg front_end_planner_cfg_filepath)"/>
+
+      <arg name="drone_id" value="$(arg drone_id)"/>
+  </include>
+
+</launch>

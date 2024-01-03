@@ -66,7 +66,7 @@ namespace ego_planner
   {
 
   private:
-    GridMap::Ptr grid_map_;
+    std::shared_ptr<GridMap> grid_map_;
     AStar::Ptr a_star_;
     PlanningVisualization::Ptr visualization_;
 
@@ -119,7 +119,7 @@ namespace ego_planner
 
     /* set variables */
     void setParam(ros::NodeHandle &nh);
-    void setEnvironment(const GridMap::Ptr &map);
+    void setEnvironment(const std::shared_ptr<GridMap> &map);
     void setVisualizer(PlanningVisualization::Ptr vis);
     void setControlPoints(const Eigen::MatrixXd &points);
     void setSwarmTrajs(SwarmTrajData *swarm_trajs_ptr);

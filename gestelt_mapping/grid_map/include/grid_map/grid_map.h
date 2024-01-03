@@ -117,7 +117,7 @@ typedef std::shared_ptr<message_filters::Synchronizer<SyncPolicyCloudPose>> Sync
 typedef std::shared_ptr<message_filters::Synchronizer<SyncPolicyCloudOdom>> SynchronizerCloudOdom;
 
 public:
-  typedef std::shared_ptr<GridMap> Ptr;
+typedef std::shared_ptr<GridMap> Ptr;
 
   enum PoseType
   {
@@ -189,14 +189,24 @@ public:
   // Checks if camera pose is valid
   bool isPoseValid();
 
+  /** Publisher methods */
+
+  /**
+   * @brief Publish map for visualization
+   * 
+   */
+  void publishMap();
+
+  /** Getter methods */
+
   // Get occupancy grid resolution
   double getResolution() { return mp_.resolution_; }
 
+  // Get map origin
+  Eigen::Vector3d getOrigin() { return mp_.map_origin_; }
+
   // Get odometry depth timeout
   bool getPoseDepthTimeout() { return md_.flag_sensor_timeout_; }
-
-  /** Publisher methods */
-  void publishMap();
 
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 

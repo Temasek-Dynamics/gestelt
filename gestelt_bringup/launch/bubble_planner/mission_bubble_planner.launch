@@ -1,0 +1,4 @@
+<launch>
+  <!-- Launches a test mission -->
+  <node pkg="gestelt_bringup" name="mission_bubble_planner" type="mission_bubble_planner.py" output="screen" />
+</launch>
