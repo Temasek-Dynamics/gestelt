@@ -190,6 +190,7 @@ public:
   }
 
   bool isInGlobalMap(const Eigen::Vector3d& pos){
+    ROS_ERROR("Not in global map Pos(%f, %f, %f)", pos(0), pos(1), pos(2));
     return map_->isInGlobalMap(pos);
   }
 

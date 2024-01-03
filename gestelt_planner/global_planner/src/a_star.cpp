@@ -17,10 +17,12 @@ bool AStarPlanner::generatePlan(const Eigen::Vector3d &start_pos, const Eigen::V
 
     Vector3i start_idx, goal_idx;
 
+    ROS_INFO("Position to index ");
     if (!common_->posToIdx(start_pos, start_idx) || !common_->posToIdx(goal_pos, goal_idx))
     {
         return false;
     }
+    ROS_INFO("After Position to index ");
 
     GridNodePtr start_node = std::make_shared<GridNode>(start_idx);
     GridNodePtr goal_node = std::make_shared<GridNode>(goal_idx);
@@ -33,11 +35,13 @@ bool AStarPlanner::generatePlan(const Eigen::Vector3d &start_pos, const Eigen::V
 
     int num_iter = 0;
 
+    ROS_INFO("is open list empty? %d", open_list_.empty());
+
     while (!open_list_.empty())
     {
         GridNodePtr cur_node = popOpenlist();
         addToClosedlist(cur_node); // Mark as visited
-        ROS_INFO("Expanding (%f, %f, %f)", cur_node->idx(0), cur_node->idx(1), cur_node->idx(2));
+        ROS_INFO("Expanding (%d, %d, %d)", cur_node->idx(0), cur_node->idx(1), cur_node->idx(2));
 
         if (*cur_node == *goal_node)
         {
