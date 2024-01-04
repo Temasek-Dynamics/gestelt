@@ -18,6 +18,13 @@ bool AStarPlanner::generatePlan(const Eigen::Vector3d &start_pos, const Eigen::V
     // Search takes place in index space. So we first convert 3d real world positions into indices
     if (!common_->isInGlobalMap(start_pos) || !common_->isInGlobalMap(goal_pos))
     {
+        ROS_ERROR("Start or goal position not in global map!");
+        return false;
+    }
+
+    if (common_->getOccupancy(start_pos) || common_->getOccupancy(goal_pos))
+    {   
+        ROS_ERROR("Start or goal position in obstacle!");
         return false;
     }
 
@@ -38,6 +45,9 @@ bool AStarPlanner::generatePlan(const Eigen::Vector3d &start_pos, const Eigen::V
 
     while (!open_list_.empty())
     {
+        if (num_iter%50 == 0){
+            ROS_INFO("[a_star] Iteration %d", num_iter);
+        }
         GridNodePtr cur_node = popOpenlist();
         addToClosedlist(cur_node); // Mark as visited
 
@@ -75,7 +85,8 @@ bool AStarPlanner::generatePlan(const Eigen::Vector3d &start_pos, const Eigen::V
         }
         num_iter++;
     }
-    ROS_INFO("[a_star] Iterations required: %d", num_iter);
+    // ROS_INFO("[a_star] Iterations required: %d", num_iter);
+
 
     return false;
 }

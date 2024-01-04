@@ -39,6 +39,7 @@ void FrontEndPlanner::planTimerCB(const ros::TimerEvent &e)
 }
 
 void FrontEndPlanner::generatePlan(){
+  
   // Check if waypoint queue is empty
   if (waypoints_.empty()){
     return;
@@ -52,11 +53,17 @@ void FrontEndPlanner::generatePlan(){
   // Generate a plan
   start_pos_ = cur_pos_;
   goal_pos_ = waypoints_.nextWP();
+
+  ros::Time plan_start_time = ros::Time::now();
+
   if (!front_end_planner_->generatePlan(start_pos_, goal_pos_)){
     ROS_ERROR("[FrontEndPlanner] Path generation failed!");
     publishVizClosedList(front_end_planner_->getClosedList(), "world");
     return;
   }
+  double plan_time_ms = (ros::Time::now() - plan_start_time).toSec() * 1000;
+  ROS_INFO("[FrontEndPlanner]: Planning Time: %f ms", plan_time_ms);
+
   std::vector<Eigen::Vector3d> path = front_end_planner_->getPathPos();
   std::vector<Eigen::Vector3d> closed_list = front_end_planner_->getClosedList();
 
@@ -68,6 +75,7 @@ void FrontEndPlanner::generatePlan(){
   // Publish front end plan
   publishVizPath(path, "world");
   publishVizClosedList(closed_list, "world");
+
 }
 
 /**

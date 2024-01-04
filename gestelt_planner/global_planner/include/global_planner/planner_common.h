@@ -131,13 +131,14 @@ public:
   // Get euclidean distance between node_1 and node_2
   // NOTE: This is in units of indices
   double getL2Norm(GridNodePtr node_1, GridNodePtr node_2) {
+    // return (node_2->idx - node_1->idx).squaredNorm();
     return (node_2->idx - node_1->idx).norm();
   }
 
   // Get euclidean distance between node_1 and node_2
   // NOTE: This is in units of indices
   double getL1Norm(GridNodePtr node_1, GridNodePtr node_2) {
-    return (node_1->idx - node_2->idx).lpNorm<1>();
+    return (node_2->idx - node_1->idx).lpNorm<1>();
   }
 
   // ??? 
@@ -202,11 +203,11 @@ public:
   int getOccupancy(const Eigen::Vector3i& idx){
     Eigen::Vector3d pos;
     idxToPos(idx, pos);
-    return (map_->getInflateOccupancy(pos) != 0);
+    return map_->getInflateOccupancy(pos);
   }
 
   int getOccupancy(const Eigen::Vector3d& pos){
-    return (map_->getInflateOccupancy(pos) != 0);
+    return map_->getInflateOccupancy(pos);
   }
 
 private:

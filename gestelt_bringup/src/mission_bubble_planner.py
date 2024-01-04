@@ -27,14 +27,13 @@ def main():
     rate = rospy.Rate(2) 
 
     start = create_pose(0.0, 0.0, 1.0)
-    goal = create_pose(10, 10, 1.0)
+    goal = create_pose(10, 5.0, 1.0)
 
     rate.sleep()
     dbg_start_pub.publish(start)
     rate.sleep()
     dbg_goal_pub.publish(goal)  
     rate.sleep()
-
     plan_on_demand_pub_.publish(Empty())
     print(f"Script complete")
 
