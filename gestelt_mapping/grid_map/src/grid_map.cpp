@@ -137,6 +137,13 @@ void GridMap::initMap(ros::NodeHandle &nh)
   mp_.global_map_size_ = Eigen::Vector3d(x_size, y_size, z_size);
   mp_.local_map_size_ = Eigen::Vector3d(local_x_size, local_y_size, local_z_size);
 
+  ROS_INFO("[%s] Map origin (%f, %f, %f)", node_name_.c_str(), 
+    mp_.map_origin_(0), mp_.map_origin_(1), mp_.map_origin_(2));
+  ROS_INFO("[%s] Global map size (%f, %f, %f)", node_name_.c_str(), 
+    mp_.global_map_size_(0), mp_.global_map_size_(1), mp_.global_map_size_(2));
+  ROS_INFO("[%s] Local map size (%f, %f, %f)", node_name_.c_str(), 
+    mp_.local_map_size_(0), mp_.local_map_size_(1), mp_.local_map_size_(2));
+
   // Initialize camera to body matrices
   double c2b_r = (M_PI/180.0) * cam2body_roll;
   double c2b_p = (M_PI/180.0) * cam2body_pitch;
