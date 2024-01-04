@@ -153,9 +153,9 @@ def main():
     # waypoints.append(create_pose(4.0,2.0,1.5))# 5.0,2.0,3
 
     # 1/4 test
-    waypoints.append(create_pose(0.0,1.2,1.2)) # 3.0,2.0,3
+    waypoints.append(create_pose(0.0,1.5,1.2)) # 3.0,2.0,3
     waypoints.append(create_pose(0.0,-0.0,1.2)) # 3.0,2.0,3
-    waypoints.append(create_pose(0.0,-1.2,1.2))# 5.0,2.0,3
+    waypoints.append(create_pose(0.0,-1.5,1.2))# 5.0,2.0,3
     waypoints.append(create_pose(0.0,0.0,1.2))# 5.0,2.0,3
 
     
