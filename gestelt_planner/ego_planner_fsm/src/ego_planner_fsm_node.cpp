@@ -17,10 +17,11 @@ int main(int argc, char **argv)
 
   ros::init(argc, argv, "ego_planner_fsm_node");
   ros::NodeHandle nh("~");
+  ros::NodeHandle pnh;
 
-  EGOReplanFSM rebo_replan;
+  EGOReplanFSM ego_replan_fsm;
 
-  rebo_replan.init(nh);
+  ego_replan_fsm.init(nh, pnh);
 
   // ros::AsyncSpinner async_spinner(4);
   // async_spinner.start();

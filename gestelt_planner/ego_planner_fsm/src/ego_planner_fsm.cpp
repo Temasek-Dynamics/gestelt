@@ -3,7 +3,7 @@
 
 namespace ego_planner
 {
-  void EGOReplanFSM::init(ros::NodeHandle &nh)
+  void EGOReplanFSM::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   {
     have_target_ = false;
     have_odom_ = false;
@@ -13,7 +13,7 @@ namespace ego_planner
     /* initialize main modules */
     visualization_.reset(new PlanningVisualization(nh));
     planner_manager_.reset(new EGOPlannerManager);
-    planner_manager_->initPlanModules(nh, visualization_);
+    planner_manager_->initPlanModules(nh, pnh, visualization_);
 
     /* Benchmarking */
     // time_benchmark_ = std::make_shared<TimeBenchmark>();

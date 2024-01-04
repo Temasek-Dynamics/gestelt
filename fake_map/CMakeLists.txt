@@ -4,7 +4,7 @@ project(fake_map)
 # set(CMAKE_CXX_STANDARD 17)
 # set(CMAKE_CXX_FLAGS "-std=c++17")
 set(CMAKE_BUILD_TYPE "Release")
-add_compile_options(-std=c++14)
+add_compile_options(-std=c++17)
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g")
 
 set (ROS_LIBRARIES

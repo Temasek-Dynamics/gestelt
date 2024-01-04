@@ -8,7 +8,7 @@ namespace ego_planner
 
   EGOPlannerManager::~EGOPlannerManager() { std::cout << "des manager" << std::endl; }
 
-  void EGOPlannerManager::initPlanModules(ros::NodeHandle &nh, PlanningVisualization::Ptr vis)
+  void EGOPlannerManager::initPlanModules(ros::NodeHandle &nh, ros::NodeHandle &pnh, PlanningVisualization::Ptr vis)
   {
     /* read algorithm parameters */
     nh.param("manager/max_vel", pp_.max_vel_, -1.0);
@@ -20,7 +20,7 @@ namespace ego_planner
     nh.param("manager/drone_id", pp_.drone_id, -1);
 
     grid_map_.reset(new GridMap);
-    grid_map_->initMap(nh);
+    grid_map_->initMap(nh, pnh);
 
     ploy_traj_opt_.reset(new PolyTrajOptimizer());
     ploy_traj_opt_->setParam(nh);

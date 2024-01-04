@@ -21,31 +21,33 @@ int main(int argc, char **argv)
 {
     ros::init(argc, argv, "fake_map_publisher");
     ros::NodeHandle nh("~");
-
+    
+    std::string frame_id;
     double map_pub_freq;
     std::string _map_path; // Path to map
     pcl::PointCloud<pcl::PointXYZ> cloud_map; // map in point cloud form
 
-    nh.param<std::string>("map/path", _map_path, "");
-    nh.param<double>("map_publish_freq", map_pub_freq, 0.1);
-
-    ros::Publisher map_pub = 
-        nh.advertise<sensor_msgs::PointCloud2>("/global_map", 3);
-
-    printf("[map_publisher] pcd path: %s\n", _map_path.c_str());
+    /* ROS Params */
+    nh.param<std::string>("map/file_path", _map_path, "");
+    nh.param<std::string>("map/frame_id", frame_id, "world");
+    nh.param<double>("map/publish_freq", map_pub_freq, 0.1);
+    
+    /* Publishers */
+    ros::Publisher map_pub = nh.advertise<sensor_msgs::PointCloud2>("/fake_map", 3);
 
     // try to load the file
-
+    printf("[fake_map_publisher] Specified pcd file path: %s\n", _map_path.c_str());
     if (pcl::io::loadPCDFile<pcl::PointXYZ>(
         _map_path, cloud_map) == -1) 
     {
-        printf("[map_publisher] %sno valid pcd used%s!\n", KRED, KNRM);
+        printf("[fake_map_publisher] no valid pcd file input! Shuting down\n");
+        ros::shutdown();
     }
 
     sensor_msgs::PointCloud2 cloud_msg;
     pcl::toROSMsg(cloud_map, cloud_msg);
     cloud_msg.header.stamp = ros::Time::now();
-    cloud_msg.header.frame_id = "world";
+    cloud_msg.header.frame_id = frame_id;
 
     ros::Rate loop_rate(map_pub_freq);
 

@@ -2,7 +2,6 @@
 #define _GRID_MAP_H
 
 #include <Eigen/Eigen>
-// #include <cv_bridge/cv_bridge.h>
 
 #include <pcl/point_cloud.h>
 #include <pcl/common/transforms.h>
@@ -24,11 +23,14 @@
 #include <tf2_ros/message_filter.h>
 // #include "tf2_geometry_msgs/tf2_geometry_msgs.h"
 // #include <tf2/transform_datatypes.h>
-
 // #include <swarm_benchmark/timebenchmark.h>
 
 #include <octomap/octomap.h>
 #include <octomap/OcTree.h>
+
+#include <bonxai/bonxai.hpp>
+#include <bonxai/pcl_utils.hpp>
+#include <bonxai/probabilistic_map.hpp>
 
 struct MappingParameters
 {
@@ -117,7 +119,8 @@ typedef std::shared_ptr<message_filters::Synchronizer<SyncPolicyCloudPose>> Sync
 typedef std::shared_ptr<message_filters::Synchronizer<SyncPolicyCloudOdom>> SynchronizerCloudOdom;
 
 public:
-typedef std::shared_ptr<GridMap> Ptr;
+  typedef std::shared_ptr<GridMap> Ptr;
+  using BonxaiT = Bonxai::ProbabilisticMap;
 
   enum PoseType
   {
@@ -142,7 +145,7 @@ typedef std::shared_ptr<GridMap> Ptr;
   void reset();
 
   // Initialize the GridMap class and it's callbacks
-  void initMap(ros::NodeHandle &nh);
+  void initMap(ros::NodeHandle &nh, ros::NodeHandle &pnh);
 
   // Get time benchmark shared pointer
   // void initTimeBenchmark(std::shared_ptr<TimeBenchmark> time_benchmark);
@@ -155,9 +158,9 @@ typedef std::shared_ptr<GridMap> Ptr;
   bool isInLocalMap(const Eigen::Vector3d &pos);
 
   // Get occupancy value of given position in Occupancy grid
-  int getOccupancy(const Eigen::Vector3d &pos);
+  bool getOccupancy(const Eigen::Vector3d &pos);
   // Get occupancy value of given position in inflated Occupancy grid
-  int getInflateOccupancy(const Eigen::Vector3d &pos);
+  bool getInflateOccupancy(const Eigen::Vector3d &pos);
 
   /* Gridmap conversion methods */
 
@@ -213,7 +216,7 @@ typedef std::shared_ptr<GridMap> Ptr;
 private:
   MappingParameters mp_;
   MappingData md_;
-  std::string node_name_;
+  std::string node_name_{"grid_map"};
 
   /**
    * Subscriber Callbacks
@@ -252,8 +255,6 @@ private:
 
 
 private: 
-  ros::NodeHandle node_;
-
   /* ROS Publishers, subscribers and Timers */
 
   // Message filters for point cloud/depth camera and pose/odom
@@ -280,6 +281,8 @@ private:
   tf2_ros::Buffer tfBuffer_;
   std::shared_ptr<tf2_ros::TransformListener> tfListener_;
 
+  bool dbg_input_entire_map_; // flag to indicate that map will be constructed at the start from the entire pcd map (instead of through incremental sensor data)
+
   /* Benchmarking */
   // std::shared_ptr<TimeBenchmark> time_benchmark_;
 
@@ -290,6 +293,8 @@ private:
   std::shared_ptr<octomap::OcTree> octree_; // Octree data structure
 
   pcl::VoxelGrid<pcl::PointXYZ> vox_grid_filter_; // Voxel filter
+
+  std::unique_ptr<BonxaiT> bonxai_;
 };
 
 

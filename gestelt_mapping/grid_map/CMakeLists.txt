@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 3.0.2)
 project(grid_map)
 
-set(CMAKE_BUILD_TYPE "Release")
-add_compile_options(-std=c++14)
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g")
+# set(CMAKE_BUILD_TYPE "Release")
+add_compile_options(-std=c++17)
+# set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g")
 
 set(ROS_LIBRARIES
     roscpp
@@ -11,6 +11,7 @@ set(ROS_LIBRARIES
     std_msgs
     sensor_msgs
     message_filters
+    bonxai
 )
 
 find_package(octomap REQUIRED)
@@ -23,7 +24,7 @@ find_package(Eigen3 REQUIRED)
 catkin_package(
  INCLUDE_DIRS include
  LIBRARIES ${PROJECT_NAME}
- CATKIN_DEPENDS tf2_ros
+ CATKIN_DEPENDS tf2_ros bonxai
  DEPENDS PCL 
 )
 
@@ -39,6 +40,7 @@ add_definitions(${PCL_DEFINITIONS})
 link_directories(${PCL_LIBRARY_DIRS})
 
 add_library(${PROJECT_NAME} 
+    include/grid_map/grid_map.h 
     src/grid_map.cpp 
 )
 

@@ -18,7 +18,7 @@ public:
   void reset();
 
   /**
-   * @brief Generate a new plan
+   * @brief Generate a new plan. 
    * 
    * @param start_pos 
    * @param goal_pos 

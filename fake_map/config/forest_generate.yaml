@@ -1,0 +1,21 @@
+polar_obs: 100 # Number of cylinder obstacles
+circle_obs: 0 # Number of hoops
+seed: 1
+
+map:
+  inter_obstacle_clearance: 0.2 # Minimum separation distance between center of obstacle primitives
+  resolution: 0.1
+  x_size: 10.0
+  y_size: 10.0
+  z_size: 3.0
+
+obstacle:
+  lower_rad: 0.1 # Cylinder: Smallest radius
+  upper_rad: 0.5 # Cylinder: Largest radius
+  lower_hei: 3.0 # Cylinder: Lowest height
+  upper_hei: 3.0 # Cylinder: Tallest height
+  radius_l: 7.0 # Circle: Smallest radius
+  radius_h: 7.0 # Circle: Biggest radius
+  z_l: 7.0 # Circle: Smallest radius
+  z_h: 7.0 # Circle: Biggest radius
+  theta: 7.0 # Circle

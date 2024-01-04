@@ -1,37 +1,40 @@
 #####
 # Front-end params
 #####
-frontend/planner_frequency: 10.0
-frontend/goal_tolerance: 0.1 # in [m]
+front_end:
+  planner_frequency: 10.0
+  goal_tolerance: 0.1 # in [m]
 
 #####
 # Mapping params
 #####
-# grid_map/global_frame: "world"
+grid_map:
+  # global_frame: "world"
+  map_size_x: 80.0
+  map_size_y: 80.0
+  map_size_z: 20.0
+  local_map_size_x: 1.5 
+  local_map_size_y: 1.5 
+  local_map_size_z: 2.5 
 
+  sensor/max_range: 5.0
+  ground_height: 0.0
 
-grid_map/map_size_x: 80.0
-grid_map/map_size_y: 80.0
-grid_map/map_size_z: 20.0
-grid_map/local_map_size_x: 1.5 
-grid_map/local_map_size_y: 1.5 
-grid_map/local_map_size_z: 2.5 
+  occ_grid/resolution: 0.1
+  occ_grid/inflation: 0.2 
+  filter/downsample_cloud: false 
+  filter/depth_stride: 4 
+  filter/voxel_size: 0.1
 
-grid_map/sensor/max_range: 5.0
-grid_map/ground_height: 0.0
+  sensor_queue_size: 5
 
-grid_map/occ_grid/resolution: 0.1 
-grid_map/occ_grid/inflation: 0.2 
-grid_map/filter/downsample_cloud: false 
-grid_map/filter/depth_stride: 4 
-grid_map/filter/voxel_size: 0.1
-
-# camera intrinsic parameters 
-grid_map/k_depth_scaling_factor: 1000.0
-# camera extrinsic parameters 
-grid_map/camera_to_body/roll: 90.0
-grid_map/camera_to_body/pitch: 180.0
-grid_map/camera_to_body/yaw: 90.0
-grid_map/camera_to_body/t_x: 0.0
-grid_map/camera_to_body/t_y: 0.0
-grid_map/camera_to_body/t_z: 0.0
+  # camera intrinsic parameters 
+  k_depth_scaling_factor: 1000.0
+  # camera extrinsic parameters 
+  camera_to_body: 
+    roll: 90.0
+    pitch: 180.0
+    yaw: 90.0
+    t_x: 0.0
+    t_y: 0.0
+    t_z: 0.0

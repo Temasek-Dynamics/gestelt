@@ -23,6 +23,7 @@
   <depend>tf2_ros</depend>
 
   <depend>octomap</depend>
+  <depend>bonxai</depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>

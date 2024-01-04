@@ -4,8 +4,8 @@ void FrontEndPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
 { 
   ROS_INFO("Initialized front end planner");
   double planner_freq;
-  pnh.param("frontend/planner_frequency", planner_freq, -1.0);
-  pnh.param("frontend/goal_tolerance", squared_goal_tol_, -1.0);
+  pnh.param("front_end/planner_frequency", planner_freq, -1.0);
+  pnh.param("front_end/goal_tolerance", squared_goal_tol_, -1.0);
   squared_goal_tol_ *= squared_goal_tol_; 
   
   odom_sub_ = nh.subscribe("odom", 5, &FrontEndPlanner::odometryCB, this);
@@ -23,7 +23,7 @@ void FrontEndPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
 
   // Initialize map
   map_.reset(new GridMap);
-  map_->initMap(nh);
+  map_->initMap(nh, pnh);
 
   // Initialize front end planner 
   front_end_planner_ = std::make_unique<AStarPlanner>(map_);
@@ -58,14 +58,16 @@ void FrontEndPlanner::generatePlan(){
     return;
   }
   std::vector<Eigen::Vector3d> path = front_end_planner_->getPathPos();
+  std::vector<Eigen::Vector3d> closed_list = front_end_planner_->getClosedList();
 
   // Generate Safe flight corridor
   // plan_refined = sfc_planner_->generateSFC(plan);
-  ROS_INFO("Size of path: %ld", path.size());
+  ROS_INFO("[FrontEndPlanner]: Size of path: %ld", path.size());
+  ROS_INFO("[FrontEndPlanner]: Size of closed list (expanded nodes): %ld", closed_list.size());
 
   // Publish front end plan
   publishVizPath(path, "world");
-  publishVizClosedList(front_end_planner_->getClosedList(), "world");
+  publishVizClosedList(closed_list, "world");
 }
 
 /**
@@ -78,7 +80,7 @@ void FrontEndPlanner::generatePlan(){
  * @param msg 
  */
 void FrontEndPlanner::planOnDemandCB(const std_msgs::EmptyConstPtr& msg){
-  ROS_INFO("Planning on demand triggered! from (%f, %f, %f) to (%f, %f, %f)",
+  ROS_INFO("[FrontEndPlanner]: Planning on demand triggered! from (%f, %f, %f) to (%f, %f, %f)",
     cur_pos_(0), cur_pos_(1), cur_pos_(2),
     waypoints_.nextWP()(0), waypoints_.nextWP()(1), waypoints_.nextWP()(2)
   );
@@ -96,12 +98,12 @@ void FrontEndPlanner::goalsCB(const gestelt_msgs::GoalsConstPtr &msg)
 {
   if (msg->transforms.size() <= 0)
   {
-    logError("Received empty waypoints");
+    logError("[FrontEndPlanner]: Received empty waypoints");
     return;
   }
   if (msg->header.frame_id != "world" && msg->header.frame_id != "map" )
   {
-    logError("Only waypoint goals in 'world' or 'map' frame are accepted, ignoring waypoints.");
+    logError("[FrontEndPlanner]: Only waypoint goals in 'world' or 'map' frame are accepted, ignoring waypoints.");
     return;
   }
 
@@ -124,7 +126,7 @@ void FrontEndPlanner::goalsCB(const gestelt_msgs::GoalsConstPtr &msg)
 
 void FrontEndPlanner::debugStartCB(const geometry_msgs::PoseConstPtr &msg)
 {
-  ROS_INFO("Received debug start (%f, %f, %f)", 
+  ROS_INFO("[FrontEndPlanner]: Received debug start (%f, %f, %f)", 
         msg->position.x,
         msg->position.y,
         msg->position.z);
@@ -136,7 +138,7 @@ void FrontEndPlanner::debugStartCB(const geometry_msgs::PoseConstPtr &msg)
 
 void FrontEndPlanner::debugGoalCB(const geometry_msgs::PoseConstPtr &msg)
 {
-  ROS_INFO("Received debug goal (%f, %f, %f)", 
+  ROS_INFO("[FrontEndPlanner]: Received debug goal (%f, %f, %f)", 
         msg->position.x,
         msg->position.y,
         msg->position.z);

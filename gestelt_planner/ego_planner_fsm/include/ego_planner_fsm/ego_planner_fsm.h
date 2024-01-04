@@ -161,7 +161,7 @@ public:
   EGOReplanFSM() {}
   ~EGOReplanFSM() {}
 
-  void init(ros::NodeHandle &nh);
+  void init(ros::NodeHandle &nh, ros::NodeHandle &pnh);
 
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 

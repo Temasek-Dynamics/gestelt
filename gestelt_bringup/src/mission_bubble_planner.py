@@ -26,9 +26,10 @@ def main():
     print(f"Sending waypoints to UAVs")
     rate = rospy.Rate(2) 
 
-    start = create_pose(0, 0, 0)
-    goal = create_pose(1, 5, 0)
+    start = create_pose(0.0, 0.0, 1.0)
+    goal = create_pose(10, 10, 1.0)
 
+    rate.sleep()
     dbg_start_pub.publish(start)
     rate.sleep()
     dbg_goal_pub.publish(goal)  

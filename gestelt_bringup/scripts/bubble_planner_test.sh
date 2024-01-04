@@ -32,7 +32,7 @@ roslaunch gestelt_bringup front_end_planner.launch drone_id:=0
 
 # Start up central bridge and nodes
 CMD_2="
-roslaunch gestelt_bringup ego_central.launch rviz_config:=bubble
+roslaunch gestelt_bringup fake_map_central.launch rviz_config:=bubble
 "
 
 # Start up script to send commands
@@ -48,7 +48,7 @@ then
     tmux split-window -t $SESSION:0.0 -h
 
     tmux send-keys -t $SESSION:0.0 "$SOURCE_WS $CMD_0" C-m 
-    sleep 1
+    sleep 2
     # tmux send-keys -t $SESSION:0.1 "$SOURCE_WS $CMD_1" C-m 
     # sleep 1
     tmux send-keys -t $SESSION:0.2 "$SOURCE_WS $CMD_2" C-m 

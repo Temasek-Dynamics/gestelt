@@ -92,6 +92,15 @@ The second one is a fake drone with no physics and be used to test the architect
 3. Minimum Snap Trajectory Planner and Sampler.
 4. Mission commands.
 
+# Additional debugging tips
+1. Build for debugging
+```
+catkin build -DCMAKE_BUILD_TYPE=debug
+```
+
+
 # Acknowledgements
 1. [EGO-Planner-V2 repo](https://github.com/ZJU-FAST-Lab/EGO-Planner-v2)
 2. [ETHZ-ASL/mav_trajectory_generation](https://github.com/ethz-asl/mav_trajectory_generation)
+
+

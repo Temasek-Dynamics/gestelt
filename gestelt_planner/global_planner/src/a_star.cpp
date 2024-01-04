@@ -15,14 +15,15 @@ bool AStarPlanner::generatePlan(const Eigen::Vector3d &start_pos, const Eigen::V
 {
     reset();
 
-    Vector3i start_idx, goal_idx;
-
-    ROS_INFO("Position to index ");
-    if (!common_->posToIdx(start_pos, start_idx) || !common_->posToIdx(goal_pos, goal_idx))
+    // Search takes place in index space. So we first convert 3d real world positions into indices
+    if (!common_->isInGlobalMap(start_pos) || !common_->isInGlobalMap(goal_pos))
     {
         return false;
     }
-    ROS_INFO("After Position to index ");
+
+    Vector3i start_idx, goal_idx;
+    common_->posToIdx(start_pos, start_idx);
+    common_->posToIdx(goal_pos, goal_idx);
 
     GridNodePtr start_node = std::make_shared<GridNode>(start_idx);
     GridNodePtr goal_node = std::make_shared<GridNode>(goal_idx);
@@ -35,49 +36,46 @@ bool AStarPlanner::generatePlan(const Eigen::Vector3d &start_pos, const Eigen::V
 
     int num_iter = 0;
 
-    ROS_INFO("is open list empty? %d", open_list_.empty());
-
     while (!open_list_.empty())
     {
         GridNodePtr cur_node = popOpenlist();
         addToClosedlist(cur_node); // Mark as visited
-        ROS_INFO("Expanding (%d, %d, %d)", cur_node->idx(0), cur_node->idx(1), cur_node->idx(2));
 
         if (*cur_node == *goal_node)
         {
-            ROS_INFO("[global_planner] Goal found!");
+            ROS_INFO("[a_star] Goal found!");
             // Goal reached, terminate search and obtain path
             tracePath(cur_node);
             return true;
         }
 
-        // Explore neighbors
+        // Explore neighbors of current node
+        // The 
         for (GridNodePtr nb_node : common_->getNeighbors(cur_node))
         {
+            // ROS_INFO("Exploring nb (%s) [%s]", common_->getPosStr(nb_node).c_str(), common_->getIndexStr(nb_node).c_str());
             double tent_g_cost = cur_node->g_cost + common_->getL2Norm(cur_node, nb_node);
 
-            if (isInClosedList(nb_node))
-            {
-                // Update explored cost
-                if (tent_g_cost < nb_node->g_cost)
-                {
-                    nb_node->g_cost = tent_g_cost;
-                    nb_node->f_cost = tent_g_cost + tie_breaker_ * common_->getL2Norm(nb_node, goal_node);
-                }
-                continue;
-            }
-
+            // If tentative cost is better than previously computed cost, then update the g and f cost
             if (tent_g_cost < nb_node->g_cost)
             {
                 nb_node->g_cost = tent_g_cost;
+                // The tie_breaker is used to assign a larger weight to the h_cost and favour 
+                // expanding nodes closer towards the goal
                 nb_node->f_cost = tent_g_cost + tie_breaker_ * common_->getL2Norm(nb_node, goal_node);
+            }
 
+            // If not already in closed list: set parent and add to open list
+            if (!isInClosedList(nb_node)) 
+            {
                 nb_node->parent = cur_node;
                 addToOpenlist(nb_node);
             }
+            // No need to update parents for nodes already in closed list, paths leading up to current node is alr the most optimal
         }
         num_iter++;
     }
+    ROS_INFO("[a_star] Iterations required: %d", num_iter);
 
     return false;
 }

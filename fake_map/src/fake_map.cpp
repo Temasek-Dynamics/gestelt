@@ -13,7 +13,11 @@ FakeMap::FakeMap(ros::NodeHandle &nodeHandle) : _nh(nodeHandle) {
 	double sensor_refresh_freq;
 
 	/* ROS Params */
+	bool input_pcd_file{false}; 
+	std::string map_pcd_topic;
+	_nh.param<bool>("map/use_pcd_file", input_pcd_file, false);
 	_nh.param<std::string>("map/filepath", map_filepath_, "");
+	_nh.param<std::string>("map/point_cloud_topic", map_pcd_topic, "");
 
 	_nh.param<std::string>("uav/id", _id, "");
 	_nh.param<std::string>("uav/global_frame", global_frame_, "world");
@@ -28,9 +32,6 @@ FakeMap::FakeMap(ros::NodeHandle &nodeHandle) : _nh(nodeHandle) {
 	_nh.param<int>("fake_laser/vertical/laser_line_num", _vtc_laser_line_num, 0);
 	_nh.param<double>("fake_laser/horizontal/laser_range_dgr", _hrz_laser_range_dgr, 0.0);
 	_nh.param<double>("fake_laser/vertical/laser_range_dgr", _vtc_laser_range_dgr, 0.0);
-
-	std::cout << "tf_listen_freq: " << tf_listen_freq << std::endl;
-	std::cout << "sensor_refresh_freq: " << sensor_refresh_freq << std::endl;
 
 	std::string copy_id = _id; 
 	std::string uav_id_char = copy_id.erase(0,5); // removes first 5 character
@@ -54,13 +55,30 @@ FakeMap::FakeMap(ros::NodeHandle &nodeHandle) : _nh(nodeHandle) {
 	sensor_refresh_timer_ = _nh.createTimer(
 		ros::Duration(1.0/sensor_refresh_freq), 
 		&FakeMap::sensorRefreshTimerCB, this, false, false);
+	
 
-	printf("[quad] %sdrone%d%s pcd path: %s\n", KGRN, uav_id, KNRM, map_filepath_.c_str());
-	// try to load the file
-	if (pcl::io::loadPCDFile<pcl::PointXYZ>(
-		map_filepath_, _global_map) == -1) 
-	{
-		printf("[quad] %sdrone%d%s no valid pcd used!\n", KRED, uav_id, KNRM);
+	if (input_pcd_file){
+		printf("[fake_map] %sdrone%d%s pcd path: %s\n", KGRN, uav_id, KNRM, map_filepath_.c_str());
+		// try to load the file
+		if (pcl::io::loadPCDFile<pcl::PointXYZ>(
+			map_filepath_, _global_map) == -1) 
+		{
+			printf("[fake_map] %sdrone%d%s no valid pcd given to input! Shutting down.\n", KRED, uav_id, KNRM);
+			ros::shutdown();
+		}
+	}
+	else {
+		sensor_msgs::PointCloud2 pc_msg;
+		try {	
+		printf("[fake_drone] %sdrone%d%s Waiting for point cloud on topic %s\n", KGRN, uav_id, KNRM, map_pcd_topic.c_str());
+			pc_msg = *(ros::topic::waitForMessage<sensor_msgs::PointCloud2>(map_pcd_topic,ros::Duration(20)));
+    	pcl::fromROSMsg(pc_msg, _global_map);
+		}
+		catch (...)
+		{
+			ROS_ERROR("[fake_drone] drone%d No point cloud topic %s received. Shutting down.", uav_id, map_pcd_topic.c_str());
+			ros::shutdown();
+		}
 	}
 
 	fake_laser_.set_parameters(
@@ -72,13 +90,12 @@ FakeMap::FakeMap(ros::NodeHandle &nodeHandle) : _nh(nodeHandle) {
 		_vtc_laser_line_num,
 		_hrz_laser_line_num);
 
-	printf("[quad] %sdrone%d%s created! \n", KGRN, uav_id, KNRM);
+	printf("[fake_map] %sdrone%d%s created! \n", KGRN, uav_id, KNRM);
 
 	sensor_cloud_.reset(new pcl::PointCloud<pcl::PointXYZ>);
 
-
-    // Transformations
-    tfListener_.reset(new tf2_ros::TransformListener(tfBuffer_));
+	// Transformations
+	tfListener_.reset(new tf2_ros::TransformListener(tfBuffer_));
 
 	tf_listen_timer_.start();
 	sensor_refresh_timer_.start();
@@ -165,14 +182,14 @@ void FakeMap::sensorRefreshTimerCB(const ros::TimerEvent &)
 
 	// Publish cloud 
 	sensor_msgs::PointCloud2 sensor_cloud_msg;
-    pcl::toROSMsg(*sensor_cloud_, sensor_cloud_msg);
+	pcl::toROSMsg(*sensor_cloud_, sensor_cloud_msg);
 
-    sensor_cloud_msg.header.frame_id = sensor_frame_;
-    sensor_cloud_msg.header.stamp = ros::Time::now();
+	sensor_cloud_msg.header.frame_id = sensor_frame_;
+	sensor_cloud_msg.header.stamp = ros::Time::now();
 
-    fake_sensor_cloud_pub_.publish(sensor_cloud_msg);
+	fake_sensor_cloud_pub_.publish(sensor_cloud_msg);
 	
-	// printf("[quad] %sdrone%d%s mapping time %.3lfms\n", 
+	// printf("[fake_map] %sdrone%d%s mapping time %.3lfms\n", 
 	// 	KGRN, uav_id, KNRM, (ros::Time::now() - start).toSec() * 1000);
 }
 

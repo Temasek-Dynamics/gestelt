@@ -1,7 +1,20 @@
 <launch>
   <arg name="drone_id" default="0"/>
   <arg name="drone_id_ns" value="drone$(arg drone_id)"/>
+
+  <arg name="cloud_topic" default="camera/depth/points" />
+
   <arg name="front_end_planner_cfg_filepath" default="$(find gestelt_bringup)/config/front_end.yaml"/>
+
+  <!-- Add static transform from drone to it's origin -->
+  <node pkg="tf" type="static_transform_publisher" 
+    name="map_to_$(arg drone_id_ns)_origin_tf" 
+    args="0 0 0 0 0 0 1 map $(arg drone_id_ns)_origin 100" />
+
+  <!-- Add static transform from base_link to camera_link -->
+  <node pkg="tf" type="static_transform_publisher" 
+    name="$(arg drone_id_ns)_base_link_to_cam_link_tf" 
+    args="0.08 0 0.02 0 0 0 1 $(arg drone_id_ns)_base_link $(arg drone_id_ns)_cam_link 100" />
 
   <!-- Planner -->
   <include file="$(find front_end_planner)/launch/include/front_end_planner.xml">
@@ -9,5 +22,19 @@
 
       <arg name="drone_id" value="$(arg drone_id)"/>
   </include>
+
+  <!-- Fake sensor data node -->
+  <!-- <node pkg="fake_map" type="fake_map_node" name="fake_map_$(arg drone_id_ns)" output="screen">
+      <rosparam command="load" file="$(find gestelt_bringup)/config/fake_laser_params.yaml" />
+
+      <param name="map/use_pcd_file" value="false"/>
+      <param name="map/point_cloud_topic" value="/fake_map"/>
+      <param name="uav/id" value="$(arg drone_id_ns)"/>
+      <param name="uav/global_frame" value="world"/>
+      <param name="uav/origin_frame" value="$(arg drone_id_ns)_origin"/>
+      <param name="uav/sensor_frame" value="$(arg drone_id_ns)_cam_link"/>
+
+      <remap from="uav/sensor_cloud" to="/$(arg drone_id_ns)/$(arg cloud_topic)"/>
+  </node> -->
 
 </launch>

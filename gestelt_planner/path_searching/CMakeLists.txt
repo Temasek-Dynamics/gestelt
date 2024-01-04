@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.0.2)
 project(path_searching)
 
 set(CMAKE_BUILD_TYPE "Release")
-add_compile_options(-std=c++14)
+add_compile_options(-std=c++17)
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g")
 
 set(ROS_LIBRARIES
