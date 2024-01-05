@@ -489,8 +489,19 @@ void TrajServer::execTakeOff()
   int type_mask = IGNORE_VEL | IGNORE_ACC | IGNORE_YAW_RATE ; // Ignore Velocity, Acceleration and yaw rate
   
   Eigen::Vector3d pos = last_mission_pos_;
-  pos(2) = takeoff_height_;
-  
+  if(isUAVReady()){
+    if (takeoff_ramp_ < takeoff_height_){
+      takeoff_ramp_ += pub_cmd_freq_/(pub_cmd_freq_*200); // 25Hz, then the addition is 0.01m, for 0.04s
+    }
+    else {
+      takeoff_ramp_ = takeoff_height_;
+    }
+  }
+  else {
+    takeoff_ramp_ = 0.0;
+  }
+  pos(2) = takeoff_ramp_;
+  last_mission_pos_ = pos;
   publishCmd( pos, Vector3d::Zero(), 
               Vector3d::Zero(), Vector3d::Zero(), 
               last_mission_yaw_, 0, 
@@ -501,11 +512,11 @@ void TrajServer::execHover()
 {
   int type_mask = IGNORE_VEL | IGNORE_ACC | IGNORE_YAW_RATE ; // Ignore Velocity, Acceleration and yaw rate
   Eigen::Vector3d pos = last_mission_pos_;
-
+  
   if (pos(2) < 0.1){
     pos(2) = takeoff_height_;
   }
-
+  last_mission_pos_ = pos;
   publishCmd( pos, Vector3d::Zero(), 
               Vector3d::Zero(), Vector3d::Zero(), 
               last_mission_yaw_, 0, 

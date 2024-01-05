@@ -435,7 +435,7 @@ private: // Member variables
   double takeoff_height_{0.0}; // Default height to take off to 
   double landed_height_{0.1}; // We assume that the ground is even (z = 0)
   double take_off_landing_tol_{0.1}; // tolerance within desired take off or landing 
-
+  double takeoff_ramp_{0.0}; //takeoff ramp value
   int uav_pose_history_size_; // Maximum UAV pose history size
 
   double traj_msg_timeout_{0.2}; 
