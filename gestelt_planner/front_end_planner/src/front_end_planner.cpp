@@ -27,6 +27,7 @@ void FrontEndPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
 
   // Initialize front end planner 
   front_end_planner_ = std::make_unique<AStarPlanner>(map_);
+  sfc_generation_ = std::make_unique<SphericalSFC>(map_);
 }
 
 /**
@@ -67,8 +68,6 @@ void FrontEndPlanner::generatePlan(){
   std::vector<Eigen::Vector3d> path = front_end_planner_->getPathPos();
   std::vector<Eigen::Vector3d> closed_list = front_end_planner_->getClosedList();
 
-  // Generate Safe flight corridor
-  // plan_refined = sfc_planner_->generateSFC(plan);
   ROS_INFO("[FrontEndPlanner]: Size of path: %ld", path.size());
   ROS_INFO("[FrontEndPlanner]: Size of closed list (expanded nodes): %ld", closed_list.size());
 
@@ -76,6 +75,15 @@ void FrontEndPlanner::generatePlan(){
   publishVizPath(path, "world");
   publishVizClosedList(closed_list, "world");
 
+  // Generate Safe flight corridor
+  if (!sfc_generation_->generateSFC(path)){
+    return;
+  }
+
+  std::vector<SphericalSFC::Sphere> sfc_waypoints = sfc_generation_->getSFCWaypoints();
+
+  // Publish safe flight corridor
+  // publishVizSphericalSFC(sfc_waypoints, "world");
 }
 
 /**
@@ -123,13 +131,6 @@ void FrontEndPlanner::goalsCB(const gestelt_msgs::GoalsConstPtr &msg)
   }
 
   waypoints_.addMultipleWP(wp_vec);
-
-  // for (auto wp : waypoints_.getQueue())
-  // {
-  //   visualization_->displayGoalPoint(wp, Eigen::Vector4d(0, 0.5, 0.5, 1), 0.3, i);
-  //   ros::Duration(0.001).sleep();
-  // }
-
 }
 
 void FrontEndPlanner::debugStartCB(const geometry_msgs::PoseConstPtr &msg)

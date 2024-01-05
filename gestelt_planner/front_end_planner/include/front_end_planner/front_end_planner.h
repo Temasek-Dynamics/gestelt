@@ -13,7 +13,10 @@
 #include <nav_msgs/Odometry.h>
 #include <gestelt_msgs/Goals.h>
 
+#include <visualization_msgs/Marker.h>
+
 #include <global_planner/a_star.h>
+#include <sfc_generation/spherical_sfc.h>
 
 class FrontEndPlanner
 {
@@ -52,7 +55,7 @@ private:
 
   /* Planner */
   std::unique_ptr<AStarPlanner> front_end_planner_; // Front-end planner
-  // sfc_planner_ // Safe flight corridor generator
+  std::unique_ptr<SphericalSFC> sfc_generation_; // Safe flight corridor generator
 
   /* Data structs */
   Waypoint waypoints_; // Waypoint handler object
@@ -107,6 +110,10 @@ private:
    */
   void planOnDemandCB(const std_msgs::EmptyConstPtr &msg);
 
+  /**
+   * @brief Generate a plan
+   * 
+   */
   void generatePlan();
 
   /* Checks */

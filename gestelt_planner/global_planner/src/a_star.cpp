@@ -87,7 +87,6 @@ bool AStarPlanner::generatePlan(const Eigen::Vector3d &start_pos, const Eigen::V
     }
     // ROS_INFO("[a_star] Iterations required: %d", num_iter);
 
-
     return false;
 }
 
