@@ -45,6 +45,7 @@ void TrajServer::init(ros::NodeHandle& nh)
   // Subscription to planner
   plan_traj_sub_ = nh.subscribe("/planner/trajectory", 10, &TrajServer::multiDOFJointTrajectoryCb, this);
   planner_hb_sub_ = nh.subscribe("/planner/heartbeat", 10, &TrajServer::plannerHeartbeatCb, this);
+  hover_pos_sub_ = nh.subscribe("/planner/hover_position", 10, &TrajServer::hoverPositionCb, this);
 
   // Subscription to UAV (via MavROS)
   uav_state_sub_ = nh.subscribe<mavros_msgs::State>("/mavros/state", 10, &TrajServer::UAVStateCb, this);
@@ -90,6 +91,11 @@ void TrajServer::plannerHeartbeatCb(std_msgs::EmptyPtr msg)
   heartbeat_time_ = ros::Time::now();
 }
 
+void TrajServer::hoverPositionCb(const geometry_msgs::Pose::ConstPtr &msg)
+{
+  hover_pos_(0) = msg->position.x;
+  hover_pos_(1) = msg->position.y;
+}
 void TrajServer::multiDOFJointTrajectoryCb(const trajectory_msgs::MultiDOFJointTrajectory::ConstPtr &msg)
 {
   if (getServerState() != ServerState::MISSION){ 
@@ -208,7 +214,7 @@ void TrajServer::execTrajTimerCb(const ros::TimerEvent &e)
 {
   // has received vel value
   // ROS_INFO("execTrajTimerCb received velocity: %f, %f, %f", last_mission_vel_(0), last_mission_vel_(1), last_mission_vel_(2));
-  // last_mission_yaw_ = -M_PI/2;
+  last_mission_yaw_ = -M_PI/2;
   // ROS_INFO("last_mission_yaw: %f", last_mission_yaw_);
   
   switch (getServerState()){
@@ -490,17 +496,39 @@ void TrajServer::execTakeOff()
   
   Eigen::Vector3d pos = last_mission_pos_;
   if(isUAVReady()){
-    if (takeoff_ramp_ < takeoff_height_){
-      takeoff_ramp_ += pub_cmd_freq_/(pub_cmd_freq_*200); // 25Hz, then the addition is 0.01m, for 0.04s
+
+
+    // x direction takeoff ramp
+    if (abs(takeoff_ramp_(0)) < abs(hover_pos_(0))){
+      takeoff_ramp_(0) += pub_cmd_freq_/(pub_cmd_freq_*200)*hover_pos_.array().sign()(0); // 25Hz, then the addition is 0.01m, for 0.04s
     }
     else {
-      takeoff_ramp_ = takeoff_height_;
+      takeoff_ramp_(0) = hover_pos_(0);
     }
+
+    // y direction takeoff ramp
+    if (abs(takeoff_ramp_(1)) < abs(hover_pos_(1))){
+      takeoff_ramp_(1) += pub_cmd_freq_/(pub_cmd_freq_*200)*hover_pos_.array().sign()(1); // 25Hz, then the addition is 0.01m, for 0.04s
+    }
+    else {
+      takeoff_ramp_(1) = hover_pos_(1);
+    }
+
+    // z axis takeoff ramp
+    if (takeoff_ramp_(2) < takeoff_height_){
+      takeoff_ramp_(2) += pub_cmd_freq_/(pub_cmd_freq_*200); // 25Hz, then the addition is 0.01m, for 0.04s
+    }
+    else {
+      takeoff_ramp_(2) = takeoff_height_;
+    }
+
   }
-  else {
-    takeoff_ramp_ = 0.0;
+  else // if the drone is not ready, then the takeoff ramp is 0
+  {
+    takeoff_ramp_ = {0.0, 0.0, 0.0};
   }
-  pos(2) = takeoff_ramp_;
+
+  pos = takeoff_ramp_;
   last_mission_pos_ = pos;
   publishCmd( pos, Vector3d::Zero(), 
               Vector3d::Zero(), Vector3d::Zero(), 

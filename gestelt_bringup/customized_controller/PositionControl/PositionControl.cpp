@@ -86,7 +86,7 @@ void PositionControl::updateHoverThrust(const float hover_thrust_new)
 		_pos_int(2) += (_acc_sp(2) - CONSTANTS_ONE_G) * _hover_thrust / hover_thrust_new + CONSTANTS_ONE_G - _acc_sp(2);
 
 		setHoverThrust(hover_thrust_new);
-		PX4_INFO("new hover thrust: %8.4f", (double)_hover_thrust);
+		// PX4_INFO("new hover thrust: %8.4f", (double)_hover_thrust);
 	}
 }
 
@@ -221,11 +221,18 @@ void PositionControl::_RPTControl(const float dt)
 	F_xy[3] = -(wn_xy * wn_xy + 2 * sigma_xy * wn_xy * ki_xy) / (eps_xy * eps_xy);
 	F_xy[4] = -(2 * sigma_xy * wn_xy + ki_xy) / eps_xy;
 
+	// F_xy[0]=10.9f;
+	// F_xy[1]=6.3f;
+	// F_xy[2]=3.0f;
+	// F_xy[3]=-10.9f;
+	// F_xy[4]=-6.3f;
+
 	// z outer-loop controller
 	float wn_z = 0.5f;
 	float sigma_z = 1.1f * 1.5f;
-	float eps_z = 1.0f * 0.3f;
 	float ki_z = 0.8f * 1.5f;
+	float eps_z = 1.0f * 0.3f;
+
 	float F_z[5];
 
 	// z outer-loop controller
@@ -234,8 +241,11 @@ void PositionControl::_RPTControl(const float dt)
 	F_z[2] = ki_z * wn_z * wn_z / (eps_z * eps_z * eps_z);
 	F_z[3] = -(wn_z * wn_z + 2 * sigma_z * wn_z * ki_z) / (eps_z * eps_z);
 	F_z[4] = -(2 * sigma_z * wn_z + ki_z) / eps_z;
-
-
+	// F_z[0]=24.78f;
+	// F_z[1]=9.5f;
+	// F_z[2]=11.11f;
+	// F_z[3]=-24.78f;
+	// F_z[4]=-9.5f;
 
 	// Constrain velocity in z-direction.
 	ControlMath::setZeroIfNanVector3f(_vel_sp);
@@ -250,8 +260,8 @@ void PositionControl::_RPTControl(const float dt)
 	ControlMath::setZeroIfNanVector3f(vel_error);
 
 
-	PX4_INFO("pos_error: %8.4f %8.4f %8.4f", (double)pos_error(0), (double)pos_error(1), (double)pos_error(2));
-	PX4_INFO("vel_error: %8.4f %8.4f %8.4f", (double)vel_error(0), (double)vel_error(1), (double)vel_error(2));
+	// PX4_INFO("pos_error: %8.4f %8.4f %8.4f", (double)pos_error(0), (double)pos_error(1), (double)pos_error(2));
+	// PX4_INFO("vel_error: %8.4f %8.4f %8.4f", (double)vel_error(0), (double)vel_error(1), (double)vel_error(2));
 	//p+d
 	Vector3f pos_gain = Vector3f(F_xy[0], F_xy[0], F_z[0]);
 	Vector3f vel_gain = Vector3f(F_xy[1], F_xy[1], F_z[1]);
@@ -266,13 +276,13 @@ void PositionControl::_RPTControl(const float dt)
 
 	// No control input from setpoints or corresponding states which are NAN
 	// desired feed-forward acceleration: _acc_sp
-	PX4_WARN("feedforward acc_sp: %8.4f %8.4f %8.4f", (double)_acc_sp(0), (double)_acc_sp(1), (double)_acc_sp(2));
+	// PX4_WARN("feedforward acc_sp: %8.4f %8.4f %8.4f", (double)_acc_sp(0), (double)_acc_sp(1), (double)_acc_sp(2));
 
 	ControlMath::addIfNotNanVector3f(_acc_sp, u_pos_error);
 	ControlMath::addIfNotNanVector3f(_acc_sp, u_vel_error);
 	ControlMath::addIfNotNanVector3f(_acc_sp, u_pos_int);
 
-	PX4_WARN("output acc_sp: %8.4f %8.4f %8.4f", (double)_acc_sp(0), (double)_acc_sp(1), (double)_acc_sp(2));
+	// PX4_WARN("output acc_sp: %8.4f %8.4f %8.4f", (double)_acc_sp(0), (double)_acc_sp(1), (double)_acc_sp(2));
 
 	//anti-windup
 	_accelerationControl();

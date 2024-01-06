@@ -1,0 +1,8 @@
+<launch>
+  <!-- Launches a test mission -->
+  <node pkg="gestelt_bringup" name="mission" type="hover_anywhere_mission.py"  />
+
+   <!-- Start rosbag to record setpoint_raw and local_position -->
+   <!-- path have to be absolute path-->
+  <node pkg="rosbag" type="record" name="record" output="screen" args="-o /home/tianchensun/gestelt_ws/data/ /mavros/setpoint_raw/local /mavros/local_position/pose  /planner/sample_trajectory"/>
+</launch>
