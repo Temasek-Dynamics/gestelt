@@ -19,6 +19,11 @@ void FrontEndPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   front_end_plan_viz_pub_ = nh.advertise<visualization_msgs::Marker>("plan_viz", 10);
   closed_list_viz_pub_ = nh.advertise<visualization_msgs::Marker>("closed_list_viz", 10);
 
+  sfc_spherical_viz_pub_ = nh.advertise<visualization_msgs::Marker>("sfc_spherical", 10);
+
+  sfc_p_cand_viz_pub_ = nh.advertise<visualization_msgs::Marker>("sfc_cand_points", 10);
+  sfc_dist_viz_pub_ = nh.advertise<visualization_msgs::Marker>("sfc_dist", 10);
+
   // plan_timer_ = nh.createTimer(ros::Duration(1/planner_freq), &FrontEndPlanner::planTimerCB, this);
 
   // Initialize map
@@ -27,7 +32,9 @@ void FrontEndPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
 
   // Initialize front end planner 
   front_end_planner_ = std::make_unique<AStarPlanner>(map_);
-  sfc_generation_ = std::make_unique<SphericalSFC>(map_);
+  sfc_generation_ = std::make_unique<SphericalSFC>(map_, 1);
+
+  sfc_generation_->addVizPublishers(sfc_p_cand_viz_pub_, sfc_dist_viz_pub_);
 }
 
 /**
@@ -39,16 +46,16 @@ void FrontEndPlanner::planTimerCB(const ros::TimerEvent &e)
   generatePlan();
 }
 
-void FrontEndPlanner::generatePlan(){
+bool FrontEndPlanner::generatePlan(){
   
   // Check if waypoint queue is empty
   if (waypoints_.empty()){
-    return;
+    return false;
   }
 
   if (isGoalReached(cur_pos_, waypoints_.nextWP())){
     waypoints_.popWP();
-    return;
+    return false;
   }
 
   // Generate a plan
@@ -59,31 +66,34 @@ void FrontEndPlanner::generatePlan(){
 
   if (!front_end_planner_->generatePlan(start_pos_, goal_pos_)){
     ROS_ERROR("[FrontEndPlanner] Path generation failed!");
-    publishVizClosedList(front_end_planner_->getClosedList(), "world");
-    return;
+    publishVizCubes(front_end_planner_->getClosedList(), "world", closed_list_viz_pub_);
+    return false;
   }
   double plan_time_ms = (ros::Time::now() - plan_start_time).toSec() * 1000;
-  ROS_INFO("[FrontEndPlanner]: Planning Time: %f ms", plan_time_ms);
 
   std::vector<Eigen::Vector3d> path = front_end_planner_->getPathPos();
   std::vector<Eigen::Vector3d> closed_list = front_end_planner_->getClosedList();
 
-  ROS_INFO("[FrontEndPlanner]: Size of path: %ld", path.size());
-  ROS_INFO("[FrontEndPlanner]: Size of closed list (expanded nodes): %ld", closed_list.size());
-
   // Publish front end plan
-  publishVizPath(path, "world");
-  publishVizClosedList(closed_list, "world");
+  publishVizSpheres(path, "world", front_end_plan_viz_pub_) ;
+  publishVizCubes(closed_list, "world", closed_list_viz_pub_);
 
   // Generate Safe flight corridor
   if (!sfc_generation_->generateSFC(path)){
-    return;
+    return false;
   }
 
-  std::vector<SphericalSFC::Sphere> sfc_waypoints = sfc_generation_->getSFCWaypoints();
+  std::vector<SphericalSFC::Sphere> sfc_spheres = sfc_generation_->getSFCWaypoints();
 
   // Publish safe flight corridor
-  // publishVizSphericalSFC(sfc_waypoints, "world");
+  publishVizSphericalSFC(sfc_spheres, "world", sfc_spherical_viz_pub_);
+
+  ROS_INFO("[FrontEndPlanner]: Planning Time: %f ms", plan_time_ms);
+  ROS_INFO("[FrontEndPlanner]: Size of path: %ld", path.size());
+  ROS_INFO("[FrontEndPlanner]: Size of closed list (expanded nodes): %ld", closed_list.size());
+  ROS_INFO("[FrontEndPlanner]: Number of spheres in SFC Spherical corridor: %ld", sfc_spheres.size());
+
+  return true;
 }
 
 /**

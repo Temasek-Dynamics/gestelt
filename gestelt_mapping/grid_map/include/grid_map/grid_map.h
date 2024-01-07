@@ -9,6 +9,8 @@
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/filters/passthrough.h>
 
+#include <pcl/kdtree/kdtree_flann.h>
+
 #include <ros/ros.h>
 
 #include <message_filters/subscriber.h>
@@ -139,6 +141,7 @@ public:
   /* Initialization methods */
 
   GridMap() {}
+
   ~GridMap() {}
 
   // Reset map data
@@ -150,22 +153,32 @@ public:
   // Get time benchmark shared pointer
   // void initTimeBenchmark(std::shared_ptr<TimeBenchmark> time_benchmark);
   
-  /* Gridmap access methods */
+  /* Gridmap operation methods */
 
   // True if given GLOBAL position is within the GLOBAL map boundaries, else False
   bool isInGlobalMap(const Eigen::Vector3d &pos);
+
   // True if given GLOBAL position is within the LOCAL map boundaries, else False
   bool isInLocalMap(const Eigen::Vector3d &pos);
 
   // Get occupancy value of given position in Occupancy grid
   bool getOccupancy(const Eigen::Vector3d &pos);
+
   // Get occupancy value of given position in inflated Occupancy grid
   bool getInflateOccupancy(const Eigen::Vector3d &pos);
 
-  /* Gridmap conversion methods */
+  /**
+   * @brief Get the Nearest Occupied Cell  
+   * 
+   * @param pos 
+   * @param occ_nb 
+   * @param radius 
+   * @return true 
+   * @return false 
+   */
+  bool getNearestOccupiedCell(const Eigen::Vector3d &pos, Eigen::Vector3d& occ_nb, double& radius); 
 
-  // Create inflation sphere for inflating the octomap
-  void setInflation(const double& inflation_radius, const double& map_res);
+  /* Gridmap conversion methods */
 
   // Get camera-to-global frame transformation
   void getCamToGlobalPose(const geometry_msgs::Pose &pose);
@@ -290,11 +303,15 @@ private:
   pcl::PointCloud<pcl::PointXYZ>::Ptr local_map_origin_;  // Point cloud local map in UAV origin frame
   pcl::PointCloud<pcl::PointXYZ>::Ptr global_map_origin_;  // Point cloud global map in UAV Origin frame
 
+  std::shared_ptr<pcl::KdTreeFLANN<pcl::PointXYZ>> kdtree_; // KD-Tree 
+
   std::shared_ptr<octomap::OcTree> octree_; // Octree data structure
 
   pcl::VoxelGrid<pcl::PointXYZ> vox_grid_filter_; // Voxel filter
 
-  std::unique_ptr<BonxaiT> bonxai_;
+  std::unique_ptr<BonxaiT> bonxai_; // Bonxai data structure 
+
+
 };
 
 
