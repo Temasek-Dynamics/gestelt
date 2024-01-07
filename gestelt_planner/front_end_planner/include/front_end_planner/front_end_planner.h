@@ -1,5 +1,5 @@
-#ifndef _EGO_PLANNER_FSM_H_
-#define _EGO_PLANNER_FSM_H_
+#ifndef _FRONT_END_PLANNER_H_
+#define _FRONT_END_PLANNER_H_
 
 #include <front_end_planner/front_end_helper.h>
 
@@ -183,6 +183,6 @@ private:
       drone_id_, str.c_str());
   }
 
-};
+}; // class FrontEndPlanner
 
-#endif // _EGO_PLANNER_FSM_H_
+#endif // _FRONT_END_PLANNER_H_

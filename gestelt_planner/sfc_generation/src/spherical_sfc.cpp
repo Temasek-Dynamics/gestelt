@@ -3,16 +3,17 @@
 SphericalSFC::SphericalSFC(std::shared_ptr<GridMap> grid_map, const int& max_itr):
     grid_map_(grid_map), max_itr_(max_itr)
 {
-    max_sample_points_ = 50;
+    max_sample_points_ = 10000;
     weight_cand_vol_ = 0.5;
     weight_intersect_vol_ = 0.5;
 }   
 
-void SphericalSFC::addVizPublishers(ros::Publisher p_cand_viz_pub, 
-    ros::Publisher dist_viz_pub)
+void SphericalSFC::addVizPublishers(ros::Publisher& p_cand_viz_pub, 
+    ros::Publisher& dist_viz_pub, ros::Publisher& sfc_spherical_viz_pub)
 {
     p_cand_viz_pub_ = p_cand_viz_pub;
     dist_viz_pub_ = dist_viz_pub;
+    sfc_spherical_viz_pub_ = sfc_spherical_viz_pub;
 }
 
 bool SphericalSFC::generateSFC(const std::vector<Eigen::Vector3d> &path)
@@ -51,6 +52,8 @@ bool SphericalSFC::generateSFC(const std::vector<Eigen::Vector3d> &path)
 
         itr_++;
     }
+
+    publishVizSphericalSFC(sfc_spheres_, "world", sfc_spherical_viz_pub_);
 
     // if !(sfc_spheres_.back().contains(path.back())){ 
     //     std::cout << "Final safe flight corridor does not contain the goal" << std::endl;
@@ -119,6 +122,10 @@ bool SphericalSFC::BatchSample(const Eigen::Vector3d& p_guide, Sphere& B_cur)
     double stddev_x = 0.5 * dir_vec.norm();
     Eigen::Vector3d stddev{stddev_x, 0.5*stddev_x, 0.5*stddev_x};
 
+    // Calculate orientation of distribution ellipsoid
+    Eigen::Matrix<double, 3, 3> ellipse_rot_mat = rotationAlign(Eigen::Vector3d::UnitX(), dir_vec_norm);
+    Eigen::Quaterniond ellipse_orientation(ellipse_rot_mat);
+
     // Set up seed for sampler
     uint64_t seed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
     sampler_.setSeed(seed);
@@ -130,9 +137,10 @@ bool SphericalSFC::BatchSample(const Eigen::Vector3d& p_guide, Sphere& B_cur)
         p_cand_vec.push_back(sampler_.sample());
     }
 
-    for (auto p_cand : p_cand_vec){
+    for (auto& p_cand: p_cand_vec){
         std::shared_ptr<Sphere> B_cand = std::make_shared<Sphere>();
         // TODO: Transform point 
+        // p_cand = ellipse_rot_mat * p_cand;
 
         // Generate candidate sphere, calculate score and add to priority queue
         generateFreeSphere(p_cand, *B_cand);
@@ -140,10 +148,6 @@ bool SphericalSFC::BatchSample(const Eigen::Vector3d& p_guide, Sphere& B_cur)
 
         B_cand_pq_.push(B_cand);
     }
-
-    // Calculate orientation of distribution ellipsoid
-    Eigen::Matrix<double, 3, 3> ellipse_rot_mat = rotationAlign(Eigen::Vector3d::UnitX(), dir_vec_norm);
-    Eigen::Quaterniond ellipse_orientation(ellipse_rot_mat);
 
     // Publish candidate points and 3d distribution visualization
     publishVizPoints(p_cand_vec, "world", p_cand_viz_pub_); 
@@ -193,7 +197,7 @@ Eigen::Matrix<double, 3, 3> SphericalSFC::rotationAlign(const Eigen::Vector3d & 
 void SphericalSFC::publishVizPoints(const std::vector<Eigen::Vector3d>& pts, const std::string& frame_id, ros::Publisher& publisher)
 {
   visualization_msgs::Marker sphere_list;
-  double radius = 0.1;
+  double radius = 0.025;
   double alpha = 0.5;
 
   sphere_list.header.frame_id = frame_id;
@@ -240,8 +244,8 @@ visualization_msgs::Marker SphericalSFC::createVizEllipsoid(const Eigen::Vector3
     sphere.pose.orientation.w = orientation.w();
 
     sphere.color.r = 1.0;
-    sphere.color.g = 0.0;
-    sphere.color.b = 1.0;
+    sphere.color.g = 1.0;
+    sphere.color.b = 0.0;
     sphere.color.a = 0.5;
     sphere.scale.x = stddev(0);
     sphere.scale.y = stddev(1);

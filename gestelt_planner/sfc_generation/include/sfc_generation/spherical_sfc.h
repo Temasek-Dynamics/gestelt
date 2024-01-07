@@ -127,7 +127,8 @@ public:
    */
   void reset();
     
-  void addVizPublishers(ros::Publisher p_cand_viz_pub, ros::Publisher dist_viz_pub);
+  void addVizPublishers(
+    ros::Publisher& p_cand_viz_pub, ros::Publisher& dist_viz_pub, ros::Publisher& sfc_spherical_viz_pub);
 
   /**
    * @brief Generate a spherical safe flight corridor given a path
@@ -188,6 +189,38 @@ private: // Private methods
 
   void publishVizPoints(const std::vector<Eigen::Vector3d>& pts, const std::string& frame_id, ros::Publisher& publisher);
 
+  void publishVizSphericalSFC(const std::vector<SphericalSFC::Sphere>& sfc_spheres, const std::string& frame_id, ros::Publisher& publisher) {
+    for (int i = 0; i < sfc_spheres.size(); i++){
+      publisher.publish(createVizSphere(sfc_spheres[i].center, sfc_spheres[i].getDiameter(), frame_id, i));
+    }
+  }
+
+  visualization_msgs::Marker createVizSphere(const Eigen::Vector3d& center, const double& diameter, const std::string& frame_id, const int& id)
+  {
+    visualization_msgs::Marker sphere;
+
+    sphere.header.frame_id = frame_id;
+    sphere.header.stamp = ros::Time::now();
+    sphere.type = visualization_msgs::Marker::SPHERE;
+    sphere.action = visualization_msgs::Marker::ADD;
+    sphere.id = id;
+    sphere.pose.orientation.w = 1.0;
+
+    sphere.color.r = 0.0;
+    sphere.color.g = 0.0;
+    sphere.color.b = 1.0;
+    sphere.color.a = 0.5;
+    sphere.scale.x = diameter;
+    sphere.scale.y = diameter;
+    sphere.scale.z = diameter;
+
+    sphere.pose.position.x = center(0);
+    sphere.pose.position.y = center(1);
+    sphere.pose.position.z = center(2);
+
+    return sphere;
+  }
+
   visualization_msgs::Marker createVizEllipsoid(const Eigen::Vector3d& center, const Eigen::Vector3d& stddev, const Eigen::Quaterniond& orientation, const std::string& frame_id, const int& id);
 
 private: // Private members
@@ -197,6 +230,7 @@ private: // Private members
 
   ros::Publisher p_cand_viz_pub_; // Visualization of sampling points
   ros::Publisher dist_viz_pub_; // Visualization of sampling distribution
+  ros::Publisher sfc_spherical_viz_pub_; // Visualization of spherical SFC
 
   /* Params */
   int max_itr_; // Maximum number of planning iterations allowed
