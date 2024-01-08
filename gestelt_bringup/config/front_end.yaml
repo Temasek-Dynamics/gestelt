@@ -4,6 +4,14 @@
 front_end:
   planner_frequency: 10.0
   goal_tolerance: 0.1 # in [m]
+  max_iterations: 1000 
+
+sfc:
+  max_iterations: 50
+  sfc_max_sample_points: 1000
+  mult_stddev_x: 0.1 # A higher value leads to worse
+  W_cand_vol: 1
+  W_intersect_vol: 5
 
 #####
 # Mapping params

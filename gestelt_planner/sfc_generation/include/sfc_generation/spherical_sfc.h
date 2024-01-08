@@ -57,7 +57,7 @@ public: // Public structs
 
     double getVolume() const
     {
-      return 1.333 * M_PI * this->radius_sqr * radius;
+      return 1.333 * M_PI * this->radius * this->radius * this->radius ;
     }
 
     /**
@@ -72,7 +72,7 @@ public: // Public structs
     }
 
     // Comparison operator between pointers
-    struct CompareCostPtr
+    struct CompareScorePtr
     {
       bool operator()(const std::shared_ptr<Sphere>& l_sphere, const std::shared_ptr<Sphere>& r_sphere)
       {
@@ -118,8 +118,19 @@ public: // Public structs
 
   }; // struct Sampler
 
+  struct SphericalSFCParams{
+    /* SFC Generation */
+    int max_itr; // maximum iterations allowed
+
+    /* Sampling */
+    int max_sample_points; // Maximum allowed sampling points
+    double mult_stddev_x; // Multiplier for x standard deviation in sampling 
+    double W_cand_vol; // Weight of candidate volume
+    double W_intersect_vol; // Weight of intersection of volumes
+  }; // struct SphericalSFCParams
+
 public:
-  SphericalSFC(std::shared_ptr<GridMap> grid_map, const int& max_itr);
+  SphericalSFC(std::shared_ptr<GridMap> grid_map, const SphericalSFCParams& sfc_params);
 
   /**
    * @brief Clear existing data structures
@@ -183,6 +194,8 @@ private: // Private methods
 
   double computeCandSphereScore(Sphere& B_cand, Sphere& B_prev);
 
+  void transformPoints(std::vector<Eigen::Vector3d>& pts, Eigen::Vector3d origin, const Eigen::Matrix<double, 3, 3>& ellipse_rot_mat);
+
   double getIntersectingVolume(Sphere& B_a, Sphere& B_b);
 
   Eigen::Matrix<double, 3, 3> rotationAlign(const Eigen::Vector3d & z, const Eigen::Vector3d & d);
@@ -233,17 +246,13 @@ private: // Private members
   ros::Publisher sfc_spherical_viz_pub_; // Visualization of spherical SFC
 
   /* Params */
-  int max_itr_; // Maximum number of planning iterations allowed
-  int max_sample_points_{-1};
   int itr_; // Iteration number
 
-  // Weights used in computing score for candidate spheres
-  double weight_cand_vol_; // Weight for candidate sphere volume
-  double weight_intersect_vol_; // Weight for volume of intersecting spheres
+  SphericalSFCParams sfc_params_; // SFC parameters
 
   /* Data structs */
   std::shared_ptr<GridMap> grid_map_; 
-  std::priority_queue<std::shared_ptr<Sphere>, std::vector<std::shared_ptr<Sphere>>, Sphere::CompareCostPtr> B_cand_pq_; // priority queue for candidate spheres in sampling phase
+  std::priority_queue<std::shared_ptr<Sphere>, std::vector<std::shared_ptr<Sphere>>, Sphere::CompareScorePtr> B_cand_pq_; // priority queue for candidate spheres in sampling phase
 
 }; // class SphericalSFC
 

@@ -1,12 +1,9 @@
 #include <sfc_generation/spherical_sfc.h>
 
-SphericalSFC::SphericalSFC(std::shared_ptr<GridMap> grid_map, const int& max_itr):
-    grid_map_(grid_map), max_itr_(max_itr)
-{
-    max_sample_points_ = 10000;
-    weight_cand_vol_ = 0.5;
-    weight_intersect_vol_ = 0.5;
-}   
+SphericalSFC::SphericalSFC(std::shared_ptr<GridMap> grid_map, const SphericalSFCParams& sfc_params):
+    grid_map_(grid_map), sfc_params_(sfc_params)
+{}   
+
 
 void SphericalSFC::addVizPublishers(ros::Publisher& p_cand_viz_pub, 
     ros::Publisher& dist_viz_pub, ros::Publisher& sfc_spherical_viz_pub)
@@ -30,7 +27,7 @@ bool SphericalSFC::generateSFC(const std::vector<Eigen::Vector3d> &path)
     sfc_spheres_.push_back(B_cur);
     
     itr_ = 0;
-    while (itr_ < max_itr_)
+    while (itr_ < sfc_params_.max_itr)
     {
         if (!getForwardPointOnPath(path, path_idx_cur, B_cur)){
             return false;
@@ -46,24 +43,26 @@ bool SphericalSFC::generateSFC(const std::vector<Eigen::Vector3d> &path)
         }
         
         sfc_spheres_.push_back(B_cur);
-        // if B_cur.contains(path.back()){ // If current sphere contains the goal
-        //     break;
-        // }
+        if (B_cur.contains(path.back())){ // If current sphere contains the goal
+            std::cout << "SFC corridor to goal generated!" << std::endl;
+            break;
+        }
 
         itr_++;
     }
 
     publishVizSphericalSFC(sfc_spheres_, "world", sfc_spherical_viz_pub_);
 
-    // if !(sfc_spheres_.back().contains(path.back())){ 
-    //     std::cout << "Final safe flight corridor does not contain the goal" << std::endl;
-    //     return false;
-    // }
+    if (!sfc_spheres_.back().contains(path.back())){ 
+        std::cout << "Final safe flight corridor does not contain the goal" << std::endl;
 
-    // if (itr_ > max_itr_){
-    //     std::cout << "[SphericalSFC] Maximum iterations " << max_itr_ << " exceeded. Consumed " << itr << " iterations." << std::endl;
-    //     return false;
-    // }
+        if (itr_ > sfc_params_.max_itr){
+            std::cout << "[SphericalSFC] Maximum iterations " << sfc_params_.max_itr 
+                    << " exceeded. Consumed " << itr_ << " iterations." << std::endl;
+        }
+
+        return false;
+    }
 
     // waypointAndTimeInitialization(sfc_spheres_);
 
@@ -106,24 +105,21 @@ bool SphericalSFC::getForwardPointOnPath(
 
 bool SphericalSFC::BatchSample(const Eigen::Vector3d& p_guide, Sphere& B_cur)
 {
-    B_cand_pq_ = std::priority_queue<std::shared_ptr<Sphere>, std::vector<std::shared_ptr<Sphere>>, Sphere::CompareCostPtr>();
+    B_cand_pq_ = std::priority_queue<std::shared_ptr<Sphere>, std::vector<std::shared_ptr<Sphere>>, Sphere::CompareScorePtr>();
 
     /* Debugging */
     std::vector<Eigen::Vector3d> p_cand_vec;
 
     // Calculate orientation and standard deviation of normal sampling distribution
-    Eigen::Vector3d dir_vec = B_cur.center - p_guide;
-
-    // Normalize the dir_vec 
-    Eigen::Vector3d dir_vec_norm = dir_vec.normalized();
-
+    Eigen::Vector3d dir_vec = (p_guide - B_cur.center);
+    std::cout << "Dir vec: " << dir_vec << std::endl;
     // TODO: Should we take the standard dev of the normalized or unnormalized vector?
     // Get standard deviation along direction vector
-    double stddev_x = 0.5 * dir_vec.norm();
-    Eigen::Vector3d stddev{stddev_x, 0.5*stddev_x, 0.5*stddev_x};
+    double stddev_x = sfc_params_.mult_stddev_x * dir_vec.norm();
+    Eigen::Vector3d stddev{stddev_x, 2*stddev_x, 2*stddev_x};
 
     // Calculate orientation of distribution ellipsoid
-    Eigen::Matrix<double, 3, 3> ellipse_rot_mat = rotationAlign(Eigen::Vector3d::UnitX(), dir_vec_norm);
+    Eigen::Matrix<double, 3, 3> ellipse_rot_mat = rotationAlign(Eigen::Vector3d::UnitX(), dir_vec.normalized());
     Eigen::Quaterniond ellipse_orientation(ellipse_rot_mat);
 
     // Set up seed for sampler
@@ -132,15 +128,15 @@ bool SphericalSFC::BatchSample(const Eigen::Vector3d& p_guide, Sphere& B_cur)
     sampler_.setParams(p_guide, stddev);
     
     // Sample the points first then rotate them
-    for (int k = 0; k < max_sample_points_; k++){
+    for (int k = 0; k < sfc_params_.max_sample_points; k++){
         /* Debugging */
         p_cand_vec.push_back(sampler_.sample());
     }
 
+    transformPoints(p_cand_vec, p_guide, ellipse_rot_mat);
+
     for (auto& p_cand: p_cand_vec){
         std::shared_ptr<Sphere> B_cand = std::make_shared<Sphere>();
-        // TODO: Transform point 
-        // p_cand = ellipse_rot_mat * p_cand;
 
         // Generate candidate sphere, calculate score and add to priority queue
         generateFreeSphere(p_cand, *B_cand);
@@ -154,6 +150,8 @@ bool SphericalSFC::BatchSample(const Eigen::Vector3d& p_guide, Sphere& B_cur)
     dist_viz_pub_.publish( createVizEllipsoid(p_guide, stddev, ellipse_orientation, "world", itr_));
 
     if (!B_cand_pq_.empty()){
+        std::cout << "Assigned next candidate sphere with volume " << (*B_cand_pq_.top()).getVolume() << 
+            " and intersecting volume " << getIntersectingVolume(*B_cand_pq_.top(), B_cur ) << std::endl;
         B_cur = *B_cand_pq_.top();
         return true;
     } 
@@ -161,17 +159,31 @@ bool SphericalSFC::BatchSample(const Eigen::Vector3d& p_guide, Sphere& B_cur)
     return false;
 }
 
+void SphericalSFC::transformPoints(std::vector<Eigen::Vector3d>& pts, Eigen::Vector3d origin, const Eigen::Matrix<double, 3, 3>& ellipse_rot_mat)
+{
+    for (auto& pt : pts){
+        pt = (ellipse_rot_mat * (pt - origin)) + origin;
+    }
+}
+
 double SphericalSFC::computeCandSphereScore(Sphere& B_cand, Sphere& B_prev)
 {   
     double V_cand = B_cand.getVolume();
     double V_intersect = getIntersectingVolume(B_cand, B_prev);
 
-    return weight_cand_vol_ * V_cand + weight_intersect_vol_ * V_intersect;
+    return sfc_params_.W_cand_vol * V_cand + sfc_params_.W_intersect_vol * V_intersect;
 }
 
 double SphericalSFC::getIntersectingVolume(Sphere& B_a, Sphere& B_b)
 {
-    return 0.0;
+    
+    double d = (B_a.center - B_b.center).norm();
+    if (d >= (B_a.radius + B_b.radius)){ // Non-intersection
+        return -999999;
+    }
+    double vol_intersect = (1/12) * M_PI * (4* B_a.radius + d) * (2 * B_a.radius - d) * (2 * B_a.radius - d);
+
+    return vol_intersect;
 }
 
 // Get rotation that aligns z to d
@@ -198,7 +210,7 @@ void SphericalSFC::publishVizPoints(const std::vector<Eigen::Vector3d>& pts, con
 {
   visualization_msgs::Marker sphere_list;
   double radius = 0.025;
-  double alpha = 0.5;
+  double alpha = 0.7;
 
   sphere_list.header.frame_id = frame_id;
   sphere_list.header.stamp = ros::Time::now();
@@ -208,9 +220,9 @@ void SphericalSFC::publishVizPoints(const std::vector<Eigen::Vector3d>& pts, con
   sphere_list.id = 1; 
   sphere_list.pose.orientation.w = 1.0;
 
-  sphere_list.color.r = 1.0;
-  sphere_list.color.g = 1.0;
-  sphere_list.color.b = 1.0;
+  sphere_list.color.r = 0.0;
+  sphere_list.color.g = 0.0;
+  sphere_list.color.b = 0.0;
   sphere_list.color.a = alpha;
 
   sphere_list.scale.x = radius;
