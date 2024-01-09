@@ -116,13 +116,12 @@ def pub_waypoints(waypoints,accels,vels):
     waypoints_pos_pub.publish(wp_pos_msg)
     waypoints_acc_pub.publish(wp_acc_msg)
 
-def hover_position(last_pos,pub_freq):
+def hover_position():
     
     hover_position = Pose()
     hover_position.position.x = 0.0
     hover_position.position.y = 1.3
     # z is the same as the takeoff height
-
 
     hover_position_pub.publish(hover_position)
 
@@ -131,8 +130,6 @@ def main():
     rospy.init_node('mission_startup', anonymous=True)
     pub_freq = 25 # hz
     rate = rospy.Rate(pub_freq) # hz 20hz
-    hover_count=0
-    hover_duration=15*pub_freq # 5 seconds
 
     HOVER_MODE = False
     MISSION_MODE = False
@@ -159,13 +156,12 @@ def main():
             break
         elif (not HOVER_MODE):
             # IDLE -> TAKE OFF -> HOVER
-            hover_position(last_pos,pub_freq)
+            hover_position()
             print("Setting to HOVER mode!")
             publishCommand(CommanderCommand.TAKEOFF)
         elif (HOVER_MODE):
             # HOVER -> desired position -> MISSION
             print("Setting to MISSION mode!")
-            
             publishCommand(CommanderCommand.MISSION)
 
 

@@ -87,6 +87,13 @@ def pub_waypoints(waypoints,accels):
     waypoints_pos_pub.publish(wp_pos_msg)
     waypoints_acc_pub.publish(wp_acc_msg)
 def main():
+
+    # need to close function in the traj_server
+    """      if (!isExecutingMission()){
+        logInfoThrottled("Waiting for mission", 5.0);
+        // ROS_INFO("in waiting for mission");
+        // execHover();
+    """
     rospy.init_node('mission_startup', anonymous=True)
     pub_freq = 25 # hz
     rate = rospy.Rate(pub_freq) # hz 20hz
@@ -120,18 +127,21 @@ def main():
             setpoint.header.stamp = rospy.Time.now()
             setpoint.header.frame_id = "world"
             setpoint.coordinate_frame = PositionTarget.FRAME_LOCAL_NED
-            setpoint.type_mask = PositionTarget.IGNORE_AFX + PositionTarget.IGNORE_AFY + PositionTarget.IGNORE_AFZ + PositionTarget.IGNORE_YAW_RATE
+            setpoint.type_mask = PositionTarget.IGNORE_VX+PositionTarget.IGNORE_VY+PositionTarget.IGNORE_VZ+PositionTarget.IGNORE_AFX + PositionTarget.IGNORE_AFY + PositionTarget.IGNORE_AFZ + PositionTarget.IGNORE_YAW_RATE
             
-            setpoint.velocity.x = 3
-            setpoint.velocity.y = 3
-            setpoint.velocity.z = 3
-            last_pos_x +=setpoint.velocity.x*(1/pub_freq)
-            last_pos_y +=setpoint.velocity.y*(1/pub_freq)
-            last_pos_z +=setpoint.velocity.z*(1/pub_freq)
+            # setpoint.velocity.x = 3
+            # setpoint.velocity.y = 3
+            # setpoint.velocity.z = 3
+            # last_pos_x +=setpoint.velocity.x*(1/pub_freq)
+            # last_pos_y +=setpoint.velocity.y*(1/pub_freq)
+            # last_pos_z +=setpoint.velocity.z*(1/pub_freq)
             
+            last_pos_x = 1.5
+            last_pos_y = 0
+            last_pos_z = 0
             setpoint.position.x = last_pos_x
             setpoint.position.y = last_pos_y
-            setpoint.position.z = last_pos_z+1.5
+            setpoint.position.z = last_pos_z+1.2
            
             setpoint.acceleration_or_force.x = 0
             setpoint.acceleration_or_force.y = 0
