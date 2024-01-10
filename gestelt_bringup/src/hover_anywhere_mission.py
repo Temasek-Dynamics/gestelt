@@ -120,7 +120,7 @@ def hover_position():
     
     hover_position = Pose()
     hover_position.position.x = 0.0
-    hover_position.position.y = 1.3
+    hover_position.position.y = 2.0
     # z is the same as the takeoff height
 
     hover_position_pub.publish(hover_position)
@@ -181,15 +181,15 @@ def main():
     # 1/4 test
     # waypoints.append(create_pose(0.0,1.5,1.2)) # 3.0,2.0,3
     waypoints.append(create_pose(0.0,-0.0,1.2)) # 3.0,2.0,3
-    waypoints.append(create_pose(0.0,-1.5,1.2))# 5.0,2.0,3
+    waypoints.append(create_pose(0.0,-2.0,1.2))# 5.0,2.0,3
     waypoints.append(create_pose(0.0,0.0,1.2))# 5.0,2.0,3
 
     
     # the number of accelerations must be equal to the number of waypoints
     accel_list = []
     
-    g=-9.81 #m/s^2
-    f=0.3*(-g) #N
+    g=-9.81 #m/s^2  # down force, negative
+    f=1*(-g) #N  # up force, positive
     angle=60
     angle_rad=math.radians(angle)
 
@@ -203,15 +203,14 @@ def main():
     # accel_list.append(create_accel(None,None,None))
     accel_list.append(create_accel(-f*np.sin(angle_rad),0.0,g+f*np.cos(angle_rad)))
     accel_list.append(create_vel(None,None,None))
-    accel_list.append(create_vel(None,None,None))
-    
+    accel_list.append(create_vel(None,None,None)) 
+
     # velocites constraint
     vel_list = []
     # vel_list.append(create_vel(0.0,0.0,0.0))
     vel_list.append(create_vel(None,None,None))
     vel_list.append(create_vel(0.0,0.0,0.0))
     vel_list.append(create_vel(0.0,0.0,0.0))
-    
     pub_waypoints(waypoints,accel_list,vel_list)
     rospy.spin()
 if __name__ == '__main__':

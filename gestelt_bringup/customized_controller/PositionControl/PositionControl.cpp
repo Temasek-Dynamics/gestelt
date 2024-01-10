@@ -208,10 +208,10 @@ void PositionControl::_RPTControl(const float dt)
 {
 	// desired system responds parameters
 	// xy outer-loop controller
-	float wn_xy = 0.4f;
-	float sigma_xy = 1.1f * 1.5f;
-	float ki_xy = 0.8f * 1.5f;
-	float eps_xy = 1.0f * 0.4f;
+	float wn_xy = 0.4f; 		// natural frequency
+	float sigma_xy = 1.1f * 1.5f ; 	// settling time
+	float ki_xy = 0.8f * 1.5f; 	// pole placement
+	float eps_xy = 1.0f * 0.4f; 	// damping ratio
 	float F_xy[5];
 
 	// xy outer-loop controller
@@ -228,10 +228,10 @@ void PositionControl::_RPTControl(const float dt)
 	// F_xy[4]=-6.3f;
 
 	// z outer-loop controller
-	float wn_z = 0.5f;
-	float sigma_z = 1.1f * 1.5f;
-	float ki_z = 0.8f * 1.5f;
-	float eps_z = 1.0f * 0.3f;
+	float wn_z = 0.5f;		// natural frequency
+	float sigma_z = 1.1f * 1.5f;	// settling time
+	float ki_z = 0.8f * 1.5f;	// pole placement
+	float eps_z = 1.0f * 0.3f;	// damping ratio
 
 	float F_z[5];
 
@@ -359,16 +359,16 @@ void PositionControl::_accelerationControl()
 	}
 	ControlMath::limitTilt(body_z, Vector3f(0, 0, 1), _lim_tilt);
 	// Scale thrust assuming hover thrust produces standard gravity
-	float collective_thrust = _acc_sp(2) * (_hover_thrust / CONSTANTS_ONE_G) - _hover_thrust;
+	// float collective_thrust = _acc_sp(2) * (_hover_thrust / CONSTANTS_ONE_G) - _hover_thrust;
 
 	// unlimited the thrust to always produce the standard gravity
 	// the thrust magitude is the maginitude of the sum of (the desired acceleration and the standard gravity)
 	// the thrust direction is opposite to the sum of (the desired acceleration and the standard gravity)
-	// float collective_thrust =-(_acc_sp+Vector3f(0, 0, -CONSTANTS_ONE_G)).norm()*( _hover_thrust / CONSTANTS_ONE_G);
+	float collective_thrust =-(_acc_sp+Vector3f(0, 0, -CONSTANTS_ONE_G)).norm()*( _hover_thrust / CONSTANTS_ONE_G);
 
 
 	// Project thrust to planned body attitude
-	collective_thrust /= (Vector3f(0, 0, 1).dot(body_z));
+	// collective_thrust /= (Vector3f(0, 0, 1).dot(body_z));
 	collective_thrust = math::min(collective_thrust, -_lim_thr_min);
 	_thr_sp = body_z * collective_thrust;
 }
