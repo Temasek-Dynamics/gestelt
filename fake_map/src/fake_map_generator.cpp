@@ -100,13 +100,38 @@ class DeterministicForest
 			// A) Generate a test map for the vicon room
 			// generateViconTest()
 			// generateRoomBoundaries()
+
 			// B) Generate a random map for benchmarking
 			// unsigned int seed = rd();
-			eng.seed(_seed);
-			RandomMapGenerate();
+			// eng.seed(_seed);
+			// RandomMapGenerate();
+			// // Add floor and ceiling
+			// generateHorizontalPlane(_x_size, _y_size, 0.0);
+			// generateHorizontalPlane(_x_size, _y_size, _z_size);
 
-			generateHorizontalPlane(_x_size, _y_size, 0.0);
-			generateHorizontalPlane(_x_size, _y_size, _z_size);
+			// C) Generate a tunnel for benchmarking
+			// generateRectangularTunnel(Eigen::Vector3d{0.0, 0.0, 0.0}, 10.0, 2.0, 2.0);
+
+			// D) Generate a narrow window (1m x 1m) for benchmarking 
+			double win_side_length = 1.0;
+			double win_top_btm_height= 1.0;
+			double win_length = 1.0;
+			double win_height = 1.0;
+
+			// Side wall along window
+			generateWall(Eigen::Vector2d{0.0, 0.0}, Eigen::Vector2d{0.0, win_side_length}, 
+				0.0, 2 * win_top_btm_height + win_height);
+			generateWall(Eigen::Vector2d{0.0, win_side_length + win_length}, Eigen::Vector2d{0.0, 2*win_side_length + win_length}, 
+				0.0, 2 * win_top_btm_height + win_height);
+
+			// Top and bottom wall of window
+			generateWall(Eigen::Vector2d{0.0, win_side_length}, Eigen::Vector2d{0.0, win_side_length + win_length}, 
+				0.0, win_top_btm_height);
+			generateWall(Eigen::Vector2d{0.0, win_side_length}, Eigen::Vector2d{0.0, win_side_length + win_length}, 
+				win_top_btm_height + win_height, 2 * win_top_btm_height + win_height);
+
+			// Generate floor
+			generateHorizontalPlane(20.0, 20.0, 0.0);	
 
 			cloud_map.width = cloud_map.points.size();
 			cloud_map.height = 1;
@@ -146,6 +171,33 @@ class DeterministicForest
 			generatePredeterminedCyclinders(cylinders);
 		}
 
+		/**
+		 * @brief Generate a rectangular tunnel 
+		 * 
+		 */
+		void generateRectangularTunnel(
+			const Eigen::Vector3d& start_pt, 
+			const double& length, const double& width, const double& height){
+
+			Eigen::Vector3d end_pt = start_pt + Eigen::Vector3d{length, width, 0.0};
+
+			// Generate tunnel floor
+			generateHorizontalPlane(
+				Eigen::Vector2d{start_pt(0),start_pt(1)}, Eigen::Vector2d{end_pt(0),end_pt(1)}, 0.0);
+
+			// Generate tunnel ceiling
+			generateHorizontalPlane(
+				Eigen::Vector2d{start_pt(0),start_pt(1)}, Eigen::Vector2d{end_pt(0),end_pt(1)}, height);
+
+			/* Generate tunnel walls */
+			// Right wall (keep y1 constant, and change x)
+			generateWall(Eigen::Vector2d{start_pt(0),start_pt(1)}, Eigen::Vector2d{end_pt(0),start_pt(1)}, 0.0, height);
+
+			// Left wall (keep y2 constant, and change x)
+			generateWall(Eigen::Vector2d{start_pt(0),end_pt(1)}, Eigen::Vector2d{end_pt(0),end_pt(1)}, 0.0, height);
+
+		}
+
 		void generateRoomBoundaries(){
 			// Generate floor, ceiling and walls
 			generateHorizontalPlane(_x_size, _y_size, 0.0);
@@ -172,7 +224,6 @@ class DeterministicForest
 		{
 			viewer.addCube(x_min, y_min, x_max, y_max, 0.0, 0.1, 1.0, 0.5, 1.0, id);
 		}
-
 
 		void addSphereViz(pcl::visualization::PCLVisualizer& viewer, double x, double y, double radius, const std::string& id)
 		{
@@ -381,6 +432,55 @@ class DeterministicForest
 			}
 		}
 
+		void generateWall(const Eigen::Vector2d& start_pt, const Eigen::Vector2d& end_pt, const double& start_z, const double& height)
+		{
+			pcl::PointXYZ pt;
+
+			long num_z_cells =  floor((height - start_z)/ _resolution);
+
+			int x0 = floor(start_pt(0)/_resolution);
+			int y0 = floor(start_pt(1)/_resolution);
+
+			int x1 = floor(end_pt(0)/_resolution);
+			int y1 = floor(end_pt(1)/_resolution);
+
+			int dx = abs(x1 - x0);
+			int sx = x0 < x1 ? 1 : -1;
+			int dy = -abs(y1 - y0);
+			int sy = y0 < y1 ? 1 : -1;
+			int error = dx + dy;
+			
+			// We need to iterate through cell space
+			while (true){
+				pt.x = x0 * _resolution;
+				pt.y = y0 * _resolution;
+				for (int k = 0; k < num_z_cells; k++){
+					pt.z = start_z + k * _resolution + 1e-2;
+					cloud_map.points.push_back(pt);
+				}
+
+				if (x0 == x1 && y0 == y1) {
+					break;
+				}
+				int e2 = 2 * error;
+				if (e2 >= dy){
+					if (x0 == x1) {
+						break;
+					}
+					error = error + dy;
+					x0 = x0 + sx;
+				}
+				if (e2 <= dx){
+					if (y0 == y1) {
+						break;
+					}
+					error = error + dx;
+					y0 = y0 + sy;
+				}
+			}
+
+		}
+
 		/**
 		 * @brief Generates a wall along y axis. 
 		 * 
@@ -449,6 +549,26 @@ class DeterministicForest
 			}
 		}
 
+		void generateHorizontalPlane(const Eigen::Vector2d& start_pt, const Eigen::Vector2d& end_pt, const double& z_height)
+		{
+			pcl::PointXYZ pt;
+			pt.z = z_height;
+
+			long num_x_cells = floor((end_pt(0) - start_pt(0)) / _resolution);
+			long num_y_cells = floor((end_pt(1) - start_pt(1)) / _resolution);
+
+			for (int i = 0; i < num_x_cells; i++){ // x-axis
+				// Points need to be in units of meters
+				pt.x = start_pt(0) + i * _resolution + 1e-2;
+				for (int j = 0; j < num_y_cells; j++){ // y-axis
+					pt.y = start_pt(1) + j * _resolution + 1e-2;
+
+					cloud_map.points.push_back(pt);
+				}
+			}
+			
+		}
+
 		/**
 		 * @brief Add a horizontal plane of predefined size and height
 		 * 
@@ -456,10 +576,10 @@ class DeterministicForest
 		 * @param size_y 
 		 * @param size_z 
 		 */
-		void generateHorizontalPlane(double size_x, double size_y, double size_z)
+		void generateHorizontalPlane(double size_x, double size_y, double z_height)
 		{
 			pcl::PointXYZ pt;
-			pt.z = size_z;
+			pt.z = z_height;
 
 			long num_x_cells = floor(size_x / _resolution);
 			long num_y_cells = floor(size_y / _resolution);
@@ -473,6 +593,7 @@ class DeterministicForest
 					cloud_map.points.push_back(pt);
 				}
 			}
+
 		}
 
 		/**
@@ -484,7 +605,6 @@ class DeterministicForest
 				generateCyclinder(cyl.x, cyl.y, cyl.radius, cyl.height);
 			}
 		}
-
 
 		/**
 		 * @brief Check if obstacle is in goal regions. IF true, then return false.

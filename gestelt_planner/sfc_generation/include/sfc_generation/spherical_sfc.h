@@ -10,6 +10,18 @@
 #include <ros/ros.h>
 #include <visualization_msgs/Marker.h>
 
+class Trajectory
+{
+public:
+  Trajectory(){}
+  
+  std::vector<Eigen::Vector3d> position;
+  std::vector<Eigen::Vector3d> time;
+
+private:
+  
+}; // class Trajectory
+
 class SphericalSFC : public SFCBase
 {
 public: // Public structs
@@ -138,8 +150,9 @@ public:
    */
   void reset();
     
-  void addVizPublishers(
-    ros::Publisher& p_cand_viz_pub, ros::Publisher& dist_viz_pub, ros::Publisher& sfc_spherical_viz_pub);
+  void addVizPublishers(ros::Publisher& p_cand_viz_pub, 
+    ros::Publisher& dist_viz_pub, ros::Publisher& sfc_spherical_viz_pub,
+    ros::Publisher&  sfc_waypoints_viz_pub);
 
   /**
    * @brief Generate a spherical safe flight corridor given a path
@@ -192,17 +205,43 @@ private: // Private methods
 
   bool BatchSample(const Eigen::Vector3d& point, Sphere& B_cur);
 
+  /**
+   * @brief Get the center of the curve of intersection made between spheres B_a and B_b
+   * 
+   * @param B_a 
+   * @param B_b 
+   * @return Eigen::Vector3d 
+   */
+  Eigen::Vector3d getIntersectionCenter(const Sphere& B_a, const Sphere& B_b);
+
+  /**
+   * @brief Compute the score of the candidate sphere, given the previous sphere in the SFC
+   * 
+   * @param B_cand 
+   * @param B_prev 
+   * @return double 
+   */
   double computeCandSphereScore(Sphere& B_cand, Sphere& B_prev);
 
-  void transformPoints(std::vector<Eigen::Vector3d>& pts, Eigen::Vector3d origin, const Eigen::Matrix<double, 3, 3>& ellipse_rot_mat);
+  void transformPoints(std::vector<Eigen::Vector3d>& pts, Eigen::Vector3d origin, const Eigen::Matrix<double, 3, 3>& rot_mat);
 
   double getIntersectingVolume(Sphere& B_a, Sphere& B_b);
 
   Eigen::Matrix<double, 3, 3> rotationAlign(const Eigen::Vector3d & z, const Eigen::Vector3d & d);
 
-  void publishVizPoints(const std::vector<Eigen::Vector3d>& pts, const std::string& frame_id, ros::Publisher& publisher);
+  std::vector<Eigen::Vector3d> initializeWaypointsAndTimeAllocation(const std::vector<SphericalSFC::Sphere>& sfc_spheres);
 
-  void publishVizSphericalSFC(const std::vector<SphericalSFC::Sphere>& sfc_spheres, const std::string& frame_id, ros::Publisher& publisher) {
+  /* Visualization methods */
+
+  void publishVizPoints(const std::vector<Eigen::Vector3d>& pts, 
+    ros::Publisher& publisher, Eigen::Vector3d color = Eigen::Vector3d{0.0, 0.0, 0.0}, 
+    double radius = 0.025, const std::string& frame_id = "world");
+
+  void publishVizPiecewiseTrajectory(const std::vector<Eigen::Vector3d>& pts, 
+    ros::Publisher& publisher, const std::string& frame_id = "world");
+
+  void publishVizSphericalSFC(const std::vector<SphericalSFC::Sphere>& sfc_spheres, 
+    ros::Publisher& publisher, const std::string& frame_id = "world") {
     for (int i = 0; i < sfc_spheres.size(); i++){
       publisher.publish(createVizSphere(sfc_spheres[i].center, sfc_spheres[i].getDiameter(), frame_id, i));
     }
@@ -244,6 +283,7 @@ private: // Private members
   ros::Publisher p_cand_viz_pub_; // Visualization of sampling points
   ros::Publisher dist_viz_pub_; // Visualization of sampling distribution
   ros::Publisher sfc_spherical_viz_pub_; // Visualization of spherical SFC
+  ros::Publisher sfc_waypoints_viz_pub_; // Visualization of trajectory waypoints
 
   /* Params */
   int itr_; // Iteration number

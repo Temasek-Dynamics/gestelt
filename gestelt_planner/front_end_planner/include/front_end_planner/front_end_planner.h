@@ -44,10 +44,11 @@ private:
   ros::Publisher closed_list_viz_pub_; // Visualization of closed list
 
   /* Visualization for SFC*/
-  ros::Publisher sfc_spherical_viz_pub_; // Visualization of front end plan
+  ros::Publisher sfc_spherical_viz_pub_; // Visualization of SFC spheres
 
-  ros::Publisher sfc_p_cand_viz_pub_; // Visualization of sampling points
-  ros::Publisher sfc_dist_viz_pub_; // Visualization of sampling distribution
+  ros::Publisher sfc_p_cand_viz_pub_; // Visualization of SFC sampling points
+  ros::Publisher sfc_dist_viz_pub_; // Visualization of SFC sampling distribution
+  ros::Publisher sfc_waypoints_viz_pub_; // Visualization of SFC waypoints
 
   ros::Timer plan_timer_; // Timer for planning loop
   

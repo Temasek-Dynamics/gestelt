@@ -6,6 +6,9 @@
 #include <unordered_set>
 #include <queue>
 
+#include <ros/ros.h>
+#include <visualization_msgs/Marker.h>
+
 class AStarPlanner : public PlannerBase
 {
 public:
@@ -41,6 +44,11 @@ public:
    */
   std::vector<Eigen::Vector3d> getClosedList();
 
+  void addVizPublishers(ros::Publisher& closed_list_viz_pub)
+  {
+      closed_list_viz_pub_ = closed_list_viz_pub;
+  }
+
 private:
 
   void addToOpenlist(GridNodePtr node);
@@ -53,10 +61,49 @@ private:
 
   void tracePath(GridNodePtr node);
 
+  void publishVizPoints(const std::vector<Eigen::Vector3d>& pts, ros::Publisher& publisher, Eigen::Vector3d color = Eigen::Vector3d{0.0, 0.0, 0.0}, double radius = 0.1, const std::string& frame_id = "world")
+  {
+    if (pts.empty()){
+      return;
+    }
+    visualization_msgs::Marker sphere_list;
+    double alpha = 0.7;
+
+    sphere_list.header.frame_id = frame_id;
+    sphere_list.header.stamp = ros::Time::now();
+    sphere_list.type = visualization_msgs::Marker::SPHERE_LIST;
+    sphere_list.action = visualization_msgs::Marker::ADD;
+    sphere_list.ns = "spherical_sfc_pts"; 
+    sphere_list.id = 1; 
+    sphere_list.pose.orientation.w = 1.0;
+
+    sphere_list.color.r = color(0);
+    sphere_list.color.g = color(1);
+    sphere_list.color.b = color(2);
+    sphere_list.color.a = alpha;
+
+    sphere_list.scale.x = radius;
+    sphere_list.scale.y = radius;
+    sphere_list.scale.z = radius;
+
+    geometry_msgs::Point pt;
+    for (int i = 0; i < pts.size(); i++){
+      pt.x = pts[i](0);
+      pt.y = pts[i](1);
+      pt.z = pts[i](2);
+
+      sphere_list.points.push_back(pt);
+    }
+
+    publisher.publish(sphere_list);
+  }
+
 private: 
   std::vector<GridNodePtr> path_gridnode_; // Path in terms of Grid Nodes
   std::vector<Eigen::Vector3i> path_idx_; // Path in terms of indices
   std::vector<Eigen::Vector3d> path_pos_; // Path in terms of 3d position
+
+  ros::Publisher closed_list_viz_pub_;
 
   /* Params */
   const double tie_breaker_ = 1.0 + 1.0 / 10000;

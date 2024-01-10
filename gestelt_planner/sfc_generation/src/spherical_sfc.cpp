@@ -6,11 +6,13 @@ SphericalSFC::SphericalSFC(std::shared_ptr<GridMap> grid_map, const SphericalSFC
 
 
 void SphericalSFC::addVizPublishers(ros::Publisher& p_cand_viz_pub, 
-    ros::Publisher& dist_viz_pub, ros::Publisher& sfc_spherical_viz_pub)
+    ros::Publisher& dist_viz_pub, ros::Publisher& sfc_spherical_viz_pub,
+    ros::Publisher&  sfc_waypoints_viz_pub)
 {
     p_cand_viz_pub_ = p_cand_viz_pub;
     dist_viz_pub_ = dist_viz_pub;
     sfc_spherical_viz_pub_ = sfc_spherical_viz_pub;
+    sfc_waypoints_viz_pub_ = sfc_waypoints_viz_pub;
 }
 
 bool SphericalSFC::generateSFC(const std::vector<Eigen::Vector3d> &path)
@@ -51,7 +53,7 @@ bool SphericalSFC::generateSFC(const std::vector<Eigen::Vector3d> &path)
         itr_++;
     }
 
-    publishVizSphericalSFC(sfc_spheres_, "world", sfc_spherical_viz_pub_);
+    publishVizSphericalSFC(sfc_spheres_, sfc_spherical_viz_pub_, "world");
 
     if (!sfc_spheres_.back().contains(path.back())){ 
         std::cout << "Final safe flight corridor does not contain the goal" << std::endl;
@@ -64,7 +66,8 @@ bool SphericalSFC::generateSFC(const std::vector<Eigen::Vector3d> &path)
         return false;
     }
 
-    // waypointAndTimeInitialization(sfc_spheres_);
+    std::vector<Eigen::Vector3d> traj_waypoints = initializeWaypointsAndTimeAllocation(sfc_spheres_);
+    publishVizPiecewiseTrajectory(traj_waypoints, sfc_waypoints_viz_pub_);
 
     return true;
 }   
@@ -146,7 +149,7 @@ bool SphericalSFC::BatchSample(const Eigen::Vector3d& p_guide, Sphere& B_cur)
     }
 
     // Publish candidate points and 3d distribution visualization
-    publishVizPoints(p_cand_vec, "world", p_cand_viz_pub_); 
+    publishVizPoints(p_cand_vec, p_cand_viz_pub_); 
     dist_viz_pub_.publish( createVizEllipsoid(p_guide, stddev, ellipse_orientation, "world", itr_));
 
     if (!B_cand_pq_.empty()){
@@ -159,10 +162,10 @@ bool SphericalSFC::BatchSample(const Eigen::Vector3d& p_guide, Sphere& B_cur)
     return false;
 }
 
-void SphericalSFC::transformPoints(std::vector<Eigen::Vector3d>& pts, Eigen::Vector3d origin, const Eigen::Matrix<double, 3, 3>& ellipse_rot_mat)
+void SphericalSFC::transformPoints(std::vector<Eigen::Vector3d>& pts, Eigen::Vector3d origin, const Eigen::Matrix<double, 3, 3>& rot_mat)
 {
     for (auto& pt : pts){
-        pt = (ellipse_rot_mat * (pt - origin)) + origin;
+        pt = (rot_mat * (pt - origin)) + origin;
     }
 }
 
@@ -186,6 +189,38 @@ double SphericalSFC::getIntersectingVolume(Sphere& B_a, Sphere& B_b)
     return vol_intersect;
 }
 
+Eigen::Vector3d SphericalSFC::getIntersectionCenter(const Sphere& B_a, const Sphere& B_b)
+{   
+    Eigen::Vector3d dir_vec = B_b.center - B_a.center; 
+    double d_centroids = (dir_vec).norm(); // scalar distance between spheres B_a and B_b 
+    // Get distance to intersection along direction vector dir_vec from center of B_a to center of B_b
+    double d_intersect = (pow(B_a.radius,2) + pow(d_centroids,2) - pow(B_b.radius,2) ) / (2*d_centroids);
+
+    Eigen::Vector3d pt_intersect = B_a.center + (d_intersect/d_centroids) * dir_vec;
+
+    return pt_intersect;
+}
+
+// TODO: Time allocation not implemented yet
+std::vector<Eigen::Vector3d> SphericalSFC::initializeWaypointsAndTimeAllocation(const std::vector<SphericalSFC::Sphere>& sfc_spheres)
+{
+    std::vector<Eigen::Vector3d> traj_waypoints;
+
+    traj_waypoints.push_back(sfc_spheres[0].center);
+
+    for(int i = 1; i < sfc_spheres.size(); i++){
+        // If the center of the previous sphere is not inside current sphere,
+        // We add their intersection into the waypoint
+        if (!sfc_spheres[i].contains(sfc_spheres[i-1].center)){
+            traj_waypoints.push_back(getIntersectionCenter(sfc_spheres[i-1], sfc_spheres[i]) );
+        }
+        traj_waypoints.push_back(sfc_spheres[i].center);
+    }
+    // traj_waypoints.push_back(sfc_spheres.back().center);
+
+    return traj_waypoints;
+}
+
 // Get rotation that aligns z to d
 Eigen::Matrix<double, 3, 3> SphericalSFC::rotationAlign(const Eigen::Vector3d & z, const Eigen::Vector3d & d)
 {
@@ -206,23 +241,86 @@ Eigen::Matrix<double, 3, 3> SphericalSFC::rotationAlign(const Eigen::Vector3d & 
 
 }
 
-void SphericalSFC::publishVizPoints(const std::vector<Eigen::Vector3d>& pts, const std::string& frame_id, ros::Publisher& publisher)
+void SphericalSFC::publishVizPiecewiseTrajectory(const std::vector<Eigen::Vector3d>& pts, ros::Publisher& publisher, const std::string& frame_id)
+{
+    visualization_msgs::Marker sphere_list, path_line_strip;
+    Eigen::Vector3d wp_color = Eigen::Vector3d{1.0, 0.0, 0.0};
+    double wp_alpha = 0.7;
+    double wp_radius = 0.2;
+
+    Eigen::Vector3d line_color = Eigen::Vector3d{1.0, 0.0, 0.0};
+    double line_alpha = 0.7;
+    double line_scale = 0.2;
+
+    // sphere_list.action = visualization_msgs::Marker::DELETEALL;
+    // path_line_strip.action = visualization_msgs::Marker::DELETEALL;
+    // publisher.publish(sphere_list);
+    // publisher.publish(path_line_strip);
+
+    /* Path waypoint spheres */
+    sphere_list.header.frame_id = frame_id;
+    sphere_list.header.stamp = ros::Time::now();
+    sphere_list.type = visualization_msgs::Marker::SPHERE_LIST;
+    sphere_list.action = visualization_msgs::Marker::ADD;
+    sphere_list.ns = "spherical_sfc_pts"; 
+    sphere_list.id = 1; 
+    sphere_list.pose.orientation.w = 1.0;
+
+    sphere_list.color.r = wp_color(0);
+    sphere_list.color.g = wp_color(1);
+    sphere_list.color.b = wp_color(2);
+    sphere_list.color.a = wp_alpha;
+
+    sphere_list.scale.x = wp_radius;
+    sphere_list.scale.y = wp_radius;
+    sphere_list.scale.z = wp_radius;
+    
+    /* Path line strips */
+    path_line_strip.header.frame_id = frame_id;
+    path_line_strip.header.stamp = ros::Time::now();
+    path_line_strip.type = visualization_msgs::Marker::LINE_STRIP;
+    path_line_strip.action = visualization_msgs::Marker::ADD;
+    path_line_strip.ns = "spherical_sfc_line"; 
+    path_line_strip.id = 2;
+    path_line_strip.pose.orientation.w = 1.0;
+
+    path_line_strip.color.r = line_color(0);
+    path_line_strip.color.g = line_color(1);
+    path_line_strip.color.b = line_color(2);
+    path_line_strip.color.a = line_alpha;
+
+    path_line_strip.scale.x = line_scale;
+
+    geometry_msgs::Point pt;
+    for (int i = 0; i < pts.size(); i++){
+        pt.x = pts[i](0);
+        pt.y = pts[i](1);
+        pt.z = pts[i](2);
+
+        sphere_list.points.push_back(pt);
+        path_line_strip.points.push_back(pt);
+    }
+
+    publisher.publish(sphere_list);
+    publisher.publish(path_line_strip);
+}
+
+void SphericalSFC::publishVizPoints(const std::vector<Eigen::Vector3d>& pts, ros::Publisher& publisher, Eigen::Vector3d color, double radius, const std::string& frame_id)
 {
   visualization_msgs::Marker sphere_list;
-  double radius = 0.025;
   double alpha = 0.7;
 
   sphere_list.header.frame_id = frame_id;
   sphere_list.header.stamp = ros::Time::now();
   sphere_list.type = visualization_msgs::Marker::SPHERE_LIST;
   sphere_list.action = visualization_msgs::Marker::ADD;
-  sphere_list.ns = "spherical_sfc_cand_pts"; 
+  sphere_list.ns = "spherical_sfc_pts"; 
   sphere_list.id = 1; 
   sphere_list.pose.orientation.w = 1.0;
 
-  sphere_list.color.r = 0.0;
-  sphere_list.color.g = 0.0;
-  sphere_list.color.b = 0.0;
+  sphere_list.color.r = color(0);
+  sphere_list.color.g = color(1);
+  sphere_list.color.b = color(2);
   sphere_list.color.a = alpha;
 
   sphere_list.scale.x = radius;
@@ -230,7 +328,7 @@ void SphericalSFC::publishVizPoints(const std::vector<Eigen::Vector3d>& pts, con
   sphere_list.scale.z = radius;
 
   geometry_msgs::Point pt;
-  for (int i = 1; i < pts.size() - 1; i++){
+  for (int i = 0; i < pts.size(); i++){
     pt.x = pts[i](0);
     pt.y = pts[i](1);
     pt.z = pts[i](2);

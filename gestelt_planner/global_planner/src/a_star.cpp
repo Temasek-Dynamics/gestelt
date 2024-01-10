@@ -45,8 +45,10 @@ bool AStarPlanner::generatePlan(const Eigen::Vector3d &start_pos, const Eigen::V
 
     while (!open_list_.empty())
     {
-        if (num_iter%50 == 0){
+        if (num_iter%100 == 0){
             ROS_INFO("[a_star] Iteration %d", num_iter);
+
+            publishVizPoints(getClosedList(), closed_list_viz_pub_);
         }
         GridNodePtr cur_node = popOpenlist();
         addToClosedlist(cur_node); // Mark as visited
@@ -60,7 +62,6 @@ bool AStarPlanner::generatePlan(const Eigen::Vector3d &start_pos, const Eigen::V
         }
 
         // Explore neighbors of current node
-        // The 
         for (GridNodePtr nb_node : common_->getNeighbors(cur_node))
         {
             // ROS_INFO("Exploring nb (%s) [%s]", common_->getPosStr(nb_node).c_str(), common_->getIndexStr(nb_node).c_str());
