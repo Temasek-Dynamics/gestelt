@@ -120,7 +120,7 @@ def hover_position():
     
     hover_position = Pose()
     hover_position.position.x = 0.0
-    hover_position.position.y = 2.0
+    hover_position.position.y = 1.5
     # z is the same as the takeoff height
 
     hover_position_pub.publish(hover_position)
@@ -181,7 +181,7 @@ def main():
     # 1/4 test
     # waypoints.append(create_pose(0.0,1.5,1.2)) # 3.0,2.0,3
     waypoints.append(create_pose(0.0,-0.0,1.2)) # 3.0,2.0,3
-    waypoints.append(create_pose(0.0,-2.0,1.2))# 5.0,2.0,3
+    waypoints.append(create_pose(0.0,-1.5,1.2))# 5.0,2.0,3
     waypoints.append(create_pose(0.0,0.0,1.2))# 5.0,2.0,3
 
     
