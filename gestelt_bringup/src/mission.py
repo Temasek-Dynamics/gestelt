@@ -196,19 +196,19 @@ def main():
         waypoints.append(create_pose(radius * math.cos(math.radians(i * 360 / num_points)) - radius, 
                                      radius * math.sin(math.radians(i * 360 / num_points)),
                                      1.2))
+        ## FINITE DIFFERENCE -- NOT WORKING
         # vel = [radius * math.cos(math.radians(i * 360 / num_points)) - radius * math.cos(math.radians((i+1) * 360 / num_points)),
         #                            radius * math.sin(math.radians(i * 360 / num_points)) - radius * math.sin(math.radians((i+1) * 360 / num_points)),
         #                            0.0]
         # vel_magnitude = math.sqrt(vel[0]**2 + vel[1]**2 + vel[2]**2)
         # vel_list.append(create_vel(3 * vel[0] / vel_magnitude, 3 * vel[1] / vel_magnitude, 3 * vel[2] / vel_magnitude)) 
+        
+        ## DIFFERENTIATING POS -- NOT WORKING
         # vel_list.append(create_vel(- radius * math.sin(math.radians(i * 360 / num_points)),
                                 #    radius * math.cos(math.radians(i * 360 / num_points)),
                                 #    0))
         vel_list.append(create_vel(None,None,None))
         accel_list.append(create_accel(None,None,None))
-
-
-
 
     pub_waypoints(waypoints,accel_list,vel_list)
     rospy.spin()

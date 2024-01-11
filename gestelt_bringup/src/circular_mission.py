@@ -50,8 +50,8 @@ def create_pose(x, y, z):
 
     pose.orientation.x = 0
     pose.orientation.y = 0
-    pose.orientation.z = 0
-    pose.orientation.w = 1
+    pose.orientation.z = -0.707
+    pose.orientation.w = 0.707
 
     return pose
 def create_accel(acc_x,acc_y,acc_z):
