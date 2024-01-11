@@ -8,6 +8,11 @@ from std_msgs.msg import Int8, Bool
 from controller_msgs.msg import FlatTarget
 import math
 import time
+
+# get ros params
+takeoff_height = rospy.get_param("/takeoff_height", 1.2)
+
+
 # Publisher of server events to trigger change of states for trajectory server 
 server_event_pub = rospy.Publisher('/traj_server/command', CommanderCommand, queue_size=10)
 # Publisher of server events to trigger change of states for trajectory server 
