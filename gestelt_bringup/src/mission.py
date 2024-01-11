@@ -147,45 +147,69 @@ def main():
     print(f"Sending waypoints to UAVs")
     waypoints = []
 
-    # side length 5m
-    # MATLAB TASK
-    # waypoints.append(create_pose(2.0,2.0,1.5))# 5.0,2.0,3
-    # waypoints.append(create_pose(4.0,2.0,1.5))# 5.0,2.0,3
+    # # side length 5m
+    # # MATLAB TASK
+    # # waypoints.append(create_pose(2.0,2.0,1.5))# 5.0,2.0,3
+    # # waypoints.append(create_pose(4.0,2.0,1.5))# 5.0,2.0,3
 
-    # 1/4 test
-    waypoints.append(create_pose(0.0,1.5,1.2)) # 3.0,2.0,3
-    waypoints.append(create_pose(0.0,-0.0,1.2)) # 3.0,2.0,3
-    waypoints.append(create_pose(0.0,-1.5,1.2))# 5.0,2.0,3
-    waypoints.append(create_pose(0.0,0.0,1.2))# 5.0,2.0,3
+    # # 1/4 test
+    # waypoints.append(create_pose(0.0,1.5,1.2)) # 3.0,2.0,3
+    # waypoints.append(create_pose(0.0,-0.0,1.2)) # 3.0,2.0,3
+    # waypoints.append(create_pose(0.0,-1.5,1.2))# 5.0,2.0,3
+    # waypoints.append(create_pose(0.0,0.0,1.2))# 5.0,2.0,3
 
     
-    # the number of accelerations must be equal to the number of waypoints
+    # # the number of accelerations must be equal to the number of waypoints
     accel_list = []
     
-    g=-9.81 #m/s^2
-    f=0.3*(-g) #N
-    angle=60
-    angle_rad=math.radians(angle)
+    # g=-9.81 #m/s^2
+    # f=0.3*(-g) #N
+    # angle=60
+    # angle_rad=math.radians(angle)
 
     
-    # frame need to verify
-    # MATLAB task
-    # accel_list.append(create_accel(0.0,-f*np.sin(angle_rad),g+f*np.cos(angle_rad)))
+    # # frame need to verify
+    # # MATLAB task
+    # # accel_list.append(create_accel(0.0,-f*np.sin(angle_rad),g+f*np.cos(angle_rad)))
 
-    # (0.0,0.0,0.0))
-    # (None,None,None)) means no constraint
-    accel_list.append(create_accel(None,None,None))
-    accel_list.append(create_accel(-f*np.sin(angle_rad),0.0,g+f*np.cos(angle_rad)))
-    accel_list.append(create_accel(None,None,None))
+    # # (0.0,0.0,0.0))
+    # # (None,None,None)) means no constraint
+    # accel_list.append(create_accel(None,None,None))
+    # accel_list.append(create_accel(-f*np.sin(angle_rad),0.0,g+f*np.cos(angle_rad)))
+    # accel_list.append(create_accel(None,None,None))
     
     
-    # velocites constraint
+    # # velocites constraint
     vel_list = []
-    vel_list.append(create_vel(0.0,0.0,0.0))
-    vel_list.append(create_vel(None,None,None))
-    vel_list.append(create_vel(0.0,0.0,0.0))
-    vel_list.append(create_vel(0.0,0.0,0.0))
+    # vel_list.append(create_vel(0.0,0.0,0.0))
+    # vel_list.append(create_vel(None,None,None))
+    # vel_list.append(create_vel(0.0,0.0,0.0))
+    # vel_list.append(create_vel(0.0,0.0,0.0))
     
+
+    #10/01/2024 - circular  mission
+    radius = 1.5
+    num_points = 100
+    waypoints.append(create_pose(0.0, 0.0, 1.2))
+    vel_list.append(create_vel(0.0, 0.0, 0.0))
+    for i in range(num_points):
+        waypoints.append(create_pose(radius * math.cos(math.radians(i * 360 / num_points)) - radius, 
+                                     radius * math.sin(math.radians(i * 360 / num_points)),
+                                     1.2))
+        # vel = [radius * math.cos(math.radians(i * 360 / num_points)) - radius * math.cos(math.radians((i+1) * 360 / num_points)),
+        #                            radius * math.sin(math.radians(i * 360 / num_points)) - radius * math.sin(math.radians((i+1) * 360 / num_points)),
+        #                            0.0]
+        # vel_magnitude = math.sqrt(vel[0]**2 + vel[1]**2 + vel[2]**2)
+        # vel_list.append(create_vel(3 * vel[0] / vel_magnitude, 3 * vel[1] / vel_magnitude, 3 * vel[2] / vel_magnitude)) 
+        # vel_list.append(create_vel(- radius * math.sin(math.radians(i * 360 / num_points)),
+                                #    radius * math.cos(math.radians(i * 360 / num_points)),
+                                #    0))
+        vel_list.append(create_vel(None,None,None))
+        accel_list.append(create_accel(None,None,None))
+
+
+
+
     pub_waypoints(waypoints,accel_list,vel_list)
     rospy.spin()
 if __name__ == '__main__':
