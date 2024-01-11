@@ -92,7 +92,7 @@ def main():
     """      if (!isExecutingMission()){
         logInfoThrottled("Waiting for mission", 5.0);
         // ROS_INFO("in waiting for mission");
-        // execHover();
+        // execHover(); --> CLOSE THIS!!!, remember to open it for other missions
     """
     rospy.init_node('mission_startup', anonymous=True)
     pub_freq = 25 # hz

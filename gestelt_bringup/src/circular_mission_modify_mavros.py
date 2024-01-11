@@ -155,6 +155,11 @@ def circular_raw_traj_cb(msg):
     circular_traj_pub.publish(circular_mavros_traj)
 
 def main():
+    """      if (!isExecutingMission()){
+    logInfoThrottled("Waiting for mission", 5.0);
+    // ROS_INFO("in waiting for mission");
+    // execHover(); --> CLOSE THIS!!!, remember to open it for other missions
+    """
     rospy.init_node('mission_startup', anonymous=True)
     pub_freq = 25 # hz
     rate = rospy.Rate(pub_freq) # hz 20hz
