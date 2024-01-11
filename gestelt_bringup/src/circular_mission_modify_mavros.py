@@ -5,6 +5,7 @@ from gestelt_msgs.msg import CommanderState, Goals, CommanderCommand
 from geometry_msgs.msg import Pose, Accel,PoseArray,AccelStamped, Twist
 from mavros_msgs.msg import PositionTarget
 from std_msgs.msg import Int8, Bool
+from controller_msgs.msg import FlatTarget
 import math
 import time
 # Publisher of server events to trigger change of states for trajectory server 
@@ -14,6 +15,10 @@ waypoints_pub = rospy.Publisher('/planner/goals', Goals, queue_size=10)
 
 # Publisher for desired hover setpoint
 hover_position_pub = rospy.Publisher('/planner/hover_position', Pose, queue_size=10)
+
+# Publisher of circular trajectory setpoints(transfer to mavros setpoint)
+circular_traj_pub = rospy.Publisher('/mavros/setpoint_raw/local', PositionTarget, queue_size=10)
+
 
 # for visualization
 waypoints_pos_pub = rospy.Publisher('/planner/goals_pos', PoseArray, queue_size=10)
@@ -125,6 +130,24 @@ def hover_position():
 
     hover_position_pub.publish(hover_position)
 
+def circular_raw_traj_cb(msg):
+    circular_mavros_traj = PositionTarget()
+    circular_mavros_traj.header.stamp = rospy.Time.now()
+    circular_mavros_traj.header.frame_id = "world"
+    circular_mavros_traj.coordinate_frame = PositionTarget.FRAME_LOCAL_NED
+    circular_mavros_traj.position.x = msg.position.x
+    circular_mavros_traj.position.y = msg.position.y
+    circular_mavros_traj.position.z = msg.position.z
+    circular_mavros_traj.velocity.x = msg.velocity.x
+    circular_mavros_traj.velocity.y = msg.velocity.y
+    circular_mavros_traj.velocity.z = msg.velocity.z
+    circular_mavros_traj.acceleration_or_force.x = msg.acceleration.x
+    circular_mavros_traj.acceleration_or_force.y = msg.acceleration.y
+    circular_mavros_traj.acceleration_or_force.z = msg.acceleration.z
+    
+    circular_mavros_traj.type_mask = PositionTarget.IGNORE_YAW+PositionTarget.IGNORE_YAW_RATE
+
+    circular_traj_pub.publish(circular_mavros_traj)
 
 def main():
     rospy.init_node('mission_startup', anonymous=True)
@@ -133,7 +156,7 @@ def main():
 
     HOVER_MODE = False
     MISSION_MODE = False
-    
+
     while not rospy.is_shutdown():
         get_server_state_callback()
 
@@ -159,51 +182,10 @@ def main():
 
         print("tick!")
         rate.sleep()
-
-    # Send waypoints to UAVs
-    # frame is ENU
-    print(f"Sending waypoints to UAVs")
-    waypoints = []
-
-    # side length 5m
-    # MATLAB TASK
-    # waypoints.append(create_pose(2.0,2.0,1.5))# 5.0,2.0,3
-    # waypoints.append(create_pose(4.0,2.0,1.5))# 5.0,2.0,3
-
-    # 1/4 test
-    # waypoints.append(create_pose(0.0,1.5,1.2)) # 3.0,2.0,3
-    waypoints.append(create_pose(0.0,-0.0,1.2)) # 3.0,2.0,3
-    waypoints.append(create_pose(0.0,-1.8,1.2))# 5.0,2.0,3
-    waypoints.append(create_pose(0.0,0.0,1.2))# 5.0,2.0,3
-
     
-    # the number of accelerations must be equal to the number of waypoints
-    accel_list = []
-    
-    g=-9.81 #m/s^2  # down force, negative
-    f=1*(-g) #N  # up force, positive
-    angle=60
-    angle_rad=math.radians(angle)
+    # Subscriber of the raw circular trajectory
+    rospy.Subscriber('/reference/flatsetpoint', FlatTarget, callback=circular_raw_traj_cb)
 
-    
-    # frame need to verify
-    # MATLAB task
-    # accel_list.append(create_accel(0.0,-f*np.sin(angle_rad),g+f*np.cos(angle_rad)))
-
-    # (0.0,0.0,0.0))
-    # (None,None,None)) means no constraint
-    # accel_list.append(create_accel(None,None,None))
-    accel_list.append(create_accel(-f*np.sin(angle_rad),0.0,g+f*np.cos(angle_rad)))
-    accel_list.append(create_vel(None,None,None))
-    accel_list.append(create_vel(None,None,None)) 
-
-    # velocites constraint
-    vel_list = []
-    # vel_list.append(create_vel(0.0,0.0,0.0))
-    vel_list.append(create_vel(None,None,None))
-    vel_list.append(create_vel(0.0,0.0,0.0))
-    vel_list.append(create_vel(0.0,0.0,0.0))
-    pub_waypoints(waypoints,accel_list,vel_list)
     rospy.spin()
 if __name__ == '__main__':
     main()
