@@ -109,7 +109,7 @@ private: // Class Methods
    * 
    * 
    */
-  void requestCircularMission(bool request);
+  void requestCircularMission();
   /**
    * @brief Callback for trajectory points from mav_trajectory_generation  
    */
@@ -403,9 +403,10 @@ private: // Member variables
   ros::Timer debug_timer_; // Timer to publish debug data
 
   /* Service server */
-  ros::ServiceClient circular_client_; // Service client for circular trajectory
   /** @brief Service clients **/
   ros::ServiceClient arming_client, set_mode_client; 
+  ros::ServiceClient circular_client_; // Service client for circular trajectory
+  std_srvs::SetBool start_circular_srv_; // Service signal for circular trajectory
 
   /* Stored data*/
   ServerEvent server_event_{ServerEvent::EMPTY_E};
@@ -433,6 +434,7 @@ private: // Member variables
 
   ros::Time last_traj_msg_time_{0}; // Time of last trajectory message
 
+  bool mission_has_entered_{false}; // Flag to indicate that mission has entered state
   bool first_pose_{true};
   bool mission_completed_{true};
 

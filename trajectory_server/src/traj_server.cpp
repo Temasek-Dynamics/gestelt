@@ -47,9 +47,9 @@ void TrajServer::init(ros::NodeHandle& nh)
   planner_hb_sub_ = nh.subscribe("/planner/heartbeat", 10, &TrajServer::plannerHeartbeatCb, this);
   hover_pos_sub_ = nh.subscribe("/planner/hover_position", 10, &TrajServer::hoverPositionCb, this);
   circular_traj_sub_ = nh.subscribe("/reference/flatsetpoint", 10, &TrajServer::circularTrajCb, this);
-
+  start_circular_srv_.request.data = false;
   // circular traj client
-  circular_client_ = nh.serviceClient<std_srvs::SetBool::Request>("start");
+  circular_client_ = nh.serviceClient<std_srvs::SetBool>("start");
 
   // Subscription to UAV (via MavROS)
   uav_state_sub_ = nh.subscribe<mavros_msgs::State>("/mavros/state", 10, &TrajServer::UAVStateCb, this);
@@ -241,16 +241,22 @@ void TrajServer::execTrajTimerCb(const ros::TimerEvent &e)
       break;
     
     case ServerState::HOVER:
+
+      // if the circular mission is requested, when back to hover,
+      // shutdown the circular_traj_sub_ and hover at current position
+      if (mission_has_entered_==true){
       circular_traj_sub_.shutdown();
+      }
+
       execHover();
       break;
     
     case ServerState::MISSION:
       if (!isExecutingMission()){
-        logInfoThrottled("Waiting for mission", 5.0);
+        // logInfoThrottled("Waiting for mission", 5.0);
         // ROS_INFO("in waiting for mission");
         // execHover();
-        requestCircularMission(true);
+        mission_has_entered_=true;
         execMission();
       }
       else {
@@ -273,13 +279,27 @@ void TrajServer::execTrajTimerCb(const ros::TimerEvent &e)
   }
 }
 /* request for circular mission*/
-void TrajServer::requestCircularMission(bool request)
+void TrajServer::requestCircularMission()
 {   
-    ros::service::waitForService("start");
-    std_srvs::SetBool start_circular_srv;
-    start_circular_srv.request.data = request;
+  ros::service::waitForService("start");
+  std_srvs::SetBool srv;
+  srv.request.data = true;
+  start_circular_srv_ = srv;
+  try {
+      // call the service
+      if (circular_client_.call(srv)) {
+          if (srv.response.success) {
+              ROS_INFO("Service call succeeded with message: %s", start_circular_srv_.response.message.c_str());
+          } else {
+              ROS_WARN("Service call failed with message: %s", start_circular_srv_.response.message.c_str());
+          }
+      } else {
+          ROS_ERROR("Failed to call service");
+      }
+  } catch (const std::exception& e) {
+      ROS_ERROR("Service call failed: %s", e.what());        
+  }
 
-    circular_client_.call(start_circular_srv);
 }
 void TrajServer::tickServerStateTimerCb(const ros::TimerEvent &e)
 {

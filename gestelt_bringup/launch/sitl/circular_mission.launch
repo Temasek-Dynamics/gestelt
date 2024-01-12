@@ -11,7 +11,7 @@
         <param name="reference_type" value="2" />
   </node> 
 
-  <node pkg="gestelt_bringup" name="mission" type="circular_mission_modify_mavros.py" output="screen" >
+  <node pkg="gestelt_bringup" name="mission" type="circular_mission_modify_mavros.py">
         <param name="takeoff_height" value="$(arg takeoff_height)" />
         <param name="test_time" value="$(arg test_time)" />
   </node>

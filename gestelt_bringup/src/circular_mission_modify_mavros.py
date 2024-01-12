@@ -8,7 +8,7 @@ from std_msgs.msg import Int8, Bool
 from controller_msgs.msg import FlatTarget
 import math
 import time
-
+from std_srvs.srv import SetBool
 # get ros params
 takeoff_height = rospy.get_param("/takeoff_height", 1.2)
 test_time = rospy.get_param("/test_time", 10.0)
@@ -23,8 +23,8 @@ waypoints_pub = rospy.Publisher('/planner/goals', Goals, queue_size=10)
 # Publisher for desired hover setpoint
 hover_position_pub = rospy.Publisher('/planner/hover_position', Pose, queue_size=10)
 
-# Publisher of circular trajectory setpoints(transfer to mavros setpoint)
-circular_traj_pub = rospy.Publisher('/mavros/setpoint_raw/local', PositionTarget, queue_size=10)
+# client for circular mission
+circular_client_=rospy.ServiceProxy('start',SetBool)
 
 
 # for visualization
@@ -137,6 +137,18 @@ def hover_position():
 
     hover_position_pub.publish(hover_position)
 
+def requestCircularMission():
+    rospy.wait_for_service('start')
+    try:
+        # call the service
+        response = circular_client_(True)  
+        if response.success:
+            rospy.loginfo("Service call succeeded with message: %s", response.message)
+        else:
+            rospy.logwarn("Service call failed with message: %s", response.message)
+
+    except rospy.ServiceException as e:
+        rospy.logerr("Service call failed: %s", str(e))
 
 def main(TIME_OUT):
     """      if (!isExecutingMission()){
@@ -182,14 +194,16 @@ def main(TIME_OUT):
             publishCommand(CommanderCommand.TAKEOFF)
         
         elif (TIME_OUT):
-            hover_position()
             print("Setting to TIMEOUT mode!")
             publishCommand(CommanderCommand.HOVER)
-
+            break
         elif (HOVER_MODE):
             # HOVER -> desired position -> MISSION
             print("Setting to MISSION mode!")
             circular_traj_start = rospy.Time.now()
+
+            # call the circular mission service, to start the mission from current position
+            requestCircularMission()
             publishCommand(CommanderCommand.MISSION)
 
 
