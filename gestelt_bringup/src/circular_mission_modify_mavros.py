@@ -11,7 +11,9 @@ import time
 
 # get ros params
 takeoff_height = rospy.get_param("/takeoff_height", 1.2)
-
+test_time = rospy.get_param("/test_time", 1.0)
+TIME_OUT = False
+global traj_callback
 
 # Publisher of server events to trigger change of states for trajectory server 
 server_event_pub = rospy.Publisher('/traj_server/command', CommanderCommand, queue_size=10)
@@ -154,7 +156,7 @@ def circular_raw_traj_cb(msg):
 
     circular_traj_pub.publish(circular_mavros_traj)
 
-def main():
+def main(TIME_OUT):
     """      if (!isExecutingMission()){
     logInfoThrottled("Waiting for mission", 5.0);
     // ROS_INFO("in waiting for mission");
@@ -166,36 +168,57 @@ def main():
 
     HOVER_MODE = False
     MISSION_MODE = False
+    circular_traj_start = rospy.Time.now()
+   
 
     while not rospy.is_shutdown():
         get_server_state_callback()
 
-        if check_traj_server_states("MISSION"):
-            MISSION_MODE = True
-        if check_traj_server_states("HOVER"):
-            HOVER_MODE = True
+        # If the TIME_OUT flag is set, then the mission is over
+        if TIME_OUT==False:
+            if check_traj_server_states("MISSION"):
+                MISSION_MODE = True
+            if check_traj_server_states("HOVER"):
+                HOVER_MODE = True
         
+
         if (MISSION_MODE):
             # Already in MISSION 
-            time.sleep(5)
-            break
+            # time.sleep(5)
+            print(circular_traj_start)
+            print((rospy.Time.now()-circular_traj_start).to_sec())
+            if (rospy.Time.now()-circular_traj_start).to_sec() < test_time:
+                # execute circular trajectory
+                 # Subscriber of the raw circular trajectory
+                traj_callback=rospy.Subscriber('/reference/flatsetpoint', FlatTarget, callback=circular_raw_traj_cb)
+
+            else:
+                print("circular trajectory timeout!")
+                MISSION_MODE = False
+                TIME_OUT = True
+
         elif (not HOVER_MODE):
             # IDLE -> TAKE OFF -> HOVER
             hover_position()
             print("Setting to HOVER mode!")
             publishCommand(CommanderCommand.TAKEOFF)
+        
+        elif (TIME_OUT):
+            print("Setting to TIMEOUT mode!")
+            traj_callback.unregister()
+            publishCommand(CommanderCommand.HOVER)
+            rospy.signal_shutdown("Mission timeout!, back to HOVER mode!")
+
         elif (HOVER_MODE):
             # HOVER -> desired position -> MISSION
             print("Setting to MISSION mode!")
+            circular_traj_start = rospy.Time.now()
             publishCommand(CommanderCommand.MISSION)
 
 
         print("tick!")
         rate.sleep()
-    
-    # Subscriber of the raw circular trajectory
-    rospy.Subscriber('/reference/flatsetpoint', FlatTarget, callback=circular_raw_traj_cb)
-
     rospy.spin()
 if __name__ == '__main__':
-    main()
+    TIME_OUT = False
+    main(TIME_OUT)

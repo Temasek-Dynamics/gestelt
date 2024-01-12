@@ -46,6 +46,7 @@ void TrajServer::init(ros::NodeHandle& nh)
   plan_traj_sub_ = nh.subscribe("/planner/trajectory", 10, &TrajServer::multiDOFJointTrajectoryCb, this);
   planner_hb_sub_ = nh.subscribe("/planner/heartbeat", 10, &TrajServer::plannerHeartbeatCb, this);
   hover_pos_sub_ = nh.subscribe("/planner/hover_position", 10, &TrajServer::hoverPositionCb, this);
+  circular_traj_sub_ = nh.subscribe("/reference/flatsetpoint", 10, &TrajServer::circularTrajCb, this);
 
   // Subscription to UAV (via MavROS)
   uav_state_sub_ = nh.subscribe<mavros_msgs::State>("/mavros/state", 10, &TrajServer::UAVStateCb, this);
@@ -475,6 +476,22 @@ void TrajServer::debugTimerCb(const ros::TimerEvent &e){
   uav_path_pub_.publish(uav_path);
 }
 
+/*circular traj callback*/
+void TrajServer::circularTrajCb(const controller_msgs::FlatTarget::ConstPtr &msg)
+{
+  int type_mask = IGNORE_YAW | IGNORE_YAW_RATE ;
+  // last_mission_pos_(0) = msg->position.x;
+  // last_mission_pos_(1) = msg->position.y;
+  // last_mission_pos_(2) = msg->position.z;
+  // last_mission_vel_(0) = msg->velocity.x;
+  // last_mission_vel_(1) = msg->velocity.y;
+  // last_mission_vel_(2) = msg->velocity.z;
+  // last_mission_acc_(0) = msg->acceleration.x;
+  // last_mission_acc_(1) = msg->acceleration.y;
+  // last_mission_acc_(2) = msg->acceleration.z;
+
+
+}
 /* Trajectory execution methods */
 
 void TrajServer::execLand()

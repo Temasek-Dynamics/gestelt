@@ -98,6 +98,11 @@ private: // Class Methods
    */
   void hoverPositionCb(const geometry_msgs::Pose::ConstPtr &msg);
 
+  /*
+  * @brief Callback for circular trajectory
+  */
+  void circularTrajCb(const controller_msgs::FlatTarget::ConstPtr &msg);
+
   /**
    * @brief Callback for trajectory points from mav_trajectory_generation  
    */
@@ -377,6 +382,7 @@ private: // Member variables
 
   ros::Subscriber planner_hb_sub_; // Subscriber to planner heartbeat
   ros::Subscriber hover_pos_sub_; // Subscriber to hover position
+  ros::Subscriber circular_traj_sub_; // Subscriber to circular trajectory
 
   ros::Subscriber uav_state_sub_; // Subscriber to UAV State (MavROS)
   ros::Subscriber pose_sub_; // Subscriber to UAV State (MavROS)

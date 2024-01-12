@@ -1,6 +1,8 @@
 <launch>
   <!-- Launches a test mission -->
   <arg name="takeoff_height" default="1.2" />
+  <arg name="test_time" default="3" /> <!-- seconds, circular trajectory test time -->
+
 
   <node pkg="trajectory_publisher" type="trajectory_publisher" name="trajectory_publisher" output="screen">
         <param name="trajectory_type" value="1" />
@@ -9,6 +11,10 @@
         <param name="reference_type" value="2" />
   </node> 
 
-  <node pkg="gestelt_bringup" name="mission" type="circular_mission_modify_mavros.py" />
+  <node pkg="gestelt_bringup" name="mission" type="circular_mission_modify_mavros.py" output="screen" >
+        <param name="takeoff_height" value="$(arg takeoff_height)" />
+        <param name="test_time" value="$(arg test_time)" />
+  </node>
+
   <node pkg="rosbag" type="record" name="record" output="screen" args="-o /home/tianchensun/gestelt_ws/data/ /mavros/setpoint_raw/local /mavros/local_position/pose  /planner/sample_trajectory"/>
 </launch>
