@@ -11,7 +11,7 @@ import time
 
 # get ros params
 takeoff_height = rospy.get_param("/takeoff_height", 1.2)
-test_time = rospy.get_param("/test_time", 1.0)
+test_time = rospy.get_param("/test_time", 10.0)
 TIME_OUT = False
 global traj_callback
 
@@ -187,12 +187,11 @@ def main(TIME_OUT):
             # time.sleep(5)
             print(circular_traj_start)
             print((rospy.Time.now()-circular_traj_start).to_sec())
-            if (rospy.Time.now()-circular_traj_start).to_sec() < test_time:
+            if (rospy.Time.now()-circular_traj_start).to_sec() > test_time:
                 # execute circular trajectory
                  # Subscriber of the raw circular trajectory
-                traj_callback=rospy.Subscriber('/reference/flatsetpoint', FlatTarget, callback=circular_raw_traj_cb)
+                # traj_callback=rospy.Subscriber('/reference/flatsetpoint', FlatTarget, callback=circular_raw_traj_cb)
 
-            else:
                 print("circular trajectory timeout!")
                 MISSION_MODE = False
                 TIME_OUT = True
@@ -204,10 +203,11 @@ def main(TIME_OUT):
             publishCommand(CommanderCommand.TAKEOFF)
         
         elif (TIME_OUT):
+            hover_position()
             print("Setting to TIMEOUT mode!")
-            traj_callback.unregister()
+            # traj_callback.unregister()
             publishCommand(CommanderCommand.HOVER)
-            rospy.signal_shutdown("Mission timeout!, back to HOVER mode!")
+            # rospy.signal_shutdown("Mission timeout!, back to HOVER mode!")
 
         elif (HOVER_MODE):
             # HOVER -> desired position -> MISSION

@@ -48,6 +48,9 @@ void TrajServer::init(ros::NodeHandle& nh)
   hover_pos_sub_ = nh.subscribe("/planner/hover_position", 10, &TrajServer::hoverPositionCb, this);
   circular_traj_sub_ = nh.subscribe("/reference/flatsetpoint", 10, &TrajServer::circularTrajCb, this);
 
+  // circular traj client
+  circular_client_ = nh.serviceClient<std_srvs::SetBool::Request>("start");
+
   // Subscription to UAV (via MavROS)
   uav_state_sub_ = nh.subscribe<mavros_msgs::State>("/mavros/state", 10, &TrajServer::UAVStateCb, this);
   pose_sub_ = nh.subscribe<geometry_msgs::PoseStamped>("/mavros/local_position/pose", 1, &TrajServer::UAVPoseCB, this);
@@ -216,6 +219,7 @@ void TrajServer::execTrajTimerCb(const ros::TimerEvent &e)
   // has received vel value
   // ROS_INFO("execTrajTimerCb received velocity: %f, %f, %f", last_mission_vel_(0), last_mission_vel_(1), last_mission_vel_(2));
   last_mission_yaw_ = -M_PI/2;
+  
   // ROS_INFO("last_mission_yaw: %f", last_mission_yaw_);
   
   switch (getServerState()){
@@ -237,6 +241,7 @@ void TrajServer::execTrajTimerCb(const ros::TimerEvent &e)
       break;
     
     case ServerState::HOVER:
+      circular_traj_sub_.shutdown();
       execHover();
       break;
     
@@ -245,6 +250,8 @@ void TrajServer::execTrajTimerCb(const ros::TimerEvent &e)
         logInfoThrottled("Waiting for mission", 5.0);
         // ROS_INFO("in waiting for mission");
         // execHover();
+        requestCircularMission(true);
+        execMission();
       }
       else {
         // ROS_INFO("ServerState received velocity: %f, %f, %f", last_mission_vel_(0), last_mission_vel_(1), last_mission_vel_(2));
@@ -265,7 +272,15 @@ void TrajServer::execTrajTimerCb(const ros::TimerEvent &e)
       break;
   }
 }
+/* request for circular mission*/
+void TrajServer::requestCircularMission(bool request)
+{   
+    ros::service::waitForService("start");
+    std_srvs::SetBool start_circular_srv;
+    start_circular_srv.request.data = request;
 
+    circular_client_.call(start_circular_srv);
+}
 void TrajServer::tickServerStateTimerCb(const ros::TimerEvent &e)
 {
   // logInfoThrottled(string_format("Current Server State: [%s]", StateToString(getServerState()).c_str()), 1.0);
@@ -480,15 +495,16 @@ void TrajServer::debugTimerCb(const ros::TimerEvent &e){
 void TrajServer::circularTrajCb(const controller_msgs::FlatTarget::ConstPtr &msg)
 {
   int type_mask = IGNORE_YAW | IGNORE_YAW_RATE ;
-  // last_mission_pos_(0) = msg->position.x;
-  // last_mission_pos_(1) = msg->position.y;
-  // last_mission_pos_(2) = msg->position.z;
-  // last_mission_vel_(0) = msg->velocity.x;
-  // last_mission_vel_(1) = msg->velocity.y;
-  // last_mission_vel_(2) = msg->velocity.z;
-  // last_mission_acc_(0) = msg->acceleration.x;
-  // last_mission_acc_(1) = msg->acceleration.y;
-  // last_mission_acc_(2) = msg->acceleration.z;
+ 
+  last_mission_pos_(0) = msg->position.x;
+  last_mission_pos_(1) = msg->position.y;
+  last_mission_pos_(2) = msg->position.z;
+  last_mission_vel_(0) = msg->velocity.x;
+  last_mission_vel_(1) = msg->velocity.y;
+  last_mission_vel_(2) = msg->velocity.z;
+  last_mission_acc_(0) = msg->acceleration.x;
+  last_mission_acc_(1) = msg->acceleration.y;
+  last_mission_acc_(2) = msg->acceleration.z;
 
 
 }

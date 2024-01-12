@@ -29,6 +29,7 @@
 
 #include "controller_msgs/FlatTarget.h"
 #include <geometry_msgs/TwistStamped.h>
+#include <std_srvs/SetBool.h> // for service client
 using namespace Eigen;
 
 /* State machine  */
@@ -103,6 +104,12 @@ private: // Class Methods
   */
   void circularTrajCb(const controller_msgs::FlatTarget::ConstPtr &msg);
 
+  /**
+   * @brief Request for circular trajectory
+   * 
+   * 
+   */
+  void requestCircularMission(bool request);
   /**
    * @brief Callback for trajectory points from mav_trajectory_generation  
    */
@@ -395,6 +402,8 @@ private: // Member variables
   ros::Timer tick_state_timer_; // Timer to tick the state machine 
   ros::Timer debug_timer_; // Timer to publish debug data
 
+  /* Service server */
+  ros::ServiceClient circular_client_; // Service client for circular trajectory
   /** @brief Service clients **/
   ros::ServiceClient arming_client, set_mode_client; 
 

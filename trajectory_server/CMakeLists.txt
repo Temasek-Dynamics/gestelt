@@ -12,6 +12,7 @@ set(ROS_LIBRARIES
   mavros_msgs
   gestelt_msgs
   controller_msgs
+  std_srvs
 )
 
 # set(ROS_DEPENDS
