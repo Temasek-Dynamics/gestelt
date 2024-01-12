@@ -132,29 +132,11 @@ def hover_position():
     
     hover_position = Pose()
     hover_position.position.x = 0.0
-    hover_position.position.y = 1.8
+    hover_position.position.y = 1.5
     # z is the same as the takeoff height
 
     hover_position_pub.publish(hover_position)
 
-def circular_raw_traj_cb(msg):
-    circular_mavros_traj = PositionTarget()
-    circular_mavros_traj.header.stamp = rospy.Time.now()
-    circular_mavros_traj.header.frame_id = "world"
-    circular_mavros_traj.coordinate_frame = PositionTarget.FRAME_LOCAL_NED
-    circular_mavros_traj.position.x = msg.position.x
-    circular_mavros_traj.position.y = msg.position.y
-    circular_mavros_traj.position.z = msg.position.z
-    circular_mavros_traj.velocity.x = msg.velocity.x
-    circular_mavros_traj.velocity.y = msg.velocity.y
-    circular_mavros_traj.velocity.z = msg.velocity.z
-    circular_mavros_traj.acceleration_or_force.x = msg.acceleration.x
-    circular_mavros_traj.acceleration_or_force.y = msg.acceleration.y
-    circular_mavros_traj.acceleration_or_force.z = msg.acceleration.z
-    
-    circular_mavros_traj.type_mask = PositionTarget.IGNORE_YAW+PositionTarget.IGNORE_YAW_RATE
-
-    circular_traj_pub.publish(circular_mavros_traj)
 
 def main(TIME_OUT):
     """      if (!isExecutingMission()){
@@ -188,10 +170,7 @@ def main(TIME_OUT):
             print(circular_traj_start)
             print((rospy.Time.now()-circular_traj_start).to_sec())
             if (rospy.Time.now()-circular_traj_start).to_sec() > test_time:
-                # execute circular trajectory
-                 # Subscriber of the raw circular trajectory
-                # traj_callback=rospy.Subscriber('/reference/flatsetpoint', FlatTarget, callback=circular_raw_traj_cb)
-
+                
                 print("circular trajectory timeout!")
                 MISSION_MODE = False
                 TIME_OUT = True
@@ -205,9 +184,7 @@ def main(TIME_OUT):
         elif (TIME_OUT):
             hover_position()
             print("Setting to TIMEOUT mode!")
-            # traj_callback.unregister()
             publishCommand(CommanderCommand.HOVER)
-            # rospy.signal_shutdown("Mission timeout!, back to HOVER mode!")
 
         elif (HOVER_MODE):
             # HOVER -> desired position -> MISSION
