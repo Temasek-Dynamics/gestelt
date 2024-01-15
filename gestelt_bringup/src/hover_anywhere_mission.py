@@ -182,7 +182,7 @@ def main():
     
     g=-9.81 #m/s^2  # down force, negative
     f=1*(-g) #N  # up force, positive
-    angle=90
+    angle=60
     angle_rad=math.radians(angle)
 
     

@@ -255,9 +255,9 @@ void TrajServer::execTrajTimerCb(const ros::TimerEvent &e)
       if (!isExecutingMission()){
         // logInfoThrottled("Waiting for mission", 5.0);
         // ROS_INFO("in waiting for mission");
-        // execHover();
-        mission_has_entered_=true;
-        execMission();
+        execHover();
+        // mission_has_entered_=true;
+        // execMission();
       }
       else {
         // ROS_INFO("ServerState received velocity: %f, %f, %f", last_mission_vel_(0), last_mission_vel_(1), last_mission_vel_(2));
