@@ -187,23 +187,22 @@ def main():
     # vel_list.append(create_vel(0.0,0.0,0.0))
     
 
-    #10/01/2024 - circular  mission
+    #15/01/2024 - circular  mission
+    
     radius = 1.5
     num_points = 100
-    waypoints.append(create_pose(0.0, 0.0, 1.2))
-    vel_list.append(create_vel(0.0, 0.0, 0.0))
     for i in range(num_points):
         waypoints.append(create_pose(radius * math.cos(math.radians(i * 360 / num_points)) - radius, 
                                      radius * math.sin(math.radians(i * 360 / num_points)),
                                      1.2))
-        ## FINITE DIFFERENCE -- NOT WORKING
+        ## FINITE DIFFERENCE -- NOT WORKING -- 10/01/2024
         # vel = [radius * math.cos(math.radians(i * 360 / num_points)) - radius * math.cos(math.radians((i+1) * 360 / num_points)),
         #                            radius * math.sin(math.radians(i * 360 / num_points)) - radius * math.sin(math.radians((i+1) * 360 / num_points)),
         #                            0.0]
         # vel_magnitude = math.sqrt(vel[0]**2 + vel[1]**2 + vel[2]**2)
         # vel_list.append(create_vel(3 * vel[0] / vel_magnitude, 3 * vel[1] / vel_magnitude, 3 * vel[2] / vel_magnitude)) 
         
-        ## DIFFERENTIATING POS -- NOT WORKING
+        ## DIFFERENTIATING POS -- NOT WORKING -- 10/01/2024
         # vel_list.append(create_vel(- radius * math.sin(math.radians(i * 360 / num_points)),
                                 #    radius * math.cos(math.radians(i * 360 / num_points)),
                                 #    0))
