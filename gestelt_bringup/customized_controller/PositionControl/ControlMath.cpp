@@ -75,29 +75,43 @@ void bodyzToAttitude(Vector3f body_z, const float yaw_sp, vehicle_attitude_setpo
 	}
 
 	body_z.normalize();
+        //------------------------original code------------------------------//
+	// //vector of desired yaw direction in XY plane, rotated by PI/2
+	// const Vector3f y_C{-sinf(yaw_sp), cosf(yaw_sp), 0.f};
 
-	// vector of desired yaw direction in XY plane, rotated by PI/2
-	const Vector3f y_C{-sinf(yaw_sp), cosf(yaw_sp), 0.f};
+	// // desired body_x axis, orthogonal to body_z
+	// Vector3f body_x = y_C % body_z;
 
-	// desired body_x axis, orthogonal to body_z
-	Vector3f body_x = y_C % body_z;
+	// // keep nose to front while inverted upside down
+	// if (body_z(2) < 0.0f) {
+	// 	body_x = -body_x;
+	// }
 
-	// keep nose to front while inverted upside down
-	if (body_z(2) < 0.0f) {
-		body_x = -body_x;
-	}
+	// if (fabsf(body_z(2)) < 0.000001f) {
+	// 	// desired thrust is in XY plane, set X downside to construct correct matrix,
+	// 	// but yaw component will not be used actually
+	// 	body_x.zero();
+	// 	body_x(2) = 1.0f;
+	// }
 
-	if (fabsf(body_z(2)) < 0.000001f) {
-		// desired thrust is in XY plane, set X downside to construct correct matrix,
-		// but yaw component will not be used actually
-		body_x.zero();
-		body_x(2) = 1.0f;
-	}
+	// body_x.normalize();
 
-	body_x.normalize();
+	// // desired body_y axis
+	// const Vector3f body_y = body_z % body_x;
 
-	// desired body_y axis
-	const Vector3f body_y = body_z % body_x;
+        //---------------------modified code-------------------------//
+
+	// firstly calculate the body_y, then calculate the body_x
+	const Vector3f x_C{cosf(yaw_sp), sinf(yaw_sp), 0.f};
+
+	// desired body_y axis, orthogonal to body_z
+	Vector3f body_y = body_z % x_C;
+	body_y.normalize();
+
+	// calculate the body_x
+	Vector3f body_x = body_y % body_z;
+
+	//------------------------------------------------------------//
 
 	Dcmf R_sp;
 
