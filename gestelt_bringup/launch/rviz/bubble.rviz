@@ -7,8 +7,8 @@ Panels:
         - /Global Options1
         - /TF1/Frames1
         - /drone0_ego1
+        - /drone0_ego1/Planning1
         - /drone0_mavros1/Localization1//mavros/local_position/pose1
-        - /sfc_spherical1
       Splitter Ratio: 0.43518519401550293
     Tree Height: 392
   - Class: rviz/Selection
@@ -28,7 +28,7 @@ Panels:
   - Class: rviz/Time
     Name: Time
     SyncMode: 0
-    SyncSource: occupancy_map
+    SyncSource: ""
 Preferences:
   PromptSaveOnExit: true
 Toolbars:
@@ -36,6 +36,24 @@ Toolbars:
 Visualization Manager:
   Class: ""
   Displays:
+    - Alpha: 0.5
+      Cell Size: 1
+      Class: rviz/Grid
+      Color: 160; 160; 164
+      Enabled: true
+      Line Style:
+        Line Width: 0.029999999329447746
+        Value: Lines
+      Name: Grid
+      Normal Cell Count: 0
+      Offset:
+        X: 0
+        Y: 0
+        Z: 0
+      Plane: XY
+      Plane Cell Count: 50
+      Reference Frame: <Fixed Frame>
+      Value: true
     - Alpha: 1
       Class: rviz/Axes
       Enabled: true
@@ -52,10 +70,6 @@ Visualization Manager:
       Frame Timeout: 15
       Frames:
         All Enabled: false
-        drone0_base_link:
-          Value: true
-        drone0_cam_link:
-          Value: true
         drone0_origin:
           Value: true
         map:
@@ -69,9 +83,6 @@ Visualization Manager:
       Show Axes: true
       Show Names: true
       Tree:
-        drone0_base_link:
-          drone0_cam_link:
-            {}
         world:
           map:
             drone0_origin:
@@ -95,17 +106,17 @@ Visualization Manager:
               Marker Topic: /drone0_ego_planner_node/goal_point
               Name: goal_point
               Namespaces:
-                {}
+                "": true
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
-              Enabled: false
+              Enabled: true
               Marker Topic: /drone0_ego_planner_node/global_list
               Name: global_path
               Namespaces:
                 {}
               Queue Size: 100
-              Value: false
+              Value: true
             - Class: rviz/Marker
               Enabled: true
               Marker Topic: /drone0_ego_planner_node/optimal_list
@@ -115,13 +126,13 @@ Visualization Manager:
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
-              Enabled: false
+              Enabled: true
               Marker Topic: /drone0_ego_planner_node/failed_list
               Name: FailedList
               Namespaces:
                 {}
               Queue Size: 100
-              Value: false
+              Value: true
             - Class: rviz/Marker
               Enabled: true
               Marker Topic: /drone0_ego_planner_node/a_star_list
@@ -131,39 +142,15 @@ Visualization Manager:
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
-              Enabled: false
+              Enabled: true
               Marker Topic: /drone0_ego_planner_node/init_list
               Name: InitTraj
               Namespaces:
                 {}
               Queue Size: 100
-              Value: false
+              Value: true
           Enabled: true
           Name: Planning
-        - Alpha: 0.699999988079071
-          Buffer Length: 1
-          Class: rviz/Path
-          Color: 138; 226; 52
-          Enabled: true
-          Head Diameter: 0.30000001192092896
-          Head Length: 0.20000000298023224
-          Length: 0.30000001192092896
-          Line Style: Billboards
-          Line Width: 0.029999999329447746
-          Name: Path
-          Offset:
-            X: 0
-            Y: 0
-            Z: 0
-          Pose Color: 255; 85; 255
-          Pose Style: None
-          Queue Size: 15
-          Radius: 0.029999999329447746
-          Shaft Diameter: 0.10000000149011612
-          Shaft Length: 0.10000000149011612
-          Topic: /drone0/uav_path
-          Unreliable: false
-          Value: true
       Enabled: true
       Name: drone0_ego
     - Class: rviz/Group
@@ -295,7 +282,7 @@ Visualization Manager:
       Length: 0.30000001192092896
       Line Style: Lines
       Line Width: 0.029999999329447746
-      Name: Path
+      Name: setpoint_trajectory/desired
       Offset:
         X: 0
         Y: 0
@@ -314,7 +301,7 @@ Visualization Manager:
       Marker Topic: /drone0/plan_viz
       Name: plan_viz
       Namespaces:
-        viz_spheres: true
+        {}
       Queue Size: 100
       Value: true
     - Class: rviz/Marker
@@ -322,116 +309,105 @@ Visualization Manager:
       Marker Topic: /drone0/closed_list_viz
       Name: closed_list_viz
       Namespaces:
-        "": true
-      Queue Size: 100
-      Value: true
-    - Alpha: 0.5
-      Cell Size: 1
-      Class: rviz/Grid
-      Color: 160; 160; 164
-      Enabled: true
-      Line Style:
-        Line Width: 0.029999999329447746
-        Value: Lines
-      Name: Grid
-      Normal Cell Count: 0
-      Offset:
-        X: 0
-        Y: 0
-        Z: 0
-      Plane: XY
-      Plane Cell Count: 50
-      Reference Frame: <Fixed Frame>
-      Value: true
-    - Class: rviz/Marker
-      Enabled: true
-      Marker Topic: /drone0/sfc_spherical
-      Name: sfc_spherical
-      Namespaces:
-        "": true
-      Queue Size: 100
-      Value: true
-    - Alpha: 0.5
-      Autocompute Intensity Bounds: true
-      Autocompute Value Bounds:
-        Max Value: 10
-        Min Value: -10
-        Value: true
-      Axis: Z
-      Channel Name: intensity
-      Class: rviz/PointCloud2
-      Color: 173; 127; 168
-      Color Transformer: FlatColor
-      Decay Time: 0
-      Enabled: false
-      Invert Rainbow: false
-      Max Color: 255; 255; 255
-      Min Color: 0; 0; 0
-      Name: fake_map
-      Position Transformer: XYZ
-      Queue Size: 10
-      Selectable: true
-      Size (Pixels): 5
-      Size (m): 0.05000000074505806
-      Style: Points
-      Topic: /fake_map
-      Unreliable: false
-      Use Fixed Frame: true
-      Use rainbow: true
-      Value: false
-    - Alpha: 0.4000000059604645
-      Autocompute Intensity Bounds: true
-      Autocompute Value Bounds:
-        Max Value: 3.156107187271118
-        Min Value: -0.0815354660153389
-        Value: true
-      Axis: Z
-      Channel Name: intensity
-      Class: rviz/PointCloud2
-      Color: 114; 159; 207
-      Color Transformer: FlatColor
-      Decay Time: 0
-      Enabled: true
-      Invert Rainbow: false
-      Max Color: 255; 255; 255
-      Min Color: 0; 0; 0
-      Name: occupancy_map
-      Position Transformer: XYZ
-      Queue Size: 5
-      Selectable: true
-      Size (Pixels): 3
-      Size (m): 0.10000000149011612
-      Style: Flat Squares
-      Topic: /drone0/grid_map/occupancy
-      Unreliable: false
-      Use Fixed Frame: true
-      Use rainbow: true
-      Value: true
-    - Class: rviz/Marker
-      Enabled: false
-      Marker Topic: /drone0/sfc_dist
-      Name: sfc_dist
-      Namespaces:
         {}
       Queue Size: 100
-      Value: false
-    - Class: rviz/Marker
-      Enabled: false
-      Marker Topic: /drone0/sfc_cand_points
-      Name: sfc_cand_points
-      Namespaces:
-        {}
-      Queue Size: 100
-      Value: false
-    - Class: rviz/Marker
-      Enabled: true
-      Marker Topic: /drone0/sfc_waypoints
-      Name: sfc_waypoints
-      Namespaces:
-        spherical_sfc_line: true
-        spherical_sfc_pts: true
-      Queue Size: 100
       Value: true
+    - Class: rviz/Group
+      Displays:
+        - Class: rviz/Marker
+          Enabled: true
+          Marker Topic: /drone0/sfc_spherical
+          Name: sfc_spherical
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: true
+        - Class: rviz/Marker
+          Enabled: false
+          Marker Topic: /drone0/sfc_dist
+          Name: sfc_dist
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: false
+        - Class: rviz/Marker
+          Enabled: false
+          Marker Topic: /drone0/sfc_cand_points
+          Name: sfc_cand_points
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: false
+        - Class: rviz/Marker
+          Enabled: true
+          Marker Topic: /drone0/sfc_waypoints
+          Name: sfc_waypoints
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: true
+      Enabled: true
+      Name: sfc
+    - Class: rviz/Group
+      Displays:
+        - Alpha: 0.5
+          Autocompute Intensity Bounds: true
+          Autocompute Value Bounds:
+            Max Value: 10
+            Min Value: -10
+            Value: true
+          Axis: Z
+          Channel Name: intensity
+          Class: rviz/PointCloud2
+          Color: 173; 127; 168
+          Color Transformer: FlatColor
+          Decay Time: 0
+          Enabled: false
+          Invert Rainbow: false
+          Max Color: 255; 255; 255
+          Min Color: 0; 0; 0
+          Name: fake_map
+          Position Transformer: XYZ
+          Queue Size: 10
+          Selectable: true
+          Size (Pixels): 5
+          Size (m): 0.05000000074505806
+          Style: Points
+          Topic: /fake_map
+          Unreliable: false
+          Use Fixed Frame: true
+          Use rainbow: true
+          Value: false
+        - Alpha: 0.4000000059604645
+          Autocompute Intensity Bounds: true
+          Autocompute Value Bounds:
+            Max Value: 3.156107187271118
+            Min Value: -0.0815354660153389
+            Value: true
+          Axis: Z
+          Channel Name: intensity
+          Class: rviz/PointCloud2
+          Color: 114; 159; 207
+          Color Transformer: FlatColor
+          Decay Time: 0
+          Enabled: true
+          Invert Rainbow: false
+          Max Color: 255; 255; 255
+          Min Color: 0; 0; 0
+          Name: occupancy_map
+          Position Transformer: XYZ
+          Queue Size: 5
+          Selectable: true
+          Size (Pixels): 3
+          Size (m): 0.10000000149011612
+          Style: Flat Squares
+          Topic: /drone0/grid_map/occupancy
+          Unreliable: false
+          Use Fixed Frame: true
+          Use rainbow: true
+          Value: true
+      Enabled: true
+      Name: map
   Enabled: true
   Global Options:
     Background Color: 255; 255; 255
@@ -461,7 +437,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/XYOrbit
-      Distance: 5.613118648529053
+      Distance: 4.887775421142578
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -469,17 +445,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: -1.1969445943832397
-        Y: 0.10612070560455322
-        Z: -3.337860107421875e-06
+        X: 2.5099661350250244
+        Y: 0.19099700450897217
+        Z: -3.814697265625e-06
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.1397967338562012
+      Pitch: 0.4797971248626709
       Target Frame: my_view
-      Yaw: 4.363614559173584
+      Yaw: 4.203619480133057
     Saved:
       - Class: rviz/FPS
         Enable Stereo Rendering:
@@ -628,5 +604,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1440
-  X: 1769
-  Y: 191
+  X: 188
+  Y: 47

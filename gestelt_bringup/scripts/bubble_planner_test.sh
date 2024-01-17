@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SESSION="gz_sim_single_uav"
+SESSION="bubble_planner_test"
 SESSIONEXISTS=$(tmux list-sessions | grep $SESSION)
 
 #####
@@ -20,7 +20,7 @@ source $SCRIPT_DIR/../../../devel/setup.bash &&
 #####
 # Commands
 #####
-# Start fake drone instance
+# Start front end planner
 CMD_0="
 roslaunch gestelt_bringup front_end_planner.launch drone_id:=0
 "

@@ -198,8 +198,6 @@ void GridMap::initMap(ros::NodeHandle &nh, ros::NodeHandle &pnh)
     }
   }
 
-
-
 }
 
 void GridMap::reset(){
@@ -467,6 +465,8 @@ void GridMap::cloudToCloudMap(const sensor_msgs::PointCloud2 &msg)
   bonxai_->insertPointCloud(global_map_origin_->points, sensor_origin, 30.0);
 
   kdtree_->setInputCloud(global_map_origin_);
+
+  ROS_INFO("[grid_map] Completed cloudToCloudMap");
 }
 
 void GridMap::pclToOctomapPC(const pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_cloud , octomap::Pointcloud& octomap_cloud) {
@@ -550,7 +550,7 @@ void GridMap::publishMap()
 
   if (bonxai_result.size() <= 1)
   {
-    ROS_WARN("[grid_map] Nothing to publish, bonxai is empty");
+    // ROS_WARN("[grid_map] Nothing to publish, bonxai is empty");
     return;
   }
 

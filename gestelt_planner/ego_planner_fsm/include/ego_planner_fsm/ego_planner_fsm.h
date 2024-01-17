@@ -267,6 +267,9 @@ private:
 
   Eigen::Vector3d start_pt_, start_vel_, start_acc_;   // start state
   Eigen::Vector3d end_pt_;                             // goal state
+
+  Eigen::Vector3d goal_pos_;                             // goal state
+
   Eigen::Vector3d local_target_pt_, local_target_vel_; // local target state
   Eigen::Vector3d odom_pos_, odom_vel_, odom_acc_;     // odometry state
 
@@ -296,8 +299,11 @@ private:
   // std::shared_ptr<TimeBenchmark> time_benchmark_; // Measures and stores CPU/Wall runtime
 
   // TF transformation 
-  tf2_ros::Buffer tfBuffer_;
-  std::unique_ptr<tf2_ros::TransformListener> tfListener_;
+  // tf2_ros::Buffer tfBuffer_;
+  // std::unique_ptr<tf2_ros::TransformListener> tfListener_;
+
+  ros::Subscriber debug_start_sub_; // DEBUG: Subscriber to user-defined start point
+  ros::Subscriber debug_goal_sub_; // DEBUG: Subscriber to user-defined goal point
 
 private: 
 
@@ -491,6 +497,9 @@ private:
 
     return event;
   }
+
+  void debugStartCB(const geometry_msgs::PoseConstPtr &msg);
+  void debugGoalCB(const geometry_msgs::PoseConstPtr &msg);
 
 private:
 

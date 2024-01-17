@@ -11,19 +11,19 @@ namespace ego_planner
   void EGOPlannerManager::initPlanModules(ros::NodeHandle &nh, ros::NodeHandle &pnh, PlanningVisualization::Ptr vis)
   {
     /* read algorithm parameters */
-    nh.param("manager/max_vel", pp_.max_vel_, -1.0);
-    nh.param("manager/max_acc", pp_.max_acc_, -1.0);
-    nh.param("manager/feasibility_tolerance", pp_.feasibility_tolerance_, 0.0);
-    nh.param("manager/polyTraj_piece_length", pp_.polyTraj_piece_length, -1.0);
-    nh.param("manager/planning_horizon", pp_.planning_horizon_, 5.0);
-    nh.param("manager/use_distinctive_trajs", pp_.use_distinctive_trajs, false);
-    nh.param("manager/drone_id", pp_.drone_id, -1);
+    pnh.param("manager/max_vel", pp_.max_vel_, -1.0);
+    pnh.param("manager/max_acc", pp_.max_acc_, -1.0);
+    pnh.param("manager/feasibility_tolerance", pp_.feasibility_tolerance_, 0.0);
+    pnh.param("manager/polyTraj_piece_length", pp_.polyTraj_piece_length, -1.0);
+    pnh.param("manager/planning_horizon", pp_.planning_horizon_, 5.0);
+    pnh.param("manager/use_distinctive_trajs", pp_.use_distinctive_trajs, false);
+    pnh.param("manager/drone_id", pp_.drone_id, -1);
 
     grid_map_.reset(new GridMap);
     grid_map_->initMap(nh, pnh);
 
     ploy_traj_opt_.reset(new PolyTrajOptimizer());
-    ploy_traj_opt_->setParam(nh);
+    ploy_traj_opt_->setParam(pnh);
     ploy_traj_opt_->setEnvironment(grid_map_);
 
     visualization_ = vis;
@@ -263,13 +263,13 @@ namespace ego_planner
       const bool flag_randomPolyTraj, const bool touch_goal)
   {
 
-    // static int count = 0;
+    static int count = 0;
     // TODO Uncomment
-    // printf("\033[47;30m\n[drone %d replan %d]==============================================\033[0m\n",
-    //        pp_.drone_id, count++);
-    // std::cout.precision(3);
-    // std::cout << "start: " << start_pt.transpose() << ", " << start_vel.transpose() << "\ngoal:" << local_target_pt.transpose() << ", " << local_target_vel.transpose()
-    //      <<std::endl;
+    printf("\033[47;30m\n[drone %d replan %d]==============================================\033[0m\n",
+           pp_.drone_id, count++);
+    std::cout.precision(3);
+    std::cout << "start: " << start_pt.transpose() << ", " << start_vel.transpose() << "\ngoal:" << local_target_pt.transpose() << ", " << local_target_vel.transpose()
+         <<std::endl;
 
     ploy_traj_opt_->setIfTouchGoal(touch_goal);
     ploy_traj_opt_->setFStartFEnd(formation_start_pt, formation_end_pt);
@@ -286,12 +286,14 @@ namespace ego_planner
     ros::Duration t_init, t_opt;
 
     /*** STEP 1: INIT. Get initial trajectory and {p,v} pairs ***/
+    ROS_INFO("[reboundReplan] 1) Get initial trajectory and {p,v} pairs");
 
     // t_seg_dur: time duration of segment = distance between control points / maximum velocity
     double t_seg_dur = pp_.polyTraj_piece_length / pp_.max_vel_;
 
     poly_traj::MinJerkOpt initMJO;
 
+    ROS_INFO("[reboundReplan] 1) Before computeInitState");
     if (!computeInitState(start_pt, start_vel, start_acc, 
                           local_target_pt, local_target_vel,
                           flag_polyInit, flag_randomPolyTraj, t_seg_dur, 
@@ -299,6 +301,7 @@ namespace ego_planner
     {
       return false;
     }
+    ROS_INFO("[reboundReplan] 1) After computeInitState");
 
     Eigen::MatrixXd cstr_pts = initMJO.getInitConstraintPoints(ploy_traj_opt_->get_cps_num_perPiece_());
     vector<std::pair<int, int>> segments; // segments are only needed for distinctive trajectories
@@ -306,10 +309,12 @@ namespace ego_planner
     // Check for collision along path and set {p,v} pairs to constraint points.
     // The collision free path for the segments in collision is determined using AStar search
     // Returns a vector of pairs (seg_start_idx, seg_end_idx)
+    ROS_INFO("[reboundReplan] 1) Before finelyCheckAndSetConstraintPoints");
     if (ploy_traj_opt_->finelyCheckAndSetConstraintPoints(segments, initMJO, true) == PolyTrajOptimizer::CHK_RET::ERR)
     {
       return false;
     }
+    ROS_INFO("[reboundReplan] 1) After finelyCheckAndSetConstraintPoints");
 
     t_init = ros::Time::now() - t_start;
 
@@ -322,77 +327,26 @@ namespace ego_planner
     t_start = ros::Time::now();
 
     /*** STEP 2: OPTIMIZE ***/
+    ROS_INFO("[reboundReplan] Optimize trajectory");
+
     bool flag_success = false;
-    vector<vector<Eigen::Vector3d>> vis_trajs; // Trajectory for visualization
-    poly_traj::MinJerkOpt best_MJO;
+    poly_traj::MinJerkOpt best_MJO; // Best minimum jerk trajectory
 
-    if (pp_.use_distinctive_trajs)
-    {
-      std::vector<ConstraintPoints> trajs = ploy_traj_opt_->distinctiveTrajs(segments);
-      std::cout << "\033[1;33m"
-           << "multi-trajs=" << trajs.size() << "\033[1;0m" << std::endl;
+    poly_traj::Trajectory initTraj = initMJO.getTraj();
+    int P_sz = initTraj.getPieceSize();
+    Eigen::MatrixXd all_pos = initTraj.getPositions();
+    // Get innerPts, a block of size (3, P_sz-1) from column 1 onwards. This excludes the first point.
+    Eigen::MatrixXd innerPts = all_pos.block(0, 1, 3, P_sz - 1);
+    Eigen::Matrix<double, 3, 3> headState, tailState;
+    headState << initTraj.getJuncPos(0), initTraj.getJuncVel(0), initTraj.getJuncAcc(0);
+    tailState << initTraj.getJuncPos(P_sz), initTraj.getJuncVel(P_sz), initTraj.getJuncAcc(P_sz);
+    double final_cost; // Not used
+    flag_success = ploy_traj_opt_->optimizeTrajectory(headState, tailState,
+                                                      innerPts, initTraj.getDurations(),
+                                                      cstr_pts, final_cost);
+    best_MJO = ploy_traj_opt_->getMinJerkOpt();
 
-      poly_traj::Trajectory initTraj = initMJO.getTraj();
-      int P_sz = initTraj.getPieceSize();
-      Eigen::MatrixXd all_pos = initTraj.getPositions();
-      Eigen::MatrixXd innerPts = all_pos.block(0, 1, 3, P_sz - 1);
-      Eigen::Matrix<double, 3, 3> headState, tailState;
-      headState << initTraj.getJuncPos(0), initTraj.getJuncVel(0), initTraj.getJuncAcc(0);
-      tailState << initTraj.getJuncPos(P_sz), initTraj.getJuncVel(P_sz), initTraj.getJuncAcc(P_sz);
-      double final_cost, min_cost = 999999.0;
-      for (int i = trajs.size() - 1; i >= 0; i--)
-      {
-        ploy_traj_opt_->setConstraintPoints(trajs[i]);
-        if (ploy_traj_opt_->optimizeTrajectory(headState, tailState,
-                                               innerPts, initTraj.getDurations(),
-                                               cstr_pts, final_cost))
-        {
-
-          std::cout << "traj " << trajs.size() - i << " success." << std::endl;
-
-          if (final_cost < min_cost)
-          {
-            min_cost = final_cost;
-            best_MJO = ploy_traj_opt_->getMinJerkOpt();
-          }
-
-          // visualization
-          Eigen::MatrixXd ctrl_pts_temp = ploy_traj_opt_->getMinJerkOpt().getInitConstraintPoints(ploy_traj_opt_->get_cps_num_perPiece_());
-          std::vector<Eigen::Vector3d> point_set;
-          for (int j = 0; j < ctrl_pts_temp.cols(); j++)
-          {
-            point_set.push_back(ctrl_pts_temp.col(j));
-          }
-          vis_trajs.push_back(point_set);
-        }
-        else
-        {
-          std::cout << "traj " << trajs.size() - i << " failed." << std::endl;
-        }
-      }
-
-      t_opt = ros::Time::now() - t_start;
-
-      visualization_->displayMultiInitPathList(vis_trajs, 0.2); // This visuallization will take up several milliseconds.
-    }
-    else
-    {
-      poly_traj::Trajectory initTraj = initMJO.getTraj();
-      int P_sz = initTraj.getPieceSize();
-      Eigen::MatrixXd all_pos = initTraj.getPositions();
-      // Get innerPts, a block of size (3, P_sz-1) from column 1 onwards. This excludes the first point.
-      Eigen::MatrixXd innerPts = all_pos.block(0, 1, 3, P_sz - 1);
-      Eigen::Matrix<double, 3, 3> headState, tailState;
-      headState << initTraj.getJuncPos(0), initTraj.getJuncVel(0), initTraj.getJuncAcc(0);
-      tailState << initTraj.getJuncPos(P_sz), initTraj.getJuncVel(P_sz), initTraj.getJuncAcc(P_sz);
-      double final_cost; // Not used
-      flag_success = ploy_traj_opt_->optimizeTrajectory(headState, tailState,
-                                                        innerPts, initTraj.getDurations(),
-                                                        cstr_pts, final_cost);
-      best_MJO = ploy_traj_opt_->getMinJerkOpt();
-
-      t_opt = ros::Time::now() - t_start;
-    }
+    t_opt = ros::Time::now() - t_start;
 
     // // save and display planned results
 
@@ -400,6 +354,7 @@ namespace ego_planner
     // std::cout << "plan_success=" << flag_success << std::endl;
     if (!flag_success)
     {
+      ROS_INFO("[reboundReplan] Planning unsuccessful");
       visualization_->displayFailedList(cstr_pts, 0);
       continous_failures_count_++;
       return false;
@@ -414,7 +369,7 @@ namespace ego_planner
     //      << "\033[0m,init:" << t_init.toSec()
     //      << ",optimize:" << t_opt.toSec()
     //      << ",avg_time=" << sum_time / count_success << std::endl;
-
+    
     setLocalTrajFromOpt(best_MJO, touch_goal);
     visualization_->displayOptimalList(cstr_pts, 0);
 

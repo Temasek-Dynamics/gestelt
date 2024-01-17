@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SESSION="gz_sim_single_uav"
+SESSION="sitl_drone_bringup"
 SESSIONEXISTS=$(tmux list-sessions | grep $SESSION)
 
 #####

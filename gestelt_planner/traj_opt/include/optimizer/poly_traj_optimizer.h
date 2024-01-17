@@ -118,7 +118,7 @@ namespace ego_planner
     };
 
     /* set variables */
-    void setParam(ros::NodeHandle &nh);
+    void setParam(ros::NodeHandle &pnh);
     void setEnvironment(const std::shared_ptr<GridMap> &map);
     void setVisualizer(PlanningVisualization::Ptr vis);
     void setControlPoints(const Eigen::MatrixXd &points);
@@ -137,11 +137,18 @@ namespace ego_planner
     const poly_traj::MinJerkOpt &getMinJerkOpt(void) { return jerkOpt_; }
 
     /**
-     * @brief Get the number of constraint points per piece
+     * @brief Get the parameter value for number of constraint points per piece.
+     * This is user-defined
      * 
      * @return int 
      */
     int get_cps_num_perPiece_(void) { return cps_num_perPiece_; }
+
+    /**
+     * @brief Get the user-defined swarm clearance parameter
+     * 
+     * @return double 
+     */
     double get_swarm_clearance_(void) { return swarm_clearance_; }
 
     /* main planning API */

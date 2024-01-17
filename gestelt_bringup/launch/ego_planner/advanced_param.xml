@@ -26,30 +26,32 @@
         <rosparam command="load" file="$(arg cfg_filepath)" />
 
         <param name="manager/drone_id" value="$(arg drone_id)"/>
-
         <!-- ///// -->
         <!-- FSM -->
         <!-- ///// -->
         <!-- Subscribed topics -->
-        <remap from="~fsm_odom" to="$(arg odometry_topic)"/>
+        <remap from="fsm_odom" to="$(arg odometry_topic)"/>
 
         <!-- Published topics -->
-        <remap from="~planner/goals" to = "/$(arg drone_id_ns)/planner/goals"/>
-        <remap from="~planner/state" to = "/$(arg drone_id_ns)/planner/state"/>
-        <remap from="~planner/trajectory" to = "/$(arg drone_id_ns)/planner/trajectory"/>
-        <remap from="~planner/heartbeat" to = "/$(arg drone_id_ns)/planner/heartbeat"/>
+        <remap from="planner/goals" to = "/$(arg drone_id_ns)/planner/goals"/>
+        <remap from="planner/state" to = "/$(arg drone_id_ns)/planner/state"/>
+        <remap from="planner/trajectory" to = "/$(arg drone_id_ns)/planner/trajectory"/>
+        <remap from="planner/heartbeat" to = "/$(arg drone_id_ns)/planner/heartbeat"/>
 
         <!-- ///// -->
         <!-- Mapping -->
         <!-- ///// -->
+        <param name="grid_map/debug_input_entire_map" value="true"/>
+        <param name="grid_map/entire_pcd_map_topic" value="/fake_map"/>
+
         <!-- Published topics -->
-        <remap from="~grid_map/occupancy" to = "$(arg drone_id_ns)/grid_map/occupancy"/>
+        <remap from="grid_map/occupancy" to = "$(arg drone_id_ns)/grid_map/occupancy"/>
         <!-- Subscribed topics -->
-        <remap from="~grid_map/odom" to = "$(arg odometry_topic)"/>
-        <remap from="~grid_map/pose" to = "$(arg pose_topic)"/>
-        <remap from="~grid_map/cloud" to = "$(arg cloud_topic)"/>
-        <remap from="~grid_map/depth" to = "$(arg depth_topic)"/>
-        <remap from="~grid_map/camera_info" to="/$(arg drone_id_ns)/camera/depth/camera_info"/>
+        <remap from="grid_map/odom" to = "$(arg odometry_topic)"/>
+        <remap from="grid_map/pose" to = "$(arg pose_topic)"/>
+        <remap from="grid_map/cloud" to = "$(arg cloud_topic)"/>
+        <remap from="grid_map/depth" to = "$(arg depth_topic)"/>
+        <remap from="grid_map/camera_info" to="/$(arg drone_id_ns)/camera/depth/camera_info"/>
         
         <!-- Frame params -->
         <param name="grid_map/global_frame" value="$(arg global_frame)"/>
@@ -61,13 +63,13 @@
             2 ("grid_map/odom") or
             3 ("/tf") 
             for use as camera pose/odom-->
-        <param name="~grid_map/pose_type" value = "$(arg POSE_TYPE)"/>
+        <param name="grid_map/pose_type" value = "$(arg POSE_TYPE)"/>
         <!-- grid_map/sensor_type: Toggle between subscription to
             1 ("grid_map/cloud") or 
             2 ("grid_map/depth") or 
             3 ("grid_map/cloud") [For use with POSE_TYPE 3]
             for use as camera sensor input -->
-        <param name="~grid_map/sensor_type" value="$(arg SENSOR_TYPE)"/>
+        <param name="grid_map/sensor_type" value="$(arg SENSOR_TYPE)"/>
 
         <!-- formation: Affects the target position of the drone relative to the goal-->
         <param name="formation/num" value="$(arg num_drones)"/>

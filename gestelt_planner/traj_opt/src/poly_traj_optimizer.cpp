@@ -1659,28 +1659,33 @@ namespace ego_planner
   }
 
   /* helper functions */
-  void PolyTrajOptimizer::setParam(ros::NodeHandle &nh)
+  void PolyTrajOptimizer::setParam(ros::NodeHandle &pnh)
   {
-    nh.param("optimization/constraint_points_perPiece", cps_num_perPiece_, -1);
-    nh.param("optimization/weight_obstacle", wei_obs_, -1.0);
-    nh.param("optimization/weight_obstacle_soft", wei_obs_soft_, -1.0);
-    nh.param("optimization/weight_swarm", wei_swarm_, -1.0);
-    nh.param("optimization/weight_formation", wei_formation_, -1.0);
-    nh.param("optimization/weight_feasibility", wei_feas_, -1.0);
-    nh.param("optimization/weight_sqrvariance", wei_sqrvar_, -1.0);
-    nh.param("optimization/weight_time", wei_time_, -1.0);
-    nh.param("optimization/obstacle_clearance", obs_clearance_, -1.0);
-    nh.param("optimization/obstacle_clearance_soft", obs_clearance_soft_, -1.0);
-    nh.param("optimization/swarm_clearance", swarm_clearance_, -1.0);
-    nh.param("optimization/max_vel", max_vel_, -1.0);
-    nh.param("optimization/max_acc", max_acc_, -1.0);
+    pnh.param("optimization/constraint_points_perPiece", cps_num_perPiece_, -1);
+    pnh.param("optimization/weight_obstacle", wei_obs_, -1.0);
+    pnh.param("optimization/weight_obstacle_soft", wei_obs_soft_, -1.0);
+    pnh.param("optimization/weight_swarm", wei_swarm_, -1.0);
+    pnh.param("optimization/weight_formation", wei_formation_, -1.0);
+    pnh.param("optimization/weight_feasibility", wei_feas_, -1.0);
+    pnh.param("optimization/weight_sqrvariance", wei_sqrvar_, -1.0);
+    pnh.param("optimization/weight_time", wei_time_, -1.0);
+    pnh.param("optimization/obstacle_clearance", obs_clearance_, -1.0);
+    pnh.param("optimization/obstacle_clearance_soft", obs_clearance_soft_, -1.0);
+    pnh.param("optimization/swarm_clearance", swarm_clearance_, -1.0);
+    pnh.param("optimization/max_vel", max_vel_, -1.0);
+    pnh.param("optimization/max_acc", max_acc_, -1.0);
 
-    nh.param("formation/num", formation_num_, -1);
+    pnh.param("formation/num", formation_num_, -1);
+
+    if (formation_num_ <= 1){
+      ROS_ERROR("Formation_num %d is invalid", formation_num_);
+    }
+
     formation_.resize(3, formation_num_);
     for (int i = 0; i < formation_num_; i++)
     {
       std::vector<double> pos;
-      nh.getParam("formation/drone" + std::to_string(i), pos);
+      pnh.getParam("formation/drone" + std::to_string(i), pos);
       formation_.col(i) << pos[0], pos[1], pos[2];
     }
   }
@@ -1691,7 +1696,6 @@ namespace ego_planner
 
     a_star_.reset(new AStar);
     a_star_->initGridMap(grid_map_, Eigen::Vector3i(200, 200, 200));
-
   }
 
   void PolyTrajOptimizer::setVisualizer(PlanningVisualization::Ptr vis)

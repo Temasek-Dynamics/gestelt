@@ -13,7 +13,7 @@
     <arg name="SENSOR_TYPE" default="1"/>
     <!-- drone_origin_frame: For PX4 SITL, leave it as default. 
     For other forms of simulation, might have to change it -->
-    <arg name="drone_origin_frame" default="$(arg drone_id_ns)_origin" />
+    <arg name="drone_origin_frame" default="world" />
 
     <arg name="planner_cfg_filepath" default="$(find gestelt_bringup)/config/ego_planner/ego_planner_default.yaml"/>
     <arg name="traj_server_cfg_filepath" default="$(find gestelt_bringup)/config/ego_planner/traj_server_default.yaml"/>
@@ -39,6 +39,7 @@
 
         <arg name="pose_topic" value="/$(arg drone_id_ns)/$(arg pose_topic)"/>
         <arg name="odometry_topic" value="/$(arg drone_id_ns)/$(arg odometry_topic)"/>
+
     </include>
 
     <!-- Planner adaptor -->
@@ -46,21 +47,6 @@
         <arg name="cfg_filepath" value="$(arg adaptor_cfg_filepath)"/>
 
         <arg name="drone_id" value="$(arg drone_id)"/>
-    </include>
-
-    <!-- Trajectory Server -->
-    <include file="$(find trajectory_server)/launch/include/trajectory_server.xml">
-        <arg name="cfg_filepath" value="$(arg traj_server_cfg_filepath)"/>
-
-        <arg name="drone_id" value="$(arg drone_id)"/>
-
-        <!-- drone_origin_frame: For PX4 SITL, leave it as default. 
-        For other forms of simulation, might have to change it -->
-        <arg name="drone_origin_frame" value="$(arg drone_origin_frame)" />
-        <!-- Input/output topics -->
-        <arg name="command_topic"   value="$(arg command_topic)" />
-        <arg name="odometry_topic"   value="$(arg odometry_topic)" />
-        <arg name="pose_topic"   value="$(arg pose_topic)" />
     </include>
 
 </launch>

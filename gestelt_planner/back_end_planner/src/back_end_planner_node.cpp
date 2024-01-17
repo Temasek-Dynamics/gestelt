@@ -4,7 +4,7 @@
 
 int main(int argc, char **argv)
 {
-  ros::init(argc, argv, "front_end_planner_node");
+  ros::init(argc, argv, "ego_planner_fsm_node");
   ros::NodeHandle nh;
   ros::NodeHandle pnh("~");
 

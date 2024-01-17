@@ -5,13 +5,14 @@ namespace ego_planner
 {
   void EGOReplanFSM::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   {
+
     have_target_ = false;
     have_odom_ = false;
     have_recv_pre_agent_ = false;
     flag_escape_emergency_ = true;
 
     /* initialize main modules */
-    visualization_.reset(new PlanningVisualization(nh));
+    visualization_.reset(new PlanningVisualization(pnh));
     planner_manager_.reset(new EGOPlannerManager);
     planner_manager_->initPlanModules(nh, pnh, visualization_);
 
@@ -26,45 +27,45 @@ namespace ego_planner
     // planner_manager_->grid_map_->initTimeBenchmark(time_benchmark_);
 
     /*  fsm param  */
-    nh.param("fsm/waypoint_type", waypoint_type_, -1);
-    nh.param("fsm/thresh_replan_time", replan_time_thresh_, -1.0);
-    nh.param("fsm/thresh_no_replan_meter", min_replan_dist_, -1.0);
-    nh.param("fsm/planning_horizon", planning_horizon_, -1.0);
-    nh.param("fsm/emergency_time", emergency_time_, 1.0);
-    nh.param("fsm/fail_safe", enable_fail_safe_, true);
+    pnh.param("fsm/waypoint_type", waypoint_type_, -1);
+    pnh.param("fsm/thresh_replan_time", replan_time_thresh_, -1.0);
+    pnh.param("fsm/thresh_no_replan_meter", min_replan_dist_, -1.0);
+    pnh.param("fsm/planning_horizon", planning_horizon_, -1.0);
+    pnh.param("fsm/emergency_time", emergency_time_, 1.0);
+    pnh.param("fsm/fail_safe", enable_fail_safe_, true);
 
     int formation_num = -1;
-    nh.param("formation/num", formation_num, -1);
+    pnh.param("formation/num", formation_num, -1);
     if (formation_num < planner_manager_->pp_.drone_id + 1)
     {
       logError("formation_num is smaller than the drone number, illegal!");
       return;
     }
     std::vector<double> pos;
-    nh.getParam("formation/drone" + std:: to_string(planner_manager_->pp_.drone_id), pos);
+    pnh.getParam("formation/drone" + std::to_string(planner_manager_->pp_.drone_id), pos);
     formation_pos_ << pos[0], pos[1], pos[2];
-    nh.getParam("formation/start", pos);
-
+    pnh.getParam("formation/start", pos);
+ 
     Eigen::Vector3d formation_start;
     formation_start << pos[0], pos[1], pos[2];
     waypoints_.setStartWP(formation_start);
 
-    double pub_state_freq, tick_state_freq, exec_state_freq;
-    nh.param("fsm/pub_state_freq", pub_state_freq, 10.0);
-    nh.param("fsm/tick_state_freq", tick_state_freq, 100.0);
-    nh.param("fsm/exec_state_freq", exec_state_freq, 20.0);
+    // double pub_state_freq, tick_state_freq, exec_state_freq;
+    // pnh.param("fsm/pub_state_freq", pub_state_freq, 10.0);
+    // pnh.param("fsm/tick_state_freq", tick_state_freq, 100.0);
+    // pnh.param("fsm/exec_state_freq", exec_state_freq, 20.0);
 
     // std::string odom_topic;
-    // nh.param("grid_map/odom", odom_topic, std::string("odom"));
+    // pnh.param("grid_map/odom", odom_topic, std::string("odom"));
 
     /* Timer callbacks */
-    pub_state_timer_ = nh.createTimer(ros::Duration(1/pub_state_freq), &EGOReplanFSM::pubStateTimerCB, this);
-    tick_state_timer_ = nh.createTimer(ros::Duration(1/tick_state_freq), &EGOReplanFSM::tickStateTimerCB, this);
-    exec_state_timer_ = nh.createTimer(ros::Duration(1/exec_state_freq), &EGOReplanFSM::execStateTimerCB, this);
+    // pub_state_timer_ = nh.createTimer(ros::Duration(1/pub_state_freq), &EGOReplanFSM::pubStateTimerCB, this);
+    // tick_state_timer_ = nh.createTimer(ros::Duration(1/tick_state_freq), &EGOReplanFSM::tickStateTimerCB, this);
+    // exec_state_timer_ = nh.createTimer(ros::Duration(1/exec_state_freq), &EGOReplanFSM::execStateTimerCB, this);
 
     /* Subscribers */
-    odom_sub_ = nh.subscribe("fsm_odom", 1, &EGOReplanFSM::odometryCallback, this);
-    mandatory_stop_sub_ = nh.subscribe("/mandatory_stop_to_planner", 1, &EGOReplanFSM::mandatoryStopCallback, this);
+    // odom_sub_ = nh.subscribe("fsm_odom", 1, &EGOReplanFSM::odometryCallback, this);
+    // mandatory_stop_sub_ = nh.subscribe("/mandatory_stop_to_planner", 1, &EGOReplanFSM::mandatoryStopCallback, this);
 
     // Use MINCO trajectory to minimize the message size in wireless communication
     broadcast_ploytraj_sub_ = nh.subscribe<traj_utils::MINCOTraj>("/broadcast_traj_to_planner", 100,
@@ -74,59 +75,91 @@ namespace ego_planner
 
     /* Publishers */
     broadcast_ploytraj_pub_ = nh.advertise<traj_utils::MINCOTraj>("/broadcast_traj_from_planner", 10);
-    poly_traj_pub_ = nh.advertise<traj_utils::PolyTraj>("planner/trajectory", 10);
-    heartbeat_pub_ = nh.advertise<std_msgs::Empty>("planner/heartbeat", 10);
-    ground_height_pub_ = nh.advertise<std_msgs::Float64>("/ground_height_measurement", 10);
-    state_pub_ = nh.advertise<std_msgs::String>("planner/state", 10);
+    poly_traj_pub_ = pnh.advertise<traj_utils::PolyTraj>("planner/trajectory", 10);
+    heartbeat_pub_ = pnh.advertise<std_msgs::Empty>("planner/heartbeat", 10);
+    // ground_height_pub_ = pnh.advertise<std_msgs::Float64>("/ground_height_measurement", 10);
+    state_pub_ = pnh.advertise<std_msgs::String>("planner/state", 10);
     // time_benchmark_pub_ = nh.advertise<gestelt_msgs::TimeBenchmark>("plan_time_benchmark", 10);
 
-    if (waypoint_type_ == TARGET_TYPE::MANUAL_TARGET)
-    {
-      waypoint_sub_ = nh.subscribe("/goal", 1, &EGOReplanFSM::waypointCB, this);
-    }
-    else if (waypoint_type_ == TARGET_TYPE::PRESET_TARGET)
-    {
-      // Subscribe to waypoints 
-      waypoints_sub_ = nh.subscribe("planner/goals", 1, &EGOReplanFSM::waypointsCB, this);
-    }
-    else{
-      logError(string_format("Invalid waypoint type value! target_type=%i, it is either 1 or 2", waypoint_type_));
-    }
+    // if (waypoint_type_ == TARGET_TYPE::MANUAL_TARGET)
+    // {
+    //   waypoint_sub_ = nh.subscribe("/goal", 1, &EGOReplanFSM::waypointCB, this);
+    // }
+    // else if (waypoint_type_ == TARGET_TYPE::PRESET_TARGET)
+    // {
+    //   // Subscribe to waypoints 
+    //   waypoints_sub_ = nh.subscribe("planner/goals", 1, &EGOReplanFSM::waypointsCB, this);
+    // }
+    // else{
+    //   logError(string_format("Invalid waypoint type value! target_type=%i, it is either 1 or 2", waypoint_type_));
+    // }
 
     /* Get Transformation from origin to world frame and vice versa */
-    nh.param("grid_map/uav_origin_frame", uav_origin_frame_, std::string("world"));
-    nh.param("grid_map/global_frame", global_frame_, std::string("world"));
-    nh.param("fsm/tf_lookup_timeout", tf_lookup_timeout_, 60.0);
+    pnh.param("grid_map/uav_origin_frame", uav_origin_frame_, std::string("world"));
+    pnh.param("grid_map/global_frame", global_frame_, std::string("world"));
+    pnh.param("fsm/tf_lookup_timeout", tf_lookup_timeout_, 60.0);
 
-    tfListener_.reset(new tf2_ros::TransformListener(tfBuffer_));
+    // tfListener_.reset(new tf2_ros::TransformListener(tfBuffer_));
 
-    geometry_msgs::TransformStamped transform;
-    try
-    {
-      transform = tfBuffer_.lookupTransform(global_frame_, uav_origin_frame_, ros::Time(0), ros::Duration(tf_lookup_timeout_));
-    }
-    catch (const tf2::TransformException &ex)
-    {
-      ROS_ERROR_THROTTLE(1,
-          "[Ego Planner FSM]: Error in lookupTransform of %s in %s", uav_origin_frame_.c_str(), global_frame_.c_str());
-      ROS_WARN_THROTTLE(1, "%s",ex.what());
-      ros::shutdown();
-    }
+    // geometry_msgs::TransformStamped transform;
+    // try
+    // {
+    //   transform = tfBuffer_.lookupTransform(global_frame_, uav_origin_frame_, ros::Time(0), ros::Duration(tf_lookup_timeout_));
+    // }
+    // catch (const tf2::TransformException &ex)
+    // {
+    //   ROS_ERROR_THROTTLE(1,
+    //       "[Ego Planner FSM]: Error in lookupTransform of %s in %s", uav_origin_frame_.c_str(), global_frame_.c_str());
+    //   ROS_WARN_THROTTLE(1, "%s",ex.what());
+    //   ros::shutdown();
+    // }
 
-    uav_origin_to_world_tf_(0) = transform.transform.translation.x;
-    uav_origin_to_world_tf_(1) = transform.transform.translation.y;
-    uav_origin_to_world_tf_(2) = transform.transform.translation.z;
+    // // Transformation from world frame to UAV frame
+    // uav_origin_to_world_tf_(0) = transform.transform.translation.x;
+    // uav_origin_to_world_tf_(1) = transform.transform.translation.y;
+    // uav_origin_to_world_tf_(2) = transform.transform.translation.z;
+
+    // // Reverse signs so that the transformation is from UAV origin frame to world frame
+    // world_to_uav_origin_tf_(0) = -uav_origin_to_world_tf_(0);
+    // world_to_uav_origin_tf_(1) = -uav_origin_to_world_tf_(1);
+    // world_to_uav_origin_tf_(2) = -uav_origin_to_world_tf_(2);
+
+    // Transformation from world frame to UAV frame
+    uav_origin_to_world_tf_(0) = 0.0;
+    uav_origin_to_world_tf_(1) = 0.0;
+    uav_origin_to_world_tf_(2) = 0.0;
 
     // Reverse signs so that the transformation is from UAV origin frame to world frame
-    world_to_uav_origin_tf_(0) = -uav_origin_to_world_tf_(0);
-    world_to_uav_origin_tf_(1) = -uav_origin_to_world_tf_(1);
-    world_to_uav_origin_tf_(2) = -uav_origin_to_world_tf_(2);
+    world_to_uav_origin_tf_(0) = 0.0;
+    world_to_uav_origin_tf_(1) = 0.0;
+    world_to_uav_origin_tf_(2) = 0.0;
+
+    debug_start_sub_ = pnh.subscribe("debug/plan_start", 5, &EGOReplanFSM::debugStartCB, this);
+    debug_goal_sub_ = pnh.subscribe("debug/plan_goal", 5, &EGOReplanFSM::debugGoalCB, this);
+
+  }
+
+  void EGOReplanFSM::debugStartCB(const geometry_msgs::PoseConstPtr &msg)
+  {
+    ROS_INFO("[EGOReplanFSM]: Received debug start (%f, %f, %f)", 
+          msg->position.x,
+          msg->position.y,
+          msg->position.z);
+
+    odom_pos_(0) = msg->position.x ;
+    odom_pos_(1) = msg->position.y ;
+    odom_pos_(2) = msg->position.z ;
+
+    odom_vel_(0) = 0.0;
+    odom_vel_(1) = 0.0;
+    odom_vel_(2) = 0.0;
+
+    have_odom_ = true;
   }
 
   /**
    * Timer Callbacks
   */
-
   void EGOReplanFSM::pubStateTimerCB(const ros::TimerEvent &e)
   {
     std_msgs::Empty heartbeat_msg;
@@ -294,6 +327,7 @@ namespace ego_planner
 
       case READY: 
       {
+        ROS_INFO("READY");
         if (have_target_) {
           setServerEvent(PLAN_GLOBAL_TRAJ_E);
         }
@@ -302,6 +336,7 @@ namespace ego_planner
 
       case PLAN_GLOBAL_TRAJ: 
       {
+        ROS_INFO("PLAN_GLOBAL_TRAJ");
         // If first drone or it has received the trajectory of the previous agent.
         if (planner_manager_->pp_.drone_id <= 0 || (planner_manager_->pp_.drone_id >= 1 && have_recv_pre_agent_))
         {
@@ -320,6 +355,7 @@ namespace ego_planner
 
       case PLAN_LOCAL_TRAJ:
       {
+        ROS_INFO("PLAN_LOCAL_TRAJ");
         if (planFromLocalTraj(3))
         {
           setServerEvent(EXEC_TRAJ_E);
@@ -340,6 +376,7 @@ namespace ego_planner
 
       case EXEC_TRAJ:
       {
+        ROS_INFO("EXEC_TRAJ");
         if (checkSensorTimeout())
         {
           setServerEvent(EMERGENCY_STOP_E);
@@ -622,6 +659,46 @@ namespace ego_planner
     planNextWaypoint(waypoints_.getStartWP(), waypoints_.getNextWP());
   }
 
+  void EGOReplanFSM::debugGoalCB(const geometry_msgs::PoseConstPtr &msg)
+  {
+    ROS_INFO("[EGOReplanFSM]: Received debug goal (%f, %f, %f)", 
+          msg->position.x,
+          msg->position.y,
+          msg->position.z);
+
+    // waypoints_.reset();
+    // waypoints_.addWP(odom_pos_);
+    // waypoints_.addWP(Eigen::Vector3d{
+    //       msg->position.x,
+    //       msg->position.y,
+    //       msg->position.z});
+    // If there are at least 2 waypoints,
+    // if (waypoints_.getSize() >= 2)
+    // {
+    //   // Set the starting wp to be second last waypoint 
+    //   waypoints_.setStartWP(waypoints_.getWP(waypoints_.getSize() - 2));
+    // }
+
+    goal_pos_ = Eigen::Vector3d{
+          msg->position.x,
+          msg->position.y,
+          msg->position.z};
+
+    ROS_INFO("Generating minimum jerk trajectory");
+    planNextWaypoint(odom_pos_, Eigen::Vector3d{
+          msg->position.x,
+          msg->position.y,
+          msg->position.z});
+    ROS_INFO("Generated minimum jerk trajectory");
+
+    ROS_INFO("Before planFromGlobalTraj");
+    if (!planFromGlobalTraj(5)){
+      ROS_ERROR("Failed to plan from global trajectory");
+      return;
+    }
+    ROS_ERROR("Planning successful");
+  }
+
   /**
    * Planning Methods
   */
@@ -690,14 +767,26 @@ namespace ego_planner
         planning_horizon_, start_pt_, end_pt_,
         local_target_pt_, local_target_vel_,
         touch_goal_);
+    ROS_INFO("Got local target");
 
     bool flag_polyInit = (have_new_target_ || flag_use_poly_init);
+    ROS_INFO("Before reboundReplan");
+    // bool plan_success = planner_manager_->reboundReplan(
+    //     start_pt_, start_vel_, start_acc_, 
+    //     local_target_pt_, local_target_vel_, 
+    //     waypoints_.getStartWP(), waypoints_.getNextWP(), 
+    //     flag_polyInit,
+    //     flag_randomPolyTraj, touch_goal_);
+
     bool plan_success = planner_manager_->reboundReplan(
         start_pt_, start_vel_, 
         start_acc_, local_target_pt_, 
-        local_target_vel_, waypoints_.getStartWP(), 
-        waypoints_.getNextWP(), flag_polyInit,
+        local_target_vel_, 
+        odom_pos_, goal_pos_, // Formation start and end
+        flag_polyInit,
         flag_randomPolyTraj, touch_goal_);
+
+    ROS_INFO("AFter reboundReplan");
 
     have_new_target_ = false;
 
@@ -713,6 +802,9 @@ namespace ego_planner
 
       poly_traj_pub_.publish(poly_msg); // (In drone origin frame) Publish to corresponding drone for execution
       broadcast_ploytraj_pub_.publish(MINCO_msg); // (In world frame) Broadcast to all other drones for replanning to optimize in avoiding swarm collision
+    }
+    else {
+      ROS_ERROR("planner_manager_->reboundReplan not successful");
     }
 
     return plan_success;
@@ -774,8 +866,6 @@ namespace ego_planner
 
     // Get position at current time
     Eigen::Vector3d pos = info->traj.getPos(t_cur);
-    // TODO: Try using actual position 
-    // Eigen::Vector3d pos = odom_pos_;
 
     // Local target is within tolerance of the goal point
     bool within_goal_tol = ((local_target_pt_ - end_pt_).norm() < 1e-2);

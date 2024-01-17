@@ -16,8 +16,8 @@ int main(int argc, char **argv)
   signal(SIGTERM,SignalHandler);
 
   ros::init(argc, argv, "ego_planner_fsm_node");
-  ros::NodeHandle nh("~");
-  ros::NodeHandle pnh;
+  ros::NodeHandle nh;
+  ros::NodeHandle pnh("~");
 
   EGOReplanFSM ego_replan_fsm;
 
