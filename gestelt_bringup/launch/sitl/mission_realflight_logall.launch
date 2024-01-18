@@ -1,10 +1,10 @@
 <launch>
   <!-- Launches a test mission -->
-  <!-- <node pkg="gestelt_bringup" name="mission" type="hover_anywhere_mission.py"  /> -->
+  <node pkg="gestelt_bringup" name="mission" type="hover_anywhere_mission.py"  />
 
 
   <!--for circular mission  only-->
-  <node pkg="trajectory_publisher" type="trajectory_publisher" name="trajectory_publisher" output="screen">
+  <!-- <node pkg="trajectory_publisher" type="trajectory_publisher" name="trajectory_publisher" output="screen">
         <param name="trajectory_type" value="1" />
         <param name="shape_omega" value="1.2" /> 
         <param name="initpos_z" value="1.2" />
@@ -12,7 +12,7 @@
   </node> 
 
   <node pkg="gestelt_bringup" name="mission" type="circular_mission_modify_mavros.py">
-  </node>
+  </node> -->
   
   <!-- Start rosbag to record setpoint_raw and local_position -->
   <!-- path have to be absolute path-->
