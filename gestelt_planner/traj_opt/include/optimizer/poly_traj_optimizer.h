@@ -197,9 +197,32 @@ namespace ego_planner
     std::vector<ConstraintPoints> distinctiveTrajs(vector<std::pair<int, int>> segments);
 
   private:
-    /* callbacks by the L-BFGS optimizer */
+    /**
+     * @brief The LBFGS callback function to provide function and gradient evaluations given a current values of variables
+     * 
+     * @param func_data 
+     * @param x 
+     * @param grad 
+     * @param n 
+     * @return double 
+     */
     static double costFunctionCallback(void *func_data, const double *x, double *grad, const int n);
 
+    /**
+     * @brief The LBFGS callback function to receive the progress (the number of iterations, the current value of the objective function) of the minimization process.
+     * 
+     * @param func_data 
+     * @param x 
+     * @param g 
+     * @param fx 
+     * @param xnorm 
+     * @param gnorm 
+     * @param step 
+     * @param n 
+     * @param k 
+     * @param ls 
+     * @return int 
+     */
     static int earlyExitCallback(void *func_data, const double *x, const double *g,
                                  const double fx, const double xnorm, const double gnorm,
                                  const double step, int n, int k, int ls);

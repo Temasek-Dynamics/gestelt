@@ -19,7 +19,7 @@ namespace ego_planner
 
     jerkOpt_.reset(iniState, finState, piece_num_);
 
-    // What is variable_num_? 
+    // Number of coefficients
     variable_num_ = 4 * (piece_num_ - 1) + 1;
 
     ros::Time t0 = ros::Time::now(), t1, t2;
@@ -30,6 +30,8 @@ namespace ego_planner
     // copy the inner points to x_init
     memcpy(x_init, initInnerPts.data(), initInnerPts.size() * sizeof(x_init[0]));
     Eigen::Map<Eigen::VectorXd> Vt(x_init + initInnerPts.size(), initT.size()); // Virtual Time
+
+    // Convert from real time to virtual time
     RealT2VirtualT(initT, Vt);
 
     lbfgs::lbfgs_parameter_t lbfgs_params;
@@ -54,14 +56,14 @@ namespace ego_planner
       /* ---------- optimize ---------- */
       t1 = ros::Time::now();
       int result = lbfgs::lbfgs_optimize(
-          variable_num_,
-          x_init,
-          &final_cost,
-          PolyTrajOptimizer::costFunctionCallback,
-          NULL,
-          PolyTrajOptimizer::earlyExitCallback,
-          this,
-          &lbfgs_params);
+          variable_num_,                  // The number of variables
+          x_init,                         // The array of variables.
+          &final_cost,                    // The pointer to the variable that receives the final value of the objective function for the variables
+          PolyTrajOptimizer::costFunctionCallback, // The callback function to provide function and gradient evaluations given a current values of variables
+          NULL,                           //  The callback function to provide values of the upperbound of the stepsize to search in, provided with the beginning values of variables before the linear search, and the current step vector (can be negative gradient).
+          PolyTrajOptimizer::earlyExitCallback,    // The callback function to receive the progress (the number of iterations, the current value of the objective function) of the minimization process.
+          this,                           // A user data for the client program. The callback functions will receive the value of this argument.
+          &lbfgs_params);                 // The pointer to a structure representing parameters for L-BFGS optimization. A client program can set this parameter to NULL to use the default parameters
 
       t2 = ros::Time::now();
       double time_ms = (t2 - t1).toSec() * 1000;
@@ -223,10 +225,10 @@ namespace ego_planner
       return CHK_RET::ERR;
     }
 
-    // Generate segments of path that are in collision
+    // Split trajectory into segments based on whether they are in collision or not
     for (int i = 0; i < i_end; ++i) // for each piece 
     {
-      for (size_t j = 0; j < pts_check[i].size(); ++j) // for each point
+      for (size_t j = 0; j < pts_check[i].size(); ++j) // for each point to check
       {
         // get occupancy value at position
         occ = grid_map_->getInflateOccupancy(pts_check[i][j].second); 
@@ -1114,19 +1116,25 @@ namespace ego_planner
   } // namespace ego_planner
 
   /* callbacks by the L-BFGS optimizer */
+  
   double PolyTrajOptimizer::costFunctionCallback(void *func_data, const double *x, double *grad, const int n)
   {
+    // Pointer to current instance of PolyTrajOptimizer
     PolyTrajOptimizer *opt = reinterpret_cast<PolyTrajOptimizer *>(func_data);
 
     opt->min_ellip_dist2_ = std::numeric_limits<double>::max();
 
-    Eigen::Map<const Eigen::MatrixXd> P(x, 3, opt->piece_num_ - 1);
+    // x is pointer to start of the array/matrix
+    Eigen::Map<const Eigen::MatrixXd> P(x, 3, opt->piece_num_ - 1); // 3 x (M-1)
     // Eigen::VectorXd T(Eigen::VectorXd::Constant(piece_nums, opt->t2T(x[n - 1]))); // same t
+    // we specify "x + (3 * (opt->piece_num_ - 1))" because that is the address, its not the value
     Eigen::Map<const Eigen::VectorXd> t(x + (3 * (opt->piece_num_ - 1)), opt->piece_num_);
+
     Eigen::Map<Eigen::MatrixXd> gradP(grad, 3, opt->piece_num_ - 1);
     Eigen::Map<Eigen::VectorXd> gradt(grad + (3 * (opt->piece_num_ - 1)), opt->piece_num_);
-    Eigen::VectorXd T(opt->piece_num_);
 
+    // from virtual time t to real time T
+    Eigen::VectorXd T(opt->piece_num_);
     opt->VirtualT2RealT(t, T);
 
     Eigen::VectorXd gradT(opt->piece_num_);
@@ -1135,9 +1143,11 @@ namespace ego_planner
 
     opt->jerkOpt_.generate(P, T);
 
-    opt->initAndGetSmoothnessGradCost2PT(gradT, smoo_cost); // Smoothness cost
+    // Smoothness cost
+    opt->initAndGetSmoothnessGradCost2PT(gradT, smoo_cost); 
 
-    opt->addPVAGradCost2CT(gradT, obs_swarm_feas_qvar_costs, opt->cps_num_perPiece_); // Time int cost
+    // Time int cost
+    opt->addPVAGradCost2CT(gradT, obs_swarm_feas_qvar_costs, opt->cps_num_perPiece_); 
 
     if (opt->iter_num_ > 3 && smoo_cost / opt->piece_num_ < 10.0) // 10.0 is an experimental value that indicates the trajectory is smooth enough.
     {
