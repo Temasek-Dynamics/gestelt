@@ -1357,7 +1357,12 @@ namespace poly_traj
         {
             return b;
         }
-
+        
+        /**
+         * @brief Return a vector of time durations of each piece/segment
+         * 
+         * @return const Eigen::VectorXd& 
+         */
         const Eigen::VectorXd &get_T1() const
         {
             return T1;
@@ -1462,9 +1467,16 @@ namespace poly_traj
             addPropCtoP(gdC, gdInPs);
         }
 
+        /**
+         * @brief Add gradient to this optimizer
+         * 
+         * @tparam EIGENVEC 
+         * @param gdT 
+         * @param cost this function sets the cost to the trajectory's cost w.r.t jerk minimization 
+         */
         template <typename EIGENVEC>
-        void initGradCost(EIGENVEC &gdT,
-                                 double &cost)
+        void initGradCost(  EIGENVEC &gdT,
+                            double &cost)
         {
             // printf( "gdInPs=%d\n", gdInPs.size() );
 

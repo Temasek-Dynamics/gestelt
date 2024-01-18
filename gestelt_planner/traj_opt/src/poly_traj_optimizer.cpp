@@ -1130,6 +1130,7 @@ namespace ego_planner
     // we specify "x + (3 * (opt->piece_num_ - 1))" because that is the address, its not the value
     Eigen::Map<const Eigen::VectorXd> t(x + (3 * (opt->piece_num_ - 1)), opt->piece_num_);
 
+    // Gradient values of P and t
     Eigen::Map<Eigen::MatrixXd> gradP(grad, 3, opt->piece_num_ - 1);
     Eigen::Map<Eigen::VectorXd> gradt(grad + (3 * (opt->piece_num_ - 1)), opt->piece_num_);
 
@@ -1144,6 +1145,7 @@ namespace ego_planner
     opt->jerkOpt_.generate(P, T);
 
     // Smoothness cost
+    // smoo_cost is the cost of the jerk minimization trajectory
     opt->initAndGetSmoothnessGradCost2PT(gradT, smoo_cost); 
 
     // Time int cost
@@ -1228,7 +1230,6 @@ namespace ego_planner
   template <typename EIGENVEC>
   void PolyTrajOptimizer::addPVAGradCost2CT(EIGENVEC &gdT, Eigen::VectorXd &costs, const int &K)
   {
-    //
     int N = gdT.size();
     Eigen::Vector3d pos, vel, acc, jer;
     Eigen::Vector3d gradp, gradv, grada;
@@ -1238,101 +1239,104 @@ namespace ego_planner
     double step, alpha;
     Eigen::Matrix<double, 6, 3> gradViolaPc, gradViolaVc, gradViolaAc;
     double gradViolaPt, gradViolaVt, gradViolaAt;
-    double omg;
+    double omega;
     int i_dp = 0;
     costs.setZero();
     // Eigen::MatrixXd constraint_pts(3, N * K + 1);
 
-    // printf("A\n");
-
-    // int innerLoop;
     double t = 0;
-    for (int i = 0; i < N; ++i)
+    for (int i = 0; i < N; ++i) // for each gradT
     {
-
+      // Get polynomial coefficients c 
       const Eigen::Matrix<double, 6, 3> &c = jerkOpt_.get_b().block<6, 3>(i * 6, 0);
       step = jerkOpt_.get_T1()(i) / K;
-      s1 = 0.0;
-      // innerLoop = K;
+      s1 = 0.0; // Time t, it will increase with each step of f the constraint point
 
-      for (int j = 0; j <= K; ++j)
+      for (int j = 0; j <= K; ++j) // For each constraint point
       {
-        s2 = s1 * s1;
-        s3 = s2 * s1;
-        s4 = s2 * s2;
-        s5 = s4 * s1;
-        beta0 << 1.0, s1, s2, s3, s4, s5;
-        beta1 << 0.0, 1.0, 2.0 * s1, 3.0 * s2, 4.0 * s3, 5.0 * s4;
-        beta2 << 0.0, 0.0, 2.0, 6.0 * s1, 12.0 * s2, 20.0 * s3;
-        beta3 << 0.0, 0.0, 0.0, 6.0, 24.0 * s1, 60.0 * s2;
-        alpha = 1.0 / K * j;
-        pos = c.transpose() * beta0;
-        vel = c.transpose() * beta1;
-        acc = c.transpose() * beta2;
-        jer = c.transpose() * beta3;
+        s2 = s1 * s1;   // t^2
+        s3 = s2 * s1;   // t^3
+        s4 = s2 * s2;   // t^4
+        s5 = s4 * s1;   // t^5
+        beta0 << 1.0, s1, s2, s3, s4, s5;                           // (1, t, t^2,  t^3,  t^4,    t^5)
+        beta1 << 0.0, 1.0, 2.0 * s1, 3.0 * s2, 4.0 * s3, 5.0 * s4;  // (0, 1, 2t,   3t^2, 4t^3,   5t^4)
+        beta2 << 0.0, 0.0, 2.0, 6.0 * s1, 12.0 * s2, 20.0 * s3;     // (0, 0, 1,    6t,   12t^2,  20t^3)
+        beta3 << 0.0, 0.0, 0.0, 6.0, 24.0 * s1, 60.0 * s2;          // (0, 0, 0,    1,    24t,    60t^2)
+        alpha = 1.0 / K * j; // progress along segment/piece, value is from 0 to 1
+        pos = c.transpose() * beta0; // position at current constraint point
+        vel = c.transpose() * beta1; // velocity at current constraint point
+        acc = c.transpose() * beta2; // acceleration at current constraint point
+        jer = c.transpose() * beta3; // jerk at current constraint point
 
-        omg = (j == 0 || j == K) ? 0.5 : 1.0;
+        // omega: quadrature coefficients using trapezoid rule
+        omega = (j == 0 || j == K) ? 0.5 : 1.0;
 
         cps_.points.col(i_dp) = pos;
 
-        // collision
+        // Static obstacle
         if (obstacleGradCostP(i_dp, pos, gradp, costp))
         {
           gradViolaPc = beta0 * gradp.transpose();
           gradViolaPt = alpha * gradp.transpose() * vel;
-          jerkOpt_.get_gdC().block<6, 3>(i * 6, 0) += omg * step * gradViolaPc;
-          gdT(i) += omg * (costp / K + step * gradViolaPt);
-          costs(0) += omg * step * costp;
+          jerkOpt_.get_gdC().block<6, 3>(i * 6, 0) += omega * step * gradViolaPc;
+          gdT(i) += omega * (costp / K + step * gradViolaPt);
+          costs(0) += omega * step * costp;
         }
 
-        // swarm
+        // Swarm/Dynamic obstacle
         double gradt, grad_prev_t;
         if (swarmGradCostP(i_dp, t + step * j, pos, vel, gradp, gradt, grad_prev_t, costp))
         {
           gradViolaPc = beta0 * gradp.transpose();
           gradViolaPt = alpha * gradt;
-          jerkOpt_.get_gdC().block<6, 3>(i * 6, 0) += omg * step * gradViolaPc;
-          gdT(i) += omg * (costp / K + step * gradViolaPt);
+          jerkOpt_.get_gdC().block<6, 3>(i * 6, 0) += omega * step * gradViolaPc;
+          gdT(i) += omega * (costp / K + step * gradViolaPt);
           if (i > 0)
           {
-            gdT.head(i).array() += omg * step * grad_prev_t;
+            gdT.head(i).array() += omega * step * grad_prev_t;
           }
-          costs(1) += omg * step * costp;
+          costs(1) += omega * step * costp;
         }
 
         // formation
-        gradt = 0, grad_prev_t = 0;
-        if (formationGradCostP(i_dp, t + step * j, pos, vel, gradp, gradt, grad_prev_t, costp))
-        {
-          gradViolaPc = beta0 * gradp.transpose();
-          gradViolaPt = alpha * gradt;
-          jerkOpt_.get_gdC().block<6, 3>(i * 6, 0) += omg * step * gradViolaPc;
-          gdT(i) += omg * (costp / K + step * gradViolaPt);
-          if (i > 0)
-          {
-            gdT.head(i).array() += omg * step * grad_prev_t;
-          }
-          costs(1) += omg * step * costp;
-        }
+        // gradt = 0, grad_prev_t = 0;
+        // if (formationGradCostP(i_dp, t + step * j, pos, vel, gradp, gradt, grad_prev_t, costp))
+        // {
+        //   gradViolaPc = beta0 * gradp.transpose();
+        //   gradViolaPt = alpha * gradt;
+        //   jerkOpt_.get_gdC().block<6, 3>(i * 6, 0) += omega * step * gradViolaPc;
+        //   gdT(i) += omega * (costp / K + step * gradViolaPt);
+        //   if (i > 0)
+        //   {
+        //     gdT.head(i).array() += omega * step * grad_prev_t;
+        //   }
+        //   costs(1) += omega * step * costp;
+        // }
 
-        // feasibility for velocity
+        // feasibility for keeping within velocity limits
         if (feasibilityGradCostV(vel, gradv, costv))
         {
+          // Gradient of constraint w.r.t c 
+          //    2 * beta_1(t) * p_1(t)
           gradViolaVc = beta1 * gradv.transpose();
+          // Gradient of constraint w.r.t t
+          //    2 * beta_2(t) * c_i * p_1(t)
           gradViolaVt = alpha * gradv.transpose() * acc;
-          jerkOpt_.get_gdC().block<6, 3>(i * 6, 0) += omg * step * gradViolaVc;
-          gdT(i) += omg * (costv / K + step * gradViolaVt);
-          costs(2) += omg * step * costv;
+          // Sampling of cost
+          // omega * penalty weight * constraint(c_i, t_i, j/sample_num)
+          jerkOpt_.get_gdC().block<6, 3>(i * 6, 0) += omega * step * gradViolaVc;
+          gdT(i) += omega * (costv / K + step * gradViolaVt);
+          costs(2) += omega * step * costv; // Sum costs
         }
 
-        // feasibility for acceleration
+        // feasibility for keeping within acceleration limits
         if (feasibilityGradCostA(acc, grada, costa))
         {
           gradViolaAc = beta2 * grada.transpose();
           gradViolaAt = alpha * grada.transpose() * jer;
-          jerkOpt_.get_gdC().block<6, 3>(i * 6, 0) += omg * step * gradViolaAc;
-          gdT(i) += omg * (costa / K + step * gradViolaAt);
-          costs(2) += omg * step * costa;
+          jerkOpt_.get_gdC().block<6, 3>(i * 6, 0) += omega * step * gradViolaAc;
+          gdT(i) += omega * (costa / K + step * gradViolaAt);
+          costs(2) += omega * step * costa;
         }
 
         // printf("L\n");
@@ -1371,12 +1375,12 @@ namespace ego_planner
         alpha = 1.0 / K * j;
         vel = jerkOpt_.get_b().block<6, 3>(i * 6, 0).transpose() * beta1;
 
-        omg = (j == 0 || j == K) ? 0.5 : 1.0;
+        omega = (j == 0 || j == K) ? 0.5 : 1.0;
 
         gradViolaPc = beta0 * gdp.col(i_dp).transpose();
         gradViolaPt = alpha * gdp.col(i_dp).transpose() * vel;
-        jerkOpt_.get_gdC().block<6, 3>(i * 6, 0) += omg * gradViolaPc;
-        gdT(i) += omg * (gradViolaPt);
+        jerkOpt_.get_gdC().block<6, 3>(i * 6, 0) += omega * gradViolaPc;
+        gdT(i) += omega * (gradViolaPt);
 
         s1 += step;
         if (j != K || (j == K && i == N - 1))
@@ -1402,7 +1406,7 @@ namespace ego_planner
     gradp.setZero();
     costp = 0;
 
-    // Obatacle cost
+    // Obstacle cost
     for (size_t j = 0; j < cps_.direction[i_dp].size(); ++j)
     {
       Eigen::Vector3d ray = (p - cps_.base_point[i_dp][j]);
@@ -1587,8 +1591,9 @@ namespace ego_planner
                                                Eigen::Vector3d &gradv,
                                                double &costv)
   {
+    // vpen is magnitude of velocity violation
     double vpen = v.squaredNorm() - max_vel_ * max_vel_;
-    if (vpen > 0)
+    if (vpen > 0) // If velocity limit is exceeded, penalty is non-zero
     {
       gradv = wei_feas_ * 6 * vpen * vpen * v;
       costv = wei_feas_ * vpen * vpen * vpen;
@@ -1602,7 +1607,7 @@ namespace ego_planner
                                                double &costa)
   {
     double apen = a.squaredNorm() - max_acc_ * max_acc_;
-    if (apen > 0)
+    if (apen > 0) // If acceleration limit is exceeded, penalty is non-zero
     {
       grada = wei_feas_ * 6 * apen * apen * a;
       costa = wei_feas_ * apen * apen * apen;
@@ -1719,11 +1724,17 @@ namespace ego_planner
     cps_.points = points;
   }
 
-  void PolyTrajOptimizer::setSwarmTrajs(SwarmTrajData *swarm_trajs_ptr) { swarm_trajs_ = swarm_trajs_ptr; }
+  void PolyTrajOptimizer::setSwarmTrajs(SwarmTrajData *swarm_trajs_ptr) { 
+    swarm_trajs_ = swarm_trajs_ptr; 
+  }
 
-  void PolyTrajOptimizer::setDroneId(const int drone_id) { drone_id_ = drone_id; }
+  void PolyTrajOptimizer::setDroneId(const int drone_id) { 
+    drone_id_ = drone_id; 
+  }
 
-  void PolyTrajOptimizer::setIfTouchGoal(const bool touch_goal) { touch_goal_ = touch_goal; }
+  void PolyTrajOptimizer::setIfTouchGoal(const bool touch_goal) { 
+    touch_goal_ = touch_goal; 
+  }
 
   void PolyTrajOptimizer::setFStartFEnd(const Eigen::Vector3d &formation_start_pt, const Eigen::Vector3d &formation_end_pt)
   {
@@ -1734,6 +1745,8 @@ namespace ego_planner
     // std::cout << "FEnd_=" << FEnd_.transpose() <<std::endl;
   }
 
-  void PolyTrajOptimizer::setConstraintPoints(ConstraintPoints cps) { cps_ = cps; }
+  void PolyTrajOptimizer::setConstraintPoints(ConstraintPoints cps) { 
+    cps_ = cps; 
+  }
 
 } // namespace ego_planner

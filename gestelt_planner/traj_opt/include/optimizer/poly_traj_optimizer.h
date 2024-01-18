@@ -54,6 +54,13 @@ namespace ego_planner
       }
     }
 
+    /**
+     * @brief Return idx of the 2/3 waypoint
+     * 
+     * @param points 
+     * @param touch_goal 
+     * @return int 
+     */
     static int two_thirds_id(Eigen::MatrixXd &points, const bool touch_goal)
     {
       return touch_goal ? points.cols() - 1 : points.cols() - 1 - (points.cols() - 2) / 3;
@@ -200,11 +207,13 @@ namespace ego_planner
     /**
      * @brief The LBFGS callback function to provide function and gradient evaluations given a current values of variables
      * 
-     * @param func_data 
-     * @param x 
-     * @param grad 
-     * @param n 
-     * @return double 
+     * @param func_data The user data sent for lbfgs_optimize() function by the client.
+     * @param x         The current values of variables.
+     * @param grad      The gradient vector. The callback function must compute
+     *                      the gradient values for the current variables.
+     * @param n         The number of variables.
+     * @return double   The value of the objective function for the current
+     *                          variables.
      */
     static double costFunctionCallback(void *func_data, const double *x, double *grad, const int n);
 
@@ -243,6 +252,14 @@ namespace ego_planner
     template <typename EIGENVEC>
     void initAndGetSmoothnessGradCost2PT(EIGENVEC &gdT, double &cost);
 
+    /**
+     * @brief 
+     * 
+     * @tparam EIGENVEC 
+     * @param gdT Gradient of size of number of pieces
+     * @param costs a vector of costs
+     * @param K Constraint points per piece
+     */
     template <typename EIGENVEC>
     void addPVAGradCost2CT(EIGENVEC &gdT, Eigen::VectorXd &costs, const int &K);
 
