@@ -1315,7 +1315,7 @@ namespace ego_planner
           costs(1) += omg * step * costp;
         }
 
-        // feasibility
+        // feasibility for velocity
         if (feasibilityGradCostV(vel, gradv, costv))
         {
           gradViolaVc = beta1 * gradv.transpose();
@@ -1325,6 +1325,7 @@ namespace ego_planner
           costs(2) += omg * step * costv;
         }
 
+        // feasibility for acceleration
         if (feasibilityGradCostA(acc, grada, costa))
         {
           gradViolaAc = beta2 * grada.transpose();
