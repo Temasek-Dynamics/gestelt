@@ -8,8 +8,10 @@
 
     <!--- Trajectory planner -->
     <node name="trajectory_planner" pkg="trajectory_planner" type="trajectory_generator" output="screen">
-        <param name="/max_v" value="1.5" type="double"/>
+        <param name="/max_v" value="3.0" type="double"/>
         <param name="/max_a" value="6.0" type="double"/>
+        <param name="/max_ang_v" value="3.0" type="double"/>
+        <param name="/max_ang_a" value="3.0" type="double"/>        
         <!-- subscribed topics -->
         <remap from="uav_pose" to="/$(arg odometry_topic)"/>
         <remap from="/waypoints" to="/planner/goals"/>

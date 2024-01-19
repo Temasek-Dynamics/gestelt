@@ -1,4 +1,6 @@
 <launch>
   <!-- Launches a test mission -->
   <node pkg="gestelt_bringup" name="mission" type="mission.py" />
+
+    <node pkg="rosbag" type="record" name="record" output="screen" args="-o /home/yash/agile_flight/gestelt_ws/data/ /mavros/setpoint_raw/local /mavros/local_position/pose  /planner/sample_trajectory"/>
 </launch>

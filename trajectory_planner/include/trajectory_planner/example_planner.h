@@ -12,8 +12,8 @@
 
 #include <mav_trajectory_generation_ros/ros_visualization.h>
 #include <mav_trajectory_generation_ros/ros_conversions.h>
-#include <tf2/LinearMath/Matrix3x3.h>
-#include <tf2/LinearMath/Quaternion.h>
+#include <tf/LinearMath/Matrix3x3.h>
+#include <tf/LinearMath/Quaternion.h>
 #include <gestelt_msgs/Goals.h>
 
 class ExamplePlanner {
@@ -35,8 +35,10 @@ class ExamplePlanner {
   bool planTrajectory(
     const std::vector<Eigen::Vector3d>& goal_pos_linear, 
     const std::vector<Eigen::Vector3d>& goal_pos_angular,  
+    const std::vector<Eigen::Vector3d>& goal_vel_linear,
+    const std::vector<Eigen::Vector3d>& goal_vel_angular,
     mav_trajectory_generation::Trajectory* trajectory);
-;
+
 
   // Plans a trajectory to take off from the current position and
   // fly to the given altitude (while maintaining x,y, and yaw).
@@ -44,7 +46,8 @@ class ExamplePlanner {
   //                     const Eigen::VectorXd& goal_vel,
   //                     mav_trajectory_generation::Trajectory* trajectory);
 
-  bool planTrajectory_1(const Eigen::Vector3d& goal_pos,
+  bool planTrajectory_1(const std::vector<Eigen::Vector3d>& goal_pos,
+                                    const std::vector<Eigen::Vector3d>& goal_vel,
                                     const Eigen::Vector3d& start_pos,
                                     const Eigen::Vector3d& start_vel,
                                     double v_max, double a_max,
@@ -76,6 +79,8 @@ class ExamplePlanner {
 
   std::vector<Eigen::Vector3d> goal_waypoints_linear_;
   std::vector<Eigen::Vector3d> goal_waypoints_angular_;
+  std::vector<Eigen::Vector3d> goal_waypoints_vel_linear_;
+  std::vector<Eigen::Vector3d> goal_waypoints_vel_angular_;
   std::string trajectory_frame_id_; //frame id of planned trajectory
 };
 

@@ -53,37 +53,36 @@ void ExamplePlanner::uavOdomCallback(const nav_msgs::Odometry::ConstPtr& odom) {
 void ExamplePlanner::waypointsCB(const gestelt_msgs::GoalsPtr &msg){
   goal_waypoints_linear_.clear(); 
   goal_waypoints_angular_.clear();
-  ROS_INFO("[Trajectory Planner] No. of waypoints: %ld", msg->waypoints.size());
+  goal_waypoints_vel_linear_.clear();
+  goal_waypoints_vel_angular_.clear();
+  ROS_INFO("[Trajectory Planner] No. of waypoints: %ld", msg->waypoints_linear.size());
    
-  for (auto pose : msg->waypoints)  {
-    ROS_INFO("[Trajectory Planner] Waypoints are: %f, %f, %f, %f, %f, %f, %f", pose.position.x, pose.position.y, pose.position.z, pose.orientation.w, pose.orientation.x, pose.orientation.y, pose.orientation.z);
-    Eigen::Vector3d wp_linear;
-    wp_linear << pose.position.x, pose.position.y, pose.position.z;
-    tf2::Quaternion quaternion(pose.orientation.w, pose.orientation.x, pose.orientation.y, pose.orientation.z);
-
-    // Convert quaternion to Euler angles
-    tf2::Matrix3x3 rotation_matrix(quaternion);
-    double roll, pitch, yaw;
-    rotation_matrix.getRPY(roll, pitch, yaw);
-    Eigen::Vector3d wp_angular(roll, pitch, yaw);    // Store Euler angles into Eigen vector
-    
+  for (auto position : msg->waypoints_linear)  {
+    // ROS_INFO("[Trajectory Planner] Waypoints are: %f, %f, %f", position.x, position.y, position.z);
+    Eigen::Vector3d wp_linear(position.x, position.y, position.z);
     goal_waypoints_linear_.push_back(wp_linear);
+  }
+
+  for (auto orientation : msg->waypoints_angular)  {
+    // ROS_INFO("[Trajectory Planner] Waypoints are: %f, %f, %f", orientation.x, orientation.y, orientation.z);
+    Eigen::Vector3d wp_angular(orientation.x, orientation.y, orientation.z);
     goal_waypoints_angular_.push_back(wp_angular);
-    ROS_INFO("[Trajectory Planner] Recieved waypoints: %f, %f, %f, %f, %f, %f", wp_linear[0], 
-                                                                                wp_linear[1], 
-                                                                                wp_linear[2],
-                                                                                wp_angular[0], 
-                                                                                wp_angular[1], 
-                                                                                wp_angular[2]);
+  }
 
-    for (const auto& vec : goal_waypoints_linear_) {
-        ROS_INFO("Vector: %d, %d, %d" , vec.transpose());
-    }
+    for (auto vel_linear : msg->waypoints_velocity_linear)  {
+    // ROS_INFO("[Trajectory Planner] Waypoints are: %f, %f, %f", vel_linear.x, vel_linear.y, vel_linear.z);
+    Eigen::Vector3d wp_vel_linear(vel_linear.x, vel_linear.y, vel_linear.z);
+    goal_waypoints_vel_linear_.push_back(wp_vel_linear);
+  }
 
+  for (auto vel_angular : msg->waypoints_velocity_angular)  {
+    // ROS_INFO("[Trajectory Planner] Waypoints are: %f, %f, %f", vel_angular.x, vel_angular.y, vel_angular.z);
+    Eigen::Vector3d wp_vel_angular(vel_angular.x, vel_angular.y, vel_angular.z);
+    goal_waypoints_vel_angular_.push_back(wp_vel_angular);
   }
 
   mav_trajectory_generation::Trajectory trajectory;
-  planTrajectory(goal_waypoints_linear_, goal_waypoints_angular_, &trajectory);
+  planTrajectory(goal_waypoints_linear_, goal_waypoints_angular_, goal_waypoints_vel_linear_, goal_waypoints_vel_angular_, &trajectory);
   publishTrajectory(trajectory);
 }
 
@@ -96,47 +95,33 @@ void ExamplePlanner::setMaxSpeed(const double max_v) {
 bool ExamplePlanner::planTrajectory(
     const std::vector<Eigen::Vector3d>& goal_pos_linear, 
     const std::vector<Eigen::Vector3d>& goal_pos_angular,  
+    const std::vector<Eigen::Vector3d>& goal_vel_linear,
+    const std::vector<Eigen::Vector3d>& goal_vel_angular,
     mav_trajectory_generation::Trajectory* trajectory) {
     // Your implementation here
 
-
   assert(trajectory);
   trajectory->clear();
-  for (const auto& vec : goal_pos_linear) {
-        ROS_INFO("Vector: %f, %f, %f" , vec.transpose());
-    }
+
   // 3 Dimensional trajectory => 3D position
   // 4 Dimensional trajectory => 3D position + yaw
-  // 6 Dimensional trajectory => through SE(3) space, position and orientation
-  const int dimension = goal_pos_linear.size();
+  // 6 Dimensional trajectory => through SE(3) space, position and orientation 
+  // const int dimension = goal_pos_linear.size();
   bool success = false;
-  Eigen::Vector3d goal_position;
-  if (dimension == 3) 
+  if (goal_pos_linear.size() == goal_pos_angular.size()) 
   {
     mav_trajectory_generation::Trajectory trajectory_trans, trajectory_rot;
-    goal_position = goal_pos_linear[0];
-
-    // // Translation trajectory.
-    
-    // std::vector<Eigen::Vector3d> goal_positions_converted; // Create a new vector for converted positions
-
-    // for (const auto& pos : goal_pos_linear) {
-    // // Construct Eigen::Vector3d objects from Eigen::Matrix<double, 3, 1>
-    //   goal_position << pos[0], pos[1], pos[2];
-    //   goal_positions_converted.push_back(goal_position);
-    // } 
-
     success = planTrajectory_1(
-                              goal_position, current_pose_.translation(),
+                              goal_pos_linear, goal_vel_linear, current_pose_.translation(),
                               current_velocity_, max_v_, max_a_, &trajectory_trans);
 
     // Rotation trajectory.
-    Eigen::Vector3d goal_rotation = goal_pos_angular[0];
+    // Eigen::Vector3d goal_rotation = goal_pos_angular[0];
     Eigen::Vector3d current_rot_vec;
     mav_msgs::vectorFromRotationMatrix(current_pose_.rotation(), &current_rot_vec);
     
     success &= planTrajectory_1(
-                                goal_rotation, current_rot_vec, current_angular_velocity_,
+                                goal_pos_angular, goal_vel_angular, current_rot_vec, current_angular_velocity_,
                                 max_ang_v_, max_ang_a_, &trajectory_rot);
 
     // Combine trajectories.
@@ -164,35 +149,26 @@ bool ExamplePlanner::planTrajectory(
   } 
   else 
   {
-    // LOG(WARNING) <<goal_positions_converted <<"            "<<goal_pos_angular<<"Dimension must be 3, 4 or 6 to be valid.";
+    ROS_WARN("[WARNING] Given waypoints does not have equal number of position and orientation waypoints");
     return false;
   }
 }
 
 // Plans a trajectory from a start position and velocity to a goal position and velocity
-bool ExamplePlanner::planTrajectory_1(const Eigen::Vector3d& goal_pos,
+bool ExamplePlanner::planTrajectory_1(const std::vector<Eigen::Vector3d>& goal_pos,
+                                    const std::vector<Eigen::Vector3d>& goal_vel,
                                     const Eigen::Vector3d& start_pos,
                                     const Eigen::Vector3d& start_vel,
                                     double v_max, double a_max,
                                     mav_trajectory_generation::Trajectory* trajectory) {
   assert(trajectory);
-  const int dimension = goal_pos.size();
+  const int dimension = 3;
   // Array for all waypoints and their constraints
   mav_trajectory_generation::Vertex::Vector vertices;
 
   // Optimze up to 4th order derivative (SNAP)
   const int derivative_to_optimize = mav_trajectory_generation::derivative_order::SNAP;
 
-  // Inside the planTrajectory_1 function
-  // Eigen::VectorXd goal_pos_vector(3 * goal_pos.size()); // Construct a vector of appropriate size
-
-  // int idx = 0;
-  // for (const auto& pos : goal_pos) {
-  //     goal_pos_vector.segment<3>(idx) << pos[0], pos[1], pos[2];
-  //     idx += 3;
-  // }
-
-// Now use goal_pos_vector in your makeStartOrEnd function
 
 
   // we have 2 vertices:
@@ -206,9 +182,19 @@ bool ExamplePlanner::planTrajectory_1(const Eigen::Vector3d& goal_pos,
                       start_vel);
   vertices.push_back(start);
 
+for (size_t i = 0; i < goal_pos.size() - 1; i++ ){
+    mav_trajectory_generation::Vertex middle_wp(dimension);
+
+    middle_wp.addConstraint(mav_trajectory_generation::derivative_order::POSITION, goal_pos[i]);
+    middle_wp.addConstraint(mav_trajectory_generation::derivative_order::VELOCITY, goal_vel[i]);
+
+    vertices.push_back(middle_wp);
+  }
+
+
   /******* Configure end point *******/
   // set end point constraints to desired position and set all derivatives to zero
-  end.makeStartOrEnd(goal_pos, derivative_to_optimize);
+  end.makeStartOrEnd(goal_pos.back(), derivative_to_optimize);
   end.addConstraint(mav_trajectory_generation::derivative_order::VELOCITY,
                     Eigen::Vector3d::Zero());
   vertices.push_back(end);
@@ -259,12 +245,6 @@ bool ExamplePlanner::publishTrajectory(const mav_trajectory_generation::Trajecto
                                                                  &msg);
   msg.header.frame_id = "world";
   pub_trajectory_.publish(msg);
-  ROS_INFO("[Trajectory Planner] No. of segments: %ld", msg.segments.size());
-//   for (const auto& segment : msg.segments) {
-//     ROS_INFO("[Trajectory planner] Published trajectory segment: %f, %f, %f, %f",
-//               segment.x, segment.y, segment.z, segment.yaw);
-// }
-
   return true;
 }
 
