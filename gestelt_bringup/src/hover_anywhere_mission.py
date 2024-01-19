@@ -8,6 +8,9 @@ from std_msgs.msg import Int8, Bool
 import math
 import time
 import tf
+# get ros params from rosparam server
+is_simulation=rospy.get_param('mission/is_simulation', False)
+
 # Publisher of server events to trigger change of states for trajectory server 
 server_event_pub = rospy.Publisher('/traj_server/command', CommanderCommand, queue_size=10)
 # Publisher of server events to trigger change of states for trajectory server 
@@ -58,19 +61,25 @@ def transform_map_to_world():
     """
     # tf listener, for transformation from map to world(initialize at the drone position)
     tf_listener = tf.TransformListener()
-    while not rospy.is_shutdown():
-        try:
-    
-            if tf_listener.canTransform("world", "map", rospy.Time(0)):
-                (trans, rot) = tf_listener.lookupTransform("world", "map", rospy.Time(0))
-                break 
-            else:
+
+    # in the simulation, the map frame is used to represent the abs world frame
+    # in the real world, there is no map frame, the world frame is the abs world frame
+    if is_simulation:
+        while not rospy.is_shutdown():
+            try:
+        
+                if tf_listener.canTransform("world", "map", rospy.Time(0)):
+                    (trans, rot) = tf_listener.lookupTransform("world", "map", rospy.Time(0))
+                    break 
+                else:
+                    rospy.sleep(0.04)
+            except tf.TransformException as ex:
+                rospy.logwarn("TransformException: {}".format(ex))
                 rospy.sleep(0.04)
-        except tf.TransformException as ex:
-            rospy.logwarn("TransformException: {}".format(ex))
-            rospy.sleep(0.04)
     
-    return trans,rot
+        return trans,rot
+    else:
+        return (0.0,0.0,0.0),(0.0,0.0,0.0,1.0)
 
 def create_pose(x, y, z):
     pose = Pose()
@@ -138,17 +147,17 @@ def pub_waypoints(waypoints,accels,vels):
     waypoints_pos_pub.publish(wp_pos_msg)
     waypoints_acc_pub.publish(wp_acc_msg)
 
-def hover_position():
+# def hover_position():
     
-     # transform waypoints from map to world
-    trans,rot=transform_map_to_world()
+#      # transform waypoints from map to world
+#     trans,rot=transform_map_to_world()
 
-    hover_position = Pose()
-    hover_position.position.x = 0.0+trans[0]
-    hover_position.position.y = 0.0+trans[1]
-    # z is the same as the takeoff height
+#     hover_position = Pose()
+#     hover_position.position.x = 0.0+trans[0]
+#     hover_position.position.y = 0.0+trans[1]
+#     # z is the same as the takeoff height
 
-    hover_position_pub.publish(hover_position)
+#     hover_position_pub.publish(hover_position)
 
 
 def main():
@@ -173,7 +182,7 @@ def main():
             break
         elif (not HOVER_MODE):
             # IDLE -> TAKE OFF -> HOVER
-            hover_position()
+            # hover_position()
             print("Setting to HOVER mode!")
             publishCommand(CommanderCommand.TAKEOFF)
         elif (HOVER_MODE):

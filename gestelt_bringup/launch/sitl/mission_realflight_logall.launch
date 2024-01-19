@@ -1,6 +1,8 @@
 <launch>
   <!-- Launches a test mission -->
-  <node pkg="gestelt_bringup" name="mission" type="hover_anywhere_mission.py"  />
+    <node pkg="gestelt_bringup" name="mission" type="hover_anywhere_mission.py">  
+        <param name="is_simulation" value="False"/>
+  </node>
 
 
   <!--for circular mission  only-->
