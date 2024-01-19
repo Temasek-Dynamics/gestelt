@@ -213,7 +213,8 @@ private: // Class Methods
   {
     // Check that difference between desired taking off height and current UAV position
     // is within tolerance 
-    return abs(uav_pose_.pose.position.z - takeoff_height_) < take_off_landing_tol_  && abs(uav_pose_.pose.position.x - hover_pos_(0)) < take_off_landing_tol_ && abs(uav_pose_.pose.position.y - hover_pos_(1)) < take_off_landing_tol_;
+    // return abs(uav_pose_.pose.position.z - takeoff_height_) < take_off_landing_tol_  && abs(uav_pose_.pose.position.x - hover_pos_(0)) < take_off_landing_tol_ && abs(uav_pose_.pose.position.y - hover_pos_(1)) < take_off_landing_tol_;
+    return abs(uav_pose_.pose.position.z - takeoff_height_) < take_off_landing_tol_;
   }
 
   /**

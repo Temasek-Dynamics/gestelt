@@ -530,9 +530,8 @@ void TrajServer::execTakeOff()
   int type_mask = IGNORE_VEL | IGNORE_ACC | IGNORE_YAW_RATE ; // Ignore Velocity, Acceleration and yaw rate
   
   Eigen::Vector3d pos = last_mission_pos_;
+  
   if(isUAVReady()){
-
-
     // x direction takeoff ramp
     // if (abs(takeoff_ramp_(0)) < abs(hover_pos_(0))){
     //   takeoff_ramp_(0) += (hover_pos_(0)*pub_cmd_freq_)/(pub_cmd_freq_*400)*hover_pos_.array().sign()(0); // 25Hz, then the addition is 0.01m, for 0.04s
@@ -548,8 +547,7 @@ void TrajServer::execTakeOff()
     // else {
     //   takeoff_ramp_(1) = hover_pos_(1);
     // }
-    takeoff_ramp_(0) = 0.0;
-    takeoff_ramp_(1) = 0.0;
+ 
     // z axis takeoff ramp
     if (takeoff_ramp_(2) < takeoff_height_){
       takeoff_ramp_(2) += pub_cmd_freq_/(pub_cmd_freq_*200); // 25Hz, then the addition is 0.01m, for 0.04s
@@ -561,11 +559,11 @@ void TrajServer::execTakeOff()
   }
   else // if the drone is not ready, then the takeoff ramp is 0
   {
-    takeoff_ramp_ = {0.0, 0.0, 0.0};
+    takeoff_ramp_(2) = 0.0;
   }
 
-  pos = takeoff_ramp_;
-  last_mission_pos_ = pos;
+  pos(2) = takeoff_ramp_(2);
+  // last_mission_pos_ = pos;
   publishCmd( pos, Vector3d::Zero(), 
               Vector3d::Zero(), Vector3d::Zero(), 
               last_mission_yaw_, 0, 

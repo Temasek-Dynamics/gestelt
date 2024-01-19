@@ -145,7 +145,7 @@ def hover_position():
 
     hover_position = Pose()
     hover_position.position.x = 0.0+trans[0]
-    hover_position.position.y = 1.8+trans[1]
+    hover_position.position.y = 0.0+trans[1]
     # z is the same as the takeoff height
 
     hover_position_pub.publish(hover_position)
@@ -198,7 +198,7 @@ def main():
     # map frame is the origin of the map
     # waypoints are under the map frame, will be transformed to world frame
     waypoints.append(create_pose(0.0,-0.0,1.4)) # 3.0,2.0,3
-    waypoints.append(create_pose(0.0,-1.8,1.2))# 5.0,2.0,3
+    waypoints.append(create_pose(0.0,-1.8,1.4))# 5.0,2.0,3
     # waypoints.append(create_pose(0.0,0.0,1.2))# 5.0,2.0,3
 
     
