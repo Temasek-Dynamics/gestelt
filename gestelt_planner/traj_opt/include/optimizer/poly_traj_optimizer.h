@@ -277,6 +277,15 @@ namespace ego_planner
                         double &grad_prev_t,
                         double &costp);
 
+    /**
+     * @brief Set the cost and gradient based on given velocity
+     * 
+     * @param v Vector of (x,y,z) velocities
+     * @param gradv Gradient
+     * @param costv cost 
+     * @return true 
+     * @return false 
+     */
     bool feasibilityGradCostV(const Eigen::Vector3d &v,
                               Eigen::Vector3d &gradv,
                               double &costv);

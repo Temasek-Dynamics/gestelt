@@ -1232,7 +1232,7 @@ namespace ego_planner
   {
     int N = gdT.size();
     Eigen::Vector3d pos, vel, acc, jer;
-    Eigen::Vector3d gradp, gradv, grada;
+    Eigen::Vector3d gradp, gradv, grada; // Gradient in (x,y,z)
     double costp, costv, costa;
     Eigen::Matrix<double, 6, 1> beta0, beta1, beta2, beta3;
     double s1, s2, s3, s4, s5;
@@ -1252,7 +1252,7 @@ namespace ego_planner
       step = jerkOpt_.get_T1()(i) / K;
       s1 = 0.0; // Time t, it will increase with each step of f the constraint point
 
-      for (int j = 0; j <= K; ++j) // For each constraint point
+      for (int j = 0; j <= K; ++j) // For each constraint point (or sample)
       {
         s2 = s1 * s1;   // t^2
         s3 = s2 * s1;   // t^3
@@ -1313,21 +1313,47 @@ namespace ego_planner
         //   costs(1) += omega * step * costp;
         // }
 
-        // feasibility for keeping within velocity limits
-        if (feasibilityGradCostV(vel, gradv, costv))
-        {
-          // Gradient of constraint w.r.t c 
-          //    2 * beta_1(t) * p_1(t)
-          gradViolaVc = beta1 * gradv.transpose();
-          // Gradient of constraint w.r.t t
-          //    2 * beta_2(t) * c_i * p_1(t)
-          gradViolaVt = alpha * gradv.transpose() * acc;
+
+        vpen = v.squaredNorm() - max_vel_ * max_vel_;
+        if (vpen > 0){
+          gradv = wei_feas_ * 6 * pow(vpen,2) * v; // Gradient of cubic cost
+          costv = wei_feas_ * pow(vpen, 3); // Cost is cubic
+
+          // gradViolaVc = beta1 * (wei_feas_ * 6 * vpen^2 * v).transpose()
+          // gradViolaVt = alpha *  (wei_feas_ * vpen^3).transpose() * acc
+
+          gradViolaVc = beta1 * gradv.transpose(); // Gradient of d(J_vel)/d(C_i)
+          gradViolaVt = alpha * gradv.transpose() * acc; // Gradient of d(J_vel)/d(t)
+          
           // Sampling of cost
           // omega * penalty weight * constraint(c_i, t_i, j/sample_num)
+
           jerkOpt_.get_gdC().block<6, 3>(i * 6, 0) += omega * step * gradViolaVc;
           gdT(i) += omega * (costv / K + step * gradViolaVt);
           costs(2) += omega * step * costv; // Sum costs
+
         }
+
+        // // feasibility for keeping within velocity limits
+        // if (feasibilityGradCostV(vel, gradv, costv))
+        // {
+
+        //   // gradv = wei_feas_ * 6 * vpen^2 * v; // Gradient of cubic cost
+        //   // costv = wei_feas_ * vpen^3; // Cost is cubic
+
+        //   // gradViolaVc = beta1 * (wei_feas_ * 6 * vpen^2 * v).transpose()
+        //   // gradViolaVt = alpha *  (wei_feas_ * vpen^3).transpose() * acc
+
+        //   gradViolaVc = beta1 * gradv.transpose();
+        //   gradViolaVt = alpha * gradv.transpose() * acc;
+          
+        //   // Sampling of cost
+        //   // omega * penalty weight * constraint(c_i, t_i, j/sample_num)
+
+        //   jerkOpt_.get_gdC().block<6, 3>(i * 6, 0) += omega * step * gradViolaVc;
+        //   gdT(i) += omega * (costv / K + step * gradViolaVt);
+        //   costs(2) += omega * step * costv; // Sum costs
+        // }
 
         // feasibility for keeping within acceleration limits
         if (feasibilityGradCostA(acc, grada, costa))
@@ -1595,8 +1621,8 @@ namespace ego_planner
     double vpen = v.squaredNorm() - max_vel_ * max_vel_;
     if (vpen > 0) // If velocity limit is exceeded, penalty is non-zero
     {
-      gradv = wei_feas_ * 6 * vpen * vpen * v;
-      costv = wei_feas_ * vpen * vpen * vpen;
+      gradv = wei_feas_ * 6 * vpen * vpen * v; // Gradient of cubic cost
+      costv = wei_feas_ * vpen * vpen * vpen; // Cost is cubic
       return true;
     }
     return false;
