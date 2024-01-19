@@ -119,6 +119,7 @@ def pub_waypoints(waypoints_linear, waypoints_angular, waypoints_vel_linear, way
     wp_msg.waypoints_angular = waypoints_angular
     wp_msg.waypoints_velocity_linear = waypoints_vel_linear
     wp_msg.waypoints_velocity_angular = waypoints_vel_angular
+    wp_msg.velocity_mask = True    #set velocity_mask = False if want velocity constraint
     waypoints_pub.publish(wp_msg)
 
 
@@ -163,7 +164,7 @@ def main():
     waypoints_linear.append(create_pose(0.0, 3.0, 1.5))
     waypoints_linear.append(create_pose(2.0, 4.0, 1.5))
     
-    waypoints_angular.append(create_orientation(0, 45, 0)) 
+    waypoints_angular.append(create_orientation(0.0, 0.0, 40)) 
     waypoints_angular.append(create_orientation(0, 0, 0))
    
     waypoints_vel_linear.append(create_vel_linear(2.0, 0.0, 0.0))

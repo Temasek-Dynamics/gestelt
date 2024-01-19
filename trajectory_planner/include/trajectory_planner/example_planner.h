@@ -37,6 +37,7 @@ class ExamplePlanner {
     const std::vector<Eigen::Vector3d>& goal_pos_angular,  
     const std::vector<Eigen::Vector3d>& goal_vel_linear,
     const std::vector<Eigen::Vector3d>& goal_vel_angular,
+    bool velocity_mask,
     mav_trajectory_generation::Trajectory* trajectory);
 
 
@@ -51,6 +52,7 @@ class ExamplePlanner {
                                     const Eigen::Vector3d& start_pos,
                                     const Eigen::Vector3d& start_vel,
                                     double v_max, double a_max,
+                                    bool velocity_mask,
                                     mav_trajectory_generation::Trajectory* trajectory);
 
   // bool planTrajectory(const Eigen::VectorXd& goal_pos,
@@ -81,6 +83,7 @@ class ExamplePlanner {
   std::vector<Eigen::Vector3d> goal_waypoints_angular_;
   std::vector<Eigen::Vector3d> goal_waypoints_vel_linear_;
   std::vector<Eigen::Vector3d> goal_waypoints_vel_angular_;
+  bool velocity_mask_;
   std::string trajectory_frame_id_; //frame id of planned trajectory
 };
 
