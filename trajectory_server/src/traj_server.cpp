@@ -534,21 +534,22 @@ void TrajServer::execTakeOff()
 
 
     // x direction takeoff ramp
-    if (abs(takeoff_ramp_(0)) < abs(hover_pos_(0))){
-      takeoff_ramp_(0) += (hover_pos_(0)*pub_cmd_freq_)/(pub_cmd_freq_*400)*hover_pos_.array().sign()(0); // 25Hz, then the addition is 0.01m, for 0.04s
-    }
-    else {
-      takeoff_ramp_(0) = hover_pos_(0);
-    }
+    // if (abs(takeoff_ramp_(0)) < abs(hover_pos_(0))){
+    //   takeoff_ramp_(0) += (hover_pos_(0)*pub_cmd_freq_)/(pub_cmd_freq_*400)*hover_pos_.array().sign()(0); // 25Hz, then the addition is 0.01m, for 0.04s
+    // }
+    // else {
+    //   takeoff_ramp_(0) = hover_pos_(0);
+    // }
 
-    // y direction takeoff ramp
-    if (abs(takeoff_ramp_(1)) < abs(hover_pos_(1))){
-      takeoff_ramp_(1) += (hover_pos_(1)*pub_cmd_freq_)/(pub_cmd_freq_*400)*hover_pos_.array().sign()(1); // 25Hz, then the addition is 0.01m, for 0.04s
-    }
-    else {
-      takeoff_ramp_(1) = hover_pos_(1);
-    }
-
+    // // y direction takeoff ramp
+    // if (abs(takeoff_ramp_(1)) < abs(hover_pos_(1))){
+    //   takeoff_ramp_(1) += (hover_pos_(1)*pub_cmd_freq_)/(pub_cmd_freq_*400)*hover_pos_.array().sign()(1); // 25Hz, then the addition is 0.01m, for 0.04s
+    // }
+    // else {
+    //   takeoff_ramp_(1) = hover_pos_(1);
+    // }
+    takeoff_ramp_(0) = 0.0;
+    takeoff_ramp_(1) = 0.0;
     // z axis takeoff ramp
     if (takeoff_ramp_(2) < takeoff_height_){
       takeoff_ramp_(2) += pub_cmd_freq_/(pub_cmd_freq_*200); // 25Hz, then the addition is 0.01m, for 0.04s
