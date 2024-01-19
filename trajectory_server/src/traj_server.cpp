@@ -553,7 +553,7 @@ void TrajServer::execTakeOff()
       takeoff_ramp_(2) += pub_cmd_freq_/(pub_cmd_freq_*200); // 25Hz, then the addition is 0.01m, for 0.04s
     }
     else {
-      takeoff_ramp_(2) = takeoff_height_;
+      takeoff_ramp_(2) = last_mission_pos_(2);
     }
 
   }
@@ -563,7 +563,7 @@ void TrajServer::execTakeOff()
   }
 
   pos(2) = takeoff_ramp_(2);
-  // last_mission_pos_ = pos;
+  last_mission_pos_ = pos;
   publishCmd( pos, Vector3d::Zero(), 
               Vector3d::Zero(), Vector3d::Zero(), 
               last_mission_yaw_, 0, 
