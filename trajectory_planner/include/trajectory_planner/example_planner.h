@@ -46,7 +46,7 @@ class ExamplePlanner {
   //                     const Eigen::VectorXd& goal_vel,
   //                     mav_trajectory_generation::Trajectory* trajectory);
 
-  bool planTrajectory_1(const std::vector<Eigen::Vector3d>& goal_pos,
+  bool planTrajectory(const std::vector<Eigen::Vector3d>& goal_pos,
                                     const std::vector<Eigen::Vector3d>& goal_vel,
                                     const Eigen::Vector3d& start_pos,
                                     const Eigen::Vector3d& start_vel,

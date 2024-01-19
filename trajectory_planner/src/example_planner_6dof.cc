@@ -111,7 +111,7 @@ bool ExamplePlanner::planTrajectory(
   if (goal_pos_linear.size() == goal_pos_angular.size()) 
   {
     mav_trajectory_generation::Trajectory trajectory_trans, trajectory_rot;
-    success = planTrajectory_1(
+    success = planTrajectory(
                               goal_pos_linear, goal_vel_linear, current_pose_.translation(),
                               current_velocity_, max_v_, max_a_, &trajectory_trans);
 
@@ -120,7 +120,7 @@ bool ExamplePlanner::planTrajectory(
     Eigen::Vector3d current_rot_vec;
     mav_msgs::vectorFromRotationMatrix(current_pose_.rotation(), &current_rot_vec);
     
-    success &= planTrajectory_1(
+    success &= planTrajectory(
                                 goal_pos_angular, goal_vel_angular, current_rot_vec, current_angular_velocity_,
                                 max_ang_v_, max_ang_a_, &trajectory_rot);
 
@@ -155,7 +155,7 @@ bool ExamplePlanner::planTrajectory(
 }
 
 // Plans a trajectory from a start position and velocity to a goal position and velocity
-bool ExamplePlanner::planTrajectory_1(const std::vector<Eigen::Vector3d>& goal_pos,
+bool ExamplePlanner::planTrajectory(const std::vector<Eigen::Vector3d>& goal_pos,
                                     const std::vector<Eigen::Vector3d>& goal_vel,
                                     const Eigen::Vector3d& start_pos,
                                     const Eigen::Vector3d& start_vel,
