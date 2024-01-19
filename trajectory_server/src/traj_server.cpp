@@ -110,25 +110,7 @@ void TrajServer::multiDOFJointTrajectoryCb(const trajectory_msgs::MultiDOFJointT
   last_traj_msg_time_ = ros::Time::now();
 
   std::lock_guard<std::mutex> cmd_guard(cmd_mutex_);
-
-  // Create rotation frame from NED To ROS
-  double roll_deg = 0; // roll (x) (Degrees)180
-  double pitch_deg = 0;   // pitch (y)0
-  double yaw_deg =  0;   // yaw (z)90
-
-  // euler in radians
-  double roll = (M_PI/180.0) * roll_deg; 
-  double pitch = (M_PI/180.0) * pitch_deg;  
-  double yaw = (M_PI/180.0) * yaw_deg; 
-
-  Eigen::Matrix3d rot_mat;
-
-  // Anti-Clockwise rotation is positive
-  rot_mat << cos(yaw) * cos(pitch),    -sin(yaw) * cos(roll) + cos(yaw) * sin(pitch) * sin(roll),    sin(yaw) * sin(roll) + cos(yaw) * sin(pitch) * cos(roll), 
-             sin(yaw) * cos(pitch),     cos(yaw) * cos(roll) + sin(yaw) * sin(pitch) * sin(roll),    -cos(yaw) * sin(roll) + sin(yaw) * sin(pitch) * cos(roll),
-             -sin(pitch),                  cos(pitch) * sin(roll),                                            cos(pitch) * cos(yaw);
-
-
+  
   // We only take the first point of the trajectory
   // Message breakdown:
   // msg.joint_names: contain "base_link"

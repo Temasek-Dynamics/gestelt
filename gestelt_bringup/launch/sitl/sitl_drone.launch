@@ -3,7 +3,7 @@
 <launch>
   <!-- initial position -->
   <arg name="init_x" default="0.0"/>
-  <arg name="init_y" default="0.0"/>
+  <arg name="init_y" default="1.8"/>
   <!-- world_filename_rel is defined relative to gestelt_bringup/simulations/worlds -->
   <arg name="world_filename_rel" default="empty.world" />
   <!-- world_filename_abs is absolute filepath -->
@@ -33,7 +33,7 @@
   <!-- Add static transform from world to map -->
   <node pkg="tf" type="static_transform_publisher" 
     name="world_to_map_tf" 
-    args="0 0 0 0 0 0 1 world map 100">
+    args="-$(arg init_x) -$(arg init_y) 0 0 0 0 1 world map 100">
   </node>
 
   <!-- RVIZ -->

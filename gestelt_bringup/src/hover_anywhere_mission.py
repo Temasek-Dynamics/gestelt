@@ -7,6 +7,7 @@ from mavros_msgs.msg import PositionTarget
 from std_msgs.msg import Int8, Bool
 import math
 import time
+import tf
 # Publisher of server events to trigger change of states for trajectory server 
 server_event_pub = rospy.Publisher('/traj_server/command', CommanderCommand, queue_size=10)
 # Publisher of server events to trigger change of states for trajectory server 
@@ -46,11 +47,39 @@ def get_server_state_callback():
     # print(msg)
     # print("==================")
 
+def transform_map_to_world():
+    """
+    this function calculates the transformation from map to world frame
+    world frame is the initial position of the drone
+    map frame is the origin of the map  
+    Returns:
+        trans: translation vector from map to world
+        rot: rotation vector from map to world
+    """
+    # tf listener, for transformation from map to world(initialize at the drone position)
+    tf_listener = tf.TransformListener()
+    while not rospy.is_shutdown():
+        try:
+    
+            if tf_listener.canTransform("world", "map", rospy.Time(0)):
+                (trans, rot) = tf_listener.lookupTransform("world", "map", rospy.Time(0))
+                break 
+            else:
+                rospy.sleep(0.04)
+        except tf.TransformException as ex:
+            rospy.logwarn("TransformException: {}".format(ex))
+            rospy.sleep(0.04)
+    
+    return trans,rot
+
 def create_pose(x, y, z):
     pose = Pose()
-    pose.position.x = x
-    pose.position.y = y
-    pose.position.z = z
+
+    # transform waypoints from map to world
+    trans,rot=transform_map_to_world()
+    pose.position.x = x+trans[0]
+    pose.position.y = y+trans[1]
+    pose.position.z = z+trans[2]
 
     pose.orientation.x = 0
     pose.orientation.y = 0
@@ -85,7 +114,6 @@ def pub_waypoints(waypoints,accels,vels):
     wp_msg = Goals()
     wp_pos_msg=PoseArray()
     wp_acc_msg=AccelStamped()
-  
 
     wp_msg.header.frame_id = "world"
     # wp_msg.waypoints.header.frame_id = "world"
@@ -106,21 +134,18 @@ def pub_waypoints(waypoints,accels,vels):
     if len(accels)>0:
         wp_acc_msg.accel=accels[1][0]
     
-    rospy.loginfo("accels: %s",wp_msg.accelerations)
-    rospy.loginfo("vels: %s",wp_msg.velocities)
-
-    rospy.loginfo("accels mask: %s",wp_msg.accelerations_mask)
-    rospy.loginfo("vels mask: %s",wp_msg.velocities_mask)
-
     waypoints_pub.publish(wp_msg)
     waypoints_pos_pub.publish(wp_pos_msg)
     waypoints_acc_pub.publish(wp_acc_msg)
 
 def hover_position():
     
+     # transform waypoints from map to world
+    trans,rot=transform_map_to_world()
+
     hover_position = Pose()
-    hover_position.position.x = 0.0
-    hover_position.position.y = 1.8
+    hover_position.position.x = 0.0+trans[0]
+    hover_position.position.y = 1.8+trans[1]
     # z is the same as the takeoff height
 
     hover_position_pub.publish(hover_position)
@@ -166,12 +191,12 @@ def main():
     waypoints = []
 
     # side length 5m
-    # MATLAB TASK
-    # waypoints.append(create_pose(2.0,2.0,1.5))# 5.0,2.0,3
-    # waypoints.append(create_pose(4.0,2.0,1.5))# 5.0,2.0,3
+
 
     # 1/4 test
-    # waypoints.append(create_pose(0.0,1.5,1.2)) # 3.0,2.0,3
+    # world frame is the initial position of the drone
+    # map frame is the origin of the map
+    # waypoints are under the map frame, will be transformed to world frame
     waypoints.append(create_pose(0.0,-0.0,1.2)) # 3.0,2.0,3
     waypoints.append(create_pose(0.0,-1.8,1.2))# 5.0,2.0,3
     waypoints.append(create_pose(0.0,0.0,1.2))# 5.0,2.0,3
@@ -185,24 +210,20 @@ def main():
     angle=60
     angle_rad=math.radians(angle)
 
-    
-    # frame need to verify
-    # MATLAB task
-    # accel_list.append(create_accel(0.0,-f*np.sin(angle_rad),g+f*np.cos(angle_rad)))
-
+    # accelerations constraint
     # (0.0,0.0,0.0))
     # (None,None,None)) means no constraint
-    # accel_list.append(create_accel(None,None,None))
     accel_list.append(create_accel(-f*np.sin(angle_rad),0.0,g+f*np.cos(angle_rad)))
     accel_list.append(create_vel(None,None,None))
     accel_list.append(create_vel(None,None,None)) 
 
     # velocites constraint
     vel_list = []
-    # vel_list.append(create_vel(0.0,0.0,0.0))
     vel_list.append(create_vel(None,None,None))
     vel_list.append(create_vel(0.0,0.0,0.0))
     vel_list.append(create_vel(0.0,0.0,0.0))
+
+
     pub_waypoints(waypoints,accel_list,vel_list)
     rospy.spin()
 if __name__ == '__main__':
