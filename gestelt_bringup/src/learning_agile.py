@@ -196,66 +196,75 @@ class LearningAgileAgent():
         # quad1.uav1.plot_M(control_tm)
 
 # waypoint subscriber: start, end, gate
+class LearningAgileAgentNode():
 
-
+    def __init__(self):
+        self.drone_state_sub = rospy.Subscriber('/mavros/local_position/pose',PoseStamped, self.drone_state_callback)
+        self.waypoints_sub = rospy.Subscriber('/planner/goals_learning_agile',Goals, self.waypoints_callback)
         
-def drone_state_callback(msg):
-    """receive the drone state from ROS side
+        self.gate_point=np.zeros(3)
+        self.end_point=np.zeros(3)
+        self.start_point=np.zeros(3)
+        
+    def drone_state_callback(self,msg):
+        """receive the drone state from ROS side
 
-    Args:
-        msg (_type_): _description_
+        Args:
+            msg (_type_): _description_
 
-    Returns:
-        _type_: _description_
-    """
-    start_point = np.array([msg.pose.position.x,msg.pose.position.y,msg.pose.position.z])
-    # print('start_point=',start_point)
-    return start_point
+        Returns:
+            _type_: _description_
+        """
+       
+        self.start_point = np.array([msg.pose.position.x,msg.pose.position.y,msg.pose.position.z])
+        # print('start_point=',start_point)
 
-def waypoints_callback(msg):
-    """receive the start and end point, and the initial gate point, from ROS side
 
-    Args:
-        msg (_type_): _description_
+    def waypoints_callback(self,msg):
+        """receive the start and end point, and the initial gate point, from ROS side
 
-    Returns:
-        _type_: _description_
-    """
+        Args:
+            msg (_type_): _description_
 
-    gate_point = np.array([msg.waypoints[0].position.x,msg.waypoints[0].position.y,msg.waypoints[0].position.z])
-    end_point = np.array([msg.waypoints[1].position.x,msg.waypoints[1].position.y,msg.waypoints[1].position.z])
-    print('gate_point=',gate_point)
-    print('end_point=',end_point)
-    return gate_point,end_point
+        Returns:
+            _type_: _description_
+        """
+        
+        self.gate_point = np.array([msg.waypoints[0].position.x,msg.waypoints[0].position.y,msg.waypoints[0].position.z])
+        self.end_point = np.array([msg.waypoints[1].position.x,msg.waypoints[1].position.y,msg.waypoints[1].position.z])
+        self.planning()
+        
+    def planning(self):
 
-def learing_agile_agent_node():
-     # ros node initialization
-    rospy.init_node('learing_agile_agent', anonymous=True)
-    rospy.Subscriber('/mavros/local_position/pose',PoseStamped, drone_state_callback)
-    rospy.Subscriber('/planner/goals',Goals, waypoints_callback)
-    rospy.spin()
+
+        # create the learning agile agent
+        learing_agile_agent=LearningAgileAgent()
+        ## receive the start and end point, and the initial gate point, from ROS side
+        # rewrite the inputs
+        learing_agile_agent.receive_states(start=self.start_point,end=self.end_point)
+
+        # problem definition
+        learing_agile_agent.problem_definition()
+
+        # solve the problem
+        learing_agile_agent.solve_problem()
+
+    
+
+# def learing_agile_agent_node():
+
 
 def main():
 
-    learing_agile_agent_node()
+         # ros node initialization
+    learing_agile_agent_node = LearningAgileAgentNode()
+    rospy.init_node('learing_agile_agent', anonymous=True)
     
+    rospy.spin()
 
 
 
-    # create the learning agile agent
-    # learing_agile_agent=LearningAgileAgent()
-    ## receive the start and end point, and the initial gate point, from ROS side
-    
-    
-    # rewrite the inputs
-    # learing_agile_agent.receive_states(start=np.array([0,1.8,1.4]),end=np.array([0,-1.8,1.4]))
 
-    # problem definition
-    # learing_agile_agent.problem_definition()
-
-    # solve the problem
-    # learing_agile_agent.solve_problem()
-   
     
 if __name__ == '__main__':
     main()

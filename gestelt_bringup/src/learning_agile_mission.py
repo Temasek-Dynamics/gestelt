@@ -14,7 +14,7 @@ is_simulation=rospy.get_param('mission/is_simulation', False)
 # Publisher of server events to trigger change of states for trajectory server 
 server_event_pub = rospy.Publisher('/traj_server/command', CommanderCommand, queue_size=10)
 # Publisher of server events to trigger change of states for trajectory server 
-waypoints_pub = rospy.Publisher('/planner/goals', Goals, queue_size=10)
+waypoints_pub = rospy.Publisher('/planner/goals_learning_agile', Goals, queue_size=10)
 
 # Publisher for desired hover setpoint
 hover_position_pub = rospy.Publisher('/planner/hover_position', Pose, queue_size=10)
