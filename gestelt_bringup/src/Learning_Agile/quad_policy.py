@@ -218,8 +218,10 @@ class run_quad:
         control = self.sol1['control_traj_opt'][0,:]
 
         # for RPT control
-        PVA= self.sol1['state_traj_opt'][0,:]
-        return control
+        pos_vel_cmd= self.sol1['state_traj_opt'][0,:]
+        print('pos_vel_cmd',pos_vel_cmd)
+        # return control, pos_vel_cmd
+        return self.sol1
 
 ## sample the perturbation (only for random perturbations)
 def sample(deviation):
