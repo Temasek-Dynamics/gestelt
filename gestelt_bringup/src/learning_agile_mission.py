@@ -215,8 +215,17 @@ def main():
     waypoints.append(create_pose(0.0,-0.5,1.4))# 5.0,2.0,3
     # waypoints.append(create_pose(0.0,0.0,1.2))# 5.0,2.0,3
 
-
-    pub_waypoints(waypoints)
+     # the number of accelerations must be equal to the number of waypoints
+    accel_list = []
+    accel_list.append(create_accel(None,None,None))
+    accel_list.append(create_accel(None,None,None))
+   
+    # velocites constraint
+    vel_list = []
+    vel_list.append(create_vel(None,None,None))
+    vel_list.append(create_vel(None,None,None))
+   
+    pub_waypoints(waypoints,accel_list,vel_list)
     ##--------------------- end of min snap trajectory--------------##
 
     # spending initial state to the learning agile node    

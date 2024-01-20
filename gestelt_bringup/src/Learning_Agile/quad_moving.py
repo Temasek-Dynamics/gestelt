@@ -1,6 +1,7 @@
 ## this file helps quadrotor traverse through a moving narrow window
 ## including kalman filter, coodinate transformation, get the solution
-
+import sys
+sys.path.append('../')
 import numpy as np
 from solid_geometry import *
 from quad_model import*
