@@ -10,8 +10,10 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 subdirectory_path = os.path.join(current_dir, 'Learning_Agile')
 
 # add to sys.path
+sys.path.append("../")
 sys.path.append(subdirectory_path)
 
+print(sys.path)
 from typing import Any
 from Learning_Agile.quad_model import *
 from Learning_Agile.quad_policy import *
@@ -32,7 +34,10 @@ import tf
 
 
 # load the DNN2 model
-FILE ="nn3_1.pth"
+abs_dir=os.path.dirname(os.path.abspath(__file__))
+print(abs_dir)
+FILE = os.path.join(abs_dir, 'Learning_Agile/nn3_1.pth')
+# FILE ="nn3_1.pth"
 
 
 
@@ -74,9 +79,28 @@ class LearningAgileAgent():
         # solver object
         self.quad1 = None
         self.quad2 = None
-        
 
-    def receive_states(self,start,end):
+
+        # planning variables
+        self.u = [0,0,0,0]
+        self.tm = [0,0,0,0]
+        self.state_n = [self.state]
+        self.control_n = [self.u]
+        self.control_tm = [self.tm]
+        self.hl_para = [0,0,0,0,0,0,0]
+        self.hl_variable = [self.hl_para]
+        
+        self.gate_move = self.moving_gate.gate_move
+        ## let assume the gate is static
+        self.gate_n = gate(self.gate_move[0])
+        self.t_guess = magni(self.gate_n.centroid-self.state[0:3])/3
+        self.Ttra    = []
+        self.T       = []
+        self.Time    = []
+        self.Pitch   = []
+        self.i       = 0
+
+    def receive_terminal_states(self,start,end):
         """receive the start and end point, and the initial gate point, from ROS side
 
         Args:
@@ -90,7 +114,7 @@ class LearningAgileAgent():
         
         self.inputs[0:3]=start
         self.inputs[3:6]=end
-
+        # self.inputs[7:10]=gate
 
     def problem_definition(self):
         """initial traversal problem
@@ -106,11 +130,71 @@ class LearningAgileAgent():
         self.quad1.init_obstacle(self.gate_point.reshape(12))
         self.quad1.uav1.setDyn(0.01)
  
- 
+    def solve_problem_gazebo(self,gazebo_model_state=None):
+        
+        if self.i <= 500:
+            self.gate_n = gate(self.gate_move[self.i])
+            self.state=gazebo_model_state
 
-    def solve_problem(self):
+            # decision variable is updated in 100 hz
+            t = solver(self.model,self.state,self.final_point,self.gate_n,self.moving_gate.V[self.i],self.moving_gate.w)
+            t_tra = t+self.i*0.01
+            gap_pitch = self.moving_gate.gate_init_p + self.moving_gate.w*self.i*0.01
+            
+            print('step',self.i,'tranversal time=',t,'gap_pitch=',gap_pitch*180/pi)
+            # print('step',i,'abs_tranversal time=',t_tra)
+            
+            self.Ttra = np.concatenate((self.Ttra,[t_tra]),axis = 0)
+            self.T = np.concatenate((self.T,[t]),axis = 0)
+            self.Time = np.concatenate((self.Time,[self.i*0.01]),axis = 0)
+            self.Pitch = np.concatenate((self.Pitch,[gap_pitch]),axis = 0)
+            
+            
+            if (self.i%10)==0: # control frequency = 10 hz
+
+                ## obtain the future traversal window state
+                    self.gate_n.translate(t*self.moving_gate.V[self.i])
+                    self.gate_n.rotate_y(t*self.moving_gate.w)
+                    # print('rotation matrix I_G=',gate_n.I_G)
+                
+                ## obtain the state in window frame 
+                    inputs = np.zeros(18)
+                    inputs[16] = magni(self.gate_n.gate_point[0,:]-self.gate_n.gate_point[1,:])
+                    inputs[17] = atan((self.gate_n.gate_point[0,2]-self.gate_n.gate_point[1,2])/(self.gate_n.gate_point[0,0]-self.gate_n.gate_point[1,0])) # compute the actual gate pitch ange in real-time
+                    inputs[0:13] = self.gate_n.transform(self.state)
+                    inputs[13:16] = self.gate_n.t_final(self.final_point)
+                
+                    out = self.model(inputs).data.numpy()
+                    print('tra_position=',out[0:3],'tra_time_dnn2=',out[6])
+                #print(out)
+                    # if (horizon-1*i/10) <= 30:
+                    #     Horizon =30
+                    # else:
+                    #     Horizon = int(horizon-1*i/10)
+
+                ## solve the mpc problem and get the control command
+                    self.quad2 = run_quad(goal_pos=inputs[13:16],horizon =50)
+                    u = self.quad2.get_input(inputs[0:13],u,out[0:3],out[3:6],out[6]) # control input 4-by-1 thrusts to pybullet
+                    j += 1
+            
+            
+            # state = np.array(self.quad1.uav1.dyn_fn(state, u)).reshape(13) # Yixiao's simulation environment ('uav1.dyn_fn'), replaced by pybullet
+            self.state_n = np.concatenate((self.state_n,[self.state]),axis = 0)
+            self.control_n = np.concatenate((self.control_n,[self.u]),axis = 0)
+            u_m = self.quad1.uav1.u_m
+            u1 = np.reshape(u,(4,1))
+            tm = np.matmul(u_m,u1)
+            tm = np.reshape(tm,4)
+            # control_tm = np.concatenate((control_tm,[tm]),axis = 0)
+            hl_variable = np.concatenate((hl_variable,[out]),axis=0)       
+            
+            self.i += 1
+
+    def solve_problem(self,gazebo_model_state=None):
         ini_state = np.array(self.quad1.ini_state)
         # initializing lists for saving data
+
+        
         state = self.quad1.ini_state # state= feedback from pybullet, 13-by-1, 3 position, 3 velocity (world frame), 4 quaternion, 3 angular rate
         u = [0,0,0,0]
         tm = [0,0,0,0]
@@ -190,6 +274,7 @@ class LearningAgileAgent():
         np.save('Pitch',Pitch)
         np.save('HL_Variable',hl_variable)
         self.quad1.uav1.play_animation(wing_len=1.5,gate_traj1=gate_move ,state_traj=state_n)
+        
         # quad1.uav1.plot_input(control_n)
         # quad1.uav1.plot_angularrate(state_n)
         # quad1.uav1.plot_T(control_tm)
@@ -199,71 +284,105 @@ class LearningAgileAgent():
 class LearningAgileAgentNode():
 
     def __init__(self):
-        self.drone_state_sub = rospy.Subscriber('/mavros/local_position/pose',PoseStamped, self.drone_state_callback)
+
+        # drone state subscribers [position, velocity, orientation, angular velocity]
+        self.drone_pose_sub = rospy.Subscriber('/mavros/local_position/pose',PoseStamped, self.drone_state_pose_callback)
+        self.drone_twist_sub = rospy.Subscriber('/mavros/local_position/velocity',Twist, self.drone_state_twist_callback)
+        
+        # waypoints subscriber [start, end, gate]
         self.waypoints_sub = rospy.Subscriber('/planner/goals_learning_agile',Goals, self.waypoints_callback)
         
+        # PVA command publisher
+        self.next_setpoint_pub = rospy.Publisher('/mavros/setpoint_raw/local', PositionTarget, queue_size=10)
+        
+        # timer for publishing setpoints
+        update_freq=10 #Hz
+        self.setpoint_timer = rospy.Timer(rospy.Duration(1/update_freq), self.setpoint_timer_callback)
+
         self.gate_point=np.zeros(3)
         self.end_point=np.zeros(3)
-        self.start_point=np.zeros(3)
+        self.drone_pos=np.zeros(3)
+        self.drone_vel=np.zeros(3)
+        self.drone_quat=np.zeros(4)
+        self.drone_ang_vel=np.zeros(3)
+
+
+        ## learning agile agent initialization
+        # create the learning agile agent
+        self.learing_agile_agent=LearningAgileAgent()
+        ## receive the start and end point, and the initial gate point, from ROS side
+        # rewrite the inputs
+        self.learing_agile_agent.receive_terminal_states(start=self.drone_pos,end=self.end_point)
+
+        # problem definition
+        self.learing_agile_agent.problem_definition()
+
+       
+    
+    def setpoint_timer_callback(self, event):
         
-    def drone_state_callback(self,msg):
+        # solve the problem
+        drone_state=np.concatenate((self.drone_pos,self.drone_vel,self.drone_quat,self.drone_ang_vel),axis=0).tolist()
+        self.learing_agile_agent.solve_problem_gazebo(drone_state)
+
+
+
+
+    def drone_state_pose_callback(self,msg):
         """receive the drone state from ROS side
 
-        Args:
-            msg (_type_): _description_
 
-        Returns:
-            _type_: _description_
         """
        
         self.start_point = np.array([msg.pose.position.x,msg.pose.position.y,msg.pose.position.z])
+        self.drone_quat = np.array([msg.pose.orientation.x,msg.pose.orientation.y,msg.pose.orientation.z,msg.pose.orientation.w])
         # print('start_point=',start_point)
+
+    def drone_state_twist_callback(self,msg):
+        """receive the drone state from ROS side
+
+        """
+        self.drone_vel = np.array([msg.linear.x,msg.linear.y,msg.linear.z])
+        self.drone_ang_vel = np.array([msg.angular.x,msg.angular.y,msg.angular.z])
+        # print('start_point=',start_point)
+
 
 
     def waypoints_callback(self,msg):
         """receive the start and end point, and the initial gate point, from ROS side
 
-        Args:
-            msg (_type_): _description_
-
-        Returns:
-            _type_: _description_
+        
         """
         
         self.gate_point = np.array([msg.waypoints[0].position.x,msg.waypoints[0].position.y,msg.waypoints[0].position.z])
         self.end_point = np.array([msg.waypoints[1].position.x,msg.waypoints[1].position.y,msg.waypoints[1].position.z])
-        self.planning()
         
-    def planning(self):
 
-
-        # create the learning agile agent
-        learing_agile_agent=LearningAgileAgent()
-        ## receive the start and end point, and the initial gate point, from ROS side
-        # rewrite the inputs
-        learing_agile_agent.receive_states(start=self.start_point,end=self.end_point)
-
-        # problem definition
-        learing_agile_agent.problem_definition()
-
-        # solve the problem
-        learing_agile_agent.solve_problem()
-
-    
-
-# def learing_agile_agent_node():
 
 
 def main():
-
-         # ros node initialization
-    learing_agile_agent_node = LearningAgileAgentNode()
-    rospy.init_node('learing_agile_agent', anonymous=True)
     
+    #---------------------- for ros node integration ----------------------------#
+    # ros node initialization
+    rospy.init_node('learing_agile_agent', anonymous=True)
+    learing_agile_agent_node = LearningAgileAgentNode()
+    
+   
     rospy.spin()
 
 
+    ## --------------for single planning part test-------------------------------##.
+    # create the learning agile agent
+    # learing_agile_agent=LearningAgileAgent()
+    # ## receive the start and end point, and the initial gate point, from ROS side
+    # # rewrite the inputs
+    # # learing_agile_agent.receive_terminal_states(start=self.start_point,end=self.end_point)
 
+    # # problem definition
+    # learing_agile_agent.problem_definition()
+
+    # # solve the problem
+    # learing_agile_agent.solve_problem()
 
     
 if __name__ == '__main__':
