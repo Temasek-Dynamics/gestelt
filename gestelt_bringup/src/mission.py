@@ -119,15 +119,13 @@ def pub_waypoints(waypoints_linear, waypoints_angular, waypoints_vel_linear, way
     wp_msg.waypoints_angular = waypoints_angular
     wp_msg.waypoints_velocity_linear = waypoints_vel_linear
     wp_msg.waypoints_velocity_angular = waypoints_vel_angular
-    wp_msg.velocity_mask = True    #set velocity_mask = False if want velocity constraint
+    wp_msg.ADD_VEL_CONSTRAINT = False    
     waypoints_pub.publish(wp_msg)
 
 
 def main():
     rospy.init_node('mission_startup', anonymous=True)
     rate = rospy.Rate(5) # 20hz
-    degrees = 70
-    g = 9.81
     HOVER_MODE = False
     MISSION_MODE = False
 

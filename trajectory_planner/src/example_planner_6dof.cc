@@ -56,7 +56,7 @@ void ExamplePlanner::waypointsCB(const gestelt_msgs::GoalsPtr &msg){
   goal_waypoints_vel_linear_.clear();
   goal_waypoints_vel_angular_.clear();
   ROS_INFO("[Trajectory Planner] No. of waypoints: %ld", msg->waypoints_linear.size());
-  velocity_mask_ = msg->velocity_mask; 
+  ADD_VEL_CONSTRAINT_ = msg->ADD_VEL_CONSTRAINT; 
   for (auto position : msg->waypoints_linear)  {
     // ROS_INFO("[Trajectory Planner] Waypoints are: %f, %f, %f", position.x, position.y, position.z);
     Eigen::Vector3d wp_linear(position.x, position.y, position.z);
@@ -85,7 +85,7 @@ void ExamplePlanner::waypointsCB(const gestelt_msgs::GoalsPtr &msg){
   planTrajectory(goal_waypoints_linear_, 
                   goal_waypoints_angular_, 
                   goal_waypoints_vel_linear_, 
-                  goal_waypoints_vel_angular_, velocity_mask_,
+                  goal_waypoints_vel_angular_, ADD_VEL_CONSTRAINT_,
                   &trajectory);
   publishTrajectory(trajectory);
 }
@@ -101,13 +101,13 @@ bool ExamplePlanner::planTrajectory(
     const std::vector<Eigen::Vector3d>& goal_pos_angular,  
     const std::vector<Eigen::Vector3d>& goal_vel_linear,
     const std::vector<Eigen::Vector3d>& goal_vel_angular,
-    bool velocity_mask,
+    bool ADD_VEL_CONSTRAINT,
     mav_trajectory_generation::Trajectory* trajectory) {
     // Your implementation here
 
   assert(trajectory);
   trajectory->clear();
-  velocity_mask = velocity_mask;
+  ADD_VEL_CONSTRAINT = ADD_VEL_CONSTRAINT;
   // 3 Dimensional trajectory => 3D position
   // 4 Dimensional trajectory => 3D position + yaw
   // 6 Dimensional trajectory => through SE(3) space, position and orientation 
@@ -115,19 +115,19 @@ bool ExamplePlanner::planTrajectory(
   bool success = false;
   if (goal_pos_linear.size() == goal_pos_angular.size()) 
   {
+    //Translation trajectory
     mav_trajectory_generation::Trajectory trajectory_trans, trajectory_rot;
     success = planTrajectory(
                               goal_pos_linear, goal_vel_linear, current_pose_.translation(),
-                              current_velocity_, max_v_, max_a_, velocity_mask, &trajectory_trans);
+                              current_velocity_, max_v_, max_a_, ADD_VEL_CONSTRAINT, &trajectory_trans);
 
     // Rotation trajectory.
-    // Eigen::Vector3d goal_rotation = goal_pos_angular[0];
     Eigen::Vector3d current_rot_vec;
     mav_msgs::vectorFromRotationMatrix(current_pose_.rotation(), &current_rot_vec);
     
     success &= planTrajectory(
                                 goal_pos_angular, goal_vel_angular, current_rot_vec, current_angular_velocity_,
-                                max_ang_v_, max_ang_a_, velocity_mask, &trajectory_rot);
+                                max_ang_v_, max_ang_a_, ADD_VEL_CONSTRAINT, &trajectory_rot);
 
     // Combine trajectories.
     success &= trajectory_trans.getTrajectoryWithAppendedDimension(trajectory_rot, &(*trajectory));
@@ -165,14 +165,14 @@ bool ExamplePlanner::planTrajectory(const std::vector<Eigen::Vector3d>& goal_pos
                                     const Eigen::Vector3d& start_pos,
                                     const Eigen::Vector3d& start_vel,
                                     double v_max, double a_max, 
-                                    bool velocity_mask,
+                                    bool ADD_VEL_CONSTRAINT,
                                     mav_trajectory_generation::Trajectory* trajectory) {
   assert(trajectory);
   const int dimension = 3;
   // Array for all waypoints and their constraints
   mav_trajectory_generation::Vertex::Vector vertices;
 
-  // Optimze up to 4th order derivative (SNAP)
+  // Optimize up to 4th order derivative (SNAP)
   const int derivative_to_optimize = mav_trajectory_generation::derivative_order::SNAP;
 
 
@@ -188,17 +188,21 @@ bool ExamplePlanner::planTrajectory(const std::vector<Eigen::Vector3d>& goal_pos
                       start_vel);
   vertices.push_back(start);
 
-for (size_t i = 0; i < goal_pos.size() - 1; i++ ){
+if (goal_pos.size()>1){
+  for (size_t i = 0; i < goal_pos.size() - 1; i++ ){
     mav_trajectory_generation::Vertex middle_wp(dimension);
 
     middle_wp.addConstraint(mav_trajectory_generation::derivative_order::POSITION, goal_pos[i]);
-    if (velocity_mask == false){
+    
+    if (ADD_VEL_CONSTRAINT == true){
           middle_wp.addConstraint(mav_trajectory_generation::derivative_order::VELOCITY, goal_vel[i]);
     }
 
 
     vertices.push_back(middle_wp);
   }
+
+} 
 
 
   /******* Configure end point *******/

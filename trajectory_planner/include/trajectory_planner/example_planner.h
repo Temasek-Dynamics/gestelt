@@ -83,7 +83,7 @@ class ExamplePlanner {
   std::vector<Eigen::Vector3d> goal_waypoints_angular_;
   std::vector<Eigen::Vector3d> goal_waypoints_vel_linear_;
   std::vector<Eigen::Vector3d> goal_waypoints_vel_angular_;
-  bool velocity_mask_;
+  bool ADD_VEL_CONSTRAINT_;
   std::string trajectory_frame_id_; //frame id of planned trajectory
 };
 
