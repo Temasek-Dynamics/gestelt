@@ -4,7 +4,7 @@
         <param name="is_simulation" value="True"/>
   </node>
 
-    <node pkg="gestelt_bringup" name="learning_agile_agent" type="learning_agile.py" output="screen">  
+    <node pkg="gestelt_bringup" name="learning_agile_agent" type="learning_agile_agent.py" output="screen">  
   </node>
    <!-- Start rosbag to record setpoint_raw and local_position -->
    <!-- path have to be absolute path-->
