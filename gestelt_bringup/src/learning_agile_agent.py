@@ -462,7 +462,7 @@ class LearningAgileAgentNode():
 
     def drone_state_pose_callback(self,msg):
         """
-        receive the drone state from ROS side
+        receive the drone state from PX4 side
         """
         drone_frame_id = msg.header.frame_id
 
@@ -485,28 +485,31 @@ class LearningAgileAgentNode():
 
 def main():
     
-    #---------------------- for ros node integration ----------------------------#
-    # # # ros node initialization
-    rospy.init_node('learing_agile_agent', anonymous=True)
+    ROS_INTEGRATION = False
+    if ROS_INTEGRATION:
+        #---------------------- for ros node integration ----------------------------#
     
-    # create the learning agile agent ROS node object
-    learing_agile_agent_node = LearningAgileAgentNode()
-    
-    rospy.spin()
+        # # # ros node initialization
+        rospy.init_node('learing_agile_agent', anonymous=True)
+        
+        # create the learning agile agent ROS node object
+        learing_agile_agent_node = LearningAgileAgentNode()
+        
+        rospy.spin()
 
+    else:
+        ## --------------for single planning part test-------------------------------##.
+        # create the learning agile agent
+        learing_agile_agent=LearningAgileAgent()
+        # receive the start and end point, and the initial gate point, from ROS side
+        # rewrite the inputs
+        learing_agile_agent.receive_terminal_states(start=np.array([0,-5,1]),end=np.array([0,5,1]))
 
-    ## --------------for single planning part test-------------------------------##.
-    # create the learning agile agent
-    # learing_agile_agent=LearningAgileAgent()
-    # # receive the start and end point, and the initial gate point, from ROS side
-    # # rewrite the inputs
-    # learing_agile_agent.receive_terminal_states(start=np.array([0,-5,1]),end=np.array([0,5,1]))
+        # problem definition
+        learing_agile_agent.problem_definition()
 
-    # # problem definition
-    # learing_agile_agent.problem_definition()
-
-    # # solve the problem
-    # learing_agile_agent.solve_problem_comparison()
+        # solve the problem
+        learing_agile_agent.solve_problem_comparison()
 
     
 if __name__ == '__main__':
