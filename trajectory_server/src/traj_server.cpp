@@ -237,7 +237,11 @@ void TrajServer::execTrajTimerCb(const ros::TimerEvent &e)
       if (!isExecutingMission()){
         // logInfoThrottled("Waiting for mission", 5.0);
         // ROS_INFO("in waiting for mission");
-        execHover();
+
+        // ----------only for minimum snap trajectory----------//
+        // execHover();
+
+        //----------- for circular mission -----------//
         // mission_has_entered_=true;
         // execMission();
       }
