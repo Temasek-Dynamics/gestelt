@@ -98,8 +98,9 @@ class DeterministicForest
 
 			// We can either:
 			// A) Generate a test map for the vicon room
-			// generateViconTest()
-			// generateRoomBoundaries()
+			generateViconTest();
+			generateRoomBoundaries(5.6, 5.6, 3.0, 
+				-2.8, 2.8, -2.8, 2.8);
 
 			// B) Generate a random map for benchmarking
 			// unsigned int seed = rd();
@@ -113,25 +114,25 @@ class DeterministicForest
 			// generateRectangularTunnel(Eigen::Vector3d{0.0, 0.0, 0.0}, 10.0, 2.0, 2.0);
 
 			// D) Generate a narrow window (1m x 1m) for benchmarking 
-			double win_side_length = 1.0;
-			double win_top_btm_height= 1.0;
-			double win_length = 1.0;
-			double win_height = 1.0;
+			// double win_side_length = 1.0;
+			// double win_top_btm_height= 1.0;
+			// double win_length = 1.0;
+			// double win_height = 1.0;
 
-			// Side wall along window
-			generateWall(Eigen::Vector2d{0.0, 0.0}, Eigen::Vector2d{0.0, win_side_length}, 
-				0.0, 2 * win_top_btm_height + win_height);
-			generateWall(Eigen::Vector2d{0.0, win_side_length + win_length}, Eigen::Vector2d{0.0, 2*win_side_length + win_length}, 
-				0.0, 2 * win_top_btm_height + win_height);
+			// // Side wall along window
+			// generateWall(Eigen::Vector2d{0.0, 0.0}, Eigen::Vector2d{0.0, win_side_length}, 
+			// 	0.0, 2 * win_top_btm_height + win_height);
+			// generateWall(Eigen::Vector2d{0.0, win_side_length + win_length}, Eigen::Vector2d{0.0, 2*win_side_length + win_length}, 
+			// 	0.0, 2 * win_top_btm_height + win_height);
 
-			// Top and bottom wall of window
-			generateWall(Eigen::Vector2d{0.0, win_side_length}, Eigen::Vector2d{0.0, win_side_length + win_length}, 
-				0.0, win_top_btm_height);
-			generateWall(Eigen::Vector2d{0.0, win_side_length}, Eigen::Vector2d{0.0, win_side_length + win_length}, 
-				win_top_btm_height + win_height, 2 * win_top_btm_height + win_height);
+			// // Top and bottom wall of window
+			// generateWall(Eigen::Vector2d{0.0, win_side_length}, Eigen::Vector2d{0.0, win_side_length + win_length}, 
+			// 	0.0, win_top_btm_height);
+			// generateWall(Eigen::Vector2d{0.0, win_side_length}, Eigen::Vector2d{0.0, win_side_length + win_length}, 
+			// 	win_top_btm_height + win_height, 2 * win_top_btm_height + win_height);
 
-			// Generate floor
-			generateHorizontalPlane(20.0, 20.0, 0.0);	
+			// // Generate floor
+			// generateHorizontalPlane(20.0, 20.0, 0.0);	
 
 			cloud_map.width = cloud_map.points.size();
 			cloud_map.height = 1;
@@ -198,10 +199,15 @@ class DeterministicForest
 
 		}
 
-		void generateRoomBoundaries(){
+
+		void generateRoomBoundaries(const double& x_size, 
+			const double& y_size, const double& z_size, 
+			const double& min_x_, const double& max_x_,
+			const double& min_y_, const double& max_y_)
+		{
 			// Generate floor, ceiling and walls
-			generateHorizontalPlane(_x_size, _y_size, 0.0);
-			generateHorizontalPlane(_x_size, _y_size, _z_size);
+			generateHorizontalPlane(x_size, y_size, 0.0);
+			generateHorizontalPlane(x_size, y_size, z_size);
 
 			generateYWall(max_x_, min_y_,  max_y_, 3.0);
 			generateYWall(min_x_, min_y_,  max_y_, 3.0);

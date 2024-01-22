@@ -1240,7 +1240,7 @@ namespace ego_planner
     Eigen::Matrix<double, 6, 3> gradViolaPc, gradViolaVc, gradViolaAc;
     double gradViolaPt, gradViolaVt, gradViolaAt;
     double omega;
-    int i_dp = 0;
+    int i_dp = 0; // Index of constraint point
     costs.setZero();
     // Eigen::MatrixXd constraint_pts(3, N * K + 1);
 
@@ -1277,57 +1277,57 @@ namespace ego_planner
         cps_.points.col(i_dp) = pos;
 
         // Penalty on clearance to static obstacle
-        if !((i_dp == 0 || i_dp > ConstraintPoints::two_thirds_id(cps_.points, touch_goal_))){ // only apply to first 2/3
-          bool obs_penalty = false;
+        if (!(i_dp == 0 || i_dp > ConstraintPoints::two_thirds_id(cps_.points, touch_goal_))){ // only apply to first 2/3
 
-          gradp.setZero();
-          costp = 0;
+          Eigen::Matrix<double, 6, 3> pd_cost_c_i_static; // Accumulation of sum across each {p,v}
+          pd_cost_c_i_static.setZero();
+          double pd_cost_t_static{0};
+          double cost_static{0};
 
           // Obstacle cost
-          for (size_t j = 0; j < cps_.direction[i_dp].size(); ++j) // For each constraint direction
+          for (size_t j_cp = 0; j_cp < cps_.direction[i_dp].size(); ++j_cp) // For each constraint direction
           {
-            Eigen::Vector3d ray = (pos - cps_.base_point[i_dp][j]); // 
-            double dist = ray.dot(cps_.direction[i_dp][j]);
-            double dist_err = obs_clearance_ - dist;
-            double dist_err_soft = obs_clearance_soft_ - dist;
-            Eigen::Vector3d dist_grad = cps_.direction[i_dp][j];
+            Eigen::Vector3d s_obs = cps_.base_point[i_dp][j_cp];
+            Eigen::Vector3d v_obs = cps_.direction[i_dp][j_cp];
 
-            if (dist_err > 0)
-            {
-              obs_penalty = true;
-              costp += wei_obs_ * pow(dist_err, 3);
-              gradp += -wei_obs_ * 3.0 * dist_err * dist_err * dist_grad;
-            }
+            double dist = (pos - s_obs).dot(v_obs);
+            double obs_penalty = obs_clearance_ - dist;
+            // double dist_err_soft = obs_clearance_soft_ - dist;
 
-            if (dist_err_soft > 0)
+            if (obs_penalty > 0) // If clearance requirements from obstacle is not met
             {
-              obs_penalty = true;
-              double r = 0.05;
-              double rsqr = r * r;
-              double term = sqrt(1.0 + dist_err_soft * dist_err_soft / rsqr);
-              costp += wei_obs_soft_ * rsqr * (term - 1.0);
-              gradp += -wei_obs_soft_ * dist_err_soft / term * dist_grad;
+              // Partial derivatives of Constraint
+              Eigen::Matrix<double, 6, 3> pd_constr_c_i = - beta0 * v_obs.transpose(); // Partial derivative of constraint w.r.t c_i // (2s, m) = (2s, 1) * (1, m)
+              double pd_constr_t =  - v_obs.transpose() * vel;// P.D. of constraint w.r.t t // (1,1) = (1, m) * (m, 1)
+
+              // Intermediate calculations for chain rule to get partial derivatives of cost J
+              double cost = (T_i / K) * omega * wei_obs_ * pow(obs_penalty, 3);
+              double pd_cost_constr = 3 * (T_i / K) * omega * wei_obs_ * pow(obs_penalty, 2) ; // P.D. of cost w.r.t constraint
+              double pd_t_T_i = (j / K); // P.D. of time t w.r.t T_i
+
+              // Partial derivatives of Cost J
+              Eigen::Matrix<double, 6, 3> pd_cost_c_i = pd_cost_constr * pd_constr_c_i; // P.D. of cost w.r.t c_i. Uses chain rule // (m,2s)
+              double pd_cost_t = cost / T_i  + pd_cost_constr * pd_constr_t * pd_t_T_i;// P.D. of cost w.r.t t // (1,1)
+
+              pd_cost_c_i_static += pd_cost_c_i;
+              pd_cost_t_static += pd_cost_t;
+              cost_static += cost;
             }
           }
-
-          if (obs_penalty)
-          {
-            gradViolaPc = beta0 * gradp.transpose();
-            gradViolaPt = alpha * gradp.transpose() * vel;
-            jerkOpt_.get_gdC().block<6, 3>(i * 6, 0) += omega * step * gradViolaPc;
-            gdT(i) += omega * (costp / K + step * gradViolaPt);
-            costs(0) += omega * step * costp;
-          }
+          
+          // Sum up sampled costs
+          jerkOpt_.get_gdC().block<6, 3>(i * 6, 0) += pd_cost_c_i_static;
+          gdT(i) += pd_cost_t_static; 
+          costs(0) += cost_static; 
         }
 
-
-        // Penalty on clearance to static obstacle
+        // // Penalty on clearance to static obstacle
         // if (obstacleGradCostP(i_dp, pos, gradp, costp))
         // {
         //   gradViolaPc = beta0 * gradp.transpose();
         //   gradViolaPt = alpha * gradp.transpose() * vel;
-        //   jerkOpt_.get_gdC().block<6, 3>(i * 6, 0) += omega * step * gradViolaPc;
-        //   gdT(i) += omega * (costp / K + step * gradViolaPt);
+        //   jerkOpt_.get_gdC().block<6, 3>(i * 6, 0) += omega * step * gradViolaPc; // Gradient of J w.r.t C_i
+        //   gdT(i) += omega * (costp / K + step * gradViolaPt); // Gradient of J w.r.t t
         //   costs(0) += omega * step * costp;
         // }
 
@@ -1465,48 +1465,48 @@ namespace ego_planner
     costs(3) += var;
   }
 
-  bool PolyTrajOptimizer::obstacleGradCostP(const int i_dp,
-                                            const Eigen::Vector3d &p,
-                                            Eigen::Vector3d &gradp,
-                                            double &costp)
-  {
-    if (i_dp == 0 || i_dp > ConstraintPoints::two_thirds_id(cps_.points, touch_goal_)) // only apply to first 2/3
-      return false;
+  // bool PolyTrajOptimizer::obstacleGradCostP(const int i_dp,
+  //                                           const Eigen::Vector3d &p,
+  //                                           Eigen::Vector3d &gradp,
+  //                                           double &costp)
+  // {
+  //   if (i_dp == 0 || i_dp > ConstraintPoints::two_thirds_id(cps_.points, touch_goal_)) // only apply to first 2/3
+  //     return false;
 
-    bool ret = false;
+  //   bool ret = false;
 
-    gradp.setZero();
-    costp = 0;
+  //   gradp.setZero();
+  //   costp = 0;
 
-    // Obstacle cost
-    for (size_t j = 0; j < cps_.direction[i_dp].size(); ++j)
-    {
-      Eigen::Vector3d ray = (p - cps_.base_point[i_dp][j]);
-      double dist = ray.dot(cps_.direction[i_dp][j]);
-      double dist_err = obs_clearance_ - dist;
-      double dist_err_soft = obs_clearance_soft_ - dist;
-      Eigen::Vector3d dist_grad = cps_.direction[i_dp][j];
+  //   // Obstacle cost
+  //   for (size_t j = 0; j < cps_.direction[i_dp].size(); ++j)
+  //   {
+  //     Eigen::Vector3d ray = (p - cps_.base_point[i_dp][j]);
+  //     double dist = ray.dot(cps_.direction[i_dp][j]);
+  //     double dist_err = obs_clearance_ - dist;
+  //     double dist_err_soft = obs_clearance_soft_ - dist;
+  //     Eigen::Vector3d dist_grad = cps_.direction[i_dp][j];
 
-      if (dist_err > 0)
-      {
-        ret = true;
-        costp += wei_obs_ * pow(dist_err, 3);
-        gradp += -wei_obs_ * 3.0 * dist_err * dist_err * dist_grad;
-      }
+  //     if (dist_err > 0)
+  //     {
+  //       ret = true;
+  //       costp += wei_obs_ * pow(dist_err, 3);
+  //       gradp += -wei_obs_ * 3.0 * dist_err * dist_err * dist_grad;
+  //     }
 
-      if (dist_err_soft > 0)
-      {
-        ret = true;
-        double r = 0.05;
-        double rsqr = r * r;
-        double term = sqrt(1.0 + dist_err_soft * dist_err_soft / rsqr);
-        costp += wei_obs_soft_ * rsqr * (term - 1.0);
-        gradp += -wei_obs_soft_ * dist_err_soft / term * dist_grad;
-      }
-    }
+  //     if (dist_err_soft > 0)
+  //     {
+  //       ret = true;
+  //       double r = 0.05;
+  //       double rsqr = r * r;
+  //       double term = sqrt(1.0 + dist_err_soft * dist_err_soft / rsqr);
+  //       costp += wei_obs_soft_ * rsqr * (term - 1.0);
+  //       gradp += -wei_obs_soft_ * dist_err_soft / term * dist_grad;
+  //     }
+  //   }
 
-    return ret;
-  }
+  //   return ret;
+  // }
 
   bool PolyTrajOptimizer::swarmGradCostP(const int i_dp,
                                          const double t,
@@ -1581,112 +1581,112 @@ namespace ego_planner
     return ret;
   }
 
-  bool PolyTrajOptimizer::formationGradCostP(const int i_dp,
-                                             const double t,
-                                             const Eigen::Vector3d &p,
-                                             const Eigen::Vector3d &v,
-                                             Eigen::Vector3d &gradp,
-                                             double &gradt,
-                                             double &grad_prev_t,
-                                             double &costp)
-  {
-    if (i_dp <= 0 || i_dp > ConstraintPoints::two_thirds_id(cps_.points, touch_goal_)) // only apply to first 2/3
-      return false;
-    if ((int)swarm_trajs_->size() < formation_num_ && drone_id_ != formation_num_-1){
-      // ROS_ERROR("swarm_trajs_->size() < formation_num_ && drone_id_ != formation_num_-1");
-      return false;
-    }
+  // bool PolyTrajOptimizer::formationGradCostP(const int i_dp,
+  //                                            const double t,
+  //                                            const Eigen::Vector3d &p,
+  //                                            const Eigen::Vector3d &v,
+  //                                            Eigen::Vector3d &gradp,
+  //                                            double &gradt,
+  //                                            double &grad_prev_t,
+  //                                            double &costp)
+  // {
+  //   if (i_dp <= 0 || i_dp > ConstraintPoints::two_thirds_id(cps_.points, touch_goal_)) // only apply to first 2/3
+  //     return false;
+  //   if ((int)swarm_trajs_->size() < formation_num_ && drone_id_ != formation_num_-1){
+  //     // ROS_ERROR("swarm_trajs_->size() < formation_num_ && drone_id_ != formation_num_-1");
+  //     return false;
+  //   }
 
-    gradp.setZero();
-    gradt = 0;
-    grad_prev_t = 0;
-    costp = 0;
+  //   gradp.setZero();
+  //   gradt = 0;
+  //   grad_prev_t = 0;
+  //   costp = 0;
 
-    // const double CLEARANCE2 = (swarm_clearance_ * 1.5) * (swarm_clearance_ * 1.5);
-    // constexpr double a = 2.0, b = 1.0, inv_a2 = 1 / a / a, inv_b2 = 1 / b / b;
-    Eigen::Vector3d O = FStart_;
-    Eigen::Vector3d a = (FEnd_ - FStart_).normalized();
-    double pt_time = t_now_ + t;
+  //   // const double CLEARANCE2 = (swarm_clearance_ * 1.5) * (swarm_clearance_ * 1.5);
+  //   // constexpr double a = 2.0, b = 1.0, inv_a2 = 1 / a / a, inv_b2 = 1 / b / b;
+  //   Eigen::Vector3d O = FStart_;
+  //   Eigen::Vector3d a = (FEnd_ - FStart_).normalized();
+  //   double pt_time = t_now_ + t;
 
-    double l = 0, dl_dt = 0;
-    bool drone_id_is_form_num_ = ( drone_id_ == (formation_num_-1) );
+  //   double l = 0, dl_dt = 0;
+  //   bool drone_id_is_form_num_ = ( drone_id_ == (formation_num_-1) );
 
-    int id_end = drone_id_is_form_num_ ? formation_num_ -1 : formation_num_;
+  //   int id_end = drone_id_is_form_num_ ? formation_num_ -1 : formation_num_;
 
-    for (int id = 0; id < id_end; ++id)
-    {
-      if ((swarm_trajs_->at(id).drone_id < 0) || swarm_trajs_->at(id).drone_id == drone_id_)
-        continue;
+  //   for (int id = 0; id < id_end; ++id)
+  //   {
+  //     if ((swarm_trajs_->at(id).drone_id < 0) || swarm_trajs_->at(id).drone_id == drone_id_)
+  //       continue;
 
-      double traj_i_satrt_time = swarm_trajs_->at(id).start_time;
+  //     double traj_i_satrt_time = swarm_trajs_->at(id).start_time;
 
-      Eigen::Vector3d swarm_p, swarm_v;
-      if (pt_time < traj_i_satrt_time + swarm_trajs_->at(id).duration)
-      {
-        swarm_p = swarm_trajs_->at(id).traj.getPos(pt_time - traj_i_satrt_time);
-        swarm_v = swarm_trajs_->at(id).traj.getVel(pt_time - traj_i_satrt_time);
-      }
-      else
-      {
-        double exceed_time = pt_time - (traj_i_satrt_time + swarm_trajs_->at(id).duration);
-        swarm_v = swarm_trajs_->at(id).traj.getVel(swarm_trajs_->at(id).duration);
-        swarm_p = swarm_trajs_->at(id).traj.getPos(swarm_trajs_->at(id).duration) +
-                  exceed_time * swarm_v;
-      }
+  //     Eigen::Vector3d swarm_p, swarm_v;
+  //     if (pt_time < traj_i_satrt_time + swarm_trajs_->at(id).duration)
+  //     {
+  //       swarm_p = swarm_trajs_->at(id).traj.getPos(pt_time - traj_i_satrt_time);
+  //       swarm_v = swarm_trajs_->at(id).traj.getVel(pt_time - traj_i_satrt_time);
+  //     }
+  //     else
+  //     {
+  //       double exceed_time = pt_time - (traj_i_satrt_time + swarm_trajs_->at(id).duration);
+  //       swarm_v = swarm_trajs_->at(id).traj.getVel(swarm_trajs_->at(id).duration);
+  //       swarm_p = swarm_trajs_->at(id).traj.getPos(swarm_trajs_->at(id).duration) +
+  //                 exceed_time * swarm_v;
+  //     }
 
-      l += (swarm_p - O).dot(a) - formation_(0, id);
-      // std::cout << "swarm_p=" << swarm_p.transpose() << " O=" << O.transpose() << " a=" << a.transpose() << " id=" << id << " formation_(0, id)=" << formation_(0, id) <<std::endl;
-      dl_dt += a.dot(swarm_v);
-    }
-    l /= (formation_num_-1);
-    dl_dt /= (formation_num_-1);
+  //     l += (swarm_p - O).dot(a) - formation_(0, id);
+  //     // std::cout << "swarm_p=" << swarm_p.transpose() << " O=" << O.transpose() << " a=" << a.transpose() << " id=" << id << " formation_(0, id)=" << formation_(0, id) <<std::endl;
+  //     dl_dt += a.dot(swarm_v);
+  //   }
+  //   l /= (formation_num_-1);
+  //   dl_dt /= (formation_num_-1);
 
-    // std::cout << "drone_id_=" << drone_id_ <<std::endl;
-    // std::cout << "t=" << t <<std::endl;
-    // std::cout << "l=" << l <<std::endl;
-    // std::cout << "dl_dt=" << dl_dt <<std::endl;
+  //   // std::cout << "drone_id_=" << drone_id_ <<std::endl;
+  //   // std::cout << "t=" << t <<std::endl;
+  //   // std::cout << "l=" << l <<std::endl;
+  //   // std::cout << "dl_dt=" << dl_dt <<std::endl;
 
-    Eigen::Vector3d tar_p;
-    tar_p.x() = (a(0) * (formation_(0, drone_id_) + l) - a(1) * formation_(1, drone_id_)) + O(0);
-    tar_p.y() = (a(1) * (formation_(0, drone_id_) + l) + a(0) * formation_(1, drone_id_)) + O(1);
-    tar_p.z() = a(2) * l + formation_(2, drone_id_) + O(2);
-    Eigen::Vector3d dJ_dp = 2 * (p - tar_p);
-    costp = wei_formation_ * (dJ_dp / 2).squaredNorm();
-    gradp = wei_formation_ * dJ_dp;
-    gradt = wei_formation_ * dJ_dp.dot(v - a * dl_dt);
-    grad_prev_t = wei_formation_ * dJ_dp.dot(-a * dl_dt);
+  //   Eigen::Vector3d tar_p;
+  //   tar_p.x() = (a(0) * (formation_(0, drone_id_) + l) - a(1) * formation_(1, drone_id_)) + O(0);
+  //   tar_p.y() = (a(1) * (formation_(0, drone_id_) + l) + a(0) * formation_(1, drone_id_)) + O(1);
+  //   tar_p.z() = a(2) * l + formation_(2, drone_id_) + O(2);
+  //   Eigen::Vector3d dJ_dp = 2 * (p - tar_p);
+  //   costp = wei_formation_ * (dJ_dp / 2).squaredNorm();
+  //   gradp = wei_formation_ * dJ_dp;
+  //   gradt = wei_formation_ * dJ_dp.dot(v - a * dl_dt);
+  //   grad_prev_t = wei_formation_ * dJ_dp.dot(-a * dl_dt);
 
-    return true;
-  }
+  //   return true;
+  // }
 
-  bool PolyTrajOptimizer::feasibilityGradCostV(const Eigen::Vector3d &v,
-                                               Eigen::Vector3d &gradv,
-                                               double &costv)
-  {
-    // vpen is magnitude of velocity violation
-    double vpen = v.squaredNorm() - max_vel_ * max_vel_;
-    if (vpen > 0) // If velocity limit is exceeded, penalty is non-zero
-    {
-      gradv = wei_feas_ * 6 * vpen * vpen * v; // Gradient of cubic cost
-      costv = wei_feas_ * vpen * vpen * vpen; // Cost is cubic
-      return true;
-    }
-    return false;
-  }
+  // bool PolyTrajOptimizer::feasibilityGradCostV(const Eigen::Vector3d &v,
+  //                                              Eigen::Vector3d &gradv,
+  //                                              double &costv)
+  // {
+  //   // vpen is magnitude of velocity violation
+  //   double vpen = v.squaredNorm() - max_vel_ * max_vel_;
+  //   if (vpen > 0) // If velocity limit is exceeded, penalty is non-zero
+  //   {
+  //     gradv = wei_feas_ * 6 * vpen * vpen * v; // Gradient of cubic cost
+  //     costv = wei_feas_ * vpen * vpen * vpen; // Cost is cubic
+  //     return true;
+  //   }
+  //   return false;
+  // }
 
-  bool PolyTrajOptimizer::feasibilityGradCostA(const Eigen::Vector3d &a,
-                                               Eigen::Vector3d &grada,
-                                               double &costa)
-  {
-    double apen = a.squaredNorm() - max_acc_ * max_acc_;
-    if (apen > 0) // If acceleration limit is exceeded, penalty is non-zero
-    {
-      grada = wei_feas_ * 6 * apen * apen * a;
-      costa = wei_feas_ * apen * apen * apen;
-      return true;
-    }
-    return false;
-  }
+  // bool PolyTrajOptimizer::feasibilityGradCostA(const Eigen::Vector3d &a,
+  //                                              Eigen::Vector3d &grada,
+  //                                              double &costa)
+  // {
+  //   double apen = a.squaredNorm() - max_acc_ * max_acc_;
+  //   if (apen > 0) // If acceleration limit is exceeded, penalty is non-zero
+  //   {
+  //     grada = wei_feas_ * 6 * apen * apen * a;
+  //     costa = wei_feas_ * apen * apen * apen;
+  //     return true;
+  //   }
+  //   return false;
+  // }
 
   void PolyTrajOptimizer::distanceSqrVarianceWithGradCost2p(const Eigen::MatrixXd &ps,
                                                             Eigen::MatrixXd &gdp,

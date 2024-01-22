@@ -286,14 +286,12 @@ namespace ego_planner
     ros::Duration t_init, t_opt;
 
     /*** STEP 1: INIT. Get initial trajectory and {p,v} pairs ***/
-    ROS_INFO("[reboundReplan] 1) Get initial trajectory and {p,v} pairs");
 
     // t_seg_dur: time duration of segment = distance between control points / maximum velocity
     double t_seg_dur = pp_.polyTraj_piece_length / pp_.max_vel_;
 
     poly_traj::MinJerkOpt initMJO;
 
-    ROS_INFO("[reboundReplan] 1) Before computeInitState");
     if (!computeInitState(start_pt, start_vel, start_acc, 
                           local_target_pt, local_target_vel,
                           flag_polyInit, flag_randomPolyTraj, t_seg_dur, 
@@ -301,7 +299,6 @@ namespace ego_planner
     {
       return false;
     }
-    ROS_INFO("[reboundReplan] 1) After computeInitState");
 
     Eigen::MatrixXd cstr_pts = initMJO.getInitConstraintPoints(ploy_traj_opt_->get_cps_num_perPiece_());
     vector<std::pair<int, int>> segments; // segments are only needed for distinctive trajectories
@@ -309,12 +306,10 @@ namespace ego_planner
     // Check for collision along path and set {p,v} pairs to constraint points.
     // The collision free path for the segments in collision is determined using AStar search
     // Returns a vector of pairs (seg_start_idx, seg_end_idx)
-    ROS_INFO("[reboundReplan] 1) Before finelyCheckAndSetConstraintPoints");
     if (ploy_traj_opt_->finelyCheckAndSetConstraintPoints(segments, initMJO, true) == PolyTrajOptimizer::CHK_RET::ERR)
     {
       return false;
     }
-    ROS_INFO("[reboundReplan] 1) After finelyCheckAndSetConstraintPoints");
 
     t_init = ros::Time::now() - t_start;
 
@@ -344,6 +339,9 @@ namespace ego_planner
     flag_success = ploy_traj_opt_->optimizeTrajectory(headState, tailState,
                                                       innerPts, initTraj.getDurations(),
                                                       cstr_pts, final_cost);
+
+    ROS_INFO("[reboundReplan] After Optimize trajectory");
+
     best_MJO = ploy_traj_opt_->getMinJerkOpt();
 
     t_opt = ros::Time::now() - t_start;
