@@ -253,12 +253,12 @@ namespace ego_planner
     void initAndGetSmoothnessGradCost2PT(EIGENVEC &gdT, double &cost);
 
     /**
-     * @brief 
+     * @brief Gradient 
      * 
      * @tparam EIGENVEC 
      * @param gdT Gradient of size of number of pieces
      * @param costs a vector of costs
-     * @param K Constraint points per piece
+     * @param K Constraint points per piece, or total sample number
      */
     template <typename EIGENVEC>
     void addPVAGradCost2CT(EIGENVEC &gdT, Eigen::VectorXd &costs, const int &K);

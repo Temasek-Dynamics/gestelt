@@ -954,7 +954,7 @@ namespace poly_traj
         Eigen::VectorXd T3;
         Eigen::VectorXd T4;
         Eigen::VectorXd T5;
-        Eigen::MatrixXd gdC;
+        Eigen::MatrixXd gdC; // Gradient of cost w.r.t polynomial coefficients
 
     private:
         template <typename EIGENVEC>
@@ -1367,7 +1367,12 @@ namespace poly_traj
         {
             return T1;
         }
-
+        
+        /**
+         * @brief Get the gradient of cost w.r.t polynomial coefficients 
+         * 
+         * @return Eigen::MatrixXd& 
+         */
         Eigen::MatrixXd &get_gdC()
         {
             return gdC;

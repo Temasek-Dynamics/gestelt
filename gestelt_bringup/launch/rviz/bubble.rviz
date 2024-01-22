@@ -28,7 +28,7 @@ Panels:
   - Class: rviz/Time
     Name: Time
     SyncMode: 0
-    SyncSource: ""
+    SyncSource: occupancy_map
 Preferences:
   PromptSaveOnExit: true
 Toolbars:
@@ -70,8 +70,6 @@ Visualization Manager:
       Frame Timeout: 15
       Frames:
         All Enabled: false
-        drone0_origin:
-          Value: true
         map:
           Value: true
         world:
@@ -85,8 +83,7 @@ Visualization Manager:
       Tree:
         world:
           map:
-            drone0_origin:
-              {}
+            {}
       Update Interval: 0
       Value: true
     - Class: rviz/Group
@@ -102,21 +99,21 @@ Visualization Manager:
         - Class: rviz/Group
           Displays:
             - Class: rviz/Marker
-              Enabled: true
+              Enabled: false
               Marker Topic: /drone0_ego_planner_node/goal_point
               Name: goal_point
               Namespaces:
-                "": true
+                {}
               Queue Size: 100
-              Value: true
+              Value: false
             - Class: rviz/Marker
-              Enabled: true
+              Enabled: false
               Marker Topic: /drone0_ego_planner_node/global_list
               Name: global_path
               Namespaces:
                 {}
               Queue Size: 100
-              Value: true
+              Value: false
             - Class: rviz/Marker
               Enabled: true
               Marker Topic: /drone0_ego_planner_node/optimal_list
@@ -126,19 +123,19 @@ Visualization Manager:
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
-              Enabled: true
+              Enabled: false
               Marker Topic: /drone0_ego_planner_node/failed_list
               Name: FailedList
               Namespaces:
                 {}
               Queue Size: 100
-              Value: true
+              Value: false
             - Class: rviz/Marker
               Enabled: true
               Marker Topic: /drone0_ego_planner_node/a_star_list
               Name: AStar
               Namespaces:
-                {}
+                "": true
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
@@ -437,7 +434,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/XYOrbit
-      Distance: 4.887775421142578
+      Distance: 13.322870254516602
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -445,17 +442,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 2.5099661350250244
-        Y: 0.19099700450897217
+        X: 2.933854579925537
+        Y: 0.9455181360244751
         Z: -3.814697265625e-06
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.4797971248626709
+      Pitch: 1.36479651927948
       Target Frame: my_view
-      Yaw: 4.203619480133057
+      Yaw: 5.06862211227417
     Saved:
       - Class: rviz/FPS
         Enable Stereo Rendering:
@@ -605,4 +602,4 @@ Window Geometry:
     collapsed: false
   Width: 1440
   X: 188
-  Y: 47
+  Y: 27

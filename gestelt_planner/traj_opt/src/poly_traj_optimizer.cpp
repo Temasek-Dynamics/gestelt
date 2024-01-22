@@ -1138,7 +1138,7 @@ namespace ego_planner
     Eigen::VectorXd T(opt->piece_num_);
     opt->VirtualT2RealT(t, T);
 
-    Eigen::VectorXd gradT(opt->piece_num_);
+    Eigen::VectorXd gradT(opt->piece_num_); // P.D. of costs w.r.t time t
     double smoo_cost = 0, time_cost = 0;
     Eigen::VectorXd obs_swarm_feas_qvar_costs(4);
 
@@ -1148,7 +1148,7 @@ namespace ego_planner
     // smoo_cost is the cost of the jerk minimization trajectory
     opt->initAndGetSmoothnessGradCost2PT(gradT, smoo_cost); 
 
-    // Time int cost
+    // Time integral cost
     opt->addPVAGradCost2CT(gradT, obs_swarm_feas_qvar_costs, opt->cps_num_perPiece_); 
 
     if (opt->iter_num_ > 3 && smoo_cost / opt->piece_num_ < 10.0) // 10.0 is an experimental value that indicates the trajectory is smooth enough.
@@ -1232,9 +1232,9 @@ namespace ego_planner
   {
     int N = gdT.size();
     Eigen::Vector3d pos, vel, acc, jer;
-    Eigen::Vector3d gradp, gradv, grada; // Gradient in (x,y,z)
+    Eigen::Vector3d gradp, gradv, grada; // Each Gradient is a vector with (x,y,z) components
     double costp, costv, costa;
-    Eigen::Matrix<double, 6, 1> beta0, beta1, beta2, beta3;
+    Eigen::Matrix<double, 6, 1> beta0, beta1, beta2, beta3; // Time basis
     double s1, s2, s3, s4, s5;
     double step, alpha;
     Eigen::Matrix<double, 6, 3> gradViolaPc, gradViolaVc, gradViolaAc;
@@ -1245,14 +1245,15 @@ namespace ego_planner
     // Eigen::MatrixXd constraint_pts(3, N * K + 1);
 
     double t = 0;
-    for (int i = 0; i < N; ++i) // for each gradT
+    for (int i = 0; i < N; ++i) // for each segment
     {
-      // Get polynomial coefficients c 
-      const Eigen::Matrix<double, 6, 3> &c = jerkOpt_.get_b().block<6, 3>(i * 6, 0);
-      step = jerkOpt_.get_T1()(i) / K;
+      const Eigen::Matrix<double, 6, 3> &c = jerkOpt_.get_b().block<6, 3>(i * 6, 0); // Polynomial coefficients 
+      double T_i = jerkOpt_.get_T1()(i);
+      step = T_i / K; // Duration of each piece / sample number.
+      // step = jerkOpt_.get_T1()(i) / K;
       s1 = 0.0; // Time t, it will increase with each step of f the constraint point
 
-      for (int j = 0; j <= K; ++j) // For each constraint point (or sample)
+      for (int j = 0; j <= K; ++j) // For each constraint point (or sample) in the segment. This is also known as the sample index
       {
         s2 = s1 * s1;   // t^2
         s3 = s2 * s1;   // t^3
@@ -1262,7 +1263,9 @@ namespace ego_planner
         beta1 << 0.0, 1.0, 2.0 * s1, 3.0 * s2, 4.0 * s3, 5.0 * s4;  // (0, 1, 2t,   3t^2, 4t^3,   5t^4)
         beta2 << 0.0, 0.0, 2.0, 6.0 * s1, 12.0 * s2, 20.0 * s3;     // (0, 0, 1,    6t,   12t^2,  20t^3)
         beta3 << 0.0, 0.0, 0.0, 6.0, 24.0 * s1, 60.0 * s2;          // (0, 0, 0,    1,    24t,    60t^2)
-        alpha = 1.0 / K * j; // progress along segment/piece, value is from 0 to 1
+        alpha = j / K ; // progress along segment/piece, value is from 0 to 1
+
+        // p_i(t) = c_i.T * beta(t) // (m, 1) = (m, 2s) * (2s, 1)
         pos = c.transpose() * beta0; // position at current constraint point
         vel = c.transpose() * beta1; // velocity at current constraint point
         acc = c.transpose() * beta2; // acceleration at current constraint point
@@ -1273,17 +1276,63 @@ namespace ego_planner
 
         cps_.points.col(i_dp) = pos;
 
-        // Static obstacle
-        if (obstacleGradCostP(i_dp, pos, gradp, costp))
-        {
-          gradViolaPc = beta0 * gradp.transpose();
-          gradViolaPt = alpha * gradp.transpose() * vel;
-          jerkOpt_.get_gdC().block<6, 3>(i * 6, 0) += omega * step * gradViolaPc;
-          gdT(i) += omega * (costp / K + step * gradViolaPt);
-          costs(0) += omega * step * costp;
+        // Penalty on clearance to static obstacle
+        if !((i_dp == 0 || i_dp > ConstraintPoints::two_thirds_id(cps_.points, touch_goal_))){ // only apply to first 2/3
+          bool obs_penalty = false;
+
+          gradp.setZero();
+          costp = 0;
+
+          // Obstacle cost
+          for (size_t j = 0; j < cps_.direction[i_dp].size(); ++j) // For each constraint direction
+          {
+            Eigen::Vector3d ray = (pos - cps_.base_point[i_dp][j]); // 
+            double dist = ray.dot(cps_.direction[i_dp][j]);
+            double dist_err = obs_clearance_ - dist;
+            double dist_err_soft = obs_clearance_soft_ - dist;
+            Eigen::Vector3d dist_grad = cps_.direction[i_dp][j];
+
+            if (dist_err > 0)
+            {
+              obs_penalty = true;
+              costp += wei_obs_ * pow(dist_err, 3);
+              gradp += -wei_obs_ * 3.0 * dist_err * dist_err * dist_grad;
+            }
+
+            if (dist_err_soft > 0)
+            {
+              obs_penalty = true;
+              double r = 0.05;
+              double rsqr = r * r;
+              double term = sqrt(1.0 + dist_err_soft * dist_err_soft / rsqr);
+              costp += wei_obs_soft_ * rsqr * (term - 1.0);
+              gradp += -wei_obs_soft_ * dist_err_soft / term * dist_grad;
+            }
+          }
+
+          if (obs_penalty)
+          {
+            gradViolaPc = beta0 * gradp.transpose();
+            gradViolaPt = alpha * gradp.transpose() * vel;
+            jerkOpt_.get_gdC().block<6, 3>(i * 6, 0) += omega * step * gradViolaPc;
+            gdT(i) += omega * (costp / K + step * gradViolaPt);
+            costs(0) += omega * step * costp;
+          }
         }
 
-        // Swarm/Dynamic obstacle
+
+        // Penalty on clearance to static obstacle
+        // if (obstacleGradCostP(i_dp, pos, gradp, costp))
+        // {
+        //   gradViolaPc = beta0 * gradp.transpose();
+        //   gradViolaPt = alpha * gradp.transpose() * vel;
+        //   jerkOpt_.get_gdC().block<6, 3>(i * 6, 0) += omega * step * gradViolaPc;
+        //   gdT(i) += omega * (costp / K + step * gradViolaPt);
+        //   costs(0) += omega * step * costp;
+        // }
+
+
+        // Penalty on Swarm/Dynamic obstacle
         double gradt, grad_prev_t;
         if (swarmGradCostP(i_dp, t + step * j, pos, vel, gradp, gradt, grad_prev_t, costp))
         {
@@ -1299,6 +1348,8 @@ namespace ego_planner
         }
 
         // formation
+
+        /* Formation: COMMENTED OUT!*/
         // gradt = 0, grad_prev_t = 0;
         // if (formationGradCostP(i_dp, t + step * j, pos, vel, gradp, gradt, grad_prev_t, costp))
         // {
@@ -1313,56 +1364,51 @@ namespace ego_planner
         //   costs(1) += omega * step * costp;
         // }
 
-
-        vpen = v.squaredNorm() - max_vel_ * max_vel_;
+        // Penalty on velocity constraint, vector of (x,y,z)
+        double vpen = vel.squaredNorm() - max_vel_ * max_vel_; 
         if (vpen > 0){
-          gradv = wei_feas_ * 6 * pow(vpen,2) * v; // Gradient of cubic cost
-          costv = wei_feas_ * pow(vpen, 3); // Cost is cubic
-
-          // gradViolaVc = beta1 * (wei_feas_ * 6 * vpen^2 * v).transpose()
-          // gradViolaVt = alpha *  (wei_feas_ * vpen^3).transpose() * acc
-
-          gradViolaVc = beta1 * gradv.transpose(); // Gradient of d(J_vel)/d(C_i)
-          gradViolaVt = alpha * gradv.transpose() * acc; // Gradient of d(J_vel)/d(t)
           
-          // Sampling of cost
-          // omega * penalty weight * constraint(c_i, t_i, j/sample_num)
+          // Partial derivatives of Constraint
+          Eigen::Matrix<double, 6, 3> pd_constr_c_i = 2 * beta1 * vel.transpose(); // Partial derivative of constraint w.r.t c_i // (2s, m) = (2s, 1) * (1, m)
+          double pd_constr_t =  2 * beta2.transpose() * c * vel;// P.D. of constraint w.r.t t // (1,1) = (1, 2s) * (2s, m) * (m, 1)
 
-          jerkOpt_.get_gdC().block<6, 3>(i * 6, 0) += omega * step * gradViolaVc;
-          gdT(i) += omega * (costv / K + step * gradViolaVt);
-          costs(2) += omega * step * costv; // Sum costs
+          // Intermediate calculations for chain rule to get partial derivatives of cost J
+          double pd_cost_constr = 3 * (T_i / K) * omega * wei_feas_ * pow(vpen,2) ; // P.D. of cost w.r.t constraint
+          double cost = (T_i / K) * omega * wei_feas_ * pow(vpen,3);
+          double pd_t_T_i = (j / K); // P.D. of time t w.r.t T_i
+
+          // Partial derivatives of Cost J
+          Eigen::Matrix<double, 6, 3> pd_cost_c_i = pd_cost_constr * pd_constr_c_i; // P.D. of cost w.r.t c_i. Uses chain rule // (m,2s)
+          double pd_cost_t = cost / T_i  + pd_cost_constr * pd_constr_t * pd_t_T_i;// P.D. of cost w.r.t t // (1,1)
+
+          // Sum up sampled costs
+          jerkOpt_.get_gdC().block<6, 3>(i * 6, 0) += pd_cost_c_i;
+          gdT(i) += pd_cost_t; 
+          costs(2) += cost; 
 
         }
 
-        // // feasibility for keeping within velocity limits
-        // if (feasibilityGradCostV(vel, gradv, costv))
-        // {
-
-        //   // gradv = wei_feas_ * 6 * vpen^2 * v; // Gradient of cubic cost
-        //   // costv = wei_feas_ * vpen^3; // Cost is cubic
-
-        //   // gradViolaVc = beta1 * (wei_feas_ * 6 * vpen^2 * v).transpose()
-        //   // gradViolaVt = alpha *  (wei_feas_ * vpen^3).transpose() * acc
-
-        //   gradViolaVc = beta1 * gradv.transpose();
-        //   gradViolaVt = alpha * gradv.transpose() * acc;
+        // Penalty on acceleration constraint, vector of (x,y,z)
+        double apen = acc.squaredNorm() - max_acc_ * max_acc_; 
+        if (apen > 0){
           
-        //   // Sampling of cost
-        //   // omega * penalty weight * constraint(c_i, t_i, j/sample_num)
+          // Partial derivatives of Constraint
+          Eigen::Matrix<double, 6, 3> pd_constr_c_i = 2 * beta2 * acc.transpose(); // Partial derivative of constraint w.r.t c_i // (2s, m) = (2s, 1) * (1, m)
+          double pd_constr_t =  2 * beta3.transpose() * c * acc;// P.D. of constraint w.r.t t // (1,1) = (1, 2s) * (2s, m) * (m, 1)
 
-        //   jerkOpt_.get_gdC().block<6, 3>(i * 6, 0) += omega * step * gradViolaVc;
-        //   gdT(i) += omega * (costv / K + step * gradViolaVt);
-        //   costs(2) += omega * step * costv; // Sum costs
-        // }
+          // Intermediate calculations for chain rule to get partial derivatives of cost J
+          double pd_cost_constr = 3 * (T_i / K) * omega * wei_feas_ * pow(apen,2) ; // P.D. of cost w.r.t constraint
+          double cost = (T_i / K) * omega * wei_feas_ * pow(apen,3);
+          double pd_t_T_i = (j / K); // P.D. of time t w.r.t T_i
 
-        // feasibility for keeping within acceleration limits
-        if (feasibilityGradCostA(acc, grada, costa))
-        {
-          gradViolaAc = beta2 * grada.transpose();
-          gradViolaAt = alpha * grada.transpose() * jer;
-          jerkOpt_.get_gdC().block<6, 3>(i * 6, 0) += omega * step * gradViolaAc;
-          gdT(i) += omega * (costa / K + step * gradViolaAt);
-          costs(2) += omega * step * costa;
+          // Partial derivatives of Cost J
+          Eigen::Matrix<double, 6, 3> pd_cost_c_i = pd_cost_constr * pd_constr_c_i; // P.D. of cost w.r.t c_i. Uses chain rule // (m,2s)
+          double pd_cost_t = cost / T_i  + pd_cost_constr * pd_constr_t * pd_t_T_i;// P.D. of cost w.r.t t // (1,1)
+
+          // Sum up sampled costs
+          jerkOpt_.get_gdC().block<6, 3>(i * 6, 0) += pd_cost_c_i;
+          gdT(i) += pd_cost_t; 
+          costs(2) += cost; 
         }
 
         // printf("L\n");
