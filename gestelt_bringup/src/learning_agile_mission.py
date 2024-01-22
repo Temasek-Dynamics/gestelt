@@ -178,6 +178,7 @@ def main():
         
         if (MISSION_MODE):
             # Already in MISSION 
+            time.sleep(1)
             break
         elif (not HOVER_MODE):
             # IDLE -> TAKE OFF -> HOVER

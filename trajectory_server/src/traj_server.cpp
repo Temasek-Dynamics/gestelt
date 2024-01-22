@@ -200,7 +200,7 @@ void TrajServer::execTrajTimerCb(const ros::TimerEvent &e)
 {
   // has received vel value
   // ROS_INFO("execTrajTimerCb received velocity: %f, %f, %f", last_mission_vel_(0), last_mission_vel_(1), last_mission_vel_(2));
-  // last_mission_yaw_ = M_PI/2;
+  last_mission_yaw_ = M_PI/2;
   
   // ROS_INFO("last_mission_yaw: %f", last_mission_yaw_);
   
