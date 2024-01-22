@@ -554,7 +554,7 @@ void TrajServer::execTakeOff()
  
     // z axis takeoff ramp
     if (takeoff_ramp_(2) < takeoff_height_){
-      takeoff_ramp_(2) += pub_cmd_freq_/(pub_cmd_freq_*20); // 200/  25Hz, then the addition is 0.01m, for 0.04s
+      takeoff_ramp_(2) += pub_cmd_freq_/(pub_cmd_freq_*200); // 200/  25Hz, then the addition is 0.01m, for 0.04s
     }
     else {
       takeoff_ramp_(2) = last_mission_pos_(2);
