@@ -207,7 +207,7 @@ def main():
     # map frame is the origin of the map
     # waypoints are under the map frame, will be transformed to world frame
     waypoints.append(create_pose(0.0,-0.0,1.4)) # 1.5,-0.0,1.4
-    waypoints.append(create_pose(0.0,-0.5,1.4))# 1.5,-1.8,1.4
+    waypoints.append(create_pose(0.0,-0.5,1.4))# 0.0,-1.8,1.4
     # waypoints.append(create_pose(0.0,0.0,1.2))# 5.0,2.0,3
 
     
@@ -222,16 +222,16 @@ def main():
     # accelerations constraint
     # (0.0,0.0,0.0))
     # (None,None,None)) means no constraint
-    accel_list.append(create_accel(-f*np.sin(angle_rad),0.0,g+f*np.cos(angle_rad)))
+    # accel_list.append(create_accel(-f*np.sin(angle_rad),0.0,g+f*np.cos(angle_rad)))
     accel_list.append(create_vel(None,None,None))
-    # accel_list.append(create_vel(None,None,None))
+    accel_list.append(create_vel(None,None,None))
     # accel_list.append(create_vel(None,None,None)) 
 
     # velocites constraint
     vel_list = []
-    vel_list.append(create_vel(None,None,None))
+    # vel_list.append(create_vel(None,None,None))
     vel_list.append(create_vel(0.0,0.0,0.0))
-    # vel_list.append(create_vel(0.0,0.0,0.0))
+    vel_list.append(create_vel(0.0,0.0,0.0))
     # vel_list.append(create_vel(0.0,0.0,0.0))
 
 
