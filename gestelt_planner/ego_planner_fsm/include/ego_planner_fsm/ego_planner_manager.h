@@ -7,7 +7,6 @@
 
 #include <ros/ros.h>
 
-// #include <traj_utils/DataDisp.h>
 #include <traj_utils/plan_container.hpp>
 #include <traj_utils/planning_visualization.h>
 
@@ -17,13 +16,9 @@
 
 namespace ego_planner
 {
-
-  // Fast Planner Manager
   // Key algorithms of mapping and planning are called
-
   class EGOPlannerManager
   {
-    // SECTION stable
   public:
     EGOPlannerManager();
     ~EGOPlannerManager();
@@ -32,6 +27,7 @@ namespace ego_planner
 
     /* main planning interface */
     void initPlanModules(ros::NodeHandle &nh, ros::NodeHandle &pnh, PlanningVisualization::Ptr vis = NULL);
+
     bool computeInitState(
         const Eigen::Vector3d &start_pt, const Eigen::Vector3d &start_vel,
         const Eigen::Vector3d &start_acc, const Eigen::Vector3d &local_target_pt,
@@ -56,9 +52,9 @@ namespace ego_planner
      */
     bool reboundReplan(
         const Eigen::Vector3d &start_pt, const Eigen::Vector3d &start_vel,
-        const Eigen::Vector3d &start_acc, const Eigen::Vector3d &end_pt,
-        const Eigen::Vector3d &end_vel, const Eigen::Vector3d &formation_start_pt,
-        const Eigen::Vector3d &formation_end_pt, const bool flag_polyInit, 
+        const Eigen::Vector3d &start_acc, 
+        const Eigen::Vector3d &end_pt, const Eigen::Vector3d &end_vel, 
+        const bool flag_polyInit, 
         const bool flag_randomPolyTraj, const bool touch_goal);
 
     /**

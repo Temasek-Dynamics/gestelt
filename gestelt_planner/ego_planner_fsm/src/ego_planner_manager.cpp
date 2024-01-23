@@ -181,8 +181,15 @@ namespace ego_planner
   }
 
   /**
+   * @brief Get local goal (position and velocity) based on planning horizon 
    * 
-  */
+   * @param planning_horizon 
+   * @param start_pt 
+   * @param global_end_pt 
+   * @param local_target_pos 
+   * @param local_target_vel 
+   * @param touch_goal 
+   */
   void EGOPlannerManager::getLocalTarget(
       const double planning_horizon, const Eigen::Vector3d &start_pt,
       const Eigen::Vector3d &global_end_pt, Eigen::Vector3d &local_target_pos,
@@ -258,8 +265,7 @@ namespace ego_planner
   bool EGOPlannerManager::reboundReplan(
       const Eigen::Vector3d &start_pt, const Eigen::Vector3d &start_vel,
       const Eigen::Vector3d &start_acc, const Eigen::Vector3d &local_target_pt,
-      const Eigen::Vector3d &local_target_vel, const Eigen::Vector3d &formation_start_pt,
-      const Eigen::Vector3d &formation_end_pt, const bool flag_polyInit,
+      const Eigen::Vector3d &local_target_vel, const bool flag_polyInit,
       const bool flag_randomPolyTraj, const bool touch_goal)
   {
 
@@ -272,7 +278,6 @@ namespace ego_planner
          <<std::endl;
 
     ploy_traj_opt_->setIfTouchGoal(touch_goal);
-    ploy_traj_opt_->setFStartFEnd(formation_start_pt, formation_end_pt);
 
     // if ((start_pt - local_target_pt).norm() < 0.2)
     // { 
@@ -322,8 +327,6 @@ namespace ego_planner
     t_start = ros::Time::now();
 
     /*** STEP 2: OPTIMIZE ***/
-    ROS_INFO("[reboundReplan] Optimize trajectory");
-
     bool flag_success = false;
     poly_traj::MinJerkOpt best_MJO; // Best minimum jerk trajectory
 
@@ -340,8 +343,6 @@ namespace ego_planner
                                                       innerPts, initTraj.getDurations(),
                                                       cstr_pts, final_cost);
 
-    ROS_INFO("[reboundReplan] After Optimize trajectory");
-
     best_MJO = ploy_traj_opt_->getMinJerkOpt();
 
     t_opt = ros::Time::now() - t_start;
@@ -352,7 +353,7 @@ namespace ego_planner
     // std::cout << "plan_success=" << flag_success << std::endl;
     if (!flag_success)
     {
-      ROS_INFO("[reboundReplan] Planning unsuccessful");
+      ROS_ERROR("[EGOPlannerManager::reboundReplan] Planning unsuccessful from ploy_traj_opt_->optimizeTrajectory");
       visualization_->displayFailedList(cstr_pts, 0);
       continous_failures_count_++;
       return false;
@@ -417,8 +418,8 @@ namespace ego_planner
   }
 
   bool EGOPlannerManager::planGlobalTrajWaypoints(
-      const Eigen::Vector3d &start_pos, const Eigen::Vector3d &start_vel,
-      const Eigen::Vector3d &start_acc, const std::vector<Eigen::Vector3d> &waypoints,
+      const Eigen::Vector3d &start_pos, const Eigen::Vector3d &start_vel, const Eigen::Vector3d &start_acc, 
+      const std::vector<Eigen::Vector3d> &waypoints,
       const Eigen::Vector3d &end_vel, const Eigen::Vector3d &end_acc)
   {
     

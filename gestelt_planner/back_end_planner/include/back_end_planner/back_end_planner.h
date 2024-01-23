@@ -1,137 +1,89 @@
-#ifndef _FRONT_END_PLANNER_H_
-#define _FRONT_END_PLANNER_H_
-
-#include <front_end_planner/front_end_helper.h>
+#ifndef _BACK_END_PLANNER_H_
+#define _BACK_END_PLANNER_H_
 
 #include <algorithm>
 
 #include <Eigen/Eigen>
 
 #include <ros/ros.h>
-#include <std_msgs/Empty.h>
 #include <geometry_msgs/Pose.h>
-#include <nav_msgs/Odometry.h>
-#include <gestelt_msgs/Goals.h>
 
 #include <visualization_msgs/Marker.h>
 
-#include <global_planner/a_star.h>
-#include <sfc_generation/spherical_sfc.h>
+#include <traj_utils/PolyTraj.h>
+#include <traj_utils/MINCOTraj.h>
+#include <ego_planner_fsm/ego_planner_manager.h>
 
-class FrontEndPlanner
+class BackEndPlanner
 {
 public:
-  FrontEndPlanner() {}
-  ~FrontEndPlanner() {}
+  BackEndPlanner() {}
+  ~BackEndPlanner() {}
 
   void init(ros::NodeHandle &nh, ros::NodeHandle &pnh);
 
 private:
   ros::NodeHandle node_;
-  std::string node_name_{"FrontEndPlanner"};
+  std::string node_name_{"BackEndPlanner"};
 
   // Subscribers and publishers
-  ros::Subscriber odom_sub_; // Subscriber to drone odometry
-  ros::Subscriber goal_sub_; // Subscriber to user-defined goals
-
   ros::Subscriber debug_start_sub_; // DEBUG: Subscriber to user-defined start point
   ros::Subscriber debug_goal_sub_; // DEBUG: Subscriber to user-defined goal point
-  ros::Subscriber plan_on_demand_sub_; // DEBUG: Subscriber to trigger planning on demand
-
-  /* Visualization for Front End Planner*/
-  ros::Publisher front_end_plan_pub_; // Publish front end plan to back-end optimizer
-  ros::Publisher front_end_plan_viz_pub_; // Visualization of front end plan
-  ros::Publisher closed_list_viz_pub_; // Visualization of closed list
-
-  /* Visualization for SFC*/
-  ros::Publisher sfc_spherical_viz_pub_; // Visualization of SFC spheres
-
-  ros::Publisher sfc_p_cand_viz_pub_; // Visualization of SFC sampling points
-  ros::Publisher sfc_dist_viz_pub_; // Visualization of SFC sampling distribution
-  ros::Publisher sfc_waypoints_viz_pub_; // Visualization of SFC waypoints
-
-  ros::Timer plan_timer_; // Timer for planning loop
+  ros::Subscriber sfc_traj_sub_; // Sub to Safe Flight Corridor trajectory
   
   /* parameters */
   int drone_id_;
-  double squared_goal_tol_; // Squared goal tolerance
-  bool within_goal_tol_; // Within a specified tolerance of the goal
+  double planning_horizon_;
+  int num_replan_retries_;
 
   /* Mapping */
   std::shared_ptr<GridMap> map_;
 
   /* Planner */
-  std::unique_ptr<AStarPlanner> front_end_planner_; // Front-end planner
-  std::unique_ptr<SphericalSFC> sfc_generation_; // Safe flight corridor generator
-
+  std::unique_ptr<ego_planner::EGOPlannerManager> back_end_planner_; // Back-end planner
+  std::shared_ptr<ego_planner::PlanningVisualization> visualization_; // For publishing visualizations
+  
   /* Data structs */
-  Waypoint waypoints_; // Waypoint handler object
-  Eigen::Vector3d cur_pos_, cur_vel_, cur_acc_;   // current state
-  Eigen::Vector3d start_pos_, start_vel_, start_acc_;   // start state
-  Eigen::Vector3d goal_pos_, goal_vel_, goal_acc_; // goal state
+  Eigen::Vector3d start_pos_, start_vel_;
+  Eigen::Vector3d goal_pos_;
+  
 
 private: 
 
-  /* Timer callbacks */
-
-  /**
-   * @brief Timer callback to generate plan
-   * @param e 
-   */
-  void planTimerCB(const ros::TimerEvent &e);
-
   /* Subscriber callbacks */
 
-  /**
-   * @brief callback to multiple user-defined goal waypoints 
-   * 
-   * @param msg 
-   */
-  void goalsCB(const gestelt_msgs::GoalsConstPtr &msg);
+  // /**
+  //  * @brief Callback for SFC Trajectory message
+  //  * 
+  //  * @param msg 
+  //  */
+  // void sfcTrajectoryCB(const gestelt_msgs::SphericalSFCConstPtr& msg);
 
-  /**
-   * @brief Callback for odometry message
-   * 
-   * @param msg 
-   */
-  void odometryCB(const nav_msgs::OdometryConstPtr &msg);
-
-  /**
-   * @brief callback to debug topic for setting starting point of plan
-   * 
-   * @param msg 
-   */
   void debugStartCB(const geometry_msgs::PoseConstPtr &msg);
 
-  /**
-   * @brief callback to debug goal topic for setting starting point of plan
-   * 
-   * @param msg 
-   */
   void debugGoalCB(const geometry_msgs::PoseConstPtr &msg);
-
+  
   /**
-   * @brief callback to debug goal topic for setting starting point of plan
+   * @brief Convert from local trajectory to polynomial and MINCO Trajectory
    * 
-   * @param msg 
+   * @param poly_msg 
+   * @param MINCO_msg 
    */
-  void planOnDemandCB(const std_msgs::EmptyConstPtr &msg);
+  void polyTraj2ROSMsg(ego_planner::LocalTrajData *data, traj_utils::PolyTraj &poly_msg, traj_utils::MINCOTraj &MINCO_msg);
 
   /**
-   * @brief Generate a plan
+   * @brief Generate and optimize a given plan
    * 
-   */
-  bool generatePlan();
-
-  /* Checks */
-
-  /**
-   * @brief Check if current position is within goal tolerance
-   * 
+   * @param start_pos 
+   * @param start_vel 
+   * @param goal_pos 
    * @return true 
    * @return false 
    */
-  bool isGoalReached(const Eigen::Vector3d& pos, const Eigen::Vector3d& goal);
+  bool generatePlan(const Eigen::Vector3d& start_pos, const Eigen::Vector3d& start_vel, 
+    const Eigen::Vector3d& goal_pos, const int& num_retrie);
+
+  /* Checks */
 
   /**
    * @brief Check feasibility of plan
@@ -142,6 +94,17 @@ private:
   bool isPlanFeasible(const Eigen::Vector3d& waypoints);
 
 private:
+  template<typename ... Args>
+  std::string string_format( const std::string& format, Args ... args )
+  {
+    int size_s = std::snprintf( nullptr, 0, format.c_str(), args ... ) + 1; // Extra space for '\0'
+    if( size_s <= 0 ){ throw std::runtime_error( "Error during formatting." ); }
+    auto size = static_cast<size_t>( size_s );
+    std::unique_ptr<char[]> buf( new char[ size ] );
+    std::snprintf( buf.get(), size, format.c_str(), args ... );
+    return std::string( buf.get(), buf.get() + size - 1 ); // We don't want the '\0' inside
+  }
+
 
   /* Logging functions */
   void logInfo(const std::string& str){
@@ -184,6 +147,6 @@ private:
       drone_id_, str.c_str());
   }
 
-}; // class FrontEndPlanner
+}; // class BackEndPlanner
 
-#endif // _FRONT_END_PLANNER_H_
+#endif // _BACK_END_PLANNER_H_

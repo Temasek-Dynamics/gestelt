@@ -4,14 +4,13 @@
   <arg name="drone_id_ns" value="drone$(arg drone_id)"/>
 
   <arg name="cfg_filepath" default="" />
-  <arg name="odometry_topic" default="mavros/local_position/odom" />
 
-  <!-- Front end planner -->
+  <!-- Back end planner -->
   <group ns="$(arg drone_id_ns)">
-    <node pkg="front_end_planner" type="front_end_planner_node" name="front_end_planner_test" required="true" output="screen">
+    <node pkg="back_end_planner" type="back_end_planner_node" name="back_end_planner" required="true" output="screen">
         <rosparam command="load" file="$(arg cfg_filepath)" />
 
-        <remap from="planner/goals" to="planner/goals"/>
+        <remap from="front_end_planner/sfc_trajectory" to="front_end_planner/sfc_trajectory"/>
 
         <param name="grid_map/debug_input_entire_map" value="true"/>
         <param name="grid_map/entire_pcd_map_topic" value="/fake_map"/>

@@ -54,9 +54,9 @@ void TrajectoryServer::init(ros::NodeHandle& nh, ros::NodeHandle& pnh)
   pos_cmd_raw_pub_ = nh.advertise<mavros_msgs::PositionTarget>("mavros/setpoint_raw/local", 50);
   server_state_pub_ = nh.advertise<gestelt_msgs::CommanderState>("traj_server/state", 50);
 
-  /////////////////
+  ////////////////////
   /* Service clients */
-  /////////////////
+  ////////////////////
   arming_client = nh.serviceClient<mavros_msgs::CommandBool>("mavros/cmd/arming");
   set_mode_client = nh.serviceClient<mavros_msgs::SetMode>("mavros/set_mode");
 

@@ -34,21 +34,21 @@ namespace ego_planner
     pnh.param("fsm/emergency_time", emergency_time_, 1.0);
     pnh.param("fsm/fail_safe", enable_fail_safe_, true);
 
-    int formation_num = -1;
-    pnh.param("formation/num", formation_num, -1);
-    if (formation_num < planner_manager_->pp_.drone_id + 1)
-    {
-      logError("formation_num is smaller than the drone number, illegal!");
-      return;
-    }
-    std::vector<double> pos;
-    pnh.getParam("formation/drone" + std::to_string(planner_manager_->pp_.drone_id), pos);
-    formation_pos_ << pos[0], pos[1], pos[2];
-    pnh.getParam("formation/start", pos);
+    // int formation_num = -1;
+    // pnh.param("formation/num", formation_num, -1);
+    // if (formation_num < planner_manager_->pp_.drone_id + 1)
+    // {
+    //   logError("formation_num is smaller than the drone number, illegal!");
+    //   return;
+    // }
+    // std::vector<double> pos;
+    // pnh.getParam("formation/drone" + std::to_string(planner_manager_->pp_.drone_id), pos);
+    // formation_pos_ << pos[0], pos[1], pos[2];
+    // pnh.getParam("formation/start", pos);
  
-    Eigen::Vector3d formation_start;
-    formation_start << pos[0], pos[1], pos[2];
-    waypoints_.setStartWP(formation_start);
+    // Eigen::Vector3d formation_start;
+    // formation_start << pos[0], pos[1], pos[2];
+    // waypoints_.setStartWP(formation_start);
 
     // double pub_state_freq, tick_state_freq, exec_state_freq;
     // pnh.param("fsm/pub_state_freq", pub_state_freq, 10.0);
@@ -443,7 +443,6 @@ namespace ego_planner
 
   }
 
-
   /**
    * Subscriber Callbacks
   */
@@ -666,37 +665,17 @@ namespace ego_planner
           msg->position.y,
           msg->position.z);
 
-    // waypoints_.reset();
-    // waypoints_.addWP(odom_pos_);
-    // waypoints_.addWP(Eigen::Vector3d{
-    //       msg->position.x,
-    //       msg->position.y,
-    //       msg->position.z});
-    // If there are at least 2 waypoints,
-    // if (waypoints_.getSize() >= 2)
-    // {
-    //   // Set the starting wp to be second last waypoint 
-    //   waypoints_.setStartWP(waypoints_.getWP(waypoints_.getSize() - 2));
-    // }
-
     goal_pos_ = Eigen::Vector3d{
           msg->position.x,
           msg->position.y,
           msg->position.z};
 
-    ROS_INFO("Generating minimum jerk trajectory");
-    planNextWaypoint(odom_pos_, Eigen::Vector3d{
-          msg->position.x,
-          msg->position.y,
-          msg->position.z});
-    ROS_INFO("Generated minimum jerk trajectory");
+    planNextWaypoint(odom_pos_, goal_pos_);
 
-    ROS_INFO("Before planFromGlobalTraj");
     if (!planFromGlobalTraj(5)){
       ROS_ERROR("Failed to plan from global trajectory");
       return;
     }
-    ROS_ERROR("Planning successful");
   }
 
   /**
@@ -767,26 +746,14 @@ namespace ego_planner
         planning_horizon_, start_pt_, end_pt_,
         local_target_pt_, local_target_vel_,
         touch_goal_);
-    ROS_INFO("Got local target");
 
     bool flag_polyInit = (have_new_target_ || flag_use_poly_init);
-    ROS_INFO("Before reboundReplan");
-    // bool plan_success = planner_manager_->reboundReplan(
-    //     start_pt_, start_vel_, start_acc_, 
-    //     local_target_pt_, local_target_vel_, 
-    //     waypoints_.getStartWP(), waypoints_.getNextWP(), 
-    //     flag_polyInit,
-    //     flag_randomPolyTraj, touch_goal_);
-
+    
     bool plan_success = planner_manager_->reboundReplan(
-        start_pt_, start_vel_, 
-        start_acc_, local_target_pt_, 
-        local_target_vel_, 
-        odom_pos_, goal_pos_, // Formation start and end
+        start_pt_, start_vel_, start_acc_, 
+        local_target_pt_, local_target_vel_, 
         flag_polyInit,
         flag_randomPolyTraj, touch_goal_);
-
-    ROS_INFO("AFter reboundReplan");
 
     have_new_target_ = false;
 
@@ -812,11 +779,13 @@ namespace ego_planner
 
   void EGOReplanFSM::planNextWaypoint(const Eigen::Vector3d previous_wp, const Eigen::Vector3d next_wp)
   {
-    Eigen::Vector3d dir = (next_wp - previous_wp).normalized();
+    // Eigen::Vector3d dir = (next_wp - previous_wp).normalized();
     // Offset end_pt_ by the formation position
-    end_pt_ = next_wp + Eigen::Vector3d(dir(0) * formation_pos_(0) - dir(1) * formation_pos_(1),
-                                        dir(1) * formation_pos_(0) + dir(0) * formation_pos_(1),
-                                        formation_pos_(2));
+    // end_pt_ = next_wp + Eigen::Vector3d(dir(0) * formation_pos_(0) - dir(1) * formation_pos_(1),
+    //                                     dir(1) * formation_pos_(0) + dir(0) * formation_pos_(1),
+    //                                     formation_pos_(2));
+
+    end_pt_ = next_wp;
 
     std::vector<Eigen::Vector3d> one_pt_wps;
     one_pt_wps.push_back(end_pt_);

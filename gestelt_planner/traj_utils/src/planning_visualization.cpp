@@ -17,14 +17,16 @@ namespace ego_planner
     failed_list_pub = nh.advertise<visualization_msgs::Marker>("failed_list", 2);
     a_star_list_pub = nh.advertise<visualization_msgs::Marker>("a_star_list", 20);
 
-    intermediate_pt0_pub = nh.advertise<visualization_msgs::Marker>("pt0_dur_opt", 10);
-    intermediate_grad0_pub = nh.advertise<visualization_msgs::MarkerArray>("grad0_dur_opt", 10);
-    intermediate_pt1_pub = nh.advertise<visualization_msgs::Marker>("pt1_dur_opt", 10);
-    intermediate_grad1_pub = nh.advertise<visualization_msgs::MarkerArray>("grad1_dur_opt", 10);
-    intermediate_grad_smoo_pub = nh.advertise<visualization_msgs::MarkerArray>("smoo_grad_dur_opt", 10);
-    intermediate_grad_dist_pub = nh.advertise<visualization_msgs::MarkerArray>("dist_grad_dur_opt", 10);
-    intermediate_grad_feas_pub = nh.advertise<visualization_msgs::MarkerArray>("feas_grad_dur_opt", 10);
-    intermediate_grad_swarm_pub = nh.advertise<visualization_msgs::MarkerArray>("swarm_grad_dur_opt", 10);
+    planner_sv_pairs_pub_ = nh.advertise<visualization_msgs::MarkerArray>("planner_sv_pairs", 1000);
+
+    intmd_pt0_pub = nh.advertise<visualization_msgs::Marker>("pt0_dur_opt", 10);
+    intmd_grad0_pub = nh.advertise<visualization_msgs::MarkerArray>("grad0_dur_opt", 10);
+    intmd_pt1_pub = nh.advertise<visualization_msgs::Marker>("pt1_dur_opt", 10);
+    intmd_grad1_pub = nh.advertise<visualization_msgs::MarkerArray>("grad1_dur_opt", 10);
+    intmd_grad_smoo_pub = nh.advertise<visualization_msgs::MarkerArray>("smoo_grad_dur_opt", 10);
+    intmd_grad_static_obs_pub = nh.advertise<visualization_msgs::MarkerArray>("static_obs_gradient", 10);
+    intmd_grad_feas_pub = nh.advertise<visualization_msgs::MarkerArray>("feas_grad_dur_opt", 10);
+    intmd_grad_swarm_pub = nh.advertise<visualization_msgs::MarkerArray>("swarm_grad_dur_opt", 10);
   }
 
   // // real ids used: {id, id+1000}
@@ -98,8 +100,9 @@ namespace ego_planner
   }
 
   // real ids used: {1000*id ~ (arrow nums)+1000*id}
-  void PlanningVisualization::generateArrowDisplayArray(visualization_msgs::MarkerArray &array,
-                                                        const vector<Eigen::Vector3d> &list, double scale, Eigen::Vector4d color, int id)
+  void PlanningVisualization::generateArrowDisplayArray(
+    visualization_msgs::MarkerArray &array, const vector<Eigen::Vector3d> &list, 
+    double scale, const Eigen::Vector4d& color, const int& id)
   {
     visualization_msgs::Marker arrow;
     arrow.header.frame_id = origin_frame_;
@@ -207,7 +210,6 @@ namespace ego_planner
 
   void PlanningVisualization::displayInitPathList(vector<Eigen::Vector3d> init_pts, const double scale, int id)
   {
-
     if (init_list_pub.getNumSubscribers() == 0)
     {
       return;
@@ -256,7 +258,6 @@ namespace ego_planner
 
   void PlanningVisualization::displayAStarList(std::vector<std::vector<Eigen::Vector3d>> a_star_paths, int id /* = Eigen::Vector4d(0.5,0.5,0,1)*/)
   {
-
     if (a_star_list_pub.getNumSubscribers() == 0)
     {
       return;
@@ -268,7 +269,7 @@ namespace ego_planner
     Eigen::Vector4d color = Eigen::Vector4d(0.5 + ((double)rand() / RAND_MAX / 2), 0.5 + ((double)rand() / RAND_MAX / 2), 0, 1); // make the A star pathes different every time.
     double scale = 0.05 + (double)rand() / RAND_MAX / 10;
 
-    for (auto block : a_star_paths)
+    for (auto block : a_star_paths) // For each a_star path segment
     {
       list.clear();
       for (auto pt : block)
@@ -281,11 +282,12 @@ namespace ego_planner
     }
   }
 
-  void PlanningVisualization::displayArrowList(ros::Publisher &pub, const vector<Eigen::Vector3d> &list, double scale, Eigen::Vector4d color, int id)
+  void PlanningVisualization::displayArrowList(
+    ros::Publisher &pub, const vector<Eigen::Vector3d> &list, 
+    double scale, const Eigen::Vector4d& color, const int& id)
   {
     visualization_msgs::MarkerArray array;
-    // clear
-    pub.publish(array);
+    pub.publish(array); //publish to clear existing arrows
 
     generateArrowDisplayArray(array, list, scale, color, id);
 
@@ -303,15 +305,16 @@ namespace ego_planner
 
     if ( !type.compare("0") )
     {
-      displayMarkerList(intermediate_pt0_pub, pts_, 0.1, color, id);
+      displayMarkerList(intmd_pt0_pub, pts_, 0.1, color, id);
     }
     else if ( !type.compare("1") )
     {
-      displayMarkerList(intermediate_pt1_pub, pts_, 0.1, color, id);
+      displayMarkerList(intmd_pt1_pub, pts_, 0.1, color, id);
     }
   }
 
-  void PlanningVisualization::displayIntermediateGrad(std::string type, Eigen::MatrixXd &pts, Eigen::MatrixXd &grad, int id, Eigen::Vector4d color)
+  void PlanningVisualization::displayIntermediateGrad(
+    std::string type, Eigen::MatrixXd &pts, Eigen::MatrixXd &grad, int id, Eigen::Vector4d color)
   {
     if ( pts.cols() != grad.cols() )
     {
@@ -324,46 +327,89 @@ namespace ego_planner
     {
       for ( int i=0; i<pts.cols(); i++ )
       {
-        arrow_.emplace_back(pts.col(i));
-        arrow_.emplace_back(grad.col(i));
+        arrow_.emplace_back(pts.col(i)); // Arrow start
+        arrow_.emplace_back(grad.col(i)); // Arrow end
       }
     }
     else
     {
       for ( int i=0; i<pts.cols(); i++ )
       {
-        arrow_.emplace_back(pts.col(i));
-        arrow_.emplace_back(pts.col(i)+grad.col(i));
+        arrow_.emplace_back(pts.col(i)); // Arrow start
+        arrow_.emplace_back(pts.col(i)+grad.col(i)); // Arrow end
       }
     }
     
 
     if ( !type.compare("grad0") )
     {
-      displayArrowList(intermediate_grad0_pub, arrow_, 0.05, color, id);
+      displayArrowList(intmd_grad0_pub, arrow_, 0.05, color, id);
     }
     else if ( !type.compare("grad1") )
     {
-      displayArrowList(intermediate_grad1_pub, arrow_, 0.05, color, id);
+      displayArrowList(intmd_grad1_pub, arrow_, 0.05, color, id);
     }
     else if ( !type.compare("dist") )
     {
-      displayArrowList(intermediate_grad_dist_pub, arrow_, 0.05, color, id);
+      displayArrowList(intmd_grad_static_obs_pub, arrow_, 0.05, color, id);
     }
     else if ( !type.compare("smoo") )
     {
-      displayArrowList(intermediate_grad_smoo_pub, arrow_, 0.05, color, id);
+      displayArrowList(intmd_grad_smoo_pub, arrow_, 0.05, color, id);
     }
     else if ( !type.compare("feas") )
     {
-      displayArrowList(intermediate_grad_feas_pub, arrow_, 0.05, color, id);
+      displayArrowList(intmd_grad_feas_pub, arrow_, 0.05, color, id);
     }
     else if ( !type.compare("swarm") )
     {
-      displayArrowList(intermediate_grad_swarm_pub, arrow_, 0.02, color, id);
+      displayArrowList(intmd_grad_swarm_pub, arrow_, 0.02, color, id);
     }
     
   }
 
-  // PlanningVisualization::
+  void PlanningVisualization::pubStaticObsGrad(
+    Eigen::MatrixXd &pts, Eigen::MatrixXd &grad, int id, Eigen::Vector4d color)
+  {
+
+    if ( pts.cols() != grad.cols() )
+    {
+      ROS_ERROR("[PlanningVisualization] pubStaticObsGrad: pts.cols() != grad.cols()");
+      return;
+    }
+    std::vector<Eigen::Vector3d> arrow;
+    arrow.reserve(pts.cols()*2);
+
+    for ( int i=0; i<pts.cols(); i++ )
+    {
+      arrow.emplace_back(pts.col(i)); // Arrow start
+      arrow.emplace_back(pts.col(i)+grad.col(i)); // Arrow end
+    }
+
+    displayArrowList(intmd_grad_static_obs_pub, arrow, 0.05, color, id);
+  }
+
+  void PlanningVisualization::pubSVPairs(
+    const std::vector<Eigen::Vector3d> &pts, 
+    const std::vector<Eigen::Vector3d> &dir, 
+    const int& id, const Eigen::Vector4d& color)
+  {
+
+    if ( pts.size() != dir.size() )
+    {
+      ROS_ERROR("[PlanningVisualization] pubSVPairs: pts.cols() != grad.cols()");
+      return;
+    }
+    std::vector<Eigen::Vector3d> arrow;
+    arrow.reserve(pts.size()*2);
+
+    for ( int i=0; i < pts.size(); i++ )
+    {
+      arrow.emplace_back(pts[i]); // Arrow start
+      arrow.emplace_back(pts[i] + dir[i]); // Arrow end
+    }
+
+    displayArrowList(planner_sv_pairs_pub_, arrow, 0.05, color, id);
+  }
+
 } // namespace ego_planner

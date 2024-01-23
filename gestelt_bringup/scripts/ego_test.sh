@@ -22,8 +22,14 @@ source $SCRIPT_DIR/../../../devel/setup.bash &&
 #####
 # Start up ego planner and planner adaptor
 CMD_0="
-roslaunch gestelt_bringup ego_planner_test.launch drone_id:=0
+roslaunch gestelt_bringup back_end_planner.launch drone_id:=0
 "
+
+# CMD_0="
+# roslaunch gestelt_bringup ego_planner_test.launch drone_id:=0
+# "
+
+
 
 # Start up central nodes
 CMD_2="

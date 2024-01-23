@@ -1,30 +1,20 @@
 #####
-# FSM params 
+# Back-end params
 #####
-fsm:
-  # waypoint_type: 1 for manual publishing of single goals, 2 for sending multiple waypoints 
-  waypoint_type: 2
-  # thresh_replan_time: Replanning period (1/frequency)
-  thresh_replan_time: 0.1
-  # thresh_no_replan_meter: Replan only if current position and local target exceeds this parameter 
-  thresh_no_replan_meter: 0.25
-  # planning_horizon: Distance to plan for local target. Always set to 1.5 times greater than sensing horizon
+back_end:
+  planner_frequency: 10.0
+  # planning_horizon: How far ahead to plan [m]
   planning_horizon: 10.0
-  emergency_time: 1.0
-  fail_safe: true
-
-  # pub_state_freq: Frequency to publish the state
-  pub_state_freq: 10.0
-  # pub_heartbeat_freq: Frequency to publish planner heartbeat
-  pub_heartbeat_freq: 10.0
-  # pub_heartbeat_freq: Timeout for TF lookup
-  tf_lookup_timeout: 60.0
+  # num_replan_retries: Number of times for back-end to retry
+  num_replan_retries: 5
 
 #####
 # Mapping params
 #####
 grid_map:
-# global_frame: "world"
+  global_frame: "world"
+  uav_origin_frame: "world"
+
   map_size_x: 80.0
   map_size_y: 80.0
   map_size_z: 20.0
@@ -35,21 +25,24 @@ grid_map:
   sensor/max_range: 5.0
   ground_height: 0.0
 
-  occ_grid/resolution: 0.1 
-  occ_grid/inflation: 0.0
+  occ_grid/resolution: 0.1
+  occ_grid/inflation: 0.15
   filter/downsample_cloud: false 
   filter/depth_stride: 4 
   filter/voxel_size: 0.1
 
+  sensor_queue_size: 5
+
   # camera intrinsic parameters 
   k_depth_scaling_factor: 1000.0
   # camera extrinsic parameters 
-  camera_to_body/roll: 90.0
-  camera_to_body/pitch: 180.0
-  camera_to_body/yaw: 90.0
-  camera_to_body/t_x: 0.0
-  camera_to_body/t_y: 0.0
-  camera_to_body/t_z: 0.0
+  camera_to_body: 
+    roll: 90.0
+    pitch: 180.0
+    yaw: 90.0
+    t_x: 0.0
+    t_y: 0.0
+    t_z: 0.0
 
 #####
 # Manager params 
@@ -83,3 +76,7 @@ optimization:
   max_vel: 1.5
   max_acc: 6.0
   max_jer: 20.0
+
+
+
+

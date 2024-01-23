@@ -98,16 +98,16 @@ class DeterministicForest
 
 			// We can either:
 			// A) Generate a test map for the vicon room
-			generateViconTest();
-			generateRoomBoundaries(5.6, 5.6, 3.0, 
-				-2.8, 2.8, -2.8, 2.8);
+			// generateViconTest();
+			// generateRoomBoundaries(5.6, 5.6, 3.0, 
+			// 	-2.8, 2.8, -2.8, 2.8);
 
-			// B) Generate a random map for benchmarking
-			// unsigned int seed = rd();
-			// eng.seed(_seed);
-			// RandomMapGenerate();
-			// // Add floor and ceiling
-			// generateHorizontalPlane(_x_size, _y_size, 0.0);
+			// B) Generate a random forest map for benchmarking
+			unsigned int seed = rd();
+			eng.seed(_seed);
+			RandomMapGenerate();
+			// Add floor and ceiling
+			generateHorizontalPlane(_x_size, _y_size, 0.0);
 			// generateHorizontalPlane(_x_size, _y_size, _z_size);
 
 			// C) Generate a tunnel for benchmarking

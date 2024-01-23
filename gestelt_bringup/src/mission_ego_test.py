@@ -5,8 +5,11 @@ from geometry_msgs.msg import Pose
 from std_msgs.msg import Empty 
 
 # Publisher of server events to trigger change of states for trajectory server 
-dbg_start_pub = rospy.Publisher('/drone0_ego_planner_node/debug/plan_start', Pose, queue_size=5)
-dbg_goal_pub = rospy.Publisher('/drone0_ego_planner_node/debug/plan_goal', Pose, queue_size=5)
+# dbg_start_pub = rospy.Publisher('/drone0_ego_planner_node/debug/plan_start', Pose, queue_size=5)
+# dbg_goal_pub = rospy.Publisher('/drone0_ego_planner_node/debug/plan_goal', Pose, queue_size=5)
+
+dbg_start_pub = rospy.Publisher('/drone0/back_end_planner/debug/plan_start', Pose, queue_size=5)
+dbg_goal_pub = rospy.Publisher('/drone0/back_end_planner/debug/plan_goal', Pose, queue_size=5)
 
 def create_pose(x, y, z):
     pose = Pose()
@@ -27,7 +30,8 @@ def main():
 
     # Forest10x10
     start = create_pose(0.0, 0.0, 1.0)
-    goal = create_pose(10, 5.0, 1.0)
+    # goal = create_pose(5.5, 5.5, 1.0)
+    goal = create_pose(6.5, 6.5, 1.0)
 
     # Tunnel 2x2x10
     # start = create_pose(0.0, 1.0, 1.0)

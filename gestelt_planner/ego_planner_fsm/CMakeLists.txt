@@ -35,6 +35,17 @@ include_directories(
   ${EIGEN3_INCLUDE_DIR}
 )
 
+## Declare a C++ library
+add_library(${PROJECT_NAME} 
+  include/ego_planner_fsm/ego_planner_manager.h
+  src/ego_planner_manager.cpp
+)
+
+## Specify libraries to link a library or executable target against
+target_link_libraries(${PROJECT_NAME}
+  ${catkin_LIBRARIES}
+)
+
 add_executable(ego_planner_fsm_node
   src/ego_planner_fsm_node.cpp 
   src/ego_planner_fsm.cpp 

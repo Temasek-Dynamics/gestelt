@@ -75,7 +75,7 @@
         <param name="formation/num" value="$(arg num_drones)"/>
         <rosparam param="formation/start">[0, 0, 0]</rosparam>
         <!-- <rosparam param="formation/drone0">[  0, 0, 0]</rosparam> -->
-        <rosparam param="formation/drone0">[ 0.45, -0.45, 0]</rosparam>
+        <rosparam param="formation/drone0">[ 0.0, 0.0, 0]</rosparam>
         <rosparam param="formation/drone1">[ -0.45, -0.45, 0]</rosparam>
         <rosparam param="formation/drone2">[ -0.45, 0.45, 0]</rosparam>
         <rosparam param="formation/drone3">[ 0.45, 0.45, 0]</rosparam>

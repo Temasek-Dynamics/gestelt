@@ -43,10 +43,10 @@
     </include>
 
     <!-- Planner adaptor -->
-    <include file="$(find planner_adaptor)/launch/include/ego_planner_adaptor.xml">
+    <!-- <include file="$(find planner_adaptor)/launch/include/ego_planner_adaptor.xml">
         <arg name="cfg_filepath" value="$(arg adaptor_cfg_filepath)"/>
 
         <arg name="drone_id" value="$(arg drone_id)"/>
-    </include>
+    </include> -->
 
 </launch>

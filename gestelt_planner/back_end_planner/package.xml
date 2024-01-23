@@ -15,8 +15,10 @@
 
   <depend>std_msgs</depend>
   <depend>geometry_msgs</depend>
-  <depend>nav_msgs</depend>
   <depend>gestelt_msgs</depend>
+
+  <depend>ego_planner_fsm</depend>
+  <depend>traj_opt</depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>

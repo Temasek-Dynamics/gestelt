@@ -1,6 +1,6 @@
 #include <csignal>
 
-#include <front_end_planner/front_end_planner.h>
+#include <back_end_planner/back_end_planner.h>
 
 int main(int argc, char **argv)
 {
@@ -8,9 +8,9 @@ int main(int argc, char **argv)
   ros::NodeHandle nh;
   ros::NodeHandle pnh("~");
 
-  FrontEndPlanner front_end_planner;
+  BackEndPlanner back_end_planner;
 
-  front_end_planner.init(nh, pnh);
+  back_end_planner.init(nh, pnh);
 
   ros::MultiThreadedSpinner spinner(2);
   spinner.spin();

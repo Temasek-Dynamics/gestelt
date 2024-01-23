@@ -103,13 +103,8 @@ namespace ego_planner
     double wei_feas_;                                             // feasibility weight
     double wei_sqrvar_;                                           // squared variance weight
     double wei_time_;                                             // time weight
-    double wei_formation_;                                            // formation weight
     double obs_clearance_, obs_clearance_soft_, swarm_clearance_; // safe distance
     double max_vel_, max_acc_;                                    // dynamic limits
-
-    int formation_num_;
-    Eigen::MatrixXd formation_;
-    Eigen::Vector3d FStart_, FEnd_;                                 //first start pt, final end pt
 
     double t_now_;
 
@@ -132,7 +127,6 @@ namespace ego_planner
     void setSwarmTrajs(SwarmTrajData *swarm_trajs_ptr);
     void setDroneId(const int drone_id);
     void setIfTouchGoal(const bool touch_goal);
-    void setFStartFEnd(const Eigen::Vector3d &formation_start_pt, const Eigen::Vector3d &formation_end_pt);
     void setConstraintPoints(ConstraintPoints cps);
 
     /* helper functions */

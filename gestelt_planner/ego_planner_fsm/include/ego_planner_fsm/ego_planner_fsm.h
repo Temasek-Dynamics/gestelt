@@ -246,7 +246,7 @@ private:
   
   // Waypoints
   Waypoint waypoints_; // Waypoint handler object
-  Eigen::Vector3d formation_pos_; // Position of drone relative to formation origin
+  // Eigen::Vector3d formation_pos_; // Position of drone relative to formation origin
 
   // Max planning distance for the local target
   double planning_horizon_;
@@ -288,6 +288,9 @@ private:
   ros::Subscriber waypoint_sub_, odom_sub_, broadcast_ploytraj_sub_, mandatory_stop_sub_;
   ros::Subscriber waypoints_sub_;
 
+  ros::Subscriber debug_start_sub_; // DEBUG: Subscriber to user-defined start point
+  ros::Subscriber debug_goal_sub_; // DEBUG: Subscriber to user-defined goal point
+
   ros::Publisher poly_traj_pub_, broadcast_ploytraj_pub_, heartbeat_pub_, ground_height_pub_;
 
   ros::Publisher state_pub_;
@@ -301,9 +304,6 @@ private:
   // TF transformation 
   // tf2_ros::Buffer tfBuffer_;
   // std::unique_ptr<tf2_ros::TransformListener> tfListener_;
-
-  ros::Subscriber debug_start_sub_; // DEBUG: Subscriber to user-defined start point
-  ros::Subscriber debug_goal_sub_; // DEBUG: Subscriber to user-defined goal point
 
 private: 
 

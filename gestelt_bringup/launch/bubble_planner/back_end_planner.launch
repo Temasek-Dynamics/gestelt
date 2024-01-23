@@ -1,0 +1,24 @@
+<launch>
+  <arg name="drone_id" default="0"/>
+  <arg name="drone_id_ns" value="drone$(arg drone_id)"/>
+
+  <arg name="back_end_planner_cfg_filepath" default="$(find gestelt_bringup)/config/back_end.yaml"/>
+
+  <!-- Add static transform from drone to it's origin -->
+  <node pkg="tf" type="static_transform_publisher" 
+    name="map_to_$(arg drone_id_ns)_origin_tf" 
+    args="0 0 0 0 0 0 1 map $(arg drone_id_ns)_origin 100" />
+
+  <!-- Add static transform from base_link to camera_link -->
+  <node pkg="tf" type="static_transform_publisher" 
+    name="$(arg drone_id_ns)_base_link_to_cam_link_tf" 
+    args="0.08 0 0.02 0 0 0 1 $(arg drone_id_ns)_base_link $(arg drone_id_ns)_cam_link 100" />
+
+  <!-- Planner -->
+  <include file="$(find back_end_planner)/launch/include/back_end_planner.xml">
+      <arg name="cfg_filepath" value="$(arg back_end_planner_cfg_filepath)"/>
+
+      <arg name="drone_id" value="$(arg drone_id)"/>
+  </include>
+
+</launch>
