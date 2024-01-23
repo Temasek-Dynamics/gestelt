@@ -90,12 +90,12 @@ def create_pose(x, y, z):
 
 def create_orientation(roll, pitch, yaw):
     pose_angular = Vector3()
-    # pose_angular.x = math.radians(roll)
-    # pose_angular.y = math.radians(pitch)
-    # pose_angular.z = math.radians(yaw)
-    pose_angular.x = roll
-    pose_angular.y = pitch
-    pose_angular.z = yaw
+    pose_angular.x = math.radians(roll)
+    pose_angular.y = math.radians(pitch)
+    pose_angular.z = math.radians(yaw)
+    # pose_angular.x = roll
+    # pose_angular.y = pitch
+    # pose_angular.z = yaw
     return pose_angular
 
 def create_vel_linear(x, y, z):
@@ -159,10 +159,10 @@ def main():
     waypoints_angular = []
     waypoints_vel_linear = []
     waypoints_vel_angular = []
-    waypoints_linear.append(create_pose(0.0, 3.0, 1.5))
-    waypoints_linear.append(create_pose(2.0, 4.0, 1.5))
+    waypoints_linear.append(create_pose(0.0, 2.0, 1.5))
+    waypoints_linear.append(create_pose(0.0, 4.0, 1.5))
     
-    waypoints_angular.append(create_orientation(0.0, 0.0, 40)) 
+    waypoints_angular.append(create_orientation(45, 0.0, 0)) 
     waypoints_angular.append(create_orientation(0, 0, 0))
    
     waypoints_vel_linear.append(create_vel_linear(2.0, 0.0, 0.0))
