@@ -162,7 +162,7 @@ def main():
     waypoints_linear.append(create_pose(0.0, 2.0, 1.5))
     waypoints_linear.append(create_pose(0.0, 4.0, 1.5))
     
-    waypoints_angular.append(create_orientation(45, 0.0, 0)) 
+    waypoints_angular.append(create_orientation(45, 35.0, 34)) 
     waypoints_angular.append(create_orientation(0, 0, 0))
    
     waypoints_vel_linear.append(create_vel_linear(2.0, 0.0, 0.0))

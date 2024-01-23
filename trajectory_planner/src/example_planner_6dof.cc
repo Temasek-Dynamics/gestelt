@@ -66,9 +66,9 @@ void ExamplePlanner::waypointsCB(const gestelt_msgs::GoalsPtr &msg){
   for (auto orientation : msg->waypoints_angular)  {
     // ROS_INFO("[Trajectory Planner] Waypoints are: %f, %f, %f", orientation.x, orientation.y, orientation.z);
     Eigen::Vector3d wp_angular;
-    Eigen::Affine3d affineTransformation(Eigen::AngleAxisd(orientation.x, Eigen::Vector3d::UnitX()) *
+    Eigen::Affine3d affineTransformation(Eigen::AngleAxisd(orientation.z, Eigen::Vector3d::UnitZ()) *
                                         Eigen::AngleAxisd(orientation.y, Eigen::Vector3d::UnitY()) *
-                                        Eigen::AngleAxisd(orientation.z, Eigen::Vector3d::UnitZ()));
+                                        Eigen::AngleAxisd(orientation.x, Eigen::Vector3d::UnitX()));
     
     mav_msgs::vectorFromRotationMatrix(affineTransformation.rotation(), &wp_angular); 
     goal_waypoints_angular_.push_back(wp_angular);
@@ -152,7 +152,7 @@ bool ExamplePlanner::planTrajectory(
         }
         vertices.push_back(middle_wp);
       }
-} 
+    } 
 
   /******* Configure end point *******/
   // set end point constraints to desired position and set all derivatives to zero
@@ -199,7 +199,7 @@ bool ExamplePlanner::planTrajectory(
   //   start_pos_4d << current_pose_.translation(),
   //       mav_msgs::yawFromQuaternion(
   //           (Eigen::Quaterniond)current_pose_.rotation());
-  //   start_vel_4d << current_velocity_, 0.0;
+  //   start_vel_4d << current_velocity_, 0.0; 
   //   success = planTrajectory(
   //       goal_pos, goal_vel, start_pos_4d, start_vel_4d, max_v_, max_a_,
   //       &(*trajectory));
