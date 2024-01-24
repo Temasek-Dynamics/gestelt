@@ -135,7 +135,7 @@ class OCSys:
         # Formulate the NLP
         for k in range(int(horizon)):
             # New NLP variable for the control
-            Uk = MX.sym('U_' + str(k), self.n_control)
+            Uk = MX.sym('U_' + str(k), self.n_control) # 4 control variables
             w += [Uk]
             lbw += self.control_lb
             ubw += self.control_ub
