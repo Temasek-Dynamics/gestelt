@@ -14,6 +14,7 @@ void TrajServer::init(ros::NodeHandle& nh)
 
   // Operational params
   nh.param("traj_server/takeoff_height", takeoff_height_, 1.0);
+  nh.param("traj_server/drone_yaw", last_mission_yaw_, -M_PI/2);
   nh.param("traj_server/planner_heartbeat_timeout", planner_heartbeat_timeout_, 0.5);
   nh.param("traj_server/ignore_planner_heartbeat", ignore_heartbeat_, false);
 
@@ -200,7 +201,7 @@ void TrajServer::execTrajTimerCb(const ros::TimerEvent &e)
 {
   // has received vel value
   // ROS_INFO("execTrajTimerCb received velocity: %f, %f, %f", last_mission_vel_(0), last_mission_vel_(1), last_mission_vel_(2));
-  last_mission_yaw_ = M_PI/2;
+  // last_mission_yaw_ = -M_PI/2; defined as a parameter
   
   // ROS_INFO("last_mission_yaw: %f", last_mission_yaw_);
   
@@ -236,12 +237,9 @@ void TrajServer::execTrajTimerCb(const ros::TimerEvent &e)
     case ServerState::MISSION:
       if (!isExecutingMission()){
         // logInfoThrottled("Waiting for mission", 5.0);
-        // ROS_INFO("in waiting for mission");
+        execHover();
 
-        // ----------only for minimum snap trajectory----------//
-        // execHover();
-
-        //----------- for circular mission -----------//
+        //-----only for circular mission-----//
         // mission_has_entered_=true;
         // execMission();
       }
