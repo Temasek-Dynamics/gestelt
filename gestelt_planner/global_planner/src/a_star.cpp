@@ -22,9 +22,12 @@ bool AStarPlanner::generatePlan(const Eigen::Vector3d &start_pos, const Eigen::V
         return false;
     }
 
-    if (common_->getOccupancy(start_pos) || common_->getOccupancy(goal_pos))
-    {   
-        ROS_ERROR("Start or goal position in obstacle!");
+    if (common_->getOccupancy(start_pos)){
+        ROS_ERROR("Start position in obstacle!");
+        return false;
+    }
+    if (common_->getOccupancy(goal_pos)){
+        ROS_ERROR("Goal position in obstacle!");
         return false;
     }
 

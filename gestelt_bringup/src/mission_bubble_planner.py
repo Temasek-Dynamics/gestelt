@@ -27,8 +27,8 @@ def main():
     rate = rospy.Rate(2) 
 
     # Forest10x10
-    # start = create_pose(0.0, 0.0, 1.0)
-    # goal = create_pose(10, 5.0, 1.0)
+    start = create_pose(0.0, 0.0, 1.0)
+    goal = create_pose(5.5, 5.5, 1.0)
 
     # Tunnel 2x2x10
     # start = create_pose(0.0, 1.0, 1.0)
@@ -38,8 +38,8 @@ def main():
     # start = create_pose(-2.0, 4.5, 1.0)
     # goal = create_pose(2.0, 4.5, 1.0)
 
-    start = create_pose(-3.0, 1.0, 0.5)
-    goal = create_pose(3.0, 1.0, 0.5)
+    # start = create_pose(-3.0, 1.0, 0.5)
+    # goal = create_pose(3.0, 1.0, 0.5)
 
     rate.sleep()
     dbg_start_pub.publish(start)

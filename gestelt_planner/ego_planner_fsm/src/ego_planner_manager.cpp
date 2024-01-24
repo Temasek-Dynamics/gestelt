@@ -34,9 +34,32 @@ namespace ego_planner
     ploy_traj_opt_->setDroneId(pp_.drone_id);
   }
 
+  bool EGOPlannerManager::generateMinJerkTraj(
+      const Eigen::Vector3d &start_pt, const Eigen::Vector3d &start_vel, const Eigen::Vector3d &start_acc,
+      const std::vector<Eigen::Vector3d>& inner_wps,
+      const Eigen::Vector3d &local_target_pos, const Eigen::Vector3d &local_target_vel,
+      const Eigen::VectorXd &segs_t_dur,
+      poly_traj::MinJerkOpt &mj_opt)
+  {
+    int num_segs = inner_wps.size()+ 1;// Number of path segments
+
+    Eigen::Matrix3d startPVA; // Boundary start condition: Matrix consisting of 3d (position, velocity acceleration) 
+    Eigen::Matrix3d endPVA;   // Boundary end condition: Matrix consisting of 3d (position, velocity acceleration) 
+    startPVA << start_pt, start_vel, start_acc;
+    endPVA << local_target_pos, local_target_vel, Eigen::Vector3d::Zero();
+    Eigen::MatrixXd inner_wp_mat(3, inner_wps.size()); // matrix of inner waypoints
+
+    for (size_t i = 0; i < inner_wps.size(); i++){
+      inner_wp_mat.col(i) = inner_wps[i];
+    }
+
+    mj_opt.reset(startPVA, endPVA, num_segs);
+    mj_opt.generate(inner_wp_mat, segs_t_dur);
+  }
+
   bool EGOPlannerManager::computeInitState(
       const Eigen::Vector3d &start_pt, const Eigen::Vector3d &start_vel, const Eigen::Vector3d &start_acc,
-      const Eigen::Vector3d &local_target_pt, const Eigen::Vector3d &local_target_vel,
+      const Eigen::Vector3d &local_target_pos, const Eigen::Vector3d &local_target_vel,
       const bool flag_polyInit, const bool flag_randomPolyTraj, const double &t_seg_dur,
       poly_traj::MinJerkOpt &initMJO)
   {
@@ -50,12 +73,12 @@ namespace ego_planner
 
       /* basic params */
       Eigen::Matrix3d headState, tailState; //headstate and tailstate contains the start and end Position, Velocity and Acceleration
-      Eigen::MatrixXd innerPs; // Inner points
-      Eigen::VectorXd piece_dur_vec; // Vector of piece durations
-      int piece_nums;
-      constexpr double init_of_init_totaldur = 2.0; // WHY is this 2.0?
       headState << start_pt, start_vel, start_acc;
-      tailState << local_target_pt, local_target_vel, Eigen::Vector3d::Zero();
+      tailState << local_target_pos, local_target_vel, Eigen::Vector3d::Zero(); // Assume local target has zero acceleration
+      Eigen::MatrixXd innerPs;              // Inner points
+      Eigen::VectorXd piece_dur_vec;        // Vector of piece/segment time durations
+      int piece_nums;                       // Number of pieces/segments
+      constexpr double init_of_init_totaldur = 2.0; // WHY is this 2.0?
 
       // IF: Non-random inner point 
       if (!flag_randomPolyTraj)
@@ -72,7 +95,7 @@ namespace ego_planner
       // ELSE: Random inner point
       else
       {
-        Eigen::Vector3d lc_tgt_dir = start_pt - local_target_pt; // Direction vector from local target to start position
+        Eigen::Vector3d lc_tgt_dir = start_pt - local_target_pos; // Direction vector from local target to start position
         // Get horizontal and vertical direction
         Eigen::Vector3d horizon_dir = (lc_tgt_dir.cross(Eigen::Vector3d(0, 0, 1))).normalized();
         Eigen::Vector3d vertical_dir = (lc_tgt_dir.cross(horizon_dir)).normalized();
@@ -80,7 +103,7 @@ namespace ego_planner
         // InnerP = midway position between start and target 
         //          + random dist along horizontal
         //          + random dist along vertical
-        innerPs = (start_pt + local_target_pt) / 2 
+        innerPs = (start_pt + local_target_pos) / 2 
                   + (((double)rand()) / RAND_MAX - 0.5) *  lc_tgt_dir.norm() *  horizon_dir * 0.8 * (-0.978 / (continous_failures_count_ + 0.989) + 0.989) 
                   + (((double)rand()) / RAND_MAX - 0.5) *  lc_tgt_dir.norm() *  vertical_dir * 0.4 * (-0.978 / (continous_failures_count_ + 0.989) + 0.989);
 
@@ -96,21 +119,22 @@ namespace ego_planner
       poly_traj::Trajectory initTraj = initMJO.getTraj();
 
       /* generate the actual init trajectory */
-      // Number of pieces = (dist between start and goal) / (dist between control points)
-      piece_nums = round((headState.col(0) - tailState.col(0)).norm() / pp_.polyTraj_piece_length);
-      piece_nums = piece_nums < 2 ? 2: piece_nums; // ensure piece_nums is always minimally 2
+      // Get actual number of pieces/segments
+      piece_nums = round((headState.col(0) - tailState.col(0)).norm() / pp_.polyTraj_piece_length); // num pieces/segments = (dist btw. start and goal) / (length of each piece/segment)
+      piece_nums = piece_nums < 2 ? 2: piece_nums; // ensure piece_nums is at least 2
 
-      // segment duration assumed to be equal
+      // Segment duration assumed to be equal
       double piece_dur = init_of_init_totaldur / (double)piece_nums;
       piece_dur_vec.resize(piece_nums);
       piece_dur_vec = Eigen::VectorXd::Constant(piece_nums, t_seg_dur); 
 
-      innerPs.resize(3, piece_nums - 1);
+      innerPs.resize(3, piece_nums - 1); // Resize inner waypoints 
       int idx = 0; 
-      double t_s = piece_dur, t_e = init_of_init_totaldur - piece_dur / 2;
+      double t_s = piece_dur; // Starting time
+      double t_e = init_of_init_totaldur - piece_dur / 2; // Ending time
       for (double t = t_s; t < t_e; t += piece_dur)
       {
-        // set inner points to be that position from the preliminary trajectory
+        // set inner points to be that position from the initial trajectory
         innerPs.col(idx++) = initTraj.getPos(t);
       }
       if (idx != piece_nums - 1)
@@ -121,53 +145,71 @@ namespace ego_planner
       initMJO.reset(headState, tailState, piece_nums);
       initMJO.generate(innerPs, piece_dur_vec);
     }
-
-    else /*** case 2: initialize from previous optimal trajectory ***/
+    /*** case 2: initialize from previous optimal trajectory ***/
+    else 
     {
+      // TODO: Better checking mechanism for whether global trajectory exists
       // last_glb_t_of_lc_tgt: The corresponding global trajectory time of the last local target
       if (traj_.global_traj.last_glb_t_of_lc_tgt < 0.0)
       {
-        ROS_ERROR("Drone %d: [EGOPlannerManager::computeInitState] You are initialzing a trajectory from a previous optimal trajectory, but no previous trajectories up to now.", pp_.drone_id);
+        ROS_ERROR("Drone %d: [EGOPlannerManager::computeInitState] You are initializing a \\
+                  trajectory from a previous optimal trajectory, but no \\
+                  previous trajectories up to now.", pp_.drone_id);
         return false;
       }
 
       /* the trajectory time system is a little bit complicated... */
 
-      // Time elapsed since local trajectory start
+      // Time elapsed since local trajectory jas started
       double t_elapsed_lc_traj = ros::Time::now().toSec() - traj_.local_traj.start_time;
-      // Time left to end of local trajectory
-      double t_to_lc_end = traj_.local_traj.duration - t_elapsed_lc_traj;
-      if ( t_to_lc_end < 0 )
+      // t_to_local_traj_end: Time left to complete trajectory
+      double t_to_local_traj_end = traj_.local_traj.duration - t_elapsed_lc_traj;
+      if ( t_to_local_traj_end < 0 )
       { 
-        ROS_INFO("Drone %d: [EGOPlannerManager::computeInitState] t_to_lc_end < 0, exit and wait for another call.", pp_.drone_id);
+        ROS_INFO("Drone %d: [EGOPlannerManager::computeInitState] Time left to complete local trajectory \\
+          is negative, exit and wait for another call.", pp_.drone_id);
         return false;
       }
-      double t_to_lc_tgt = t_to_lc_end +
+      // t_to_local_tgt: Time to reach local target
+      double t_to_local_tgt = t_to_local_traj_end +
                            (traj_.global_traj.glb_t_of_lc_tgt - traj_.global_traj.last_glb_t_of_lc_tgt);
-      int piece_nums = ceil((start_pt - local_target_pt).norm() / pp_.polyTraj_piece_length);
+
+      // Number of pieces = remaining distance / piece length 
+      int piece_nums = ceil((start_pt - local_target_pos).norm() / pp_.polyTraj_piece_length);
       piece_nums = piece_nums < 2 ? 2: piece_nums; // ensure piece_nums is always minimally 2
 
-      Eigen::Matrix3d headState, tailState;
-      Eigen::MatrixXd innerPs(3, piece_nums - 1);
-      Eigen::VectorXd piece_dur_vec = Eigen::VectorXd::Constant(piece_nums, t_to_lc_tgt / piece_nums);
+      Eigen::Matrix3d headState;
+      Eigen::Matrix3d tailState;
       headState << start_pt, start_vel, start_acc;
-      tailState << local_target_pt, local_target_vel, Eigen::Vector3d::Zero();
+      tailState << local_target_pos, local_target_vel, Eigen::Vector3d::Zero();
+      Eigen::MatrixXd innerPs(3, piece_nums - 1);
+      // piece_dur_vec: Vector of time duration of each piece. 
+      // Each duration assumed to be equal, value = time to local target / piece_num 
+      Eigen::VectorXd piece_dur_vec = Eigen::VectorXd::Constant(piece_nums, t_to_local_tgt / piece_nums);
 
-      double t = piece_dur_vec(0);
+      /* Generate inner waypoints based on time per piece */
+      double t = piece_dur_vec(0); // Set start time t to first piece  
       for (int i = 0; i < piece_nums - 1; ++i) // For each piece
       {
-        if (t < t_to_lc_end) // if not yet end of local trajectory
+        // t ----> t_to_local_traj_end ----> t_to_local_tgt
+
+        // if not yet end of local trajectory
+        if (t < t_to_local_traj_end) 
         {
           innerPs.col(i) = traj_.local_traj.traj.getPos(t + t_elapsed_lc_traj);
         }
-        else if (t <= t_to_lc_tgt) // if not yet local target 
+        // if not yet reached local target but exceed local trajectory
+        // we need to use global trajectory 
+        else if (t <= t_to_local_tgt) 
         {
-          double glb_t = t - t_to_lc_end + traj_.global_traj.last_glb_t_of_lc_tgt - traj_.global_traj.global_start_time;
+          // glb_t: t - time to local trajectory end + time last local target was set - start time of global trajectory
+          double glb_t = t - t_to_local_traj_end + traj_.global_traj.last_glb_t_of_lc_tgt - traj_.global_traj.global_start_time;
           innerPs.col(i) = traj_.global_traj.traj.getPos(glb_t);
         }
         else
         {
-          ROS_ERROR("Drone %d: [EGOPlannerManager::computeInitState] t=%.2f, t_to_lc_end=%.2f, t_to_lc_tgt=%.2f", pp_.drone_id, t, t_to_lc_end, t_to_lc_tgt);
+          // time t should not exceed t_to_local_Tgt
+          ROS_ERROR("Drone %d: [EGOPlannerManager::computeInitState] t=%.2f, t_to_local_traj_end=%.2f, t_to_local_tgt=%.2f", pp_.drone_id, t, t_to_local_traj_end, t_to_local_tgt);
         }
 
         t += piece_dur_vec(i + 1);
@@ -180,16 +222,6 @@ namespace ego_planner
     return true;
   }
 
-  /**
-   * @brief Get local goal (position and velocity) based on planning horizon 
-   * 
-   * @param planning_horizon 
-   * @param start_pt 
-   * @param global_end_pt 
-   * @param local_target_pos 
-   * @param local_target_vel 
-   * @param touch_goal 
-   */
   void EGOPlannerManager::getLocalTarget(
       const double planning_horizon, const Eigen::Vector3d &start_pt,
       const Eigen::Vector3d &global_end_pt, Eigen::Vector3d &local_target_pos,
@@ -264,49 +296,42 @@ namespace ego_planner
 
   bool EGOPlannerManager::reboundReplan(
       const Eigen::Vector3d &start_pt, const Eigen::Vector3d &start_vel,
-      const Eigen::Vector3d &start_acc, const Eigen::Vector3d &local_target_pt,
+      const Eigen::Vector3d &start_acc, const Eigen::Vector3d &local_target_pos,
       const Eigen::Vector3d &local_target_vel, const bool flag_polyInit,
       const bool flag_randomPolyTraj, const bool touch_goal)
   {
-
     static int count = 0;
-    // TODO Uncomment
     printf("\033[47;30m\n[drone %d replan %d]==============================================\033[0m\n",
            pp_.drone_id, count++);
     std::cout.precision(3);
-    std::cout << "start: " << start_pt.transpose() << ", " << start_vel.transpose() << "\ngoal:" << local_target_pt.transpose() << ", " << local_target_vel.transpose()
+    std::cout << "start: " << start_pt.transpose() << ", " << start_vel.transpose() << "\ngoal:" << local_target_pos.transpose() << ", " << local_target_vel.transpose()
          <<std::endl;
 
     ploy_traj_opt_->setIfTouchGoal(touch_goal);
-
-    // if ((start_pt - local_target_pt).norm() < 0.2)
-    // { 
-    //   // TODO Uncomment
-    //   // std::cout << "Close to goal" << std::endl;
-    //   // continous_failures_count_++;
-    //   // return false;
-    // }
 
     ros::Time t_start = ros::Time::now();
     ros::Duration t_init, t_opt;
 
     /*** STEP 1: INIT. Get initial trajectory and {p,v} pairs ***/
 
-    // t_seg_dur: time duration of segment = distance between control points / maximum velocity
+    // t_seg_dur: duration of segment = distance between control points / maximum velocity
     double t_seg_dur = pp_.polyTraj_piece_length / pp_.max_vel_;
 
-    poly_traj::MinJerkOpt initMJO;
+    poly_traj::MinJerkOpt initMJO; // Initial minimum jerk trajectory optimizer
 
+    /*** STEP 1a: Get initial minimum jerk trajectory ***/
+    // This is done using the local trajectory and the existing global trajectory (from start to actual goal)
     if (!computeInitState(start_pt, start_vel, start_acc, 
-                          local_target_pt, local_target_vel,
+                          local_target_pos, local_target_vel,
                           flag_polyInit, flag_randomPolyTraj, t_seg_dur, 
                           initMJO))
     {
       return false;
     }
 
+    /*** STEP 1b: Get constraint points ***/
     Eigen::MatrixXd cstr_pts = initMJO.getInitConstraintPoints(ploy_traj_opt_->get_cps_num_perPiece_());
-    vector<std::pair<int, int>> segments; // segments are only needed for distinctive trajectories
+    vector<std::pair<int, int>> segments; // segments are only needed for ESDF Local planner and distinctive trajectories
 
     // Check for collision along path and set {p,v} pairs to constraint points.
     // The collision free path for the segments in collision is determined using AStar search
@@ -322,7 +347,7 @@ namespace ego_planner
     for (int i = 0; i < cstr_pts.cols(); ++i){
       point_set.push_back(cstr_pts.col(i));
     }
-    visualization_->displayInitPathList(point_set, 0.2, 0);
+    visualization_->displayInitialMinJerkTraj(point_set, 0.2, 0);
 
     t_start = ros::Time::now();
 
@@ -364,10 +389,10 @@ namespace ego_planner
     sum_time += (t_init + t_opt).toSec();
     count_success++;
 
-    // std::cout << "total time:\033[42m" << (t_init + t_opt).toSec()
-    //      << "\033[0m,init:" << t_init.toSec()
-    //      << ",optimize:" << t_opt.toSec()
-    //      << ",avg_time=" << sum_time / count_success << std::endl;
+    std::cout << "total time:\033[42m" << (t_init + t_opt).toSec()
+         << "\033[0m,init:" << t_init.toSec()
+         << ",optimize:" << t_opt.toSec()
+         << ",avg_time=" << sum_time / count_success << std::endl;
     
     setLocalTrajFromOpt(best_MJO, touch_goal);
     visualization_->displayOptimalList(cstr_pts, 0);
@@ -418,12 +443,11 @@ namespace ego_planner
   }
 
   bool EGOPlannerManager::planGlobalTrajWaypoints(
+      poly_traj::MinJerkOpt& globalMJO,
       const Eigen::Vector3d &start_pos, const Eigen::Vector3d &start_vel, const Eigen::Vector3d &start_acc, 
-      const std::vector<Eigen::Vector3d> &waypoints,
-      const Eigen::Vector3d &end_vel, const Eigen::Vector3d &end_acc)
+      const std::vector<Eigen::Vector3d> &waypoints, const Eigen::Vector3d &end_vel, const Eigen::Vector3d &end_acc)
   {
     
-    poly_traj::MinJerkOpt globalMJO;
     Eigen::Matrix<double, 3, 3> headState, tailState;
     headState << start_pos, start_vel, start_acc;
     tailState << waypoints.back(), end_vel, end_acc;
@@ -445,7 +469,8 @@ namespace ego_planner
     Eigen::VectorXd time_vec(waypoints.size());
 
     // Try replanning up to 2 times if the velocity constraints are not fulfilled
-    for (int j = 0; j < 2; ++j)
+    int num_retries = 2;
+    for (int j = 0; j < num_retries; ++j)
     {
       // TODO: Refactor
       // for each plan segment, calculate time using desired velocity
@@ -479,8 +504,7 @@ namespace ego_planner
       des_vel /= 1.5;
     }
 
-    auto time_now = ros::Time::now();
-    traj_.setGlobalTraj(globalMJO.getTraj(), time_now.toSec());
+
 
     return true;
   }

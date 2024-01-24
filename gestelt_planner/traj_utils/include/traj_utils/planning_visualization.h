@@ -22,7 +22,7 @@ namespace ego_planner
 
     ros::Publisher goal_point_pub;
     ros::Publisher global_list_pub;
-    ros::Publisher init_list_pub;
+    ros::Publisher initial_min_jerk_traj_pub_;
     ros::Publisher optimal_list_pub;
     ros::Publisher failed_list_pub;
     ros::Publisher a_star_list_pub;
@@ -69,7 +69,7 @@ namespace ego_planner
 
     void displayGoalPoint(Eigen::Vector3d goal_point, Eigen::Vector4d color, const double scale, int id);
     void displayGlobalPathList(vector<Eigen::Vector3d> global_pts, const double scale, int id);
-    void displayInitPathList(vector<Eigen::Vector3d> init_pts, const double scale, int id);
+    void displayInitialMinJerkTraj(vector<Eigen::Vector3d> init_pts, const double scale, int id);
     void displayMultiInitPathList(vector<vector<Eigen::Vector3d>> init_trajs, const double scale);
     void displayOptimalList(Eigen::MatrixXd optimal_pts, int id);
     void displayFailedList(Eigen::MatrixXd failed_pts, int id);

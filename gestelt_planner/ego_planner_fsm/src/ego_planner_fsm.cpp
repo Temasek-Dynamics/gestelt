@@ -792,9 +792,13 @@ namespace ego_planner
 
     // Plan global trajectory starting from agent's current position
     // with 0 starting/ending acceleration and velocity. With a single waypoint
+    poly_traj::MinJerkOpt globalMJO; // Global minimum jerk trajectory
     bool plan_success = planner_manager_->planGlobalTrajWaypoints(
+        globalMJO,
         odom_pos_, Eigen::Vector3d::Zero(), Eigen::Vector3d::Zero(),
         one_pt_wps, Eigen::Vector3d::Zero(), Eigen::Vector3d::Zero());
+
+    planner_manager_->traj_.setGlobalTraj(globalMJO.getTraj(), ros::Time::now().toSec());
 
     visualization_->displayGoalPoint(next_wp, Eigen::Vector4d(0, 0.5, 0.5, 1), 0.3, 0);
 

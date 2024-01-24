@@ -57,6 +57,9 @@ private:
   double squared_goal_tol_; // Squared goal tolerance
   bool within_goal_tol_; // Within a specified tolerance of the goal
 
+  double avg_vel_; 
+  double max_vel_;
+
   /* Mapping */
   std::shared_ptr<GridMap> map_;
 
@@ -116,6 +119,8 @@ private:
    * @param msg 
    */
   void planOnDemandCB(const std_msgs::EmptyConstPtr &msg);
+
+  /* Planner methods */
 
   /**
    * @brief Generate a plan

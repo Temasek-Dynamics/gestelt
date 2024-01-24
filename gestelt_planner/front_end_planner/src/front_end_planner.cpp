@@ -10,13 +10,20 @@ void FrontEndPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   int front_end_max_itr;
   pnh.param("front_end/max_iterations", front_end_max_itr, -1);
   
-  int sfc_max_itr, sfc_max_sample_points;
-  double mult_stddev_x, W_intersect_vol, W_cand_vol;
-  pnh.param("sfc/max_iterations", sfc_max_itr, -1);
-  pnh.param("sfc/sfc_max_sample_points", sfc_max_sample_points, -1);
-  pnh.param("sfc/mult_stddev_x", mult_stddev_x, -1.0);
-  pnh.param("sfc/W_intersect_vol", W_intersect_vol, -1.0);
-  pnh.param("sfc/W_cand_vol", W_cand_vol, -1.0);
+  SphericalSFC::SphericalSFCParams sfc_params; 
+  pnh.param("sfc/max_iterations", sfc_params.max_itr, -1);
+  pnh.param("sfc/max_sample_points", sfc_params.max_sample_points, -1);
+  pnh.param("sfc/mult_stddev_x", sfc_params.mult_stddev_x, -1.0);
+  pnh.param("sfc/W_intersect_vol", sfc_params.W_intersect_vol, -1.0);
+  pnh.param("sfc/W_cand_vol", sfc_params.W_cand_vol, -1.0);
+  pnh.param("sfc/W_cand_vol", sfc_params.W_cand_vol, -1.0);
+
+  pnh.param("sfc/min_sphere_vol", sfc_params.min_sphere_vol, -1.0);
+  pnh.param("sfc/max_sphere_vol", sfc_params.max_sphere_vol, -1.0);
+  pnh.param("sfc/min_sphere_intersection_vol", sfc_params.min_sphere_intersection_vol, -1.0);
+
+  pnh.param("sfc/avg_vel", sfc_params.avg_vel, 3.0);
+  pnh.param("sfc/max_vel", sfc_params.max_vel, 1.5);
 
   squared_goal_tol_ *= squared_goal_tol_; 
   
@@ -47,14 +54,6 @@ void FrontEndPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   front_end_planner_ = std::make_unique<AStarPlanner>(map_);
   front_end_planner_->addVizPublishers(closed_list_viz_pub_);
 
-  SphericalSFC::SphericalSFCParams sfc_params = {
-    .max_itr = sfc_max_itr,
-    .max_sample_points = sfc_max_sample_points,
-    .mult_stddev_x = mult_stddev_x,
-    .W_cand_vol = W_cand_vol,
-    .W_intersect_vol = W_intersect_vol
-  };
-
   sfc_generation_ = std::make_unique<SphericalSFC>(map_, sfc_params);
 
   sfc_generation_->addVizPublishers(sfc_p_cand_viz_pub_, sfc_dist_viz_pub_, sfc_spherical_viz_pub_, sfc_waypoints_viz_pub_);
@@ -81,7 +80,7 @@ bool FrontEndPlanner::generatePlan(){
     return false;
   }
 
-  // Generate a plan
+  // Generate a front-end path
   start_pos_ = cur_pos_;
   goal_pos_ = waypoints_.nextWP();
 
@@ -94,29 +93,28 @@ bool FrontEndPlanner::generatePlan(){
   }
   double front_end_plan_time_ms = (ros::Time::now() - front_end_plan_start_time).toSec() * 1000;
 
-  std::vector<Eigen::Vector3d> path = front_end_planner_->getPathPos();
+  std::vector<Eigen::Vector3d> front_end_path = front_end_planner_->getPathPos();
   std::vector<Eigen::Vector3d> closed_list = front_end_planner_->getClosedList();
 
   // Publish front end plan
-  viz_helper::publishVizSpheres(path, "world", front_end_plan_viz_pub_) ;
+  viz_helper::publishVizSpheres(front_end_path, "world", front_end_plan_viz_pub_) ;
   viz_helper::publishVizCubes(closed_list, "world", closed_list_viz_pub_);
 
   ros::Time sfc_plan_start_time = ros::Time::now();
 
-  // Generate Safe flight corridor
-  if (!sfc_generation_->generateSFC(path)){
+  // Generate safe flight corridor from front end path
+  if (!sfc_generation_->generateSFC(front_end_path)){
     return false;
   }
-
   double sfc_plan_time_ms = (ros::Time::now() - sfc_plan_start_time).toSec() * 1000;
 
-  std::vector<SphericalSFC::Sphere> sfc_spheres = sfc_generation_->getSFCWaypoints();
+  std::vector<SphericalSFC::Sphere> sfc_spheres = sfc_generation_->getSFCSpheres();
 
-  ROS_INFO("[FrontEndPlanner]: Front-end Planning Time: %f ms", front_end_plan_time_ms);
-  ROS_INFO("[FrontEndPlanner]: SFC Planning Time: %f ms", sfc_plan_time_ms);
-  ROS_INFO("[FrontEndPlanner]: Size of path: %ld", path.size());
-  ROS_INFO("[FrontEndPlanner]: Size of closed list (expanded nodes): %ld", closed_list.size());
-  ROS_INFO("[FrontEndPlanner]: Number of spheres in SFC Spherical corridor: %ld", sfc_spheres.size());
+  logInfo(string_format("[FrontEndPlanner]: Front-end Planning Time: %f ms", front_end_plan_time_ms));
+  logInfo(string_format("[FrontEndPlanner]: SFC Planning Time: %f ms", sfc_plan_time_ms));
+  logInfo(string_format("[FrontEndPlanner]: Number of waypoints in front-end path: %ld", front_end_path.size()));
+  logInfo(string_format("[FrontEndPlanner]: Size of closed list (expanded nodes): %ld", closed_list.size()));
+  logInfo(string_format("[FrontEndPlanner]: Number of spheres in SFC Spherical corridor: %ld", sfc_spheres.size()));
 
   return true;
 }
@@ -192,6 +190,8 @@ void FrontEndPlanner::debugGoalCB(const geometry_msgs::PoseConstPtr &msg)
         msg->position.y,
         msg->position.z});
 }
+
+/* Planning helper methods */
 
 /* Checking methods */
 

@@ -10,17 +10,6 @@
 #include <ros/ros.h>
 #include <visualization_msgs/Marker.h>
 
-class Trajectory
-{
-public:
-  Trajectory(){}
-  
-  std::vector<Eigen::Vector3d> position;
-  std::vector<Eigen::Vector3d> time;
-
-private:
-  
-}; // class Trajectory
 
 class SphericalSFC : public SFCBase
 {
@@ -101,10 +90,7 @@ public: // Public structs
     std::normal_distribution<double> y_dis;
     std::normal_distribution<double> z_dis;
 
-    Sampler()
-    {
-      
-    }
+    Sampler(){}
 
     Sampler(const Eigen::Vector3d& mean, const Eigen::Vector3d& stddev)
     {
@@ -139,7 +125,39 @@ public: // Public structs
     double mult_stddev_x; // Multiplier for x standard deviation in sampling 
     double W_cand_vol; // Weight of candidate volume
     double W_intersect_vol; // Weight of intersection of volumes
+
+    double min_sphere_vol; // Minimum volume of sphere
+    double max_sphere_vol; // Maximum volume of spheres
+    double min_sphere_intersection_vol; // Minimum volume of intersection between 2 spheres
+
+    // /* Time allocation */
+    double avg_vel; // Average velocity
+    double max_vel; // Maximum velocity
+
   }; // struct SphericalSFCParams
+
+  struct SFCTrajectory{
+    std::vector<SphericalSFC::Sphere> spheres;  // Vector of Spheres 
+    std::vector<Eigen::Vector3d> waypoints;     // Vector of 3d waypoint positions {p1, p2, ... p_M+1}
+    std::vector<double> segs_t_dur;          // Vector of time durations of each segment {t_1, t_2, ..., t_M}
+
+    SFCTrajectory(){} // Default constructor
+
+    Eigen::Vector3d const getStartPos(){
+      if (waypoints.size() < 2){
+        throw std::runtime_error("SFCTrajectory does not contain at least 2 waypoints");
+      }
+      return waypoints[0];
+    }
+
+    Eigen::Vector3d const getGoalPos(){
+      if (waypoints.size() < 2){
+        throw std::runtime_error("SFCTrajectory does not contain at least 2 waypoints");
+      }
+      return waypoints.back();
+    }
+
+  }; // struct SFCTrajectory
 
 public:
   SphericalSFC(std::shared_ptr<GridMap> grid_map, const SphericalSFCParams& sfc_params);
@@ -168,7 +186,7 @@ public:
    * 
    * @return std::vector<SphericalSFC::Sphere> const 
    */
-  std::vector<SphericalSFC::Sphere> const getSFCWaypoints(){
+  std::vector<SphericalSFC::Sphere> const getSFCSpheres(){
       return sfc_spheres_;
   }
 
@@ -225,60 +243,61 @@ private: // Private methods
 
   void transformPoints(std::vector<Eigen::Vector3d>& pts, Eigen::Vector3d origin, const Eigen::Matrix<double, 3, 3>& rot_mat);
 
+  /**
+   * @brief Get the volume of intersection between 2 spheres
+   * 
+   * @param B_a 
+   * @param B_b 
+   * @return double Returns -1 if 2 spheres do not intersect, else return volume of intersection 
+   */
   double getIntersectingVolume(Sphere& B_a, Sphere& B_b);
 
+  /**
+   * @brief Get rotation matrix that aligns vector z to vector d
+   * 
+   * @param z 
+   * @param d 
+   * @return Eigen::Matrix<double, 3, 3> 
+   */
   Eigen::Matrix<double, 3, 3> rotationAlign(const Eigen::Vector3d & z, const Eigen::Vector3d & d);
 
-  std::vector<Eigen::Vector3d> initializeWaypointsAndTimeAllocation(const std::vector<SphericalSFC::Sphere>& sfc_spheres);
+  /**
+   * @brief Get the trajectory waypoints from SFC spheres
+   * 
+   * @param sfc_spheres 
+   * @return std::vector<Eigen::Vector3d> 
+   */
+  std::vector<Eigen::Vector3d> getTrajWaypointsFromSpheres(const std::vector<SphericalSFC::Sphere>& sfc_spheres);
+
+  /**
+   * @brief Get a SFC Trajectory given a sequence of intersecting spheres
+   * 
+   * @param sfc_spheres 
+   * @param goal_pos 
+   * @param sfc_traj 
+   */
+  void getSFCTrajectory(const std::vector<SphericalSFC::Sphere>& sfc_spheres, const Eigen::Vector3d& goal_pos, SphericalSFC::SFCTrajectory& sfc_traj);
 
   /* Visualization methods */
 
   void publishVizPoints(const std::vector<Eigen::Vector3d>& pts, 
-    ros::Publisher& publisher, Eigen::Vector3d color = Eigen::Vector3d{0.0, 0.0, 0.0}, 
-    double radius = 0.025, const std::string& frame_id = "world");
+                        ros::Publisher& publisher, Eigen::Vector3d color = Eigen::Vector3d{0.0, 0.0, 0.0}, 
+                        double radius = 0.025, const std::string& frame_id = "world");
 
-  void publishVizPiecewiseTrajectory(const std::vector<Eigen::Vector3d>& pts, 
-    ros::Publisher& publisher, const std::string& frame_id = "world");
+  void publishVizPiecewiseTrajectory( const std::vector<Eigen::Vector3d>& pts, 
+                                      ros::Publisher& publisher, const std::string& frame_id = "world");
 
   void publishVizSphericalSFC(const std::vector<SphericalSFC::Sphere>& sfc_spheres, 
-    ros::Publisher& publisher, const std::string& frame_id = "world") {
-    for (int i = 0; i < sfc_spheres.size(); i++){
-      publisher.publish(createVizSphere(sfc_spheres[i].center, sfc_spheres[i].getDiameter(), frame_id, i));
-    }
-  }
+                              ros::Publisher& publisher, const std::string& frame_id = "world");
 
-  visualization_msgs::Marker createVizSphere(const Eigen::Vector3d& center, const double& diameter, const std::string& frame_id, const int& id)
-  {
-    visualization_msgs::Marker sphere;
-
-    sphere.header.frame_id = frame_id;
-    sphere.header.stamp = ros::Time::now();
-    sphere.type = visualization_msgs::Marker::SPHERE;
-    sphere.action = visualization_msgs::Marker::ADD;
-    sphere.id = id;
-    sphere.pose.orientation.w = 1.0;
-
-    sphere.color.r = 0.0;
-    sphere.color.g = 0.0;
-    sphere.color.b = 1.0;
-    sphere.color.a = 0.5;
-    sphere.scale.x = diameter;
-    sphere.scale.y = diameter;
-    sphere.scale.z = diameter;
-
-    sphere.pose.position.x = center(0);
-    sphere.pose.position.y = center(1);
-    sphere.pose.position.z = center(2);
-
-    return sphere;
-  }
+  visualization_msgs::Marker createVizSphere( const Eigen::Vector3d& center, const double& diameter, 
+                                              const std::string& frame_id, const int& id);
 
   visualization_msgs::Marker createVizEllipsoid(const Eigen::Vector3d& center, const Eigen::Vector3d& stddev, const Eigen::Quaterniond& orientation, const std::string& frame_id, const int& id);
 
 private: // Private members
   Sampler sampler_; // Sampler for sampling SFC waypoints
 
-  std::vector<SphericalSFC::Sphere> sfc_spheres_; // Waypoints of the spherical flight corridor
 
   ros::Publisher p_cand_viz_pub_; // Visualization of sampling points
   ros::Publisher dist_viz_pub_; // Visualization of sampling distribution
@@ -287,12 +306,13 @@ private: // Private members
 
   /* Params */
   int itr_; // Iteration number
-
   SphericalSFCParams sfc_params_; // SFC parameters
+  
 
   /* Data structs */
   std::shared_ptr<GridMap> grid_map_; 
-  std::priority_queue<std::shared_ptr<Sphere>, std::vector<std::shared_ptr<Sphere>>, Sphere::CompareScorePtr> B_cand_pq_; // priority queue for candidate spheres in sampling phase
+  std::vector<SphericalSFC::Sphere> sfc_spheres_; // Waypoints of the spherical flight corridor
+  SphericalSFC::SFCTrajectory sfc_traj_;          // SFC Trajectory 
 
 }; // class SphericalSFC
 

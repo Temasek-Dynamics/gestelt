@@ -8,10 +8,17 @@ front_end:
 
 sfc:
   max_iterations: 50
-  sfc_max_sample_points: 1000
-  mult_stddev_x: 0.1 # A higher value leads to worse
-  W_cand_vol: 1
-  W_intersect_vol: 5
+  max_sample_points: 2000 # Maximum sample points for candidate sphere
+  mult_stddev_x: 0.1      # A higher value leads to clustering of spheres around previous spheres
+  W_cand_vol: 1           # Weight for candidate sphere volume
+  W_intersect_vol: 5      # Weight for volume of intersection between spheres
+
+  min_sphere_vol: 0.1 # (m^3) Minimum volume of sphere
+  max_sphere_vol: 1000.0 # (m^3) Maximum allowed sphere volume
+  min_sphere_intersect: 0.05 # (m^3) Minimum volume of sphere intersection
+
+  avg_vel: 1.5 # Average velocity (m/s) used for estimating initial time allocation
+  max_vel: 3.0 # Maximum velocity (m/s)
 
 #####
 # Mapping params
@@ -29,7 +36,7 @@ grid_map:
   ground_height: 0.0
 
   occ_grid/resolution: 0.1
-  occ_grid/inflation: 0.2 
+  occ_grid/inflation: 0.2
   filter/downsample_cloud: false 
   filter/depth_stride: 4 
   filter/voxel_size: 0.1

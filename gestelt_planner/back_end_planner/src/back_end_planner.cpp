@@ -55,7 +55,7 @@ void BackEndPlanner::debugGoalCB(const geometry_msgs::PoseConstPtr &msg)
         msg->position.y,
         msg->position.z};
 
-  if (!generatePlan(start_pos_, start_vel_, goal_pos_, num_replan_retries_)){
+  if (!generatePlanESDFFree(start_pos_, start_vel_, goal_pos_, num_replan_retries_)){
     logError("Unable to generate plan!");
   }
 }
@@ -66,61 +66,60 @@ void BackEndPlanner::debugGoalCB(const geometry_msgs::PoseConstPtr &msg)
  * @param msg 
  */
 // void BackEndPlanner::sfcTrajectoryCB(const gestelt_msgs::SphericalSFCConstPtr& msg){
-//   msg->
-
-//   generatePlan();
+//   // generatePlanSFC();
 // }
 
 /* Planning methods */
 
-bool BackEndPlanner::generatePlan(
+bool BackEndPlanner::generatePlanESDFFree(
   const Eigen::Vector3d& start_pos, const Eigen::Vector3d& start_vel, 
-  const Eigen::Vector3d& goal_pos, const int& num_retries)
+  const Eigen::Vector3d& goal_pos, const int& num_opt_retries)
 {
   Eigen::Vector3d start_acc;
+  Eigen::Vector3d end_vel;
+  Eigen::Vector3d end_acc;
+
   start_acc.setZero();
+  end_vel.setZero();
+  end_acc.setZero();
 
   /*1:  Plan initial minimum jerk trajectory */
+  poly_traj::MinJerkOpt globalMJO; // Global minimum jerk trajectory
 
   std::vector<Eigen::Vector3d> waypoints;
   waypoints.push_back(goal_pos);
   // Generate initial minimum jerk trajectory starting from agent's current position with 0 starting/ending acceleration and velocity.
   bool plan_success = back_end_planner_->planGlobalTrajWaypoints(
-      start_pos, Eigen::Vector3d::Zero(), Eigen::Vector3d::Zero(),
-      waypoints, 
-      Eigen::Vector3d::Zero(), Eigen::Vector3d::Zero());
+      globalMJO,
+      start_pos, start_vel, start_acc,
+      waypoints, end_vel, end_acc);
 
   // Publishes to "goal_point"
   visualization_->displayGoalPoint(goal_pos, Eigen::Vector4d(0, 0.5, 0.5, 1), 0.3, 0);
 
   if (!plan_success)
   {
-    logError("Unable to generate global trajectory! Undefined actions!");
+    logError("Unable to generate initial global minimum jerk trajectory!");
     return false;
   }
-  constexpr double step_size_t = 0.1;
-  int i_end = floor(back_end_planner_->traj_.global_traj.duration / step_size_t);
-  // global_traj is only used for visualization
-  vector<Eigen::Vector3d> global_traj(i_end);
-  for (int i = 0; i < i_end; i++)
-  {
-    global_traj[i] = back_end_planner_->traj_.global_traj.traj.getPos(i * step_size_t);
-  }
-  
+
+  back_end_planner_->traj_.setGlobalTraj(globalMJO.getTraj(), ros::Time::now().toSec());
+
+  std::vector<Eigen::Vector3d> global_traj = back_end_planner_->traj_.getGlobalTrajViz(0.1);
+
   // Publishes to "global_list"
   visualization_->displayGlobalPathList(global_traj, 0.1, 0);
 
   /*2:  Plan global trajectory */
-
-  bool flag_polyInit = true; 
-  bool flag_randomPolyTraj = true;
+  bool flag_polyInit = true; // Initialize new polynomial
+  bool flag_randomPolyTraj = true; // Random polynomial coefficients
   bool touch_goal = false;
 
   Eigen::Vector3d local_target_pos;
   Eigen::Vector3d local_target_vel;
 
   // If this is the first time planning has been called, then initialize a random polynomial
-  for (int i = 0; i < num_retries; i++)
+  for (int i = 0; i < num_opt_retries; i++)
   {
     // Get local target based on planning horizon
     back_end_planner_->getLocalTarget(
@@ -149,11 +148,134 @@ bool BackEndPlanner::generatePlan(
   }
 
   // Get data from local trajectory and store in PolyTraj and MINCOTraj 
-  traj_utils::PolyTraj poly_msg; 
-  traj_utils::MINCOTraj MINCO_msg; 
-  ego_planner::LocalTrajData* local_traj_data = &back_end_planner_->traj_.local_traj;
+  // traj_utils::PolyTraj poly_msg; 
+  // traj_utils::MINCOTraj MINCO_msg; 
+  // ego_planner::LocalTrajData* local_traj_data = &back_end_planner_->traj_.local_traj;
 
-  polyTraj2ROSMsg(local_traj_data, poly_msg, MINCO_msg);
+  // polyTraj2ROSMsg(local_traj_data, poly_msg, MINCO_msg);
+
+  // poly_traj_pub_.publish(poly_msg); // (In drone origin frame) Publish to corresponding drone for execution
+  // broadcast_ploytraj_pub_.publish(MINCO_msg); // (In world frame) Broadcast to all other drones for replanning to optimize in avoiding swarm collision
+  
+  return true;
+}
+
+bool BackEndPlanner::generatePlanSFC(
+  const Eigen::Vector3d& start_pos, const Eigen::Vector3d& start_vel, 
+  const std::vector<Eigen::Vector3d>& inner_wps, const std::vector<double>& segs_t_dur,
+  const Eigen::Vector3d& goal_pos, const int& num_opt_retries)
+{
+  int num_segs = inner_wps.size()+ 1;// Number of path segments
+
+  Eigen::Vector3d start_acc;
+  Eigen::Vector3d end_vel;
+  Eigen::Vector3d end_acc;
+
+  start_acc.setZero();
+  end_vel.setZero();
+  end_acc.setZero();
+
+  /*1:  Plan initial minimum jerk trajectory */
+  poly_traj::MinJerkOpt globalMJO; // Global minimum jerk trajectory
+
+  std::vector<Eigen::Vector3d> waypoints;
+  waypoints.push_back(goal_pos);
+  // Generate initial minimum jerk trajectory starting from agent's current position with 0 starting/ending acceleration and velocity.
+  bool plan_success = back_end_planner_->planGlobalTrajWaypoints(
+      globalMJO,
+      start_pos, start_vel, start_acc,
+      waypoints, end_vel, end_acc);
+
+  // Publishes to "goal_point"
+  visualization_->displayGoalPoint(goal_pos, Eigen::Vector4d(0, 0.5, 0.5, 1), 0.3, 0);
+
+  if (!plan_success)
+  {
+    logError("Unable to generate initial global minimum jerk trajectory!");
+    return false;
+  }
+
+  back_end_planner_->traj_.setGlobalTraj(globalMJO.getTraj(), ros::Time::now().toSec());
+
+  std::vector<Eigen::Vector3d> global_traj = back_end_planner_->traj_.getGlobalTrajViz(0.1);
+
+  // Publishes to "global_list"
+  visualization_->displayGlobalPathList(global_traj, 0.1, 0);
+
+  /*2:  Plan global trajectory */
+  bool flag_polyInit = true; // Initialize new polynomial
+  bool flag_randomPolyTraj = true; // Random polynomial coefficients
+  bool touch_goal = false;
+
+  Eigen::Vector3d local_target_pos;
+  Eigen::Vector3d local_target_vel;
+
+  // If this is the first time planning has been called, then initialize a random polynomial
+  for (int i = 0; i < num_opt_retries; i++)
+  {
+    // Get local target based on planning horizon
+    back_end_planner_->getLocalTarget(
+        planning_horizon_, start_pos, goal_pos,
+        local_target_pos, local_target_vel,
+        touch_goal);
+
+    // TODO: 
+    // 1) We can use waypoints from bubble planner to form an initial minimum jerk trajectory
+    // 2) Get constraint points from initial minimum jerk trajectory
+    // 3) Get (inner waypoints, start, end, durations, constraint points) from initial minimum jerk trajectory
+    // 4) Optimize plan
+    // 5) [Optional?] Set local trajectory for execution 
+
+    poly_traj::MinJerkOpt initMJO; // Initial minimum jerk trajectory optimizer
+
+    // TODO: convert segs_t_dur from std::Vector<double> to VectorXd
+    // Eigen::VectorXd segs_t_dur_vec(num_segs);        
+
+    // Eigen::VectorXd segs_t_dur_vec(segs_t_dur.data()); // Vector of piece/segment time durations
+
+    // back_end_planner_->generateMinJerkTraj( start_pos, start_vel, start_acc, 
+    //                                         inner_wps, 
+    //                                         local_target_pos, local_target_vel, 
+    //                                         segs_t_dur_vec,
+    //                                         initMJO);
+
+    int num_constr_pts = 5;
+    Eigen::MatrixXd cstr_pts_mjo = initMJO.getInitConstraintPoints(num_constr_pts);
+
+    std::vector<Eigen::Vector3d> initMJO_viz; // Visualization of the initial minimum jerk trajectory
+    for (int i = 0; i < cstr_pts_mjo.cols(); ++i){
+      initMJO_viz.push_back(cstr_pts_mjo.col(i));
+    }
+    visualization_->displayInitialMinJerkTraj(initMJO_viz, 0.2, 0);
+
+    plan_success = true;
+
+    // // Optimizer plans to local target and goal
+    // plan_success = back_end_planner_->reboundReplan(
+    //     start_pos, start_vel, start_acc, 
+    //     local_target_pos, local_target_vel, 
+    //     flag_polyInit, flag_randomPolyTraj, 
+    //     touch_goal);
+
+    if (plan_success)
+    {
+      logInfo("Back-end planning successful!");
+      break;
+    }
+  }
+
+  if (!plan_success)
+  {
+    logError("back_end_planner_->reboundReplan not successful");
+    return false;
+  }
+
+  // Get data from local trajectory and store in PolyTraj and MINCOTraj 
+  // traj_utils::PolyTraj poly_msg; 
+  // traj_utils::MINCOTraj MINCO_msg; 
+  // ego_planner::LocalTrajData* local_traj_data = &back_end_planner_->traj_.local_traj;
+
+  // polyTraj2ROSMsg(local_traj_data, poly_msg, MINCO_msg);
 
   // poly_traj_pub_.publish(poly_msg); // (In drone origin frame) Publish to corresponding drone for execution
   // broadcast_ploytraj_pub_.publish(MINCO_msg); // (In world frame) Broadcast to all other drones for replanning to optimize in avoiding swarm collision

@@ -154,7 +154,6 @@ namespace ego_planner
         }
       }
 
-
       const double next_t_stp = t_seg_start(id_piece_curr) + durations(id_piece_curr) / cps_num_perPiece_ * ((id_cps_curr + 1) - cps_num_perPiece_ * id_piece_curr);
       if (t >= next_t_stp)
       {
@@ -185,7 +184,6 @@ namespace ego_planner
 
       t += t_step;
     }
-    // ROS_ERROR("C");
 
     return true;
   }

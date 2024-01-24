@@ -52,27 +52,21 @@ private:
 
   /* Subscriber callbacks */
 
+  void debugStartCB(const geometry_msgs::PoseConstPtr &msg);
+
+  void debugGoalCB(const geometry_msgs::PoseConstPtr &msg);
+
   // /**
-  //  * @brief Callback for SFC Trajectory message
+  //  * @brief Callback for safe flight corridor trajectory
   //  * 
   //  * @param msg 
   //  */
   // void sfcTrajectoryCB(const gestelt_msgs::SphericalSFCConstPtr& msg);
-
-  void debugStartCB(const geometry_msgs::PoseConstPtr &msg);
-
-  void debugGoalCB(const geometry_msgs::PoseConstPtr &msg);
   
-  /**
-   * @brief Convert from local trajectory to polynomial and MINCO Trajectory
-   * 
-   * @param poly_msg 
-   * @param MINCO_msg 
-   */
-  void polyTraj2ROSMsg(ego_planner::LocalTrajData *data, traj_utils::PolyTraj &poly_msg, traj_utils::MINCOTraj &MINCO_msg);
+  /* Plan generation methods */
 
   /**
-   * @brief Generate and optimize a given plan
+   * @brief Generate and optimize a given plan using ESDF free method
    * 
    * @param start_pos 
    * @param start_vel 
@@ -80,8 +74,24 @@ private:
    * @return true 
    * @return false 
    */
-  bool generatePlan(const Eigen::Vector3d& start_pos, const Eigen::Vector3d& start_vel, 
-    const Eigen::Vector3d& goal_pos, const int& num_retrie);
+  bool generatePlanESDFFree(const Eigen::Vector3d& start_pos, const Eigen::Vector3d& start_vel, 
+    const Eigen::Vector3d& goal_pos, const int& num_opt_retries);
+
+  /**
+   * @brief 
+   * 
+   * @param start_pos   Start position vector [x, y, z]
+   * @param start_vel   Start velocity vector [dx, dy, dz]
+   * @param inner_wps   Vector of inner waypoints [ [x_1, y_1, z_1], [x_2, y_2, z_2], ..., [x_M-1, y_M-1, z_M-1]]
+   * @param segs_t_dur  Vector of time durations (s) of each segment (t_1, t_2, ..., t_M)
+   * @param goal_pos    Local goal position vector [x, y, z]
+   * @param num_opt_retries Number of times to retry optimization 
+   * @return true 
+   * @return false 
+   */
+  bool generatePlanSFC(  const Eigen::Vector3d& start_pos, const Eigen::Vector3d& start_vel, 
+                      const std::vector<Eigen::Vector3d>& inner_wps, const std::vector<double>& segs_t_dur,
+                      const Eigen::Vector3d& goal_pos, const int& num_opt_retries);
 
   /* Checks */
 
@@ -92,6 +102,16 @@ private:
    * @return false 
    */
   bool isPlanFeasible(const Eigen::Vector3d& waypoints);
+
+  /* Helper functions */
+
+  /**
+   * @brief Convert from local trajectory to polynomial and MINCO Trajectory
+   * 
+   * @param poly_msg 
+   * @param MINCO_msg 
+   */
+  void polyTraj2ROSMsg(ego_planner::LocalTrajData *data, traj_utils::PolyTraj &poly_msg, traj_utils::MINCOTraj &MINCO_msg);
 
 private:
   template<typename ... Args>

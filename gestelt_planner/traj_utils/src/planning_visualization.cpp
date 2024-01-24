@@ -12,7 +12,7 @@ namespace ego_planner
 
     goal_point_pub = nh.advertise<visualization_msgs::Marker>("goal_point", 2);
     global_list_pub = nh.advertise<visualization_msgs::Marker>("global_list", 2);
-    init_list_pub = nh.advertise<visualization_msgs::Marker>("init_list", 2);
+    initial_min_jerk_traj_pub_ = nh.advertise<visualization_msgs::Marker>("initial_min_jerk_traj", 2);
     optimal_list_pub = nh.advertise<visualization_msgs::Marker>("optimal_list", 2);
     failed_list_pub = nh.advertise<visualization_msgs::Marker>("failed_list", 2);
     a_star_list_pub = nh.advertise<visualization_msgs::Marker>("a_star_list", 20);
@@ -182,7 +182,7 @@ namespace ego_planner
   void PlanningVisualization::displayMultiInitPathList(vector<vector<Eigen::Vector3d>> init_trajs, const double scale)
   {
 
-    if (init_list_pub.getNumSubscribers() == 0)
+    if (initial_min_jerk_traj_pub_.getNumSubscribers() == 0)
     {
       return;
     }
@@ -193,7 +193,7 @@ namespace ego_planner
     {
       Eigen::Vector4d color(0, 0, 0, 0);
       vector<Eigen::Vector3d> blank;
-      displayMarkerList(init_list_pub, blank, scale, color, id, false);
+      displayMarkerList(initial_min_jerk_traj_pub_, blank, scale, color, id, false);
       ros::Duration(0.001).sleep();
     }
     last_nums = 0;
@@ -201,22 +201,23 @@ namespace ego_planner
     for ( int id=0; id<(int)init_trajs.size(); id++ )
     {
       Eigen::Vector4d color(0, 0, 1, 0.7);
-      displayMarkerList(init_list_pub, init_trajs[id], scale, color, id, false);
+      displayMarkerList(initial_min_jerk_traj_pub_, init_trajs[id], scale, color, id, false);
       ros::Duration(0.001).sleep();
       last_nums++;
     }
 
   }
 
-  void PlanningVisualization::displayInitPathList(vector<Eigen::Vector3d> init_pts, const double scale, int id)
+  void PlanningVisualization::displayInitialMinJerkTraj(
+    vector<Eigen::Vector3d> init_pts, const double scale, int id)
   {
-    if (init_list_pub.getNumSubscribers() == 0)
+    if (initial_min_jerk_traj_pub_.getNumSubscribers() == 0)
     {
       return;
     }
 
     Eigen::Vector4d color(0, 0, 1, 1);
-    displayMarkerList(init_list_pub, init_pts, scale, color, id);
+    displayMarkerList(initial_min_jerk_traj_pub_, init_pts, scale, color, id);
   }
 
 

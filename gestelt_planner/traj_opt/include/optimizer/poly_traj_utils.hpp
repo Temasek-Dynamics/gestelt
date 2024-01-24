@@ -945,7 +945,7 @@ namespace poly_traj
         int N; // Number of pieces
         Eigen::Matrix3d headPVA; // Start PVA
         Eigen::Matrix3d tailPVA; // Goal PVA
-        Eigen::VectorXd T1; // Time duration of each piece
+        Eigen::VectorXd T1; // Vector of time duration of each piece
         BandedSystem A;
         Eigen::MatrixXd b; // Coefficient matrix. Coeffcients of 5th order polynomial [c_5, ... c_0] = b * [P_i; V_i; A_i; P_f; V_f; A_f]
 
@@ -1165,13 +1165,20 @@ namespace poly_traj
         }
 
     public:
-        void reset(const Eigen::Matrix3d &headState,
-                          const Eigen::Matrix3d &tailState,
+        /**
+         * @brief Set the boundary states and resize 
+         * 
+         * @param startPVA  Boundary start condition: Matrix consisting of 3d (position, velocity acceleration) 
+         * @param endPVA    Boundary end condition: Matrix consisting of 3d (position, velocity acceleration) 
+         * @param pieceNum  Number of path segments
+         */
+        void reset(const Eigen::Matrix3d &startPVA,
+                          const Eigen::Matrix3d &endPVA,
                           const int &pieceNum)
         {
             N = pieceNum;
-            headPVA = headState;
-            tailPVA = tailState;
+            headPVA = startPVA;
+            tailPVA = endPVA;
             T1.resize(N);
             A.create(6 * N, 6, 6);
             b.resize(6 * N, 3);
@@ -1419,14 +1426,14 @@ namespace poly_traj
         }
         
         /**
-         * @brief Get the initial Constraint Points, which is simply the positions along the trajectory
+         * @brief Given desired number of constraint points per segment, get all constraint points along trajectory
          * 
-         * @param K Number of constraint points per piece
-         * @return Eigen::MatrixXd 
+         * @param num_cp Number of constraint points per piece
+         * @return Eigen::MatrixXd Matrix of points of size (3, N*num_cp+1)
          */
-        Eigen::MatrixXd getInitConstraintPoints(const int K) const
+        Eigen::MatrixXd getInitConstraintPoints(const int num_cp) const
         {   
-            Eigen::MatrixXd pts(3, N * K + 1); // Each column of pts is a 3d position value
+            Eigen::MatrixXd pts(3, N * num_cp + 1); // Each column of pts is a 3d position value
             Eigen::Vector3d pos;
             Eigen::Matrix<double, 6, 1> beta0;
             double s1, s2, s3, s4, s5;
@@ -1436,12 +1443,12 @@ namespace poly_traj
             for (int i = 0; i < N; ++i) // For each piece
             {
                 const auto &c = b.block<6, 3>(i * 6, 0);
-                step = T1(i) / K; // step is time duration / number of constraint points
+                step = T1(i) / num_cp; // step is time duration / number of constraint points
                 s1 = 0.0; // Time stamp
                 double t = 0;
-                // innerLoop = K;
+                // innerLoop = num_cp;
 
-                for (int j = 0; j <= K; ++j) // For each constraint point
+                for (int j = 0; j <= num_cp; ++j) // For each constraint point
                 {
                     s2 = s1 * s1;
                     s3 = s2 * s1;
@@ -1453,7 +1460,7 @@ namespace poly_traj
                     pts.col(i_dp) = pos; 
 
                     s1 += step;
-                    if (j != K || (j == K && i == N - 1))
+                    if (j != num_cp || (j == num_cp && i == N - 1))
                     {
                         ++i_dp;
                     }
