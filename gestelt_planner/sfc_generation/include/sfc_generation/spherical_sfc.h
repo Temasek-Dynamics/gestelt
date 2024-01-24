@@ -136,7 +136,7 @@ public: // Public structs
 
   }; // struct SphericalSFCParams
 
-  struct SFCTrajectory{
+  struct SFCTrajectory{ // SFCTrajectory contains the spheres, trajectory waypoints and time allocation
     std::vector<SphericalSFC::Sphere> spheres;  // Vector of Spheres 
     std::vector<Eigen::Vector3d> waypoints;     // Vector of 3d waypoint positions {p1, p2, ... p_M+1}
     std::vector<double> segs_t_dur;          // Vector of time durations of each segment {t_1, t_2, ..., t_M}
@@ -187,7 +187,11 @@ public:
    * @return std::vector<SphericalSFC::Sphere> const 
    */
   std::vector<SphericalSFC::Sphere> const getSFCSpheres(){
-      return sfc_spheres_;
+    return sfc_spheres_;
+  }
+
+  SphericalSFC::SFCTrajectory const getSFCTrajectory(){
+    return sfc_traj_;
   }
 
 private: // Private methods
@@ -262,21 +266,13 @@ private: // Private methods
   Eigen::Matrix<double, 3, 3> rotationAlign(const Eigen::Vector3d & z, const Eigen::Vector3d & d);
 
   /**
-   * @brief Get the trajectory waypoints from SFC spheres
-   * 
-   * @param sfc_spheres 
-   * @return std::vector<Eigen::Vector3d> 
-   */
-  std::vector<Eigen::Vector3d> getTrajWaypointsFromSpheres(const std::vector<SphericalSFC::Sphere>& sfc_spheres);
-
-  /**
-   * @brief Get a SFC Trajectory given a sequence of intersecting spheres
+   * @brief Compute a SFC Trajectory given a sequence of intersecting spheres
    * 
    * @param sfc_spheres 
    * @param goal_pos 
    * @param sfc_traj 
    */
-  void getSFCTrajectory(const std::vector<SphericalSFC::Sphere>& sfc_spheres, const Eigen::Vector3d& goal_pos, SphericalSFC::SFCTrajectory& sfc_traj);
+  void computeSFCTrajectory(const std::vector<SphericalSFC::Sphere>& sfc_spheres, const Eigen::Vector3d& goal_pos, SphericalSFC::SFCTrajectory& sfc_traj);
 
   /* Visualization methods */
 
@@ -298,7 +294,6 @@ private: // Private methods
 private: // Private members
   Sampler sampler_; // Sampler for sampling SFC waypoints
 
-
   ros::Publisher p_cand_viz_pub_; // Visualization of sampling points
   ros::Publisher dist_viz_pub_; // Visualization of sampling distribution
   ros::Publisher sfc_spherical_viz_pub_; // Visualization of spherical SFC
@@ -308,7 +303,6 @@ private: // Private members
   int itr_; // Iteration number
   SphericalSFCParams sfc_params_; // SFC parameters
   
-
   /* Data structs */
   std::shared_ptr<GridMap> grid_map_; 
   std::vector<SphericalSFC::Sphere> sfc_spheres_; // Waypoints of the spherical flight corridor

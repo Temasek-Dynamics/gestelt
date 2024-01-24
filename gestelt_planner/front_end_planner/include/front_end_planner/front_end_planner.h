@@ -11,7 +11,9 @@
 #include <std_msgs/Empty.h>
 #include <geometry_msgs/Pose.h>
 #include <nav_msgs/Odometry.h>
+
 #include <gestelt_msgs/Goals.h>
+#include <gestelt_msgs/SphericalSFCTrajectory.h>
 
 #include <visualization_msgs/Marker.h>
 
@@ -38,6 +40,8 @@ private:
   ros::Subscriber debug_goal_sub_; // DEBUG: Subscriber to user-defined goal point
   ros::Subscriber plan_on_demand_sub_; // DEBUG: Subscriber to trigger planning on demand
 
+  ros::Publisher spherical_sfc_traj_pub_; // Publish safe flight corridor spherical trajectory
+
   /* Visualization for Front End Planner*/
   ros::Publisher front_end_plan_pub_; // Publish front end plan to back-end optimizer
   ros::Publisher front_end_plan_viz_pub_; // Visualization of front end plan
@@ -53,7 +57,7 @@ private:
   ros::Timer plan_timer_; // Timer for planning loop
   
   /* parameters */
-  int drone_id_;
+  int drone_id_{-1};
   double squared_goal_tol_; // Squared goal tolerance
   bool within_goal_tol_; // Within a specified tolerance of the goal
 

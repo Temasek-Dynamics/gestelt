@@ -10,6 +10,8 @@
 
 #include <visualization_msgs/Marker.h>
 
+#include <gestelt_msgs/SphericalSFCTrajectory.h>
+
 #include <traj_utils/PolyTraj.h>
 #include <traj_utils/MINCOTraj.h>
 #include <ego_planner_fsm/ego_planner_manager.h>
@@ -56,13 +58,13 @@ private:
 
   void debugGoalCB(const geometry_msgs::PoseConstPtr &msg);
 
-  // /**
-  //  * @brief Callback for safe flight corridor trajectory
-  //  * 
-  //  * @param msg 
-  //  */
-  // void sfcTrajectoryCB(const gestelt_msgs::SphericalSFCConstPtr& msg);
-  
+  /**
+   * @brief Callback for safe flight corridor trajectory
+   * 
+   * @param msg 
+   */
+  void sfcTrajectoryCB(const gestelt_msgs::SphericalSFCTrajectoryConstPtr& msg);
+
   /* Plan generation methods */
 
   /**
@@ -90,7 +92,7 @@ private:
    * @return false 
    */
   bool generatePlanSFC(  const Eigen::Vector3d& start_pos, const Eigen::Vector3d& start_vel, 
-                      const std::vector<Eigen::Vector3d>& inner_wps, const std::vector<double>& segs_t_dur,
+                      const std::vector<Eigen::Vector3d>& inner_wps, std::vector<double>& segs_t_dur,
                       const Eigen::Vector3d& goal_pos, const int& num_opt_retries);
 
   /* Checks */

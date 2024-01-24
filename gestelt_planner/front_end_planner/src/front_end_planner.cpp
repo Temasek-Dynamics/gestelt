@@ -35,6 +35,8 @@ void FrontEndPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
 
   plan_on_demand_sub_ = nh.subscribe("plan_on_demand", 5, &FrontEndPlanner::planOnDemandCB, this);
 
+  spherical_sfc_traj_pub_ = nh.advertise<gestelt_msgs::SphericalSFCTrajectory>("front_end/sfc_trajectory", 10);
+
   front_end_plan_viz_pub_ = nh.advertise<visualization_msgs::Marker>("plan_viz", 10);
   closed_list_viz_pub_ = nh.advertise<visualization_msgs::Marker>("closed_list_viz", 10);
 
@@ -67,6 +69,11 @@ void FrontEndPlanner::planTimerCB(const ros::TimerEvent &e)
 {
   generatePlan();
 }
+
+/**
+ * Timer Callbacks
+*/
+
 
 bool FrontEndPlanner::generatePlan(){
   
@@ -108,13 +115,38 @@ bool FrontEndPlanner::generatePlan(){
   }
   double sfc_plan_time_ms = (ros::Time::now() - sfc_plan_start_time).toSec() * 1000;
 
-  std::vector<SphericalSFC::Sphere> sfc_spheres = sfc_generation_->getSFCSpheres();
+  SphericalSFC::SFCTrajectory sfc_traj = sfc_generation_->getSFCTrajectory();
 
-  logInfo(string_format("[FrontEndPlanner]: Front-end Planning Time: %f ms", front_end_plan_time_ms));
-  logInfo(string_format("[FrontEndPlanner]: SFC Planning Time: %f ms", sfc_plan_time_ms));
-  logInfo(string_format("[FrontEndPlanner]: Number of waypoints in front-end path: %ld", front_end_path.size()));
-  logInfo(string_format("[FrontEndPlanner]: Size of closed list (expanded nodes): %ld", closed_list.size()));
-  logInfo(string_format("[FrontEndPlanner]: Number of spheres in SFC Spherical corridor: %ld", sfc_spheres.size()));
+  gestelt_msgs::SphericalSFCTrajectory sfc_traj_msg;
+
+  for (auto sphere : sfc_traj.spheres){
+    gestelt_msgs::Sphere sphere_msg;
+    sphere_msg.radius = sphere.radius;
+    sphere_msg.center.x = sphere.center(0);
+    sphere_msg.center.y = sphere.center(1);
+    sphere_msg.center.z = sphere.center(2);
+    sfc_traj_msg.spheres.push_back(sphere_msg);
+  }
+
+  for (auto wp : sfc_traj.waypoints)
+  {
+    geometry_msgs::Point wp_msg;
+    wp_msg.x = wp(0);
+    wp_msg.y = wp(1);
+    wp_msg.z = wp(2);
+    sfc_traj_msg.waypoints.push_back(wp_msg);
+  }
+
+  sfc_traj_msg.segments_time_duration = sfc_traj.segs_t_dur;
+  spherical_sfc_traj_pub_.publish(sfc_traj_msg);
+
+  logInfo(string_format("Front-end Planning Time: %f ms", front_end_plan_time_ms));
+  logInfo(string_format("SFC Planning Time: %f ms", sfc_plan_time_ms));
+  logInfo(string_format("Number of waypoints in front-end path: %ld", front_end_path.size()));
+  logInfo(string_format("Size of closed list (expanded nodes): %ld", closed_list.size()));
+  logInfo(string_format("[SFC] Number of spheres in SFC Spherical corridor: %ld", sfc_traj.spheres.size()));
+  logInfo(string_format("[SFC] Number of waypoints: %ld", sfc_traj.waypoints.size()));
+  logInfo(string_format("[SFC] Number of time segment durations: %ld", sfc_traj.segs_t_dur.size()));
 
   return true;
 }

@@ -57,7 +57,7 @@ bool SphericalSFC::generateSFC(const std::vector<Eigen::Vector3d> &path)
 
     publishVizSphericalSFC(sfc_spheres_, sfc_spherical_viz_pub_, "world");
 
-    getSFCTrajectory(sfc_spheres_, path.back(), sfc_traj_);
+    computeSFCTrajectory(sfc_spheres_, path.back(), sfc_traj_);
     publishVizPiecewiseTrajectory(sfc_traj_.waypoints, sfc_waypoints_viz_pub_);
 
     if (!sfc_spheres_.back().contains(path.back())){ 
@@ -82,10 +82,6 @@ bool SphericalSFC::generateFreeSphere(const Eigen::Vector3d& point, Sphere& B)
     if (grid_map_->getNearestOccupiedCell(point, occ_nearest, radius)){
         B.center = point;
         B.setRadius(radius);
-        // std::cout << "point: " << point << std::endl;
-        // std::cout << "Occ_nearest: " << occ_nearest << std::endl;
-        // std::cout << "Sphere radius: " << sphere.radius << std::endl;
-
         return true;
     }
     return false;
@@ -234,7 +230,7 @@ Eigen::Vector3d SphericalSFC::getIntersectionCenter(const Sphere& B_a, const Sph
     return pt_intersect;
 }
 
-void SphericalSFC::getSFCTrajectory(const std::vector<SphericalSFC::Sphere>& sfc_spheres, const Eigen::Vector3d& goal_pos, SphericalSFC::SFCTrajectory& sfc_traj)
+void SphericalSFC::computeSFCTrajectory(const std::vector<SphericalSFC::Sphere>& sfc_spheres, const Eigen::Vector3d& goal_pos, SphericalSFC::SFCTrajectory& sfc_traj)
 {
     /* 1: Retrieve waypoints from the intersections between the spheres */
     std::vector<Eigen::Vector3d> traj_waypoints(sfc_spheres.size()+1);

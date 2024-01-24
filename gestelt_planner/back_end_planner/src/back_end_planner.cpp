@@ -9,7 +9,7 @@ void BackEndPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   pnh.param("back_end/num_replan_retries", num_replan_retries_, -1);
   
   /* Subscribers */
-  // sfc_traj_sub_ = nh.subscribe("front_end_planner/sfc_trajectory", 5, &BackEndPlanner::sfcTrajectoryCB, this);
+  sfc_traj_sub_ = nh.subscribe("front_end_planner/sfc_trajectory", 5, &BackEndPlanner::sfcTrajectoryCB, this);
   debug_start_sub_ = pnh.subscribe("debug/plan_start", 5, &BackEndPlanner::debugStartCB, this);
   debug_goal_sub_ = pnh.subscribe("debug/plan_goal", 5, &BackEndPlanner::debugGoalCB, this);
 
@@ -65,9 +65,30 @@ void BackEndPlanner::debugGoalCB(const geometry_msgs::PoseConstPtr &msg)
  * 
  * @param msg 
  */
-// void BackEndPlanner::sfcTrajectoryCB(const gestelt_msgs::SphericalSFCConstPtr& msg){
-//   // generatePlanSFC();
-// }
+void BackEndPlanner::sfcTrajectoryCB(const gestelt_msgs::SphericalSFCTrajectoryConstPtr& msg){
+  std::vector<double> spheres_radius;
+  std::vector<geometry_msgs::Point> spheres_centers;
+
+  for (auto sphere : msg->spheres){
+    spheres_radius.push_back(sphere.radius);
+    spheres_centers.push_back(sphere.center);
+  }
+  std::vector<geometry_msgs::Point> waypoints = msg->waypoints;
+  std::vector<double> segments_time_duration = msg->segments_time_duration;
+
+  // Convert to data types used by optimizer
+  Eigen::Vector3d start_pos{waypoints[0].x, waypoints[0].y, waypoints[0].z};
+  Eigen::Vector3d start_vel{0.0, 0.0, 0.0};  
+  std::vector<Eigen::Vector3d> inner_wps;  
+  for (int i = 1; i < waypoints.size() - 1; i++){
+    inner_wps.push_back(Eigen::Vector3d{waypoints[i].x, waypoints[i].y, waypoints[i].z});
+  }
+  Eigen::Vector3d goal_pos{waypoints.back().x, waypoints.back().y, waypoints.back().z};
+
+  generatePlanSFC(start_pos, start_vel, 
+                  inner_wps, segments_time_duration,
+                  goal_pos, 5);
+}
 
 /* Planning methods */
 
@@ -162,7 +183,7 @@ bool BackEndPlanner::generatePlanESDFFree(
 
 bool BackEndPlanner::generatePlanSFC(
   const Eigen::Vector3d& start_pos, const Eigen::Vector3d& start_vel, 
-  const std::vector<Eigen::Vector3d>& inner_wps, const std::vector<double>& segs_t_dur,
+  const std::vector<Eigen::Vector3d>& inner_wps, std::vector<double>& segs_t_dur,
   const Eigen::Vector3d& goal_pos, const int& num_opt_retries)
 {
   int num_segs = inner_wps.size()+ 1;// Number of path segments
@@ -225,19 +246,19 @@ bool BackEndPlanner::generatePlanSFC(
     // 3) Get (inner waypoints, start, end, durations, constraint points) from initial minimum jerk trajectory
     // 4) Optimize plan
     // 5) [Optional?] Set local trajectory for execution 
-
+    
     poly_traj::MinJerkOpt initMJO; // Initial minimum jerk trajectory optimizer
 
+    std::vector<double> segs_t_dur_cpy = segs_t_dur;
     // TODO: convert segs_t_dur from std::Vector<double> to VectorXd
-    // Eigen::VectorXd segs_t_dur_vec(num_segs);        
+    Eigen::VectorXd segs_t_dur_vec = 
+      Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(segs_t_dur_cpy.data(), segs_t_dur_cpy.size()); // Vector of piece/segment time durations
 
-    // Eigen::VectorXd segs_t_dur_vec(segs_t_dur.data()); // Vector of piece/segment time durations
-
-    // back_end_planner_->generateMinJerkTraj( start_pos, start_vel, start_acc, 
-    //                                         inner_wps, 
-    //                                         local_target_pos, local_target_vel, 
-    //                                         segs_t_dur_vec,
-    //                                         initMJO);
+    back_end_planner_->generateMinJerkTraj( start_pos, start_vel, start_acc, 
+                                            inner_wps, 
+                                            local_target_pos, local_target_vel, 
+                                            segs_t_dur_vec,
+                                            initMJO);
 
     int num_constr_pts = 5;
     Eigen::MatrixXd cstr_pts_mjo = initMJO.getInitConstraintPoints(num_constr_pts);

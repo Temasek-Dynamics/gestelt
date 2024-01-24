@@ -24,6 +24,8 @@ add_message_files(
   Goals.msg
   CommanderState.msg
   ExecTrajectory.msg
+  Sphere.msg
+  SphericalSFCTrajectory.msg
 )
 
 ## Generate services in the 'srv' folder
