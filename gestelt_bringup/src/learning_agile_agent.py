@@ -470,7 +470,7 @@ class LearningAgileAgentNode():
         setpoint.position.x = pos_vel_cmd[0]
         
         # TODO ONLY FOR TEST
-        setpoint.position.y = pos_vel_cmd[1]+5
+        setpoint.position.y = pos_vel_cmd[1]-1.8
 
 
         setpoint.position.z = pos_vel_cmd[2]
@@ -494,7 +494,7 @@ class LearningAgileAgentNode():
         self.drone_quat = np.array([msg.pose.orientation.w,msg.pose.orientation.x,msg.pose.orientation.y,msg.pose.orientation.z])
         
         # TODO ONLY FOR TEST
-        self.drone_pos[1]=self.drone_pos[1]-5 
+        self.drone_pos[1]=self.drone_pos[1]+1.8 
         # print('drone_pos=',self.drone_pos)
 
     def drone_state_twist_callback(self,msg):
@@ -509,7 +509,7 @@ class LearningAgileAgentNode():
 
 def main():
     
-    ROS_INTEGRATION = True 
+    ROS_INTEGRATION = True
     if ROS_INTEGRATION:
         #---------------------- for ros node integration ----------------------------#
     
@@ -527,7 +527,7 @@ def main():
         learing_agile_agent=LearningAgileAgent()
         # receive the start and end point, and the initial gate point, from ROS side
         # rewrite the inputs
-        learing_agile_agent.receive_terminal_states(start=np.array([0,-5,1]),end=np.array([0,5,1]))
+        learing_agile_agent.receive_terminal_states(start=np.array([0,1.8,1]),end=np.array([0,-1.8,1]))
 
         # problem definition
         learing_agile_agent.problem_definition()
