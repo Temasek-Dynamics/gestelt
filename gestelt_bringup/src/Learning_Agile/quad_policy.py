@@ -35,9 +35,11 @@ class run_quad:
         self.uav1 = Quadrotor()
         jx, jy, jz = 0.0023, 0.0023, 0.004
         # self.uav1.initDyn(Jx=0.0023,Jy=0.0023,Jz=0.004,mass=0.5,l=0.35,c=0.0245) # hb quadrotor
-        self.uav1.initDyn(Jx=0.000392,Jy=0.000405,Jz=0.000639,mass=0.205,l=0.0775,c=0.0245) # NUSWARM quadrotor
 
-        self.uav1.initCost(wrt=5,wqt=80,wthrust=0.1,wrf=5,wvf=5,wqf=0,wwf=3,goal_pos=self.goal_pos) # wthrust = 0.1
+        # c is the force constant, l is the arm length
+        self.uav1.initDyn(Jx=0.000392,Jy=0.000405,Jz=0.000639,mass=0.205,l=0.1650,c=2.9265e-7) # NUSWARM quadrotor
+
+        self.uav1.initCost(wrt=50,wqt=80,wthrust=0.1,wrf=50,wvf=5,wqf=0,wwf=3,goal_pos=self.goal_pos) # wthrust = 0.1
         self.uav1.init_TraCost()
 
         # --------------------------- create PDP object1 ----------------------------------------

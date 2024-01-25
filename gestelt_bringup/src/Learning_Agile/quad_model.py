@@ -113,9 +113,14 @@ class Quadrotor:
         # Euler's law
         dq = 1 / 2 * mtimes(self.omega(self.w_B), self.q)
         dw = mtimes(inv(self.J_B), self.M_B - mtimes(mtimes(self.skew(self.w_B), self.J_B), self.w_B))
-
+        
+        # state
         self.X = vertcat(self.r_I, self.v_I, self.q, self.w_B)
+        
+        # input
         self.U = self.T_B
+        
+        # dynamics
         self.f = vertcat(dr_I, dv_I, dq, dw)
 
     def initCost(self, wrt=None, wqt=None, wrf=None, wvf=None, wqf=None, wwf=None, \
