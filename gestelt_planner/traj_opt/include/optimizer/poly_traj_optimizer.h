@@ -81,7 +81,7 @@ namespace ego_planner
     ConstraintPoints cps_;
     // PtsChk_t pts_check_;
 
-    int drone_id_;
+    int drone_id_;            // ID of drone
     int cps_num_perPiece_;   // number of distinctive constraint points per piece
     int variable_num_;       // optimization variables
     int piece_num_;          // poly traj piece numbers
@@ -107,6 +107,9 @@ namespace ego_planner
 
     double t_now_;
 
+    std::vector<double> spheres_radius_;                // Vector of sphere radius, size is no. of segments/pieces
+    std::vector<Eigen::Vector3d> spheres_center_; // Vector of sphere centers, size is no. of segments/pieces
+
   public:
     PolyTrajOptimizer(){}
     ~PolyTrajOptimizer() {}
@@ -125,9 +128,6 @@ namespace ego_planner
     void setSwarmTrajs(SwarmTrajData *swarm_trajs_ptr);
     void setDroneId(const int drone_id);
     void setIfTouchGoal(const bool touch_goal);
-
-    /* helper functions */
-    const ConstraintPoints &getControlPoints(void) { return cps_; }
 
     /**
      * Returns the minimum jerk optimizer object
@@ -166,7 +166,9 @@ namespace ego_planner
      */
     bool optimizeTrajectorySFC(const Eigen::MatrixXd &iniState, const Eigen::MatrixXd &finState,
                             const Eigen::MatrixXd &initInnerPts, const Eigen::VectorXd &initT,
-                            Eigen::MatrixXd &init_cstr_pts, double &final_cost);
+                            const std::vector<double>& spheres_radius,
+                            const std::vector<Eigen::Vector3d>& spheres_centers,
+                            double &final_cost);
 
     /**
      * @brief Optimize a trajectory given boundary conditions, inner points and segment durations.
@@ -372,8 +374,6 @@ namespace ego_planner
 
       return true;
     }
-
-    // std::vector<std::pair<int, int>> finelyCheckConstraintPointsOnly(Eigen::MatrixXd &init_points);
 
     /**
      * @brief Check for collision along path and set {p,v} pairs to constraint points
@@ -973,334 +973,6 @@ namespace ego_planner
       return false;
     }
 
-    /* multi-topological paths support */
-    std::vector<ConstraintPoints> distinctiveTrajs(vector<std::pair<int, int>> segments)
-    {
-      if (segments.size() == 0) // will be invoked again later.
-      {
-        std::vector<ConstraintPoints> oneSeg;
-        oneSeg.push_back(cps_);
-        return oneSeg;
-      }
-
-      constexpr int MAX_TRAJS = 8;
-      constexpr int VARIS = 2;
-      int seg_upbound = std::min((int)segments.size(), static_cast<int>(floor(log(MAX_TRAJS) / log(VARIS))));
-      std::vector<ConstraintPoints> control_pts_buf;
-      control_pts_buf.reserve(MAX_TRAJS);
-      const double RESOLUTION = grid_map_->getResolution();
-      const double CTRL_PT_DIST = (cps_.points.col(0) - cps_.points.col(cps_.cp_size - 1)).norm() / (cps_.cp_size - 1);
-
-      // Step 1. Find the opposite vectors and base points for every segment.
-      std::vector<std::pair<ConstraintPoints, ConstraintPoints>> RichInfoSegs;
-      for (int i = 0; i < seg_upbound; i++)
-      {
-        std::pair<ConstraintPoints, ConstraintPoints> RichInfoOneSeg;
-        ConstraintPoints RichInfoOneSeg_temp;
-        cps_.segment(RichInfoOneSeg_temp, segments[i].first, segments[i].second);
-        RichInfoOneSeg.first = RichInfoOneSeg_temp;
-        RichInfoOneSeg.second = RichInfoOneSeg_temp;
-        RichInfoSegs.push_back(RichInfoOneSeg);
-      }
-
-      for (int i = 0; i < seg_upbound; i++)
-      {
-
-        // 1.1 Find the start occupied point id and the last occupied point id
-        if (RichInfoSegs[i].first.cp_size > 1)
-        {
-          int occ_start_id = -1, occ_end_id = -1;
-          Eigen::Vector3d occ_start_pt, occ_end_pt;
-          for (int j = 0; j < RichInfoSegs[i].first.cp_size - 1; j++)
-          {
-            double step_size = RESOLUTION / (RichInfoSegs[i].first.points.col(j) - RichInfoSegs[i].first.points.col(j + 1)).norm() / 2;
-            for (double a = 1; a > 0; a -= step_size)
-            {
-              Eigen::Vector3d pt(a * RichInfoSegs[i].first.points.col(j) + (1 - a) * RichInfoSegs[i].first.points.col(j + 1));
-              if (grid_map_->getInflateOccupancy(pt))
-              {
-                occ_start_id = j;
-                occ_start_pt = pt;
-                goto exit_multi_loop1;
-              }
-            }
-          }
-        exit_multi_loop1:;
-          for (int j = RichInfoSegs[i].first.cp_size - 1; j >= 1; j--)
-          {
-            ;
-            double step_size = RESOLUTION / (RichInfoSegs[i].first.points.col(j) - RichInfoSegs[i].first.points.col(j - 1)).norm();
-            for (double a = 1; a > 0; a -= step_size)
-            {
-              Eigen::Vector3d pt(a * RichInfoSegs[i].first.points.col(j) + (1 - a) * RichInfoSegs[i].first.points.col(j - 1));
-              if (grid_map_->getInflateOccupancy(pt))
-              {
-                occ_end_id = j;
-                occ_end_pt = pt;
-                goto exit_multi_loop2;
-              }
-            }
-          }
-        exit_multi_loop2:;
-
-          // double check
-          if (occ_start_id == -1 || occ_end_id == -1)
-          {
-            // It means that the first or the last control points of one segment are in obstacles, which is not allowed.
-            // ROS_WARN("What? occ_start_id=%d, occ_end_id=%d", occ_start_id, occ_end_id);
-
-            segments.erase(segments.begin() + i);
-            RichInfoSegs.erase(RichInfoSegs.begin() + i);
-            seg_upbound--;
-            i--;
-
-            continue;
-          }
-
-          // 1.2 Reverse the vector and find new base points from occ_start_id to occ_end_id.
-          for (int j = occ_start_id; j <= occ_end_id; j++)
-          {
-            Eigen::Vector3d base_pt_reverse, base_vec_reverse;
-            if (RichInfoSegs[i].first.base_point[j].size() != 1)
-            {
-              std::cout << "RichInfoSegs[" << i << "].first.base_point[" << j << "].size()=" << RichInfoSegs[i].first.base_point[j].size() <<std::endl;
-              ROS_ERROR("Wrong number of base_points!!! Should not be happen!.");
-
-              std::cout << std::setprecision(5);
-              std::cout << "cps_" <<std::endl;
-              std::cout << " clearance=" << obs_clearance_ << " cps.size=" << cps_.cp_size <<std::endl;
-              for (int temp_i = 0; temp_i < cps_.cp_size; temp_i++)
-              {
-                if (cps_.base_point[temp_i].size() > 1 && cps_.base_point[temp_i].size() < 1000)
-                {
-                  ROS_ERROR("Should not happen!!!");
-                  std::cout << "######" << cps_.points.col(temp_i).transpose() <<std::endl;
-                  for (size_t temp_j = 0; temp_j < cps_.base_point[temp_i].size(); temp_j++)
-                    std::cout << "      " << cps_.base_point[temp_i][temp_j].transpose() << " @ " << cps_.direction[temp_i][temp_j].transpose() <<std::endl;
-                }
-              }
-
-              std::vector<ConstraintPoints> blank;
-              return blank;
-            }
-
-            base_vec_reverse = -RichInfoSegs[i].first.direction[j][0];
-
-            // The start and the end case must get taken special care of.
-            if (j == occ_start_id)
-            {
-              base_pt_reverse = occ_start_pt;
-            }
-            else if (j == occ_end_id)
-            {
-              base_pt_reverse = occ_end_pt;
-            }
-            else
-            {
-              base_pt_reverse = RichInfoSegs[i].first.points.col(j) + base_vec_reverse * (RichInfoSegs[i].first.base_point[j][0] - RichInfoSegs[i].first.points.col(j)).norm();
-            }
-
-            if (grid_map_->getInflateOccupancy(base_pt_reverse)) // Search outward.
-            {
-              double l_upbound = 5 * CTRL_PT_DIST; // "5" is the threshold.
-              double l = RESOLUTION;
-              for (; l <= l_upbound; l += RESOLUTION)
-              {
-                Eigen::Vector3d base_pt_temp = base_pt_reverse + l * base_vec_reverse;
-                if (!grid_map_->getInflateOccupancy(base_pt_temp))
-                {
-                  RichInfoSegs[i].second.base_point[j][0] = base_pt_temp;
-                  RichInfoSegs[i].second.direction[j][0] = base_vec_reverse;
-                  break;
-                }
-              }
-              if (l > l_upbound)
-              {
-                ROS_WARN("Can't find the new base points at the opposite within the threshold. i=%d, j=%d", i, j);
-
-                segments.erase(segments.begin() + i);
-                RichInfoSegs.erase(RichInfoSegs.begin() + i);
-                seg_upbound--;
-                i--;
-
-                goto exit_multi_loop3; // break "for (int j = 0; j < RichInfoSegs[i].first.size; j++)"
-              }
-            }
-            else if ((base_pt_reverse - RichInfoSegs[i].first.points.col(j)).norm() >= RESOLUTION) // Unnecessary to search.
-            {
-              RichInfoSegs[i].second.base_point[j][0] = base_pt_reverse;
-              RichInfoSegs[i].second.direction[j][0] = base_vec_reverse;
-            }
-            else
-            {
-              ROS_WARN("base_point and control point are too close!");
-              std::cout << "base_point=" << RichInfoSegs[i].first.base_point[j][0].transpose() << " control point=" << RichInfoSegs[i].first.points.col(j).transpose() <<std::endl;
-
-              segments.erase(segments.begin() + i);
-              RichInfoSegs.erase(RichInfoSegs.begin() + i);
-              seg_upbound--;
-              i--;
-
-              goto exit_multi_loop3; // break "for (int j = 0; j < RichInfoSegs[i].first.size; j++)"
-            }
-          }
-
-          // 1.3 Assign the base points to control points within [0, occ_start_id) and (occ_end_id, RichInfoSegs[i].first.size()-1].
-          if (RichInfoSegs[i].second.cp_size)
-          {
-            for (int j = occ_start_id - 1; j >= 0; j--)
-            {
-              RichInfoSegs[i].second.base_point[j][0] = RichInfoSegs[i].second.base_point[occ_start_id][0];
-              RichInfoSegs[i].second.direction[j][0] = RichInfoSegs[i].second.direction[occ_start_id][0];
-            }
-            for (int j = occ_end_id + 1; j < RichInfoSegs[i].second.cp_size; j++)
-            {
-              RichInfoSegs[i].second.base_point[j][0] = RichInfoSegs[i].second.base_point[occ_end_id][0];
-              RichInfoSegs[i].second.direction[j][0] = RichInfoSegs[i].second.direction[occ_end_id][0];
-            }
-          }
-
-        exit_multi_loop3:;
-        }
-        else
-        {
-          Eigen::Vector3d base_vec_reverse = -RichInfoSegs[i].first.direction[0][0];
-          Eigen::Vector3d base_pt_reverse = RichInfoSegs[i].first.points.col(0) + base_vec_reverse * (RichInfoSegs[i].first.base_point[0][0] - RichInfoSegs[i].first.points.col(0)).norm();
-
-          if (grid_map_->getInflateOccupancy(base_pt_reverse)) // Search outward.
-          {
-            double l_upbound = 5 * CTRL_PT_DIST; // "5" is the threshold.
-            double l = RESOLUTION;
-            for (; l <= l_upbound; l += RESOLUTION)
-            {
-              Eigen::Vector3d base_pt_temp = base_pt_reverse + l * base_vec_reverse;
-              //cout << base_pt_temp.transpose() <<std::endl;
-              if (!grid_map_->getInflateOccupancy(base_pt_temp))
-              {
-                RichInfoSegs[i].second.base_point[0][0] = base_pt_temp;
-                RichInfoSegs[i].second.direction[0][0] = base_vec_reverse;
-                break;
-              }
-            }
-            if (l > l_upbound)
-            {
-              ROS_WARN("Can't find the new base points at the opposite within the threshold, 2. i=%d", i);
-
-              segments.erase(segments.begin() + i);
-              RichInfoSegs.erase(RichInfoSegs.begin() + i);
-              seg_upbound--;
-              i--;
-            }
-          }
-          else if ((base_pt_reverse - RichInfoSegs[i].first.points.col(0)).norm() >= RESOLUTION) // Unnecessary to search.
-          {
-            RichInfoSegs[i].second.base_point[0][0] = base_pt_reverse;
-            RichInfoSegs[i].second.direction[0][0] = base_vec_reverse;
-          }
-          else
-          {
-            ROS_WARN("base_point and control point are too close!, 2");
-            std::cout << "base_point=" << RichInfoSegs[i].first.base_point[0][0].transpose() << " control point=" << RichInfoSegs[i].first.points.col(0).transpose() <<std::endl;
-
-            segments.erase(segments.begin() + i);
-            RichInfoSegs.erase(RichInfoSegs.begin() + i);
-            seg_upbound--;
-            i--;
-          }
-        }
-      }
-
-      // Step 2. Assemble each segment to make up the new control point sequence.
-      if (seg_upbound == 0) // After the erase operation above, segment legth will decrease to 0 again.
-      {
-        std::vector<ConstraintPoints> oneSeg;
-        oneSeg.push_back(cps_);
-        return oneSeg;
-      }
-
-      // std::cout << "A4" <<std::endl;
-
-      std::vector<int> selection(seg_upbound);
-      std::fill(selection.begin(), selection.end(), 0);
-      selection[0] = -1; // init
-      int max_traj_nums = static_cast<int>(pow(VARIS, seg_upbound));
-      for (int i = 0; i < max_traj_nums; i++)
-      {
-        // 2.1 Calculate the selection table.
-        int digit_id = 0;
-        selection[digit_id]++;
-        while (digit_id < seg_upbound && selection[digit_id] >= VARIS)
-        {
-          selection[digit_id] = 0;
-          digit_id++;
-          if (digit_id >= seg_upbound)
-          {
-            ROS_ERROR("Should not happen!!! digit_id=%d, seg_upbound=%d", digit_id, seg_upbound);
-          }
-          selection[digit_id]++;
-        }
-
-        // 2.2 Assign params according to the selection table.
-        ConstraintPoints cpsOneSample;
-        cpsOneSample.resize_cp(cps_.cp_size);
-        int cp_id = 0, seg_id = 0, cp_of_seg_id = 0;
-        while (/*seg_id < RichInfoSegs.size() ||*/ cp_id < cps_.cp_size)
-        {
-
-          if (seg_id >= seg_upbound || cp_id < segments[seg_id].first || cp_id > segments[seg_id].second)
-          {
-            cpsOneSample.points.col(cp_id) = cps_.points.col(cp_id);
-            cpsOneSample.base_point[cp_id] = cps_.base_point[cp_id];
-            cpsOneSample.direction[cp_id] = cps_.direction[cp_id];
-          }
-          else if (cp_id >= segments[seg_id].first && cp_id <= segments[seg_id].second)
-          {
-            if (!selection[seg_id]) // zx-todo
-            {
-              cpsOneSample.points.col(cp_id) = RichInfoSegs[seg_id].first.points.col(cp_of_seg_id);
-              cpsOneSample.base_point[cp_id] = RichInfoSegs[seg_id].first.base_point[cp_of_seg_id];
-              cpsOneSample.direction[cp_id] = RichInfoSegs[seg_id].first.direction[cp_of_seg_id];
-              cp_of_seg_id++;
-            }
-            else
-            {
-              if (RichInfoSegs[seg_id].second.cp_size)
-              {
-                cpsOneSample.points.col(cp_id) = RichInfoSegs[seg_id].second.points.col(cp_of_seg_id);
-                cpsOneSample.base_point[cp_id] = RichInfoSegs[seg_id].second.base_point[cp_of_seg_id];
-                cpsOneSample.direction[cp_id] = RichInfoSegs[seg_id].second.direction[cp_of_seg_id];
-                cp_of_seg_id++;
-              }
-              else
-              {
-                // Abandon this trajectory.
-                goto abandon_this_trajectory;
-              }
-            }
-
-            if (cp_id == segments[seg_id].second)
-            {
-              cp_of_seg_id = 0;
-              seg_id++;
-            }
-          }
-          else
-          {
-            ROS_ERROR("Shold not happen!!!!, cp_id=%d, seg_id=%d, segments.front().first=%d, segments.back().second=%d, segments[seg_id].first=%d, segments[seg_id].second=%d",
-                      cp_id, seg_id, segments.front().first, segments.back().second, segments[seg_id].first, segments[seg_id].second);
-          }
-
-          cp_id++;
-        }
-
-        control_pts_buf.push_back(cpsOneSample);
-
-      abandon_this_trajectory:;
-      }
-
-      return control_pts_buf;
-    } 
-
   private:
 
     /**
@@ -1321,8 +993,7 @@ namespace ego_planner
      * 
      * @param func_data The user data sent for lbfgs_optimize() function by the client.
      * @param x         The current values of variables.
-     * @param grad      The gradient vector. The callback function must compute
-     *                      the gradient values for the current variables.
+     * @param grad      The gradient vector. The callback function must compute the gradient values for the current variables.
      * @param n         The number of variables.
      * @return double   The value of the objective function for the current
      *                          variables.
@@ -1598,7 +1269,6 @@ namespace ego_planner
       visualization_->pubSVPairs(all_s_obs, all_v_obs, 0, Eigen::Vector4d(1, 0.5, 0, 1));
     }
 
-
     /**
      * @brief 
      * 
@@ -1610,12 +1280,12 @@ namespace ego_planner
     template <typename EIGENVEC>
     void addPVAGradCost2CT_SFC(EIGENVEC &gdT, Eigen::VectorXd &costs, const int &K);
 
-    bool obstacleGradCostP(const int i_dp,
+    bool obstacleGradCostP(const int idx_cp,
                            const Eigen::Vector3d &p,
                            Eigen::Vector3d &gradp,
                            double &costp);
 
-    bool swarmGradCostP(const int i_dp,
+    bool swarmGradCostP(const int idx_cp,
                         const double t,
                         const Eigen::Vector3d &p,
                         const Eigen::Vector3d &v,
@@ -1649,15 +1319,6 @@ namespace ego_planner
                                       const int n,
                                       Eigen::MatrixXd &gdp,
                                       double &var);
-
-    bool formationGradCostP(const int i_dp,
-                            const double t,
-                            const Eigen::Vector3d &p,
-                            const Eigen::Vector3d &v,
-                            Eigen::Vector3d &gradp,
-                            double &gradt,
-                            double &grad_prev_t,
-                            double &costp);
 
   public:
     typedef std::unique_ptr<PolyTrajOptimizer> Ptr;

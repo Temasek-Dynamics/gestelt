@@ -26,7 +26,7 @@ grid_map:
   ground_height: 0.0
 
   occ_grid/resolution: 0.1
-  occ_grid/inflation: 0.15
+  occ_grid/inflation: 0.2
   filter/downsample_cloud: false 
   filter/depth_stride: 4 
   filter/voxel_size: 0.1

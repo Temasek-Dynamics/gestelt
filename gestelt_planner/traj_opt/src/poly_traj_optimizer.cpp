@@ -5,14 +5,19 @@ namespace ego_planner
   bool PolyTrajOptimizer::optimizeTrajectorySFC(
       const Eigen::MatrixXd &iniState, const Eigen::MatrixXd &finState,
       const Eigen::MatrixXd &initInnerPts, const Eigen::VectorXd &initT,
-      Eigen::MatrixXd &init_cstr_pts, double &final_cost)
+      const std::vector<double>& spheres_radius, const std::vector<Eigen::Vector3d>& spheres_center,
+      double &final_cost)
   {
+    ROS_INFO("Start optimizeTrajectorySFC");
     // IF size of inner points and segment durations are not the same, there is a bug
     if (initInnerPts.cols() != (initT.size() - 1))
     {
       ROS_ERROR("[PolyTrajOptimizer::optimizeTrajectory] initInnerPts.cols() != (initT.size()-1)");
       return false;
     }
+
+    spheres_radius_ = spheres_radius;
+    spheres_center_ = spheres_center;
 
     piece_num_ = initT.size();
 
@@ -26,7 +31,7 @@ namespace ego_planner
     bool flag_force_return, flag_still_occ, flag_success;
 
     double x_init[variable_num_];
-    // copy the inner points to x_init
+    // copy the initInnerPts to x_init
     memcpy(x_init, initInnerPts.data(), initInnerPts.size() * sizeof(x_init[0]));
     Eigen::Map<Eigen::VectorXd> Vt(x_init + initInnerPts.size(), initT.size()); // Virtual Time
 
@@ -76,6 +81,8 @@ namespace ego_planner
           result == lbfgs::LBFGS_ALREADY_MINIMIZED ||
           result == lbfgs::LBFGS_STOP)
       {
+        ROS_INFO("optimizeTrajectorySFC: converged, maxmimum_iteration, already minimized or stop");
+
         flag_force_return = false;
 
         // /* Check for collisions in the path */
@@ -116,21 +123,24 @@ namespace ego_planner
         (flag_still_occ && restart_nums < 3) ||
         (flag_force_return && force_stop_type_ == STOP_FOR_REBOUND && rebound_times <= 20));
 
-    init_cstr_pts = cps_.points; 
-
     return flag_success;
   }
 
   /* callbacks by the L-BFGS optimizer */
-  
   double PolyTrajOptimizer::costFunctionCallbackSFC(void *func_data, const double *x, double *grad, const int n)
   {
+    // func_data =                                            // The user data sent for lbfgs_optimize() function by the client.
+    // x         = x_init = initInnerPts                      // The current values of variables.
+    // grad      = (gradP, gradt)                             // The gradient vector. The callback function must compute the gradient values for the current variables.
+    // n         = variable_num_ = 4 * (piece_num_ - 1) + 1   // The number of variables.
+
     // Pointer to current instance of PolyTrajOptimizer
     PolyTrajOptimizer *opt = reinterpret_cast<PolyTrajOptimizer *>(func_data);
 
     opt->min_ellip_dist2_ = std::numeric_limits<double>::max();
 
     // x is pointer to start of the array/matrix
+    // P: inner 3d position of trajectory
     Eigen::Map<const Eigen::MatrixXd> P(x, 3, opt->piece_num_ - 1); // 3 x (M-1)
     // Eigen::VectorXd T(Eigen::VectorXd::Constant(piece_nums, opt->t2T(x[n - 1]))); // same t
     // we specify "x + (3 * (opt->piece_num_ - 1))" because that is the address, its not the value
@@ -148,6 +158,7 @@ namespace ego_planner
     double smoo_cost = 0, time_cost = 0;
     Eigen::VectorXd obs_swarm_feas_qvar_costs(4); // Vector of costs containing (Static obstacles, swarm, dynamic, feasibility, qvar)
 
+    // Generate minimum jerk trajectory
     opt->jerkOpt_.generate(P, T);
 
     // Smoothness cost
@@ -298,9 +309,6 @@ namespace ego_planner
     int idx_cp = 0; // Index of constraint point
     costs.setZero();
 
-    // std::vector<Eigen::Vector3d> all_s_obs;
-    // std::vector<Eigen::Vector3d> all_v_obs;
-
     double t = 0;
     for (int i = 0; i < N; ++i) // for each piece/segment number
     {
@@ -383,6 +391,17 @@ namespace ego_planner
         // }
 
         /**
+         * Penalty on static obstacle, vector of (x,y,z)
+         */
+        
+        // obs_static_pen: Distance from current point to center of sphere
+        double obs_static_pen = (pos - spheres_center_[i]).squaredNorm(); 
+        if (obs_static_pen >= spheres_radius_[i]){ // current point is outside the sphere or on it's boundary
+          std::cout << "Segment " << i << ": " << " POINT " << pos.transpose() 
+            << " is outside sphere with center "<<spheres_center_[i].transpose();
+        } 
+
+        /**
          * Penalty on clearance to swarm/dynamic obstacles
          */
         double gradt, grad_prev_t;
@@ -402,16 +421,16 @@ namespace ego_planner
         /**
          * Penalty on velocity constraint, vector of (x,y,z)
          */
-        double vpen = vel.squaredNorm() - max_vel_ * max_vel_; 
-        if (vpen > 0){
+        double vel_pen = vel.squaredNorm() - max_vel_ * max_vel_; 
+        if (vel_pen > 0){
           
           // Partial derivatives of Constraint
           Eigen::Matrix<double, 6, 3> pd_constr_c_i = 2 * beta1 * vel.transpose(); // Partial derivative of constraint w.r.t c_i // (2s, m) = (2s, 1) * (1, m)
           double pd_constr_t =  2 * beta2.transpose() * c * vel;// P.D. of constraint w.r.t t // (1,1) = (1, 2s) * (2s, m) * (m, 1)
 
           // Intermediate calculations for chain rule to get partial derivatives of cost J
-          double pd_cost_constr = 3 * (T_i / K) * omega * wei_feas_ * pow(vpen,2) ; // P.D. of cost w.r.t constraint
-          double cost = (T_i / K) * omega * wei_feas_ * pow(vpen,3);
+          double pd_cost_constr = 3 * (T_i / K) * omega * wei_feas_ * pow(vel_pen,2) ; // P.D. of cost w.r.t constraint
+          double cost = (T_i / K) * omega * wei_feas_ * pow(vel_pen,3);
           double pd_t_T_i = (j / K); // P.D. of time t w.r.t T_i
 
           // Partial derivatives of Cost J
@@ -428,16 +447,16 @@ namespace ego_planner
         /**
          * Penalty on acceleration constraint, vector of (x,y,z)
          */
-        double apen = acc.squaredNorm() - max_acc_ * max_acc_; 
-        if (apen > 0){
+        double acc_pen = acc.squaredNorm() - max_acc_ * max_acc_; 
+        if (acc_pen > 0){
           
           // Partial derivatives of Constraint
           Eigen::Matrix<double, 6, 3> pd_constr_c_i = 2 * beta2 * acc.transpose(); // Partial derivative of constraint w.r.t c_i // (2s, m) = (2s, 1) * (1, m)
           double pd_constr_t =  2 * beta3.transpose() * c * acc;// P.D. of constraint w.r.t t // (1,1) = (1, 2s) * (2s, m) * (m, 1)
 
           // Intermediate calculations for chain rule to get partial derivatives of cost J
-          double pd_cost_constr = 3 * (T_i / K) * omega * wei_feas_ * pow(apen,2) ; // P.D. of cost w.r.t constraint
-          double cost = (T_i / K) * omega * wei_feas_ * pow(apen,3);
+          double pd_cost_constr = 3 * (T_i / K) * omega * wei_feas_ * pow(acc_pen,2) ; // P.D. of cost w.r.t constraint
+          double cost = (T_i / K) * omega * wei_feas_ * pow(acc_pen,3);
           double pd_t_T_i = (j / K); // P.D. of time t w.r.t T_i
 
           // Partial derivatives of Cost J
@@ -503,12 +522,9 @@ namespace ego_planner
     // }
     // costs(3) += var;
 
-
-    // Publish for debugging
-    // visualization_->pubSVPairs(all_s_obs, all_v_obs, 0, Eigen::Vector4d(1, 0.5, 0, 1));
   }
 
-  bool PolyTrajOptimizer::swarmGradCostP(const int i_dp,
+  bool PolyTrajOptimizer::swarmGradCostP(const int idx_cp,
                                          const double t,
                                          const Eigen::Vector3d &p,
                                          const Eigen::Vector3d &v,
@@ -517,8 +533,8 @@ namespace ego_planner
                                          double &grad_prev_t,
                                          double &costp)
   {
-    if (i_dp <= 0 || i_dp > ConstraintPoints::two_thirds_id(cps_.points, touch_goal_)) // only apply to first 2/3
-      return false;
+    // if (idx_cp <= 0 || idx_cp > ConstraintPoints::two_thirds_id(cps_.points, touch_goal_)) // only apply to first 2/3
+    //   return false;
 
     bool ret = false;
 

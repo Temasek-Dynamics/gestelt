@@ -280,16 +280,18 @@ Eigen::Matrix<double, 3, 3> SphericalSFC::rotationAlign(const Eigen::Vector3d & 
 
 }
 
-void SphericalSFC::publishVizPiecewiseTrajectory(const std::vector<Eigen::Vector3d>& pts, ros::Publisher& publisher, const std::string& frame_id)
+void SphericalSFC::publishVizPiecewiseTrajectory(
+    const std::vector<Eigen::Vector3d>& pts, ros::Publisher& publisher, 
+    const std::string& frame_id)
 {
     visualization_msgs::Marker sphere_list, path_line_strip;
     Eigen::Vector3d wp_color = Eigen::Vector3d{0.0, 0.0, 1.0};
-    double wp_alpha = 0.4;
-    double wp_radius = 0.075;
+    double wp_alpha = 0.3;
+    double wp_radius = 0.15;
 
     Eigen::Vector3d line_color = Eigen::Vector3d{0.0, 0.0, 1.0};
-    double line_alpha = 0.4;
-    double line_scale = 0.04;
+    double line_alpha = 0.3;
+    double line_scale = 0.05;
 
     // sphere_list.action = visualization_msgs::Marker::DELETEALL;
     // path_line_strip.action = visualization_msgs::Marker::DELETEALL;
@@ -344,7 +346,9 @@ void SphericalSFC::publishVizPiecewiseTrajectory(const std::vector<Eigen::Vector
     publisher.publish(path_line_strip);
 }
 
-void SphericalSFC::publishVizPoints(const std::vector<Eigen::Vector3d>& pts, ros::Publisher& publisher, Eigen::Vector3d color, double radius, const std::string& frame_id)
+void SphericalSFC::publishVizPoints(
+    const std::vector<Eigen::Vector3d>& pts, ros::Publisher& publisher, 
+    Eigen::Vector3d color, double radius, const std::string& frame_id)
 {
   visualization_msgs::Marker sphere_list;
   double alpha = 0.7;
@@ -378,16 +382,18 @@ void SphericalSFC::publishVizPoints(const std::vector<Eigen::Vector3d>& pts, ros
   publisher.publish(sphere_list);
 }
 
-void SphericalSFC::publishVizSphericalSFC(  const std::vector<SphericalSFC::Sphere>& sfc_spheres, 
-                                            ros::Publisher& publisher, const std::string& frame_id) 
+void SphericalSFC::publishVizSphericalSFC(  
+    const std::vector<SphericalSFC::Sphere>& sfc_spheres, 
+    ros::Publisher& publisher, const std::string& frame_id) 
 {
     for (int i = 0; i < sfc_spheres.size(); i++){
         publisher.publish(createVizSphere(sfc_spheres[i].center, sfc_spheres[i].getDiameter(), frame_id, i));
     }
 }
 
-visualization_msgs::Marker SphericalSFC::createVizSphere( const Eigen::Vector3d& center, const double& diameter, 
-                                                            const std::string& frame_id, const int& id)
+visualization_msgs::Marker SphericalSFC::createVizSphere( 
+    const Eigen::Vector3d& center, const double& diameter, 
+    const std::string& frame_id, const int& id)
 {
     visualization_msgs::Marker sphere;
 
@@ -401,7 +407,7 @@ visualization_msgs::Marker SphericalSFC::createVizSphere( const Eigen::Vector3d&
     sphere.color.r = 0.5;
     sphere.color.g = 0.5;
     sphere.color.b = 0.5;
-    sphere.color.a = 0.35;
+    sphere.color.a = 0.3;
     sphere.scale.x = diameter;
     sphere.scale.y = diameter;
     sphere.scale.z = diameter;
@@ -413,7 +419,9 @@ visualization_msgs::Marker SphericalSFC::createVizSphere( const Eigen::Vector3d&
     return sphere;
   }
 
-visualization_msgs::Marker SphericalSFC::createVizEllipsoid(const Eigen::Vector3d& center, const Eigen::Vector3d& stddev, const Eigen::Quaterniond& orientation, const std::string& frame_id, const int& id)
+visualization_msgs::Marker SphericalSFC::createVizEllipsoid(
+    const Eigen::Vector3d& center, const Eigen::Vector3d& stddev, 
+    const Eigen::Quaterniond& orientation, const std::string& frame_id, const int& id)
 {
     visualization_msgs::Marker sphere;
 

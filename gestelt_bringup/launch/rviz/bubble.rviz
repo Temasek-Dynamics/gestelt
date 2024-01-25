@@ -6,11 +6,8 @@ Panels:
       Expanded:
         - /Global Options1
         - /TF1/Frames1
-        - /drone0_ego1
         - /drone0_mavros1/Localization1//mavros/local_position/pose1
-        - /front-end1
-        - /sfc1
-        - /sfc1/sfc_spherical1
+        - /map1
       Splitter Ratio: 0.5300925970077515
     Tree Height: 544
   - Class: rviz/Selection
@@ -82,130 +79,14 @@ Visualization Manager:
         {}
       Update Interval: 0
       Value: false
-    - Class: rviz/Group
-      Displays:
-        - Class: rviz/Marker
-          Enabled: true
-          Marker Topic: /drone0/model
-          Name: model
-          Namespaces:
-            {}
-          Queue Size: 100
-          Value: true
-        - Class: rviz/Group
-          Displays:
-            - Class: rviz/Marker
-              Enabled: true
-              Marker Topic: /drone0/back_end_planner/goal_point
-              Name: goal_point(cyan)
-              Namespaces:
-                {}
-              Queue Size: 100
-              Value: true
-            - Class: rviz/Marker
-              Enabled: true
-              Marker Topic: /drone0/back_end_planner/global_list
-              Name: global_list(cyan)
-              Namespaces:
-                {}
-              Queue Size: 100
-              Value: true
-            - Class: rviz/Marker
-              Enabled: true
-              Marker Topic: /drone0/back_end_planner/optimal_list
-              Name: optimal_list(red)
-              Namespaces:
-                {}
-              Queue Size: 100
-              Value: true
-            - Class: rviz/Marker
-              Enabled: true
-              Marker Topic: /drone0/back_end_planner/failed_list
-              Name: FailedList(brown)
-              Namespaces:
-                {}
-              Queue Size: 100
-              Value: true
-            - Class: rviz/Marker
-              Enabled: true
-              Marker Topic: /drone0/back_end_planner/a_star_list
-              Name: AStar(Yellow)
-              Namespaces:
-                {}
-              Queue Size: 100
-              Value: true
-            - Class: rviz/Marker
-              Enabled: true
-              Marker Topic: /drone0/back_end_planner/init_list
-              Name: Init_list(Blue)
-              Namespaces:
-                {}
-              Queue Size: 100
-              Value: true
-            - Class: rviz/Marker
-              Enabled: true
-              Marker Topic: /drone0/back_end_planner/initial_min_jerk_traj
-              Name: init_min_jerk_traj
-              Namespaces:
-                "": true
-              Queue Size: 100
-              Value: true
-          Enabled: true
-          Name: Planning_back_end
-        - Class: rviz/Group
-          Displays:
-            - Class: rviz/Marker
-              Enabled: true
-              Marker Topic: /drone0_ego_planner_node/goal_point
-              Name: goal_point(cyan)
-              Namespaces:
-                {}
-              Queue Size: 100
-              Value: true
-            - Class: rviz/Marker
-              Enabled: true
-              Marker Topic: /drone0_ego_planner_node/global_list
-              Name: global_list(cyan)
-              Namespaces:
-                {}
-              Queue Size: 100
-              Value: true
-            - Class: rviz/Marker
-              Enabled: true
-              Marker Topic: /drone0_ego_planner_node/optimal_list
-              Name: optimal_list(red)
-              Namespaces:
-                {}
-              Queue Size: 100
-              Value: true
-            - Class: rviz/Marker
-              Enabled: true
-              Marker Topic: /drone0_ego_planner_node/failed_list
-              Name: FailedList(brown)
-              Namespaces:
-                {}
-              Queue Size: 100
-              Value: true
-            - Class: rviz/Marker
-              Enabled: true
-              Marker Topic: /drone0_ego_planner_node/a_star_list
-              Name: AStar(Yellow)
-              Namespaces:
-                {}
-              Queue Size: 100
-              Value: true
-            - Class: rviz/Marker
-              Enabled: true
-              Marker Topic: /drone0_ego_planner_node/init_list
-              Name: Init_list(Blue)
-              Namespaces:
-                {}
-              Queue Size: 100
-              Value: true
-          Enabled: false
-          Name: Planning_ego
+    - Class: rviz/Marker
       Enabled: true
-      Name: drone0_ego
+      Marker Topic: /drone0/model
+      Name: /drone0/model
+      Namespaces:
+        {}
+      Queue Size: 100
+      Value: true
     - Class: rviz/Group
       Displays:
         - Class: rviz/Group
@@ -323,6 +204,30 @@ Visualization Manager:
               Value: true
           Enabled: true
           Name: mavros_viz
+        - Alpha: 1
+          Buffer Length: 1
+          Class: rviz/Path
+          Color: 25; 255; 0
+          Enabled: true
+          Head Diameter: 0.30000001192092896
+          Head Length: 0.20000000298023224
+          Length: 0.30000001192092896
+          Line Style: Lines
+          Line Width: 0.029999999329447746
+          Name: setpoint_trajectory/desired
+          Offset:
+            X: 0
+            Y: 0
+            Z: 0
+          Pose Color: 255; 85; 255
+          Pose Style: None
+          Queue Size: 10
+          Radius: 0.029999999329447746
+          Shaft Diameter: 0.10000000149011612
+          Shaft Length: 0.10000000149011612
+          Topic: /drone0/mavros/setpoint_trajectory/desired
+          Unreliable: false
+          Value: true
       Enabled: false
       Name: drone0_mavros
     - Class: rviz/Group
@@ -395,7 +300,7 @@ Visualization Manager:
           Color: 114; 159; 207
           Color Transformer: FlatColor
           Decay Time: 0
-          Enabled: true
+          Enabled: false
           Invert Rainbow: false
           Max Color: 255; 255; 255
           Min Color: 0; 0; 0
@@ -410,7 +315,7 @@ Visualization Manager:
           Unreliable: false
           Use Fixed Frame: true
           Use rainbow: true
-          Value: true
+          Value: false
         - Alpha: 0.10000000149011612
           Autocompute Intensity Bounds: true
           Autocompute Value Bounds:
@@ -423,7 +328,7 @@ Visualization Manager:
           Color: 114; 159; 207
           Color Transformer: FlatColor
           Decay Time: 0
-          Enabled: false
+          Enabled: true
           Invert Rainbow: false
           Max Color: 255; 255; 255
           Min Color: 0; 0; 0
@@ -438,7 +343,7 @@ Visualization Manager:
           Unreliable: false
           Use Fixed Frame: true
           Use rainbow: true
-          Value: false
+          Value: true
         - Alpha: 0.10000000149011612
           Autocompute Intensity Bounds: true
           Autocompute Value Bounds:
@@ -497,30 +402,6 @@ Visualization Manager:
           Value: false
       Enabled: true
       Name: map
-    - Alpha: 1
-      Buffer Length: 1
-      Class: rviz/Path
-      Color: 25; 255; 0
-      Enabled: true
-      Head Diameter: 0.30000001192092896
-      Head Length: 0.20000000298023224
-      Length: 0.30000001192092896
-      Line Style: Lines
-      Line Width: 0.029999999329447746
-      Name: setpoint_trajectory/desired
-      Offset:
-        X: 0
-        Y: 0
-        Z: 0
-      Pose Color: 255; 85; 255
-      Pose Style: None
-      Queue Size: 10
-      Radius: 0.029999999329447746
-      Shaft Diameter: 0.10000000149011612
-      Shaft Length: 0.10000000149011612
-      Topic: /drone0/mavros/setpoint_trajectory/desired
-      Unreliable: false
-      Value: true
     - Class: rviz/Group
       Displays:
         - Class: rviz/Marker
@@ -578,22 +459,130 @@ Visualization Manager:
           Value: true
       Enabled: true
       Name: sfc
-    - Class: rviz/MarkerArray
+    - Class: rviz/Group
+      Displays:
+        - Class: rviz/Group
+          Displays:
+            - Class: rviz/Marker
+              Enabled: true
+              Marker Topic: /drone0/back_end_planner/goal_point
+              Name: goal_point(cyan)
+              Namespaces:
+                {}
+              Queue Size: 100
+              Value: true
+            - Class: rviz/Marker
+              Enabled: true
+              Marker Topic: /drone0/back_end_planner/global_list
+              Name: global_list(cyan)
+              Namespaces:
+                {}
+              Queue Size: 100
+              Value: true
+            - Class: rviz/Marker
+              Enabled: true
+              Marker Topic: /drone0/back_end_planner/optimal_list
+              Name: optimal_list(red)
+              Namespaces:
+                "": true
+              Queue Size: 100
+              Value: true
+            - Class: rviz/Marker
+              Enabled: true
+              Marker Topic: /drone0/back_end_planner/failed_list
+              Name: FailedList(brown)
+              Namespaces:
+                {}
+              Queue Size: 100
+              Value: true
+            - Class: rviz/Marker
+              Enabled: true
+              Marker Topic: /drone0/back_end_planner/a_star_list
+              Name: AStar(Yellow)
+              Namespaces:
+                {}
+              Queue Size: 100
+              Value: true
+            - Class: rviz/Marker
+              Enabled: true
+              Marker Topic: /drone0/back_end_planner/init_list
+              Name: Init_list(Blue)
+              Namespaces:
+                {}
+              Queue Size: 100
+              Value: true
+            - Class: rviz/Marker
+              Enabled: true
+              Marker Topic: /drone0/back_end_planner/initial_min_jerk_traj
+              Name: init_min_jerk_traj
+              Namespaces:
+                "": true
+              Queue Size: 100
+              Value: true
+          Enabled: true
+          Name: Planning_back_end
+        - Class: rviz/Group
+          Displays:
+            - Class: rviz/Marker
+              Enabled: true
+              Marker Topic: /drone0_ego_planner_node/goal_point
+              Name: goal_point(cyan)
+              Namespaces:
+                {}
+              Queue Size: 100
+              Value: true
+            - Class: rviz/Marker
+              Enabled: true
+              Marker Topic: /drone0_ego_planner_node/global_list
+              Name: global_list(cyan)
+              Namespaces:
+                {}
+              Queue Size: 100
+              Value: true
+            - Class: rviz/Marker
+              Enabled: true
+              Marker Topic: /drone0_ego_planner_node/optimal_list
+              Name: optimal_list(red)
+              Namespaces:
+                {}
+              Queue Size: 100
+              Value: true
+            - Class: rviz/Marker
+              Enabled: true
+              Marker Topic: /drone0_ego_planner_node/failed_list
+              Name: FailedList(brown)
+              Namespaces:
+                {}
+              Queue Size: 100
+              Value: true
+            - Class: rviz/Marker
+              Enabled: true
+              Marker Topic: /drone0_ego_planner_node/a_star_list
+              Name: AStar(Yellow)
+              Namespaces:
+                {}
+              Queue Size: 100
+              Value: true
+            - Class: rviz/Marker
+              Enabled: true
+              Marker Topic: /drone0_ego_planner_node/init_list
+              Name: Init_list(Blue)
+              Namespaces:
+                {}
+              Queue Size: 100
+              Value: true
+          Enabled: false
+          Name: Planning_ego
+        - Class: rviz/MarkerArray
+          Enabled: true
+          Marker Topic: /drone0/back_end_planner/planner_sv_pairs
+          Name: planner_sv_pairs
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: true
       Enabled: true
-      Marker Topic: /drone0/back_end_planner/planner_sv_pairs
-      Name: MarkerArray
-      Namespaces:
-        {}
-      Queue Size: 100
-      Value: true
-    - Class: rviz/MarkerArray
-      Enabled: true
-      Marker Topic: /drone0_ego_planner_node/planner_sv_pairs
-      Name: MarkerArray
-      Namespaces:
-        {}
-      Queue Size: 100
-      Value: true
+      Name: back_end
   Enabled: true
   Global Options:
     Background Color: 255; 255; 255
@@ -622,26 +611,20 @@ Visualization Manager:
   Value: true
   Views:
     Current:
-      Class: rviz/Orbit
-      Distance: 10.86849308013916
+      Angle: 0
+      Class: rviz/TopDownOrtho
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
-      Field of View: 0.7853981852531433
-      Focal Point:
-        X: 2.0548009872436523
-        Y: 2.2875304222106934
-        Z: 1.2196818590164185
-      Focal Shape Fixed Size: true
-      Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.5697963237762451
+      Scale: 114.18242645263672
       Target Frame: my_view
-      Yaw: 4.851309776306152
+      X: 4.196592330932617
+      Y: 3.387179374694824
     Saved:
       - Class: rviz/FPS
         Enable Stereo Rendering:

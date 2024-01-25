@@ -69,11 +69,11 @@ void BackEndPlanner::sfcTrajectoryCB(const gestelt_msgs::SphericalSFCTrajectoryC
   logInfo(str_fmt("Received callback to SFC Trajectory with %ld waypoints", msg->waypoints.size()));
 
   std::vector<double> spheres_radius;
-  std::vector<geometry_msgs::Point> spheres_centers;
+  std::vector<Eigen::Vector3d> spheres_center;
 
   for (auto sphere : msg->spheres){
     spheres_radius.push_back(sphere.radius);
-    spheres_centers.push_back(sphere.center);
+    spheres_center.push_back(Eigen::Vector3d{sphere.center.x, sphere.center.y, sphere.center.z});
   }
   Eigen::VectorXd segs_t_dur(msg->segments_time_duration.size());
   for (size_t i = 0; i < msg->segments_time_duration.size(); i++){
@@ -92,14 +92,16 @@ void BackEndPlanner::sfcTrajectoryCB(const gestelt_msgs::SphericalSFCTrajectoryC
 
   generatePlanSFC(start_pos, start_vel, 
                   inner_wps, segs_t_dur,
-                  goal_pos, num_replan_retries_);
+                  goal_pos, num_replan_retries_,
+                  spheres_radius, spheres_center);
 }
 
 /* Planning methods */
 
 bool BackEndPlanner::generatePlanSFC( const Eigen::Vector3d& start_pos, const Eigen::Vector3d& start_vel, 
                                       const std::vector<Eigen::Vector3d>& inner_wps, const Eigen::VectorXd& segs_t_dur,
-                                      const Eigen::Vector3d& goal_pos, const int& num_opt_retries)
+                                      const Eigen::Vector3d& goal_pos, const int& num_opt_retries,
+                                      const std::vector<double>& spheres_radius, const std::vector<Eigen::Vector3d>& spheres_center)
 {
   logInfo(str_fmt("Generating plan from SFC from (%f, %f, %f) to (%f, %f, %f)", 
     start_pos(0), start_pos(1), start_pos(2), 
@@ -176,18 +178,19 @@ bool BackEndPlanner::generatePlanSFC( const Eigen::Vector3d& start_pos, const Ei
     /***************************/
     poly_traj::MinJerkOpt optimized_mjo;
 
-    plan_success = back_end_planner_->optimizeMJOTraj(initial_mjo, cstr_pts_mjo, optimized_mjo);
+    plan_success = back_end_planner_->optimizeMJOTraj(initial_mjo, optimized_mjo, spheres_radius, spheres_center);
 
-    // if (plan_success)
-    // {
-    //   visualization_->displayOptimalList(cstr_pts_mjo, 0);
-    //   break;
-    // }
-    // else{
-    //   logError(str_fmt("Trajectory optimization unsuccessful! Number retries left: %d", 
-    //     num_opt_retries - i));
-    //   visualization_->displayFailedList(cstr_pts_mjo, 0);
-    // }
+    Eigen::MatrixXd cstr_pts_optimized_mjo = optimized_mjo.getInitConstraintPoints(num_constr_pts);
+    if (plan_success)
+    {
+      visualization_->displayOptimalList(cstr_pts_optimized_mjo, 0);
+      break;
+    }
+    else{
+      logError(str_fmt("Trajectory optimization unsuccessful! Number retries left: %d", 
+        num_opt_retries - i));
+      visualization_->displayFailedList(cstr_pts_optimized_mjo, 0);
+    }
   }
 
   if (!plan_success)

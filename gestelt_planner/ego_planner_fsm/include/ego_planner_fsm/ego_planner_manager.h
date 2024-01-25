@@ -54,8 +54,10 @@ namespace ego_planner
      * 
      */
     bool optimizeMJOTraj(
-      const poly_traj::MinJerkOpt &initial_mjo, Eigen::MatrixXd& cstr_pts_mjo, 
-      poly_traj::MinJerkOpt& optimized_mjo);
+      const poly_traj::MinJerkOpt &initial_mjo,
+      poly_traj::MinJerkOpt& optimized_mjo,
+      const std::vector<double>& spheres_radius,
+      const std::vector<Eigen::Vector3d>& spheres_center);
 
     /**
      * @brief Compute an initial minimum jerk trajectory given boundary conditions while ignoring obstacles

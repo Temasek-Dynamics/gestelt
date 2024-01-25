@@ -50,7 +50,7 @@ namespace ego_planner
     sphere.scale.x = scale;
     sphere.scale.y = scale;
     sphere.scale.z = scale;
-    line_strip.scale.x = scale / 2;
+    line_strip.scale.x = scale / 3.5;
     geometry_msgs::Point pt;
     for (int i = 0; i < int(list.size()); i++)
     {
@@ -223,19 +223,17 @@ namespace ego_planner
 
   void PlanningVisualization::displayOptimalList(Eigen::MatrixXd optimal_pts, int id)
   {
-
     if (optimal_list_pub.getNumSubscribers() == 0)
     {
       return;
     }
-
     vector<Eigen::Vector3d> list;
     for (int i = 0; i < optimal_pts.cols(); i++)
     {
       Eigen::Vector3d pt = optimal_pts.col(i).transpose();
       list.push_back(pt);
     }
-    Eigen::Vector4d color(1, 0, 0, 1);
+    Eigen::Vector4d color(1, 0, 0, 0.4);
     displayMarkerList(optimal_list_pub, list, 0.15, color, id);
   }
 

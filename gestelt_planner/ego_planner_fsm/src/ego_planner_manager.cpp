@@ -61,8 +61,8 @@ namespace ego_planner
   }
 
   bool EGOPlannerManager::optimizeMJOTraj(
-    const poly_traj::MinJerkOpt &initial_mjo, Eigen::MatrixXd& cstr_pts_mjo, 
-    poly_traj::MinJerkOpt& optimized_mjo)
+    const poly_traj::MinJerkOpt &initial_mjo, poly_traj::MinJerkOpt& optimized_mjo,
+    const std::vector<double>& spheres_radius, const std::vector<Eigen::Vector3d>& spheres_center)
   {
     bool plan_success = false;
     poly_traj::Trajectory initial_traj = initial_mjo.getTraj();
@@ -77,12 +77,14 @@ namespace ego_planner
     
     double final_cost; // Not used for now
 
-    plan_success = ploy_traj_opt_->optimizeTrajectorySFC( headState, tailState,
-                                                          innerPts, initial_traj.getDurations(),
-                                                          cstr_pts_mjo, final_cost);
+    plan_success = ploy_traj_opt_->optimizeTrajectorySFC( 
+      headState, tailState,
+      innerPts, initial_traj.getDurations(), 
+      spheres_radius, spheres_center,
+      final_cost);
 
     // Optimized minimum jerk trajectory
-    // optimized_mjo = ploy_traj_opt_->getMinJerkOpt();
+    optimized_mjo = ploy_traj_opt_->getMinJerkOpt();
 
     return plan_success;
   }

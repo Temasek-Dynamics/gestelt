@@ -81,7 +81,9 @@ private:
    */
   bool generatePlanSFC(  const Eigen::Vector3d& start_pos, const Eigen::Vector3d& start_vel, 
                       const std::vector<Eigen::Vector3d>& inner_wps, const Eigen::VectorXd& segs_t_dur,
-                      const Eigen::Vector3d& goal_pos, const int& num_opt_retries);
+                      const Eigen::Vector3d& goal_pos, const int& num_opt_retries,
+                      const std::vector<double>& spheres_radius,
+                      const std::vector<Eigen::Vector3d>& spheres_center);
 
   /**
    * @brief Generate and optimize a given plan using ESDF free method
