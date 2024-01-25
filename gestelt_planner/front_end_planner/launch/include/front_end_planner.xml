@@ -8,7 +8,7 @@
 
   <!-- Front end planner -->
   <group ns="$(arg drone_id_ns)">
-    <node pkg="front_end_planner" type="front_end_planner_node" name="front_end_planner_test" required="true" output="screen">
+    <node pkg="front_end_planner" type="front_end_planner_node" name="front_end_planner" required="true" output="screen">
         <rosparam command="load" file="$(arg cfg_filepath)" />
 
         <remap from="planner/goals" to="planner/goals"/>

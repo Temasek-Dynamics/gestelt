@@ -59,7 +59,7 @@ enum TrajMode
 };
 
 template<typename ... Args>
-std::string string_format( const std::string& format, Args ... args )
+std::string str_fmt( const std::string& format, Args ... args )
 {
     int size_s = std::snprintf( nullptr, 0, format.c_str(), args ... ) + 1; // Extra space for '\0'
     if( size_s <= 0 ){ throw std::runtime_error( "Error during formatting." ); }
@@ -291,7 +291,7 @@ private: // Class Methods
   /* Send a server event to be processed by the state machine*/
   inline void setServerEvent(ServerEvent event)
   {
-    // logInfo(string_format("Set server event: %s", EventToString(event).c_str()));
+    // logInfo(str_fmt("Set server event: %s", EventToString(event).c_str()));
     server_event_ = event;
   }
 
@@ -299,7 +299,7 @@ private: // Class Methods
   it will then set the event to be EMPTY, which prevents further processing*/
   ServerEvent getServerEvent()
   {
-    // logInfo(string_format("Retrieved server event: %s", EventToString(server_event_).c_str()));
+    // logInfo(str_fmt("Retrieved server event: %s", EventToString(server_event_).c_str()));
     ServerEvent event = server_event_;
     server_event_ = ServerEvent::EMPTY_E;  // Reset to empty
 
@@ -311,7 +311,7 @@ private: // Class Methods
    */
   void setServerState(ServerState des_state)
   {
-    logInfo(string_format("Transitioning server state: %s -> %s", 
+    logInfo(str_fmt("Transitioning server state: %s -> %s", 
       StateToString(getServerState()).c_str(), StateToString(des_state).c_str()));
 
     server_state_ = des_state;

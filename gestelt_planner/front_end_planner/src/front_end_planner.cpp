@@ -140,13 +140,13 @@ bool FrontEndPlanner::generatePlan(){
   sfc_traj_msg.segments_time_duration = sfc_traj.segs_t_dur;
   spherical_sfc_traj_pub_.publish(sfc_traj_msg);
 
-  logInfo(string_format("Front-end Planning Time: %f ms", front_end_plan_time_ms));
-  logInfo(string_format("SFC Planning Time: %f ms", sfc_plan_time_ms));
-  logInfo(string_format("Number of waypoints in front-end path: %ld", front_end_path.size()));
-  logInfo(string_format("Size of closed list (expanded nodes): %ld", closed_list.size()));
-  logInfo(string_format("[SFC] Number of spheres in SFC Spherical corridor: %ld", sfc_traj.spheres.size()));
-  logInfo(string_format("[SFC] Number of waypoints: %ld", sfc_traj.waypoints.size()));
-  logInfo(string_format("[SFC] Number of time segment durations: %ld", sfc_traj.segs_t_dur.size()));
+  logInfo(str_fmt("Front-end Planning Time: %f ms", front_end_plan_time_ms));
+  logInfo(str_fmt("SFC Planning Time: %f ms", sfc_plan_time_ms));
+  logInfo(str_fmt("Number of waypoints in front-end path: %ld", front_end_path.size()));
+  logInfo(str_fmt("Size of closed list (expanded nodes): %ld", closed_list.size()));
+  logInfo(str_fmt("[SFC] Number of spheres in SFC Spherical corridor: %ld", sfc_traj.spheres.size()));
+  logInfo(str_fmt("[SFC] Number of waypoints: %ld", sfc_traj.waypoints.size()));
+  logInfo(str_fmt("[SFC] Number of time segment durations: %ld", sfc_traj.segs_t_dur.size()));
 
   return true;
 }

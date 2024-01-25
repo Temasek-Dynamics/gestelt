@@ -31,7 +31,7 @@ namespace ego_planner
     /**
      * @brief Generate a minimum jerk trajectory given boundary conditions and inner waypoints while ignoring obstacles
      * 
-     * @param start_pt start position vector [x, y, z]
+     * @param start_pos start position vector [x, y, z]
      * @param start_vel start velocity vector [dx, dy, dz]
      * @param start_acc start acceleration vector [ddx, ddy, ddz]
      * @param inner_wps Vector of inner waypoints [ [x_1, y_1, z_1], [x_2, y_2, z_2], ..., [x_M-1, y_M-1, z_M-1]]
@@ -43,16 +43,24 @@ namespace ego_planner
      * @return false 
      */
     bool generateMinJerkTraj(
-      const Eigen::Vector3d &start_pt, const Eigen::Vector3d &start_vel, const Eigen::Vector3d &start_acc,
+      const Eigen::Vector3d &start_pos, const Eigen::Vector3d &start_vel, const Eigen::Vector3d &start_acc,
       const std::vector<Eigen::Vector3d>& inner_wps,
       const Eigen::Vector3d &local_target_pos, const Eigen::Vector3d &local_target_vel,
       const Eigen::VectorXd &segs_t_dur,
       poly_traj::MinJerkOpt &mj_opt);
 
     /**
+     * @brief Given an initial minimum jerk trajectory, optimize it
+     * 
+     */
+    bool optimizeMJOTraj(
+      const poly_traj::MinJerkOpt &initial_mjo, Eigen::MatrixXd& cstr_pts_mjo, 
+      poly_traj::MinJerkOpt& optimized_mjo);
+
+    /**
      * @brief Compute an initial minimum jerk trajectory given boundary conditions while ignoring obstacles
      * 
-     * @param start_pt 
+     * @param start_pos 
      * @param start_vel 
      * @param start_acc 
      * @param local_target_pos 
@@ -65,7 +73,7 @@ namespace ego_planner
      * @return false 
      */
     bool computeInitState(
-        const Eigen::Vector3d &start_pt, const Eigen::Vector3d &start_vel, const Eigen::Vector3d &start_acc, 
+        const Eigen::Vector3d &start_pos, const Eigen::Vector3d &start_vel, const Eigen::Vector3d &start_acc, 
         const Eigen::Vector3d &local_target_pos, const Eigen::Vector3d &local_target_vel, 
         const bool flag_polyInit, const bool flag_randomPolyTraj, 
         const double &t_seg_dur, poly_traj::MinJerkOpt &initMJO);
@@ -73,13 +81,11 @@ namespace ego_planner
     /**
      * @brief Given boundary conditions, plan a path and optimize it given user-defined objectives
      * 
-     * @param start_pt 
+     * @param start_pos 
      * @param start_vel 
      * @param start_acc 
      * @param end_pt 
      * @param end_vel 
-     * @param formation_start_pt 
-     * @param formation_end_pt 
      * @param flag_polyInit Intialize new polynomial if true
      * @param flag_randomPolyTraj Randomize inner points if true
      * @param touch_goal 
@@ -87,7 +93,7 @@ namespace ego_planner
      * @return false 
      */
     bool reboundReplan(
-        const Eigen::Vector3d &start_pt, const Eigen::Vector3d &start_vel,
+        const Eigen::Vector3d &start_pos, const Eigen::Vector3d &start_vel,
         const Eigen::Vector3d &start_acc, 
         const Eigen::Vector3d &end_pt, const Eigen::Vector3d &end_vel, 
         const bool flag_polyInit, 
@@ -115,7 +121,7 @@ namespace ego_planner
      * @brief Get local goal (position and velocity) based on planning horizon 
      * 
      * @param planning_horizon 
-     * @param start_pt 
+     * @param start_pos 
      * @param global_end_pt 
      * @param local_target_pos 
      * @param local_target_vel 
@@ -123,7 +129,7 @@ namespace ego_planner
      */
     void getLocalTarget(
         const double planning_horizon,
-        const Eigen::Vector3d &start_pt, const Eigen::Vector3d &global_end_pt,
+        const Eigen::Vector3d &start_pos, const Eigen::Vector3d &global_end_pt,
         Eigen::Vector3d &local_target_pos, Eigen::Vector3d &local_target_vel,
         bool &touch_goal);
 

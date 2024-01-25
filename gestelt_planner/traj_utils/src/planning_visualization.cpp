@@ -216,7 +216,7 @@ namespace ego_planner
       return;
     }
 
-    Eigen::Vector4d color(0, 0, 1, 1);
+    Eigen::Vector4d color(0, 1, 0, 1);
     displayMarkerList(initial_min_jerk_traj_pub_, init_pts, scale, color, id);
   }
 

@@ -91,7 +91,7 @@ namespace ego_planner
     //   waypoints_sub_ = nh.subscribe("planner/goals", 1, &EGOReplanFSM::waypointsCB, this);
     // }
     // else{
-    //   logError(string_format("Invalid waypoint type value! target_type=%i, it is either 1 or 2", waypoint_type_));
+    //   logError(str_fmt("Invalid waypoint type value! target_type=%i, it is either 1 or 2", waypoint_type_));
     // }
 
     /* Get Transformation from origin to world frame and vice versa */
@@ -183,7 +183,7 @@ namespace ego_planner
 
   void EGOReplanFSM::tickStateTimerCB(const ros::TimerEvent &e)
   {
-    // logInfoThrottled(string_format("Current State: [%s]", StateToString(getServerState()).c_str()), 1.0);
+    // logInfoThrottled(str_fmt("Current State: [%s]", StateToString(getServerState()).c_str()), 1.0);
     
     static int fsm_num = 0;
     if (fsm_num++ == 500)
@@ -362,12 +362,12 @@ namespace ego_planner
         }
         else 
         {
-          logError(string_format("Plan from local trajectory failed, possibly from potential collision!"));
+          logError(str_fmt("Plan from local trajectory failed, possibly from potential collision!"));
           if (potential_agent_to_agent_collision_)
           {
-            logError(string_format("Potential agent to agent collision detected, ESTOP has been disabled from activation for debugging"));
+            logError(str_fmt("Potential agent to agent collision detected, ESTOP has been disabled from activation for debugging"));
 
-            // logError(string_format("Potential agent to agent collision detected, activating ESTOP"));
+            // logError(str_fmt("Potential agent to agent collision detected, activating ESTOP"));
             // setServerEvent(EMERGENCY_STOP_E);
           }
         }
@@ -385,7 +385,7 @@ namespace ego_planner
 
         if (checkTrajectoryClearance())
         {
-          logInfo(string_format("Replanning to avoid collision."));
+          logInfo(str_fmt("Replanning to avoid collision."));
           setServerEvent(PLAN_LOCAL_TRAJ_E);
           break;
         }
@@ -495,7 +495,7 @@ namespace ego_planner
         planner_manager_->traj_.swarm_traj[recv_id].drone_id == (int)recv_id &&
         minco_traj.start_time.toSec() - planner_manager_->traj_.swarm_traj[recv_id].start_time <= 0)
     {
-      logWarn(string_format("Received drone %d's trajectory out of order or duplicated, abandon it.", (int)recv_id));
+      logWarn(str_fmt("Received drone %d's trajectory out of order or duplicated, abandon it.", (int)recv_id));
       return;
     }
 
@@ -505,12 +505,12 @@ namespace ego_planner
 
       if (abs((t_now - minco_traj.start_time).toSec()) < 10.0) // 10 seconds offset, more likely to be caused by unsynced system time.
       {
-        logWarn(string_format("Time stamp diff: Local - Remote Agent %d = %fs",
+        logWarn(str_fmt("Time stamp diff: Local - Remote Agent %d = %fs",
                  minco_traj.drone_id, (t_now - minco_traj.start_time).toSec()));
       }
       else
       {
-        logError(string_format("Time stamp diff: Local - Remote Agent %d = %fs, swarm time seems not synchronized, abandon!",
+        logError(str_fmt("Time stamp diff: Local - Remote Agent %d = %fs, swarm time seems not synchronized, abandon!",
                   minco_traj.drone_id, (t_now - minco_traj.start_time).toSec()));
         return;
       }
@@ -576,7 +576,7 @@ namespace ego_planner
     /* Check Collision */
     if (planner_manager_->checkCollision(recv_id))
     {
-      logError(string_format("Imminent COLLISION between ownself and drone %d", recv_id));
+      logError(str_fmt("Imminent COLLISION between ownself and drone %d", recv_id));
       // TODO: What state is it expected to be in? EXEC_TRAJ?
       setServerState(PLAN_LOCAL_TRAJ);
     }
@@ -1025,7 +1025,7 @@ namespace ego_planner
 
                 if (dist < CLEARANCE)
                 {
-                  logWarn(string_format("Clearance between drones %d and %d is %f, too close!",
+                  logWarn(str_fmt("Clearance between drones %d and %d is %f, too close!",
                           planner_manager_->pp_.drone_id, (int)id, dist));
 
                   potential_agent_to_agent_collision_ = ((t - t_cur) < emergency_time_);
@@ -1053,7 +1053,7 @@ namespace ego_planner
   void EGOReplanFSM::printFSMExecState()
   {
     std::string msg{""};
-    msg += string_format("[FSM]: state: %s", StateToString(getServerState()).c_str());
+    msg += str_fmt("[FSM]: state: %s", StateToString(getServerState()).c_str());
 
     if (!have_odom_)
     {

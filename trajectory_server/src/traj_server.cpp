@@ -109,7 +109,7 @@ void TrajectoryServer::execTrajCb(const gestelt_msgs::ExecTrajectory::ConstPtr &
 
 void TrajectoryServer::UAVStateCb(const mavros_msgs::State::ConstPtr &msg)
 {
-  // logInfoThrottled(string_format("State: Mode[%s], Connected[%d], Armed[%d]", msg->mode.c_str(), msg->connected, msg->armed), 1.0);
+  // logInfoThrottled(str_fmt("State: Mode[%s], Connected[%d], Armed[%d]", msg->mode.c_str(), msg->connected, msg->armed), 1.0);
   uav_current_state_ = *msg;
 }
 
@@ -191,7 +191,7 @@ void TrajectoryServer::execTrajTimerCb(const ros::TimerEvent &e)
 
 void TrajectoryServer::tickServerStateTimerCb(const ros::TimerEvent &e)
 {
-  // logInfoThrottled(string_format("Current Server State: [%s]", StateToString(getServerState()).c_str()), 1.0);
+  // logInfoThrottled(str_fmt("Current Server State: [%s]", StateToString(getServerState()).c_str()), 1.0);
 
   switch (getServerState())
   {
@@ -519,10 +519,10 @@ bool TrajectoryServer::toggleOffboardMode(bool toggle)
         if (set_mode_client.call(set_mode_srv))
         {
           if (set_mode_srv.response.mode_sent){
-            logInfo(string_format("Setting %s mode successful", set_mode_val.c_str()));
+            logInfo(str_fmt("Setting %s mode successful", set_mode_val.c_str()));
           }
           else {
-            logInfo(string_format("Setting %s mode failed", set_mode_val.c_str()));
+            logInfo(str_fmt("Setting %s mode failed", set_mode_val.c_str()));
           }
         }
         else {
@@ -535,10 +535,10 @@ bool TrajectoryServer::toggleOffboardMode(bool toggle)
       {
         if (arming_client.call(arm_cmd)){
           if (arm_cmd.response.success){
-            logInfo(string_format("Setting arm to %d successful", arm_val));
+            logInfo(str_fmt("Setting arm to %d successful", arm_val));
           }
           else {
-            logInfo(string_format("Setting arm to %d failed", arm_val));
+            logInfo(str_fmt("Setting arm to %d failed", arm_val));
           }
         }
         else {
@@ -557,21 +557,21 @@ bool TrajectoryServer::toggleOffboardMode(bool toggle)
 bool TrajectoryServer::checkPositionLimits(SafetyLimits position_limits, Vector3d p){
 
   if (p(0) < position_limits.min_x || p(0) > position_limits.max_x){
-    logError(string_format("Commanded x position (%f) exceeded limits (%f,%f)", 
+    logError(str_fmt("Commanded x position (%f) exceeded limits (%f,%f)", 
       p(0), position_limits.min_x, position_limits.max_x));
 
     return false;
   }
   else if (p(1) < position_limits.min_y || p(1) > position_limits.max_y) {
 
-    logError(string_format("Commanded y position (%f) exceeded limits (%f,%f)", 
+    logError(str_fmt("Commanded y position (%f) exceeded limits (%f,%f)", 
       p(1), position_limits.min_y, position_limits.max_y));
 
     return false;
   }
   else if (p(2) < position_limits.min_z || p(2) > position_limits.max_z) {
 
-    logError(string_format("Commanded z position (%f) exceeded limits (%f,%f)", 
+    logError(str_fmt("Commanded z position (%f) exceeded limits (%f,%f)", 
       p(2), position_limits.min_z, position_limits.max_z));
 
     return false;

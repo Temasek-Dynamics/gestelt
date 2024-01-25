@@ -110,7 +110,7 @@ private:
 };
 
 template<typename ... Args>
-std::string string_format( const std::string& format, Args ... args )
+std::string str_fmt( const std::string& format, Args ... args )
 {
   int size_s = std::snprintf( nullptr, 0, format.c_str(), args ... ) + 1; // Extra space for '\0'
   if( size_s <= 0 ){ throw std::runtime_error( "Error during formatting." ); }
@@ -168,8 +168,8 @@ namespace viz_helper{
    */
   inline void publishVizSpheres(const std::vector<Eigen::Vector3d>& pts, const std::string& frame_id, ros::Publisher& publisher) {
     visualization_msgs::Marker sphere_list;
-    double radius = 0.1;
-    double alpha = 0.5;
+    double radius = 0.075;
+    double alpha = 0.4;
 
     sphere_list.header.frame_id = frame_id;
     sphere_list.header.stamp = ros::Time::now();
@@ -181,7 +181,7 @@ namespace viz_helper{
 
     sphere_list.color.r = 0.0;
     sphere_list.color.g = 0.0;
-    sphere_list.color.b = 1.0;
+    sphere_list.color.b = 0.0;
     sphere_list.color.a = alpha;
 
     sphere_list.scale.x = radius;

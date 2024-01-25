@@ -34,7 +34,7 @@ private:
   ros::Subscriber sfc_traj_sub_; // Sub to Safe Flight Corridor trajectory
   
   /* parameters */
-  int drone_id_;
+  int drone_id_{-1};
   double planning_horizon_;
   int num_replan_retries_;
 
@@ -68,18 +68,6 @@ private:
   /* Plan generation methods */
 
   /**
-   * @brief Generate and optimize a given plan using ESDF free method
-   * 
-   * @param start_pos 
-   * @param start_vel 
-   * @param goal_pos 
-   * @return true 
-   * @return false 
-   */
-  bool generatePlanESDFFree(const Eigen::Vector3d& start_pos, const Eigen::Vector3d& start_vel, 
-    const Eigen::Vector3d& goal_pos, const int& num_opt_retries);
-
-  /**
    * @brief 
    * 
    * @param start_pos   Start position vector [x, y, z]
@@ -92,8 +80,20 @@ private:
    * @return false 
    */
   bool generatePlanSFC(  const Eigen::Vector3d& start_pos, const Eigen::Vector3d& start_vel, 
-                      const std::vector<Eigen::Vector3d>& inner_wps, std::vector<double>& segs_t_dur,
+                      const std::vector<Eigen::Vector3d>& inner_wps, const Eigen::VectorXd& segs_t_dur,
                       const Eigen::Vector3d& goal_pos, const int& num_opt_retries);
+
+  /**
+   * @brief Generate and optimize a given plan using ESDF free method
+   * 
+   * @param start_pos 
+   * @param start_vel 
+   * @param goal_pos 
+   * @return true 
+   * @return false 
+   */
+  bool generatePlanESDFFree(const Eigen::Vector3d& start_pos, const Eigen::Vector3d& start_vel, 
+    const Eigen::Vector3d& goal_pos, const int& num_opt_retries);
 
   /* Checks */
 
@@ -117,7 +117,7 @@ private:
 
 private:
   template<typename ... Args>
-  std::string string_format( const std::string& format, Args ... args )
+  std::string str_fmt( const std::string& format, Args ... args )
   {
     int size_s = std::snprintf( nullptr, 0, format.c_str(), args ... ) + 1; // Extra space for '\0'
     if( size_s <= 0 ){ throw std::runtime_error( "Error during formatting." ); }

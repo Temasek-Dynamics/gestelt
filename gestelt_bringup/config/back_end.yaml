@@ -62,7 +62,7 @@ manager:
 # Optimization params
 #####
 optimization:
-  constraint_points_perPiece: 10
+  constraint_points_perPiece: 5
   weight_obstacle: 10000.0 
   weight_obstacle_soft: 5000.0 
   weight_swarm: 50000.0 

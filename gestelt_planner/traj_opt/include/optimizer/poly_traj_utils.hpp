@@ -569,9 +569,9 @@ namespace poly_traj
         }
         
         /**
-         * @brief Get the position at the start of the piece
+         * @brief Get position at the start of the indexed piece/segment
          * 
-         * @param pieceIdx 
+         * @param pieceIdx  Segment index
          * @return Eigen::Vector3d 
          */
         Eigen::Vector3d getJuncPos(int pieceIdx) const
@@ -586,6 +586,12 @@ namespace poly_traj
             }
         }
 
+        /**
+         * @brief Get velocity at the start of the indexed piece/segment
+         * 
+         * @param pieceIdx  Segment index
+         * @return Eigen::Vector3d 
+         */
         Eigen::Vector3d getJuncVel(int pieceIdx) const
         {
             if (pieceIdx != getPieceSize())
@@ -598,6 +604,12 @@ namespace poly_traj
             }
         }
 
+        /**
+         * @brief Get acceleration at the start of the indexed piece/segment
+         * 
+         * @param pieceIdx  Segment index
+         * @return Eigen::Vector3d 
+         */
         Eigen::Vector3d getJuncAcc(int pieceIdx) const
         {
             if (pieceIdx != getPieceSize())
@@ -609,7 +621,12 @@ namespace poly_traj
                 return pieces[pieceIdx - 1].getAcc(pieces[pieceIdx - 1].getDuration());
             }
         }
-
+        
+        /**
+         * @brief Get the Max velocity along the piece
+         * 
+         * @return double 
+         */
         double getMaxVelRate() const
         {
             int N = getPieceSize();
@@ -1190,7 +1207,7 @@ namespace poly_traj
         /**
          * @brief 
          * 
-         * @param inPs innerpoints
+         * @param inPs inner waypoints
          * @param ts time vector
          */
         void generate(const Eigen::MatrixXd &inPs,
@@ -1199,7 +1216,7 @@ namespace poly_traj
             // Default case: Single goal waypoint
             if (inPs.cols() == 0)
             {
-                T1(0) = ts(0); // time duration
+                T1(0) = ts(0); // time duration 
                 double t1_inv = 1.0 / T1(0);      // 1/t
                 double t2_inv = t1_inv * t1_inv;  // 1/(t^2)
                 double t3_inv = t2_inv * t1_inv;  // 1/(t^3)
@@ -1279,11 +1296,11 @@ namespace poly_traj
             }
             else
             {
-                T1 = ts;
+                T1 = ts; // Time duration vector
                 // cwiseProduct: coefficient-wise product
-                T2 = T1.cwiseProduct(T1);
-                T3 = T2.cwiseProduct(T1);
-                T4 = T2.cwiseProduct(T2);
+                T2 = T1.cwiseProduct(T1); // Time squared
+                T3 = T2.cwiseProduct(T1); // Time cubed
+                T4 = T2.cwiseProduct(T2); 
                 T5 = T4.cwiseProduct(T1);
 
                 A.reset();
@@ -1426,7 +1443,8 @@ namespace poly_traj
         }
         
         /**
-         * @brief Given desired number of constraint points per segment, get all constraint points along trajectory
+         * @brief Given desired number of constraint points per segment, get all constraint points 
+         * along trajectory. This is done by stepping through time and sampling the polynomial segment
          * 
          * @param num_cp Number of constraint points per piece
          * @return Eigen::MatrixXd Matrix of points of size (3, N*num_cp+1)
@@ -1435,12 +1453,12 @@ namespace poly_traj
         {   
             Eigen::MatrixXd pts(3, N * num_cp + 1); // Each column of pts is a 3d position value
             Eigen::Vector3d pos;
-            Eigen::Matrix<double, 6, 1> beta0;
-            double s1, s2, s3, s4, s5;
+            Eigen::Matrix<double, 6, 1> beta0; //Time values
+            double s1, s2, s3, s4, s5; //Time values
             double step;
             int i_dp = 0;
 
-            for (int i = 0; i < N; ++i) // For each piece
+            for (int i = 0; i < N; ++i) // For each trajectory segment/piece
             {
                 const auto &c = b.block<6, 3>(i * 6, 0);
                 step = T1(i) / num_cp; // step is time duration / number of constraint points
@@ -1450,11 +1468,12 @@ namespace poly_traj
 
                 for (int j = 0; j <= num_cp; ++j) // For each constraint point
                 {
-                    s2 = s1 * s1;
-                    s3 = s2 * s1;
-                    s4 = s2 * s2;
-                    s5 = s4 * s1;
+                    s2 = s1 * s1; // t^2
+                    s3 = s2 * s1; // t^3
+                    s4 = s2 * s2; // t^4
+                    s5 = s4 * s1; // t^5
                     beta0 << 1.0, s1, s2, s3, s4, s5;
+                    
                     // pos = c_5*(t**5) + c_4*(t**4) + c_3*(t**3) + c_2*(t**2) + c_1*(t) + c_0
                     pos = c.transpose() * beta0;
                     pts.col(i_dp) = pos; 

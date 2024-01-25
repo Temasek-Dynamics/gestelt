@@ -33,6 +33,14 @@ public: // Public structs
       radius(radius), radius_sqr(radius*radius), center(center)
     {}
 
+    // Copy constructor from shared_ptr
+    Sphere(const std::shared_ptr<Sphere>& sphere): 
+      radius(sphere->radius), 
+      radius_sqr(sphere->radius*sphere->radius), 
+      center(sphere->center),
+      score(sphere->score)
+    {}
+
     /**
      * @brief Returns true if point is contained inside sphere (including at it's
      * boundary). Else return false
@@ -46,11 +54,6 @@ public: // Public structs
       return (center-pt).squaredNorm() <= this->radius_sqr;
     }
 
-    /**
-     * @brief Get the diameter of the sphere
-     * 
-     * @return double 
-     */
     double getDiameter() const
     {
       return this->radius * 2;
@@ -61,11 +64,6 @@ public: // Public structs
       return 1.333 * M_PI * this->radius * this->radius * this->radius ;
     }
 
-    /**
-     * @brief Set the radius of the sphere
-     * 
-     * @return double 
-     */
     void setRadius(const double& radius)
     {
       this->radius = radius;
@@ -143,6 +141,12 @@ public: // Public structs
 
     SFCTrajectory(){} // Default constructor
 
+    void clear(){
+      spheres.clear();
+      segs_t_dur.clear();
+      waypoints.clear();
+    }
+
     Eigen::Vector3d const getStartPos(){
       if (waypoints.size() < 2){
         throw std::runtime_error("SFCTrajectory does not contain at least 2 waypoints");
@@ -162,11 +166,12 @@ public: // Public structs
 public:
   SphericalSFC(std::shared_ptr<GridMap> grid_map, const SphericalSFCParams& sfc_params);
 
+
   /**
    * @brief Clear existing data structures
    * 
    */
-  void reset();
+  void clear();
     
   void addVizPublishers(ros::Publisher& p_cand_viz_pub, 
     ros::Publisher& dist_viz_pub, ros::Publisher& sfc_spherical_viz_pub,
@@ -180,15 +185,6 @@ public:
    * @return false 
    */
   bool generateSFC(const std::vector<Eigen::Vector3d> &path);
-
-  /**
-   * @brief Get the spheres making up the safe flight corridor
-   * 
-   * @return std::vector<SphericalSFC::Sphere> const 
-   */
-  std::vector<SphericalSFC::Sphere> const getSFCSpheres(){
-    return sfc_spheres_;
-  }
 
   SphericalSFC::SFCTrajectory const getSFCTrajectory(){
     return sfc_traj_;
@@ -218,12 +214,12 @@ private: // Private methods
    * 
    * @param path 
    * @param start_idx 
-   * @param sphere 
+   * @param B_prev Previous sphere 
    * @return true 
    * @return false 
    */
   bool getForwardPointOnPath(
-    const std::vector<Eigen::Vector3d> &path, size_t& start_idx, const Sphere& B);
+    const std::vector<Eigen::Vector3d> &path, size_t& start_idx, const Sphere& B_prev);
 
   bool BatchSample(const Eigen::Vector3d& point, Sphere& B_cur);
 

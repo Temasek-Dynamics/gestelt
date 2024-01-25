@@ -10,7 +10,7 @@
     <node pkg="back_end_planner" type="back_end_planner_node" name="back_end_planner" required="true" output="screen">
         <rosparam command="load" file="$(arg cfg_filepath)" />
 
-        <remap from="front_end_planner/sfc_trajectory" to="front_end_planner/sfc_trajectory"/>
+        <remap from="front_end/sfc_trajectory" to="front_end/sfc_trajectory"/>
 
         <param name="grid_map/debug_input_entire_map" value="true"/>
         <param name="grid_map/entire_pcd_map_topic" value="/fake_map"/>
