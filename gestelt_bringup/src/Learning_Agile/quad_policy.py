@@ -39,7 +39,7 @@ class run_quad:
         # c is the force constant, l is the arm length
         self.uav1.initDyn(Jx=0.000392,Jy=0.000405,Jz=0.000639,mass=0.205,l=0.1650,c=2.9265e-7) # NUSWARM quadrotor
 
-        self.uav1.initCost(wrt=50,wqt=80,wthrust=0.1,wrf=50,wvf=5,wqf=0,wwf=3,goal_pos=self.goal_pos) # wthrust = 0.1
+        self.uav1.initCost(wrt=500,wqt=8,wthrust=0.1,wrf=5,wvf=5,wqf=0,wwf=3,goal_pos=self.goal_pos) # wthrust = 0.1
         self.uav1.init_TraCost()
 
         # --------------------------- create PDP object1 ----------------------------------------
@@ -59,6 +59,9 @@ class run_quad:
         self.uavoc1.setTraCost(self.uav1.tra_cost)
         self.uavoc1.setFinalCost(self.uav1.final_cost)
 
+        # initialize the mpc solver
+        self.uavoc1.ocSolverInit(horizon=self.horizon,dt=self.dt)
+    
     # define function
     # initialize the narrow window
     def init_obstacle(self,gate_point):
@@ -217,7 +220,13 @@ class run_quad:
         self.uav1.init_TraCost(tra_pos,tra_atti)
         self.uavoc1.setTraCost(self.uav1.tra_cost,t)
         ## obtain the solution
-        self.sol1 = self.uavoc1.ocSolver(ini_state=ini_state,horizon=self.horizon,dt=self.dt, Ulast=Ulast)
+        if type(ini_state) == numpy.ndarray:
+            ini_state = ini_state.flatten().tolist()
+        
+  
+        current_state_control = ini_state+Ulast
+        
+        self.sol1 = self.uavoc1.ocSolver(current_state_control=current_state_control)
         # obtain the control command
         control = self.sol1['control_traj_opt'][0,:]
 

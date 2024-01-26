@@ -6,6 +6,7 @@ from scipy import interpolate
 import casadi
 from acados_template import AcadosOcp, AcadosOcpSolver, AcadosSimSolver
 from acados_template import AcadosModel
+import time
 class OCSys:
 
     def __init__(self, project_name="my optimal control system"):
@@ -103,45 +104,60 @@ class OCSys:
         self.tra_cost_fn = casadi.Function('tra_cost', [self.state, self.auxvar], [self.tra_cost])
 
 
-    def ocSolver(self, ini_state, Ulast=None, horizon=None, auxvar_value=1, print_level=0, dt = 0.1,costate_option=0):
+    def ocSolverInit(self, horizon=None, auxvar_value=1, print_level=0, dt = 0.1,costate_option=0):
         assert hasattr(self, 'state'), "Define the state variable first!"
         assert hasattr(self, 'control'), "Define the control variable first!"
         assert hasattr(self, 'dyn'), "Define the system dynamics first!"
         assert hasattr(self, 'path_cost'), "Define the running cost function first!"
         assert hasattr(self, 'final_cost'), "Define the final cost function first!"
+        self.horizon=horizon
 
-        if type(ini_state) == numpy.ndarray:
-            ini_state = ini_state.flatten().tolist()
+        #-----------------------------------------construct the CasiADi solver-----------------------------------------##
+        # J: The objective function
+        # w: The state and control variables
+        # w0: the initial guess of the state and control variables solutions
+        # g: The equality for multiple shooting constraints
 
         # Start with an empty NLP
         w = []
-        w0 = []
-        lbw = []
-        ubw = []
+        self.w0 = []
+        self.lbw = []
+        self.ubw = []
         J = 0
         g = []
-        lbg = []
-        ubg = []
+        self.lbg = []
+        self.ubg = []
+
+
+        # for solver to receive the current state and control
+        P=MX.sym('P',self.n_state+self.n_control)
 
         # "Lift" initial conditions
         Xk = MX.sym('X0', self.n_state)
         w += [Xk]
-        lbw += ini_state
-        ubw += ini_state
-        w0 += ini_state
-        if Ulast is not None:
-            Ulast = Ulast
-        else:
-            Ulast = np.array([0,0,0,0])
+        self.lbw += self.state_lb
+        self.ubw +=  self.state_ub
+        self.w0 += [0.5 * (x + y) for x, y in zip(self.state_lb, self.state_ub)]
+        
+        # current state and control constraints
+        # g for multiple shooting constraints
+        g += [Xk-P[0:self.n_state]]
+        self.lbg += self.n_state * [0]
+        self.ubg += self.n_state * [0]
+
+        Ulast=P[self.n_state:]
         
         # Formulate the NLP
-        for k in range(int(horizon)):
+        for k in range(int(self.horizon)):
             # New NLP variable for the control
             Uk = MX.sym('U_' + str(k), self.n_control) # 4 control variables
+            
             w += [Uk]
-            lbw += self.control_lb
-            ubw += self.control_ub
-            w0 += [0.5 * (x + y) for x, y in zip(self.control_lb, self.control_ub)]
+
+            # control constraints
+            self.lbw += self.control_lb
+            self.ubw += self.control_ub
+            self.w0 += [0.5 * (x + y) for x, y in zip(self.control_lb, self.control_ub)]
 
             #calculate weight
             weight = 60*casadi.exp(-10*(dt*k-self.t)**2) #gamma should increase as the flight duration decreases
@@ -150,42 +166,62 @@ class OCSys:
             Xnext = self.dyn_fn(Xk, Uk,auxvar_value)
             Ck = weight*self.tra_cost_fn(Xk, auxvar_value) + self.path_cost_fn(Xk, auxvar_value)\
                 +self.thrust_cost_fn(Uk, auxvar_value) + 1*dot(Uk-Ulast,Uk-Ulast)
+                                                               
             J = J + Ck
 
             # New NLP variable for state at end of interval
             Xk = MX.sym('X_' + str(k + 1), self.n_state)
             w += [Xk]
-            lbw += self.state_lb
-            ubw += self.state_ub
-            w0 += [0.5 * (x + y) for x, y in zip(self.state_lb, self.state_ub)]
+            self.lbw += self.state_lb
+            self.ubw += self.state_ub
+            self.w0 += [0.5 * (x + y) for x, y in zip(self.state_lb, self.state_ub)]
             Ulast = Uk
 
             # Add equality constraint, multiple shooting
             g += [Xnext - Xk]
-            lbg += self.n_state * [0]
-            ubg += self.n_state * [0]
+            self.lbg += self.n_state * [0]
+            self.ubg += self.n_state * [0]
 
         # Adding the final cost
         J = J + self.final_cost_fn(Xk, auxvar_value)
 
         # Create an NLP solver and solve it
-        opts = {'ipopt.max_iter':10,'ipopt.print_level': print_level, 'ipopt.sb': 'yes', 'print_time': print_level}
+        opts = {'ipopt.max_iter':10,
+                'ipopt.print_level': print_level, 
+                'ipopt.sb': 'yes', 
+                'print_time': print_level}
+        
 
-        # J: The objective function
-        # w: The control variables
-        # g: The constraints
-        prob = {'f': J, 'x': vertcat(*w), 'g': vertcat(*g)}
-        solver = nlpsol('solver', 'ipopt', prob, opts)
-        # Solve the NLP
-        sol = solver(x0=w0, lbx=lbw, ubx=ubw, lbg=lbg, ubg=ubg)
+       
+        # 1. Create a solver
+        
+        prob = {'f': J, 
+                'x': vertcat(*w), 
+                'p': P,
+                'g': vertcat(*g)}
+        self.solver = nlpsol('solver', 'ipopt', prob, opts)
+        
+        
+    def ocSolver(self, current_state_control, auxvar_value=1, costate_option=0):
+        # ------------------------------------------ use the solver -------------------------------------------##
+        # 2. use the solver to Solve the NLP
+
+        # self.w0: The initial state and control( initial state means current drone state)
+        t_ = time.time()
+        sol = self.solver(x0=self.w0,
+                     lbx=self.lbw, 
+                     ubx=self.ubw, 
+                     p=current_state_control, 
+                     lbg=self.lbg, 
+                     ubg=self.ubg)
         w_opt = sol['x'].full().flatten()
-
+        print('solving time=',time.time()-t_)
         # take the optimal control and state
         sol_traj = numpy.concatenate((w_opt, self.n_control * [0]))
         sol_traj = numpy.reshape(sol_traj, (-1, self.n_state + self.n_control))
         state_traj_opt = sol_traj[:, 0:self.n_state]
         control_traj_opt = numpy.delete(sol_traj[:, self.n_state:], -1, 0)
-        time = numpy.array([k for k in range(horizon + 1)])
+        current_time = numpy.array([k for k in range(self.horizon + 1)])
 
         # Compute the costates using two options
         if costate_option == 0:
@@ -198,9 +234,9 @@ class OCSys:
             dhx_fun = casadi.Function('dhx', [self.state, self.auxvar], [jacobian(self.final_cost, self.state)])
             dcx_fun = casadi.Function('dcx', [self.state, self.control, self.auxvar],
                                       [jacobian(self.path_cost, self.state)])
-            costate_traj_opt = numpy.zeros((horizon, self.n_state))
+            costate_traj_opt = numpy.zeros((self.horizon, self.n_state))
             costate_traj_opt[-1, :] = dhx_fun(state_traj_opt[-1, :], auxvar_value)
-            for k in range(horizon - 1, 0, -1):
+            for k in range(self.horizon - 1, 0, -1):
                 costate_traj_opt[k - 1, :] = dcx_fun(state_traj_opt[k, :], control_traj_opt[k, :],
                                                      auxvar_value).full() + numpy.dot(
                     numpy.transpose(dfx_fun(state_traj_opt[k, :], control_traj_opt[k, :], auxvar_value).full()),
@@ -211,8 +247,8 @@ class OCSys:
                    "control_traj_opt": control_traj_opt,
                    "costate_traj_opt": costate_traj_opt,
                    'auxvar_value': auxvar_value,
-                   "time": time,
-                   "horizon": horizon,
+                   "time": current_time,
+                   "horizon": self.horizon,
                    "cost": sol['f'].full()}
 
         return opt_sol 
@@ -231,7 +267,7 @@ class OCSys:
 
         model=AcadosModel()
 
-        # mapping CasADi to ACADOS
+        ##----------------- mapping CasADi to ACADOS -----------------##
         # explicit model
         model.f_expl_expr=self.dyn_fn(self.state,self.control,self.auxvar)
 
@@ -266,24 +302,33 @@ class OCSys:
         ocp.parameter_values = auxvar_value * numpy.ones((self.n_auxvar,))
 
         ##------------ setting the cost function--------------------##
-        ocp.cost.cost_type = 'LINEAR_LS'
-        ocp.cost.cost_type_e = 'LINEAR_LS'
+        ocp.cost.cost_type = 'ext_cost'
+        ocp.cost.cost_type_e = 'ext_cost'
         
+        # "Lift" initial conditions
+        Xk = MX.sym('X0', self.n_state)
+        w += [Xk]
         J = 0
         for k in range(int(horizon)):
+
+             # New NLP variable for the control
+            Uk = MX.sym('U_' + str(k), self.n_control) # 4 control variables
+            w += [Uk]
+
             #calculate weight
-            weight = 60*casadi.exp(-10*(dt*k-self.t)**2) #gamma should increase as the flight duration decreases
-             
+            # weight = 60*casadi.exp(-10*(dt*k-self.t)**2) #gamma should increase as the flight duration decreases
+            #  weight*self.tra_cost_fn(Xk, auxvar_value) + 
             # Integrate till the end of the interval
-            Xnext = self.dyn_fn(Xk, Uk,auxvar_value)
-            Ck = weight*self.tra_cost_fn(Xk, auxvar_value) + self.path_cost_fn(Xk, auxvar_value)\
+            Ck = self.path_cost_fn(Xk, auxvar_value)\
                 +self.thrust_cost_fn(Uk, auxvar_value) + 1*dot(Uk-Ulast,Uk-Ulast)
             
             J = J + Ck
         
         # Adding the final cost
         J = J + self.final_cost_fn(Xk, auxvar_value)
-        ocp.cost.ext_cost = J   
+
+        # setting the cost function
+        ocp.cost.cost_expr_ext_cost = J
 
     
         ##-------------- setting the constraints -----------------##
@@ -317,12 +362,12 @@ class OCSys:
         """
         This function is to solve the optimal control problem using ACADOS
         """
-        x_current = ini_state   
-        
+ 
         # set initial condition
-        self.acados_solver.set(0, "lbx", x_current)
-        self.acados_solver.set(0, "ubx", x_current)
+        self.acados_solver.set(0, "lbx", ini_state)
+        self.acados_solver.set(0, "ubx", ini_state)
 
+        # solve ocp
         sol = self.acados_solver.solve()
 
         if sol != 0:

@@ -23,7 +23,7 @@ from Learning_Agile.quad_moving import *
 # ros
 import numpy as np
 import rospy
-# from gestelt_msgs.msg import CommanderState, Goals, CommanderCommand
+from gestelt_msgs.msg import CommanderState, Goals, CommanderCommand
 from geometry_msgs.msg import Pose, Accel,PoseArray,AccelStamped, TwistStamped, PoseStamped,Quaternion,Vector3
 from mavros_msgs.msg import PositionTarget, AttitudeTarget
 from std_msgs.msg import Int8, Bool,Float32
@@ -135,10 +135,12 @@ class LearningAgileAgent():
         self.quad1 = run_quad(goal_pos=self.env_inputs[3:6],ini_r=self.env_inputs[0:3].tolist(),ini_q=ini_q)
         self.quad1.init_obstacle(self.gate_point.reshape(12))
         self.quad1.uav1.setDyn(0.01)
-
+        
+        self.quad2 = run_quad(goal_pos=self.final_point,horizon =20) #solver_inputs[13:16]
         print('start_point=',self.env_inputs[0:3])
         print('final_point=',self.env_inputs[3:6])
 
+        
     def gate_state_estimation(self,gazebo_model_state):
         # run in 100 hz
         if self.i <= 500:
@@ -173,7 +175,7 @@ class LearningAgileAgent():
         return t, self.gate_n.centroid
 
     def solve_problem_gazebo(self):
-        
+        t_ = time.time()
         # if (self.i%10)==0: # control frequency = 10 hz
        
         solver_inputs = np.zeros(18)
@@ -185,13 +187,13 @@ class LearningAgileAgent():
         # print('input_UNDER_GATE=',solver_inputs)
 
         ## solve the mpc problem and get the control command
-        self.quad2 = run_quad(goal_pos=solver_inputs[13:16],horizon =20)
+        # self.quad2 = run_quad(goal_pos=solver_inputs[13:16],horizon =20)
 
-        t_ = time.time()
+        
         cmd_solution = self.quad2.get_input(solver_inputs[0:13],self.u,out[0:3],out[3:6],out[6])
-        print('solving time=',time.time()-t_)
+        
         self.pos_vel_att_cmd=cmd_solution['state_traj_opt'][0,:]
-        self.u=cmd_solution['control_traj_opt'][0,:]
+        self.u=cmd_solution['control_traj_opt'][0,:].tolist()
         
                 
         # self.state = np.array(self.quad1.uav1.dyn_fn(self.state, self.u)).reshape(13) # Yixiao's simulation environment ('uav1.dyn_fn'), replaced by pybullet
@@ -204,9 +206,9 @@ class LearningAgileAgent():
         # control_tm = np.concatenate((control_tm,[tm]),axis = 0)
         # self.hl_variable = np.concatenate((self.hl_variable,[out]),axis=0)       
         
-        
-       
-        return self.pos_vel_att_cmd,self.u
+        print('solving time=',time.time()-t_)
+        callback_runtime=time.time()-t_
+        return self.pos_vel_att_cmd,self.u, callback_runtime
 
 
     def solve_problem_comparison(self):
@@ -242,8 +244,8 @@ class LearningAgileAgent():
                     solver_inputs = np.zeros(18)
                     solver_inputs[16] = magni(self.gate_n.gate_point[0,:]-self.gate_n.gate_point[1,:])
                     solver_inputs[17] = atan((self.gate_n.gate_point[0,2]-self.gate_n.gate_point[1,2])/(self.gate_n.gate_point[0,0]-self.gate_n.gate_point[1,0])) # compute the actual gate pitch ange in real-time
-                    solver_inputs[0:13] = self.gate_n.transform(self.state)
-                    solver_inputs[13:16] = self.gate_n.t_final(self.final_point)
+                    solver_inputs[0:13] = self.state #self.gate_n.transform(self.state)
+                    solver_inputs[13:16] = self.final_point #self.gate_n.t_final(self.final_point)
                     print('input_UNDER_GATE=',solver_inputs)
                     out = self.model(solver_inputs).data.numpy()
                     print('tra_position=',out[0:3],'tra_time_dnn2=',out[6])
@@ -254,15 +256,13 @@ class LearningAgileAgent():
                     #     Horizon = int(horizon-1*i/10)
 
                 ## solve the mpc problem and get the control command
-                   
-                    self.quad2 = run_quad(goal_pos=solver_inputs[13:16],horizon =20)
-
                     t_ = time.time()
+                    # self.quad2 = run_quad(goal_pos=solver_inputs[13:16],horizon =20)
                     cmd_solution = self.quad2.get_input(solver_inputs[0:13],self.u,out[0:3],out[3:6],out[6]) # control input 4-by-1 thrusts to pybullet
                     
-                    print('solving time=',time.time()-t_)
+                    print('solving time at main=',time.time()-t_)
                     self.index_t.append(time.time()- t_)
-                    self.u=cmd_solution['control_traj_opt'][0,:]
+                    self.u=cmd_solution['control_traj_opt'][0,:].tolist()
                     self.pos_vel_att_cmd=cmd_solution['state_traj_opt'][0,:]
             
             
@@ -290,13 +290,13 @@ class LearningAgileAgent():
 
         # self.quad1.uav1.plot_input(self.control_n)
         # self.quad1.uav1.plot_angularrate(self.state_n)
-        # self.quad1.uav1.plot_position(self.pos_vel_att_cmd_n)
-        # self.quad1.uav1.plot_velocity(self.pos_vel_att_cmd_n)
-        plt.plot(self.Time,self.T)
-        
-        plt.show()
+        self.quad1.uav1.plot_position(self.pos_vel_att_cmd_n)
+        self.quad1.uav1.plot_velocity(self.pos_vel_att_cmd_n)
         plt.plot(self.index_t)
+        plt.title('mpc solving time')
         plt.show()
+        # plt.plot(self.index_t)
+        # plt.show()
         # self.quad1.uav1.plot_T(control_tm)
         # self.quad1.uav1.plot_M(control_tm)
     
@@ -408,14 +408,15 @@ class LearningAgileAgentNode():
         self.next_attitude_setpoint_pub = rospy.Publisher('/mavros/setpoint_raw/attitude', AttitudeTarget, queue_size=10)
 
         self.gate_centroid_pub = rospy.Publisher('/learning_agile_agent/gate_centroid', PoseStamped, queue_size=10)
+        
         ##--------learning agile agent data----------------##
         # traverse time publisher
         self.traverse_time_pub = rospy.Publisher('/learning_agile_agent/traverse_time', Float32, queue_size=10)
-
+        self.callback_runtime_pub = rospy.Publisher('/learning_agile_agent/callback_runtime', Float32, queue_size=10)
 
         
         # timer for publishing setpoints
-        self.terminal_waypoints_received = False
+        self.terminal_waypoints_received = True
         
 
         # environment setting
@@ -461,12 +462,12 @@ class LearningAgileAgentNode():
         self.learing_agile_agent.problem_definition(self.drone_quat)
 
         # after receiving the waypoints, start the timer to run the learning agile agent
-        pub_freq = 20 # hz
+        pub_freq = 40 # hz
 
         # the traverse time is estimated in 100 hz
         rospy.Timer(rospy.Duration(1/50), self.gate_state_estimation_timer_callback) 
         
-        # # the MPC problem is solved in 10 hz
+        # # the MPC problem is solved in 40 hz
         rospy.Timer(rospy.Duration(1/pub_freq), self.setpoint_timer_callback)
           
       
@@ -499,7 +500,7 @@ class LearningAgileAgentNode():
 
         # concatenate the drone state into a list, give it to the learning agile agent
         self.drone_state=np.concatenate((self.drone_pos,self.drone_vel,self.drone_quat,self.drone_ang_vel),axis=0).tolist()
-        pos_vel_att_cmd,thrust_vector=self.learing_agile_agent.solve_problem_gazebo()
+        pos_vel_att_cmd,thrust_vector,callback_runtime=self.learing_agile_agent.solve_problem_gazebo()
         
         # publish the pos_vel_att_cmd setpoint
         pos_vel_setpoint=PositionTarget()
@@ -547,6 +548,7 @@ class LearningAgileAgentNode():
 
         # publish the setpoint
         self.next_setpoint_pub.publish(pos_vel_setpoint)
+        self.callback_runtime_pub.publish(callback_runtime)
         # self.next_attitude_setpoint_pub.publish(mavros_attitude_setpoint)
 
 
@@ -586,7 +588,7 @@ class LearningAgileAgentNode():
 
 def main():
     
-    ROS_INTEGRATION = False
+    ROS_INTEGRATION = True
     if ROS_INTEGRATION:
         #---------------------- for ros node integration ----------------------------#
     
@@ -604,7 +606,7 @@ def main():
         learing_agile_agent=LearningAgileAgent()
         # receive the start and end point, and the initial gate point, from ROS side
         # rewrite the inputs
-        learing_agile_agent.receive_terminal_states(start=np.array([0,1.8,1]),end=np.array([0,-1.8,1]))
+        learing_agile_agent.receive_terminal_states(start=np.array([0,1.8,1]),end=np.array([2,-1.8,-1]))
 
         # problem definition
         learing_agile_agent.problem_definition()
