@@ -4,11 +4,18 @@
         <param name="is_simulation" value="True"/>
   </node>
 
-    <node pkg="gestelt_bringup" name="learning_agile_agent" type="learning_agile_agent.py" output="screen">  
+    <node pkg="gestelt_bringup" name="learning_agile_agent" type="learning_agent_node.py" output="screen">  
   </node>
    <!-- Start rosbag to record setpoint_raw and local_position -->
    <!-- path have to be absolute path-->
-  <node pkg="rosbag" type="record" name="record" output="screen" args="-o /home/tianchensun/gestelt_ws/data/ /mavros/setpoint_raw/local /mavros/local_position/pose  /planner/sample_trajectory  /learning_agile_agent/traverse_time /learning_agile_agent/gate_centroid   /learning_agile_agent/callback_runtime"/>
+  <node pkg="rosbag" type="record" name="record" output="screen" args="-o /home/tianchensun/gestelt_ws/data/ 
+  /mavros/setpoint_raw/local 
+  /mavros/local_position/pose 
+  /planner/sample_trajectory 
+  /learning_agile_agent/traverse_time 
+  /learning_agile_agent/gate_centroid   
+  /learning_agile_agent/callback_runtime
+  /learning_agile_agent/solver_input_state"/>
   <!-- <node pkg="rosbag" type="record" name="record" output="screen" args="-a -o /home/tianchensun/gestelt_ws/data/ "/> -->
 
 </launch>

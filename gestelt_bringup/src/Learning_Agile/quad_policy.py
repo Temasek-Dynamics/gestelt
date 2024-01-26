@@ -232,8 +232,8 @@ class run_quad:
 
         # for RPT control
         pos_vel_cmd= self.sol1['state_traj_opt'][0,:]
-        print("pos_vel_cmd: ", pos_vel_cmd)
-        print("control: ", control)
+        # print("pos_vel_cmd: ", pos_vel_cmd)
+        # print("control: ", control)
         # return control, pos_vel_cmd
         return self.sol1
 

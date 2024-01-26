@@ -23,7 +23,7 @@ from Learning_Agile.quad_moving import *
 # ros
 import numpy as np
 import rospy
-from gestelt_msgs.msg import CommanderState, Goals, CommanderCommand
+# from gestelt_msgs.msg import CommanderState, Goals, CommanderCommand
 from geometry_msgs.msg import Pose, Accel,PoseArray,AccelStamped, TwistStamped, PoseStamped,Quaternion,Vector3
 from mavros_msgs.msg import PositionTarget, AttitudeTarget
 from std_msgs.msg import Int8, Bool,Float32
@@ -87,7 +87,7 @@ class LearningAgileAgent():
     
 
         ##-------------------- planning variables --------------------------##
-        self.u = [0,0,0,0]
+        self.u = [0.8,0.8,0.8,0.8]
         self.tm = [0,0,0,0]
         self.state_n = []
         self.control_n = [self.u]
@@ -156,7 +156,7 @@ class LearningAgileAgent():
             t_tra = t+self.i*0.01
             gap_pitch = self.moving_gate.gate_init_p + self.moving_gate.w*self.i*0.01
             
-            print('step',self.i,'tranversal time W.R.T current=',t,'gap_pitch=',gap_pitch*180/pi)
+            # print('step',self.i,'tranversal time W.R.T current=',t,'gap_pitch=',gap_pitch*180/pi)
             # print('step',self.i,'abs_tranversal time W.R.T mission=',t_tra)
             
             self.Ttra = np.concatenate((self.Ttra,[t_tra]),axis = 0)
@@ -174,10 +174,10 @@ class LearningAgileAgent():
         self.i += 1
         return t, self.gate_n.centroid
 
-    def solve_problem_gazebo(self):
+    def solve_problem_gazebo(self,drone_state):
         t_ = time.time()
         # if (self.i%10)==0: # control frequency = 10 hz
-       
+        self.state=drone_state
         solver_inputs = np.zeros(18)
         solver_inputs[16] = magni(self.gate_n.gate_point[0,:]-self.gate_n.gate_point[1,:]) # gate width
         solver_inputs[17] = atan((self.gate_n.gate_point[0,2]-self.gate_n.gate_point[1,2])/(self.gate_n.gate_point[0,0]-self.gate_n.gate_point[1,0])) # compute the actual gate pitch ange in real-time
@@ -206,7 +206,6 @@ class LearningAgileAgent():
         # control_tm = np.concatenate((control_tm,[tm]),axis = 0)
         # self.hl_variable = np.concatenate((self.hl_variable,[out]),axis=0)       
         
-        print('solving time=',time.time()-t_)
         callback_runtime=time.time()-t_
         return self.pos_vel_att_cmd,self.u, callback_runtime
 
@@ -258,7 +257,7 @@ class LearningAgileAgent():
                 ## solve the mpc problem and get the control command
                     t_ = time.time()
                     # self.quad2 = run_quad(goal_pos=solver_inputs[13:16],horizon =20)
-                    cmd_solution = self.quad2.get_input(solver_inputs[0:13],self.u,out[0:3],out[3:6],out[6]) # control input 4-by-1 thrusts to pybullet
+                    cmd_solution = self.quad1.get_input(solver_inputs[0:13],self.u,out[0:3],out[3:6],out[6]) # control input 4-by-1 thrusts to pybullet
                     
                     print('solving time at main=',time.time()-t_)
                     self.index_t.append(time.time()- t_)
@@ -392,255 +391,21 @@ class LearningAgileAgent():
         # quad1.uav1.plot_M(control_tm)
 
 # waypoint subscriber: start, end, gate
-class LearningAgileAgentNode():
-
-    def __init__(self):
-
-        # drone state subscribers [position, velocity, orientation, angular velocity]
-        self.drone_pose_sub = rospy.Subscriber('/mavros/local_position/pose',PoseStamped, self.drone_state_pose_callback)
-        self.drone_twist_sub = rospy.Subscriber('/mavros/local_position/velocity_local',TwistStamped, self.drone_state_twist_callback)
         
-        # waypoints subscriber [start, end, gate]
-        self.waypoints_sub = rospy.Subscriber('/planner/goals_learning_agile',Goals, self.mission_start_callback)
-        
-        # pos_vel_att_cmd command publisher
-        self.next_setpoint_pub = rospy.Publisher('/mavros/setpoint_raw/local', PositionTarget, queue_size=10)
-        self.next_attitude_setpoint_pub = rospy.Publisher('/mavros/setpoint_raw/attitude', AttitudeTarget, queue_size=10)
-
-        self.gate_centroid_pub = rospy.Publisher('/learning_agile_agent/gate_centroid', PoseStamped, queue_size=10)
-        
-        ##--------learning agile agent data----------------##
-        # traverse time publisher
-        self.traverse_time_pub = rospy.Publisher('/learning_agile_agent/traverse_time', Float32, queue_size=10)
-        self.callback_runtime_pub = rospy.Publisher('/learning_agile_agent/callback_runtime', Float32, queue_size=10)
-
-        
-        # timer for publishing setpoints
-        self.terminal_waypoints_received = True
-        
-
-        # environment setting
-        self.gate_point=np.zeros(3)
-        self.start_point=np.zeros(3)
-        self.final_point=np.zeros(3)
-
-        # current drone state
-        self.drone_state=np.zeros(13)
-        self.drone_pos=np.zeros(3)
-        self.drone_vel=np.zeros(3)
-        self.drone_quat=np.zeros(4)
-        self.drone_ang_vel=np.zeros(3)
-
-
-        ## learning agile agent initialization
-        # create the learning agile agent
-        self.learing_agile_agent=LearningAgileAgent()
-
-        # time statics
-        self.index_t = []
-
-    def mission_start_callback(self,msg):
-        """
-        when mission starts,
-        receive the start and end point, and the initial gate point, from ROS side
-        this waypoints callback will only be called once, 
-        since the waypoints are only published once when the mission starts
-        
-        """
-        
-        # mission start point is the learning agile agent start point
-        self.start_point = self.drone_pos
-
-        # self.gate_point = np.array([msg.waypoints[0].position.x,msg.waypoints[0].position.y,msg.waypoints[0].position.z])
-        self.final_point = np.array([msg.waypoints[1].position.x,msg.waypoints[1].position.y,msg.waypoints[1].position.z])
-        
-        ## receive the start and end point, and the initial gate point, from ROS side
-        # rewrite the inputs
-        self.learing_agile_agent.receive_terminal_states(start=self.start_point,end=self.final_point)
-
-        # problem definition
-        self.learing_agile_agent.problem_definition(self.drone_quat)
-
-        # after receiving the waypoints, start the timer to run the learning agile agent
-        pub_freq = 40 # hz
-
-        # the traverse time is estimated in 100 hz
-        rospy.Timer(rospy.Duration(1/50), self.gate_state_estimation_timer_callback) 
-        
-        # # the MPC problem is solved in 40 hz
-        rospy.Timer(rospy.Duration(1/pub_freq), self.setpoint_timer_callback)
-          
-      
-    def gate_state_estimation_timer_callback(self, event):
-        """
-        this function estimate the gate future state, is called in 100 hz
-        """
-        self.drone_state=np.concatenate((self.drone_pos,self.drone_vel,self.drone_quat,self.drone_ang_vel),axis=0).tolist()
-        traverse_time, gate_centroid=self.learing_agile_agent.gate_state_estimation(self.drone_state)
-        
-        # publish the traverse time w.r.t current timestep
-        traverse_time_msg=Float32()
-        traverse_time_msg.data=traverse_time
-
-        # publish the gate centroid w.r.t the world frame
-        gate_centroid_msg=PoseStamped()
-        gate_centroid_msg.header.stamp = rospy.Time.now()
-        gate_centroid_msg.header.frame_id = "world"
-        gate_centroid_msg.pose.position.x = gate_centroid[0]
-        gate_centroid_msg.pose.position.y = gate_centroid[1]
-        gate_centroid_msg.pose.position.z = gate_centroid[2]
-        
-        self.gate_centroid_pub.publish(gate_centroid_msg)
-        self.traverse_time_pub.publish(traverse_time_msg)
-    
-    def setpoint_timer_callback(self, event):
-        """
-        this function solves the MPC problem and output drone PV, is called in 10 hz
-        """
-
-        # concatenate the drone state into a list, give it to the learning agile agent
-        self.drone_state=np.concatenate((self.drone_pos,self.drone_vel,self.drone_quat,self.drone_ang_vel),axis=0).tolist()
-        pos_vel_att_cmd,thrust_vector,callback_runtime=self.learing_agile_agent.solve_problem_gazebo()
-        
-        # publish the pos_vel_att_cmd setpoint
-        pos_vel_setpoint=PositionTarget()
-        pos_vel_setpoint.header.stamp = rospy.Time.now()
-        pos_vel_setpoint.header.frame_id = "world"
-        pos_vel_setpoint.coordinate_frame = PositionTarget.FRAME_LOCAL_NED
-        pos_vel_setpoint.type_mask =  PositionTarget.IGNORE_YAW_RATE+PositionTarget.IGNORE_YAW+PositionTarget.IGNORE_AFX+PositionTarget.IGNORE_AFY+PositionTarget.IGNORE_AFZ
-        pos_vel_setpoint.position.x = pos_vel_att_cmd[0]
-        
-        # TODO ONLY FOR TEST
-        pos_vel_setpoint.position.y = pos_vel_att_cmd[1]-1.8
-
-
-        pos_vel_setpoint.position.z = pos_vel_att_cmd[2]
-        pos_vel_setpoint.velocity.x = pos_vel_att_cmd[3]
-        pos_vel_setpoint.velocity.y = pos_vel_att_cmd[4]
-        pos_vel_setpoint.velocity.z = pos_vel_att_cmd[5]
-
-         # attitude setpoint
-        # attitude_setpoint=Quaternion()
-        # attitude_setpoint.w=pos_vel_att_cmd[6]
-        # attitude_setpoint.x=pos_vel_att_cmd[7]
-        # attitude_setpoint.y=pos_vel_att_cmd[8]
-        # attitude_setpoint.z=pos_vel_att_cmd[9]
-
-        # body rate setpoint
-        body_rate_setpoint=Vector3()
-        body_rate_setpoint.x=pos_vel_att_cmd[10]
-        body_rate_setpoint.y=pos_vel_att_cmd[11]
-        body_rate_setpoint.z=pos_vel_att_cmd[12]
-
-        # assemble the setpoint
-        mavros_attitude_setpoint=AttitudeTarget()
-        mavros_attitude_setpoint.header.stamp = rospy.Time.now()
-        mavros_attitude_setpoint.header.frame_id = "world"
-        mavros_attitude_setpoint.type_mask = AttitudeTarget.IGNORE_ATTITUDE
-        
-        ## thrust
-        print('thrust_vector=',thrust_vector)
-        print('body_rate_setpoint=',body_rate_setpoint)
-        mavros_attitude_setpoint.thrust = sum(thrust_vector)
-        mavros_attitude_setpoint.body_rate=body_rate_setpoint
-        # mavros_attitude_setpoint.orientation=attitude_setpoint
-        
-
-        # publish the setpoint
-        self.next_setpoint_pub.publish(pos_vel_setpoint)
-        self.callback_runtime_pub.publish(callback_runtime)
-        # self.next_attitude_setpoint_pub.publish(mavros_attitude_setpoint)
-
-
-
-    def drone_state_pose_callback(self,msg):
-        """
-        receive the drone state from PX4 side
-        """
-        drone_frame_id = msg.header.frame_id
-
-        self.drone_pos = np.array([msg.pose.position.x,msg.pose.position.y,msg.pose.position.z])
-
-        drone_quat_origin = np.array([msg.pose.orientation.w,msg.pose.orientation.x,msg.pose.orientation.y,msg.pose.orientation.z])
-        drone_quat_origin_euler = tf.transformations.euler_from_quaternion(drone_quat_origin.tolist())
-        drone_quat_origin_yaw = drone_quat_origin_euler[2]
-        # print('drone_quat_origin_yaw=',drone_quat_origin_yaw)
-
-
-        # TODO ONLY FOR TEST
-        drone_quat_current_yaw = drone_quat_origin_yaw
-        # print('drone_quat_current_yaw=',drone_quat_current_yaw)
-        self.drone_quat = tf.transformations.quaternion_from_euler(drone_quat_origin_euler[0],drone_quat_origin_euler[1],drone_quat_current_yaw)
-
-        # TODO ONLY FOR TEST
-        self.drone_pos[1]=self.drone_pos[1]+1.8 
-        
-
-    def drone_state_twist_callback(self,msg):
-        """
-        receive the drone state from ROS side
-        """
-       
-        self.drone_vel = np.array([msg.twist.linear.x,msg.twist.linear.y,msg.twist.linear.z])
-        self.drone_ang_vel = np.array([msg.twist.angular.x,msg.twist.angular.y,msg.twist.angular.z])
-        # print('drone_vel=',self.drone_vel)
-        
-
 def main():
-    
-    ROS_INTEGRATION = True
-    if ROS_INTEGRATION:
-        #---------------------- for ros node integration ----------------------------#
-    
-        # # # ros node initialization
-        rospy.init_node('learing_agile_agent', anonymous=True)
-        
-        # create the learning agile agent ROS node object
-        learing_agile_agent_node = LearningAgileAgentNode()
-        
-        rospy.spin()
+    ## --------------for single planning part test-------------------------------##.
+    # create the learning agile agent
+    learing_agile_agent=LearningAgileAgent()
+    # receive the start and end point, and the initial gate point, from ROS side
+    # rewrite the inputs
+    learing_agile_agent.receive_terminal_states(start=np.array([0,1.8,1]),end=np.array([0,-1.8,2]))
 
-    else:
-        ## --------------for single planning part test-------------------------------##.
-        # create the learning agile agent
-        learing_agile_agent=LearningAgileAgent()
-        # receive the start and end point, and the initial gate point, from ROS side
-        # rewrite the inputs
-        learing_agile_agent.receive_terminal_states(start=np.array([0,1.8,1]),end=np.array([2,-1.8,-1]))
+    # problem definition
+    learing_agile_agent.problem_definition()
 
-        # problem definition
-        learing_agile_agent.problem_definition()
+    # solve the problem
+    learing_agile_agent.solve_problem_comparison()
 
-        # solve the problem
-        learing_agile_agent.solve_problem_comparison()
-
-    
 if __name__ == '__main__':
     main()
-    
-
-   
-
-
-
-        #  # attitude setpoint
-        # attitude_setpoint=Quaternion()
-        # attitude_setpoint.w=pos_vel_att_cmd[6]
-        # attitude_setpoint.x=pos_vel_att_cmd[7]
-        # attitude_setpoint.y=pos_vel_att_cmd[8]
-        # attitude_setpoint.z=pos_vel_att_cmd[9]
-
-        # # body rate setpoint
-        # body_rate_setpoint=Vector3()
-        # body_rate_setpoint.x=pos_vel_att_cmd[10]
-        # body_rate_setpoint.y=pos_vel_att_cmd[11]
-        # body_rate_setpoint.z=pos_vel_att_cmd[12]
-
-        # # assemble the setpoint
-        # mavros_attitude_setpoint=AttitudeTarget()
-        # mavros_attitude_setpoint.header.stamp = rospy.Time.now()
-        # mavros_attitude_setpoint.header.frame_id = "world"
-        # mavros_attitude_setpoint.type_mask = AttitudeTarget.IGNORE_THRUST
         
-        # mavros_attitude_setpoint.orientation=attitude_setpoint
-        # mavros_attitude_setpoint.body_rate=body_rate_setpoint

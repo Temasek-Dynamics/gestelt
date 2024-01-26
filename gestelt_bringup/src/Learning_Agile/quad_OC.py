@@ -215,7 +215,7 @@ class OCSys:
                      lbg=self.lbg, 
                      ubg=self.ubg)
         w_opt = sol['x'].full().flatten()
-        print('solving time=',time.time()-t_)
+        # print('solving time=',time.time()-t_)
         # take the optimal control and state
         sol_traj = numpy.concatenate((w_opt, self.n_control * [0]))
         sol_traj = numpy.reshape(sol_traj, (-1, self.n_state + self.n_control))
