@@ -39,7 +39,16 @@ class run_quad:
         # c is the force constant, l is the arm length
         self.uav1.initDyn(Jx=0.000392,Jy=0.000405,Jz=0.000639,mass=0.205,l=0.1650,c=2.9265e-7) # NUSWARM quadrotor
 
-        self.uav1.initCost(wrt=500,wqt=8,wthrust=0.1,wrf=5,wvf=5,wqf=0,wwf=3,goal_pos=self.goal_pos) # wthrust = 0.1
+
+        # wrt: ,gate traverse position cost
+        # wqt: gate traverse attitude cost
+        # wthrust: thrust cost
+        # wrf: final position cost
+        # wvf: final velocity cost
+        # wqf: final attitude cost
+        # wwf: final angular velocity cost
+
+        self.uav1.initCost(wrt=5,wqt=8,wthrust=0.1,wrf=5,wvf=5,wqf=0,wwf=3,goal_pos=self.goal_pos) # wthrust = 0.1
         self.uav1.init_TraCost()
 
         # --------------------------- create PDP object1 ----------------------------------------
@@ -47,7 +56,7 @@ class run_quad:
         self.dt = 0.1
         self.uavoc1 = OCSys()
         self.uavoc1.setAuxvarVariable()
-        sc   = 1e20
+        sc   = 5 #1e20
         wc   = pi/2 #pi
         tw   = 1.22
         t2w  = 2
@@ -60,8 +69,16 @@ class run_quad:
         self.uavoc1.setFinalCost(self.uav1.final_cost)
 
         # initialize the mpc solver
-        self.uavoc1.ocSolverInit(horizon=self.horizon,dt=self.dt)
-    
+        # self.uavoc1.ocSolverInit(horizon=self.horizon,dt=self.dt)
+        self.uavoc1.AcadosOcSolverInit(horizon=self.horizon,
+                                       dt=self.dt,
+                                       w_tra_p=self.uav1.wrt,
+                                       w_tra_q=self.uav1.wqt,
+                                       w_thrust=self.uav1.wthrust,
+                                       w_final_p=self.uav1.wrf,
+                                       w_final_v=self.uav1.wvf,
+                                       w_final_q=self.uav1.wqf,
+                                       w_final_w=self.uav1.wwf)
     # define function
     # initialize the narrow window
     def init_obstacle(self,gate_point):
@@ -226,7 +243,8 @@ class run_quad:
   
         current_state_control = ini_state+Ulast
         
-        self.sol1 = self.uavoc1.ocSolver(current_state_control=current_state_control)
+        # self.sol1 = self.uavoc1.ocSolver(current_state_control=current_state_control)
+        self.sol1 = self.uavoc1.AcadosOcSolver(current_state_control=current_state_control,goal_pos=self.goal_pos)
         # obtain the control command
         control = self.sol1['control_traj_opt'][0,:]
 

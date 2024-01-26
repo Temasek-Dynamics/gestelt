@@ -164,6 +164,12 @@ class Quadrotor:
         else:
             self.wwf = wwf
 
+        #thrust
+        if wthrust is None:
+            self.wthrust = SX.sym('wthrust')
+            parameter += [self.wthrust]
+        else:
+            self.wthrust = wthrust
         self.cost_auxvar = vcat(parameter)
 
         ## goal cost
@@ -190,7 +196,7 @@ class Quadrotor:
         # the thrust cost
         self.cost_torque = dot(self.T_B, self.T_B)
 
-        self.thrust_cost = wthrust * (self.cost_torque) 
+        self.thrust_cost = self.wthrust * (self.cost_torque) 
 
         ## the final (goal) cost
         self.goal_cost = self.wrf * self.cost_r_I_g + \
