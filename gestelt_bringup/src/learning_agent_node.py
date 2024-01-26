@@ -18,7 +18,7 @@ from Learning_Agile.quad_model import *
 from Learning_Agile.quad_policy import *
 from Learning_Agile.quad_nn import *
 from Learning_Agile.quad_moving import *
-from learning_agile_agent import LearningAgileAgent
+from Learning_Agile.learning_agile_agent import LearningAgileAgent
 # ros
 import numpy as np
 import rospy

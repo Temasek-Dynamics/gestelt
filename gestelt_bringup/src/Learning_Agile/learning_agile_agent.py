@@ -36,7 +36,7 @@ import tf
 # load the DNN2 model
 abs_dir=os.path.dirname(os.path.abspath(__file__))
 print(abs_dir)
-FILE = os.path.join(abs_dir, 'Learning_Agile/nn3_1.pth')
+FILE = os.path.join(abs_dir, 'nn3_1.pth')
 # FILE ="nn3_1.pth"
 
 
