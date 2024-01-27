@@ -245,9 +245,9 @@ class LearningAgileAgent():
                     solver_inputs[17] = atan((self.gate_n.gate_point[0,2]-self.gate_n.gate_point[1,2])/(self.gate_n.gate_point[0,0]-self.gate_n.gate_point[1,0])) # compute the actual gate pitch ange in real-time
                     solver_inputs[0:13] = self.state #self.gate_n.transform(self.state)
                     solver_inputs[13:16] = self.final_point #self.gate_n.t_final(self.final_point)
-                    print('input_UNDER_GATE=',solver_inputs)
+                    # print('input_UNDER_GATE=',solver_inputs)
                     out = self.model(solver_inputs).data.numpy()
-                    print('tra_position=',out[0:3],'tra_time_dnn2=',out[6])
+                    # print('tra_position=',out[0:3],'tra_time_dnn2=',out[6])
                 #print(out)
                     # if (horizon-1*i/10) <= 30:
                     #     Horizon =30
@@ -292,7 +292,7 @@ class LearningAgileAgent():
         self.quad1.uav1.plot_position(self.pos_vel_att_cmd_n)
         self.quad1.uav1.plot_velocity(self.pos_vel_att_cmd_n)
         plt.plot(self.index_t)
-        plt.title('mpc solving time')
+        plt.title('mpc solving time at the main loop')
         plt.show()
         # plt.plot(self.index_t)
         # plt.show()
@@ -306,7 +306,7 @@ def main():
     learing_agile_agent=LearningAgileAgent()
     # receive the start and end point, and the initial gate point, from ROS side
     # rewrite the inputs
-    learing_agile_agent.receive_terminal_states(start=np.array([0,5.8,1]),end=np.array([0,-5.8,2]))
+    learing_agile_agent.receive_terminal_states(start=np.array([0,1.8,1]),end=np.array([0,-1.8,2]))
 
     # problem definition
     learing_agile_agent.problem_definition()

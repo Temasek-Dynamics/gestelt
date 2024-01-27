@@ -636,61 +636,6 @@ void ACADOS_model_acados_create_5_set_nlp_in(ACADOS_model_solver_capsule* capsul
 
 
 
-    // x
-    int* idxbx = malloc(NBX * sizeof(int));
-    
-    idxbx[0] = 0;
-    idxbx[1] = 1;
-    idxbx[2] = 2;
-    idxbx[3] = 3;
-    idxbx[4] = 4;
-    idxbx[5] = 5;
-    idxbx[6] = 6;
-    idxbx[7] = 7;
-    idxbx[8] = 8;
-    idxbx[9] = 9;
-    idxbx[10] = 10;
-    idxbx[11] = 11;
-    idxbx[12] = 12;
-    double* lubx = calloc(2*NBX, sizeof(double));
-    double* lbx = lubx;
-    double* ubx = lubx + NBX;
-    
-    lbx[0] = -5;
-    ubx[0] = 5;
-    lbx[1] = -5;
-    ubx[1] = 5;
-    lbx[2] = -5;
-    ubx[2] = 5;
-    lbx[3] = -5;
-    ubx[3] = 5;
-    lbx[4] = -5;
-    ubx[4] = 5;
-    lbx[5] = -5;
-    ubx[5] = 5;
-    lbx[6] = -5;
-    ubx[6] = 5;
-    lbx[7] = -5;
-    ubx[7] = 5;
-    lbx[8] = -5;
-    ubx[8] = 5;
-    lbx[9] = -5;
-    ubx[9] = 5;
-    lbx[10] = -1.5707963267948966;
-    ubx[10] = 1.5707963267948966;
-    lbx[11] = -1.5707963267948966;
-    ubx[11] = 1.5707963267948966;
-    lbx[12] = -1.5707963267948966;
-    ubx[12] = 1.5707963267948966;
-
-    for (int i = 1; i < N; i++)
-    {
-        ocp_nlp_constraints_model_set(nlp_config, nlp_dims, nlp_in, i, "idxbx", idxbx);
-        ocp_nlp_constraints_model_set(nlp_config, nlp_dims, nlp_in, i, "lbx", lbx);
-        ocp_nlp_constraints_model_set(nlp_config, nlp_dims, nlp_in, i, "ubx", ubx);
-    }
-    free(idxbx);
-    free(lubx);
 
 
 
@@ -800,7 +745,7 @@ void ACADOS_model_acados_create_6_set_opts(ACADOS_model_solver_capsule* capsule)
 
 
 
-    int print_level = 1;
+    int print_level = 0;
     ocp_nlp_solver_opts_set(nlp_config, nlp_opts, "print_level", &print_level);
     int qp_solver_cond_ric_alg = 1;
     ocp_nlp_solver_opts_set(nlp_config, nlp_opts, "qp_cond_ric_alg", &qp_solver_cond_ric_alg);

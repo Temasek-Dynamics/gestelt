@@ -6,6 +6,7 @@ from quad_model import *
 from casadi import *
 import scipy.io as sio
 import numpy as np
+import time
 from solid_geometry import *
 def Rd2Rp(tra_ang):
     theta = 2*math.atan(magni(tra_ang))
@@ -14,7 +15,7 @@ def Rd2Rp(tra_ang):
 
 class run_quad:
     def __init__(self, goal_pos = [0, 8, 0], goal_atti = [0,[1,0,0]], ini_r=[0,-8,0]\
-            ,ini_v_I = [0.0, 0.0, 0.0], ini_q = toQuaternion(0.0,[3,3,5]),horizon = 50):
+            ,ini_v_I = [0.0, 0.0, 0.0], ini_q = toQuaternion(0.0,[3,3,5]),horizon = 20):
         ## definition 
         self.winglen = 1.5
         # goal
@@ -242,15 +243,17 @@ class run_quad:
         
   
         current_state_control = ini_state+Ulast
-        
+        t_ = time.time()
         # self.sol1 = self.uavoc1.ocSolver(current_state_control=current_state_control)
         self.sol1 = self.uavoc1.AcadosOcSolver(current_state_control=current_state_control,goal_pos=self.goal_pos)
+        
+        print('solving time for solver=',time.time()-t_)
         # obtain the control command
         control = self.sol1['control_traj_opt'][0,:]
 
         # for RPT control
         pos_vel_cmd= self.sol1['state_traj_opt'][0,:]
-        # print("pos_vel_cmd: ", pos_vel_cmd)
+        print("pos_vel_cmd: ", pos_vel_cmd)
         # print("control: ", control)
         # return control, pos_vel_cmd
         return self.sol1
