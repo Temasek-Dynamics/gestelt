@@ -124,19 +124,19 @@ class LearningAgileAgent():
         self.final_point = end
         # self.env_inputs[7:10]=gate
 
-    def problem_definition(self,drone_init_quat=None):
+    def problem_definition(self,drone_init_quat=None,gazebo_sim=False):
         """initial traversal problem
 
         """
         ini_q=toQuaternion(self.env_inputs[6],[0,0,1]) # drone_init_yaw
         if drone_init_quat is not None:
             ini_q=drone_init_quat.tolist()
-            
-        self.quad1 = run_quad(goal_pos=self.env_inputs[3:6],ini_r=self.env_inputs[0:3].tolist(),ini_q=ini_q)
+        horizon =50    
+        self.quad1 = run_quad(goal_pos=self.env_inputs[3:6],ini_r=self.env_inputs[0:3].tolist(),ini_q=ini_q,horizon=horizon)
         self.quad1.init_obstacle(self.gate_point.reshape(12))
         self.quad1.uav1.setDyn(0.01)
         
-        self.quad2 = run_quad(goal_pos=self.final_point,horizon =20) #solver_inputs[13:16]
+        self.quad2 = run_quad(goal_pos=self.final_point,horizon=horizon,gazebo_sim=gazebo_sim) #solver_inputs[13:16]
         print('start_point=',self.env_inputs[0:3])
         print('final_point=',self.env_inputs[3:6])
 
@@ -232,7 +232,7 @@ class LearningAgileAgent():
             self.Time = np.concatenate((self.Time,[self.i*0.01]),axis = 0)
             self.Pitch = np.concatenate((self.Pitch,[gap_pitch]),axis = 0)
             
-            if (self.i%10)==0: # control frequency = 10 hz
+            if (self.i%1)==0: # control frequency = 10 hz
 
                 ## obtain the future traversal window state
                     self.gate_n.translate(t*self.moving_gate.V[self.i])
@@ -287,8 +287,8 @@ class LearningAgileAgent():
         np.save('HL_Variable',self.hl_variable)
         self.quad1.uav1.play_animation(wing_len=1.5,gate_traj1=self.gate_move ,state_traj=self.state_n)
 
-        # self.quad1.uav1.plot_input(self.control_n)
-        # self.quad1.uav1.plot_angularrate(self.state_n)
+        self.quad1.uav1.plot_input(self.control_n)
+        self.quad1.uav1.plot_angularrate(self.state_n)
         self.quad1.uav1.plot_position(self.pos_vel_att_cmd_n)
         self.quad1.uav1.plot_velocity(self.pos_vel_att_cmd_n)
         plt.plot(self.index_t)
@@ -306,7 +306,7 @@ def main():
     learing_agile_agent=LearningAgileAgent()
     # receive the start and end point, and the initial gate point, from ROS side
     # rewrite the inputs
-    learing_agile_agent.receive_terminal_states(start=np.array([0,1.8,1]),end=np.array([0,-1.8,2]))
+    learing_agile_agent.receive_terminal_states(start=np.array([2,5.8,1]),end=np.array([0,-1.8,2]))
 
     # problem definition
     learing_agile_agent.problem_definition()

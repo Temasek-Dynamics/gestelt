@@ -15,7 +15,7 @@ def Rd2Rp(tra_ang):
 
 class run_quad:
     def __init__(self, goal_pos = [0, 8, 0], goal_atti = [0,[1,0,0]], ini_r=[0,-8,0]\
-            ,ini_v_I = [0.0, 0.0, 0.0], ini_q = toQuaternion(0.0,[3,3,5]),horizon = 20):
+            ,ini_v_I = [0.0, 0.0, 0.0], ini_q = toQuaternion(0.0,[3,3,5]),horizon = 20,gazebo_sim = False):
         ## definition 
         self.winglen = 1.5
         # goal
@@ -79,7 +79,8 @@ class run_quad:
                                        w_final_p=self.uav1.wrf,
                                        w_final_v=self.uav1.wvf,
                                        w_final_q=self.uav1.wqf,
-                                       w_final_w=self.uav1.wwf)
+                                       w_final_w=self.uav1.wwf,
+                                       gazebo_sim=gazebo_sim)
     # define function
     # initialize the narrow window
     def init_obstacle(self,gate_point):
@@ -254,7 +255,7 @@ class run_quad:
         # for RPT control
         pos_vel_cmd= self.sol1['state_traj_opt'][0,:]
         print("pos_vel_cmd: ", pos_vel_cmd)
-        # print("control: ", control)
+        print("control: ", control)
         # return control, pos_vel_cmd
         return self.sol1
 

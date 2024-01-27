@@ -53,7 +53,6 @@ class OCSys:
 
         #self.dyn = casadi.Function('f',[self.state, self.control],[f])
         self.dyn = self.state + dt * f
-        self.rhs=f
         self.dyn_fn = casadi.Function('dynamics', [self.state, self.control, self.auxvar], [self.dyn],['x','u','p'],['x_next'])
         #M = 4
         #DT = dt/4
@@ -268,6 +267,7 @@ class OCSys:
                             w_final_v=1,
                             w_final_q=1,
                             w_final_w=1,
+                            gazebo_sim=False
                             ):
         """
         This function is to define the optimal control problem using ACADOS
@@ -306,10 +306,8 @@ class OCSys:
         
         
         ############################################################### 
-        ##----------------- mapping CasADi to ACADOS -----------------##
-        ############################################################### 
-        # for solver to receive the current state and control
-        P=casadi.SX.sym('P',self.n_state+self.n_control)
+        ##----------------- mapping CasADi to ACADOS ----------------##
+        ###############################################################
         model.name="ACADOS_model" 
 
         # explicit model
@@ -322,7 +320,7 @@ class OCSys:
         model.x=self.state
         model.xdot=x_dot
         model.u=self.control
-        model.p=P    # parameters for solver input, here is the current state and control
+        model.p=[]
         
         ###############################################################
         ###############################################################
@@ -358,23 +356,23 @@ class OCSys:
         ocp.dims.N = self.n_nodes    # number of nodes 
         ocp.solver_options.tf = self.T # horizon length T in seconds
         ocp.dims.np = self.n_state+self.n_control      # number of parameters for solver input, here is the current state and control
-        ocp.parameter_values = np.zeros(self.n_state+self.n_control)
+        ocp.parameter_values = np.zeros(len(model.p))
 
 
 
         ############################################################### 
-        ##------------ setting the cost function--------------------##
+        ##------------ setting the cost function---------------------##
         ############################################################### 
         # setting the cost function weight
         Q_tra_p = np.diag([1, 1, 1])*w_tra_p
         Q_tra_q = np.diag([1, 1, 1])*w_tra_q
 
         Q_final_p = np.diag([1, 1, 1])*w_final_p
-        Q_final_q = np.diag([1, 1, 1, 1])*w_final_q
-        Q_final_v = np.diag([1, 1, 1])*w_final_v
-        Q_final_w = np.diag([1, 1, 1])*w_final_w
+        Q_final_v = np.diag([1, 1, 1])*w_final_v*10
+        Q_final_q = np.diag([1, 1, 1, 1])*w_final_q*0
+        Q_final_w = np.diag([1, 1, 1])*w_final_w*10
 
-        R_thrust = np.diag([1, 1, 1, 1])*w_thrust
+        R_thrust = np.diag([1, 1, 1, 1])*w_thrust*0
 
         ocp.cost.W = scipy.linalg.block_diag(Q_final_p, Q_final_v, Q_final_q, Q_final_w, R_thrust)
         ocp.cost.W_e = scipy.linalg.block_diag(Q_final_p, Q_final_v, Q_final_q, Q_final_w)
@@ -382,7 +380,7 @@ class OCSys:
         ocp.cost.cost_type = 'LINEAR_LS'
         ocp.cost.cost_type_e = 'LINEAR_LS'
 
-        # mapping from x,u to y
+        # #mapping from x,u to y
         ocp.cost.Vx = np.zeros((self.n_state+self.n_control, self.n_state))
         ocp.cost.Vx[:self.n_state, :self.n_state] = np.eye(self.n_state)
         
@@ -390,29 +388,39 @@ class OCSys:
         ocp.cost.Vu[-self.n_control:,-self.n_control:] = np.eye(self.n_control)
         
         ocp.cost.Vx_e = np.eye(self.n_state)
-    
-    
+
+
+        #-------------------------external cost-------------------------##
+        # ocp.cost.cost_type = 'EXTERNAL'
+        # ocp.cost.cost_type_e = 'EXTERNAL'
+        # # setting the cost function
+        # ocp.model.cost_expr_ext_cost = self.path_cost_fn(self.state, self.auxvar)+self.final_cost_fn(self.state, self.auxvar)#+self.thrust_cost_fn(self.control, self.auxvar)
+        # ocp.model.cost_expr_ext_cost_e = self.path_cost_fn(self.state, self.auxvar)+self.final_cost_fn(self.state, self.auxvar)
+
+
         ############################################################### 
-        ##-------------- setting the constraints -----------------##
+        ##----------------- setting the constraints -----------------##
         ###############################################################  
 
            
-        # control constraints
+        ##------------------control constraints----------------------##
         # 4x1
         ocp.constraints.lbu = np.array(self.control_lb) 
         ocp.constraints.ubu = np.array(self.control_ub)
         ocp.constraints.idxbu = np.array([i for i in range(self.n_control)])
         
-        # state constraints ( no constraints for the state)
+        
+        ##------------------ state constraints ----------------------##
+        # # constraint for position ( no constraints for the state)
         ocp.constraints.lbx = np.array([])#(self.state_lb)
         ocp.constraints.ubx = np.array([])#(self.state_ub)
-
-        # define the state that is affected by the constraints
         ocp.constraints.idxbx = np.array([])#([i for i in range(self.n_state)])
+        
 
+        #---------------------for linear cost---------------------##
         # initial constraints, and desired values, will be updated later
-        x_ref=np.zeros((self.n_state))
-        u_ref=np.zeros((self.n_control))
+        x_ref= np.zeros((self.n_state))
+        u_ref= 0.5*(np.array(self.control_lb)+np.array(self.control_ub))  #np.zeros((self.n_control))
 
         # will set this initial value for all N nodes states
         ocp.constraints.x0 = x_ref
@@ -426,27 +434,35 @@ class OCSys:
         ocp.solver_options.hessian_approx = 'GAUSS_NEWTON'
         ocp.solver_options.integrator_type = 'ERK' # ERK (explicit Runge-Kutta integrator) or IRK (Implicit Runge-Kutta integrator)
         ocp.solver_options.print_level = 0
-        ocp.solver_options.nlp_solver_type = 'SQP'
+        ocp.solver_options.nlp_solver_type = 'SQP_RTI'
 
         ##------------------ setting the code generation ------------------##
         # compile acados ocp
         json_file = os.path.join('./'+model.name+'_acados_ocp.json')
-        self.acados_solver = AcadosOcpSolver(ocp, json_file=json_file)
+
+        # load solver from json file
+        build=True
+        generate=True
+        if gazebo_sim:
+            build=False
+            generate=False
+        self.acados_solver = AcadosOcpSolver(ocp,generate=generate,build=build, json_file=json_file)
 
     def AcadosOcSolver(self, current_state_control, goal_pos,auxvar_value=1, costate_option=0):
         """
         This function is to solve the optimal control problem using ACADOS
         """
  
-        
-        # set desired ref state
+        #---------------------for linear cost---------------------##
+        # #set desired ref state
         desired_goal_vel=np.array([0, 0, 0])
         desired_goal_ori = np.array([1, 0, 0, 0])
         desired_goal_w=np.array([0, 0, 0])
-        desired_goal_thrust = 0.3*(np.array(self.control_lb)+np.array(self.control_ub))
+        desired_thrust = np.ones(self.n_control)*0.5
         
         goal_state=np.concatenate((np.array(goal_pos),desired_goal_vel,desired_goal_ori,desired_goal_w))
-        goal_state_middle=np.concatenate((np.array(goal_pos),desired_goal_vel,desired_goal_ori,desired_goal_w,desired_goal_thrust ))
+        goal_state_middle=np.concatenate((np.array(goal_pos),desired_goal_vel,desired_goal_ori,desired_goal_w,desired_thrust ))
+        
         
         # set the desired state at the N-th(final) node (only x, no u)
         self.acados_solver.set(self.n_nodes, "yref",goal_state)
@@ -458,8 +474,7 @@ class OCSys:
         # set initial condition aligned with the current state
         self.acados_solver.set(0, "lbx", np.array(current_state_control[0:self.n_state]))
         self.acados_solver.set(0, "ubx", np.array(current_state_control[0:self.n_state]))
-        self.acados_solver.set(0, "ubu", np.array(current_state_control[self.n_state:]))
-        self.acados_solver.set(0, "lbu", np.array(current_state_control[self.n_state:]))
+  
 
 
         # solve ocp
@@ -489,6 +504,11 @@ class OCSys:
                    #"cost": sol['f'].full()}
 
         return opt_sol 
+    
+
+
+
+
     # def diffPMP(self):
     #     assert hasattr(self, 'state'), "Define the state variable first!"
     #     assert hasattr(self, 'control'), "Define the control variable first!"

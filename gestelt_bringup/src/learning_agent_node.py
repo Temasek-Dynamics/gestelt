@@ -98,10 +98,10 @@ class LearningAgileAgentNode():
         self.learing_agile_agent.receive_terminal_states(start=self.start_point,end=self.final_point)
 
         # problem definition
-        self.learing_agile_agent.problem_definition(self.drone_quat)
+        self.learing_agile_agent.problem_definition(self.drone_quat,gazebo_sim=True)
 
         # after receiving the waypoints, start the timer to run the learning agile agent
-        pub_freq = 40 # hz
+        pub_freq = 200 # hz
 
         # the traverse time is estimated in 100 hz
         rospy.Timer(rospy.Duration(1/50), self.gate_state_estimation_timer_callback) 
@@ -184,9 +184,9 @@ class LearningAgileAgentNode():
         
 
         # publish the setpoint
-        self.next_setpoint_pub.publish(pos_vel_setpoint)
+        # self.next_setpoint_pub.publish(pos_vel_setpoint)
         
-        # self.next_attitude_setpoint_pub.publish(mavros_attitude_setpoint)
+        self.next_attitude_setpoint_pub.publish(mavros_attitude_setpoint)
 
 
         # publish the solver input and solver performance

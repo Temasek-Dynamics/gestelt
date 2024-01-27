@@ -145,7 +145,7 @@ void ACADOS_model_acados_create_1_set_plan(ocp_nlp_plan_t* nlp_solver_plan, cons
     *  plan
     ************************************************/
 
-    nlp_solver_plan->nlp_solver = SQP;
+    nlp_solver_plan->nlp_solver = SQP_RTI;
 
     nlp_solver_plan->ocp_qp_solver_plan.qp_solver = PARTIAL_CONDENSING_HPIPM;
 
@@ -320,7 +320,7 @@ void ACADOS_model_acados_create_3_create_and_set_functions(ACADOS_model_solver_c
         capsule->__CAPSULE_FNC__.casadi_sparsity_in = & __MODEL_BASE_FNC__ ## _sparsity_in; \
         capsule->__CAPSULE_FNC__.casadi_sparsity_out = & __MODEL_BASE_FNC__ ## _sparsity_out; \
         capsule->__CAPSULE_FNC__.casadi_work = & __MODEL_BASE_FNC__ ## _work; \
-        external_function_param_casadi_create(&capsule->__CAPSULE_FNC__ , 17); \
+        external_function_param_casadi_create(&capsule->__CAPSULE_FNC__ , 0); \
     } while(false)
 
 
@@ -345,14 +345,7 @@ void ACADOS_model_acados_create_3_create_and_set_functions(ACADOS_model_solver_c
  * Internal function for ACADOS_model_acados_create: step 4
  */
 void ACADOS_model_acados_create_4_set_default_parameters(ACADOS_model_solver_capsule* capsule) {
-    const int N = capsule->nlp_solver_plan->N;
-    // initialize parameters to nominal value
-    double* p = calloc(NP, sizeof(double));
-
-    for (int i = 0; i <= N; i++) {
-        ACADOS_model_acados_update_params(capsule, i, p, NP);
-    }
-    free(p);
+    // no parameters defined
 }
 
 
@@ -397,6 +390,10 @@ void ACADOS_model_acados_create_5_set_nlp_in(ACADOS_model_solver_capsule* capsul
     /**** Cost ****/
     double* yref_0 = calloc(NY0, sizeof(double));
     // change only the non-zero elements:
+    yref_0[13] = 1.22;
+    yref_0[14] = 1.22;
+    yref_0[15] = 1.22;
+    yref_0[16] = 1.22;
     ocp_nlp_cost_model_set(nlp_config, nlp_dims, nlp_in, 0, "yref", yref_0);
     free(yref_0);
 
@@ -405,16 +402,12 @@ void ACADOS_model_acados_create_5_set_nlp_in(ACADOS_model_solver_capsule* capsul
     W_0[0+(NY0) * 0] = 5;
     W_0[1+(NY0) * 1] = 5;
     W_0[2+(NY0) * 2] = 5;
-    W_0[3+(NY0) * 3] = 5;
-    W_0[4+(NY0) * 4] = 5;
-    W_0[5+(NY0) * 5] = 5;
-    W_0[10+(NY0) * 10] = 3;
-    W_0[11+(NY0) * 11] = 3;
-    W_0[12+(NY0) * 12] = 3;
-    W_0[13+(NY0) * 13] = 0.1;
-    W_0[14+(NY0) * 14] = 0.1;
-    W_0[15+(NY0) * 15] = 0.1;
-    W_0[16+(NY0) * 16] = 0.1;
+    W_0[3+(NY0) * 3] = 50;
+    W_0[4+(NY0) * 4] = 50;
+    W_0[5+(NY0) * 5] = 50;
+    W_0[10+(NY0) * 10] = 30;
+    W_0[11+(NY0) * 11] = 30;
+    W_0[12+(NY0) * 12] = 30;
     ocp_nlp_cost_model_set(nlp_config, nlp_dims, nlp_in, 0, "W", W_0);
     free(W_0);
     double* Vx_0 = calloc(NY0*NX, sizeof(double));
@@ -444,6 +437,10 @@ void ACADOS_model_acados_create_5_set_nlp_in(ACADOS_model_solver_capsule* capsul
     free(Vu_0);
     double* yref = calloc(NY, sizeof(double));
     // change only the non-zero elements:
+    yref[13] = 1.22;
+    yref[14] = 1.22;
+    yref[15] = 1.22;
+    yref[16] = 1.22;
 
     for (int i = 1; i < N; i++)
     {
@@ -455,16 +452,12 @@ void ACADOS_model_acados_create_5_set_nlp_in(ACADOS_model_solver_capsule* capsul
     W[0+(NY) * 0] = 5;
     W[1+(NY) * 1] = 5;
     W[2+(NY) * 2] = 5;
-    W[3+(NY) * 3] = 5;
-    W[4+(NY) * 4] = 5;
-    W[5+(NY) * 5] = 5;
-    W[10+(NY) * 10] = 3;
-    W[11+(NY) * 11] = 3;
-    W[12+(NY) * 12] = 3;
-    W[13+(NY) * 13] = 0.1;
-    W[14+(NY) * 14] = 0.1;
-    W[15+(NY) * 15] = 0.1;
-    W[16+(NY) * 16] = 0.1;
+    W[3+(NY) * 3] = 50;
+    W[4+(NY) * 4] = 50;
+    W[5+(NY) * 5] = 50;
+    W[10+(NY) * 10] = 30;
+    W[11+(NY) * 11] = 30;
+    W[12+(NY) * 12] = 30;
 
     for (int i = 1; i < N; i++)
     {
@@ -516,12 +509,12 @@ void ACADOS_model_acados_create_5_set_nlp_in(ACADOS_model_solver_capsule* capsul
     W_e[0+(NYN) * 0] = 5;
     W_e[1+(NYN) * 1] = 5;
     W_e[2+(NYN) * 2] = 5;
-    W_e[3+(NYN) * 3] = 5;
-    W_e[4+(NYN) * 4] = 5;
-    W_e[5+(NYN) * 5] = 5;
-    W_e[10+(NYN) * 10] = 3;
-    W_e[11+(NYN) * 11] = 3;
-    W_e[12+(NYN) * 12] = 3;
+    W_e[3+(NYN) * 3] = 50;
+    W_e[4+(NYN) * 4] = 50;
+    W_e[5+(NYN) * 5] = 50;
+    W_e[10+(NYN) * 10] = 30;
+    W_e[11+(NYN) * 11] = 30;
+    W_e[12+(NYN) * 12] = 30;
     ocp_nlp_cost_model_set(nlp_config, nlp_dims, nlp_in, N, "W", W_e);
     free(W_e);
     double* Vx_e = calloc(NYN*NX, sizeof(double));
@@ -721,24 +714,6 @@ void ACADOS_model_acados_create_6_set_opts(ACADOS_model_solver_capsule* capsule)
     ocp_nlp_solver_opts_set(nlp_config, nlp_opts, "qp_hpipm_mode", "BALANCE");
 
 
-    // set SQP specific options
-    double nlp_solver_tol_stat = 0.000001;
-    ocp_nlp_solver_opts_set(nlp_config, nlp_opts, "tol_stat", &nlp_solver_tol_stat);
-
-    double nlp_solver_tol_eq = 0.000001;
-    ocp_nlp_solver_opts_set(nlp_config, nlp_opts, "tol_eq", &nlp_solver_tol_eq);
-
-    double nlp_solver_tol_ineq = 0.000001;
-    ocp_nlp_solver_opts_set(nlp_config, nlp_opts, "tol_ineq", &nlp_solver_tol_ineq);
-
-    double nlp_solver_tol_comp = 0.000001;
-    ocp_nlp_solver_opts_set(nlp_config, nlp_opts, "tol_comp", &nlp_solver_tol_comp);
-
-    int nlp_solver_max_iter = 100;
-    ocp_nlp_solver_opts_set(nlp_config, nlp_opts, "max_iter", &nlp_solver_max_iter);
-
-    int initialize_t_slacks = 0;
-    ocp_nlp_solver_opts_set(nlp_config, nlp_opts, "initialize_t_slacks", &initialize_t_slacks);
 
     int qp_solver_iter_max = 50;
     ocp_nlp_solver_opts_set(nlp_config, nlp_opts, "qp_iter_max", &qp_solver_iter_max);
@@ -936,7 +911,7 @@ int ACADOS_model_acados_update_params(ACADOS_model_solver_capsule* capsule, int 
 {
     int solver_status = 0;
 
-    int casadi_np = 17;
+    int casadi_np = 0;
     if (casadi_np != np) {
         printf("acados_update_params: trying to set %i parameters for external functions."
             " External function has %i parameters. Exiting.\n", np, casadi_np);
@@ -981,7 +956,7 @@ int ACADOS_model_acados_update_params_sparse(ACADOS_model_solver_capsule * capsu
 {
     int solver_status = 0;
 
-    int casadi_np = 17;
+    int casadi_np = 0;
     if (casadi_np < n_update) {
         printf("ACADOS_model_acados_update_params_sparse: trying to set %d parameters for external functions."
             " External function has %d parameters. Exiting.\n", n_update, casadi_np);
@@ -996,35 +971,6 @@ int ACADOS_model_acados_update_params_sparse(ACADOS_model_solver_capsule * capsu
     //     }
     //     printf("param %d value %e\n", idx[i], p[i]);
     // }
-    const int N = capsule->nlp_solver_plan->N;
-    if (stage < N && stage >= 0)
-    {
-        capsule->forw_vde_casadi[stage].set_param_sparse(capsule->forw_vde_casadi+stage, n_update, idx, p);
-        capsule->expl_ode_fun[stage].set_param_sparse(capsule->expl_ode_fun+stage, n_update, idx, p);
-    
-
-        // cost & constraints
-        if (stage == 0)
-        {
-            // cost
-            // constraints
-        
-        }
-        else // 0 < stage < N
-        {
-
-        
-        }
-    }
-
-    else // stage == N
-    {
-        // terminal shooting node has no dynamics
-        // cost
-        // constraints
-    
-    }
-
 
     return solver_status;
 }
@@ -1087,24 +1033,16 @@ void ACADOS_model_acados_print_stats(ACADOS_model_solver_capsule* capsule)
     if (stat_n > 8)
         printf("\t\tqp_res_stat\tqp_res_eq\tqp_res_ineq\tqp_res_comp");
     printf("\n");
-
+    printf("iter\tqp_stat\tqp_iter\n");
     for (int i = 0; i < nrow; i++)
     {
         for (int j = 0; j < stat_n + 1; j++)
         {
-            if (j == 0 || j == 5 || j == 6)
-            {
-                tmp_int = (int) stat[i + j * nrow];
-                printf("%d\t", tmp_int);
-            }
-            else
-            {
-                printf("%e\t", stat[i + j * nrow]);
-            }
+            tmp_int = (int) stat[i + j * nrow];
+            printf("%d\t", tmp_int);
         }
         printf("\n");
     }
-
 }
 
 int ACADOS_model_acados_custom_update(ACADOS_model_solver_capsule* capsule, double* data, int data_len)
