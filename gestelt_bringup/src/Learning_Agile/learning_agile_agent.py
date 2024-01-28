@@ -139,7 +139,6 @@ class LearningAgileAgent():
         self.quad2 = run_quad(goal_pos=self.final_point,horizon=horizon,gazebo_sim=gazebo_sim) #solver_inputs[13:16]
         print('start_point=',self.env_inputs[0:3])
         print('final_point=',self.env_inputs[3:6])
-
         
     def gate_state_estimation(self,gazebo_model_state):
         # run in 100 hz
@@ -306,7 +305,7 @@ def main():
     learing_agile_agent=LearningAgileAgent()
     # receive the start and end point, and the initial gate point, from ROS side
     # rewrite the inputs
-    learing_agile_agent.receive_terminal_states(start=np.array([2,5.8,1]),end=np.array([0,-1.8,2]))
+    learing_agile_agent.receive_terminal_states(start=np.array([2,3.8,1]),end=np.array([0,-1.8,2]))
 
     # problem definition
     learing_agile_agent.problem_definition()

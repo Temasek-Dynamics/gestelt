@@ -39,7 +39,7 @@
 #define ACADOS_MODEL_NX     13
 #define ACADOS_MODEL_NZ     0
 #define ACADOS_MODEL_NU     4
-#define ACADOS_MODEL_NP     0
+#define ACADOS_MODEL_NP     17
 #define ACADOS_MODEL_NBX    0
 #define ACADOS_MODEL_NBX0   13
 #define ACADOS_MODEL_NBU    4
@@ -60,9 +60,9 @@
 #define ACADOS_MODEL_NG     0
 #define ACADOS_MODEL_NBXN   0
 #define ACADOS_MODEL_NGN    0
-#define ACADOS_MODEL_NY0    17
-#define ACADOS_MODEL_NY     17
-#define ACADOS_MODEL_NYN    13
+#define ACADOS_MODEL_NY0    0
+#define ACADOS_MODEL_NY     0
+#define ACADOS_MODEL_NYN    0
 #define ACADOS_MODEL_N      50
 #define ACADOS_MODEL_NH     0
 #define ACADOS_MODEL_NHN    0
@@ -104,10 +104,20 @@ typedef struct ACADOS_model_solver_capsule
 
     // cost
 
+    external_function_param_casadi *ext_cost_fun;
+    external_function_param_casadi *ext_cost_fun_jac;
+    external_function_param_casadi *ext_cost_fun_jac_hess;
 
 
 
+    external_function_param_casadi ext_cost_0_fun;
+    external_function_param_casadi ext_cost_0_fun_jac;
+    external_function_param_casadi ext_cost_0_fun_jac_hess;
 
+
+    external_function_param_casadi ext_cost_e_fun;
+    external_function_param_casadi ext_cost_e_fun_jac;
+    external_function_param_casadi ext_cost_e_fun_jac_hess;
 
     // constraints
 
