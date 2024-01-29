@@ -275,13 +275,6 @@ class OCSys:
                             print_level=0, 
                             dt = 0.1,
                             costate_option=0,
-                            w_tra_p=1,
-                            w_tra_q=1,
-                            w_thrust=1,
-                            w_final_p=1,
-                            w_final_v=1,
-                            w_final_q=1,
-                            w_final_w=1,
                             gazebo_sim=False
                             ):
         """
@@ -403,80 +396,26 @@ class OCSys:
         ##------------ setting the cost function---------------------##
         ############################################################### 
 
-         #---------------------for linear cost---------------------##
-        ocp.cost.cost_type = 'LINEAR_LS'
-        ocp.cost.cost_type_e = 'LINEAR_LS'
-        
-        # setting the cost function weight
-        # Q_tra_p = np.diag([1, 1, 1])*w_tra_p
-        # Q_tra_q = np.diag([1, 1, 1])*w_tra_q*0.1
-
-        Q_final_p = np.diag([1, 1, 1])*w_final_p
-        Q_final_v = np.diag([1, 1, 1])*w_final_v
-        Q_final_q = np.diag([1, 1, 1, 1])*w_final_q
-        Q_final_w = np.diag([1, 1, 1])*w_final_w
-
-        R_thrust = np.diag([1, 1, 1, 1])*w_thrust
-        
-        Q_state = scipy.linalg.block_diag(Q_final_p, Q_final_v, Q_final_q, Q_final_w, R_thrust)
-        Q_state_e = scipy.linalg.block_diag(Q_final_p, Q_final_v, Q_final_q, Q_final_w)
-        
-        ocp.cost.W = scipy.linalg.block_diag(Q_final_p, Q_final_v, Q_final_q, Q_final_w, R_thrust)
-        ocp.cost.W_e = scipy.linalg.block_diag(Q_final_p, Q_final_v, Q_final_q, Q_final_w)
-
-
-
-        # #mapping from x,u to y
-        ocp.cost.Vx = np.zeros((self.n_state+self.n_control, self.n_state))
-        ocp.cost.Vx[:self.n_state, :self.n_state] = np.eye(self.n_state)
-        
-        ocp.cost.Vu = np.zeros((self.n_state+self.n_control, self.n_control))
-        ocp.cost.Vu[-self.n_control:,-self.n_control:] = np.eye(self.n_control)
-        
-        ocp.cost.Vx_e = np.eye(self.n_state)
-
-       
-        # initial constraints, and desired values, will be updated later
-        x_ref= np.ones((self.n_state))
-        u_ref= np.zeros((self.n_control))
-
-        ### 0--N-1
-        ocp.cost.yref = np.concatenate((x_ref, u_ref))
-        ### N
-        ocp.cost.yref_e = x_ref
-
 
         #-------------------------external cost-------------------------##
-        # ocp.cost.cost_type = 'EXTERNAL'
-        # ocp.cost.cost_type_e = 'EXTERNAL'
+        ocp.cost.cost_type = 'EXTERNAL'
+        ocp.cost.cost_type_e = 'EXTERNAL'
 
-        # # Ulast=ocp.model.p
-        # goal_state=ocp.model.p[0:self.n_state]  
+        # Ulast=ocp.model.p
+        goal_state=ocp.model.p[0:self.n_state]  
 
-        # # goal state - current state
-        # # last input - current input
-
-        # # state_control_error = self.
-        # # state_control_error=vertcat(goal_state,ocp.model.u)-vertcat(ocp.model.x,ocp.model.p[self.n_state:]) 
-        # # state_control_error_e=goal_state-ocp.model.x
+    
 
         # # setting the cost function
-        # # ocp.model.cost_expr_ext_cost = state_control_error.T@Q_state@state_control_error
+        ocp.model.cost_expr_ext_cost = self.path_cost_fn(ocp.model.x,self.auxvar)\
+            +self.thrust_cost_fn(ocp.model.u,self.auxvar)\
+            # +self.final_cost_fn(ocp.model.x,self.auxvar)\
+            # +1*dot(ocp.model.u-Ulast,ocp.model.u-Ulast)
         
-        # # # end cost
-        # # ocp.model.cost_expr_ext_cost_e = state_control_error_e.T@Q_state_e@state_control_error_e
+        # end cost
+        ocp.model.cost_expr_ext_cost_e = self.final_cost_fn(ocp.model.x,self.auxvar)
 
-
-        # # # setting the cost function
-        # ocp.model.cost_expr_ext_cost = self.path_cost_fn(ocp.model.x,self.auxvar)\
-        #     +self.thrust_cost_fn(ocp.model.u,self.auxvar)\
-        #     # +self.final_cost_fn(ocp.model.x,self.auxvar)
-        #     # +100*dot(ocp.model.u-Ulast,ocp.model.u-Ulast)
-        
-        # # end cost
-        # ocp.model.cost_expr_ext_cost_e = self.final_cost_fn(ocp.model.x,self.auxvar)
-
-        # Ulast=ocp.model.u
+        Ulast=ocp.model.u
         ############################################################### 
         ##----------------- setting the constraints -----------------##
         ###############################################################  
@@ -484,7 +423,7 @@ class OCSys:
            
         ##------------------control constraints----------------------##
         # # will set this initial value for all N nodes states
-        x_init = np.ones((self.n_state))
+        x_init = np.zeros((self.n_state))
         x_init[6] = 1.0 # w for the quaternion
         ocp.constraints.x0 = x_init
 
@@ -541,22 +480,17 @@ class OCSys:
         goal_state=np.concatenate((np.array(goal_pos),desired_goal_vel,desired_goal_ori,desired_goal_w))
         goal_state_middle=np.concatenate((np.array(goal_pos),desired_goal_vel,desired_goal_ori,desired_goal_w,desired_thrust ))
         
-        
-        # set the desired state at the N-th(final) node (only x, no u)
-        self.acados_solver.set(self.n_nodes, 'yref',goal_state)
+
         
 
         # set the desired state-control at 0->N-1 nodes
         for i in range(self.n_nodes):
-            self.acados_solver.set(i, 'yref',goal_state_middle)
+            # self.acados_solver.set(i, 'yref',goal_state_middle)
             
             # set the current input
             current_input = np.array(current_state_control[self.n_state:])
             self.acados_solver.set(i, 'p',np.concatenate((goal_state,current_input)))
 
-            # # set initial guess as last time predicted traj
-            # self.acados_solver.set(i, "x", self.state_traj_opt[i,:])
-            # self.acados_solver.set(i, "u", self.control_traj_opt[i,:])
 
         # set the last state-control as the initial guess for the last node
         self.acados_solver.set(self.n_nodes, "x", self.state_traj_opt[-1,:])
@@ -575,10 +509,8 @@ class OCSys:
 
         if status != 0:
             raise Exception('acados returned status {}. Exiting.'.format(status))
-        sol_u=self.acados_solver.get(0, "u")
-        sol_x=self.acados_solver.get(1, "x")
-        # self.state_traj_opt = sol_x.reshape(-1, self.n_state)
-        # self.control_traj_opt = sol_u.reshape(-1, self.n_control)
+
+ 
        
         #-------------take the optimal control and state sequences
 

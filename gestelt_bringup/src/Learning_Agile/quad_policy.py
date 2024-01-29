@@ -73,14 +73,8 @@ class run_quad:
         # self.uavoc1.ocSolverInit(horizon=self.horizon,dt=self.dt)
         self.uavoc1.AcadosOcSolverInit(horizon=self.horizon,
                                        dt=self.dt,
-                                       w_tra_p=self.uav1.wrt,
-                                       w_tra_q=self.uav1.wqt,
-                                       w_thrust=self.uav1.wthrust,
-                                       w_final_p=self.uav1.wrf,
-                                       w_final_v=self.uav1.wvf,
-                                       w_final_q=self.uav1.wqf,
-                                       w_final_w=self.uav1.wwf,
                                        gazebo_sim=gazebo_sim)
+        
     # define function
     # initialize the narrow window
     def init_obstacle(self,gate_point):

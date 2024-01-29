@@ -96,7 +96,7 @@ class LearningAgileAgent():
         self.hl_para = [0,0,0,0,0,0,0]
         self.hl_variable = [self.hl_para]
         
-        ##-----------------gate initialization ----------------------------##
+        ##---------------------gate initialization -------------------------##
         self.moving_gate.let_gate_move()
         self.gate_move = self.moving_gate.gate_move
         self.gate_n = gate(self.gate_move[0])
@@ -131,7 +131,7 @@ class LearningAgileAgent():
         ini_q=toQuaternion(self.env_inputs[6],[0,0,1]) # drone_init_yaw
         if drone_init_quat is not None:
             ini_q=drone_init_quat.tolist()
-        horizon =50    
+        horizon =20    
         self.quad1 = run_quad(goal_pos=self.env_inputs[3:6],ini_r=self.env_inputs[0:3].tolist(),ini_q=ini_q,horizon=horizon,gazebo_sim=gazebo_sim)
         self.quad1.init_obstacle(self.gate_point.reshape(12))
         self.quad1.uav1.setDyn(0.01)
@@ -140,6 +140,7 @@ class LearningAgileAgent():
         print('start_point=',self.env_inputs[0:3])
         print('final_point=',self.env_inputs[3:6])
         
+    
     def gate_state_estimation(self,gazebo_model_state):
         # run in 100 hz
         if self.i <= 500:
@@ -175,7 +176,7 @@ class LearningAgileAgent():
 
     def solve_problem_gazebo(self,drone_state):
         t_ = time.time()
-        # if (self.i%10)==0: # control frequency = 10 hz
+        
         self.state=drone_state
         solver_inputs = np.zeros(18)
         solver_inputs[16] = magni(self.gate_n.gate_point[0,:]-self.gate_n.gate_point[1,:]) # gate width
@@ -198,8 +199,11 @@ class LearningAgileAgent():
         # self.state = np.array(self.quad1.uav1.dyn_fn(self.state, self.u)).reshape(13) # Yixiao's simulation environment ('uav1.dyn_fn'), replaced by pybullet
         self.state_n = np.concatenate((self.state_n,[self.state]),axis = 0)
         self.control_n = np.concatenate((self.control_n,[self.u]),axis = 0)
+        
+        
+        
         # u_m = self.quad1.uav1.u_m
-        u1 = np.reshape(self.u,(4,1))
+        # u1 = np.reshape(self.u,(4,1))
         # tm = np.matmul(u_m,u1)
         # tm = np.reshape(tm,4)
         # control_tm = np.concatenate((control_tm,[tm]),axis = 0)
@@ -231,7 +235,7 @@ class LearningAgileAgent():
             self.Time = np.concatenate((self.Time,[self.i*0.01]),axis = 0)
             self.Pitch = np.concatenate((self.Pitch,[gap_pitch]),axis = 0)
             
-            if (self.i%1)==0: # control frequency = 10 hz
+            if (self.i%2)==0: # control frequency = 10 hz
 
                 ## obtain the future traversal window state
                     self.gate_n.translate(t*self.moving_gate.V[self.i])
@@ -298,7 +302,7 @@ def main():
     learing_agile_agent=LearningAgileAgent()
     # receive the start and end point, and the initial gate point, from ROS side
     # rewrite the inputs
-    learing_agile_agent.receive_terminal_states(start=np.array([4,3.8,-1]),end=np.array([0,1.8,-2]))
+    learing_agile_agent.receive_terminal_states(start=np.array([0,1.8,1]),end=np.array([0,-1.8,1]))
 
     # problem definition
     learing_agile_agent.problem_definition()

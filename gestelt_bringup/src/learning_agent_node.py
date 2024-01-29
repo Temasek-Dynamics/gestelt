@@ -98,10 +98,10 @@ class LearningAgileAgentNode():
         self.learing_agile_agent.receive_terminal_states(start=self.start_point,end=self.final_point)
 
         # problem definition
-        self.learing_agile_agent.problem_definition(self.drone_quat,gazebo_sim=True)
+        self.learing_agile_agent.problem_definition(self.drone_quat,gazebo_sim=False)
 
         # after receiving the waypoints, start the timer to run the learning agile agent
-        pub_freq = 200 # hz
+        pub_freq = 100 # hz
 
         # the traverse time is estimated in 100 hz
         rospy.Timer(rospy.Duration(1/50), self.gate_state_estimation_timer_callback) 
