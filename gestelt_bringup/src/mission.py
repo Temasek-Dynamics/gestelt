@@ -138,7 +138,7 @@ def main():
             HOVER_MODE = True
         
         if (MISSION_MODE):
-            time.sleep(1)
+            time.sleep(3)
             # Already in MISSION 
             break
         elif (not HOVER_MODE):
