@@ -184,9 +184,9 @@ class LearningAgileAgentNode():
         
 
         # publish the setpoint
-        # self.next_setpoint_pub.publish(pos_vel_setpoint)
+        self.next_setpoint_pub.publish(pos_vel_setpoint)
         
-        self.next_attitude_setpoint_pub.publish(mavros_attitude_setpoint)
+        # self.next_attitude_setpoint_pub.publish(mavros_attitude_setpoint)
 
 
         # publish the solver input and solver performance

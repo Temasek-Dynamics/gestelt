@@ -179,7 +179,7 @@ class Quadrotor:
 
         # goal velocity
         goal_velo = goal_velo
-        self.goal_v_I = goal_velo
+        self.goal_v_I = goal_velo 
         self.cost_v_I_g = dot(self.v_I - self.goal_v_I, self.v_I - self.goal_v_I)
 
         # final attitude error

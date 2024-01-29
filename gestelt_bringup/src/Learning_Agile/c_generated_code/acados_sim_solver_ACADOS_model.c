@@ -137,7 +137,7 @@ int ACADOS_model_acados_sim_create(ACADOS_model_sim_solver_capsule * capsule)
  
     tmp_int = 4;
     sim_opts_set(ACADOS_model_sim_config, ACADOS_model_sim_opts, "num_stages", &tmp_int);
-    tmp_int = 3;
+    tmp_int = 1;
     sim_opts_set(ACADOS_model_sim_config, ACADOS_model_sim_opts, "num_steps", &tmp_int);
     tmp_bool = 0;
     sim_opts_set(ACADOS_model_sim_config, ACADOS_model_sim_opts, "jac_reuse", &tmp_bool);

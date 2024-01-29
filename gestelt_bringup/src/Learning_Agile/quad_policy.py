@@ -70,17 +70,17 @@ class run_quad:
         self.uavoc1.setFinalCost(self.uav1.final_cost)
 
         # initialize the mpc solver
-        # self.uavoc1.ocSolverInit(horizon=self.horizon,dt=self.dt)
-        self.uavoc1.AcadosOcSolverInit(horizon=self.horizon,
-                                       dt=self.dt,
-                                       w_tra_p=self.uav1.wrt,
-                                       w_tra_q=self.uav1.wqt,
-                                       w_thrust=self.uav1.wthrust,
-                                       w_final_p=self.uav1.wrf,
-                                       w_final_v=self.uav1.wvf,
-                                       w_final_q=self.uav1.wqf,
-                                       w_final_w=self.uav1.wwf,
-                                       gazebo_sim=gazebo_sim)
+        self.uavoc1.ocSolverInit(horizon=self.horizon,dt=self.dt)
+        # self.uavoc1.AcadosOcSolverInit(horizon=self.horizon,
+        #                                dt=self.dt,
+        #                                w_tra_p=self.uav1.wrt,
+        #                                w_tra_q=self.uav1.wqt,
+        #                                w_thrust=self.uav1.wthrust,
+        #                                w_final_p=self.uav1.wrf,
+        #                                w_final_v=self.uav1.wvf,
+        #                                w_final_q=self.uav1.wqf,
+        #                                w_final_w=self.uav1.wwf,
+        #                                gazebo_sim=gazebo_sim)
     # define function
     # initialize the narrow window
     def init_obstacle(self,gate_point):
@@ -245,8 +245,8 @@ class run_quad:
   
         current_state_control = ini_state+Ulast
         t_ = time.time()
-        # self.sol1 = self.uavoc1.ocSolver(current_state_control=current_state_control)
-        self.sol1 = self.uavoc1.AcadosOcSolver(current_state_control=current_state_control,goal_pos=self.goal_pos)
+        self.sol1 = self.uavoc1.ocSolver(current_state_control=current_state_control)
+        # self.sol1 = self.uavoc1.AcadosOcSolver(current_state_control=current_state_control,goal_pos=self.goal_pos)
         
         print('solving time for solver=',time.time()-t_)
         # obtain the control command

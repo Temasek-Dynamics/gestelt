@@ -43,15 +43,6 @@ MODEL_OBJ := $(MODEL_SRC:.c=.o)
 
 # optimal control problem - mostly CasADi exports
 OCP_SRC=
-OCP_SRC+= ACADOS_model_cost/ACADOS_model_cost_ext_cost_0_fun.c
-OCP_SRC+= ACADOS_model_cost/ACADOS_model_cost_ext_cost_0_fun_jac.c
-OCP_SRC+= ACADOS_model_cost/ACADOS_model_cost_ext_cost_0_fun_jac_hess.c
-OCP_SRC+= ACADOS_model_cost/ACADOS_model_cost_ext_cost_fun.c
-OCP_SRC+= ACADOS_model_cost/ACADOS_model_cost_ext_cost_fun_jac.c
-OCP_SRC+= ACADOS_model_cost/ACADOS_model_cost_ext_cost_fun_jac_hess.c
-OCP_SRC+= ACADOS_model_cost/ACADOS_model_cost_ext_cost_e_fun.c
-OCP_SRC+= ACADOS_model_cost/ACADOS_model_cost_ext_cost_e_fun_jac.c
-OCP_SRC+= ACADOS_model_cost/ACADOS_model_cost_ext_cost_e_fun_jac_hess.c
 
 OCP_SRC+= acados_solver_ACADOS_model.c
 OCP_OBJ := $(OCP_SRC:.c=.o)

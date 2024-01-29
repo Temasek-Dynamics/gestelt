@@ -87,7 +87,7 @@ class LearningAgileAgent():
     
 
         ##-------------------- planning variables --------------------------##
-        self.u = [0.8,0.8,0.8,0.8]
+        self.u = [0.5,0.5,0.5,0.5]
         self.tm = [0,0,0,0]
         self.state_n = []
         self.control_n = [self.u]
@@ -132,11 +132,11 @@ class LearningAgileAgent():
         if drone_init_quat is not None:
             ini_q=drone_init_quat.tolist()
         horizon =50    
-        self.quad1 = run_quad(goal_pos=self.env_inputs[3:6],ini_r=self.env_inputs[0:3].tolist(),ini_q=ini_q,horizon=horizon)
+        self.quad1 = run_quad(goal_pos=self.env_inputs[3:6],ini_r=self.env_inputs[0:3].tolist(),ini_q=ini_q,horizon=horizon,gazebo_sim=gazebo_sim)
         self.quad1.init_obstacle(self.gate_point.reshape(12))
         self.quad1.uav1.setDyn(0.01)
         
-        self.quad2 = run_quad(goal_pos=self.final_point,horizon=horizon,gazebo_sim=gazebo_sim) #solver_inputs[13:16]
+        # self.quad2 = run_quad(goal_pos=self.final_point,horizon=horizon,gazebo_sim=gazebo_sim) #solver_inputs[13:16]
         print('start_point=',self.env_inputs[0:3])
         print('final_point=',self.env_inputs[3:6])
         
@@ -189,7 +189,7 @@ class LearningAgileAgent():
         # self.quad2 = run_quad(goal_pos=solver_inputs[13:16],horizon =20)
 
         
-        cmd_solution = self.quad2.get_input(solver_inputs[0:13],self.u,out[0:3],out[3:6],out[6])
+        cmd_solution = self.quad1.get_input(solver_inputs[0:13],self.u,out[0:3],out[3:6],out[6])
         
         self.pos_vel_att_cmd=cmd_solution['state_traj_opt'][0,:]
         self.u=cmd_solution['control_traj_opt'][0,:].tolist()
@@ -246,17 +246,10 @@ class LearningAgileAgent():
                     solver_inputs[13:16] = self.final_point #self.gate_n.t_final(self.final_point)
                     # print('input_UNDER_GATE=',solver_inputs)
                     out = self.model(solver_inputs).data.numpy()
-                    # print('tra_position=',out[0:3],'tra_time_dnn2=',out[6])
-                #print(out)
-                    # if (horizon-1*i/10) <= 30:
-                    #     Horizon =30
-                    # else:
-                    #     Horizon = int(horizon-1*i/10)
-
-                ## solve the mpc problem and get the control command
+                    
                     t_ = time.time()
                     # self.quad2 = run_quad(goal_pos=solver_inputs[13:16],horizon =20)
-                    cmd_solution = self.quad2.get_input(solver_inputs[0:13],self.u,out[0:3],out[3:6],out[6]) # control input 4-by-1 thrusts to pybullet
+                    cmd_solution = self.quad1.get_input(solver_inputs[0:13],self.u,out[0:3],out[3:6],out[6]) # control input 4-by-1 thrusts to pybullet
                     
                     print('solving time at main=',time.time()-t_)
                     self.index_t.append(time.time()- t_)
@@ -305,7 +298,7 @@ def main():
     learing_agile_agent=LearningAgileAgent()
     # receive the start and end point, and the initial gate point, from ROS side
     # rewrite the inputs
-    learing_agile_agent.receive_terminal_states(start=np.array([2,3.8,1]),end=np.array([0,-1.8,2]))
+    learing_agile_agent.receive_terminal_states(start=np.array([4,3.8,-1]),end=np.array([0,-1.8,-2]))
 
     # problem definition
     learing_agile_agent.problem_definition()
