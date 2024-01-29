@@ -275,6 +275,18 @@ bool BackEndPlanner::generatePlanESDFFree(const Eigen::Vector3d& start_pos, cons
         touch_goal);
 
 
+    // Print results for benchmarking
+    poly_traj::MinJerkOpt optimized_mjo = back_end_planner_->getMinJerkOpt();
+    
+    double traj_length = back_end_planner_->getPathLength(optimized_mjo);
+    double traj_jerk_cost = optimized_mjo.getTrajJerkCost();
+    double trajectory_duration = back_end_planner_->getTrajectoryDuration(optimized_mjo);
+
+    // double max_speed =
+    // double max_acc = 
+
+    Eigen::VectorXd durations = traj.getDurations();
+
     if (plan_success)
     {
       logInfo("Back-end planning successful!");

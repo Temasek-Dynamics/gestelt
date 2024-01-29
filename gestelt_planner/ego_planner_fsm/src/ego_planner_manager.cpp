@@ -538,4 +538,26 @@ namespace ego_planner
     return true;
   }
 
+  /* Utility methods */
+
+  double EGOPlannerManager::getTrajectoryLength(poly_traj::MinJerkOpt& mjo, const double& dt)
+  {
+    poly_traj::Trajectory traj = mjo->getTraj();
+
+    double total_duration = traj.getDurations().sum();
+    double total_traj_length = 0.0;
+
+    while (double t = 0; t < total_duration-dt; t += dt)
+    {
+      total_traj_length += (traj.getPos(t+dt) - traj.getPos(t)).norm();
+    }
+    
+    return total_traj_length;
+  }
+
+  double EGOPlannerManager::getTrajectoryDuration(poly_traj::MinJerkOpt& mjo)
+  {
+    return mjo->getTraj().getDurations().sum();
+  }
+
 } // namespace ego_planner

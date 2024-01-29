@@ -163,6 +163,33 @@ namespace ego_planner
     }
     // PtsChk_t getPtsCheck(void) { return ploy_traj_opt_->get_pts_check_(); }
 
+    /**
+     * @brief Get the minimum jerk trajectory currently being optimized
+     * 
+     * @return poly_traj::MinJerkOpt 
+     */
+    poly_traj::MinJerkOpt getMinJerkOpt(){
+      return ploy_traj_opt_->getMinJerkOpt();
+    }
+
+    /**
+     * @brief Get the path length of the minimum jerk trajectory
+     * 
+     * @param mjo minimum jerk trajectory
+     * @param dt sample time
+     * @return double 
+     */
+    double getTrajectoryLength(poly_traj::MinJerkOpt& mjo, const double& dt=0.05);
+
+    /**
+     * @brief Get the duration of the trajectory
+     * 
+     * @param mjo 
+     * @return double 
+     */
+    double getTrajectoryDuration(poly_traj::MinJerkOpt& mjo);
+
+
     PlanParameters pp_;
     GridMap::Ptr grid_map_;
     TrajContainer traj_;
