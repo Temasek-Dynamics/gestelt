@@ -10,7 +10,6 @@
 #include <ros/ros.h>
 #include <visualization_msgs/Marker.h>
 
-
 class SphericalSFC : public SFCBase
 {
 public: // Public structs
@@ -116,12 +115,13 @@ public: // Public structs
 
   struct SphericalSFCParams{
     /* SFC Generation */
-    int max_itr; // maximum iterations allowed
+    int max_itr; // Corresponds to maximum number of spheres
+    bool debug_viz; // If true, publish visualization for debugging
 
     /* Sampling */
     int max_sample_points; // Maximum allowed sampling points
     double mult_stddev_x; // Multiplier for x standard deviation in sampling 
-    double W_cand_vol; // Weight of candidate volume
+    double W_cand_vol;    // Weight of candidate volume
     double W_intersect_vol; // Weight of intersection of volumes
 
     double min_sphere_vol; // Minimum volume of sphere

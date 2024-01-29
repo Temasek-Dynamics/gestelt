@@ -76,7 +76,6 @@ optimization:
   weight_feasibility: 10000.0 
   weight_sqrvariance: 10000.0 
   weight_time: 10.0 
-  weight_formation: 100 
   obstacle_clearance: 0.35 
   obstacle_clearance_soft: 0.5 
   swarm_clearance: 0.4 

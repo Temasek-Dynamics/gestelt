@@ -7,6 +7,7 @@
 
 #include <ros/ros.h>
 #include <geometry_msgs/Pose.h>
+#include <std_msgs/Empty.h>
 
 #include <visualization_msgs/Marker.h>
 
@@ -32,6 +33,8 @@ private:
   ros::Subscriber debug_start_sub_; // DEBUG: Subscriber to user-defined start point
   ros::Subscriber debug_goal_sub_; // DEBUG: Subscriber to user-defined goal point
   ros::Subscriber sfc_traj_sub_; // Sub to Safe Flight Corridor trajectory
+
+  ros::Subscriber plan_on_demand_esdf_free_sub_; // Subscriber to plan on demand for ESDF Free
   
   /* parameters */
   int drone_id_{-1};
@@ -39,7 +42,7 @@ private:
   int num_replan_retries_;
 
   /* Mapping */
-  std::shared_ptr<GridMap> map_;
+  // std::shared_ptr<GridMap> map_;
 
   /* Planner */
   std::unique_ptr<ego_planner::EGOPlannerManager> back_end_planner_; // Back-end planner
@@ -57,6 +60,8 @@ private:
   void debugStartCB(const geometry_msgs::PoseConstPtr &msg);
 
   void debugGoalCB(const geometry_msgs::PoseConstPtr &msg);
+
+  void planOnDemandESDFFree(const std_msgs::EmptyConstPtr &msg);
 
   /**
    * @brief Callback for safe flight corridor trajectory

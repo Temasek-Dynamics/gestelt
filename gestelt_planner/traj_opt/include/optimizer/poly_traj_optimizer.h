@@ -71,6 +71,9 @@ namespace ego_planner
 
   class PolyTrajOptimizer
   {
+  public:
+    typedef std::unique_ptr<PolyTrajOptimizer> Ptr;
+
   private:
     std::shared_ptr<GridMap> grid_map_;
     AStar::Ptr a_star_;
@@ -109,6 +112,7 @@ namespace ego_planner
 
     std::vector<double> spheres_radius_;                // Vector of sphere radius, size is no. of segments/pieces
     std::vector<Eigen::Vector3d> spheres_center_; // Vector of sphere centers, size is no. of segments/pieces
+    Eigen::MatrixXd inner_cstr_pts_; // inner constraint points of trajectory (excludes boundary points), this is finer than the inner CONTROL points
 
   public:
     PolyTrajOptimizer(){}
@@ -154,18 +158,18 @@ namespace ego_planner
     /**
      * @brief Optimize a trajectory given boundary conditions, inner points and segment durations.
      * 
-     * 
-     * @param iniState Initial state
-     * @param finState Final state
-     * @param initInnerPts Inner points
-     * @param initT Time duration at each point
-     * @param init_cstr_pts Initial constraint points
+     * @param iniState 
+     * @param finState 
+     * @param inner_ctrl_pts 
+     * @param initT 
+     * @param spheres_radius 
+     * @param spheres_centers 
      * @param final_cost 
      * @return true 
      * @return false 
      */
     bool optimizeTrajectorySFC(const Eigen::MatrixXd &iniState, const Eigen::MatrixXd &finState,
-                            const Eigen::MatrixXd &initInnerPts, const Eigen::VectorXd &initT,
+                            const Eigen::MatrixXd &inner_ctrl_pts, const Eigen::VectorXd &initT,
                             const std::vector<double>& spheres_radius,
                             const std::vector<Eigen::Vector3d>& spheres_centers,
                             double &final_cost);
@@ -175,22 +179,22 @@ namespace ego_planner
      * 
      * 
      * @param iniState Initial state
-     * @param finState Final state
-     * @param initInnerPts Inner points
+     * @param finState Final state 
+     * @param inner_ctrl_pts Inner control points (less fine than constraint points)
      * @param initT Time duration at each point
-     * @param init_cstr_pts Initial constraint points
+     * @param initial_cstr_pts Initial constraint points (more fine than control points)
      * @param final_cost 
      * @return true 
      * @return false 
      */
     bool optimizeTrajectory(const Eigen::MatrixXd &iniState, const Eigen::MatrixXd &finState,
-                            const Eigen::MatrixXd &initInnerPts, const Eigen::VectorXd &initT,
-                            Eigen::MatrixXd &init_cstr_pts, double &final_cost)
+                            const Eigen::MatrixXd &inner_ctrl_pts, const Eigen::VectorXd &initT,
+                            Eigen::MatrixXd &initial_cstr_pts, double &final_cost)
     {
       // IF size of inner points and segment durations are not the same, there is a bug
-      if (initInnerPts.cols() != (initT.size() - 1))
+      if (inner_ctrl_pts.cols() != (initT.size() - 1))
       {
-        ROS_ERROR("[PolyTrajOptimizer::optimizeTrajectory] initInnerPts.cols() != (initT.size()-1)");
+        ROS_ERROR("[PolyTrajOptimizer::optimizeTrajectory] inner_cstr_pts.cols() != (initT.size()-1)");
         return false;
       }
 
@@ -207,8 +211,8 @@ namespace ego_planner
 
       double x_init[variable_num_];
       // copy the inner points to x_init
-      memcpy(x_init, initInnerPts.data(), initInnerPts.size() * sizeof(x_init[0]));
-      Eigen::Map<Eigen::VectorXd> Vt(x_init + initInnerPts.size(), initT.size()); // Virtual Time
+      memcpy(x_init, inner_ctrl_pts.data(), inner_ctrl_pts.size() * sizeof(x_init[0]));
+      Eigen::Map<Eigen::VectorXd> Vt(x_init + inner_ctrl_pts.size(), initT.size()); // Virtual Time
 
       // Convert from real time to virtual time
       RealT2VirtualT(initT, Vt);
@@ -292,7 +296,7 @@ namespace ego_planner
           (flag_still_occ && restart_nums < 3) ||
           (flag_force_return && force_stop_type_ == STOP_FOR_REBOUND && rebound_times <= 20));
 
-      init_cstr_pts = cps_.points; 
+      initial_cstr_pts = cps_.points; 
 
       return flag_success;
     }
@@ -975,18 +979,7 @@ namespace ego_planner
 
   private:
 
-    /**
-     * @brief The LBFGS callback function to provide function and gradient evaluations given a current values of variables
-     * 
-     * @param func_data The user data sent for lbfgs_optimize() function by the client.
-     * @param x         The current values of variables.
-     * @param grad      The gradient vector. The callback function must compute
-     *                      the gradient values for the current variables.
-     * @param n         The number of variables.
-     * @return double   The value of the objective function for the current
-     *                          variables.
-     */
-    static double costFunctionCallback(void *func_data, const double *x, double *grad, const int n);
+    /* Optimizer callbacks */
 
     /**
      * @brief The LBFGS callback function to provide function and gradient evaluations given a current values of variables
@@ -1034,6 +1027,52 @@ namespace ego_planner
     /* gradient and cost evaluation functions */
     template <typename EIGENVEC>
     void initAndGetSmoothnessGradCost2PT(EIGENVEC &gdT, double &cost);
+
+    /**
+     * @brief Get cost for constraints on PVA
+     * 
+     * @tparam EIGENVEC 
+     * @param gdT Gradient of size of number of pieces
+     * @param costs a vector of costs
+     * @param K Constraint points per piece, or total sample number
+     */
+    template <typename EIGENVEC>
+    void addPVAGradCost2CT_SFC(EIGENVEC &gdT, Eigen::VectorXd &costs, const int &K);
+
+    /**
+     * @brief Cost of swarm 
+     * 
+     * @param idx_cp 
+     * @param t 
+     * @param p 
+     * @param v 
+     * @param gradp 
+     * @param gradt 
+     * @param grad_prev_t 
+     * @param costp 
+     * @return true 
+     * @return false 
+     */
+    bool swarmGradCostP(const int idx_cp,
+                        const double t,
+                        const Eigen::Vector3d &p,
+                        const Eigen::Vector3d &v,
+                        Eigen::Vector3d &gradp,
+                        double &gradt,
+                        double &grad_prev_t,
+                        double &costp);
+
+    /**
+     * @brief Penalty on variance of distance between each point i.e. penalize the non-uniformity of distance between points
+     * 
+     * @param ps 
+     * @param gdp 
+     * @param var 
+     */
+    void distanceSqrVarianceWithGradCost2p(const Eigen::MatrixXd &ps,
+                                           Eigen::MatrixXd &gdp,
+                                           double &var);
+
 
     /**
      * @brief 
@@ -1270,58 +1309,24 @@ namespace ego_planner
     }
 
     /**
-     * @brief 
+     * @brief The LBFGS callback function to provide function and gradient evaluations given a current values of variables
      * 
-     * @tparam EIGENVEC 
-     * @param gdT Gradient of size of number of pieces
-     * @param costs a vector of costs
-     * @param K Constraint points per piece, or total sample number
+     * @param func_data The user data sent for lbfgs_optimize() function by the client.
+     * @param x         The current values of variables.
+     * @param grad      The gradient vector. The callback function must compute
+     *                      the gradient values for the current variables.
+     * @param n         The number of variables.
+     * @return double   The value of the objective function for the current
+     *                          variables.
      */
-    template <typename EIGENVEC>
-    void addPVAGradCost2CT_SFC(EIGENVEC &gdT, Eigen::VectorXd &costs, const int &K);
+    static double costFunctionCallback(void *func_data, const double *x, double *grad, const int n);  
 
-    bool obstacleGradCostP(const int idx_cp,
-                           const Eigen::Vector3d &p,
-                           Eigen::Vector3d &gradp,
-                           double &costp);
+    // void lengthVarianceWithGradCost2p(const Eigen::MatrixXd &ps,
+    //                                   const int n,
+    //                                   Eigen::MatrixXd &gdp,
+    //                                   double &var);
 
-    bool swarmGradCostP(const int idx_cp,
-                        const double t,
-                        const Eigen::Vector3d &p,
-                        const Eigen::Vector3d &v,
-                        Eigen::Vector3d &gradp,
-                        double &gradt,
-                        double &grad_prev_t,
-                        double &costp);
 
-    /**
-     * @brief Set the cost and gradient based on given velocity
-     * 
-     * @param v Vector of (x,y,z) velocities
-     * @param gradv Gradient
-     * @param costv cost 
-     * @return true 
-     * @return false 
-     */
-    bool feasibilityGradCostV(const Eigen::Vector3d &v,
-                              Eigen::Vector3d &gradv,
-                              double &costv);
-
-    bool feasibilityGradCostA(const Eigen::Vector3d &a,
-                              Eigen::Vector3d &grada,
-                              double &costa);
-
-    void distanceSqrVarianceWithGradCost2p(const Eigen::MatrixXd &ps,
-                                           Eigen::MatrixXd &gdp,
-                                           double &var);
-
-    void lengthVarianceWithGradCost2p(const Eigen::MatrixXd &ps,
-                                      const int n,
-                                      Eigen::MatrixXd &gdp,
-                                      double &var);
-
-  public:
-    typedef std::unique_ptr<PolyTrajOptimizer> Ptr;
   }; // class PolyTrajOptimizer
 
 } // namespace ego_planner

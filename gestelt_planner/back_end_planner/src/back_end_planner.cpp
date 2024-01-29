@@ -13,6 +13,8 @@ void BackEndPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   debug_start_sub_ = pnh.subscribe("debug/plan_start", 5, &BackEndPlanner::debugStartCB, this);
   debug_goal_sub_ = pnh.subscribe("debug/plan_goal", 5, &BackEndPlanner::debugGoalCB, this);
 
+  plan_on_demand_esdf_free_sub_ = pnh.subscribe("plan_on_demand/esdf_free", 5, &BackEndPlanner::planOnDemandESDFFree, this);
+
   // Initialize map
   // map_.reset(new GridMap);
   // map_->initMap(nh, pnh);
@@ -54,9 +56,12 @@ void BackEndPlanner::debugGoalCB(const geometry_msgs::PoseConstPtr &msg)
         msg->position.x,
         msg->position.y,
         msg->position.z};
+}
 
+void BackEndPlanner::planOnDemandESDFFree(const std_msgs::EmptyConstPtr &msg){
+  logInfo("Generating plan using ESDF-Free front-end!");
   if (!generatePlanESDFFree(start_pos_, start_vel_, goal_pos_, num_replan_retries_)){
-    logError("Unable to generate plan!");
+    logError("ESDF-Free front-end: Unable to generate plan!");
   }
 }
 
@@ -217,6 +222,7 @@ bool BackEndPlanner::generatePlanESDFFree(const Eigen::Vector3d& start_pos, cons
   /*1:  Plan initial minimum jerk trajectory */
   poly_traj::MinJerkOpt globalMJO; // Global minimum jerk trajectory
 
+
   std::vector<Eigen::Vector3d> waypoints;
   waypoints.push_back(goal_pos);
   // Generate initial minimum jerk trajectory starting from agent's current position with 0 starting/ending acceleration and velocity.
@@ -236,10 +242,12 @@ bool BackEndPlanner::generatePlanESDFFree(const Eigen::Vector3d& start_pos, cons
 
   back_end_planner_->traj_.setGlobalTraj(globalMJO.getTraj(), ros::Time::now().toSec());
 
+
   std::vector<Eigen::Vector3d> global_traj = back_end_planner_->traj_.getGlobalTrajViz(0.1);
 
   // Publishes to "global_list"
   visualization_->displayGlobalPathList(global_traj, 0.1, 0);
+
 
   /*2:  Plan global trajectory */
   bool flag_polyInit = true; // Initialize new polynomial
@@ -258,12 +266,14 @@ bool BackEndPlanner::generatePlanESDFFree(const Eigen::Vector3d& start_pos, cons
         local_target_pos, local_target_vel,
         touch_goal);
 
+
     // Optimizer plans to local target and goal
     plan_success = back_end_planner_->reboundReplan(
         start_pos, start_vel, start_acc, 
         local_target_pos, local_target_vel, 
         flag_polyInit, flag_randomPolyTraj, 
         touch_goal);
+
 
     if (plan_success)
     {

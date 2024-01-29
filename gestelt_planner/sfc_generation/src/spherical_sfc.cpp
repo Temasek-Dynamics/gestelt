@@ -350,36 +350,39 @@ void SphericalSFC::publishVizPoints(
     const std::vector<Eigen::Vector3d>& pts, ros::Publisher& publisher, 
     Eigen::Vector3d color, double radius, const std::string& frame_id)
 {
-  visualization_msgs::Marker sphere_list;
-  double alpha = 0.7;
+    if (!sfc_params_.debug_viz){
+        return; 
+    }
+    visualization_msgs::Marker sphere_list;
+    double alpha = 0.7;
 
-  sphere_list.header.frame_id = frame_id;
-  sphere_list.header.stamp = ros::Time::now();
-  sphere_list.type = visualization_msgs::Marker::SPHERE_LIST;
-  sphere_list.action = visualization_msgs::Marker::ADD;
-  sphere_list.ns = "spherical_sfc_pts"; 
-  sphere_list.id = 1; 
-  sphere_list.pose.orientation.w = 1.0;
+    sphere_list.header.frame_id = frame_id;
+    sphere_list.header.stamp = ros::Time::now();
+    sphere_list.type = visualization_msgs::Marker::SPHERE_LIST;
+    sphere_list.action = visualization_msgs::Marker::ADD;
+    sphere_list.ns = "spherical_sfc_pts"; 
+    sphere_list.id = 1; 
+    sphere_list.pose.orientation.w = 1.0;
 
-  sphere_list.color.r = color(0);
-  sphere_list.color.g = color(1);
-  sphere_list.color.b = color(2);
-  sphere_list.color.a = alpha;
+    sphere_list.color.r = color(0);
+    sphere_list.color.g = color(1);
+    sphere_list.color.b = color(2);
+    sphere_list.color.a = alpha;
 
-  sphere_list.scale.x = radius;
-  sphere_list.scale.y = radius;
-  sphere_list.scale.z = radius;
+    sphere_list.scale.x = radius;
+    sphere_list.scale.y = radius;
+    sphere_list.scale.z = radius;
 
-  geometry_msgs::Point pt;
-  for (int i = 0; i < pts.size(); i++){
-    pt.x = pts[i](0);
-    pt.y = pts[i](1);
-    pt.z = pts[i](2);
+    geometry_msgs::Point pt;
+    for (int i = 0; i < pts.size(); i++){
+        pt.x = pts[i](0);
+        pt.y = pts[i](1);
+        pt.z = pts[i](2);
 
-    sphere_list.points.push_back(pt);
-  }
+        sphere_list.points.push_back(pt);
+    }
 
-  publisher.publish(sphere_list);
+    publisher.publish(sphere_list);
 }
 
 void SphericalSFC::publishVizSphericalSFC(  

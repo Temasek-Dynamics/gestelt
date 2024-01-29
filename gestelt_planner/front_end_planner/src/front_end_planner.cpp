@@ -7,11 +7,15 @@ void FrontEndPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   pnh.param("front_end/planner_frequency", planner_freq, -1.0);
   pnh.param("front_end/goal_tolerance", squared_goal_tol_, -1.0);
 
-  int front_end_max_itr;
-  pnh.param("front_end/max_iterations", front_end_max_itr, -1);
+  AStarPlanner::AStarParams astar_params; 
+  pnh.param("front_end/max_iterations", astar_params.max_iterations, -1);
+  pnh.param("front_end/tie_breaker", astar_params.tie_breaker, -1.0);
+  pnh.param("front_end/debug_viz", astar_params.debug_viz, false);
   
   SphericalSFC::SphericalSFCParams sfc_params; 
   pnh.param("sfc/max_iterations", sfc_params.max_itr, -1);
+  pnh.param("sfc/debug_viz", sfc_params.debug_viz, false);
+
   pnh.param("sfc/max_sample_points", sfc_params.max_sample_points, -1);
   pnh.param("sfc/mult_stddev_x", sfc_params.mult_stddev_x, -1.0);
   pnh.param("sfc/W_intersect_vol", sfc_params.W_intersect_vol, -1.0);
@@ -30,10 +34,10 @@ void FrontEndPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   odom_sub_ = nh.subscribe("odom", 5, &FrontEndPlanner::odometryCB, this);
   goal_sub_ = nh.subscribe("planner/goals", 5, &FrontEndPlanner::goalsCB, this);
 
-  debug_start_sub_ = nh.subscribe("debug/plan_start", 5, &FrontEndPlanner::debugStartCB, this);
-  debug_goal_sub_ = nh.subscribe("debug/plan_goal", 5, &FrontEndPlanner::debugGoalCB, this);
+  debug_start_sub_ = pnh.subscribe("debug/plan_start", 5, &FrontEndPlanner::debugStartCB, this);
+  debug_goal_sub_ = pnh.subscribe("debug/plan_goal", 5, &FrontEndPlanner::debugGoalCB, this);
 
-  plan_on_demand_sub_ = nh.subscribe("plan_on_demand", 5, &FrontEndPlanner::planOnDemandCB, this);
+  plan_on_demand_sub_ = pnh.subscribe("plan_on_demand", 5, &FrontEndPlanner::planOnDemandCB, this);
 
   spherical_sfc_traj_pub_ = nh.advertise<gestelt_msgs::SphericalSFCTrajectory>("front_end/sfc_trajectory", 10);
 
@@ -53,7 +57,7 @@ void FrontEndPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   map_->initMap(nh, pnh);
 
   // Initialize front end planner 
-  front_end_planner_ = std::make_unique<AStarPlanner>(map_);
+  front_end_planner_ = std::make_unique<AStarPlanner>(map_, astar_params);
   front_end_planner_->addVizPublishers(closed_list_viz_pub_);
 
   sfc_generation_ = std::make_unique<SphericalSFC>(map_, sfc_params);
@@ -144,9 +148,9 @@ bool FrontEndPlanner::generatePlan(){
   logInfo(str_fmt("SFC Planning Time: %f ms", sfc_plan_time_ms));
   logInfo(str_fmt("Number of waypoints in front-end path: %ld", front_end_path.size()));
   logInfo(str_fmt("Size of closed list (expanded nodes): %ld", closed_list.size()));
-  logInfo(str_fmt("[SFC] Number of spheres in SFC Spherical corridor: %ld", sfc_traj.spheres.size()));
-  logInfo(str_fmt("[SFC] Number of waypoints: %ld", sfc_traj.waypoints.size()));
-  logInfo(str_fmt("[SFC] Number of time segment durations: %ld", sfc_traj.segs_t_dur.size()));
+  // logInfo(str_fmt("[SFC] Number of spheres in SFC Spherical corridor: %ld", sfc_traj.spheres.size()));
+  // logInfo(str_fmt("[SFC] Number of waypoints: %ld", sfc_traj.waypoints.size()));
+  // logInfo(str_fmt("[SFC] Number of time segment durations: %ld", sfc_traj.segs_t_dur.size()));
 
   return true;
 }

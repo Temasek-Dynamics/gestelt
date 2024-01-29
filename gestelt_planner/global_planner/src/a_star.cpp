@@ -1,6 +1,7 @@
 #include <global_planner/a_star.h>
 
-AStarPlanner::AStarPlanner(std::shared_ptr<GridMap> grid_map)
+AStarPlanner::AStarPlanner(std::shared_ptr<GridMap> grid_map, const AStarParams& astar_params):
+    astar_params_(astar_params)
 {
     common_.reset(new PlannerCommon(grid_map));
 }
@@ -39,7 +40,7 @@ bool AStarPlanner::generatePlan(const Eigen::Vector3d &start_pos, const Eigen::V
     GridNodePtr goal_node = std::make_shared<GridNode>(goal_idx);
 
     start_node->g_cost = 0.0;
-    start_node->f_cost = tie_breaker_ * common_->getL2Norm(start_node, goal_node);
+    start_node->f_cost = astar_params_.tie_breaker * common_->getL2Norm(start_node, goal_node);
     start_node->parent = nullptr;
 
     addToOpenlist(start_node);
@@ -48,7 +49,7 @@ bool AStarPlanner::generatePlan(const Eigen::Vector3d &start_pos, const Eigen::V
 
     while (!open_list_.empty())
     {
-        if (num_iter%100 == 0){
+        if (num_iter%1000 == 0){
             ROS_INFO("[a_star] Iteration %d", num_iter);
 
             publishVizPoints(getClosedList(), closed_list_viz_pub_);
@@ -68,7 +69,7 @@ bool AStarPlanner::generatePlan(const Eigen::Vector3d &start_pos, const Eigen::V
         for (GridNodePtr nb_node : common_->getNeighbors(cur_node))
         {
             // ROS_INFO("Exploring nb (%s) [%s]", common_->getPosStr(nb_node).c_str(), common_->getIndexStr(nb_node).c_str());
-            double tent_g_cost = cur_node->g_cost + common_->getL2Norm(cur_node, nb_node);
+            double tent_g_cost = cur_node->g_cost + common_->getL1Norm(cur_node, nb_node);
 
             // If tentative cost is better than previously computed cost, then update the g and f cost
             if (tent_g_cost < nb_node->g_cost)
@@ -76,7 +77,7 @@ bool AStarPlanner::generatePlan(const Eigen::Vector3d &start_pos, const Eigen::V
                 nb_node->g_cost = tent_g_cost;
                 // The tie_breaker is used to assign a larger weight to the h_cost and favour 
                 // expanding nodes closer towards the goal
-                nb_node->f_cost = tent_g_cost + tie_breaker_ * common_->getL2Norm(nb_node, goal_node);
+                nb_node->f_cost = tent_g_cost + astar_params_.tie_breaker * common_->getL1Norm(nb_node, goal_node);
             }
 
             // If not already in closed list: set parent and add to open list

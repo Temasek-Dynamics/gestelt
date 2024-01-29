@@ -12,7 +12,14 @@
 class AStarPlanner : public PlannerBase
 {
 public:
-  AStarPlanner(std::shared_ptr<GridMap> grid_map);
+
+  struct AStarParams{
+    int max_iterations; // Maximum iterations for Astar to run
+    double tie_breaker;
+    bool debug_viz; // Publish visualization messages for debugging 
+  }; // struct SphericalSFCParams
+
+  AStarPlanner(std::shared_ptr<GridMap> grid_map, const AStarParams& astar_params);
 
   /**
    * @brief Clear closed, open list and reset planning_successful flag for new plan generation
@@ -63,9 +70,10 @@ private:
 
   void publishVizPoints(const std::vector<Eigen::Vector3d>& pts, ros::Publisher& publisher, Eigen::Vector3d color = Eigen::Vector3d{0.0, 0.0, 0.0}, double radius = 0.1, const std::string& frame_id = "world")
   {
-    if (pts.empty()){
+    if (!astar_params_.debug_viz || pts.empty()){
       return;
     }
+
     visualization_msgs::Marker sphere_list;
     double alpha = 0.7;
 
@@ -106,7 +114,8 @@ private:
   ros::Publisher closed_list_viz_pub_;
 
   /* Params */
-  const double tie_breaker_ = 1.0 + 1.0 / 10000;
+  // const double tie_breaker_ = 1.0 + 1.0 / 10000; 
+  AStarParams astar_params_;
 
   /* Path planner data structures */
 

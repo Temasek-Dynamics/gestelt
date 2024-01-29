@@ -48,14 +48,14 @@ namespace ego_planner
     startPVA << start_pos, start_vel, start_acc;
     endPVA << goal_pos, goal_vel, Eigen::Vector3d::Zero();
 
-    Eigen::MatrixXd inner_wp_mat(3, inner_wps.size()); // matrix of inner waypoints
+    Eigen::MatrixXd inner_ctrl_pts(3, inner_wps.size()); // matrix of inner waypoints
 
     for (size_t i = 0; i < inner_wps.size(); i++){
-      inner_wp_mat.col(i) = inner_wps[i];
+      inner_ctrl_pts.col(i) = inner_wps[i];
     }
 
     mj_opt.reset(startPVA, endPVA, num_segs);
-    mj_opt.generate(inner_wp_mat, segs_t_dur);
+    mj_opt.generate(inner_ctrl_pts, segs_t_dur);
 
     return true;
   }
@@ -69,8 +69,8 @@ namespace ego_planner
 
     int num_segs = initial_traj.getPieceSize();
     // Eigen::MatrixXd all_pos = initial_traj.getPositions();
-    // Get innerPts, a block of size (3, num_segs-1) from column 1 onwards. This excludes the first point.
-    Eigen::MatrixXd innerPts = initial_traj.getPositions().block(0, 1, 3, num_segs - 1);
+    // Get inner_ctrl_pts, a block of size (3, num_segs-1) from column 1 onwards. This excludes the boundary points (start and goal).
+    Eigen::MatrixXd inner_ctrl_pts = initial_traj.getPositions().block(0, 1, 3, num_segs - 1);
     Eigen::Matrix<double, 3, 3> headState, tailState;
     headState << initial_traj.getJuncPos(0),        initial_traj.getJuncVel(0),        initial_traj.getJuncAcc(0);
     tailState << initial_traj.getJuncPos(num_segs), initial_traj.getJuncVel(num_segs), initial_traj.getJuncAcc(num_segs);
@@ -79,7 +79,7 @@ namespace ego_planner
 
     plan_success = ploy_traj_opt_->optimizeTrajectorySFC( 
       headState, tailState,
-      innerPts, initial_traj.getDurations(), 
+      inner_ctrl_pts, initial_traj.getDurations(), 
       spheres_radius, spheres_center,
       final_cost);
 
@@ -361,8 +361,9 @@ namespace ego_planner
       return false;
     }
 
-    /*** STEP 1b: Get constraint points ***/
-    Eigen::MatrixXd cstr_pts = initMJO.getInitConstraintPoints(ploy_traj_opt_->get_cps_num_perPiece_());
+    /*** STEP 1b: Get initail constraint points ***/
+
+    Eigen::MatrixXd initial_cstr_pts = initMJO.getInitConstraintPoints(ploy_traj_opt_->get_cps_num_perPiece_());
     vector<std::pair<int, int>> segments; // segments are only needed for ESDF Local planner and distinctive trajectories
 
     // Check for collision along path and set {p,v} pairs to constraint points.
@@ -376,8 +377,8 @@ namespace ego_planner
     t_init = ros::Time::now() - t_start;
 
     std::vector<Eigen::Vector3d> point_set; //Used for visualization: set of constraint points
-    for (int i = 0; i < cstr_pts.cols(); ++i){
-      point_set.push_back(cstr_pts.col(i));
+    for (int i = 0; i < initial_cstr_pts.cols(); ++i){
+      point_set.push_back(initial_cstr_pts.col(i));
     }
     visualization_->displayInitialMinJerkTraj(point_set, 0.2, 0);
 
@@ -390,28 +391,25 @@ namespace ego_planner
     poly_traj::Trajectory initTraj = initMJO.getTraj();
     int P_sz = initTraj.getPieceSize();
     Eigen::MatrixXd all_pos = initTraj.getPositions();
-    // Get innerPts, a block of size (3, P_sz-1) from column 1 onwards. This excludes the first point.
-    Eigen::MatrixXd innerPts = all_pos.block(0, 1, 3, P_sz - 1);
+    // Get inner_ctrl_pts, a block of size (3, P_sz-1) from column 1 onwards. This excludes the first point.
+    Eigen::MatrixXd inner_ctrl_pts = all_pos.block(0, 1, 3, P_sz - 1);
     Eigen::Matrix<double, 3, 3> headState, tailState;
     headState << initTraj.getJuncPos(0), initTraj.getJuncVel(0), initTraj.getJuncAcc(0);
     tailState << initTraj.getJuncPos(P_sz), initTraj.getJuncVel(P_sz), initTraj.getJuncAcc(P_sz);
     double final_cost; // Not used for now
     flag_success = ploy_traj_opt_->optimizeTrajectory(headState, tailState,
-                                                      innerPts, initTraj.getDurations(),
-                                                      cstr_pts, final_cost);
+                                                      inner_ctrl_pts, initTraj.getDurations(),
+                                                      initial_cstr_pts, final_cost);
 
     best_MJO = ploy_traj_opt_->getMinJerkOpt();
 
     t_opt = ros::Time::now() - t_start;
 
     // // save and display planned results
-
-    // TODO_0: Uncomment
-    // std::cout << "plan_success=" << flag_success << std::endl;
     if (!flag_success)
     {
       ROS_ERROR("[EGOPlannerManager::reboundReplan] Planning unsuccessful from ploy_traj_opt_->optimizeTrajectory");
-      visualization_->displayFailedList(cstr_pts, 0);
+      visualization_->displayFailedList(initial_cstr_pts, 0);
       continous_failures_count_++;
       return false;
     }
@@ -427,7 +425,7 @@ namespace ego_planner
          << ",avg_time=" << sum_time / count_success << std::endl;
     
     setLocalTrajFromOpt(best_MJO, touch_goal);
-    visualization_->displayOptimalList(cstr_pts, 0);
+    visualization_->displayOptimalList(initial_cstr_pts, 0);
 
     // success. YoY
     continous_failures_count_ = 0;
@@ -479,18 +477,17 @@ namespace ego_planner
       const Eigen::Vector3d &start_pos, const Eigen::Vector3d &start_vel, const Eigen::Vector3d &start_acc, 
       const std::vector<Eigen::Vector3d> &waypoints, const Eigen::Vector3d &end_vel, const Eigen::Vector3d &end_acc)
   {
-    
     Eigen::Matrix<double, 3, 3> headState, tailState;
     headState << start_pos, start_vel, start_acc;
     tailState << waypoints.back(), end_vel, end_acc;
-    Eigen::MatrixXd innerPts; // vector of 3d positions 
+    Eigen::MatrixXd inner_ctrl_pts; // vector of 3d positions 
 
     if (waypoints.size() > 1)
     {
-      innerPts.resize(3, waypoints.size() - 1);
+      inner_ctrl_pts.resize(3, waypoints.size() - 1);
       for (int i = 0; i < (int)waypoints.size() - 1; ++i)
       {
-        innerPts.col(i) = waypoints[i];
+        inner_ctrl_pts.col(i) = waypoints[i];
       }
     }
 
@@ -513,7 +510,7 @@ namespace ego_planner
       }
 
       // Generate a minimum snap trajectory
-      globalMJO.generate(innerPts, time_vec);
+      globalMJO.generate(inner_ctrl_pts, time_vec);
 
       // check if any point in trajectory exceeds maximum velocity
       if (globalMJO.getTraj().getMaxVelRate() < pp_.max_vel_ ||
