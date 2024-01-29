@@ -169,7 +169,7 @@ void ACADOS_model_acados_create_1_set_plan(ocp_nlp_plan_t* nlp_solver_plan, cons
     }
     nlp_solver_plan->nlp_constraints[N] = BGH;
 
-    nlp_solver_plan->regularization = PROJECT_REDUC_HESS;
+    nlp_solver_plan->regularization = NO_REGULARIZE;
 }
 
 
@@ -771,7 +771,7 @@ void ACADOS_model_acados_create_6_set_opts(ACADOS_model_solver_capsule* capsule)
     double nlp_solver_step_length = 1;
     ocp_nlp_solver_opts_set(nlp_config, nlp_opts, "step_length", &nlp_solver_step_length);
 
-    double levenberg_marquardt = 0;
+    double levenberg_marquardt = 0.0000000001;
     ocp_nlp_solver_opts_set(nlp_config, nlp_opts, "levenberg_marquardt", &levenberg_marquardt);
 
     /* options QP solver */

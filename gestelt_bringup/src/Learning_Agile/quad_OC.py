@@ -55,6 +55,7 @@ class OCSys:
         #self.dyn = casadi.Function('f',[self.state, self.control],[f])
         self.dyn = self.state + dt * f
         self.dyn_fn = casadi.Function('dynamics', [self.state, self.control, self.auxvar], [self.dyn],['x','u','p'],['x_next'])
+        self.dyn_fn_acados = casadi.Function('dynamics', [self.state, self.control, self.auxvar], [f],['x','u','p'],['rhs'])
         #M = 4
         #DT = dt/4
         #X0 = casadi.SX.sym("X", self.n_state)
@@ -321,8 +322,6 @@ class OCSys:
         model=AcadosModel()
         
         
-        
-        
         ############################################################### 
         ##----------------- mapping CasADi to ACADOS ----------------##
         ###############################################################
@@ -347,11 +346,11 @@ class OCSys:
         self.T_B = vertcat(f1, f2, f3, f4)
         """
         # explicit model
-        model.f_expl_expr=self.dyn_fn(self.state,self.control,self.auxvar)
+        model.f_expl_expr=self.dyn_fn_acados(self.state,self.control,self.auxvar)
 
         # implicit model
         x_dot=casadi.SX.sym('x_dot',self.n_state)
-        model.f_impl_expr=x_dot-self.dyn_fn(self.state,self.control,self.auxvar)
+        model.f_impl_expr=x_dot-self.dyn_fn_acados(self.state,self.control,self.auxvar)
 
         # self.state = vertcat(self.r_I, self.v_I, self.q, self.w_B)
         model.x=self.state
@@ -505,12 +504,12 @@ class OCSys:
 
 
         ##------------------ setting the solver ------------------##
-        ocp.solver_options.qp_solver = 'PARTIAL_CONDENSING_HPIPM'
+        ocp.solver_options.qp_solver = 'PARTIAL_CONDENSING_HPIPM'# FULL_CONDENSING_HPIPM PARTIAL_CONDENSING_HPIPM
         ocp.solver_options.hessian_approx = 'GAUSS_NEWTON' # GAUSS_NEWTON, EXACT
-        ocp.solver_options.regularize_method = 'PROJECT_REDUC_HESS'#'CONVEXIFY'
+        # ocp.solver_options.regularize_method = 'PROJECT_REDUC_HESS'#'CONVEXIFY'
         ocp.solver_options.integrator_type = 'ERK' # ERK (explicit Runge-Kutta integrator) or IRK (Implicit Runge-Kutta integrator)
         ocp.solver_options.print_level = 0
-        # ocp.solver_options.levenberg_marquardt =  
+        ocp.solver_options.levenberg_marquardt = 1e-10
         ocp.solver_options.nlp_solver_type = 'SQP_RTI' # SQP_RTI or SQP
         # ocp.solver_options.nlp_solver_max_iter = 200
         ##------------------ setting the code generation ------------------##
@@ -524,8 +523,9 @@ class OCSys:
             build=False
             generate=False
         self.acados_solver = AcadosOcpSolver(ocp,generate=generate,build=build, json_file=json_file)
-         ## 仿真模拟器（仅仿真使用）
-        self.integrator = AcadosSimSolver(ocp, json_file=json_file)
+ 
+
+
     def AcadosOcSolver(self, current_state_control, goal_pos,auxvar_value=1, costate_option=0):
         """
         This function is to solve the optimal control problem using ACADOS
@@ -554,12 +554,12 @@ class OCSys:
             current_input = np.array(current_state_control[self.n_state:])
             self.acados_solver.set(i, 'p',np.concatenate((goal_state,current_input)))
 
-            # set initial guess as last time predicted traj
+            # # set initial guess as last time predicted traj
             # self.acados_solver.set(i, "x", self.state_traj_opt[i,:])
             # self.acados_solver.set(i, "u", self.control_traj_opt[i,:])
 
         # set the last state-control as the initial guess for the last node
-        # self.acados_solver.set(self.n_nodes, "x", self.state_traj_opt[-1,:])
+        self.acados_solver.set(self.n_nodes, "x", self.state_traj_opt[-1,:])
 
         # set the end desired goal
         self.acados_solver.set(self.n_nodes, "p",np.concatenate((goal_state,current_input)))
@@ -577,16 +577,17 @@ class OCSys:
             raise Exception('acados returned status {}. Exiting.'.format(status))
         sol_u=self.acados_solver.get(0, "u")
         sol_x=self.acados_solver.get(1, "x")
-
+        # self.state_traj_opt = sol_x.reshape(-1, self.n_state)
+        # self.control_traj_opt = sol_u.reshape(-1, self.n_control)
+       
         #-------------take the optimal control and state sequences
 
-        # for i in range(self.n_nodes):
-        #     self.state_traj_opt[i,:]=self.acados_solver.get(i, "x")
-        #     self.control_traj_opt[i,:]=self.acados_solver.get(i, "u")
-        # self.state_traj_opt[-1,:]=self.acados_solver.get(self.n_nodes, "x")
+        for i in range(self.n_nodes):
+            self.state_traj_opt[i,:]=self.acados_solver.get(i, "x")
+            self.control_traj_opt[i,:]=self.acados_solver.get(i, "u")
+        self.state_traj_opt[-1,:]=self.acados_solver.get(self.n_nodes, "x")
         
-        self.state_traj_opt = sol_x.reshape(-1, self.n_state)
-        self.control_traj_opt = sol_u.reshape(-1, self.n_control)
+        
         # output
         opt_sol = {"state_traj_opt": self.state_traj_opt,
                    "control_traj_opt": self.control_traj_opt,

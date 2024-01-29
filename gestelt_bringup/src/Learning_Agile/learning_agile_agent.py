@@ -298,7 +298,7 @@ def main():
     learing_agile_agent=LearningAgileAgent()
     # receive the start and end point, and the initial gate point, from ROS side
     # rewrite the inputs
-    learing_agile_agent.receive_terminal_states(start=np.array([4,3.8,-1]),end=np.array([0,-1.8,-2]))
+    learing_agile_agent.receive_terminal_states(start=np.array([4,3.8,-1]),end=np.array([0,1.8,-2]))
 
     # problem definition
     learing_agile_agent.problem_definition()
