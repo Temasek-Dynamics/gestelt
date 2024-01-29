@@ -132,18 +132,21 @@ class OCSys:
 
 
         # for solver to receive the current state and control
-        P=MX.sym('P',self.n_state+self.n_control)
-
+        X=SX.sym('X',self.n_state,self.horizon+1)
+        U=SX.sym('U',self.n_control,self.horizon)
+        P=SX.sym('P',self.n_state+self.n_control)
+        
+        
+        
         # "Lift" initial conditions
-        Xk = MX.sym('X0', self.n_state)
-        w += [Xk]
+        w += [X[:,0]]
         self.lbw += self.state_lb
         self.ubw +=  self.state_ub
         self.w0 += [0.5 * (x + y) for x, y in zip(self.state_lb, self.state_ub)]
         
         # current state and control constraints
         # g for multiple shooting constraints
-        g += [Xk-P[0:self.n_state]]
+        g += [X[:,0]-P[0:self.n_state]]
         self.lbg += self.n_state * [0]
         self.ubg += self.n_state * [0]
 
@@ -151,10 +154,8 @@ class OCSys:
         
         # Formulate the NLP
         for k in range(int(self.horizon)):
-            # New NLP variable for the control
-            Uk = MX.sym('U_' + str(k), self.n_control) # 4 control variables
-            
-            w += [Uk]
+         
+            w += [U[:,k]]
 
             # control constraints
             self.lbw += self.control_lb
@@ -165,29 +166,28 @@ class OCSys:
             # weight = 60*casadi.exp(-10*(dt*k-self.t)**2) #gamma should increase as the flight duration decreases
              
             # Integrate till the end of the interval
-            Xnext = self.dyn_fn(Xk, Uk,auxvar_value)
+            Xnext = self.dyn_fn(X[:,k], U[:,k],auxvar_value)
 
             # weight*self.tra_cost_fn(Xk, auxvar_value) + 
-            Ck = self.path_cost_fn(Xk, auxvar_value)\
-                +self.thrust_cost_fn(Uk, auxvar_value) #+ 1*dot(Uk-Ulast,Uk-Ulast)
+            Ck = self.path_cost_fn(X[:,k], auxvar_value)\
+                +self.thrust_cost_fn(U[:,k], auxvar_value) #+ 1*dot(Uk-Ulast,Uk-Ulast)
                                                                
             J = J + Ck
 
-            # New NLP variable for state at end of interval
-            Xk = MX.sym('X_' + str(k + 1), self.n_state)
-            w += [Xk]
+        
+            w += [X[:,k+1]]
             self.lbw += self.state_lb
             self.ubw += self.state_ub
             self.w0 += [0.5 * (x + y) for x, y in zip(self.state_lb, self.state_ub)]
-            Ulast = Uk
+            Ulast = U[:,k]
 
             # Add equality constraint, multiple shooting
-            g += [Xnext - Xk]
+            g += [Xnext - X[:,k+1]]
             self.lbg += self.n_state * [0]
             self.ubg += self.n_state * [0]
 
         # Adding the final cost
-        J = J + self.final_cost_fn(Xk, auxvar_value)
+        J = J + self.final_cost_fn(X[:,k+1], auxvar_value)
 
         # Create an NLP solver and solve it
         opts = {'ipopt.max_iter':100,
