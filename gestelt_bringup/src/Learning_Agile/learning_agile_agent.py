@@ -188,7 +188,7 @@ class LearningAgileAgent():
         solver_inputs[0:13] = self.gate_n.transform(self.state)
         solver_inputs[13:16] = self.gate_n.t_final(self.final_point)
         out = self.model(solver_inputs).data.numpy()
-        # print('input_UNDER_GATE=',solver_inputs)
+
 
         ## solve the mpc problem and get the control command
         # self.quad2 = run_quad(goal_pos=solver_inputs[13:16],horizon =20)
@@ -198,7 +198,7 @@ class LearningAgileAgent():
         
         self.pos_vel_att_cmd=cmd_solution['state_traj_opt'][1,:]
         self.u=cmd_solution['control_traj_opt'][0,:].tolist()
-        
+        current_pred_traj=cmd_solution['state_traj_opt']
 
                 
         # self.state = np.array(self.quad1.uav1.dyn_fn(self.state, self.u)).reshape(13) # Yixiao's simulation environment ('uav1.dyn_fn'), replaced by pybullet
@@ -215,7 +215,7 @@ class LearningAgileAgent():
         # self.hl_variable = np.concatenate((self.hl_variable,[out]),axis=0)       
         
         callback_runtime=time.time()-t_
-        return self.pos_vel_att_cmd,self.u, callback_runtime
+        return self.pos_vel_att_cmd,self.u, callback_runtime,current_pred_traj
 
 
     def solve_problem_comparison(self):
@@ -307,7 +307,7 @@ def main():
     learing_agile_agent=LearningAgileAgent()
     # receive the start and end point, and the initial gate point, from ROS side
     # rewrite the inputs
-    learing_agile_agent.receive_terminal_states(start=np.array([0,1.8,10]),end=np.array([0,-1.8,1]))
+    learing_agile_agent.receive_terminal_states(start=np.array([0,1.8,1]),end=np.array([0,-1.8,1]))
 
     # problem definition
     learing_agile_agent.problem_definition()

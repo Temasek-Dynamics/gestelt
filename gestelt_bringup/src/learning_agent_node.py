@@ -53,7 +53,7 @@ class LearningAgileAgentNode():
         self.traverse_time_pub = rospy.Publisher('/learning_agile_agent/traverse_time', Float32, queue_size=10)
         self.callback_runtime_pub = rospy.Publisher('/learning_agile_agent/callback_runtime', Float32, queue_size=10)
         self.solver_input_state_pub = rospy.Publisher('/learning_agile_agent/solver_input_state', PoseStamped, queue_size=10)
-        
+        self.current_pred_traj_pub = rospy.Publisher('/learning_agile_agent/current_pred_traj', PoseArray, queue_size=10)
         # timer for publishing setpoints
         self.terminal_waypoints_received = True
         
@@ -141,14 +141,19 @@ class LearningAgileAgentNode():
 
         # concatenate the drone state into a list, give it to the learning agile agent
         self.drone_state=np.concatenate((self.drone_pos,self.drone_vel,self.drone_quat,self.drone_ang_vel),axis=0).tolist()
-        pos_vel_att_cmd,thrust_vector,callback_runtime=self.learing_agile_agent.solve_problem_gazebo(self.drone_state)
+        pos_vel_att_cmd,thrust_vector,callback_runtime,current_pred_traj=self.learing_agile_agent.solve_problem_gazebo(self.drone_state)
+        
+        #################################################
+        ##---------pub pos_vel_att_cmd setpoint--------##
+        #################################################
         
         # publish the pos_vel_att_cmd setpoint
         pos_vel_setpoint=PositionTarget()
         pos_vel_setpoint.header.stamp = rospy.Time.now()
         pos_vel_setpoint.header.frame_id = "world"
         pos_vel_setpoint.coordinate_frame = PositionTarget.FRAME_LOCAL_NED
-        pos_vel_setpoint.type_mask =  PositionTarget.IGNORE_YAW_RATE+PositionTarget.IGNORE_YAW+PositionTarget.IGNORE_AFX+PositionTarget.IGNORE_AFY+PositionTarget.IGNORE_AFZ
+        pos_vel_setpoint.type_mask =  PositionTarget.IGNORE_YAW_RATE+PositionTarget.IGNORE_YAW+PositionTarget.IGNORE_AFX+PositionTarget.IGNORE_AFY+PositionTarget.IGNORE_AFZ\
+                                    # +PositionTarget.IGNORE_VX+PositionTarget.IGNORE_VY+PositionTarget.IGNORE_VZ
         pos_vel_setpoint.position.x = pos_vel_att_cmd[0]
         
         # TODO ONLY FOR TEST
@@ -186,7 +191,10 @@ class LearningAgileAgentNode():
         # publish the solver input and solver performance
         self.callback_runtime_pub.publish(callback_runtime)
 
-        # publish the solver input state
+        #################################################
+        ##---------pub the solver input state----------##
+        #################################################
+  
         solver_input_state_msg=PoseStamped()
         solver_input_state_msg.header.stamp = rospy.Time.now()
         solver_input_state_msg.header.frame_id = "world"
@@ -199,6 +207,27 @@ class LearningAgileAgentNode():
         solver_input_state_msg.pose.orientation.z = self.learing_agile_agent.state[9]
 
         self.solver_input_state_pub.publish(solver_input_state_msg)
+
+        #################################################
+        ##---------pub the current pred traj-----------##
+        #################################################
+
+        # publish the current pred traj
+        current_pred_traj_msg=PoseArray()
+        current_pred_traj_msg.header.stamp = rospy.Time.now()
+        current_pred_traj_msg.header.frame_id = "world"
+        for i in range(len(current_pred_traj)):
+            pose=Pose()
+            pose.position.x=current_pred_traj[i][0]
+            pose.position.y=current_pred_traj[i][1]-1.8
+            pose.position.z=current_pred_traj[i][2]
+            pose.orientation.w=current_pred_traj[i][6]
+            pose.orientation.x=current_pred_traj[i][7]
+            pose.orientation.y=current_pred_traj[i][8]
+            pose.orientation.z=current_pred_traj[i][9]
+            current_pred_traj_msg.poses.append(pose)
+        self.current_pred_traj_pub.publish(current_pred_traj_msg)
+
 
     def drone_state_pose_callback(self,msg):
         """
