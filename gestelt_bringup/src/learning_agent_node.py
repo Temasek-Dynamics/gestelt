@@ -98,17 +98,18 @@ class LearningAgileAgentNode():
         self.learing_agile_agent.receive_terminal_states(start=self.start_point,end=self.final_point)
 
         # problem definition
+        # gazebo_sim=False, means the solver will compile to c code first, then solve the problem
         self.learing_agile_agent.problem_definition(self.drone_quat,gazebo_sim=True)
 
         # after receiving the waypoints, start the timer to run the learning agile agent
-        pub_freq = 100 # hz
-
+        NMPC_pub_freq = 100 # hz
+        tra_NN_pub_freq = 50 # hz
         
         # the traverse time is estimated in 100 hz
-        rospy.Timer(rospy.Duration(1/100), self.gate_state_estimation_timer_callback) 
+        rospy.Timer(rospy.Duration(1/tra_NN_pub_freq), self.gate_state_estimation_timer_callback) 
         
-        # # the MPC problem is solved in 40 hz
-        rospy.Timer(rospy.Duration(1/pub_freq), self.setpoint_timer_callback)
+        # # the MPC problem is solved in 100 hz
+        rospy.Timer(rospy.Duration(1/NMPC_pub_freq), self.setpoint_timer_callback)
           
       
     def gate_state_estimation_timer_callback(self, event):
@@ -141,7 +142,7 @@ class LearningAgileAgentNode():
 
         # concatenate the drone state into a list, give it to the learning agile agent
         self.drone_state=np.concatenate((self.drone_pos,self.drone_vel,self.drone_quat,self.drone_ang_vel),axis=0).tolist()
-        pos_vel_att_cmd,thrust_vector,callback_runtime,current_pred_traj=self.learing_agile_agent.solve_problem_gazebo(self.drone_state)
+        pos_vel_att_cmd,thrust_each,callback_runtime,current_pred_traj,accelerations=self.learing_agile_agent.solve_problem_gazebo(self.drone_state)
         
         #################################################
         ##---------pub pos_vel_att_cmd setpoint--------##
@@ -152,7 +153,8 @@ class LearningAgileAgentNode():
         pos_vel_setpoint.header.stamp = rospy.Time.now()
         pos_vel_setpoint.header.frame_id = "world"
         pos_vel_setpoint.coordinate_frame = PositionTarget.FRAME_LOCAL_NED
-        pos_vel_setpoint.type_mask =  PositionTarget.IGNORE_YAW_RATE+PositionTarget.IGNORE_YAW+PositionTarget.IGNORE_AFX+PositionTarget.IGNORE_AFY+PositionTarget.IGNORE_AFZ\
+        pos_vel_setpoint.type_mask =  PositionTarget.IGNORE_YAW_RATE+PositionTarget.IGNORE_YAW\
+                                    # +PositionTarget.IGNORE_AFX+PositionTarget.IGNORE_AFY+PositionTarget.IGNORE_AFZ\
                                     # +PositionTarget.IGNORE_VX+PositionTarget.IGNORE_VY+PositionTarget.IGNORE_VZ
         pos_vel_setpoint.position.x = pos_vel_att_cmd[0]
         
@@ -165,6 +167,17 @@ class LearningAgileAgentNode():
         pos_vel_setpoint.velocity.y = pos_vel_att_cmd[4]
         pos_vel_setpoint.velocity.z = pos_vel_att_cmd[5]
 
+        pos_vel_setpoint.acceleration_or_force.x = accelerations[0]
+        pos_vel_setpoint.acceleration_or_force.y = accelerations[1]
+        pos_vel_setpoint.acceleration_or_force.z = accelerations[2]
+
+        # attitude setpoint
+        attitude_setpoint=Quaternion()
+        attitude_setpoint.w=pos_vel_att_cmd[6]
+        attitude_setpoint.x=pos_vel_att_cmd[7]
+        attitude_setpoint.y=pos_vel_att_cmd[8]
+        attitude_setpoint.z=pos_vel_att_cmd[9]
+
 
         # body rate setpoint
         body_rate_setpoint=Vector3()
@@ -172,27 +185,24 @@ class LearningAgileAgentNode():
         body_rate_setpoint.y=pos_vel_att_cmd[11]
         body_rate_setpoint.z=pos_vel_att_cmd[12]
 
-        # assemble the setpoint
+        # assemble the body rate and thrust setpoint
         mavros_attitude_setpoint=AttitudeTarget()
         mavros_attitude_setpoint.header.stamp = rospy.Time.now()
         mavros_attitude_setpoint.header.frame_id = "world"
-        mavros_attitude_setpoint.type_mask = AttitudeTarget.IGNORE_ATTITUDE
+        mavros_attitude_setpoint.type_mask = AttitudeTarget.IGNORE_PITCH_RATE+AttitudeTarget.IGNORE_THRUST+AttitudeTarget.IGNORE_PITCH_RATE+AttitudeTarget.IGNORE_YAW_RATE+AttitudeTarget.IGNORE_ROLL_RATE
         
-    
-        mavros_attitude_setpoint.thrust = sum(thrust_vector)
-        mavros_attitude_setpoint.body_rate=body_rate_setpoint
-
+        # mavros_attitude_setpoint.thrust = sum(thrust_each)
+        # mavros_attitude_setpoint.body_rate=body_rate_setpoint
+        # mavros_attitude_setpoint.orientation=attitude_setpoint
         
         # publish the setpoint（PV or attitude)
         self.next_setpoint_pub.publish(pos_vel_setpoint)
         # self.next_attitude_setpoint_pub.publish(mavros_attitude_setpoint)
 
 
-        # publish the solver input and solver performance
-        self.callback_runtime_pub.publish(callback_runtime)
-
+        #TODO ONLY FOR TEST
         #################################################
-        ##---------pub the solver input state----------##
+        ##-pub the solver input state/solver comp time-##
         #################################################
   
         solver_input_state_msg=PoseStamped()
@@ -207,7 +217,11 @@ class LearningAgileAgentNode():
         solver_input_state_msg.pose.orientation.z = self.learing_agile_agent.state[9]
 
         self.solver_input_state_pub.publish(solver_input_state_msg)
-
+        
+        # publish the solver input and solver performance
+        self.callback_runtime_pub.publish(callback_runtime)
+        
+        
         #################################################
         ##---------pub the current pred traj-----------##
         #################################################
@@ -249,7 +263,7 @@ class LearningAgileAgentNode():
        
         self.drone_vel = np.array([msg.twist.linear.x,msg.twist.linear.y,msg.twist.linear.z])
         self.drone_ang_vel = np.array([msg.twist.angular.x,msg.twist.angular.y,msg.twist.angular.z])
-        # print('drone_vel=',self.drone_vel)
+        
         
 
 def main():

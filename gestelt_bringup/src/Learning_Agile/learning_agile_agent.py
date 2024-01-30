@@ -199,6 +199,7 @@ class LearningAgileAgent():
         self.pos_vel_att_cmd=cmd_solution['state_traj_opt'][1,:]
         self.u=cmd_solution['control_traj_opt'][0,:].tolist()
         current_pred_traj=cmd_solution['state_traj_opt']
+        accelerations=np.diff(current_pred_traj[:,3:6],axis=0)/0.1
 
                 
         # self.state = np.array(self.quad1.uav1.dyn_fn(self.state, self.u)).reshape(13) # Yixiao's simulation environment ('uav1.dyn_fn'), replaced by pybullet
@@ -215,7 +216,7 @@ class LearningAgileAgent():
         # self.hl_variable = np.concatenate((self.hl_variable,[out]),axis=0)       
         
         callback_runtime=time.time()-t_
-        return self.pos_vel_att_cmd,self.u, callback_runtime,current_pred_traj
+        return self.pos_vel_att_cmd,self.u, callback_runtime,current_pred_traj,accelerations[1,:]
 
 
     def solve_problem_comparison(self):
