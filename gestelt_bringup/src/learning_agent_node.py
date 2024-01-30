@@ -103,7 +103,7 @@ class LearningAgileAgentNode():
 
         # after receiving the waypoints, start the timer to run the learning agile agent
         NMPC_pub_freq = 100 # hz
-        tra_NN_pub_freq = 50 # hz
+        tra_NN_pub_freq = 100 # hz
         
         # the traverse time is estimated in 100 hz
         rospy.Timer(rospy.Duration(1/tra_NN_pub_freq), self.gate_state_estimation_timer_callback) 
@@ -189,15 +189,17 @@ class LearningAgileAgentNode():
         mavros_attitude_setpoint=AttitudeTarget()
         mavros_attitude_setpoint.header.stamp = rospy.Time.now()
         mavros_attitude_setpoint.header.frame_id = "world"
-        mavros_attitude_setpoint.type_mask = AttitudeTarget.IGNORE_PITCH_RATE+AttitudeTarget.IGNORE_THRUST+AttitudeTarget.IGNORE_PITCH_RATE+AttitudeTarget.IGNORE_YAW_RATE+AttitudeTarget.IGNORE_ROLL_RATE
-        
-        # mavros_attitude_setpoint.thrust = sum(thrust_each)
-        # mavros_attitude_setpoint.body_rate=body_rate_setpoint
+        # mavros_attitude_setpoint.type_mask = AttitudeTarget.IGNORE_PITCH_RATE+AttitudeTarget.IGNORE_THRUST+AttitudeTarget.IGNORE_PITCH_RATE+AttitudeTarget.IGNORE_YAW_RATE+AttitudeTarget.IGNORE_ROLL_RATE
+        mavros_attitude_setpoint.type_mask = AttitudeTarget.IGNORE_ATTITUDE
+
+        mavros_attitude_setpoint.thrust = sum(thrust_each)/2.44 # normalize to [0,1]
+        mavros_attitude_setpoint.body_rate=body_rate_setpoint
         # mavros_attitude_setpoint.orientation=attitude_setpoint
         
-        # publish the setpoint（PV or attitude)
-        self.next_setpoint_pub.publish(pos_vel_setpoint)
-        # self.next_attitude_setpoint_pub.publish(mavros_attitude_setpoint)
+        #---------- publish the setpoint（PV or attitude)-----------------#
+        # self.next_setpoint_pub.publish(pos_vel_setpoint)
+
+        self.next_attitude_setpoint_pub.publish(mavros_attitude_setpoint)
 
 
         #TODO ONLY FOR TEST

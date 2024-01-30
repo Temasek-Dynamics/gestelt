@@ -87,6 +87,10 @@ class LearningAgileAgent():
     
 
         ##-------------------- planning variables --------------------------##
+        # MPC prediction step, and prediction horizon
+        self.dt=0.1
+        self.horizon=20 #(T/dt)
+
         self.u = [0.5,0.5,0.5,0.5]
         self.tm = [0,0,0,0]
         self.state_n = []
@@ -96,10 +100,11 @@ class LearningAgileAgent():
         self.hl_para = [0,0,0,0,0,0,0]
         self.hl_variable = [self.hl_para]
         
-        ##---------------------gate initialization -------------------------##
+        ##---------------------gate initialization ------------------------##
         self.moving_gate.let_gate_move()
         self.gate_move = self.moving_gate.gate_move
         self.gate_n = gate(self.gate_move[0])
+
 
         ##-------------- initial guess of the traversal time---------------##
         self.t_guess = magni(self.gate_n.centroid-self.state[0:3])/3
@@ -113,8 +118,11 @@ class LearningAgileAgent():
         # trajectory pos_vel_att_cmd
         self.pos_vel_att_cmd=np.zeros(13)
         self.pos_vel_att_cmd_n = [self.pos_vel_att_cmd]
+    
+    
     def receive_terminal_states(self,start,end):
-        """receive the start and end point defined in the mission file
+        """
+        receive the start and end point defined in the mission file
 
         """
         
@@ -125,14 +133,23 @@ class LearningAgileAgent():
         # self.env_inputs[7:10]=gate
 
     def problem_definition(self,drone_init_quat=None,gazebo_sim=False):
-        """initial traversal problem
+        """
+        initial traversal problem
 
         """
         ini_q=toQuaternion(self.env_inputs[6],[0,0,1]) # drone_init_yaw
         if drone_init_quat is not None:
             ini_q=drone_init_quat.tolist()
-        horizon =20    
-        self.quad1 = run_quad(goal_pos=self.env_inputs[3:6],ini_r=self.env_inputs[0:3].tolist(),ini_q=ini_q,horizon=horizon,gazebo_sim=gazebo_sim)
+          
+
+        self.quad1 = run_quad(goal_pos=self.env_inputs[3:6],
+                              ini_r=self.env_inputs[0:3].tolist(),
+                              ini_q=ini_q,
+                              horizon=self.horizon,
+                              gazebo_sim=gazebo_sim,
+                              dt=self.dt)
+        
+
         self.quad1.init_obstacle(self.gate_point.reshape(12))
         self.quad1.uav1.setDyn(0.01)
         
@@ -142,19 +159,22 @@ class LearningAgileAgent():
         
     
     def gate_state_estimation(self,gazebo_model_state):
+
+        """
+        estimate the gate pose, using binary search
+
+        """
+
         # run in 100 hz
-        self.state=gazebo_model_state
+        drone_state=gazebo_model_state
 
         if self.i <= 500:
     
             self.gate_n = gate(self.gate_move[self.i])
-            
-            
-        
-            self.state_n = [self.state]
+            self.state_n = [drone_state]
 
             # binary search for the traversal time
-            t = solver(self.model,self.state,self.final_point,self.gate_n,self.moving_gate.V[self.i],self.moving_gate.w)
+            t = solver(self.model,drone_state,self.final_point,self.gate_n,self.moving_gate.V[self.i],self.moving_gate.w)
             t_tra = t+self.i*0.01
             gap_pitch = self.moving_gate.gate_init_p + self.moving_gate.w*self.i*0.01
             
@@ -177,11 +197,19 @@ class LearningAgileAgent():
         t=0
         return t, self.gate_n.centroid
 
-    def solve_problem_gazebo(self,drone_state):
-        t_ = time.time()
+    def solve_problem_gazebo(self,drone_state=None):
+        """ 
+        gazebo simulation
         
-        # decision variable is updated in 100 hz
-        self.state=drone_state
+        """
+        
+        t_ = time.time()
+        if self.i <= 500:   
+            self.state=drone_state
+        else:
+            # after 5s, let the drone hover
+            self.state=self.state
+        
         solver_inputs = np.zeros(18)
         solver_inputs[16] = magni(self.gate_n.gate_point[0,:]-self.gate_n.gate_point[1,:]) # gate width
         solver_inputs[17] = atan((self.gate_n.gate_point[0,2]-self.gate_n.gate_point[1,2])/(self.gate_n.gate_point[0,0]-self.gate_n.gate_point[1,0])) # compute the actual gate pitch ange in real-time
@@ -199,8 +227,8 @@ class LearningAgileAgent():
         self.pos_vel_att_cmd=cmd_solution['state_traj_opt'][1,:]
         self.u=cmd_solution['control_traj_opt'][0,:].tolist()
         current_pred_traj=cmd_solution['state_traj_opt']
-        accelerations=np.diff(current_pred_traj[:,3:6],axis=0)/0.1
-
+        # accelerations=np.diff(current_pred_traj[:,3:6],axis=0)/self.dt
+        accelerations=(current_pred_traj[2,3:6]-current_pred_traj[1,3:6])/self.dt
                 
         # self.state = np.array(self.quad1.uav1.dyn_fn(self.state, self.u)).reshape(13) # Yixiao's simulation environment ('uav1.dyn_fn'), replaced by pybullet
         self.state_n = np.concatenate((self.state_n,[self.state]),axis = 0)
@@ -216,11 +244,14 @@ class LearningAgileAgent():
         # self.hl_variable = np.concatenate((self.hl_variable,[out]),axis=0)       
         
         callback_runtime=time.time()-t_
-        return self.pos_vel_att_cmd,self.u, callback_runtime,current_pred_traj,accelerations[1,:]
+        return self.pos_vel_att_cmd,self.u, callback_runtime,current_pred_traj,accelerations#accelerations[1,:]
 
 
     def solve_problem_comparison(self):
-        
+        """
+        python simulation
+
+        """
         
         self.state = self.quad1.ini_state # state= feedback from pybullet, 13-by-1, 3 position, 3 velocity (world frame), 4 quaternion, 3 angular rate
         self.state_n = [self.state]
@@ -306,9 +337,10 @@ def main():
     ## --------------for single planning part test-------------------------------##.
     # create the learning agile agent
     learing_agile_agent=LearningAgileAgent()
+    
     # receive the start and end point, and the initial gate point, from ROS side
     # rewrite the inputs
-    learing_agile_agent.receive_terminal_states(start=np.array([0,1.8,1]),end=np.array([0,-1.8,1]))
+    learing_agile_agent.receive_terminal_states(start=np.array([0,1.8,1]),end=np.array([2,-1.8,1]))
 
     # problem definition
     learing_agile_agent.problem_definition()

@@ -14,8 +14,14 @@ def Rd2Rp(tra_ang):
     return [theta,vector]
 
 class run_quad:
-    def __init__(self, goal_pos = [0, 8, 0], goal_atti = [0,[1,0,0]], ini_r=[0,-8,0]\
-            ,ini_v_I = [0.0, 0.0, 0.0], ini_q = toQuaternion(0.0,[3,3,5]),horizon = 20,gazebo_sim = False):
+    def __init__(self, goal_pos = [0, 8, 0], 
+                 goal_atti = [0,[1,0,0]], ini_r=[0,-8,0],
+                ini_v_I = [0.0, 0.0, 0.0], 
+                ini_q = toQuaternion(0.0,[3,3,5]),
+                horizon = 20,
+                gazebo_sim = False,
+                dt=0.1):
+        
         ## definition 
         self.winglen = 1.5
         # goal
@@ -54,7 +60,7 @@ class run_quad:
 
         # --------------------------- create PDP object1 ----------------------------------------
         # create a pdp object
-        self.dt = 0.1
+        self.dt = dt
         self.uavoc1 = OCSys()
         self.uavoc1.setAuxvarVariable()
         sc   = 5 #1e20
