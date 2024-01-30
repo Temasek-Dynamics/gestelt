@@ -76,7 +76,7 @@ class LearningAgileAgent():
         self.env_inputs = nn_sample()
         # self.env_inputs[8]=pi/2 # gate pitch angle
         # drone state
-        self.state = np.zeros(13)
+        self.state = np.zeros(13).tolist()
 
         # moving gate
         self.moving_gate = MovingGate(self.env_inputs)
@@ -143,11 +143,13 @@ class LearningAgileAgent():
     
     def gate_state_estimation(self,gazebo_model_state):
         # run in 100 hz
+        self.state=gazebo_model_state
+
         if self.i <= 500:
     
             self.gate_n = gate(self.gate_move[self.i])
             
-            self.state=gazebo_model_state
+            
         
             self.state_n = [self.state]
 
@@ -172,11 +174,13 @@ class LearningAgileAgent():
             # print('rotation matrix I_G=',gate_n.I_G)
                
         self.i += 1
+        t=0
         return t, self.gate_n.centroid
 
     def solve_problem_gazebo(self,drone_state):
         t_ = time.time()
         
+        # decision variable is updated in 100 hz
         self.state=drone_state
         solver_inputs = np.zeros(18)
         solver_inputs[16] = magni(self.gate_n.gate_point[0,:]-self.gate_n.gate_point[1,:]) # gate width
@@ -192,9 +196,10 @@ class LearningAgileAgent():
         
         cmd_solution = self.quad1.get_input(solver_inputs[0:13],self.u,out[0:3],out[3:6],out[6])
         
-        self.pos_vel_att_cmd=cmd_solution['state_traj_opt'][0,:]
+        self.pos_vel_att_cmd=cmd_solution['state_traj_opt'][1,:]
         self.u=cmd_solution['control_traj_opt'][0,:].tolist()
         
+
                 
         # self.state = np.array(self.quad1.uav1.dyn_fn(self.state, self.u)).reshape(13) # Yixiao's simulation environment ('uav1.dyn_fn'), replaced by pybullet
         self.state_n = np.concatenate((self.state_n,[self.state]),axis = 0)
@@ -302,7 +307,7 @@ def main():
     learing_agile_agent=LearningAgileAgent()
     # receive the start and end point, and the initial gate point, from ROS side
     # rewrite the inputs
-    learing_agile_agent.receive_terminal_states(start=np.array([0,1.8,1]),end=np.array([0,-1.8,1]))
+    learing_agile_agent.receive_terminal_states(start=np.array([0,1.8,10]),end=np.array([0,-1.8,1]))
 
     # problem definition
     learing_agile_agent.problem_definition()

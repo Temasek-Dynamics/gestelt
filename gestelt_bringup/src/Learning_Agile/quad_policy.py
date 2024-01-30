@@ -238,18 +238,10 @@ class run_quad:
         
   
         current_state_control = ini_state+Ulast
-        t_ = time.time()
+       
         # self.sol1 = self.uavoc1.ocSolver(current_state_control=current_state_control)
         self.sol1 = self.uavoc1.AcadosOcSolver(current_state_control=current_state_control,goal_pos=self.goal_pos)
         
-        print('solving time for solver=',time.time()-t_)
-        # obtain the control command
-        control = self.sol1['control_traj_opt'][0,:]
-
-        # for RPT control
-        pos_vel_cmd= self.sol1['state_traj_opt'][0,:]
-        print("pos_vel_cmd: ", pos_vel_cmd)
-        print("control: ", control)
         # return control, pos_vel_cmd
         return self.sol1
 

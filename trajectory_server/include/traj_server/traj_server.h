@@ -423,6 +423,7 @@ private: // Member variables
   Eigen::Vector3d last_mission_acc_{0.0, 0.0, 0.0}, last_mission_jerk_{0.0, 0.0, 0.0};
   // Last received mission yaw and yaw rate
   double last_mission_yaw_{0.0}, last_mission_yaw_dot_{0.0};
+  double takeoff_ramptime_;
 
   // Pair of error value and timestamp (in seconds)
   std::deque<std::pair<double, double>> err_xy_vec;

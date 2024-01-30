@@ -98,13 +98,14 @@ class LearningAgileAgentNode():
         self.learing_agile_agent.receive_terminal_states(start=self.start_point,end=self.final_point)
 
         # problem definition
-        self.learing_agile_agent.problem_definition(self.drone_quat,gazebo_sim=False)
+        self.learing_agile_agent.problem_definition(self.drone_quat,gazebo_sim=True)
 
         # after receiving the waypoints, start the timer to run the learning agile agent
         pub_freq = 100 # hz
 
+        
         # the traverse time is estimated in 100 hz
-        rospy.Timer(rospy.Duration(1/50), self.gate_state_estimation_timer_callback) 
+        rospy.Timer(rospy.Duration(1/100), self.gate_state_estimation_timer_callback) 
         
         # # the MPC problem is solved in 40 hz
         rospy.Timer(rospy.Duration(1/pub_freq), self.setpoint_timer_callback)
@@ -114,6 +115,7 @@ class LearningAgileAgentNode():
         """
         this function estimate the gate future state, is called in 100 hz
         """
+        
         self.drone_state=np.concatenate((self.drone_pos,self.drone_vel,self.drone_quat,self.drone_ang_vel),axis=0).tolist()
         traverse_time, gate_centroid=self.learing_agile_agent.gate_state_estimation(self.drone_state)
         
@@ -158,12 +160,6 @@ class LearningAgileAgentNode():
         pos_vel_setpoint.velocity.y = pos_vel_att_cmd[4]
         pos_vel_setpoint.velocity.z = pos_vel_att_cmd[5]
 
-         # attitude setpoint
-        # attitude_setpoint=Quaternion()
-        # attitude_setpoint.w=pos_vel_att_cmd[6]
-        # attitude_setpoint.x=pos_vel_att_cmd[7]
-        # attitude_setpoint.y=pos_vel_att_cmd[8]
-        # attitude_setpoint.z=pos_vel_att_cmd[9]
 
         # body rate setpoint
         body_rate_setpoint=Vector3()
@@ -180,12 +176,10 @@ class LearningAgileAgentNode():
     
         mavros_attitude_setpoint.thrust = sum(thrust_vector)
         mavros_attitude_setpoint.body_rate=body_rate_setpoint
-        # mavros_attitude_setpoint.orientation=attitude_setpoint
-        
 
-        # publish the setpoint
-        self.next_setpoint_pub.publish(pos_vel_setpoint)
         
+        # publish the setpoint（PV or attitude)
+        self.next_setpoint_pub.publish(pos_vel_setpoint)
         # self.next_attitude_setpoint_pub.publish(mavros_attitude_setpoint)
 
 
@@ -213,18 +207,8 @@ class LearningAgileAgentNode():
         drone_frame_id = msg.header.frame_id
 
         self.drone_pos = np.array([msg.pose.position.x,msg.pose.position.y,msg.pose.position.z])
+        self.drone_quat = np.array([msg.pose.orientation.w,msg.pose.orientation.x,msg.pose.orientation.y,msg.pose.orientation.z])
 
-        drone_quat_origin = np.array([msg.pose.orientation.w,msg.pose.orientation.x,msg.pose.orientation.y,msg.pose.orientation.z])
-        drone_quat_origin_euler = tf.transformations.euler_from_quaternion(drone_quat_origin.tolist())
-        drone_quat_origin_yaw = drone_quat_origin_euler[2]
-        # print('drone_quat_origin_yaw=',drone_quat_origin_yaw)
-
-
-        # TODO ONLY FOR TEST
-        drone_quat_current_yaw = drone_quat_origin_yaw+pi/2
-        # print('drone_quat_current_yaw=',drone_quat_current_yaw)
-        # self.drone_quat = tf.transformations.quaternion_from_euler(drone_quat_origin_euler[0],drone_quat_origin_euler[1],drone_quat_current_yaw)
-        self.drone_quat=np.array([1,0,0,0])
         # TODO ONLY FOR TEST
         self.drone_pos[1]=self.drone_pos[1]+1.8 
         
@@ -259,28 +243,3 @@ if __name__ == '__main__':
     main()
     
 
-   
-
-
-
-        #  # attitude setpoint
-        # attitude_setpoint=Quaternion()
-        # attitude_setpoint.w=pos_vel_att_cmd[6]
-        # attitude_setpoint.x=pos_vel_att_cmd[7]
-        # attitude_setpoint.y=pos_vel_att_cmd[8]
-        # attitude_setpoint.z=pos_vel_att_cmd[9]
-
-        # # body rate setpoint
-        # body_rate_setpoint=Vector3()
-        # body_rate_setpoint.x=pos_vel_att_cmd[10]
-        # body_rate_setpoint.y=pos_vel_att_cmd[11]
-        # body_rate_setpoint.z=pos_vel_att_cmd[12]
-
-        # # assemble the setpoint
-        # mavros_attitude_setpoint=AttitudeTarget()
-        # mavros_attitude_setpoint.header.stamp = rospy.Time.now()
-        # mavros_attitude_setpoint.header.frame_id = "world"
-        # mavros_attitude_setpoint.type_mask = AttitudeTarget.IGNORE_THRUST
-        
-        # mavros_attitude_setpoint.orientation=attitude_setpoint
-        # mavros_attitude_setpoint.body_rate=body_rate_setpoint
