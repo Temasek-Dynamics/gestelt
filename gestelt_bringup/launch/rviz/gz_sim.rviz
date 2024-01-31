@@ -8,9 +8,9 @@ Panels:
         - /MarkerArray1
         - /MarkerArray1/Namespaces1
         - /uav_path1
-        - /PoseArray1
+        - /waypoints1
         - /AccelStamped1
-        - /PoseArray2
+        - /predicted_traj1
       Splitter Ratio: 0.6323529481887817
     Tree Height: 751
   - Class: rviz/Selection
@@ -258,12 +258,12 @@ Visualization Manager:
       Class: rviz/PoseArray
       Color: 255; 25; 0
       Enabled: true
-      Head Length: 0.07000000029802322
-      Head Radius: 0.029999999329447746
-      Name: PoseArray
+      Head Length: 0.17000000178813934
+      Head Radius: 0.12999999523162842
+      Name: waypoints
       Queue Size: 10
-      Shaft Length: 0.23000000417232513
-      Shaft Radius: 0.009999999776482582
+      Shaft Length: 0.12999999523162842
+      Shaft Radius: 0.029999999329447746
       Shape: Arrow (3D)
       Topic: /planner/goals_pos
       Unreliable: false
@@ -292,7 +292,7 @@ Visualization Manager:
       Enabled: true
       Head Length: 0.07000000029802322
       Head Radius: 0.029999999329447746
-      Name: PoseArray
+      Name: predicted_traj
       Queue Size: 10
       Shaft Length: 0.23000000417232513
       Shaft Radius: 0.009999999776482582
@@ -329,7 +329,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/XYOrbit
-      Distance: 5.301129341125488
+      Distance: 5.9807305335998535
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -337,17 +337,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: -0.0178680419921875
-        Y: 0.30705612897872925
-        Z: 1.4576210105587961e-06
-      Focal Shape Fixed Size: true
+        X: 0.34126436710357666
+        Y: -1.8986753225326538
+        Z: 2.384185791015625e-07
+      Focal Shape Fixed Size: false
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.2047962248325348
+      Pitch: 0.340398371219635
       Target Frame: my_view
-      Yaw: 5.8335723876953125
+      Yaw: 0.17540130019187927
     Saved:
       - Class: rviz/FPS
         Enable Stereo Rendering:

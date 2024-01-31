@@ -174,8 +174,10 @@ class LearningAgileAgent():
             self.state_n = [drone_state]
 
             # binary search for the traversal time
-            t = solver(self.model,drone_state,self.final_point,self.gate_n,self.moving_gate.V[self.i],self.moving_gate.w)
-            t_tra = t+self.i*0.01
+            t_tra =2
+            # t = solver(self.model,self.state,self.final_point,self.gate_n,self.moving_gate.V[self.i],self.moving_gate.w)
+            t=t_tra-self.i*0.01
+            # t_tra = t+self.i*0.01
             gap_pitch = self.moving_gate.gate_init_p + self.moving_gate.w*self.i*0.01
             
             # print('step',self.i,'tranversal time W.R.T current=',t,'gap_pitch=',gap_pitch*180/pi)
@@ -203,12 +205,8 @@ class LearningAgileAgent():
         
         """
         
-        t_ = time.time()
-        # if self.i <= 500:   
+        t_ = time.time()   
         self.state=drone_state
-        # else:
-        #     # after 5s, let the drone hover
-        #     self.state=self.state
         
         solver_inputs = np.zeros(18)
         solver_inputs[16] = magni(self.gate_n.gate_point[0,:]-self.gate_n.gate_point[1,:]) # gate width
@@ -216,7 +214,8 @@ class LearningAgileAgent():
         solver_inputs[0:13] = self.gate_n.transform(self.state)
         solver_inputs[13:16] = self.gate_n.t_final(self.final_point)
         out = self.model(solver_inputs).data.numpy()
-
+        out[0:3]=np.array([0,0,0])
+        out[6]=1-self.i*0.01
 
         ## solve the mpc problem and get the control command
         # self.quad2 = run_quad(goal_pos=solver_inputs[13:16],horizon =20)
@@ -289,7 +288,7 @@ class LearningAgileAgent():
                     # print('input_UNDER_GATE=',solver_inputs)
                     out = self.model(solver_inputs).data.numpy()
                     
-                    out[0:3]=np.array([0,0,0])
+                    out[0:3]=np.array([0,0,1.5])
                     out[6]=1-self.i*0.01
                     t_ = time.time()
                     # self.quad2 = run_quad(goal_pos=solver_inputs[13:16],horizon =20)
@@ -323,10 +322,10 @@ class LearningAgileAgent():
         np.save('HL_Variable',self.hl_variable)
         self.quad1.uav1.play_animation(wing_len=1.5,gate_traj1=self.gate_move ,state_traj=self.state_n)
 
-        # self.quad1.uav1.plot_input(self.control_n)
-        # self.quad1.uav1.plot_angularrate(self.state_n)
-        # self.quad1.uav1.plot_position(self.pos_vel_att_cmd_n)
-        # self.quad1.uav1.plot_velocity(self.pos_vel_att_cmd_n)
+        self.quad1.uav1.plot_input(self.control_n)
+        self.quad1.uav1.plot_angularrate(self.state_n)
+        self.quad1.uav1.plot_position(self.pos_vel_att_cmd_n)
+        self.quad1.uav1.plot_velocity(self.pos_vel_att_cmd_n)
         plt.plot(self.index_t)
         plt.title('mpc solving time at the main loop')
         plt.show()

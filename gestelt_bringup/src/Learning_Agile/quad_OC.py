@@ -361,7 +361,8 @@ class OCSys:
         
         # parameters: received after solver initialization
         # goal state; Ulast; current state can be set as constraints 
-        P=casadi.SX.sym('p',self.n_state+self.n_control)
+        # tra_cost weight
+        P=casadi.SX.sym('p',self.n_state+self.n_control+1)
         model.p=P
         
         ###############################################################
@@ -394,8 +395,8 @@ class OCSys:
         ocp.model = model
         ocp.dims.N = self.n_nodes    # number of nodes 
         ocp.solver_options.tf = T # horizon length T in seconds
-        ocp.dims.np = self.n_state+self.n_control     # number of parameters for solver input, here is the current state and control
-        ocp.parameter_values = np.zeros(self.n_state+self.n_control) # Ulast
+        ocp.dims.np = self.n_state+self.n_control+1    # number of parameters for solver input, here is the current state and control
+        ocp.parameter_values = np.zeros(self.n_state+self.n_control+1) 
 
 
 
@@ -419,7 +420,7 @@ class OCSys:
         ocp.model.cost_expr_ext_cost = self.path_cost_fn(ocp.model.x,self.auxvar)\
             +self.thrust_cost_fn(ocp.model.u,self.auxvar)\
             +self.final_cost_fn(ocp.model.x,self.auxvar)\
-            # +casadi.transpose(ocp.model.p[self.n_state:])*self.tra_cost_fn(ocp.model.x, self.auxvar)\
+            +ocp.model.p[-1]*self.tra_cost_fn(ocp.model.x, self.auxvar)\
             # +1*dot(ocp.model.u-Ulast,ocp.model.u-Ulast)
         
         # end cost
@@ -458,7 +459,6 @@ class OCSys:
         # ocp.solver_options.regularize_method = 'PROJECT_REDUC_HESS'#'CONVEXIFY'
         ocp.solver_options.integrator_type = 'ERK' # ERK (explicit Runge-Kutta integrator) or IRK (Implicit Runge-Kutta integrator)
         ocp.solver_options.print_level = 0
-        ocp.solver_options.levenberg_marquardt = 1e-10
         ocp.solver_options.nlp_solver_type = 'SQP_RTI' # SQP_RTI or SQP
         # ocp.solver_options.nlp_solver_max_iter = 200
         ##------------------ setting the code generation ------------------##
@@ -495,10 +495,9 @@ class OCSys:
         goal_state=np.concatenate((np.array(goal_pos),desired_goal_vel,desired_goal_ori,desired_goal_w))
         goal_state_middle=np.concatenate((np.array(goal_pos),desired_goal_vel,desired_goal_ori,desired_goal_w,desired_thrust ))
         
-        weight = np.zeros(self.n_nodes)
-        for i in range(self.n_nodes):   
-            weight[i] = 60*casadi.exp(-10*(dt*i-t_tra)**2) #gamma should increase as the flight duration decreases
-             
+        # weight = np.zeros(self.n_nodes)
+        # for i in range(self.n_nodes):   
+        
 
         # set the desired state-control at 0->N-1 nodes
         for i in range(self.n_nodes):
@@ -506,15 +505,17 @@ class OCSys:
             
             # set the current input
             current_input = np.array(current_state_control[self.n_state:])
-            test=np.concatenate((goal_state,current_input,weight))
-            self.acados_solver.set(i, 'p',np.concatenate((goal_state,current_input)))
-
+     
+            weight = 6*casadi.exp(-10*(dt*i-t_tra)**2) #gamma should increase as the flight duration decreases
+            test=np.concatenate((goal_state,current_input,np.array([weight])))
+            self.acados_solver.set(i, 'p',np.concatenate((goal_state,current_input,np.array([weight]))))
+            
 
         # set the last state-control as the initial guess for the last node
         self.acados_solver.set(self.n_nodes, "x", self.state_traj_opt[-1,:])
 
         # set the end desired goal
-        self.acados_solver.set(self.n_nodes, "p",np.concatenate((goal_state,current_input)))
+        self.acados_solver.set(self.n_nodes, "p",np.concatenate((goal_state,current_input,np.array([weight]))))
 
         # set initial condition aligned with the current state
         self.acados_solver.set(0, "lbx", np.array(current_state_control[0:self.n_state]))

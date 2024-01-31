@@ -120,6 +120,7 @@ int main()
     p[14] = 0;
     p[15] = 0;
     p[16] = 0;
+    p[17] = 0;
 
     ACADOS_model_acados_sim_update_params(capsule, p, NP);
   
