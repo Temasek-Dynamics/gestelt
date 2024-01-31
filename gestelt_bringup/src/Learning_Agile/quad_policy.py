@@ -238,6 +238,7 @@ class run_quad:
         # initialize the NLP problem
         self.uav1.init_TraCost(tra_pos,tra_atti)
         self.uavoc1.setTraCost(self.uav1.tra_cost,t)
+        
         ## obtain the solution
         if type(ini_state) == numpy.ndarray:
             ini_state = ini_state.flatten().tolist()
@@ -245,8 +246,10 @@ class run_quad:
   
         current_state_control = ini_state+Ulast
        
-        # self.sol1 = self.uavoc1.ocSolver(current_state_control=current_state_control)
-        self.sol1 = self.uavoc1.AcadosOcSolver(current_state_control=current_state_control,goal_pos=self.goal_pos)
+        # self.sol1 = self.uavoc1.ocSolver(current_state_control=current_state_control,t_tra=t)
+        self.sol1 = self.uavoc1.AcadosOcSolver(current_state_control=current_state_control,
+                                                goal_pos=self.goal_pos,
+                                                t_tra=t)
         
         # return control, pos_vel_cmd
         return self.sol1

@@ -208,7 +208,7 @@ class Quadrotor:
                           self.wwf * self.cost_w_B_g + \
                           self.wqf * self.cost_q_g
 
-    def init_TraCost(self, tra_pos = [0, 0, 5], tra_atti = [0.7,[0,1,0]]): # transforming Rodrigues to Quaternion is shown in get_input function
+    def init_TraCost(self, tra_pos = [0, 0, 0], tra_atti = [0.7,[0,1,0]]): # transforming Rodrigues to Quaternion is shown in get_input function
         ## traverse cost
         # traverse position in the world frame
         self.tra_r_I = tra_pos[0:3]

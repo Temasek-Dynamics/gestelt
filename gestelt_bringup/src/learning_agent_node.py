@@ -34,6 +34,8 @@ import tf
 class LearningAgileAgentNode():
 
     def __init__(self):
+        self.NMPC_pub_freq = 100 # hz
+        self.tra_NN_pub_freq = 100 # hz
 
         # drone state subscribers [position, velocity, orientation, angular velocity]
         self.drone_pose_sub = rospy.Subscriber('/mavros/local_position/pose',PoseStamped, self.drone_state_pose_callback)
@@ -102,14 +104,12 @@ class LearningAgileAgentNode():
         self.learing_agile_agent.problem_definition(self.drone_quat,gazebo_sim=True)
 
         # after receiving the waypoints, start the timer to run the learning agile agent
-        NMPC_pub_freq = 100 # hz
-        tra_NN_pub_freq = 100 # hz
         
         # the traverse time is estimated in 100 hz
-        rospy.Timer(rospy.Duration(1/tra_NN_pub_freq), self.gate_state_estimation_timer_callback) 
+        rospy.Timer(rospy.Duration(1/self.tra_NN_pub_freq), self.gate_state_estimation_timer_callback) 
         
         # # the MPC problem is solved in 100 hz
-        rospy.Timer(rospy.Duration(1/NMPC_pub_freq), self.setpoint_timer_callback)
+        rospy.Timer(rospy.Duration(1/self.NMPC_pub_freq), self.setpoint_timer_callback)
           
       
     def gate_state_estimation_timer_callback(self, event):
@@ -192,7 +192,11 @@ class LearningAgileAgentNode():
         # mavros_attitude_setpoint.type_mask = AttitudeTarget.IGNORE_PITCH_RATE+AttitudeTarget.IGNORE_THRUST+AttitudeTarget.IGNORE_PITCH_RATE+AttitudeTarget.IGNORE_YAW_RATE+AttitudeTarget.IGNORE_ROLL_RATE
         mavros_attitude_setpoint.type_mask = AttitudeTarget.IGNORE_ATTITUDE
 
-        mavros_attitude_setpoint.thrust = sum(thrust_each)/2.44 # normalize to [0,1]
+        # each propeller thrust max is 2.466207 N
+        # thrust_each: each propeller thrust, in N
+        # offset for compensate the gravity
+        g_compe=0.4
+        mavros_attitude_setpoint.thrust = sum(thrust_each)/(2.466207*4)+g_compe # normalize to [0,1]
         mavros_attitude_setpoint.body_rate=body_rate_setpoint
         # mavros_attitude_setpoint.orientation=attitude_setpoint
         

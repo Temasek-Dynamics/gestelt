@@ -11,6 +11,7 @@
   <node pkg="rosbag" type="record" name="record" output="screen" args="-o /home/tianchensun/gestelt_ws/data/ 
   /mavros/setpoint_raw/local 
   /mavros/local_position/pose 
+  /mavros/setpoint_raw/attitude 
   /planner/sample_trajectory 
   /learning_agile_agent/traverse_time 
   /learning_agile_agent/gate_centroid   

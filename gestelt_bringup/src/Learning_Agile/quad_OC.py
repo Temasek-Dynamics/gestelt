@@ -135,7 +135,7 @@ class OCSys:
         # for solver to receive the current state and control
         X=SX.sym('X',self.n_state,self.horizon+1)
         U=SX.sym('U',self.n_control,self.horizon)
-        P=SX.sym('P',self.n_state+self.n_control)
+        P=SX.sym('P',self.n_state+self.n_control+1)
         
         
         
@@ -164,13 +164,15 @@ class OCSys:
             self.w0 += [0.5 * (x + y) for x, y in zip(self.control_lb, self.control_ub)]
 
             #calculate weight
-            # weight = 60*casadi.exp(-10*(dt*k-self.t)**2) #gamma should increase as the flight duration decreases
+            # self.t: traverse time
+
+            weight = 600*casadi.exp(-10*(dt*k-P[-1])**2) #gamma should increase as the flight duration decreases
              
             # Integrate till the end of the interval
             Xnext = self.dyn_fn(X[:,k], U[:,k],auxvar_value)
 
             # weight*self.tra_cost_fn(Xk, auxvar_value) + 
-            Ck = self.path_cost_fn(X[:,k], auxvar_value)\
+            Ck = weight*self.tra_cost_fn(X[:,k], auxvar_value) + self.path_cost_fn(X[:,k], auxvar_value)\
                 +self.thrust_cost_fn(U[:,k], auxvar_value) #+ 1*dot(Uk-Ulast,Uk-Ulast)
                                                                
             J = J + Ck
@@ -220,7 +222,11 @@ class OCSys:
         self.solver = nlpsol('solver', 'ipopt', prob, opts)
         
         
-    def ocSolver(self, current_state_control, auxvar_value=1, costate_option=0):
+    def ocSolver(self,
+                current_state_control, 
+                auxvar_value=1, 
+                costate_option=0,
+                t_tra=1.0):
         # ------------------------------------------ use the solver -------------------------------------------##
         # 2. use the solver to Solve the NLP
 
@@ -229,9 +235,10 @@ class OCSys:
         sol = self.solver(x0=self.w0,
                      lbx=self.lbw, 
                      ubx=self.ubw, 
-                     p=current_state_control, 
+                     p=current_state_control+ [t_tra], 
                      lbg=self.lbg, 
                      ubg=self.ubg)
+        
         w_opt = sol['x'].full().flatten()
         # print('solving time=',time.time()-t_)
         # take the optimal control and state
@@ -407,9 +414,12 @@ class OCSys:
     
 
         # # setting the cost function
+        # weight = 60*casadi.exp(-10*(dt*k-model.p[-1])**2) #gamma should increase as the flight duration decreases
+             
         ocp.model.cost_expr_ext_cost = self.path_cost_fn(ocp.model.x,self.auxvar)\
             +self.thrust_cost_fn(ocp.model.u,self.auxvar)\
-            # +self.final_cost_fn(ocp.model.x,self.auxvar)\
+            +self.final_cost_fn(ocp.model.x,self.auxvar)\
+            # +casadi.transpose(ocp.model.p[self.n_state:])*self.tra_cost_fn(ocp.model.x, self.auxvar)\
             # +1*dot(ocp.model.u-Ulast,ocp.model.u-Ulast)
         
         # end cost
@@ -465,7 +475,12 @@ class OCSys:
  
 
 
-    def AcadosOcSolver(self, current_state_control, goal_pos,auxvar_value=1, costate_option=0):
+    def AcadosOcSolver(self, 
+                       current_state_control, 
+                       goal_pos,auxvar_value=1, 
+                       costate_option=0,
+                       dt=0.1,
+                       t_tra=1.0):
         """
         This function is to solve the optimal control problem using ACADOS
         """
@@ -480,8 +495,10 @@ class OCSys:
         goal_state=np.concatenate((np.array(goal_pos),desired_goal_vel,desired_goal_ori,desired_goal_w))
         goal_state_middle=np.concatenate((np.array(goal_pos),desired_goal_vel,desired_goal_ori,desired_goal_w,desired_thrust ))
         
-
-        
+        weight = np.zeros(self.n_nodes)
+        for i in range(self.n_nodes):   
+            weight[i] = 60*casadi.exp(-10*(dt*i-t_tra)**2) #gamma should increase as the flight duration decreases
+             
 
         # set the desired state-control at 0->N-1 nodes
         for i in range(self.n_nodes):
@@ -489,6 +506,7 @@ class OCSys:
             
             # set the current input
             current_input = np.array(current_state_control[self.n_state:])
+            test=np.concatenate((goal_state,current_input,weight))
             self.acados_solver.set(i, 'p',np.concatenate((goal_state,current_input)))
 
 
