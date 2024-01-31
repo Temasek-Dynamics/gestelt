@@ -1,0 +1,7 @@
+<launch>
+  <node pkg="gestelt_test" type="test_traj_opt" name="test_traj_opt" output="screen"/>
+
+  <node name="rviz" pkg="rviz" type="rviz" required="true" 
+        args="-d $(find gestelt_bringup)/launch/rviz/testing.rviz"/>
+
+</launch>

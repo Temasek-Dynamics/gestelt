@@ -6,7 +6,7 @@ back_end:
   # planning_horizon: How far ahead to plan [m]
   planning_horizon: 30.0
   # num_replan_retries: Number of times for back-end to retry
-  num_replan_retries: 5
+  num_replan_retries: 10
 
 #####
 # Mapping params

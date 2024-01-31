@@ -185,6 +185,15 @@ bool BackEndPlanner::generatePlanSFC( const Eigen::Vector3d& start_pos, const Ei
 
     plan_success = back_end_planner_->optimizeMJOTraj(initial_mjo, optimized_mjo, spheres_radius, spheres_center);
 
+
+    // Print results for benchmarking
+    double traj_length = back_end_planner_->getTrajectoryLength(optimized_mjo);
+    double traj_jerk_cost = optimized_mjo.getTrajJerkCost();
+    double trajectory_duration = back_end_planner_->getTrajectoryDuration(optimized_mjo);
+
+    logInfo(str_fmt("Trajectory: Length(%f), Jerk Cost(%f), Duration(%f)", 
+      traj_length, traj_jerk_cost, trajectory_duration));
+
     Eigen::MatrixXd cstr_pts_optimized_mjo = optimized_mjo.getInitConstraintPoints(num_constr_pts);
     if (plan_success)
     {
@@ -275,20 +284,22 @@ bool BackEndPlanner::generatePlanESDFFree(const Eigen::Vector3d& start_pos, cons
         touch_goal);
 
 
-    // Print results for benchmarking
-    poly_traj::MinJerkOpt optimized_mjo = back_end_planner_->getMinJerkOpt();
-    
-    double traj_length = back_end_planner_->getPathLength(optimized_mjo);
-    double traj_jerk_cost = optimized_mjo.getTrajJerkCost();
-    double trajectory_duration = back_end_planner_->getTrajectoryDuration(optimized_mjo);
-
-    // double max_speed =
-    // double max_acc = 
-
-    Eigen::VectorXd durations = traj.getDurations();
 
     if (plan_success)
     {
+      // Print results for benchmarking
+      poly_traj::MinJerkOpt optimized_mjo = back_end_planner_->getMinJerkOpt();
+      
+      double traj_length = back_end_planner_->getTrajectoryLength(optimized_mjo);
+      double traj_jerk_cost = optimized_mjo.getTrajJerkCost();
+      double trajectory_duration = back_end_planner_->getTrajectoryDuration(optimized_mjo);
+
+      logInfo(str_fmt("Trajectory: Length(%f), Jerk Cost(%f), Duration(%f)", 
+        traj_length, traj_jerk_cost, trajectory_duration));
+
+      // double max_speed =
+      // double max_acc = 
+
       logInfo("Back-end planning successful!");
       break;
     }

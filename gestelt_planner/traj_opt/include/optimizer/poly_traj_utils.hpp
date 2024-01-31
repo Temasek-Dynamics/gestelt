@@ -9,8 +9,26 @@
 
 #include <Eigen/Eigen>
 
+#include <boost/math/special_functions/factorials.hpp>
+
+
 namespace poly_traj
 {
+    using namespace boost::math;
+
+    // /**
+    //  * @brief Factorial 
+    //  * 
+    //  * @param i 
+    //  * @return int 
+    //  */
+    // int factl(int i){
+    //     int result = 1; 
+    //     while(i > 0){
+    //         result *= i--;
+    //     }
+    //     return result;
+    // }
 
     // Polynomial order and trajectory dimension are fixed here
     typedef Eigen::Matrix<double, 3, 6> CoefficientMat;
@@ -962,13 +980,30 @@ namespace poly_traj
         int N; // Number of pieces
         Eigen::Matrix3d headPVA; // Start PVA
         Eigen::Matrix3d tailPVA; // Goal PVA
-        Eigen::VectorXd T1; // Vector of time duration of each piece
+        Eigen::VectorXd T1; // shape (N, 1) Vector of time duration of each piece
         BandedSystem A;
-        Eigen::MatrixXd b; // Coefficient matrix. Coeffcients of 5th order polynomial [c_5, ... c_0] = b * [P_i; V_i; A_i; P_f; V_f; A_f]
+
+        //  b: shape (6 * N, 3)
+        // 
+        //     x-axis, y-axis, z-axis  
+        //   [ cy_0_0  cy_0_0  cz_0_0;  // Start of 1st segment
+        //     cy_1_0  cy_1_0  cz_1_0;      
+        //     cy_2_0  cy_2_0  cz_2_0;      
+        //     cy_3_0  cy_3_0  cz_3_0;
+        //     cy_4_0  cy_4_0  cz_4_0;      
+        //     cy_5_0  cy_5_0  cz_5_0;      
+        //     ...     ...      ... ;      
+        //     cy_0_N  cy_0_N  cz_0_N;  // Start of n-th segment
+        //     cy_1_N  cy_1_N  cz_1_N;      
+        //     cy_2_N  cy_2_N  cz_2_N;      
+        //     cy_3_N  cy_3_N  cz_3_N;
+        //     cy_4_N  cy_4_N  cz_4_N;      
+        //     cy_5_N  cy_5_N  cz_5_N;] 
+        Eigen::MatrixXd b; 
 
         // Temp variables
-        Eigen::VectorXd T2; // T1 * T1
-        Eigen::VectorXd T3;
+        Eigen::VectorXd T2; // T1**2
+        Eigen::VectorXd T3; // T1**3
         Eigen::VectorXd T4;
         Eigen::VectorXd T5;
         Eigen::MatrixXd gdC; // Gradient of cost w.r.t polynomial coefficients
@@ -1412,20 +1447,63 @@ namespace poly_traj
         //     return gdT(i);
         // }
 
+        /**
+         * @brief Get the cost of jerk for the entire trajectory 
+         * 
+         * @return double 
+         */
         double getTrajJerkCost() const
         {
+            // Cost matrix is:
+            //      0   0   0   0   0   0
+            //      0   0   0   0   0   0
+            //      0   0   0   0   0   0
+            //      0   0   0  36  72 120
+            //      0   0   0  72 192 360
+            //      0   0   0 120 360 720
+            
             double objective = 0.0;
-            for (int i = 0; i < N; i++)
+            for (int i = 0; i < N; i++) // for each segment
             {
-                objective += 36.0 * b.row(6 * i + 3).squaredNorm() * T1(i) +
-                             144.0 * b.row(6 * i + 4).dot(b.row(6 * i + 3)) * T2(i) +
+                objective += 36.0 * b.row(6 * i + 3).squaredNorm() * T1(i) +          // c_i_3 * 36 * T1(i) * c_i_3
+                             144.0 * b.row(6 * i + 4).dot(b.row(6 * i + 3)) * T2(i) + // c_i_3 * 36 * T1(i) * c_i_3
                              192.0 * b.row(6 * i + 4).squaredNorm() * T3(i) +
                              240.0 * b.row(6 * i + 5).dot(b.row(6 * i + 3)) * T3(i) +
                              720.0 * b.row(6 * i + 5).dot(b.row(6 * i + 4)) * T4(i) +
                              720.0 * b.row(6 * i + 5).squaredNorm() * T5(i);
             }
+
             return objective;
         }
+
+        /**
+         * @brief Construct the cost matrix for minimizing the k-th derivative. Used as part of 
+         * J_m = integral of f'(t)^2 over t(m) to t(m-1) = C_m.T * Q_m * C_m
+         * 
+         * @param n 
+         * @param k 
+         * @return Eigen::MatrixXd 
+         */
+        Eigen::MatrixXd constructQ(const int& n, const int& k){
+            Eigen::MatrixXd Q = Eigen::MatrixXd::Zero(n+1, n+1);
+
+            for (int i = k; i < n+1; i++){ // for each derivative of order ith 
+                for (int j = i; j < n+1; j++){ // for each derivative of other kth
+                    int c = i + j - (2*k - 1);
+                    Q(i, j) = (factorial<float>(i) / factorial<float>(i-k)) * (factorial<float>(j) / factorial<float>(j-k)) / c;
+                    Q(j, i) = Q(i, j);
+                }
+            }
+            return Q;
+        }
+
+        // double getCost(const int& k) const
+        // {
+        //     for (int i = 0; i < N; i++) 
+        //     {
+                
+        //     }
+        // }
 
         Trajectory getTraj(void) const
         {

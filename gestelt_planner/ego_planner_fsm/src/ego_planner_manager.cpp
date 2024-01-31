@@ -164,16 +164,19 @@ namespace ego_planner
       int idx = 0; 
       double t_s = piece_dur; // Starting time
       double t_e = init_of_init_totaldur - piece_dur / 2; // Ending time
+
       for (double t = t_s; t < t_e; t += piece_dur)
       {
         // set inner points to be that position from the initial trajectory
         innerPs.col(idx++) = initTraj.getPos(t);
       }
+
       if (idx != piece_nums - 1)
       {
         ROS_ERROR("Drone %d: [EGOPlannerManager::computeInitState] (idx != piece_nums - 1). Unexpected error", pp_.drone_id);
         return false;
       }
+      
       initMJO.reset(headState, tailState, piece_nums);
       initMJO.generate(innerPs, piece_dur_vec);
     }
@@ -419,10 +422,10 @@ namespace ego_planner
     sum_time += (t_init + t_opt).toSec();
     count_success++;
 
-    std::cout << "total time:\033[42m" << (t_init + t_opt).toSec()
-         << "\033[0m,init:" << t_init.toSec()
-         << ",optimize:" << t_opt.toSec()
-         << ",avg_time=" << sum_time / count_success << std::endl;
+    std::cout << "total time (ms):\033[42m" << (t_init + t_opt).toSec()*1000
+         << "\033[0m, init(ms):" << t_init.toSec()*1000
+         << ",optimize(ms):" << t_opt.toSec()*1000
+         << ",avg_time(ms)=" << sum_time / count_success << std::endl;
     
     setLocalTrajFromOpt(best_MJO, touch_goal);
     visualization_->displayOptimalList(initial_cstr_pts, 0);
@@ -542,12 +545,12 @@ namespace ego_planner
 
   double EGOPlannerManager::getTrajectoryLength(poly_traj::MinJerkOpt& mjo, const double& dt)
   {
-    poly_traj::Trajectory traj = mjo->getTraj();
+    poly_traj::Trajectory traj = mjo.getTraj();
 
     double total_duration = traj.getDurations().sum();
     double total_traj_length = 0.0;
 
-    while (double t = 0; t < total_duration-dt; t += dt)
+    for (double t = 0; t < total_duration-dt; t += dt)
     {
       total_traj_length += (traj.getPos(t+dt) - traj.getPos(t)).norm();
     }
@@ -557,7 +560,7 @@ namespace ego_planner
 
   double EGOPlannerManager::getTrajectoryDuration(poly_traj::MinJerkOpt& mjo)
   {
-    return mjo->getTraj().getDurations().sum();
+    return mjo.getTraj().getDurations().sum();
   }
 
 } // namespace ego_planner

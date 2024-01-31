@@ -1,6 +1,6 @@
 # PX4 setup
 
-## Building the firmware
+## Building the FCU firmware
 1. Building and uploading the bootloader
 ```bash
 # Install dfu-util 
@@ -29,6 +29,31 @@ make flywoo_f405s_aio
 make flywoo_f405s_aio_mpu6000 upload
 # ICM42688P Build (New flywoo gn405s AIO)
 make flywoo_f405s_aio_icm42688p upload
+```
+
+### (Advanced) Configuring the board configuration
+1. Launch GUI 
+```bash
+# Older PX4 firmwares ( < V1.11)
+make omnibus_f4sd menuconfig
+
+# Newer PX4 firmwares (V1.13)
+make flywoo_f405s_aio boardguiconfig
+
+# Save the file as ".config", the default filename, NO EXCEPTIONS! This will be saved in "PX4-Autopilot/platforms/nuttx/NuttX/nuttx" 
+# This ".config" file is the full configuration of your board and needs to be configured to a "defconfig" file which is usable by the FCU board.
+```
+2. Make `defconfig` files from `.config` files
+```bash
+# Navigate to "PX4-Autopilot/platforms/nuttx/NuttX/nuttx"
+# Generate a defconfig file using the following command:
+make savedefconfig
+# Copy the newly generated "defconfig" file in this directory to "PX4-Autopilot/boards/flywoo/f405s_aio/nuttx-config/nsh"
+```
+
+3. [Optional] Recover `.config` file from the `defconfig` file
+```
+make olddefconfig
 ```
 
 ### Troubleshooting
