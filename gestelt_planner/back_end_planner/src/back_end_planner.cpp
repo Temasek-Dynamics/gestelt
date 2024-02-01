@@ -283,8 +283,6 @@ bool BackEndPlanner::generatePlanESDFFree(const Eigen::Vector3d& start_pos, cons
         flag_polyInit, flag_randomPolyTraj, 
         touch_goal);
 
-
-
     if (plan_success)
     {
       // Print results for benchmarking

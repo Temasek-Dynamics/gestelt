@@ -18,13 +18,13 @@ find_package(catkin REQUIRED COMPONENTS
 )
 
 catkin_package(
- INCLUDE_DIRS include
+#  INCLUDE_DIRS include
  LIBRARIES ${PROJECT_NAME}
 #  CATKIN_DEPENDS 
 )
 
 include_directories(
-  include
+  # include
   SYSTEM
   ${catkin_INCLUDE_DIRS} 
   ${PROJECT_SOURCE_DIR}/include
@@ -36,4 +36,5 @@ add_executable(test_traj_opt
 )
 target_link_libraries(test_traj_opt 
   ${catkin_LIBRARIES}
+  benchmark::benchmark
 )
