@@ -153,10 +153,10 @@ def main():
     # waypoints.append(create_pose(4.0,2.0,1.5))# 5.0,2.0,3
 
     # 1/4 test
-    waypoints.append(create_pose(0.0,1.5,1.2)) # 3.0,2.0,3
-    waypoints.append(create_pose(0.0,-0.0,1.2)) # 3.0,2.0,3
-    waypoints.append(create_pose(0.0,-1.5,1.2))# 5.0,2.0,3
-    waypoints.append(create_pose(0.0,0.0,1.2))# 5.0,2.0,3
+    waypoints.append(create_pose(1,1.5,1.2)) # 3.0,2.0,3
+    # waypoints.append(create_pose(0.0,-0.0,1.2)) # 3.0,2.0,3
+    # waypoints.append(create_pose(0.0,-1.5,1.2))# 5.0,2.0,3
+    # waypoints.append(create_pose(0.0,0.0,1.2))# 5.0,2.0,3
 
     
     # the number of accelerations must be equal to the number of waypoints
@@ -174,17 +174,17 @@ def main():
 
     # (0.0,0.0,0.0))
     # (None,None,None)) means no constraint
-    accel_list.append(create_accel(None,None,None))
+    # accel_list.append(create_accel(None,None,None))
     accel_list.append(create_accel(-f*np.sin(angle_rad),0.0,g+f*np.cos(angle_rad)))
-    accel_list.append(create_accel(None,None,None))
+    # accel_list.append(create_accel(None,None,None))
     
     
     # velocites constraint
     vel_list = []
     vel_list.append(create_vel(0.0,0.0,0.0))
-    vel_list.append(create_vel(None,None,None))
-    vel_list.append(create_vel(0.0,0.0,0.0))
-    vel_list.append(create_vel(0.0,0.0,0.0))
+    # vel_list.append(create_vel(None,None,None))
+    # vel_list.append(create_vel(0.0,0.0,0.0))
+    # vel_list.append(create_vel(0.0,0.0,0.0))
     
     pub_waypoints(waypoints,accel_list,vel_list)
     rospy.spin()
