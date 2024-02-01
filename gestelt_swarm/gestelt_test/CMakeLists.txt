@@ -11,6 +11,7 @@ set(ROS_LIBRARIES
   traj_utils
 ) 
 
+find_package(benchmark QUIET)
 find_package(Eigen3 REQUIRED)
 find_package(catkin REQUIRED COMPONENTS
   ${ROS_LIBRARIES}

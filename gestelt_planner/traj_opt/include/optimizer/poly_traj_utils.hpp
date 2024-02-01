@@ -1454,23 +1454,68 @@ namespace poly_traj
          */
         double getTrajJerkCost() const
         {
-            // Cost matrix is:
-            //      0   0   0   0   0   0
-            //      0   0   0   0   0   0
-            //      0   0   0   0   0   0
-            //      0   0   0  36  72 120
-            //      0   0   0  72 192 360
-            //      0   0   0 120 360 720
-            
             double objective = 0.0;
             for (int i = 0; i < N; i++) // for each segment
             {
-                objective += 36.0 * b.row(6 * i + 3).squaredNorm() * T1(i) +          // c_i_3 * 36 * T1(i) * c_i_3
-                             144.0 * b.row(6 * i + 4).dot(b.row(6 * i + 3)) * T2(i) + // c_i_3 * 36 * T1(i) * c_i_3
-                             192.0 * b.row(6 * i + 4).squaredNorm() * T3(i) +
-                             240.0 * b.row(6 * i + 5).dot(b.row(6 * i + 3)) * T3(i) +
-                             720.0 * b.row(6 * i + 5).dot(b.row(6 * i + 4)) * T4(i) +
-                             720.0 * b.row(6 * i + 5).squaredNorm() * T5(i);
+
+            //  b: shape (6 * N, 3)
+            // 
+            //     x-axis, y-axis, z-axis  
+            //   [ cy_0_0  cy_0_0  cz_0_0;  // Start of 1st segment
+            //     cy_1_0  cy_1_0  cz_1_0;      
+            //     cy_2_0  cy_2_0  cz_2_0;      
+            //     cy_3_0  cy_3_0  cz_3_0;
+            //     cy_4_0  cy_4_0  cz_4_0;      
+            //     cy_5_0  cy_5_0  cz_5_0;      
+            //     ...     ...      ... ;      
+            //     cy_0_N  cy_0_N  cz_0_N;  // Start of n-th segment
+            //     cy_1_N  cy_1_N  cz_1_N;      
+            //     cy_2_N  cy_2_N  cz_2_N;      
+            //     cy_3_N  cy_3_N  cz_3_N;
+            //     cy_4_N  cy_4_N  cz_4_N;      
+            //     cy_5_N  cy_5_N  cz_5_N;] 
+
+                // objective += 36.0 * b.row(6 * i + 3).squaredNorm() * T1(i) +          // 36  * c3^2     * t
+                //              144.0 * b.row(6 * i + 4).dot(b.row(6 * i + 3)) * T2(i) + // 144 * c3 * c4  * t^2
+                //              192.0 * b.row(6 * i + 4).squaredNorm() * T3(i) +         // 192 * c4^2     * t^3 
+                //              240.0 * b.row(6 * i + 5).dot(b.row(6 * i + 3)) * T3(i) + // 240 * c3 * c5  * t^3  
+                //              720.0 * b.row(6 * i + 5).dot(b.row(6 * i + 4)) * T4(i) + // 720 * c4 * c5  * t^4 
+                //              720.0 * b.row(6 * i + 5).squaredNorm() * T5(i);          // 720 * c5^2     * t^5 
+
+                Eigen::MatrixXd b_i = b.block<6, 3>(6 * i, 0); // Coefficient of 3 axes (x,y,z) at segment i
+                
+                // Cost matrix Q is:
+                //      0   0   0   0   0   0
+                //      0   0   0   0   0   0
+                //      0   0   0   0   0   0
+                //      0   0   0  36  72 120
+                //      0   0   0  72 192 360
+                //      0   0   0 120 360 720
+
+                objective += ( b_i.transpose() * constructQ(5, 3, T1(i)) * b_i ).trace(); 
+            }
+
+            return objective;
+        }
+
+        /**
+         * @brief Original code: Get the cost of jerk for the entire trajectory 
+         * 
+         * @return double 
+         */
+        double getTrajJerkCostOg() const
+        {
+            double objective = 0.0;
+            for (int i = 0; i < N; i++) // for each segment
+            {
+
+                objective += 36.0 * b.row(6 * i + 3).squaredNorm() * T1(i) +          // 36  * c3^2     * t
+                             144.0 * b.row(6 * i + 4).dot(b.row(6 * i + 3)) * T2(i) + // 144 * c3 * c4  * t^2
+                             192.0 * b.row(6 * i + 4).squaredNorm() * T3(i) +         // 192 * c4^2     * t^3 
+                             240.0 * b.row(6 * i + 5).dot(b.row(6 * i + 3)) * T3(i) + // 240 * c3 * c5  * t^3  
+                             720.0 * b.row(6 * i + 5).dot(b.row(6 * i + 4)) * T4(i) + // 720 * c4 * c5  * t^4 
+                             720.0 * b.row(6 * i + 5).squaredNorm() * T5(i);          // 720 * c5^2     * t^5 
+
             }
 
             return objective;
@@ -1480,30 +1525,25 @@ namespace poly_traj
          * @brief Construct the cost matrix for minimizing the k-th derivative. Used as part of 
          * J_m = integral of f'(t)^2 over t(m) to t(m-1) = C_m.T * Q_m * C_m
          * 
-         * @param n 
-         * @param k 
+         * @param n Polynomial order (Snap uses 7th order polynomial, jerk uses 5th order polynomial)
+         * @param k Derivative to construct cost for (snap is 4, jerk is 3)
+         * @param T Time duration
          * @return Eigen::MatrixXd 
          */
-        Eigen::MatrixXd constructQ(const int& n, const int& k){
+        Eigen::MatrixXd constructQ(const int& n, const int& k, const double& T) const 
+        {
             Eigen::MatrixXd Q = Eigen::MatrixXd::Zero(n+1, n+1);
 
             for (int i = k; i < n+1; i++){ // for each derivative of order ith 
                 for (int j = i; j < n+1; j++){ // for each derivative of other kth
                     int c = i + j - (2*k - 1);
-                    Q(i, j) = (factorial<float>(i) / factorial<float>(i-k)) * (factorial<float>(j) / factorial<float>(j-k)) / c;
+                    Q(i, j) = (factorial<float>(i) / factorial<float>(i-k)) * (factorial<float>(j) / factorial<float>(j-k)) * std::pow(T,c) / c ;
                     Q(j, i) = Q(i, j);
                 }
             }
+
             return Q;
         }
-
-        // double getCost(const int& k) const
-        // {
-        //     for (int i = 0; i < N; i++) 
-        //     {
-                
-        //     }
-        // }
 
         Trajectory getTraj(void) const
         {
