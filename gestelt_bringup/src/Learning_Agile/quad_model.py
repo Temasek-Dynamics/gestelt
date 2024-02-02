@@ -332,7 +332,8 @@ class Quadrotor:
     
 
     def play_animation(self, wing_len, state_traj, gate_traj1=None, gate_traj2=None,state_traj_ref=None, dt=0.01, \
-            point1 = None,point2 = None,point3 = None,point4 = None,save_option=0, title='UAV Maneuvering'):
+            point1 = None,point2 = None,point3 = None,point4 = None,save_option=0, title='UAV Maneuvering',\
+                goal_pos=[0,0,0]):
         font1 = {'family':'Times New Roman',
          'weight':'normal',
          'style':'normal', 'size':7}
@@ -360,8 +361,8 @@ class Quadrotor:
         #     t.label.set_fontsize(7)
 
         # target landing point
-        # ax.plot([self.goal_r_I[0]], [self.goal_r_I[1]], [self.goal_r_I[2]], c="r", marker="o",markersize=2)
-        # ax.view_init(25,-150)
+        ax.plot([goal_pos[0]], [goal_pos[1]], [goal_pos[2]], c="r", marker="o",markersize=2)
+        ax.view_init(25,-150)
         #plot the final state
         #final_position = self.get_final_position(wing_len=wing_len)
         #c_x, c_y, c_z = final_position[0:3]
