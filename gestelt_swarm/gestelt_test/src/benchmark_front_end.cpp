@@ -1,77 +1,104 @@
-#include <ros/ros.h>
-#include <benchmark/benchmark.h>
-
+// #include <ros/ros.h>
 #include <Eigen/Eigen>
 
-#include <random>
+#include <benchmark/benchmark.h>
+#include "benchmark_utils.hpp"
 
-#include <optimizer/poly_traj_optimizer.h>
-#include <traj_utils/planning_visualization.h>
+#include <sfc_generation/spherical_sfc.h>
 
-#include <front_end_planner/front_end_planner.h>
+#include <grid_map/grid_map.h>
+
+#include <global_planner/a_star.h>
+#include <sfc_generation/spherical_sfc.h>
+
+// Read map from point cloud
 
 
-
-static void getTrajJerkCost(benchmark::State& state)
+// Benchmark the front end planner 
+static void frontEndPlan(benchmark::State& state)
 {
-  Eigen::MatrixXd waypoints = generateRandom3DWaypoints(100, 69, Eigen::Vector3d{0, 0, 0}, Eigen::Vector3d{2, 2, 2});
-  poly_traj::MinJerkOpt mjo = generateMJO(waypoints);
+  const auto& params = TestParameters[state.range(0)];
+  auto pcd = ReadCloud(params.pcd_filename);
+
+  // Initialize map
+  std::shared_ptr<GridMap> map_ = std::make_shared<GridMap>();
+  map_->initMap(pcd, Eigen::Vector3d{20.0, 20.0, 20.0}, params.voxel_resolution, params.inflation);
+
+  // Initialize front end planner
+  AStarPlanner::AStarParams astar_params;
+  astar_params.max_iterations = 999999;
+  astar_params.tie_breaker = 1.0001;
+  astar_params.debug_viz = false;
+
+  std::unique_ptr<AStarPlanner> front_end_planner_ = std::make_unique<AStarPlanner>(map_, astar_params);
+
+  Eigen::Vector3d start_pos{0.0, 0.0, 1.0};
+  Eigen::Vector3d goal_pos{6.5, 6.5, 1.0};
 
   for (auto _ : state)
   {
-    double new_jerk_cost = mjo.getTrajJerkCost();
+    if (!front_end_planner_->generatePlan(start_pos, goal_pos)){
+      state.SkipWithError("Failed to find SFC Path");
+      return; // Early return is allowed when SkipWithError() has been used.
+    }
+  }
+}
+
+// Benchmark the SFC Planner
+static void SFCPlan(benchmark::State& state)
+{
+  const auto& params = TestParameters[state.range(0)];
+  auto pcd = ReadCloud(params.pcd_filename);
+
+  // Initialize map
+  std::shared_ptr<GridMap> map_ = std::make_shared<GridMap>();
+  map_->initMap(pcd, Eigen::Vector3d{20.0, 20.0, 20.0}, params.voxel_resolution, params.inflation);
+
+  // Initialize front end planner
+  AStarPlanner::AStarParams astar_params;
+  astar_params.max_iterations = 999999;
+  astar_params.tie_breaker = 1.0001;
+  astar_params.debug_viz = false;
+
+  std::unique_ptr<AStarPlanner> front_end_planner_ = std::make_unique<AStarPlanner>(map_, astar_params);
+
+  // Initialize safe flight corridor
+  SphericalSFC::SphericalSFCParams sfc_params; 
+  sfc_params.max_itr = -100;
+  sfc_params.debug_viz = false;
+
+  sfc_params.max_sample_points = 1000;
+  sfc_params.mult_stddev_x = 0.1;
+  sfc_params.W_cand_vol = 1;
+  sfc_params.W_intersect_vol = 5;
+
+  sfc_params.min_sphere_vol = 0.1;
+  sfc_params.max_sphere_vol = 1000.0;
+  sfc_params.min_sphere_intersection_vol = 0.05;
+
+  sfc_params.avg_vel = 1,5;
+  sfc_params.max_vel = 3.0;
+
+  std::unique_ptr<SphericalSFC> sfc_generation_ = std::make_unique<SphericalSFC>(map_, sfc_params);
+
+  Eigen::Vector3d start_pos{-1.0, 0.0, 1.0};
+  Eigen::Vector3d goal_pos{22.0, 2.0, 1.0};
+
+  front_end_planner_->generatePlan(start_pos, goal_pos);
+
+  std::vector<Eigen::Vector3d> front_end_path = front_end_planner_->getPathPos();
+
+  for (auto _ : state)
+  { 
+    if (!sfc_generation_->generateSFC(front_end_path)){
+      state.SkipWithError("Failed to find SFC Path");
+      return; // Early return is allowed when SkipWithError() has been used.
+    }
   }
 }
 
 // Register the function as a benchmark
-BENCHMARK(getTrajJerkCost);
+BENCHMARK(frontEndPlan)->Arg(0)->Arg(1)->Unit(benchmark::kMillisecond);;
+// BENCHMARK(SFCPlan)->Arg(0)->Arg(1);
 // Run the benchmark
 BENCHMARK_MAIN();
-
-
-// int main(int argc, char **argv)
-// {
-//   ros::init(argc, argv, "ego_planner_fsm_node");
-//   ros::NodeHandle nh;
-
-//   std::shared_ptr<ego_planner::PlanningVisualization> visualization_; 
-//   visualization_.reset(new ego_planner::PlanningVisualization(nh));
-//   ros::Duration(2.0).sleep();
-//   std::cout << "test_traj_opt" << std::endl;
-
-//   // Eigen::MatrixXd waypoints(5, 3);
-
-//   // waypoints <<  0, 0, 0,
-//   //               1, 0, 0,
-//   //               1, 1, 0,
-//   //               0, 1, 0,
-//   //               0, 0, 0;
-
-//   Eigen::MatrixXd waypoints = generateRandom3DWaypoints(100, 69, Eigen::Vector3d{0, 0, 0}, Eigen::Vector3d{2, 2, 2});
-
-//   poly_traj::MinJerkOpt mjo = generateMJO(waypoints);
-
-//   // // std::cout << mjo.constructQ(7, 4) << std::endl;
-//   // std::cout << mjo.constructQ(5, 3) << std::endl;
-
-//   double new_jerk_cost = mjo.getTrajJerkCost();
-//   double og_jerk_cost = mjo.getTrajJerkCostOg();
-
-//   std::cout << "New Control effort (minimizing jerk): " << new_jerk_cost  << std::endl;
-//   std::cout << "Og Control effort (minimizing jerk): " << og_jerk_cost  << std::endl;
-
-//   // Register the function as a benchmark
-//   BENCHMARK(mjo.getTrajJerkCost());
-//   BENCHMARK(mjo.getTrajJerkCostOg());
-//   // Run the benchmark
-//   BENCHMARK_MAIN();
-
-//   Eigen::MatrixXd cstr_pts_mjo = mjo.getInitConstraintPoints(10);
-
-//   visualization_->displayOptimalList(cstr_pts_mjo, 0);
-
-//   ros::MultiThreadedSpinner spinner(1);
-//   spinner.spin();
-
-//   return 0;
-// }

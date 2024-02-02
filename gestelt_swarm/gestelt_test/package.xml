@@ -14,7 +14,9 @@
   <exec_depend>roscpp</exec_depend>
 
   <depend>traj_opt</depend>
-  <depend>traj_utils</depend>
+  <depend>global_planner</depend>
+  <depend>sfc_generation</depend>
+  <depend>grid_map</depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>

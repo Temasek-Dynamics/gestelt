@@ -20,7 +20,7 @@ namespace ego_planner
     pnh.param("manager/drone_id", pp_.drone_id, -1);
 
     grid_map_.reset(new GridMap);
-    grid_map_->initMap(nh, pnh);
+    grid_map_->initiMapROS(nh, pnh);
 
     ploy_traj_opt_.reset(new PolyTrajOptimizer());
     ploy_traj_opt_->setParam(pnh);

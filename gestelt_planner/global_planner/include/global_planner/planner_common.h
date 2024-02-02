@@ -91,41 +91,51 @@ public:
   : map_(grid_map)
   {}
 
-  std::vector<GridNodePtr> getNeighbors(GridNodePtr cur_node) {
-    std::vector<GridNodePtr> neighbors;
+  void getNeighbors(GridNodePtr cur_node, std::vector<GridNodePtr>& neighbors) {
+    neighbors.clear();
 
-    // Explore all 26 neighbours
-    for (int dx = -1; dx <= 1; dx++)
-    {
-      for (int dy = -1; dy <= 1; dy++)
-      {
-        for (int dz = -1; dz <= 1; dz++)
-        {
-          // Skip it's own position
-          if (dx == 0 && dy == 0 && dz == 0){
-            continue;
-          }
+    for (int i = 0; i < nb_idx_8con_.rows(); i++){
+      Eigen::Vector3i nb_idx = cur_node->idx 
+        + Eigen::Vector3i{nb_idx_8con_.row(i)(0), nb_idx_8con_.row(i)(1), nb_idx_8con_.row(i)(2)};
 
-          Eigen::Vector3i nb_idx{
-            cur_node->idx(0) + dx,
-            cur_node->idx(1) + dy,
-            cur_node->idx(2) + dz,
-          };
-          
-          if (getOccupancy(nb_idx)){
-            // Skip if current index is occupied
-            continue;
-          }
-
-          GridNodePtr nb_node = std::make_shared<GridNode>(nb_idx);
-          // ROS_INFO("getNeighbors: Pushed back (%d, %d, %d)", nb_idx(0), nb_idx(1), nb_idx(2));
-
-          neighbors.push_back(nb_node);
-        }
+      if (getOccupancy(nb_idx)){
+        // Skip if current index is occupied
+        continue;
       }
+
+      neighbors.push_back(std::make_shared<GridNode>(nb_idx));
     }
 
-    return neighbors;
+    // // Explore all 26 neighbours
+    // for (int dx = -1; dx <= 1; dx++)
+    // {
+    //   for (int dy = -1; dy <= 1; dy++)
+    //   {
+    //     for (int dz = -1; dz <= 1; dz++)
+    //     {
+    //       // Skip it's own position
+    //       if (dx == 0 && dy == 0 && dz == 0){
+    //         continue;
+    //       }
+
+    //       Eigen::Vector3i nb_idx{
+    //         cur_node->idx(0) + dx,
+    //         cur_node->idx(1) + dy,
+    //         cur_node->idx(2) + dz,
+    //       };
+          
+    //       if (getOccupancy(nb_idx)){
+    //         // Skip if current index is occupied
+    //         continue;
+    //       }
+
+    //       GridNodePtr nb_node = std::make_shared<GridNode>(nb_idx);
+    //       // ROS_INFO("getNeighbors: Pushed back (%d, %d, %d)", nb_idx(0), nb_idx(1), nb_idx(2));
+
+    //       neighbors.push_back(nb_node);
+    //     }
+    //   }
+    // }
   } 
 
   // Get euclidean distance between node_1 and node_2
@@ -212,6 +222,77 @@ public:
 
 private:
   std::shared_ptr<GridMap> map_; 
+
+  Eigen::Matrix<int, 26, 3> nb_idx_8con_ {
+    // Top Layer
+    {0, 0,    1},  // Top 
+    {1, 1,    1},  // Top Fwd Left
+    {1, 0,    1},  // Top Fwd 
+    {1, -1,   1},  // Top Fwd Right
+    {0, 1,    1},  // Top Left
+    {0, -1,   1},  // Top Right
+    {-1, 1,   1},  // Top Bck Left
+    {-1, 0,   1},  // Top Bck 
+    {-1, -1,  1},  // Top Bck Right 
+
+    // Mid Layer
+    // {0, 0,    0}, // Mid 
+    {1, 1,    0}, // Mid Fwd Left
+    {1, 0,    0}, // Mid Fwd
+    {1, -1,   0}, // Mid Fwd Right
+    {0, 1,    0}, // Mid Left
+    {0, -1,   0}, // Mid Right
+    {-1, 1,   0}, // Mid Bck Left
+    {-1, 0,   0}, // Mid Bck
+    {-1, -1,  0}, // Mid Bck Right 
+
+    // Btm Layer
+    {0, 0,    -1}, // Btm 
+    {1, 1,    -1}, // Btm Fwd Left
+    {1, 0,    -1}, // Btm Fwd
+    {1, -1,   -1}, // Btm Fwd Right
+    {0, 1,    -1}, // Btm Left
+    {0, -1,   -1}, // Btm Right
+    {-1, 1,   -1}, // Btm Bck Left
+    {-1, 0,   -1}, // Btm Bck
+    {-1, -1,  -1}, // Btm Bck Right 
+  };
+
+  const double nb_idx_8con_dist[26] = {
+    // Top Layer
+    1,  // Top 
+    1.73205,    // Top Fwd Left
+    1.414214,   // Top Fwd 
+    1.73205,    // Top Fwd Right
+    1.414214,   // Top Left
+    1.414214,   // Top Right
+    1.73205,    // Top Bck Left
+    1.414214,   // Top Bck 
+    1.73205,    // Top Bck Right 
+
+    // Mid Layer
+    // 0, // Mid 
+    1.414214, // Mid Fwd Left
+    1, // Mid Fwd
+    1.414214, // Mid Fwd Right
+    1, // Mid Left
+    1, // Mid Right
+    1.414214, // Mid Bck Left
+    1, // Mid Bck
+    1.414214, // Mid Bck Right 
+
+    // Btm Layer
+    1,  // Top 
+    1.73205, // Btm Fwd Left
+    1.414214, // Btm Fwd
+    1.73205, // Btm Fwd Right
+    1.414214, // Btm Left
+    1.414214, // Btm Right
+    1.73205, // Btm Bck Left
+    1.414214, // Btm Bck
+    1.73205 // Btm Bck Right 
+  };
+
 };
 
 #endif // _PLANNER_COMMON_H_

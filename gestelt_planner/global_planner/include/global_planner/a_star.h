@@ -95,7 +95,7 @@ private:
     sphere_list.scale.z = radius;
 
     geometry_msgs::Point pt;
-    for (int i = 0; i < pts.size(); i++){
+    for (size_t i = 0; i < pts.size(); i++){
       pt.x = pts[i](0);
       pt.y = pts[i](1);
       pt.z = pts[i](2);

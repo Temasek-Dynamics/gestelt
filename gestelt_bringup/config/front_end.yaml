@@ -46,8 +46,6 @@ grid_map:
   filter/depth_stride: 4 
   filter/voxel_size: 0.1
 
-  sensor_queue_size: 5
-
   # camera intrinsic parameters 
   k_depth_scaling_factor: 1000.0
   # camera extrinsic parameters 

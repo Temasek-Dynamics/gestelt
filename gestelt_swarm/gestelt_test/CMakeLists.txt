@@ -8,10 +8,13 @@ add_compile_options(-std=c++17)
 set(ROS_LIBRARIES
   roscpp
   traj_opt
-  traj_utils
+  global_planner
+  sfc_generation
+  grid_map
 ) 
 
-find_package(benchmark QUIET)
+find_package(benchmark)
+find_package(PCL REQUIRED COMPONENTS common io)
 find_package(Eigen3 REQUIRED)
 find_package(catkin REQUIRED COMPONENTS
   ${ROS_LIBRARIES}
@@ -31,10 +34,31 @@ include_directories(
   ${EIGEN3_INCLUDE_DIR}
 )
 
-add_executable(test_traj_opt
-  src/test_traj_opt.cpp
-)
-target_link_libraries(test_traj_opt 
-  ${catkin_LIBRARIES}
-  benchmark::benchmark
-)
+############################################
+
+function(compile_benchmark TARGET)
+    target_compile_definitions(${TARGET} PUBLIC
+        DATA_PATH="${PROJECT_SOURCE_DIR}/data/")
+    target_include_directories(${TARGET} PUBLIC
+        ${PCL_INCLUDE_DIRS})
+    target_link_libraries(${TARGET} PUBLIC
+        benchmark::benchmark
+        ${PCL_LIBRARIES}
+        ${catkin_LIBRARIES})
+endfunction()
+
+############################################
+
+set(BENCHMARK_SRC src/benchmark_front_end.cpp)
+
+add_executable(benchmark_front_end ${BENCHMARK_SRC})
+compile_benchmark(benchmark_front_end)
+
+# add_executable(test_traj_opt
+#   src/test_traj_opt.cpp
+# )
+# target_link_libraries(test_traj_opt 
+#   ${catkin_LIBRARIES}
+#   benchmark::benchmark
+# )
+

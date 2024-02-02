@@ -18,16 +18,15 @@ void FrontEndPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
 
   pnh.param("sfc/max_sample_points", sfc_params.max_sample_points, -1);
   pnh.param("sfc/mult_stddev_x", sfc_params.mult_stddev_x, -1.0);
+  pnh.param("sfc/W_cand_vol", sfc_params.W_cand_vol, -1.0);
   pnh.param("sfc/W_intersect_vol", sfc_params.W_intersect_vol, -1.0);
-  pnh.param("sfc/W_cand_vol", sfc_params.W_cand_vol, -1.0);
-  pnh.param("sfc/W_cand_vol", sfc_params.W_cand_vol, -1.0);
 
   pnh.param("sfc/min_sphere_vol", sfc_params.min_sphere_vol, -1.0);
   pnh.param("sfc/max_sphere_vol", sfc_params.max_sphere_vol, -1.0);
   pnh.param("sfc/min_sphere_intersection_vol", sfc_params.min_sphere_intersection_vol, -1.0);
 
-  pnh.param("sfc/avg_vel", sfc_params.avg_vel, 3.0);
-  pnh.param("sfc/max_vel", sfc_params.max_vel, 1.5);
+  pnh.param("sfc/avg_vel", sfc_params.avg_vel, 1.5);
+  pnh.param("sfc/max_vel", sfc_params.max_vel, 3.0);
 
   squared_goal_tol_ *= squared_goal_tol_; 
   
@@ -54,7 +53,7 @@ void FrontEndPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
 
   // Initialize map
   map_.reset(new GridMap);
-  map_->initMap(nh, pnh);
+  map_->initiMapROS(nh, pnh);
 
   // Initialize front end planner 
   front_end_planner_ = std::make_unique<AStarPlanner>(map_, astar_params);

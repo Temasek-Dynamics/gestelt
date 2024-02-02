@@ -17,7 +17,7 @@ void BackEndPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
 
   // Initialize map
   // map_.reset(new GridMap);
-  // map_->initMap(nh, pnh);
+  // map_->initiMapROS(nh, pnh);
 
   visualization_.reset(new ego_planner::PlanningVisualization(pnh));
 

@@ -19,16 +19,16 @@ bool AStarPlanner::generatePlan(const Eigen::Vector3d &start_pos, const Eigen::V
     // Search takes place in index space. So we first convert 3d real world positions into indices
     if (!common_->isInGlobalMap(start_pos) || !common_->isInGlobalMap(goal_pos))
     {
-        ROS_ERROR("Start or goal position not in global map!");
+        std::cerr << "[a_star] Start or goal position not in global map!" << std::endl;
         return false;
     }
 
     if (common_->getOccupancy(start_pos)){
-        ROS_ERROR("Start position in obstacle!");
+        std::cerr << "[a_star] Start position in obstacle!" << std::endl;
         return false;
     }
     if (common_->getOccupancy(goal_pos)){
-        ROS_ERROR("Goal position in obstacle!");
+        std::cerr << "[a_star] Goal position in obstacle!" << std::endl;
         return false;
     }
 
@@ -47,10 +47,12 @@ bool AStarPlanner::generatePlan(const Eigen::Vector3d &start_pos, const Eigen::V
 
     int num_iter = 0;
 
+    std::vector<GridNodePtr> neighbors;
+
     while (!open_list_.empty())
     {
         if (num_iter%1000 == 0){
-            ROS_INFO("[a_star] Iteration %d", num_iter);
+            std::cout << "[a_star] Iteration " << num_iter << std::endl;
 
             publishVizPoints(getClosedList(), closed_list_viz_pub_);
         }
@@ -59,16 +61,18 @@ bool AStarPlanner::generatePlan(const Eigen::Vector3d &start_pos, const Eigen::V
 
         if (*cur_node == *goal_node)
         {
-            ROS_INFO("[a_star] Goal found!");
+            std::cout << "[a_star] Goal found at iteration " << num_iter << std::endl;
             // Goal reached, terminate search and obtain path
             tracePath(cur_node);
             return true;
         }
+        
+        common_->getNeighbors(cur_node, neighbors);
 
         // Explore neighbors of current node
-        for (GridNodePtr nb_node : common_->getNeighbors(cur_node))
+        for (GridNodePtr nb_node : neighbors)
         {
-            // ROS_INFO("Exploring nb (%s) [%s]", common_->getPosStr(nb_node).c_str(), common_->getIndexStr(nb_node).c_str());
+            // std::cout << "[a_star] Exploring neighbor " << common_->getPosStr(nb_node).c_str() << std::endl;
             double tent_g_cost = cur_node->g_cost + common_->getL1Norm(cur_node, nb_node);
 
             // If tentative cost is better than previously computed cost, then update the g and f cost
@@ -90,7 +94,6 @@ bool AStarPlanner::generatePlan(const Eigen::Vector3d &start_pos, const Eigen::V
         }
         num_iter++;
     }
-    // ROS_INFO("[a_star] Iterations required: %d", num_iter);
 
     return false;
 }

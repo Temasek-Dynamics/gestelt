@@ -73,18 +73,14 @@ struct MappingParameters
 
 struct MappingData
 {
-  // camera position in uav origin frame 
-  Eigen::Vector3d cam_pos_{0.0, 0.0, 0.0};
+  Eigen::Vector3d cam2body_rpy_deg{0.0, 0.0, 0.0};
 
-  // Rotation matrix of camera to UAV origin frame
-  Eigen::Matrix3d cam_to_origin_r_m_;
-
-  // Transformation matrix of camera to body frame
-  Eigen::Matrix4d cam2body_;
-  // Transformation matrix of body to UAV origin frame
-  Eigen::Matrix4d body2origin_;
-  // Transformation matrix of camera to UAV origin frame
-  Eigen::Matrix4d cam2origin_;
+  // Homogenous Transformation matrix of camera to body frame
+  Eigen::Matrix4d cam2body_{Eigen::Matrix4d::Identity(4, 4)};
+  // Homogenous Transformation matrix of body to UAV origin frame
+  Eigen::Matrix4d body2origin_{Eigen::Matrix4d::Identity(4, 4)};
+  // Homogenous Transformation matrix of camera to UAV origin frame
+  Eigen::Matrix4d cam2origin_{Eigen::Matrix4d::Identity(4, 4)};
 
   Eigen::Vector3d local_map_min_; // minimum 3d bound of local map in (x,y,z)
   Eigen::Vector3d local_map_max_; // maximum 3d bound of local map in (x,y,z)
@@ -145,14 +141,18 @@ public:
   ~GridMap() {}
 
   // Reset map data
-  void reset();
+  void reset(const double& resolution);
 
-  // Initialize the GridMap class and it's callbacks
-  void initMap(ros::NodeHandle &nh, ros::NodeHandle &pnh);
+  // Initialize gridmap without ros
+  void initMap(pcl::PointCloud<pcl::PointXYZ>::Ptr pcd, const Eigen::Vector3d& map_size, const double& inflation, const double& resolution);
 
-  // Get time benchmark shared pointer
-  // void initTimeBenchmark(std::shared_ptr<TimeBenchmark> time_benchmark);
-  
+  // Initialize gridmap for ros
+  void initMapROS(ros::NodeHandle &nh, ros::NodeHandle &pnh);
+
+  void initROSPubSubTimers(ros::NodeHandle &nh, ros::NodeHandle &pnh);
+
+  void readROSParams(ros::NodeHandle &nh, ros::NodeHandle &pnh);
+
   /* Gridmap operation methods */
 
   // True if given GLOBAL position is within the GLOBAL map boundaries, else False
@@ -183,9 +183,11 @@ public:
   // Get camera-to-global frame transformation
   void getCamToGlobalPose(const geometry_msgs::Pose &pose);
   
-  // Take in point cloud as octree map. Transformation from camera-to-global frame is 
-  // done here
-  void cloudToCloudMap(const sensor_msgs::PointCloud2 &msg);
+  // Convert point cloud message to point cloud map, transform it from camera-to-global frame and save it. 
+  void pcdMsgToMap(const sensor_msgs::PointCloud2 &msg);
+  
+  // Convert point cloud to point cloud map, transform it from camera-to-global frame and save it. 
+  void pcdToMap(pcl::PointCloud<pcl::PointXYZ>::Ptr pcd);
 
   // Take in depth image as octree map.  Transformation from camera-to-global frame is 
   // done here
@@ -258,6 +260,33 @@ private:
   void cloudTFCB(const sensor_msgs::PointCloud2ConstPtr &msg_pc);
 
   /**
+   * Read methods
+  */
+
+  /**
+   * @brief Load a point cloud map from a PCD file 
+   * 
+   * @param file 
+   */
+  void loadPCDFile(const std::string& file)
+  {
+    pcl::PointCloud<pcl::PointXYZ>::Ptr pcd;
+
+    if (pcl::io::loadPCDFile<pcl::PointXYZ> (file, *pcd) == -1) //* load the file
+    {
+      throw std::runtime_error("Couldn't read file " + file);
+    }
+    
+    std::cout << "Loaded point clouds of size " 
+              << pcd->width << " * " 
+              << pcd->height << " with size "
+              << pcd->size() <<std::endl;
+
+    pcdToMap(pcd);
+  }
+
+
+  /**
    * Timer Callbacks
   */
 
@@ -265,7 +294,6 @@ private:
    * @brief This timer publishes a visualization of the occupancy grid
   */
   void visTimerCB(const ros::TimerEvent & /*event*/);
-
 
 private: 
   /* ROS Publishers, subscribers and Timers */
@@ -294,24 +322,24 @@ private:
   tf2_ros::Buffer tfBuffer_;
   std::shared_ptr<tf2_ros::TransformListener> tfListener_;
 
+  /* Params */
   bool dbg_input_entire_map_; // flag to indicate that map will be constructed at the start from the entire pcd map (instead of through incremental sensor data)
+  std::string entire_pcd_map_topic_; // Topic to listen for an entire PCD for debugging
 
   /* Benchmarking */
   // std::shared_ptr<TimeBenchmark> time_benchmark_;
 
   /* Data structures for point clouds */
-  pcl::PointCloud<pcl::PointXYZ>::Ptr local_map_origin_;  // Point cloud local map in UAV origin frame
-  pcl::PointCloud<pcl::PointXYZ>::Ptr global_map_origin_;  // Point cloud global map in UAV Origin frame
+  pcl::PointCloud<pcl::PointXYZ>::Ptr local_map_in_origin_;  // Point cloud local map in UAV origin frame
+  pcl::PointCloud<pcl::PointXYZ>::Ptr global_map_in_origin_;  // Point cloud global map in UAV Origin frame
 
+  std::unique_ptr<BonxaiT> bonxai_map_; // Bonxai data structure 
+  
   std::shared_ptr<pcl::KdTreeFLANN<pcl::PointXYZ>> kdtree_; // KD-Tree 
 
-  std::shared_ptr<octomap::OcTree> octree_; // Octree data structure
+  // std::shared_ptr<octomap::OcTree> octree_; // Octree data structure
 
-  pcl::VoxelGrid<pcl::PointXYZ> vox_grid_filter_; // Voxel filter
-
-  std::unique_ptr<BonxaiT> bonxai_; // Bonxai data structure 
-
-
+  // pcl::VoxelGrid<pcl::PointXYZ> vox_grid_filter_; // Voxel filter
 };
 
 

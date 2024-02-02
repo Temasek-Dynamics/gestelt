@@ -1452,7 +1452,7 @@ namespace poly_traj
          * 
          * @return double 
          */
-        double getTrajJerkCost() const
+        double getTrajJerkCostNew() const
         {
             double objective = 0.0;
             for (int i = 0; i < N; i++) // for each segment
@@ -1503,7 +1503,7 @@ namespace poly_traj
          * 
          * @return double 
          */
-        double getTrajJerkCostOg() const
+        double getTrajJerkCost() const
         {
             double objective = 0.0;
             for (int i = 0; i < N; i++) // for each segment
