@@ -92,12 +92,14 @@ class LearningAgileAgentNode():
         # mission start point is the learning agile agent start point
         self.start_point = self.drone_pos
 
-        # self.gate_point = np.array([msg.waypoints[0].position.x,msg.waypoints[0].position.y,msg.waypoints[0].position.z])
+        self.gate_point = np.array([msg.waypoints[0].position.x,msg.waypoints[0].position.y,msg.waypoints[0].position.z])
         self.final_point = np.array([msg.waypoints[1].position.x,msg.waypoints[1].position.y,msg.waypoints[1].position.z])
         
         ## receive the start and end point, and the initial gate point, from ROS side
         # rewrite the inputs
-        self.learing_agile_agent.receive_terminal_states(start=self.start_point,end=self.final_point,gate_center=self.gate_point)
+        self.learing_agile_agent.receive_terminal_states(start=self.start_point,
+                                                         end=self.final_point,
+                                                         gate_center=self.gate_point)
 
         # problem definition
         # gazebo_sim=False, means the solver will compile to c code first, then solve the problem
