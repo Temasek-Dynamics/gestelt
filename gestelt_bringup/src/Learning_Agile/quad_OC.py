@@ -82,23 +82,29 @@ class OCSys:
         self.thrust_cost = thrust_cost
         self.thrust_cost_fn = casadi.Function('thrust_cost',[self.control, self.auxvar], [self.thrust_cost])
 
-    def setPathCost(self, path_cost):
+    def setPathCost(self, 
+                    path_cost,
+                    goal_state_sym):
+        self.goal_state_sym = goal_state_sym
         if not hasattr(self, 'auxvar'):
             self.setAuxvarVariable()
 
         assert path_cost.numel() == 1, "path_cost must be a scalar function"
 
         self.path_cost = path_cost
-        self.path_cost_fn = casadi.Function('path_cost', [self.state,  self.auxvar], [self.path_cost])
+        self.path_cost_fn = casadi.Function('path_cost', [self.state,self.goal_state_sym,self.auxvar], [self.path_cost])
 
-    def setFinalCost(self, final_cost):
+    def setFinalCost(self, 
+                     final_cost,
+                     goal_state_sym):
+        self.goal_state_sym = goal_state_sym
         if not hasattr(self, 'auxvar'):
             self.setAuxvarVariable()
 
         assert final_cost.numel() == 1, "final_cost must be a scalar function"
 
         self.final_cost = final_cost
-        self.final_cost_fn = casadi.Function('final_cost', [self.state, self.auxvar], [self.final_cost])
+        self.final_cost_fn = casadi.Function('final_cost', [self.state,self.goal_state_sym, self.auxvar], [self.final_cost])
     
     def setTraCost(self, 
                 tra_cost, 
@@ -435,14 +441,14 @@ class OCSys:
         # # setting the cost function
         # weight = 60*casadi.exp(-10*(dt*k-model.p[-1])**2) #gamma should increase as the flight duration decreases
              
-        ocp.model.cost_expr_ext_cost = self.path_cost_fn(ocp.model.x,self.auxvar)\
+        ocp.model.cost_expr_ext_cost = self.path_cost_fn(ocp.model.x,goal_state,self.auxvar)\
             +self.thrust_cost_fn(ocp.model.u,self.auxvar)\
-            +self.final_cost_fn(ocp.model.x,self.auxvar)\
+            +self.final_cost_fn(ocp.model.x,goal_state,self.auxvar)\
             +ocp.model.p[-1]*self.tra_cost_fn(ocp.model.x, des_tra_pos,des_tra_q, self.auxvar)\
             # +1*dot(ocp.model.u-Ulast,ocp.model.u-Ulast)
         
         # end cost
-        ocp.model.cost_expr_ext_cost_e = self.final_cost_fn(ocp.model.x,self.auxvar)
+        ocp.model.cost_expr_ext_cost_e = self.final_cost_fn(ocp.model.x,goal_state,self.auxvar)
 
         Ulast=ocp.model.u
         ############################################################### 
@@ -520,7 +526,7 @@ class OCSys:
             # set the current input
             current_input = np.array(current_state_control[self.n_state:])
      
-            weight = 60*casadi.exp(-10*(dt*i-t_tra)**2) #gamma should increase as the flight duration decreases
+            weight = 6*casadi.exp(-10*(dt*i-t_tra)**2) #gamma should increase as the flight duration decreases
             
             self.acados_solver.set(i, 'p',np.concatenate((goal_state,
                                                           current_input,

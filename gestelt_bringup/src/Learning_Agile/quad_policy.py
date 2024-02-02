@@ -74,12 +74,12 @@ class run_quad:
         self.uavoc1.setControlVariable(self.uav1.U,control_lb=[0,0,0,0],control_ub= [t2w*tw,t2w*tw,t2w*tw,t2w*tw]) # thrust-to-weight = 4:1
         self.uavoc1.setDyn(self.uav1.f,self.dt)
         self.uavoc1.setthrustcost(self.uav1.thrust_cost)
-        self.uavoc1.setPathCost(self.uav1.goal_cost)
+        self.uavoc1.setPathCost(self.uav1.goal_cost,goal_state_sym=self.uav1.goal_state_sym)
         self.uavoc1.setTraCost(self.uav1.tra_cost,
                                self.uav1.des_tra_r_I,
                                self.uav1.des_tra_q)
         
-        self.uavoc1.setFinalCost(self.uav1.final_cost)
+        self.uavoc1.setFinalCost(self.uav1.final_cost,goal_state_sym=self.uav1.goal_state_sym)
 
         # initialize the mpc solver
         # self.uavoc1.ocSolverInit(horizon=self.horizon,dt=self.dt)

@@ -36,6 +36,13 @@ class Quadrotor:
         self.des_tra_r_I = vertcat(SX.sym('des_tra_rx'), SX.sym('des_tra_ry'), SX.sym('des_tra_rz'))
         self.des_tra_q = vertcat(SX.sym('des_tra_q0'), SX.sym('des_tra_q1'), SX.sym('des_tra_q2'), SX.sym('des_tra_q3'))
 
+        # define desired goal state
+        self.goal_r_I  = vertcat(SX.sym('des_goal_rx'), SX.sym('des_goal_ry'), SX.sym('des_goal_rz'))
+        self.goal_v_I = vertcat(SX.sym('des_goal_vx'), SX.sym('des_goal_vy'), SX.sym('des_goal_vz'))
+        self.goal_q = vertcat(SX.sym('des_goal_q0'), SX.sym('des_goal_q1'), SX.sym('des_goal_q2'), SX.sym('des_goal_q3'))
+        self.goal_w_B= vertcat(SX.sym('des_goal_wx'), SX.sym('des_goal_wy'), SX.sym('des_goal_wz'))
+        
+        self.goal_state_sym=vertcat(self.goal_r_I,self.goal_v_I,self.goal_q,self.goal_w_B)
     def initDyn(self, Jx=None, Jy=None, Jz=None, mass=None, l=None, c=None):
         # global parameter
         g = 9.78
@@ -178,22 +185,24 @@ class Quadrotor:
 
         ## goal cost
         # goal position in the world frame
-        self.goal_r_I = goal_pos
+        # self.goal_r_I = goal_pos
+
+        
         self.cost_r_I_g = dot(self.r_I - self.goal_r_I, self.r_I - self.goal_r_I)
 
         # goal velocity
-        goal_velo = goal_velo
-        self.goal_v_I = goal_velo 
+        # goal_velo = goal_velo
+        # self.goal_v_I = goal_velo 
         self.cost_v_I_g = dot(self.v_I - self.goal_v_I, self.v_I - self.goal_v_I)
 
         # final attitude error
-        self.goal_q = toQuaternion(goal_atti[0],goal_atti[1])
+        # self.goal_q = toQuaternion(goal_atti[0],goal_atti[1])
         goal_R_B_I = self.dir_cosine(self.goal_q)
         R_B_I = self.dir_cosine(self.q)
         self.cost_q_g = trace(np.identity(3) - mtimes(transpose(goal_R_B_I), R_B_I))
 
         # auglar velocity cost
-        self.goal_w_B = [0, 0, 0]
+        # self.goal_w_B = [0, 0, 0]
         self.cost_w_B_g = dot(self.w_B - self.goal_w_B, self.w_B - self.goal_w_B)
 
 
@@ -351,8 +360,8 @@ class Quadrotor:
         #     t.label.set_fontsize(7)
 
         # target landing point
-        ax.plot([self.goal_r_I[0]], [self.goal_r_I[1]], [self.goal_r_I[2]], c="r", marker="o",markersize=2)
-        ax.view_init(25,-150)
+        # ax.plot([self.goal_r_I[0]], [self.goal_r_I[1]], [self.goal_r_I[2]], c="r", marker="o",markersize=2)
+        # ax.view_init(25,-150)
         #plot the final state
         #final_position = self.get_final_position(wing_len=wing_len)
         #c_x, c_y, c_z = final_position[0:3]
