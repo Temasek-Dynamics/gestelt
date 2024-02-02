@@ -97,7 +97,7 @@ class LearningAgileAgentNode():
         
         ## receive the start and end point, and the initial gate point, from ROS side
         # rewrite the inputs
-        self.learing_agile_agent.receive_terminal_states(start=self.start_point,end=self.final_point)
+        self.learing_agile_agent.receive_terminal_states(start=self.start_point,end=self.final_point,gate_center=self.gate_point)
 
         # problem definition
         # gazebo_sim=False, means the solver will compile to c code first, then solve the problem

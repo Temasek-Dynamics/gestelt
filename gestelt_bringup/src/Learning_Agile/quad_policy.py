@@ -55,6 +55,7 @@ class run_quad:
         # wqf: final attitude cost
         # wwf: final angular velocity cost
 
+        # initialize the cost function with symbolic variables
         self.uav1.initCost(wrt=5,wqt=8,wthrust=0.1,wrf=5,wvf=5,wqf=0,wwf=3,goal_pos=self.goal_pos) # wthrust = 0.1
         self.uav1.init_TraCost()
 
@@ -67,12 +68,17 @@ class run_quad:
         wc   = pi/2 #pi
         tw   = 1.22
         t2w  = 2
+
+        # set symbolic functions for the MPC solver
         self.uavoc1.setStateVariable(self.uav1.X,state_lb=[-sc,-sc,-sc,-sc,-sc,-sc,-sc,-sc,-sc,-sc,-wc,-wc,-wc],state_ub=[sc,sc,sc,sc,sc,sc,sc,sc,sc,sc,wc,wc,wc])
         self.uavoc1.setControlVariable(self.uav1.U,control_lb=[0,0,0,0],control_ub= [t2w*tw,t2w*tw,t2w*tw,t2w*tw]) # thrust-to-weight = 4:1
         self.uavoc1.setDyn(self.uav1.f,self.dt)
         self.uavoc1.setthrustcost(self.uav1.thrust_cost)
         self.uavoc1.setPathCost(self.uav1.goal_cost)
-        self.uavoc1.setTraCost(self.uav1.tra_cost)
+        self.uavoc1.setTraCost(self.uav1.tra_cost,
+                               self.uav1.des_tra_r_I,
+                               self.uav1.des_tra_q)
+        
         self.uavoc1.setFinalCost(self.uav1.final_cost)
 
         # initialize the mpc solver
@@ -233,12 +239,15 @@ class run_quad:
             point2 = self.point2, point3 = self.point3, point4 = self.point4)
     
     ## given initial state, control command, high-level parameters, obtain the first control command of the quadrotor
-    def get_input(self, ini_state, Ulast ,tra_pos, tra_ang, t):
+    def get_input(self, ini_state, Ulast ,tra_pos, tra_ang, t_tra):
         tra_atti = Rd2Rp(tra_ang)
         # initialize the NLP problem
-        self.uav1.init_TraCost(tra_pos,tra_atti)
-        self.uavoc1.setTraCost(self.uav1.tra_cost,t)
-        
+        # self.uav1.init_TraCost(tra_pos,tra_atti)
+        # self.uavoc1.setTraCost(self.uav1.tra_cost,
+        #                        tra_pos,
+        #                        tra_atti,
+        #                        t_tra)
+        tra_q=toQuaternion(tra_atti[0],tra_atti[1])
         ## obtain the solution
         if type(ini_state) == numpy.ndarray:
             ini_state = ini_state.flatten().tolist()
@@ -249,7 +258,9 @@ class run_quad:
         # self.sol1 = self.uavoc1.ocSolver(current_state_control=current_state_control,t_tra=t)
         self.sol1 = self.uavoc1.AcadosOcSolver(current_state_control=current_state_control,
                                                 goal_pos=self.goal_pos,
-                                                t_tra=t)
+                                                tra_pos=tra_pos,
+                                                tra_q=tra_q,
+                                                t_tra=t_tra)
         
         # return control, pos_vel_cmd
         return self.sol1

@@ -34,7 +34,7 @@
   <!-- map frame only used in the simulation-->
   <node pkg="tf" type="static_transform_publisher" 
     name="world_to_map_tf" 
-    args="-$(arg init_x) -$(arg init_y) 0 0 0 0 1 world map 100">
+    args="-0 -$(arg init_y) 0 0 0 0 1 world map 100">
   </node>
 
   <!-- RVIZ -->

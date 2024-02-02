@@ -120,7 +120,10 @@ class LearningAgileAgent():
         self.pos_vel_att_cmd_n = [self.pos_vel_att_cmd]
     
     
-    def receive_terminal_states(self,start,end):
+    def receive_terminal_states(self,
+                                start,
+                                end,
+                                gate_center=[0,0,1.5]):
         """
         receive the start and end point defined in the mission file
 
@@ -130,6 +133,7 @@ class LearningAgileAgent():
         self.env_inputs[3:6]=end
         self.start_point = start
         self.final_point = end
+        self.gate_center = gate_center
         # self.env_inputs[7:10]=gate
 
     def problem_definition(self,drone_init_quat=None,gazebo_sim=False):
@@ -174,16 +178,16 @@ class LearningAgileAgent():
             self.state_n = [drone_state]
 
             # binary search for the traversal time
-            t_tra =2
+            self.t_tra_abs =2
             # t = solver(self.model,self.state,self.final_point,self.gate_n,self.moving_gate.V[self.i],self.moving_gate.w)
-            t=t_tra-self.i*0.01
+            t=self.t_tra_abs-self.i*0.01
             # t_tra = t+self.i*0.01
             gap_pitch = self.moving_gate.gate_init_p + self.moving_gate.w*self.i*0.01
             
             # print('step',self.i,'tranversal time W.R.T current=',t,'gap_pitch=',gap_pitch*180/pi)
             # print('step',self.i,'abs_tranversal time W.R.T mission=',t_tra)
             
-            self.Ttra = np.concatenate((self.Ttra,[t_tra]),axis = 0)
+            self.Ttra = np.concatenate((self.Ttra,[self.t_tra_abs]),axis = 0)
             self.T = np.concatenate((self.T,[t]),axis = 0)
             self.Time = np.concatenate((self.Time,[self.i*0.01]),axis = 0)
             self.Pitch = np.concatenate((self.Pitch,[gap_pitch]),axis = 0)
@@ -205,17 +209,22 @@ class LearningAgileAgent():
         
         """
         
-        t_ = time.time()   
+        t_comp = time.time()  
+        # if self.i <= 500: 
         self.state=drone_state
-        
+        # else:
+            # self.state=self.state
+
         solver_inputs = np.zeros(18)
         solver_inputs[16] = magni(self.gate_n.gate_point[0,:]-self.gate_n.gate_point[1,:]) # gate width
         solver_inputs[17] = atan((self.gate_n.gate_point[0,2]-self.gate_n.gate_point[1,2])/(self.gate_n.gate_point[0,0]-self.gate_n.gate_point[1,0])) # compute the actual gate pitch ange in real-time
         solver_inputs[0:13] = self.gate_n.transform(self.state)
         solver_inputs[13:16] = self.gate_n.t_final(self.final_point)
         out = self.model(solver_inputs).data.numpy()
-        out[0:3]=np.array([0,0,0])
-        out[6]=1-self.i*0.01
+        
+        out[0:3]=self.gate_center
+        out[3:6]=np.array([0,0,0])
+        out[6]=self.t_tra_abs-self.i*0.01
 
         ## solve the mpc problem and get the control command
         # self.quad2 = run_quad(goal_pos=solver_inputs[13:16],horizon =20)
@@ -242,7 +251,7 @@ class LearningAgileAgent():
         # control_tm = np.concatenate((control_tm,[tm]),axis = 0)
         # self.hl_variable = np.concatenate((self.hl_variable,[out]),axis=0)       
         
-        callback_runtime=time.time()-t_
+        callback_runtime=time.time()-t_comp
         return self.pos_vel_att_cmd,self.u, callback_runtime,current_pred_traj,accelerations#accelerations[1,:]
 
 
@@ -257,9 +266,9 @@ class LearningAgileAgent():
         for self.i in range(500):
             # decision variable is updated in 100 hz
             self.gate_n = gate(self.gate_move[self.i])
-            t_tra =2
+            t_tra_abs =2
             # t = solver(self.model,self.state,self.final_point,self.gate_n,self.moving_gate.V[self.i],self.moving_gate.w)
-            t=t_tra-self.i*0.01
+            t=t_tra_abs-self.i*0.01
             # t_tra = t+self.i*0.01
             gap_pitch = self.moving_gate.gate_init_p + self.moving_gate.w*self.i*0.01
             
@@ -267,7 +276,7 @@ class LearningAgileAgent():
             # print('step',self.i,'tranversal time=',t,'gap_pitch=',gap_pitch*180/pi)
             # print('step',i,'abs_tranversal time=',t_tra)
             
-            self.Ttra = np.concatenate((self.Ttra,[t_tra]),axis = 0)
+            self.Ttra = np.concatenate((self.Ttra,[t_tra_abs]),axis = 0)
             self.T = np.concatenate((self.T,[t]),axis = 0)
             self.Time = np.concatenate((self.Time,[self.i*0.01]),axis = 0)
             self.Pitch = np.concatenate((self.Pitch,[gap_pitch]),axis = 0)
@@ -288,14 +297,15 @@ class LearningAgileAgent():
                     # print('input_UNDER_GATE=',solver_inputs)
                     out = self.model(solver_inputs).data.numpy()
                     
-                    out[0:3]=np.array([0,0,1.5])
-                    out[6]=1-self.i*0.01
-                    t_ = time.time()
+                    out[0:3]=self.gate_center
+                    out[3:6]=np.array([0,0,0])
+                    out[6]=t_tra_abs-self.i*0.01
+                    t_comp = time.time()
                     # self.quad2 = run_quad(goal_pos=solver_inputs[13:16],horizon =20)
                     cmd_solution = self.quad1.get_input(solver_inputs[0:13],self.u,out[0:3],out[3:6],out[6]) # control input 4-by-1 thrusts to pybullet
                     
-                    print('solving time at main=',time.time()-t_)
-                    self.index_t.append(time.time()- t_)
+                    print('solving time at main=',time.time()-t_comp)
+                    self.index_t.append(time.time()- t_comp)
                     self.u=cmd_solution['control_traj_opt'][0,:].tolist()
                     self.pos_vel_att_cmd=cmd_solution['state_traj_opt'][0,:]
             
@@ -323,9 +333,9 @@ class LearningAgileAgent():
         self.quad1.uav1.play_animation(wing_len=1.5,gate_traj1=self.gate_move ,state_traj=self.state_n)
 
         self.quad1.uav1.plot_input(self.control_n)
-        self.quad1.uav1.plot_angularrate(self.state_n)
+        # self.quad1.uav1.plot_angularrate(self.state_n)
         self.quad1.uav1.plot_position(self.pos_vel_att_cmd_n)
-        self.quad1.uav1.plot_velocity(self.pos_vel_att_cmd_n)
+        # self.quad1.uav1.plot_velocity(self.pos_vel_att_cmd_n)
         plt.plot(self.index_t)
         plt.title('mpc solving time at the main loop')
         plt.show()
@@ -341,7 +351,9 @@ def main():
     
     # receive the start and end point, and the initial gate point, from ROS side
     # rewrite the inputs
-    learing_agile_agent.receive_terminal_states(start=np.array([0,1.8,1]),end=np.array([2,-1.8,1]))
+    learing_agile_agent.receive_terminal_states(start=np.array([0,1.8,1.4]),
+                                                end=np.array([2,-1.8,1.4]),
+                                                gate_center=[0,0,0.5])
 
     # problem definition
     learing_agile_agent.problem_definition()

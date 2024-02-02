@@ -39,7 +39,7 @@
 #define ACADOS_MODEL_NX     13
 #define ACADOS_MODEL_NZ     0
 #define ACADOS_MODEL_NU     4
-#define ACADOS_MODEL_NP     18
+#define ACADOS_MODEL_NP     25
 #define ACADOS_MODEL_NBX    0
 #define ACADOS_MODEL_NBX0   13
 #define ACADOS_MODEL_NBU    4

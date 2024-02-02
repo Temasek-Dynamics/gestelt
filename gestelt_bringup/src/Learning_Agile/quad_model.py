@@ -32,6 +32,10 @@ class Quadrotor:
         # self.thrust, self.Mx, self.My, self.Mz = SX.sym('T'), SX.sym('Mx'), SX.sym('My'), SX.sym('Mz')
         # self.U   = vertcat(self.thrust, self.Mx, self.My, self.Mz)
 
+        # define desire traverse pose
+        self.des_tra_r_I = vertcat(SX.sym('des_tra_rx'), SX.sym('des_tra_ry'), SX.sym('des_tra_rz'))
+        self.des_tra_q = vertcat(SX.sym('des_tra_q0'), SX.sym('des_tra_q1'), SX.sym('des_tra_q2'), SX.sym('des_tra_q3'))
+
     def initDyn(self, Jx=None, Jy=None, Jz=None, mass=None, l=None, c=None):
         # global parameter
         g = 9.78
@@ -208,15 +212,15 @@ class Quadrotor:
                           self.wwf * self.cost_w_B_g + \
                           self.wqf * self.cost_q_g
 
-    def init_TraCost(self, tra_pos = [0, 0, 0], tra_atti = [0.7,[0,1,0]]): # transforming Rodrigues to Quaternion is shown in get_input function
+    def init_TraCost(self): # transforming Rodrigues to Quaternion is shown in get_input function
         ## traverse cost
         # traverse position in the world frame
-        self.tra_r_I = tra_pos[0:3]
-        self.cost_r_I_t = dot(self.r_I - self.tra_r_I, self.r_I - self.tra_r_I)
+    
+        # replaced by symbolic variables: des_tra_r_I, des_tra_q
+        self.cost_r_I_t = dot(self.r_I - self.des_tra_r_I, self.r_I - self.des_tra_r_I)
 
         # traverse attitude error
-        self.tra_q = toQuaternion(tra_atti[0],tra_atti[1])
-        tra_R_B_I = self.dir_cosine(self.tra_q)
+        tra_R_B_I = self.dir_cosine(self.des_tra_q)
         R_B_I = self.dir_cosine(self.q)
         self.cost_q_t = trace(np.identity(3) - mtimes(transpose(tra_R_B_I), R_B_I))**2
 

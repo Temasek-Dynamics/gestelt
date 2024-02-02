@@ -76,7 +76,6 @@ def transform_map_to_world():
             except tf.TransformException as ex:
                 rospy.logwarn("TransformException: {}".format(ex))
                 rospy.sleep(0.04)
-    
         return trans,rot
     else:
         return (0.0,0.0,0.0),(0.0,0.0,0.0,1.0)
@@ -209,7 +208,7 @@ def main():
     # waypoints are under the map frame, will be transformed to world frame
     
     # gate position
-    waypoints.append(create_pose(0.0,-0.0,1.4)) # 3.0,2.0,3
+    waypoints.append(create_pose(0.0,-0.0,0.5)) # 3.0,2.0,3
     
     # end position
     waypoints.append(create_pose(2.0,-1.8,1.4))# 5.0,2.0,3
