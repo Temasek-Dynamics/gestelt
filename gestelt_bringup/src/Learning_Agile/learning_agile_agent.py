@@ -123,7 +123,7 @@ class LearningAgileAgent():
     def receive_terminal_states(self,
                                 start,
                                 end,
-                                gate_center=np.array([0,0,1.5])):
+                                gate_center=np.array([0,0,0.5])):
         """
         receive the start and end point defined in the mission file
 
@@ -353,7 +353,7 @@ def main():
     # rewrite the inputs
     learing_agile_agent.receive_terminal_states(start=np.array([0,1.8,1.4]),
                                                 end=np.array([2,-1.8,1.4]),
-                                                gate_center=[0.0,0,0.4])
+                                                gate_center=[0.0,0,0.5])
 
     # problem definition
     learing_agile_agent.problem_definition()

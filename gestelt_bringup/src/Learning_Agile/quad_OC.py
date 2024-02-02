@@ -510,7 +510,6 @@ class OCSys:
         desired_goal_vel=np.array([0, 0, 0])
         desired_goal_ori = np.array([1, 0, 0, 0])
         desired_goal_w=np.array([0, 0, 0])
-        desired_thrust = np.ones(self.n_control)*0.5
         
         goal_state=np.concatenate((np.array(goal_pos),desired_goal_vel,desired_goal_ori,desired_goal_w))
        
@@ -521,7 +520,7 @@ class OCSys:
             # set the current input
             current_input = np.array(current_state_control[self.n_state:])
      
-            weight = 6*casadi.exp(-10*(dt*i-t_tra)**2) #gamma should increase as the flight duration decreases
+            weight = 60*casadi.exp(-10*(dt*i-t_tra)**2) #gamma should increase as the flight duration decreases
             
             self.acados_solver.set(i, 'p',np.concatenate((goal_state,
                                                           current_input,
