@@ -52,9 +52,9 @@ class OCSys:
         if not hasattr(self, 'auxvar'):
             self.setAuxvarVariable()
 
-        #self.dyn = casadi.Function('f',[self.state, self.control],[f])
-        # self.dyn = self.state + dt * f
-        # self.dyn_fn = casadi.Function('dynamics', [self.state, self.control, self.auxvar], [self.dyn],['x','u','p'],['x_next'])
+        self.dyn = casadi.Function('f',[self.state, self.control],[f])
+        self.dyn = self.state + dt * f
+        self.dyn_fn = casadi.Function('dynamics', [self.state, self.control, self.auxvar], [self.dyn],['x','u','p'],['x_next'])
         self.dyn_fn_acados = casadi.Function('dynamics', [self.state, self.control, self.auxvar], [f],['x','u','p'],['rhs'])
         #M = 4
         #DT = dt/4
@@ -444,7 +444,6 @@ class OCSys:
         ocp.model.cost_expr_ext_cost = self.path_cost_fn(ocp.model.x,goal_state,self.auxvar)\
             +self.final_cost_fn(ocp.model.x,goal_state,self.auxvar)\
             +ocp.model.p[-1]*self.tra_cost_fn(ocp.model.x, des_tra_pos,des_tra_q, self.auxvar)\
-            # +self.thrust_cost_fn(ocp.model.u,self.auxvar)\
             # +1*dot(ocp.model.u-Ulast,ocp.model.u-Ulast)
         
         # end cost

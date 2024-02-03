@@ -215,14 +215,14 @@ class Quadrotor:
         self.thrust_cost = self.wthrust * (self.cost_torque) 
 
         ## the final (goal) cost
-        self.goal_cost = self.wrf * self.cost_r_I_g + \
-                         self.wvf * self.cost_v_I_g + \
-                         self.wqf * self.cost_q_g \
-                        #  self.wwf * self.cost_w_B_g + \
+        self.goal_cost = self.wrf * self.cost_r_I_g \
+                         + self.wvf * self.cost_v_I_g \
+                            + self.wqf * self.cost_q_g \
+                        # +  self.wwf * self.cost_w_B_g  \
         
-        self.final_cost = self.wrf * self.cost_r_I_g + \
-                          self.wvf * self.cost_v_I_g + \
-                        self.wqf * self.cost_q_g
+        self.final_cost = self.wrf * self.cost_r_I_g\
+                         + self.wvf * self.cost_v_I_g\
+                         + self.wqf * self.cost_q_g
                             # self.wwf * self.cost_w_B_g + \
 
     def init_TraCost(self): # transforming Rodrigues to Quaternion is shown in get_input function

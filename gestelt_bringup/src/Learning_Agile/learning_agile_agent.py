@@ -99,7 +99,7 @@ class LearningAgileAgent():
         
         self.hl_para = [0,0,0,0,0,0,0]
         self.hl_variable = [self.hl_para]
-        self.max_tra_w=6
+        self.max_tra_w=60
         ##---------------------gate initialization ------------------------##
         self.moving_gate.let_gate_move()
         self.gate_move = self.moving_gate.gate_move
@@ -362,7 +362,7 @@ def main():
     # rewrite the inputs
     learing_agile_agent.receive_terminal_states(start=np.array([0,2.8,1.4]),
                                                 end=np.array([0,-2.8,1.4]),
-                                                gate_center=[1.2,0,1.4])
+                                                gate_center=[1.2,0,0.4])
 
     # problem definition
     learing_agile_agent.problem_definition()

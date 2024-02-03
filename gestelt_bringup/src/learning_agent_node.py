@@ -118,7 +118,7 @@ class LearningAgileAgentNode():
         """
         this function estimate the gate future state, is called in 100 hz
         """
-        #,self.drone_ang_ve
+        #,self.drone_ang_vel
         self.drone_state=np.concatenate((self.drone_pos,self.drone_vel,self.drone_quat),axis=0).tolist()
         traverse_time, gate_centroid=self.learing_agile_agent.gate_state_estimation(self.drone_state)
         
@@ -193,7 +193,7 @@ class LearningAgileAgentNode():
                                     # AttitudeTarget.IGNORE_THRUST+AttitudeTarget.IGNORE_PITCH_RATE+\
                                     # AttitudeTarget.IGNORE_YAW_RATE+AttitudeTarget.IGNORE_ROLL_RATE
         
-        # mavros_attitude_setpoint.type_mask = AttitudeTarget.IGNORE_ATTITUDE
+        mavros_attitude_setpoint.type_mask = AttitudeTarget.IGNORE_ATTITUDE
 
 
         # thrust_each: each propeller thrust, in N

@@ -56,7 +56,7 @@ class run_quad:
         # wwf: final angular velocity cost
 
         # initialize the cost function with symbolic variables
-        self.uav1.initCost(wrt=5,wqt=8,wthrust=0.1,wrf=5,wvf=5,wqf=0,wwf=3,goal_pos=self.goal_pos) # wthrust = 0.1
+        self.uav1.initCost(wrt=5,wqt=8,wthrust=0.1,wrf=5,wvf=5,wqf=1,wwf=3,goal_pos=self.goal_pos) # wthrust = 0.1
         self.uav1.init_TraCost()
 
         # --------------------------- create PDP object1 ----------------------------------------
@@ -73,7 +73,7 @@ class run_quad:
                                      state_ub=[sc,sc,sc,sc,sc,sc,sc,sc,sc,sc]) #,wc,wc,wc
         # self.uavoc1.setControlVariable(self.uav1.U,control_lb=[0,0,0,0],control_ub= [t2w*tw,t2w*tw,t2w*tw,t2w*tw]) # thrust-to-weight = 4:1
         thrust_ub = 0.8706*4
-        ang_rate_b=1.57*3
+        ang_rate_b=1.57
 
         self.uavoc1.setControlVariable(self.uav1.U,control_lb=[0,-ang_rate_b,-ang_rate_b,-ang_rate_b],control_ub= [thrust_ub,ang_rate_b,ang_rate_b,ang_rate_b]) # thrust-to-weight = 4:1
 
@@ -258,7 +258,7 @@ class run_quad:
             ini_state = ini_state.flatten().tolist()
         
   
-        current_state_control = ini_state[0:10]+Ulast
+        current_state_control = ini_state+Ulast
        
         # self.sol1 = self.uavoc1.ocSolver(current_state_control=current_state_control,t_tra=t)
         self.sol1 = self.uavoc1.AcadosOcSolver(current_state_control=current_state_control,
