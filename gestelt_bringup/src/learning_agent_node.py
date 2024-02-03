@@ -188,7 +188,10 @@ class LearningAgileAgentNode():
         mavros_attitude_setpoint=AttitudeTarget()
         mavros_attitude_setpoint.header.stamp = rospy.Time.now()
         mavros_attitude_setpoint.header.frame_id = "world"
-        # mavros_attitude_setpoint.type_mask = AttitudeTarget.IGNORE_PITCH_RATE+AttitudeTarget.IGNORE_THRUST+AttitudeTarget.IGNORE_PITCH_RATE+AttitudeTarget.IGNORE_YAW_RATE+AttitudeTarget.IGNORE_ROLL_RATE
+        # mavros_attitude_setpoint.type_mask = AttitudeTarget.IGNORE_PITCH_RATE+\
+                                    # AttitudeTarget.IGNORE_THRUST+AttitudeTarget.IGNORE_PITCH_RATE+\
+                                    # AttitudeTarget.IGNORE_YAW_RATE+AttitudeTarget.IGNORE_ROLL_RATE
+        
         mavros_attitude_setpoint.type_mask = AttitudeTarget.IGNORE_ATTITUDE
 
         # each propeller thrust max is 2.466207 N

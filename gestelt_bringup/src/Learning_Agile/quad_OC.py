@@ -470,9 +470,9 @@ class OCSys:
         
         ##------------------ state constraints ----------------------##
         # # constraint for position ( no constraints for the state)
-        ocp.constraints.lbx = np.array([])#(self.state_lb) #([])#
-        ocp.constraints.ubx = np.array([])#(self.state_ub) #([])#
-        ocp.constraints.idxbx = np.array([])#([i for i in range(self.n_state)]) #([])#i for i in range(self.n_state)]
+        ocp.constraints.lbx = np.array(self.state_lb) #([])#
+        ocp.constraints.ubx = np.array(self.state_ub) #([])#
+        ocp.constraints.idxbx = np.array([i for i in range(self.n_state)]) #([])#i for i in range(self.n_state)]
         
 
 
@@ -506,7 +506,8 @@ class OCSys:
                     dt=0.1,
                     tra_pos=np.array([0,0,1.5]),
                     tra_q=np.array([1,0,0,0]),
-                    t_tra=1.0):
+                    t_tra=1.0,
+                    max_tra_w=60):
         """
         This function is to solve the optimal control problem using ACADOS
         """
@@ -526,7 +527,7 @@ class OCSys:
             # set the current input
             current_input = np.array(current_state_control[self.n_state:])
      
-            weight = 60*casadi.exp(-10*(dt*i-t_tra)**2) #gamma should increase as the flight duration decreases
+            weight = max_tra_w*casadi.exp(-10*(dt*i-t_tra)**2) #gamma should increase as the flight duration decreases
             
             self.acados_solver.set(i, 'p',np.concatenate((goal_state,
                                                           current_input,

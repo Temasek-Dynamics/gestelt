@@ -99,7 +99,7 @@ class LearningAgileAgent():
         
         self.hl_para = [0,0,0,0,0,0,0]
         self.hl_variable = [self.hl_para]
-        
+        self.max_tra_w=60
         ##---------------------gate initialization ------------------------##
         self.moving_gate.let_gate_move()
         self.gate_move = self.moving_gate.gate_move
@@ -115,6 +115,7 @@ class LearningAgileAgent():
         self.Pitch   = []
         self.i       = 0
         self.index_t = []
+        
         # trajectory pos_vel_att_cmd
         self.pos_vel_att_cmd=np.zeros(13)
         self.pos_vel_att_cmd_n = [self.pos_vel_att_cmd]
@@ -134,7 +135,6 @@ class LearningAgileAgent():
         self.start_point = start
         self.final_point = end
         self.gate_center = gate_center
-        # self.env_inputs[7:10]=gate
 
     def problem_definition(self,drone_init_quat=None,gazebo_sim=False):
         """
@@ -227,10 +227,12 @@ class LearningAgileAgent():
         out[6]=self.t_tra_abs-self.i*0.01
 
         ## solve the mpc problem and get the control command
-        # self.quad2 = run_quad(goal_pos=solver_inputs[13:16],horizon =20)
-
-        
-        cmd_solution = self.quad1.get_input(solver_inputs[0:13],self.u,out[0:3],out[3:6],out[6])
+        cmd_solution = self.quad1.get_input(solver_inputs[0:13],
+                                                        self.u,out[0:3],
+                                                        out[3:6],
+                                                        out[6],
+                                                        max_tra_w=self.max_tra_w) # control input 4-by-1 thrusts to pybullet
+                    
         
         self.pos_vel_att_cmd=cmd_solution['state_traj_opt'][1,:]
         self.u=cmd_solution['control_traj_opt'][0,:].tolist()
@@ -301,8 +303,12 @@ class LearningAgileAgent():
                     out[3:6]=np.array([0,0,0])
                     out[6]=t_tra_abs-self.i*0.01
                     t_comp = time.time()
-                    # self.quad2 = run_quad(goal_pos=solver_inputs[13:16],horizon =20)
-                    cmd_solution = self.quad1.get_input(solver_inputs[0:13],self.u,out[0:3],out[3:6],out[6]) # control input 4-by-1 thrusts to pybullet
+                  
+                    cmd_solution = self.quad1.get_input(solver_inputs[0:13],
+                                                        self.u,out[0:3],
+                                                        out[3:6],
+                                                        out[6],
+                                                        max_tra_w=self.max_tra_w) # control input 4-by-1 thrusts to pybullet
                     
                     print('solving time at main=',time.time()-t_comp)
                     self.index_t.append(time.time()- t_comp)
@@ -336,7 +342,7 @@ class LearningAgileAgent():
                                        goal_pos=self.final_point.tolist())
 
         self.quad1.uav1.plot_input(self.control_n)
-        # self.quad1.uav1.plot_angularrate(self.state_n)
+        self.quad1.uav1.plot_angularrate(self.state_n)
         self.quad1.uav1.plot_position(self.pos_vel_att_cmd_n)
         # self.quad1.uav1.plot_velocity(self.pos_vel_att_cmd_n)
         plt.plot(self.index_t)

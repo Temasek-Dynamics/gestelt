@@ -239,7 +239,7 @@ class run_quad:
             point2 = self.point2, point3 = self.point3, point4 = self.point4)
     
     ## given initial state, control command, high-level parameters, obtain the first control command of the quadrotor
-    def get_input(self, ini_state, Ulast ,tra_pos, tra_ang, t_tra):
+    def get_input(self, ini_state, Ulast ,tra_pos, tra_ang, t_tra,max_tra_w):
         tra_atti = Rd2Rp(tra_ang)
         # initialize the NLP problem
         # self.uav1.init_TraCost(tra_pos,tra_atti)
@@ -260,7 +260,8 @@ class run_quad:
                                                 goal_pos=self.goal_pos,
                                                 tra_pos=tra_pos,
                                                 tra_q=tra_q,
-                                                t_tra=t_tra)
+                                                t_tra=t_tra,
+                                                max_tra_w=max_tra_w)
         
         # return control, pos_vel_cmd
         return self.sol1
