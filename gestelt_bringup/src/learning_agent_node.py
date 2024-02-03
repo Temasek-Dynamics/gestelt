@@ -193,7 +193,8 @@ class LearningAgileAgentNode():
                                     # AttitudeTarget.IGNORE_THRUST+AttitudeTarget.IGNORE_PITCH_RATE+\
                                     # AttitudeTarget.IGNORE_YAW_RATE+AttitudeTarget.IGNORE_ROLL_RATE
         
-        mavros_attitude_setpoint.type_mask = AttitudeTarget.IGNORE_ATTITUDE
+        # mavros_attitude_setpoint.type_mask = AttitudeTarget.IGNORE_ATTITUDE
+        
 
 
         # thrust_each: each propeller thrust, in N
@@ -205,7 +206,7 @@ class LearningAgileAgentNode():
         mavros_attitude_setpoint.thrust = input[0]/((0.8706+0.25)*4) # normalize to [0,1]
 
         mavros_attitude_setpoint.body_rate=body_rate_setpoint
-        # mavros_attitude_setpoint.orientation=attitude_setpoint
+        mavros_attitude_setpoint.orientation=attitude_setpoint
         
         #---------- publish the setpoint（PV or attitude)-----------------#
         # self.next_setpoint_pub.publish(pos_vel_setpoint)

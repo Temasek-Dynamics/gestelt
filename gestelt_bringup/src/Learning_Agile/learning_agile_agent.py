@@ -155,9 +155,8 @@ class LearningAgileAgent():
         
 
         self.quad1.init_obstacle(self.gate_point.reshape(12))
-        self.quad1.uav1.setDyn(0.01)
+        self.quad1.uav1.setDyn(0.002)
         
-        # self.quad2 = run_quad(goal_pos=self.final_point,horizon=horizon,gazebo_sim=gazebo_sim) #solver_inputs[13:16]
         print('start_point=',self.env_inputs[0:3])
         print('final_point=',self.env_inputs[3:6])
         
