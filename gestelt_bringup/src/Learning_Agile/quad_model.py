@@ -42,10 +42,10 @@ class Quadrotor:
         self.goal_q = vertcat(SX.sym('des_goal_q0'), SX.sym('des_goal_q1'), SX.sym('des_goal_q2'), SX.sym('des_goal_q3'))
         self.goal_w_B= vertcat(SX.sym('des_goal_wx'), SX.sym('des_goal_wy'), SX.sym('des_goal_wz'))
         
-        self.goal_state_sym=vertcat(self.goal_r_I,self.goal_v_I,self.goal_q,self.goal_w_B)
+        self.goal_state_sym=vertcat(self.goal_r_I,self.goal_v_I,self.goal_q)#,self.goal_w_B)
     def initDyn(self, Jx=None, Jy=None, Jz=None, mass=None, l=None, c=None):
         # global parameter
-        g = 9.78
+        g = 9.81
         # parameters settings
         parameter = []
         if Jx is None:
@@ -94,7 +94,8 @@ class Quadrotor:
         self.m = self.mass
 
         # total thrust in body frame
-        thrust = self.T_B[0] + self.T_B[1] + self.T_B[2] + self.T_B[3]
+        thrust=SX.sym('thrust')
+        # thrust = self.T_B[0] + self.T_B[1] + self.T_B[2] + self.T_B[3]
         self.thrust_B = vertcat(0, 0, thrust)
         # total moment M in body frame
         Mx = -self.T_B[1] * self.l / 2 + self.T_B[3] * self.l / 2
@@ -109,9 +110,9 @@ class Quadrotor:
         ])
         self.M_B = vertcat(Mx, My, Mz)
 
-        #Mx = self.T_B[0] * sqrt(2)*self.l / 4 -self.T_B[1] * sqrt(2)*self.l / 4 - self.T_B[2] * sqrt(2)*self.l / 4 + self.T_B[3] * sqrt(2)*self.l / 4
-        #My = self.T_B[0] * sqrt(2)*self.l / 4 +self.T_B[1] * sqrt(2)*self.l / 4 - self.T_B[2] * sqrt(2)*self.l / 4 - self.T_B[3] * sqrt(2)*self.l / 4
-        #Mz = (self.T_B[0] + self.T_B[1] - self.T_B[2] - self.T_B[3]) * self.c
+        Mx = self.T_B[0] * sqrt(2)*self.l / 4 -self.T_B[1] * sqrt(2)*self.l / 4 - self.T_B[2] * sqrt(2)*self.l / 4 + self.T_B[3] * sqrt(2)*self.l / 4
+        My = self.T_B[0] * sqrt(2)*self.l / 4 +self.T_B[1] * sqrt(2)*self.l / 4 - self.T_B[2] * sqrt(2)*self.l / 4 - self.T_B[3] * sqrt(2)*self.l / 4
+        Mz = (self.T_B[0] + self.T_B[1] - self.T_B[2] - self.T_B[3]) * self.c
 
 
         # cosine directional matrix
@@ -123,16 +124,18 @@ class Quadrotor:
         dv_I = 1 / self.m * mtimes(C_I_B, self.thrust_B) + self.g_I
         # Euler's law
         dq = 1 / 2 * mtimes(self.omega(self.w_B), self.q)
+        
         dw = mtimes(inv(self.J_B), self.M_B - mtimes(mtimes(self.skew(self.w_B), self.J_B), self.w_B))
         
         # state
-        self.X = vertcat(self.r_I, self.v_I, self.q, self.w_B)
+        self.X = vertcat(self.r_I, self.v_I, self.q)#, self.w_B)
         
         # input
-        self.U = self.T_B
+        # self.U = self.T_B
+        self.U=vertcat(thrust,self.w_B)
         
         # dynamics
-        self.f = vertcat(dr_I, dv_I, dq, dw)
+        self.f = vertcat(dr_I, dv_I, dq)#, dw)
 
     def initCost(self, wrt=None, wqt=None, wrf=None, wvf=None, wqf=None, wwf=None, \
         wthrust=0.5,goal_pos=[0,9,5],goal_velo = [0,0,0],goal_atti=[0,[1,0,0]]):
@@ -203,7 +206,7 @@ class Quadrotor:
 
         # auglar velocity cost
         # self.goal_w_B = [0, 0, 0]
-        self.cost_w_B_g = dot(self.w_B - self.goal_w_B, self.w_B - self.goal_w_B)
+        # self.cost_w_B_g = dot(self.w_B - self.goal_w_B, self.w_B - self.goal_w_B)
 
 
         # the thrust cost
@@ -214,12 +217,13 @@ class Quadrotor:
         ## the final (goal) cost
         self.goal_cost = self.wrf * self.cost_r_I_g + \
                          self.wvf * self.cost_v_I_g + \
-                         self.wwf * self.cost_w_B_g + \
-                         self.wqf * self.cost_q_g 
+                         self.wqf * self.cost_q_g \
+                        #  self.wwf * self.cost_w_B_g + \
+        
         self.final_cost = self.wrf * self.cost_r_I_g + \
                           self.wvf * self.cost_v_I_g + \
-                          self.wwf * self.cost_w_B_g + \
-                          self.wqf * self.cost_q_g
+                        self.wqf * self.cost_q_g
+                            # self.wwf * self.cost_w_B_g + \
 
     def init_TraCost(self): # transforming Rodrigues to Quaternion is shown in get_input function
         ## traverse cost
@@ -600,9 +604,9 @@ class Quadrotor:
         plt.title('angularrate vs time')
         N = len(state_traj[:,0])
         x = np.arange(0,N*dt,dt)
-        plt.plot(x,state_traj[:,10],color = 'b', label = 'w1')
-        plt.plot(x,state_traj[:,11],color = 'r', label = 'w2')
-        plt.plot(x,state_traj[:,12],color = 'y', label = 'w3')
+        plt.plot(x,state_traj[:,1],color = 'b', label = 'w1')
+        plt.plot(x,state_traj[:,2],color = 'r', label = 'w2')
+        plt.plot(x,state_traj[:,3],color = 'y', label = 'w3')
         plt.xlabel('t')
         plt.ylabel('w')
         plt.grid(True,color='0.6',dashes=(2,2,1,1))

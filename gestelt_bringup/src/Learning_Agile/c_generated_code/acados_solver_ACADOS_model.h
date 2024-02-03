@@ -36,12 +36,12 @@
 #include "acados_c/ocp_nlp_interface.h"
 #include "acados_c/external_function_interface.h"
 
-#define ACADOS_MODEL_NX     13
+#define ACADOS_MODEL_NX     10
 #define ACADOS_MODEL_NZ     0
 #define ACADOS_MODEL_NU     4
-#define ACADOS_MODEL_NP     25
-#define ACADOS_MODEL_NBX    13
-#define ACADOS_MODEL_NBX0   13
+#define ACADOS_MODEL_NP     22
+#define ACADOS_MODEL_NBX    10
+#define ACADOS_MODEL_NBX0   10
 #define ACADOS_MODEL_NBU    4
 #define ACADOS_MODEL_NSBX   0
 #define ACADOS_MODEL_NSBU   0

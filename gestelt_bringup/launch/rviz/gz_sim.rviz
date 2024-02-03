@@ -345,9 +345,9 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.8503981232643127
+      Pitch: 0.18039843440055847
       Target Frame: my_view
-      Yaw: 0.43040019273757935
+      Yaw: 0.48040005564689636
     Saved:
       - Class: rviz/FPS
         Enable Stereo Rendering:

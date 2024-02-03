@@ -66,7 +66,7 @@ class LearningAgileAgentNode():
         self.final_point=np.zeros(3)
 
         # current drone state
-        self.drone_state=np.zeros(13)
+        self.drone_state=np.zeros(10)
         self.drone_pos=np.zeros(3)
         self.drone_vel=np.zeros(3)
         self.drone_quat=np.zeros(4)
@@ -118,8 +118,8 @@ class LearningAgileAgentNode():
         """
         this function estimate the gate future state, is called in 100 hz
         """
-        
-        self.drone_state=np.concatenate((self.drone_pos,self.drone_vel,self.drone_quat,self.drone_ang_vel),axis=0).tolist()
+        #,self.drone_ang_ve
+        self.drone_state=np.concatenate((self.drone_pos,self.drone_vel,self.drone_quat),axis=0).tolist()
         traverse_time, gate_centroid=self.learing_agile_agent.gate_state_estimation(self.drone_state)
         
         # publish the traverse time w.r.t current timestep
@@ -142,9 +142,10 @@ class LearningAgileAgentNode():
         this function solves the MPC problem and output drone PV, is called in 10 hz
         """
 
-        # concatenate the drone state into a list, give it to the learning agile agent
-        self.drone_state=np.concatenate((self.drone_pos,self.drone_vel,self.drone_quat,self.drone_ang_vel),axis=0).tolist()
-        pos_vel_att_cmd,thrust_each,callback_runtime,current_pred_traj,accelerations=self.learing_agile_agent.solve_problem_gazebo(self.drone_state)
+        # concatenate the drone state into a list, give it to the learning agile agent 
+        #,self.drone_ang_vel
+        self.drone_state=np.concatenate((self.drone_pos,self.drone_vel,self.drone_quat),axis=0).tolist()
+        pos_vel_att_cmd,input,callback_runtime,current_pred_traj,accelerations=self.learing_agile_agent.solve_problem_gazebo(self.drone_state)
         
         #################################################
         ##---------pub pos_vel_att_cmd setpoint--------##
@@ -180,9 +181,9 @@ class LearningAgileAgentNode():
 
         # body rate setpoint
         body_rate_setpoint=Vector3()
-        body_rate_setpoint.x=pos_vel_att_cmd[10]
-        body_rate_setpoint.y=pos_vel_att_cmd[11]
-        body_rate_setpoint.z=pos_vel_att_cmd[12]
+        body_rate_setpoint.x=input[1]
+        body_rate_setpoint.y=input[2]
+        body_rate_setpoint.z=input[3]
 
         # assemble the body rate and thrust setpoint
         mavros_attitude_setpoint=AttitudeTarget()
@@ -192,13 +193,17 @@ class LearningAgileAgentNode():
                                     # AttitudeTarget.IGNORE_THRUST+AttitudeTarget.IGNORE_PITCH_RATE+\
                                     # AttitudeTarget.IGNORE_YAW_RATE+AttitudeTarget.IGNORE_ROLL_RATE
         
-        mavros_attitude_setpoint.type_mask = AttitudeTarget.IGNORE_ATTITUDE
+        # mavros_attitude_setpoint.type_mask = AttitudeTarget.IGNORE_ATTITUDE
 
-        # each propeller thrust max is 2.466207 N
+
         # thrust_each: each propeller thrust, in N
-        # offset for compensate the gravity
-        g_compe=0.4
-        mavros_attitude_setpoint.thrust = sum(thrust_each)/(2.466207*4)+g_compe # normalize to [0,1]
+        # hover thrust is 0.5775 (normalized to [0,1])
+        # drone weight is 0.205kg
+        # thrust max is 3.48234 N
+        # each propeller thrust max is 0.870585 N
+        # mavros_attitude_setpoint.thrust = sum(thrust_each)/((0.8706+0.25)*4) # normalize to [0,1]
+        mavros_attitude_setpoint.thrust = input[0]/((0.8706+0.25)*4) # normalize to [0,1]
+
         mavros_attitude_setpoint.body_rate=body_rate_setpoint
         # mavros_attitude_setpoint.orientation=attitude_setpoint
         

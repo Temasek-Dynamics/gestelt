@@ -34,7 +34,7 @@ class run_quad:
         self.ini_v_I = ini_v_I 
         self.ini_q = ini_q
         self.ini_w =  [0.0, 0.0, 0.0]
-        self.ini_state = self.ini_r + self.ini_v_I + self.ini_q + self.ini_w
+        self.ini_state = self.ini_r + self.ini_v_I + self.ini_q# + self.ini_w
         # set horizon
         self.horizon = horizon
 
@@ -68,10 +68,15 @@ class run_quad:
         wc   = pi/2 #pi
         tw   = 1.22
         t2w  = 2
-
         # set symbolic functions for the MPC solver
-        self.uavoc1.setStateVariable(self.uav1.X,state_lb=[-sc,-sc,-sc,-sc,-sc,-sc,-sc,-sc,-sc,-sc,-wc,-wc,-wc],state_ub=[sc,sc,sc,sc,sc,sc,sc,sc,sc,sc,wc,wc,wc])
-        self.uavoc1.setControlVariable(self.uav1.U,control_lb=[0,0,0,0],control_ub= [t2w*tw,t2w*tw,t2w*tw,t2w*tw]) # thrust-to-weight = 4:1
+        self.uavoc1.setStateVariable(self.uav1.X,state_lb=[-sc,-sc,-sc,-sc,-sc,-sc,-sc,-sc,-sc,-sc],\
+                                     state_ub=[sc,sc,sc,sc,sc,sc,sc,sc,sc,sc]) #,wc,wc,wc
+        # self.uavoc1.setControlVariable(self.uav1.U,control_lb=[0,0,0,0],control_ub= [t2w*tw,t2w*tw,t2w*tw,t2w*tw]) # thrust-to-weight = 4:1
+        thrust_ub = 0.8706*4
+        ang_rate_b=1.57*3
+
+        self.uavoc1.setControlVariable(self.uav1.U,control_lb=[0,-ang_rate_b,-ang_rate_b,-ang_rate_b],control_ub= [thrust_ub,ang_rate_b,ang_rate_b,ang_rate_b]) # thrust-to-weight = 4:1
+
         self.uavoc1.setDyn(self.uav1.f,self.dt)
         self.uavoc1.setthrustcost(self.uav1.thrust_cost)
         self.uavoc1.setPathCost(self.uav1.goal_cost,goal_state_sym=self.uav1.goal_state_sym)
@@ -253,7 +258,7 @@ class run_quad:
             ini_state = ini_state.flatten().tolist()
         
   
-        current_state_control = ini_state+Ulast
+        current_state_control = ini_state[0:10]+Ulast
        
         # self.sol1 = self.uavoc1.ocSolver(current_state_control=current_state_control,t_tra=t)
         self.sol1 = self.uavoc1.AcadosOcSolver(current_state_control=current_state_control,
