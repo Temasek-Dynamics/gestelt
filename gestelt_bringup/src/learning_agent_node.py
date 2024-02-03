@@ -158,12 +158,9 @@ class LearningAgileAgentNode():
         pos_vel_setpoint.type_mask =  PositionTarget.IGNORE_YAW_RATE+PositionTarget.IGNORE_YAW\
                                     # +PositionTarget.IGNORE_AFX+PositionTarget.IGNORE_AFY+PositionTarget.IGNORE_AFZ\
                                     # +PositionTarget.IGNORE_VX+PositionTarget.IGNORE_VY+PositionTarget.IGNORE_VZ
-        pos_vel_setpoint.position.x = pos_vel_att_cmd[0]
         
-        # TODO ONLY FOR TEST
-        pos_vel_setpoint.position.y = pos_vel_att_cmd[1]-1.8
-
-
+        pos_vel_setpoint.position.x = pos_vel_att_cmd[0]
+        pos_vel_setpoint.position.y = pos_vel_att_cmd[1]
         pos_vel_setpoint.position.z = pos_vel_att_cmd[2]
         pos_vel_setpoint.velocity.x = pos_vel_att_cmd[3]
         pos_vel_setpoint.velocity.y = pos_vel_att_cmd[4]
@@ -241,7 +238,7 @@ class LearningAgileAgentNode():
         for i in range(len(current_pred_traj)):
             pose=Pose()
             pose.position.x=current_pred_traj[i][0]
-            pose.position.y=current_pred_traj[i][1]-1.8
+            pose.position.y=current_pred_traj[i][1]
             pose.position.z=current_pred_traj[i][2]
             pose.orientation.w=current_pred_traj[i][6]
             pose.orientation.x=current_pred_traj[i][7]
@@ -259,9 +256,7 @@ class LearningAgileAgentNode():
 
         self.drone_pos = np.array([msg.pose.position.x,msg.pose.position.y,msg.pose.position.z])
         self.drone_quat = np.array([msg.pose.orientation.w,msg.pose.orientation.x,msg.pose.orientation.y,msg.pose.orientation.z])
-
-        # TODO ONLY FOR TEST
-        self.drone_pos[1]=self.drone_pos[1]+1.8 
+ 
         
 
     def drone_state_twist_callback(self,msg):
