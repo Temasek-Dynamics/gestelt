@@ -114,7 +114,7 @@ class LearningAgileAgent():
         self.Time    = []
         self.Pitch   = []
         self.i       = 0
-        self.index_t = []
+        self.solving_time = []
         
         # trajectory pos_vel_att_cmd
         self.pos_vel_att_cmd=np.zeros(10)
@@ -312,7 +312,7 @@ class LearningAgileAgent():
                                                         max_tra_w=self.max_tra_w) # control input 4-by-1 thrusts to pybullet
                     
                     print('solving time at main=',time.time()-t_comp)
-                    self.index_t.append(time.time()- t_comp)
+                    self.solving_time.append(time.time()- t_comp)
                     self.u=cmd_solution['control_traj_opt'][0,:].tolist()
                     self.pos_vel_att_cmd=cmd_solution['state_traj_opt'][0,:]
             
@@ -337,19 +337,20 @@ class LearningAgileAgent():
         np.save('Time',self.Time)
         np.save('Pitch',self.Pitch)
         np.save('HL_Variable',self.hl_variable)
-        self.quad1.uav1.play_animation(wing_len=1.5,
-                                       gate_traj1=self.gate_move[::5,:,:],
-                                       state_traj=self.state_n[::5,:],
-                                       goal_pos=self.final_point.tolist(),
-                                       dt=self.dyn_step)
+        np.save('solving_time',self.solving_time)
+        # self.quad1.uav1.play_animation(wing_len=1.5,
+        #                                gate_traj1=self.gate_move[::5,:,:],
+        #                                state_traj=self.state_n[::5,:],
+        #                                goal_pos=self.final_point.tolist(),
+        #                                dt=self.dyn_step)
 
-        self.quad1.uav1.plot_input(self.control_n)
-        self.quad1.uav1.plot_angularrate(self.control_n)
-        self.quad1.uav1.plot_position(self.pos_vel_att_cmd_n)
+        # self.quad1.uav1.plot_input(self.control_n)
+        # self.quad1.uav1.plot_angularrate(self.control_n)
+        # self.quad1.uav1.plot_position(self.pos_vel_att_cmd_n)
         # self.quad1.uav1.plot_velocity(self.pos_vel_att_cmd_n)
-        plt.plot(self.index_t)
-        plt.title('mpc solving time at the main loop')
-        plt.show()
+        # plt.plot(self.solving_time)
+        # plt.title('mpc solving time at the main loop')
+        # plt.show()
   
         # self.quad1.uav1.plot_T(control_tm)
         # self.quad1.uav1.plot_M(control_tm)
