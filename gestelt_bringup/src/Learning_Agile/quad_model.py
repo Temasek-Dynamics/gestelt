@@ -558,8 +558,11 @@ class Quadrotor:
                                             #, line_arm1_ref, line_arm2_ref, line_arm3_ref, line_arm4_ref
             return line_traj, line_arm1, line_arm2, line_arm3, line_arm4, \
                 line_traj_ref, time_text #, line_arm1_ref, line_arm2_ref, line_arm3_ref, line_arm4_ref, time_text
+     
 
-        ani = animation.FuncAnimation(fig, update_traj, sim_horizon, interval=dt*500, blit=True)
+        # interval: draw new frame every 'interval' ms
+        # here the simulation freq is 500hz, so interval=2ms=0.002s sim_horizon,
+        ani = animation.FuncAnimation(fig, update_traj, interval=1, blit=True)
 
         if save_option != 0:
             Writer = animation.writers['ffmpeg']

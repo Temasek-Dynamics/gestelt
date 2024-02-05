@@ -103,7 +103,9 @@ class LearningAgileAgentNode():
 
         # problem definition
         # gazebo_sim=False, means the solver will compile to c code first, then solve the problem
-        self.learing_agile_agent.problem_definition(self.drone_quat,gazebo_sim=True)
+        self.learing_agile_agent.problem_definition(self.drone_quat,\
+                                                    gazebo_sim=True,\
+                                                    dyn_step=0.002,)
 
         # after receiving the waypoints, start the timer to run the learning agile agent
         
@@ -201,7 +203,7 @@ class LearningAgileAgentNode():
         # hover thrust is 0.5775 (normalized to [0,1])
         # drone weight is 0.205kg
         # thrust max is 3.48234 N
-        # each propeller thrust max is 0.870585 N
+        # each propeller thrust max is 0.870585 N+0.15
         # mavros_attitude_setpoint.thrust = sum(thrust_each)/((0.8706+0.25)*4) # normalize to [0,1]
         mavros_attitude_setpoint.thrust = input[0]/((0.8706+0.25)*4) # normalize to [0,1]
 

@@ -66,7 +66,7 @@ class MovingGate():
          ## define the kinematics of the narrow window
         self.v =np.array([0,0.0,0.0])
         self.w = 0 #pi/2
-        self.gate_move, self.V = self.gate1.move(v = self.v ,w = self.w)
+        self.gate_move, self.V = self.gate1.move(v = self.v ,w = self.w,dt=0.002)
 
     
 class LearningAgileAgent():
@@ -136,7 +136,7 @@ class LearningAgileAgent():
         self.final_point = end
         self.gate_center = gate_center
 
-    def problem_definition(self,drone_init_quat=None,gazebo_sim=False):
+    def problem_definition(self,drone_init_quat=None,gazebo_sim=False,dyn_step=0.002):
         """
         initial traversal problem
 
@@ -155,7 +155,9 @@ class LearningAgileAgent():
         
 
         self.quad1.init_obstacle(self.gate_point.reshape(12))
-        self.quad1.uav1.setDyn(0.002)
+
+        self.dyn_step=dyn_step
+        self.quad1.uav1.setDyn(self.dyn_step)
         
         print('start_point=',self.env_inputs[0:3])
         print('final_point=',self.env_inputs[3:6])
@@ -264,14 +266,14 @@ class LearningAgileAgent():
         
         self.state = self.quad1.ini_state # state= feedback from pybullet, 13-by-1, 3 position, 3 velocity (world frame), 4 quaternion, 3 angular rate
         self.state_n = [self.state]
-        for self.i in range(500):
+        for self.i in range(2500): # 5s, 500 Hz
             # decision variable is updated in 100 hz
             self.gate_n = gate(self.gate_move[self.i])
             t_tra_abs =2
             # t = solver(self.model,self.state,self.final_point,self.gate_n,self.moving_gate.V[self.i],self.moving_gate.w)
-            t=t_tra_abs-self.i*0.01
-            # t_tra = t+self.i*0.01
-            gap_pitch = self.moving_gate.gate_init_p + self.moving_gate.w*self.i*0.01
+            t=t_tra_abs-self.i*self.dyn_step
+            # t_tra = t+self.i*self.dyn_step
+            gap_pitch = self.moving_gate.gate_init_p + self.moving_gate.w*self.i*self.dyn_step
             
             
             # print('step',self.i,'tranversal time=',t,'gap_pitch=',gap_pitch*180/pi)
@@ -279,10 +281,10 @@ class LearningAgileAgent():
             
             self.Ttra = np.concatenate((self.Ttra,[t_tra_abs]),axis = 0)
             self.T = np.concatenate((self.T,[t]),axis = 0)
-            self.Time = np.concatenate((self.Time,[self.i*0.01]),axis = 0)
+            self.Time = np.concatenate((self.Time,[self.i*self.dyn_step]),axis = 0)
             self.Pitch = np.concatenate((self.Pitch,[gap_pitch]),axis = 0)
             
-            if (self.i%2)==0: # control frequency = 10 hz
+            if (self.i%5)==0: # control frequency = 100 hz
 
                 ## obtain the future traversal window state
                     self.gate_n.translate(t*self.moving_gate.V[self.i])
@@ -300,7 +302,7 @@ class LearningAgileAgent():
                     
                     out[0:3]=self.gate_center
                     out[3:6]=np.array([0,0,0])
-                    out[6]=t_tra_abs-self.i*0.01
+                    out[6]=t_tra_abs-self.i*self.dyn_step
                     t_comp = time.time()
                   
                     cmd_solution = self.quad1.get_input(solver_inputs[0:10],
@@ -336,9 +338,10 @@ class LearningAgileAgent():
         np.save('Pitch',self.Pitch)
         np.save('HL_Variable',self.hl_variable)
         self.quad1.uav1.play_animation(wing_len=1.5,
-                                       gate_traj1=self.gate_move ,
-                                       state_traj=self.state_n,
-                                       goal_pos=self.final_point.tolist())
+                                       gate_traj1=self.gate_move[::5,:,:],
+                                       state_traj=self.state_n[::5,:],
+                                       goal_pos=self.final_point.tolist(),
+                                       dt=self.dyn_step)
 
         self.quad1.uav1.plot_input(self.control_n)
         self.quad1.uav1.plot_angularrate(self.control_n)
@@ -364,7 +367,7 @@ def main():
                                                 gate_center=[1.2,0,0.4])
 
     # problem definition
-    learing_agile_agent.problem_definition()
+    learing_agile_agent.problem_definition(dyn_step=0.002)
 
     # solve the problem
     learing_agile_agent.solve_problem_comparison()
