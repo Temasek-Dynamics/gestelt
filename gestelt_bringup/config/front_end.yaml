@@ -5,7 +5,7 @@ front_end:
   planner_frequency: 10.0
   goal_tolerance: 0.1       # in [m]
   max_iterations: 99999999  
-  debug_viz: false          # If true, publish visualization for debugging
+  debug_viz: true          # If true, publish visualization for debugging
   tie_breaker: 1.0001       # Tie breaker as weight for f-cost (cost-to-go)
 
 sfc:

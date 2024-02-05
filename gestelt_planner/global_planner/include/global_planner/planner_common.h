@@ -10,8 +10,10 @@ using namespace Eigen;
 constexpr double inf = std::numeric_limits<float>::infinity();
 constexpr double epsilon = std::numeric_limits<double>::epsilon();
 
-struct GridNode; //forward declration
-typedef std::shared_ptr<GridNode> GridNodePtr;
+struct OccNode; //forward declration
+typedef std::shared_ptr<OccNode> OccNodePtr;
+
+#define SQRT2 1.4142135623
 
 enum CellState
 {
@@ -20,20 +22,69 @@ enum CellState
   UNDEFINED = 3
 };
 
-struct GridNode
+template <typename T>
+class OccMap {
+public:
+  OccMap(size_t sz_x, size_t sz_y, size_t sz_z, T const& t=T())
+    : sz_x_(sz_x), sz_y_(sz_y_), sz_z_(sz_z_)
+  {
+    occ_nodes_.resize(sz_x_ * sz_y_ * sz_z_);
+
+    for (size_t x = 0; x < sz_x_; x++){
+      for (size_t y = 0; y < sz_y_; y++){
+        for (size_t z = 0; z < sz_z_; z++){
+          occ_nodes_.at(x * sz_y_ * sz_z_ + y * sz_z_ + z) 
+            = OccNode(x, y, z);
+        }
+      }
+    }
+  }
+
+  // Access node of occupancy map at (x,y,z)
+  T& operator()(const Eigen::Vector3i& idx) {
+    return occ_nodes.at(idx(0) * sz_y_ * sz_z_ + idx(1) * sz_z_ + idx(2));
+  }
+
+  // Access node of occupancy map at (x,y,z)
+  T& operator()(size_t x, size_t y, size_t z) {
+    return occ_nodes.at(x * sz_y_ * sz_z_ + y * sz_z_ + z);
+  }
+
+  // Access const node of occupancy map at (x,y,z)
+  T const& operator()(const Eigen::Vector3i& idx) const {
+    return occ_nodes.at(idx(0) * sz_y_ * sz_z_ + idx(1) * sz_z_ + idx(2));
+  }
+
+  // Access const node of occupancy map at (x,y,z)
+  T const& operator()(size_t x, size_t y, size_t z) const {
+    return occ_nodes.at(x * sz_y_ * sz_z_ + y * sz_z_ + z);
+  }
+
+private:
+  size_t sz_x_, sz_y_, sz_z_; // Size of Occupancy Map
+  std::vector<T> occ_nodes_; // Contiguous vector of occupancy nodes
+}
+
+
+struct OccNode
 {
-  GridNode(const Eigen::Vector3i& idx)
+  OccNode(const size_t& x, const size_t& y, const size_t& z)
+  {
+    this->idx = Eigen::Vector3i{x, y, z};
+  }
+
+  OccNode(const Eigen::Vector3i& idx)
   {
     this->idx = idx;
   }
 
 	Eigen::Vector3i idx;
 	double g_cost{inf}, f_cost{inf};
-	std::shared_ptr<GridNode> parent{nullptr};
+	std::shared_ptr<OccNode> parent{nullptr};
   CellState state{CellState::UNDEFINED};
 
   // Equality
-  bool operator==(const GridNode& node) const
+  bool operator==(const OccNode& node) const
   {
     if (this->idx(0) == node.idx(0) 
       && this->idx(1) == node.idx(1)
@@ -46,7 +97,7 @@ struct GridNode
   // Hash generation
   struct ObjHash
   {
-    size_t operator()(GridNode& node) const
+    size_t operator()(OccNode& node) const
     {
       // return (node.idx(0) * 7927 + node.idx(1)) * 7993 + node.idx(2);
       // Cantor pairing function
@@ -57,7 +108,7 @@ struct GridNode
 
   // Equality between pointers
   struct PointedObjEq {
-    bool operator () ( GridNodePtr l_node, GridNodePtr r_node) const {
+    bool operator () ( OccNodePtr l_node, OccNodePtr r_node) const {
       return *l_node == *r_node;
     }
   };
@@ -65,7 +116,7 @@ struct GridNode
   // Hash generation for pointers
   struct PointedObjHash
   {
-    size_t operator()(const GridNodePtr& node) const
+    size_t operator()(const OccNodePtr& node) const
     {
       // https://stackoverflow.com/questions/1358468/how-to-create-unique-integer-number-from-3-different-integers-numbers1-oracle-l
       // https://stackoverflow.com/questions/38965931/hash-function-for-3-integers
@@ -80,7 +131,7 @@ struct GridNode
   // Comparison operator between pointers
   struct CompareCostPtr
   {
-    bool operator()(const GridNodePtr& l_node, const GridNodePtr& r_node)
+    bool operator()(const OccNodePtr& l_node, const OccNodePtr& r_node)
     {
       return l_node->f_cost > r_node->f_cost;
     }
@@ -140,7 +191,7 @@ public:
    * @param neighbors 
    * @param nb_8con_idxs Index of 8 con neighbor lookup
    */
-  void getNeighbors(GridNodePtr cur_node, std::vector<GridNodePtr>& neighbors, std::vector<int>& nb_8con_idxs){
+  void getNeighbors(OccNodePtr cur_node, std::vector<OccNodePtr>& neighbors, std::vector<int>& nb_8con_idxs){
     neighbors.clear();
     nb_8con_idxs.clear();
 
@@ -153,62 +204,49 @@ public:
         continue;
       }
 
-      neighbors.push_back(std::make_shared<GridNode>(nb_3d_idx));
+      neighbors.push_back(std::make_shared<OccNode>(nb_3d_idx));
       nb_8con_idxs.push_back(i);
     }
 
   }
 
-  void getNeighbors(GridNodePtr cur_node, std::vector<GridNodePtr>& neighbors) {
+  void getNeighborsOG(OccNodePtr cur_node, std::vector<OccNodePtr>& neighbors) {
     neighbors.clear();
+    // Explore all 26 neighbours
+    for (int dx = -1; dx <= 1; dx++)
+    {
+      for (int dy = -1; dy <= 1; dy++)
+      {
+        for (int dz = -1; dz <= 1; dz++)
+        {
+          // Skip it's own position
+          if (dx == 0 && dy == 0 && dz == 0){
+            continue;
+          }
 
-    for (int i = 0; i < nb_idx_8con_.rows(); i++){
-      Eigen::Vector3i nb_idx = cur_node->idx 
-        + Eigen::Vector3i{nb_idx_8con_.row(i)(0), nb_idx_8con_.row(i)(1), nb_idx_8con_.row(i)(2)};
-
-      if (getOccupancy(nb_idx)){
-        // Skip if current index is occupied
-        continue;
-      }
-
-      neighbors.push_back(std::make_shared<GridNode>(nb_idx));
-    }
-
-    // // Explore all 26 neighbours
-    // for (int dx = -1; dx <= 1; dx++)
-    // {
-    //   for (int dy = -1; dy <= 1; dy++)
-    //   {
-    //     for (int dz = -1; dz <= 1; dz++)
-    //     {
-    //       // Skip it's own position
-    //       if (dx == 0 && dy == 0 && dz == 0){
-    //         continue;
-    //       }
-
-    //       Eigen::Vector3i nb_idx{
-    //         cur_node->idx(0) + dx,
-    //         cur_node->idx(1) + dy,
-    //         cur_node->idx(2) + dz,
-    //       };
+          Eigen::Vector3i nb_idx{
+            cur_node->idx(0) + dx,
+            cur_node->idx(1) + dy,
+            cur_node->idx(2) + dz,
+          };
           
-    //       if (getOccupancy(nb_idx)){
-    //         // Skip if current index is occupied
-    //         continue;
-    //       }
+          if (getOccupancy(nb_idx)){
+            // Skip if current index is occupied
+            continue;
+          }
 
-    //       GridNodePtr nb_node = std::make_shared<GridNode>(nb_idx);
-    //       // ROS_INFO("getNeighbors: Pushed back (%d, %d, %d)", nb_idx(0), nb_idx(1), nb_idx(2));
+          OccNodePtr nb_node = std::make_shared<OccNode>(nb_idx);
+          // ROS_INFO("getNeighbors: Pushed back (%d, %d, %d)", nb_idx(0), nb_idx(1), nb_idx(2));
 
-    //       neighbors.push_back(nb_node);
-    //     }
-    //   }
-    // }
+          neighbors.push_back(nb_node);
+        }
+      }
+    }
   } 
 
   // Get euclidean distance between node_1 and node_2
   // NOTE: This is in units of indices
-  inline int getL1Norm(GridNodePtr a, GridNodePtr b) const {
+  inline int getL1Norm(OccNodePtr a, OccNodePtr b) const {
     // return (a->idx - b->idx).lpNorm<1>();
 
     return abs(a->idx(0) - b->idx(0)) + abs(a->idx(1) - b->idx(1)) + abs(a->idx(2) - b->idx(2));
@@ -216,7 +254,7 @@ public:
 
   // Get euclidean distance between node_1 and node_2
   // NOTE: This is in units of indices
-  inline double getL2Norm(GridNodePtr node_1, GridNodePtr node_2) const {
+  inline double getL2Norm(OccNodePtr node_1, OccNodePtr node_2) const {
     double dx = abs(node_2->idx(0) - node_1->idx(0));
     double dy = abs(node_2->idx(1) - node_1->idx(1));
     double dz = abs(node_2->idx(2) - node_1->idx(2));
@@ -224,8 +262,26 @@ public:
     return sqrt(dx*dx + dy*dy + dz*dz);
   }
 
+  // Get octile distance
+  inline double getOctileDist(OccNodePtr node_1, OccNodePtr node_2) const {
+    double dx = abs(node_2->idx(0) - node_1->idx(0));
+    double dy = abs(node_2->idx(1) - node_1->idx(1));
+    double dz = abs(node_2->idx(2) - node_1->idx(2));
+
+    return (dx + dy + dz) - std::min(dx, std::min(dy, dz)); 
+  }
+
+  // Get chebyshev distance
+  inline double getChebyshevDist(OccNodePtr node_1, OccNodePtr node_2) const {
+    double dx = abs(node_2->idx(0) - node_1->idx(0));
+    double dy = abs(node_2->idx(1) - node_1->idx(1));
+    double dz = abs(node_2->idx(2) - node_1->idx(2));
+
+    return (dx + dy + dz) + (SQRT2 - 2) * std::min(dx, std::min(dy, dz)); 
+  }
+
   // ??? 
-  double getDiagCost(GridNodePtr node_1, GridNodePtr node_2) {
+  double getDiagCost(OccNodePtr node_1, OccNodePtr node_2) {
     double dx = abs(node_1->idx(0) - node_2->idx(0));
     double dy = abs(node_1->idx(1) - node_2->idx(1));
     double dz = abs(node_1->idx(2) - node_2->idx(2));
@@ -252,12 +308,12 @@ public:
   }
 
   // Get index of grid node in string 
-  std::string getIndexStr(GridNodePtr node){
+  std::string getIndexStr(OccNodePtr node){
     return "(" + std::to_string(node->idx(0)) + ", " + std::to_string(node->idx(1)) + ", " +  std::to_string(node->idx(2)) + ")";
   }
 
   // Get position of grid node in string 
-  std::string getPosStr(GridNodePtr node){
+  std::string getPosStr(OccNodePtr node){
     Eigen::Vector3d pos;
     idxToPos(node->idx, pos);
     return "(" + std::to_string(pos(0)) + ", " + std::to_string(pos(1)) + ", " +  std::to_string(pos(2)) + ")";
@@ -367,9 +423,7 @@ public:
     3 // Btm Bck Right 
   };
 
-private:
   std::shared_ptr<GridMap> map_; 
-
 };
 
 #endif // _PLANNER_COMMON_H_

@@ -6,10 +6,13 @@ void GridMap::initMap(pcl::PointCloud<pcl::PointXYZ>::Ptr pcd, const Eigen::Vect
 {
   md_.has_pose_ = true;
   mp_.global_map_size_ = map_size;
+
   mp_.inflation_ = inflation;
   mp_.uav_origin_frame_ = "world";
   mp_.map_origin_ = Eigen::Vector3d(mp_.global_map_size_(0) / 2.0, mp_.global_map_size_(1) / 2.0, 0.0);
   mp_.resolution_ = resolution;
+
+  mp_.global_map_num_cells_ = (map_size.cwiseProduct(Eigen::Vector3d::Constant(1/mp_.resolution_))).cast<int>();
 
   reset(mp_.resolution_);
 
@@ -33,6 +36,8 @@ void GridMap::initMapROS(ros::NodeHandle &nh, ros::NodeHandle &pnh)
                                       * Eigen::AngleAxisd((M_PI/180.0) * md_.cam2body_rpy_deg(1), Eigen::Vector3d::UnitY())
                                       * Eigen::AngleAxisd((M_PI/180.0) * md_.cam2body_rpy_deg(2), Eigen::Vector3d::UnitZ())).toRotationMatrix();
   mp_.map_origin_ = Eigen::Vector3d(-mp_.global_map_size_(0) / 2.0, -mp_.global_map_size_(1) / 2.0, mp_.ground_height_);
+  
+  mp_.global_map_num_cells_ = (map_size.cwiseProduct(Eigen::Vector3d::Constant(1/mp_.resolution_))).cast<int>();
 
   std::cout << "before dbg_input_entire_map_" << std::endl;
 

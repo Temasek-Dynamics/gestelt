@@ -38,8 +38,10 @@ struct MappingParameters
 {
   /* map properties */
   Eigen::Vector3d map_origin_; // Origin of map
-  Eigen::Vector3d global_map_size_; //  Size of global occupancy grid 
-  Eigen::Vector3d local_map_size_; //  Size of local occupancy grid 
+  Eigen::Vector3d global_map_size_; //  Size of global occupancy map  (m)
+  Eigen::Vector3d local_map_size_; //  Size of local occupancy map (m)
+
+  Eigen::Vector3i global_map_num_cells_; //  Size of global occupancy grid (no. of voxels)
 
   double resolution_; // Voxel size for occupancy grid without inflation                  
   double inflation_; // Voxel size for occupancy grid with inflation

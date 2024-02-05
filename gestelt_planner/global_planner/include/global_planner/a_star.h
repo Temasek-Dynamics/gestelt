@@ -60,15 +60,15 @@ public:
 
 private:
 
-  void addToOpenlist(GridNodePtr node);
+  void addToOpenlist(OccNodePtr node);
 
-  GridNodePtr popOpenlist();
+  OccNodePtr popOpenlist();
 
-  void addToClosedlist(GridNodePtr node);
+  void addToClosedlist(OccNodePtr node);
 
-  bool isInClosedList(GridNodePtr node);
+  bool isInClosedList(OccNodePtr node);
 
-  void tracePath(GridNodePtr node);
+  void tracePath(OccNodePtr node);
 
   void publishVizPoints(const std::vector<Eigen::Vector3d>& pts, ros::Publisher& publisher, Eigen::Vector3d color = Eigen::Vector3d{0.0, 0.0, 0.0}, double radius = 0.1, const std::string& frame_id = "world")
   {
@@ -109,7 +109,7 @@ private:
   }
 
 private: 
-  std::vector<GridNodePtr> path_gridnode_; // Path in terms of Grid Nodes
+  std::vector<OccNodePtr> path_gridnode_; // Path in terms of Grid Nodes
   std::vector<Eigen::Vector3i> path_idx_; // Path in terms of indices
   std::vector<Eigen::Vector3d> path_pos_; // Path in terms of 3d position
 
@@ -125,10 +125,11 @@ private:
   std::unique_ptr<PlannerCommon> common_; 
 
   // Priority queue: open list stores nodes yet to be visited
-  std::priority_queue<GridNodePtr, std::vector<GridNodePtr>, GridNode::CompareCostPtr> open_list_; 
+  std::priority_queue<OccNodePtr, std::vector<OccNodePtr>, OccNode::CompareCostPtr> open_list_; 
   // Hashmap: closed list stores nodes that have been visited
-  std::unordered_set<GridNodePtr, GridNode::PointedObjHash, GridNode::PointedObjEq> closed_list_;
+  std::unordered_set<OccNodePtr, OccNode::PointedObjHash, OccNode::PointedObjEq> closed_list_;
 
+  std::unique_ptr<OccMap<OccNodePtr>> occ_map_;
 };
 
 #endif // _A_STAR_PLANNER_H_
