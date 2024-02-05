@@ -54,8 +54,22 @@ cp -r ~/gestelt_ws/src/gestelt/gestelt_bringup/simulation/models/raynor ~/gestel
 # [EMERGENCY USE] IF you screw up the PX4 Autopilot build at any point, clean up the build files via the following command:
 make distclean
 ```
+4. ACADOS solver installation on the Radxa
+- Before the installation, the cmake should be updated to the latest version. please refer to this [cmake update](https://zhuanlan.zhihu.com/p/513871916).
+   - install casadi
+   - 
+Please refer to this [acados doc](https://docs.acados.org/installation/index.html#linux-mac) for detail.
+Modification to the installation process for the Radxa:
+- After the MAKE installation
+   - In the `acados/CMakeLists.txt`,the `BLASFEO_TARGET`and the `HPIPM_TARGET` should be set to `ARMV8A_ARM_CORTEX_A53` for the Radxa.
+   - In the `acados/Makefile.rule`, the `BLASFEO_TARGET` should be set to `ARMV8A_ARM_CORTEX_A53` for the Radxa.
+   - In the `acados/Makefile.rule`, the `HPIPM_TARGET` should be set to `GENERIC` for the Radxa.
+   - 
+- Before `make run_examples_c`
+  -  add `export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:home/rock/acados/lib` to the `~/.bashrc` file.
+  -  `source ~/.bashrc`
 
-4. Building the workspace
+1. Building the workspace
 ```bash
 # Assuming your workspace is named as follows
 cd ~/gestelt_ws/
@@ -106,6 +120,10 @@ The second one is a fake drone with no physics and be used to test the architect
 2. Trajectory Server.
 3. Minimum Snap Trajectory Planner and Sampler.
 4. Mission commands.
+
+
+
+
 
 # Acknowledgements
 1. [EGO-Planner-V2 repo](https://github.com/ZJU-FAST-Lab/EGO-Planner-v2)
