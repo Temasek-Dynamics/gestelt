@@ -14,18 +14,25 @@ struct PlannerParameters {
   double inflation;         // Inflation of the map
   std::string pcd_filename; // filename of the point cloud to load from
   Eigen::Vector3d map_size; // (size_x, size_y, size_z)
+  Eigen::Vector3d start_pos;
+  Eigen::Vector3d goal_pos;
 };
 
 static PlannerParameters TestParameters[] = {
   { 0.1, 
     0.2, 
     "forest_10x10_1.pcd",
-    Eigen::Vector3d{20.0, 20.0, 20.0}},
+    Eigen::Vector3d{20.0, 20.0, 20.0},
+    Eigen::Vector3d{0.0, 0.0, 1.0},
+    Eigen::Vector3d{6.5, 6.5, 1.0}
+    },
   { 0.1, 
     0.2, 
     "tunnel_2x2x20.pcd",
-    Eigen::Vector3d{20.0, 20.0, 20.0}},
-
+    Eigen::Vector3d{80.0, 80.0, 80.0},
+    Eigen::Vector3d{-1.0, 0.0, 1.0},
+    Eigen::Vector3d{22.0, 2.0, 1.0}
+    },
 };
 
 //----------------------------------------

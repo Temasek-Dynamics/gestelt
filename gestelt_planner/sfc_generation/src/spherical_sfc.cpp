@@ -16,6 +16,8 @@ void SphericalSFC::addVizPublishers(ros::Publisher& p_cand_viz_pub,
 
 bool SphericalSFC::generateSFC(const std::vector<Eigen::Vector3d> &path)
 {
+    auto a = std::chrono::high_resolution_clock::now();
+
     Sphere B_cur; // current sphere being considered
 
     size_t path_idx_cur = 0; // Current index of guide path
@@ -28,6 +30,8 @@ bool SphericalSFC::generateSFC(const std::vector<Eigen::Vector3d> &path)
 
     sfc_spheres_.push_back(B_cur);
     
+    auto b = std::chrono::high_resolution_clock::now();
+
     itr_ = 0;
     while (itr_ < sfc_params_.max_itr)
     {
@@ -50,6 +54,8 @@ bool SphericalSFC::generateSFC(const std::vector<Eigen::Vector3d> &path)
         itr_++;
     }
 
+    auto c = std::chrono::high_resolution_clock::now();
+
     publishVizSphericalSFC(sfc_spheres_, sfc_spherical_viz_pub_, "world");
 
     std::cout << "[SphericalSFC] Before computeSFCTrajectory" << std::endl;
@@ -58,6 +64,8 @@ bool SphericalSFC::generateSFC(const std::vector<Eigen::Vector3d> &path)
     std::cout << "[SphericalSFC] After computeSFCTrajectory" << std::endl;
     publishVizPiecewiseTrajectory(sfc_traj_.waypoints, sfc_waypoints_viz_pub_);
     std::cout << "[SphericalSFC] After publishVizPiecewiseTrajectory" << std::endl;
+
+    auto d = std::chrono::high_resolution_clock::now();
 
     if (!sfc_spheres_.back().contains(path.back())){ 
         std::cout << "[SphericalSFC] Final safe flight corridor does not contain the goal" << std::endl;
@@ -69,6 +77,25 @@ bool SphericalSFC::generateSFC(const std::vector<Eigen::Vector3d> &path)
 
         return false;
     }
+
+    auto e = std::chrono::high_resolution_clock::now();
+
+    auto total_loop_dur = std::chrono::duration_cast<std::chrono::duration<double>>(
+        e - a).count();
+
+    auto preloop_dur = std::chrono::duration_cast<std::chrono::duration<double>>(
+        b - a).count();
+
+    auto loop_dur = std::chrono::duration_cast<std::chrono::duration<double>>(
+        c - b).count();
+
+    auto pub_dur = std::chrono::duration_cast<std::chrono::duration<double>>(
+        d - c).count();
+
+    std::cout << "Total dur: " << total_loop_dur    << std::endl;
+    std::cout << "Preloop dur: " << preloop_dur     << "s, pct:" << preloop_dur / total_loop_dur * 100 << "%" << std::endl;
+    std::cout << "loop dur: " << loop_dur           << "s, pct:" << loop_dur / total_loop_dur * 100<< "%" << std::endl;
+    std::cout << "publish dur: " << pub_dur         << "s, pct:" << pub_dur / total_loop_dur * 100<< "%" << std::endl;
 
     return true;
 }   
@@ -149,8 +176,10 @@ bool SphericalSFC::BatchSample(const Eigen::Vector3d& p_guide, Sphere& B_cur)
     }
 
     // Publish candidate points and 3d distribution visualization
-    publishVizPoints(p_cand_vec, p_cand_viz_pub_); 
-    dist_viz_pub_.publish( createVizEllipsoid(p_guide, stddev, ellipse_orientation, "world", itr_));
+    if (sfc_params_.debug_viz){
+        publishVizPoints(p_cand_vec, p_cand_viz_pub_); 
+        dist_viz_pub_.publish( createVizEllipsoid(p_guide, stddev, ellipse_orientation, "world", itr_));
+    }
 
     if (B_cand_pq.empty()){
         std::cout << "Unable to generate next candidate sphere"<< std::endl;
@@ -284,6 +313,10 @@ void SphericalSFC::publishVizPiecewiseTrajectory(
     const std::vector<Eigen::Vector3d>& pts, ros::Publisher& publisher, 
     const std::string& frame_id)
 {
+    if (!sfc_params_.debug_viz){
+        return;
+    }
+
     visualization_msgs::Marker sphere_list, path_line_strip;
     Eigen::Vector3d wp_color = Eigen::Vector3d{0.0, 0.0, 1.0};
     double wp_alpha = 0.3;
@@ -389,6 +422,10 @@ void SphericalSFC::publishVizSphericalSFC(
     const std::vector<SphericalSFC::Sphere>& sfc_spheres, 
     ros::Publisher& publisher, const std::string& frame_id) 
 {
+    if (!sfc_params_.debug_viz){
+        return;
+    }
+
     for (int i = 0; i < sfc_spheres.size(); i++){
         publisher.publish(createVizSphere(sfc_spheres[i].center, sfc_spheres[i].getDiameter(), frame_id, i));
     }

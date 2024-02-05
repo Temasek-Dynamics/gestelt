@@ -6,6 +6,7 @@ void FrontEndPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   double planner_freq;
   pnh.param("front_end/planner_frequency", planner_freq, -1.0);
   pnh.param("front_end/goal_tolerance", squared_goal_tol_, -1.0);
+  squared_goal_tol_ *= squared_goal_tol_; 
 
   AStarPlanner::AStarParams astar_params; 
   pnh.param("front_end/max_iterations", astar_params.max_iterations, -1);
@@ -28,7 +29,6 @@ void FrontEndPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   pnh.param("sfc/avg_vel", sfc_params.avg_vel, 1.5);
   pnh.param("sfc/max_vel", sfc_params.max_vel, 3.0);
 
-  squared_goal_tol_ *= squared_goal_tol_; 
   
   odom_sub_ = nh.subscribe("odom", 5, &FrontEndPlanner::odometryCB, this);
   goal_sub_ = nh.subscribe("planner/goals", 5, &FrontEndPlanner::goalsCB, this);
@@ -53,7 +53,7 @@ void FrontEndPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
 
   // Initialize map
   map_.reset(new GridMap);
-  map_->initiMapROS(nh, pnh);
+  map_->initMapROS(nh, pnh);
 
   // Initialize front end planner 
   front_end_planner_ = std::make_unique<AStarPlanner>(map_, astar_params);

@@ -48,7 +48,10 @@ struct GridNode
   {
     size_t operator()(GridNode& node) const
     {
-      return (node.idx(0) * 7927 + node.idx(1)) * 7993 + node.idx(2);
+      // return (node.idx(0) * 7927 + node.idx(1)) * 7993 + node.idx(2);
+      // Cantor pairing function
+      size_t H_a_b = 0.5 * (node.idx(0) + node.idx(1))*(node.idx(0) + node.idx(1) + 1) + node.idx(1);
+      return 0.5 * (H_a_b + node.idx(2))*(H_a_b + node.idx(2) + 1) + node.idx(2);
     }
   };
 
@@ -66,7 +69,11 @@ struct GridNode
     {
       // https://stackoverflow.com/questions/1358468/how-to-create-unique-integer-number-from-3-different-integers-numbers1-oracle-l
       // https://stackoverflow.com/questions/38965931/hash-function-for-3-integers
-      return (node->idx(0) * 7927 + node->idx(1)) * 7993 + node->idx(2);
+      // return (node->idx(0) * 7927 + node->idx(1)) * 7993 + node->idx(2);
+
+      // Cantor pairing function
+      size_t H_a_b = 0.5 * (node->idx(0) + node->idx(1))*(node->idx(0) + node->idx(1) + 1) + node->idx(1);
+      return 0.5 * (H_a_b + node->idx(2))*(H_a_b + node->idx(2) + 1) + node->idx(2);
     }
   };
 
@@ -89,7 +96,68 @@ class PlannerCommon {
 public:
   PlannerCommon(std::shared_ptr<GridMap> grid_map)
   : map_(grid_map)
-  {}
+  {
+
+    nb_idx_8con_ <<
+      0, 0,    1,  // Top 
+      1, 1,    1,  // Top Fwd Left
+      1, 0,    1,  // Top Fwd 
+      1, -1,   1,  // Top Fwd Right
+      0, 1,    1,  // Top Left
+      0, -1,   1,  // Top Right
+      -1, 1,   1,  // Top Bck Left
+      -1, 0,   1,  // Top Bck 
+      -1, -1,  1,  // Top Bck Right 
+
+      // Mid Layer
+      // {0, 0,    0}, // Mid 
+      1, 1,    0, // Mid Fwd Left
+      1, 0,    0, // Mid Fwd
+      1, -1,   0, // Mid Fwd Right
+      0, 1,    0, // Mid Left
+      0, -1,   0, // Mid Right
+      -1, 1,   0, // Mid Bck Left
+      -1, 0,   0, // Mid Bck
+      -1, -1,  0, // Mid Bck Right 
+
+      // Btm Layer
+      0, 0,    -1, // Btm 
+      1, 1,    -1, // Btm Fwd Left
+      1, 0,    -1, // Btm Fwd
+      1, -1,   -1, // Btm Fwd Right
+      0, 1,    -1, // Btm Left
+      0, -1,   -1, // Btm Right
+      -1, 1,   -1, // Btm Bck Left
+      -1, 0,   -1, // Btm Bck
+      -1, -1,  -1;// Btm Bck Right 
+
+  }
+
+  /**
+   * @brief Get the Neighbors Idx object
+   * 
+   * @param cur_node 
+   * @param neighbors 
+   * @param nb_8con_idxs Index of 8 con neighbor lookup
+   */
+  void getNeighbors(GridNodePtr cur_node, std::vector<GridNodePtr>& neighbors, std::vector<int>& nb_8con_idxs){
+    neighbors.clear();
+    nb_8con_idxs.clear();
+
+    for (int i = 0; i < nb_idx_8con_.rows(); i++){
+      Eigen::Vector3i nb_3d_idx = cur_node->idx + nb_idx_8con_.row(i).transpose();
+                                  // + Eigen::Vector3i{nb_idx_8con_.row(i)(0), nb_idx_8con_.row(i)(1), nb_idx_8con_.row(i)(2)};
+
+      if (getOccupancy(nb_3d_idx)){
+        // Skip if current index is occupied
+        continue;
+      }
+
+      neighbors.push_back(std::make_shared<GridNode>(nb_3d_idx));
+      nb_8con_idxs.push_back(i);
+    }
+
+  }
 
   void getNeighbors(GridNodePtr cur_node, std::vector<GridNodePtr>& neighbors) {
     neighbors.clear();
@@ -140,15 +208,20 @@ public:
 
   // Get euclidean distance between node_1 and node_2
   // NOTE: This is in units of indices
-  double getL2Norm(GridNodePtr node_1, GridNodePtr node_2) {
-    // return (node_2->idx - node_1->idx).squaredNorm();
-    return (node_2->idx - node_1->idx).norm();
+  inline int getL1Norm(GridNodePtr a, GridNodePtr b) const {
+    // return (a->idx - b->idx).lpNorm<1>();
+
+    return abs(a->idx(0) - b->idx(0)) + abs(a->idx(1) - b->idx(1)) + abs(a->idx(2) - b->idx(2));
   }
 
   // Get euclidean distance between node_1 and node_2
   // NOTE: This is in units of indices
-  double getL1Norm(GridNodePtr node_1, GridNodePtr node_2) {
-    return (node_2->idx - node_1->idx).lpNorm<1>();
+  inline double getL2Norm(GridNodePtr node_1, GridNodePtr node_2) const {
+    double dx = abs(node_2->idx(0) - node_1->idx(0));
+    double dy = abs(node_2->idx(1) - node_1->idx(1));
+    double dz = abs(node_2->idx(2) - node_1->idx(2));
+
+    return sqrt(dx*dx + dy*dy + dz*dz);
   }
 
   // ??? 
@@ -220,47 +293,13 @@ public:
     return map_->getInflateOccupancy(pos);
   }
 
-private:
-  std::shared_ptr<GridMap> map_; 
+public: 
 
-  Eigen::Matrix<int, 26, 3> nb_idx_8con_ {
+  Eigen::Matrix<int, 26, 3> nb_idx_8con_; 
+
+  const double nb_8con_dist_l2_[26] = {
     // Top Layer
-    {0, 0,    1},  // Top 
-    {1, 1,    1},  // Top Fwd Left
-    {1, 0,    1},  // Top Fwd 
-    {1, -1,   1},  // Top Fwd Right
-    {0, 1,    1},  // Top Left
-    {0, -1,   1},  // Top Right
-    {-1, 1,   1},  // Top Bck Left
-    {-1, 0,   1},  // Top Bck 
-    {-1, -1,  1},  // Top Bck Right 
-
-    // Mid Layer
-    // {0, 0,    0}, // Mid 
-    {1, 1,    0}, // Mid Fwd Left
-    {1, 0,    0}, // Mid Fwd
-    {1, -1,   0}, // Mid Fwd Right
-    {0, 1,    0}, // Mid Left
-    {0, -1,   0}, // Mid Right
-    {-1, 1,   0}, // Mid Bck Left
-    {-1, 0,   0}, // Mid Bck
-    {-1, -1,  0}, // Mid Bck Right 
-
-    // Btm Layer
-    {0, 0,    -1}, // Btm 
-    {1, 1,    -1}, // Btm Fwd Left
-    {1, 0,    -1}, // Btm Fwd
-    {1, -1,   -1}, // Btm Fwd Right
-    {0, 1,    -1}, // Btm Left
-    {0, -1,   -1}, // Btm Right
-    {-1, 1,   -1}, // Btm Bck Left
-    {-1, 0,   -1}, // Btm Bck
-    {-1, -1,  -1}, // Btm Bck Right 
-  };
-
-  const double nb_idx_8con_dist[26] = {
-    // Top Layer
-    1,  // Top 
+    1.0,  // Top 
     1.73205,    // Top Fwd Left
     1.414214,   // Top Fwd 
     1.73205,    // Top Fwd Right
@@ -273,16 +312,16 @@ private:
     // Mid Layer
     // 0, // Mid 
     1.414214, // Mid Fwd Left
-    1, // Mid Fwd
+    1.0, // Mid Fwd
     1.414214, // Mid Fwd Right
-    1, // Mid Left
-    1, // Mid Right
+    1.0, // Mid Left
+    1.0, // Mid Right
     1.414214, // Mid Bck Left
-    1, // Mid Bck
+    1.0, // Mid Bck
     1.414214, // Mid Bck Right 
 
     // Btm Layer
-    1,  // Top 
+    1.0,  // Top 
     1.73205, // Btm Fwd Left
     1.414214, // Btm Fwd
     1.73205, // Btm Fwd Right
@@ -292,6 +331,44 @@ private:
     1.414214, // Btm Bck
     1.73205 // Btm Bck Right 
   };
+
+  const int nb_8con_dist_l1_[26] = {
+    // Top Layer
+    1,  // Top 
+    3,    // Top Fwd Left
+    2,   // Top Fwd 
+    3,    // Top Fwd Right
+    2,   // Top Left
+    2,   // Top Right
+    3,    // Top Bck Left
+    2,   // Top Bck 
+    3,    // Top Bck Right 
+
+    // Mid Layer
+    // 0, // Mid 
+    2, // Mid Fwd Left
+    1, // Mid Fwd
+    2, // Mid Fwd Right
+    1, // Mid Left
+    1, // Mid Right
+    2, // Mid Bck Left
+    1, // Mid Bck
+    2, // Mid Bck Right 
+
+    // Btm Layer
+    1,  // Top 
+    3, // Btm Fwd Left
+    2, // Btm Fwd
+    3, // Btm Fwd Right
+    2, // Btm Left
+    2, // Btm Right
+    3, // Btm Bck Left
+    2, // Btm Bck
+    3 // Btm Bck Right 
+  };
+
+private:
+  std::shared_ptr<GridMap> map_; 
 
 };
 

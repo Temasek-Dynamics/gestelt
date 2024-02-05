@@ -9,6 +9,8 @@
 #include <ros/ros.h>
 #include <visualization_msgs/Marker.h>
 
+#include <chrono>
+
 class AStarPlanner : public PlannerBase
 {
 public:
@@ -122,9 +124,9 @@ private:
   // class for commonly used helper functions 
   std::unique_ptr<PlannerCommon> common_; 
 
-  // open list stores nodes yet to be visited
+  // Priority queue: open list stores nodes yet to be visited
   std::priority_queue<GridNodePtr, std::vector<GridNodePtr>, GridNode::CompareCostPtr> open_list_; 
-  // closed list stores nodes that have been visited
+  // Hashmap: closed list stores nodes that have been visited
   std::unordered_set<GridNodePtr, GridNode::PointedObjHash, GridNode::PointedObjEq> closed_list_;
 
 };

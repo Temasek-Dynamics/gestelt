@@ -178,6 +178,16 @@ public:
    */
   bool getNearestOccupiedCell(const Eigen::Vector3d &pos, Eigen::Vector3d& occ_nb, double& radius); 
 
+  /**
+   * @brief Check if position is within a radius of an obstacle
+   * 
+   * @param pos 
+   * @param radius 
+   * @return true 
+   * @return false 
+   */
+  bool withinObsRadius(const Eigen::Vector3d &pos, const double& radius);
+
   /* Gridmap conversion methods */
 
   // Get camera-to-global frame transformation
@@ -263,29 +273,28 @@ private:
    * Read methods
   */
 
-  /**
-   * @brief Load a point cloud map from a PCD file 
-   * 
-   * @param file 
-   */
-  void loadPCDFile(const std::string& file)
-  {
-    pcl::PointCloud<pcl::PointXYZ>::Ptr pcd;
+  // /**
+  //  * @brief Load a point cloud map from a PCD file 
+  //  * 
+  //  * @param file 
+  //  */
+  // void loadPCDFile(const std::string& file)
+  // {
+  //   pcl::PointCloud<pcl::PointXYZ>::Ptr pcd;
 
-    if (pcl::io::loadPCDFile<pcl::PointXYZ> (file, *pcd) == -1) //* load the file
-    {
-      throw std::runtime_error("Couldn't read file " + file);
-    }
+  //   if (pcl::io::loadPCDFile<pcl::PointXYZ> (file, *pcd) == -1) //* load the file
+  //   {
+  //     throw std::runtime_error("Couldn't read file " + file);
+  //   }
     
-    std::cout << "Loaded point clouds of size " 
-              << pcd->width << " * " 
-              << pcd->height << " with size "
-              << pcd->size() <<std::endl;
+  //   std::cout << "Loaded point clouds of size " 
+  //             << pcd->width << " * " 
+  //             << pcd->height << " with size "
+  //             << pcd->size() <<std::endl;
 
-    pcdToMap(pcd);
-  }
-
-
+  //   pcdToMap(pcd);
+  // }
+  
   /**
    * Timer Callbacks
   */

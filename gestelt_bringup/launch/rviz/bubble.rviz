@@ -8,6 +8,10 @@ Panels:
         - /TF1/Frames1
         - /drone0_mavros1/Localization1//mavros/local_position/pose1
         - /map1
+        - /front-end1/closed_list_viz1
+        - /front-end1/plan_viz1
+        - /front-end1/plan_viz1/Status1
+        - /sfc1
       Splitter Ratio: 0.5300925970077515
     Tree Height: 369
   - Class: rviz/Selection
@@ -429,7 +433,7 @@ Visualization Manager:
           Marker Topic: /drone0/sfc_spherical
           Name: sfc_spherical
           Namespaces:
-            "": true
+            {}
           Queue Size: 100
           Value: true
         - Class: rviz/Marker
@@ -453,8 +457,7 @@ Visualization Manager:
           Marker Topic: /drone0/sfc_waypoints
           Name: sfc_waypoints
           Namespaces:
-            spherical_sfc_line: true
-            spherical_sfc_pts: true
+            {}
           Queue Size: 100
           Value: true
       Enabled: true
@@ -468,7 +471,7 @@ Visualization Manager:
               Marker Topic: /drone0/back_end_planner/goal_point
               Name: goal_point(cyan)
               Namespaces:
-                {}
+                "": true
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
@@ -476,7 +479,7 @@ Visualization Manager:
               Marker Topic: /drone0/back_end_planner/global_list
               Name: global_list(cyan)
               Namespaces:
-                {}
+                "": true
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
@@ -610,7 +613,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 19.972434997558594
+      Distance: 10.86727523803711
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -618,17 +621,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 3.217930793762207
-        Y: 2.067704677581787
-        Z: 0.7405383586883545
+        X: 2.347238063812256
+        Y: 3.239051580429077
+        Z: 0.2958267033100128
       Focal Shape Fixed Size: false
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.0747973918914795
+      Pitch: 1.3247965574264526
       Target Frame: my_view
-      Yaw: 3.153560161590576
+      Yaw: 5.433516979217529
     Saved:
       - Class: rviz/FPS
         Enable Stereo Rendering:
@@ -777,5 +780,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1440
-  X: -82
-  Y: 687
+  X: 258
+  Y: 149

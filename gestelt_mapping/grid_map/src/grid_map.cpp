@@ -9,7 +9,7 @@ void GridMap::initMap(pcl::PointCloud<pcl::PointXYZ>::Ptr pcd, const Eigen::Vect
   mp_.inflation_ = inflation;
   mp_.uav_origin_frame_ = "world";
   mp_.map_origin_ = Eigen::Vector3d(mp_.global_map_size_(0) / 2.0, mp_.global_map_size_(1) / 2.0, 0.0);
-  mp_.resolution_ = 0.1;
+  mp_.resolution_ = resolution;
 
   reset(mp_.resolution_);
 
@@ -18,7 +18,10 @@ void GridMap::initMap(pcl::PointCloud<pcl::PointXYZ>::Ptr pcd, const Eigen::Vect
 
 void GridMap::initMapROS(ros::NodeHandle &nh, ros::NodeHandle &pnh)
 {  
+  std::cout << "initMapROS" << std::endl;
   readROSParams(nh, pnh);
+
+  std::cout << "read ros params" << std::endl;
 
   reset(mp_.resolution_);
 
@@ -30,6 +33,8 @@ void GridMap::initMapROS(ros::NodeHandle &nh, ros::NodeHandle &pnh)
                                       * Eigen::AngleAxisd((M_PI/180.0) * md_.cam2body_rpy_deg(1), Eigen::Vector3d::UnitY())
                                       * Eigen::AngleAxisd((M_PI/180.0) * md_.cam2body_rpy_deg(2), Eigen::Vector3d::UnitZ())).toRotationMatrix();
   mp_.map_origin_ = Eigen::Vector3d(-mp_.global_map_size_(0) / 2.0, -mp_.global_map_size_(1) / 2.0, mp_.ground_height_);
+
+  std::cout << "before dbg_input_entire_map_" << std::endl;
 
   if (dbg_input_entire_map_){
     ROS_INFO("[%s] DEBUG: INPUT ENTIRE MAP", node_name_.c_str());
@@ -408,13 +413,16 @@ void GridMap::pcdMsgToMap(const sensor_msgs::PointCloud2 &msg)
   }
 
   // Remove anything outside of local map bounds
-  updateLocalMap();
+  // updateLocalMap();
 
   if (msg.data.empty()){
     ROS_WARN_THROTTLE(1.0, "[grid_map]: Empty point cloud received");
     // return;
   }
+
+  std::cout << "before fromROSMsg" << std::endl;
   pcl::PointCloud<pcl::PointXYZ>::Ptr pcd;
+  pcd.reset(new pcl::PointCloud<pcl::PointXYZ>);
 
   pcl::fromROSMsg(msg, *pcd);
 
@@ -432,12 +440,23 @@ void GridMap::pcdToMap(pcl::PointCloud<pcl::PointXYZ>::Ptr pcd)
   ROS_INFO("[grid_map] Size of point clouds: %ld", pcd->points.size());
 
   // Save point cloud to global map origin
+  std::cout << "before global_map_in_origin_ = pcd" << std::endl;
+
   global_map_in_origin_ = pcd;
   global_map_in_origin_->header.frame_id = mp_.uav_origin_frame_;
 
+  auto bonxai_start = std::chrono::high_resolution_clock::now();
   bonxai_map_->insertPointCloud(global_map_in_origin_->points, sensor_origin, 30.0);
+  auto bonxai_end = std::chrono::high_resolution_clock::now();
 
+  auto kdtree_set_input_cloud_start = std::chrono::high_resolution_clock::now();
   kdtree_->setInputCloud(global_map_in_origin_);
+  auto kdtree_set_input_cloud_end = std::chrono::high_resolution_clock::now();
+
+  std::cout << "kdtree_set_input_cloud duration: " << std::chrono::duration_cast<std::chrono::duration<double>>(
+        kdtree_set_input_cloud_end - kdtree_set_input_cloud_start).count() << std::endl;
+  std::cout << "bonxai duration: " << std::chrono::duration_cast<std::chrono::duration<double>>(
+        bonxai_end - bonxai_start).count() << std::endl;
 
   ROS_INFO("[grid_map] Completed pcdToMap");
 }
@@ -611,27 +630,33 @@ bool GridMap::getInflateOccupancy(const Eigen::Vector3d &pos)
 
   /* Bonxai */
 
+  // if (!isInGlobalMap(pos)){
+  //   return true;
+  // }
+
+  // for(float x = pos(0) - mp_.inflation_; x <= pos(0) + mp_.inflation_; x += mp_.resolution_)
+  // {
+  //   for(float y = pos(1) - mp_.inflation_; y <= pos(1) + mp_.inflation_; y += mp_.resolution_)
+  //   {
+  //     for(float z = pos(2) - mp_.inflation_; z <= pos(2) + mp_.inflation_; z += mp_.resolution_)
+  //     {
+  //       Bonxai::CoordT coord = bonxai_map_->grid().posToCoord(x, y, z);
+  //       if (bonxai_map_->isOccupied(coord)){
+  //         return true;
+  //       }
+  //     }
+  //   }
+  // }
+  // Return 0 if node is not occupied
+  // return false;
+
+  /* Using KDTree to check for inflation */
+
   if (!isInGlobalMap(pos)){
     return true;
   }
 
-  // Search inflated space of given position
-  for(float x = pos(0) - mp_.inflation_; x <= pos(0) + mp_.inflation_; x += mp_.resolution_)
-  {
-    for(float y = pos(1) - mp_.inflation_; y <= pos(1) + mp_.inflation_; y += mp_.resolution_)
-    {
-      for(float z = pos(2) - mp_.inflation_; z <= pos(2) + mp_.inflation_; z += mp_.resolution_)
-      {
-        Bonxai::CoordT coord = bonxai_map_->grid().posToCoord(x, y, z);
-        if (bonxai_map_->isOccupied(coord)){
-          return true;
-        }
-      }
-    }
-  }
-
-  // Return 0 if node is not occupied
-  return false;
+  return withinObsRadius(pos, mp_.inflation_);
 }
 
 bool GridMap::isInGlobalMap(const Eigen::Vector3d &pos)
@@ -658,6 +683,16 @@ bool GridMap::isInLocalMap(const Eigen::Vector3d &pos)
   return true;
 }
 
+bool GridMap::withinObsRadius(const Eigen::Vector3d &pos, const double& radius)
+{
+  std::vector<int> pointIdxRadiusSearch;
+  std::vector<float> pointRadiusSquaredDistance;
+
+  pcl::PointXYZ searchPoint(pos(0), pos(1), pos(2));
+
+  return kdtree_->radiusSearch (searchPoint, radius, pointIdxRadiusSearch, pointRadiusSquaredDistance) > 0 ;
+}
+
 bool GridMap::getNearestOccupiedCell(const Eigen::Vector3d &pos, Eigen::Vector3d& occ_nearest, double& radius){
   int K = 1;
 
@@ -678,6 +713,7 @@ bool GridMap::getNearestOccupiedCell(const Eigen::Vector3d &pos, Eigen::Vector3d
 
   return false;
 }
+
 
 void GridMap::depthToCloudMap(const sensor_msgs::ImageConstPtr &msg)
 {
