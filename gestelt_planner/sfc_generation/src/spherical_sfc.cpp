@@ -16,6 +16,9 @@ void SphericalSFC::addVizPublishers(ros::Publisher& p_cand_viz_pub,
 
 bool SphericalSFC::generateSFC(const std::vector<Eigen::Vector3d> &path)
 {
+    double get_fwd_pt_durs{0};
+    double batch_sample_durs{0};
+
     auto a = std::chrono::high_resolution_clock::now();
 
     Sphere B_cur; // current sphere being considered
@@ -35,21 +38,35 @@ bool SphericalSFC::generateSFC(const std::vector<Eigen::Vector3d> &path)
     itr_ = 0;
     while (itr_ < sfc_params_.max_itr)
     {
+        auto get_fwd_pt = std::chrono::high_resolution_clock::now();
+
         if (!getForwardPointOnPath(path, path_idx_cur, B_cur)){
             std::cout << "getForwardPointOnPath: Failed to get forward point on the path" << std::endl;
             return false;
         }
 
+        auto get_fwd_pt_end = std::chrono::high_resolution_clock::now();
+
+        auto batch_sample = std::chrono::high_resolution_clock::now();
+
         if (!BatchSample(path[path_idx_cur], B_cur)){
             std::cout << "Batch sample failed" << std::endl;
             return false;
         }
+
+        auto batch_sample_end = std::chrono::high_resolution_clock::now();
         
         sfc_spheres_.push_back(B_cur);
 
         if (B_cur.contains(path.back())){ // If current sphere contains the goal
             break;
         }
+
+        get_fwd_pt_durs += std::chrono::duration_cast<std::chrono::duration<double>>(
+            get_fwd_pt_end - get_fwd_pt).count();
+
+        batch_sample_durs += std::chrono::duration_cast<std::chrono::duration<double>>(
+            batch_sample_end - batch_sample).count();
 
         itr_++;
     }
@@ -58,12 +75,8 @@ bool SphericalSFC::generateSFC(const std::vector<Eigen::Vector3d> &path)
 
     publishVizSphericalSFC(sfc_spheres_, sfc_spherical_viz_pub_, "world");
 
-    std::cout << "[SphericalSFC] Before computeSFCTrajectory" << std::endl;
-
     computeSFCTrajectory(sfc_spheres_, path.back(), sfc_traj_);
-    std::cout << "[SphericalSFC] After computeSFCTrajectory" << std::endl;
     publishVizPiecewiseTrajectory(sfc_traj_.waypoints, sfc_waypoints_viz_pub_);
-    std::cout << "[SphericalSFC] After publishVizPiecewiseTrajectory" << std::endl;
 
     auto d = std::chrono::high_resolution_clock::now();
 
@@ -92,10 +105,15 @@ bool SphericalSFC::generateSFC(const std::vector<Eigen::Vector3d> &path)
     auto pub_dur = std::chrono::duration_cast<std::chrono::duration<double>>(
         d - c).count();
 
-    std::cout << "Total dur: " << total_loop_dur    << std::endl;
-    std::cout << "Preloop dur: " << preloop_dur     << "s, pct:" << preloop_dur / total_loop_dur * 100 << "%" << std::endl;
-    std::cout << "loop dur: " << loop_dur           << "s, pct:" << loop_dur / total_loop_dur * 100<< "%" << std::endl;
-    std::cout << "publish dur: " << pub_dur         << "s, pct:" << pub_dur / total_loop_dur * 100<< "%" << std::endl;
+    std::cout << "Spherical SFC runtimes [ms]: " << std::endl;
+
+    std::cout << "  Total dur: " << total_loop_dur *1000   << std::endl;
+    std::cout << "  Preloop dur: " << preloop_dur *1000    << ", pct:" << preloop_dur / total_loop_dur * 100 << "%" << std::endl;
+    std::cout << "  loop dur: " << loop_dur  *1000         << ", pct:" << loop_dur / total_loop_dur * 100<< "%" << std::endl;
+    std::cout << "      get_fwd_pt_durs: " << get_fwd_pt_durs  *1000         << ", pct:" << get_fwd_pt_durs / total_loop_dur * 100<< "%" << std::endl;
+    std::cout << "      batch_sample_durs: " << batch_sample_durs  *1000     << ", pct:" << batch_sample_durs / total_loop_dur * 100<< "%" << std::endl;
+
+    std::cout << "  publish dur: " << pub_dur  *1000       << "s, pct:" << pub_dur / total_loop_dur * 100<< "%" << std::endl;
 
     return true;
 }   
@@ -131,6 +149,8 @@ bool SphericalSFC::getForwardPointOnPath(
 
 bool SphericalSFC::BatchSample(const Eigen::Vector3d& p_guide, Sphere& B_cur)
 {
+    auto a = std::chrono::high_resolution_clock::now();
+
     // Priority queue of candidate spheres sorted by highest score first
     std::priority_queue<std::shared_ptr<Sphere>, std::vector<std::shared_ptr<Sphere>>, Sphere::CompareScorePtr> B_cand_pq = 
         std::priority_queue<std::shared_ptr<Sphere>, std::vector<std::shared_ptr<Sphere>>, Sphere::CompareScorePtr>();
@@ -141,7 +161,9 @@ bool SphericalSFC::BatchSample(const Eigen::Vector3d& p_guide, Sphere& B_cur)
     Eigen::Vector3d dir_vec = (p_guide - B_cur.center); // Direction vector from previous sphere to p_guide
     // std::cout << "Dir vec: " << dir_vec << std::endl;
     double stddev_x = sfc_params_.mult_stddev_x * dir_vec.norm(); // Get standard deviation along direction vector
-    Eigen::Vector3d stddev{stddev_x, 2*stddev_x, 2*stddev_x};
+    double stddev_y = sfc_params_.mult_stddev_y * dir_vec.norm(); // Get standard deviation along direction vector
+    double stddev_z = sfc_params_.mult_stddev_z * dir_vec.norm(); // Get standard deviation along direction vector
+    Eigen::Vector3d stddev{stddev_x, stddev_y, stddev_z};
 
     // Calculate orientation of distribution ellipsoid
     Eigen::Matrix<double, 3, 3> ellipse_rot_mat = rotationAlign(Eigen::Vector3d::UnitX(), dir_vec.normalized());
@@ -152,28 +174,49 @@ bool SphericalSFC::BatchSample(const Eigen::Vector3d& p_guide, Sphere& B_cur)
     sampler_.setSeed(seed);
     sampler_.setParams(p_guide, stddev);
     
+    auto b = std::chrono::high_resolution_clock::now();
+
     // Sample the points first then rotate them
     for (int k = 0; k < sfc_params_.max_sample_points; k++){
         /* Debugging */
         p_cand_vec.push_back(sampler_.sample());
     }
 
+    auto c = std::chrono::high_resolution_clock::now();
+
     // Transform set of sampled points to have its mean at p_guide and rotated along dir_vec
     // TODO: Use matrix parallelization for transformations
     transformPoints(p_cand_vec, p_guide, ellipse_rot_mat);
 
+    auto d = std::chrono::high_resolution_clock::now();
+
+    double d2_dur{0};
+    double d3_dur{0};
+
     for (auto& p_cand: p_cand_vec){
+        auto d1 = std::chrono::high_resolution_clock::now();
+
         std::shared_ptr<Sphere> B_cand = std::make_shared<Sphere>();
 
         // Generate candidate sphere, calculate score and add to priority queue
         generateFreeSphere(p_cand, *B_cand);
+
+        auto d2 = std::chrono::high_resolution_clock::now();
 
         B_cand->score = computeCandSphereScore(*B_cand, B_cur); 
 
         if (B_cand->score > 0){ // If score is positive, add sphere to priority queue
             B_cand_pq.push(B_cand); 
         }
+
+        auto d3 = std::chrono::high_resolution_clock::now();
+        d2_dur += std::chrono::duration_cast<std::chrono::duration<double>>(
+            d2 - d1).count() * 1000.0;
+        d3_dur += std::chrono::duration_cast<std::chrono::duration<double>>(
+            d3 - d2).count() * 1000.0;
     }
+
+    auto e = std::chrono::high_resolution_clock::now();
 
     // Publish candidate points and 3d distribution visualization
     if (sfc_params_.debug_viz){
@@ -181,18 +224,43 @@ bool SphericalSFC::BatchSample(const Eigen::Vector3d& p_guide, Sphere& B_cur)
         dist_viz_pub_.publish( createVizEllipsoid(p_guide, stddev, ellipse_orientation, "world", itr_));
     }
 
+    auto f = std::chrono::high_resolution_clock::now();
+
     if (B_cand_pq.empty()){
         std::cout << "Unable to generate next candidate sphere"<< std::endl;
         return false;
     }
 
-    std::cout << "Assigned next candidate sphere of radius " << B_cand_pq.top()->radius 
-                << ", with volume " << B_cand_pq.top()->getVolume() 
-                << ", intersecting volume " << getIntersectingVolume(*B_cand_pq.top(), B_cur ) 
-                << ", Center " << B_cand_pq.top()->center
-                << std::endl;
+    // std::cout << "Assigned next candidate sphere of radius " << B_cand_pq.top()->radius 
+    //             << ", with volume " << B_cand_pq.top()->getVolume() 
+    //             << ", intersecting volume " << getIntersectingVolume(*B_cand_pq.top(), B_cur ) 
+    //             << ", Center " << B_cand_pq.top()->center
+    //             << std::endl;
 
     B_cur = Sphere(B_cand_pq.top());
+
+    double chpt_b = std::chrono::duration_cast<std::chrono::duration<double>>(
+        b - a).count() * 1000.0;
+    double chpt_c = std::chrono::duration_cast<std::chrono::duration<double>>(
+        c - b).count() * 1000.0;
+    double chpt_d = std::chrono::duration_cast<std::chrono::duration<double>>(
+        d - c).count() * 1000.0;
+    double chpt_e = std::chrono::duration_cast<std::chrono::duration<double>>(
+        e - d).count() * 1000.0;
+    double chpt_f = std::chrono::duration_cast<std::chrono::duration<double>>(
+        f - e).count() * 1000.0;
+
+    double total_dur = chpt_b + chpt_c + chpt_d + chpt_e + chpt_f;
+    std::cout << "==========" << std::endl;
+
+    std::cout << "          b: " << chpt_b *1000  << ", pct:" << chpt_b / total_dur * 100 << "%" << std::endl;
+    std::cout << "          c: " << chpt_c *1000  << ", pct:" << chpt_c / total_dur * 100 << "%" << std::endl;
+    std::cout << "          d: " << chpt_d *1000  << ", pct:" << chpt_d / total_dur * 100 << "%" << std::endl;
+    std::cout << "              d2: " << d2_dur *1000  << ", pct:" << d2_dur / total_dur * 100 << "%" << std::endl;
+    std::cout << "              d3: " << d3_dur *1000  << ", pct:" << d3_dur / total_dur * 100 << "%" << std::endl;
+    std::cout << "          e: " << chpt_e *1000  << ", pct:" << chpt_e / total_dur * 100 << "%" << std::endl;
+    std::cout << "          f: " << chpt_f *1000  << ", pct:" << chpt_f / total_dur * 100 << "%" << std::endl;
+    std::cout << "==========" << std::endl;
 
     return true;
 }

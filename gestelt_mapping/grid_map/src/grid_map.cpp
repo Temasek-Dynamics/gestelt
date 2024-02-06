@@ -12,7 +12,7 @@ void GridMap::initMap(pcl::PointCloud<pcl::PointXYZ>::Ptr pcd, const Eigen::Vect
   mp_.map_origin_ = Eigen::Vector3d(mp_.global_map_size_(0) / 2.0, mp_.global_map_size_(1) / 2.0, 0.0);
   mp_.resolution_ = resolution;
 
-  mp_.global_map_num_cells_ = (map_size.cwiseProduct(Eigen::Vector3d::Constant(1/mp_.resolution_))).cast<int>();
+  mp_.global_map_num_voxels_ = (mp_.global_map_size_.cwiseProduct(Eigen::Vector3d::Constant(1/mp_.resolution_))).cast<int>();
 
   reset(mp_.resolution_);
 
@@ -37,7 +37,7 @@ void GridMap::initMapROS(ros::NodeHandle &nh, ros::NodeHandle &pnh)
                                       * Eigen::AngleAxisd((M_PI/180.0) * md_.cam2body_rpy_deg(2), Eigen::Vector3d::UnitZ())).toRotationMatrix();
   mp_.map_origin_ = Eigen::Vector3d(-mp_.global_map_size_(0) / 2.0, -mp_.global_map_size_(1) / 2.0, mp_.ground_height_);
   
-  mp_.global_map_num_cells_ = (map_size.cwiseProduct(Eigen::Vector3d::Constant(1/mp_.resolution_))).cast<int>();
+  mp_.global_map_num_voxels_ = (mp_.global_map_size_.cwiseProduct(Eigen::Vector3d::Constant(1/mp_.resolution_))).cast<int>();
 
   std::cout << "before dbg_input_entire_map_" << std::endl;
 
@@ -224,6 +224,7 @@ void GridMap::reset(const double& resolution){
 
   // Set up kdtree for generating safe flight corridors
   kdtree_ = std::make_shared<pcl::KdTreeFLANN<pcl::PointXYZ>>(); // KD-Tree 
+  kdtree_->setEpsilon(resolution);
 }
 
 /** Timer callbacks */
@@ -459,9 +460,9 @@ void GridMap::pcdToMap(pcl::PointCloud<pcl::PointXYZ>::Ptr pcd)
   auto kdtree_set_input_cloud_end = std::chrono::high_resolution_clock::now();
 
   std::cout << "kdtree_set_input_cloud duration: " << std::chrono::duration_cast<std::chrono::duration<double>>(
-        kdtree_set_input_cloud_end - kdtree_set_input_cloud_start).count() << std::endl;
+        kdtree_set_input_cloud_end - kdtree_set_input_cloud_start).count() * 1000.0 << std::endl;
   std::cout << "bonxai duration: " << std::chrono::duration_cast<std::chrono::duration<double>>(
-        bonxai_end - bonxai_start).count() << std::endl;
+        bonxai_end - bonxai_start).count() * 1000.0 << std::endl;
 
   ROS_INFO("[grid_map] Completed pcdToMap");
 }

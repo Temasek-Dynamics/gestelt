@@ -54,6 +54,7 @@ static void SFCPlan(benchmark::State& state)
 
   // Initialize front end planner
   AStarPlanner::AStarParams astar_params;
+  astar_params.cost_function_type = 0;
   astar_params.max_iterations = 999999;
   astar_params.tie_breaker = 1.0001;
   astar_params.debug_viz = false;

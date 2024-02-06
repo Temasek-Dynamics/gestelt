@@ -6,22 +6,49 @@ AStarPlanner::AStarPlanner(std::shared_ptr<GridMap> grid_map, const AStarParams&
     astar_params_(astar_params)
 {
     common_.reset(new PlannerCommon(grid_map));
-    occ_map_ = std::make_unique<OccMap<OccNodePtr>>(
-        common_->map_.global_map_num_cells_(0), 
-        common_->map_.global_map_num_cells_(1), 
-        common_->map_.global_map_num_cells_(2));
 }
 
 void AStarPlanner::reset()
 {
     closed_list_.clear();
-    open_list_ = std::priority_queue<OccNodePtr, std::vector<OccNodePtr>, OccNode::CompareCostPtr>();
+    open_list_.clear();
 }
 
 bool AStarPlanner::generatePlan(const Eigen::Vector3d &start_pos, const Eigen::Vector3d &goal_pos)
 {
-    auto total_loop_start = std::chrono::high_resolution_clock::now();
 
+    std::function<double(const PosIdx&, const PosIdx&)> cost_function;
+
+    switch ( astar_params_.cost_function_type ) {
+        case 0:
+            std::cout << "[AStar]: Using octile distance cost " << std::endl;
+            cost_function = getOctileDist;
+            break;
+        case 1:
+            std::cout << "[AStar]: Using L1 Norm" << std::endl;
+            cost_function = getL1Norm;
+            break;
+        case 2:
+            std::cout << "[AStar]: Using L2 Norm " << std::endl;
+            cost_function = getL2Norm;
+            break;
+        case 3:
+            std::cout << "[AStar]: Using Chebyshev Distance" << std::endl;
+            cost_function = getChebyshevDist;
+            break;
+        default: 
+            std::cout << "[AStar]: Using Octile Distance" << std::endl;
+            cost_function = getOctileDist;
+            break;
+    }
+    
+    return generatePlan(start_pos, goal_pos, cost_function);
+}
+
+bool AStarPlanner::generatePlan(const Eigen::Vector3d &start_pos, const Eigen::Vector3d &goal_pos, 
+                                std::function<double(const PosIdx&, const PosIdx&)> cost_function)
+{
+    auto total_loop_start = std::chrono::high_resolution_clock::now();
     auto preloop_start = std::chrono::high_resolution_clock::now();
 
     reset();
@@ -42,30 +69,16 @@ bool AStarPlanner::generatePlan(const Eigen::Vector3d &start_pos, const Eigen::V
         return false;
     }
 
-    Vector3i start_idx, goal_idx;
-    common_->posToIdx(start_pos, start_idx);
-    common_->posToIdx(goal_pos, goal_idx);
+    PosIdx start_node, goal_node;
+    common_->posToIdx(start_pos, start_node);
+    common_->posToIdx(goal_pos, goal_node);
 
-    OccNodePtr start_node = occ_map_(start_idx);
-    OccNodePtr goal_node = occ_map_(goal_idx);
+    came_from_[start_node] = start_node;
+    g_cost_[start_node] = 0;
 
-    start_node->g_cost = 0.0;
-
-    #if defined(L1_cost)
-        start_node->f_cost = astar_params_.tie_breaker * common_->getL1Norm(start_node, goal_node);
-    #elif defined(L2_cost)
-        start_node->f_cost = astar_params_.tie_breaker * common_->getL2Norm(start_node, goal_node);
-    #else 
-        start_node->f_cost = astar_params_.tie_breaker * common_->getL2Norm(start_node, goal_node);
-    #endif
-
-    start_node->parent = nullptr;
-
-    addToOpenlist(start_node);
+    open_list_.put(start_node, 0);
 
     int num_iter = 0;
-
-    std::vector<OccNodePtr> nb_nodes; // 3d indices of neighbors
 
     auto preloop_end = std::chrono::high_resolution_clock::now();
     auto preloop_dur = std::chrono::duration_cast<std::chrono::duration<double>>(
@@ -76,7 +89,9 @@ bool AStarPlanner::generatePlan(const Eigen::Vector3d &start_pos, const Eigen::V
     double get_nb_durs = 0;
     double get_occ_durs = 0;
 
-    while (!open_list_.empty())
+    std::vector<PosIdx> neighbours; // 3d indices of neighbors
+
+    while (!open_list_.empty() && num_iter < astar_params_.max_iterations)
     {
         auto loop_start = std::chrono::high_resolution_clock::now();
 
@@ -88,27 +103,27 @@ bool AStarPlanner::generatePlan(const Eigen::Vector3d &start_pos, const Eigen::V
 
         auto chkpt_1_start = std::chrono::high_resolution_clock::now();
 
-        OccNodePtr cur_node = popOpenlist();
-        addToClosedlist(cur_node); // Mark as visited
+        PosIdx cur_node = open_list_.get();
+        closed_list_.insert(cur_node);
 
         auto chkpt_1_end = std::chrono::high_resolution_clock::now();
-
-        if (*cur_node == *goal_node)
+        
+        if (cur_node == goal_node)
         {
             auto total_loop_end = std::chrono::high_resolution_clock::now();
             auto total_loop_dur = std::chrono::duration_cast<std::chrono::duration<double>>(
                 total_loop_end - total_loop_start).count();
 
-            std::cout << "Total dur: " << total_loop_dur                 << std::endl;
-            std::cout << "Preloop dur: " << preloop_dur                    << "s, pct:" << preloop_dur / total_loop_dur * 100 << "%" << std::endl;
-            std::cout << "loop dur: " << loop_durs                << "s, pct:" << loop_durs / total_loop_dur * 100<< "%" << std::endl;
-            std::cout << "  explore_nb dur: " << explore_nb_durs  << "s, pct:" << explore_nb_durs / total_loop_dur * 100 << "%" << std::endl;
-            std::cout << "  chkpt_1 dur: " << chkpt_1_durs        << "s, pct:" << chkpt_1_durs / total_loop_dur * 100<< "%" << std::endl;
-            std::cout << "  get_nb dur: " << get_nb_durs          << "s, pct:" << get_nb_durs / total_loop_dur * 100<< "%" << std::endl;
+            std::cout << "Total dur: " << total_loop_dur*1000                 << std::endl;
+            std::cout << "Preloop dur: " << preloop_dur  *1000                  << ", pct:" << preloop_dur / total_loop_dur * 100 << "%" << std::endl;
+            std::cout << "loop dur: " << loop_durs         *1000       << ", pct:" << loop_durs / total_loop_dur * 100<< "%" << std::endl;
+            std::cout << "  explore_nb dur: " << explore_nb_durs *1000 << ", pct:" << explore_nb_durs / total_loop_dur * 100 << "%" << std::endl;
+            std::cout << "  chkpt_1 dur: " << chkpt_1_durs *1000       << ", pct:" << chkpt_1_durs / total_loop_dur * 100<< "%" << std::endl;
+            std::cout << "  get_nb dur: " << get_nb_durs   *1000       << ", pct:" << get_nb_durs / total_loop_dur * 100<< "%" << std::endl;
             
-            std::cout << "  get_occ dur: " << get_occ_durs          << "s, pct:" << get_occ_durs / total_loop_dur * 100<< "%" << std::endl;
+            std::cout << "  get_occ dur: " << get_occ_durs *1000         << ", pct:" << get_occ_durs / total_loop_dur * 100<< "%" << std::endl;
 
-            // std::cout << "[a_star] Goal found at iteration " << num_iter << std::endl;
+            std::cout << "[a_star] Goal found at iteration " << num_iter << std::endl;
             // Goal reached, terminate search and obtain path
             tracePath(cur_node);
 
@@ -117,69 +132,52 @@ bool AStarPlanner::generatePlan(const Eigen::Vector3d &start_pos, const Eigen::V
 
         auto get_nb_start = std::chrono::high_resolution_clock::now();
         
-        common_->getNeighborsOG(cur_node, nb_nodes);
+        // std::cout << "Before getNeighbours" << std::endl;
+
+        common_->getNeighbours(cur_node, neighbours);
+
+        // std::cout << "After getNeighbours" << std::endl;
 
         auto get_nb_end = std::chrono::high_resolution_clock::now();
-
         auto explore_nb_start = std::chrono::high_resolution_clock::now();
 
         // Explore neighbors of current node
-        for (size_t i = 0; i < nb_nodes.size(); i++)
+        for (auto nb_node : neighbours)
         {
             // std::cout << "[a_star] Exploring neighbor " << common_->getPosStr(nb_node).c_str() << std::endl;
-            #if defined(L1_cost)
-                // double tent_g_cost = cur_node->g_cost + common_->nb_8con_dist_l1_[nb_8con_idxs[i]];
-                double tent_g_cost = cur_node->g_cost + common_->getL1Norm(cur_node, nb_nodes[i]);
-            #elif defined(L2_cost)
-                double tent_g_cost = cur_node->g_cost + common_->getL2Norm(cur_node, nb_nodes[i]);
-            #else 
-                double tent_g_cost = cur_node->g_cost + common_->nb_8con_dist_l2_[nb_8con_idxs[i]];
-            #endif
+            double tent_g_cost = g_cost_[cur_node] + cost_function(cur_node, nb_node);
 
-            // If tentative cost is better than previously computed cost, then update the g and f cost
-            if (tent_g_cost < nb_nodes[i]->g_cost)
+            // If tentative cost is better than previously computed cost, then update costs
+            if (g_cost_.find(nb_node) == g_cost_.end() || tent_g_cost < g_cost_[nb_node])
             {
-                nb_nodes[i]->g_cost = tent_g_cost;
-                // The tie_breaker is used to assign a larger weight to the h_cost and favour 
-                // expanding nodes closer towards the goal
-                #if defined(L1_cost)
-                    nb_nodes[i]->f_cost = tent_g_cost + astar_params_.tie_breaker * common_->getL1Norm(nb_nodes[i], goal_node);
-                #elif defined(L2_cost)
-                    nb_nodes[i]->f_cost = tent_g_cost + astar_params_.tie_breaker * common_->getL2Norm(nb_nodes[i], goal_node);
-                #else 
-                    nb_nodes[i]->f_cost = tent_g_cost + astar_params_.tie_breaker * common_->getL2Norm(nb_nodes[i], goal_node);
-                #endif
-            }
+                g_cost_[nb_node] = tent_g_cost;
+                // The tie_breaker is used to assign a larger weight to the h_cost and favour expanding nodes closer towards the goal
+                double f_cost = g_cost_[nb_node] + astar_params_.tie_breaker * cost_function(nb_node, goal_node);
 
-            // If not already in closed list: set parent and add to open list
-            if (!isInClosedList(nb_nodes[i])) 
-            {
-                nb_nodes[i]->parent = cur_node;
-                addToOpenlist(nb_nodes[i]);
+                // If not in closed list: set parent and add to open list
+                if (closed_list_.find(nb_node) == closed_list_.end()) 
+                {
+                    came_from_[nb_node] = cur_node;
+                    open_list_.put(nb_node, f_cost);
+                }
+                // No need to update parents for nodes already in closed list, paths leading up to current node is alr the most optimal
             }
-            // No need to update parents for nodes already in closed list, paths leading up to current node is alr the most optimal
         }
-
-        auto explore_nb_end = std::chrono::high_resolution_clock::now();
-
         num_iter++;
 
+        auto explore_nb_end = std::chrono::high_resolution_clock::now();
         auto loop_end = std::chrono::high_resolution_clock::now();
-
         explore_nb_durs += std::chrono::duration_cast<std::chrono::duration<double>>(
             explore_nb_end - explore_nb_start).count();
         loop_durs += std::chrono::duration_cast<std::chrono::duration<double>>(
             loop_end - loop_start).count();
-
         chkpt_1_durs += std::chrono::duration_cast<std::chrono::duration<double>>(
             chkpt_1_end - chkpt_1_start).count();
-
         get_nb_durs += std::chrono::duration_cast<std::chrono::duration<double>>(
             get_nb_end - get_nb_start).count();
     }
 
     std::cerr << "[a_star] Unable to find goal with maximum iteration " << num_iter << std::endl;
-
 
     return false;
 }
@@ -486,69 +484,67 @@ std::vector<Eigen::Vector3d> AStarPlanner::getClosedList()
     std::vector<Eigen::Vector3d> closed_list_pos;
     for (auto itr = closed_list_.begin(); itr != closed_list_.end(); ++itr) {
       Eigen::Vector3d node_pos;
-      common_->idxToPos((*itr)->idx, node_pos);
+      common_->idxToPos(*itr, node_pos);
       closed_list_pos.push_back(node_pos);
     }
 
     return closed_list_pos;
 }
 
-void AStarPlanner::addToOpenlist(OccNodePtr node)
-{
-    node->state = CellState::OPEN;
-    open_list_.push(node);
-}
+// void AStarPlanner::addToOpenlist(PosIdx node)
+// {
+//     node->state = CellState::OPEN;
+//     open_list_.push(node);
+// }
 
-OccNodePtr AStarPlanner::popOpenlist()
-{
-    OccNodePtr node = open_list_.top();
-    open_list_.pop();
-    return node;
-}
+// OccNodePtr AStarPlanner::popOpenlist()
+// {
+//     OccNodePtr node = open_list_.top();
+//     open_list_.pop();
+//     return node;
+// }
 
-void AStarPlanner::addToClosedlist(OccNodePtr node)
-{
-    node->state = CellState::CLOSED; // move current node to closed set.
-    closed_list_.insert(node);
-}
+// void AStarPlanner::addToClosedlist(OccNodePtr node)
+// {
+//     node->state = CellState::CLOSED; // move current node to closed set.
+//     closed_list_.insert(node);
+// }
 
-bool AStarPlanner::isInClosedList(OccNodePtr node)
-{
-    if (closed_list_.find(node) != closed_list_.end())
-    {
-        return true;
-    }
-    return false;
-}
+// bool AStarPlanner::isInClosedList(OccNodePtr node)
+// {
+//     if (closed_list_.find(node) != closed_list_.end())
+//     {
+//         return true;
+//     }
+//     return false;
+// }
 
-void AStarPlanner::tracePath(OccNodePtr node)
+void AStarPlanner::tracePath(PosIdx final_node)
 {
     // Clear existing data structures
-    path_gridnode_.clear();
     path_idx_.clear();
     path_pos_.clear();
 
     // Trace back the nodes through the pointer to their parent
-    OccNodePtr cur_node = node;
-    while (cur_node->parent != nullptr)
+    PosIdx cur_node = final_node;
+    while (!(cur_node == came_from_[cur_node]))
     {
-        path_gridnode_.push_back(cur_node);
-        cur_node = cur_node->parent;
+        path_idx_.push_back(cur_node);
+        cur_node = came_from_[cur_node];
     }
     // Push back the start node
-    path_gridnode_.push_back(cur_node);
+    path_idx_.push_back(cur_node);
 
     // Reverse the order of the path so that it goes from start to goal
-    std::reverse(path_gridnode_.begin(), path_gridnode_.end());
+    std::reverse(path_idx_.begin(), path_idx_.end());
 
     // For each gridnode, get the position and index,
     // So we can obtain a path in terms of indices and positions
-    for (auto gridnode_ptr : path_gridnode_)
+    for (auto idx : path_idx_)
     {
         Eigen::Vector3d gridnode_pos;
-        common_->idxToPos(gridnode_ptr->idx, gridnode_pos);
+        common_->idxToPos(idx, gridnode_pos);
 
         path_pos_.push_back(gridnode_pos);
-        path_idx_.push_back(gridnode_ptr->idx);
     }
 }

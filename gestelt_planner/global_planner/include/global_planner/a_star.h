@@ -19,6 +19,15 @@ public:
     int max_iterations; // Maximum iterations for Astar to run
     double tie_breaker;
     bool debug_viz; // Publish visualization messages for debugging 
+
+    /**
+     * 0: Octile
+     * 1: L1 Norm 
+     * 2: L2 Norm (Euclidean)
+     * 3: Chebyshev
+     * 4: 
+     */
+    int cost_function_type; // Type of cost function to use
   }; // struct SphericalSFCParams
 
   AStarPlanner(std::shared_ptr<GridMap> grid_map, const AStarParams& astar_params);
@@ -38,6 +47,17 @@ public:
    * @return false 
    */
   bool generatePlan(const Eigen::Vector3d& start_pos, const Eigen::Vector3d& goal_pos);
+
+  /**
+   * @brief Generate a new plan. 
+   * 
+   * @param start_pos 
+   * @param goal_pos 
+   * @return true 
+   * @return false 
+   */
+  bool generatePlan(const Eigen::Vector3d& start_pos, const Eigen::Vector3d& goal_pos, 
+    std::function<double(const PosIdx&, const PosIdx&)> cost_function);
 
   /**
    * @brief Get successful plan in terms of path positions
@@ -60,15 +80,15 @@ public:
 
 private:
 
-  void addToOpenlist(OccNodePtr node);
+  // void addToOpenlist(OccNodePtr node);
 
-  OccNodePtr popOpenlist();
+  // OccNodePtr popOpenlist();
 
-  void addToClosedlist(OccNodePtr node);
+  // void addToClosedlist(OccNodePtr node);
 
-  bool isInClosedList(OccNodePtr node);
+  // bool isInClosedList(OccNodePtr node);
 
-  void tracePath(OccNodePtr node);
+  void tracePath(PosIdx final_node);
 
   void publishVizPoints(const std::vector<Eigen::Vector3d>& pts, ros::Publisher& publisher, Eigen::Vector3d color = Eigen::Vector3d{0.0, 0.0, 0.0}, double radius = 0.1, const std::string& frame_id = "world")
   {
@@ -109,8 +129,7 @@ private:
   }
 
 private: 
-  std::vector<OccNodePtr> path_gridnode_; // Path in terms of Grid Nodes
-  std::vector<Eigen::Vector3i> path_idx_; // Path in terms of indices
+  std::vector<PosIdx> path_idx_; // Path in terms of indices
   std::vector<Eigen::Vector3d> path_pos_; // Path in terms of 3d position
 
   ros::Publisher closed_list_viz_pub_;
@@ -125,11 +144,16 @@ private:
   std::unique_ptr<PlannerCommon> common_; 
 
   // Priority queue: open list stores nodes yet to be visited
-  std::priority_queue<OccNodePtr, std::vector<OccNodePtr>, OccNode::CompareCostPtr> open_list_; 
+  // std::priority_queue<OccNodePtr, std::vector<OccNodePtr>, OccNode::CompareCostPtr> open_list_; 
   // Hashmap: closed list stores nodes that have been visited
-  std::unordered_set<OccNodePtr, OccNode::PointedObjHash, OccNode::PointedObjEq> closed_list_;
+  // std::unordered_set<OccNodePtr, OccNode::PointedObjHash, OccNode::PointedObjEq> closed_list_;
 
-  std::unique_ptr<OccMap<OccNodePtr>> occ_map_;
+  std::unordered_map<PosIdx, double> g_cost_; 
+  std::unordered_map<PosIdx, PosIdx> came_from_;
+  PriorityQueue<PosIdx, double> open_list_; // Min priority queue 
+  std::unordered_set<PosIdx> closed_list_; // All closed nodes
+
+  std::unique_ptr<OccMap> occ_map_;
 };
 
 #endif // _A_STAR_PLANNER_H_

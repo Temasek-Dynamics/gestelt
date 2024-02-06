@@ -12,6 +12,7 @@ void FrontEndPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   pnh.param("front_end/max_iterations", astar_params.max_iterations, -1);
   pnh.param("front_end/tie_breaker", astar_params.tie_breaker, -1.0);
   pnh.param("front_end/debug_viz", astar_params.debug_viz, false);
+  pnh.param("front_end/cost_function_type", astar_params.cost_function_type, 2);
   
   SphericalSFC::SphericalSFCParams sfc_params; 
   pnh.param("sfc/max_iterations", sfc_params.max_itr, -1);
@@ -19,6 +20,8 @@ void FrontEndPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
 
   pnh.param("sfc/max_sample_points", sfc_params.max_sample_points, -1);
   pnh.param("sfc/mult_stddev_x", sfc_params.mult_stddev_x, -1.0);
+  pnh.param("sfc/mult_stddev_y", sfc_params.mult_stddev_y, -1.0);
+  pnh.param("sfc/mult_stddev_z", sfc_params.mult_stddev_z, -1.0);
   pnh.param("sfc/W_cand_vol", sfc_params.W_cand_vol, -1.0);
   pnh.param("sfc/W_intersect_vol", sfc_params.W_intersect_vol, -1.0);
 
@@ -101,6 +104,7 @@ bool FrontEndPlanner::generatePlan(){
     viz_helper::publishVizCubes(front_end_planner_->getClosedList(), "world", closed_list_viz_pub_);
     return false;
   }
+
   double front_end_plan_time_ms = (ros::Time::now() - front_end_plan_start_time).toSec() * 1000;
 
   std::vector<Eigen::Vector3d> front_end_path = front_end_planner_->getPathPos();

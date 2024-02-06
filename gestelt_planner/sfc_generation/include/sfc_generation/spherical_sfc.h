@@ -122,6 +122,8 @@ public: // Public structs
     /* Sampling */
     int max_sample_points; // Maximum allowed sampling points
     double mult_stddev_x; // Multiplier for x standard deviation in sampling 
+    double mult_stddev_y; // Multiplier for x standard deviation in sampling 
+    double mult_stddev_z; // Multiplier for x standard deviation in sampling 
     double W_cand_vol;    // Weight of candidate volume
     double W_intersect_vol; // Weight of intersection of volumes
 

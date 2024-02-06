@@ -5,6 +5,7 @@
 #include <grid_map/grid_map.h>
 #include <limits>
 #include <Eigen/Eigen>
+#include <queue>
 
 using namespace Eigen;
 constexpr double inf = std::numeric_limits<float>::infinity();
@@ -21,50 +22,6 @@ enum CellState
   CLOSED = 2,
   UNDEFINED = 3
 };
-
-template <typename T>
-class OccMap {
-public:
-  OccMap(size_t sz_x, size_t sz_y, size_t sz_z, T const& t=T())
-    : sz_x_(sz_x), sz_y_(sz_y_), sz_z_(sz_z_)
-  {
-    occ_nodes_.resize(sz_x_ * sz_y_ * sz_z_);
-
-    for (size_t x = 0; x < sz_x_; x++){
-      for (size_t y = 0; y < sz_y_; y++){
-        for (size_t z = 0; z < sz_z_; z++){
-          occ_nodes_.at(x * sz_y_ * sz_z_ + y * sz_z_ + z) 
-            = OccNode(x, y, z);
-        }
-      }
-    }
-  }
-
-  // Access node of occupancy map at (x,y,z)
-  T& operator()(const Eigen::Vector3i& idx) {
-    return occ_nodes.at(idx(0) * sz_y_ * sz_z_ + idx(1) * sz_z_ + idx(2));
-  }
-
-  // Access node of occupancy map at (x,y,z)
-  T& operator()(size_t x, size_t y, size_t z) {
-    return occ_nodes.at(x * sz_y_ * sz_z_ + y * sz_z_ + z);
-  }
-
-  // Access const node of occupancy map at (x,y,z)
-  T const& operator()(const Eigen::Vector3i& idx) const {
-    return occ_nodes.at(idx(0) * sz_y_ * sz_z_ + idx(1) * sz_z_ + idx(2));
-  }
-
-  // Access const node of occupancy map at (x,y,z)
-  T const& operator()(size_t x, size_t y, size_t z) const {
-    return occ_nodes.at(x * sz_y_ * sz_z_ + y * sz_z_ + z);
-  }
-
-private:
-  size_t sz_x_, sz_y_, sz_z_; // Size of Occupancy Map
-  std::vector<T> occ_nodes_; // Contiguous vector of occupancy nodes
-}
-
 
 struct OccNode
 {
@@ -139,6 +96,127 @@ struct OccNode
 
 };
 
+class OccMap {
+public:
+  OccMap(size_t sz_x, size_t sz_y, size_t sz_z)
+    : sz_x_(sz_x), sz_y_(sz_y_), sz_z_(sz_z_)
+  {
+    data_.resize(sz_x * sz_y * sz_z);
+
+    // for (size_t x = 0; x < sz_x; x++){
+    //   for (size_t y = 0; y < sz_y; y++){
+    //     for (size_t z = 0; z < sz_z; z++){
+
+    //       data_.at((z * sz_y * sz_x) + (y * sz_x) + x) = std::make_shared<OccNode>(x, y, z);
+    //       // data_.at(x * sz_y_ * sz_z_ + y * sz_z_ + z)->setIdx(x,y,z);
+    //     }
+    //   }
+    // }
+
+  }
+
+  // Access node of occupancy map at (x,y,z)
+  std::shared_ptr<OccNode>& operator()(const Eigen::Vector3i& idx) {
+    return data_.at( (idx(2) * sz_y_ * sz_x_) + (idx(1) * sz_x_) + idx(0));
+  }
+
+  // Access node of occupancy map at (x,y,z)
+  std::shared_ptr<OccNode>& operator()(size_t x, size_t y, size_t z) {
+    return data_.at( (z * sz_y_ * sz_x_) + (y * sz_x_) + x);
+  }
+
+  // Access const node of occupancy map at (x,y,z)
+  std::shared_ptr<OccNode> const& operator()(const Eigen::Vector3i& idx) const {
+    return data_.at( (idx(2) * sz_y_ * sz_x_) + (idx(1) * sz_x_) + idx(0));
+  }
+
+  // Access const node of occupancy map at (x,y,z)
+  std::shared_ptr<OccNode> const& operator()(size_t x, size_t y, size_t z) const {
+    return data_.at( (z * sz_y_ * sz_x_) + (y * sz_x_) + x);
+  }
+
+  size_t getSize() const {
+    return data_.size();
+  }
+
+private:
+  size_t sz_x_, sz_y_, sz_z_; // Size of Occupancy Map
+  std::vector<std::shared_ptr<OccNode>> data_; // Contiguous vector of occupancy nodes
+};
+
+template<typename T, typename priority_t>
+struct PriorityQueue {
+  typedef std::pair<priority_t, T> PQElement;
+  struct PQComp {
+      constexpr bool operator()(
+          PQElement const& a,
+          PQElement const& b)
+          const noexcept
+      {
+          return a.first > b.first;
+      }
+  };
+
+  std::priority_queue<PQElement, std::vector<PQElement>, PQComp > elements;
+
+  inline bool empty() const {
+     return elements.empty();
+  }
+
+  inline void put(T item, priority_t priority) {
+    elements.emplace(priority, item);
+  }
+
+  T get() {
+    T best_item = elements.top().second;
+    elements.pop();
+    return best_item;
+  }
+
+  void clear() {
+    elements = std::priority_queue<PQElement, std::vector<PQElement>, PQComp>();
+  }
+};
+
+struct PosIdx {
+  PosIdx() {}
+
+  PosIdx(const int& x, const int& y, const int& z)
+    : x(x), y(y), z(z)
+  {}
+
+  void setIdx(const Eigen::Vector3i& idx)
+  {
+    x = idx(0);
+    y = idx(1);
+    z = idx(2);
+  }
+
+  Eigen::Vector3i getIdx() const
+  {
+    return Eigen::Vector3i{x, y, z};
+  }
+
+  // Equality
+  bool operator == (const PosIdx& pos) const
+  {
+    return (this->x == pos.x && this->y == pos.y && this->z == pos.z);
+  }
+
+  int x, y, z;
+}; // struct PosIdx
+
+
+template <> 
+struct std::hash<PosIdx> {
+  /* implement hash function so we can put PosIdx into an unordered_set */
+  std::size_t operator()(const PosIdx& pos) const noexcept {
+    // NOTE: better to use something like boost hash_combine
+    size_t H_x_y = 0.5 * (pos.x + pos.y)*(pos.x + pos.y + 1) + pos.y;
+    return 0.5 * (H_x_y + pos.z)*(H_x_y + pos.z + 1) + pos.z;
+  }
+};
+
 class PlannerCommon {
 /**
  * PlannerCommon acts a wrapper to the underlying obstacle map and provides commonly
@@ -184,34 +262,36 @@ public:
 
   }
 
-  /**
-   * @brief Get the Neighbors Idx object
-   * 
-   * @param cur_node 
-   * @param neighbors 
-   * @param nb_8con_idxs Index of 8 con neighbor lookup
-   */
-  void getNeighbors(OccNodePtr cur_node, std::vector<OccNodePtr>& neighbors, std::vector<int>& nb_8con_idxs){
-    neighbors.clear();
-    nb_8con_idxs.clear();
+  // /**
+  //  * @brief Get the Neighbors Idx object
+  //  * 
+  //  * @param cur_node 
+  //  * @param neighbors 
+  //  * @param nb_8con_idxs Index of 8 con neighbor lookup
+  //  */
+  // void getNeighbors(OccNodePtr cur_node, std::vector<OccNodePtr>& neighbors, std::vector<int>& nb_8con_idxs){
+  //   neighbors.clear();
+  //   nb_8con_idxs.clear();
 
-    for (int i = 0; i < nb_idx_8con_.rows(); i++){
-      Eigen::Vector3i nb_3d_idx = cur_node->idx + nb_idx_8con_.row(i).transpose();
-                                  // + Eigen::Vector3i{nb_idx_8con_.row(i)(0), nb_idx_8con_.row(i)(1), nb_idx_8con_.row(i)(2)};
+  //   for (int i = 0; i < nb_idx_8con_.rows(); i++){
+  //     Eigen::Vector3i nb_3d_idx = cur_node->idx + nb_idx_8con_.row(i).transpose();
+  //                                 // + Eigen::Vector3i{nb_idx_8con_.row(i)(0), nb_idx_8con_.row(i)(1), nb_idx_8con_.row(i)(2)};
 
-      if (getOccupancy(nb_3d_idx)){
-        // Skip if current index is occupied
-        continue;
-      }
+  //     if (getOccupancy(nb_3d_idx)){
+  //       // Skip if current index is occupied
+  //       continue;
+  //     }
 
-      neighbors.push_back(std::make_shared<OccNode>(nb_3d_idx));
-      nb_8con_idxs.push_back(i);
-    }
+  //     neighbors.push_back(std::make_shared<OccNode>(nb_3d_idx));
+  //     nb_8con_idxs.push_back(i);
+  //   }
 
-  }
+  // }
 
-  void getNeighborsOG(OccNodePtr cur_node, std::vector<OccNodePtr>& neighbors) {
-    neighbors.clear();
+  void getNeighbours(const PosIdx& cur_node, std::vector<PosIdx>& neighbours) {
+
+    neighbours.clear();
+    
     // Explore all 26 neighbours
     for (int dx = -1; dx <= 1; dx++)
     {
@@ -224,112 +304,44 @@ public:
             continue;
           }
 
-          Eigen::Vector3i nb_idx{
-            cur_node->idx(0) + dx,
-            cur_node->idx(1) + dy,
-            cur_node->idx(2) + dz,
-          };
+          PosIdx nb_idx(cur_node.x + dx, cur_node.y + dy, cur_node.z + dz);
           
           if (getOccupancy(nb_idx)){
             // Skip if current index is occupied
             continue;
           }
 
-          OccNodePtr nb_node = std::make_shared<OccNode>(nb_idx);
-          // ROS_INFO("getNeighbors: Pushed back (%d, %d, %d)", nb_idx(0), nb_idx(1), nb_idx(2));
-
-          neighbors.push_back(nb_node);
+          neighbours.push_back(nb_idx);
         }
       }
     }
   } 
 
-  // Get euclidean distance between node_1 and node_2
-  // NOTE: This is in units of indices
-  inline int getL1Norm(OccNodePtr a, OccNodePtr b) const {
-    // return (a->idx - b->idx).lpNorm<1>();
-
-    return abs(a->idx(0) - b->idx(0)) + abs(a->idx(1) - b->idx(1)) + abs(a->idx(2) - b->idx(2));
-  }
-
-  // Get euclidean distance between node_1 and node_2
-  // NOTE: This is in units of indices
-  inline double getL2Norm(OccNodePtr node_1, OccNodePtr node_2) const {
-    double dx = abs(node_2->idx(0) - node_1->idx(0));
-    double dy = abs(node_2->idx(1) - node_1->idx(1));
-    double dz = abs(node_2->idx(2) - node_1->idx(2));
-
-    return sqrt(dx*dx + dy*dy + dz*dz);
-  }
-
-  // Get octile distance
-  inline double getOctileDist(OccNodePtr node_1, OccNodePtr node_2) const {
-    double dx = abs(node_2->idx(0) - node_1->idx(0));
-    double dy = abs(node_2->idx(1) - node_1->idx(1));
-    double dz = abs(node_2->idx(2) - node_1->idx(2));
-
-    return (dx + dy + dz) - std::min(dx, std::min(dy, dz)); 
-  }
-
-  // Get chebyshev distance
-  inline double getChebyshevDist(OccNodePtr node_1, OccNodePtr node_2) const {
-    double dx = abs(node_2->idx(0) - node_1->idx(0));
-    double dy = abs(node_2->idx(1) - node_1->idx(1));
-    double dz = abs(node_2->idx(2) - node_1->idx(2));
-
-    return (dx + dy + dz) + (SQRT2 - 2) * std::min(dx, std::min(dy, dz)); 
-  }
-
-  // ??? 
-  double getDiagCost(OccNodePtr node_1, OccNodePtr node_2) {
-    double dx = abs(node_1->idx(0) - node_2->idx(0));
-    double dy = abs(node_1->idx(1) - node_2->idx(1));
-    double dz = abs(node_1->idx(2) - node_2->idx(2));
-
-    double h = 0.0;
-    int diag = std::min(std::min(dx, dy), dz);
-    dx -= diag;
-    dy -= diag;
-    dz -= diag;
-
-    if (dx == 0)
-    {
-      h = 1.0 * sqrt(3.0) * diag + sqrt(2.0) * std::min(dy, dz) + 1.0 * abs(dy - dz);
-    }
-    if (dy == 0)
-    {
-      h = 1.0 * sqrt(3.0) * diag + sqrt(2.0) * std::min(dx, dz) + 1.0 * abs(dx - dz);
-    }
-    if (dz == 0)
-    {
-      h = 1.0 * sqrt(3.0) * diag + sqrt(2.0) * std::min(dx, dy) + 1.0 * abs(dx - dy);
-    }
-    return h;
-  }
-
   // Get index of grid node in string 
-  std::string getIndexStr(OccNodePtr node){
-    return "(" + std::to_string(node->idx(0)) + ", " + std::to_string(node->idx(1)) + ", " +  std::to_string(node->idx(2)) + ")";
+  std::string getIndexStr(PosIdx idx){
+    return "("  + std::to_string(idx.x) + ", " 
+                + std::to_string(idx.y) + ", " 
+                + std::to_string(idx.z) + ")";
   }
 
   // Get position of grid node in string 
-  std::string getPosStr(OccNodePtr node){
+  std::string getPosStr(PosIdx idx){
     Eigen::Vector3d pos;
-    idxToPos(node->idx, pos);
+    idxToPos(idx, pos);
     return "(" + std::to_string(pos(0)) + ", " + std::to_string(pos(1)) + ", " +  std::to_string(pos(2)) + ")";
   }
 
   // Convert from 3d position to gridmap index
-  void posToIdx(const Eigen::Vector3d& pos, Eigen::Vector3i& idx) {
-    idx = ((pos - map_->getOrigin()) / map_->getResolution()).array().floor().cast<int>();
+  void posToIdx(const Eigen::Vector3d& pos, PosIdx& idx) {
+    idx.setIdx(((pos - map_->getOrigin()) / map_->getResolution()).array().ceil().cast<int>());
   }
 
   // Convert from gridmap index to 3d position
-  void idxToPos(const Eigen::Vector3i& idx, Eigen::Vector3d& pos){
-    pos = idx.cast<double>() * map_->getResolution() + map_->getOrigin();
+  void idxToPos(const PosIdx& idx, Eigen::Vector3d& pos){
+    pos = (idx.getIdx()).cast<double>() * map_->getResolution() + map_->getOrigin();
   }
 
-  bool isInGlobalMap(const Eigen::Vector3i& idx){
+  bool isInGlobalMap(const PosIdx& idx){
     Eigen::Vector3d pos;
     idxToPos(idx, pos);
     return map_->isInGlobalMap(pos);
@@ -339,7 +351,7 @@ public:
     return map_->isInGlobalMap(pos);
   }
 
-  int getOccupancy(const Eigen::Vector3i& idx){
+  int getOccupancy(const PosIdx& idx){
     Eigen::Vector3d pos;
     idxToPos(idx, pos);
     return map_->getInflateOccupancy(pos);
@@ -425,5 +437,69 @@ public:
 
   std::shared_ptr<GridMap> map_; 
 };
+
+
+
+
+// Get euclidean distance between node_1 and node_2
+// NOTE: This is in units of indices
+inline double getL1Norm(const PosIdx& a, const PosIdx& b) {
+  return abs(a.x - b.x) + abs(a.y - b.y) + abs(a.z - b.z);
+}
+
+// Get euclidean distance between node_1 and node_2
+// NOTE: This is in units of indices
+inline double getL2Norm(const PosIdx& a, const PosIdx& b) {
+  double dx = abs(a.x - b.x);
+  double dy = abs(a.y - b.y);
+  double dz = abs(a.z - b.z);
+
+  return sqrt(dx*dx + dy*dy + dz*dz);
+}
+
+// // Get octile distance
+inline double getChebyshevDist(const PosIdx& a, const PosIdx& b)  {
+  double dx = abs(a.x - b.x);
+  double dy = abs(a.y - b.y);
+  double dz = abs(a.z - b.z);
+
+  return (dx + dy + dz) - std::min(dx, std::min(dy, dz)); 
+}
+
+// // Get chebyshev distance
+inline double getOctileDist(const PosIdx& a, const PosIdx& b)  {
+  double dx = abs(a.x - b.x);
+  double dy = abs(a.y - b.y);
+  double dz = abs(a.z - b.z);
+
+  return (dx + dy + dz) + (SQRT2 - 2) * std::min(dx, std::min(dy, dz)); 
+}
+
+// ??? 
+// double getDiagCost(OccNodePtr node_1, OccNodePtr node_2) {
+//   double dx = abs(node_1->idx(0) - node_2->idx(0));
+//   double dy = abs(node_1->idx(1) - node_2->idx(1));
+//   double dz = abs(node_1->idx(2) - node_2->idx(2));
+
+//   double h = 0.0;
+//   int diag = std::min(std::min(dx, dy), dz);
+//   dx -= diag;
+//   dy -= diag;
+//   dz -= diag;
+
+//   if (dx == 0)
+//   {
+//     h = 1.0 * sqrt(3.0) * diag + sqrt(2.0) * std::min(dy, dz) + 1.0 * abs(dy - dz);
+//   }
+//   if (dy == 0)
+//   {
+//     h = 1.0 * sqrt(3.0) * diag + sqrt(2.0) * std::min(dx, dz) + 1.0 * abs(dx - dz);
+//   }
+//   if (dz == 0)
+//   {
+//     h = 1.0 * sqrt(3.0) * diag + sqrt(2.0) * std::min(dx, dy) + 1.0 * abs(dx - dy);
+//   }
+//   return h;
+// }
 
 #endif // _PLANNER_COMMON_H_

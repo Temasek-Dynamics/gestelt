@@ -41,7 +41,7 @@ struct MappingParameters
   Eigen::Vector3d global_map_size_; //  Size of global occupancy map  (m)
   Eigen::Vector3d local_map_size_; //  Size of local occupancy map (m)
 
-  Eigen::Vector3i global_map_num_cells_; //  Size of global occupancy grid (no. of voxels)
+  Eigen::Vector3i global_map_num_voxels_; //  Size of global occupancy grid (no. of voxels)
 
   double resolution_; // Voxel size for occupancy grid without inflation                  
   double inflation_; // Voxel size for occupancy grid with inflation
@@ -237,6 +237,9 @@ public:
 
   // Get odometry depth timeout
   bool getPoseDepthTimeout() { return md_.flag_sensor_timeout_; }
+
+  // Get number of voxels
+  Eigen::Vector3i getGlobalMapNumVoxels() const { return mp_.global_map_num_voxels_; }
 
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 

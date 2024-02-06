@@ -2,24 +2,28 @@
 # Front-end params
 #####
 front_end:
-  planner_frequency: 10.0
+  cost_function_type: 0    # Type of cost function to use 
   goal_tolerance: 0.1       # in [m]
-  max_iterations: 99999999  
+  max_iterations: 99999  
   debug_viz: true          # If true, publish visualization for debugging
   tie_breaker: 1.0001       # Tie breaker as weight for f-cost (cost-to-go)
 
+  planner_frequency: 10.0
+
 sfc:
   max_iterations: 100     # Corresponds to maximum number of spheres
-  debug_viz: false        # If true, publish visualization for debugging
+  debug_viz: true        # If true, publish visualization for debugging
   # Sampling
-  max_sample_points: 1000 # Maximum sample points for candidate sphere
-  mult_stddev_x: 0.1      # A higher value leads to clustering of spheres around previous spheres
+  max_sample_points: 500 # Maximum sample points for candidate sphere
+  mult_stddev_x: 0.2      # if mult_stddev_x is too high, the spheres cannot round corners and generate loads of spheres around the same area around corners
+  mult_stddev_y: 0.2      # 
+  mult_stddev_z: 0.2      # 
   W_cand_vol: 1           # Weight for candidate sphere volume
   W_intersect_vol: 5      # Weight for volume of intersection between spheres
   # Criteria for valid spheres
   min_sphere_vol: 0.1 # (m^3) Minimum volume of sphere
-  max_sphere_vol: 1000.0 # (m^3) Maximum allowed sphere volume
-  min_sphere_intersect: 0.05 # (m^3) Minimum volume of sphere intersection
+  max_sphere_vol: 10000.0 # (m^3) Maximum allowed sphere volume
+  min_sphere_intersect: 0.1 # (m^3) Minimum volume of sphere intersection
 
   # Initial time allocation
   avg_vel: 1.5 # Average velocity (m/s) used for estimating initial time allocation
