@@ -1,0 +1,15 @@
+<launch>
+
+    <arg name="drone_id" default="0"/>
+
+    <!-- Input/output topics -->
+    <arg name="odometry_topic" default="mavros/local_position/odom" />
+
+    <node pkg="ruckig_planner" name="ruckig_trajectory_generator" type="ruckig_trajectory_generator" output="screen">
+        <!--Subscribed topics-->
+        <remap from="/waypoints" to="/planner/goals"/>
+        <remap from="uav_pose" to="/$(arg odometry_topic)"/>
+        <!-- published topics -->
+        <remap from="command/trajectory" to="/planner/trajectory"/>
+    </node>
+</launch>

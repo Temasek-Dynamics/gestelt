@@ -12,36 +12,35 @@ set(ROS_LIBRARIES
   controller_msgs
   rospy
   nav_msgs
+  trajectory_msgs
+  eigen_conversions
 )
 
 find_package(Eigen3 REQUIRED)
+find_package(ruckig REQUIRED)
 find_package(catkin REQUIRED COMPONENTS
   ${ROS_LIBRARIES}
 )
 
 catkin_package(
- INCLUDE_DIRS include
- LIBRARIES ruckig_planner
-#  CATKIN_DEPENDS ${ROS_DEPENDS}
-#  DEPENDS system_lib
+ CATKIN_DEPENDS ${ROS_DEPENDS}
 )
 
 include_directories(
   include
-  SYSTEM
   ${catkin_INCLUDE_DIRS} 
-  ${PROJECT_SOURCE_DIR}/include
   ${EIGEN3_INCLUDE_DIR}
 )
-# link_directories(lib)
-
-# Build the position example
-# add_executable(example_position src/example_1.cpp)
-# target_compile_features(example_position PUBLIC cxx_std_17)
 
 
+add_executable(ruckig_trajectory_generator 
+  src/ruckig_trajectory_generator.cpp
+  src/ruckig_trajectory_generator_node.cpp
+)
+add_dependencies(ruckig_trajectory_generator ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_compile_features(ruckig_trajectory_generator PUBLIC cxx_std_17)
+target_link_libraries(ruckig_trajectory_generator PUBLIC ${catkin_LIBRARIES} ruckig::ruckig)
 
-# target_link_libraries(example_position 
-#   ${catkin_LIBRARIES}
-#   ${EIGEN3_LIBRARIES}
-# )
+install(TARGETS ruckig_trajectory_generator
+  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)

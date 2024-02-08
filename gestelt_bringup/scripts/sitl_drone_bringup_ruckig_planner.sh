@@ -42,11 +42,11 @@ roslaunch trajectory_server trajectory_server_node.launch rviz_config:=gz_sim
 
 # Start up minimum snap trajectory planner and sampler 
 CMD_2="
-roslaunch ruckig_planner example.launch
+ roslaunch ruckig_planner ruckig_trajectory_generator.launch
 "
 
 # Start up script to send commands
-CMD_3="roslaunch gestelt_bringup mission.launch"
+CMD_3="roslaunch gestelt_bringup ruckig_mission.launch"
 
 # disarm drone
 # CMD_4="rosservice call /drone_commander/disarm"
@@ -64,9 +64,9 @@ then
     sleep 2
     tmux send-keys -t $SESSION:0.1 "$SOURCE_WS $CMD_1" C-m 
     sleep 1
-    tmux send-keys -t $SESSION:0.0 "$SOURCE_WS $CMD_2" C-m 
+    tmux send-keys -t $SESSION:0.2 "$SOURCE_WS $CMD_2" C-m 
     sleep 1
-    tmux send-keys -t $SESSION:0.1 "$SOURCE_WS $CMD_3" C-m
+    tmux send-keys -t $SESSION:0.3 "$SOURCE_WS $CMD_3" C-m
 fi
 
 # Attach session on the first window

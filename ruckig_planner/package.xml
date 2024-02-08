@@ -60,6 +60,8 @@
   <exec_depend>std_msgs</exec_depend>
 
   <depend>ruckig</depend>
+  <depend>gestelt_msgs</depend>
+  <depend>mavros_msgs</depend>
 
 
   <!-- The export tag contains other, unspecified, tags -->

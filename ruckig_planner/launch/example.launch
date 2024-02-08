@@ -1,6 +1,0 @@
-<launch>
-    <node pkg="ruckig_planner" name="example_1" type="example_1.py" output="screen">
-        <!--Subscribed topics-->
-        <remap from="/waypoints" to="/planner/goals"/>
-    </node>
-</launch>

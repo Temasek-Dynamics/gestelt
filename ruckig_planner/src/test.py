@@ -3,16 +3,19 @@
 import rospy
 from gestelt_msgs.msg import Goals
 from geometry_msgs.msg import Vector3
+from mavros_msgs.msg import PositionTarget
+from std_msgs.msg import Header
 import matplotlib.pyplot as plt
 import numpy as np
+import math
 
 from ruckig import InputParameter, Result, Ruckig, Trajectory
 
 class RuckigPlanner:
     def __init__(self):
         rospy.init_node('RuckigPlanner', anonymous=True)
-        rospy.loginfo("[RuckigPlanner] Ruckig is working" )
-
+        rospy.loginfo("[RuckigPlanner] Ruckig is ON" )
+        self.referencePublisher = rospy.Publisher('/reference', PositionTarget, queue_size=50)
         rospy.Subscriber('/planner/goals', Goals, self.waypointCB)
         self.goal_waypoints = []
         self.goal_waypoints_vel = []
@@ -27,7 +30,7 @@ class RuckigPlanner:
         self.goal_waypoints_vel = [Vector3(vel.linear.x, vel.linear.y, vel.linear.z) for vel in msg.velocities]
         self.goal_waypoints_acc = [Vector3(acc.linear.x, acc.linear.y, acc.linear.z) for acc in msg.accelerations]
 
-        rospy.loginfo("[Trajectory Planner] No. of waypoints: %d", len(msg.waypoints))
+        rospy.loginfo("[Ruckig Planner] No. of waypoints: %d", len(msg.waypoints))
         self.planner()
 
     def planner(self):
@@ -35,7 +38,7 @@ class RuckigPlanner:
         inp = InputParameter(3)
         
         # Replace with actual values from odom
-        inp.current_position = [0.0, 0.0, 1.0]
+        inp.current_position = [0.0, 0.0, 1.2]
         inp.current_velocity = [0.0, 0.0, 0.0]
         inp.current_acceleration = [0.0, 0.0, 0.0]
 
@@ -72,42 +75,40 @@ class RuckigPlanner:
             self.velocity.append(new_velocity)
             self.acceleration.append(new_acceleration)
             time_stamp += 1/25  # 25Hz for publishing commands
+            self.pubTrajectory(new_position, new_velocity, new_acceleration, time_stamp)
 
-        self.position = np.array(self.position)
-        self.velocity = np.array(self.velocity)
-        self.acceleration = np.array(self.acceleration)
-        rospy.loginfo(f'Position Values are: \n{self.position}')
-        self.uavStatePlotter(flight_duration)
+        # self.position = np.array(self.position)
+        # self.velocity = np.array(self.velocity)
+        # self.acceleration = np.array(self.acceleration)
+        # rospy.loginfo(f'Position Values are: \n{self.position}')
+        # self.uavStatePlotter(flight_duration)
 
-    def uavStatePlotter(self, flight_duration):
-        x = self.position[:, 0]
-        y = self.position[:, 1]
-        z = self.position[:, 2]
+    def pubTrajectory(self, pos, vel, acc, time_stamp):
+        msg = PositionTarget()
+        header = Header()
+        header.stamp = rospy.Time.now() 
+        header.frame_id = "World"
+        msg.position.x = pos[0]
+        msg.position.y = pos[1]
+        msg.position.z = pos[2]
 
-        # Calculate the number of points
-        num_points = len(x)
+        msg.velocity.x = vel[0]
+        msg.velocity.y = vel[1]
+        msg.velocity.z = vel[2]
 
-        # Generate time values based on flight duration
-        time = np.linspace(0, flight_duration, num_points)
+        msg.acceleration_or_force.x = acc[0]
+        msg.acceleration_or_force.y = acc[1]
+        msg.acceleration_or_force.z = acc[2]
 
-        # Plot the UAV position
-        fig = plt.figure()
-        ax = fig.add_subplot(111, projection='3d')
-        ax.plot(time, x, label='X-axis')
-        ax.plot(time, y, label='Y-axis')
-        ax.plot(time, z, label='Z-axis')
+        msg.yaw_rate = 0
+        msg.yaw = -math.pi/2
 
-        # Set labels and title
-        ax.set_xlabel('Time')
-        ax.set_ylabel('Position')
-        ax.set_zlabel('Coordinates')
-        ax.set_title('UAV Position over Time')
+        msg.header = header
 
-        # Show legend
-        ax.legend()
+        self.referencePublisher.publish(msg)
+        rospy.loginfo("Trajectory Published")
 
-        # Show the plot
-        plt.show()
+
 
 if __name__ == '__main__':
     try:
