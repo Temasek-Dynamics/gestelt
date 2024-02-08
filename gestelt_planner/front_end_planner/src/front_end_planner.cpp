@@ -46,10 +46,11 @@ void FrontEndPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   front_end_plan_viz_pub_ = nh.advertise<visualization_msgs::Marker>("plan_viz", 10);
   closed_list_viz_pub_ = nh.advertise<visualization_msgs::Marker>("closed_list_viz", 10);
 
-  sfc_spherical_viz_pub_ = nh.advertise<visualization_msgs::Marker>("sfc_spherical", 10);
+  sfc_spherical_viz_pub_ = nh.advertise<visualization_msgs::MarkerArray>("sfc_spherical", 10);
 
   sfc_p_cand_viz_pub_ = nh.advertise<visualization_msgs::Marker>("sfc_cand_points", 10);
-  sfc_dist_viz_pub_ = nh.advertise<visualization_msgs::Marker>("sfc_dist", 10);
+  sfc_dist_viz_pub_ = nh.advertise<visualization_msgs::MarkerArray>("sfc_dist", 10);
+  samp_dir_vec_pub_ = nh.advertise<visualization_msgs::MarkerArray>("sfc_samp_dir_vec", 10);
   sfc_waypoints_viz_pub_ = nh.advertise<visualization_msgs::Marker>("sfc_waypoints", 10);
 
   // plan_timer_ = nh.createTimer(ros::Duration(1/planner_freq), &FrontEndPlanner::planTimerCB, this);
@@ -64,7 +65,12 @@ void FrontEndPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
 
   sfc_generation_ = std::make_unique<SphericalSFC>(map_, sfc_params);
 
-  sfc_generation_->addVizPublishers(sfc_p_cand_viz_pub_, sfc_dist_viz_pub_, sfc_spherical_viz_pub_, sfc_waypoints_viz_pub_);
+  sfc_generation_->addVizPublishers(
+    sfc_p_cand_viz_pub_, 
+    sfc_dist_viz_pub_, 
+    samp_dir_vec_pub_, 
+    sfc_spherical_viz_pub_, 
+    sfc_waypoints_viz_pub_);
 }
 
 /**

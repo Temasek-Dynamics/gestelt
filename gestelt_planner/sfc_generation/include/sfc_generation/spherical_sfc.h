@@ -9,6 +9,7 @@
 
 #include <ros/ros.h>
 #include <visualization_msgs/Marker.h>
+#include <visualization_msgs/MarkerArray.h>
 
 #include <chrono>
 class SphericalSFC : public SFCBase
@@ -176,9 +177,11 @@ public:
    */
   void clear();
     
-  void addVizPublishers(ros::Publisher& p_cand_viz_pub, 
-    ros::Publisher& dist_viz_pub, ros::Publisher& sfc_spherical_viz_pub,
-    ros::Publisher&  sfc_waypoints_viz_pub);
+  void addVizPublishers(
+    ros::Publisher& p_cand_viz_pub, 
+    ros::Publisher& dist_viz_pub, ros::Publisher& samp_dir_vec_pub,
+    ros::Publisher& sfc_spherical_viz_pub, ros::Publisher&  sfc_waypoints_viz_pub
+  );
 
   /**
    * @brief Generate a spherical safe flight corridor given a path
@@ -224,7 +227,15 @@ private: // Private methods
   bool getForwardPointOnPath(
     const std::vector<Eigen::Vector3d> &path, size_t& start_idx, const Sphere& B_prev);
 
-  bool BatchSample(const Eigen::Vector3d& point, Sphere& B_cur);
+  /**
+   * @brief Sample a batch of spheres
+   * 
+   * @param pt_guide 
+   * @param B_cur 
+   * @return true 
+   * @return false 
+   */
+  bool BatchSample(const Eigen::Vector3d& pt_guide, Sphere& B_cur);
 
   /**
    * @brief Get the center of the curve of intersection made between spheres B_a and B_b
@@ -285,6 +296,10 @@ private: // Private methods
   void publishVizSphericalSFC(const std::vector<SphericalSFC::Sphere>& sfc_spheres, 
                               ros::Publisher& publisher, const std::string& frame_id = "world");
 
+  visualization_msgs::Marker createArrow(
+    const Eigen::Vector3d& pt_guide, const Eigen::Vector3d& dir_vec, 
+    const std::string& frame_id, const int& id);
+
   visualization_msgs::Marker createVizSphere( const Eigen::Vector3d& center, const double& diameter, 
                                               const std::string& frame_id, const int& id);
 
@@ -297,6 +312,7 @@ private: // Private members
   ros::Publisher dist_viz_pub_; // Visualization of sampling distribution
   ros::Publisher sfc_spherical_viz_pub_; // Visualization of spherical SFC
   ros::Publisher sfc_waypoints_viz_pub_; // Visualization of trajectory waypoints
+  ros::Publisher samp_dir_vec_pub_; // Visualization of direction vectors used for sampling
 
   /* Params */
   int itr_; // Iteration number
@@ -306,6 +322,10 @@ private: // Private members
   std::shared_ptr<GridMap> grid_map_; 
   std::vector<SphericalSFC::Sphere> sfc_spheres_; // Waypoints of the spherical flight corridor
   SphericalSFC::SFCTrajectory sfc_traj_;          // SFC Trajectory 
+
+  std::vector<Eigen::Vector3d> p_cand_vec_hist_; // history of candidate points
+  visualization_msgs::MarkerArray sampling_dist_hist_; // history of sampling distributions (1 s.d.)
+  visualization_msgs::MarkerArray samp_dir_vec_hist_; // history of sampling distributions (1 s.d.)
 
 }; // class SphericalSFC
 

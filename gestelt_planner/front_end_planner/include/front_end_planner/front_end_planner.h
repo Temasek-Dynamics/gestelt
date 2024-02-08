@@ -52,6 +52,7 @@ private:
 
   ros::Publisher sfc_p_cand_viz_pub_; // Visualization of SFC sampling points
   ros::Publisher sfc_dist_viz_pub_; // Visualization of SFC sampling distribution
+  ros::Publisher samp_dir_vec_pub_; // Visualization of SFC sampling direction vectors
   ros::Publisher sfc_waypoints_viz_pub_; // Visualization of SFC waypoints
 
   ros::Timer plan_timer_; // Timer for planning loop

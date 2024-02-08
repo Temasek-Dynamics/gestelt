@@ -4,12 +4,14 @@ SphericalSFC::SphericalSFC(std::shared_ptr<GridMap> grid_map, const SphericalSFC
     grid_map_(grid_map), sfc_params_(sfc_params)
 {}   
 
-void SphericalSFC::addVizPublishers(ros::Publisher& p_cand_viz_pub, 
-    ros::Publisher& dist_viz_pub, ros::Publisher& sfc_spherical_viz_pub,
-    ros::Publisher&  sfc_waypoints_viz_pub)
+void SphericalSFC::addVizPublishers(
+    ros::Publisher& p_cand_viz_pub, 
+    ros::Publisher& dist_viz_pub, ros::Publisher& samp_dir_vec_pub,
+    ros::Publisher& sfc_spherical_viz_pub, ros::Publisher&  sfc_waypoints_viz_pub)
 {
     p_cand_viz_pub_ = p_cand_viz_pub;
     dist_viz_pub_ = dist_viz_pub;
+    samp_dir_vec_pub_ = samp_dir_vec_pub;
     sfc_spherical_viz_pub_ = sfc_spherical_viz_pub;
     sfc_waypoints_viz_pub_ = sfc_waypoints_viz_pub;
 }
@@ -70,13 +72,20 @@ bool SphericalSFC::generateSFC(const std::vector<Eigen::Vector3d> &path)
 
         itr_++;
     }
-
     auto c = std::chrono::high_resolution_clock::now();
 
-    publishVizSphericalSFC(sfc_spheres_, sfc_spherical_viz_pub_, "world");
+    // Publish candidate points and 3d distribution visualization
+    if (sfc_params_.debug_viz){
 
-    computeSFCTrajectory(sfc_spheres_, path.back(), sfc_traj_);
-    publishVizPiecewiseTrajectory(sfc_traj_.waypoints, sfc_waypoints_viz_pub_);
+        publishVizPoints(p_cand_vec_hist_, p_cand_viz_pub_); 
+        dist_viz_pub_.publish(sampling_dist_hist_);
+        samp_dir_vec_pub_.publish(samp_dir_vec_hist_);
+
+        publishVizSphericalSFC(sfc_spheres_, sfc_spherical_viz_pub_, "world");
+
+        computeSFCTrajectory(sfc_spheres_, path.back(), sfc_traj_);
+        publishVizPiecewiseTrajectory(sfc_traj_.waypoints, sfc_waypoints_viz_pub_);
+    }
 
     auto d = std::chrono::high_resolution_clock::now();
 
@@ -147,7 +156,7 @@ bool SphericalSFC::getForwardPointOnPath(
     return false;
 }
 
-bool SphericalSFC::BatchSample(const Eigen::Vector3d& p_guide, Sphere& B_cur)
+bool SphericalSFC::BatchSample(const Eigen::Vector3d& pt_guide, Sphere& B_cur)
 {
     auto a = std::chrono::high_resolution_clock::now();
 
@@ -158,12 +167,12 @@ bool SphericalSFC::BatchSample(const Eigen::Vector3d& p_guide, Sphere& B_cur)
     std::vector<Eigen::Vector3d> p_cand_vec; // vector of candidate points
 
     // Calculate orientation and standard deviation of normal sampling distribution
-    Eigen::Vector3d dir_vec = (p_guide - B_cur.center); // Direction vector from previous sphere to p_guide
+    Eigen::Vector3d dir_vec = (pt_guide - B_cur.center); // Direction vector from previous sphere to pt_guide
     // std::cout << "Dir vec: " << dir_vec << std::endl;
     double stddev_x = sfc_params_.mult_stddev_x * dir_vec.norm(); // Get standard deviation along direction vector
     double stddev_y = sfc_params_.mult_stddev_y * dir_vec.norm(); // Get standard deviation along direction vector
     double stddev_z = sfc_params_.mult_stddev_z * dir_vec.norm(); // Get standard deviation along direction vector
-    Eigen::Vector3d stddev{stddev_x, stddev_y, stddev_z};
+    Eigen::Vector3d stddev_3d{stddev_x, stddev_y, stddev_z};
 
     // Calculate orientation of distribution ellipsoid
     Eigen::Matrix<double, 3, 3> ellipse_rot_mat = rotationAlign(Eigen::Vector3d::UnitX(), dir_vec.normalized());
@@ -172,7 +181,7 @@ bool SphericalSFC::BatchSample(const Eigen::Vector3d& p_guide, Sphere& B_cur)
     // Set up seed for sampler
     uint64_t seed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
     sampler_.setSeed(seed);
-    sampler_.setParams(p_guide, stddev);
+    sampler_.setParams(pt_guide, stddev_3d);
     
     auto b = std::chrono::high_resolution_clock::now();
 
@@ -184,9 +193,9 @@ bool SphericalSFC::BatchSample(const Eigen::Vector3d& p_guide, Sphere& B_cur)
 
     auto c = std::chrono::high_resolution_clock::now();
 
-    // Transform set of sampled points to have its mean at p_guide and rotated along dir_vec
+    // Transform set of sampled points to have its mean at pt_guide and rotated along dir_vec
     // TODO: Use matrix parallelization for transformations
-    transformPoints(p_cand_vec, p_guide, ellipse_rot_mat);
+    transformPoints(p_cand_vec, pt_guide, ellipse_rot_mat);
 
     auto d = std::chrono::high_resolution_clock::now();
 
@@ -218,14 +227,6 @@ bool SphericalSFC::BatchSample(const Eigen::Vector3d& p_guide, Sphere& B_cur)
 
     auto e = std::chrono::high_resolution_clock::now();
 
-    // Publish candidate points and 3d distribution visualization
-    if (sfc_params_.debug_viz){
-        publishVizPoints(p_cand_vec, p_cand_viz_pub_); 
-        dist_viz_pub_.publish( createVizEllipsoid(p_guide, stddev, ellipse_orientation, "world", itr_));
-    }
-
-    auto f = std::chrono::high_resolution_clock::now();
-
     if (B_cand_pq.empty()){
         std::cout << "Unable to generate next candidate sphere"<< std::endl;
         return false;
@@ -247,10 +248,8 @@ bool SphericalSFC::BatchSample(const Eigen::Vector3d& p_guide, Sphere& B_cur)
         d - c).count() * 1000.0;
     double chpt_e = std::chrono::duration_cast<std::chrono::duration<double>>(
         e - d).count() * 1000.0;
-    double chpt_f = std::chrono::duration_cast<std::chrono::duration<double>>(
-        f - e).count() * 1000.0;
 
-    double total_dur = chpt_b + chpt_c + chpt_d + chpt_e + chpt_f;
+    double total_dur = chpt_b + chpt_c + chpt_d + chpt_e;
     std::cout << "==========" << std::endl;
 
     std::cout << "          b: " << chpt_b *1000  << ", pct:" << chpt_b / total_dur * 100 << "%" << std::endl;
@@ -259,8 +258,11 @@ bool SphericalSFC::BatchSample(const Eigen::Vector3d& p_guide, Sphere& B_cur)
     std::cout << "              d2: " << d2_dur *1000  << ", pct:" << d2_dur / total_dur * 100 << "%" << std::endl;
     std::cout << "              d3: " << d3_dur *1000  << ", pct:" << d3_dur / total_dur * 100 << "%" << std::endl;
     std::cout << "          e: " << chpt_e *1000  << ", pct:" << chpt_e / total_dur * 100 << "%" << std::endl;
-    std::cout << "          f: " << chpt_f *1000  << ", pct:" << chpt_f / total_dur * 100 << "%" << std::endl;
     std::cout << "==========" << std::endl;
+
+    p_cand_vec_hist_.insert(p_cand_vec_hist_.end(), p_cand_vec.begin(), p_cand_vec.end());
+    sampling_dist_hist_.markers.push_back(createVizEllipsoid(pt_guide, stddev_3d, ellipse_orientation, "world", itr_));
+    samp_dir_vec_hist_.markers.push_back(createArrow(pt_guide, dir_vec, "world", itr_));
 
     return true;
 }
@@ -330,13 +332,16 @@ Eigen::Vector3d SphericalSFC::getIntersectionCenter(const Sphere& B_a, const Sph
     return pt_intersect;
 }
 
-void SphericalSFC::computeSFCTrajectory(const std::vector<SphericalSFC::Sphere>& sfc_spheres, const Eigen::Vector3d& goal_pos, SphericalSFC::SFCTrajectory& sfc_traj)
+void SphericalSFC::computeSFCTrajectory(
+    const std::vector<SphericalSFC::Sphere>& sfc_spheres, 
+    const Eigen::Vector3d& goal_pos, 
+    SphericalSFC::SFCTrajectory& sfc_traj)
 {
     /* 1: Retrieve waypoints from the intersections between the spheres */
     std::vector<Eigen::Vector3d> traj_waypoints(sfc_spheres.size()+1);
  
     traj_waypoints[0] = sfc_spheres[0].center; // Add start state
-    for (int i = 1; i < sfc_spheres.size(); i++){
+    for (size_t i = 1; i < sfc_spheres.size(); i++){
         // TODO: Add check for intersection between 2 spheres?
 
         // Add intersection between 2 spheres
@@ -348,7 +353,7 @@ void SphericalSFC::computeSFCTrajectory(const std::vector<SphericalSFC::Sphere>&
     std::vector<double> segs_time_durations(traj_waypoints.size()-1); // Vector of time durations for each segment {t_1, t_2, ..., t_M}
     // TODO: Use trapezoidal time allocation
 
-    for (int i = 0 ; i < traj_waypoints.size()-1; i++){
+    for (size_t i = 0 ; i < traj_waypoints.size()-1; i++){
         // Using constant velocity time allocation
         segs_time_durations[i] = (traj_waypoints[i+1] - traj_waypoints[i]).norm() / sfc_params_.avg_vel ;
     }
@@ -358,7 +363,8 @@ void SphericalSFC::computeSFCTrajectory(const std::vector<SphericalSFC::Sphere>&
     sfc_traj.segs_t_dur = segs_time_durations;
 }
 
-Eigen::Matrix<double, 3, 3> SphericalSFC::rotationAlign(const Eigen::Vector3d & z, const Eigen::Vector3d & d)
+Eigen::Matrix<double, 3, 3> SphericalSFC::rotationAlign(
+    const Eigen::Vector3d & z, const Eigen::Vector3d & d)
 {
     // TODO: IF either vector is a unit vector, possibility to speed this up
 
@@ -381,9 +387,6 @@ void SphericalSFC::publishVizPiecewiseTrajectory(
     const std::vector<Eigen::Vector3d>& pts, ros::Publisher& publisher, 
     const std::string& frame_id)
 {
-    if (!sfc_params_.debug_viz){
-        return;
-    }
 
     visualization_msgs::Marker sphere_list, path_line_strip;
     Eigen::Vector3d wp_color = Eigen::Vector3d{0.0, 0.0, 1.0};
@@ -404,7 +407,7 @@ void SphericalSFC::publishVizPiecewiseTrajectory(
     sphere_list.header.stamp = ros::Time::now();
     sphere_list.type = visualization_msgs::Marker::SPHERE_LIST;
     sphere_list.action = visualization_msgs::Marker::ADD;
-    sphere_list.ns = "spherical_sfc_pts"; 
+    sphere_list.ns = "sfc_trajectory_waypoints"; 
     sphere_list.id = 1; 
     sphere_list.pose.orientation.w = 1.0;
 
@@ -422,7 +425,7 @@ void SphericalSFC::publishVizPiecewiseTrajectory(
     path_line_strip.header.stamp = ros::Time::now();
     path_line_strip.type = visualization_msgs::Marker::LINE_STRIP;
     path_line_strip.action = visualization_msgs::Marker::ADD;
-    path_line_strip.ns = "spherical_sfc_line"; 
+    path_line_strip.ns = "sfc_trajectory_line"; 
     path_line_strip.id = 2;
     path_line_strip.pose.orientation.w = 1.0;
 
@@ -434,7 +437,7 @@ void SphericalSFC::publishVizPiecewiseTrajectory(
     path_line_strip.scale.x = line_scale;
 
     geometry_msgs::Point pt;
-    for (int i = 0; i < pts.size(); i++){
+    for (size_t i = 0; i < pts.size(); i++){
         pt.x = pts[i](0);
         pt.y = pts[i](1);
         pt.z = pts[i](2);
@@ -451,9 +454,6 @@ void SphericalSFC::publishVizPoints(
     const std::vector<Eigen::Vector3d>& pts, ros::Publisher& publisher, 
     Eigen::Vector3d color, double radius, const std::string& frame_id)
 {
-    if (!sfc_params_.debug_viz){
-        return; 
-    }
     visualization_msgs::Marker sphere_list;
     double alpha = 0.7;
 
@@ -461,7 +461,7 @@ void SphericalSFC::publishVizPoints(
     sphere_list.header.stamp = ros::Time::now();
     sphere_list.type = visualization_msgs::Marker::SPHERE_LIST;
     sphere_list.action = visualization_msgs::Marker::ADD;
-    sphere_list.ns = "spherical_sfc_pts"; 
+    sphere_list.ns = "sfc_cand_pts"; 
     sphere_list.id = 1; 
     sphere_list.pose.orientation.w = 1.0;
 
@@ -475,7 +475,7 @@ void SphericalSFC::publishVizPoints(
     sphere_list.scale.z = radius;
 
     geometry_msgs::Point pt;
-    for (int i = 0; i < pts.size(); i++){
+    for (size_t i = 0; i < pts.size(); i++){
         pt.x = pts[i](0);
         pt.y = pts[i](1);
         pt.z = pts[i](2);
@@ -488,15 +488,52 @@ void SphericalSFC::publishVizPoints(
 
 void SphericalSFC::publishVizSphericalSFC(  
     const std::vector<SphericalSFC::Sphere>& sfc_spheres, 
-    ros::Publisher& publisher, const std::string& frame_id) 
+    ros::Publisher& publisher, const std::string& frame_id)  
 {
-    if (!sfc_params_.debug_viz){
-        return;
-    }
+    visualization_msgs::MarkerArray sfc_spheres_marker_arr;
 
-    for (int i = 0; i < sfc_spheres.size(); i++){
-        publisher.publish(createVizSphere(sfc_spheres[i].center, sfc_spheres[i].getDiameter(), frame_id, i));
+    for (size_t i = 0; i < sfc_spheres.size(); i++){
+        sfc_spheres_marker_arr.markers.push_back(createVizSphere(sfc_spheres[i].center, sfc_spheres[i].getDiameter(), frame_id, i));
     }
+    publisher.publish(sfc_spheres_marker_arr);
+}
+
+visualization_msgs::Marker SphericalSFC::createArrow(
+    const Eigen::Vector3d& pt_guide, const Eigen::Vector3d& dir_vec, 
+    const std::string& frame_id, const int& id)
+{
+    visualization_msgs::Marker arrow;
+
+    arrow.ns = "sfc_samp_dir_vec";
+    arrow.header.frame_id = frame_id;
+    arrow.header.stamp = ros::Time::now();
+    arrow.type = visualization_msgs::Marker::ARROW;
+    arrow.action = visualization_msgs::Marker::ADD;
+
+    double scale = 0.1;
+
+    arrow.color.r = 1.0;
+    arrow.color.g = 1.0;
+    arrow.color.b = 1.0;
+    arrow.color.a = 0.7;
+    arrow.scale.x = scale;
+    arrow.scale.y = 2 * scale;
+    arrow.scale.z = 2 * scale;
+
+    geometry_msgs::Point start, end;
+    start.x = pt_guide(0);
+    start.y = pt_guide(1);
+    start.z = pt_guide(2);
+    end.x = pt_guide(0) + dir_vec(0);
+    end.y = pt_guide(1) + dir_vec(1);
+    end.z = pt_guide(2) + dir_vec(2);
+
+    arrow.points.clear();
+    arrow.points.push_back(start);
+    arrow.points.push_back(end);
+    arrow.id = id * 100;
+
+    return arrow;
 }
 
 visualization_msgs::Marker SphericalSFC::createVizSphere( 
@@ -505,11 +542,12 @@ visualization_msgs::Marker SphericalSFC::createVizSphere(
 {
     visualization_msgs::Marker sphere;
 
+    sphere.ns = "sfc_spheres";
     sphere.header.frame_id = frame_id;
     sphere.header.stamp = ros::Time::now();
     sphere.type = visualization_msgs::Marker::SPHERE;
     sphere.action = visualization_msgs::Marker::ADD;
-    sphere.id = id;
+    sphere.id = id * 999 + 10;
     sphere.pose.orientation.w = 1.0;
 
     sphere.color.r = 0.5;
@@ -528,16 +566,17 @@ visualization_msgs::Marker SphericalSFC::createVizSphere(
   }
 
 visualization_msgs::Marker SphericalSFC::createVizEllipsoid(
-    const Eigen::Vector3d& center, const Eigen::Vector3d& stddev, 
+    const Eigen::Vector3d& center, const Eigen::Vector3d& stddev_3d, 
     const Eigen::Quaterniond& orientation, const std::string& frame_id, const int& id)
 {
     visualization_msgs::Marker sphere;
 
+    sphere.ns = "sfc_samp_dist";
     sphere.header.frame_id = frame_id;
     sphere.header.stamp = ros::Time::now();
     sphere.type = visualization_msgs::Marker::SPHERE;
     sphere.action = visualization_msgs::Marker::ADD;
-    sphere.id = id;
+    sphere.id = id * 1002 + 999;
     sphere.pose.orientation.x = orientation.x();
     sphere.pose.orientation.y = orientation.y();
     sphere.pose.orientation.z = orientation.z();
@@ -547,9 +586,9 @@ visualization_msgs::Marker SphericalSFC::createVizEllipsoid(
     sphere.color.g = 1.0;
     sphere.color.b = 0.0;
     sphere.color.a = 0.5;
-    sphere.scale.x = stddev(0);
-    sphere.scale.y = stddev(1);
-    sphere.scale.z = stddev(2);
+    sphere.scale.x = stddev_3d(0);
+    sphere.scale.y = stddev_3d(1);
+    sphere.scale.z = stddev_3d(2);
 
     sphere.pose.position.x = center(0);
     sphere.pose.position.y = center(1);

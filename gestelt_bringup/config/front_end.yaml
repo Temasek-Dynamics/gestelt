@@ -11,10 +11,11 @@ front_end:
   planner_frequency: 10.0
 
 sfc:
-  max_iterations: 100     # Corresponds to maximum number of spheres
+  max_iterations: 50     # Corresponds to maximum number of spheres
   debug_viz: true        # If true, publish visualization for debugging
   # Sampling
   max_sample_points: 500 # Maximum sample points for candidate sphere
+  # standard deviation: remember 68–95–99.7 rule
   mult_stddev_x: 0.2      # if mult_stddev_x is too high, the spheres cannot round corners and generate loads of spheres around the same area around corners
   mult_stddev_y: 0.2      # 
   mult_stddev_z: 0.2      # 
