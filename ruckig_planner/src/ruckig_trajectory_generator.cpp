@@ -13,17 +13,17 @@ RuckigPlanner::RuckigPlanner(ros::NodeHandle& nh_,
                     publish_whole_trajectory_);
     nh_private_.param("dt", dt_, dt_);
 
-    command_pub_ = nh_.advertise<trajectory_msgs::MultiDOFJointTrajectory>("command/trajectory", 1);   //new
-    stop_srv_ = nh_.advertiseService("stop_sampling", &RuckigPlanner::stopSamplingCallback, this);      //new
-    position_hold_client_ = nh_.serviceClient<std_srvs::Empty>("back_to_position_hold");            //new
+    command_pub_ = nh_.advertise<trajectory_msgs::MultiDOFJointTrajectory>("command/trajectory", 1);   
+    stop_srv_ = nh_.advertiseService("stop_sampling", &RuckigPlanner::stopSamplingCallback, this);      
+    position_hold_client_ = nh_.serviceClient<std_srvs::Empty>("back_to_position_hold");            
 
     const bool oneshot = false;
     const bool autostart = false;
     publish_timer_ = nh_.createTimer(ros::Duration(dt_),
                                     &RuckigPlanner::commandTimerCallback,
-                                    this, oneshot, autostart);                                        //new
+                                    this, oneshot, autostart);                                       
 
-    referencePublisher_ = nh_.advertise<mavros_msgs::PositionTarget>("/reference", 50);
+    // referencePublisher_ = nh_.advertise<mavros_msgs::PositionTarget>("/reference", 50);          //Only for debugging
     goalsSubscriber_ = nh_.subscribe("/planner/goals", 1, &RuckigPlanner::waypointCB, this);
     sub_odom_ = nh_.subscribe("uav_pose", 1, &RuckigPlanner::uavOdomCallback, this);
 }
@@ -34,11 +34,13 @@ RuckigPlanner::~RuckigPlanner() {
 
 // Callback to get current Pose of UAV
 void RuckigPlanner::uavOdomCallback(const nav_msgs::Odometry::ConstPtr& odom) {
-  // store current position in our planner
-  tf::poseMsgToEigen(odom->pose.pose, current_pose_);
+    // store current position in our planner
+    tf::poseMsgToEigen(odom->pose.pose, current_pose_);
 
-  // store current velocity
-  tf::vectorMsgToEigen(odom->twist.twist.linear, current_velocity_);
+    // store current velocity
+    tf::vectorMsgToEigen(odom->twist.twist.linear, current_velocity_);
+
+    // std::cout<<current_pose_.translation()<<std::endl;
 }
 
 
@@ -47,7 +49,7 @@ void RuckigPlanner::waypointCB(const gestelt_msgs::Goals::ConstPtr& msg) {
     goal_waypoints_vel_.clear(); // Clear existing goal waypoints vel
     goal_waypoints_acc_.clear(); // Clear existing goal waypoints acc
 
-    ROS_INFO("[Trajectory Planner] No. of waypoints: %ld", msg->waypoints.size());
+    // ROS_INFO("[Trajectory Planner] No. of waypoints: %ld", msg->waypoints.size());
     
     for (auto pose : msg->waypoints) {
         Eigen::Vector3d wp(
@@ -56,7 +58,7 @@ void RuckigPlanner::waypointCB(const gestelt_msgs::Goals::ConstPtr& msg) {
             pose.position.z);
         // Transform received waypoints from world to UAV origin frame
         goal_waypoints_.push_back(wp);
-        ROS_INFO("MSG waypoints: %f, %f, %f", wp[0], wp[1], wp[2]);
+        // ROS_INFO("MSG waypoints: %f, %f, %f", wp[0], wp[1], wp[2]);
     }
     for (auto vel : msg->velocities) {
         Eigen::Vector3d wp_vel( 
@@ -65,7 +67,7 @@ void RuckigPlanner::waypointCB(const gestelt_msgs::Goals::ConstPtr& msg) {
             vel.linear.z);
         // Transform received waypoints from world to UAV origin frame
         goal_waypoints_vel_.push_back(wp_vel);
-        ROS_INFO("MSG_VEL waypoints: %f, %f, %f", wp_vel[0], wp_vel[1], wp_vel[2]);
+        // ROS_INFO("MSG_VEL waypoints: %f, %f, %f", wp_vel[0], wp_vel[1], wp_vel[2]);
     }
 
     for (auto acc : msg->accelerations) {
@@ -75,7 +77,7 @@ void RuckigPlanner::waypointCB(const gestelt_msgs::Goals::ConstPtr& msg) {
             acc.linear.z);
         // Transform received waypoints from world to UAV origin frame
         goal_waypoints_acc_.push_back(wp_acc);
-        ROS_INFO("MSG_ACC waypoints: %f, %f, %f", wp_acc[0], wp_acc[1], wp_acc[2]);
+        // ROS_INFO("MSG_ACC waypoints: %f, %f, %f", wp_acc[0], wp_acc[1], wp_acc[2]);
     }
 
     planner(goal_waypoints_, goal_waypoints_vel_, goal_waypoints_acc_);
@@ -84,29 +86,35 @@ void RuckigPlanner::waypointCB(const gestelt_msgs::Goals::ConstPtr& msg) {
 void RuckigPlanner::planner(const std::vector<Eigen::Vector3d>& wp_pos,
                             const std::vector<Eigen::Vector3d>& wp_vel,
                             const std::vector<Eigen::Vector3d>& wp_acc) {
-    ROS_INFO("Planner working");
+    // ROS_INFO("Planner working");
     ruckig::InputParameter<3> input;
-
-    // Replace with actual values from odom
-    input.current_position = {0.0, 0.0, 1.2};
-    input.current_velocity = {0.0, 0.0, 0.0};
+    auto initialPose = current_pose_.translation();
+    // std::cout<<initialPose[0]<<", "<<initialPose[1]<<", "<<initialPose[2]<<std::endl;
+    
+    input.current_position = {initialPose[0], initialPose[1], initialPose[2]};
+    input.current_velocity = {current_velocity_[0], current_velocity_[1], current_velocity_[2]};
     input.current_acceleration = {0.0, 0.0, 0.0};
 
     auto first_waypoint = wp_pos.front();
     auto first_waypoint_vel = wp_vel.front();
     auto first_waypoint_acc = wp_acc.front();
-    std::cout<<"POS: " <<first_waypoint[0]<<", " <<first_waypoint[1]<<", "<<first_waypoint[2]<<std::endl;
-    std::cout<<"VEL: " <<first_waypoint_vel[0]<<", " <<first_waypoint_vel[1]<<", "<<first_waypoint_vel[2]<<std::endl;
-    std::cout<<"ACC: " <<first_waypoint_acc[0]<<", " <<first_waypoint_acc[1]<<", "<<first_waypoint_acc[2]<<std::endl;
+    // std::cout<<"POS: " <<first_waypoint[0]<<", " <<first_waypoint[1]<<", "<<first_waypoint[2]<<std::endl;
+    // std::cout<<"VEL: " <<first_waypoint_vel[0]<<", " <<first_waypoint_vel[1]<<", "<<first_waypoint_vel[2]<<std::endl;
+    // std::cout<<"ACC: " <<first_waypoint_acc[0]<<", " <<first_waypoint_acc[1]<<", "<<first_waypoint_acc[2]<<std::endl;
 
-
+    // input.intermediate_positions = {                             //Need to have paid version of Ruckig
+    //     {1.4, -1.6, 1.0},            
+    //     {-0.6, -0.5, 0.4},
+    //     {-0.4, -0.35, 0.0},
+    //     {0.8, 1.8, -0.1}
+    // };
     input.target_position = {first_waypoint[0], first_waypoint[1], first_waypoint[2]};
     input.target_velocity = {first_waypoint_vel[0], first_waypoint_vel[1], first_waypoint_vel[2]};
     input.target_acceleration = {first_waypoint_acc[0], first_waypoint_acc[1], first_waypoint_acc[2]};
 
     input.max_velocity = {3.0, 3.0, 3.0};
-    trajectory_.~Trajectory();
-    trajectory_ = ruckig::Trajectory<3>();
+    trajectory_.~Trajectory();                             //Calling destructor
+    trajectory_ = ruckig::Trajectory<3>();                 //re-initializing trajectory_ variable, otherwise garbage value is getting stored
 
     ruckig::Ruckig<3> otg;
     
@@ -123,8 +131,8 @@ void RuckigPlanner::planner(const std::vector<Eigen::Vector3d>& wp_pos,
 }
 
 
-
-//////------------------NOT IN USE-------------------////////////
+//////////////////////////////////////////////////////////////////////////////
+//////------------------NOT USING-------------------////////////
 void RuckigPlanner::generate_trajectory_points(const ruckig::Trajectory<3>& trajectory) {
     ROS_INFO("Generating trajectory points");
     setPosition.clear();
@@ -173,7 +181,7 @@ void RuckigPlanner::pubTrajectory(const std::array<double, 3>& pos,
     referencePublisher_.publish(msg);
     ROS_INFO("Trajectory Published");
 }
-//////-------------------------------------///////////
+///////////////////////////////////////////////////////////////////////////////
 
 
 void RuckigPlanner::processTrajectory(){
@@ -194,7 +202,7 @@ void RuckigPlanner::processTrajectory(){
         // msgMultiDofJointTrajectoryFromEigen(trajectory_points, &msg_pub);
         // command_pub_.publish(msg_pub);
         //-------------------------------------//
-        ROS_WARN_STREAM("[RuckigPlanner]Error in processTrajectory(), publish_whole_trajectory_=TRUE");
+        ROS_WARN_STREAM("[RuckigPlanner] Error in processTrajectory(), publish_whole_trajectory_=TRUE");
         return;
         } 
     else {
@@ -222,16 +230,16 @@ void RuckigPlanner::commandTimerCallback(const ros::TimerEvent&) {
         new_velocity = {};
         new_acceleration = {};
         trajectory_.at_time(current_sample_time_, new_position, new_velocity, new_acceleration);
-        std::cout<<"Total trajectory duration: " << trajectory_.get_duration()<<std::endl;
-        std::cout << "new position: " << new_position[0]<<", "<<new_position[1]<<", "<<new_position[2] << std::endl;
-        std::cout << "new velocity: " << new_velocity[0]<<", "<<new_velocity[1]<<", "<<new_velocity[2] << std::endl;
-        std::cout << "new acceleration: " << new_acceleration[0]<<", "<<new_acceleration[1]<<", "<<new_acceleration[2] << std::endl;
-        std::cout<< "Sampling Time: " << current_sample_time_<<std::endl;
+        // std::cout<<"Total trajectory duration: " << trajectory_.get_duration()<<std::endl;
+        // std::cout << "new position: " << new_position[0]<<", "<<new_position[1]<<", "<<new_position[2] << std::endl;
+        // std::cout << "new velocity: " << new_velocity[0]<<", "<<new_velocity[1]<<", "<<new_velocity[2] << std::endl;
+        // std::cout << "new acceleration: " << new_acceleration[0]<<", "<<new_acceleration[1]<<", "<<new_acceleration[2] << std::endl;
+        // std::cout<< "Sampling Time: " << current_sample_time_<<std::endl;
         // ROS_INFO("Timer working");
         
         if (new_position.empty()) {
             publish_timer_.stop();
-            ROS_WARN_STREAM("[RuckigPlanner]Empty new_position");
+            ROS_WARN_STREAM("[RuckigPlanner] Empty new_position");
         }
         // ROS_INFO("Timer working 2");
 
@@ -262,7 +270,7 @@ void RuckigPlanner::commandTimerCallback(const ros::TimerEvent&) {
 
         command_pub_.publish(msg);
         current_sample_time_ += dt_;
-        ROS_INFO("[RuckigPlanner]Published trajectory");
+        // ROS_INFO("[RuckigPlanner]Published trajectory");
     } 
     else{
         publish_timer_.stop();

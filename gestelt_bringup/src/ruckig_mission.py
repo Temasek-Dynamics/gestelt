@@ -215,7 +215,7 @@ def main():
     accel_list.append(create_accel(-f*np.sin(angle_rad),0.0,g+f*np.cos(angle_rad)))
 
     
-    # velocites constraint
+    # velocities constraint
     
     vel_list.append(create_vel(0.0,0.0,0.0))
 

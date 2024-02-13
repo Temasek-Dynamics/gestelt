@@ -1,10 +1,10 @@
 <launch>
   <!-- Launches a test mission -->
-  <node pkg="gestelt_bringup" name="ruckig" type="ruckig_mission.py"  output = "screen">
+  <node pkg="gestelt_bringup" name="ruckig" type="ruckig_mission.py" >
     <param name = "is_simulation" value="True"/>
   </node>
    <!-- Start rosbag to record setpoint_raw and local_position -->
    <!-- path have to be absolute path-->
   <node pkg="rosbag" type="record" name="record" output="screen" args="-o /home/yash/agile_flight/gestelt_ws/data/ 
-  /reference"/>
+  /mavros/setpoint_raw/local /mavros/local_position/pose"/>
 </launch>
