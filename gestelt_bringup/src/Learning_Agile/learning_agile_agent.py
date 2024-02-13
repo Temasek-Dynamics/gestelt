@@ -224,7 +224,7 @@ class LearningAgileAgent():
         out = self.model(solver_inputs).data.numpy()
         
         out[0:3]=self.gate_center
-        out[3:6]=np.array([0,0,0])
+        out[3:6]=np.array([0,-0.3,0])
         out[6]=self.t_tra_abs-self.i*0.01
 
         ## solve the mpc problem and get the control command
@@ -269,7 +269,7 @@ class LearningAgileAgent():
         for self.i in range(2500): # 5s, 500 Hz
             # decision variable is updated in 100 hz
             self.gate_n = gate(self.gate_move[self.i])
-            t_tra_abs =2
+            t_tra_abs =1
             # t = solver(self.model,self.state,self.final_point,self.gate_n,self.moving_gate.V[self.i],self.moving_gate.w)
             t=t_tra_abs-self.i*self.dyn_step
             # t_tra = t+self.i*self.dyn_step
@@ -301,7 +301,7 @@ class LearningAgileAgent():
                     out = self.model(solver_inputs).data.numpy()
                     
                     out[0:3]=self.gate_center
-                    out[3:6]=np.array([0,0,0])
+                    out[3:6]=np.array([0,-0.7,0])
                     out[6]=t_tra_abs-self.i*self.dyn_step
                     t_comp = time.time()
                   

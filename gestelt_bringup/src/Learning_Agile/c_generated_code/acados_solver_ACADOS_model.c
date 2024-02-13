@@ -170,7 +170,7 @@ void ACADOS_model_acados_create_1_set_plan(ocp_nlp_plan_t* nlp_solver_plan, cons
     }
     nlp_solver_plan->nlp_constraints[N] = BGH;
 
-    nlp_solver_plan->regularization = NO_REGULARIZE;
+    nlp_solver_plan->regularization = CONVEXIFY;
 }
 
 
@@ -647,7 +647,7 @@ void ACADOS_model_acados_create_6_set_opts(ACADOS_model_solver_capsule* capsule)
     double nlp_solver_step_length = 1;
     ocp_nlp_solver_opts_set(nlp_config, nlp_opts, "step_length", &nlp_solver_step_length);
 
-    double levenberg_marquardt = 0;
+    double levenberg_marquardt = 0.00001;
     ocp_nlp_solver_opts_set(nlp_config, nlp_opts, "levenberg_marquardt", &levenberg_marquardt);
 
     /* options QP solver */
@@ -655,6 +655,8 @@ void ACADOS_model_acados_create_6_set_opts(ACADOS_model_solver_capsule* capsule)
     // NOTE: there is no condensing happening here!
     qp_solver_cond_N = N;
     ocp_nlp_solver_opts_set(nlp_config, nlp_opts, "qp_cond_N", &qp_solver_cond_N);
+    double reg_epsilon = 0.0001;
+    ocp_nlp_solver_opts_set(nlp_config, nlp_opts, "reg_epsilon", &reg_epsilon);
 
     int nlp_solver_ext_qp_res = 0;
     ocp_nlp_solver_opts_set(nlp_config, nlp_opts, "ext_qp_res", &nlp_solver_ext_qp_res);
