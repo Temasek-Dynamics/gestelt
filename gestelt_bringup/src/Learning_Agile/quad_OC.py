@@ -434,13 +434,13 @@ class OCSys:
 
         # Ulast=ocp.model.p
         goal_state=ocp.model.p[0:self.n_state]  
-        des_tra_pos=ocp.model.p[self.n_state+self.n_control:self.n_state+self.n_control+3]
-        des_tra_q=ocp.model.p[self.n_state+self.n_control+3:self.n_state+self.n_control+7]
+        des_tra_pos=ocp.model.p[self.n_state+self.n_control : self.n_state+self.n_control+3]
+        des_tra_q=ocp.model.p[self.n_state+self.n_control+3 : self.n_state+self.n_control+7]
     
 
         # # setting the cost function
         # weight = 60*casadi.exp(-10*(dt*k-model.p[-1])**2) #gamma should increase as the flight duration decreases
-             
+        # ocp.model.cost_expr_ext_cost_custom_hess/cost_expr_ext_cost
         ocp.model.cost_expr_ext_cost = self.path_cost_fn(ocp.model.x,goal_state,self.auxvar)\
             +self.final_cost_fn(ocp.model.x,goal_state,self.auxvar)\
             +ocp.model.p[-1]*self.tra_cost_fn(ocp.model.x, des_tra_pos,des_tra_q, self.auxvar)\
@@ -483,7 +483,7 @@ class OCSys:
         ocp.solver_options.integrator_type = 'ERK' # ERK (explicit Runge-Kutta integrator) or IRK (Implicit Runge-Kutta integrator)
         ocp.solver_options.print_level = 0
         ocp.solver_options.nlp_solver_type = 'SQP_RTI' # SQP_RTI or SQP
-        # ocp.solver_options.nlp_solver_max_iter = 200
+        # ocp.solver_options.nlp_solver_max_iter = 100
         ##------------------ setting the code generation ------------------##
         # compile acados ocp
         json_file = os.path.join('./'+model.name+'_acados_ocp.json')
@@ -532,6 +532,8 @@ class OCSys:
                                                           current_input,
                                                           np.concatenate((tra_pos,tra_q)),
                                                           np.array([weight]))))
+            if i==0:
+                weight_vis=weight
             
 
         # set the last state-control as the initial guess for the last node
@@ -559,7 +561,7 @@ class OCSys:
  
        
         #-------------take the optimal control and state sequences
-
+        #self.n_nodes
         for i in range(self.n_nodes):
             self.state_traj_opt[i,:]=self.acados_solver.get(i, "x")
             self.control_traj_opt[i,:]=self.acados_solver.get(i, "u")
@@ -574,7 +576,7 @@ class OCSys:
                    "horizon": self.horizon}
                    #"cost": sol['f'].full()}
 
-        return opt_sol 
+        return opt_sol,weight_vis    
     
 
 

@@ -253,15 +253,12 @@ class run_quad:
         #                        tra_atti,
         #                        t_tra)
         tra_q=toQuaternion(tra_atti[0],tra_atti[1])
-        ## obtain the solution
-        if type(ini_state) == numpy.ndarray:
-            ini_state = ini_state.flatten().tolist()
-        
-  
-        current_state_control = ini_state+Ulast
+        # tra_q= np.array([ 0.9914449,0, -0.1305262, 0])
+    
+        current_state_control = np.concatenate((ini_state,Ulast))
        
         # self.sol1 = self.uavoc1.ocSolver(current_state_control=current_state_control,t_tra=t)
-        self.sol1 = self.uavoc1.AcadosOcSolver(current_state_control=current_state_control,
+        self.sol1,weight_vis = self.uavoc1.AcadosOcSolver(current_state_control=current_state_control,
                                                 goal_pos=self.goal_pos,
                                                 tra_pos=tra_pos,
                                                 tra_q=tra_q,
@@ -269,7 +266,7 @@ class run_quad:
                                                 max_tra_w=max_tra_w)
         
         # return control, pos_vel_cmd
-        return self.sol1
+        return self.sol1,weight_vis
 
 ## sample the perturbation (only for random perturbations)
 def sample(deviation):

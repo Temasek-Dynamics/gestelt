@@ -56,19 +56,31 @@ make distclean
 ```
 4. ACADOS solver installation on the Radxa
 - Before the installation, the cmake should be updated to the latest version. please refer to this [cmake update](https://zhuanlan.zhihu.com/p/513871916).
-   - install casadi
-   - 
-Please refer to this [acados doc](https://docs.acados.org/installation/index.html#linux-mac) for detail.
-Modification to the installation process for the Radxa:
-- After the MAKE installation
-   - In the `acados/CMakeLists.txt`,the `BLASFEO_TARGET`and the `HPIPM_TARGET` should be set to `ARMV8A_ARM_CORTEX_A53` for the Radxa.
-   - In the `acados/Makefile.rule`, the `BLASFEO_TARGET` should be set to `ARMV8A_ARM_CORTEX_A53` for the Radxa.
-   - In the `acados/Makefile.rule`, the `HPIPM_TARGET` should be set to `GENERIC` for the Radxa.
-   - 
-- Before `make run_examples_c`
-  -  add `export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:home/rock/acados/lib` to the `~/.bashrc` file.
-  -  `source ~/.bashrc`
+- Requirements
 
+  CasADi: version 3.5.5 Info: https://web.casadi.org/
+  Numpy: version 1.23.0 Info: https://numpy.org/
+  Pytorch: version 1.12.0+cu116 Info: https://pytorch.org/
+  Matplotlib: version 3.3.0 Info:   https://matplotlib.org/
+  Python: version 3.8.10 Info: https://www.python.org/
+  ACADOS: version LATEST Info: https://docs.acados.org/
+    Please refer to this [acados doc](https://docs.acados.org/installation/index.html#linux-mac) for detail.
+
+- Modification to the installation process for the Radxa:
+  - After the MAKE installation
+     - In the `acados/CMakeLists.txt`,the `BLASFEO_TARGET`and the `HPIPM_TARGET` should be set to `ARMV8A_ARM_CORTEX_A53`.
+     - In the `acados/Makefile.rule`, the `BLASFEO_TARGET` should be set to `ARMV8A_ARM_CORTEX_A53` .
+     - In the `acados/Makefile.rule`, the `HPIPM_TARGET` should be set to `GENERIC` .
+     - 
+  - Before `make run_examples_c`
+    -  add `export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:~/acados/lib` to the `~/.bashrc` file.
+    -  add `export ACADOS_SOURCE_DIR=~/acados` to the `~/.bashrc` file. for acados python interface.
+    -  `source ~/.bashrc`
+  -  Install ACADOS [python interface](https://docs.acados.org/python_interface/index.html)
+     -  `tera_renderer` should be installed from source. refer to this [tera_renderer solution](https://discourse.acados.org/t/problems-with-t-renderer/438)
+
+
+  
 1. Building the workspace
 ```bash
 # Assuming your workspace is named as follows
