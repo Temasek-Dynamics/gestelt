@@ -212,9 +212,13 @@ def main():
     
     # end position
     waypoints.append(create_pose(-0.0,-1.8,1.4))# 5.0,2.0,3  -2.0,-1.8,1.4
-    # waypoints.append(create_pose(0.0,0.0,1.2))# 5.0,2.0,3
 
-     # the number of accelerations must be equal to the number of waypoints
+    #------------------------------------ for hovering test:-------------------------------------------#
+    # waypoints.append(create_pose(-0.0,1.8,1.4)) # 3.0,2.0,3   2.0,-0.0,1.5
+    # waypoints.append(create_pose(-0.0,1.8,1.4)) # 3.0,2.0,3   2.0,-0.0,1.5
+
+    #--------------------------------------------------------------------------------------------------#
+    # the number of accelerations must be equal to the number of waypoints
     accel_list = []
     accel_list.append(create_accel(None,None,None))
     accel_list.append(create_accel(None,None,None))

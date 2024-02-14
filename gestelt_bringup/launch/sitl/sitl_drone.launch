@@ -24,7 +24,7 @@
   <!-- Spawn drone in gazebo with mavros plugin -->
   <include file="$(find gestelt_bringup)/launch/sitl/include/px4_sitl.xml">
     <arg name="vehicle" default="iris"/>
-    <arg name="model"   default="raynor"/>
+    <arg name="model"   default="raynor"/> <!-- raynor-->
     <arg name="init_x"  value="$(arg init_x)"/>
     <arg name="init_y"  value="$(arg init_y)"/>
     <arg name="init_z"  value="0.0"/>

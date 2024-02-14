@@ -91,7 +91,7 @@ class LearningAgileAgent():
         self.dt=0.1
         self.horizon=20 #(T/dt)
 
-        self.u = np.array([0.5,0.5,0.5,0.5])
+        self.u = np.array([2,0.0,0.0,0.0])
         self.tm = [0,0,0,0]
         self.state_n = []
         self.control_n = [self.u.tolist()]
@@ -224,7 +224,9 @@ class LearningAgileAgent():
         out = self.model(solver_inputs).data.numpy()
         
         out[0:3]=self.gate_center
-        out[3:6]=np.array([0,-0.3,0])
+        # out[3:6]=np.array([0,-0.7*0.5,0])
+
+        out[3:6]=np.array([0,0,0])
         out[6]=self.t_tra_abs-self.i*0.01
 
         ## solve the mpc problem and get the control command
@@ -301,7 +303,9 @@ class LearningAgileAgent():
                     out = self.model(solver_inputs).data.numpy()
                     
                     out[0:3]=self.gate_center
-                    out[3:6]=np.array([0,-0.7,0])
+                    # out[3:6]=np.array([0,-0.7*0.6,0])
+
+                    out[3:6]=np.array([0,0,0])
                     out[6]=t_tra_abs-self.i*self.dyn_step
                     t_comp = time.time()
                   
@@ -344,7 +348,7 @@ class LearningAgileAgent():
                                        goal_pos=self.final_point.tolist(),
                                        dt=self.dyn_step)
 
-        self.quad1.uav1.plot_input(self.control_n)
+        self.quad1.uav1.plot_thrust(self.control_n)
         self.quad1.uav1.plot_angularrate(self.control_n)
         self.quad1.uav1.plot_position(self.pos_vel_att_cmd_n)
         self.quad1.uav1.plot_velocity(self.pos_vel_att_cmd_n)
@@ -368,8 +372,13 @@ def main():
     # rewrite the inputs
     learing_agile_agent.receive_terminal_states(start=np.array([0,1.8,1.4]),
                                                 end=np.array([0,-1.8,1.4]),
-                                                gate_center=[1.2,0,1.6])
+                                                gate_center=[1.2,0,1.4])
 
+    #------------------------------hover test--------------------------------------#
+    # learing_agile_agent.receive_terminal_states(start=np.array([0,1.8,1.4]),
+    #                                             end=np.array([0,1.8,1.4]),
+    #                                             gate_center=[0,1.8,1.4])
+    #------------------------------------------------------------------------------#
     # problem definition
     learing_agile_agent.problem_definition(dyn_step=0.002)
 

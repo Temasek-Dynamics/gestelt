@@ -210,7 +210,7 @@ class Quadrotor:
 
 
         # the thrust cost
-        self.cost_torque = dot(self.T_B, self.T_B)
+        self.cost_torque = dot(self.T_B-2, self.T_B-2)
 
         self.thrust_cost = self.wthrust * (self.cost_torque) 
 
@@ -618,13 +618,13 @@ class Quadrotor:
         plt.show()
         
 
-    def plot_input(self,control_traj,dt = 0.1):
+    def plot_thrust(self,control_traj,dt = 0.1):
         N = int(len(control_traj[:,0]))
         x = np.arange(0,round(N*dt,1),dt)
         plt.plot(x,control_traj[:,0],color = 'b', label = 'u1')
-        plt.plot(x,control_traj[:,1],color = 'r', label = 'u2')
-        plt.plot(x,control_traj[:,2],color = 'y', label = 'u3')
-        plt.plot(x,control_traj[:,3],color = 'g', label = 'u4')
+        # plt.plot(x,control_traj[:,1],color = 'r', label = 'u2')
+        # plt.plot(x,control_traj[:,2],color = 'y', label = 'u3')
+        # plt.plot(x,control_traj[:,3],color = 'g', label = 'u4')
         plt.title('input vs time')
         plt.ylim([0,5])
         plt.xlabel('t')

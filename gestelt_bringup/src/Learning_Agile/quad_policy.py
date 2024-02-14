@@ -44,7 +44,7 @@ class run_quad:
         # self.uav1.initDyn(Jx=0.0023,Jy=0.0023,Jz=0.004,mass=0.5,l=0.35,c=0.0245) # hb quadrotor
 
         # c is the force constant, l is the arm length
-        self.uav1.initDyn(Jx=0.000392,Jy=0.000405,Jz=0.000639,mass=0.205,l=0.1650,c=2.9265e-7) # NUSWARM quadrotor
+        self.uav1.initDyn(Jx=0.000392,Jy=0.000405,Jz=0.000639,mass=0.205,l=0.1650,c=3.383e-07 ) # NUSWARM quadrotor
 
 
         # wrt: ,gate traverse position cost
@@ -56,7 +56,7 @@ class run_quad:
         # wwf: final angular velocity cost
 
         # initialize the cost function with symbolic variables
-        self.uav1.initCost(wrt=5,wqt=8,wthrust=0.1,wrf=5,wvf=5,wqf=1,wwf=3,goal_pos=self.goal_pos) # wthrust = 0.1
+        self.uav1.initCost(wrt=5,wqt=3,wthrust=0.1,wrf=1,wvf=1,wqf=1,wwf=3,goal_pos=self.goal_pos) # wthrust = 0.1
         self.uav1.init_TraCost()
 
         # --------------------------- create PDP object1 ----------------------------------------
