@@ -303,9 +303,9 @@ class LearningAgileAgent():
                     out = self.model(solver_inputs).data.numpy()
                     
                     out[0:3]=self.gate_center
-                    # out[3:6]=np.array([0,-0.7*0.6,0])
+                    out[3:6]=np.array([0,-0.7,0])
 
-                    out[3:6]=np.array([0,0,0])
+                    # out[3:6]=np.array([0,0,0])
                     out[6]=t_tra_abs-self.i*self.dyn_step
                     t_comp = time.time()
                   
