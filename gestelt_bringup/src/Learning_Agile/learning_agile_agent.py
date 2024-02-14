@@ -99,7 +99,7 @@ class LearningAgileAgent():
         
         self.hl_para = [0,0,0,0,0,0,0]
         self.hl_variable = [self.hl_para]
-        self.max_tra_w=60
+        self.max_tra_w=0
         ##---------------------gate initialization ------------------------##
         self.moving_gate.let_gate_move()
         self.gate_move = self.moving_gate.gate_move
