@@ -137,7 +137,7 @@ class Quadrotor:
         # dynamics
         self.f = vertcat(dr_I, dv_I, dq)#, dw)
 
-    def initCost(self, wrt=None, wqt=None, wrf=None, wvf=None, wqf=None, wwf=None, \
+    def initCost(self, wrt=None, wqt=None, wrf=None, wvf=None, wqf=None, wwt=None, \
         wthrust=0.5,goal_pos=[0,9,5],goal_velo = [0,0,0],goal_atti=[0,[1,0,0]]):
         #traverse
         parameter = []
@@ -172,11 +172,11 @@ class Quadrotor:
         else:
             self.wqf = wqf
         
-        if wwf is None:
-            self.wwf = SX.sym('wwf')
-            parameter += [self.wwf]
+        if wwt is None:
+            self.wwt = SX.sym('wwt')
+            parameter += [self.wwt]
         else:
-            self.wwf = wwf
+            self.wwt = wwt
 
         #thrust
         if wthrust is None:
@@ -205,25 +205,26 @@ class Quadrotor:
         self.cost_q_g = trace(np.identity(3) - mtimes(transpose(goal_R_B_I), R_B_I))
 
         # auglar velocity cost
-        # self.goal_w_B = [0, 0, 0]
-        # self.cost_w_B_g = dot(self.w_B - self.goal_w_B, self.w_B - self.goal_w_B)
+        self.goal_w_B = [0, 0, 0]
+        self.cost_w_B_g = dot(self.w_B - self.goal_w_B, self.w_B - self.goal_w_B)
 
 
         # the thrust cost
+        # 2 is the hover thrust
         self.cost_torque = dot(self.T_B-2, self.T_B-2)
 
-        self.thrust_cost = self.wthrust * (self.cost_torque) 
+        self.input_cost = self.wthrust * (self.cost_torque) +self.wwt* self.cost_w_B_g
 
         ## the final (goal) cost
         self.goal_cost = self.wrf * self.cost_r_I_g \
                          + self.wvf * self.cost_v_I_g \
                             + self.wqf * self.cost_q_g \
-                        # +  self.wwf * self.cost_w_B_g  \
+                     
         
         self.final_cost = self.wrf * self.cost_r_I_g\
                          + self.wvf * self.cost_v_I_g\
                          + self.wqf * self.cost_q_g
-                            # self.wwf * self.cost_w_B_g + \
+                     
 
     def init_TraCost(self): # transforming Rodrigues to Quaternion is shown in get_input function
         ## traverse cost

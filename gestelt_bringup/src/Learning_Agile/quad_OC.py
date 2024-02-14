@@ -73,14 +73,14 @@ class OCSys:
         ## Fold
         #self.dyn_fn = casadi.Function('dyn', [X0, U], [X])
 
-    def setthrustcost(self, thrust_cost):
+    def setInputCost(self, input_cost):
         if not hasattr(self, 'auxvar'):
             self.setAuxvarVariable()
 
-        assert thrust_cost.numel() == 1, "thrust_cost must be a scalar function"        
+        assert input_cost.numel() == 1, "input_cost must be a scalar function"        
 
-        self.thrust_cost = thrust_cost
-        self.thrust_cost_fn = casadi.Function('thrust_cost',[self.control, self.auxvar], [self.thrust_cost])
+        self.input_cost = input_cost
+        self.input_cost_fn = casadi.Function('input_cost',[self.control, self.auxvar], [self.input_cost])
 
     def setPathCost(self, 
                     path_cost,
@@ -184,7 +184,7 @@ class OCSys:
 
             # weight*self.tra_cost_fn(Xk, auxvar_value) + 
             Ck = weight*self.tra_cost_fn(X[:,k], auxvar_value) + self.path_cost_fn(X[:,k], auxvar_value)\
-                +self.thrust_cost_fn(U[:,k], auxvar_value) #+ 1*dot(Uk-Ulast,Uk-Ulast)
+                +self.input_cost_fn(U[:,k], auxvar_value) #+ 1*dot(Uk-Ulast,Uk-Ulast)
                                                                
             J = J + Ck
 
@@ -432,7 +432,7 @@ class OCSys:
         ocp.cost.cost_type = 'EXTERNAL'
         ocp.cost.cost_type_e = 'EXTERNAL'
 
-        # Ulast=ocp.model.p
+        Ulast=ocp.model.p[self.n_state:self.n_state+self.n_control]
         goal_state=ocp.model.p[0:self.n_state]  
         des_tra_pos=ocp.model.p[self.n_state+self.n_control : self.n_state+self.n_control+3]
         des_tra_q=ocp.model.p[self.n_state+self.n_control+3 : self.n_state+self.n_control+7]
@@ -444,7 +444,7 @@ class OCSys:
         ocp.model.cost_expr_ext_cost = self.path_cost_fn(ocp.model.x,goal_state,self.auxvar)\
             +self.final_cost_fn(ocp.model.x,goal_state,self.auxvar)\
             +ocp.model.p[-1]*self.tra_cost_fn(ocp.model.x, des_tra_pos,des_tra_q, self.auxvar)\
-            # +1*dot(ocp.model.u-Ulast,ocp.model.u-Ulast)
+            +1*dot(ocp.model.u-Ulast,ocp.model.u-Ulast)
         
         # end cost
         ocp.model.cost_expr_ext_cost_e = self.final_cost_fn(ocp.model.x,goal_state,self.auxvar)
