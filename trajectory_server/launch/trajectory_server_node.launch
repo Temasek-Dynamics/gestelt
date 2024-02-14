@@ -24,6 +24,9 @@
         <!-- Debug display params -->
         <param name="traj_server/uav_pose_history_size" value="5000" type="int"/>
 
+        <!--takeoff ramp speed denominator-->
+        <param name="traj_server/takeoff_ramp_denom" value="20.0" type="double"/>
+
         <!-- Safety bounding box, any commands exceeding this limit will result in the drone stopping-->
         <!-- This is relative to uav origin frame -->
         <param name="traj_server/enable_safety_box" value="false" type="bool"/>

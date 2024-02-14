@@ -370,14 +370,14 @@ def main():
     
     # receive the start and end point, and the initial gate point, from ROS side
     # rewrite the inputs
-    learing_agile_agent.receive_terminal_states(start=np.array([0,1.8,1.4]),
-                                                end=np.array([0,-1.8,1.4]),
-                                                gate_center=[1.2,0,1.4])
+    # learing_agile_agent.receive_terminal_states(start=np.array([0,1.8,1.4]),
+    #                                             end=np.array([0,-1.8,1.4]),
+    #                                             gate_center=[1.2,0,1.4])
 
     #------------------------------hover test--------------------------------------#
-    # learing_agile_agent.receive_terminal_states(start=np.array([0,1.8,1.4]),
-    #                                             end=np.array([0,1.8,1.4]),
-    #                                             gate_center=[0,1.8,1.4])
+    learing_agile_agent.receive_terminal_states(start=np.array([0,1.8,1.4]),
+                                                end=np.array([0,1.8,1.4]),
+                                                gate_center=[0,1.8,1.4])
     #------------------------------------------------------------------------------#
     # problem definition
     learing_agile_agent.problem_definition(dyn_step=0.002)

@@ -15,7 +15,7 @@ void TrajServer::init(ros::NodeHandle& nh)
   // Operational params
   nh.param("traj_server/takeoff_height", takeoff_height_, 1.0);
   nh.param("traj_server/drone_yaw", last_mission_yaw_, -M_PI/2);
-  nh.param("traj_server/takeoff_ramptime", takeoff_ramptime_, 0.0);
+  nh.param("traj_server/takeoff_ramp_denom", takeoff_ramp_denom_, 200.0);
 
   nh.param("traj_server/planner_heartbeat_timeout", planner_heartbeat_timeout_, 0.5);
   nh.param("traj_server/ignore_planner_heartbeat", ignore_heartbeat_, false);
@@ -557,7 +557,7 @@ void TrajServer::execTakeOff()
  
     // z axis takeoff ramp
     if (takeoff_ramp_(2) < takeoff_height_){
-      takeoff_ramp_(2) += pub_cmd_freq_/(pub_cmd_freq_*20); // 200/  25Hz, then the addition is 0.01m, for 0.04s
+      takeoff_ramp_(2) += pub_cmd_freq_/(pub_cmd_freq_*takeoff_ramp_denom_); // 200/  25Hz, then the addition is 0.01m, for 0.04s
     }
     else {
       takeoff_ramp_(2) = last_mission_pos_(2);
