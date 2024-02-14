@@ -50,13 +50,14 @@ class run_quad:
         # wrt: ,gate traverse position cost
         # wqt: gate traverse attitude cost
         # wthrust: thrust cost
+        # wwt: input angular velocity cost
         # wrf: final position cost
         # wvf: final velocity cost
         # wqf: final attitude cost
         # wwf: final angular velocity cost
 
         # initialize the cost function with symbolic variables
-        self.uav1.initCost(wrt=5,wqt=3,wthrust=0.1,wrf=1,wvf=1,wqf=1,wwf=3,goal_pos=self.goal_pos) # wthrust = 0.1
+        self.uav1.initCost(wrt=5,wqt=8,wthrust=1,wwt=0,wrf=1,wvf=1,wqf=1,goal_pos=self.goal_pos) # wthrust = 0.1
         self.uav1.init_TraCost()
 
         # --------------------------- create PDP object1 ----------------------------------------
@@ -78,7 +79,7 @@ class run_quad:
         self.uavoc1.setControlVariable(self.uav1.U,control_lb=[0,-ang_rate_b,-ang_rate_b,-ang_rate_b],control_ub= [thrust_ub,ang_rate_b,ang_rate_b,ang_rate_b]) # thrust-to-weight = 4:1
 
         self.uavoc1.setDyn(self.uav1.f,self.dt)
-        self.uavoc1.setthrustcost(self.uav1.thrust_cost)
+        self.uavoc1.setInputCost(self.uav1.input_cost)
         self.uavoc1.setPathCost(self.uav1.goal_cost,goal_state_sym=self.uav1.goal_state_sym)
         self.uavoc1.setTraCost(self.uav1.tra_cost,
                                self.uav1.des_tra_r_I,

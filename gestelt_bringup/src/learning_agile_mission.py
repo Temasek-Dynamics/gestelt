@@ -208,10 +208,10 @@ def main():
     # waypoints are under the map frame, will be transformed to world frame
     
     # gate position
-    # waypoints.append(create_pose(1.2,-0.0,1.5)) # 3.0,2.0,3   2.0,-0.0,1.5
+    waypoints.append(create_pose(1.2,-0.0,1.5)) # 3.0,2.0,3   2.0,-0.0,1.5
     
     # end position
-    # waypoints.append(create_pose(-0.0,-1.8,1.4))# 5.0,2.0,3  -2.0,-1.8,1.4
+    waypoints.append(create_pose(-0.0,-1.8,1.4))# 5.0,2.0,3  -2.0,-1.8,1.4
 
     #------------------------------------ for hovering test:-------------------------------------------#
     waypoints.append(create_pose(-0.0,0.0,1.3)) # 3.0,2.0,3   2.0,-0.0,1.5

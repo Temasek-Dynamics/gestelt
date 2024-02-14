@@ -205,7 +205,7 @@ class LearningAgileAgentNode():
         # thrust max is 3.48234 N
         # each propeller thrust max is 0.870585 N+0.15
         # mavros_attitude_setpoint.thrust = sum(thrust_each)/((0.8706+0.25)*4) # normalize to [0,1]
-        mavros_attitude_setpoint.thrust = input[0]/((0.8706)*4) # normalize to [0,1] # +0.25
+        mavros_attitude_setpoint.thrust = input[0]/((0.8706)*4) # normalize to [0,1] # 
 
         mavros_attitude_setpoint.body_rate=body_rate_setpoint
         mavros_attitude_setpoint.orientation=attitude_setpoint
