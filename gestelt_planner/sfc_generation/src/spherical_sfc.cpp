@@ -44,7 +44,7 @@ bool SphericalSFC::generateSFC(const std::vector<Eigen::Vector3d> &path)
 
         if (!getForwardPointOnPath(path, path_idx_cur, B_cur)){
             std::cout << "getForwardPointOnPath: Failed to get forward point on the path" << std::endl;
-            return false;
+            break;
         }
 
         auto get_fwd_pt_end = std::chrono::high_resolution_clock::now();
@@ -53,7 +53,7 @@ bool SphericalSFC::generateSFC(const std::vector<Eigen::Vector3d> &path)
 
         if (!BatchSample(path[path_idx_cur], B_cur)){
             std::cout << "Batch sample failed" << std::endl;
-            return false;
+            break;
         }
 
         auto batch_sample_end = std::chrono::high_resolution_clock::now();
@@ -180,16 +180,18 @@ bool SphericalSFC::BatchSample(const Eigen::Vector3d& pt_guide, Sphere& B_cur)
 
     // Set up seed for sampler
     uint64_t seed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
-    sampler_.setSeed(seed);
+    // sampler_.setSeed(seed);
     sampler_.setParams(pt_guide, stddev_3d);
     
     auto b = std::chrono::high_resolution_clock::now();
 
     // Sample the points first then rotate them
-    for (int k = 0; k < sfc_params_.max_sample_points; k++){
-        /* Debugging */
-        p_cand_vec.push_back(sampler_.sample());
-    }
+    // for (int k = 0; k < sfc_params_.max_sample_points; k++){
+    //     /* Debugging */
+    //     p_cand_vec.push_back(sampler_.sample());
+    // }
+
+    p_cand_vec = sampler_.sample(sfc_params_.max_sample_points);
 
     auto c = std::chrono::high_resolution_clock::now();
 

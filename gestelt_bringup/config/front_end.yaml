@@ -11,19 +11,24 @@ front_end:
   planner_frequency: 10.0
 
 sfc:
-  max_iterations: 50     # Corresponds to maximum number of spheres
+  max_iterations: 10     # Corresponds to maximum number of spheres
   debug_viz: true        # If true, publish visualization for debugging
   # Sampling
   max_sample_points: 500 # Maximum sample points for candidate sphere
   # standard deviation: remember 68–95–99.7 rule
-  mult_stddev_x: 0.2      # if mult_stddev_x is too high, the spheres cannot round corners and generate loads of spheres around the same area around corners
-  mult_stddev_y: 0.2      # 
-  mult_stddev_z: 0.2      # 
+  # mult_stddev_x: 0.2      # if mult_stddev_x is too high, the spheres cannot round corners and generate loads of spheres around the same area around corners
+  # mult_stddev_y: 0.2      # 
+  # mult_stddev_z: 0.2      # 
+
+  mult_stddev_x: 1.0      # if mult_stddev_x is too high, the spheres cannot round corners and generate loads of spheres around the same area around corners
+  mult_stddev_y: 1.5      # 
+  mult_stddev_z: 1.5     # 
+
   W_cand_vol: 1           # Weight for candidate sphere volume
   W_intersect_vol: 5      # Weight for volume of intersection between spheres
   # Criteria for valid spheres
-  min_sphere_vol: 0.1 # (m^3) Minimum volume of sphere
-  max_sphere_vol: 10000.0 # (m^3) Maximum allowed sphere volume
+  min_sphere_vol: 0.25 # (m^3) Minimum volume of sphere
+  max_sphere_vol: 999999.0 # (m^3) Maximum allowed sphere volume
   min_sphere_intersect: 0.1 # (m^3) Minimum volume of sphere intersection
 
   # Initial time allocation

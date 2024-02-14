@@ -2,16 +2,18 @@
 #define _SPHERICAL_SFC_H_
 
 #include <sfc_generation/sfc_base.h>
+#include "halton_enum.h"
+#include "halton_sampler.h"
 
 #include <random>
 #include <chrono>
 #include <queue>
+#include <chrono>
 
 #include <ros/ros.h>
 #include <visualization_msgs/Marker.h>
 #include <visualization_msgs/MarkerArray.h>
 
-#include <chrono>
 class SphericalSFC : public SFCBase
 {
 public: // Public structs
@@ -82,35 +84,79 @@ public: // Public structs
 
   }; // struct Sphere
 
+  // struct Sampler {
+  //   std::default_random_engine gen; 
+
+  //   std::normal_distribution<double> x_dis;
+  //   std::normal_distribution<double> y_dis;
+  //   std::normal_distribution<double> z_dis;
+
+  //   Sampler(){}
+
+  //   Sampler(const Eigen::Vector3d& mean, const Eigen::Vector3d& stddev)
+  //   {
+  //     x_dis = std::normal_distribution<double>(mean(0), stddev(0));
+  //     y_dis = std::normal_distribution<double>(mean(1), stddev(1));
+  //     z_dis = std::normal_distribution<double>(mean(2), stddev(2));
+  //   }
+
+  //   void setParams(const Eigen::Vector3d& mean, const Eigen::Vector3d& stddev)
+  //   {
+  //     x_dis = std::normal_distribution<double>(mean(0), stddev(0));
+  //     y_dis = std::normal_distribution<double>(mean(1), stddev(1));
+  //     z_dis = std::normal_distribution<double>(mean(2), stddev(2));
+  //   }
+
+  //   void setSeed(uint64_t seed){
+  //     gen.seed(seed);
+  //   }
+
+  //   Eigen::Vector3d sample() {
+  //     return Eigen::Vector3d{x_dis(gen), y_dis(gen), z_dis(gen)};
+  //   }
+
+  // }; // struct Sampler
+
   struct Sampler {
-    std::default_random_engine gen; 
+    Halton_sampler halton_sampler_;
+    unsigned samples_per_pixel_;
+    Eigen::Vector3d mean_;
+    Eigen::Vector3d stddev_;
 
-    std::normal_distribution<double> x_dis;
-    std::normal_distribution<double> y_dis;
-    std::normal_distribution<double> z_dis;
-
-    Sampler(){}
-
-    Sampler(const Eigen::Vector3d& mean, const Eigen::Vector3d& stddev)
+    Sampler()
     {
-      x_dis = std::normal_distribution<double>(mean(0), stddev(0));
-      y_dis = std::normal_distribution<double>(mean(1), stddev(1));
-      z_dis = std::normal_distribution<double>(mean(2), stddev(2));
+      halton_sampler_.init_faure();
     }
 
     void setParams(const Eigen::Vector3d& mean, const Eigen::Vector3d& stddev)
     {
-      x_dis = std::normal_distribution<double>(mean(0), stddev(0));
-      y_dis = std::normal_distribution<double>(mean(1), stddev(1));
-      z_dis = std::normal_distribution<double>(mean(2), stddev(2));
+      mean_ = mean;
+      stddev_ = stddev;
     }
 
-    void setSeed(uint64_t seed){
-      gen.seed(seed);
-    }
+    std::vector<Eigen::Vector3d> sample(const unsigned& samples_per_pixel) {
+      std::vector<Eigen::Vector3d> samp_pts;
 
-    Eigen::Vector3d sample() {
-      return Eigen::Vector3d{x_dis(gen), y_dis(gen), z_dis(gen)};
+      for (unsigned i = 0; i < samples_per_pixel; ++i) // Iterate over samples in the pixel.
+      {
+        // Draw three components.
+        auto samp_pt = Eigen::Vector3d{ 
+            halton_sampler_.sample(0, i), 
+            halton_sampler_.sample(1, i), 
+            halton_sampler_.sample(2, i) };
+
+        samp_pt = samp_pt.array() - Eigen::Vector3d{0.5, 0.5, 0.5}.array();
+
+        // Rescale the 3 components
+        samp_pt = samp_pt.array() * stddev_.array();
+
+        // Translate by the mean
+        samp_pt = samp_pt + mean_;
+
+        samp_pts.push_back(samp_pt);
+      }
+
+      return samp_pts;
     }
 
   }; // struct Sampler
@@ -255,6 +301,13 @@ private: // Private methods
    */
   double computeCandSphereScore(Sphere& B_cand, Sphere& B_prev);
 
+  /**
+   * @brief Transform points about the origin
+   * 
+   * @param pts 
+   * @param origin 
+   * @param rot_mat 
+   */
   void transformPoints(std::vector<Eigen::Vector3d>& pts, Eigen::Vector3d origin, const Eigen::Matrix<double, 3, 3>& rot_mat);
 
   /**
