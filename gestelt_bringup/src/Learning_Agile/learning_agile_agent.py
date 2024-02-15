@@ -254,8 +254,10 @@ class LearningAgileAgent():
         # tm = np.matmul(u_m,u1)
         # tm = np.reshape(tm,4)
         # control_tm = np.concatenate((control_tm,[tm]),axis = 0)
-        # self.hl_variable = np.concatenate((self.hl_variable,[out]),axis=0)       
-        
+        # self.hl_variable = np.concatenate((self.hl_variable,[out]),axis=0) 
+
+        # TODO ONLY FOR SIMULATING EXTREME CASES      
+        # time.sleep(0.05)
         callback_runtime=time.time()-t_comp
         return self.pos_vel_att_cmd,self.u, callback_runtime,current_pred_traj,accelerations#accelerations[1,:]
 
@@ -370,14 +372,14 @@ def main():
     
     # receive the start and end point, and the initial gate point, from ROS side
     # rewrite the inputs
-    learing_agile_agent.receive_terminal_states(start=np.array([0,1.8,1.4]),
-                                                end=np.array([0,-1.8,1.4]),
-                                                gate_center=[1.2,0,1.4])
+    # learing_agile_agent.receive_terminal_states(start=np.array([0,1.8,1.4]),
+    #                                             end=np.array([0,-1.8,1.4]),
+    #                                             gate_center=[1.2,0,1.4])
 
     #------------------------------hover test--------------------------------------#
-    # learing_agile_agent.receive_terminal_states(start=np.array([0,1.8,1.4]),
-    #                                             end=np.array([0,1.8,1.4]),
-    #                                             gate_center=[0,1.8,1.4])
+    learing_agile_agent.receive_terminal_states(start=np.array([0,1.8,1.4]),
+                                                end=np.array([0,1.8,1.4]),
+                                                gate_center=[0,1.8,1.4])
     #------------------------------------------------------------------------------#
     # problem definition
     learing_agile_agent.problem_definition(dyn_step=0.002)
