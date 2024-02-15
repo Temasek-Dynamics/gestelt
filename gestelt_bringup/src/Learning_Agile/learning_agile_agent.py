@@ -89,7 +89,7 @@ class LearningAgileAgent():
         ##-------------------- planning variables --------------------------##
         # MPC prediction step, and prediction horizon
         self.dt=0.1
-        self.horizon=20 #(T/dt)
+        self.horizon=10 #(T/dt)
 
         self.u = np.array([2,0.0,0.0,0.0])
         self.tm = [0,0,0,0]
