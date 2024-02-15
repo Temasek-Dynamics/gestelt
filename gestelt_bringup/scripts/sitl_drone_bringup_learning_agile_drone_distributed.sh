@@ -19,6 +19,7 @@ source $SCRIPT_DIR/../../../devel/setup.bash &&
 # export ROS_MASTER_URI (for distributed simulation)
 # drone's side ROS_MASTER_URI should be the laptop
 EXPORT_ROS_MASTER_URI="
+export ROS_HOSTNAME=172.20.10.3 &&
 export ROS_MASTER_URI=http://172.20.10.8:11311
 "
 
@@ -62,11 +63,11 @@ then
 
     tmux send-keys -t $SESSION:0.0 "$SOURCE_PX4_AUTOPILOT $CMD_0" #C-m 
     sleep 2
-    tmux send-keys -t $SESSION:0.1 "$SOURCE_WS $CMD_1" #C-m 
+    tmux send-keys -t $SESSION:0.1 "$SOURCE_WS $EXPORT_ROS_MASTER_URI $CMD_1" C-m 
     sleep 1
-    tmux send-keys -t $SESSION:0.2 "$SOURCE_WS $EXPORT_ROS_MASTER_URI $CMD_2" C-m 
+    tmux send-keys -t $SESSION:0.2 "$SOURCE_WS $CMD_2" #C-m 
     sleep 1
-    tmux send-keys -t $SESSION:0.3 "$SOURCE_WS $CMD_3" C-m
+    tmux send-keys -t $SESSION:0.3 "$SOURCE_WS $EXPORT_ROS_MASTER_URI $CMD_3" C-m
 fi
 
 # Attach session on the first window
