@@ -98,6 +98,7 @@ def main():
     # transforms.append(create_transform(0, 0, z))
 
     transforms.append(create_transform(5.5, 5.5, 1.0))
+    transforms.append(create_transform(0.0, 0.0, 1.0))
     pub_goals(transforms)
 
 if __name__ == '__main__':

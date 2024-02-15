@@ -34,7 +34,7 @@ public:
 
     // Publishers
     traj_server_cmd_pub_ = nh.advertise<gestelt_msgs::Command>("traj_server/command", 1); // Publishes commands to trajectory server
-    exec_traj_pub_ = nh.advertise<gestelt_msgs::ExecTrajectory>("planner_adaptor/exec_trajectory", 5); // Trajectory points to be published to Trajectory Server
+    exec_traj_pub_ = nh.advertise<gestelt_msgs::ExecTrajectory>("planner_adaptor/exec_trajectory", 50); // Trajectory points to be published to Trajectory Server
 
     // Timers
     checks_timer_ = nh.createTimer(ros::Duration(1/checks_freq), &PlannerAdaptor::checksTimerCB, this); // Timer for checking planner heartbeat.
