@@ -80,15 +80,9 @@ public:
 
 private:
 
-  // void addToOpenlist(OccNodePtr node);
-
-  // OccNodePtr popOpenlist();
-
-  // void addToClosedlist(OccNodePtr node);
-
-  // bool isInClosedList(OccNodePtr node);
-
   void tracePath(PosIdx final_node);
+
+  void clearVisualizations();
 
   void publishVizPoints(const std::vector<Eigen::Vector3d>& pts, ros::Publisher& publisher, Eigen::Vector3d color = Eigen::Vector3d{0.0, 0.0, 0.0}, double radius = 0.1, const std::string& frame_id = "world")
   {
@@ -103,8 +97,8 @@ private:
     sphere_list.header.stamp = ros::Time::now();
     sphere_list.type = visualization_msgs::Marker::SPHERE_LIST;
     sphere_list.action = visualization_msgs::Marker::ADD;
-    sphere_list.ns = "spherical_sfc_pts"; 
-    sphere_list.id = 1; 
+    sphere_list.ns = "closed_list"; 
+    sphere_list.id = 0; 
     sphere_list.pose.orientation.w = 1.0;
 
     sphere_list.color.r = color(0);

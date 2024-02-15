@@ -2,7 +2,6 @@
 
 <launch>
   <arg name="drone_id" default="0"/>
-  <arg name="drone_id_ns" value="drone$(arg drone_id)"/>
   <arg name="fake_drone_cfg_filepath" default="$(find gestelt_bringup)/config/fake_drone_params.yaml"/>
 
   <!-- Fake drone -->
@@ -14,7 +13,6 @@
       <arg name="init_x" value="0.0"/>
       <arg name="init_y" value="0.0"/>
       <arg name="init_z" value="0.0"/>
-
   </include>
 
 </launch>

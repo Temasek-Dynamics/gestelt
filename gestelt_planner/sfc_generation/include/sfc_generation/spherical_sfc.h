@@ -84,82 +84,91 @@ public: // Public structs
 
   }; // struct Sphere
 
-  // struct Sampler {
-  //   std::default_random_engine gen; 
-
-  //   std::normal_distribution<double> x_dis;
-  //   std::normal_distribution<double> y_dis;
-  //   std::normal_distribution<double> z_dis;
-
-  //   Sampler(){}
-
-  //   Sampler(const Eigen::Vector3d& mean, const Eigen::Vector3d& stddev)
-  //   {
-  //     x_dis = std::normal_distribution<double>(mean(0), stddev(0));
-  //     y_dis = std::normal_distribution<double>(mean(1), stddev(1));
-  //     z_dis = std::normal_distribution<double>(mean(2), stddev(2));
-  //   }
-
-  //   void setParams(const Eigen::Vector3d& mean, const Eigen::Vector3d& stddev)
-  //   {
-  //     x_dis = std::normal_distribution<double>(mean(0), stddev(0));
-  //     y_dis = std::normal_distribution<double>(mean(1), stddev(1));
-  //     z_dis = std::normal_distribution<double>(mean(2), stddev(2));
-  //   }
-
-  //   void setSeed(uint64_t seed){
-  //     gen.seed(seed);
-  //   }
-
-  //   Eigen::Vector3d sample() {
-  //     return Eigen::Vector3d{x_dis(gen), y_dis(gen), z_dis(gen)};
-  //   }
-
-  // }; // struct Sampler
-
   struct Sampler {
-    Halton_sampler halton_sampler_;
-    unsigned samples_per_pixel_;
-    Eigen::Vector3d mean_;
-    Eigen::Vector3d stddev_;
+    std::default_random_engine gen; 
 
-    Sampler()
+    std::normal_distribution<double> x_dis;
+    std::normal_distribution<double> y_dis;
+    std::normal_distribution<double> z_dis;
+
+    Sampler(){}
+
+    Sampler(const Eigen::Vector3d& mean, const Eigen::Vector3d& stddev)
     {
-      halton_sampler_.init_faure();
+      x_dis = std::normal_distribution<double>(mean(0), stddev(0));
+      y_dis = std::normal_distribution<double>(mean(1), stddev(1));
+      z_dis = std::normal_distribution<double>(mean(2), stddev(2));
     }
 
     void setParams(const Eigen::Vector3d& mean, const Eigen::Vector3d& stddev)
     {
-      mean_ = mean;
-      stddev_ = stddev;
+      x_dis = std::normal_distribution<double>(mean(0), stddev(0));
+      y_dis = std::normal_distribution<double>(mean(1), stddev(1));
+      z_dis = std::normal_distribution<double>(mean(2), stddev(2));
     }
 
-    std::vector<Eigen::Vector3d> sample(const unsigned& samples_per_pixel) {
+    void setSeed(uint64_t seed){
+      gen.seed(seed);
+    }
+
+    std::vector<Eigen::Vector3d> sample(const unsigned& num_samples) {
       std::vector<Eigen::Vector3d> samp_pts;
-
-      for (unsigned i = 0; i < samples_per_pixel; ++i) // Iterate over samples in the pixel.
+      for (unsigned i = 0; i < num_samples; ++i) // Iterate over samples in the pixel.
       {
-        // Draw three components.
-        auto samp_pt = Eigen::Vector3d{ 
-            halton_sampler_.sample(0, i), 
-            halton_sampler_.sample(1, i), 
-            halton_sampler_.sample(2, i) };
-
-        samp_pt = samp_pt.array() - Eigen::Vector3d{0.5, 0.5, 0.5}.array();
-
-        // Rescale the 3 components
-        samp_pt = samp_pt.array() * stddev_.array();
-
-        // Translate by the mean
-        samp_pt = samp_pt + mean_;
-
-        samp_pts.push_back(samp_pt);
+        samp_pts.push_back(Eigen::Vector3d{x_dis(gen), y_dis(gen), z_dis(gen)});
       }
 
       return samp_pts;
     }
 
   }; // struct Sampler
+
+  // struct Sampler {
+  //   Halton_sampler halton_sampler_;
+  //   Eigen::Vector3d mean_;
+  //   Eigen::Vector3d stddev_;
+
+  //   Sampler()
+  //   {
+  //     halton_sampler_.init_faure();
+  //   }
+
+  //   void setSeed(uint64_t seed){
+  //   }
+
+  //   void setParams(const Eigen::Vector3d& mean, const Eigen::Vector3d& stddev)
+  //   {
+  //     mean_ = mean;
+  //     stddev_ = stddev;
+  //   }
+
+  //   std::vector<Eigen::Vector3d> sample(const unsigned& num_samples) {
+  //     std::vector<Eigen::Vector3d> samp_pts;
+
+  //     for (unsigned i = 0; i < num_samples; ++i) // Iterate over samples in the pixel.
+  //     {
+  //       // Draw three components.
+  //       auto samp_pt = Eigen::Vector3d{ 
+  //           halton_sampler_.sample(0, i), 
+  //           halton_sampler_.sample(1, i), 
+  //           halton_sampler_.sample(2, i) };
+
+  //       // Points are sampled from a value of 0.0 to 1.0, so we must center them at 0.5.
+  //       samp_pt = samp_pt.array() - Eigen::Vector3d{0.5, 0.5, 0.5}.array();
+
+  //       // Rescale the 3 components
+  //       samp_pt = samp_pt.array() * stddev_.array();
+
+  //       // Translate by the mean
+  //       samp_pt = samp_pt + mean_;
+
+  //       samp_pts.push_back(samp_pt);
+  //     }
+
+  //     return samp_pts;
+  //   }
+
+  // }; // struct Sampler
 
   struct SphericalSFCParams{
     /* SFC Generation */
@@ -218,11 +227,26 @@ public:
 
 
   /**
-   * @brief Clear existing data structures
+   * @brief Reset existing data structures used during planning
    * 
    */
-  void clear();
-    
+  void reset();
+
+  /**
+   * @brief Clear published visualizations
+   * 
+   */
+  void clearVisualizations();
+  
+  /**
+   * @brief Add publishers for visualization
+   * 
+   * @param p_cand_viz_pub 
+   * @param dist_viz_pub 
+   * @param samp_dir_vec_pub 
+   * @param sfc_spherical_viz_pub 
+   * @param sfc_waypoints_viz_pub 
+   */
   void addVizPublishers(
     ros::Publisher& p_cand_viz_pub, 
     ros::Publisher& dist_viz_pub, ros::Publisher& samp_dir_vec_pub,
@@ -361,11 +385,11 @@ private: // Private methods
 private: // Private members
   Sampler sampler_; // Sampler for sampling SFC waypoints
 
-  ros::Publisher p_cand_viz_pub_; // Visualization of sampling points
-  ros::Publisher dist_viz_pub_; // Visualization of sampling distribution
-  ros::Publisher sfc_spherical_viz_pub_; // Visualization of spherical SFC
-  ros::Publisher sfc_waypoints_viz_pub_; // Visualization of trajectory waypoints
-  ros::Publisher samp_dir_vec_pub_; // Visualization of direction vectors used for sampling
+  ros::Publisher p_cand_viz_pub_; // (visualization_msgs::Marker) Visualization of sampling points
+  ros::Publisher dist_viz_pub_; // (visualization_msgs::MarkerArray) Visualization of sampling distribution
+  ros::Publisher sfc_spherical_viz_pub_; // (visualization_msgs::MarkerArray) Visualization of spherical SFC
+  ros::Publisher sfc_waypoints_viz_pub_; // (visualization_msgs::Marker) Visualization of trajectory waypoints
+  ros::Publisher samp_dir_vec_pub_; // (visualization_msgs::MarkerArray) Visualization of direction vectors used for sampling
 
   /* Params */
   int itr_; // Iteration number

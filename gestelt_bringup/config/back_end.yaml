@@ -2,7 +2,7 @@
 # Back-end params
 #####
 back_end:
-  planner_frequency: 10.0
+  # planner_frequency: 30.0
   # planning_horizon: How far ahead to plan [m]
   planning_horizon: 30.0
   # num_replan_retries: Number of times for back-end to retry
@@ -26,7 +26,7 @@ grid_map:
   ground_height: 0.0
 
   occ_grid/resolution: 0.1
-  occ_grid/inflation: 0.1
+  occ_grid/inflation: 0.2
   filter/downsample_cloud: false 
   filter/depth_stride: 4 
   filter/voxel_size: 0.1

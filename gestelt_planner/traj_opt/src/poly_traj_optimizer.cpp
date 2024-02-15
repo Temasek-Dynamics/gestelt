@@ -8,7 +8,6 @@ namespace ego_planner
       const std::vector<double>& spheres_radius, const std::vector<Eigen::Vector3d>& spheres_center,
       double &final_cost)
   {
-    ROS_INFO("Start optimizeTrajectorySFC");
     // IF size of inner points and segment durations are not the same, there is a bug
     if (inner_ctrl_pts.cols() != (initT.size() - 1))
     {
@@ -81,11 +80,11 @@ namespace ego_planner
           result == lbfgs::LBFGS_ALREADY_MINIMIZED ||
           result == lbfgs::LBFGS_STOP)
       {
-        ROS_INFO("optimizeTrajectorySFC: converged, maxmimum_iteration, already minimized or stop");
+        // ROS_INFO("optimizeTrajectorySFC: converged, maxmimum_iteration, already minimized or stop");
 
         flag_force_return = false;
         // TODO: Add collision-checking in the path
-        printf("\033[32miter=%d,time(ms)=%5.3f,total_t(ms)=%5.3f,cost=%5.3f\n\033[0m", iter_num_, time_ms, total_time_ms, final_cost);
+        // printf("\033[32miter=%d,time(ms)=%5.3f,total_t(ms)=%5.3f,cost=%5.3f\n\033[0m", iter_num_, time_ms, total_time_ms, final_cost);
 
         flag_success = true;
       }
@@ -468,17 +467,17 @@ namespace ego_planner
         continue;
       }
 
-      double traj_i_satrt_time = swarm_trajs_->at(id).start_time;
+      double traj_i_start_time = swarm_trajs_->at(id).start_time;
 
       Eigen::Vector3d swarm_p, swarm_v;
-      if (pt_time < traj_i_satrt_time + swarm_trajs_->at(id).duration)
+      if (pt_time < traj_i_start_time + swarm_trajs_->at(id).duration)
       {
-        swarm_p = swarm_trajs_->at(id).traj.getPos(pt_time - traj_i_satrt_time);
-        swarm_v = swarm_trajs_->at(id).traj.getVel(pt_time - traj_i_satrt_time);
+        swarm_p = swarm_trajs_->at(id).traj.getPos(pt_time - traj_i_start_time);
+        swarm_v = swarm_trajs_->at(id).traj.getVel(pt_time - traj_i_start_time);
       }
       else
       {
-        double exceed_time = pt_time - (traj_i_satrt_time + swarm_trajs_->at(id).duration);
+        double exceed_time = pt_time - (traj_i_start_time + swarm_trajs_->at(id).duration);
         swarm_v = swarm_trajs_->at(id).traj.getVel(swarm_trajs_->at(id).duration);
         swarm_p = swarm_trajs_->at(id).traj.getPos(swarm_trajs_->at(id).duration) +
                   exceed_time * swarm_v;
@@ -665,15 +664,11 @@ namespace ego_planner
     touch_goal_ = touch_goal; 
   }
 
-
   int PolyTrajOptimizer::earlyExitCallback(void *func_data, const double *x, const double *g, const double fx, const double xnorm, const double gnorm, const double step, int n, int k, int ls)
   {
     PolyTrajOptimizer *opt = reinterpret_cast<PolyTrajOptimizer *>(func_data);
 
     return (opt->force_stop_type_ == STOP_FOR_ERROR || opt->force_stop_type_ == STOP_FOR_REBOUND);
   }
-
-
-
 
 } // namespace ego_planner

@@ -6,8 +6,10 @@ SphericalSFC::SphericalSFC(std::shared_ptr<GridMap> grid_map, const SphericalSFC
 
 void SphericalSFC::addVizPublishers(
     ros::Publisher& p_cand_viz_pub, 
-    ros::Publisher& dist_viz_pub, ros::Publisher& samp_dir_vec_pub,
-    ros::Publisher& sfc_spherical_viz_pub, ros::Publisher&  sfc_waypoints_viz_pub)
+    ros::Publisher& dist_viz_pub, 
+    ros::Publisher& sfc_spherical_viz_pub,
+    ros::Publisher&  sfc_waypoints_viz_pub,
+    ros::Publisher& samp_dir_vec_pub)
 {
     p_cand_viz_pub_ = p_cand_viz_pub;
     dist_viz_pub_ = dist_viz_pub;
@@ -16,8 +18,57 @@ void SphericalSFC::addVizPublishers(
     sfc_waypoints_viz_pub_ = sfc_waypoints_viz_pub;
 }
 
+void SphericalSFC::reset()
+{
+    // Clear planning data
+    sfc_spheres_.clear();
+    sfc_traj_.clear();
+
+    // Clear visualizations
+    p_cand_vec_hist_.clear();
+    sampling_dist_hist_.markers.clear();
+    samp_dir_vec_hist_.markers.clear();
+
+    clearVisualizations();
+}   
+
+void SphericalSFC::clearVisualizations()
+{
+    visualization_msgs::MarkerArray markerarray;
+
+    visualization_msgs::Marker marker;
+    marker.id = 0; 
+    marker.action = visualization_msgs::Marker::DELETEALL;
+    
+    visualization_msgs::Marker marker_arr_m;
+    marker_arr_m.action = visualization_msgs::Marker::DELETEALL;
+    marker_arr_m.id = 0;
+    marker_arr_m.ns = "sfc_samp_dist";
+    markerarray.markers.push_back(marker_arr_m);
+    marker_arr_m.ns = "sfc_spheres";
+    markerarray.markers.push_back(marker_arr_m);
+    marker_arr_m.ns = "sfc_samp_dir_vec";
+    markerarray.markers.push_back(marker_arr_m);
+
+    marker.ns = "sfc_cand_pts"; 
+    p_cand_viz_pub_.publish(marker);
+
+    dist_viz_pub_.publish(markerarray);
+
+    sfc_spherical_viz_pub_.publish(markerarray); 
+
+    marker.ns = "sfc_trajectory_waypoints"; 
+    sfc_waypoints_viz_pub_.publish(marker); 
+    marker.ns = "sfc_trajectory_line"; 
+    sfc_waypoints_viz_pub_.publish(marker); 
+
+    samp_dir_vec_pub_.publish(markerarray); 
+}
+
 bool SphericalSFC::generateSFC(const std::vector<Eigen::Vector3d> &path)
 {
+    reset();
+
     double get_fwd_pt_durs{0};
     double batch_sample_durs{0};
 
@@ -113,16 +164,18 @@ bool SphericalSFC::generateSFC(const std::vector<Eigen::Vector3d> &path)
 
     auto pub_dur = std::chrono::duration_cast<std::chrono::duration<double>>(
         d - c).count();
+    
+    if (sfc_params_.debug_viz){
+        // std::cout << "Spherical SFC runtimes [ms]: " << std::endl;
 
-    std::cout << "Spherical SFC runtimes [ms]: " << std::endl;
+        // std::cout << "  Total dur: " << total_loop_dur *1000   << std::endl;
+        // std::cout << "  Preloop dur: " << preloop_dur *1000    << ", pct:" << preloop_dur / total_loop_dur * 100 << "%" << std::endl;
+        // std::cout << "  loop dur: " << loop_dur  *1000         << ", pct:" << loop_dur / total_loop_dur * 100<< "%" << std::endl;
+        // std::cout << "      get_fwd_pt_durs: " << get_fwd_pt_durs  *1000         << ", pct:" << get_fwd_pt_durs / total_loop_dur * 100<< "%" << std::endl;
+        // std::cout << "      batch_sample_durs: " << batch_sample_durs  *1000     << ", pct:" << batch_sample_durs / total_loop_dur * 100<< "%" << std::endl;
 
-    std::cout << "  Total dur: " << total_loop_dur *1000   << std::endl;
-    std::cout << "  Preloop dur: " << preloop_dur *1000    << ", pct:" << preloop_dur / total_loop_dur * 100 << "%" << std::endl;
-    std::cout << "  loop dur: " << loop_dur  *1000         << ", pct:" << loop_dur / total_loop_dur * 100<< "%" << std::endl;
-    std::cout << "      get_fwd_pt_durs: " << get_fwd_pt_durs  *1000         << ", pct:" << get_fwd_pt_durs / total_loop_dur * 100<< "%" << std::endl;
-    std::cout << "      batch_sample_durs: " << batch_sample_durs  *1000     << ", pct:" << batch_sample_durs / total_loop_dur * 100<< "%" << std::endl;
-
-    std::cout << "  publish dur: " << pub_dur  *1000       << "s, pct:" << pub_dur / total_loop_dur * 100<< "%" << std::endl;
+        // std::cout << "  publish dur: " << pub_dur  *1000       << "s, pct:" << pub_dur / total_loop_dur * 100<< "%" << std::endl;
+    }
 
     return true;
 }   
@@ -180,17 +233,12 @@ bool SphericalSFC::BatchSample(const Eigen::Vector3d& pt_guide, Sphere& B_cur)
 
     // Set up seed for sampler
     uint64_t seed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
-    // sampler_.setSeed(seed);
+    sampler_.setSeed(seed);
     sampler_.setParams(pt_guide, stddev_3d);
     
     auto b = std::chrono::high_resolution_clock::now();
 
-    // Sample the points first then rotate them
-    // for (int k = 0; k < sfc_params_.max_sample_points; k++){
-    //     /* Debugging */
-    //     p_cand_vec.push_back(sampler_.sample());
-    // }
-
+    // Sample the points first
     p_cand_vec = sampler_.sample(sfc_params_.max_sample_points);
 
     auto c = std::chrono::high_resolution_clock::now();
@@ -252,15 +300,18 @@ bool SphericalSFC::BatchSample(const Eigen::Vector3d& pt_guide, Sphere& B_cur)
         e - d).count() * 1000.0;
 
     double total_dur = chpt_b + chpt_c + chpt_d + chpt_e;
-    std::cout << "==========" << std::endl;
+    if (sfc_params_.debug_viz){
+    
+        // std::cout << "==========" << std::endl;
 
-    std::cout << "          b: " << chpt_b *1000  << ", pct:" << chpt_b / total_dur * 100 << "%" << std::endl;
-    std::cout << "          c: " << chpt_c *1000  << ", pct:" << chpt_c / total_dur * 100 << "%" << std::endl;
-    std::cout << "          d: " << chpt_d *1000  << ", pct:" << chpt_d / total_dur * 100 << "%" << std::endl;
-    std::cout << "              d2: " << d2_dur *1000  << ", pct:" << d2_dur / total_dur * 100 << "%" << std::endl;
-    std::cout << "              d3: " << d3_dur *1000  << ", pct:" << d3_dur / total_dur * 100 << "%" << std::endl;
-    std::cout << "          e: " << chpt_e *1000  << ", pct:" << chpt_e / total_dur * 100 << "%" << std::endl;
-    std::cout << "==========" << std::endl;
+        // std::cout << "          b: " << chpt_b *1000  << ", pct:" << chpt_b / total_dur * 100 << "%" << std::endl;
+        // std::cout << "          c: " << chpt_c *1000  << ", pct:" << chpt_c / total_dur * 100 << "%" << std::endl;
+        // std::cout << "          d: " << chpt_d *1000  << ", pct:" << chpt_d / total_dur * 100 << "%" << std::endl;
+        // std::cout << "              d2: " << d2_dur *1000  << ", pct:" << d2_dur / total_dur * 100 << "%" << std::endl;
+        // std::cout << "              d3: " << d3_dur *1000  << ", pct:" << d3_dur / total_dur * 100 << "%" << std::endl;
+        // std::cout << "          e: " << chpt_e *1000  << ", pct:" << chpt_e / total_dur * 100 << "%" << std::endl;
+        // std::cout << "==========" << std::endl;
+    }
 
     p_cand_vec_hist_.insert(p_cand_vec_hist_.end(), p_cand_vec.begin(), p_cand_vec.end());
     sampling_dist_hist_.markers.push_back(createVizEllipsoid(pt_guide, stddev_3d, ellipse_orientation, "world", itr_));
@@ -410,7 +461,7 @@ void SphericalSFC::publishVizPiecewiseTrajectory(
     sphere_list.type = visualization_msgs::Marker::SPHERE_LIST;
     sphere_list.action = visualization_msgs::Marker::ADD;
     sphere_list.ns = "sfc_trajectory_waypoints"; 
-    sphere_list.id = 1; 
+    sphere_list.id = 0; 
     sphere_list.pose.orientation.w = 1.0;
 
     sphere_list.color.r = wp_color(0);
@@ -428,7 +479,7 @@ void SphericalSFC::publishVizPiecewiseTrajectory(
     path_line_strip.type = visualization_msgs::Marker::LINE_STRIP;
     path_line_strip.action = visualization_msgs::Marker::ADD;
     path_line_strip.ns = "sfc_trajectory_line"; 
-    path_line_strip.id = 2;
+    path_line_strip.id = 0;
     path_line_strip.pose.orientation.w = 1.0;
 
     path_line_strip.color.r = line_color(0);
@@ -464,7 +515,7 @@ void SphericalSFC::publishVizPoints(
     sphere_list.type = visualization_msgs::Marker::SPHERE_LIST;
     sphere_list.action = visualization_msgs::Marker::ADD;
     sphere_list.ns = "sfc_cand_pts"; 
-    sphere_list.id = 1; 
+    sphere_list.id = 0; 
     sphere_list.pose.orientation.w = 1.0;
 
     sphere_list.color.r = color(0);
@@ -533,7 +584,7 @@ visualization_msgs::Marker SphericalSFC::createArrow(
     arrow.points.clear();
     arrow.points.push_back(start);
     arrow.points.push_back(end);
-    arrow.id = id * 100;
+    arrow.id = id;
 
     return arrow;
 }
@@ -549,7 +600,7 @@ visualization_msgs::Marker SphericalSFC::createVizSphere(
     sphere.header.stamp = ros::Time::now();
     sphere.type = visualization_msgs::Marker::SPHERE;
     sphere.action = visualization_msgs::Marker::ADD;
-    sphere.id = id * 999 + 10;
+    sphere.id = id;
     sphere.pose.orientation.w = 1.0;
 
     sphere.color.r = 0.5;
@@ -578,7 +629,7 @@ visualization_msgs::Marker SphericalSFC::createVizEllipsoid(
     sphere.header.stamp = ros::Time::now();
     sphere.type = visualization_msgs::Marker::SPHERE;
     sphere.action = visualization_msgs::Marker::ADD;
-    sphere.id = id * 1002 + 999;
+    sphere.id = id;
     sphere.pose.orientation.x = orientation.x();
     sphere.pose.orientation.y = orientation.y();
     sphere.pose.orientation.z = orientation.z();

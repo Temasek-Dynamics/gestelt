@@ -16,7 +16,7 @@
     name="$(arg drone_id_ns)_base_link_to_cam_link_tf" 
     args="0.08 0 0.02 0 0 0 1 $(arg drone_id_ns)_base_link $(arg drone_id_ns)_cam_link 100" />
 
-  <!-- Planner -->
+  <!-- Front-end Planner -->
   <include file="$(find front_end_planner)/launch/include/front_end_planner.xml">
       <arg name="cfg_filepath" value="$(arg front_end_planner_cfg_filepath)"/>
 
@@ -24,7 +24,7 @@
   </include>
 
   <!-- Fake sensor data node -->
-  <!-- <node pkg="fake_map" type="fake_map_node" name="fake_map_$(arg drone_id_ns)" output="screen">
+  <node pkg="fake_map" type="fake_map_node" name="fake_map_$(arg drone_id_ns)" output="screen">
       <rosparam command="load" file="$(find gestelt_bringup)/config/fake_laser_params.yaml" />
 
       <param name="map/use_pcd_file" value="false"/>
@@ -35,6 +35,6 @@
       <param name="uav/sensor_frame" value="$(arg drone_id_ns)_cam_link"/>
 
       <remap from="uav/sensor_cloud" to="/$(arg drone_id_ns)/$(arg cloud_topic)"/>
-  </node> -->
+  </node>
 
 </launch>

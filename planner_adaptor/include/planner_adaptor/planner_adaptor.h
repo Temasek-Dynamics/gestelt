@@ -133,6 +133,9 @@ public:
    * @return false 
    */
   bool isPlannerHBTimeout() {
+    if (ignore_heartbeat_checks_){
+      return false;
+    }
     return (ros::Time::now().toSec() - last_planner_heartbeat_time_) > planner_heartbeat_timeout_;
   }
 

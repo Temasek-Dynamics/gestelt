@@ -1,0 +1,37 @@
+<!-- Spawns a fake drone for testing architecture and algorithms-->
+
+<launch>
+  <arg name="drone_id" default="0"/>
+  <arg name="fake_drone_cfg_filepath" default="$(find gestelt_bringup)/config/fake_drone_params.yaml"/>
+  <arg name="init_x" default="0.0"/>
+  <arg name="init_y" default="0.0"/>
+  <arg name="init_z" default="0.0"/>
+
+  <!-- Fake drone -->
+  <include file="$(find fake_drone)/launch/include/fake_drone.xml">
+      <arg name="cfg_filepath" value="$(arg fake_drone_cfg_filepath)"/>
+
+      <arg name="drone_id" value="$(arg drone_id)"/>
+
+      <arg name="init_x" value="$(arg init_x)"/>
+      <arg name="init_y" value="$(arg init_y)"/>
+      <arg name="init_z" value="$(arg init_z)"/>
+  </include>
+
+  <!-- Fake sensor data node -->
+  <!-- <node pkg="fake_map" type="fake_map_node" name="fake_map_$(arg drone_id_ns)" output="screen">
+      <rosparam command="load" file="$(find gestelt_bringup)/config/fake_laser_params.yaml" />
+
+      <param name="map/use_pcd_file" value="false"/>
+      <param name="map/point_cloud_topic" value="/fake_map"/>
+
+      <param name="uav/id" value="$(arg drone_id_ns)"/>
+      <param name="uav/global_frame" value="world"/>
+      <param name="uav/origin_frame" value="$(arg drone_id_ns)_origin"/>
+      <param name="uav/sensor_frame" value="$(arg drone_id_ns)_cam_link"/>
+
+      <remap from="uav/sensor_cloud" to="/$(arg drone_id_ns)/$(arg cloud_topic)"/>
+  </node> -->
+
+
+</launch>

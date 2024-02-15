@@ -44,7 +44,6 @@ public:
    * 
    */
   void planTrajectoryCB(traj_utils::PolyTrajPtr msg){
-
     if (msg->order != 5)
     {
       // Only support trajectory order equals 5 now!
@@ -84,8 +83,14 @@ public:
   virtual void samplePlanTimerCB(const ros::TimerEvent &e){
     // No heartbeat from the planner received
     // or plan has not been received
-    if (isPlannerHBTimeout() || !traj_)
+    if (isPlannerHBTimeout())
     {
+      // ROS_INFO_THROTTLE(5.0, "[EGO Planner Adaptor] Planner heartbeat timeout");
+      return;
+    }
+    if (!traj_)
+    {
+      // ROS_INFO_THROTTLE(5.0, "[EGO Planner Adaptor] No trajectory received!");
       return;
     }
 
@@ -112,16 +117,19 @@ public:
       quat = RPYToQuaternion(0.0, 0.0, yaw_yawdot.first);
 
       time_last_ = time_now;
+
+      // Send sampled point to Trajectory Server
+      forwardExecTrajectory(pos, quat, vel, acc, jer, type_mask_);
     }
     // IF time elapsed is longer then duration of trajectory, then nothing is done
     else if (t_cur >= traj_->getTotalDuration()) // Finished trajectory
     {
+      return;
     }
     else { // Time is negative
+      return;
     }
 
-    // Send sampled point to Trajectory Server
-    forwardExecTrajectory(pos, quat, vel, acc, jer, type_mask_);
   }
 
   std::pair<double, double> calculate_yaw(double t_cur, Eigen::Vector3d &pos, double dt)

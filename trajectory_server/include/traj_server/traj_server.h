@@ -179,8 +179,6 @@ private: // Class Methods
   */
   inline bool isTakenOff()
   {
-    // Check that difference between desired taking off height and current UAV position
-    // is within tolerance 
     return abs(uav_pose_.pose.position.z - takeoff_height_) < take_off_landing_tol_;
   }
 
@@ -386,6 +384,7 @@ private: // Member variables
   double sm_tick_freq_; // Frequency of state machine ticks
 
   double takeoff_height_{0.0}; // Default height to take off to 
+  double min_hover_height_{0.25};
   double landed_height_{0.1}; // We assume that the ground is even (z = 0)
   double take_off_landing_tol_{0.1}; // tolerance within desired take off or landing 
 

@@ -142,9 +142,6 @@ class FakeDrone
         // Publish mavros state
         void pubMavrosState();
 
-        // Stop and hover the drone in the last given position
-        void stopAndHover(FakeDrone::Command& cmd);
-
         void setStateFromCmd(FakeDrone::State& state, const FakeDrone::Command& cmd);
 };
 

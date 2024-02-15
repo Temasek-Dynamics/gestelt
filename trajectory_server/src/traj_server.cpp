@@ -15,7 +15,7 @@ void TrajectoryServer::init(ros::NodeHandle& nh, ros::NodeHandle& pnh)
 
   // Operational params
   pnh.param("takeoff_height", takeoff_height_, 1.0);
-  ROS_INFO("TAKE OFF HEIGHT: %f", takeoff_height_);
+  pnh.param("minimum_hover_height", min_hover_height_, 0.25);
 
   // Safety bounding box params
   pnh.param("enable_safety_box", enable_safety_box_, true);
@@ -45,8 +45,8 @@ void TrajectoryServer::init(ros::NodeHandle& nh, ros::NodeHandle& pnh)
 
   // Subscription to UAV (via MavROS)
   uav_state_sub_ = nh.subscribe<mavros_msgs::State>("mavros/state", 10, &TrajectoryServer::UAVStateCb, this);
-  pose_sub_ = nh.subscribe<geometry_msgs::PoseStamped>("mavros/local_position/pose", 1, &TrajectoryServer::UAVPoseCB, this);
-  odom_sub_ = nh.subscribe<nav_msgs::Odometry>("mavros/local_position/odom", 1, &TrajectoryServer::UAVOdomCB, this);
+  pose_sub_ = nh.subscribe<geometry_msgs::PoseStamped>("mavros/local_position/pose", 5, &TrajectoryServer::UAVPoseCB, this);
+  odom_sub_ = nh.subscribe<nav_msgs::Odometry>("mavros/local_position/odom", 5, &TrajectoryServer::UAVOdomCB, this);
 
   /////////////////
   /* Publishers */
@@ -116,17 +116,16 @@ void TrajectoryServer::UAVStateCb(const mavros_msgs::State::ConstPtr &msg)
 void TrajectoryServer::UAVPoseCB(const geometry_msgs::PoseStamped::ConstPtr &msg)
 {
   if (first_pose_){
-    last_mission_pos_(0) = uav_pose_.pose.position.x;
-    last_mission_pos_(1) = uav_pose_.pose.position.y;
+    last_mission_pos_(0) = msg->pose.position.x;
+    last_mission_pos_(1) = msg->pose.position.y;
     num_pose_msgs_++;
     if (num_pose_msgs_ > 100){
       first_pose_ = false;
-      ROS_INFO("Taking off pose locked to (%f, %f)", last_mission_pos_(0), last_mission_pos_(1));
+      ROS_INFO("Taking off 2d pose locked to (%f, %f)", last_mission_pos_(0), last_mission_pos_(1));
     }
   }
 
   uav_pose_ = *msg; 
-
 }
 
 void TrajectoryServer::UAVOdomCB(const nav_msgs::Odometry::ConstPtr &msg)
@@ -174,7 +173,7 @@ void TrajectoryServer::execTrajTimerCb(const ros::TimerEvent &e)
     
     case ServerState::MISSION:
       if (!isExecutingMission()){ // isExecutingMission() is true if last exec trajectory message did not exceed timeout
-        logInfoThrottled("No Mission Received, waiting...", 2.0);
+        logInfoThrottled("No Mission Received, waiting...", 5.0);
         execHover();
       }
       else {
@@ -398,8 +397,8 @@ void TrajectoryServer::execLand()
 {
   int type_mask = IGNORE_VEL | IGNORE_ACC | IGNORE_YAW_RATE ; // Ignore Velocity, Acceleration and yaw rate
 
-  Eigen::Vector3d pos;
-  pos << uav_pose_.pose.position.x, uav_pose_.pose.position.y, landed_height_;
+  Eigen::Vector3d pos = Eigen::Vector3d{
+    uav_pose_.pose.position.x, uav_pose_.pose.position.y, landed_height_};
 
   publishCmd( pos, Vector3d::Zero(), Vector3d::Zero(), Vector3d::Zero(), 
               last_mission_yaw_, 0, 
@@ -413,6 +412,8 @@ void TrajectoryServer::execTakeOff()
   Eigen::Vector3d pos = last_mission_pos_;
   pos(2) = takeoff_height_;
 
+  logInfoThrottled(str_fmt("[TAKEOFF] Taking off to position (%f, %f, %f)", pos(0), pos(1), pos(2)), 1.5);
+
   publishCmd( pos, Vector3d::Zero(), Vector3d::Zero(), Vector3d::Zero(), 
               last_mission_yaw_, 0, 
               type_mask);
@@ -421,10 +422,11 @@ void TrajectoryServer::execTakeOff()
 void TrajectoryServer::execHover()
 {
   int type_mask = IGNORE_VEL | IGNORE_ACC | IGNORE_YAW_RATE ; // Ignore Velocity, Acceleration and yaw rate
-  Eigen::Vector3d pos = last_mission_pos_;
+  Eigen::Vector3d pos = Eigen::Vector3d{
+    uav_pose_.pose.position.x, uav_pose_.pose.position.y, uav_pose_.pose.position.z};
 
   // ensure that hover z position does not fall below 0.2m
-  pos(2) = pos(2) < 0.2 ? 0.2 : pos(2);
+  pos(2) = pos(2) < min_hover_height_ ? min_hover_height_ : pos(2);
 
   publishCmd( pos, Vector3d::Zero(), Vector3d::Zero(), Vector3d::Zero(), 
               last_mission_yaw_, 0, 

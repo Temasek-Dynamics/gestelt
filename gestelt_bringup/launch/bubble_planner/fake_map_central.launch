@@ -5,7 +5,8 @@
   <arg name="map_filepath" default="$(find gestelt_bringup)/simulation/fake_maps/demo_map.pcd" />
 
   <!-- Add static transform from world to map -->
-  <node pkg="tf" type="static_transform_publisher" name="world_to_map_tf" args="0 0 0 0 0 0 1 world map 100"> </node>
+  <node pkg="tf" type="static_transform_publisher" 
+    name="world_to_map_tf" args="0 0 0 0 0 0 1 world map 100"> </node>
 
   <!-- RVIZ -->
   <node name="rviz" pkg="rviz" type="rviz" required="true" args="-d $(find gestelt_bringup)/launch/rviz/$(arg rviz_config).rviz"/>

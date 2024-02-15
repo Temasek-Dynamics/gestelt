@@ -20,14 +20,14 @@ source $SCRIPT_DIR/../../../devel/setup.bash &&
 #####
 # Commands
 #####
-# Start front-end planner
+# Start planner module
 CMD_0="
-roslaunch gestelt_bringup front_end_planner.launch drone_id:=0
+roslaunch gestelt_bringup planner_module.launch drone_id:=0
 "
 
-# Start up back-end planner adaptor
+# Start up fake drones
 CMD_1="
-roslaunch gestelt_bringup back_end_planner.launch drone_id:=0
+roslaunch gestelt_bringup multi_fake_drones.launch 
 "
 
 # Start up central bridge and nodes

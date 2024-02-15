@@ -2,7 +2,7 @@
 
 void FrontEndPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
 { 
-  ROS_INFO("Initialized front end planner");
+  logInfo("Initialized front end planner");
   double planner_freq;
   pnh.param("front_end/planner_frequency", planner_freq, -1.0);
   pnh.param("front_end/goal_tolerance", squared_goal_tol_, -1.0);
@@ -46,14 +46,13 @@ void FrontEndPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   front_end_plan_viz_pub_ = nh.advertise<visualization_msgs::Marker>("plan_viz", 10);
   closed_list_viz_pub_ = nh.advertise<visualization_msgs::Marker>("closed_list_viz", 10);
 
-  sfc_spherical_viz_pub_ = nh.advertise<visualization_msgs::MarkerArray>("sfc_spherical", 10);
-
   sfc_p_cand_viz_pub_ = nh.advertise<visualization_msgs::Marker>("sfc_cand_points", 10);
   sfc_dist_viz_pub_ = nh.advertise<visualization_msgs::MarkerArray>("sfc_dist", 10);
-  samp_dir_vec_pub_ = nh.advertise<visualization_msgs::MarkerArray>("sfc_samp_dir_vec", 10);
+  sfc_spherical_viz_pub_ = nh.advertise<visualization_msgs::MarkerArray>("sfc_spherical", 10);
   sfc_waypoints_viz_pub_ = nh.advertise<visualization_msgs::Marker>("sfc_waypoints", 10);
+  samp_dir_vec_pub_ = nh.advertise<visualization_msgs::MarkerArray>("sfc_samp_dir_vec", 10);
 
-  // plan_timer_ = nh.createTimer(ros::Duration(1/planner_freq), &FrontEndPlanner::planTimerCB, this);
+  plan_timer_ = nh.createTimer(ros::Duration(1/planner_freq), &FrontEndPlanner::planTimerCB, this);
 
   // Initialize map
   map_.reset(new GridMap);
@@ -68,9 +67,10 @@ void FrontEndPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   sfc_generation_->addVizPublishers(
     sfc_p_cand_viz_pub_, 
     sfc_dist_viz_pub_, 
-    samp_dir_vec_pub_, 
     sfc_spherical_viz_pub_, 
-    sfc_waypoints_viz_pub_);
+    sfc_waypoints_viz_pub_,
+    samp_dir_vec_pub_
+  );
 }
 
 /**
@@ -85,7 +85,6 @@ void FrontEndPlanner::planTimerCB(const ros::TimerEvent &e)
 /**
  * Timer Callbacks
 */
-
 
 bool FrontEndPlanner::generatePlan(){
   
@@ -103,10 +102,15 @@ bool FrontEndPlanner::generatePlan(){
   start_pos_ = cur_pos_;
   goal_pos_ = waypoints_.nextWP();
 
+  // logInfo(str_fmt("generatePlan() from (%f, %f, %f) to (%f, %f, %f)",
+  //   start_pos_(0), start_pos_(1), start_pos_(2),
+  //   goal_pos_(0), goal_pos_(1), goal_pos_(2))
+  // );
+
   ros::Time front_end_plan_start_time = ros::Time::now();
 
   if (!front_end_planner_->generatePlan(start_pos_, goal_pos_)){
-    ROS_ERROR("[FrontEndPlanner] Path generation failed!");
+    logError("Path generation failed!");
     viz_helper::publishVizCubes(front_end_planner_->getClosedList(), "world", closed_list_viz_pub_);
     return false;
   }
@@ -153,10 +157,10 @@ bool FrontEndPlanner::generatePlan(){
   sfc_traj_msg.segments_time_duration = sfc_traj.segs_t_dur;
   spherical_sfc_traj_pub_.publish(sfc_traj_msg);
 
-  logInfo(str_fmt("Front-end Planning Time: %f ms", front_end_plan_time_ms));
-  logInfo(str_fmt("SFC Planning Time: %f ms", sfc_plan_time_ms));
-  logInfo(str_fmt("Number of waypoints in front-end path: %ld", front_end_path.size()));
-  logInfo(str_fmt("Size of closed list (expanded nodes): %ld", closed_list.size()));
+  // logInfo(str_fmt("Front-end Planning Time: %f ms", front_end_plan_time_ms));
+  // logInfo(str_fmt("SFC Planning Time: %f ms", sfc_plan_time_ms));
+  // logInfo(str_fmt("Number of waypoints in front-end path: %ld", front_end_path.size()));
+  // logInfo(str_fmt("Size of closed list (expanded nodes): %ld", closed_list.size()));
   // logInfo(str_fmt("[SFC] Number of spheres in SFC Spherical corridor: %ld", sfc_traj.spheres.size()));
   // logInfo(str_fmt("[SFC] Number of waypoints: %ld", sfc_traj.waypoints.size()));
   // logInfo(str_fmt("[SFC] Number of time segment durations: %ld", sfc_traj.segs_t_dur.size()));
@@ -174,9 +178,9 @@ bool FrontEndPlanner::generatePlan(){
  * @param msg 
  */
 void FrontEndPlanner::planOnDemandCB(const std_msgs::EmptyConstPtr& msg){
-  ROS_INFO("[FrontEndPlanner]: Planning on demand triggered! from (%f, %f, %f) to (%f, %f, %f)",
+  logInfo(str_fmt("Planning on demand triggered! from (%f, %f, %f) to (%f, %f, %f)",
     cur_pos_(0), cur_pos_(1), cur_pos_(2),
-    waypoints_.nextWP()(0), waypoints_.nextWP()(1), waypoints_.nextWP()(2)
+    waypoints_.nextWP()(0), waypoints_.nextWP()(1), waypoints_.nextWP()(2))
   );
   generatePlan();
 }
@@ -192,12 +196,12 @@ void FrontEndPlanner::goalsCB(const gestelt_msgs::GoalsConstPtr &msg)
 {
   if (msg->transforms.size() <= 0)
   {
-    logError("[FrontEndPlanner]: Received empty waypoints");
+    logError("Received empty waypoints");
     return;
   }
   if (msg->header.frame_id != "world" && msg->header.frame_id != "map" )
   {
-    logError("[FrontEndPlanner]: Only waypoint goals in 'world' or 'map' frame are accepted, ignoring waypoints.");
+    logError("Only waypoint goals in 'world' or 'map' frame are accepted, ignoring waypoints.");
     return;
   }
 
@@ -213,10 +217,10 @@ void FrontEndPlanner::goalsCB(const gestelt_msgs::GoalsConstPtr &msg)
 
 void FrontEndPlanner::debugStartCB(const geometry_msgs::PoseConstPtr &msg)
 {
-  ROS_INFO("[FrontEndPlanner]: Received debug start (%f, %f, %f)", 
+  logInfo(str_fmt("Received debug start (%f, %f, %f)", 
         msg->position.x,
         msg->position.y,
-        msg->position.z);
+        msg->position.z));
   cur_pos_ = Eigen::Vector3d{
         msg->position.x,
         msg->position.y,
@@ -225,10 +229,10 @@ void FrontEndPlanner::debugStartCB(const geometry_msgs::PoseConstPtr &msg)
 
 void FrontEndPlanner::debugGoalCB(const geometry_msgs::PoseConstPtr &msg)
 {
-  ROS_INFO("[FrontEndPlanner]: Received debug goal (%f, %f, %f)", 
+  logInfo(str_fmt("Received debug goal (%f, %f, %f)", 
         msg->position.x,
         msg->position.y,
-        msg->position.z);
+        msg->position.z));
   waypoints_.reset();
   waypoints_.addWP(Eigen::Vector3d{
         msg->position.x,

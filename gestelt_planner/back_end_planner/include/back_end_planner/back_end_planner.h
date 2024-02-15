@@ -36,6 +36,8 @@ private:
 
   ros::Subscriber plan_on_demand_esdf_free_sub_; // Subscriber to plan on demand for ESDF Free
   
+  ros::Publisher plan_traj_pub_; // Pub planning trajectory (polynomial trajectory)
+
   /* parameters */
   int drone_id_{-1};
   double planning_horizon_;
@@ -88,7 +90,9 @@ private:
                       const std::vector<Eigen::Vector3d>& inner_wps, const Eigen::VectorXd& segs_t_dur,
                       const Eigen::Vector3d& goal_pos, const int& num_opt_retries,
                       const std::vector<double>& spheres_radius,
-                      const std::vector<Eigen::Vector3d>& spheres_center);
+                      const std::vector<Eigen::Vector3d>& spheres_center,
+                      poly_traj::MinJerkOpt& optimized_mjo
+                      );
 
   /**
    * @brief Generate and optimize a given plan using ESDF free method
@@ -115,12 +119,12 @@ private:
   /* Helper functions */
 
   /**
-   * @brief Convert from local trajectory to polynomial and MINCO Trajectory
+   * @brief Convert minimum jerk trajectory to message 
    * 
-   * @param poly_msg 
-   * @param MINCO_msg 
+   * @param mjo minimum jerk trajectory
+   * @param poly_msg polynomial trajectory message
    */
-  void polyTraj2ROSMsg(ego_planner::LocalTrajData *data, traj_utils::PolyTraj &poly_msg, traj_utils::MINCOTraj &MINCO_msg);
+  void mjoToMsg(const poly_traj::MinJerkOpt& mjo, traj_utils::PolyTraj &poly_msg);
 
 private:
   template<typename ... Args>

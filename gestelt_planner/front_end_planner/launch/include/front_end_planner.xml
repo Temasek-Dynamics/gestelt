@@ -11,6 +11,7 @@
     <node pkg="front_end_planner" type="front_end_planner_node" name="front_end_planner" required="true" output="screen">
         <rosparam command="load" file="$(arg cfg_filepath)" />
 
+        <remap from="odom" to="$(arg odometry_topic)"/>
         <remap from="planner/goals" to="planner/goals"/>
 
         <param name="grid_map/debug_input_entire_map" value="true"/>

@@ -3,8 +3,8 @@
 void BackEndPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
 { 
   logInfo("Initialized back end planner");
-  double planner_freq;
-  pnh.param("back_end/planner_frequency", planner_freq, -1.0);
+  // double planner_freq;
+  // pnh.param("back_end/planner_frequency", planner_freq, -1.0);
   pnh.param("back_end/planning_horizon", planning_horizon_, -1.0);
   pnh.param("back_end/num_replan_retries", num_replan_retries_, -1);
   
@@ -14,6 +14,8 @@ void BackEndPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   debug_goal_sub_ = pnh.subscribe("debug/plan_goal", 5, &BackEndPlanner::debugGoalCB, this);
 
   plan_on_demand_esdf_free_sub_ = pnh.subscribe("plan_on_demand/esdf_free", 5, &BackEndPlanner::planOnDemandESDFFree, this);
+
+  plan_traj_pub_ = nh.advertise<traj_utils::PolyTraj>("planner/trajectory", 10); 
 
   // Initialize map
   // map_.reset(new GridMap);
@@ -71,7 +73,7 @@ void BackEndPlanner::planOnDemandESDFFree(const std_msgs::EmptyConstPtr &msg){
  * @param msg 
  */
 void BackEndPlanner::sfcTrajectoryCB(const gestelt_msgs::SphericalSFCTrajectoryConstPtr& msg){
-  logInfo(str_fmt("Received callback to SFC Trajectory with %ld waypoints", msg->waypoints.size()));
+  // logInfo(str_fmt("Received callback to SFC Trajectory with %ld waypoints", msg->waypoints.size()));
 
   std::vector<double> spheres_radius;
   std::vector<Eigen::Vector3d> spheres_center;
@@ -95,10 +97,26 @@ void BackEndPlanner::sfcTrajectoryCB(const gestelt_msgs::SphericalSFCTrajectoryC
   }
   Eigen::Vector3d goal_pos{msg->waypoints.back().x, msg->waypoints.back().y, msg->waypoints.back().z};
 
-  generatePlanSFC(start_pos, start_vel, 
+  poly_traj::MinJerkOpt optimized_mjo;
+
+  if (!generatePlanSFC(start_pos, start_vel, 
                   inner_wps, segs_t_dur,
                   goal_pos, num_replan_retries_,
-                  spheres_radius, spheres_center);
+                  spheres_radius, spheres_center,
+                  optimized_mjo))
+  {
+    logError("Failed to optimize SFC Trajectory!");
+    return;
+  }
+
+  // Get data from local trajectory and store in PolyTraj and MINCOTraj 
+  traj_utils::PolyTraj poly_msg; 
+  // traj_utils::MINCOTraj MINCO_msg; 
+
+  mjoToMsg(optimized_mjo, poly_msg);
+  plan_traj_pub_.publish(poly_msg); // (In drone origin frame) Publish to corresponding drone for execution
+  // broadcast_ploytraj_pub_.publish(MINCO_msg); // (In world frame) Broadcast to all other drones for replanning to optimize in avoiding swarm collision
+  
 }
 
 /* Planning methods */
@@ -106,11 +124,12 @@ void BackEndPlanner::sfcTrajectoryCB(const gestelt_msgs::SphericalSFCTrajectoryC
 bool BackEndPlanner::generatePlanSFC( const Eigen::Vector3d& start_pos, const Eigen::Vector3d& start_vel, 
                                       const std::vector<Eigen::Vector3d>& inner_wps, const Eigen::VectorXd& segs_t_dur,
                                       const Eigen::Vector3d& goal_pos, const int& num_opt_retries,
-                                      const std::vector<double>& spheres_radius, const std::vector<Eigen::Vector3d>& spheres_center)
+                                      const std::vector<double>& spheres_radius, const std::vector<Eigen::Vector3d>& spheres_center,
+                                      poly_traj::MinJerkOpt& optimized_mjo)
 {
-  logInfo(str_fmt("Generating plan from SFC from (%f, %f, %f) to (%f, %f, %f)", 
-    start_pos(0), start_pos(1), start_pos(2), 
-    goal_pos(0), goal_pos(1), goal_pos(2)));
+  // logInfo(str_fmt("Generating plan from SFC from (%f, %f, %f) to (%f, %f, %f)", 
+  //   start_pos(0), start_pos(1), start_pos(2), 
+  //   goal_pos(0), goal_pos(1), goal_pos(2)));
   
   bool plan_success = false;
   int num_segs = inner_wps.size()+ 1;// Number of path segments
@@ -126,12 +145,6 @@ bool BackEndPlanner::generatePlanSFC( const Eigen::Vector3d& start_pos, const Ei
   // 1) Use waypoints from bubble planner to form an initial minimum jerk trajectory
   // 2) Obtain (inner waypoints, start, end, durations, constraint points) from initial minimum jerk trajectory
   // 3) Optimize plan
-  // 4) [Optional?] Set local trajectory for execution 
-
-  /***************************/
-  /*1:  Plan initial minimum jerk trajectory */
-  /***************************/
-  // std::cout << segs_t_dur << std::endl;
 
   // for (int i = 0; i < inner_wps.size(); i++) {
     // std::cout << "Idx " << i  << ": "<< inner_wps[i].transpose() << std::endl;
@@ -181,18 +194,16 @@ bool BackEndPlanner::generatePlanSFC( const Eigen::Vector3d& start_pos, const Ei
     /***************************/
     /*4:  Optimize plan
     /***************************/
-    poly_traj::MinJerkOpt optimized_mjo;
 
     plan_success = back_end_planner_->optimizeMJOTraj(initial_mjo, optimized_mjo, spheres_radius, spheres_center);
-
 
     // Print results for benchmarking
     double traj_length = back_end_planner_->getTrajectoryLength(optimized_mjo);
     double traj_jerk_cost = optimized_mjo.getTrajJerkCost();
     double trajectory_duration = back_end_planner_->getTrajectoryDuration(optimized_mjo);
 
-    logInfo(str_fmt("Trajectory: Length(%f), Jerk Cost(%f), Duration(%f)", 
-      traj_length, traj_jerk_cost, trajectory_duration));
+    // logInfo(str_fmt("Trajectory: Length(%f), Jerk Cost(%f), Duration(%f)", 
+    //   traj_length, traj_jerk_cost, trajectory_duration));
 
     Eigen::MatrixXd cstr_pts_optimized_mjo = optimized_mjo.getInitConstraintPoints(num_constr_pts);
     if (plan_success)
@@ -292,8 +303,8 @@ bool BackEndPlanner::generatePlanESDFFree(const Eigen::Vector3d& start_pos, cons
       double traj_jerk_cost = optimized_mjo.getTrajJerkCost();
       double trajectory_duration = back_end_planner_->getTrajectoryDuration(optimized_mjo);
 
-      logInfo(str_fmt("Trajectory: Length(%f), Jerk Cost(%f), Duration(%f)", 
-        traj_length, traj_jerk_cost, trajectory_duration));
+      // logInfo(str_fmt("Trajectory: Length(%f), Jerk Cost(%f), Duration(%f)", 
+      //   traj_length, traj_jerk_cost, trajectory_duration));
 
       // double max_speed =
       // double max_acc = 
@@ -309,39 +320,102 @@ bool BackEndPlanner::generatePlanESDFFree(const Eigen::Vector3d& start_pos, cons
     return false;
   }
 
-  // Get data from local trajectory and store in PolyTraj and MINCOTraj 
-  // traj_utils::PolyTraj poly_msg; 
-  // traj_utils::MINCOTraj MINCO_msg; 
-  // ego_planner::LocalTrajData* local_traj_data = &back_end_planner_->traj_.local_traj;
-
-  // polyTraj2ROSMsg(local_traj_data, poly_msg, MINCO_msg);
-
-  // poly_traj_pub_.publish(poly_msg); // (In drone origin frame) Publish to corresponding drone for execution
-  // broadcast_ploytraj_pub_.publish(MINCO_msg); // (In world frame) Broadcast to all other drones for replanning to optimize in avoiding swarm collision
-  
   return true;
 }
 
+// void BackEndPlanner::mjoToMsg(ego_planner::LocalTrajData *data, traj_utils::PolyTraj &poly_msg, traj_utils::MINCOTraj &MINCO_msg)
+// {
+//   // struct LocalTrajData
+//   // {
+//   //   poly_traj::Trajectory traj;
+//   //   PtsChk_t pts_chk;
+//   //   int drone_id; // A negative value indicates no received trajectories.
+//   //   int traj_id;
+//   //   double duration;
+//   //   double start_time; // world time
+//   //   double end_time;   // world time
+//   //   Eigen::Vector3d start_pos;
+//   // };
 
-void BackEndPlanner::polyTraj2ROSMsg(ego_planner::LocalTrajData *data, traj_utils::PolyTraj &poly_msg, traj_utils::MINCOTraj &MINCO_msg)
+//   Eigen::VectorXd durs = data->traj.getDurations();
+//   int piece_num = data->traj.getPieceSize();
+//   poly_msg.drone_id = back_end_planner_->pp_.drone_id;
+//   poly_msg.traj_id = data->traj_id;
+//   poly_msg.start_time = ros::Time(data->start_time);
+//   poly_msg.order = 5; // todo, only support order = 5 now.
+//   poly_msg.duration.resize(piece_num);
+//   poly_msg.coef_x.resize(6 * piece_num);
+//   poly_msg.coef_y.resize(6 * piece_num);
+//   poly_msg.coef_z.resize(6 * piece_num);
+
+//   // For each segment
+//   for (int i = 0; i < piece_num; ++i)
+//   {
+//     // Assign timestamp
+//     poly_msg.duration[i] = durs(i);
+
+//     // Assign coefficient matrix values
+//     poly_traj::CoefficientMat cMat = data->traj.getPiece(i).getCoeffMat();
+//     int i6 = i * 6;
+//     for (int j = 0; j < 6; j++)
+//     {
+//       poly_msg.coef_x[i6 + j] = cMat(0, j);
+//       poly_msg.coef_y[i6 + j] = cMat(1, j);
+//       poly_msg.coef_z[i6 + j] = cMat(2, j);
+//     }
+//   }
+
+//   // MINCO_msg.drone_id = back_end_planner_->pp_.drone_id;
+//   // MINCO_msg.traj_id = data->traj_id;
+//   // MINCO_msg.start_time = ros::Time(data->start_time);
+//   // MINCO_msg.order = 5; // todo, only support order = 5 now.
+//   // MINCO_msg.duration.resize(piece_num);
+
+//   // Eigen::Vector3d vec; // Vector representing x,y,z values or their derivatives
+//   // // Start Position
+//   // vec = data->traj.getPos(0);
+//   // MINCO_msg.start_p[0] = vec(0), MINCO_msg.start_p[1] = vec(1), MINCO_msg.start_p[2] = vec(2);
+//   // // Start Velocity
+//   // vec = data->traj.getVel(0);
+//   // MINCO_msg.start_v[0] = vec(0), MINCO_msg.start_v[1] = vec(1), MINCO_msg.start_v[2] = vec(2);
+//   // // Start Acceleration
+//   // vec = data->traj.getAcc(0);
+//   // MINCO_msg.start_a[0] = vec(0), MINCO_msg.start_a[1] = vec(1), MINCO_msg.start_a[2] = vec(2);
+//   // // End position
+//   // vec = data->traj.getPos(data->duration);
+//   // MINCO_msg.end_p[0] = vec(0), MINCO_msg.end_p[1] = vec(1), MINCO_msg.end_p[2] = vec(2);
+//   // // End velocity
+//   // vec = data->traj.getVel(data->duration);
+//   // MINCO_msg.end_v[0] = vec(0), MINCO_msg.end_v[1] = vec(1), MINCO_msg.end_v[2] = vec(2);
+//   // // End Acceleration
+//   // vec = data->traj.getAcc(data->duration);
+//   // MINCO_msg.end_a[0] = vec(0), MINCO_msg.end_a[1] = vec(1), MINCO_msg.end_a[2] = vec(2);
+
+//   // // Assign inner points
+//   // MINCO_msg.inner_x.resize(piece_num - 1);
+//   // MINCO_msg.inner_y.resize(piece_num - 1);
+//   // MINCO_msg.inner_z.resize(piece_num - 1);
+//   // Eigen::MatrixXd pos = data->traj.getPositions();
+//   // for (int i = 0; i < piece_num - 1; i++)
+//   // {
+//   //   MINCO_msg.inner_x[i] = pos(0, i + 1);
+//   //   MINCO_msg.inner_y[i] = pos(1, i + 1);
+//   //   MINCO_msg.inner_z[i] = pos(2, i + 1);
+//   // }
+//   // for (int i = 0; i < piece_num; i++){
+//   //   MINCO_msg.duration[i] = durs[i];
+//   // }
+// }
+
+void BackEndPlanner::mjoToMsg(const poly_traj::MinJerkOpt& mjo, traj_utils::PolyTraj &poly_msg)
 {
-  // struct LocalTrajData
-  // {
-  //   poly_traj::Trajectory traj;
-  //   PtsChk_t pts_chk;
-  //   int drone_id; // A negative value indicates no received trajectories.
-  //   int traj_id;
-  //   double duration;
-  //   double start_time; // world time
-  //   double end_time;   // world time
-  //   Eigen::Vector3d start_pos;
-  // };
+  poly_traj::Trajectory traj = mjo.getTraj();
 
-  Eigen::VectorXd durs = data->traj.getDurations();
-  int piece_num = data->traj.getPieceSize();
+  Eigen::VectorXd durs = traj.getDurations();
+  int piece_num = traj.getPieceSize();
   poly_msg.drone_id = back_end_planner_->pp_.drone_id;
-  poly_msg.traj_id = data->traj_id;
-  poly_msg.start_time = ros::Time(data->start_time);
+  poly_msg.traj_id = 0;
+  poly_msg.start_time = ros::Time::now();
   poly_msg.order = 5; // todo, only support order = 5 now.
   poly_msg.duration.resize(piece_num);
   poly_msg.coef_x.resize(6 * piece_num);
@@ -355,7 +429,7 @@ void BackEndPlanner::polyTraj2ROSMsg(ego_planner::LocalTrajData *data, traj_util
     poly_msg.duration[i] = durs(i);
 
     // Assign coefficient matrix values
-    poly_traj::CoefficientMat cMat = data->traj.getPiece(i).getCoeffMat();
+    poly_traj::CoefficientMat cMat = traj.getPiece(i).getCoeffMat();
     int i6 = i * 6;
     for (int j = 0; j < 6; j++)
     {
@@ -363,47 +437,6 @@ void BackEndPlanner::polyTraj2ROSMsg(ego_planner::LocalTrajData *data, traj_util
       poly_msg.coef_y[i6 + j] = cMat(1, j);
       poly_msg.coef_z[i6 + j] = cMat(2, j);
     }
-  }
-
-  MINCO_msg.drone_id = back_end_planner_->pp_.drone_id;
-  MINCO_msg.traj_id = data->traj_id;
-  MINCO_msg.start_time = ros::Time(data->start_time);
-  MINCO_msg.order = 5; // todo, only support order = 5 now.
-  MINCO_msg.duration.resize(piece_num);
-
-  Eigen::Vector3d vec; // Vector representing x,y,z values or their derivatives
-  // Start Position
-  vec = data->traj.getPos(0);
-  MINCO_msg.start_p[0] = vec(0), MINCO_msg.start_p[1] = vec(1), MINCO_msg.start_p[2] = vec(2);
-  // Start Velocity
-  vec = data->traj.getVel(0);
-  MINCO_msg.start_v[0] = vec(0), MINCO_msg.start_v[1] = vec(1), MINCO_msg.start_v[2] = vec(2);
-  // Start Acceleration
-  vec = data->traj.getAcc(0);
-  MINCO_msg.start_a[0] = vec(0), MINCO_msg.start_a[1] = vec(1), MINCO_msg.start_a[2] = vec(2);
-  // End position
-  vec = data->traj.getPos(data->duration);
-  MINCO_msg.end_p[0] = vec(0), MINCO_msg.end_p[1] = vec(1), MINCO_msg.end_p[2] = vec(2);
-  // End velocity
-  vec = data->traj.getVel(data->duration);
-  MINCO_msg.end_v[0] = vec(0), MINCO_msg.end_v[1] = vec(1), MINCO_msg.end_v[2] = vec(2);
-  // End Acceleration
-  vec = data->traj.getAcc(data->duration);
-  MINCO_msg.end_a[0] = vec(0), MINCO_msg.end_a[1] = vec(1), MINCO_msg.end_a[2] = vec(2);
-
-  // Assign inner points
-  MINCO_msg.inner_x.resize(piece_num - 1);
-  MINCO_msg.inner_y.resize(piece_num - 1);
-  MINCO_msg.inner_z.resize(piece_num - 1);
-  Eigen::MatrixXd pos = data->traj.getPositions();
-  for (int i = 0; i < piece_num - 1; i++)
-  {
-    MINCO_msg.inner_x[i] = pos(0, i + 1);
-    MINCO_msg.inner_y[i] = pos(1, i + 1);
-    MINCO_msg.inner_z[i] = pos(2, i + 1);
-  }
-  for (int i = 0; i < piece_num; i++){
-    MINCO_msg.duration[i] = durs[i];
   }
 }
 

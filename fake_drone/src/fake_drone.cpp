@@ -48,7 +48,6 @@ FakeDrone::FakeDrone(ros::NodeHandle& nh, ros::NodeHandle& pnh) {
 		&FakeDrone::setModeCb, this);
 
 	// Set initial position
-
 	cmd_des_.pos_targ.position.x = init_pos_(0);
 	cmd_des_.pos_targ.position.y = init_pos_(1);
 	cmd_des_.pos_targ.position.z = init_pos_(2);
@@ -136,24 +135,6 @@ bool FakeDrone::setModeCb(mavros_msgs::SetMode::Request &req,
 
 void FakeDrone::simUpdateTimer(const ros::TimerEvent &)
 {
-	// // when UAV have not received any commands, UAV will hover
-	// if (isOffboardCmdTimeout(offboard_timeout_))
-	// {
-	// 	// if (mavros_state_.custom_mode.compare("AUTO.LOITER") != 0)
-	// 	// {
-	// 	// 	mavros_state_.custom_mode = "AUTO.LOITER";
-	// 	// 	printf("%sdrone%d%s mode switch to %s%s%s! \n", 
-	// 	// 		KGRN, uav_id_, KNRM, 
-	// 	// 		KBLU, mavros_state_.custom_mode.c_str(), KNRM);
-	// 	// }
-	// 	stopAndHover(cmd_des_);
-	// 	setStateFromCmd(state_cur_, cmd_des_);
-	// }
-	// else
-	// {
-	// 	setStateFromCmd(state_cur_, cmd_des_);
-	// }
-
 	setStateFromCmd(state_cur_, cmd_des_);
 
 	if ((ros::Time::now() - last_mavros_state_pub_time_).toSec() > (1/pose_pub_freq_))
@@ -231,7 +212,6 @@ Eigen::Quaterniond FakeDrone::calcUAVOrientation(
 }
 
 void FakeDrone::setStateFromCmd(FakeDrone::State& state, const FakeDrone::Command& cmd ){
-	cmd_mutex_.lock();
 	state_mutex_.lock();
 
 	// Set odom
@@ -258,18 +238,6 @@ void FakeDrone::setStateFromCmd(FakeDrone::State& state, const FakeDrone::Comman
 	state.pose.pose.orientation.z = cmd.q.z();
 
 	state_mutex_.unlock();
-	cmd_mutex_.unlock();
-}
-
-void FakeDrone::stopAndHover(FakeDrone::Command& cmd)
-{	
-	geometry_msgs::Vector3 empty_vec3;
-	empty_vec3.x = 0;
-	empty_vec3.y = 0;
-	empty_vec3.z = 0;
-	cmd.pos_targ.velocity = geometry_msgs::Vector3();
-	cmd.pos_targ.acceleration_or_force = geometry_msgs::Vector3();
-	cmd.q = calcUAVOrientation(cmd.pos_targ.acceleration_or_force, cmd.yaw);
 }
 
 void FakeDrone::pubMavrosState()
