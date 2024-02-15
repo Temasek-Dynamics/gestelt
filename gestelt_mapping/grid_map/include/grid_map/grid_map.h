@@ -9,7 +9,7 @@
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/filters/passthrough.h>
 
-#include <pcl/kdtree/kdtree_flann.h>
+#include <ikd_tree/ikd_tree.h>
 
 #include <ros/ros.h>
 
@@ -178,7 +178,7 @@ public:
    * @return true 
    * @return false 
    */
-  bool getNearestOccupiedCell(const Eigen::Vector3d &pos, Eigen::Vector3d& occ_nb, double& radius); 
+  bool getNearestOccupiedCell(const Eigen::Vector3d &pos, Eigen::Vector3d& occ_nb, double& dist_to_nearest_nb); 
 
   /**
    * @brief Check if position is within a radius of an obstacle
@@ -227,6 +227,9 @@ public:
    */
   void publishMap();
 
+  void publishCollisionSphere(const Eigen::Vector3d &pos, const double& radius);
+
+
   /** Getter methods */
 
   // Get occupancy grid resolution
@@ -254,6 +257,9 @@ private:
 
   // Subscriber callback to camera info 
   void cameraInfoCallback(const sensor_msgs::CameraInfoConstPtr &msg);
+
+  // Subscriber callback to odom for collision checking
+  void odomColCheckCB( const nav_msgs::OdometryConstPtr &msg_odom);
 
   // Subscriber callback to depth image and base_link odom
   void depthOdomCB( const sensor_msgs::ImageConstPtr &msg_img, 
@@ -323,6 +329,8 @@ private:
   std::shared_ptr<message_filters::Subscriber<geometry_msgs::PoseStamped>> pose_sub_;
   std::shared_ptr<message_filters::Subscriber<nav_msgs::Odometry>> odom_sub_;
 
+  ros::Subscriber odom_col_check_sub_; // Subscriber to odom for collision checking
+
   // Message filters for point cloud and tf
   std::shared_ptr<tf2_ros::MessageFilter<sensor_msgs::PointCloud2>> tf_cloud_filter_;
 
@@ -339,6 +347,7 @@ private:
   /* Params */
   bool dbg_input_entire_map_; // flag to indicate that map will be constructed at the start from the entire pcd map (instead of through incremental sensor data)
   std::string entire_pcd_map_topic_; // Topic to listen for an entire PCD for debugging
+  bool check_collisions_{true}; // Flag for checking collisions
 
   /* Benchmarking */
   // std::shared_ptr<TimeBenchmark> time_benchmark_;
@@ -349,7 +358,7 @@ private:
 
   std::unique_ptr<BonxaiT> bonxai_map_; // Bonxai data structure 
   
-  std::shared_ptr<pcl::KdTreeFLANN<pcl::PointXYZ>> kdtree_; // KD-Tree 
+  std::shared_ptr<KD_TREE<pcl::PointXYZ>> kdtree_; // KD-Tree 
 
   // std::shared_ptr<octomap::OcTree> octree_; // Octree data structure
 

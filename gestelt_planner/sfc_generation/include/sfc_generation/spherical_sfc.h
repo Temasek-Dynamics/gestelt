@@ -191,6 +191,8 @@ public: // Public structs
     double avg_vel; // Average velocity
     double max_vel; // Maximum velocity
 
+    double spherical_buffer; // Reduce sampled spherical corridors by this amount as a buffer
+
   }; // struct SphericalSFCParams
 
   struct SFCTrajectory{ // SFCTrajectory contains the spheres, trajectory waypoints and time allocation

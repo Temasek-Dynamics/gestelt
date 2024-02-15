@@ -24,6 +24,7 @@
 
   <depend>octomap</depend>
   <depend>bonxai</depend>
+  <depend>ikd_tree</depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>

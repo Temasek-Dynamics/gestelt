@@ -187,7 +187,7 @@ bool SphericalSFC::generateFreeSphere(const Eigen::Vector3d& point, Sphere& B)
 
     if (grid_map_->getNearestOccupiedCell(point, occ_nearest, radius)){
         B.center = point;
-        B.setRadius(radius);
+        B.setRadius(radius - sfc_params_.spherical_buffer);
         return true;
     }
     return false;

@@ -32,6 +32,7 @@ void FrontEndPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   pnh.param("sfc/avg_vel", sfc_params.avg_vel, 1.5);
   pnh.param("sfc/max_vel", sfc_params.max_vel, 3.0);
 
+  pnh.param("sfc/spherical_buffer", sfc_params.spherical_buffer, 0.0);
   
   odom_sub_ = nh.subscribe("odom", 5, &FrontEndPlanner::odometryCB, this);
   goal_sub_ = nh.subscribe("planner/goals", 5, &FrontEndPlanner::goalsCB, this);

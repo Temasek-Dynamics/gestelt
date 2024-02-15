@@ -61,6 +61,12 @@ void GridMap::initMapROS(ros::NodeHandle &nh, ros::NodeHandle &pnh)
     // Initialize publisher for occupancy map
     occ_map_pub_ = nh.advertise<sensor_msgs::PointCloud2>("grid_map/occupancy", 10);
 
+    // Initialize subscriber
+    // if (check_collisions_){
+    //   odom_col_check_sub_ = nh.subscribe<nav_msgs::Odometry>(
+    //     "odom", 1, &GridMap::odomColCheckCB, this);
+    // }
+
     /* Initialize ROS Timers */
     vis_timer_ = nh.createTimer(ros::Duration(0.1), &GridMap::visTimerCB, this);
   }
@@ -223,8 +229,8 @@ void GridMap::reset(const double& resolution){
   bonxai_map_ = std::make_unique<BonxaiT>(resolution);
 
   // Set up kdtree for generating safe flight corridors
-  kdtree_ = std::make_shared<pcl::KdTreeFLANN<pcl::PointXYZ>>(); // KD-Tree 
-  kdtree_->setEpsilon(resolution);
+  kdtree_ = std::make_shared<KD_TREE<pcl::PointXYZ>>(0.5, 0.6, 0.1);
+
 }
 
 /** Timer callbacks */
@@ -235,10 +241,25 @@ void GridMap::visTimerCB(const ros::TimerEvent & /*event*/)
   // ROS_INFO_THROTTLE(1.0, "No. of Point clouds: %ld", global_map_in_origin_->points.size());
   // ROS_INFO_THROTTLE(1.0, "Octree memory usage: %ld kilobytes", octree_->memoryUsage()/1000);
   // ROS_INFO_STREAM_THROTTLE(1.0, "Octree Bounding Box: " << octree_->getBBXMin() << ", " << octree_->getBBXMax());
+
+  // if (check_collisions_){
+  //   Eigen::Vector3d occ_nearest;
+  //   double dist_to_nearest_nb;
+
+  //   getNearestOccupiedCell(md_.body2origin_.col(3), occ_nearest, dist_to_nearest_nb);
+
+  //   if (dist_to_nearest_nb < mp.inflation_){
+  //     pub
+  //   }
+  // }
 }
 
-
 /** Subscriber callbacks */
+
+void GridMap::odomColCheckCB(const nav_msgs::OdometryConstPtr &msg_odom) 
+{
+  getCamToGlobalPose(msg_odom->pose.pose);
+}
 
 void GridMap::depthOdomCB( const sensor_msgs::ImageConstPtr &msg_img, 
                           const nav_msgs::OdometryConstPtr &msg_odom) 
@@ -456,13 +477,15 @@ void GridMap::pcdToMap(pcl::PointCloud<pcl::PointXYZ>::Ptr pcd)
   auto bonxai_end = std::chrono::high_resolution_clock::now();
 
   auto kdtree_set_input_cloud_start = std::chrono::high_resolution_clock::now();
-  kdtree_->setInputCloud(global_map_in_origin_);
+  kdtree_->Build((*global_map_in_origin_).points);
+
   auto kdtree_set_input_cloud_end = std::chrono::high_resolution_clock::now();
 
-  std::cout << "kdtree_set_input_cloud duration: " << std::chrono::duration_cast<std::chrono::duration<double>>(
-        kdtree_set_input_cloud_end - kdtree_set_input_cloud_start).count() * 1000.0 << std::endl;
-  std::cout << "bonxai duration: " << std::chrono::duration_cast<std::chrono::duration<double>>(
-        bonxai_end - bonxai_start).count() * 1000.0 << std::endl;
+
+  ROS_INFO("[grid_map] kdtree_set_input_cloud duration: %f", std::chrono::duration_cast<std::chrono::duration<double>>(
+        kdtree_set_input_cloud_end - kdtree_set_input_cloud_start).count() * 1000.0);
+  ROS_INFO("[grid_map] bonxai duration: %f", std::chrono::duration_cast<std::chrono::duration<double>>(
+        bonxai_end - bonxai_start).count() * 1000.0);
 
   ROS_INFO("[grid_map] Completed pcdToMap");
 }
@@ -609,31 +632,6 @@ bool GridMap::getOccupancy(const Eigen::Vector3d &pos)
 
 bool GridMap::getInflateOccupancy(const Eigen::Vector3d &pos)
 {
-  /* Octree */
-
-  // if (!isInGlobalMap(pos)){
-  //   return -1;
-  // }
-
-  // // Search inflated space of given position
-  // for(float x = pos(0) - mp_.inflation_; x <= pos(0) + mp_.inflation_; x += mp_.resolution_){
-  //   for(float y = pos(1) - mp_.inflation_; y <= pos(1) + mp_.inflation_; y += mp_.resolution_){
-  //     for(float z = pos(2) - mp_.inflation_; z <= pos(2) + mp_.inflation_; z += mp_.resolution_){
-  //       octomap::OcTreeNode* node = octree_->search(x, y, z);
-  //       if (node == NULL){
-  //         // Return 0 if node is not occupied
-  //         return 0;
-  //       }
-  //       if (octree_->isNodeOccupied(node)){
-  //         return 1;
-  //       }
-  //     }
-  //   }
-  // }
-
-  // // Return 0 if node is not occupied
-  // return 0;
-
   /* Bonxai */
 
   // if (!isInGlobalMap(pos)){
@@ -691,35 +689,32 @@ bool GridMap::isInLocalMap(const Eigen::Vector3d &pos)
 
 bool GridMap::withinObsRadius(const Eigen::Vector3d &pos, const double& radius)
 {
-  std::vector<int> pointIdxRadiusSearch;
-  std::vector<float> pointRadiusSquaredDistance;
+  pcl::PointXYZ search_point(pos(0), pos(1), pos(2));
+  std::vector<pcl::PointXYZ, Eigen::aligned_allocator<pcl::PointXYZ>> nb_points;
+  kdtree_->Radius_Search(search_point, radius, nb_points);
 
-  pcl::PointXYZ searchPoint(pos(0), pos(1), pos(2));
-
-  return kdtree_->radiusSearch (searchPoint, radius, pointIdxRadiusSearch, pointRadiusSquaredDistance) > 0 ;
+  return !nb_points.empty();
 }
 
-bool GridMap::getNearestOccupiedCell(const Eigen::Vector3d &pos, Eigen::Vector3d& occ_nearest, double& radius){
-  int K = 1;
+bool GridMap::getNearestOccupiedCell(const Eigen::Vector3d &pos, Eigen::Vector3d& occ_nearest, double& dist_to_nearest_nb){
 
-  std::vector<int> pointIdxKNNSearch(K);
-  std::vector<float> pointKNNSquaredDistance(K);
+  int nearest_num_nb = 1;
+  pcl::PointXYZ search_point(pos(0), pos(1), pos(2));
+  std::vector<pcl::PointXYZ, Eigen::aligned_allocator<pcl::PointXYZ>> nb_points;
+  std::vector<float> nb_radius_vec;
 
-  pcl::PointXYZ searchPoint(pos(0), pos(1), pos(2));
+  kdtree_->Nearest_Search(search_point, nearest_num_nb, nb_points, nb_radius_vec);
 
-  if ( kdtree_->nearestKSearch (searchPoint, K, pointIdxKNNSearch, pointKNNSquaredDistance) > 0 )
-  {
-    occ_nearest = Eigen::Vector3d{(*global_map_in_origin_)[ pointIdxKNNSearch[0]].x, 
-                                  (*global_map_in_origin_)[ pointIdxKNNSearch[0]].y, 
-                                  (*global_map_in_origin_)[ pointIdxKNNSearch[0]].z};
-    radius = sqrt(pointKNNSquaredDistance[0]);
-
-    return true;
+  if (nb_points.empty()){
+    return false;
   }
 
-  return false;
-}
+  dist_to_nearest_nb = sqrt(nb_radius_vec[0]);
 
+  occ_nearest = Eigen::Vector3d{nb_points[0].x, nb_points[0].y, nb_points[0].z};
+
+  return true;
+}
 
 void GridMap::depthToCloudMap(const sensor_msgs::ImageConstPtr &msg)
 {
@@ -782,3 +777,6 @@ void GridMap::depthToCloudMap(const sensor_msgs::ImageConstPtr &msg)
   // pcl::transformPointCloud(*local_map_in_origin_, *local_map_in_origin_, md_.cam2origin_);
 }
 
+// void GridMap::publishCollisionSphere(const Eigen::Vector3d &pos, const double& radius){
+
+// }
