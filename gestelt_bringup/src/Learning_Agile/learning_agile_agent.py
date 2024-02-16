@@ -31,6 +31,8 @@ import math
 import time
 import tf
 
+# running time statistics
+import cProfile
 
 
 # load the DNN2 model
@@ -388,5 +390,5 @@ def main():
     learing_agile_agent.solve_problem_comparison()
 
 if __name__ == '__main__':
-    main()
-        
+    # main()
+    cProfile.run('main()',filename='running_time/running_time_statistics.prof')

@@ -1,6 +1,7 @@
 <launch>
   <!-- Launches a test mission -->
-  <node pkg="gestelt_bringup" name="mission" type="learning_agile_mission.py">  
+  <node pkg="gestelt_bringup" name="mission" type="learning_agile_mission.py"
+        launch-prefix="python3 -m cProfile -o running_time_statistics.prof">  
         <param name="is_simulation" value="True"/>
   </node>
 

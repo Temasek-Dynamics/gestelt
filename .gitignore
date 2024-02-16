@@ -54,3 +54,5 @@ CATKIN_IGNORE
 *.npy
 
 *.bag
+*.bag.active
+*.prof
