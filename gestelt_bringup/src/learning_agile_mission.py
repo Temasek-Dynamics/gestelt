@@ -8,6 +8,11 @@ from std_msgs.msg import Int8, Bool
 import math
 import time
 import tf
+
+
+# running time statistics
+import cProfile
+
 # get ros params from rosparam server
 is_simulation=rospy.get_param('mission/is_simulation', False)
 
@@ -234,7 +239,8 @@ def main():
     # spending initial state to the learning agile node    
     rospy.spin()
 if __name__ == '__main__':
-    main()
+    # main()
+    cProfile.run('main()',filename='running_time_statistics.prof')
 
 
 

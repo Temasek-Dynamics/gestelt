@@ -13,7 +13,7 @@ subdirectory_path = os.path.join(current_dir, 'Learning_Agile')
 sys.path.append("../")
 sys.path.append(subdirectory_path)
 
-print(sys.path)
+
 from typing import Any
 from quad_model import *
 from quad_policy import *
@@ -30,9 +30,6 @@ from std_msgs.msg import Int8, Bool,Float32
 import math
 import time
 import tf
-
-# running time statistics
-import cProfile
 
 
 # load the DNN2 model
@@ -390,5 +387,5 @@ def main():
     learing_agile_agent.solve_problem_comparison()
 
 if __name__ == '__main__':
-    # main()
-    cProfile.run('main()',filename='running_time/running_time_statistics.prof')
+    main()
+   

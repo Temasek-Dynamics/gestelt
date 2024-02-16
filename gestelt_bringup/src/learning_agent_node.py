@@ -30,6 +30,8 @@ import math
 import time
 import tf
 
+# running time statistics
+import cProfile
 
 class LearningAgileAgentNode():
 
@@ -297,6 +299,7 @@ def main():
 
     
 if __name__ == '__main__':
-    main()
+    # main()
+    cProfile.run('main()',filename='running_time_statistics.prof')
     
 
