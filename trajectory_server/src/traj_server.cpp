@@ -33,7 +33,6 @@ void TrajectoryServer::init(ros::NodeHandle& nh, ros::NodeHandle& pnh)
   double debug_freq; // Frequency to publish debug information
   pnh.param("debug_freq", debug_freq, 10.0);
 
-
   /////////////////
   /* Subscribers */
   /////////////////

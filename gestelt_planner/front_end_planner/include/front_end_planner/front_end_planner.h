@@ -109,21 +109,52 @@ private:
    * 
    * @param msg 
    */
-  void debugStartCB(const geometry_msgs::PoseConstPtr &msg);
+  void debugStartCB(const geometry_msgs::PoseConstPtr &msg)
+  {
+    logInfo(str_fmt("Received debug start (%f, %f, %f)", 
+          msg->position.x,
+          msg->position.y,
+          msg->position.z));
+    cur_pos_ = Eigen::Vector3d{
+          msg->position.x,
+          msg->position.y,
+          msg->position.z};
+  }
+
 
   /**
    * @brief callback to debug goal topic for setting starting point of plan
    * 
    * @param msg 
    */
-  void debugGoalCB(const geometry_msgs::PoseConstPtr &msg);
+  void debugGoalCB(const geometry_msgs::PoseConstPtr &msg)
+  {
+    logInfo(str_fmt("Received debug goal (%f, %f, %f)", 
+          msg->position.x,
+          msg->position.y,
+          msg->position.z));
+    waypoints_.reset();
+    waypoints_.addWP(Eigen::Vector3d{
+          msg->position.x,
+          msg->position.y,
+          msg->position.z});
+  }
+
 
   /**
    * @brief callback to debug goal topic for setting starting point of plan
    * 
    * @param msg 
    */
-  void planOnDemandCB(const std_msgs::EmptyConstPtr &msg);
+  void planOnDemandCB(const std_msgs::EmptyConstPtr &msg)
+  {
+    logInfo(str_fmt("Planning on demand triggered! from (%f, %f, %f) to (%f, %f, %f)",
+      cur_pos_(0), cur_pos_(1), cur_pos_(2),
+      waypoints_.nextWP()(0), waypoints_.nextWP()(1), waypoints_.nextWP()(2))
+    );
+    generatePlan();
+  }
+
 
   /* Planner methods */
 

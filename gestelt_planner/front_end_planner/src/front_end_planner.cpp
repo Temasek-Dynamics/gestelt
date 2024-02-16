@@ -96,6 +96,7 @@ bool FrontEndPlanner::generatePlan(){
 
   if (isGoalReached(cur_pos_, waypoints_.nextWP())){
     waypoints_.popWP();
+    // Invalidate currently held trajectory
     return false;
   }
 
@@ -173,19 +174,6 @@ bool FrontEndPlanner::generatePlan(){
  * Subscriber Callbacks
 */
 
-/**
- * @brief Callback to generate plan on demand
- * 
- * @param msg 
- */
-void FrontEndPlanner::planOnDemandCB(const std_msgs::EmptyConstPtr& msg){
-  logInfo(str_fmt("Planning on demand triggered! from (%f, %f, %f) to (%f, %f, %f)",
-    cur_pos_(0), cur_pos_(1), cur_pos_(2),
-    waypoints_.nextWP()(0), waypoints_.nextWP()(1), waypoints_.nextWP()(2))
-  );
-  generatePlan();
-}
-
 void FrontEndPlanner::odometryCB(const nav_msgs::OdometryConstPtr &msg)
 {
   // TODO Add mutex 
@@ -214,31 +202,6 @@ void FrontEndPlanner::goalsCB(const gestelt_msgs::GoalsConstPtr &msg)
   }
 
   waypoints_.addMultipleWP(wp_vec);
-}
-
-void FrontEndPlanner::debugStartCB(const geometry_msgs::PoseConstPtr &msg)
-{
-  logInfo(str_fmt("Received debug start (%f, %f, %f)", 
-        msg->position.x,
-        msg->position.y,
-        msg->position.z));
-  cur_pos_ = Eigen::Vector3d{
-        msg->position.x,
-        msg->position.y,
-        msg->position.z};
-}
-
-void FrontEndPlanner::debugGoalCB(const geometry_msgs::PoseConstPtr &msg)
-{
-  logInfo(str_fmt("Received debug goal (%f, %f, %f)", 
-        msg->position.x,
-        msg->position.y,
-        msg->position.z));
-  waypoints_.reset();
-  waypoints_.addWP(Eigen::Vector3d{
-        msg->position.x,
-        msg->position.y,
-        msg->position.z});
 }
 
 /* Planning helper methods */

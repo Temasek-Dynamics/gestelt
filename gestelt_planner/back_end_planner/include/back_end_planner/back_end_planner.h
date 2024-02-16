@@ -53,17 +53,12 @@ private:
   /* Data structs */
   Eigen::Vector3d start_pos_, start_vel_;
   Eigen::Vector3d goal_pos_;
+  poly_traj::MinJerkOpt optimized_mjo_;
   
 
 private: 
 
   /* Subscriber callbacks */
-
-  void debugStartCB(const geometry_msgs::PoseConstPtr &msg);
-
-  void debugGoalCB(const geometry_msgs::PoseConstPtr &msg);
-
-  void planOnDemandESDFFree(const std_msgs::EmptyConstPtr &msg);
 
   /**
    * @brief Callback for safe flight corridor trajectory
@@ -124,7 +119,48 @@ private:
    * @param mjo minimum jerk trajectory
    * @param poly_msg polynomial trajectory message
    */
-  void mjoToMsg(const poly_traj::MinJerkOpt& mjo, traj_utils::PolyTraj &poly_msg);
+  void mjoToMsg(const poly_traj::MinJerkOpt& mjo, 
+                traj_utils::PolyTraj &poly_msg, traj_utils::MINCOTraj &MINCO_msg);
+
+  /* Debugging use */
+
+    void debugStartCB(const geometry_msgs::PoseConstPtr &msg)
+    {
+      logInfo(str_fmt("Received debug start (%f, %f, %f)", 
+            msg->position.x,
+            msg->position.y,
+            msg->position.z));
+
+      start_pos_(0) = msg->position.x ;
+      start_pos_(1) = msg->position.y ;
+      start_pos_(2) = msg->position.z ;
+
+      start_vel_.setZero();
+    }
+
+
+    void debugGoalCB(const geometry_msgs::PoseConstPtr &msg)
+    {
+      logInfo(str_fmt("Received debug goal (%f, %f, %f)", 
+            msg->position.x,
+            msg->position.y,
+            msg->position.z));
+
+      goal_pos_ = Eigen::Vector3d{
+            msg->position.x,
+            msg->position.y,
+            msg->position.z};
+    }
+
+    void planOnDemandESDFFree(const std_msgs::EmptyConstPtr &msg)
+    {
+      logInfo("Generating plan using ESDF-Free front-end!");
+      if (!generatePlanESDFFree(start_pos_, start_vel_, goal_pos_, num_replan_retries_)){
+        logError("ESDF-Free front-end: Unable to generate plan!");
+      }
+    }
+
+
 
 private:
   template<typename ... Args>
