@@ -239,8 +239,8 @@ def main():
     # spending initial state to the learning agile node    
     rospy.spin()
 if __name__ == '__main__':
-    # main()
-    cProfile.run('main()',filename='running_time_statistics.prof')
+    main()
+    # cProfile.run('main()',filename='running_time_statistics.prof')
 
 
 

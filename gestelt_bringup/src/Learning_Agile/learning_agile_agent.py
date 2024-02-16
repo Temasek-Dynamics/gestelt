@@ -65,8 +65,11 @@ class MovingGate():
          ## define the kinematics of the narrow window
         self.v =np.array([0,0.0,0.0])
         self.w = 0 #pi/2
-        self.gate_move, self.V = self.gate1.move(v = self.v ,w = self.w,dt=0.002)
+        # self.gate_move, self.V = self.gate1.move(v = self.v ,w = self.w,dt=0.002)
 
+        self.gate_move=np.zeros([1,4,3])
+        self.V=np.zeros([1,3])
+        # return self.w
     
 class LearningAgileAgent():
     def __init__(self) -> None:
@@ -174,7 +177,7 @@ class LearningAgileAgent():
 
         if self.i <= 500:
     
-            self.gate_n = gate(self.gate_move[self.i])
+            self.gate_n = gate(self.gate_move[0])
             self.state_n = [drone_state]
 
             # binary search for the traversal time
@@ -194,7 +197,7 @@ class LearningAgileAgent():
             
 
             ## obtain the future traversal window state
-            self.gate_n.translate(t*self.moving_gate.V[self.i])
+            self.gate_n.translate(t*self.moving_gate.V[0])
             self.gate_n.rotate_y(t*self.moving_gate.w)
              
             # print('rotation matrix I_G=',gate_n.I_G)
@@ -216,8 +219,8 @@ class LearningAgileAgent():
             # self.state=self.state
 
         solver_inputs = np.zeros(18)
-        solver_inputs[16] = magni(self.gate_n.gate_point[0,:]-self.gate_n.gate_point[1,:]) # gate width
-        solver_inputs[17] = atan((self.gate_n.gate_point[0,2]-self.gate_n.gate_point[1,2])/(self.gate_n.gate_point[0,0]-self.gate_n.gate_point[1,0])) # compute the actual gate pitch ange in real-time
+        # solver_inputs[16] = magni(self.gate_n.gate_point[0,:]-self.gate_n.gate_point[1,:]) # gate width
+        # solver_inputs[17] = atan((self.gate_n.gate_point[0,2]-self.gate_n.gate_point[1,2])/(self.gate_n.gate_point[0,0]-self.gate_n.gate_point[1,0])) # compute the actual gate pitch ange in real-time
         solver_inputs[0:10] = self.state #self.gate_n.transform(self.state)
         solver_inputs[10:13] = self.final_point#self.gate_n.t_final(self.final_point)
         out = self.model(solver_inputs).data.numpy()
@@ -271,7 +274,7 @@ class LearningAgileAgent():
         self.state_n = [self.state]
         for self.i in range(2500): # 5s, 500 Hz
             # decision variable is updated in 100 hz
-            self.gate_n = gate(self.gate_move[self.i])
+            self.gate_n = gate(self.gate_move[0])
             t_tra_abs =1
             # t = solver(self.model,self.state,self.final_point,self.gate_n,self.moving_gate.V[self.i],self.moving_gate.w)
             t=t_tra_abs-self.i*self.dyn_step
@@ -290,14 +293,14 @@ class LearningAgileAgent():
             if (self.i%5)==0: # control frequency = 100 hz
 
                 ## obtain the future traversal window state
-                    self.gate_n.translate(t*self.moving_gate.V[self.i])
+                    self.gate_n.translate(t*self.moving_gate.V[0])
                     self.gate_n.rotate_y(t*self.moving_gate.w)
                     # print('rotation matrix I_G=',gate_n.I_G)
                 
                 ## obtain the state in window frame 
                     solver_inputs = np.zeros(18)
-                    solver_inputs[16] = magni(self.gate_n.gate_point[0,:]-self.gate_n.gate_point[1,:])
-                    solver_inputs[17] = atan((self.gate_n.gate_point[0,2]-self.gate_n.gate_point[1,2])/(self.gate_n.gate_point[0,0]-self.gate_n.gate_point[1,0])) # compute the actual gate pitch ange in real-time
+                    # solver_inputs[16] = magni(self.gate_n.gate_point[0,:]-self.gate_n.gate_point[1,:])
+                    # solver_inputs[17] = atan((self.gate_n.gate_point[0,2]-self.gate_n.gate_point[1,2])/(self.gate_n.gate_point[0,0]-self.gate_n.gate_point[1,0])) # compute the actual gate pitch ange in real-time
                     solver_inputs[0:10] = self.state #self.gate_n.transform(self.state)
                     solver_inputs[10:13] = self.final_point #self.gate_n.t_final(self.final_point)
                     # print('input_UNDER_GATE=',solver_inputs)

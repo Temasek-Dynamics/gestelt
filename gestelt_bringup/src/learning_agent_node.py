@@ -32,7 +32,8 @@ import tf
 
 # running time statistics
 import cProfile
-
+# get ros params from rosparam server
+hardware_platform=rospy.get_param('mission/hardware_platform', 'laptop')
 class LearningAgileAgentNode():
 
     def __init__(self):
@@ -300,6 +301,10 @@ def main():
     
 if __name__ == '__main__':
     # main()
-    cProfile.run('main()',filename='running_time_statistics.prof')
+    parent_dir=current_dir+'/..'
+    output_dir=parent_dir+'/data/'
+    file_name=hardware_platform+'_running_time_statistics.prof'
+    rel_path=output_dir+file_name
+    cProfile.run('main()',filename=rel_path)
     
 
