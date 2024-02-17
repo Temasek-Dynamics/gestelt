@@ -151,18 +151,6 @@ def pub_waypoints(waypoints,accels,vels):
     waypoints_pos_pub.publish(wp_pos_msg)
     waypoints_acc_pub.publish(wp_acc_msg)
 
-# def hover_position():
-    
-#      # transform waypoints from map to world
-#     trans,rot=transform_map_to_world()
-
-#     hover_position = Pose()
-#     hover_position.position.x = 0.0+trans[0]
-#     hover_position.position.y = 0.0+trans[1]
-#     # z is the same as the takeoff height
-
-#     hover_position_pub.publish(hover_position)
-
 
 def main():
     rospy.init_node('mission_startup', anonymous=True)
@@ -182,7 +170,6 @@ def main():
         
         if (MISSION_MODE):
             # Already in MISSION 
-            time.sleep(1)
             break
         elif (not HOVER_MODE):
             # IDLE -> TAKE OFF -> HOVER

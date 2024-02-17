@@ -37,7 +37,7 @@ roslaunch trajectory_server trajectory_server_node.launch rviz_config:=gz_sim
 
 # Start up minimum snap trajectory planner and sampler 
 CMD_2="
-roslaunch trajectory_planner trajectory_planner_node.launch
+rosbag record -o ~/gestelt_ws/src/gestelt/gestelt_bringup/data/ /learning_agile_agent/callback_runtime
 "
 
 # Start up script to send commands
@@ -56,9 +56,9 @@ then
     tmux split-window -t $SESSION:0.0 -h
 
     tmux send-keys -t $SESSION:0.0 "$SOURCE_PX4_AUTOPILOT $CMD_0" C-m 
-    sleep 2
-    tmux send-keys -t $SESSION:0.1 "$SOURCE_WS $CMD_1" #C-m 
     sleep 1
+    tmux send-keys -t $SESSION:0.1 "$SOURCE_WS $CMD_1" #C-m 
+    sleep 10
     tmux send-keys -t $SESSION:0.2 "$SOURCE_WS $CMD_2" #C-m 
     sleep 1
     tmux send-keys -t $SESSION:0.3 "$SOURCE_WS $CMD_3" #C-m

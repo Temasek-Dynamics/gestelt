@@ -20,7 +20,7 @@ source $SCRIPT_DIR/../../../devel/setup.bash &&
 # drone's side ROS_MASTER_URI should be the laptop
 EXPORT_ROS_MASTER_URI="
 export ROS_HOSTNAME=172.20.10.3 &&
-export ROS_MASTER_URI=http://172.20.10.8:11311
+export ROS_MASTER_URI=http://172.20.10.4:11311
 "
 
 # PX4 v1.13.0

@@ -14,10 +14,7 @@ sys.path.append("../")
 sys.path.append(subdirectory_path)
 
 from typing import Any
-from Learning_Agile.quad_model import *
-from Learning_Agile.quad_policy import *
-from Learning_Agile.quad_nn import *
-from Learning_Agile.quad_moving import *
+
 from Learning_Agile.learning_agile_agent import LearningAgileAgent
 # ros
 import numpy as np
@@ -48,7 +45,7 @@ class LearningAgileAgentNode():
         self.waypoints_sub = rospy.Subscriber('/planner/goals_learning_agile',Goals, self.mission_start_callback)
         
         # pos_vel_att_cmd command publisher
-        self.next_setpoint_pub = rospy.Publisher('/mavros/setpoint_raw/local', PositionTarget, queue_size=10)
+        # self.next_setpoint_pub = rospy.Publisher('/mavros/setpoint_raw/local', PositionTarget, queue_size=10)
         self.next_attitude_setpoint_pub = rospy.Publisher('/mavros/setpoint_raw/attitude', AttitudeTarget, queue_size=10)
 
         self.gate_centroid_pub = rospy.Publisher('/learning_agile_agent/gate_centroid', PoseStamped, queue_size=10)
@@ -56,8 +53,8 @@ class LearningAgileAgentNode():
         ##--------learning agile agent data----------------##
         # traverse time publisher
         self.traverse_time_pub = rospy.Publisher('/learning_agile_agent/traverse_time', Float32, queue_size=10)
-        self.callback_runtime_pub = rospy.Publisher('/learning_agile_agent/callback_runtime', Float32, queue_size=10)
-        self.solver_input_state_pub = rospy.Publisher('/learning_agile_agent/solver_input_state', PoseStamped, queue_size=10)
+        self.mpc_runtime_pub_ = rospy.Publisher('/learning_agile_agent/callback_runtime', Float32, queue_size=10)
+        # self.solver_input_state_pub = rospy.Publisher('/learning_agile_agent/solver_input_state', PoseStamped, queue_size=10)
         self.current_pred_traj_pub = rospy.Publisher('/learning_agile_agent/current_pred_traj', PoseArray, queue_size=10)
         # timer for publishing setpoints
         self.terminal_waypoints_received = True
@@ -153,35 +150,19 @@ class LearningAgileAgentNode():
         pos_vel_att_cmd,input,callback_runtime,current_pred_traj,accelerations=self.learing_agile_agent.solve_problem_gazebo(self.drone_state)
         
         #################################################
-        ##---------pub pos_vel_att_cmd setpoint--------##
+        ##---------pub pos_vel_cmd setpoint------------##
         #################################################
-        
-        # publish the pos_vel_att_cmd setpoint
-        pos_vel_setpoint=PositionTarget()
-        pos_vel_setpoint.header.stamp = rospy.Time.now()
-        pos_vel_setpoint.header.frame_id = "world"
-        pos_vel_setpoint.coordinate_frame = PositionTarget.FRAME_LOCAL_NED
-        pos_vel_setpoint.type_mask =  PositionTarget.IGNORE_YAW_RATE+PositionTarget.IGNORE_YAW\
-                                    # +PositionTarget.IGNORE_AFX+PositionTarget.IGNORE_AFY+PositionTarget.IGNORE_AFZ\
-                                    # +PositionTarget.IGNORE_VX+PositionTarget.IGNORE_VY+PositionTarget.IGNORE_VZ
-        
-        pos_vel_setpoint.position.x = pos_vel_att_cmd[0]
-        pos_vel_setpoint.position.y = pos_vel_att_cmd[1]
-        pos_vel_setpoint.position.z = pos_vel_att_cmd[2]
-        pos_vel_setpoint.velocity.x = pos_vel_att_cmd[3]
-        pos_vel_setpoint.velocity.y = pos_vel_att_cmd[4]
-        pos_vel_setpoint.velocity.z = pos_vel_att_cmd[5]
 
-        pos_vel_setpoint.acceleration_or_force.x = accelerations[0]
-        pos_vel_setpoint.acceleration_or_force.y = accelerations[1]
-        pos_vel_setpoint.acceleration_or_force.z = accelerations[2]
 
-        # attitude setpoint
-        attitude_setpoint=Quaternion()
-        attitude_setpoint.w=pos_vel_att_cmd[6]
-        attitude_setpoint.x=pos_vel_att_cmd[7]
-        attitude_setpoint.y=pos_vel_att_cmd[8]
-        attitude_setpoint.z=pos_vel_att_cmd[9]
+        #################################################
+        ##---------pub att_body_rate setpoint----------##
+        #################################################
+        # # attitude setpoint
+        # attitude_setpoint=Quaternion()
+        # attitude_setpoint.w=pos_vel_att_cmd[6]
+        # attitude_setpoint.x=pos_vel_att_cmd[7]
+        # attitude_setpoint.y=pos_vel_att_cmd[8]
+        # attitude_setpoint.z=pos_vel_att_cmd[9]
 
 
         # body rate setpoint
@@ -198,8 +179,8 @@ class LearningAgileAgentNode():
                                     # AttitudeTarget.IGNORE_THRUST+AttitudeTarget.IGNORE_PITCH_RATE+\
                                     # AttitudeTarget.IGNORE_YAW_RATE+AttitudeTarget.IGNORE_ROLL_RATE
         
-        # mavros_attitude_setpoint.type_mask = AttitudeTarget.IGNORE_ATTITUDE
-        
+        mavros_attitude_setpoint.type_mask = AttitudeTarget.IGNORE_ATTITUDE
+        # mavros_attitude_setpoint.orientation=attitude_setpoint
 
 
         # thrust_each: each propeller thrust, in N
@@ -211,34 +192,18 @@ class LearningAgileAgentNode():
         mavros_attitude_setpoint.thrust = input[0]/((0.8706)*4) # normalize to [0,1] # 
 
         mavros_attitude_setpoint.body_rate=body_rate_setpoint
-        mavros_attitude_setpoint.orientation=attitude_setpoint
         
-        #---------- publish the setpoint（PV or attitude)-----------------#
-        # self.next_setpoint_pub.publish(pos_vel_setpoint)
-
+        
+        #---------- publish the setpoint（att or body_rate)-----------------#
         self.next_attitude_setpoint_pub.publish(mavros_attitude_setpoint)
 
 
-        #TODO ONLY FOR TEST
+        
         #################################################
         ##-pub the solver input state/solver comp time-##
-        #################################################
-  
-        solver_input_state_msg=PoseStamped()
-        solver_input_state_msg.header.stamp = rospy.Time.now()
-        solver_input_state_msg.header.frame_id = "world"
-        solver_input_state_msg.pose.position.x = self.learing_agile_agent.state[0]
-        solver_input_state_msg.pose.position.y = self.learing_agile_agent.state[1]
-        solver_input_state_msg.pose.position.z = self.learing_agile_agent.state[2]
-        solver_input_state_msg.pose.orientation.w = self.learing_agile_agent.state[6]
-        solver_input_state_msg.pose.orientation.x = self.learing_agile_agent.state[7]
-        solver_input_state_msg.pose.orientation.y = self.learing_agile_agent.state[8]
-        solver_input_state_msg.pose.orientation.z = self.learing_agile_agent.state[9]
-
-        self.solver_input_state_pub.publish(solver_input_state_msg)
-        
+        #################################################        
         # publish the solver input and solver performance
-        self.callback_runtime_pub.publish(callback_runtime)
+        self.mpc_runtime_pub_.publish(callback_runtime)
         
         
         #################################################
@@ -308,3 +273,30 @@ if __name__ == '__main__':
     cProfile.run('main()',filename=rel_path)
     
 
+
+#################################################
+##---------pub pos_vel_cmd setpoint------------##
+#################################################
+
+# publish the pos_vel_att_cmd setpoint
+# pos_vel_setpoint=PositionTarget()
+# pos_vel_setpoint.header.stamp = rospy.Time.now()
+# pos_vel_setpoint.header.frame_id = "world"
+# pos_vel_setpoint.coordinate_frame = PositionTarget.FRAME_LOCAL_NED
+# pos_vel_setpoint.type_mask =  PositionTarget.IGNORE_YAW_RATE+PositionTarget.IGNORE_YAW\
+#                             # +PositionTarget.IGNORE_AFX+PositionTarget.IGNORE_AFY+PositionTarget.IGNORE_AFZ\
+#                             # +PositionTarget.IGNORE_VX+PositionTarget.IGNORE_VY+PositionTarget.IGNORE_VZ
+
+# pos_vel_setpoint.position.x = pos_vel_att_cmd[0]
+# pos_vel_setpoint.position.y = pos_vel_att_cmd[1]
+# pos_vel_setpoint.position.z = pos_vel_att_cmd[2]
+# pos_vel_setpoint.velocity.x = pos_vel_att_cmd[3]
+# pos_vel_setpoint.velocity.y = pos_vel_att_cmd[4]
+# pos_vel_setpoint.velocity.z = pos_vel_att_cmd[5]
+
+# pos_vel_setpoint.acceleration_or_force.x = accelerations[0]
+# pos_vel_setpoint.acceleration_or_force.y = accelerations[1]
+# pos_vel_setpoint.acceleration_or_force.z = accelerations[2]
+
+#---------- publish the setpoint（PV or attitude)-----------------#
+# self.next_setpoint_pub.publish(pos_vel_setpoint)
