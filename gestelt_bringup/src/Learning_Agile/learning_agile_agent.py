@@ -178,27 +178,27 @@ class LearningAgileAgent():
         if self.i <= 500:
     
             self.gate_n = gate(self.gate_move[0])
-            self.state_n = [drone_state]
+            # self.state_n = [drone_state]
 
             # binary search for the traversal time
             self.t_tra_abs =1
             # t = solver(self.model,self.state,self.final_point,self.gate_n,self.moving_gate.V[self.i],self.moving_gate.w)
             t=self.t_tra_abs-self.i*0.01
             # t_tra = t+self.i*0.01
-            gap_pitch = self.moving_gate.gate_init_p + self.moving_gate.w*self.i*0.01
+            # gap_pitch = self.moving_gate.gate_init_p + self.moving_gate.w*self.i*0.01
             
             # print('step',self.i,'tranversal time W.R.T current=',t,'gap_pitch=',gap_pitch*180/pi)
             # print('step',self.i,'abs_tranversal time W.R.T mission=',t_tra)
             
-            self.Ttra = np.concatenate((self.Ttra,[self.t_tra_abs]),axis = 0)
-            self.T = np.concatenate((self.T,[t]),axis = 0)
-            self.Time = np.concatenate((self.Time,[self.i*0.01]),axis = 0)
-            self.Pitch = np.concatenate((self.Pitch,[gap_pitch]),axis = 0)
+            # self.Ttra = np.concatenate((self.Ttra,[self.t_tra_abs]),axis = 0)
+            # self.T = np.concatenate((self.T,[t]),axis = 0)
+            # self.Time = np.concatenate((self.Time,[self.i*0.01]),axis = 0)
+            # self.Pitch = np.concatenate((self.Pitch,[gap_pitch]),axis = 0)
             
 
             ## obtain the future traversal window state
-            self.gate_n.translate(t*self.moving_gate.V[0])
-            self.gate_n.rotate_y(t*self.moving_gate.w)
+            # self.gate_n.translate(t*self.moving_gate.V[0])
+            # self.gate_n.rotate_y(t*self.moving_gate.w)
              
             # print('rotation matrix I_G=',gate_n.I_G)
                
@@ -246,8 +246,8 @@ class LearningAgileAgent():
         accelerations=(current_pred_traj[2,3:6]-current_pred_traj[1,3:6])/self.dt
                 
         # self.state = np.array(self.quad1.uav1.dyn_fn(self.state, self.u)).reshape(13) # Yixiao's simulation environment ('uav1.dyn_fn'), replaced by pybullet
-        self.state_n = np.concatenate((self.state_n,[self.state]),axis = 0)
-        self.control_n = np.concatenate((self.control_n,[self.u]),axis = 0)
+        # self.state_n = np.concatenate((self.state_n,[self.state]),axis = 0)
+        # self.control_n = np.concatenate((self.control_n,[self.u]),axis = 0)
         
         
         

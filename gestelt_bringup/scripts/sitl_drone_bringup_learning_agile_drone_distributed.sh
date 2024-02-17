@@ -47,7 +47,7 @@ roslaunch trajectory_planner trajectory_planner_node.launch
 "
 
 # Start up script to send commands
-CMD_3="roslaunch gestelt_bringup learning_agile_mission.launch platform:='drone' record:=false"
+CMD_3="roslaunch gestelt_bringup learning_agile_mission.launch platform:='drone' record:='false'"
 
 # disarm drone
 # CMD_4="rosservice call /drone_commander/disarm"
@@ -65,7 +65,7 @@ then
     sleep 2
     tmux send-keys -t $SESSION:0.1 "$SOURCE_WS $EXPORT_ROS_MASTER_URI $CMD_1" C-m 
     sleep 1
-    tmux send-keys -t $SESSION:0.2 "$SOURCE_WS $CMD_2" #C-m 
+    tmux send-keys -t $SESSION:0.2 "$SOURCE_WS " #C-m 
     sleep 1
     tmux send-keys -t $SESSION:0.3 "$SOURCE_WS $EXPORT_ROS_MASTER_URI $CMD_3" C-m
 fi
