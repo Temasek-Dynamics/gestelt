@@ -19,7 +19,7 @@ from Learning_Agile.learning_agile_agent import LearningAgileAgent
 # ros
 import numpy as np
 import rospy
-from gestelt_msgs.msg import Goals
+from gestelt_msgs.msg import Goals,CommanderCommand
 from geometry_msgs.msg import Pose,PoseArray,TwistStamped, PoseStamped,Quaternion,Vector3
 from mavros_msgs.msg import PositionTarget, AttitudeTarget
 from std_msgs.msg import Int8, Bool,Float32
@@ -50,6 +50,10 @@ class LearningAgileAgentNode():
 
         self.gate_centroid_pub = rospy.Publisher('/learning_agile_agent/gate_centroid', PoseStamped, queue_size=10)
         
+        # Publisher of server events to trigger change of states for trajectory server 
+        self.server_event_pub = rospy.Publisher('/traj_server/command', CommanderCommand, queue_size=10)
+        
+        
         ##--------learning agile agent data----------------##
         # traverse time publisher
         self.traverse_time_pub = rospy.Publisher('/learning_agile_agent/traverse_time', Float32, queue_size=10)
@@ -75,7 +79,7 @@ class LearningAgileAgentNode():
 
         ## learning agile agent initialization
         # create the learning agile agent
-        self.learing_agile_agent=LearningAgileAgent()
+        self.learning_agile_agent=LearningAgileAgent()
 
         # time statics
         self.index_t = []
@@ -97,13 +101,13 @@ class LearningAgileAgentNode():
         # print("gate point: ",self.gate_point)
         ## receive the start and end point, and the initial gate point, from ROS side
         # rewrite the inputs
-        self.learing_agile_agent.receive_terminal_states(start=self.start_point,
+        self.learning_agile_agent.receive_terminal_states(start=self.start_point,
                                                          end=self.final_point,
                                                          gate_center=self.gate_point)
 
         # problem definition
         # gazebo_sim=False, means the solver will compile to c code first, then solve the problem
-        self.learing_agile_agent.problem_definition(self.drone_quat,\
+        self.learning_agile_agent.problem_definition(self.drone_quat,\
                                                     gazebo_sim=True,\
                                                     dyn_step=0.002)
 
@@ -122,7 +126,7 @@ class LearningAgileAgentNode():
         """
         #,self.drone_ang_vel
         self.drone_state=np.concatenate((self.drone_pos,self.drone_vel,self.drone_quat),axis=0).tolist()
-        traverse_time, gate_centroid=self.learing_agile_agent.gate_state_estimation(self.drone_state)
+        traverse_time, gate_centroid=self.learning_agile_agent.gate_state_estimation(self.drone_state)
         
         # publish the traverse time w.r.t current timestep
         traverse_time_msg=Float32()
@@ -147,84 +151,93 @@ class LearningAgileAgentNode():
         # concatenate the drone state into a list, give it to the learning agile agent 
         #,self.drone_ang_vel
         self.drone_state=np.concatenate((self.drone_pos,self.drone_vel,self.drone_quat),axis=0).tolist()
-        pos_vel_att_cmd,input,callback_runtime,current_pred_traj,accelerations=self.learing_agile_agent.solve_problem_gazebo(self.drone_state)
+        input,callback_runtime,current_pred_traj,NO_SOLUTION_FLAG=self.learning_agile_agent.solve_problem_gazebo(self.drone_state)
         
-        #################################################
-        ##---------pub pos_vel_cmd setpoint------------##
-        #################################################
+
+        # stop the mission if no solution is found
+        if NO_SOLUTION_FLAG:
+            print("No solution is found, stop the mission!")
+            commander_cmd = CommanderCommand()
+            commander_cmd.command = CommanderCommand.HOVER
+
+            self.server_event_pub.publish(commander_cmd)
+        else:    
+            #################################################
+            ##---------pub pos_vel_cmd setpoint------------##
+            #################################################
 
 
-        #################################################
-        ##---------pub att_body_rate setpoint----------##
-        #################################################
-        # # attitude setpoint
-        # attitude_setpoint=Quaternion()
-        # attitude_setpoint.w=pos_vel_att_cmd[6]
-        # attitude_setpoint.x=pos_vel_att_cmd[7]
-        # attitude_setpoint.y=pos_vel_att_cmd[8]
-        # attitude_setpoint.z=pos_vel_att_cmd[9]
+            #################################################
+            ##---------pub att_body_rate setpoint----------##
+            #################################################
+            # # attitude setpoint
+            # attitude_setpoint=Quaternion()
+            # attitude_setpoint.w=pos_vel_att_cmd[6]
+            # attitude_setpoint.x=pos_vel_att_cmd[7]
+            # attitude_setpoint.y=pos_vel_att_cmd[8]
+            # attitude_setpoint.z=pos_vel_att_cmd[9]
 
 
-        # body rate setpoint
-        body_rate_setpoint=Vector3()
-        body_rate_setpoint.x=input[1]
-        body_rate_setpoint.y=input[2]
-        body_rate_setpoint.z=input[3]
+            # body rate setpoint
+            body_rate_setpoint=Vector3()
+            body_rate_setpoint.x=input[1]
+            body_rate_setpoint.y=input[2]
+            body_rate_setpoint.z=input[3]
 
-        # assemble the body rate and thrust setpoint
-        mavros_attitude_setpoint=AttitudeTarget()
-        mavros_attitude_setpoint.header.stamp = rospy.Time.now()
-        mavros_attitude_setpoint.header.frame_id = "world"
-        # mavros_attitude_setpoint.type_mask = AttitudeTarget.IGNORE_PITCH_RATE+\
-                                    # AttitudeTarget.IGNORE_THRUST+AttitudeTarget.IGNORE_PITCH_RATE+\
-                                    # AttitudeTarget.IGNORE_YAW_RATE+AttitudeTarget.IGNORE_ROLL_RATE
-        
-        mavros_attitude_setpoint.type_mask = AttitudeTarget.IGNORE_ATTITUDE
-        # mavros_attitude_setpoint.orientation=attitude_setpoint
-
-
-        # thrust_each: each propeller thrust, in N
-        # hover thrust is 0.5775 (normalized to [0,1])
-        # drone weight is 0.205kg
-        # thrust max is 3.48234 N
-        # each propeller thrust max is 0.870585 N+0.15
-        # mavros_attitude_setpoint.thrust = sum(thrust_each)/((0.8706+0.25)*4) # normalize to [0,1]
-        mavros_attitude_setpoint.thrust = input[0]/((0.8706)*4) # normalize to [0,1] # 
-
-        mavros_attitude_setpoint.body_rate=body_rate_setpoint
-        
-        
-        #---------- publish the setpoint（att or body_rate)-----------------#
-        self.next_attitude_setpoint_pub.publish(mavros_attitude_setpoint)
+            # assemble the body rate and thrust setpoint
+            mavros_attitude_setpoint=AttitudeTarget()
+            mavros_attitude_setpoint.header.stamp = rospy.Time.now()
+            mavros_attitude_setpoint.header.frame_id = "world"
+            # mavros_attitude_setpoint.type_mask = AttitudeTarget.IGNORE_PITCH_RATE+\
+                                        # AttitudeTarget.IGNORE_THRUST+AttitudeTarget.IGNORE_PITCH_RATE+\
+                                        # AttitudeTarget.IGNORE_YAW_RATE+AttitudeTarget.IGNORE_ROLL_RATE
+            
+            mavros_attitude_setpoint.type_mask = AttitudeTarget.IGNORE_ATTITUDE
+            # mavros_attitude_setpoint.orientation=attitude_setpoint
 
 
-        
-        #################################################
-        ##-pub the solver input state/solver comp time-##
-        #################################################        
-        # publish the solver input and solver performance
-        self.mpc_runtime_pub_.publish(callback_runtime)
-        
-        
-        #################################################
-        ##---------pub the current pred traj-----------##
-        #################################################
+            # thrust_each: each propeller thrust, in N
+            # hover thrust is 0.5775 (normalized to [0,1])
+            # drone weight is 0.205kg
+            # thrust max is 3.48234 N
+            # each propeller thrust max is 0.870585 N+0.15
+            # mavros_attitude_setpoint.thrust = sum(thrust_each)/((0.8706+0.25)*4) # normalize to [0,1]
+            mavros_attitude_setpoint.thrust = input[0]/((0.8706)*4) # normalize to [0,1] # 
 
-        # publish the current pred traj
-        current_pred_traj_msg=PoseArray()
-        current_pred_traj_msg.header.stamp = rospy.Time.now()
-        current_pred_traj_msg.header.frame_id = "world"
-        for i in range(len(current_pred_traj)):
-            pose=Pose()
-            pose.position.x=current_pred_traj[i][0]
-            pose.position.y=current_pred_traj[i][1]
-            pose.position.z=current_pred_traj[i][2]
-            pose.orientation.w=current_pred_traj[i][6]
-            pose.orientation.x=current_pred_traj[i][7]
-            pose.orientation.y=current_pred_traj[i][8]
-            pose.orientation.z=current_pred_traj[i][9]
-            current_pred_traj_msg.poses.append(pose)
-        self.current_pred_traj_pub.publish(current_pred_traj_msg)
+            mavros_attitude_setpoint.body_rate=body_rate_setpoint
+            
+            
+            #---------- publish the setpoint（att or body_rate)-----------------#
+            self.next_attitude_setpoint_pub.publish(mavros_attitude_setpoint)
+
+
+            
+            #################################################
+            ##-pub the solver input state/solver comp time-##
+            #################################################        
+            # publish the solver input and solver performance
+            self.mpc_runtime_pub_.publish(callback_runtime)
+            
+            
+            #################################################
+            ##---------pub the current pred traj-----------##
+            #################################################
+
+            # publish the current pred traj
+            current_pred_traj_msg=PoseArray()
+            current_pred_traj_msg.header.stamp = rospy.Time.now()
+            current_pred_traj_msg.header.frame_id = "world"
+            for i in range(len(current_pred_traj)):
+                pose=Pose()
+                pose.position.x=current_pred_traj[i][0]
+                pose.position.y=current_pred_traj[i][1]
+                pose.position.z=current_pred_traj[i][2]
+                pose.orientation.w=current_pred_traj[i][6]
+                pose.orientation.x=current_pred_traj[i][7]
+                pose.orientation.y=current_pred_traj[i][8]
+                pose.orientation.z=current_pred_traj[i][9]
+                current_pred_traj_msg.poses.append(pose)
+            self.current_pred_traj_pub.publish(current_pred_traj_msg)
 
 
     def drone_state_pose_callback(self,msg):
@@ -254,10 +267,10 @@ def main():
     #---------------------- for ros node integration ----------------------------#
 
     # # # ros node initialization
-    rospy.init_node('learing_agile_agent', anonymous=True)
+    rospy.init_node('learning_agile_agent', anonymous=True)
     
     # create the learning agile agent ROS node object
-    learing_agile_agent_node = LearningAgileAgentNode()
+    learning_agile_agent_node = LearningAgileAgentNode()
     
     rospy.spin()
 

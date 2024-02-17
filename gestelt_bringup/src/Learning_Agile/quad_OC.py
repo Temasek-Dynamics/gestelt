@@ -517,7 +517,7 @@ class OCSys:
         desired_goal_vel=np.array([0, 0, 0])
         desired_goal_ori = np.array([1, 0, 0, 0])
         # desired_goal_w=np.array([0, 0, 0])
-        
+
         goal_state=np.concatenate((np.array(goal_pos),desired_goal_vel,desired_goal_ori))#,desired_goal_w))
        
         
@@ -552,32 +552,34 @@ class OCSys:
         self.acados_solver.set(0, "ubx", np.array(current_state_control[0:self.n_state]))
         
        
-
+        NO_SOLUTION_FLAG=False
         # solve ocp
-        status = self.acados_solver.solve()
+        try:
+            status = self.acados_solver.solve()
 
-        if status != 0:
-            raise Exception('acados returned status {}. Exiting.'.format(status))
-
- 
-       
-        #-------------take the optimal control and state sequences
-        #self.n_nodes
-        for i in range(self.n_nodes):
-            self.state_traj_opt[i,:]=self.acados_solver.get(i, "x")
-            self.control_traj_opt[i,:]=self.acados_solver.get(i, "u")
-        self.state_traj_opt[-1,:]=self.acados_solver.get(self.n_nodes, "x")
+            if status != 0:
+                raise Exception('acados returned status {}. Exiting.'.format(status))
+            
+            #-------------take the optimal control and state sequences
+            #self.n_nodes
+            for i in range(self.n_nodes):
+                self.state_traj_opt[i,:]=self.acados_solver.get(i, "x")
+                self.control_traj_opt[i,:]=self.acados_solver.get(i, "u")
+            self.state_traj_opt[-1,:]=self.acados_solver.get(self.n_nodes, "x")
         
-        
+        except Exception as e:   
+            NO_SOLUTION_FLAG=True
+            
         # output
         opt_sol = {"state_traj_opt": self.state_traj_opt,
-                   "control_traj_opt": self.control_traj_opt,
-                   'auxvar_value': auxvar_value,
-                   "time": time,
-                   "horizon": self.horizon}
-                   #"cost": sol['f'].full()}
+                "control_traj_opt": self.control_traj_opt,
+                'auxvar_value': auxvar_value,
+                "time": time,
+                "horizon": self.horizon}
+                #"cost": sol['f'].full()}
+    
 
-        return opt_sol,weight_vis    
+        return opt_sol,weight_vis ,NO_SOLUTION_FLAG   
     
 
 

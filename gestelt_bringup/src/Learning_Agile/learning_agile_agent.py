@@ -213,10 +213,7 @@ class LearningAgileAgent():
         """
         
         t_comp = time.time()  
-        # if self.i <= 500: 
         self.state=drone_state
-        # else:
-            # self.state=self.state
 
         solver_inputs = np.zeros(18)
         # solver_inputs[16] = magni(self.gate_n.gate_point[0,:]-self.gate_n.gate_point[1,:]) # gate width
@@ -228,40 +225,22 @@ class LearningAgileAgent():
         out[0:3]=self.gate_center
         out[3:6]=np.array([0,-0.7,0])
 
-        # out[3:6]=np.array([0,0,0])
         out[6]=self.t_tra_abs-self.i*0.01
 
         ## solve the mpc problem and get the control command
-        cmd_solution,weight_vis = self.quad1.get_input(solver_inputs[0:10],
+        cmd_solution,weight_vis,NO_SOLUTION_FLAG = self.quad1.get_input(solver_inputs[0:10],
                                                         self.u,out[0:3],
                                                         out[3:6],
                                                         out[6],
                                                         max_tra_w=self.max_tra_w) # control input 4-by-1 thrusts to pybullet
                     
-        
-        self.pos_vel_att_cmd=cmd_solution['state_traj_opt'][1,:]
+
         self.u=cmd_solution['control_traj_opt'][0,:]
         current_pred_traj=cmd_solution['state_traj_opt']
-        # accelerations=np.diff(current_pred_traj[:,3:6],axis=0)/self.dt
-        accelerations=(current_pred_traj[2,3:6]-current_pred_traj[1,3:6])/self.dt
-                
-        # self.state = np.array(self.quad1.uav1.dyn_fn(self.state, self.u)).reshape(13) # Yixiao's simulation environment ('uav1.dyn_fn'), replaced by pybullet
-        # self.state_n = np.concatenate((self.state_n,[self.state]),axis = 0)
-        # self.control_n = np.concatenate((self.control_n,[self.u]),axis = 0)
-        
-        
-        
-        # u_m = self.quad1.uav1.u_m
-        # u1 = np.reshape(self.u,(4,1))
-        # tm = np.matmul(u_m,u1)
-        # tm = np.reshape(tm,4)
-        # control_tm = np.concatenate((control_tm,[tm]),axis = 0)
-        # self.hl_variable = np.concatenate((self.hl_variable,[out]),axis=0) 
 
-        # TODO ONLY FOR SIMULATING EXTREME CASES      
-        # time.sleep(0.05)
+                
         callback_runtime=time.time()-t_comp
-        return self.pos_vel_att_cmd,self.u, callback_runtime,current_pred_traj,accelerations#accelerations[1,:]
+        return self.u, callback_runtime,current_pred_traj,NO_SOLUTION_FLAG
 
 
     def solve_problem_comparison(self):
