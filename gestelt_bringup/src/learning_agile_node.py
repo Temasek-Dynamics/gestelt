@@ -19,8 +19,8 @@ from Learning_Agile.learning_agile_agent import LearningAgileAgent
 # ros
 import numpy as np
 import rospy
-from gestelt_msgs.msg import CommanderState, Goals, CommanderCommand
-from geometry_msgs.msg import Pose, Accel,PoseArray,AccelStamped, TwistStamped, PoseStamped,Quaternion,Vector3
+from gestelt_msgs.msg import Goals
+from geometry_msgs.msg import Pose,PoseArray,TwistStamped, PoseStamped,Quaternion,Vector3
 from mavros_msgs.msg import PositionTarget, AttitudeTarget
 from std_msgs.msg import Int8, Bool,Float32
 import math
