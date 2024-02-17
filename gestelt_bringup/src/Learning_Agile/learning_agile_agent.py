@@ -238,7 +238,6 @@ class LearningAgileAgent():
         self.u=cmd_solution['control_traj_opt'][0,:]
         current_pred_traj=cmd_solution['state_traj_opt']
 
-                
         callback_runtime=time.time()-t_comp
         return self.u, callback_runtime,current_pred_traj,NO_SOLUTION_FLAG
 
@@ -292,7 +291,7 @@ class LearningAgileAgent():
                     out[6]=t_tra_abs-self.i*self.dyn_step
                     t_comp = time.time()
                   
-                    cmd_solution,weight_vis = self.quad1.get_input(solver_inputs[0:10],
+                    cmd_solution,weight_vis,NO_SOLUTION_FLAG  = self.quad1.get_input(solver_inputs[0:10],
                                                         self.u,out[0:3],
                                                         out[3:6],
                                                         out[6],

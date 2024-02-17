@@ -554,21 +554,20 @@ class OCSys:
        
         NO_SOLUTION_FLAG=False
         # solve ocp
-        try:
-            status = self.acados_solver.solve()
+       
+        status = self.acados_solver.solve()
 
-            if status != 0:
-                raise Exception('acados returned status {}. Exiting.'.format(status))
-            
-            #-------------take the optimal control and state sequences
-            #self.n_nodes
-            for i in range(self.n_nodes):
-                self.state_traj_opt[i,:]=self.acados_solver.get(i, "x")
-                self.control_traj_opt[i,:]=self.acados_solver.get(i, "u")
-            self.state_traj_opt[-1,:]=self.acados_solver.get(self.n_nodes, "x")
-        
-        except Exception as e:   
+        if status != 0:
             NO_SOLUTION_FLAG=True
+        
+        #-------------take the optimal control and state sequences
+        #self.n_nodes
+        for i in range(self.n_nodes):
+            self.state_traj_opt[i,:]=self.acados_solver.get(i, "x")
+            self.control_traj_opt[i,:]=self.acados_solver.get(i, "u")
+        self.state_traj_opt[-1,:]=self.acados_solver.get(self.n_nodes, "x")
+        
+       
             
         # output
         opt_sol = {"state_traj_opt": self.state_traj_opt,
