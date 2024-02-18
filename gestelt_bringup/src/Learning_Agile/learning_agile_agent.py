@@ -160,7 +160,11 @@ class LearningAgileAgent():
 
         self.dyn_step=dyn_step
         self.quad1.uav1.setDyn(self.dyn_step)
-        
+
+        # FIXME Temporally set the traversal time here, for both python and gazebo simulation
+        self.t_tra_abs =1
+
+
         print('start_point=',self.env_inputs[0:3])
         print('final_point=',self.env_inputs[3:6])
         
@@ -183,7 +187,7 @@ class LearningAgileAgent():
             # binary search for the traversal time
             self.t_tra_abs =1
             # t = solver(self.model,self.state,self.final_point,self.gate_n,self.moving_gate.V[self.i],self.moving_gate.w)
-            t=self.t_tra_abs-self.i*0.01
+            # t=self.t_tra_abs-self.i*0.01
             # t_tra = t+self.i*0.01
             # gap_pitch = self.moving_gate.gate_init_p + self.moving_gate.w*self.i*0.01
             
@@ -203,8 +207,6 @@ class LearningAgileAgent():
             # print('rotation matrix I_G=',gate_n.I_G)
                
         self.i += 1
-        t=0
-        return t, self.gate_n.centroid
 
     def solve_problem_gazebo(self,drone_state=None):
         """ 
@@ -215,20 +217,25 @@ class LearningAgileAgent():
         t_comp = time.time()  
         self.state=drone_state
 
-        solver_inputs = np.zeros(18)
-        # solver_inputs[16] = magni(self.gate_n.gate_point[0,:]-self.gate_n.gate_point[1,:]) # gate width
-        # solver_inputs[17] = atan((self.gate_n.gate_point[0,2]-self.gate_n.gate_point[1,2])/(self.gate_n.gate_point[0,0]-self.gate_n.gate_point[1,0])) # compute the actual gate pitch ange in real-time
-        solver_inputs[0:10] = self.state #self.gate_n.transform(self.state)
-        solver_inputs[10:13] = self.final_point#self.gate_n.t_final(self.final_point)
-        out = self.model(solver_inputs).data.numpy()
-        
+        # FIXME, the drone state sould under the gate frame
+        nn_mpc_inputs = np.zeros(18)
+        # nn_mpc_inputs[16] = magni(self.gate_n.gate_point[0,:]-self.gate_n.gate_point[1,:]) # gate width
+        # nn_mpc_inputs[17] = atan((self.gate_n.gate_point[0,2]-self.gate_n.gate_point[1,2])/(self.gate_n.gate_point[0,0]-self.gate_n.gate_point[1,0])) # compute the actual gate pitch ange in real-time
+        nn_mpc_inputs[0:10] = self.state #self.gate_n.transform(self.state)
+        nn_mpc_inputs[10:13] = self.final_point#self.gate_n.t_final(self.final_point)
+
+        # NN2 OUTPUT the traversal time and pose
+        # out = self.model(nn_mpc_inputs).data.numpy()
+
+        # FIXME, manually set the traversal time and pose
+        out=np.zeros(7)
         out[0:3]=self.gate_center
         out[3:6]=np.array([0,-0.7,0])
-
         out[6]=self.t_tra_abs-self.i*0.01
+        # end FIXME
 
         ## solve the mpc problem and get the control command
-        cmd_solution,weight_vis,NO_SOLUTION_FLAG = self.quad1.get_input(solver_inputs[0:10],
+        cmd_solution,weight_vis,NO_SOLUTION_FLAG = self.quad1.get_input(nn_mpc_inputs[0:10],
                                                         self.u,out[0:3],
                                                         out[3:6],
                                                         out[6],
@@ -253,17 +260,18 @@ class LearningAgileAgent():
         for self.i in range(2500): # 5s, 500 Hz
             # decision variable is updated in 100 hz
             self.gate_n = gate(self.gate_move[0])
-            t_tra_abs =1
+            self.t_tra_abs =1
             # t = solver(self.model,self.state,self.final_point,self.gate_n,self.moving_gate.V[self.i],self.moving_gate.w)
-            t=t_tra_abs-self.i*self.dyn_step
             # t_tra = t+self.i*self.dyn_step
+
+            t=self.t_tra_abs-self.i*self.dyn_step
             gap_pitch = self.moving_gate.gate_init_p + self.moving_gate.w*self.i*self.dyn_step
             
             
             # print('step',self.i,'tranversal time=',t,'gap_pitch=',gap_pitch*180/pi)
             # print('step',i,'abs_tranversal time=',t_tra)
             
-            self.Ttra = np.concatenate((self.Ttra,[t_tra_abs]),axis = 0)
+            self.Ttra = np.concatenate((self.Ttra,[self.t_tra_abs]),axis = 0)
             self.T = np.concatenate((self.T,[t]),axis = 0)
             self.Time = np.concatenate((self.Time,[self.i*self.dyn_step]),axis = 0)
             self.Pitch = np.concatenate((self.Pitch,[gap_pitch]),axis = 0)
@@ -271,37 +279,42 @@ class LearningAgileAgent():
             if (self.i%5)==0: # control frequency = 100 hz
 
                 ## obtain the future traversal window state
-                    self.gate_n.translate(t*self.moving_gate.V[0])
-                    self.gate_n.rotate_y(t*self.moving_gate.w)
-                    # print('rotation matrix I_G=',gate_n.I_G)
+                self.gate_n.translate(t*self.moving_gate.V[0])
+                self.gate_n.rotate_y(t*self.moving_gate.w)
+                # print('rotation matrix I_G=',gate_n.I_G)
                 
                 ## obtain the state in window frame 
-                    solver_inputs = np.zeros(18)
-                    # solver_inputs[16] = magni(self.gate_n.gate_point[0,:]-self.gate_n.gate_point[1,:])
-                    # solver_inputs[17] = atan((self.gate_n.gate_point[0,2]-self.gate_n.gate_point[1,2])/(self.gate_n.gate_point[0,0]-self.gate_n.gate_point[1,0])) # compute the actual gate pitch ange in real-time
-                    solver_inputs[0:10] = self.state #self.gate_n.transform(self.state)
-                    solver_inputs[10:13] = self.final_point #self.gate_n.t_final(self.final_point)
-                    # print('input_UNDER_GATE=',solver_inputs)
-                    out = self.model(solver_inputs).data.numpy()
-                    
-                    out[0:3]=self.gate_center
-                    out[3:6]=np.array([0,-0.7,0])
+                
+                # FIXME, the drone state sould under the gate frame
+                nn_mpc_inputs = np.zeros(18)
+                # nn_mpc_inputs[16] = magni(self.gate_n.gate_point[0,:]-self.gate_n.gate_point[1,:]) # gate width
+                # nn_mpc_inputs[17] = atan((self.gate_n.gate_point[0,2]-self.gate_n.gate_point[1,2])/(self.gate_n.gate_point[0,0]-self.gate_n.gate_point[1,0])) # compute the actual gate pitch ange in real-time
+                nn_mpc_inputs[0:10] = self.state #self.gate_n.transform(self.state)
+                nn_mpc_inputs[10:13] = self.final_point#self.gate_n.t_final(self.final_point)
 
-                    # out[3:6]=np.array([0,0,0])
-                    out[6]=t_tra_abs-self.i*self.dyn_step
-                    t_comp = time.time()
-                  
-                    cmd_solution,weight_vis,NO_SOLUTION_FLAG  = self.quad1.get_input(solver_inputs[0:10],
-                                                        self.u,out[0:3],
-                                                        out[3:6],
-                                                        out[6],
-                                                        max_tra_w=self.max_tra_w) # control input 4-by-1 thrusts to pybullet
-                    
-                    print('solving time at main=',time.time()-t_comp)
-                    self.solving_time.append(time.time()- t_comp)
-                    self.u=cmd_solution['control_traj_opt'][0,:].tolist()
-                    self.pos_vel_att_cmd=cmd_solution['state_traj_opt'][0,:]
-                    self.tra_weight_list.append(weight_vis)
+                # NN2 OUTPUT the traversal time and pose
+                # out = self.model(nn_mpc_inputs).data.numpy()
+
+                # FIXME, manually set the traversal time and pose
+                out=np.zeros(7)
+                out[0:3]=self.gate_center
+                out[3:6]=np.array([0,-0.7,0])
+                out[6]=self.t_tra_abs-self.i*0.01
+                # end FIXME
+
+                t_comp = time.time()
+                
+                cmd_solution,weight_vis,NO_SOLUTION_FLAG  = self.quad1.get_input(nn_mpc_inputs[0:10],
+                                                    self.u,out[0:3],
+                                                    out[3:6],
+                                                    out[6],
+                                                    max_tra_w=self.max_tra_w) # control input 4-by-1 thrusts to pybullet
+                
+                print('solving time at main=',time.time()-t_comp)
+                self.solving_time.append(time.time()- t_comp)
+                self.u=cmd_solution['control_traj_opt'][0,:].tolist()
+                self.pos_vel_att_cmd=cmd_solution['state_traj_opt'][0,:]
+                self.tra_weight_list.append(weight_vis)
             
             self.state = np.array(self.quad1.uav1.dyn_fn(self.state, self.u)).reshape(10) # Yixiao's simulation environment ('uav1.dyn_fn'), replaced by pybullet
             self.state_n = np.concatenate((self.state_n,[self.state]),axis = 0)
