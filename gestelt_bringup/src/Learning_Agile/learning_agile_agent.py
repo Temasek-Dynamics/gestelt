@@ -121,7 +121,9 @@ class LearningAgileAgent():
         # trajectory pos_vel_att_cmd
         self.pos_vel_att_cmd=np.zeros(10)
         self.pos_vel_att_cmd_n = [self.pos_vel_att_cmd]
-    
+
+        # FIXME Temporally set the traversal time here, for both python and gazebo simulation
+        self.t_tra_abs =2
     
     def receive_terminal_states(self,
                                 start,
@@ -161,8 +163,6 @@ class LearningAgileAgent():
         self.dyn_step=dyn_step
         self.quad1.uav1.setDyn(self.dyn_step)
 
-        # FIXME Temporally set the traversal time here, for both python and gazebo simulation
-        self.t_tra_abs =1
 
 
         print('start_point=',self.env_inputs[0:3])
@@ -261,7 +261,7 @@ class LearningAgileAgent():
         for self.i in range(2500): # 5s, 500 Hz
             # decision variable is updated in 100 hz
             self.gate_n = gate(self.gate_move[0])
-            self.t_tra_abs =1
+           
             # t = solver(self.model,self.state,self.final_point,self.gate_n,self.moving_gate.V[self.i],self.moving_gate.w)
             # t_tra = t+self.i*self.dyn_step
 
@@ -299,8 +299,8 @@ class LearningAgileAgent():
                 # FIXME, manually set the traversal time and pose
                 out=np.zeros(7)
                 out[0:3]=self.gate_center
-                out[3:6]=np.array([0,-0.7,0])
-                out[6]=self.t_tra_abs-self.i*0.01
+                out[3:6]=np.array([0,-0.0,0])
+                out[6]=self.t_tra_abs-self.i*self.dyn_step
                 # end FIXME
 
                 t_comp = time.time()
@@ -338,11 +338,11 @@ class LearningAgileAgent():
         np.save('Pitch',self.Pitch)
         np.save('HL_Variable',self.hl_variable)
         np.save('solving_time',self.solving_time)
-        # self.quad1.uav1.play_animation(wing_len=1.5,
-        #                                gate_traj1=self.gate_move[::5,:,:],
-        #                                state_traj=self.state_n[::5,:],
-        #                                goal_pos=self.final_point.tolist(),
-        #                                dt=self.dyn_step)
+        self.quad1.uav1.play_animation(wing_len=1.5,
+                                    #    gate_traj1=self.gate_move[::5,:,:],
+                                       state_traj=self.state_n[::5,:],
+                                       goal_pos=self.final_point.tolist(),
+                                       dt=self.dyn_step)
 
         # self.quad1.uav1.plot_thrust(self.control_n)
         # self.quad1.uav1.plot_angularrate(self.control_n)
@@ -352,9 +352,9 @@ class LearningAgileAgent():
         # plt.title('mpc solving time at the main loop')
         # plt.show()
 
-        # plt.plot(self.tra_weight_list)
-        # plt.title('traverse weight')
-        # plt.show()
+        plt.plot(self.tra_weight_list)
+        plt.title('traverse weight')
+        plt.show()
         # self.quad1.uav1.plot_T(control_tm)
         # self.quad1.uav1.plot_M(control_tm)
     
@@ -366,15 +366,15 @@ def main():
     
     # receive the start and end point, and the initial gate point, from ROS side
     # rewrite the inputs
-    # learing_agile_agent.receive_terminal_states(start=np.array([0,1.8,1.4]),
-    #                                             end=np.array([0,-1.8,1.4]),
-    #                                             gate_center=[1.2,0,1.4])
+    learing_agile_agent.receive_terminal_states(start=np.array([0,1.8,1.4]),
+                                                end=np.array([0,-1.8,1.4]),
+                                                gate_center=[1.2,0,1.4])
 
     #------------------------------hover test--------------------------------------#
-    learing_agile_agent.receive_terminal_states(start=np.array([0,1.8,1.4]),
-                                                end=np.array([0,1.8,1.4]),
-                                                gate_center=[0,1.8,1.4])
-    #------------------------------------------------------------------------------#
+    # learing_agile_agent.receive_terminal_states(start=np.array([0,1.8,1.4]),
+    #                                             end=np.array([0,1.8,1.4]),
+    #                                             gate_center=[0,1.8,1.4])
+    # #------------------------------------------------------------------------------#
     # problem definition
     learing_agile_agent.problem_definition(dyn_step=0.002)
 
