@@ -207,7 +207,7 @@ class LearningAgileAgent():
             # print('rotation matrix I_G=',gate_n.I_G)
                
         self.i += 1
-        return self.t_tra_abs,self.gate_n.centroid
+        # return self.t_tra_abs,self.gate_n.centroid
 
     def solve_problem_gazebo(self,drone_state=None):
         """ 

@@ -126,22 +126,23 @@ class LearningAgileAgentNode():
         """
         #,self.drone_ang_vel
         self.drone_state=np.concatenate((self.drone_pos,self.drone_vel,self.drone_quat),axis=0).tolist()
-        traverse_time, gate_centroid=self.learning_agile_agent.gate_state_estimation(self.drone_state)
+        self.learning_agile_agent.gate_state_estimation(self.drone_state)
+        # traverse_time, gate_centroid=
         
         # publish the traverse time w.r.t current timestep
-        traverse_time_msg=Float32()
-        traverse_time_msg.data=traverse_time
+        # traverse_time_msg=Float32()
+        # traverse_time_msg.data=traverse_time
 
         # publish the gate centroid w.r.t the world frame
-        gate_centroid_msg=PoseStamped()
-        gate_centroid_msg.header.stamp = rospy.Time.now()
-        gate_centroid_msg.header.frame_id = "world"
-        gate_centroid_msg.pose.position.x = gate_centroid[0]
-        gate_centroid_msg.pose.position.y = gate_centroid[1]
-        gate_centroid_msg.pose.position.z = gate_centroid[2]
+        # gate_centroid_msg=PoseStamped()
+        # gate_centroid_msg.header.stamp = rospy.Time.now()
+        # gate_centroid_msg.header.frame_id = "world"
+        # gate_centroid_msg.pose.position.x = gate_centroid[0]
+        # gate_centroid_msg.pose.position.y = gate_centroid[1]
+        # gate_centroid_msg.pose.position.z = gate_centroid[2]
         
-        self.gate_centroid_pub.publish(gate_centroid_msg)
-        self.traverse_time_pub.publish(traverse_time_msg)
+        # self.gate_centroid_pub.publish(gate_centroid_msg)
+        # self.traverse_time_pub.publish(traverse_time_msg)
     
     def setpoint_timer_callback(self, event):
         """
@@ -161,6 +162,7 @@ class LearningAgileAgentNode():
             commander_cmd.command = CommanderCommand.HOVER
 
             self.server_event_pub.publish(commander_cmd)
+            rospy.signal_shutdown("MPC no solution, turn the node down")
         else:    
             #################################################
             ##---------pub pos_vel_cmd setpoint------------##

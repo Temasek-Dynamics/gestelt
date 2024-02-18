@@ -225,7 +225,7 @@ def main():
 
     # spending initial state to the learning agile node    
     rospy.spin()
-    rospy.signal_shutdown("Mission completed!")
+    rospy.signal_shutdown("transfer to the MPC")
 if __name__ == '__main__':
     main()
     # cProfile.run('main()',filename='running_time_statistics.prof')
