@@ -19,6 +19,9 @@
   <depend>gestelt_msgs</depend>
   <depend>global_planner</depend>
 
+  <depend>traj_utils</depend>
+  <depend>traj_opt</depend>
+
   <depend>sfc_generation</depend>
 
   <!-- The export tag contains other, unspecified, tags -->

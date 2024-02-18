@@ -183,11 +183,11 @@ bool SphericalSFC::generateSFC(const std::vector<Eigen::Vector3d> &path)
 bool SphericalSFC::generateFreeSphere(const Eigen::Vector3d& point, Sphere& B)
 {
     Eigen::Vector3d occ_nearest;
-    double radius;
+    double dist_to_nearest_obs;
 
-    if (grid_map_->getNearestOccupiedCell(point, occ_nearest, radius)){
+    if (grid_map_->getNearestOccupiedCell(point, occ_nearest, dist_to_nearest_obs)){
         B.center = point;
-        B.setRadius(radius - sfc_params_.spherical_buffer);
+        B.setRadius(dist_to_nearest_obs - sfc_params_.spherical_buffer);
         return true;
     }
     return false;

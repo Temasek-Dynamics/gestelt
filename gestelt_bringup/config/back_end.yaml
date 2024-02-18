@@ -74,8 +74,6 @@ optimization:
   max_acc: 6.0
   max_jer: 20.0
 
-
-
 # optimization:
 #   constraint_points_perPiece: 5
 #   weight_obstacle: 10000.0 

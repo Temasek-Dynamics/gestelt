@@ -3,6 +3,9 @@
 void FrontEndPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
 { 
   logInfo("Initialized front end planner");
+
+  pnh.param("drone_id", drone_id_, -1);
+  
   double planner_freq;
   pnh.param("front_end/planner_frequency", planner_freq, -1.0);
   pnh.param("front_end/goal_tolerance", squared_goal_tol_, -1.0);
@@ -37,9 +40,10 @@ void FrontEndPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   odom_sub_ = nh.subscribe("odom", 5, &FrontEndPlanner::odometryCB, this);
   goal_sub_ = nh.subscribe("planner/goals", 5, &FrontEndPlanner::goalsCB, this);
 
+  plan_traj_sub_ = nh.subscribe("back_end/trajectory", 5, &FrontEndPlanner::backEndTrajCB, this);
+
   debug_start_sub_ = pnh.subscribe("debug/plan_start", 5, &FrontEndPlanner::debugStartCB, this);
   debug_goal_sub_ = pnh.subscribe("debug/plan_goal", 5, &FrontEndPlanner::debugGoalCB, this);
-
   plan_on_demand_sub_ = pnh.subscribe("plan_on_demand", 5, &FrontEndPlanner::planOnDemandCB, this);
 
   spherical_sfc_traj_pub_ = nh.advertise<gestelt_msgs::SphericalSFCTrajectory>("front_end/sfc_trajectory", 10);
@@ -80,38 +84,39 @@ void FrontEndPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
 
 void FrontEndPlanner::planTimerCB(const ros::TimerEvent &e)
 {
-  generatePlan();
+  // Check if waypoint queue is empty
+  if (waypoints_.empty()){
+    return;
+  }
+
+  if (isGoalReached(cur_pos_, waypoints_.nextWP())){
+    waypoints_.popWP();
+    return;
+  }
+
+  // Sample the starting position from the back end trajectory
+  if (!sampleBackEndTrajectory(ros::Time::now().toSec() ,start_pos_)){
+    // If we are unable to sample the back end trajectory, we set the starting position as the quadrotor's current position
+    start_pos_ = cur_pos_;
+  }
+
+  // Generate a front-end path
+  generatePlan(start_pos_, waypoints_.nextWP());
 }
 
 /**
  * Timer Callbacks
 */
 
-bool FrontEndPlanner::generatePlan(){
-  
-  // Check if waypoint queue is empty
-  if (waypoints_.empty()){
-    return false;
-  }
-
-  if (isGoalReached(cur_pos_, waypoints_.nextWP())){
-    waypoints_.popWP();
-    // Invalidate currently held trajectory
-    return false;
-  }
-
-  // Generate a front-end path
-  start_pos_ = cur_pos_;
-  goal_pos_ = waypoints_.nextWP();
-
+bool FrontEndPlanner::generatePlan(const Eigen::Vector3d& start_pos, const Eigen::Vector3d& goal_pos){
   // logInfo(str_fmt("generatePlan() from (%f, %f, %f) to (%f, %f, %f)",
-  //   start_pos_(0), start_pos_(1), start_pos_(2),
-  //   goal_pos_(0), goal_pos_(1), goal_pos_(2))
+  //   start_pos(0), start_pos(1), start_pos(2),
+  //   goal_pos(0), goal_pos(1), goal_pos(2))
   // );
 
   ros::Time front_end_plan_start_time = ros::Time::now();
 
-  if (!front_end_planner_->generatePlan(start_pos_, goal_pos_)){
+  if (!front_end_planner_->generatePlan(start_pos, goal_pos)){
     logError("Path generation failed!");
     viz_helper::publishVizCubes(front_end_planner_->getClosedList(), "world", closed_list_viz_pub_);
     return false;
@@ -179,6 +184,66 @@ void FrontEndPlanner::odometryCB(const nav_msgs::OdometryConstPtr &msg)
   // TODO Add mutex 
   cur_pos_= Eigen::Vector3d{msg->pose.pose.position.x, msg->pose.pose.position.y, msg->pose.pose.position.z};
   cur_vel_= Eigen::Vector3d{msg->twist.twist.linear.x, msg->twist.twist.linear.y, msg->twist.twist.linear.z};
+}
+
+void FrontEndPlanner::backEndTrajCB(const traj_utils::PolyTrajPtr msg)
+{
+    if (msg->order != 5)
+    {
+      // Only support trajectory order equals 5 now!
+      return;
+    }
+    if (msg->duration.size() * (msg->order + 1) != msg->coef_x.size())
+    {
+      // WRONG trajectory parameters
+      return;
+    }
+
+    // The chunk of code below is just converting the received 
+    // trajectories into poly_traj::Trajectory type and storing it
+
+    // piece_nums is the number of Pieces in the trajectory 
+    int piece_nums = msg->duration.size();
+    std::vector<double> dura(piece_nums);
+    std::vector<poly_traj::CoefficientMat> cMats(piece_nums);
+    for (int i = 0; i < piece_nums; ++i)
+    {
+      int i6 = i * 6;
+      cMats[i].row(0) <<  msg->coef_x[i6 + 0], msg->coef_x[i6 + 1], msg->coef_x[i6 + 2],
+                          msg->coef_x[i6 + 3], msg->coef_x[i6 + 4], msg->coef_x[i6 + 5];
+      cMats[i].row(1) <<  msg->coef_y[i6 + 0], msg->coef_y[i6 + 1], msg->coef_y[i6 + 2],
+                          msg->coef_y[i6 + 3], msg->coef_y[i6 + 4], msg->coef_y[i6 + 5];
+      cMats[i].row(2) <<  msg->coef_z[i6 + 0], msg->coef_z[i6 + 1], msg->coef_z[i6 + 2],
+                          msg->coef_z[i6 + 3], msg->coef_z[i6 + 4], msg->coef_z[i6 + 5];
+
+      dura[i] = msg->duration[i];
+    }
+
+    be_traj_.reset(new poly_traj::Trajectory(dura, cMats));
+    be_traj_->setGlobalStartTime(msg->start_time.toSec());
+}
+
+bool FrontEndPlanner::sampleBackEndTrajectory(
+  const double& time_samp, 
+  Eigen::Vector3d& pos)
+{
+  if (!be_traj_)
+  {
+    // ROS_INFO_THROTTLE(5.0, "[EGO Planner Adaptor] No trajectory received!");
+    return false;
+  }
+
+  double t = time_samp - be_traj_->getGlobalStartTime();
+
+  if (t >= 0.0 && t < be_traj_->getTotalDuration())
+  {
+    pos = be_traj_->getPos(t);
+  }
+  else {
+    return false;
+  }
+
+  return true;
 }
 
 void FrontEndPlanner::goalsCB(const gestelt_msgs::GoalsConstPtr &msg)

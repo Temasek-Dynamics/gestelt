@@ -50,14 +50,20 @@ grid_map:
   local_map_size_y: 1.5 
   local_map_size_z: 2.5 
 
-  sensor/max_range: 5.0
   ground_height: 0.0
+  occ_grid:
+    resolution: 0.1
+    inflation: 0.2
+  filter:
+    downsample_cloud: false 
+    depth_stride: 4 
+    voxel_size: 0.1
 
-  occ_grid/resolution: 0.1
-  occ_grid/inflation: 0.2
-  filter/downsample_cloud: false 
-  filter/depth_stride: 4 
-  filter/voxel_size: 0.1
+  sensor/max_range: 5.0
+
+  collision_check:
+    warn_radius: 0.2
+    fatal_radius: 0.126
 
   # camera intrinsic parameters 
   k_depth_scaling_factor: 1000.0

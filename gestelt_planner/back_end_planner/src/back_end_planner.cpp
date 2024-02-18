@@ -5,12 +5,21 @@ void BackEndPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   logInfo("Initialized back end planner");
   // double planner_freq;
   // pnh.param("back_end/planner_frequency", planner_freq, -1.0);
+  pnh.param("drone_id", drone_id_, -1);
   pnh.param("back_end/planning_horizon", planning_horizon_, -1.0);
   pnh.param("back_end/num_replan_retries", num_replan_retries_, -1);
   
   /* Subscribers */
   sfc_traj_sub_ = nh.subscribe("front_end/sfc_trajectory", 5, &BackEndPlanner::sfcTrajectoryCB, this);
+  odom_sub_ = nh.subscribe("odom", 5, &BackEndPlanner::odometryCB, this);
+  swarm_minco_traj_sub_ = nh.subscribe("swarm/minco_traj_in", 100,
+                                        &BackEndPlanner::swarmMincoTrajCB,
+                                        this,
+                                        ros::TransportHints().tcpNoDelay());
+
+  /* Publishers */
   plan_traj_pub_ = nh.advertise<traj_utils::PolyTraj>("back_end/trajectory", 10); 
+  swarm_minco_traj_pub_ = nh.advertise<traj_utils::MINCOTraj>("swarm/local/minco_traj_out", 10);
 
   // Debugging topics
   debug_start_sub_ = pnh.subscribe("debug/plan_start", 5, &BackEndPlanner::debugStartCB, this);
@@ -33,9 +42,17 @@ void BackEndPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
  * Subscriber Callbacks
 */
 
+void BackEndPlanner::odometryCB(const nav_msgs::OdometryConstPtr &msg)
+{
+  odom_mutex_.lock();
+  // TODO Add mutex 
+  cur_pos_= Eigen::Vector3d{msg->pose.pose.position.x, msg->pose.pose.position.y, msg->pose.pose.position.z};
+  cur_vel_= Eigen::Vector3d{msg->twist.twist.linear.x, msg->twist.twist.linear.y, msg->twist.twist.linear.z};
+  odom_mutex_.unlock();
+}
+
 void BackEndPlanner::sfcTrajectoryCB(const gestelt_msgs::SphericalSFCTrajectoryConstPtr& msg){
   // logInfo(str_fmt("Received callback to SFC Trajectory with %ld waypoints", msg->waypoints.size()));
-
   std::vector<double> spheres_radius;
   std::vector<Eigen::Vector3d> spheres_center;
 
@@ -50,7 +67,10 @@ void BackEndPlanner::sfcTrajectoryCB(const gestelt_msgs::SphericalSFCTrajectoryC
 
   // Convert to data types used by optimizer
   Eigen::Vector3d start_pos{msg->waypoints[0].x, msg->waypoints[0].y, msg->waypoints[0].z};
-  Eigen::Vector3d start_vel{0.0, 0.0, 0.0};  
+  odom_mutex_.lock();
+  Eigen::Vector3d start_vel{cur_vel_(0), cur_vel_(1), cur_vel_(2)};  
+  odom_mutex_.unlock();
+  
   std::vector<Eigen::Vector3d> inner_wps;  
   // Inner points contain all waypoints except start and goal
   for (int i = 1; i < msg->waypoints.size() - 1; i++){
@@ -74,7 +94,7 @@ void BackEndPlanner::sfcTrajectoryCB(const gestelt_msgs::SphericalSFCTrajectoryC
 
   mjoToMsg(optimized_mjo_, poly_msg, MINCO_msg);
   plan_traj_pub_.publish(poly_msg); // (In drone origin frame) Publish to corresponding drone for execution
-  // broadcast_ploytraj_pub_.publish(MINCO_msg); // (In world frame) Broadcast to all other drones for replanning to optimize in avoiding swarm collision
+  swarm_minco_traj_pub_.publish(MINCO_msg); // (In world frame) Broadcast to all other drones for replanning to optimize in avoiding swarm collision
   
 }
 
@@ -284,12 +304,15 @@ bool BackEndPlanner::generatePlanESDFFree(const Eigen::Vector3d& start_pos, cons
 void BackEndPlanner::mjoToMsg(const poly_traj::MinJerkOpt& mjo, 
                               traj_utils::PolyTraj &poly_msg, traj_utils::MINCOTraj &MINCO_msg)
 {
+  static int traj_id = 0;
+  traj_id++;
+
   poly_traj::Trajectory traj = mjo.getTraj();
 
   Eigen::VectorXd durs = traj.getDurations();
   int piece_num = traj.getPieceSize();
-  poly_msg.drone_id = back_end_planner_->pp_.drone_id;
-  poly_msg.traj_id = 0;
+  poly_msg.drone_id = drone_id_;
+  poly_msg.traj_id = traj_id;
   poly_msg.start_time = ros::Time::now();
   poly_msg.order = 5; 
   poly_msg.duration.resize(piece_num);
@@ -314,8 +337,8 @@ void BackEndPlanner::mjoToMsg(const poly_traj::MinJerkOpt& mjo,
     }
   }
 
-  MINCO_msg.drone_id = back_end_planner_->pp_.drone_id;
-  MINCO_msg.traj_id = 0;
+  MINCO_msg.drone_id = drone_id_;
+  MINCO_msg.traj_id = traj_id;
   MINCO_msg.start_time = ros::Time::now();
   MINCO_msg.order = 5; 
   MINCO_msg.duration.resize(piece_num);

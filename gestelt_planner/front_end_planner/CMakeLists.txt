@@ -13,6 +13,8 @@ set(ROS_LIBRARIES
   gestelt_msgs
   global_planner
   sfc_generation
+  traj_utils
+  traj_opt
 ) 
 
 find_package(Eigen3 REQUIRED)

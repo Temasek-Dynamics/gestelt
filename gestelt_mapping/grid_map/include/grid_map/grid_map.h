@@ -20,6 +20,7 @@
 #include <geometry_msgs/PoseStamped.h>
 #include <nav_msgs/Odometry.h>
 #include <sensor_msgs/CameraInfo.h>
+#include <visualization_msgs/Marker.h>
 
 #include <tf2_ros/transform_listener.h>
 #include <tf2_ros/message_filter.h>
@@ -80,6 +81,7 @@ struct MappingData
   // Homogenous Transformation matrix of camera to body frame
   Eigen::Matrix4d cam2body_{Eigen::Matrix4d::Identity(4, 4)};
   // Homogenous Transformation matrix of body to UAV origin frame
+  // NOTE: USE `body2origin_.block<3,1>(0,3)` FOR UAV POSE!
   Eigen::Matrix4d body2origin_{Eigen::Matrix4d::Identity(4, 4)};
   // Homogenous Transformation matrix of camera to UAV origin frame
   Eigen::Matrix4d cam2origin_{Eigen::Matrix4d::Identity(4, 4)};
@@ -225,9 +227,11 @@ public:
    * @brief Publish map for visualization
    * 
    */
-  void publishMap();
+  void publishOccMap();
 
-  void publishCollisionSphere(const Eigen::Vector3d &pos, const double& radius);
+  void publishCollisionSphere(
+    const Eigen::Vector3d &pos, const double& dist_to_obs, 
+    const double& fatal_radius, const double& warn_radius);
 
 
   /** Getter methods */
@@ -315,6 +319,12 @@ private:
   */
   void visTimerCB(const ros::TimerEvent & /*event*/);
 
+  /**
+   * @brief Timer for checking collision of drone with obstacles
+   * 
+   */
+  void checkCollisionsTimerCB(const ros::TimerEvent & /*event*/);
+
 private: 
   /* ROS Publishers, subscribers and Timers */
 
@@ -337,8 +347,11 @@ private:
   ros::Subscriber camera_info_sub_;
   ros::Subscriber cloud_only_sub_;
 
-  ros::Publisher occ_map_pub_;
+  ros::Publisher occ_map_pub_; // Publisher for occupancy map
+  ros::Publisher collision_viz_pub_; // Publisher for collision visualization spheres
+
   ros::Timer vis_timer_; // Timer for visualization
+  ros::Timer check_collisions_timer_; // Timer for checking collisions
 
   // TF transformation 
   tf2_ros::Buffer tfBuffer_;
@@ -363,6 +376,8 @@ private:
   // std::shared_ptr<octomap::OcTree> octree_; // Octree data structure
 
   // pcl::VoxelGrid<pcl::PointXYZ> vox_grid_filter_; // Voxel filter
+
+  double col_warn_radius_, col_fatal_radius_; // collision check radius
 };
 
 

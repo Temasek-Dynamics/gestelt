@@ -410,6 +410,7 @@ namespace poly_traj
     private:
         typedef std::vector<Piece> Pieces;
         Pieces pieces;
+        double global_start_time_{-1}; // Global start time in seconds
 
     public:
         Trajectory() = default;
@@ -423,6 +424,16 @@ namespace poly_traj
             {
                 pieces.emplace_back(durs[i], cMats[i]);
             }
+        }
+
+        void setGlobalStartTime(const double& global_start_time)
+        {
+            global_start_time_ = global_start_time;
+        }
+
+        double getGlobalStartTime() const
+        {
+            return global_start_time_;
         }
 
         /**

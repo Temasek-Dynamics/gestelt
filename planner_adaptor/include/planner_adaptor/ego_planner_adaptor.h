@@ -5,7 +5,6 @@
 
 #include <optimizer/poly_traj_utils.hpp>
 #include <traj_utils/PolyTraj.h>
-
 class EgoPlannerAdaptor : public PlannerAdaptor
 {
 public:
@@ -76,9 +75,8 @@ public:
       dura[i] = msg->duration[i];
     }
 
-    traj_.reset(new poly_traj::Trajectory(dura, cMats));
-
-    plan_start_time_ = msg->start_time;
+    be_traj_.reset(new poly_traj::Trajectory(dura, cMats));
+    be_traj_->setGlobalStartTime(msg->start_time.toSec());
   }
 
   virtual void samplePlanTimerCB(const ros::TimerEvent &e){
@@ -89,7 +87,7 @@ public:
       // ROS_INFO_THROTTLE(5.0, "[EGO Planner Adaptor] Planner heartbeat timeout");
       return;
     }
-    if (!traj_)
+    if (!be_traj_)
     {
       // ROS_INFO_THROTTLE(5.0, "[EGO Planner Adaptor] No trajectory received!");
       return;
@@ -97,7 +95,7 @@ public:
 
     ros::Time time_now = ros::Time::now();
     // Time elapsed since start of trajectory
-    double t_cur = (time_now - plan_start_time_).toSec();
+    double t_cur = (time_now).toSec() - be_traj_->getGlobalStartTime();
 
     Eigen::Vector3d pos(Eigen::Vector3d::Zero()), vel(Eigen::Vector3d::Zero()), acc(Eigen::Vector3d::Zero()), jer(Eigen::Vector3d::Zero());
     Eigen::Quaterniond quat{0,0,0,1};
@@ -105,12 +103,12 @@ public:
 
     time_last_ = ros::Time::now();
     // IF time elapsed is below duration of trajectory, then continue to send command
-    if (t_cur >= 0.0 && t_cur < traj_->getTotalDuration())
+    if (t_cur >= 0.0 && t_cur < be_traj_->getTotalDuration())
     {
-      pos = traj_->getPos(t_cur);
-      vel = traj_->getVel(t_cur);
-      acc = traj_->getAcc(t_cur);
-      jer = traj_->getJer(t_cur);
+      pos = be_traj_->getPos(t_cur);
+      vel = be_traj_->getVel(t_cur);
+      acc = be_traj_->getAcc(t_cur);
+      jer = be_traj_->getJer(t_cur);
 
       /*** calculate yaw ***/
       yaw_yawdot = calculate_yaw(t_cur, pos, (time_now - time_last_).toSec());
@@ -123,7 +121,7 @@ public:
       forwardExecTrajectory(pos, quat, vel, acc, jer, type_mask_);
     }
     // IF time elapsed is longer then duration of trajectory, then nothing is done
-    else if (t_cur >= traj_->getTotalDuration()) // Finished trajectory
+    else if (t_cur >= be_traj_->getTotalDuration()) // Finished trajectory
     {
       return;
     }
@@ -137,9 +135,9 @@ public:
   {
     std::pair<double, double> yaw_yawdot(0, 0);
 
-    Eigen::Vector3d dir = t_cur + time_forward_ <= traj_->getTotalDuration()
-                              ? traj_->getPos(t_cur + time_forward_) - pos
-                              : traj_->getPos(traj_->getTotalDuration()) - pos;
+    Eigen::Vector3d dir = t_cur + time_forward_ <= be_traj_->getTotalDuration()
+                              ? be_traj_->getPos(t_cur + time_forward_) - pos
+                              : be_traj_->getPos(be_traj_->getTotalDuration()) - pos;
     double yaw_temp = dir.norm() > 0.1
                           ? atan2(dir(1), dir(0))
                           : last_mission_yaw_;
@@ -204,8 +202,7 @@ public:
 private:
 
   // Plan trajectory data
-  boost::shared_ptr<poly_traj::Trajectory> traj_;
-  ros::Time plan_start_time_; // Starting time of plan
+  boost::shared_ptr<poly_traj::Trajectory> be_traj_; // back end trajectory
   ros::Time time_last_; // Time since last sampling
   double time_forward_{1.0}; //Timestep forward
 

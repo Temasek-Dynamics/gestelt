@@ -60,15 +60,22 @@ void GridMap::initMapROS(ros::NodeHandle &nh, ros::NodeHandle &pnh)
 
     // Initialize publisher for occupancy map
     occ_map_pub_ = nh.advertise<sensor_msgs::PointCloud2>("grid_map/occupancy", 10);
+    // Publisher for collision visualizations
+    collision_viz_pub_ = nh.advertise<visualization_msgs::Marker>("grid_map/collision_viz", 10);
 
     // Initialize subscriber
-    // if (check_collisions_){
-    //   odom_col_check_sub_ = nh.subscribe<nav_msgs::Odometry>(
-    //     "odom", 1, &GridMap::odomColCheckCB, this);
-    // }
+    if (check_collisions_){
+      odom_col_check_sub_ = nh.subscribe<nav_msgs::Odometry>(
+        "odom", 1, &GridMap::odomColCheckCB, this);
+      check_collisions_timer_ = 
+        nh.createTimer(ros::Duration(0.025), &GridMap::checkCollisionsTimerCB, this);
+      pnh.param("grid_map/collision_check/warn_radius", col_warn_radius_, -1.0); // 0.25
+      pnh.param("grid_map/collision_check/fatal_radius", col_fatal_radius_, -1.0); // 0.126
+    }
 
     /* Initialize ROS Timers */
     vis_timer_ = nh.createTimer(ros::Duration(0.1), &GridMap::visTimerCB, this);
+    
   }
   else {
     initROSPubSubTimers(nh, pnh);
@@ -237,21 +244,25 @@ void GridMap::reset(const double& resolution){
 
 void GridMap::visTimerCB(const ros::TimerEvent & /*event*/)
 {
-  publishMap();
+  publishOccMap();
   // ROS_INFO_THROTTLE(1.0, "No. of Point clouds: %ld", global_map_in_origin_->points.size());
   // ROS_INFO_THROTTLE(1.0, "Octree memory usage: %ld kilobytes", octree_->memoryUsage()/1000);
   // ROS_INFO_STREAM_THROTTLE(1.0, "Octree Bounding Box: " << octree_->getBBXMin() << ", " << octree_->getBBXMax());
+}
 
-  // if (check_collisions_){
-  //   Eigen::Vector3d occ_nearest;
-  //   double dist_to_nearest_nb;
+void GridMap::checkCollisionsTimerCB(const ros::TimerEvent & /*event*/)
+{
+  // Get nearest obstacle position
+  Eigen::Vector3d occ_nearest;
+  double dist_to_obs;
+  if (!getNearestOccupiedCell(md_.body2origin_.block<3,1>(0,3), occ_nearest, dist_to_obs)){
+    return;
+  }
 
-  //   getNearestOccupiedCell(md_.body2origin_.col(3), occ_nearest, dist_to_nearest_nb);
-
-  //   if (dist_to_nearest_nb < mp.inflation_){
-  //     pub
-  //   }
-  // }
+  // Publish collision sphere visualizations.
+  if (dist_to_obs <= col_warn_radius_){
+    publishCollisionSphere(occ_nearest, dist_to_obs, col_fatal_radius_, col_warn_radius_);
+  }
 }
 
 /** Subscriber callbacks */
@@ -372,7 +383,8 @@ void GridMap::getCamToGlobalPose(const geometry_msgs::Pose &pose)
                                                 pose.orientation.z);
   // UAV body to global frame
   md_.body2origin_.block<3, 3>(0, 0) = body_q.toRotationMatrix();
-  md_.body2origin_.col(3) << pose.position.x, pose.position.y, pose.position.z;
+  // md_.body2origin_.col(3) << pose.position.x, pose.position.y, pose.position.z, 1.0;
+  md_.body2origin_.block<3,1>(0,3) << pose.position.x, pose.position.y, pose.position.z;
 
   // Converts camera to UAV origin frame
   md_.cam2origin_ = md_.body2origin_ * md_.cam2body_;
@@ -543,7 +555,7 @@ bool GridMap::isPoseValid() {
 
 /** Publishers */
 
-void GridMap::publishMap()
+void GridMap::publishOccMap()
 {
   if (occ_map_pub_.getNumSubscribers() == 0){
     return;
@@ -589,6 +601,40 @@ void GridMap::publishMap()
   cloud_msg.header.stamp = ros::Time::now();
   occ_map_pub_.publish(cloud_msg);
   // ROS_INFO("Published occupancy grid with %ld voxels", pcl_cloud.points.size());
+}
+
+void GridMap::publishCollisionSphere(
+  const Eigen::Vector3d &pos, const double& dist_to_obs, 
+  const double& fatal_radius, const double& warn_radius)
+{
+  static int col_viz_id = 0;
+
+  visualization_msgs::Marker sphere;
+  sphere.header.frame_id = mp_.uav_origin_frame_;
+  sphere.header.stamp = ros::Time::now();
+  sphere.type = visualization_msgs::Marker::SPHERE;
+  sphere.action = visualization_msgs::Marker::ADD;
+  sphere.ns = "collision_viz";
+  sphere.pose.orientation.w = 1.0;
+  sphere.id = col_viz_id++;
+  double scale = 0.5;
+
+  // Make the alpha and red color value scale from 0.0 to 1.0 depending on the distance to the obstacle. 
+  // With the upper limit being the warn_radius, and the lower limit being the fatal_radius
+  double fatal_ratio = std::clamp((warn_radius - dist_to_obs)/(warn_radius - fatal_radius), 0.0, 1.0);
+  sphere.color.r = fatal_ratio;
+  sphere.color.g = 0.0;
+  sphere.color.b = 1.0;
+  sphere.color.a = fatal_ratio;
+  
+  sphere.scale.x = scale;
+  sphere.scale.y = scale;
+  sphere.scale.z = scale;
+  sphere.pose.position.x = pos(0);
+  sphere.pose.position.y = pos(1);
+  sphere.pose.position.z = pos(2);
+
+  collision_viz_pub_.publish(sphere);
 }
 
 /** Gridmap operations */
@@ -776,7 +822,3 @@ void GridMap::depthToCloudMap(const sensor_msgs::ImageConstPtr &msg)
 
   // pcl::transformPointCloud(*local_map_in_origin_, *local_map_in_origin_, md_.cam2origin_);
 }
-
-// void GridMap::publishCollisionSphere(const Eigen::Vector3d &pos, const double& radius){
-
-// }

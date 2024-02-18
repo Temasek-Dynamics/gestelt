@@ -11,11 +11,13 @@
 #include <std_msgs/Empty.h>
 #include <geometry_msgs/Pose.h>
 #include <nav_msgs/Odometry.h>
+#include <visualization_msgs/Marker.h>
 
 #include <gestelt_msgs/Goals.h>
 #include <gestelt_msgs/SphericalSFCTrajectory.h>
 
-#include <visualization_msgs/Marker.h>
+#include <optimizer/poly_traj_utils.hpp>
+#include <traj_utils/PolyTraj.h>
 
 #include <global_planner/a_star.h>
 #include <sfc_generation/spherical_sfc.h>
@@ -35,6 +37,8 @@ private:
   // Subscribers and publishers
   ros::Subscriber odom_sub_; // Subscriber to drone odometry
   ros::Subscriber goal_sub_; // Subscriber to user-defined goals
+
+  ros::Subscriber plan_traj_sub_; // Subscriber to back end planner trajectory
 
   ros::Subscriber debug_start_sub_; // DEBUG: Subscriber to user-defined start point
   ros::Subscriber debug_goal_sub_; // DEBUG: Subscriber to user-defined goal point
@@ -62,8 +66,7 @@ private:
   double squared_goal_tol_; // Squared goal tolerance
   bool within_goal_tol_; // Within a specified tolerance of the goal
 
-  double avg_vel_; 
-  double max_vel_;
+  double avg_vel_, max_vel_; // average and maximum velocity 
 
   /* Mapping */
   std::shared_ptr<GridMap> map_;
@@ -72,11 +75,14 @@ private:
   std::unique_ptr<AStarPlanner> front_end_planner_; // Front-end planner
   std::unique_ptr<SphericalSFC> sfc_generation_; // Safe flight corridor generator
 
+
+
   /* Data structs */
   Waypoint waypoints_; // Waypoint handler object
-  Eigen::Vector3d cur_pos_, cur_vel_, cur_acc_;   // current state
-  Eigen::Vector3d start_pos_, start_vel_, start_acc_;   // start state
-  Eigen::Vector3d goal_pos_, goal_vel_, goal_acc_; // goal state
+  Eigen::Vector3d cur_pos_, cur_vel_;   // current state
+  Eigen::Vector3d start_pos_;   // start state
+
+  boost::shared_ptr<poly_traj::Trajectory> be_traj_; //received back end trajectory
 
 private: 
 
@@ -103,6 +109,23 @@ private:
    * @param msg 
    */
   void odometryCB(const nav_msgs::OdometryConstPtr &msg);
+
+  /**
+   * @brief Callback for back end trajectory
+   * 
+   * @param msg 
+   */
+  void backEndTrajCB(const traj_utils::PolyTrajPtr msg);
+
+  /**
+   * @brief Sample the back end trajectory 
+   * 
+   * @param time_samp time at which back end trajectory is sampled
+   * @param pos sampled position to assign value to
+   * @return true 
+   * @return false 
+   */
+  bool sampleBackEndTrajectory(const double& time_samp, Eigen::Vector3d& pos);
 
   /**
    * @brief callback to debug topic for setting starting point of plan
@@ -152,7 +175,7 @@ private:
       cur_pos_(0), cur_pos_(1), cur_pos_(2),
       waypoints_.nextWP()(0), waypoints_.nextWP()(1), waypoints_.nextWP()(2))
     );
-    generatePlan();
+    generatePlan(cur_pos_, waypoints_.nextWP());
   }
 
 
@@ -162,7 +185,7 @@ private:
    * @brief Generate a plan
    * 
    */
-  bool generatePlan();
+  bool generatePlan(const Eigen::Vector3d& start_pos, const Eigen::Vector3d& goal_pos);
 
   /* Checks */
 

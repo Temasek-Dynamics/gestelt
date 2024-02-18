@@ -32,6 +32,8 @@
       <arg name="cfg_filepath" value="$(arg back_end_planner_cfg_filepath)"/>
 
       <arg name="drone_id" value="$(arg drone_id)"/>
+      
+      <arg name="odometry_topic"   value="$(arg odometry_topic)" />
   </include>
 
   <!-- Planner adaptor -->

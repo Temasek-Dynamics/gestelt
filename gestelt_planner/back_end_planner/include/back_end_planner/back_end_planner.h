@@ -7,6 +7,7 @@
 
 #include <ros/ros.h>
 #include <geometry_msgs/Pose.h>
+#include <nav_msgs/Odometry.h>
 #include <std_msgs/Empty.h>
 
 #include <visualization_msgs/Marker.h>
@@ -32,11 +33,15 @@ private:
   // Subscribers and publishers
   ros::Subscriber debug_start_sub_; // DEBUG: Subscriber to user-defined start point
   ros::Subscriber debug_goal_sub_; // DEBUG: Subscriber to user-defined goal point
-  ros::Subscriber sfc_traj_sub_; // Sub to Safe Flight Corridor trajectory
-
   ros::Subscriber plan_on_demand_esdf_free_sub_; // Subscriber to plan on demand for ESDF Free
   
-  ros::Publisher plan_traj_pub_; // Pub planning trajectory (polynomial trajectory)
+  ros::Subscriber sfc_traj_sub_; // Sub to Safe Flight Corridor trajectory
+  ros::Subscriber odom_sub_; // Sub to odometry
+
+  ros::Subscriber swarm_minco_traj_sub_; // Subscriber to MINCO trajectory for inter-agent collision avoidance
+
+  ros::Publisher plan_traj_pub_; // Pub polynomial trajectory used for execution
+  ros::Publisher swarm_minco_traj_pub_; // Publish minco trajectory for inter-agent collision avoidance
 
   /* parameters */
   int drone_id_{-1};
@@ -53,12 +58,18 @@ private:
   /* Data structs */
   Eigen::Vector3d start_pos_, start_vel_;
   Eigen::Vector3d goal_pos_;
-  poly_traj::MinJerkOpt optimized_mjo_;
+  poly_traj::MinJerkOpt optimized_mjo_; // Optimized minimum jerk trajectory
+
+  Eigen::Vector3d cur_pos_, cur_vel_; // Current position and velocity
   
+  /* Mutexes */
+  std::mutex odom_mutex_; // mutex for Odom
 
 private: 
 
   /* Subscriber callbacks */
+
+  void odometryCB(const nav_msgs::OdometryConstPtr &msg);
 
   /**
    * @brief Callback for safe flight corridor trajectory

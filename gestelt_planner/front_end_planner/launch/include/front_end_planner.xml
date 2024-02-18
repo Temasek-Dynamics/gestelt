@@ -11,6 +11,8 @@
     <node pkg="front_end_planner" type="front_end_planner_node" name="front_end_planner" required="true" output="screen">
         <rosparam command="load" file="$(arg cfg_filepath)" />
 
+        <param name="drone_id" value="$(arg drone_id)"/>
+
         <remap from="odom" to="$(arg odometry_topic)"/>
         <remap from="planner/goals" to="planner/goals"/>
 

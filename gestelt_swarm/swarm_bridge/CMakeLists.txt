@@ -5,8 +5,6 @@ set(CMAKE_BUILD_TYPE "Release")
 add_compile_options(-std=c++17)
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g")
 
-set(ENABLE_TCP false) # requires zmq, zmqpp 
-
 find_package(Eigen3 REQUIRED)
 find_package(catkin REQUIRED COMPONENTS
   roscpp
@@ -33,17 +31,12 @@ target_link_libraries(bridge_node_udp
   ${catkin_LIBRARIES}
   )
 
-if(ENABLE_TCP)
-
-  add_executable(bridge_node_tcp
-    src/bridge_node_tcp.cpp 
-    )
-  target_link_libraries(bridge_node_tcp
-    ${catkin_LIBRARIES}
-    zmq
-    zmqpp
-    )
-
-endif(ENABLE_TCP)
+add_executable(swarm_bridge
+  src/swarm_bridge.cpp 
+  src/swarm_bridge_node.cpp 
+)
+target_link_libraries(swarm_bridge 
+  ${catkin_LIBRARIES}
+)
 
 
