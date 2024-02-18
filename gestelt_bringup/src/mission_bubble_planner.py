@@ -5,7 +5,7 @@ from gestelt_msgs.msg import Command, CommanderState, Goals
 from geometry_msgs.msg import Transform
 from std_msgs.msg import Int8
 
-num_drones = 1
+num_drones = 2
 
 # Publisher of server events to trigger change of states for trajectory server 
 goals_pub = rospy.Publisher('/planner_adaptor/goals', Goals, queue_size=5)

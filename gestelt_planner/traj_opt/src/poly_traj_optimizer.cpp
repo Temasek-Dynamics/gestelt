@@ -460,26 +460,28 @@ namespace ego_planner
 
     double pt_time = t_now_ + t;
 
-    for (size_t id = 0; id < swarm_trajs_->size(); id++)
-    {
-      if ((swarm_trajs_->at(id).drone_id < 0) || swarm_trajs_->at(id).drone_id == drone_id_)
+    for (auto& it : *swarm_minco_trajs_){ // Iterate through trajectories
+      int id = it.first;
+
+      if ((id < 0) || id == drone_id_)
       {
+        // Ignore 
         continue;
       }
 
-      double traj_i_start_time = swarm_trajs_->at(id).start_time;
+      double traj_i_start_time = it.second.start_time;
 
       Eigen::Vector3d swarm_p, swarm_v;
-      if (pt_time < traj_i_start_time + swarm_trajs_->at(id).duration)
+      if (pt_time < traj_i_start_time + it.second.duration)
       {
-        swarm_p = swarm_trajs_->at(id).traj.getPos(pt_time - traj_i_start_time);
-        swarm_v = swarm_trajs_->at(id).traj.getVel(pt_time - traj_i_start_time);
+        swarm_p = it.second.traj.getPos(pt_time - traj_i_start_time);
+        swarm_v = it.second.traj.getVel(pt_time - traj_i_start_time);
       }
       else
       {
-        double exceed_time = pt_time - (traj_i_start_time + swarm_trajs_->at(id).duration);
-        swarm_v = swarm_trajs_->at(id).traj.getVel(swarm_trajs_->at(id).duration);
-        swarm_p = swarm_trajs_->at(id).traj.getPos(swarm_trajs_->at(id).duration) +
+        double exceed_time = pt_time - (traj_i_start_time + it.second.duration);
+        swarm_v = it.second.traj.getVel(it.second.duration);
+        swarm_p = it.second.traj.getPos(it.second.duration) +
                   exceed_time * swarm_v;
       }
       Eigen::Vector3d dist_vec = p - swarm_p;
@@ -650,6 +652,11 @@ namespace ego_planner
   void PolyTrajOptimizer::setVisualizer(PlanningVisualization::Ptr vis)
   {
     visualization_ = vis;
+  }
+
+  void PolyTrajOptimizer::assignSwarmTrajs(
+    std::shared_ptr<std::unordered_map<int, ego_planner::LocalTrajData>>& swarm_minco_trajs) {
+    swarm_minco_trajs_ = swarm_minco_trajs;
   }
 
   void PolyTrajOptimizer::setSwarmTrajs(SwarmTrajData *swarm_trajs_ptr) { 

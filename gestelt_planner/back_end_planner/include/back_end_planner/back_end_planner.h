@@ -2,6 +2,7 @@
 #define _BACK_END_PLANNER_H_
 
 #include <algorithm>
+#include <unordered_map>
 
 #include <Eigen/Eigen>
 
@@ -61,6 +62,8 @@ private:
   poly_traj::MinJerkOpt optimized_mjo_; // Optimized minimum jerk trajectory
 
   Eigen::Vector3d cur_pos_, cur_vel_; // Current position and velocity
+
+  std::shared_ptr<std::unordered_map<int, ego_planner::LocalTrajData>> swarm_minco_trajs_; // Swarm MINCO trajectories
   
   /* Mutexes */
   std::mutex odom_mutex_; // mutex for Odom
@@ -68,6 +71,8 @@ private:
 private: 
 
   /* Subscriber callbacks */
+
+  void swarmMincoTrajCB(const traj_utils::MINCOTrajConstPtr &msg);
 
   void odometryCB(const nav_msgs::OdometryConstPtr &msg);
 
@@ -133,37 +138,39 @@ private:
   void mjoToMsg(const poly_traj::MinJerkOpt& mjo, 
                 traj_utils::PolyTraj &poly_msg, traj_utils::MINCOTraj &MINCO_msg);
 
+  void mincoMsgToTraj(const traj_utils::MINCOTraj &msg, ego_planner::LocalTrajData& traj);
+
   /* Debugging use */
 
-    void debugStartCB(const geometry_msgs::PoseConstPtr &msg)
-    {
-      logInfo(str_fmt("Received debug start (%f, %f, %f)", 
-            msg->position.x,
-            msg->position.y,
-            msg->position.z));
+  void debugStartCB(const geometry_msgs::PoseConstPtr &msg)
+  {
+    logInfo(str_fmt("Received debug start (%f, %f, %f)", 
+          msg->position.x,
+          msg->position.y,
+          msg->position.z));
 
-      start_pos_(0) = msg->position.x ;
-      start_pos_(1) = msg->position.y ;
-      start_pos_(2) = msg->position.z ;
+    start_pos_(0) = msg->position.x ;
+    start_pos_(1) = msg->position.y ;
+    start_pos_(2) = msg->position.z ;
 
-      start_vel_.setZero();
-    }
+    start_vel_.setZero();
+  }
 
 
-    void debugGoalCB(const geometry_msgs::PoseConstPtr &msg)
-    {
-      logInfo(str_fmt("Received debug goal (%f, %f, %f)", 
-            msg->position.x,
-            msg->position.y,
-            msg->position.z));
+  void debugGoalCB(const geometry_msgs::PoseConstPtr &msg)
+  {
+    logInfo(str_fmt("Received debug goal (%f, %f, %f)", 
+          msg->position.x,
+          msg->position.y,
+          msg->position.z));
 
-      goal_pos_ = Eigen::Vector3d{
-            msg->position.x,
-            msg->position.y,
-            msg->position.z};
-    }
+    goal_pos_ = Eigen::Vector3d{
+          msg->position.x,
+          msg->position.y,
+          msg->position.z};
+  }
 
-    void planOnDemandESDFFree(const std_msgs::EmptyConstPtr &msg)
+  void planOnDemandESDFFree(const std_msgs::EmptyConstPtr &msg)
     {
       logInfo("Generating plan using ESDF-Free front-end!");
       if (!generatePlanESDFFree(start_pos_, start_vel_, goal_pos_, num_replan_retries_)){

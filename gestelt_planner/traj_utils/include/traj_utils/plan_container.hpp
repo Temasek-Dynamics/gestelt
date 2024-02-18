@@ -28,12 +28,11 @@ namespace ego_planner
     poly_traj::Trajectory traj;
     PtsChk_t pts_chk;
     int drone_id; // A negative value indicates no received trajectories.
-    int traj_id;
+    int traj_id; // Trajectory id
     double duration; // Total duration of trajectory
     double start_time; // world time
     double end_time;   // world time
-    Eigen::Vector3d start_pos;
-
+    Eigen::Vector3d start_pos; // starting position
   };
 
   typedef std::vector<LocalTrajData> SwarmTrajData;

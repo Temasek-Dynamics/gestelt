@@ -12,14 +12,14 @@ void BackEndPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   /* Subscribers */
   sfc_traj_sub_ = nh.subscribe("front_end/sfc_trajectory", 5, &BackEndPlanner::sfcTrajectoryCB, this);
   odom_sub_ = nh.subscribe("odom", 5, &BackEndPlanner::odometryCB, this);
-  swarm_minco_traj_sub_ = nh.subscribe("swarm/minco_traj_in", 100,
-                                        &BackEndPlanner::swarmMincoTrajCB,
-                                        this,
-                                        ros::TransportHints().tcpNoDelay());
+  // swarm_minco_traj_sub_ = nh.subscribe("/swarm/global/minco", 100,
+  //                                       &BackEndPlanner::swarmMincoTrajCB,
+  //                                       this,
+  //                                       ros::TransportHints().tcpNoDelay());
 
   /* Publishers */
   plan_traj_pub_ = nh.advertise<traj_utils::PolyTraj>("back_end/trajectory", 10); 
-  swarm_minco_traj_pub_ = nh.advertise<traj_utils::MINCOTraj>("swarm/local/minco_traj_out", 10);
+  swarm_minco_traj_pub_ = nh.advertise<traj_utils::MINCOTraj>("/swarm/global/minco", 10);
 
   // Debugging topics
   debug_start_sub_ = pnh.subscribe("debug/plan_start", 5, &BackEndPlanner::debugStartCB, this);
@@ -36,11 +36,49 @@ void BackEndPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   back_end_planner_.reset(new ego_planner::EGOPlannerManager());
   // back_end_planner_ = std::make_unique<ego_planner::EGOPlannerManager>();
   back_end_planner_->initPlanModules(nh, pnh, visualization_);
+
+  
+  // Initialize own trajectory
+  swarm_minco_trajs_ = std::make_shared<std::unordered_map<int, ego_planner::LocalTrajData>>();
+  (*swarm_minco_trajs_)[drone_id_] = ego_planner::LocalTrajData();
+
+  back_end_planner_->setSwarmTrajectories(swarm_minco_trajs_);
+
 }
 
 /**
  * Subscriber Callbacks
 */
+
+void BackEndPlanner::swarmMincoTrajCB(const traj_utils::MINCOTrajConstPtr &msg)
+{
+  if (msg->drone_id == drone_id_){
+    return; 
+  }
+
+  logInfo(str_fmt("Received swarm MINCO trajectory from drone %d", msg->drone_id));
+
+  ros::Time t_now = ros::Time::now();
+  if (abs((t_now - msg->start_time).toSec()) > 0.25)
+  {
+    if (abs((t_now - msg->start_time).toSec()) < 10.0) // 10 seconds offset, more likely to be caused by unsynced system time.
+    {
+      logWarn(str_fmt("Time stamp diff: Local - Remote Agent %d = %fs",
+                msg->drone_id, (t_now - msg->start_time).toSec()));
+    }
+    else
+    {
+      logError(str_fmt("Time stamp diff: Local - Remote Agent %d = %fs, swarm time seems not synchronized, abandon!",
+                msg->drone_id, (t_now - msg->start_time).toSec()));
+      return;
+    }
+  }
+
+  ego_planner::LocalTrajData swarm_minco_traj;
+  mincoMsgToTraj(*msg, swarm_minco_traj);
+
+  (*swarm_minco_trajs_)[msg->drone_id] = swarm_minco_traj;
+}
 
 void BackEndPlanner::odometryCB(const nav_msgs::OdometryConstPtr &msg)
 {
@@ -95,7 +133,11 @@ void BackEndPlanner::sfcTrajectoryCB(const gestelt_msgs::SphericalSFCTrajectoryC
   mjoToMsg(optimized_mjo_, poly_msg, MINCO_msg);
   plan_traj_pub_.publish(poly_msg); // (In drone origin frame) Publish to corresponding drone for execution
   swarm_minco_traj_pub_.publish(MINCO_msg); // (In world frame) Broadcast to all other drones for replanning to optimize in avoiding swarm collision
-  
+
+  ego_planner::LocalTrajData swarm_minco_traj;
+  mincoMsgToTraj(MINCO_msg, swarm_minco_traj);
+
+  (*swarm_minco_trajs_)[drone_id_] = swarm_minco_traj;
 }
 
 /* Planning methods */
@@ -378,6 +420,53 @@ void BackEndPlanner::mjoToMsg(const poly_traj::MinJerkOpt& mjo,
     MINCO_msg.duration[i] = durs[i];
   }
 
+}
+
+void BackEndPlanner::mincoMsgToTraj(const traj_utils::MINCOTraj &msg, ego_planner::LocalTrajData& traj)
+{
+  /* Store data */
+  traj.drone_id = msg.drone_id;
+  traj.traj_id = msg.traj_id;
+  traj.start_time = msg.start_time.toSec();
+
+  int piece_nums = msg.duration.size();
+  Eigen::Matrix<double, 3, 3> headState, tailState;
+
+  headState <<  msg.start_p[0], 
+                  msg.start_v[0], msg.start_a[0],
+                msg.start_p[1], 
+                  msg.start_v[1], msg.start_a[1],
+                msg.start_p[2], 
+                  msg.start_v[2], msg.start_a[2];
+  tailState <<  msg.end_p[0], 
+                  msg.end_v[0], msg.end_a[0],
+                msg.end_p[1], 
+                  msg.end_v[1], msg.end_a[1],
+                msg.end_p[2], 
+                  msg.end_v[2], msg.end_a[2];
+
+  Eigen::MatrixXd innerPts(3, piece_nums - 1);
+  Eigen::VectorXd durations(piece_nums);
+
+  for (int i = 0; i < piece_nums - 1; i++){
+    innerPts.col(i) <<  msg.inner_x[i], 
+                        msg.inner_y[i], 
+                        msg.inner_z[i];
+  }
+  for (int i = 0; i < piece_nums; i++){
+    durations(i) = msg.duration[i];
+  }
+
+  // Recreate trajectory using closed-form min jerk
+  poly_traj::MinJerkOpt MJO;
+  MJO.reset(headState, tailState, piece_nums);
+  MJO.generate(innerPts, durations);
+
+  poly_traj::Trajectory trajectory = MJO.getTraj();
+
+  traj.traj = trajectory;
+  traj.duration = trajectory.getTotalDuration();
+  traj.start_pos = trajectory.getPos(0.0);
 }
 
 /* Checking methods */

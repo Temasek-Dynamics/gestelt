@@ -18,6 +18,11 @@
       <arg name="init_z" value="$(arg init_z)"/>
   </include>
 
+  <!-- Planning module -->
+  <include file="$(find gestelt_bringup)/launch/bubble_planner/include/planner_module.xml">
+      <arg name="drone_id" value="$(arg drone_id)"/>
+  </include>
+
   <!-- Fake sensor data node -->
   <!-- <node pkg="fake_map" type="fake_map_node" name="fake_map_$(arg drone_id_ns)" output="screen">
       <rosparam command="load" file="$(find gestelt_bringup)/config/fake_laser_params.yaml" />

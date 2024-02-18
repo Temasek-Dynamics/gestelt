@@ -189,6 +189,8 @@ namespace ego_planner
      */
     double getTrajectoryDuration(poly_traj::MinJerkOpt& mjo);
 
+    
+    void setSwarmTrajectories(std::shared_ptr<std::unordered_map<int, ego_planner::LocalTrajData>>& swarm_minco_trajs);
 
     PlanParameters pp_;
     GridMap::Ptr grid_map_;

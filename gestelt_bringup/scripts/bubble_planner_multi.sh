@@ -20,20 +20,19 @@ source $SCRIPT_DIR/../../../devel/setup.bash &&
 #####
 # Commands
 #####
-# Start planner module
+# Start drones with planner modules
 CMD_0="
-roslaunch gestelt_bringup planner_module.launch drone_id:=0
-"
-
-# Start up fake drones
-CMD_1="
 roslaunch gestelt_bringup multi_fake_drones.launch 
 "
 
-# Start up central bridge and nodes
-CMD_2="
+# Start up rviz
+CMD_1="
 roslaunch gestelt_bringup fake_map_central.launch rviz_config:=bubble
 "
+
+# Start up central bridge and nodes
+# CMD_2="
+# "
 
 # Start up script to send commands
 CMD_3="roslaunch gestelt_bringup mission_bubble_planner.launch"
@@ -51,8 +50,8 @@ then
     sleep 1
     tmux send-keys -t $SESSION:0.1 "$SOURCE_WS $CMD_1" C-m 
     sleep 0.5
-    tmux send-keys -t $SESSION:0.2 "$SOURCE_WS $CMD_2" C-m 
-    sleep 0.5
+    # tmux send-keys -t $SESSION:0.2 "$SOURCE_WS $CMD_2" C-m 
+    # sleep 0.5
     tmux send-keys -t $SESSION:0.3 "$SOURCE_WS $CMD_3" C-m
 fi
 

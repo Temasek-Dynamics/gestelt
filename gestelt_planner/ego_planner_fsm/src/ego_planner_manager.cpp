@@ -6,10 +6,14 @@ namespace ego_planner
 
   EGOPlannerManager::EGOPlannerManager() {}
 
-  EGOPlannerManager::~EGOPlannerManager() { std::cout << "des manager" << std::endl; }
+  EGOPlannerManager::~EGOPlannerManager() { 
+    std::cout << "destroyed EGOPlannerManager" << std::endl; 
+  }
 
   void EGOPlannerManager::initPlanModules(ros::NodeHandle &nh, ros::NodeHandle &pnh, PlanningVisualization::Ptr vis)
   {
+    pnh.param("drone_id", pp_.drone_id, -1);
+
     /* read algorithm parameters */
     pnh.param("manager/max_vel", pp_.max_vel_, -1.0);
     pnh.param("manager/max_acc", pp_.max_acc_, -1.0);
@@ -17,7 +21,6 @@ namespace ego_planner
     pnh.param("manager/polyTraj_piece_length", pp_.polyTraj_piece_length, -1.0);
     pnh.param("manager/planning_horizon", pp_.planning_horizon_, 5.0);
     pnh.param("manager/use_distinctive_trajs", pp_.use_distinctive_trajs, false);
-    pnh.param("manager/drone_id", pp_.drone_id, -1);
 
     grid_map_.reset(new GridMap);
     grid_map_->initMapROS(nh, pnh);
@@ -30,7 +33,6 @@ namespace ego_planner
 
     ploy_traj_opt_->setVisualizer(visualization_);
 
-    ploy_traj_opt_->setSwarmTrajs(&traj_.swarm_traj);
     ploy_traj_opt_->setDroneId(pp_.drone_id);
   }
 
@@ -542,6 +544,12 @@ namespace ego_planner
   }
 
   /* Utility methods */
+
+  void EGOPlannerManager::setSwarmTrajectories(std::shared_ptr<std::unordered_map<int, ego_planner::LocalTrajData>>& swarm_minco_trajs)
+  {
+    // ploy_traj_opt_->setSwarmTrajs(&traj_.swarm_traj);
+    ploy_traj_opt_->assignSwarmTrajs(swarm_minco_trajs);
+  }
 
   double EGOPlannerManager::getTrajectoryLength(poly_traj::MinJerkOpt& mjo, const double& dt)
   {
