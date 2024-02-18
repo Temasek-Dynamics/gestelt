@@ -101,7 +101,7 @@ class LearningAgileAgent():
         
         self.hl_para = [0,0,0,0,0,0,0]
         self.hl_variable = [self.hl_para]
-        self.max_tra_w=0
+        self.max_tra_w=60
         ##---------------------gate initialization ------------------------##
         self.moving_gate.let_gate_move()
         self.gate_move = self.moving_gate.gate_move
@@ -207,6 +207,7 @@ class LearningAgileAgent():
             # print('rotation matrix I_G=',gate_n.I_G)
                
         self.i += 1
+        return self.t_tra_abs,self.gate_n.centroid
 
     def solve_problem_gazebo(self,drone_state=None):
         """ 
@@ -230,7 +231,7 @@ class LearningAgileAgent():
         # FIXME, manually set the traversal time and pose
         out=np.zeros(7)
         out[0:3]=self.gate_center
-        out[3:6]=np.array([0,-0.7,0])
+        out[3:6]=np.array([0,-0.0,0]) # 0.7
         out[6]=self.t_tra_abs-self.i*0.01
         # end FIXME
 
