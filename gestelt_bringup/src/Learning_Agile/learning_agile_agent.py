@@ -123,7 +123,7 @@ class LearningAgileAgent():
         self.pos_vel_att_cmd_n = [self.pos_vel_att_cmd]
 
         # FIXME Temporally set the traversal time here, for both python and gazebo simulation
-        self.t_tra_abs =2
+        self.t_tra_abs =1
     
     def receive_terminal_states(self,
                                 start,
@@ -185,7 +185,6 @@ class LearningAgileAgent():
             # self.state_n = [drone_state]
 
             # binary search for the traversal time
-            self.t_tra_abs =1
             # t = solver(self.model,self.state,self.final_point,self.gate_n,self.moving_gate.V[self.i],self.moving_gate.w)
             # t=self.t_tra_abs-self.i*0.01
             # t_tra = t+self.i*0.01
@@ -231,7 +230,10 @@ class LearningAgileAgent():
         # FIXME, manually set the traversal time and pose
         out=np.zeros(7)
         out[0:3]=self.gate_center
-        out[3:6]=np.array([0,-0.0,0]) # 0.7
+
+        angle=-0.785# rad 0.707
+        rod_ang=np.tan(angle/2)
+        out[3:6]=np.array([0,rod_ang,0]) 
         out[6]=self.t_tra_abs-self.i*0.01
         # end FIXME
 
