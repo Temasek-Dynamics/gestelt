@@ -43,7 +43,6 @@ class FakeDrone
         {
             mavros_msgs::PositionTarget pos_targ; // position, velocity, acceleration
             Eigen::Quaterniond q;
-            double yaw; // in units of rad
         };
 
         struct State 

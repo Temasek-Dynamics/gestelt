@@ -617,16 +617,17 @@ void GridMap::publishCollisionSphere(
   sphere.ns = "collision_viz";
   sphere.pose.orientation.w = 1.0;
   sphere.id = col_viz_id++;
-  double scale = 0.5;
 
   // Make the alpha and red color value scale from 0.0 to 1.0 depending on the distance to the obstacle. 
   // With the upper limit being the warn_radius, and the lower limit being the fatal_radius
   double fatal_ratio = std::clamp((warn_radius - dist_to_obs)/(warn_radius - fatal_radius), 0.0, 1.0);
   sphere.color.r = fatal_ratio;
   sphere.color.g = 0.0;
-  sphere.color.b = 1.0;
-  sphere.color.a = fatal_ratio;
+  sphere.color.b = fatal_ratio < 1.0 ? 1.0 : 0.0; // If fatal, make blue value 0.0, so sphere is entire red.
+  sphere.color.a = fatal_ratio < 1.0 ? 0.35 : 0.7;
   
+  double scale = fatal_ratio < 1.0 ? 0.35 : 0.6;
+
   sphere.scale.x = scale;
   sphere.scale.y = scale;
   sphere.scale.z = scale;

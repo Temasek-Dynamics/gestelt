@@ -29,7 +29,7 @@ public:
     pnh.param("sample_plan_freq", sample_plan_freq, 30.0);
 
     // Subscribers
-    adaptor_goals_sub_ = nh.subscribe("/planner_adaptor/goals", 10, &PlannerAdaptor::goalsCB, this); // Subscription to user-defined goals, these goals are processed and sent to the planner
+    adaptor_goals_sub_ = nh.subscribe("planner_adaptor/goals", 10, &PlannerAdaptor::goalsCB, this); // Subscription to user-defined goals, these goals are processed and sent to the planner
     heartbeat_sub_ = nh.subscribe("planner/heartbeat", 10, &PlannerAdaptor::plannerHeartbeatCB, this); // Subscription to hearbeat from the planner
 
     // Publishers

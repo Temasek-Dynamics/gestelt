@@ -93,7 +93,6 @@ void FakeDrone::setpointRawCmdCb(const mavros_msgs::PositionTarget::ConstPtr &ms
 	cmd_mutex_.lock();
 
 	cmd_des_.pos_targ = *msg;
-	cmd_des_.yaw = msg->yaw;
 	cmd_des_.q = calcUAVOrientation(msg->acceleration_or_force, msg->yaw);
 
 	cmd_mutex_.unlock();

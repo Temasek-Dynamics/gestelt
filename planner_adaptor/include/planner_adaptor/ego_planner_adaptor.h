@@ -94,7 +94,8 @@ public:
     }
 
     ros::Time time_now = ros::Time::now();
-    // Time elapsed since start of trajectory
+
+    // t_cur: time elapsed since start of trajectory
     double t_cur = (time_now).toSec() - be_traj_->getGlobalStartTime();
 
     Eigen::Vector3d pos(Eigen::Vector3d::Zero()), vel(Eigen::Vector3d::Zero()), acc(Eigen::Vector3d::Zero()), jer(Eigen::Vector3d::Zero());
@@ -131,13 +132,23 @@ public:
 
   }
 
-  std::pair<double, double> calculate_yaw(double t_cur, Eigen::Vector3d &pos, double dt)
+  /**
+   * @brief 
+   * 
+   * @param t_cur 
+   * @param pos current position
+   * @param dt 
+   * @return std::pair<double, double> 
+   */
+  std::pair<double, double> calculate_yaw(const double& t_cur, const Eigen::Vector3d& pos, const double& dt)
   {
     std::pair<double, double> yaw_yawdot(0, 0);
 
+    // get direction vector
     Eigen::Vector3d dir = t_cur + time_forward_ <= be_traj_->getTotalDuration()
                               ? be_traj_->getPos(t_cur + time_forward_) - pos
                               : be_traj_->getPos(be_traj_->getTotalDuration()) - pos;
+    
     double yaw_temp = dir.norm() > 0.1
                           ? atan2(dir(1), dir(0))
                           : last_mission_yaw_;
@@ -152,20 +163,26 @@ public:
     {
       d_yaw += 2 * M_PI;
     }
+    ROS_INFO("yaw_temp(%f) - last_mission_yaw_(%f) = d_yaw(%f)", yaw_temp, last_mission_yaw_, d_yaw);
 
     const double YDM = d_yaw >= 0 ? YAW_DOT_MAX_PER_SEC : -YAW_DOT_MAX_PER_SEC;
     const double YDDM = d_yaw >= 0 ? YAW_DOT_DOT_MAX_PER_SEC : -YAW_DOT_DOT_MAX_PER_SEC;
     double d_yaw_max;
-    if (fabs(last_mission_yaw_dot_ + dt * YDDM) <= fabs(YDM))
+
+    if (fabs(last_mission_yaw_dot_ + dt * YDDM) <= fabs(YDM)) // Within yaw_dot limits
     {
+      ROS_INFO("====fabs(last_mission_yaw_dot_ + dt * YDDM) <= fabs(YDM)");
       // yawdot = last_mission_yaw_dot_ + dt * YDDM;
-      d_yaw_max = last_mission_yaw_dot_ * dt + 0.5 * YDDM * dt * dt;
+      d_yaw_max = (last_mission_yaw_dot_ * dt) + (0.5 * YDDM * dt * dt);
+      ROS_INFO("  d_yaw_max(%f)", dt, d_yaw_max);
     }
-    else
+    else // exceed yaw_dot limits
     {
+      ROS_INFO("====else");
       // yawdot = YDM;
       double t1 = (YDM - last_mission_yaw_dot_) / YDDM;
       d_yaw_max = ((dt - t1) + dt) * (YDM - last_mission_yaw_dot_) / 2.0;
+      // ROS_INFO("  t1(%f), d_yaw_max(%f)", t1, d_yaw_max);
     }
 
     if (fabs(d_yaw) > fabs(d_yaw_max))
@@ -173,6 +190,9 @@ public:
       d_yaw = d_yaw_max;
     }
     yawdot = d_yaw / dt;
+
+    ROS_INFO("d_yaw_max(%f), d_yaw(%f)", d_yaw, d_yaw_max);
+
 
     double yaw = last_mission_yaw_ + d_yaw;
     if (yaw > M_PI)
@@ -184,6 +204,8 @@ public:
 
     last_mission_yaw_ = yaw_yawdot.first;
     last_mission_yaw_dot_ = yaw_yawdot.second;
+
+    ROS_INFO("yaw_yawdot.first(%f)", yaw_yawdot.first);
 
     yaw_yawdot.second = yaw_temp;
 
@@ -212,8 +234,8 @@ private:
   u_int16_t type_mask_{2048}; // Default to ignore yaw rate
 
   // Params
-  double YAW_DOT_MAX_PER_SEC{ 2 * M_PI};
-  double YAW_DOT_DOT_MAX_PER_SEC{ 5 * M_PI};
+  const double YAW_DOT_MAX_PER_SEC{ 2 * M_PI};
+  const double YAW_DOT_DOT_MAX_PER_SEC{ 5 * M_PI};
 
 // protected:
 }; // class EgoPlannerAdaptor

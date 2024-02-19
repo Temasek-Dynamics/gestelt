@@ -48,7 +48,7 @@ grid_map:
 manager: 
   # When changing maximum velocity and acceleration, make sure to change those on the optimization params too
   max_vel: 1.5
-  max_acc: 6.0
+  max_acc: 6.0 # 8 newtons max, for 0.3g. 8/0.3 = 26.67
   # polyTraj_piece_length: distance between adjacent spline control points
   polyTraj_piece_length: 1.5
   # feasibility_tolerance: permitted ratio of vel/acc exceeding limits 
@@ -67,8 +67,8 @@ optimization:
   weight_feasibility: 10000.0
   weight_sqrvariance: 10000.0 
   weight_time: 10.0 
-  obstacle_clearance: 0.35 
-  obstacle_clearance_soft: 0.5 
+  # obstacle_clearance: 0.35 
+  # obstacle_clearance_soft: 0.5 
   swarm_clearance: 0.4 
   max_vel: 1.5
   max_acc: 6.0

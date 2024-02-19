@@ -284,17 +284,27 @@ namespace ego_planner
         /**
          * Penalty on static obstacle, vector of (x,y,z)
          */
+
+        // double sp_buffer = std::min(0.0, spheres_radius_[i] - 0.01);
         
-        // obs_static_pen: Distance from current point to center of sphere
-        Eigen::Vector3d dist_from_sphere = pos - spheres_center_[i];
-        double obs_static_pen = dist_from_sphere.squaredNorm() - pow(spheres_radius_[i],2) ; 
-        if (obs_static_pen > 0){ // If current point is outside the sphere or on it's boundary
+        // obs_static_pen: Distance from current point to center of sphere at segment i
+        Eigen::Vector3d sph_ctr_to_pos_vec = pos - spheres_center_[i]; // Sphere center to pos vector
+        double sph_ctr_to_pos_dist = sph_ctr_to_pos_vec.norm();
+
+        double obs_static_pen = sph_ctr_to_pos_dist * sph_ctr_to_pos_dist - spheres_radius_[i] * spheres_radius_[i] ; 
+
+        // Flag conditions to make sure that point stays as close as possible to the center of the sphere
+        bool outside_sph = obs_static_pen > 0; // If current point is outside the sphere/on boundary 
+        // bool inside_sph_but_within_buffer_dist = !outside_sph && (spheres_radius_[i] - sph_ctr_to_pos_dist < sp_buffer); // if point is inside but within `sp_buffer` distance of boundary
+        
+        if (outside_sph){ 
+        
           // std::cout << "Segment " << i << ": ," << "Penalty " << obs_static_pen << ", POINT (" << pos.transpose() 
           //   << ") is outside sphere with center ("<< spheres_center_[i].transpose() << ") with radius " << spheres_radius_[i] << std::endl;
 
           // Partial derivatives of Constraint
-          Eigen::Matrix<double, 6, 3> pd_constr_c_i = 2 * beta0 * dist_from_sphere.transpose(); // Partial derivative of constraint w.r.t c_i // (2s, m) = (2s, 1) * (1, m)
-          double pd_constr_t =  2 * beta1.transpose() * c * dist_from_sphere;// P.D. of constraint w.r.t t // (1,1) = (1, 2s) * (2s, m) * (m, 1)
+          Eigen::Matrix<double, 6, 3> pd_constr_c_i = 2 * beta0 * sph_ctr_to_pos_vec.transpose(); // Partial derivative of constraint w.r.t c_i // (2s, m) = (2s, 1) * (1, m)
+          double pd_constr_t =  2 * beta1.transpose() * c * sph_ctr_to_pos_vec;// P.D. of constraint w.r.t t // (1,1) = (1, 2s) * (2s, m) * (m, 1)
 
           // Intermediate calculations for chain rule to get partial derivatives of cost J
           double pd_cost_constr = 3 * (T_i / K) * omega * wei_obs_ * pow(obs_static_pen,2) ; // P.D. of cost w.r.t constraint

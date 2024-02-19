@@ -97,6 +97,8 @@ void TrajectoryServer::execTrajCb(const gestelt_msgs::ExecTrajectory::ConstPtr &
   geomMsgsVector3ToEigenVector3(msg->transform.translation, last_mission_pos_);
   last_mission_yaw_ = quaternionToRPY(msg->transform.rotation)(2); // yaw
 
+  // ROS_INFO("Last mission yaw: %f", last_mission_yaw_);
+
   geomMsgsVector3ToEigenVector3(msg->velocity.linear, last_mission_vel_);
   last_mission_yaw_dot_ = msg->velocity.angular.z; //yaw rate
   // ROS_INFO("received velocity: %f, %f, %f", last_mission_vel_(0), last_mission_vel_(1), last_mission_vel_(2));

@@ -5,10 +5,12 @@ from gestelt_msgs.msg import Command, CommanderState, Goals
 from geometry_msgs.msg import Transform
 from std_msgs.msg import Int8
 
-num_drones = 2
+num_drones = 1
 
 # Publisher of server events to trigger change of states for trajectory server 
-goals_pub = rospy.Publisher('/planner_adaptor/goals', Goals, queue_size=5)
+goal_publishers = []
+for i in range(0, num_drones):
+    goal_publishers.append(rospy.Publisher(f'/drone{i}/planner_adaptor/goals', Goals, queue_size=2))
 
 # Dictionary of UAV states
 server_states = {}
@@ -54,12 +56,14 @@ def create_transform(x, y, z):
 
     return pos
 
-def pub_goals(transform_wps):
-    goals_msg = Goals()
-    goals_msg.header.frame_id = "world"
-    goals_msg.transforms = transform_wps
+def pub_goals(goals):
 
-    goals_pub.publish(goals_msg)
+    for i in range(0, len(goals)):
+        goals_msg = Goals()
+        goals_msg.header.frame_id = "world"
+        goals_msg.transforms = goals[i]
+
+        goal_publishers[i].publish(goals_msg)
 
 def main():
     rospy.init_node('mission_startup', anonymous=True)
@@ -87,19 +91,26 @@ def main():
 
     # Send waypoints to UAVs
     print(f"Sending waypoints to UAVs")
-    transforms = []
-    # d = 1.5
-    # z = 0.75
-    # for i in range(10):
-    #     transforms.append(create_transform(d, d, z))
-    #     transforms.append(create_transform(-d, d, z))
-    #     transforms.append(create_transform(-d, -d, z))
-    #     transforms.append(create_transform(d, -d, z))
-    # transforms.append(create_transform(0, 0, z))
+    # goals_0 = []
+    # goals_1 = []
+    # goals_2 = []
 
-    transforms.append(create_transform(5.5, 5.5, 1.0))
-    transforms.append(create_transform(0.0, 0.0, 1.0))
-    pub_goals(transforms)
+    # goals_0.append(create_transform(5.5, 5.5, 1.0))
+    # goals_0.append(create_transform(0.0, 0.0, 1.0))
+
+    # goals_1.append(create_transform(6.0, 6.0, 1.0))
+    # goals_1.append(create_transform(0.5, 0.5, 1.0))
+
+    # goals_2.append(create_transform(5.0, 5.0, 1.0))
+    # goals_2.append(create_transform(-0.5, -0.5, 1.0))
+
+    # pub_goals([goals_0, goals_1, goals_2])
+
+
+    goals_0 = []
+    goals_0.append(create_transform(5.5, 5.5, 1.0))
+    goals_0.append(create_transform(0.0, 0.0, 1.0))
+    pub_goals([goals_0])
 
 if __name__ == '__main__':
     main()

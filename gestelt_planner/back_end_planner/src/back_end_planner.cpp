@@ -12,10 +12,10 @@ void BackEndPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   /* Subscribers */
   sfc_traj_sub_ = nh.subscribe("front_end/sfc_trajectory", 5, &BackEndPlanner::sfcTrajectoryCB, this);
   odom_sub_ = nh.subscribe("odom", 5, &BackEndPlanner::odometryCB, this);
-  // swarm_minco_traj_sub_ = nh.subscribe("/swarm/global/minco", 100,
-  //                                       &BackEndPlanner::swarmMincoTrajCB,
-  //                                       this,
-  //                                       ros::TransportHints().tcpNoDelay());
+  swarm_minco_traj_sub_ = nh.subscribe("/swarm/global/minco", 100,
+                                        &BackEndPlanner::swarmMincoTrajCB,
+                                        this,
+                                        ros::TransportHints().tcpNoDelay());
 
   /* Publishers */
   plan_traj_pub_ = nh.advertise<traj_utils::PolyTraj>("back_end/trajectory", 10); 
@@ -37,13 +37,11 @@ void BackEndPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   // back_end_planner_ = std::make_unique<ego_planner::EGOPlannerManager>();
   back_end_planner_->initPlanModules(nh, pnh, visualization_);
 
-  
   // Initialize own trajectory
   swarm_minco_trajs_ = std::make_shared<std::unordered_map<int, ego_planner::LocalTrajData>>();
   (*swarm_minco_trajs_)[drone_id_] = ego_planner::LocalTrajData();
 
   back_end_planner_->setSwarmTrajectories(swarm_minco_trajs_);
-
 }
 
 /**
@@ -55,8 +53,6 @@ void BackEndPlanner::swarmMincoTrajCB(const traj_utils::MINCOTrajConstPtr &msg)
   if (msg->drone_id == drone_id_){
     return; 
   }
-
-  logInfo(str_fmt("Received swarm MINCO trajectory from drone %d", msg->drone_id));
 
   ros::Time t_now = ros::Time::now();
   if (abs((t_now - msg->start_time).toSec()) > 0.25)
