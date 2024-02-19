@@ -63,6 +63,7 @@ class ExamplePlanner {
   double max_a_; // m/s^2
   double max_ang_v_;
   double max_ang_a_;
+  double max_j_;
 
   std::vector<Eigen::Vector3d> goal_waypoints_;
   std::vector<Eigen::Vector3d> goal_waypoints_vel_;

@@ -446,7 +446,8 @@ private: // Member variables
   uint16_t USE_FORCE; // Use force in typemask
   uint16_t IGNORE_YAW; // Ignore yaw in typemask
   uint16_t IGNORE_YAW_RATE; // Ignore yaw rate in typemask
-
+  uint16_t IGNORE_VZ;    //Ignore velocity z direction in typemask        //new
+  uint16_t IGNORE_AFZ;    //Ignore acceleration/force in z in typemask      //new
   uint16_t mission_type_mask_{0}; // Current type mask
 
   std::mutex cmd_mutex_; // mutex for PVA Commands

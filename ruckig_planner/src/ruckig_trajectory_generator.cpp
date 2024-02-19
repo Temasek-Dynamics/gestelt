@@ -112,7 +112,7 @@ void RuckigPlanner::planner(const std::vector<Eigen::Vector3d>& wp_pos,
     input.target_velocity = {first_waypoint_vel[0], first_waypoint_vel[1], first_waypoint_vel[2]};
     input.target_acceleration = {first_waypoint_acc[0], first_waypoint_acc[1], first_waypoint_acc[2]};
 
-    input.max_velocity = {3.0, 3.0, 3.0};
+    input.max_velocity = {1.0, 1.0, 1.0};
     trajectory_.~Trajectory();                             //Calling destructor
     trajectory_ = ruckig::Trajectory<3>();                 //re-initializing trajectory_ variable, otherwise garbage value is getting stored
 

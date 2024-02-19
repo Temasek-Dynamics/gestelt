@@ -2,18 +2,19 @@
 
 ExamplePlanner::ExamplePlanner(ros::NodeHandle& nh) :
     nh_(nh),
-    max_v_(2.0),
-    max_a_(2.0),
+    max_v_(3.0),
+    max_a_(12.0),
+    max_j_(10.0),
     current_velocity_(Eigen::Vector3d::Zero()),
     current_pose_(Eigen::Affine3d::Identity()) {
       
   // Load params
-  if (!nh_.getParam(ros::this_node::getName() + "/max_v", max_v_)){
-    ROS_WARN("[example_planner] param max_v not found");
-  }
-  if (!nh_.getParam(ros::this_node::getName() + "/max_a", max_a_)){
-    ROS_WARN("[example_planner] param max_a not found");
-  }
+  // if (!nh_.getParam(ros::this_node::getName() + "/max_v", max_v_)){
+  //   ROS_WARN("[example_planner] param max_v not found");
+  // }
+  // if (!nh_.getParam(ros::this_node::getName() + "/max_a", max_a_)){
+  //   ROS_WARN("[example_planner] param max_a not found");
+  // }
 
   nh.param("trajectory_frame", trajectory_frame_id_, std::string("world"));
 
@@ -29,6 +30,8 @@ ExamplePlanner::ExamplePlanner(ros::NodeHandle& nh) :
       nh.subscribe("uav_pose", 1, &ExamplePlanner::uavOdomCallback, this);
 
   goal_waypoints_sub_ = nh.subscribe("/waypoints", 1, &ExamplePlanner::waypointsCB, this);
+
+  std::cout<<"Max vel: "<<max_v_<<std::endl<<"Max Acc: " <<max_a_<<std::endl <<"Max Jerk: "<<max_j_<<std::endl;
 
 }
 
@@ -56,7 +59,7 @@ void ExamplePlanner::waypointsCB(const gestelt_msgs::GoalsPtr &msg){
         pose.position.z);
     // Transform received waypoints from world to UAV origin frame
     goal_waypoints_.push_back(wp);
-    ROS_INFO("MSG waypoints: %f, %f, %f", wp[0], wp[1], wp[2]);
+    // ROS_INFO("MSG waypoints: %f, %f, %f", wp[0], wp[1], wp[2]);
   }
   for (auto vel : msg->velocities) {
     Eigen::Vector3d wp_vel(
@@ -65,7 +68,7 @@ void ExamplePlanner::waypointsCB(const gestelt_msgs::GoalsPtr &msg){
         vel.linear.z);
     // Transform received waypoints from world to UAV origin frame
     goal_waypoints_vel_.push_back(wp_vel);
-    ROS_INFO("MSG_VEL waypoints: %f, %f, %f", wp_vel[0], wp_vel[1], wp_vel[2]);
+    // ROS_INFO("MSG_VEL waypoints: %f, %f, %f", wp_vel[0], wp_vel[1], wp_vel[2]);
   }
 
   for (auto acc : msg->accelerations) {
@@ -75,7 +78,7 @@ void ExamplePlanner::waypointsCB(const gestelt_msgs::GoalsPtr &msg){
         acc.linear.z);
     // Transform received waypoints from world to UAV origin frame
     goal_waypoints_acc_.push_back(wp_acc);
-    ROS_INFO("MSG_ACC waypoints: %f, %f, %f", wp_acc[0], wp_acc[1], wp_acc[2]);
+    // ROS_INFO("MSG_ACC waypoints: %f, %f, %f", wp_acc[0], wp_acc[1], wp_acc[2]);
   }
 
   mav_trajectory_generation::Trajectory trajectory;
@@ -86,6 +89,7 @@ void ExamplePlanner::waypointsCB(const gestelt_msgs::GoalsPtr &msg){
 // Method to set maximum speed.
 void ExamplePlanner::setMaxSpeed(const double max_v) {
   max_v_ = max_v;
+  std::cout<<max_v<<std::endl;
 }
 
 // Plans a trajectory from the current position to the a goal position and velocity
@@ -157,6 +161,7 @@ bool ExamplePlanner::planTrajectory(const std::vector<Eigen::Vector3d>& wp_pos,
   const int N = 10;
   mav_trajectory_generation::PolynomialOptimization<N> opt(dimension);
   opt.setupFromVertices(vertices, segment_times, derivative_to_optimize);
+
   opt.solveLinear();
 
   // Get segments
@@ -187,13 +192,14 @@ bool ExamplePlanner::planTrajectory(const std::vector<Eigen::Vector3d>& wp_pos,
   // // constrain velocity and acceleration
   // opt.addMaximumMagnitudeConstraint(mav_trajectory_generation::derivative_order::VELOCITY, max_v_);
   // opt.addMaximumMagnitudeConstraint(mav_trajectory_generation::derivative_order::ACCELERATION, max_a_);
-
+  // // opt.addMaximumMagnitudeConstraint(mav_trajectory_generation::derivative_order::JERK, max_j_);
+  // opt.addMaximumMagnitudeConstraint(mav_trajectory_generation::derivative_order::SNAP, 0.0);
   // // solve trajectory
   // opt.optimize();
 
   // // get trajectory as polynomial parameters
   // opt.getTrajectory(&(*trajectory));
-
+  // trajectory->scaleSegmentTimesToMeetConstraints(max_v_, max_a_);
   return true;
 }
 

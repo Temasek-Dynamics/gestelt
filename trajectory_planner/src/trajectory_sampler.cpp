@@ -101,6 +101,7 @@ void TrajectorySamplerNode::processTrajectory() {
                                                      &trajectory_points);
     trajectory_msgs::MultiDOFJointTrajectory msg_pub;
     msgMultiDofJointTrajectoryFromEigen(trajectory_points, &msg_pub);
+    // std::cout<<msg;
     command_pub_.publish(msg_pub);
   } else {
     publish_timer_.start();
@@ -126,6 +127,10 @@ void TrajectorySamplerNode::commandTimerCallback(const ros::TimerEvent&) {
     }
     mav_msgs::msgMultiDofJointTrajectoryFromEigen(trajectory_point, &msg);
     msg.points[0].time_from_start = ros::Duration(current_sample_time_);
+    // std::cout<<msg<<std::endl;
+    // msg.points[0].transforms[0].translation.z = 1.2;
+    // msg.points[0].velocities[0].linear.z = 0;
+    // msg.points[0].accelerations[0].linear.z = 0;
     command_pub_.publish(msg);
     current_sample_time_ += dt_;
   } else {

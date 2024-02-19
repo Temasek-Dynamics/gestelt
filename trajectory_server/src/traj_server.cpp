@@ -85,6 +85,8 @@ void TrajServer::init(ros::NodeHandle& nh)
   USE_FORCE = mavros_msgs::PositionTarget::FORCE;
   IGNORE_YAW = mavros_msgs::PositionTarget::IGNORE_YAW;
   IGNORE_YAW_RATE = mavros_msgs::PositionTarget::IGNORE_YAW_RATE;
+  IGNORE_VZ = mavros_msgs::PositionTarget::IGNORE_VZ;         //new flag
+  IGNORE_AFZ = mavros_msgs::PositionTarget::IGNORE_AFZ;        //new flag
 
   logInfo("Initialized");
 }
@@ -590,8 +592,8 @@ void TrajServer::execHover()
 void TrajServer::execMission()
 {
   std::lock_guard<std::mutex> cmd_guard(cmd_mutex_);
-
-  mission_type_mask_ = IGNORE_YAW_RATE; // Ignore yaw rate 
+  mission_type_mask_ = IGNORE_YAW_RATE;   
+  // mission_type_mask_ = IGNORE_YAW_RATE | IGNORE_VZ | IGNORE_AFZ;// Ignore yaw rate          //new
   // ROS_INFO("execMission() mission_vel: %f, %f, %f", last_mission_vel_(0), last_mission_vel_(1), last_mission_vel_(2));
   publishCmd( last_mission_pos_, last_mission_vel_, 
               last_mission_acc_, last_mission_jerk_, 

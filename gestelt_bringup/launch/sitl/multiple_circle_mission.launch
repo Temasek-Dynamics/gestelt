@@ -5,7 +5,11 @@
   </node>
    <!-- Start rosbag to record setpoint_raw and local_position -->
    <!-- path have to be absolute path-->
-  <node pkg="rosbag" type="record" name="record" output="screen" args="-o /home/yash/agile_flight/gestelt_ws/data/ /mavros/setpoint_raw/local /mavros/local_position/pose  /planner/sample_trajectory"/>
+  <node pkg="rosbag" type="record" name="record" output="screen" args="-o /home/yash/agile_flight/gestelt_ws/data/ 
+  /mavros/setpoint_raw/local 
+  /mavros/local_position/pose  
+  /planner/sample_trajectory 
+  /mavros/setpoint_raw/attitude"/>
   <!-- <node pkg="rosbag" type="record" name="record" output="screen" args="-a -o /home/tianchensun/gestelt_ws/data/ "/> -->
 
 </launch>
