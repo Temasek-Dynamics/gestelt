@@ -299,7 +299,7 @@ class LearningAgileAgent():
                 # FIXME, manually set the traversal time and pose
                 out=np.zeros(7)
                 out[0:3]=self.gate_center
-                out[3:6]=np.array([0,-0.0,0])
+                out[3:6]=np.array([0,-0.7,0])
                 out[6]=self.t_tra_abs-self.i*self.dyn_step
                 # end FIXME
 
@@ -348,13 +348,13 @@ class LearningAgileAgent():
         # self.quad1.uav1.plot_angularrate(self.control_n)
         # self.quad1.uav1.plot_position(self.pos_vel_att_cmd_n)
         # self.quad1.uav1.plot_velocity(self.pos_vel_att_cmd_n)
-        # plt.plot(self.solving_time)
-        # plt.title('mpc solving time at the main loop')
-        # plt.show()
-
-        plt.plot(self.tra_weight_list)
-        plt.title('traverse weight')
+        plt.plot(self.solving_time)
+        plt.title('mpc solving time at the main loop')
         plt.show()
+
+        # plt.plot(self.tra_weight_list)
+        # plt.title('traverse weight')
+        # plt.show()
         # self.quad1.uav1.plot_T(control_tm)
         # self.quad1.uav1.plot_M(control_tm)
     
