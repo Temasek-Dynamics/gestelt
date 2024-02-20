@@ -1,26 +1,53 @@
 <launch>
-  <!-- Launches a test mission -->
+  <!-- Launches a test mission -->`1
+  <arg name="LAUNCH_DRONE_NODE" default="false"/>
+
   <arg name="platform" default="laptop"/>
-  <arg name="record" default="true"/>
 
-  <node pkg="gestelt_bringup" name="mission" type="learning_agile_mission.py">
-        <param name="is_simulation" value="True"/>
-  </node>
+  <machine name="rock" user="rock" password="rock" address="172.20.10.3" env-loader="/opt/ros/noetic/env.sh" />
 
-  <node pkg="gestelt_bringup" name="learning_agile_agent" type="learning_agile_node.py" output="screen">  
-      <param name="hardware_platform" value="$(arg platform)"/>
-  </node>
-   <!-- Start rosbag to record setpoint_raw and local_position -->
-   <!-- path have to be absolute path-->
-  <node if="$(arg record)" pkg="rosbag" type="record" name="record" output="screen" args="-o $(find gestelt_bringup)/data/
-  /mavros/setpoint_raw/local 
-  /mavros/local_position/pose 
-  /mavros/setpoint_raw/attitude 
-  /planner/sample_trajectory 
-  /learning_agile_agent/traverse_time 
-  /learning_agile_agent/gate_centroid   
-  /learning_agile_agent/callback_runtime
-  /learning_agile_agent/solver_input_state"/>
-  <!-- <node pkg="rosbag" type="record" name="record" output="screen" args="-a -o /home/tianchensun/gestelt_ws/data/ "/> -->
+  <!--IF remotely launch nodes in the drone-->
+  <group if="$(arg LAUNCH_DRONE_NODE)">
+
+    <node pkg="gestelt_bringup" name="mission" type="learning_agile_mission.py" 
+    machine="rock">
+          <param name="is_simulation" value="True"/>
+    </node>
+
+    <node pkg="gestelt_bringup" name="learning_agile_agent" type="learning_agile_node.py" output="screen" 
+    machine="rock">  
+        <param name="hardware_platform" value="$(arg platform)"/>
+    </node>
+      
+  </group>
+
+<!--if only launch node locally-->
+<!-- 
+<node pkg="gestelt_bringup" name="mission" type="learning_agile_mission.py">
+      <param name="is_simulation" value="True"/>
+</node>
+
+<node pkg="gestelt_bringup" name="learning_agile_agent" type="learning_agile_node.py" output="screen">  
+    <param name="hardware_platform" value="$(arg platform)"/>
+</node> -->
+
+<!-- Start rosbag to record setpoint_raw and local_position -->
+<!-- path have to be absolute path-->
+
+<arg name="record_topics" default="/mavros/setpoint_raw/local 
+/mavros/local_position/pose 
+/mavros/setpoint_raw/attitude 
+/planner/sample_trajectory 
+/learning_agile_agent/traverse_time 
+/learning_agile_agent/gate_centroid   
+/learning_agile_agent/callback_runtime
+/learning_agile_agent/solver_input_state"/>
+
+
+
+
+<node pkg="rosbag" type="record" name="record" output="screen" args="-o $(find gestelt_bringup)/data/
+$(arg record_topics)"/>
+
 
 </launch>

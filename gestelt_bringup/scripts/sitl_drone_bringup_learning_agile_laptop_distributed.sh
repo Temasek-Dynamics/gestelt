@@ -47,7 +47,7 @@ rosbag record -o ~/gestelt_ws/src/gestelt/gestelt_bringup/data/ /learning_agile_
 "
 
 # Start up script to send commands
-CMD_3="roslaunch gestelt_bringup learning_agile_mission.launch"
+CMD_3="roslaunch gestelt_bringup learning_agile_mission.launch platform:='drone' LAUNCH_DRONE_NODE:=true"
 
 # disarm drone
 # CMD_4="rosservice call /drone_commander/disarm"
@@ -61,13 +61,13 @@ then
     tmux split-window -t $SESSION:0.1 -h
     tmux split-window -t $SESSION:0.0 -h
 
-    tmux send-keys -t $SESSION:0.0 "$SOURCE_PX4_AUTOPILOT $EXPORT_ROS_MASTER_URI $CMD_0" C-m 
+    tmux send-keys -t $SESSION:0.0 "$SOURCE_PX4_AUTOPILOT $CMD_0" C-m 
     sleep 1
     tmux send-keys -t $SESSION:0.1 "$SOURCE_WS " #C-m 
     sleep 10
-    tmux send-keys -t $SESSION:0.2 "$SOURCE_WS $EXPORT_ROS_MASTER_URI $CMD_2" C-m 
+    tmux send-keys -t $SESSION:0.2 "$SOURCE_WS $CMD_2" C-m 
     sleep 1
-    tmux send-keys -t $SESSION:0.3 "$SOURCE_WS $CMD_3" #C-m
+    tmux send-keys -t $SESSION:0.3 "$SOURCE_WS $CMD_3" C-m
 fi
 
 # Attach session on the first window
