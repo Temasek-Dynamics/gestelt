@@ -73,10 +73,9 @@ static void SFCPlan(benchmark::State& state)
 
   sfc_params.min_sphere_vol = 0.1;
   sfc_params.max_sphere_vol = 1000.0;
-  sfc_params.min_sphere_intersection_vol = 0.05;
 
-  sfc_params.avg_vel = 1,5;
   sfc_params.max_vel = 3.0;
+  sfc_params.max_acc = 10.0;
 
   std::unique_ptr<SphericalSFC> sfc_generation_ = std::make_unique<SphericalSFC>(map_, sfc_params);
 

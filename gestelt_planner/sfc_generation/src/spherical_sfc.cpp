@@ -74,6 +74,7 @@ bool SphericalSFC::generateSFC(const std::vector<Eigen::Vector3d> &path)
 
     auto a = std::chrono::high_resolution_clock::now();
 
+    Sphere B_starting; // starting sphere
     Sphere B_cur; // current sphere being considered
 
     size_t path_idx_cur = 0; // Current index of guide path
@@ -84,7 +85,23 @@ bool SphericalSFC::generateSFC(const std::vector<Eigen::Vector3d> &path)
         return false;
     }
 
-    sfc_spheres_.push_back(B_cur);
+    // Intialize largest sphere along guide path containing start point
+    for (size_t i = 0; i < path.size(); i++){
+        // Generate free sphere and check if it contains start point
+        //      IF NOT, then stop and pick previous sphere
+        if (!generateFreeSphere(path[i], B_cur)){
+            break;
+        }
+        // Check if new sphere contains start point
+        if (!B_cur.contains(path[0])){
+            break;
+        }
+        path_idx_cur = i;
+        B_starting = B_cur;
+    }
+    
+    // Add first sphere
+    sfc_spheres_.push_back(B_starting);
     
     auto b = std::chrono::high_resolution_clock::now();
 
@@ -134,7 +151,7 @@ bool SphericalSFC::generateSFC(const std::vector<Eigen::Vector3d> &path)
 
         publishVizSphericalSFC(sfc_spheres_, sfc_spherical_viz_pub_, "world");
 
-        computeSFCTrajectory(sfc_spheres_, path.back(), sfc_traj_);
+        computeSFCTrajectory(sfc_spheres_, path[0], path.back(), sfc_traj_);
         publishVizPiecewiseTrajectory(sfc_traj_.waypoints, sfc_waypoints_viz_pub_);
     }
 
@@ -187,6 +204,9 @@ bool SphericalSFC::generateFreeSphere(const Eigen::Vector3d& point, Sphere& B)
 
     if (grid_map_->getNearestOccupiedCell(point, occ_nearest, dist_to_nearest_obs)){
         B.center = point;
+        if (dist_to_nearest_obs <= sfc_params_.spherical_buffer){
+            return false;
+        }
         B.setRadius(dist_to_nearest_obs - sfc_params_.spherical_buffer);
         return true;
     }
@@ -233,8 +253,7 @@ bool SphericalSFC::BatchSample(const Eigen::Vector3d& pt_guide, Sphere& B_cur)
 
     // Set up seed for sampler
     uint64_t seed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
-    sampler_.setSeed(seed);
-    sampler_.setParams(pt_guide, stddev_3d);
+    sampler_.setParams(pt_guide, stddev_3d, seed);
     
     auto b = std::chrono::high_resolution_clock::now();
 
@@ -253,12 +272,39 @@ bool SphericalSFC::BatchSample(const Eigen::Vector3d& pt_guide, Sphere& B_cur)
     double d3_dur{0};
 
     for (auto& p_cand: p_cand_vec){
+        // Generate candidate sphere, calculate score and add to priority queue
+
         auto d1 = std::chrono::high_resolution_clock::now();
 
         std::shared_ptr<Sphere> B_cand = std::make_shared<Sphere>();
+        
+        if (!generateFreeSphere(p_cand, *B_cand)){
+            continue;
+        }
 
-        // Generate candidate sphere, calculate score and add to priority queue
-        generateFreeSphere(p_cand, *B_cand);
+        // Condition for a valid candidate sphere
+        // 1) Cand sphere contains guide point
+        // 2) Cand sphere is within minimum and maximum volume bounds 
+        // 3) Cand sphere is not completely contained within previous sphere
+
+        // 1) Sphere must contain guide point
+        if (!B_cand->contains(pt_guide)){
+            continue;
+        }
+
+        // 2) Sphere is bounded by a minimum and maximum volume 
+        if (B_cand->getVolume() < sfc_params_.min_sphere_vol || B_cand->getVolume() > sfc_params_.max_sphere_vol) 
+        {
+            // If candidate sphere's volume is below minimum or maximum volume
+            continue;
+        }
+
+        // 3) Cand sphere is not completely contained within previous sphere
+        if (B_cur.contains(B_cand->center)){ // candidate sphere's center inside previous sphere
+            if ((B_cand->center - B_cur.center).norm() + B_cand->radius <= B_cur.radius){ // If candidate sphere is fully contained within previous sphere
+                continue;
+            }
+        }
 
         auto d2 = std::chrono::high_resolution_clock::now();
 
@@ -329,34 +375,7 @@ void SphericalSFC::transformPoints(std::vector<Eigen::Vector3d>& pts, Eigen::Vec
 
 double SphericalSFC::computeCandSphereScore(Sphere& B_cand, Sphere& B_prev)
 {      
-    if (B_cand.getVolume() > sfc_params_.max_sphere_vol) // candidate sphere's volume has exceeded the maximum allowed
-    {
-        return -1.0;
-    }
-
-    double dist_btw_centers_sq = (B_cand.center - B_prev.center).squaredNorm();
-
-    if (B_prev.contains(B_cand.center)){ // candidate sphere's center inside previous sphere
-        if (dist_btw_centers_sq + B_cand.radius <= B_prev.radius){ // If candidate sphere is fully contained within previous sphere
-            return -1.0;
-        }
-    }
-
-    // Obtain volume of candidate sphere
-    double V_cand = B_cand.getVolume();
-    // if candidate sphere is below minimum sphere volume, discard.
-    if (V_cand < sfc_params_.min_sphere_vol){ 
-        return -1.0;
-    }
-
-    // Obtain volume of intersection between candidate and previous sphere 
-    double V_intersect = getIntersectingVolume(B_cand, B_prev);
-    // IF intersection volume is zero, discard.
-    if (V_intersect < sfc_params_.min_sphere_intersection_vol){
-        return -1.0;
-    }
-
-    return sfc_params_.W_cand_vol * V_cand + sfc_params_.W_intersect_vol * V_intersect;
+    return sfc_params_.W_cand_vol * B_cand.getVolume() + sfc_params_.W_intersect_vol * getIntersectingVolume(B_cand, B_prev);
 }
 
 double SphericalSFC::getIntersectingVolume(Sphere& B_a, Sphere& B_b)
@@ -378,7 +397,7 @@ Eigen::Vector3d SphericalSFC::getIntersectionCenter(const Sphere& B_a, const Sph
     Eigen::Vector3d dir_vec = B_b.center - B_a.center; 
     double d_centroids = (dir_vec).norm(); // scalar distance between spheres B_a and B_b 
     // Get distance to intersection along direction vector dir_vec from center of B_a to center of B_b
-    double d_intersect = (pow(B_a.radius,2) + pow(d_centroids,2) - pow(B_b.radius,2) ) / (2*d_centroids);
+    double d_intersect = (B_a.radius*B_a.radius + d_centroids*d_centroids - B_b.radius*B_b.radius ) / (2*d_centroids);
 
     Eigen::Vector3d pt_intersect = B_a.center + (d_intersect/d_centroids) * dir_vec;
 
@@ -387,13 +406,14 @@ Eigen::Vector3d SphericalSFC::getIntersectionCenter(const Sphere& B_a, const Sph
 
 void SphericalSFC::computeSFCTrajectory(
     const std::vector<SphericalSFC::Sphere>& sfc_spheres, 
+    const Eigen::Vector3d& start_pos, 
     const Eigen::Vector3d& goal_pos, 
     SphericalSFC::SFCTrajectory& sfc_traj)
 {
     /* 1: Retrieve waypoints from the intersections between the spheres */
     std::vector<Eigen::Vector3d> traj_waypoints(sfc_spheres.size()+1);
  
-    traj_waypoints[0] = sfc_spheres[0].center; // Add start state
+    traj_waypoints[0] = start_pos; // Add start state
     for (size_t i = 1; i < sfc_spheres.size(); i++){
         // TODO: Add check for intersection between 2 spheres?
 
@@ -402,14 +422,35 @@ void SphericalSFC::computeSFCTrajectory(
     }
     traj_waypoints.back() = goal_pos; // Add goal state
 
-    /* 2: Get time allocation using constant velocity time allocation */
+    /* 2: Get time allocation  */
     std::vector<double> segs_time_durations(traj_waypoints.size()-1); // Vector of time durations for each segment {t_1, t_2, ..., t_M}
-    // TODO: Use trapezoidal time allocation
+
+    // We can either use triangle or trapezoidal time profile.
+    // We use a trapezoidal time profile
 
     for (size_t i = 0 ; i < traj_waypoints.size()-1; i++){
-        // Using constant velocity time allocation
-        segs_time_durations[i] = (traj_waypoints[i+1] - traj_waypoints[i]).norm() / sfc_params_.avg_vel ;
+        double traj_dist = (traj_waypoints[i+1] - traj_waypoints[i]).norm();
+        
+        // For trapezoidal time profile: t_s, t_c and t_d is the time taken to 
+        //  accelerate, travel at maximum velocity, and decelerate respectively.
+        double t_s, t_c, t_d;
+        t_c = ( (traj_dist / sfc_params_.max_vel) - (sfc_params_.max_vel / sfc_params_.max_acc) );
+        if (t_c <= 0){ // Follow triangle profile
+            t_s = sqrt(traj_dist/(2*sfc_params_.max_acc));
+            t_d = t_s;
+            t_c = 0.0;
+        }
+        else{
+            t_s = sfc_params_.max_vel / sfc_params_.max_acc;
+            t_d = t_s;
+        }
+        segs_time_durations[i] = t_s + t_c + t_d;
     }
+
+    // for (size_t i = 0 ; i < traj_waypoints.size()-1; i++){
+    //     // Using constant velocity time allocation
+    //     segs_time_durations[i] = (traj_waypoints[i+1] - traj_waypoints[i]).norm() / sfc_params_.avg_vel ;
+    // }
 
     sfc_traj.spheres = sfc_spheres;
     sfc_traj.waypoints = traj_waypoints;
@@ -443,11 +484,11 @@ void SphericalSFC::publishVizPiecewiseTrajectory(
 
     visualization_msgs::Marker sphere_list, path_line_strip;
     Eigen::Vector3d wp_color = Eigen::Vector3d{0.0, 0.0, 1.0};
-    double wp_alpha = 0.3;
+    double wp_alpha = 0.75;
     double wp_radius = 0.15;
 
     Eigen::Vector3d line_color = Eigen::Vector3d{0.0, 0.0, 1.0};
-    double line_alpha = 0.3;
+    double line_alpha = 0.75;
     double line_scale = 0.05;
 
     // sphere_list.action = visualization_msgs::Marker::DELETEALL;

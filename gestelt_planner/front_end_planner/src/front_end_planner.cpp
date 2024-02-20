@@ -5,7 +5,8 @@ void FrontEndPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   logInfo("Initialized front end planner");
 
   pnh.param("drone_id", drone_id_, -1);
-  
+  pnh.param("front_end/debug_planning", debug_planning_, false);
+
   double planner_freq;
   pnh.param("front_end/planner_frequency", planner_freq, -1.0);
   pnh.param("front_end/goal_tolerance", squared_goal_tol_, -1.0);
@@ -30,10 +31,9 @@ void FrontEndPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
 
   pnh.param("sfc/min_sphere_vol", sfc_params.min_sphere_vol, -1.0);
   pnh.param("sfc/max_sphere_vol", sfc_params.max_sphere_vol, -1.0);
-  pnh.param("sfc/min_sphere_intersection_vol", sfc_params.min_sphere_intersection_vol, -1.0);
 
-  pnh.param("sfc/avg_vel", sfc_params.avg_vel, 1.5);
   pnh.param("sfc/max_vel", sfc_params.max_vel, 3.0);
+  pnh.param("sfc/max_acc", sfc_params.max_acc, 10.0);
 
   pnh.param("sfc/spherical_buffer", sfc_params.spherical_buffer, 0.0);
   
@@ -41,10 +41,6 @@ void FrontEndPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   goal_sub_ = nh.subscribe("planner/goals", 5, &FrontEndPlanner::goalsCB, this);
 
   plan_traj_sub_ = nh.subscribe("back_end/trajectory", 5, &FrontEndPlanner::backEndTrajCB, this);
-
-  debug_start_sub_ = pnh.subscribe("debug/plan_start", 5, &FrontEndPlanner::debugStartCB, this);
-  debug_goal_sub_ = pnh.subscribe("debug/plan_goal", 5, &FrontEndPlanner::debugGoalCB, this);
-  plan_on_demand_sub_ = pnh.subscribe("plan_on_demand", 5, &FrontEndPlanner::planOnDemandCB, this);
 
   spherical_sfc_traj_pub_ = nh.advertise<gestelt_msgs::SphericalSFCTrajectory>("front_end/sfc_trajectory", 10);
 
@@ -57,7 +53,14 @@ void FrontEndPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   sfc_waypoints_viz_pub_ = nh.advertise<visualization_msgs::Marker>("sfc_waypoints", 10);
   samp_dir_vec_pub_ = nh.advertise<visualization_msgs::MarkerArray>("sfc_samp_dir_vec", 10);
 
-  plan_timer_ = nh.createTimer(ros::Duration(1/planner_freq), &FrontEndPlanner::planTimerCB, this);
+  if (debug_planning_){
+    debug_start_sub_ = pnh.subscribe("debug/plan_start", 5, &FrontEndPlanner::debugStartCB, this);
+    debug_goal_sub_ = pnh.subscribe("debug/plan_goal", 5, &FrontEndPlanner::debugGoalCB, this);
+    plan_on_demand_sub_ = pnh.subscribe("plan_on_demand", 5, &FrontEndPlanner::planOnDemandCB, this);
+  }
+  else {
+    plan_timer_ = nh.createTimer(ros::Duration(1/planner_freq), &FrontEndPlanner::planTimerCB, this);
+  }
 
   // Initialize map
   map_.reset(new GridMap);

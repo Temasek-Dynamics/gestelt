@@ -36,7 +36,7 @@ roslaunch gestelt_bringup fake_map_central.launch rviz_config:=bubble
 "
 
 # Start up script to send commands
-CMD_3="roslaunch gestelt_bringup mission_bubble_planner.launch"
+CMD_3="roslaunch gestelt_bringup mission_bubble_planner_test.launch"
 
 if [ "$SESSIONEXISTS" = "" ]
 then 

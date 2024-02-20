@@ -63,6 +63,9 @@ private:
   
   /* parameters */
   int drone_id_{-1};
+
+  bool debug_planning_; // IF true, then debug mode is activated
+
   double squared_goal_tol_; // Squared goal tolerance
   bool within_goal_tol_; // Within a specified tolerance of the goal
 

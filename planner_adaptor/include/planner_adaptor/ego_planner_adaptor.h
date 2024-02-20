@@ -164,7 +164,6 @@ public:
     {
       d_yaw += 2 * M_PI;
     }
-    ROS_INFO("yaw_temp(%f) - last_mission_yaw_(%f) = d_yaw(%f)", yaw_temp, last_mission_yaw_, d_yaw);
 
     const double YDM = d_yaw >= 0 ? YAW_DOT_MAX_PER_SEC : -YAW_DOT_MAX_PER_SEC;
     const double YDDM = d_yaw >= 0 ? YAW_DOT_DOT_MAX_PER_SEC : -YAW_DOT_DOT_MAX_PER_SEC;
@@ -172,18 +171,14 @@ public:
 
     if (fabs(last_mission_yaw_dot_ + dt * YDDM) <= fabs(YDM)) // Within yaw_dot limits
     {
-      ROS_INFO("====fabs(last_mission_yaw_dot_ + dt * YDDM) <= fabs(YDM)");
       // yawdot = last_mission_yaw_dot_ + dt * YDDM;
       d_yaw_max = (last_mission_yaw_dot_ * dt) + (0.5 * YDDM * dt * dt);
-      ROS_INFO("  d_yaw_max(%f)", dt, d_yaw_max);
     }
     else // exceed yaw_dot limits
     {
-      ROS_INFO("====else");
       // yawdot = YDM;
       double t1 = (YDM - last_mission_yaw_dot_) / YDDM;
       d_yaw_max = ((dt - t1) + dt) * (YDM - last_mission_yaw_dot_) / 2.0;
-      // ROS_INFO("  t1(%f), d_yaw_max(%f)", t1, d_yaw_max);
     }
 
     if (fabs(d_yaw) > fabs(d_yaw_max))
@@ -191,9 +186,6 @@ public:
       d_yaw = d_yaw_max;
     }
     yawdot = d_yaw / dt;
-
-    ROS_INFO("d_yaw_max(%f), d_yaw(%f)", d_yaw, d_yaw_max);
-
 
     double yaw = last_mission_yaw_ + d_yaw;
     if (yaw > M_PI)
@@ -205,8 +197,6 @@ public:
 
     last_mission_yaw_ = yaw_yawdot.first;
     last_mission_yaw_dot_ = yaw_yawdot.second;
-
-    ROS_INFO("yaw_yawdot.first(%f)", yaw_yawdot.first);
 
     yaw_yawdot.second = yaw_temp;
 
