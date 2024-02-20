@@ -4,7 +4,8 @@
 
   <arg name="platform" default="laptop"/>
 
-  <machine name="rock" user="rock" password="rock" address="172.20.10.3" env-loader="/opt/ros/noetic/env.sh" />
+  <machine name="rock" user="rock" password="rock" address="172.20.10.3" 
+  env-loader="~/gestelt_ws/src/gestelt/gestelt_bringup/launch/scripts/drone_remote_launch_env.sh" />
 
   <!--IF remotely launch nodes in the drone-->
   <group if="$(arg LAUNCH_DRONE_NODE)">
