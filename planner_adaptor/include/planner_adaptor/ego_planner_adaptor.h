@@ -8,7 +8,9 @@
 class EgoPlannerAdaptor : public PlannerAdaptor
 {
 public:
-  EgoPlannerAdaptor(){};
+  EgoPlannerAdaptor(){
+    time_since_last_samp_ = ros::Time::now();
+  };
 
   virtual void init_planner_specific_topics(ros::NodeHandle& nh){
     planner_goals_pub_ = nh.advertise<gestelt_msgs::Goals>("planner/goals", 5); 
@@ -102,7 +104,6 @@ public:
     Eigen::Quaterniond quat{0,0,0,1};
     std::pair<double, double> yaw_yawdot(0, 0);
 
-    time_last_ = ros::Time::now();
     // IF time elapsed is below duration of trajectory, then continue to send command
     if (t_cur >= 0.0 && t_cur < be_traj_->getTotalDuration())
     {
@@ -112,11 +113,11 @@ public:
       jer = be_traj_->getJer(t_cur);
 
       /*** calculate yaw ***/
-      yaw_yawdot = calculate_yaw(t_cur, pos, (time_now - time_last_).toSec());
+      yaw_yawdot = calculate_yaw(t_cur, pos, (time_now - time_since_last_samp_).toSec());
 
       quat = RPYToQuaternion(0.0, 0.0, yaw_yawdot.first);
 
-      time_last_ = time_now;
+      time_since_last_samp_ = time_now;
 
       // Send sampled point to Trajectory Server
       forwardExecTrajectory(pos, quat, vel, acc, jer, type_mask_);
@@ -225,7 +226,7 @@ private:
 
   // Plan trajectory data
   boost::shared_ptr<poly_traj::Trajectory> be_traj_; // back end trajectory
-  ros::Time time_last_; // Time since last sampling
+  ros::Time time_since_last_samp_; // Time since last sampling
   double time_forward_{1.0}; //Timestep forward
 
   double last_mission_yaw_{0.0};
