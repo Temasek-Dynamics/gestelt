@@ -204,9 +204,9 @@ def main():
     # side length 5m
     g=-9.81 #m/s^2  # down force, negative
     f=1*(-g) #N  # up force, positive
-    angle=85
+    angle=60
     angle_rad=math.radians(angle)
-    num_passes = 2
+    num_passes = 1
         # 1/4 test
         # world frame is the initial position of the drone
         # map frame is the origin of the map
