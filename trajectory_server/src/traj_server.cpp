@@ -164,15 +164,14 @@ void TrajServer::UAVStateCb(const mavros_msgs::State::ConstPtr &msg)
 
 void TrajServer::UAVPoseCB(const geometry_msgs::PoseStamped::ConstPtr &msg)
 {
-  //for setpoint takeoff
-  if (num_pose_msgs_ < 100){
+  //for setpoint TAKEOFF AND HOVER, lock the first pose to the current pose
+  if (getServerState()==ServerState::TAKEOFF || getServerState()==ServerState::HOVER ){
     first_pose_ = false;
     // ROS_INFO("Taking off pose locked to (%f, %f)", last_mission_pos_(0), last_mission_pos_(1));
   }
   else {
     first_pose_ = true;
   }
-  num_pose_msgs_++;
   
   if (first_pose_)
   {

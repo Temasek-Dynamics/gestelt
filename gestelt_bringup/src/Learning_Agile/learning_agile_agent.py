@@ -233,7 +233,7 @@ class LearningAgileAgent():
 
         angle=-0.785# rad 0.707
         rod_ang=np.tan(angle/2)
-        out[3:6]=np.array([0,rod_ang,0]) 
+        out[3:6]=np.array([0,-0.707,0]) 
         out[6]=self.t_tra_abs-self.i*0.01
         # end FIXME
 

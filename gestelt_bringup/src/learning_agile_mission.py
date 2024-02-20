@@ -224,7 +224,7 @@ def main():
     ##--------------------- end of min snap trajectory--------------##
 
     # spending initial state to the learning agile node    
-    rospy.spin()
+    # rospy.spin()
     rospy.signal_shutdown("transfer to the MPC")
 if __name__ == '__main__':
     main()
