@@ -16,6 +16,9 @@
 #include <gestelt_msgs/Goals.h>
 #include <gestelt_msgs/SphericalSFCTrajectory.h>
 
+#include <gestelt_debug_msgs/SFCTrajectory.h>
+#include <gestelt_debug_msgs/SFCSegment.h>
+
 #include <optimizer/poly_traj_utils.hpp>
 #include <traj_utils/PolyTraj.h>
 
@@ -33,6 +36,8 @@ public:
 private:
   ros::NodeHandle node_;
   std::string node_name_{"FrontEndPlanner"};
+
+  ros::Timer plan_timer_; // Timer for planning loop
 
   // Subscribers and publishers
   ros::Subscriber odom_sub_; // Subscriber to drone odometry
@@ -59,7 +64,8 @@ private:
   ros::Publisher samp_dir_vec_pub_; // Visualization of SFC sampling direction vectors
   ros::Publisher sfc_waypoints_viz_pub_; // Visualization of SFC waypoints
 
-  ros::Timer plan_timer_; // Timer for planning loop
+  /* Debugging */
+  ros::Publisher dbg_sfc_traj_pub_;
   
   /* parameters */
   int drone_id_{-1};
@@ -77,8 +83,6 @@ private:
   /* Planner */
   std::unique_ptr<AStarPlanner> front_end_planner_; // Front-end planner
   std::unique_ptr<SphericalSFC> sfc_generation_; // Safe flight corridor generator
-
-
 
   /* Data structs */
   Waypoint waypoints_; // Waypoint handler object

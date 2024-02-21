@@ -241,19 +241,37 @@ bool SphericalSFC::BatchSample(const Eigen::Vector3d& pt_guide, Sphere& B_cur)
 
     // Calculate orientation and standard deviation of normal sampling distribution
     Eigen::Vector3d dir_vec = (pt_guide - B_cur.center); // Direction vector from previous sphere to pt_guide
-    // std::cout << "Dir vec: " << dir_vec << std::endl;
-    double stddev_x = sfc_params_.mult_stddev_x * dir_vec.norm(); // Get standard deviation along direction vector
-    double stddev_y = sfc_params_.mult_stddev_y * dir_vec.norm(); // Get standard deviation along direction vector
-    double stddev_z = sfc_params_.mult_stddev_z * dir_vec.norm(); // Get standard deviation along direction vector
+    Eigen::Vector3d dir_vec_unit = dir_vec.normalized();
+
+    // static double step_size = 0.05;
+    // Eigen::Vector3d pt_col = pt_guide; // point just before collision with obstacle 
+    // // Iterate along direction vector and check if it hits an occupied obstacle
+    // while ((pt_col - B_cur.center).norm() < B_cur.radius*2){ // Is this a good condition for getting the dir vector?
+    //     Eigen::Vector3d pt_check = pt_col.array() + (dir_vec_unit * step_size).array();
+    //     if (grid_map_->getOccupancy(pt_check)){
+    //         // Collision detected, get out!
+    //         break;
+    //     }
+    //     pt_col = pt_check;
+    // }
+    // Eigen::Vector3d samp_dir_vec = (pt_col.array() - B_cur.center.array());
+    // Eigen::Vector3d samp_mean = 0.5 * (pt_col.array() + B_cur.center.array());
+
+    Eigen::Vector3d samp_dir_vec = dir_vec;
+    Eigen::Vector3d samp_mean = pt_guide;
+
+    double stddev_x = sfc_params_.mult_stddev_x * samp_dir_vec.norm(); // Get standard deviation along direction vector
+    double stddev_y = sfc_params_.mult_stddev_y * samp_dir_vec.norm(); // Get standard deviation along direction vector
+    double stddev_z = sfc_params_.mult_stddev_z * samp_dir_vec.norm(); // Get standard deviation along direction vector
     Eigen::Vector3d stddev_3d{stddev_x, stddev_y, stddev_z};
 
     // Calculate orientation of distribution ellipsoid
-    Eigen::Matrix<double, 3, 3> ellipse_rot_mat = rotationAlign(Eigen::Vector3d::UnitX(), dir_vec.normalized());
+    Eigen::Matrix<double, 3, 3> ellipse_rot_mat = rotationAlign(Eigen::Vector3d::UnitX(), dir_vec_unit);
     Eigen::Quaterniond ellipse_orientation(ellipse_rot_mat);
 
     // Set up seed for sampler
     uint64_t seed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
-    sampler_.setParams(pt_guide, stddev_3d, seed);
+    sampler_.setParams(samp_mean, stddev_3d, seed);
     
     auto b = std::chrono::high_resolution_clock::now();
 
@@ -264,12 +282,14 @@ bool SphericalSFC::BatchSample(const Eigen::Vector3d& pt_guide, Sphere& B_cur)
 
     // Transform set of sampled points to have its mean at pt_guide and rotated along dir_vec
     // TODO: Use matrix parallelization for transformations
-    transformPoints(p_cand_vec, pt_guide, ellipse_rot_mat);
+    transformPoints(p_cand_vec, samp_mean, ellipse_rot_mat);
 
     auto d = std::chrono::high_resolution_clock::now();
 
     double d2_dur{0};
     double d3_dur{0};
+
+    std::vector<SphericalSFC::Sphere> sampled_spheres; // Vector of all sampled spheres used for debugging
 
     for (auto& p_cand: p_cand_vec){
         // Generate candidate sphere, calculate score and add to priority queue
@@ -281,6 +301,8 @@ bool SphericalSFC::BatchSample(const Eigen::Vector3d& pt_guide, Sphere& B_cur)
         if (!generateFreeSphere(p_cand, *B_cand)){
             continue;
         }
+
+        sampled_spheres.push_back(*B_cand);
 
         // Condition for a valid candidate sphere
         // 1) Cand sphere contains guide point
@@ -323,17 +345,6 @@ bool SphericalSFC::BatchSample(const Eigen::Vector3d& pt_guide, Sphere& B_cur)
 
     auto e = std::chrono::high_resolution_clock::now();
 
-    if (B_cand_pq.empty()){
-        std::cout << "Unable to generate next candidate sphere"<< std::endl;
-        return false;
-    }
-
-    // std::cout << "Assigned next candidate sphere of radius " << B_cand_pq.top()->radius 
-    //             << ", with volume " << B_cand_pq.top()->getVolume() 
-    //             << ", intersecting volume " << getIntersectingVolume(*B_cand_pq.top(), B_cur ) 
-    //             << ", Center " << B_cand_pq.top()->center
-    //             << std::endl;
-
     B_cur = Sphere(B_cand_pq.top());
 
     double chpt_b = std::chrono::duration_cast<std::chrono::duration<double>>(
@@ -360,8 +371,23 @@ bool SphericalSFC::BatchSample(const Eigen::Vector3d& pt_guide, Sphere& B_cur)
     }
 
     p_cand_vec_hist_.insert(p_cand_vec_hist_.end(), p_cand_vec.begin(), p_cand_vec.end());
-    sampling_dist_hist_.markers.push_back(createVizEllipsoid(pt_guide, stddev_3d, ellipse_orientation, "world", itr_));
-    samp_dir_vec_hist_.markers.push_back(createArrow(pt_guide, dir_vec, "world", itr_));
+    sampling_dist_hist_.markers.push_back(createVizEllipsoid(samp_mean, stddev_3d, ellipse_orientation, "world", itr_));
+    samp_dir_vec_hist_.markers.push_back(createArrow(samp_mean, samp_dir_vec, "world", itr_));
+
+    // For debugging purposes
+    sfc_sampled_spheres_.push_back(sampled_spheres);
+    samp_dir_vec_.push_back(samp_dir_vec);
+    guide_points_vec_.push_back(samp_mean);
+
+    if (B_cand_pq.empty()){
+        std::cout << "Unable to generate next candidate sphere"<< std::endl;
+        return false;
+    }
+    // std::cout << "Assigned next candidate sphere of radius " << B_cand_pq.top()->radius 
+    //             << ", with volume " << B_cand_pq.top()->getVolume() 
+    //             << ", intersecting volume " << getIntersectingVolume(*B_cand_pq.top(), B_cur ) 
+    //             << ", Center " << B_cand_pq.top()->center
+    //             << std::endl;
 
     return true;
 }
@@ -593,7 +619,7 @@ void SphericalSFC::publishVizSphericalSFC(
 }
 
 visualization_msgs::Marker SphericalSFC::createArrow(
-    const Eigen::Vector3d& pt_guide, const Eigen::Vector3d& dir_vec, 
+    const Eigen::Vector3d& start_pt, const Eigen::Vector3d& dir_vec, 
     const std::string& frame_id, const int& id)
 {
     visualization_msgs::Marker arrow;
@@ -606,21 +632,21 @@ visualization_msgs::Marker SphericalSFC::createArrow(
 
     double scale = 0.1;
 
-    arrow.color.r = 1.0;
+    arrow.color.r = 0.0;
     arrow.color.g = 1.0;
     arrow.color.b = 1.0;
-    arrow.color.a = 0.7;
+    arrow.color.a = 0.9;
     arrow.scale.x = scale;
     arrow.scale.y = 2 * scale;
     arrow.scale.z = 2 * scale;
 
     geometry_msgs::Point start, end;
-    start.x = pt_guide(0);
-    start.y = pt_guide(1);
-    start.z = pt_guide(2);
-    end.x = pt_guide(0) + dir_vec(0);
-    end.y = pt_guide(1) + dir_vec(1);
-    end.z = pt_guide(2) + dir_vec(2);
+    start.x = start_pt(0);
+    start.y = start_pt(1);
+    start.z = start_pt(2);
+    end.x = start_pt(0) + dir_vec(0);
+    end.y = start_pt(1) + dir_vec(1);
+    end.z = start_pt(2) + dir_vec(2);
 
     arrow.points.clear();
     arrow.points.push_back(start);

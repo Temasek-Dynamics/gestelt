@@ -2,4 +2,9 @@
   <!-- Launches a test mission -->
   <node pkg="gestelt_bringup" name="mission_bubble_planner" 
     type="mission_bubble_planner_test.py" output="screen" />
+
+  <!-- Launches a trajectory inspector -->
+  <node pkg="trajectory_inspector" name="trajectory_inspector_node" 
+    type="trajectory_inspector.py" output="screen" />
+
 </launch>

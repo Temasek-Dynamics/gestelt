@@ -53,6 +53,8 @@ void FrontEndPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   sfc_waypoints_viz_pub_ = nh.advertise<visualization_msgs::Marker>("sfc_waypoints", 10);
   samp_dir_vec_pub_ = nh.advertise<visualization_msgs::MarkerArray>("sfc_samp_dir_vec", 10);
 
+  dbg_sfc_traj_pub_ = nh.advertise<gestelt_debug_msgs::SFCTrajectory>("sfc/debug_trajectory", 10);
+
   if (debug_planning_){
     debug_start_sub_ = pnh.subscribe("debug/plan_start", 5, &FrontEndPlanner::debugStartCB, this);
     debug_goal_sub_ = pnh.subscribe("debug/plan_goal", 5, &FrontEndPlanner::debugGoalCB, this);
@@ -166,6 +168,59 @@ bool FrontEndPlanner::generatePlan(const Eigen::Vector3d& start_pos, const Eigen
 
   sfc_traj_msg.segments_time_duration = sfc_traj.segs_t_dur;
   spherical_sfc_traj_pub_.publish(sfc_traj_msg);
+
+  /* Debug */
+  std::vector<std::vector<SphericalSFC::Sphere>> sfc_sampled_spheres;
+  std::vector<Eigen::Vector3d> samp_dir_vec, guide_points_vec;
+
+  sfc_generation_->getSFCTrajectoryDebug(
+    sfc_sampled_spheres, samp_dir_vec, guide_points_vec);
+
+  if (sfc_sampled_spheres.size() != samp_dir_vec.size() 
+      || samp_dir_vec.size() != guide_points_vec.size() 
+      || sfc_sampled_spheres.size() != guide_points_vec.size()){
+    ROS_ERROR("ERROR, SFC Debug trajectory fields do not all have the same size (same number of semgments)!");
+  }
+
+  gestelt_debug_msgs::SFCTrajectory dbg_sfc_traj_msg;
+  for (size_t i = 0; i < guide_points_vec.size(); i++)
+  {
+    gestelt_debug_msgs::SFCSegment segment;
+    for (auto& sphere : sfc_sampled_spheres[i])
+    {
+      gestelt_msgs::Sphere sphere_msg;
+      sphere_msg.radius = sphere.radius;
+      sphere_msg.center.x = sphere.center(0);
+      sphere_msg.center.y = sphere.center(1);
+      sphere_msg.center.z = sphere.center(2);
+
+      segment.sampled_spheres.push_back(sphere_msg);
+    }
+
+    segment.guide_point.x = guide_points_vec[i](0);
+    segment.guide_point.y = guide_points_vec[i](1);
+    segment.guide_point.z = guide_points_vec[i](2);
+
+    segment.sampling_vector.x = samp_dir_vec[i](0);
+    segment.sampling_vector.y = samp_dir_vec[i](1);
+    segment.sampling_vector.z = samp_dir_vec[i](2);
+
+    dbg_sfc_traj_msg.segments.push_back(segment);
+  }
+
+  for (size_t i = 0; i < front_end_path.size(); i++)
+  {
+    geometry_msgs::Point front_end_pt;
+    front_end_pt.x = front_end_path[i](0);
+    front_end_pt.y = front_end_path[i](1);
+    front_end_pt.z = front_end_path[i](2);
+
+    dbg_sfc_traj_msg.front_end_path.push_back(front_end_pt);
+  }
+
+  dbg_sfc_traj_msg.sfc_spheres = sfc_traj_msg.spheres;
+  
+  dbg_sfc_traj_pub_.publish(dbg_sfc_traj_msg);
 
   // logInfo(str_fmt("Front-end Planning Time: %f ms", front_end_plan_time_ms));
   // logInfo(str_fmt("SFC Planning Time: %f ms", sfc_plan_time_ms));

@@ -56,14 +56,14 @@ def main():
     # rate.sleep()
     # dbg_start_esdf_free_pub.publish(start)
     # rate.sleep()
-    # dbg_goal_esdf_free_pub.publish(goal)  
+    # dbg_goal_esdf_free_pub.publish(goal)
     # rate.sleep()
     # plan_on_demand_esdf_free_pub.publish(Empty())
 
     rate.sleep()
     dbg_start_sfc_pub.publish(start)
     rate.sleep()
-    dbg_goal_sfc_pub.publish(goal)  
+    dbg_goal_sfc_pub.publish(goal)
     rate.sleep()
     plan_on_demand_sfc_pub.publish(Empty())
 

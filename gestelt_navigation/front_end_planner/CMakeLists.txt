@@ -15,6 +15,7 @@ set(ROS_LIBRARIES
   sfc_generation
   traj_utils
   traj_opt
+  gestelt_debug_msgs
 ) 
 
 find_package(Eigen3 REQUIRED)

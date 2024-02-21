@@ -169,7 +169,7 @@ namespace viz_helper{
   inline void publishVizSpheres(const std::vector<Eigen::Vector3d>& pts, const std::string& frame_id, ros::Publisher& publisher) {
     visualization_msgs::Marker sphere_list;
     double radius = 0.075;
-    double alpha = 0.4;
+    double alpha = 0.8;
 
     sphere_list.header.frame_id = frame_id;
     sphere_list.header.stamp = ros::Time::now();
@@ -179,8 +179,8 @@ namespace viz_helper{
     sphere_list.id = 1; 
     sphere_list.pose.orientation.w = 1.0;
 
-    sphere_list.color.r = 0.0;
-    sphere_list.color.g = 0.0;
+    sphere_list.color.r = 1.0;
+    sphere_list.color.g = 0.5;
     sphere_list.color.b = 0.0;
     sphere_list.color.a = alpha;
 

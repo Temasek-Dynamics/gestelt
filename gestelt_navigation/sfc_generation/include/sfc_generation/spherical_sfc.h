@@ -2,8 +2,9 @@
 #define _SPHERICAL_SFC_H_
 
 #include <sfc_generation/sfc_base.h>
-#include "halton_enum.h"
-#include "halton_sampler.h"
+#include "halton_enum.h"    // For deterministic sampling
+#include "halton_sampler.h" // For deterministic sampling
+#include "nanoflann.hpp" // For nearest neighbors queries
 
 #include <random>
 #include <chrono>
@@ -259,9 +260,22 @@ public:
    */
   bool generateSFC(const std::vector<Eigen::Vector3d> &path);
 
+  /* Getter methods */
+
   SphericalSFC::SFCTrajectory const getSFCTrajectory(){
     return sfc_traj_;
   }
+
+  void getSFCTrajectoryDebug(
+    std::vector<std::vector<SphericalSFC::Sphere>>& sfc_sampled_spheres,
+    std::vector<Eigen::Vector3d>& samp_dir_vec,
+    std::vector<Eigen::Vector3d>& guide_points_vec)
+  {
+    sfc_sampled_spheres = sfc_sampled_spheres_;
+    samp_dir_vec = samp_dir_vec_;
+    guide_points_vec = guide_points_vec_;
+  }
+
 
 private: // Private methods
 
@@ -375,7 +389,7 @@ private: // Private methods
                               ros::Publisher& publisher, const std::string& frame_id = "world");
 
   visualization_msgs::Marker createArrow(
-    const Eigen::Vector3d& pt_guide, const Eigen::Vector3d& dir_vec, 
+    const Eigen::Vector3d& start_pt, const Eigen::Vector3d& dir_vec, 
     const std::string& frame_id, const int& id);
 
   visualization_msgs::Marker createVizSphere( const Eigen::Vector3d& center, const double& diameter, 
@@ -402,9 +416,19 @@ private: // Private members
   std::vector<SphericalSFC::Sphere> sfc_spheres_; // Waypoints of the spherical flight corridor
   SphericalSFC::SFCTrajectory sfc_traj_;          // SFC Trajectory 
 
+  KDTreeVectorOfVectorsAdaptor<my_vector_of_vectors_t, double>
+        my_kd_tree_t;
+
+  /* Data for Visualization */
   std::vector<Eigen::Vector3d> p_cand_vec_hist_; // history of candidate points
   visualization_msgs::MarkerArray sampling_dist_hist_; // history of sampling distributions (1 s.d.)
   visualization_msgs::MarkerArray samp_dir_vec_hist_; // history of sampling distributions (1 s.d.)
+
+  std::vector<std::vector<SphericalSFC::Sphere>> sfc_sampled_spheres_ ; // Outer index is segment, each segment contains a number of sampled spheres
+  std::vector<Eigen::Vector3d> samp_dir_vec_; // vector of sampling vectors
+  std::vector<Eigen::Vector3d> guide_points_vec_; // vector of sampling guide points
+
+
 
 }; // class SphericalSFC
 

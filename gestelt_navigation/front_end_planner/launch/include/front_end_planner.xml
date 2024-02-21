@@ -5,6 +5,7 @@
 
   <arg name="cfg_filepath" default="" />
   <arg name="odometry_topic" default="mavros/local_position/odom" />
+  <arg name="debug_planning" default="false"/>
 
   <!-- Front end planner -->
   <group ns="$(arg drone_id_ns)">
@@ -12,6 +13,8 @@
         <rosparam command="load" file="$(arg cfg_filepath)" />
 
         <param name="drone_id" value="$(arg drone_id)"/>
+
+        <param name="front_end/debug_planning" value="$(arg debug_planning)"/>
 
         <remap from="odom" to="$(arg odometry_topic)"/>
         <remap from="planner/goals" to="planner/goals"/>
