@@ -1,0 +1,1 @@
+gestelt_debug_msgs/SFCSegment[] trajectory     # Consists of trajectory segments of sampled spheres
