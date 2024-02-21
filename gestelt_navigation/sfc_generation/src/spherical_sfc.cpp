@@ -23,6 +23,7 @@ void SphericalSFC::reset()
     // Clear planning data
     sfc_spheres_.clear();
     sfc_traj_.clear();
+    front_end_path_.clear();
 
     // Clear visualizations
     p_cand_vec_hist_.clear();
@@ -68,9 +69,13 @@ void SphericalSFC::clearVisualizations()
 bool SphericalSFC::generateSFC(const std::vector<Eigen::Vector3d> &path)
 {
     reset();
+    front_end_path_ = path;
+    guide_path_kdtree_ = 
+        std::make_unique<KDTreeVectorOfVectorsAdaptor<std::vector<Eigen::Vector3d>, double>>(
+            3, path, 10);
 
-    double get_fwd_pt_durs{0};
-    double batch_sample_durs{0};
+    double get_fwd_pt_durs{0};      // for checking runtime
+    double batch_sample_durs{0};    // for checking runtime
 
     auto a = std::chrono::high_resolution_clock::now();
 
@@ -243,6 +248,10 @@ bool SphericalSFC::BatchSample(const Eigen::Vector3d& pt_guide, Sphere& B_cur)
     Eigen::Vector3d dir_vec = (pt_guide - B_cur.center); // Direction vector from previous sphere to pt_guide
     Eigen::Vector3d dir_vec_unit = dir_vec.normalized();
 
+    
+
+    // Method A: Use collision point
+
     // static double step_size = 0.05;
     // Eigen::Vector3d pt_col = pt_guide; // point just before collision with obstacle 
     // // Iterate along direction vector and check if it hits an occupied obstacle
@@ -256,6 +265,8 @@ bool SphericalSFC::BatchSample(const Eigen::Vector3d& pt_guide, Sphere& B_cur)
     // }
     // Eigen::Vector3d samp_dir_vec = (pt_col.array() - B_cur.center.array());
     // Eigen::Vector3d samp_mean = 0.5 * (pt_col.array() + B_cur.center.array());
+
+    // Method B: Default 
 
     Eigen::Vector3d samp_dir_vec = dir_vec;
     Eigen::Vector3d samp_mean = pt_guide;
@@ -401,7 +412,21 @@ void SphericalSFC::transformPoints(std::vector<Eigen::Vector3d>& pts, Eigen::Vec
 
 double SphericalSFC::computeCandSphereScore(Sphere& B_cand, Sphere& B_prev)
 {      
-    return sfc_params_.W_cand_vol * B_cand.getVolume() + sfc_params_.W_intersect_vol * getIntersectingVolume(B_cand, B_prev);
+    std::vector<double> query_pt(3);
+    query_pt[0] = B_cand.center(0);
+    query_pt[1] = B_cand.center(1);
+    query_pt[2] = B_cand.center(2);
+    
+    const size_t        num_closest = 1;
+    std::vector<size_t> out_indices(num_closest);
+    std::vector<double> out_distances_sq(num_closest);
+
+    guide_path_kdtree_->query(&query_pt[0], num_closest, &out_indices[0], &out_distances_sq[0]);
+    double progress = double(out_indices[0]) / front_end_path_.size();
+
+    return sfc_params_.W_cand_vol * B_cand.getVolume() 
+        + sfc_params_.W_intersect_vol * getIntersectingVolume(B_cand, B_prev) 
+        + sfc_params_.W_progress * progress;
 }
 
 double SphericalSFC::getIntersectingVolume(Sphere& B_a, Sphere& B_b)

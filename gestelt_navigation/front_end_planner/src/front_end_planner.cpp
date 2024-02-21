@@ -26,8 +26,10 @@ void FrontEndPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   pnh.param("sfc/mult_stddev_x", sfc_params.mult_stddev_x, -1.0);
   pnh.param("sfc/mult_stddev_y", sfc_params.mult_stddev_y, -1.0);
   pnh.param("sfc/mult_stddev_z", sfc_params.mult_stddev_z, -1.0);
+
   pnh.param("sfc/W_cand_vol", sfc_params.W_cand_vol, -1.0);
   pnh.param("sfc/W_intersect_vol", sfc_params.W_intersect_vol, -1.0);
+  pnh.param("sfc/W_progress", sfc_params.W_progress, -1.0);
 
   pnh.param("sfc/min_sphere_vol", sfc_params.min_sphere_vol, -1.0);
   pnh.param("sfc/max_sphere_vol", sfc_params.max_sphere_vol, -1.0);

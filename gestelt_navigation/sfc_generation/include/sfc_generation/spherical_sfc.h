@@ -4,7 +4,9 @@
 #include <sfc_generation/sfc_base.h>
 #include "halton_enum.h"    // For deterministic sampling
 #include "halton_sampler.h" // For deterministic sampling
+
 #include "nanoflann.hpp" // For nearest neighbors queries
+#include "KDTreeVectorOfVectorsAdaptor.h" // For nearest neighbors queries
 
 #include <random>
 #include <chrono>
@@ -177,8 +179,11 @@ public: // Public structs
     double mult_stddev_x; // Multiplier for x standard deviation in sampling 
     double mult_stddev_y; // Multiplier for x standard deviation in sampling 
     double mult_stddev_z; // Multiplier for x standard deviation in sampling 
+
+    /* Scoring metric*/
     double W_cand_vol;    // Weight of candidate volume
     double W_intersect_vol; // Weight of intersection of volumes
+    double W_progress; // Weight for progress along guide path
 
     double min_sphere_vol; // Minimum volume of sphere
     double max_sphere_vol; // Maximum volume of spheres
@@ -222,7 +227,6 @@ public: // Public structs
 
 public:
   SphericalSFC(std::shared_ptr<GridMap> grid_map, const SphericalSFCParams& sfc_params);
-
 
   /**
    * @brief Reset existing data structures used during planning
@@ -416,8 +420,8 @@ private: // Private members
   std::vector<SphericalSFC::Sphere> sfc_spheres_; // Waypoints of the spherical flight corridor
   SphericalSFC::SFCTrajectory sfc_traj_;          // SFC Trajectory 
 
-  KDTreeVectorOfVectorsAdaptor<my_vector_of_vectors_t, double>
-        my_kd_tree_t;
+  std::unique_ptr<KDTreeVectorOfVectorsAdaptor<std::vector<Eigen::Vector3d>, double>>   
+    guide_path_kdtree_; // KD Tree for guide path
 
   /* Data for Visualization */
   std::vector<Eigen::Vector3d> p_cand_vec_hist_; // history of candidate points
@@ -428,7 +432,7 @@ private: // Private members
   std::vector<Eigen::Vector3d> samp_dir_vec_; // vector of sampling vectors
   std::vector<Eigen::Vector3d> guide_points_vec_; // vector of sampling guide points
 
-
+  std::vector<Eigen::Vector3d> front_end_path_; // front_end path
 
 }; // class SphericalSFC
 

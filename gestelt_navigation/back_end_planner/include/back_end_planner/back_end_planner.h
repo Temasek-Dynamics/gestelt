@@ -178,8 +178,6 @@ private:
       }
     }
 
-
-
 private:
   template<typename ... Args>
   std::string str_fmt( const std::string& format, Args ... args )
