@@ -933,7 +933,7 @@ namespace poly_traj
             return;
         }
 
-        // This function solves ATx=b, then stores x in b
+        // This function solves A.T x = b, then stores x in b
         // The input b is required to be N*m, i.e.,
         // m vectors to be solved.
         void solveAdj(Eigen::MatrixXd &b) const
@@ -992,7 +992,9 @@ namespace poly_traj
         Eigen::Matrix3d headPVA; // Start PVA
         Eigen::Matrix3d tailPVA; // Goal PVA
         Eigen::VectorXd T1; // shape (N, 1) Vector of time duration of each piece
-        BandedSystem A;
+
+        // A : shape (2*M*s, 2*M*s) = (6*M, 6*M)
+        BandedSystem A; // M banded matrix in the literature
 
         //  b: shape (6 * N, 3)
         // 
@@ -1010,13 +1012,13 @@ namespace poly_traj
         //     cy_3_N  cy_3_N  cz_3_N;
         //     cy_4_N  cy_4_N  cz_4_N;      
         //     cy_5_N  cy_5_N  cz_5_N;] 
-        Eigen::MatrixXd b; 
+        Eigen::MatrixXd b;  // shape (6 * N, 3) Polynomial coefficients
 
         // Temp variables
         Eigen::VectorXd T2; // T1**2
         Eigen::VectorXd T3; // T1**3
-        Eigen::VectorXd T4;
-        Eigen::VectorXd T5;
+        Eigen::VectorXd T4; // T1**4
+        Eigen::VectorXd T5; // T1**5
         Eigen::MatrixXd gdC; // Gradient of cost w.r.t polynomial coefficients
 
     private:
@@ -1059,13 +1061,21 @@ namespace poly_traj
             return;
         }
 
+        /**
+         * @brief 
+         * 
+         * @tparam EIGENVEC 
+         * @param adjGdC G
+         * @param gdT P.D. of H/T
+         */
         template <typename EIGENVEC>
         void addPropCtoT(const Eigen::MatrixXd &adjGdC, EIGENVEC &gdT) const
         {
             Eigen::MatrixXd B1(6, 3), B2(3, 3);
 
             Eigen::RowVector3d negVel, negAcc, negJer, negSnp, negCrk;
-
+            
+            // For every segment except the last one
             for (int i = 0; i < N - 1; i++)
             {
                 negVel = -(b.row(i * 6 + 1) +
@@ -1108,14 +1118,21 @@ namespace poly_traj
 
             return;
         }
-
+        
+        /**
+         * @brief Assign G to p.d. of H w.r.t q. 
+         * From eqn (66) of MINCO paper
+         * 
+         * @tparam EIGENMAT 
+         * @param adjGdC 
+         * @param gradP 
+         */
         template <typename EIGENMAT>
-        void addPropCtoP(const Eigen::MatrixXd &adjGdC, EIGENMAT &gdInP) const
+        void addPropCtoP(const Eigen::MatrixXd &adjGdC, EIGENMAT &gradP) const
         {
             for (int i = 0; i < N - 1; i++)
             {
-                // gdInP.col(i) += adjGdC.row(6 * i + 5).transpose();
-                gdInP.col(i) = adjGdC.row(6 * i + 5).transpose(); // zxzx
+                gradP.col(i) = adjGdC.row(6 * i + 5).transpose(); // zxzx
             }
             return;
         }
@@ -1469,23 +1486,6 @@ namespace poly_traj
             for (int i = 0; i < N; i++) // for each segment
             {
 
-            //  b: shape (6 * N, 3)
-            // 
-            //     x-axis, y-axis, z-axis  
-            //   [ cy_0_0  cy_0_0  cz_0_0;  // Start of 1st segment
-            //     cy_1_0  cy_1_0  cz_1_0;      
-            //     cy_2_0  cy_2_0  cz_2_0;      
-            //     cy_3_0  cy_3_0  cz_3_0;
-            //     cy_4_0  cy_4_0  cz_4_0;      
-            //     cy_5_0  cy_5_0  cz_5_0;      
-            //     ...     ...      ... ;      
-            //     cy_0_N  cy_0_N  cz_0_N;  // Start of n-th segment
-            //     cy_1_N  cy_1_N  cz_1_N;      
-            //     cy_2_N  cy_2_N  cz_2_N;      
-            //     cy_3_N  cy_3_N  cz_3_N;
-            //     cy_4_N  cy_4_N  cz_4_N;      
-            //     cy_5_N  cy_5_N  cz_5_N;] 
-
                 // objective += 36.0 * b.row(6 * i + 3).squaredNorm() * T1(i) +          // 36  * c3^2     * t
                 //              144.0 * b.row(6 * i + 4).dot(b.row(6 * i + 3)) * T2(i) + // 144 * c3 * c4  * t^2
                 //              192.0 * b.row(6 * i + 4).squaredNorm() * T3(i) +         // 192 * c4^2     * t^3 
@@ -1565,7 +1565,7 @@ namespace poly_traj
                 // Block of size (6,3) at (0,0), (6,0), ... (6*(N-1), 0)
                 // Reverse rowwise (i.e. left to right -> right to left)
 
-                // To trajectory, append (time duration of each piece, 5th order polynomial coefficients)
+                // To trajectory, append (time duration of each piece, 5th order polynomial coefficients of 3 axes (x,y,z))
                 traj.emplace_back(T1(i), b.block<6, 3>(6 * i, 0).transpose().rowwise().reverse());
             }
             return traj;
@@ -1618,17 +1618,33 @@ namespace poly_traj
             return pts;
         }
 
+        /**
+         * @brief Get the Grad2 T P object
+         * 
+         * @tparam EIGENVEC 
+         * @tparam EIGENMAT 
+         * @param gdT gradient of H w.r.t T
+         * @param gradP gradient of H w.r.t P
+         */
         template <typename EIGENVEC, typename EIGENMAT>
         void getGrad2TP(EIGENVEC &gdT,
-                               EIGENMAT &gdInPs)
+                        EIGENMAT &gradP)
         {
-            solveAdjGradC(gdC);
+            // Solves A.T x = gdC 
+            //      or (M.T) G = p.d(F w.r.t c)  eqn (63)
+            // then store the result in gdC.
+            // Therefore gdc = G
+            solveAdjGradC(gdC); 
+
+            // eqn (70): p.d.(H/T_i) = p.d.(F/T_i) - Tr{ G_i.T * p.d.(E_i/T_i) * c_i}
             addPropCtoT(gdC, gdT);
-            addPropCtoP(gdC, gdInPs);
+
+            // eqn (66): p.d.(H/q) = (G_1.T * e1, ..., G_(M-1).T * e1)
+            addPropCtoP(gdC, gradP);
         }
 
         /**
-         * @brief Add gradient to this optimizer
+         * @brief Sets all gradients to 0 and start adding the initial cost
          * 
          * @tparam EIGENVEC 
          * @param gdT 
@@ -1638,8 +1654,6 @@ namespace poly_traj
         void initGradCost(  EIGENVEC &gdT,
                             double &cost)
         {
-            // printf( "gdInPs=%d\n", gdInPs.size() );
-
             gdT.setZero();
             gdC.setZero();
             cost = getTrajJerkCost();
@@ -1656,10 +1670,10 @@ namespace poly_traj
                                      const Eigen::Vector3d &ci,
                                      double &cost,
                                      EIGENVEC &gdT,
-                                     EIGENMAT &gdInPs)
+                                     EIGENMAT &gradP)
         {
             gdT.setZero();
-            gdInPs.setZero();
+            gradP.setZero();
             gdC.setZero();
 
             cost = getTrajJerkCost();
@@ -1668,9 +1682,9 @@ namespace poly_traj
 
             addTimeIntPenalty(cons, idxHs, cfgHs, vmax, amax, ci, cost, gdT, gdC);
 
-            solveAdjGradC(gdC);
+            solveAdjGradC(gdC); //gdC become G
             addPropCtoT(gdC, gdT);
-            addPropCtoP(gdC, gdInPs);
+            addPropCtoP(gdC, gradP);
         }
 
         EIGEN_MAKE_ALIGNED_OPERATOR_NEW;

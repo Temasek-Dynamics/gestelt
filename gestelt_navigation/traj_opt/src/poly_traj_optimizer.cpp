@@ -136,8 +136,10 @@ namespace ego_planner
     // from virtual time t to real time T
     Eigen::VectorXd T(opt->piece_num_);
     opt->VirtualT2RealT(t, T);
-
-    Eigen::VectorXd gradT(opt->piece_num_); // P.D. of costs w.r.t time t, A vector of size (M, 1)
+    
+    // gradT: P.D. of objective function H w.r.t time T, A vector of size (M, 1)
+    //        Each element is a value of the gradient
+    Eigen::VectorXd gradT(opt->piece_num_); 
     double smoo_cost = 0, time_cost = 0;
     Eigen::VectorXd obs_swarm_feas_qvar_costs(4); // Vector of costs containing (Static obstacles, swarm, dynamic, feasibility, qvar)
 
@@ -151,8 +153,8 @@ namespace ego_planner
     // std::cout << "[optimizeTrajectorySFC] inner_cstr_pts_ size " << opt->inner_cstr_pts_.cols() << std::endl;
 
     /* 1. Smoothness cost */
-    // smoo_cost is the cost of the jerk minimization trajectory
-    opt->initAndGetSmoothnessGradCost2PT(gradT, smoo_cost); 
+    // smoo_cost is trajectory jerk cost
+    opt->initAndGetSmoothnessGradCost2PT(gradT, smoo_cost); // calls initGradCost(gdT, cost)
 
     /** 2. Time integral cost 
       *   2a. Static obstacle cost
@@ -162,10 +164,10 @@ namespace ego_planner
     */
     opt->addPVAGradCost2CT_SFC(gradT, obs_swarm_feas_qvar_costs, opt->cps_num_perPiece_); 
 
-    if (opt->iter_num_ > 3 && smoo_cost / opt->piece_num_ < 10.0) // 10.0 is an experimental value that indicates the trajectory is smooth enough.
-    {
-      opt->roughlyCheckConstraintPoints();
-    }
+    // if (opt->iter_num_ > 3 && smoo_cost / opt->piece_num_ < 10.0) // 10.0 is an experimental value that indicates the trajectory is smooth enough.
+    // {
+    //   opt->roughlyCheckConstraintPoints();
+    // }
 
     opt->jerkOpt_.getGrad2TP(gradT, gradP);
     // time_cost += opt->rho_ * T(0) * piece_nums;  // same t
