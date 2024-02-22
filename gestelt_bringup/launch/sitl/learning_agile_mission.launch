@@ -1,8 +1,7 @@
 <launch>
   <arg name="LAUNCH_DRONE_NODE" default="false"/>
   <arg name="platform" default="laptop"/>
-
-
+  <arg name="record" default="true"/>
    <!--if remotely launch nodes in the drone-->
   <group if="$(arg LAUNCH_DRONE_NODE)">
     <machine name="any" user="rock" password="rock" address="172.20.10.3" 
@@ -15,7 +14,7 @@
 
 
  
-  <node pkg="gestelt_bringup" name="mission" type="learning_agile_mission.py" 
+  <node pkg="gestelt_bringup" name="mission" type="learning_agile_mission.py" output="screen"
   machine="any">
         <param name="is_simulation" value="True"/>
   </node>
@@ -40,7 +39,7 @@
 
 
 
-  <node pkg="rosbag" type="record" name="record" output="screen" args="-o $(find gestelt_bringup)/data/
+  <node if="$(arg record)" pkg="rosbag" type="record" name="record" output="screen" args="-o $(find gestelt_bringup)/data/
   $(arg record_topics)"/>
 
 
