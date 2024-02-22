@@ -45,7 +45,7 @@ roslaunch trajectory_server trajectory_server_node.launch rviz_config:=gz_sim LA
 
 # Start up script to send commands
 CMD_3="
-roslaunch gestelt_bringup learning_agile_mission.launch platform:='drone' LAUNCH_DRONE_NODE:=true
+roslaunch gestelt_bringup learning_agile_mission.launch platform:='drone' LAUNCH_DRONE_NODE:=true record:=false
 "
 
 # disarm drone
@@ -66,7 +66,7 @@ then
     sleep 1
     tmux send-keys -t $SESSION:0.2 "$SOURCE_WS $EXPORT_ROS_MASTER_URI" #C-m 
     sleep 1
-    tmux send-keys -t $SESSION:0.3 "$SOURCE_WS $EXPORT_ROS_MASTER_URI $CMD_3" #C-m
+    tmux send-keys -t $SESSION:0.3 "$SOURCE_WS $EXPORT_ROS_MASTER_URI $CMD_3" C-m
 fi
 
 # Attach session on the first window

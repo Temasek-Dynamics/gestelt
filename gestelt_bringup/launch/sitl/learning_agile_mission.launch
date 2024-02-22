@@ -14,7 +14,7 @@
 
 
  
-  <node pkg="gestelt_bringup" name="mission" type="learning_agile_mission.py" output="screen"
+  <node pkg="gestelt_bringup" name="mission" type="learning_agile_mission.py" 
   machine="any">
         <param name="is_simulation" value="True"/>
   </node>
