@@ -1,32 +1,20 @@
 <launch>
-  <arg name="LAUNCH_DRONE_NODE" default="false"/>
   <arg name="platform" default="laptop"/>
-  <arg name="record" default="true"/>
-   <!--if remotely launch nodes in the drone-->
-  <group if="$(arg LAUNCH_DRONE_NODE)">
-    <machine name="any" user="rock" password="rock" address="172.20.10.3" 
-    env-loader="~/gestelt_ws/src/gestelt/gestelt_bringup/scripts/drone_remote_launch_env.sh" />
-  </group>
-  <!--else launch local node-->
-  <group unless="$(arg LAUNCH_DRONE_NODE)">
-    <machine name="any" address="localhost" />
-  </group>
-
+  <arg name="record" default="false"/>
 
  
-  <node pkg="gestelt_bringup" name="mission" type="learning_agile_mission.py" 
-  machine="any">
+  <node pkg="gestelt_bringup" name="mission" type="learning_agile_mission.py" >
         <param name="is_simulation" value="True"/>
   </node>
 
-  <node pkg="gestelt_bringup" name="learning_agile_agent" type="learning_agile_node.py" output="screen" 
-  machine="any">  
+  <node pkg="gestelt_bringup" name="learning_agile_agent" type="learning_agile_node.py" output="screen" >  
       <param name="hardware_platform" value="$(arg platform)"/>
   </node>
     
 
   
-
+  <!--for running on the Radxa, This record does not start, 
+  instead rosbag record will run on the laptop, in a seperate launch-->
   <arg name="record_topics" default="/mavros/setpoint_raw/local 
   /mavros/local_position/pose 
   /mavros/setpoint_raw/attitude 

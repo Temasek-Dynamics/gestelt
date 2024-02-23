@@ -397,7 +397,7 @@
             <far>7.5</far>
           </clip>
         </camera>
-        <plugin filename="libgazebo_ros_openni_kinect.so" name="camera_controller">
+        <!-- <plugin filename="libgazebo_ros_openni_kinect.so" name="camera_controller">
           <cameraName>camera</cameraName>
           <robotNamespace></robotNamespace>
           <alwaysOn>true</alwaysOn>
@@ -415,7 +415,7 @@
           <distortion_k3>0.0</distortion_k3>
           <distortion_t1>0.0</distortion_t1>
           <distortion_t2>0.0</distortion_t2>
-        </plugin>
+        </plugin> -->
       </sensor>
     </link>
     <joint name="depth_camera_joint" type="fixed">

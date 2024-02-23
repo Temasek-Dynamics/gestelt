@@ -1,16 +1,4 @@
 <launch>
-    <arg name="LAUNCH_DRONE_NODE" default="false"/>
-    
-
-       <!--if remotely launch nodes in the drone-->
-    <group if="$(arg LAUNCH_DRONE_NODE)">
-        <machine name="any" user="rock" password="rock" address="172.20.10.3" 
-        env-loader="~/gestelt_ws/src/gestelt/gestelt_bringup/scripts/drone_remote_launch_env.sh" />
-    </group>
-    <!--else launch local node-->
-    <group unless="$(arg LAUNCH_DRONE_NODE)">
-        <machine name="any" address="localhost" />
-    </group>
 
     <arg name="drone_id" default="0"/>
     <!-- size of map, change the size inflate x, y, z according to your application -->
@@ -27,7 +15,7 @@
     <arg name="bag_file_prefix" default="~/gestelt/data/flight_data" />
     
     <!-- Trajectory server -->
-    <node pkg="trajectory_server" name="trajectory_server" type="traj_server_node" output="screen" machine="any">
+    <node pkg="trajectory_server" name="trajectory_server" type="traj_server_node" output="screen">
         <param name="drone_id" value="$(arg drone_id)"/>
         <param name="origin_frame" value="$(arg drone_origin_frame)"/>
 

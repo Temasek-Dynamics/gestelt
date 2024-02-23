@@ -38,14 +38,16 @@ roslaunch gestelt_bringup sitl_drone.launch
 
 # Start up drone commander (Handles taking off, execution of mission and landing etc.)
 CMD_1="
-roslaunch trajectory_server trajectory_server_node.launch rviz_config:=gz_sim LAUNCH_DRONE_NODE:=true
+roslaunch trajectory_server trajectory_server_node.launch rviz_config:=gz_sim
 "
 
-
+CMD_2="
+roslaunch gestelt_bringup record.launch
+"
 
 # Start up script to send commands
 CMD_3="
-roslaunch gestelt_bringup learning_agile_mission.launch platform:='drone' LAUNCH_DRONE_NODE:=true
+roslaunch gestelt_bringup learning_agile_mission.launch platform:='drone'
 "
 
 # disarm drone
@@ -64,7 +66,7 @@ then
     sleep 1
     tmux send-keys -t $SESSION:0.1 "$SOURCE_WS $EXPORT_ROS_MASTER_URI " #C-m $CMD_1
     sleep 1
-    tmux send-keys -t $SESSION:0.2 "$SOURCE_WS $EXPORT_ROS_MASTER_URI" #C-m 
+    tmux send-keys -t $SESSION:0.2 "$SOURCE_WS $EXPORT_ROS_MASTER_URI $CMD_2" C-m 
     sleep 1
     tmux send-keys -t $SESSION:0.3 "$SOURCE_WS $EXPORT_ROS_MASTER_URI " #C-m $CMD_3
 fi

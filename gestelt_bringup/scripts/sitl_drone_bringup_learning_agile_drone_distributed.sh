@@ -47,11 +47,6 @@ CMD_1="
 roslaunch trajectory_server trajectory_server_node.launch rviz_config:=gz_sim
 "
 
-# Start up minimum snap trajectory planner and sampler 
-CMD_2="
-roslaunch trajectory_planner trajectory_planner_node.launch
-"
-
 # Start up script to send commands
 CMD_3="roslaunch gestelt_bringup learning_agile_mission.launch platform:='drone'  record:=false"
 
@@ -67,7 +62,7 @@ then
     tmux split-window -t $SESSION:0.1 -h
     tmux split-window -t $SESSION:0.0 -h
 
-    tmux send-keys -t $SESSION:0.0 "$SOURCE_PX4_AUTOPILOT $CMD_0" #C-m 
+    tmux send-keys -t $SESSION:0.0 "$SOURCE_PX4_AUTOPILOT " #C-m 
     sleep 2
     tmux send-keys -t $SESSION:0.1 "$SOURCE_WS $EXPORT_ROS_MASTER_URI $CMD_1" C-m 
     sleep 1
