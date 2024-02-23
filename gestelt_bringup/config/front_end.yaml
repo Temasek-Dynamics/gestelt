@@ -11,7 +11,7 @@ front_end:
   planner_frequency: 2.0
 
 sfc:
-  max_iterations: 50     # Corresponds to maximum number of spheres
+  max_iterations: 100     # Corresponds to maximum number of spheres
   debug_viz: true        # If true, publish visualization for debugging
   # Sampling
   max_sample_points: 100 # Maximum sample points for candidate sphere
@@ -26,7 +26,7 @@ sfc:
 
   W_cand_vol: 5         # Weight for candidate sphere volume
   W_intersect_vol: 1    # Weight for volume of intersection between spheres
-  W_progress: 20        # Weight for progress along guide path
+  W_progress: 100        # Weight for progress along guide path
 
   # Criteria for valid spheres
   min_sphere_vol: 0.01 # (m^3) Minimum volume of sphere
