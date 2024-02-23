@@ -146,7 +146,7 @@ class LearningAgileAgent():
         self.gate_center = gate_center
         self.gate_pose = gate_pose
         self.t_tra_abs =t_tra_abs
-        self.max_tra_w=60
+        self.max_tra_w=max_tra_w
 
     def problem_definition(self,drone_init_quat=None,gazebo_sim=False,dyn_step=0.002):
         """
@@ -376,20 +376,20 @@ def main():
     
     # receive the start and end point, and the initial gate point, from ROS side
     # rewrite the inputs
-    learing_agile_agent.receive_mission_states(start=np.array([0,1.8,1.4]),
-                                                end=np.array([0,-1.8,1.4]),
-                                                gate_center=np.array([1.2,0,1.4]),
-                                                gate_pose=np.array([0,-0.707/2,0]),
-                                                t_tra_abs=1,
-                                                max_tra_w=60)
+    # learing_agile_agent.receive_mission_states(start=np.array([0,1.8,1.4]),
+    #                                             end=np.array([0,-1.8,1.4]),
+    #                                             gate_center=np.array([1.2,0,1.4]),
+    #                                             gate_pose=np.array([0,-0.707/2,0]),
+    #                                             t_tra_abs=1,
+    #                                             max_tra_w=60)
 
     #------------------------------python hover test--------------------------------------#
-    # learing_agile_agent.receive_mission_states(start=np.array([0,1.8,1.4]),
-    #                                             end=np.array([0,1.8,1.4]),
-    #                                             gate_center=np.array([0,1.8,1.4]),
-                                                # gate_pose=np.array([0,0,0]),
-                                                # t_tra_abs=1,
-                                                # max_tra_w=0)
+    learing_agile_agent.receive_mission_states(start=np.array([0,1.8,1.4]),
+                                                end=np.array([0,1.8,1.4]),
+                                                gate_center=np.array([0,1.8,1.4]),
+                                                gate_pose=np.array([0,0,0]),
+                                                t_tra_abs=1,
+                                                max_tra_w=0)
 
     # #------------------------------------------------------------------------------#
     # problem definition

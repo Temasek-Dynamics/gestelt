@@ -102,21 +102,21 @@ class LearningAgileAgentNode():
         ## receive the start and end point, and the initial gate point, from ROS side
         # rewrite the inputs
 
-        self.learning_agile_agent.receive_mission_states(start=self.start_point,
-                                                         end=self.final_point,
-                                                         gate_center=self.gate_point,
-                                                         gate_pose=np.array([0,-0.707/2,0]),
-                                                        t_tra_abs=1,
-                                                        max_tra_w=60)
+        # self.learning_agile_agent.receive_mission_states(start=self.start_point,
+        #                                                  end=self.final_point,
+        #                                                  gate_center=self.gate_point,
+        #                                                  gate_pose=np.array([0,-0.707/2,0]),
+        #                                                 t_tra_abs=1,
+        #                                                 max_tra_w=60)
 
 
         #------------------------------gazebo hover test--------------------------------------#
-        # self.learning_agile_agent.receive_mission_states(start=self.start_point,
-        #                                             end=self.final_point,
-        #                                             gate_center=self.gate_point,
-        #                                             gate_pose=np.array([0,-0.0,0]),
-        #                                         t_tra_abs=1,
-        #                                         max_tra_w=0)
+        self.learning_agile_agent.receive_mission_states(start=self.start_point,
+                                                    end=self.final_point,
+                                                    gate_center=self.gate_point,
+                                                    gate_pose=np.array([0,-0.0,0]),
+                                                t_tra_abs=1,
+                                                max_tra_w=0)
 
         
         # problem definition
