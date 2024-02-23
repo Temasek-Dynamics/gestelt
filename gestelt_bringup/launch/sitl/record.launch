@@ -2,17 +2,18 @@
   <arg name="record_topics" default="/mavros/setpoint_raw/local 
   /mavros/local_position/pose 
   /mavros/setpoint_raw/attitude 
-  /planner/sample_trajectory 
-  /learning_agile_agent/traverse_time 
-  /learning_agile_agent/gate_centroid   
   /learning_agile_agent/callback_runtime
-  /learning_agile_agent/solver_input_state"/>
+ "/>
 
 
-  <!-- <node pkg="rosbag" type="record" name="record" output="screen" args="-o $(find gestelt_bringup)/data/
-  $(arg record_topics)"/> -->
+  <node pkg="rosbag" type="record" name="record" output="screen" args="-o $(find gestelt_bringup)/data/
+  $(arg record_topics)"/> 
 
   <!-- record all topics -->
-  <node pkg="rosbag" type="record" name="record" output="screen" args="-a -o $(find gestelt_bringup)/data/"/>
+  <!-- <node pkg="rosbag" type="record" name="record" output="screen" args="-a -o $(find gestelt_bringup)/data/"/> -->
 
   </launch>
+
+
+    <!-- /learning_agile_agent/traverse_time /planner/sample_trajectory   /learning_agile_agent/solver_input_state 
+  /learning_agile_agent/gate_centroid    -->

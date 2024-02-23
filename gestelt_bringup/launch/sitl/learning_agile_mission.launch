@@ -1,5 +1,5 @@
 <launch>
-  <arg name="platform" default="laptop"/>
+  <arg name="platform" default="laptop"/> <!-- for the python.prof check-->
   <arg name="record" default="false"/>
 
  

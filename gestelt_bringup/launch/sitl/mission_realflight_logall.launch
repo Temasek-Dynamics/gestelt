@@ -11,6 +11,6 @@
   
   <!-- Start rosbag to record setpoint_raw and local_position -->
   <!-- path have to be absolute path-->
-  <node pkg="rosbag" type="record" name="record" output="screen" args="-a -o /home/rock/gestelt_ws/data/flight_data/"/>
+  <!-- <node pkg="rosbag" type="record" name="record" output="screen" args="-a -o /home/rock/gestelt_ws/data/flight_data/"/> -->
 
 </launch>
