@@ -541,7 +541,7 @@ class OCSys:
         self.acados_solver.set(self.n_nodes, "x", self.state_traj_opt[-1,:])
 
         # set the end desired goal
-        weight = 0.6*casadi.exp(-10*(dt*self.n_nodes-t_tra)**2) #gamma should increase as the flight duration decreases
+        weight = 0.0*casadi.exp(-10*(dt*self.n_nodes-t_tra)**2) #gamma should increase as the flight duration decreases
         self.acados_solver.set(self.n_nodes, "p",np.concatenate((goal_state,
                                                                  current_input,
                                                                  np.concatenate((tra_pos,tra_q)),

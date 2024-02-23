@@ -101,7 +101,7 @@ class LearningAgileAgent():
         
         self.hl_para = [0,0,0,0,0,0,0]
         self.hl_variable = [self.hl_para]
-        self.max_tra_w=60
+        
         ##---------------------gate initialization ------------------------##
         self.moving_gate.let_gate_move()
         self.gate_move = self.moving_gate.gate_move
@@ -123,12 +123,16 @@ class LearningAgileAgent():
         self.pos_vel_att_cmd_n = [self.pos_vel_att_cmd]
 
         # FIXME Temporally set the traversal time here, for both python and gazebo simulation
-        self.t_tra_abs =1
+        
     
-    def receive_terminal_states(self,
+    def receive_mission_states(self,
                                 start,
                                 end,
-                                gate_center=np.array([0,0,0.5])):
+                                gate_center=np.array([0,0,1.5]),
+                                gate_pose=np.array([0,0,0]),
+                                t_tra_abs=1,
+                                max_tra_w=0,
+                                ):
         """
         receive the start and end point defined in the mission file
 
@@ -138,7 +142,11 @@ class LearningAgileAgent():
         self.env_inputs[3:6]=end
         self.start_point = start
         self.final_point = end
+
         self.gate_center = gate_center
+        self.gate_pose = gate_pose
+        self.t_tra_abs =t_tra_abs
+        self.max_tra_w=60
 
     def problem_definition(self,drone_init_quat=None,gazebo_sim=False,dyn_step=0.002):
         """
@@ -233,7 +241,7 @@ class LearningAgileAgent():
 
         angle=-0.785# rad 0.707
         rod_ang=np.tan(angle/2)
-        out[3:6]=np.array([0,-0.707/2,0]) 
+        out[3:6]=self.gate_pose  
         out[6]=self.t_tra_abs-self.i*0.01
         # end FIXME
 
@@ -368,14 +376,21 @@ def main():
     
     # receive the start and end point, and the initial gate point, from ROS side
     # rewrite the inputs
-    learing_agile_agent.receive_terminal_states(start=np.array([0,1.8,1.4]),
+    learing_agile_agent.receive_mission_states(start=np.array([0,1.8,1.4]),
                                                 end=np.array([0,-1.8,1.4]),
-                                                gate_center=[1.2,0,1.4])
+                                                gate_center=np.array([1.2,0,1.4]),
+                                                gate_pose=np.array([0,-0.707/2,0]),
+                                                t_tra_abs=1,
+                                                max_tra_w=60)
 
-    #------------------------------hover test--------------------------------------#
-    # learing_agile_agent.receive_terminal_states(start=np.array([0,1.8,1.4]),
+    #------------------------------python hover test--------------------------------------#
+    # learing_agile_agent.receive_mission_states(start=np.array([0,1.8,1.4]),
     #                                             end=np.array([0,1.8,1.4]),
-    #                                             gate_center=[0,1.8,1.4])
+    #                                             gate_center=np.array([0,1.8,1.4]),
+                                                # gate_pose=np.array([0,0,0]),
+                                                # t_tra_abs=1,
+                                                # max_tra_w=0)
+
     # #------------------------------------------------------------------------------#
     # problem definition
     learing_agile_agent.problem_definition(dyn_step=0.002)
