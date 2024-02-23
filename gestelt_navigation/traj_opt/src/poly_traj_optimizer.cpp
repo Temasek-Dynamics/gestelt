@@ -297,8 +297,6 @@ namespace ego_planner
 
         // Flag conditions to make sure that point stays as close as possible to the center of the sphere
         bool outside_sph = obs_static_pen > 0; // If current point is outside the sphere/on boundary 
-        // bool inside_sph_but_within_buffer_dist = !outside_sph && (spheres_radius_[i] - sph_ctr_to_pos_dist < sp_buffer); // if point is inside but within `sp_buffer` distance of boundary
-        
         if (outside_sph){ 
         
           // std::cout << "Segment " << i << ": ," << "Penalty " << obs_static_pen << ", POINT (" << pos.transpose() 
