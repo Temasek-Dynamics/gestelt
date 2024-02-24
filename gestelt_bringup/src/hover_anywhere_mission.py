@@ -223,7 +223,7 @@ def main():
     # (0.0,0.0,0.0))
     # (None,None,None)) means no constraint
     accel_list.append(create_accel(-f*np.sin(angle_rad),0.0,g+f*np.cos(angle_rad)))
-    accel_list.append(create_vel(None,None,None))
+    accel_list.append(create_accel(None,None,None))
     # accel_list.append(create_vel(None,None,None))
     # accel_list.append(create_vel(None,None,None)) 
 
