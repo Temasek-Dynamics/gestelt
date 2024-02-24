@@ -40,13 +40,10 @@ CMD_1="
 roslaunch trajectory_server trajectory_server_node.launch rviz_config:=gz_sim
 "
 
-# Start up minimum snap trajectory planner and sampler 
-CMD_2="
-roslaunch trajectory_planner trajectory_planner_node.launch
-"
+
 
 # Start up script to send commands
-CMD_3="roslaunch gestelt_bringup learning_agile_mission.launch platform:='laptop' LAUNCH_DRONE_NODE:=false record:=true"
+CMD_3="taskset -c 1 roslaunch gestelt_bringup learning_agile_mission.launch platform:='laptop' LAUNCH_DRONE_NODE:=false record:=true"
 
 # disarm drone
 # CMD_4="rosservice call /drone_commander/disarm"

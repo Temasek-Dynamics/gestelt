@@ -168,6 +168,11 @@ class LearningAgileAgentNode():
         self.drone_state=np.concatenate((self.drone_pos,self.drone_vel,self.drone_quat),axis=0).tolist()
         input,callback_runtime,current_pred_traj,NO_SOLUTION_FLAG=self.learning_agile_agent.solve_problem_gazebo(self.drone_state)
         
+        #################################################
+        ##-pub the solver input state/solver comp time-##
+        #################################################        
+        # publish the solver input and solver performance
+        self.mpc_runtime_pub_.publish(callback_runtime)
 
         # stop the mission if no solution is found
         if NO_SOLUTION_FLAG:
@@ -228,11 +233,7 @@ class LearningAgileAgentNode():
 
 
             
-            #################################################
-            ##-pub the solver input state/solver comp time-##
-            #################################################        
-            # publish the solver input and solver performance
-            self.mpc_runtime_pub_.publish(callback_runtime)
+
             
             
             #################################################
