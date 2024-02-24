@@ -178,7 +178,7 @@ def main():
         
         if (MISSION_MODE):
             # Already in MISSION 
-            time.sleep(5)
+            # time.sleep(5)
             break
         elif (not HOVER_MODE):
             # IDLE -> TAKE OFF -> HOVER
@@ -211,11 +211,11 @@ def main():
         # world frame is the initial position of the drone
         # map frame is the origin of the map
         # waypoints are under the map frame, will be transformed to world frame
-    for i in range(4):
-        waypoints.append(create_pose(1.2,-0.0,1.4)) # 1.2,-0.0,1.4
-        waypoints.append(create_pose(0.0,-1.2,1.4))# 0.0,-1.8,1.4
-        waypoints.append(create_pose(-1.2, 0.0, 1.4))
-        waypoints.append(create_pose(0.0,1.2,1.4))
+    for i in range(2):
+        waypoints.append(create_pose(1.2,-0.0,1.5)) # 1.2,-0.0,1.4
+        waypoints.append(create_pose(0.0,-1.2,1.2))# 0.0,-1.8,1.4
+        waypoints.append(create_pose(-1.2, 0.0, 1.2))
+        waypoints.append(create_pose(0.0,1.2,1.2))
 
         # waypoints.append(create_pose(0.0,0.0,1.2))# 5.0,2.0,3
 
@@ -242,9 +242,9 @@ def main():
 
     
     # end of the trajectory
-    waypoints.append(create_pose(0.0,1.2,1.4))
-    accel_list.append(create_vel(None,None,None))
-    vel_list.append(create_vel(0,0,0))
+    waypoints.append(create_pose(0.0,1.2,1.2))
+    accel_list.append(create_accel(None,None,None))
+    vel_list.append(create_vel(None,None,None))
 
     pub_waypoints(waypoints,accel_list,vel_list)
     rospy.spin()
