@@ -101,13 +101,17 @@ def main():
     HOVER_MODE = False
     MISSION_MODE = False
     hover_count=0
-    hover_duration=5*pub_freq # 5 seconds
+    hover_duration=2*pub_freq # 2 seconds
     ramp_steps = 25*1
     t=0
 
     last_pos_x = 0
     last_pos_y = 0
     last_pos_z = 0
+
+    UP=False
+    DOWN=True
+
     while not rospy.is_shutdown():
         get_server_state_callback()
 
@@ -121,38 +125,8 @@ def main():
              # Send waypoints to UAVs
             # frame is ENU
             print(f"Sending single setpoint to UAVs")
-            
-            
-            setpoint = PositionTarget()
-            setpoint.header.stamp = rospy.Time.now()
-            setpoint.header.frame_id = "world"
-            setpoint.coordinate_frame = PositionTarget.FRAME_LOCAL_NED
-            setpoint.type_mask = PositionTarget.IGNORE_VX+PositionTarget.IGNORE_VY+PositionTarget.IGNORE_VZ+PositionTarget.IGNORE_AFX + PositionTarget.IGNORE_AFY + PositionTarget.IGNORE_AFZ + PositionTarget.IGNORE_YAW_RATE
-            
-            # setpoint.velocity.x = 3
-            # setpoint.velocity.y = 3
-            # setpoint.velocity.z = 3
-            # last_pos_x +=setpoint.velocity.x*(1/pub_freq)
-            # last_pos_y +=setpoint.velocity.y*(1/pub_freq)
-            # last_pos_z +=setpoint.velocity.z*(1/pub_freq)
-            
-            last_pos_x = 1.5
-            last_pos_y = 0
-            last_pos_z = 0
-            setpoint.position.x = last_pos_x
-            setpoint.position.y = last_pos_y
-            setpoint.position.z = last_pos_z+1.2
-           
-            setpoint.acceleration_or_force.x = 0
-            setpoint.acceleration_or_force.y = 0
-            setpoint.acceleration_or_force.z = 0
-            setpoint.yaw = 0
-            setpoint.yaw_rate = 0
-            single_setpoint_pub.publish(setpoint)
-
-
-            if t < ramp_steps:
-                t=t+1
+            break
+    
         elif (not HOVER_MODE):
             # IDLE -> TAKE OFF -> HOVER
             print("Setting to HOVER mode!")
@@ -166,9 +140,53 @@ def main():
 
         print("tick!")
         rate.sleep()
+    
+    # In the mission mode
+    while not rospy.is_shutdown():
+        # If current drone at 1.5m, send to down to 1.2m
+        # vice versa
+        t=t+1
 
+        if t==10*pub_freq:
+            t=0
+            if UP:
+                last_pos_z=0.0
+                UP=False
+                DOWN=True
+            elif DOWN:
+                last_pos_z=0.3
+                UP=True
+                DOWN=False
+
+
+        setpoint = PositionTarget()
+        setpoint.header.stamp = rospy.Time.now()
+        setpoint.header.frame_id = "world"
+        setpoint.coordinate_frame = PositionTarget.FRAME_LOCAL_NED
+        setpoint.type_mask = PositionTarget.IGNORE_VX+PositionTarget.IGNORE_VY+PositionTarget.IGNORE_VZ+PositionTarget.IGNORE_AFX + PositionTarget.IGNORE_AFY + PositionTarget.IGNORE_AFZ + PositionTarget.IGNORE_YAW_RATE\
+                            + PositionTarget.IGNORE_YAW
+        # setpoint.velocity.x = 3
+        # setpoint.velocity.y = 3
+        # setpoint.velocity.z = 3
+        # last_pos_x +=setpoint.velocity.x*(1/pub_freq)
+        # last_pos_y +=setpoint.velocity.y*(1/pub_freq)
+        # last_pos_z +=setpoint.velocity.z*(1/pub_freq)
+        
+        last_pos_x = 0.0
+        last_pos_y = 0.0
+
+        setpoint.position.x = last_pos_x
+        setpoint.position.y = last_pos_y
+        setpoint.position.z = last_pos_z+1.2
+        
+        setpoint.acceleration_or_force.x = 0
+        setpoint.acceleration_or_force.y = 0
+        setpoint.acceleration_or_force.z = 0
+
+        single_setpoint_pub.publish(setpoint)
    
-    rospy.spin()
+        print("tick!")
+        rate.sleep()
 
 if __name__ == '__main__':
     main()

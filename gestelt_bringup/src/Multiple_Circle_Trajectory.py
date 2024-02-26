@@ -204,7 +204,7 @@ def main():
     # side length 5m
     g=-9.81 #m/s^2  # down force, negative
     f=1*(-g) #N  # up force, positive
-    angle=85
+    angle=60
     angle_rad=math.radians(angle)
     num_passes = 3  
         # 1/4 test
@@ -213,7 +213,7 @@ def main():
         # waypoints are under the map frame, will be transformed to world frame
     for i in range(num_passes):
 
-        waypoints.append(create_pose(1.5-0.01,0.0+0.01,1.5))   
+        waypoints.append(create_pose(1.5,0.0,1.5))   
         waypoints.append(create_pose(0.0,-1.5,1.2)) 
         waypoints.append(create_pose(-1.5, 0.0, 1.5))
         waypoints.append(create_pose(0.0,1.5,1.2))
