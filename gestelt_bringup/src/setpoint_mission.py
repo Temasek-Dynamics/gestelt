@@ -147,7 +147,7 @@ def main():
         # vice versa
         t=t+1
 
-        if t==6*pub_freq:
+        if t==10*pub_freq:
             t=0
             if UP:
                 last_pos_z=0.0
