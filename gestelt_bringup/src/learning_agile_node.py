@@ -3,6 +3,8 @@
 ## this file is for traversing moving narrow window
 import sys
 import os
+from multiprocessing import Process
+
 # acquire the current directory
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -38,28 +40,28 @@ class LearningAgileAgentNode():
         self.tra_NN_pub_freq = 100 # hz
 
         # drone state subscribers [position, velocity, orientation, angular velocity]
-        self.drone_pose_sub = rospy.Subscriber('/mavros/local_position/pose',PoseStamped, self.drone_state_pose_callback)
-        self.drone_twist_sub = rospy.Subscriber('/mavros/local_position/velocity_local',TwistStamped, self.drone_state_twist_callback)
+        self.drone_pose_sub = rospy.Subscriber('/mavros/local_position/pose',PoseStamped, self.drone_state_pose_callback, queue_size=1)
+        self.drone_twist_sub = rospy.Subscriber('/mavros/local_position/velocity_local',TwistStamped, self.drone_state_twist_callback, queue_size=1)
         
         # waypoints subscriber [start, end, gate]
         self.waypoints_sub = rospy.Subscriber('/planner/goals_learning_agile',Goals, self.mission_start_callback)
         
         # pos_vel_att_cmd command publisher
         # self.next_setpoint_pub = rospy.Publisher('/mavros/setpoint_raw/local', PositionTarget, queue_size=10)
-        self.next_attitude_setpoint_pub = rospy.Publisher('/mavros/setpoint_raw/attitude', AttitudeTarget, queue_size=10)
+        self.next_attitude_setpoint_pub = rospy.Publisher('/mavros/setpoint_raw/attitude', AttitudeTarget, queue_size=1)
 
-        self.gate_centroid_pub = rospy.Publisher('/learning_agile_agent/gate_centroid', PoseStamped, queue_size=10)
+        self.gate_centroid_pub = rospy.Publisher('/learning_agile_agent/gate_centroid', PoseStamped, queue_size=1)
         
         # Publisher of server events to trigger change of states for trajectory server 
-        self.server_event_pub = rospy.Publisher('/traj_server/command', CommanderCommand, queue_size=10)
+        self.server_event_pub = rospy.Publisher('/traj_server/command', CommanderCommand, queue_size=1)
         
         
         ##--------learning agile agent data----------------##
         # traverse time publisher
-        self.traverse_time_pub = rospy.Publisher('/learning_agile_agent/traverse_time', Float32, queue_size=10)
-        self.mpc_runtime_pub_ = rospy.Publisher('/learning_agile_agent/callback_runtime', Float32, queue_size=10)
+        # self.traverse_time_pub = rospy.Publisher('/learning_agile_agent/traverse_time', Float32, queue_size=1)
+        self.mpc_runtime_pub_ = rospy.Publisher('/learning_agile_agent/callback_runtime', Float32, queue_size=1)
         # self.solver_input_state_pub = rospy.Publisher('/learning_agile_agent/solver_input_state', PoseStamped, queue_size=10)
-        self.current_pred_traj_pub = rospy.Publisher('/learning_agile_agent/current_pred_traj', PoseArray, queue_size=10)
+        # self.current_pred_traj_pub = rospy.Publisher('/learning_agile_agent/current_pred_traj', PoseArray, queue_size=1)
         # timer for publishing setpoints
         self.terminal_waypoints_received = True
         
@@ -128,10 +130,16 @@ class LearningAgileAgentNode():
         # after receiving the waypoints, start the timer to run the learning agile agent
         
         # the traverse time is estimated in 100 hz
-        rospy.Timer(rospy.Duration(1/self.tra_NN_pub_freq), self.gate_state_estimation_timer_callback) 
+        # rospy.Timer(rospy.Duration(1/self.tra_NN_pub_freq), self.gate_state_estimation_timer_callback) 
         
         # # the MPC problem is solved in 100 hz
-        rospy.Timer(rospy.Duration(1/self.NMPC_pub_freq), self.setpoint_timer_callback)
+        # rospy.Timer(rospy.Duration(1/self.NMPC_pub_freq), self.setpoint_timer_callback)
+        rate = rospy.Rate(self.NMPC_pub_freq)
+        while not rospy.is_shutdown():
+            self.setpoint_timer_callback()
+            rate.sleep()
+            
+
           
       
     def gate_state_estimation_timer_callback(self, event):
@@ -158,7 +166,7 @@ class LearningAgileAgentNode():
         # self.gate_centroid_pub.publish(gate_centroid_msg)
         # self.traverse_time_pub.publish(traverse_time_msg)
     
-    def setpoint_timer_callback(self, event):
+    def setpoint_timer_callback(self):
         """
         this function solves the MPC problem and output drone PV, is called in 10 hz
         """
@@ -240,21 +248,21 @@ class LearningAgileAgentNode():
             ##---------pub the current pred traj-----------##
             #################################################
 
-            # publish the current pred traj
-            current_pred_traj_msg=PoseArray()
-            current_pred_traj_msg.header.stamp = rospy.Time.now()
-            current_pred_traj_msg.header.frame_id = "world"
-            for i in range(len(current_pred_traj)):
-                pose=Pose()
-                pose.position.x=current_pred_traj[i][0]
-                pose.position.y=current_pred_traj[i][1]
-                pose.position.z=current_pred_traj[i][2]
-                pose.orientation.w=current_pred_traj[i][6]
-                pose.orientation.x=current_pred_traj[i][7]
-                pose.orientation.y=current_pred_traj[i][8]
-                pose.orientation.z=current_pred_traj[i][9]
-                current_pred_traj_msg.poses.append(pose)
-            self.current_pred_traj_pub.publish(current_pred_traj_msg)
+            # # publish the current pred traj
+            # current_pred_traj_msg=PoseArray()
+            # current_pred_traj_msg.header.stamp = rospy.Time.now()
+            # current_pred_traj_msg.header.frame_id = "world"
+            # for i in range(len(current_pred_traj)):
+            #     pose=Pose()
+            #     pose.position.x=current_pred_traj[i][0]
+            #     pose.position.y=current_pred_traj[i][1]
+            #     pose.position.z=current_pred_traj[i][2]
+            #     pose.orientation.w=current_pred_traj[i][6]
+            #     pose.orientation.x=current_pred_traj[i][7]
+            #     pose.orientation.y=current_pred_traj[i][8]
+            #     pose.orientation.z=current_pred_traj[i][9]
+            #     current_pred_traj_msg.poses.append(pose)
+            # self.current_pred_traj_pub.publish(current_pred_traj_msg)
 
 
     def drone_state_pose_callback(self,msg):
@@ -295,7 +303,9 @@ def main():
 
     
 if __name__ == '__main__':
-    main()
+    process = Process(target=main())
+    process.start()
+    process.join()
     # parent_dir=current_dir+'/..'
     # output_dir=parent_dir+'/data/'
     # file_name=hardware_platform+'_running_time_statistics.prof'
