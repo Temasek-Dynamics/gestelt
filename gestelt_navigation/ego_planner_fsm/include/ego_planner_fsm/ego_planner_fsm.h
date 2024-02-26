@@ -515,7 +515,7 @@ private:
   }
 
   void logError(const std::string& str){
-    ROS_WARN_NAMED(node_name_, "UAV_%i: %s", 
+    ROS_ERROR_NAMED(node_name_, "UAV_%i: %s", 
       planner_manager_->pp_.drone_id, str.c_str());
   }
 

@@ -74,6 +74,8 @@ namespace ego_planner
   public:
     typedef std::unique_ptr<PolyTrajOptimizer> Ptr;
 
+    int cps_num_perPiece_;   // number of distinctive constraint points per piece
+
   private:
     std::shared_ptr<GridMap> grid_map_;
     AStar::Ptr a_star_;
@@ -88,7 +90,6 @@ namespace ego_planner
     // PtsChk_t pts_check_;
 
     int drone_id_;            // ID of drone
-    int cps_num_perPiece_;   // number of distinctive constraint points per piece
     int variable_num_;       // optimization variables
     int piece_num_;          // poly traj piece numbers
     int iter_num_;           // iteration of the solver
@@ -115,7 +116,8 @@ namespace ego_planner
 
     std::vector<double> spheres_radius_;                // Vector of sphere radius, size is no. of segments/pieces
     std::vector<Eigen::Vector3d> spheres_center_; // Vector of sphere centers, size is no. of segments/pieces
-    Eigen::MatrixXd inner_cstr_pts_; // inner constraint points of trajectory (excludes boundary points), this is finer than the inner CONTROL points
+    Eigen::MatrixXd inner_cstr_pts_xi_; // inner CONSTRAINT points of trajectory (excludes boundary points), this is finer than the inner CONTROL points
+    Eigen::MatrixXd inner_cstr_pts_q_; // inner CONSTRAINT points of trajectory (excludes boundary points), this is finer than the inner CONTROL points
 
   public:
     PolyTrajOptimizer(){}
@@ -982,6 +984,21 @@ namespace ego_planner
       return false;
     }
 
+    // /**
+    //  * @brief The LBFGS callback function to provide function and gradient evaluations given a current values of variables
+    //  * 
+    //  * @param func_data The user data sent for lbfgs_optimize() function by the client.
+    //  * @param x         The current values of variables.
+    //  * @param grad      The gradient vector. The callback function must compute
+    //  *                      the gradient values for the current variables.
+    //  * @param n         The number of variables.
+    //  * @return double   The value of the objective function for the current
+    //  *                          variables.
+    //  */
+    static double costFunctionCallback(void *func_data, const double *x, double *grad, const int n);
+
+
+
   private:
 
     /* Optimizer callbacks */
@@ -1018,9 +1035,24 @@ namespace ego_planner
                                  const double step, int n, int k, int ls);
 
     /* mappings between real world time and unconstrained virtual time */
+
+    /**
+     * @brief Convert from real to virtual time
+     * 
+     * @tparam EIGENVEC 
+     * @param RT 
+     * @param VT 
+     */
     template <typename EIGENVEC>
     void RealT2VirtualT(const Eigen::VectorXd &RT, EIGENVEC &VT);
 
+    /**
+     * @brief Convert from virtual to real time
+     * 
+     * @tparam EIGENVEC 
+     * @param RT 
+     * @param VT 
+     */
     template <typename EIGENVEC>
     void VirtualT2RealT(const EIGENVEC &VT, Eigen::VectorXd &RT);
 
@@ -1271,7 +1303,6 @@ namespace ego_planner
        */
       Eigen::MatrixXd gdp;
       double var;
-      // lengthVarianceWithGradCost2p(cps_.points, K, gdp, var);
       distanceSqrVarianceWithGradCost2p(cps_.points, gdp, var);
       // std::cout << "var=" << var <<std::endl;
 
@@ -1313,24 +1344,199 @@ namespace ego_planner
       visualization_->pubSVPairs(all_s_obs, all_v_obs, 0, Eigen::Vector4d(1, 0.5, 0, 1));
     }
 
+  public:
+    /* Constraint elimination methods */
     /**
-     * @brief The LBFGS callback function to provide function and gradient evaluations given a current values of variables
+     * @brief 
      * 
-     * @param func_data The user data sent for lbfgs_optimize() function by the client.
-     * @param x         The current values of variables.
-     * @param grad      The gradient vector. The callback function must compute
-     *                      the gradient values for the current variables.
-     * @param n         The number of variables.
-     * @return double   The value of the objective function for the current
-     *                          variables.
+     * @param xi  Decision variable
+     * @param o   Center of sphere 
+     * @param r   radius of sphere
+     * @return Eigen::MatrixXd 
      */
-    static double costFunctionCallback(void *func_data, const double *x, double *grad, const int n);  
+    Eigen::Vector3d f_B_single(
+      const Eigen::Vector3d& xi, 
+      const Eigen::Vector3d& o, 
+      const double& r)
+    {
+      return o + (2 * r  * xi) / (xi.squaredNorm() + 1.0);
+    }
 
-    // void lengthVarianceWithGradCost2p(const Eigen::MatrixXd &ps,
-    //                                   const int n,
-    //                                   Eigen::MatrixXd &gdp,
-    //                                   double &var);
+    /**
+     * @brief Transformation from decision variable xi to variable q
+     * Part of constraint elimination concept.
+     * @param xi Decision variables to be optimized
+     * @return eigen::Vector 
+     */
+    Eigen::MatrixXd f_B_ctrl_pts(
+      const Eigen::MatrixXd& xi, 
+      const std::vector<Eigen::Vector3d>& spheres_center, 
+      const std::vector<double>& sphere_radius)
+    {
+      // Expects array of size (3, M-1)
+      size_t M = xi.cols() + 1;
 
+      Eigen::MatrixXd q(3, M-1);
+
+      //for each segment i (excluding boundary points)
+      // Therefore starting and final sphere is excluded
+      for (size_t i = 0; i < M-1; i++)
+      {
+        auto r_i = sphere_radius[i];
+        auto o_i = spheres_center[i];
+        auto xi_i = xi.block<3,1>(0, i);
+        
+        q.block<3,1>(0, i) =  o_i + (2 * r_i  * xi_i) / (xi_i.squaredNorm() + 1.0);
+      }
+
+      return q;
+    }
+
+    /**
+     * @brief Inverse transform from variable q to decision variable xi 
+     * Part of constraint elimination concept.
+     * @param xi Decision variables to be optimized
+     * @return eigen::Vector 
+     */
+    Eigen::MatrixXd f_BInv_ctrl_pts(
+      const Eigen::MatrixXd& q,
+      const std::vector<Eigen::Vector3d>& spheres_center, 
+      const std::vector<double>& sphere_radius)
+    {
+      // Expects array of size (3, M-1)
+      size_t M = q.cols() + 1;
+
+      Eigen::MatrixXd xi(3, M-1);
+
+      //for each segment i (excluding boundary points)
+      // Therefore starting and final sphere is excluded
+      for (size_t i = 0; i < M-1; i++)
+      {
+        auto r_i = sphere_radius[i];
+        auto o_i = spheres_center[i];
+        auto q_i = q.block<3,1>(0, i);
+
+        auto v_i = q_i - o_i;
+        
+        xi.block<3,1>(0, i) = o_i.array() + ( (r_i - sqrt(r_i * r_i - v_i.squaredNorm() )) / (v_i.squaredNorm()) ) * v_i.array() ;
+      }
+
+      return xi;
+    }
+
+
+    /**
+     * @brief 
+     * 
+     * @param xi Unconstrained decision variables to be optimized
+     * @param M number of segments
+     * @param num_cp number of constraint points
+     * @param spheres_center 
+     * @param sphere_radius 
+     * @return Eigen::MatrixXd 
+     */
+    Eigen::MatrixXd f_B_cstr_pts(
+      const Eigen::MatrixXd& xi, 
+      const size_t M,
+      const size_t num_cp,
+      const std::vector<Eigen::Vector3d>& spheres_center, 
+      const std::vector<double>& sphere_radius)
+    {
+      // Expects array of size (3, M*num_cp + 1)
+      Eigen::MatrixXd q(3, xi.cols());  // Constrained variable q
+
+      //for each segment i (excluding boundary points)
+      // Therefore starting and final sphere is excluded
+      size_t idx = 0;
+      for (size_t i = 0; i < M; i++)
+      {
+        std::cout << "i: " << i << std::endl;
+        auto r_i = sphere_radius[i];
+        auto o_i = spheres_center[i];
+
+        for (int j = 0; j <= num_cp; j++){ // For every constraint point
+          std::cout << "  j: " << j << std::endl;
+
+          auto xi_i = xi.block<3,1>(0, idx);
+
+          q.block<3,1>(0, idx) =  o_i + (2 * r_i  * xi_i) / (xi_i.squaredNorm() + 1.0);
+
+          std::cout << "    Idx: " << idx << std::endl;
+
+          // Next point IF not last point in segment
+          //            OR is last point in segment AND LAST segment
+          if (j != num_cp || (j == num_cp && i == M-1))
+          {
+            ++idx;
+          }
+        }
+      }
+
+      // For last goal
+      // idx = xi.cols();
+      // auto r_i = sphere_radius[M-1];
+      // auto o_i = spheres_center[M-1];
+      // auto xi_i = xi.block<3,1>(0, idx);
+      // q.block<3,1>(0, idx) =  o_i + (2 * r_i  * xi_i) / (xi_i.squaredNorm() + 1.0);
+
+
+      std::cout<< "M: " << M << std::endl;
+      std::cout<< "num_cp: " << num_cp << std::endl;
+      std::cout<< "xi.cols: " << xi.cols() << std::endl;
+      std::cout<< "q.cols: " << q.cols() << std::endl;
+
+      return q;
+    }
+
+    /**
+     * @brief Inverse transform from variable q to decision variable xi 
+     * Part of constraint elimination concept.
+     * @param xi Decision variables to be optimized
+     * @return eigen::Vector 
+     */
+    Eigen::MatrixXd f_BInv_cstr_pts(
+      const Eigen::MatrixXd& q,
+      const size_t M,
+      const size_t num_cp,
+      const std::vector<Eigen::Vector3d>& spheres_center, 
+      const std::vector<double>& sphere_radius)
+    {
+      // Expects array of size (3, M*num_cp + 1)
+      Eigen::MatrixXd xi(3, q.cols());  // Constrained variable q
+
+      //for each segment i (excluding boundary points)
+      // Therefore starting and final sphere is excluded
+      for (size_t i = 0; i < M; i++)
+      {
+        auto r_i = sphere_radius[i];
+        auto o_i = spheres_center[i];
+
+        for (int j = 0; j <= num_cp; j++){ // For every constraint point
+          size_t idx = i*num_cp + j;
+
+          auto q_i = q.block<3,1>(0, idx);
+          auto v_i = q_i - o_i;
+
+          xi.block<3,1>(0, idx) = o_i.array() + ( (r_i - sqrt(r_i * r_i - v_i.squaredNorm() )) / (v_i.squaredNorm()) ) * v_i.array() ;
+          
+          std::cout << "    Idx: " << idx << std::endl;
+          
+          // Next point IF not last point in segment
+          //            OR is last point in segment AND LAST segment
+          if (j != num_cp || (j == num_cp && i == M-1))
+          {
+            ++idx;
+          } 
+        }
+      }
+
+      std::cout<< "M: " << M << std::endl;
+      std::cout<< "num_cp: " << num_cp << std::endl;
+      std::cout<< "xi.cols: " << xi.cols() << std::endl;
+      std::cout<< "q.cols: " << q.cols() << std::endl;
+
+      return xi;
+    }
 
   }; // class PolyTrajOptimizer
 

@@ -47,7 +47,6 @@ void BackEndPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
 /**
  * Subscriber Callbacks
 */
-
 void BackEndPlanner::swarmMincoTrajCB(const traj_utils::MINCOTrajConstPtr &msg)
 {
   if (msg->drone_id == drone_id_){
@@ -158,17 +157,10 @@ bool BackEndPlanner::generatePlanSFC( const Eigen::Vector3d& start_pos, const Ei
   goal_vel.setZero();
   goal_acc.setZero();
 
-  // 1) Use waypoints from bubble planner to form an initial minimum jerk trajectory
-  // 2) Obtain (inner waypoints, start, end, durations, constraint points) from initial minimum jerk trajectory
-  // 3) Optimize plan
-
-  // for (int i = 0; i < inner_wps.size(); i++) {
-    // std::cout << "Idx " << i  << ": "<< inner_wps[i].transpose() << std::endl;
-  // }
-
   // Eigen::Vector3d local_target_pos, local_target_vel;
 
-  // If this is the first time planning has been called, then initialize a random polynomial
+  int num_cstr_pts = back_end_planner_->ploy_traj_opt_->get_cps_num_perPiece_();
+
   for (int i = 0; i < num_opt_retries; i++)
   {
     /***************************/
@@ -193,8 +185,7 @@ bool BackEndPlanner::generatePlanSFC( const Eigen::Vector3d& start_pos, const Ei
                                             segs_t_dur, // Time duration of segments
                                             initial_mjo); // Initial Minimum jerk trajectory
 
-    int num_constr_pts = 5;
-    Eigen::MatrixXd cstr_pts_mjo = initial_mjo.getInitConstraintPoints(num_constr_pts);
+    Eigen::MatrixXd cstr_pts_mjo = initial_mjo.getInitConstraintPoints(num_cstr_pts);
 
     // for (int i = 0; i < 2; i++) {
       // std::cout << "Idx " << i  << ": "<< initial_mjo.get_b().block<6, 3>(i * 6, 0) << std::endl;
@@ -205,13 +196,59 @@ bool BackEndPlanner::generatePlanSFC( const Eigen::Vector3d& start_pos, const Ei
       // std::cout << "Constraint_pt " << i << ": " << cstr_pts_mjo.col(i).transpose() << std::endl;
       initial_mjo_viz.push_back(cstr_pts_mjo.col(i));
     }
-    visualization_->displayInitialMinJerkTraj(initial_mjo_viz, 0.075, 0);
+    visualization_->displayInitialMJO(initial_mjo_viz, 0.075, 0);
 
     /***************************/
     /*4:  Optimize plan
     /***************************/
 
-    plan_success = back_end_planner_->optimizeMJOTraj(initial_mjo, optimized_mjo, spheres_radius, spheres_center);
+    // plan_success = back_end_planner_->optimizeMJOTraj(initial_mjo, optimized_mjo, spheres_radius, spheres_center);
+    bool plan_success = false;
+    poly_traj::Trajectory initial_traj = initial_mjo.getTraj();
+
+    int num_segs = initial_traj.getPieceSize();
+    // Eigen::MatrixXd all_pos = initial_traj.getPositions();
+    // Get inner_ctrl_pts, a block of size (3, num_segs-1) from (row 0, column 1) onwards. This excludes the boundary points (start and goal).
+    Eigen::MatrixXd inner_ctrl_pts = initial_traj.getPositions().block(0, 1, 3, num_segs - 1);
+    Eigen::Matrix<double, 3, 3> headState, tailState;
+    headState << initial_traj.getJuncPos(0),        initial_traj.getJuncVel(0),        initial_traj.getJuncAcc(0);
+    tailState << initial_traj.getJuncPos(num_segs), initial_traj.getJuncVel(num_segs), initial_traj.getJuncAcc(num_segs);
+    
+    double final_cost; // Not used for now
+
+    Eigen::MatrixXd inner_cstr_pts = initial_mjo.getInitConstraintPoints(num_cstr_pts);
+    // Display trajectory in q coordinates
+    Eigen::MatrixXd inner_cstr_pts_xi = 
+      back_end_planner_->ploy_traj_opt_->f_BInv_cstr_pts(inner_cstr_pts, 
+                                              initial_mjo.getNumSegs(),
+                                              num_cstr_pts,
+                                              spheres_center,
+                                              spheres_radius);
+    visualization_->displayInitialMJO_xi(inner_cstr_pts_xi, 0); 
+
+    // Eigen::MatrixXd inner_cstr_pts_q = 
+    //   back_end_planner_->ploy_traj_opt_->f_B_cstr_pts(inner_cstr_pts, 
+    //                                           initial_mjo.getNumSegs(),
+    //                                           num_cstr_pts,
+    //                                           spheres_center,
+    //                                           spheres_radius);
+
+    // visualization_->displayInitialMJO_q(inner_cstr_pts_q, 0); 
+
+    // Optimize trajectory!
+    plan_success = back_end_planner_->ploy_traj_opt_->optimizeTrajectorySFC( 
+          headState, tailState,                         // Start and end position
+          inner_ctrl_pts,                               // Inner control points
+          initial_traj.getDurations(),                  // Time durations
+          spheres_radius, spheres_center,               // SFC
+          final_cost);
+
+    // Optimized minimum jerk trajectory
+    optimized_mjo = back_end_planner_->ploy_traj_opt_->getMinJerkOpt();
+
+    /***************************/
+    /* Print and display results for debugging
+    /***************************/
 
     // Print results for benchmarking
     double traj_length = back_end_planner_->getTrajectoryLength(optimized_mjo);
@@ -221,7 +258,8 @@ bool BackEndPlanner::generatePlanSFC( const Eigen::Vector3d& start_pos, const Ei
     // logInfo(str_fmt("Trajectory: Length(%f), Jerk Cost(%f), Duration(%f)", 
     //   traj_length, traj_jerk_cost, trajectory_duration));
 
-    Eigen::MatrixXd cstr_pts_optimized_mjo = optimized_mjo.getInitConstraintPoints(num_constr_pts);
+    Eigen::MatrixXd cstr_pts_optimized_mjo = optimized_mjo.getInitConstraintPoints(num_cstr_pts);
+
     if (plan_success)
     {
       visualization_->displayOptimalList(cstr_pts_optimized_mjo, 0);

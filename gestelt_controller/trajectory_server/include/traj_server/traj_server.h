@@ -405,7 +405,7 @@ private:
   }
 
   void logError(const std::string& str){
-    ROS_WARN_NAMED(node_name_, "UAV_%i: %s", drone_id_, str.c_str());
+    ROS_ERROR_NAMED(node_name_, "UAV_%i: %s", drone_id_, str.c_str());
   }
 
   void logFatal(const std::string& str){

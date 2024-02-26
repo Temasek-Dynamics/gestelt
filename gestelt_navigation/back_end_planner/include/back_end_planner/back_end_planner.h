@@ -44,6 +44,8 @@ private:
   ros::Publisher plan_traj_pub_; // Pub polynomial trajectory used for execution
   ros::Publisher swarm_minco_traj_pub_; // Publish minco trajectory for inter-agent collision avoidance
 
+
+
   /* parameters */
   int drone_id_{-1};
   double planning_horizon_;
@@ -203,7 +205,7 @@ private:
   }
 
   void logError(const std::string& str){
-    ROS_WARN_NAMED(node_name_, "UAV_%i: %s", 
+    ROS_ERROR_NAMED(node_name_, "UAV_%i: %s", 
       drone_id_, str.c_str());
   }
 

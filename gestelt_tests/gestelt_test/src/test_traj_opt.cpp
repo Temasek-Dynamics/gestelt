@@ -84,7 +84,7 @@ static void getTrajJerkCostNew(benchmark::State& state)
 
   for (auto _ : state)
   {
-    double new_jerk_cost = mjo.getTrajJerkCostNew();
+    // double new_jerk_cost = mjo.getTrajJerkCostNew();
   }
 }
 

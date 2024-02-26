@@ -12,11 +12,16 @@ namespace ego_planner
 
     goal_point_pub = nh.advertise<visualization_msgs::Marker>("goal_point", 2);
     global_list_pub = nh.advertise<visualization_msgs::Marker>("global_list", 2);
-    initial_min_jerk_traj_pub_ = nh.advertise<visualization_msgs::Marker>("initial_min_jerk_traj", 2);
+    initial_mjo_pub_ = nh.advertise<visualization_msgs::Marker>("initial_mjo", 2);
     optimal_list_pub = nh.advertise<visualization_msgs::Marker>("optimal_list", 2);
     failed_list_pub = nh.advertise<visualization_msgs::Marker>("failed_list", 2);
     a_star_list_pub = nh.advertise<visualization_msgs::Marker>("a_star_list", 20);
 
+    // Debugging topics
+    initial_mjo_q_pub_ = nh.advertise<visualization_msgs::Marker>("initial_mjo_q", 20);
+    initial_mjo_xi_pub_ = nh.advertise<visualization_msgs::Marker>("initial_mjo_xi", 20);
+
+    // Publish (S,V) Pairs from ESDF-Free local planner
     planner_sv_pairs_pub_ = nh.advertise<visualization_msgs::MarkerArray>("planner_sv_pairs", 1000);
 
     intmd_pt0_pub = nh.advertise<visualization_msgs::Marker>("pt0_dur_opt", 10);
@@ -182,7 +187,7 @@ namespace ego_planner
   void PlanningVisualization::displayMultiInitPathList(vector<vector<Eigen::Vector3d>> init_trajs, const double scale)
   {
 
-    if (initial_min_jerk_traj_pub_.getNumSubscribers() == 0)
+    if (initial_mjo_pub_.getNumSubscribers() == 0)
     {
       return;
     }
@@ -193,7 +198,7 @@ namespace ego_planner
     {
       Eigen::Vector4d color(0, 0, 0, 0);
       vector<Eigen::Vector3d> blank;
-      displayMarkerList(initial_min_jerk_traj_pub_, blank, scale, color, id, false);
+      displayMarkerList(initial_mjo_pub_, blank, scale, color, id, false);
       ros::Duration(0.001).sleep();
     }
     last_nums = 0;
@@ -201,25 +206,56 @@ namespace ego_planner
     for ( int id=0; id<(int)init_trajs.size(); id++ )
     {
       Eigen::Vector4d color(0, 0, 1, 0.7);
-      displayMarkerList(initial_min_jerk_traj_pub_, init_trajs[id], scale, color, id, false);
+      displayMarkerList(initial_mjo_pub_, init_trajs[id], scale, color, id, false);
       ros::Duration(0.001).sleep();
       last_nums++;
     }
 
   }
 
-  void PlanningVisualization::displayInitialMinJerkTraj(
+  void PlanningVisualization::displayInitialMJO_xi(Eigen::MatrixXd pts, int id)
+  {
+    if (initial_mjo_xi_pub_.getNumSubscribers() == 0)
+    {
+      return;
+    }
+    vector<Eigen::Vector3d> list;
+    for (int i = 0; i < pts.cols(); i++)
+    {
+      Eigen::Vector3d pt = pts.col(i).transpose();
+      list.push_back(pt);
+    }
+    Eigen::Vector4d color(0, 1, 1, 0.8); // Cyan
+    displayMarkerList(initial_mjo_xi_pub_, list, 0.15, color, id);
+  }
+
+  void PlanningVisualization::displayInitialMJO_q(Eigen::MatrixXd pts, int id)
+  {
+    if (initial_mjo_q_pub_.getNumSubscribers() == 0)
+    {
+      return;
+    }
+    vector<Eigen::Vector3d> list;
+    for (int i = 0; i < pts.cols(); i++)
+    {
+      Eigen::Vector3d pt = pts.col(i).transpose();
+      list.push_back(pt);
+    }
+    Eigen::Vector4d color(1, 0, 1, 0.8); // Purple
+    displayMarkerList(initial_mjo_q_pub_, list, 0.05, color, id);
+  }
+
+  void PlanningVisualization::displayInitialMJO(
     vector<Eigen::Vector3d> init_pts, const double scale, int id)
   {
-    if (initial_min_jerk_traj_pub_.getNumSubscribers() == 0)
+    if (initial_mjo_pub_.getNumSubscribers() == 0)
     {
       return;
     }
 
-    Eigen::Vector4d color(0, 1, 0, 1);
-    displayMarkerList(initial_min_jerk_traj_pub_, init_pts, scale, color, id);
+    Eigen::Vector4d color(0, 1, 0, 0.8); // Green
+    displayMarkerList(initial_mjo_pub_, init_pts, scale, color, id);
   }
-
 
   void PlanningVisualization::displayOptimalList(Eigen::MatrixXd optimal_pts, int id)
   {

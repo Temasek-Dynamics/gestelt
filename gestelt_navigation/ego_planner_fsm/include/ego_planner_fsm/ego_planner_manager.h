@@ -199,12 +199,11 @@ namespace ego_planner
   private:
     PlanningVisualization::Ptr visualization_;
 
-    PolyTrajOptimizer::Ptr ploy_traj_opt_;
-
     int continous_failures_count_{0};
 
   public:
     typedef std::unique_ptr<EGOPlannerManager> Ptr;
+    PolyTrajOptimizer::Ptr ploy_traj_opt_;
 
     // !SECTION
   };

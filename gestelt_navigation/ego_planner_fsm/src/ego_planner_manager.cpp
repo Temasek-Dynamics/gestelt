@@ -71,7 +71,7 @@ namespace ego_planner
 
     int num_segs = initial_traj.getPieceSize();
     // Eigen::MatrixXd all_pos = initial_traj.getPositions();
-    // Get inner_ctrl_pts, a block of size (3, num_segs-1) from column 1 onwards. This excludes the boundary points (start and goal).
+    // Get inner_ctrl_pts, a block of size (3, num_segs-1) from (row 0, column 1) onwards. This excludes the boundary points (start and goal).
     Eigen::MatrixXd inner_ctrl_pts = initial_traj.getPositions().block(0, 1, 3, num_segs - 1);
     Eigen::Matrix<double, 3, 3> headState, tailState;
     headState << initial_traj.getJuncPos(0),        initial_traj.getJuncVel(0),        initial_traj.getJuncAcc(0);
@@ -385,7 +385,7 @@ namespace ego_planner
     for (int i = 0; i < initial_cstr_pts.cols(); ++i){
       point_set.push_back(initial_cstr_pts.col(i));
     }
-    visualization_->displayInitialMinJerkTraj(point_set, 0.2, 0);
+    visualization_->displayInitialMJO(point_set, 0.2, 0);
 
     t_start = ros::Time::now();
 

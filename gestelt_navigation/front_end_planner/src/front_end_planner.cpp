@@ -221,6 +221,9 @@ bool FrontEndPlanner::generatePlan(const Eigen::Vector3d& start_pos, const Eigen
   }
 
   dbg_sfc_traj_msg.sfc_spheres = sfc_traj_msg.spheres;
+
+  dbg_sfc_traj_msg.sfc_waypoints = sfc_traj_msg.waypoints;
+
   
   dbg_sfc_traj_pub_.publish(dbg_sfc_traj_msg);
 

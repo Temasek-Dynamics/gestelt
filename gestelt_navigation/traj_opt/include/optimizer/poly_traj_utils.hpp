@@ -1130,9 +1130,11 @@ namespace poly_traj
         template <typename EIGENMAT>
         void addPropCtoP(const Eigen::MatrixXd &adjGdC, EIGENMAT &gradP) const
         {
-            for (int i = 0; i < N - 1; i++)
-            {
-                gradP.col(i) = adjGdC.row(6 * i + 5).transpose(); // zxzx
+            // eqn (66): p.d.(H / q) = (G_1.T * e1, ..., G_(M-1).T * e1)
+
+            for (int i = 0; i < N - 1; i++) // For each segment (except start and end)
+            {   
+                gradP.col(i) = adjGdC.row(6 * i + 5).transpose(); 
             }
             return;
         }
@@ -1464,51 +1466,15 @@ namespace poly_traj
         {
             return gdC;
         }
-
-        // Eigen::MatrixXd get_gdT() const
-        // {
-        //     return gdT;
-        // }
-
-        // Eigen::MatrixXd get_gdT(size_t i) const
-        // {
-        //     return gdT(i);
-        // }
-
+        
         /**
-         * @brief Get the cost of jerk for the entire trajectory 
+         * @brief Get number of trajectory segments
          * 
-         * @return double 
+         * @return size_t 
          */
-        double getTrajJerkCostNew() const
-        {
-            double objective = 0.0;
-            for (int i = 0; i < N; i++) // for each segment
-            {
-
-                // objective += 36.0 * b.row(6 * i + 3).squaredNorm() * T1(i) +          // 36  * c3^2     * t
-                //              144.0 * b.row(6 * i + 4).dot(b.row(6 * i + 3)) * T2(i) + // 144 * c3 * c4  * t^2
-                //              192.0 * b.row(6 * i + 4).squaredNorm() * T3(i) +         // 192 * c4^2     * t^3 
-                //              240.0 * b.row(6 * i + 5).dot(b.row(6 * i + 3)) * T3(i) + // 240 * c3 * c5  * t^3  
-                //              720.0 * b.row(6 * i + 5).dot(b.row(6 * i + 4)) * T4(i) + // 720 * c4 * c5  * t^4 
-                //              720.0 * b.row(6 * i + 5).squaredNorm() * T5(i);          // 720 * c5^2     * t^5 
-
-                Eigen::MatrixXd b_i = b.block<6, 3>(6 * i, 0); // Coefficient of 3 axes (x,y,z) at segment i
-                
-                // Cost matrix Q is:
-                //      0   0   0   0   0   0
-                //      0   0   0   0   0   0
-                //      0   0   0   0   0   0
-                //      0   0   0  36  72 120
-                //      0   0   0  72 192 360
-                //      0   0   0 120 360 720
-
-                objective += ( b_i.transpose() * constructQ(5, 3, T1(i)) * b_i ).trace(); 
-            }
-
-            return objective;
+        size_t getNumSegs(){
+            return N;
         }
-
         /**
          * @brief Original code: Get the cost of jerk for the entire trajectory 
          * 
@@ -1530,30 +1496,6 @@ namespace poly_traj
             }
 
             return objective;
-        }
-
-        /**
-         * @brief Construct the cost matrix for minimizing the k-th derivative. Used as part of 
-         * J_m = integral of f'(t)^2 over t(m) to t(m-1) = C_m.T * Q_m * C_m
-         * 
-         * @param n Polynomial order (Snap uses 7th order polynomial, jerk uses 5th order polynomial)
-         * @param k Derivative to construct cost for (snap is 4, jerk is 3)
-         * @param T Time duration
-         * @return Eigen::MatrixXd 
-         */
-        Eigen::MatrixXd constructQ(const int& n, const int& k, const double& T) const 
-        {
-            Eigen::MatrixXd Q = Eigen::MatrixXd::Zero(n+1, n+1);
-
-            for (int i = k; i < n+1; i++){ // for each derivative of order ith 
-                for (int j = i; j < n+1; j++){ // for each derivative of other kth
-                    int c = i + j - (2*k - 1);
-                    Q(i, j) = (factorial<float>(i) / factorial<float>(i-k)) * (factorial<float>(j) / factorial<float>(j-k)) * std::pow(T,c) / c ;
-                    Q(j, i) = Q(i, j);
-                }
-            }
-
-            return Q;
         }
 
         Trajectory getTraj(void) const
@@ -1608,6 +1550,11 @@ namespace poly_traj
                     pts.col(i_dp) = pos; 
 
                     s1 += step;
+
+                    // Next point IF not last point in segment
+                    //            OR is last point in segment AND LAST segment
+
+                    // Don't move on IF last point in segment and not LAST segment
                     if (j != num_cp || (j == num_cp && i == N - 1))
                     {
                         ++i_dp;
@@ -1619,7 +1566,50 @@ namespace poly_traj
         }
 
         /**
-         * @brief Get the Grad2 T P object
+         * @brief Update the p.d.(H/T_i) and p.d.(H/q) 
+         * (Get the Grad2 T P object)
+         * 
+         * @tparam EIGENVEC 
+         * @tparam EIGENMAT 
+         * @param gdT gradient of H w.r.t T
+         * @param gradP gradient of H w.r.t P
+         */
+        template <typename EIGENVEC, typename EIGENMAT>
+        void getGrad2TP(EIGENVEC &gdT,
+                        EIGENMAT &gradP,
+                        const Eigen::MatrixXd &inner_ctrl_pts_xi,
+                        const std::vector<double>& spheres_radius)
+        {
+            // Solves  (A.T) x = gdC 
+            //      or (M.T) G = p.d(F/c)  eqn (63)
+            // then store the result in gdC.
+            // Therefore gdc = G
+            solveAdjGradC(gdC); 
+
+            // eqn (70): p.d.(H / T_i) = p.d.(F/T_i) - Tr{ G_i.T * p.d.(E_i/T_i) * c_i}
+            addPropCtoT(gdC, gdT); // Adds to gdT
+
+            // eqn (66): p.d.(H / q) = (G_1.T * e1, ..., G_(M-1).T * e1)
+            // eqn (79): p.d.(H / xi) = ...
+            for (int i = 0; i < N - 1; i++) // For each segment (except start and end)
+            {   
+                double r_i = spheres_radius[i+1];
+                auto xi_i = inner_ctrl_pts_xi.block<3,1>(0, i);
+                auto g_i = gdC.row(6 * i + 5).transpose(); 
+
+                double div = (xi_i.squaredNorm() + 1);
+                
+                auto a = (2 * r_i * g_i.array() ) / div;
+                auto b = (4 * r_i * (xi_i).dot(g_i) * xi_i.array()) / (div*div);
+
+                gradP.col(i) = a.array() - b.array();
+            }
+            return;
+        }
+
+        /**
+         * @brief Update the p.d.(H/T_i) and p.d.(H/q) 
+         * (Get the Grad2 T P object)
          * 
          * @tparam EIGENVEC 
          * @tparam EIGENMAT 
@@ -1630,17 +1620,18 @@ namespace poly_traj
         void getGrad2TP(EIGENVEC &gdT,
                         EIGENMAT &gradP)
         {
-            // Solves A.T x = gdC 
-            //      or (M.T) G = p.d(F w.r.t c)  eqn (63)
+            // Solves  (A.T) x = gdC 
+            //      or (M.T) G = p.d(F/c)  eqn (63)
             // then store the result in gdC.
             // Therefore gdc = G
             solveAdjGradC(gdC); 
 
-            // eqn (70): p.d.(H/T_i) = p.d.(F/T_i) - Tr{ G_i.T * p.d.(E_i/T_i) * c_i}
-            addPropCtoT(gdC, gdT);
+            // eqn (70): p.d.(H / T_i) = p.d.(F/T_i) - Tr{ G_i.T * p.d.(E_i/T_i) * c_i}
+            addPropCtoT(gdC, gdT); // Adds to gdT
 
-            // eqn (66): p.d.(H/q) = (G_1.T * e1, ..., G_(M-1).T * e1)
-            addPropCtoP(gdC, gradP);
+            // eqn (66): p.d.(H / q) = (G_1.T * e1, ..., G_(M-1).T * e1)
+            addPropCtoP(gdC, gradP); // Adds to gradP
+            return;
         }
 
         /**
@@ -1661,31 +1652,99 @@ namespace poly_traj
             addGradJbyC(gdC);
         }
 
-        template <typename EIGENVEC, typename EIGENMAT>
-        void evalTrajCostGrad(const Eigen::VectorXi &cons,
-                                     const Eigen::VectorXi &idxHs,
-                                     const std::vector<Eigen::MatrixXd> &cfgHs,
-                                     const double &vmax,
-                                     const double &amax,
-                                     const Eigen::Vector3d &ci,
-                                     double &cost,
-                                     EIGENVEC &gdT,
-                                     EIGENMAT &gradP)
-        {
-            gdT.setZero();
-            gradP.setZero();
-            gdC.setZero();
+        // Eigen::MatrixXd get_gdT() const
+        // {
+        //     return gdT;
+        // }
 
-            cost = getTrajJerkCost();
-            addGradJbyT(gdT);
-            addGradJbyC(gdC);
+        // Eigen::MatrixXd get_gdT(size_t i) const
+        // {
+        //     return gdT(i);
+        // }
 
-            addTimeIntPenalty(cons, idxHs, cfgHs, vmax, amax, ci, cost, gdT, gdC);
+        // /**
+        //  * @brief Get the cost of jerk for the entire trajectory 
+        //  * 
+        //  * @return double 
+        //  */
+        // double getTrajJerkCostNew() const
+        // {
+        //     double objective = 0.0;
+        //     for (int i = 0; i < N; i++) // for each segment
+        //     {
 
-            solveAdjGradC(gdC); //gdC become G
-            addPropCtoT(gdC, gdT);
-            addPropCtoP(gdC, gradP);
-        }
+        //         // objective += 36.0 * b.row(6 * i + 3).squaredNorm() * T1(i) +          // 36  * c3^2     * t
+        //         //              144.0 * b.row(6 * i + 4).dot(b.row(6 * i + 3)) * T2(i) + // 144 * c3 * c4  * t^2
+        //         //              192.0 * b.row(6 * i + 4).squaredNorm() * T3(i) +         // 192 * c4^2     * t^3 
+        //         //              240.0 * b.row(6 * i + 5).dot(b.row(6 * i + 3)) * T3(i) + // 240 * c3 * c5  * t^3  
+        //         //              720.0 * b.row(6 * i + 5).dot(b.row(6 * i + 4)) * T4(i) + // 720 * c4 * c5  * t^4 
+        //         //              720.0 * b.row(6 * i + 5).squaredNorm() * T5(i);          // 720 * c5^2     * t^5 
+
+        //         Eigen::MatrixXd b_i = b.block<6, 3>(6 * i, 0); // Coefficient of 3 axes (x,y,z) at segment i
+                
+        //         // Cost matrix Q is:
+        //         //      0   0   0   0   0   0
+        //         //      0   0   0   0   0   0
+        //         //      0   0   0   0   0   0
+        //         //      0   0   0  36  72 120
+        //         //      0   0   0  72 192 360
+        //         //      0   0   0 120 360 720
+
+        //         objective += ( b_i.transpose() * constructQ(5, 3, T1(i)) * b_i ).trace(); 
+        //     }
+
+        //     return objective;
+        // }
+
+        // /**
+        //  * @brief Construct the cost matrix for minimizing the k-th derivative. Used as part of 
+        //  * J_m = integral of f'(t)^2 over t(m) to t(m-1) = C_m.T * Q_m * C_m
+        //  * 
+        //  * @param n Polynomial order (Snap uses 7th order polynomial, jerk uses 5th order polynomial)
+        //  * @param k Derivative to construct cost for (snap is 4, jerk is 3)
+        //  * @param T Time duration
+        //  * @return Eigen::MatrixXd 
+        //  */
+        // Eigen::MatrixXd constructQ(const int& n, const int& k, const double& T) const 
+        // {
+        //     Eigen::MatrixXd Q = Eigen::MatrixXd::Zero(n+1, n+1);
+
+        //     for (int i = k; i < n+1; i++){ // for each derivative of order ith 
+        //         for (int j = i; j < n+1; j++){ // for each derivative of other kth
+        //             int c = i + j - (2*k - 1);
+        //             Q(i, j) = (factorial<float>(i) / factorial<float>(i-k)) * (factorial<float>(j) / factorial<float>(j-k)) * std::pow(T,c) / c ;
+        //             Q(j, i) = Q(i, j);
+        //         }
+        //     }
+
+        //     return Q;
+        // }
+
+        // template <typename EIGENVEC, typename EIGENMAT>
+        // void evalTrajCostGrad(const Eigen::VectorXi &cons,
+        //                              const Eigen::VectorXi &idxHs,
+        //                              const std::vector<Eigen::MatrixXd> &cfgHs,
+        //                              const double &vmax,
+        //                              const double &amax,
+        //                              const Eigen::Vector3d &ci,
+        //                              double &cost,
+        //                              EIGENVEC &gdT,
+        //                              EIGENMAT &gradP)
+        // {
+        //     gdT.setZero();
+        //     gradP.setZero();
+        //     gdC.setZero();
+
+        //     cost = getTrajJerkCost();
+        //     addGradJbyT(gdT);
+        //     addGradJbyC(gdC);
+
+        //     addTimeIntPenalty(cons, idxHs, cfgHs, vmax, amax, ci, cost, gdT, gdC);
+
+        //     solveAdjGradC(gdC); //gdC become G
+        //     addPropCtoT(gdC, gdT);
+        //     addPropCtoP(gdC, gradP);
+        // }
 
         EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
     };
