@@ -204,7 +204,7 @@ def main():
     # side length 5m
     g=-9.81 #m/s^2  # down force, negative
     f=1*(-g) #N  # up force, positive
-    angle=60
+    angle=85
     angle_rad=math.radians(angle)
     num_passes = 3  
         # 1/4 test
@@ -229,13 +229,13 @@ def main():
         vel_list.append(create_vel(None,None,None))
         vel_list.append(create_vel(None,None,None))
         vel_list.append(create_vel(None,None,None))
-        vel_list.append(create_vel(None,None,None))
+        vel_list.append(create_vel(0,0,0))
 
     
     # end of the trajectory
-    waypoints.append(create_pose(0.0,1.5,1.2))
-    vel_list.append(create_vel(0,0,0))
-    accel_list.append(create_accel(None,None,None))
+    # waypoints.append(create_pose(0.0,1.5,1.2))
+    # vel_list.append(create_vel(0,0,0))
+    # accel_list.append(create_accel(None,None,None))
 
     pub_waypoints(waypoints,accel_list,vel_list)
     rospy.spin()
