@@ -206,14 +206,14 @@ def main():
     f=1*(-g) #N  # up force, positive
     angle=60
     angle_rad=math.radians(angle)
-    num_passes = 3
+    num_passes = 3  
         # 1/4 test
         # world frame is the initial position of the drone
         # map frame is the origin of the map
         # waypoints are under the map frame, will be transformed to world frame
     for i in range(num_passes):
 
-        waypoints.append(create_pose(1.5-0.01,-0.01,1.5))   
+        waypoints.append(create_pose(1.5-0.01,0.0+0.01,1.5))   
         waypoints.append(create_pose(0.0,-1.5,1.2)) 
         waypoints.append(create_pose(-1.5, 0.0, 1.5))
         waypoints.append(create_pose(0.0,1.5,1.2))
