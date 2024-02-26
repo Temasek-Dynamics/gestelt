@@ -229,11 +229,13 @@ def main():
         vel_list.append(create_vel(None,None,None))
         vel_list.append(create_vel(None,None,None))
         vel_list.append(create_vel(None,None,None))
-        vel_list.append(create_vel(0,0,0))
+        vel_list.append(create_vel(None,None,None))
 
     
     # end of the trajectory
-
+    waypoints.append(create_pose(0.0,1.5,1.2))
+    vel_list.append(create_vel(0,0,0))
+    accel_list.append(create_accel(None,None,None))
 
     pub_waypoints(waypoints,accel_list,vel_list)
     rospy.spin()
