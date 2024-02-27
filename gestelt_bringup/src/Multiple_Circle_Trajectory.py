@@ -206,7 +206,7 @@ def main():
     f=1*(-g) #N  # up force, positive
     angle=60
     angle_rad=math.radians(angle)
-    num_passes = 3  
+    num_passes = 4
         # 1/4 test
         # world frame is the initial position of the drone
         # map frame is the origin of the map
@@ -229,6 +229,7 @@ def main():
         vel_list.append(create_vel(None,None,None))
         vel_list.append(create_vel(None,None,None))
         vel_list.append(create_vel(None,None,None))
+        # vel_list.append(create_vel(None,None,None))
         vel_list.append(create_vel(0,0,0))
 
     

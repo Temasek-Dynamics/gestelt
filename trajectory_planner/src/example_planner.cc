@@ -2,19 +2,19 @@
 
 ExamplePlanner::ExamplePlanner(ros::NodeHandle& nh) :
     nh_(nh),
-    max_v_(3.0),
-    max_a_(12.0),
+    max_v_(5.0),
+    max_a_(8.0),
     max_j_(10.0),
     current_velocity_(Eigen::Vector3d::Zero()),
     current_pose_(Eigen::Affine3d::Identity()) {
       
   // Load params
-  // if (!nh_.getParam(ros::this_node::getName() + "/max_v", max_v_)){
-  //   ROS_WARN("[example_planner] param max_v not found");
-  // }
-  // if (!nh_.getParam(ros::this_node::getName() + "/max_a", max_a_)){
-  //   ROS_WARN("[example_planner] param max_a not found");
-  // }
+  if (!nh_.getParam(ros::this_node::getName() + "/max_v", max_v_)){
+    ROS_WARN("[example_planner] param max_v not found");
+  }
+  if (!nh_.getParam(ros::this_node::getName() + "/max_a", max_a_)){
+    ROS_WARN("[example_planner] param max_a not found");
+  }
 
   nh.param("trajectory_frame", trajectory_frame_id_, std::string("world"));
 
@@ -89,7 +89,7 @@ void ExamplePlanner::waypointsCB(const gestelt_msgs::GoalsPtr &msg){
 // Method to set maximum speed.
 void ExamplePlanner::setMaxSpeed(const double max_v) {
   max_v_ = max_v;
-  std::cout<<max_v<<std::endl;
+  // std::cout<<max_v<<std::endl;
 }
 
 // Plans a trajectory from the current position to the a goal position and velocity
@@ -148,13 +148,75 @@ bool ExamplePlanner::planTrajectory(const std::vector<Eigen::Vector3d>& wp_pos,
   // segment_times = estimateSegmentTimes(vertices, max_v_, max_a_);
  
   segment_times = estimateSegmentTimesVelocityRamp(vertices, max_v_, max_a_);
+  segment_times[0] = segment_times[1];
+  for(int i = 0; i<segment_times.size(); i++){
+    std::cout<<"Time allocation of segment "<<i+1<<": "<<segment_times[i]<<std::endl;
+    
+    // use this time allocation if NO 0 velocity constraint is present in each circle
+    
+    if (i%4 == 0 && i == 0){
+      segment_times[i] *= 0.8;
+    }
+    if (i%4 == 0 && i > 3){
+      segment_times[i] *= 0.85;
+    }
+    if (i%4 == 1 && i>3){
+      segment_times[i] *= 1;
+    }
+    if (i%4 == 1 && i == 1){
+      segment_times[i] *= 1.1;
+    }
+    if (i%4 == 2){
+      segment_times[i] *= 1.1;
+    }
+    if (i%4 == 3){
+      segment_times[i] *= 1.3;
+    }
+
+    
+    //use this time allocation if 0 velocity constraint is present in each circle
+    
+
+    // if (i%4 == 0){
+    //   segment_times[i] *= 0.8;
+    // }
+    // if (i%4 == 1 && i>3){
+    //   segment_times[i] *= 1.3;
+    // }
+    // if (i%4 == 1 && i == 1){
+    //   segment_times[i] *= 1.4;
+    // }
+
+    // if (i%4 == 2){
+    //   segment_times[i] *= 1.2;
+    // }
+    // if (i%4 == 3){
+    //   segment_times[i] *= 1.3;
+    // }
+
+    std::cout<<"MODIFIED Time allocation of segment "<<i+1<<": "<<segment_times[i]<<std::endl;
+  }
   
-  // enlarge the segement_time
-  // for (size_t i = 0; i < segment_times.size(); ++i) {
-  //       ROS_INFO("segment_times: %f", segment_times[i]);
-  //       segment_times[i] *= 1.5;
-  //   } 
+
+  //changing time allocation
+
   
+
+  // for (size_t i = 0; i < vertices.size()-1; ++i) {
+  //   // if (i==0 || i==1 || i==4 || i==5){
+  //   //   segment_times[i] *= 0.8;
+  //   // }
+
+  //   if(i%4==0 || i%4==1){
+  //     segment_times[i] *= 1;
+  //   }
+
+  //   //extra time factor
+  //   if(i==0 || i==1){
+  //     segment_times[i] *= 1.2;
+  //   }
+  
+
   /*
   * Linear optimization
   */

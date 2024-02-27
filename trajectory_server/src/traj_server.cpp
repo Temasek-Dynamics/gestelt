@@ -85,8 +85,6 @@ void TrajServer::init(ros::NodeHandle& nh)
   USE_FORCE = mavros_msgs::PositionTarget::FORCE;
   IGNORE_YAW = mavros_msgs::PositionTarget::IGNORE_YAW;
   IGNORE_YAW_RATE = mavros_msgs::PositionTarget::IGNORE_YAW_RATE;
-  IGNORE_VZ = mavros_msgs::PositionTarget::IGNORE_VZ;         //new flag
-  IGNORE_AFZ = mavros_msgs::PositionTarget::IGNORE_AFZ;        //new flag
 
   logInfo("Initialized");
 }
@@ -141,7 +139,8 @@ void TrajServer::multiDOFJointTrajectoryCb(const trajectory_msgs::MultiDOFJointT
   }
   else {
     geomMsgsVector3ToEigenVector3(msg->points[0].velocities[0].linear, last_mission_vel_);
-    last_mission_yaw_dot_ = msg->points[0].velocities[0].angular.z; //yaw rate
+    mission_type_mask_ |= IGNORE_YAW_RATE;
+    // last_mission_yaw_dot_ = msg->points[0].velocities[0].angular.z; //yaw rate
     // ROS_INFO("received velocity: %f, %f, %f", last_mission_vel_(0), last_mission_vel_(1), last_mission_vel_(2));
   }
 
@@ -154,6 +153,9 @@ void TrajServer::multiDOFJointTrajectoryCb(const trajectory_msgs::MultiDOFJointT
     // ROS_INFO("received acceleration: %f, %f, %f", last_mission_acc_(0), last_mission_acc_(1), last_mission_acc_(2));
   }
   // ROS_INFO("mission_type_mask_: %d", mission_type_mask_);
+
+  //calculate the yaw angle as the tangent of the position
+  last_mission_yaw_ = atan2(last_mission_vel_(1), last_mission_vel_(0));
 }
 
 void TrajServer::UAVStateCb(const mavros_msgs::State::ConstPtr &msg)
@@ -592,8 +594,8 @@ void TrajServer::execHover()
 void TrajServer::execMission()
 {
   std::lock_guard<std::mutex> cmd_guard(cmd_mutex_);
-  mission_type_mask_ = IGNORE_YAW_RATE;   
-  // mission_type_mask_ = IGNORE_YAW_RATE | IGNORE_VZ | IGNORE_AFZ;// Ignore yaw rate          //new
+
+  mission_type_mask_ = IGNORE_YAW_RATE; // Ignore yaw rate 
   // ROS_INFO("execMission() mission_vel: %f, %f, %f", last_mission_vel_(0), last_mission_vel_(1), last_mission_vel_(2));
   publishCmd( last_mission_pos_, last_mission_vel_, 
               last_mission_acc_, last_mission_jerk_, 
@@ -799,4 +801,3 @@ Eigen::Vector3d TrajServer::quaternionToRPY(const geometry_msgs::Quaternion& qua
 
   return euler;
 }
-
