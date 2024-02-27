@@ -62,7 +62,7 @@ then
     sleep 1
     tmux send-keys -t $SESSION:0.2 "$SOURCE_WS " #C-m 
     sleep 1
-    tmux send-keys -t $SESSION:0.3 "$CPU_PERFORMANCE $SOURCE_WS $EXPORT_ROS_MASTER_URI $CMD_3" C-m
+    tmux send-keys -t $SESSION:0.3 "$SOURCE_WS $EXPORT_ROS_MASTER_URI $CMD_3" C-m
 fi
 
 # Attach session on the first window
