@@ -151,50 +151,32 @@ bool ExamplePlanner::planTrajectory(const std::vector<Eigen::Vector3d>& wp_pos,
   segment_times[0] = segment_times[1];
   for(int i = 0; i<segment_times.size(); i++){
     std::cout<<"Time allocation of segment "<<i+1<<": "<<segment_times[i]<<std::endl;
-    
-    // use this time allocation if NO 0 velocity constraint is present in each circle
-    
-    if (i%4 == 0 && i == 0){
-      segment_times[i] *= 0.8;
-    }
-    if (i%4 == 0 && i > 3){
-      segment_times[i] *= 0.85;
-    }
-    if (i%4 == 1 && i>3){
-      segment_times[i] *= 1;
-    }
-    if (i%4 == 1 && i == 1){
-      segment_times[i] *= 1.1;
-    }
-    if (i%4 == 2){
-      segment_times[i] *= 1.1;
-    }
-    if (i%4 == 3){
-      segment_times[i] *= 1.3;
-    }
+    segment_times[i] *= 0.9;        //works for 85 deg angle
 
     
-    //use this time allocation if 0 velocity constraint is present in each circle
+    // works for 60 deg angle
     
-
-    // if (i%4 == 0){
+    // if (i%4 == 0 && i == 0){
     //   segment_times[i] *= 0.8;
     // }
+    // if (i%4 == 0 && i > 3){
+    //   segment_times[i] *= 0.85;
+    // }
     // if (i%4 == 1 && i>3){
-    //   segment_times[i] *= 1.3;
+    //   segment_times[i] *= 1;
     // }
     // if (i%4 == 1 && i == 1){
-    //   segment_times[i] *= 1.4;
+    //   segment_times[i] *= 1.1;
     // }
-
     // if (i%4 == 2){
-    //   segment_times[i] *= 1.2;
+    //   segment_times[i] *= 1.1;
     // }
     // if (i%4 == 3){
     //   segment_times[i] *= 1.3;
     // }
 
-    std::cout<<"MODIFIED Time allocation of segment "<<i+1<<": "<<segment_times[i]<<std::endl;
+  
+    // std::cout<<"MODIFIED Time allocation of segment "<<i+1<<": "<<segment_times[i]<<std::endl;
   }
   
 
