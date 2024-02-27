@@ -73,10 +73,11 @@ class run_quad:
         self.uavoc1.setStateVariable(self.uav1.X,state_lb=[-sc,-sc,-sc,-sc,-sc,-sc,-sc,-sc,-sc,-sc],\
                                      state_ub=[sc,sc,sc,sc,sc,sc,sc,sc,sc,sc]) #,wc,wc,wc
         # self.uavoc1.setControlVariable(self.uav1.U,control_lb=[0,0,0,0],control_ub= [t2w*tw,t2w*tw,t2w*tw,t2w*tw]) # thrust-to-weight = 4:1
-        thrust_ub = 0.8706*4
+        thrust_ub = 0.8706*4*0.6
+        thrust_lb = 0.8706*4*0.5
         ang_rate_b=1.57
 
-        self.uavoc1.setControlVariable(self.uav1.U,control_lb=[0,-ang_rate_b,-ang_rate_b,-ang_rate_b],control_ub= [thrust_ub,ang_rate_b,ang_rate_b,ang_rate_b]) # thrust-to-weight = 4:1
+        self.uavoc1.setControlVariable(self.uav1.U,control_lb=[thrust_lb ,-ang_rate_b,-ang_rate_b,-ang_rate_b],control_ub= [thrust_ub,ang_rate_b,ang_rate_b,ang_rate_b]) # thrust-to-weight = 4:1
 
         self.uavoc1.setDyn(self.uav1.f,self.dt)
         self.uavoc1.setInputCost(self.uav1.input_cost)

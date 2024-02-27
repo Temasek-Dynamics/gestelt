@@ -259,7 +259,7 @@ class LearningAgileAgent():
         callback_runtime=time.time()-t_comp
 
         # IF the solving time is too long, stop the mission
-        if callback_runtime>0.025:
+        if callback_runtime>0.015:
             print("too long to solve")
             NO_SOLUTION_FLAG=True
         return self.u, callback_runtime,current_pred_traj,NO_SOLUTION_FLAG
