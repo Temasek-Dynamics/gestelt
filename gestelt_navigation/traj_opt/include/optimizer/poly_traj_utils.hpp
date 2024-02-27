@@ -1589,21 +1589,25 @@ namespace poly_traj
             // eqn (70): p.d.(H / T_i) = p.d.(F/T_i) - Tr{ G_i.T * p.d.(E_i/T_i) * c_i}
             addPropCtoT(gdC, gdT); // Adds to gdT
 
-            // eqn (66): p.d.(H / q) = (G_1.T * e1, ..., G_(M-1).T * e1)
-            // eqn (79): p.d.(H / xi) = ...
-            for (int i = 0; i < N - 1; i++) // For each segment (except start and end)
-            {   
-                double r_i = spheres_radius[i+1];
-                auto xi_i = inner_ctrl_pts_xi.block<3,1>(0, i);
-                auto g_i = gdC.row(6 * i + 5).transpose(); 
 
-                double div = (xi_i.squaredNorm() + 1);
+            addPropCtoP(gdC, gradP); // Adds to gdT
+
+            // // eqn (66): p.d.(H / q) = (G_1.T * e1, ..., G_(M-1).T * e1)
+            // // eqn (79): p.d.(H / xi) = ...
+            // for (int i = 0; i < N - 1; i++) // For each segment (except start and end)
+            // {   
+            //     double r_i = spheres_radius[i+1];
+            //     auto xi_i = inner_ctrl_pts_xi.block<3,1>(0, i);
+            //     auto g_i = gdC.row(6 * i + 5).transpose(); 
+
+            //     double div = (xi_i.squaredNorm() + 1);
                 
-                auto a = (2 * r_i * g_i.array() ) / div;
-                auto b = (4 * r_i * (xi_i).dot(g_i) * xi_i.array()) / (div*div);
+            //     auto a = (2 * r_i * g_i.array() ) / div;
+            //     auto b = (4 * r_i * (xi_i).dot(g_i) * xi_i.array()) / (div*div);
 
-                gradP.col(i) = a.array() - b.array();
-            }
+            //     gradP.col(i) = a.array() - b.array();
+            // }
+            
             return;
         }
 

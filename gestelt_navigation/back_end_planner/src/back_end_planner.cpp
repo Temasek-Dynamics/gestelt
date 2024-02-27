@@ -112,10 +112,10 @@ void BackEndPlanner::sfcTrajectoryCB(const gestelt_msgs::SphericalSFCTrajectoryC
   Eigen::Vector3d goal_pos{msg->waypoints.back().x, msg->waypoints.back().y, msg->waypoints.back().z};
 
   if (!generatePlanSFC(start_pos, start_vel, 
-                  inner_wps, segs_t_dur,
-                  goal_pos, num_replan_retries_,
-                  spheres_radius, spheres_center,
-                  optimized_mjo_))
+                      inner_wps, segs_t_dur,
+                      goal_pos, num_replan_retries_,
+                      spheres_radius, spheres_center,
+                      optimized_mjo_))
   {
     logError("Failed to optimize SFC Trajectory!");
     return;
@@ -232,7 +232,6 @@ bool BackEndPlanner::generatePlanSFC( const Eigen::Vector3d& start_pos, const Ei
     //                                           num_cstr_pts,
     //                                           spheres_center,
     //                                           spheres_radius);
-
     // visualization_->displayInitialMJO_q(inner_cstr_pts_q, 0); 
 
     // Optimize trajectory!
@@ -249,6 +248,12 @@ bool BackEndPlanner::generatePlanSFC( const Eigen::Vector3d& start_pos, const Ei
     /***************************/
     /* Print and display results for debugging
     /***************************/
+    // Display optimized paths
+    visualization_->displayIntermediateMJO_xi(
+      back_end_planner_->ploy_traj_opt_->intermediate_cstr_pts_xi_);
+
+    visualization_->displayIntermediateMJO_q(
+      back_end_planner_->ploy_traj_opt_->intermediate_cstr_pts_q_);
 
     // Print results for benchmarking
     double traj_length = back_end_planner_->getTrajectoryLength(optimized_mjo);
@@ -272,13 +277,7 @@ bool BackEndPlanner::generatePlanSFC( const Eigen::Vector3d& start_pos, const Ei
     }
   }
 
-  if (!plan_success)
-  {
-    logError("back_end_planner_->reboundReplan not successful");
-    return false;
-  }
-
-  return true;
+  return plan_success;
 }
 
 bool BackEndPlanner::generatePlanESDFFree(const Eigen::Vector3d& start_pos, const Eigen::Vector3d& start_vel, 

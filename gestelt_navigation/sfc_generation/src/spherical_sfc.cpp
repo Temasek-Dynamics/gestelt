@@ -535,11 +535,11 @@ void SphericalSFC::publishVizPiecewiseTrajectory(
 
     visualization_msgs::Marker sphere_list, path_line_strip;
     Eigen::Vector3d wp_color = Eigen::Vector3d{0.0, 0.0, 1.0};
-    double wp_alpha = 0.75;
-    double wp_radius = 0.15;
+    double wp_alpha = 0.5;
+    double wp_radius = 0.075;
 
     Eigen::Vector3d line_color = Eigen::Vector3d{0.0, 0.0, 1.0};
-    double line_alpha = 0.75;
+    double line_alpha = 0.5;
     double line_scale = 0.05;
 
     // sphere_list.action = visualization_msgs::Marker::DELETEALL;

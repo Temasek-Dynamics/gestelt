@@ -15,6 +15,9 @@ namespace ego_planner
       return false;
     }
 
+    intermediate_cstr_pts_xi_.clear();
+    intermediate_cstr_pts_q_.clear();
+
     spheres_radius_ = spheres_radius;
     spheres_center_ = spheres_center;
 
@@ -97,12 +100,10 @@ namespace ego_planner
           result == lbfgs::LBFGS_ALREADY_MINIMIZED ||
           result == lbfgs::LBFGS_STOP)
       {
-        // ROS_INFO("optimizeTrajectorySFC: converged, maxmimum_iteration, already minimized or stop");
-
         flag_force_return = false;
         // TODO: Add collision-checking in the path
         std::cout << "[PolyTrajOptimizer] Optimization Succeeded!" << std::endl;
-        printf("\033[32miter=%d,time(ms)=%5.3f,total_t(ms)=%5.3f,cost=%5.3f\n\033[0m", iter_num_, time_ms, total_time_ms, final_cost);
+        printf("\033[32m iter=%d, time(ms)=%5.3f, total_t(ms)=%5.3f, cost=%5.3f\n \033[0m", iter_num_, time_ms, total_time_ms, final_cost);
 
         flag_success = true;
       }
@@ -166,14 +167,14 @@ namespace ego_planner
     // Generate minimum jerk trajectory from given inner points
     opt->jerkOpt_.generate(P, T);
 
-    // Assign ALL inner constraint points 
+    // Discretize trajectory into inner constraint points
     opt->inner_cstr_pts_xi_ = opt->jerkOpt_.getInitConstraintPoints(opt->cps_num_perPiece_);
 
     opt->inner_cstr_pts_q_ = opt->f_B_cstr_pts(opt->inner_cstr_pts_xi_, 
-                                      opt->jerkOpt_.getNumSegs(),
-                                      opt->cps_num_perPiece_, 
-                                      opt->spheres_center_,
-                                      opt->spheres_radius_);
+                                                opt->jerkOpt_.getNumSegs(),
+                                                opt->cps_num_perPiece_, 
+                                                opt->spheres_center_,
+                                                opt->spheres_radius_);
 
     /* 1. Smoothness cost */
     // jerk_cost is trajectory jerk cost
@@ -188,13 +189,18 @@ namespace ego_planner
     opt->addPVAGradCost2CT_SFC(gradT, obs_swarm_feas_qvar_costs, opt->cps_num_perPiece_); 
 
     // Update the gradient costs p.d.(H / T_i) and p.d.(H / xi)
-    opt->jerkOpt_.getGrad2TP(gradT, gradP, opt->inner_cstr_pts_xi_, opt->spheres_radius_);
+    opt->jerkOpt_.getGrad2TP(gradT, gradP, P, opt->spheres_radius_);
     // time_cost += opt->rho_ * T(0) * piece_nums;  // same t
     // grad[n - 1] = (gradT.sum() + opt->rho_ * piece_nums) * gdT2t(x[n - 1]);  // same t
 
     opt->VirtualTGradCost(T, t, gradT, gradt, time_cost);
 
     opt->iter_num_ += 1;
+
+    // Collect intermediate MJO trajectories for publishing later
+    opt->intermediate_cstr_pts_xi_.push_back(opt->inner_cstr_pts_xi_);
+    opt->intermediate_cstr_pts_q_.push_back(opt->inner_cstr_pts_q_);
+
     return jerk_cost + obs_swarm_feas_qvar_costs.sum() + time_cost;
   }
 
@@ -303,12 +309,13 @@ namespace ego_planner
 
         // Transform from xi to q
         // Forward cost evaluation is done in q
-        Eigen::Vector3d pos_q = f_B_single(pos, spheres_center_[i], spheres_radius_[i]);
 
         // set inner_cstr_pts_xi_ for obtaining inner waypoint positions in 
         //    obtaining costs for certain types of penalties
         inner_cstr_pts_xi_.col(idx_cp) = pos; // NOTE: pos is in xi coordinates
-        inner_cstr_pts_q_.col(idx_cp) = pos_q; 
+
+        // Eigen::Vector3d pos_q = f_B_single(pos, spheres_center_[i], spheres_radius_[i]);
+        // inner_cstr_pts_q_.col(idx_cp) = pos_q;  
 
         /**
          * Penalty on static obstacle, vector of (x,y,z)
@@ -362,7 +369,7 @@ namespace ego_planner
         //   }
         //   costs(1) += omega * step * costp;
         // }
-
+        
         /**
          * Penalty on velocity constraint, vector of (x,y,z)
          */
@@ -432,7 +439,7 @@ namespace ego_planner
      */
     Eigen::MatrixXd gdp;
     double var;
-    distanceSqrVarianceWithGradCost2p(inner_cstr_pts_q_, gdp, var);
+    distanceSqrVarianceWithGradCost2p(inner_cstr_pts_xi_, gdp, var);
     // std::cout << "var=" << var <<std::endl;
 
     idx_cp = 0;

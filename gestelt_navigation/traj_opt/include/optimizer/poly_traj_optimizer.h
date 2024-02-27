@@ -74,7 +74,13 @@ namespace ego_planner
   public:
     typedef std::unique_ptr<PolyTrajOptimizer> Ptr;
 
+    /* Params */
     int cps_num_perPiece_;   // number of distinctive constraint points per piece
+
+    /* Data structures */
+    std::vector<Eigen::MatrixXd> intermediate_cstr_pts_xi_; // Intermediate constraint points unconstrained xi coordinates
+    std::vector<Eigen::MatrixXd> intermediate_cstr_pts_q_; // Intermediate constraint points constrained q coordinates
+    
 
   private:
     std::shared_ptr<GridMap> grid_map_;
@@ -113,6 +119,8 @@ namespace ego_planner
     double max_vel_, max_acc_;                                    // dynamic limits
 
     double t_now_;
+
+    /* Data structures */
 
     std::vector<double> spheres_radius_;                // Vector of sphere radius, size is no. of segments/pieces
     std::vector<Eigen::Vector3d> spheres_center_; // Vector of sphere centers, size is no. of segments/pieces
@@ -1424,7 +1432,6 @@ namespace ego_planner
       return xi;
     }
 
-
     /**
      * @brief 
      * 
@@ -1450,18 +1457,14 @@ namespace ego_planner
       size_t idx = 0;
       for (size_t i = 0; i < M; i++)
       {
-        std::cout << "i: " << i << std::endl;
         auto r_i = sphere_radius[i];
         auto o_i = spheres_center[i];
 
         for (int j = 0; j <= num_cp; j++){ // For every constraint point
-          std::cout << "  j: " << j << std::endl;
 
           auto xi_i = xi.block<3,1>(0, idx);
 
           q.block<3,1>(0, idx) =  o_i + (2 * r_i  * xi_i) / (xi_i.squaredNorm() + 1.0);
-
-          std::cout << "    Idx: " << idx << std::endl;
 
           // Next point IF not last point in segment
           //            OR is last point in segment AND LAST segment
@@ -1478,12 +1481,6 @@ namespace ego_planner
       // auto o_i = spheres_center[M-1];
       // auto xi_i = xi.block<3,1>(0, idx);
       // q.block<3,1>(0, idx) =  o_i + (2 * r_i  * xi_i) / (xi_i.squaredNorm() + 1.0);
-
-
-      std::cout<< "M: " << M << std::endl;
-      std::cout<< "num_cp: " << num_cp << std::endl;
-      std::cout<< "xi.cols: " << xi.cols() << std::endl;
-      std::cout<< "q.cols: " << q.cols() << std::endl;
 
       return q;
     }
@@ -1519,8 +1516,6 @@ namespace ego_planner
 
           xi.block<3,1>(0, idx) = o_i.array() + ( (r_i - sqrt(r_i * r_i - v_i.squaredNorm() )) / (v_i.squaredNorm()) ) * v_i.array() ;
           
-          std::cout << "    Idx: " << idx << std::endl;
-          
           // Next point IF not last point in segment
           //            OR is last point in segment AND LAST segment
           if (j != num_cp || (j == num_cp && i == M-1))
@@ -1529,11 +1524,6 @@ namespace ego_planner
           } 
         }
       }
-
-      std::cout<< "M: " << M << std::endl;
-      std::cout<< "num_cp: " << num_cp << std::endl;
-      std::cout<< "xi.cols: " << xi.cols() << std::endl;
-      std::cout<< "q.cols: " << q.cols() << std::endl;
 
       return xi;
     }

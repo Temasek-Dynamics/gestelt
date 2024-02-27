@@ -20,6 +20,7 @@ namespace ego_planner
     // Debugging topics
     initial_mjo_q_pub_ = nh.advertise<visualization_msgs::Marker>("initial_mjo_q", 20);
     initial_mjo_xi_pub_ = nh.advertise<visualization_msgs::Marker>("initial_mjo_xi", 20);
+    ctrl_pts_opt_pub_ = nh.advertise<visualization_msgs::Marker>("ctrl_pts_opt", 20);
 
     // Publish (S,V) Pairs from ESDF-Free local planner
     planner_sv_pairs_pub_ = nh.advertise<visualization_msgs::MarkerArray>("planner_sv_pairs", 1000);
@@ -184,34 +185,68 @@ namespace ego_planner
     displayMarkerList(global_list_pub, init_pts, scale, color, id);
   }
 
-  void PlanningVisualization::displayMultiInitPathList(vector<vector<Eigen::Vector3d>> init_trajs, const double scale)
+  void PlanningVisualization::displayIntermediateMJO_xi(
+    const std::vector<Eigen::MatrixXd>& trajectories)
   {
-
-    if (initial_mjo_pub_.getNumSubscribers() == 0)
+    if (ctrl_pts_opt_pub_.getNumSubscribers() == 0)
     {
       return;
     }
 
-    static int last_nums = 0;
+    Eigen::Vector3d color_green(0, 1, 0);
+    Eigen::Vector3d color_red(1, 0, 0);
 
-    for ( int id=0; id<last_nums; id++ )
-    {
-      Eigen::Vector4d color(0, 0, 0, 0);
-      vector<Eigen::Vector3d> blank;
-      displayMarkerList(initial_mjo_pub_, blank, scale, color, id, false);
-      ros::Duration(0.001).sleep();
+    // For each trajectory, publish it
+    for (size_t i = 0; i < trajectories.size(); i++){
+      
+      // Determine color based on i
+      // Between red and green 
+      Eigen::Vector3d colorRGB = generateColor(
+        i, trajectories.size(), color_green, color_red);
+
+      Eigen::Vector4d colorRGBA(colorRGB(0), colorRGB(1), colorRGB(2), 0.5); 
+      
+      std::vector<Eigen::Vector3d> list;
+      for (size_t j = 0; j < trajectories[i].cols(); j++)
+      {
+        Eigen::Vector3d pt = trajectories[i].col(j).transpose();
+        list.push_back(pt);
+      }
+      displayMarkerList(ctrl_pts_opt_pub_, list, 0.075, colorRGBA, i);
     }
-    last_nums = 0;
-
-    for ( int id=0; id<(int)init_trajs.size(); id++ )
-    {
-      Eigen::Vector4d color(0, 0, 1, 0.7);
-      displayMarkerList(initial_mjo_pub_, init_trajs[id], scale, color, id, false);
-      ros::Duration(0.001).sleep();
-      last_nums++;
-    }
-
   }
+
+  void PlanningVisualization::displayIntermediateMJO_q(
+    const std::vector<Eigen::MatrixXd>& trajectories)
+  {
+    if (ctrl_pts_opt_pub_.getNumSubscribers() == 0)
+    {
+      return;
+    }
+
+    Eigen::Vector3d color_green(0, 1, 0);
+    Eigen::Vector3d color_red(1, 0, 0);
+
+    // For each trajectory, publish it
+    for (size_t i = 0; i < trajectories.size(); i++){
+      
+      // Determine color based on i
+      // Between red and green 
+      Eigen::Vector3d colorRGB = generateColor(
+        i, trajectories.size(), color_green, color_red);
+
+      Eigen::Vector4d colorRGBA(colorRGB(0), colorRGB(1), colorRGB(2), 0.5); 
+      
+      std::vector<Eigen::Vector3d> list;
+      for (size_t j = 0; j < trajectories[i].cols(); j++)
+      {
+        Eigen::Vector3d pt = trajectories[i].col(j).transpose();
+        list.push_back(pt);
+      }
+      displayMarkerList(ctrl_pts_opt_pub_, list, 0.075, colorRGBA, i);
+    }
+  }
+
 
   void PlanningVisualization::displayInitialMJO_xi(Eigen::MatrixXd pts, int id)
   {
@@ -225,8 +260,8 @@ namespace ego_planner
       Eigen::Vector3d pt = pts.col(i).transpose();
       list.push_back(pt);
     }
-    Eigen::Vector4d color(0, 1, 1, 0.8); // Cyan
-    displayMarkerList(initial_mjo_xi_pub_, list, 0.15, color, id);
+    Eigen::Vector4d color(0, 1, 1, 0.5); // Cyan
+    displayMarkerList(initial_mjo_xi_pub_, list, 0.075, color, id);
   }
 
   void PlanningVisualization::displayInitialMJO_q(Eigen::MatrixXd pts, int id)
@@ -241,8 +276,8 @@ namespace ego_planner
       Eigen::Vector3d pt = pts.col(i).transpose();
       list.push_back(pt);
     }
-    Eigen::Vector4d color(1, 0, 1, 0.8); // Purple
-    displayMarkerList(initial_mjo_q_pub_, list, 0.05, color, id);
+    Eigen::Vector4d color(1, 0, 1, 0.5); // Purple
+    displayMarkerList(initial_mjo_q_pub_, list, 0.075, color, id);
   }
 
   void PlanningVisualization::displayInitialMJO(
@@ -253,7 +288,7 @@ namespace ego_planner
       return;
     }
 
-    Eigen::Vector4d color(0, 1, 0, 0.8); // Green
+    Eigen::Vector4d color(0, 1, 0, 0.75); // Green
     displayMarkerList(initial_mjo_pub_, init_pts, scale, color, id);
   }
 
@@ -270,7 +305,7 @@ namespace ego_planner
       list.push_back(pt);
     }
     Eigen::Vector4d color(1, 0, 0, 0.4);
-    displayMarkerList(optimal_list_pub, list, 0.15, color, id);
+    displayMarkerList(optimal_list_pub, list, 0.1, color, id);
   }
 
   void PlanningVisualization::displayFailedList(Eigen::MatrixXd failed_pts, int id)
@@ -288,7 +323,7 @@ namespace ego_planner
       list.push_back(pt);
     }
     Eigen::Vector4d color(0.3, 0, 0, 1);
-    displayMarkerList(failed_list_pub, list, 0.15, color, id);
+    displayMarkerList(failed_list_pub, list, 0.1, color, id);
   }
 
   void PlanningVisualization::displayAStarList(std::vector<std::vector<Eigen::Vector3d>> a_star_paths, int id /* = Eigen::Vector4d(0.5,0.5,0,1)*/)
@@ -446,5 +481,34 @@ namespace ego_planner
 
     displayArrowList(planner_sv_pairs_pub_, arrow, 0.05, color, id);
   }
+
+  // void PlanningVisualization::displayMultiInitPathList(vector<vector<Eigen::Vector3d>> init_trajs, const double scale)
+  // {
+
+  //   if (initial_mjo_pub_.getNumSubscribers() == 0)
+  //   {
+  //     return;
+  //   }
+
+  //   static int last_nums = 0;
+
+  //   for ( int id=0; id<last_nums; id++ )
+  //   {
+  //     Eigen::Vector4d color(0, 0, 0, 0);
+  //     vector<Eigen::Vector3d> blank;
+  //     displayMarkerList(initial_mjo_pub_, blank, scale, color, id, false);
+  //     ros::Duration(0.001).sleep();
+  //   }
+  //   last_nums = 0;
+
+  //   for ( int id=0; id<(int)init_trajs.size(); id++ )
+  //   {
+  //     Eigen::Vector4d color(0, 0, 1, 0.7);
+  //     displayMarkerList(initial_mjo_pub_, init_trajs[id], scale, color, id, false);
+  //     ros::Duration(0.001).sleep();
+  //     last_nums++;
+  //   }
+
+  // }
 
 } // namespace ego_planner
