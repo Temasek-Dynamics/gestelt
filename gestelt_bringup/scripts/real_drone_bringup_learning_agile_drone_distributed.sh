@@ -38,14 +38,8 @@ cpufreq-set -g performance
 # Commands
 #####
 # Start Gazebo and PX4 SITL instances
-CMD_0="
-roslaunch gestelt_bringup sitl_drone.launch 
-"
 
-# Start up drone commander (Handles taking off, execution of mission and landing etc.)
-CMD_1="
-roslaunch trajectory_server trajectory_server_node.launch rviz_config:=gz_sim
-"
+
 
 # Start up script to send commands
 CMD_3="roslaunch gestelt_bringup learning_agile_mission.launch platform:='drone'  record:=false"

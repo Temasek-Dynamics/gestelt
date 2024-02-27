@@ -32,23 +32,15 @@ export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:$gestelt_bringup_DIR:$PX4_AUTOPILOT_RE
 # Commands
 #####
 # Start Gazebo and PX4 SITL instances
-CMD_0="
-roslaunch gestelt_bringup sitl_drone.launch 
-"
+
 
 # Start up drone commander (Handles taking off, execution of mission and landing etc.)
-CMD_1="
-roslaunch trajectory_server trajectory_server_node.launch rviz_config:=gz_sim
-"
+
 
 CMD_2="
 roslaunch gestelt_bringup record.launch
 "
 
-# Start up script to send commands
-CMD_3="
-roslaunch gestelt_bringup learning_agile_mission.launch platform:='drone'
-"
 
 # disarm drone
 # CMD_4="rosservice call /drone_commander/disarm"
@@ -64,11 +56,11 @@ then
 
     tmux send-keys -t $SESSION:0.0 "$SOURCE_PX4_AUTOPILOT $EXPORT_ROS_MASTER_URI " #C-m 
     sleep 1
-    tmux send-keys -t $SESSION:0.1 "$SOURCE_WS $EXPORT_ROS_MASTER_URI " #C-m $CMD_1
+    tmux send-keys -t $SESSION:0.1 "$SOURCE_WS $EXPORT_ROS_MASTER_URI " #C-m 
     sleep 1
     tmux send-keys -t $SESSION:0.2 "$SOURCE_WS $EXPORT_ROS_MASTER_URI $CMD_2" C-m 
     sleep 1
-    tmux send-keys -t $SESSION:0.3 "$SOURCE_WS $EXPORT_ROS_MASTER_URI " #C-m $CMD_3
+    tmux send-keys -t $SESSION:0.3 "$SOURCE_WS $EXPORT_ROS_MASTER_URI " #C-m 
 fi
 
 # Attach session on the first window
