@@ -128,7 +128,6 @@ bool ExamplePlanner::planTrajectory(const std::vector<Eigen::Vector3d>& wp_pos,
     if (wp_acc.size() > 0 && msg->accelerations_mask[i].data == false){
       middle_wp.addConstraint(mav_trajectory_generation::derivative_order::ACCELERATION, wp_acc[i]);
     }
-
     vertices.push_back(middle_wp);
   }
 
@@ -141,16 +140,48 @@ bool ExamplePlanner::planTrajectory(const std::vector<Eigen::Vector3d>& wp_pos,
 
   // setimate initial segment times
   std::vector<double> segment_times;
-  // segment_times = estimateSegmentTimes(vertices, max_v_, max_a_);
- 
+  std::vector<double> current_segment_times;
+
+  mav_trajectory_generation::Vertex::Vector vertices_current;
+
+  // adjust the segement_time
+  // for (size_t i = 0; i < vertices.size()-1; ++i) {
+  //     vertices_current.push_back(vertices[i]);
+  //     vertices_current.push_back(vertices[i+1]);
+
+  //     // for trajectoy NOT fly through the gate
+  //     if (i!=0 || i!=4){
+        // current_segment_times = estimateSegmentTimes(vertices_current, max_v_, max_a_);
+  //       // current_segment_times *= 0.6;
+  //       double factor = 0.6;
+  //       std::transform(current_segment_times.begin(), current_segment_times.end(), current_segment_times.begin(),
+  //         [factor](double& c) { return c * factor; });
+  //       ROS_INFO("fabian segment_times: %f", segment_times[i]);
+  //     }
+  //     // for trajectoy fly through the gate
+  //     else{
+  //       current_segment_times= estimateSegmentTimesVelocityRamp(vertices_current, max_v_, max_a_);
+  //       ROS_INFO("ramp segment_times: %f", segment_times[i]);
+  //     }
+  //     segment_times.insert(segment_times.end(), current_segment_times.begin(), current_segment_times.end());
+  // } 
   segment_times = estimateSegmentTimesVelocityRamp(vertices, max_v_, max_a_);
+  for (size_t i = 0; i < vertices.size()-1; ++i) {
+    // if (i==0 || i==1 || i==4 || i==5){
+    //   segment_times[i] *= 0.8;
+    // }
+
+    if(i%4==0 || i%4==1){
+      segment_times[i] *= 0.8;
+    }
+
+    //extra time factor
+    if(i==0 || i==1){
+      segment_times[i] *= 1.2;
+    }
   
-  // enlarge the segement_time
-  // for (size_t i = 0; i < segment_times.size(); ++i) {
-  //       ROS_INFO("segment_times: %f", segment_times[i]);
-  //       segment_times[i] *= 1.5;
-  //   } 
-  
+  }
+
   /*
   * Linear optimization
   */

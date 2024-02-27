@@ -211,11 +211,11 @@ def main():
         # world frame is the initial position of the drone
         # map frame is the origin of the map
         # waypoints are under the map frame, will be transformed to world frame
-    for i in range(2):
-        waypoints.append(create_pose(1.2,-0.0,1.5)) # 1.2,-0.0,1.4
-        waypoints.append(create_pose(0.0,-1.2,1.2))# 0.0,-1.8,1.4
-        waypoints.append(create_pose(-1.2, 0.0, 1.2))
-        waypoints.append(create_pose(0.0,1.2,1.2))
+    for i in range(5):
+        waypoints.append(create_pose(1.5,-0.0,1.5)) # 1.2,-0.0,1.4
+        waypoints.append(create_pose(0.0,-1.5,1.2))# 0.0,-1.8,1.4
+        waypoints.append(create_pose(-1.5, 0.0, 1.2))
+        waypoints.append(create_pose(-0.0,1.5,1.2))
 
         # waypoints.append(create_pose(0.0,0.0,1.2))# 5.0,2.0,3
 
@@ -240,13 +240,12 @@ def main():
         vel_list.append(create_vel(None,None,None))
         vel_list.append(create_vel(None,None,None))
 
-    
-    # end of the trajectory
-    waypoints.append(create_pose(0.0,1.2,1.2))
-    accel_list.append(create_accel(None,None,None))
-    vel_list.append(create_vel(None,None,None))
+
 
     pub_waypoints(waypoints,accel_list,vel_list)
-    rospy.spin()
+    # rospy.spin()
+    print(waypoints)
+    rospy.signal_shutdown("Mission completed!")
+    
 if __name__ == '__main__':
     main()

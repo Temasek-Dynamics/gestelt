@@ -139,7 +139,8 @@ void TrajServer::multiDOFJointTrajectoryCb(const trajectory_msgs::MultiDOFJointT
   }
   else {
     geomMsgsVector3ToEigenVector3(msg->points[0].velocities[0].linear, last_mission_vel_);
-    last_mission_yaw_dot_ = msg->points[0].velocities[0].angular.z; //yaw rate
+    mission_type_mask_ |= IGNORE_YAW_RATE;
+    // last_mission_yaw_dot_ = msg->points[0].velocities[0].angular.z; //yaw rate
     // ROS_INFO("received velocity: %f, %f, %f", last_mission_vel_(0), last_mission_vel_(1), last_mission_vel_(2));
   }
 
@@ -152,6 +153,9 @@ void TrajServer::multiDOFJointTrajectoryCb(const trajectory_msgs::MultiDOFJointT
     // ROS_INFO("received acceleration: %f, %f, %f", last_mission_acc_(0), last_mission_acc_(1), last_mission_acc_(2));
   }
   // ROS_INFO("mission_type_mask_: %d", mission_type_mask_);
+
+  //calculate the yaw angle as the tangent of the position
+  last_mission_yaw_ = atan2(last_mission_vel_(1), last_mission_vel_(0));
 }
 
 void TrajServer::UAVStateCb(const mavros_msgs::State::ConstPtr &msg)
