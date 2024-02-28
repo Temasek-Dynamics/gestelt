@@ -28,12 +28,6 @@ SOURCE_PX4_AUTOPILOT="
 source $PX4_AUTOPILOT_REPO_DIR/Tools/setup_gazebo.bash $PX4_AUTOPILOT_REPO_DIR $PX4_AUTOPILOT_REPO_DIR/build/px4_sitl_default &&
 export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:$gestelt_bringup_DIR:$PX4_AUTOPILOT_REPO_DIR:$PX4_AUTOPILOT_REPO_DIR/Tools/sitl_gazebo &&
 "
-
-# let the cpu run in the highest performance
-CPU_PERFORMANCE="
-cpufreq-set -g performance
-"
-
 #####
 # Commands
 #####
