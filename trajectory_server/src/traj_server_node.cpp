@@ -10,7 +10,7 @@ int main(int argc, char **argv)
 
   traj_server.init(nh);
 
-  ros::MultiThreadedSpinner spinner(2);
+  ros::MultiThreadedSpinner spinner(4);
   spinner.spin();
 
   return 0;

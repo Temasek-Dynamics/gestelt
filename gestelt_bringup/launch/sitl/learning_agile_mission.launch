@@ -15,20 +15,18 @@
   
   <!--for running on the Radxa, This record does not start, 
   instead rosbag record will run on the laptop, in a seperate launch-->
-  <arg name="record_topics" default="/mavros/setpoint_raw/local 
-  /mavros/local_position/pose 
-  /mavros/setpoint_raw/attitude 
-  /planner/sample_trajectory 
-  /learning_agile_agent/traverse_time 
-  /learning_agile_agent/gate_centroid   
-  /learning_agile_agent/callback_runtime
-  /learning_agile_agent/solver_input_state"/>
+  <arg name="record_topics" default="
+    (.*)mavros(.*)
+  (.*)traj_server(.*)
+  (.*)learning_agile_agent(.*)
+  "
+  />
 
 
 
 
   <node if="$(arg record)" pkg="rosbag" type="record" name="record" output="screen" args="-o $(find gestelt_bringup)/data/
-  $(arg record_topics)"/>
+  -e $(arg record_topics)"/>
 
 
 </launch>

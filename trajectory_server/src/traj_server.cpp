@@ -119,10 +119,10 @@ void TrajServer::multiDOFJointTrajectoryCb(const trajectory_msgs::MultiDOFJointT
     return;
   }
 
-  last_traj_msg_time_ = ros::Time::now();
+  
 
   std::lock_guard<std::mutex> cmd_guard(cmd_mutex_);
-  
+  last_traj_msg_time_ = ros::Time::now();
   // We only take the first point of the trajectory
   // Message breakdown:
   // msg.joint_names: contain "base_link"
@@ -243,26 +243,17 @@ void TrajServer::execTrajTimerCb(const ros::TimerEvent &e)
     
     case ServerState::HOVER:
 
-      // if the circular mission is requested, when back to hover,
-      // shutdown the circular_traj_sub_ and hover at current position
-      if (mission_has_entered_==true){
-      circular_traj_sub_.shutdown();
-      }
-
       execHover();
       break;
     
     case ServerState::MISSION:
       if (!isExecutingMission()){
-        // logInfoThrottled("Waiting for mission", 5.0);
+       
+        logInfoThrottled("Waiting for mission", 5.0);
 
-
-        //-----only for minimum snap trajectory-----//
+        // this is critical for the HOVER->MISSION transition, keep it!
         execHover();
 
-        //-----only for circular mission-----//
-        // mission_has_entered_=true;
-        // execMission();
       }
       else {
         // ROS_INFO("ServerState received velocity: %f, %f, %f", last_mission_vel_(0), last_mission_vel_(1), last_mission_vel_(2));
@@ -273,7 +264,6 @@ void TrajServer::execTrajTimerCb(const ros::TimerEvent &e)
           execHover();
         }
         // ROS_INFO("final ServerState::MISSION,mission_vel: %f, %f, %f", last_mission_vel_(0), last_mission_vel_(1), last_mission_vel_(2));
-        // execMission();
         execMPCControl();
         
       }
@@ -312,10 +302,10 @@ void TrajServer::requestCircularMission()
 
 void TrajServer::MPCControlCb(const mavros_msgs::AttitudeTarget::ConstPtr &msg)
 { 
-  last_traj_msg_time_ = ros::Time::now();
+ 
 
   std::lock_guard<std::mutex> cmd_guard(cmd_mutex_);
-  
+  last_traj_msg_time_ = ros::Time::now();
   last_mission_thrust_ = msg->thrust;
   last_mission_bodyrates_(0) = msg->body_rate.x;
   last_mission_bodyrates_(1) = msg->body_rate.y;
@@ -618,7 +608,6 @@ void TrajServer::execMission()
   std::lock_guard<std::mutex> cmd_guard(cmd_mutex_);
 
   mission_type_mask_ = IGNORE_YAW_RATE; // Ignore yaw rate 
-  // ROS_INFO("execMission() mission_vel: %f, %f, %f", last_mission_vel_(0), last_mission_vel_(1), last_mission_vel_(2));
   publishCmd( last_mission_pos_, last_mission_vel_, 
               last_mission_acc_, last_mission_jerk_, 
               last_mission_yaw_, last_mission_yaw_dot_, 
@@ -629,7 +618,6 @@ void TrajServer::execMission()
               last_mission_yaw_, last_mission_yaw_dot_, 
               mission_type_mask_);
 
-  // pubrefState( last_mission_pos_, last_mission_vel_);
 
 
 }
