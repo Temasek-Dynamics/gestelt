@@ -1,13 +1,12 @@
   <launch>
-  <arg name="record_topics" default="/mavros/setpoint_raw/local 
-  /mavros/local_position/pose 
-  /mavros/setpoint_raw/attitude 
-  /learning_agile_agent/callback_runtime
+  <arg name="record_topics" default="
+  (.*)mavros(.*)
+  (.*)learning_agile_agent(.*)
  "/>
 
 
   <node pkg="rosbag" type="record" name="record" output="screen" args="-o $(find gestelt_bringup)/data/
-  $(arg record_topics)"/> 
+  -e $(arg record_topics)"/> 
 
   <!-- record all topics -->
   <!-- <node pkg="rosbag" type="record" name="record" output="screen" args="-a -o $(find gestelt_bringup)/data/"/> -->
