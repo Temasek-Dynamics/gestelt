@@ -53,16 +53,12 @@ def f_B_inv(q_i, o_i, r_i):
     o_i_ = o_i.flatten()
     v_i = q_i_ - o_i_
 
-    b = np.dot(v_i, v_i)
+    if (v_i )
 
-    a = r_i - np.sqrt(r_i**2 - b)  # Works only for points inside the circle
+    a = r_i   
+    b = r_i + np.sqrt(r_i**2 - np.linalg.norm(v_i)**2) # q has to be inside the sphere
 
-    # if b < r_i*r_i: #If point q_i inside the sphere
-    #     a = r_i - np.sqrt(r_i**2 - b)  # Works only for oriignal xi inside the circle
-    # else:
-    #     a = r_i + np.sqrt(r_i**2 - b)  # Works for origina xi outside the circle
-
-    xi_i = ( a ) * (v_i / b) 
+    xi_i = (a / b ) * v_i + o_i.flatten()
     return xi_i
 
 class TrajectoryInspector:
@@ -139,7 +135,8 @@ class TrajectoryInspector:
         num_cp = msg_be.num_cp               # Vector of constraint points
         num_segs = msg_be.num_segs               # Vector of constraint points
         cstr_pts = PointVec()               # Vector of constraint points
-        cstr_pts_q = PointVec()               # Vector of constraint points in constrained q coordinates
+        cstr_pts_q = PointVec()               # Vector of constraint pts: constrained q coordinates
+        cstr_pts_xi = PointVec()               # Vector of constraint pts: unconstrained xi coordinates
 
         for i in range(0, len(msg_be.initial_mjo)):
             cstr_pts.x.append(msg_be.initial_mjo[i].x)
@@ -161,8 +158,6 @@ class TrajectoryInspector:
                 
                 idx = i * num_cp + j
 
-                print(sfc_spheres.centers[i])
-
                 # The start (j=0) and end (j=num_cp-1) are intersection of the spheres, which
                 # are not transformed.
                 if j == 0 or j == num_cp:
@@ -175,6 +170,24 @@ class TrajectoryInspector:
                 cstr_pts_q.x.append(pt[0])
                 cstr_pts_q.y.append(pt[1])
                 cstr_pts_q.z.append(pt[2])
+
+        for i in range(0, num_segs): # For each segment
+
+            for j in range(0, num_cp+1): # For each waypoint 
+                
+                idx = i * num_cp + j
+
+                # The start (j=0) and end (j=num_cp-1) are intersection of the spheres, which
+                # are not transformed.
+                if j == 0 or j == num_cp:
+                    pt = np.array([cstr_pts.x[idx], cstr_pts.y[idx], cstr_pts.z[idx]])
+                else:
+                    q = np.array([cstr_pts.x[idx], cstr_pts.y[idx], cstr_pts.z[idx]])
+                    pt = f_B_inv(q, sfc_spheres.centers[i], sfc_spheres.radii[i])
+
+                cstr_pts_xi.x.append(pt[0])
+                cstr_pts_xi.y.append(pt[1])
+                cstr_pts_xi.z.append(pt[2])
 
         #####
         # Plotting
