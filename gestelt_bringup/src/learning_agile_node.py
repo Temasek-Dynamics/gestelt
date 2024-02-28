@@ -48,7 +48,7 @@ class LearningAgileAgentNode():
         
         # pos_vel_att_cmd command publisher
         # self.next_setpoint_pub = rospy.Publisher('/mavros/setpoint_raw/local', PositionTarget, queue_size=10)
-        self.next_attitude_setpoint_pub = rospy.Publisher('/mavros/setpoint_raw/attitude', AttitudeTarget, queue_size=1)
+        self.next_attitude_setpoint_pub = rospy.Publisher('/learning_agile_agent/soft_RT_mpc_attitude', AttitudeTarget, queue_size=1)
 
         self.gate_centroid_pub = rospy.Publisher('/learning_agile_agent/gate_centroid', PoseStamped, queue_size=1)
         

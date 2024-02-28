@@ -30,7 +30,7 @@ void TrajServer::init(ros::NodeHandle& nh)
   nh.param("traj_server/safety_box/min_z", safety_box_.min_z, -1.0);
 
   // Frequency params
-  nh.param("traj_server/pub_cmd_freq", pub_cmd_freq_, 25.0); // frequency to publish commands
+  nh.param("traj_server/pub_cmd_freq", pub_cmd_freq_, 100.0); // frequency to publish commands
   double state_machine_tick_freq; // Frequency to tick the state machine transitions
   nh.param("traj_server/state_machine_tick_freq", state_machine_tick_freq, 50.0);
   double debug_freq; // Frequency to publish debug information
@@ -54,6 +54,11 @@ void TrajServer::init(ros::NodeHandle& nh)
   // circular traj client
   circular_client_ = nh.serviceClient<std_srvs::SetBool>("start");
 
+
+  //MPC control soft real time cmd subscriber
+  mpc_soft_RT_cmd_sub_ = nh.subscribe("/learning_agile_agent/soft_RT_mpc_attitude", 1, &TrajServer::MPCControlCb, this);
+  
+  
   // Subscription to UAV (via MavROS)
   uav_state_sub_ = nh.subscribe<mavros_msgs::State>("/mavros/state", 10, &TrajServer::UAVStateCb, this);
   pose_sub_ = nh.subscribe<geometry_msgs::PoseStamped>("/mavros/local_position/pose", 1, &TrajServer::UAVPoseCB, this);
@@ -62,6 +67,9 @@ void TrajServer::init(ros::NodeHandle& nh)
   /////////////////
   /* Publishers */
   /////////////////
+  //MPC control hard real time cmd publisher
+  mpc_hard_RT_cmd_pub_ = nh.advertise<mavros_msgs::AttitudeTarget>("/mavros/setpoint_raw/attitude", 1);
+  
   pos_cmd_raw_pub_ = nh.advertise<mavros_msgs::PositionTarget>("/mavros/setpoint_raw/local", 50);
   uav_path_pub_ = nh.advertise<nav_msgs::Path>("/uav_path_trajectory", 50);
   server_state_pub_ = nh.advertise<gestelt_msgs::CommanderState>("/traj_server/state", 50);
@@ -87,6 +95,7 @@ void TrajServer::init(ros::NodeHandle& nh)
   USE_FORCE = mavros_msgs::PositionTarget::FORCE;
   IGNORE_YAW = mavros_msgs::PositionTarget::IGNORE_YAW;
   IGNORE_YAW_RATE = mavros_msgs::PositionTarget::IGNORE_YAW_RATE;
+  IGNORE_ATTITUDE = mavros_msgs::AttitudeTarget::IGNORE_ATTITUDE;
 
   logInfo("Initialized");
 }
@@ -249,7 +258,7 @@ void TrajServer::execTrajTimerCb(const ros::TimerEvent &e)
 
 
         //-----only for minimum snap trajectory-----//
-        // execHover();
+        execHover();
 
         //-----only for circular mission-----//
         // mission_has_entered_=true;
@@ -264,7 +273,9 @@ void TrajServer::execTrajTimerCb(const ros::TimerEvent &e)
           execHover();
         }
         // ROS_INFO("final ServerState::MISSION,mission_vel: %f, %f, %f", last_mission_vel_(0), last_mission_vel_(1), last_mission_vel_(2));
-        execMission();
+        // execMission();
+        execMPCControl();
+        
       }
       break;
 
@@ -297,6 +308,24 @@ void TrajServer::requestCircularMission()
   }
 
 }
+
+
+void TrajServer::MPCControlCb(const mavros_msgs::AttitudeTarget::ConstPtr &msg)
+{ 
+  last_traj_msg_time_ = ros::Time::now();
+
+  std::lock_guard<std::mutex> cmd_guard(cmd_mutex_);
+  
+  last_mission_thrust_ = msg->thrust;
+  last_mission_bodyrates_(0) = msg->body_rate.x;
+  last_mission_bodyrates_(1) = msg->body_rate.y;
+  last_mission_bodyrates_(2) = msg->body_rate.z;
+
+  
+}
+
+
+
 void TrajServer::tickServerStateTimerCb(const ros::TimerEvent &e)
 {
   // logInfoThrottled(string_format("Current Server State: [%s]", StateToString(getServerState()).c_str()), 1.0);
@@ -546,25 +575,10 @@ void TrajServer::execTakeOff()
   Eigen::Vector3d pos = last_mission_pos_;
   
   if(isUAVReady()){
-    // x direction takeoff ramp
-    // if (abs(takeoff_ramp_(0)) < abs(hover_pos_(0))){
-    //   takeoff_ramp_(0) += (hover_pos_(0)*pub_cmd_freq_)/(pub_cmd_freq_*400)*hover_pos_.array().sign()(0); // 25Hz, then the addition is 0.01m, for 0.04s
-    // }
-    // else {
-    //   takeoff_ramp_(0) = hover_pos_(0);
-    // }
-
-    // // y direction takeoff ramp
-    // if (abs(takeoff_ramp_(1)) < abs(hover_pos_(1))){
-    //   takeoff_ramp_(1) += (hover_pos_(1)*pub_cmd_freq_)/(pub_cmd_freq_*400)*hover_pos_.array().sign()(1); // 25Hz, then the addition is 0.01m, for 0.04s
-    // }
-    // else {
-    //   takeoff_ramp_(1) = hover_pos_(1);
-    // }
- 
+    
     // z axis takeoff ramp
     if (takeoff_ramp_(2) < takeoff_height_){
-      takeoff_ramp_(2) += pub_cmd_freq_/(pub_cmd_freq_*takeoff_ramp_denom_); // 200/  25Hz, then the addition is 0.01m, for 0.04s
+      takeoff_ramp_(2) += pub_cmd_freq_/(pub_cmd_freq_*takeoff_ramp_denom_*4); // 200/  25Hz, then the addition is 0.01m, for 0.04s
     }
     else {
       takeoff_ramp_(2) = last_mission_pos_(2);
@@ -619,6 +633,23 @@ void TrajServer::execMission()
 
 
 }
+void TrajServer::execMPCControl()
+{
+  std::lock_guard<std::mutex> cmd_guard(cmd_mutex_);
+  mavros_msgs::AttitudeTarget mpc_cmd;
+  mpc_cmd.header.stamp = ros::Time::now();
+  mpc_cmd.header.frame_id = origin_frame_;
+  mpc_cmd.type_mask = IGNORE_ATTITUDE; // Ignore orientation
+  mpc_cmd.thrust = last_mission_thrust_;
+  mpc_cmd.body_rate.x = last_mission_bodyrates_(0);
+  mpc_cmd.body_rate.y = last_mission_bodyrates_(1);
+  mpc_cmd.body_rate.z = last_mission_bodyrates_(2);
+  mpc_hard_RT_cmd_pub_.publish(mpc_cmd);
+  
+}
+
+
+
 
 /* Publisher methods */
 

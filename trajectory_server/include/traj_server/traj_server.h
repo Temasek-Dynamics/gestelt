@@ -13,6 +13,7 @@
 #include <nav_msgs/Odometry.h>
 #include <nav_msgs/Path.h>
 #include <mavros_msgs/PositionTarget.h>
+#include <mavros_msgs/AttitudeTarget.h>
 #include <mavros_msgs/CommandBool.h>
 #include <mavros_msgs/State.h>
 #include <mavros_msgs/SetMode.h>
@@ -110,6 +111,15 @@ private: // Class Methods
    * 
    */
   void requestCircularMission();
+
+
+  /**
+   * @brief   MPC control callback
+   * 
+   */
+  void MPCControlCb(const mavros_msgs::AttitudeTarget::ConstPtr &msg);
+
+
   /**
    * @brief Callback for trajectory points from mav_trajectory_generation  
    */
@@ -183,6 +193,11 @@ private: // Class Methods
   */
   void execMission();
 
+  /**
+   * @brief Execute MPC hard Real Time Control
+   * 
+   */
+  void execMPCControl();
   /* Conditional checking methods */
 
   /**
@@ -384,7 +399,8 @@ private: // Member variables
   ros::Publisher server_state_pub_; // Publisher of current uav and server state
   ros::Publisher flat_reference_pub_; // Publisher of flat reference for controller
   ros::Publisher reference_pub_; // Publisher of reference velocity for controller
-  
+  ros::Publisher mpc_hard_RT_cmd_pub_; // Publisher of MPC hard Real Time control commands
+
   /* Subscriber */
   ros::Subscriber plan_traj_sub_; // Subscriber for planner trajectory
 
@@ -395,6 +411,10 @@ private: // Member variables
   ros::Subscriber uav_state_sub_; // Subscriber to UAV State (MavROS)
   ros::Subscriber pose_sub_; // Subscriber to UAV State (MavROS)
   ros::Subscriber odom_sub_; // Subscriber to UAV State (MavROS)
+
+  ros::Subscriber mpc_soft_RT_cmd_sub_; // Subscriber to MPC soft Real Time control commands
+  
+  
   // TODO: make this a service server
   ros::Subscriber command_server_sub_; // Subscriber to trajectory server commands
 
@@ -421,6 +441,12 @@ private: // Member variables
   // Last received mission PVAJ (position, velocity, acceleration, Jerk)
   Eigen::Vector3d last_mission_pos_{0.0, 0.0, 0.0}, last_mission_vel_{0.0, 0.0, 0.0};
   Eigen::Vector3d last_mission_acc_{0.0, 0.0, 0.0}, last_mission_jerk_{0.0, 0.0, 0.0};
+
+  // last MPC control input
+  Eigen::Vector3d last_mission_bodyrates_{0.0, 0.0, 0.0}; // Last received mission body rates
+  double last_mission_thrust_{0.0}; // Last received mission thrust
+
+
   // Last received mission yaw and yaw rate
   double last_mission_yaw_{0.0}, last_mission_yaw_dot_{0.0};
   double takeoff_ramp_denom_;
@@ -435,7 +461,6 @@ private: // Member variables
   ros::Time heartbeat_time_{0};
 
   ros::Time last_traj_msg_time_{0}; // Time of last trajectory message
-
   bool mission_has_entered_{false}; // Flag to indicate that mission has entered state
   bool first_pose_{true};
   bool mission_completed_{true};
@@ -448,6 +473,10 @@ private: // Member variables
   uint16_t IGNORE_YAW; // Ignore yaw in typemask
   uint16_t IGNORE_YAW_RATE; // Ignore yaw rate in typemask
 
+  // Values set from mavros_msgs/AttitudeTarget message constants
+  uint8_t IGNORE_ATTITUDE; // Ignore attitude in typemask
+
+  
   uint16_t mission_type_mask_{0}; // Current type mask
 
   std::mutex cmd_mutex_; // mutex for PVA Commands
