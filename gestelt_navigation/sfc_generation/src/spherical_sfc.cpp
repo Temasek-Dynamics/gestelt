@@ -461,25 +461,24 @@ void SphericalSFC::computeSFCTrajectory(
     const Eigen::Vector3d& goal_pos, 
     SphericalSFC::SFCTrajectory& sfc_traj)
 {
+    size_t num_segs = sfc_spheres.size(); // Number of 
     /* 1: Retrieve waypoints from the intersections between the spheres */
-    std::vector<Eigen::Vector3d> traj_waypoints(sfc_spheres.size()+1);
+    std::vector<Eigen::Vector3d> traj_waypoints(num_segs+1);
  
     traj_waypoints[0] = start_pos; // Add start state
-    for (size_t i = 1; i < sfc_spheres.size(); i++){
-        // TODO: Add check for intersection between 2 spheres?
-
+    for (size_t i = 1; i < num_segs; i++){
         // Add intersection between 2 spheres
         traj_waypoints[i] = getIntersectionCenter(sfc_spheres[i-1], sfc_spheres[i]) ;
     }
     traj_waypoints.back() = goal_pos; // Add goal state
 
     /* 2: Get time allocation  */
-    std::vector<double> segs_time_durations(traj_waypoints.size()-1); // Vector of time durations for each segment {t_1, t_2, ..., t_M}
+    std::vector<double> segs_time_durations(num_segs); // Vector of time durations for each segment {t_1, t_2, ..., t_M}
 
     // We can either use triangle or trapezoidal time profile.
     // We use a trapezoidal time profile
 
-    for (size_t i = 0 ; i < traj_waypoints.size()-1; i++){
+    for (size_t i = 0 ; i < num_segs; i++){
         double traj_dist = (traj_waypoints[i+1] - traj_waypoints[i]).norm();
         
         // For trapezoidal time profile: t_s, t_c and t_d is the time taken to 

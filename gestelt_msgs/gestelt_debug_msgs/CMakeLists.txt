@@ -23,6 +23,7 @@ add_message_files(
   FILES
   SFCSegment.msg
   SFCTrajectory.msg
+  BackEndTrajectoryDebug.msg
 )
 
 ## Generate services in the 'srv' folder

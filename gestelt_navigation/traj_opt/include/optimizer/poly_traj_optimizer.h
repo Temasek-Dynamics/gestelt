@@ -1452,35 +1452,51 @@ namespace ego_planner
       // Expects array of size (3, M*num_cp + 1)
       Eigen::MatrixXd q(3, xi.cols());  // Constrained variable q
 
+
       //for each segment i (excluding boundary points)
-      // Therefore starting and final sphere is excluded
-      size_t idx = 0;
       for (size_t i = 0; i < M; i++)
       {
         auto r_i = sphere_radius[i];
         auto o_i = spheres_center[i];
 
-        for (int j = 0; j <= num_cp; j++){ // For every constraint point
-
+        for (int j = 0; j < num_cp; j++){ // For every constraint point
+          size_t idx = i * num_cp + j;
           auto xi_i = xi.block<3,1>(0, idx);
 
           q.block<3,1>(0, idx) =  o_i + (2 * r_i  * xi_i) / (xi_i.squaredNorm() + 1.0);
-
-          // Next point IF not last point in segment
-          //            OR is last point in segment AND LAST segment
-          if (j != num_cp || (j == num_cp && i == M-1))
-          {
-            ++idx;
-          }
         }
       }
 
       // For last goal
-      // idx = xi.cols();
-      // auto r_i = sphere_radius[M-1];
-      // auto o_i = spheres_center[M-1];
-      // auto xi_i = xi.block<3,1>(0, idx);
-      // q.block<3,1>(0, idx) =  o_i + (2 * r_i  * xi_i) / (xi_i.squaredNorm() + 1.0);
+      size_t idx = xi.cols();
+      auto r_i = sphere_radius[M-1];
+      auto o_i = spheres_center[M-1];
+      auto xi_i = xi.block<3,1>(0, idx-1);
+      q.block<3,1>(0, idx-1) =  o_i + (2 * r_i  * xi_i) / (xi_i.squaredNorm() + 1.0);
+
+
+      // //for each segment i (excluding boundary points)
+      // // Therefore starting and final sphere is excluded
+      // size_t idx = 0;
+      // for (size_t i = 0; i < M; i++)
+      // {
+      //   auto r_i = sphere_radius[i];
+      //   auto o_i = spheres_center[i];
+
+      //   for (int j = 0; j <= num_cp; j++){ // For every constraint point
+
+      //     auto xi_i = xi.block<3,1>(0, idx);
+
+      //     q.block<3,1>(0, idx) =  o_i + (2 * r_i  * xi_i) / (xi_i.squaredNorm() + 1.0);
+
+      //     // Next point IF not last point in segment
+      //     //            OR is last point in segment AND LAST segment
+      //     if (j != num_cp || (j == num_cp && i == M-1))
+      //     {
+      //       ++idx;
+      //     }
+      //   }
+      // }
 
       return q;
     }

@@ -1589,8 +1589,14 @@ namespace poly_traj
             // eqn (70): p.d.(H / T_i) = p.d.(F/T_i) - Tr{ G_i.T * p.d.(E_i/T_i) * c_i}
             addPropCtoT(gdC, gdT); // Adds to gdT
 
+            // // eqn (66): p.d.(H / q) = (G_1.T * e1, ..., G_(M-1).T * e1)
+            // addPropCtoP(gdC, gradP); // Adds to gdT
 
-            addPropCtoP(gdC, gradP); // Adds to gdT
+            for (int i = 0; i < N - 1; i++) // For each segment (except start and end)
+            {   
+                gradP.col(i) = gdC.row(6 * i + 5).transpose(); 
+            }
+
 
             // // eqn (66): p.d.(H / q) = (G_1.T * e1, ..., G_(M-1).T * e1)
             // // eqn (79): p.d.(H / xi) = ...

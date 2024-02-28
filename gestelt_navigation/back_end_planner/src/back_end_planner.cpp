@@ -21,6 +21,9 @@ void BackEndPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   plan_traj_pub_ = nh.advertise<traj_utils::PolyTraj>("back_end/trajectory", 10); 
   swarm_minco_traj_pub_ = nh.advertise<traj_utils::MINCOTraj>("/swarm/global/minco", 10);
 
+  debug_traj_pub_ = nh.advertise<gestelt_debug_msgs::BackEndTrajectoryDebug>(
+    "back_end/debug_trajectory", 10, true); 
+
   // Debugging topics
   debug_start_sub_ = pnh.subscribe("debug/plan_start", 5, &BackEndPlanner::debugStartCB, this);
   debug_goal_sub_ = pnh.subscribe("debug/plan_goal", 5, &BackEndPlanner::debugGoalCB, this);
@@ -185,16 +188,11 @@ bool BackEndPlanner::generatePlanSFC( const Eigen::Vector3d& start_pos, const Ei
                                             segs_t_dur, // Time duration of segments
                                             initial_mjo); // Initial Minimum jerk trajectory
 
-    Eigen::MatrixXd cstr_pts_mjo = initial_mjo.getInitConstraintPoints(num_cstr_pts);
-
-    // for (int i = 0; i < 2; i++) {
-      // std::cout << "Idx " << i  << ": "<< initial_mjo.get_b().block<6, 3>(i * 6, 0) << std::endl;
-    // }
+    Eigen::MatrixXd init_cstr_pts = initial_mjo.getInitConstraintPoints(num_cstr_pts);
 
     std::vector<Eigen::Vector3d> initial_mjo_viz; // Visualization of the initial minimum jerk trajectory
-    for (int i = 0; i < cstr_pts_mjo.cols(); ++i){
-      // std::cout << "Constraint_pt " << i << ": " << cstr_pts_mjo.col(i).transpose() << std::endl;
-      initial_mjo_viz.push_back(cstr_pts_mjo.col(i));
+    for (int i = 0; i < init_cstr_pts.cols(); ++i){
+      initial_mjo_viz.push_back(init_cstr_pts.col(i));
     }
     visualization_->displayInitialMJO(initial_mjo_viz, 0.075, 0);
 
@@ -216,23 +214,22 @@ bool BackEndPlanner::generatePlanSFC( const Eigen::Vector3d& start_pos, const Ei
     
     double final_cost; // Not used for now
 
-    Eigen::MatrixXd inner_cstr_pts = initial_mjo.getInitConstraintPoints(num_cstr_pts);
     // Display trajectory in q coordinates
-    Eigen::MatrixXd inner_cstr_pts_xi = 
-      back_end_planner_->ploy_traj_opt_->f_BInv_cstr_pts(inner_cstr_pts, 
+    Eigen::MatrixXd cstr_pts_xi = 
+      back_end_planner_->ploy_traj_opt_->f_BInv_cstr_pts(init_cstr_pts, 
                                               initial_mjo.getNumSegs(),
                                               num_cstr_pts,
                                               spheres_center,
                                               spheres_radius);
-    visualization_->displayInitialMJO_xi(inner_cstr_pts_xi, 0); 
+    visualization_->displayInitialMJO_xi(cstr_pts_xi, 0); 
 
-    // Eigen::MatrixXd inner_cstr_pts_q = 
-    //   back_end_planner_->ploy_traj_opt_->f_B_cstr_pts(inner_cstr_pts, 
+    // Eigen::MatrixXd cstr_pts_q = 
+    //   back_end_planner_->ploy_traj_opt_->f_B_cstr_pts(cstr_pts, 
     //                                           initial_mjo.getNumSegs(),
     //                                           num_cstr_pts,
     //                                           spheres_center,
     //                                           spheres_radius);
-    // visualization_->displayInitialMJO_q(inner_cstr_pts_q, 0); 
+    // visualization_->displayInitialMJO_q(cstr_pts_q, 0); 
 
     // Optimize trajectory!
     plan_success = back_end_planner_->ploy_traj_opt_->optimizeTrajectorySFC( 
@@ -244,6 +241,7 @@ bool BackEndPlanner::generatePlanSFC( const Eigen::Vector3d& start_pos, const Ei
 
     // Optimized minimum jerk trajectory
     optimized_mjo = back_end_planner_->ploy_traj_opt_->getMinJerkOpt();
+    Eigen::MatrixXd cstr_pts_optimized_mjo = optimized_mjo.getInitConstraintPoints(num_cstr_pts);
 
     /***************************/
     /* Print and display results for debugging
@@ -263,7 +261,20 @@ bool BackEndPlanner::generatePlanSFC( const Eigen::Vector3d& start_pos, const Ei
     // logInfo(str_fmt("Trajectory: Length(%f), Jerk Cost(%f), Duration(%f)", 
     //   traj_length, traj_jerk_cost, trajectory_duration));
 
-    Eigen::MatrixXd cstr_pts_optimized_mjo = optimized_mjo.getInitConstraintPoints(num_cstr_pts);
+
+    // Publish back end trajectory for debugging with trajectory inspector
+    gestelt_debug_msgs::BackEndTrajectoryDebug debug_traj_msg;
+    for (int i = 0; i < init_cstr_pts.cols(); ++i){
+      geometry_msgs::Point pt;
+      pt.x = init_cstr_pts.col(i)(0);
+      pt.y = init_cstr_pts.col(i)(1);
+      pt.z = init_cstr_pts.col(i)(2);
+
+      debug_traj_msg.initial_mjo.push_back(pt);
+    }
+    debug_traj_msg.num_cp = num_cstr_pts;
+    debug_traj_msg.num_segs = initial_mjo.getNumSegs();
+    debug_traj_pub_.publish(debug_traj_msg);
 
     if (plan_success)
     {

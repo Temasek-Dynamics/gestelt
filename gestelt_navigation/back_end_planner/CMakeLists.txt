@@ -10,8 +10,10 @@ set(ROS_LIBRARIES
   std_msgs
   geometry_msgs
   gestelt_msgs
+  gestelt_debug_msgs
   traj_opt
   ego_planner_fsm
+  
 ) 
 
 find_package(Eigen3 REQUIRED)

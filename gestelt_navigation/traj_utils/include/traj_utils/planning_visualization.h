@@ -26,7 +26,8 @@ namespace ego_planner
     ros::Publisher initial_mjo_q_pub_; // Publish projected coordinates q
     ros::Publisher initial_mjo_xi_pub_; // Publish unconstrained coords xi
 
-    ros::Publisher ctrl_pts_opt_pub_; // Publish control points as they are being optimized
+    ros::Publisher intmd_ctrl_pts_q_pub_; // Publish intermediate control points as they are being optimized
+    ros::Publisher intmd_ctrl_pts_xi_pub_; // Publish intermediate control points as they are being optimized
 
 
     ros::Publisher optimal_list_pub;

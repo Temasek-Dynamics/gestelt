@@ -20,7 +20,8 @@ namespace ego_planner
     // Debugging topics
     initial_mjo_q_pub_ = nh.advertise<visualization_msgs::Marker>("initial_mjo_q", 20);
     initial_mjo_xi_pub_ = nh.advertise<visualization_msgs::Marker>("initial_mjo_xi", 20);
-    ctrl_pts_opt_pub_ = nh.advertise<visualization_msgs::Marker>("ctrl_pts_opt", 20);
+    intmd_ctrl_pts_q_pub_ = nh.advertise<visualization_msgs::Marker>("intmd_ctrl_pts_q", 20);
+    intmd_ctrl_pts_xi_pub_ = nh.advertise<visualization_msgs::Marker>("intmd_ctrl_pts_xi", 20);
 
     // Publish (S,V) Pairs from ESDF-Free local planner
     planner_sv_pairs_pub_ = nh.advertise<visualization_msgs::MarkerArray>("planner_sv_pairs", 1000);
@@ -56,7 +57,7 @@ namespace ego_planner
     sphere.scale.x = scale;
     sphere.scale.y = scale;
     sphere.scale.z = scale;
-    line_strip.scale.x = scale / 3.5;
+    line_strip.scale.x = scale / 5.0;
     geometry_msgs::Point pt;
     for (int i = 0; i < int(list.size()); i++)
     {
@@ -66,7 +67,9 @@ namespace ego_planner
       if (show_sphere) sphere.points.push_back(pt);
       line_strip.points.push_back(pt);
     }
-    if (show_sphere) pub.publish(sphere);
+    if (show_sphere) {
+      pub.publish(sphere);
+    }
     pub.publish(line_strip);
   }
 
@@ -188,7 +191,7 @@ namespace ego_planner
   void PlanningVisualization::displayIntermediateMJO_xi(
     const std::vector<Eigen::MatrixXd>& trajectories)
   {
-    if (ctrl_pts_opt_pub_.getNumSubscribers() == 0)
+    if (intmd_ctrl_pts_xi_pub_.getNumSubscribers() == 0)
     {
       return;
     }
@@ -212,14 +215,14 @@ namespace ego_planner
         Eigen::Vector3d pt = trajectories[i].col(j).transpose();
         list.push_back(pt);
       }
-      displayMarkerList(ctrl_pts_opt_pub_, list, 0.075, colorRGBA, i);
+      displayMarkerList(intmd_ctrl_pts_xi_pub_, list, 0.075, colorRGBA, i);
     }
   }
 
   void PlanningVisualization::displayIntermediateMJO_q(
     const std::vector<Eigen::MatrixXd>& trajectories)
   {
-    if (ctrl_pts_opt_pub_.getNumSubscribers() == 0)
+    if (intmd_ctrl_pts_q_pub_.getNumSubscribers() == 0)
     {
       return;
     }
@@ -243,10 +246,9 @@ namespace ego_planner
         Eigen::Vector3d pt = trajectories[i].col(j).transpose();
         list.push_back(pt);
       }
-      displayMarkerList(ctrl_pts_opt_pub_, list, 0.075, colorRGBA, i);
+      displayMarkerList(intmd_ctrl_pts_q_pub_, list, 0.075, colorRGBA, i);
     }
   }
-
 
   void PlanningVisualization::displayInitialMJO_xi(Eigen::MatrixXd pts, int id)
   {
@@ -437,6 +439,13 @@ namespace ego_planner
     }
     
   }
+
+
+
+  // void PlanningVisualization::displayIntermediateGrad()
+  // {
+
+  // }
 
   void PlanningVisualization::pubStaticObsGrad(
     Eigen::MatrixXd &pts, Eigen::MatrixXd &grad, int id, Eigen::Vector4d color)

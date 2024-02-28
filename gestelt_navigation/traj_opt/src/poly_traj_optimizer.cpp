@@ -122,9 +122,7 @@ namespace ego_planner
         ROS_WARN("[PolyTrajOptimizer] Solver error. Return = %d, %s. Skip this planning.", result, lbfgs::lbfgs_strerror(result));
       }
 
-    } while (
-        (flag_still_occ && restart_nums < 3) ||
-        (flag_force_return && force_stop_type_ == STOP_FOR_REBOUND && rebound_times <= 20));
+    } while ((flag_force_return && force_stop_type_ == STOP_FOR_REBOUND && rebound_times <= 20));
 
     return flag_success;
   }

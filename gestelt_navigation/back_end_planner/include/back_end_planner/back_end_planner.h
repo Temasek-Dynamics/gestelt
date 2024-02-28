@@ -8,12 +8,14 @@
 
 #include <ros/ros.h>
 #include <geometry_msgs/Pose.h>
+#include <geometry_msgs/Point.h>
 #include <nav_msgs/Odometry.h>
 #include <std_msgs/Empty.h>
 
 #include <visualization_msgs/Marker.h>
 
 #include <gestelt_msgs/SphericalSFCTrajectory.h>
+#include <gestelt_debug_msgs/BackEndTrajectoryDebug.h>
 
 #include <traj_utils/PolyTraj.h>
 #include <traj_utils/MINCOTraj.h>
@@ -44,7 +46,7 @@ private:
   ros::Publisher plan_traj_pub_; // Pub polynomial trajectory used for execution
   ros::Publisher swarm_minco_traj_pub_; // Publish minco trajectory for inter-agent collision avoidance
 
-
+  ros::Publisher debug_traj_pub_; // Publish trajectory for debugging
 
   /* parameters */
   int drone_id_{-1};

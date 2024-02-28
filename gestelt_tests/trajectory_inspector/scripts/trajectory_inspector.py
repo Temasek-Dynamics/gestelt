@@ -5,7 +5,7 @@ import rospy
 import numpy as np
 import matplotlib.pyplot as plt
 
-from gestelt_debug_msgs.msg import SFCSegment, SFCTrajectory
+from gestelt_debug_msgs.msg import SFCTrajectory, BackEndTrajectoryDebug
 from gestelt_msgs.msg import Sphere
 
 # pytransform3d
@@ -30,57 +30,65 @@ class Spheres:
         self.colors = np.empty([size, 3], dtype=float)
         self.alphas = np.empty([size], dtype=float)
 
-class Projection:
-    def __init__(self):
-        pass
 
-    def f_B(self, xi, r, o):
-        """Projection from n-dim state x to n-dim closed ball.
-            Or from xi to q
+def f_B(xi, o, r):
+    """Projection from n-dim state x to n-dim closed ball.
+        Or from xi to q
 
-        Args:
-            r (_type_): radius of sphere
-            o (_type_): center of sphere
-        """
-        return o + (2 * r * xi) / (np.dot(xi.transpose(),xi) + 1.0)
-        
-    def f_BInv_ctrl_pts(self, q_i, o_i, r_i):
-        """Local inverse of f_B(xi)
+    Args:
+        o (np.array): center of sphere
+        r (float): radius of sphere
+    """
+    return o + (2 * r * xi) / (np.dot(xi.transpose(),xi) + 1.0)
+    
+def f_B_inv(q_i, o_i, r_i):
+    """Local inverse of f_B(xi)
 
-        Args:
-            q_i (np.array): waypoint i
-            o_i (np.array): center of sphere i
-            r_i (float): radius of sphere i
-        """
-        q_i_ = q_i.flatten()
-        o_i_ = o_i.flatten()
-        v_i = q_i_ - o_i_
-        
-        a = r_i + np.sqrt(r_i**2 - np.dot(v_i, v_i) )  # Works for points both inside nad outside the circle
-        # a = r_i - np.sqrt(r_i**2 - np.dot(v_i, v_i) )  # Works only for points inside the circle
-        
-        b = np.dot(v_i, v_i)
+    Args:
+        q_i (np.array): waypoint i
+        o_i (np.array): center of sphere i
+        r_i (float): radius of sphere i
+    """
+    q_i_ = q_i.flatten()
+    o_i_ = o_i.flatten()
+    v_i = q_i_ - o_i_
 
-        xi_i = ( a ) * (v_i / b) 
-        return xi_i
+    b = np.dot(v_i, v_i)
+
+    a = r_i - np.sqrt(r_i**2 - b)  # Works only for points inside the circle
+
+    # if b < r_i*r_i: #If point q_i inside the sphere
+    #     a = r_i - np.sqrt(r_i**2 - b)  # Works only for oriignal xi inside the circle
+    # else:
+    #     a = r_i + np.sqrt(r_i**2 - b)  # Works for origina xi outside the circle
+
+    xi_i = ( a ) * (v_i / b) 
+    return xi_i
 
 class TrajectoryInspector:
     
     def __init__(self):
-        msg = rospy.wait_for_message("drone0/sfc/debug_trajectory", SFCTrajectory, timeout=10.0)
-        rospy.loginfo("Got SFCTraj")
- 
+        #####
+        # Wait for messages
+        #####
+        rospy.loginfo("Waiting for /drone0/sfc/debug_trajectory...")
+        msg = rospy.wait_for_message("/drone0/sfc/debug_trajectory", SFCTrajectory, timeout=10.0)
+        rospy.loginfo("Got /drone0/sfc/debug_trajectory!")
+        
+        rospy.loginfo("Waiting for /drone0/back_end/debug_trajectory...")
+        msg_be = rospy.wait_for_message("/drone0/back_end/debug_trajectory", BackEndTrajectoryDebug, timeout=10.0)
+        rospy.loginfo("got /drone0/back_end/debug_trajectory!")
+
+        #####
+        # Get data from sfc trajectory
+        #####
         front_end_path = PointVec()                 # A* path
         guide_pts = PointVec()                      # Guide points for constructing sampling vector
         sampling_vector = PointVec()                # Sampling vector for direction of sampling distribution
         all_seg_samp_spheres = []                        # Each element (the i-th segment) contains a list of sampled spheres 
         sfc_spheres = Spheres(len(msg.sfc_spheres)) # Vector of final SFC spheres
         sfc_waypoints = PointVec()                  # Vector of final SFC Trajectory waypoints
-        sfc_waypoints_xi = PointVec()               # Vector of waypoints in xi coordinates
-
-        #####
-        # Get data from ROS msg
-        #####
+        sfc_waypoints_q = PointVec()               # Vector of waypoints in constrained q coordinates
 
         # Get Guide path
         for pt in msg.front_end_path:
@@ -116,7 +124,7 @@ class TrajectoryInspector:
             sph = msg.sfc_spheres[i]
             sfc_spheres.centers[i, 0:3] = ([sph.center.x, sph.center.y, sph.center.z])
             sfc_spheres.radii[i] = sph.radius 
-            sfc_spheres.alphas[i] = 0.3
+            sfc_spheres.alphas[i] = 0.1
             sfc_spheres.colors[i, 0:3] = ([1.0, 0.0, 0.0])
         
         # Get final SFC trajectory
@@ -126,10 +134,47 @@ class TrajectoryInspector:
             sfc_waypoints.z.append(pt.z)
 
         #####
-        # Transfrom from q to xi
+        # Get data from back_end/debug_trajectory
         #####
-        # for i in range(1, len(sfc_waypoints.x)-1): # For each waypoint except starting and final waypoint
-            
+        num_cp = msg_be.num_cp               # Vector of constraint points
+        num_segs = msg_be.num_segs               # Vector of constraint points
+        cstr_pts = PointVec()               # Vector of constraint points
+        cstr_pts_q = PointVec()               # Vector of constraint points in constrained q coordinates
+
+        for i in range(0, len(msg_be.initial_mjo)):
+            cstr_pts.x.append(msg_be.initial_mjo[i].x)
+            cstr_pts.y.append(msg_be.initial_mjo[i].y)
+            cstr_pts.z.append(msg_be.initial_mjo[i].z)
+
+        #####
+        # Transfrom from xi to q
+        #####
+        print("num_cp: ", num_cp)
+        print("Num_segs: ", num_segs)
+        print("cstr_pts size: ", len(cstr_pts.x))
+        print("sfc_spheres size: ", sfc_spheres.radii.shape)
+
+
+        for i in range(0, num_segs): # For each segment
+
+            for j in range(0, num_cp+1): # For each waypoint 
+                
+                idx = i * num_cp + j
+
+                print(sfc_spheres.centers[i])
+
+                # The start (j=0) and end (j=num_cp-1) are intersection of the spheres, which
+                # are not transformed.
+                if j == 0 or j == num_cp:
+                    pt = np.array([cstr_pts.x[idx], cstr_pts.y[idx], cstr_pts.z[idx]])
+                else:
+                    xi = np.array([cstr_pts.x[idx], cstr_pts.y[idx], cstr_pts.z[idx]])
+                    xi_rel = xi - sfc_spheres.centers[i] # Point relative to sphere
+                    pt = f_B(xi_rel, sfc_spheres.centers[i], sfc_spheres.radii[i])
+
+                cstr_pts_q.x.append(pt[0])
+                cstr_pts_q.y.append(pt[1])
+                cstr_pts_q.z.append(pt[2])
 
         #####
         # Plotting
@@ -144,12 +189,33 @@ class TrajectoryInspector:
         # 1b) Plot guide points used to construct sampling vector
         # self.ax.scatter(guide_pts.x, guide_pts.y, guide_pts.z, s=5.0, c='r', marker='o')
         
-        # 1c) Plot SFC Waypoints 
-        self.ax.scatter(sfc_waypoints.x, sfc_waypoints.y, sfc_waypoints.z, s=5.0, c='b', marker='.')
-        for i in range(0, len(sfc_waypoints.x)-1): # Plot line connecting all SFC waypoints
-            self.ax.plot([sfc_waypoints.x[i], sfc_waypoints.x[i+1]], 
-                        [sfc_waypoints.y[i],sfc_waypoints.y[i+1]],
-                        [sfc_waypoints.z[i],sfc_waypoints.z[i+1]])
+        # # 1c) Plot SFC Waypoints 
+        # self.ax.scatter(sfc_waypoints.x, sfc_waypoints.y, sfc_waypoints.z, s=5.0, c='b', marker='.')
+        # for i in range(0, len(sfc_waypoints.x)-1): # Plot line connecting all SFC waypoints
+        #     self.ax.plot([sfc_waypoints.x[i], sfc_waypoints.x[i+1]], 
+        #                 [sfc_waypoints.y[i],sfc_waypoints.y[i+1]],
+        #                 [sfc_waypoints.z[i],sfc_waypoints.z[i+1]], c='b')
+
+        # # 1d) Plot q transformed coordinates of SFC Waypoints 
+        # self.ax.scatter(sfc_waypoints_q.x, sfc_waypoints_q.y, sfc_waypoints_q.z, s=10.0, c='m', marker='o')
+        # for i in range(0, len(sfc_waypoints_q.x)-1): # Plot line connecting all SFC waypoints
+        #     self.ax.plot([sfc_waypoints_q.x[i], sfc_waypoints_q.x[i+1]], 
+        #                 [sfc_waypoints_q.y[i],sfc_waypoints_q.y[i+1]],
+        #                 [sfc_waypoints_q.z[i],sfc_waypoints_q.z[i+1]], c='m')
+
+        # 1e) Plot original constraint points 
+        self.ax.scatter(cstr_pts.x, cstr_pts.y, cstr_pts.z, s=20.0, c='b', marker='.')
+        for i in range(0, len(cstr_pts.x)-1): # Plot line connecting all SFC waypoints
+            self.ax.plot([cstr_pts.x[i], cstr_pts.x[i+1]], 
+                        [cstr_pts.y[i],cstr_pts.y[i+1]],
+                        [cstr_pts.z[i],cstr_pts.z[i+1]], c='b')
+
+        # 1e) Plot original constraint points 
+        self.ax.scatter(cstr_pts_q.x, cstr_pts_q.y, cstr_pts_q.z, s=20.0, c='m', marker='o')
+        for i in range(0, len(cstr_pts_q.x)-1): # Plot line connecting all SFC waypoints
+            self.ax.plot([cstr_pts_q.x[i], cstr_pts_q.x[i+1]], 
+                        [cstr_pts_q.y[i],cstr_pts_q.y[i+1]],
+                        [cstr_pts_q.z[i],cstr_pts_q.z[i+1]], c='m')
 
         # 2a) Plot all sampled sphere
         # self.plotSpheres(all_seg_samp_spheres[2])
