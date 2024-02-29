@@ -142,9 +142,9 @@ namespace ego_planner
 
     // x is pointer to start of the array/matrix
 
-    // P IS ACTUALLY IN XI UNCONSTRAINED COORDINATES
-    // P: Taken from decision variables at start of iteration. inner 3d position of trajectory
-    Eigen::Map<const Eigen::MatrixXd> P(x, 3, opt->piece_num_ - 1); // 3 x (M-1)
+    // P_xi IS CONTROL POINTS IN XI UNCONSTRAINED COORDINATES
+    //      Taken from decision variables at start of iteration. inner 3d position of trajectory
+    Eigen::Map<const Eigen::MatrixXd> P_xi(x, 3, opt->piece_num_ - 1); // 3 x (M-1)
     // we specify "x + (3 * (opt->piece_num_ - 1))" because that is the address, its not the value
     Eigen::Map<const Eigen::VectorXd> t(x + (3 * (opt->piece_num_ - 1)), opt->piece_num_);
     
@@ -164,20 +164,25 @@ namespace ego_planner
     Eigen::VectorXd obs_swarm_feas_qvar_costs(4); // Vector of costs containing (Static obstacles, swarm, dynamic, feasibility, qvar)
 
     // Discretize trajectory into inner constraint points
-    opt->inner_cstr_pts_xi_ = opt->jerkOpt_.getInitConstraintPoints(opt->cps_num_perPiece_);
-    opt->inner_cstr_pts_q_ = opt->f_B_cstr_pts(opt->inner_cstr_pts_xi_, 
-                                                opt->jerkOpt_.getNumSegs(),
-                                                opt->cps_num_perPiece_, 
-                                                opt->spheres_center_,
-                                                opt->spheres_radius_);
+    opt->cstr_pts_xi_ = opt->jerkOpt_.getInitConstraintPoints(opt->cps_num_perPiece_);
+    opt->cstr_pts_q_ = opt->f_B_cstr_pts(opt->cstr_pts_xi_, 
+                                          opt->jerkOpt_.getNumSegs(),
+                                          opt->cps_num_perPiece_, 
+                                          opt->spheres_center_,
+                                          opt->spheres_radius_);
 
     // Generate minimum jerk trajectory from given inner control points
-    opt->jerkOpt_.generate(opt->inner_cstr_pts_q_, T);
+
+    // Get decision variables P_xi in constrained q form
+    Eigen::MatrixXd P_q = opt->f_B_ctrl_pts(P_xi,
+                                            opt->spheres_center_,
+                                            opt->spheres_radius_); 
+    opt->jerkOpt_.generate(P_q, T);
 
     if (opt->iter_num_ == 0){
       // Collect intermediate MJO trajectories for publishing later
-      opt->intermediate_cstr_pts_xi_.push_back(opt->inner_cstr_pts_xi_);
-      opt->intermediate_cstr_pts_q_.push_back(opt->inner_cstr_pts_q_);
+      opt->intermediate_cstr_pts_xi_.push_back(opt->cstr_pts_xi_);
+      opt->intermediate_cstr_pts_q_.push_back(opt->cstr_pts_q_);
     }
 
     /* 1. Smoothness cost */
@@ -192,8 +197,9 @@ namespace ego_planner
     */
     opt->addPVAGradCost2CT_SFC(gradT, obs_swarm_feas_qvar_costs, opt->cps_num_perPiece_); 
 
-    // Update the gradient costs p.d.(H / T_i) and p.d.(H / xi)
-    opt->jerkOpt_.getGrad2TP(gradT, gradP, P, opt->spheres_center_, opt->spheres_radius_);
+    // Update the gradient costs p.d.(H / T_i) 
+    //                       and p.d.(H / xi)
+    opt->jerkOpt_.getGrad2TP(gradT, gradP, P_xi, opt->spheres_center_, opt->spheres_radius_);
     // time_cost += opt->rho_ * T(0) * piece_nums;  // same t
     // grad[n - 1] = (gradT.sum() + opt->rho_ * piece_nums) * gdT2t(x[n - 1]);  // same t
 
@@ -202,8 +208,8 @@ namespace ego_planner
     opt->iter_num_++;
 
     // Collect intermediate MJO trajectories for publishing later
-    opt->intermediate_cstr_pts_xi_.push_back(opt->inner_cstr_pts_xi_);
-    opt->intermediate_cstr_pts_q_.push_back(opt->inner_cstr_pts_q_);
+    opt->intermediate_cstr_pts_xi_.push_back(opt->cstr_pts_xi_);
+    opt->intermediate_cstr_pts_q_.push_back(opt->cstr_pts_q_);
 
     return jerk_cost + obs_swarm_feas_qvar_costs.sum() + time_cost;
   }
@@ -311,13 +317,13 @@ namespace ego_planner
         // omega: quadrature coefficients using trapezoid rule
         omega = (j == 0 || j == K) ? 0.5 : 1.0;
 
-        // set inner_cstr_pts_xi_ for obtaining inner waypoint positions in 
+        // set cstr_pts_xi_ for obtaining inner waypoint positions in 
         //    obtaining costs for certain types of penalties
-        // inner_cstr_pts_xi_.col(idx_cp) = pos; // NOTE: pos is in xi coordinates
+        // cstr_pts_xi_.col(idx_cp) = pos; // NOTE: pos is in xi coordinates
 
         // Transform from xi to q. Forward cost evaluation is done in q
         // Eigen::Vector3d pos_q = f_B(pos, spheres_center_[i], spheres_radius_[i]);
-        // inner_cstr_pts_q_.col(idx_cp) = pos_q;  
+        // cstr_pts_q_.col(idx_cp) = pos_q;  
 
         /**
          * Penalty on static obstacle, vector of (x,y,z)
@@ -441,7 +447,7 @@ namespace ego_planner
      */
     Eigen::MatrixXd gdp;
     double var;
-    distanceSqrVarianceWithGradCost2p(inner_cstr_pts_q_, gdp, var);
+    distanceSqrVarianceWithGradCost2p(cstr_pts_q_, gdp, var);
     // std::cout << "var=" << var <<std::endl;
 
     idx_cp = 0;

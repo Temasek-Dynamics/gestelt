@@ -124,8 +124,8 @@ namespace ego_planner
 
     std::vector<double> spheres_radius_;                // Vector of sphere radius, size is no. of segments/pieces
     std::vector<Eigen::Vector3d> spheres_center_; // Vector of sphere centers, size is no. of segments/pieces
-    Eigen::MatrixXd inner_cstr_pts_xi_; // inner CONSTRAINT points of trajectory (excludes boundary points), this is finer than the inner CONTROL points
-    Eigen::MatrixXd inner_cstr_pts_q_; // inner CONSTRAINT points of trajectory (excludes boundary points), this is finer than the inner CONTROL points
+    Eigen::MatrixXd cstr_pts_xi_; // inner CONSTRAINT points of trajectory (excludes boundary points), this is finer than the inner CONTROL points
+    Eigen::MatrixXd cstr_pts_q_; // inner CONSTRAINT points of trajectory (excludes boundary points), this is finer than the inner CONTROL points
 
   public:
     PolyTrajOptimizer(){}
@@ -209,7 +209,7 @@ namespace ego_planner
       // IF size of inner points and segment durations are not the same, there is a bug
       if (inner_ctrl_pts.cols() != (initT.size() - 1))
       {
-        ROS_ERROR("[PolyTrajOptimizer::optimizeTrajectory] inner_cstr_pts.cols() != (initT.size()-1)");
+        ROS_ERROR("[PolyTrajOptimizer::optimizeTrajectory] inner_ctrl_pts.cols() != (initT.size()-1)");
         return false;
       }
 
@@ -1485,13 +1485,13 @@ namespace ego_planner
         auto r_i = sphere_radius[i];
         auto o_i = spheres_center[i];
 
-        for (int j = 0; j < num_cp; j++){ // For every constraint point
-          size_t idx = i * num_cp + j;
+        for (int j = 1; j < num_cp+1; j++){ // For every constraint point
+          size_t idx = i * num_cp + j; // For segment 0, idx = [0, num_cp-1]
 
           auto xi_i = xi.block<3,1>(0, idx);
 
-          if (j == 0 || j == num_cp ){
-            // Nothing is done, retain original points
+          if ( (idx == 0) || j == q.cols()-1){
+            // If start or goal, retain original points
             // q.block<3,1>(0, idx);
           }
           else {

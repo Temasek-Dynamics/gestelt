@@ -1603,17 +1603,18 @@ namespace poly_traj
                 auto g_i = gdC.row(6 * i + 5).transpose(); 
 
                 double r_i = spheres_radius[i];
-                auto o_i = spheres_center[i];
-                auto xi_i = inner_ctrl_pts.block<3,1>(0, i);
+                Eigen::Vector3d o_i = spheres_center[i];
+                Eigen::Vector3d xi_i = inner_ctrl_pts.block<3,1>(0, i);
 
                 double r_i_sqr = r_i * r_i;
-                auto v_i = xi_i - o_i;
+                Eigen::Vector3d v_i = xi_i - o_i;
 
-                auto c = v_i.squaredNorm() + r_i_sqr;
+                double c = v_i.squaredNorm() + r_i_sqr;
                 
-                auto a = (2 * r_i_sqr * g_i) / c ;
+                Eigen::Vector3d a = (2 * r_i_sqr * g_i) / c ;
 
-                auto b = (4 * r_i_sqr * v_i.transpose() * g_i * v_i)/(c*c);
+                // Eigen::Vector3d b = (4 * r_i_sqr * v_i.transpose() * g_i * v_i)/(c*c);
+                Eigen::Vector3d b = (4 * r_i_sqr * v_i.squaredNorm() * g_i)/(c*c);
 
                 gradP.col(i) = a - b;
             }
