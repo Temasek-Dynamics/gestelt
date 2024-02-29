@@ -97,6 +97,13 @@ void BackEndPlanner::sfcTrajectoryCB(const gestelt_msgs::SphericalSFCTrajectoryC
     spheres_radius.push_back(sphere.radius);
     spheres_center.push_back(Eigen::Vector3d{sphere.center.x, sphere.center.y, sphere.center.z});
   }
+
+  std::cout << "Sphere size: " << spheres_radius.size() << std::endl;
+  std::cout << "Sphere size: " << spheres_radius.size() << std::endl;
+  std::cout << "Sphere size: " << spheres_radius.size() << std::endl;
+  std::cout << "Sphere size: " << spheres_radius.size() << std::endl;
+  std::cout << "Sphere size: " << spheres_radius.size() << std::endl;
+
   Eigen::VectorXd segs_t_dur(msg->segments_time_duration.size());
   for (size_t i = 0; i < msg->segments_time_duration.size(); i++){
     segs_t_dur(i) = msg->segments_time_duration[i];
@@ -299,6 +306,7 @@ bool BackEndPlanner::generatePlanSFC( const Eigen::Vector3d& start_pos, const Ei
 
     if (plan_success)
     {
+      logInfo("Planning successful!");
       visualization_->displayOptimalMJO(cstr_pts_optimized_mjo, 0);
       break;
     }

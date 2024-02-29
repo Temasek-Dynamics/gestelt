@@ -1612,8 +1612,6 @@ namespace poly_traj
                 Eigen::Vector3d b = (4 * r_i_sqr * v_i.dot(g_i) * v_i)/(c*c);
 
                 gradP.col(i) = a - b;
-
-                std::cout << "gradP.col(" << i << "): " <<  gradP.col(i) << std::endl;
             }
             
             return;

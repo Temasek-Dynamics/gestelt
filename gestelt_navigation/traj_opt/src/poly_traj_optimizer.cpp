@@ -330,7 +330,7 @@ namespace ego_planner
 
         // Transform from xi to q. Forward cost evaluation is done in q
         // Eigen::Vector3d pos_q = f_B(pos, spheres_center_[i], spheres_radius_[i]);
-        cstr_pts_q_.col(idx_cp) = pos;  
+        // cstr_pts_q_.col(idx_cp) = pos_q;  
 
         /**
          * Penalty on static obstacle, vector of (x,y,z)

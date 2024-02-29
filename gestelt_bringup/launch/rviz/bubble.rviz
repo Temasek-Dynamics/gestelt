@@ -8,8 +8,10 @@ Panels:
         - /TF1/Frames1
         - /drone0_mavros1/Localization1//mavros/local_position/pose1
         - /d0/planner1
+        - /d0/planner1/sfc1
         - /d0/planner1/back_end1
         - /d0/planner1/back_end1/Planning_back_end1
+        - /d0/planner1/back_end1/Planning_ego1
         - /d2/planner1/front-end1/plan_viz1
         - /collision_viz1/drone0/collision_viz1
       Splitter Ratio: 0.4941634237766266
@@ -494,13 +496,13 @@ Visualization Manager:
                   Queue Size: 100
                   Value: false
                 - Class: rviz/Marker
-                  Enabled: true
+                  Enabled: false
                   Marker Topic: /drone0/back_end_planner/failed_list
                   Name: FailedList(brown)
                   Namespaces:
-                    "": true
+                    {}
                   Queue Size: 100
-                  Value: true
+                  Value: false
                 - Class: rviz/Marker
                   Enabled: false
                   Marker Topic: /drone0/back_end_planner/initial_mjo_q
@@ -534,21 +536,21 @@ Visualization Manager:
                   Queue Size: 100
                   Value: false
                 - Class: rviz/Marker
-                  Enabled: false
+                  Enabled: true
                   Marker Topic: /drone0/back_end_planner/initial_ctrl_pts_xi
                   Name: initial_ctrl_pts_xi
                   Namespaces:
-                    {}
+                    "": true
                   Queue Size: 100
-                  Value: false
+                  Value: true
                 - Class: rviz/Marker
-                  Enabled: false
+                  Enabled: true
                   Marker Topic: /drone0/back_end_planner/initial_ctrl_pts_q
                   Name: initial_ctrl_pts_q
                   Namespaces:
-                    {}
+                    "": true
                   Queue Size: 100
-                  Value: false
+                  Value: true
                 - Class: rviz/Marker
                   Enabled: false
                   Marker Topic: /drone0/back_end_planner/intmd_ctrl_pts_q
@@ -566,13 +568,13 @@ Visualization Manager:
                   Queue Size: 100
                   Value: false
                 - Class: rviz/Marker
-                  Enabled: true
+                  Enabled: false
                   Marker Topic: /drone0/back_end_planner/optimal_mjo
                   Name: optimal_mjo
                   Namespaces:
                     {}
                   Queue Size: 100
-                  Value: true
+                  Value: false
               Enabled: true
               Name: Planning_back_end
             - Class: rviz/Group
@@ -1094,7 +1096,7 @@ Visualization Manager:
           Marker Topic: /drone0/grid_map/collision_viz
           Name: drone0/collision_viz
           Namespaces:
-            collision_viz: true
+            {}
           Queue Size: 100
           Value: true
         - Class: rviz/Marker
@@ -1177,7 +1179,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/XYOrbit
-      Distance: 9.06207275390625
+      Distance: 5.630241870880127
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -1185,17 +1187,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 2.6120471954345703
-        Y: 1.1482205390930176
-        Z: 5.9604644775390625e-06
+        X: 2.2818078994750977
+        Y: 2.025341272354126
+        Z: 5.4836273193359375e-06
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.2447972297668457
+      Pitch: 1.3147965669631958
       Target Frame: my_view
-      Yaw: 4.708619594573975
+      Yaw: 4.813616752624512
     Saved:
       - Class: rviz/FPS
         Enable Stereo Rendering:
