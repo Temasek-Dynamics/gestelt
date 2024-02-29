@@ -1352,22 +1352,50 @@ namespace ego_planner
       visualization_->pubSVPairs(all_s_obs, all_v_obs, 0, Eigen::Vector4d(1, 0.5, 0, 1));
     }
 
+  /* Constraint elimination methods */
   public:
-    /* Constraint elimination methods */
     /**
-     * @brief 
+     * @brief Stereographic projection from (n) hyperplane onto (n+1) sphere and then orthographic projection onto (n) circle 
      * 
      * @param xi  Decision variable
      * @param o   Center of sphere 
      * @param r   radius of sphere
      * @return Eigen::MatrixXd 
      */
-    Eigen::Vector3d f_B_single(
+    Eigen::Vector3d f_B(
       const Eigen::Vector3d& xi, 
       const Eigen::Vector3d& o, 
       const double& r)
     {
-      return o + (2 * r  * xi) / (xi.squaredNorm() + 1.0);
+      // xi_relative: xi relative to center of sphere
+      auto xi_relative = xi - o;
+      auto r_sqr = r*r;
+
+      return o + xi_relative * ((2 * r_sqr ) / (xi_relative.squaredNorm() + r_sqr));
+    }
+
+    /**
+     * @brief Inverse orthographic projection from (n) circle to (n+1) sphere
+     * then inverse stereographic projection to (n) hyperplane
+     * 
+     * @param xi  Decision variable
+     * @param o   Center of sphere 
+     * @param r   radius of sphere
+     * @return Eigen::MatrixXd 
+     */
+    Eigen::Vector3d f_B_inv(
+      const Eigen::Vector3d& q, 
+      const Eigen::Vector3d& o, 
+      const double& r)
+    {
+      auto v = q - o; // Vector from center of sphere to point q
+      // std::cout << v << std::endl;
+      // if (r*r - v.squaredNorm() < 0.0){
+        // ROS_ERROR("ERROR!!!!!!!!!!!");
+      // }
+      auto b = r - sqrt( r*r - v.squaredNorm());
+
+      return o + v * (r/b);
     }
 
     /**
@@ -1393,8 +1421,8 @@ namespace ego_planner
         auto r_i = sphere_radius[i];
         auto o_i = spheres_center[i];
         auto xi_i = xi.block<3,1>(0, i);
-        
-        q.block<3,1>(0, i) =  o_i + (2 * r_i  * xi_i) / (xi_i.squaredNorm() + 1.0);
+
+        q.block<3,1>(0, i) =  f_B(xi_i, o_i, r_i);
       }
 
       return q;
@@ -1407,12 +1435,12 @@ namespace ego_planner
      * @return eigen::Vector 
      */
     Eigen::MatrixXd f_BInv_ctrl_pts(
-      const Eigen::MatrixXd& q,
+      const Eigen::MatrixXd& q_inner,
       const std::vector<Eigen::Vector3d>& spheres_center, 
       const std::vector<double>& sphere_radius)
     {
       // Expects array of size (3, M-1)
-      size_t M = q.cols() + 1;
+      size_t M = q_inner.cols() + 1;
 
       Eigen::MatrixXd xi(3, M-1);
 
@@ -1422,11 +1450,9 @@ namespace ego_planner
       {
         auto r_i = sphere_radius[i];
         auto o_i = spheres_center[i];
-        auto q_i = q.block<3,1>(0, i);
+        auto q_i = q_inner.block<3,1>(0, i);
 
-        auto v_i = q_i - o_i;
-        
-        xi.block<3,1>(0, i) = o_i.array() + ( (r_i - sqrt(r_i * r_i - v_i.squaredNorm() )) / (v_i.squaredNorm()) ) * v_i.array() ;
+        xi.block<3,1>(0, i) = f_B_inv(q_i, o_i, r_i);
       }
 
       return xi;
@@ -1461,42 +1487,18 @@ namespace ego_planner
 
         for (int j = 0; j < num_cp; j++){ // For every constraint point
           size_t idx = i * num_cp + j;
+
           auto xi_i = xi.block<3,1>(0, idx);
 
-          q.block<3,1>(0, idx) =  o_i + (2 * r_i  * xi_i) / (xi_i.squaredNorm() + 1.0);
+          if (j == 0 || j == num_cp ){
+            // Nothing is done, retain original points
+            // q.block<3,1>(0, idx);
+          }
+          else {
+            q.block<3,1>(0, idx) =  f_B(xi_i, o_i, r_i);
+          }
         }
       }
-
-      // For last goal
-      size_t idx = xi.cols();
-      auto r_i = sphere_radius[M-1];
-      auto o_i = spheres_center[M-1];
-      auto xi_i = xi.block<3,1>(0, idx-1);
-      q.block<3,1>(0, idx-1) =  o_i + (2 * r_i  * xi_i) / (xi_i.squaredNorm() + 1.0);
-
-
-      // //for each segment i (excluding boundary points)
-      // // Therefore starting and final sphere is excluded
-      // size_t idx = 0;
-      // for (size_t i = 0; i < M; i++)
-      // {
-      //   auto r_i = sphere_radius[i];
-      //   auto o_i = spheres_center[i];
-
-      //   for (int j = 0; j <= num_cp; j++){ // For every constraint point
-
-      //     auto xi_i = xi.block<3,1>(0, idx);
-
-      //     q.block<3,1>(0, idx) =  o_i + (2 * r_i  * xi_i) / (xi_i.squaredNorm() + 1.0);
-
-      //     // Next point IF not last point in segment
-      //     //            OR is last point in segment AND LAST segment
-      //     if (j != num_cp || (j == num_cp && i == M-1))
-      //     {
-      //       ++idx;
-      //     }
-      //   }
-      // }
 
       return q;
     }
@@ -1528,16 +1530,13 @@ namespace ego_planner
           size_t idx = i*num_cp + j;
 
           auto q_i = q.block<3,1>(0, idx);
-          auto v_i = q_i - o_i;
-
-          xi.block<3,1>(0, idx) = o_i.array() + ( (r_i - sqrt(r_i * r_i - v_i.squaredNorm() )) / (v_i.squaredNorm()) ) * v_i.array() ;
-          
-          // Next point IF not last point in segment
-          //            OR is last point in segment AND LAST segment
-          if (j != num_cp || (j == num_cp && i == M-1))
-          {
-            ++idx;
-          } 
+            
+          if (j == 0 || j == num_cp ){
+            // Nothing is done, retain original points
+          }
+          else {
+            xi.block<3,1>(0, i) = f_B_inv(q_i, o_i, r_i);
+          }
         }
       }
 

@@ -23,8 +23,8 @@ namespace ego_planner
 
     // 1) Initial SFC is in coordinates of unconstrained variables xi 
     //      inner_ctrl_pts is of size (3, M-1)
-    //      Eigen::MatrixXd inner_ctrl_pts_xi = f_BInv_ctrl_pts(inner_ctrl_pts, spheres_center_, spheres_radius_); // (3, num_segs - 1);
-    Eigen::MatrixXd inner_ctrl_pts_xi = inner_ctrl_pts;
+    Eigen::MatrixXd inner_ctrl_pts_xi = f_BInv_ctrl_pts(inner_ctrl_pts, spheres_center_, spheres_radius_); // (3, num_segs - 1);
+    // Eigen::MatrixXd inner_ctrl_pts_xi = inner_ctrl_pts;
 
     // 2) Optimization is done using xi as decision variables
     //      a) Forward direction: cost evaluation done using q_i = f_B_ctrl_pts(xi)
@@ -142,6 +142,7 @@ namespace ego_planner
 
     // x is pointer to start of the array/matrix
 
+    // P IS ACTUALLY IN XI UNCONSTRAINED COORDINATES
     // P: Taken from decision variables at start of iteration. inner 3d position of trajectory
     Eigen::Map<const Eigen::MatrixXd> P(x, 3, opt->piece_num_ - 1); // 3 x (M-1)
     // we specify "x + (3 * (opt->piece_num_ - 1))" because that is the address, its not the value
@@ -162,17 +163,22 @@ namespace ego_planner
 
     Eigen::VectorXd obs_swarm_feas_qvar_costs(4); // Vector of costs containing (Static obstacles, swarm, dynamic, feasibility, qvar)
 
-    // Generate minimum jerk trajectory from given inner points
-    opt->jerkOpt_.generate(P, T);
-
     // Discretize trajectory into inner constraint points
     opt->inner_cstr_pts_xi_ = opt->jerkOpt_.getInitConstraintPoints(opt->cps_num_perPiece_);
-
     opt->inner_cstr_pts_q_ = opt->f_B_cstr_pts(opt->inner_cstr_pts_xi_, 
                                                 opt->jerkOpt_.getNumSegs(),
                                                 opt->cps_num_perPiece_, 
                                                 opt->spheres_center_,
                                                 opt->spheres_radius_);
+
+    // Generate minimum jerk trajectory from given inner control points
+    opt->jerkOpt_.generate(opt->inner_cstr_pts_q_, T);
+
+    if (opt->iter_num_ == 0){
+      // Collect intermediate MJO trajectories for publishing later
+      opt->intermediate_cstr_pts_xi_.push_back(opt->inner_cstr_pts_xi_);
+      opt->intermediate_cstr_pts_q_.push_back(opt->inner_cstr_pts_q_);
+    }
 
     /* 1. Smoothness cost */
     // jerk_cost is trajectory jerk cost
@@ -187,13 +193,13 @@ namespace ego_planner
     opt->addPVAGradCost2CT_SFC(gradT, obs_swarm_feas_qvar_costs, opt->cps_num_perPiece_); 
 
     // Update the gradient costs p.d.(H / T_i) and p.d.(H / xi)
-    opt->jerkOpt_.getGrad2TP(gradT, gradP, P, opt->spheres_radius_);
+    opt->jerkOpt_.getGrad2TP(gradT, gradP, P, opt->spheres_center_, opt->spheres_radius_);
     // time_cost += opt->rho_ * T(0) * piece_nums;  // same t
     // grad[n - 1] = (gradT.sum() + opt->rho_ * piece_nums) * gdT2t(x[n - 1]);  // same t
 
     opt->VirtualTGradCost(T, t, gradT, gradt, time_cost);
 
-    opt->iter_num_ += 1;
+    opt->iter_num_++;
 
     // Collect intermediate MJO trajectories for publishing later
     opt->intermediate_cstr_pts_xi_.push_back(opt->inner_cstr_pts_xi_);
@@ -277,11 +283,11 @@ namespace ego_planner
     double t = 0;
     for (int i = 0; i < N; ++i) // for each piece/segment number
     {
-      const Eigen::Matrix<double, 6, 3> &c = jerkOpt_.get_b().block<6, 3>(i * 6, 0); // Polynomial coefficients 
+      // c: Polynomial coefficients 
+      const Eigen::Matrix<double, 6, 3> &c = jerkOpt_.get_b().block<6, 3>(i * 6, 0); 
       double T_i = jerkOpt_.get_T1()(i);
       step = T_i / K; // Duration of each piece / sample number.
-      // step = jerkOpt_.get_T1()(i) / K;
-      s1 = 0.0; // Time t, it will increase with each step of f the constraint point
+      s1 = 0.0; // Time t, it will increase with each step of the constraint point
 
       for (int j = 0; j <= K; ++j) // For each constraint point (or sample) in the segment. This is also known as the sample index
       {
@@ -305,14 +311,12 @@ namespace ego_planner
         // omega: quadrature coefficients using trapezoid rule
         omega = (j == 0 || j == K) ? 0.5 : 1.0;
 
-        // Transform from xi to q
-        // Forward cost evaluation is done in q
-
         // set inner_cstr_pts_xi_ for obtaining inner waypoint positions in 
         //    obtaining costs for certain types of penalties
-        inner_cstr_pts_xi_.col(idx_cp) = pos; // NOTE: pos is in xi coordinates
+        // inner_cstr_pts_xi_.col(idx_cp) = pos; // NOTE: pos is in xi coordinates
 
-        // Eigen::Vector3d pos_q = f_B_single(pos, spheres_center_[i], spheres_radius_[i]);
+        // Transform from xi to q. Forward cost evaluation is done in q
+        // Eigen::Vector3d pos_q = f_B(pos, spheres_center_[i], spheres_radius_[i]);
         // inner_cstr_pts_q_.col(idx_cp) = pos_q;  
 
         /**
@@ -354,19 +358,19 @@ namespace ego_planner
         /**
          * Penalty on clearance to swarm/dynamic obstacles
          */
-        // double gradt, grad_prev_t;
-        // if (swarmGradCostP(idx_cp, t + step * j, pos_q, vel, gradp, gradt, grad_prev_t, costp))
-        // {
-        //   gradViolaPc = beta0 * gradp.transpose();
-        //   gradViolaPt = alpha * gradt;
-        //   jerkOpt_.get_gdC().block<6, 3>(i * 6, 0) += omega * step * gradViolaPc;
-        //   gdT(i) += omega * (costp / K + step * gradViolaPt);
-        //   if (i > 0)
-        //   {
-        //     gdT.head(i).array() += omega * step * grad_prev_t;
-        //   }
-        //   costs(1) += omega * step * costp;
-        // }
+        double gradt, grad_prev_t;
+        if (swarmGradCostP(idx_cp, t + step * j, pos, vel, gradp, gradt, grad_prev_t, costp))
+        {
+          gradViolaPc = beta0 * gradp.transpose();
+          gradViolaPt = alpha * gradt;
+          jerkOpt_.get_gdC().block<6, 3>(i * 6, 0) += omega * step * gradViolaPc;
+          gdT(i) += omega * (costp / K + step * gradViolaPt);
+          if (i > 0)
+          {
+            gdT.head(i).array() += omega * step * grad_prev_t;
+          }
+          costs(1) += omega * step * costp;
+        }
         
         /**
          * Penalty on velocity constraint, vector of (x,y,z)
@@ -437,7 +441,7 @@ namespace ego_planner
      */
     Eigen::MatrixXd gdp;
     double var;
-    distanceSqrVarianceWithGradCost2p(inner_cstr_pts_xi_, gdp, var);
+    distanceSqrVarianceWithGradCost2p(inner_cstr_pts_q_, gdp, var);
     // std::cout << "var=" << var <<std::endl;
 
     idx_cp = 0;

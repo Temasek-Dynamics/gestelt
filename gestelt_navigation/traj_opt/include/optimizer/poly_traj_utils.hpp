@@ -1577,7 +1577,8 @@ namespace poly_traj
         template <typename EIGENVEC, typename EIGENMAT>
         void getGrad2TP(EIGENVEC &gdT,
                         EIGENMAT &gradP,
-                        const Eigen::MatrixXd &inner_ctrl_pts_xi,
+                        const Eigen::MatrixXd &inner_ctrl_pts,
+                        const std::vector<Eigen::Vector3d>& spheres_center,
                         const std::vector<double>& spheres_radius)
         {
             // Solves  (A.T) x = gdC 
@@ -1590,29 +1591,32 @@ namespace poly_traj
             addPropCtoT(gdC, gdT); // Adds to gdT
 
             // // eqn (66): p.d.(H / q) = (G_1.T * e1, ..., G_(M-1).T * e1)
-            // addPropCtoP(gdC, gradP); // Adds to gdT
-
-            for (int i = 0; i < N - 1; i++) // For each segment (except start and end)
-            {   
-                gradP.col(i) = gdC.row(6 * i + 5).transpose(); 
-            }
-
-
-            // // eqn (66): p.d.(H / q) = (G_1.T * e1, ..., G_(M-1).T * e1)
-            // // eqn (79): p.d.(H / xi) = ...
             // for (int i = 0; i < N - 1; i++) // For each segment (except start and end)
             // {   
-            //     double r_i = spheres_radius[i+1];
-            //     auto xi_i = inner_ctrl_pts_xi.block<3,1>(0, i);
-            //     auto g_i = gdC.row(6 * i + 5).transpose(); 
-
-            //     double div = (xi_i.squaredNorm() + 1);
-                
-            //     auto a = (2 * r_i * g_i.array() ) / div;
-            //     auto b = (4 * r_i * (xi_i).dot(g_i) * xi_i.array()) / (div*div);
-
-            //     gradP.col(i) = a.array() - b.array();
+            //     gradP.col(i) = gdC.row(6 * i + 5).transpose(); 
             // }
+
+            // eqn (66): p.d.(H / q) = (G_1.T * e1, ..., G_(M-1).T * e1)
+            // eqn (79): p.d.(H / xi) = ...
+            for (int i = 0; i < N - 1; i++) // For each segment (except start and end)
+            {   
+                auto g_i = gdC.row(6 * i + 5).transpose(); 
+
+                double r_i = spheres_radius[i];
+                auto o_i = spheres_center[i];
+                auto xi_i = inner_ctrl_pts.block<3,1>(0, i);
+
+                double r_i_sqr = r_i * r_i;
+                auto v_i = xi_i - o_i;
+
+                auto c = v_i.squaredNorm() + r_i_sqr;
+                
+                auto a = (2 * r_i_sqr * g_i) / c ;
+
+                auto b = (4 * r_i_sqr * v_i.transpose() * g_i * v_i)/(c*c);
+
+                gradP.col(i) = a - b;
+            }
             
             return;
         }

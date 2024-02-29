@@ -27,7 +27,8 @@ void BackEndPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   // Debugging topics
   debug_start_sub_ = pnh.subscribe("debug/plan_start", 5, &BackEndPlanner::debugStartCB, this);
   debug_goal_sub_ = pnh.subscribe("debug/plan_goal", 5, &BackEndPlanner::debugGoalCB, this);
-  plan_on_demand_esdf_free_sub_ = pnh.subscribe("plan_on_demand/esdf_free", 5, &BackEndPlanner::planOnDemandESDFFree, this);
+  plan_on_demand_esdf_free_sub_ = pnh.subscribe(
+    "plan_on_demand/esdf_free", 5, &BackEndPlanner::planOnDemandESDFFree, this);
 
   // Initialize map
   // map_.reset(new GridMap);
@@ -206,22 +207,37 @@ bool BackEndPlanner::generatePlanSFC( const Eigen::Vector3d& start_pos, const Ei
 
     int num_segs = initial_traj.getPieceSize();
     // Eigen::MatrixXd all_pos = initial_traj.getPositions();
-    // Get inner_ctrl_pts, a block of size (3, num_segs-1) from (row 0, column 1) onwards. This excludes the boundary points (start and goal).
-    Eigen::MatrixXd inner_ctrl_pts = initial_traj.getPositions().block(0, 1, 3, num_segs - 1);
+    // Get init_inner_ctrl_pts, a block of size (3, num_segs-1) from (row 0, column 1) onwards. This excludes the boundary points (start and goal).
+    Eigen::MatrixXd init_inner_ctrl_pts = initial_traj.getPositions().block(0, 1, 3, num_segs - 1);
     Eigen::Matrix<double, 3, 3> headState, tailState;
     headState << initial_traj.getJuncPos(0),        initial_traj.getJuncVel(0),        initial_traj.getJuncAcc(0);
     tailState << initial_traj.getJuncPos(num_segs), initial_traj.getJuncVel(num_segs), initial_traj.getJuncAcc(num_segs);
-    
-    double final_cost; // Not used for now
 
-    // Display trajectory in q coordinates
-    Eigen::MatrixXd cstr_pts_xi = 
-      back_end_planner_->ploy_traj_opt_->f_BInv_cstr_pts(init_cstr_pts, 
-                                              initial_mjo.getNumSegs(),
-                                              num_cstr_pts,
+    visualization_->displayInitialCtrlPts(init_inner_ctrl_pts);
+
+    // Display initial control points in xi coordinates
+    Eigen::MatrixXd init_inner_ctrl_pts_xi = back_end_planner_->ploy_traj_opt_->f_BInv_ctrl_pts(
+                                              init_inner_ctrl_pts, 
                                               spheres_center,
                                               spheres_radius);
-    visualization_->displayInitialMJO_xi(cstr_pts_xi, 0); 
+
+    visualization_->displayInitialCtrlPts_xi(init_inner_ctrl_pts_xi);
+
+    Eigen::MatrixXd init_inner_ctrl_pts_q = back_end_planner_->ploy_traj_opt_->f_B_ctrl_pts(
+                                              init_inner_ctrl_pts_xi, 
+                                              spheres_center,
+                                              spheres_radius);
+
+    visualization_->displayInitialCtrlPts_q(init_inner_ctrl_pts_q);
+
+    // Display initial MJO trajectory in xi coordinates
+    // Eigen::MatrixXd cstr_pts_xi = 
+    //   back_end_planner_->ploy_traj_opt_->f_BInv_cstr_pts(init_cstr_pts, 
+    //                                           initial_mjo.getNumSegs(),
+    //                                           num_cstr_pts,
+    //                                           spheres_center,
+    //                                           spheres_radius);
+    // visualization_->displayInitialMJO_xi(cstr_pts_xi, 0); 
 
     // Eigen::MatrixXd cstr_pts_q = 
     //   back_end_planner_->ploy_traj_opt_->f_B_cstr_pts(cstr_pts, 
@@ -232,9 +248,10 @@ bool BackEndPlanner::generatePlanSFC( const Eigen::Vector3d& start_pos, const Ei
     // visualization_->displayInitialMJO_q(cstr_pts_q, 0); 
 
     // Optimize trajectory!
+    double final_cost; // Not used for now
     plan_success = back_end_planner_->ploy_traj_opt_->optimizeTrajectorySFC( 
           headState, tailState,                         // Start and end position
-          inner_ctrl_pts,                               // Inner control points
+          init_inner_ctrl_pts,                               // Inner control points
           initial_traj.getDurations(),                  // Time durations
           spheres_radius, spheres_center,               // SFC
           final_cost);
@@ -243,10 +260,18 @@ bool BackEndPlanner::generatePlanSFC( const Eigen::Vector3d& start_pos, const Ei
     optimized_mjo = back_end_planner_->ploy_traj_opt_->getMinJerkOpt();
     Eigen::MatrixXd cstr_pts_optimized_mjo = optimized_mjo.getInitConstraintPoints(num_cstr_pts);
 
+    auto cstr_pts_optimized_mjo_q = back_end_planner_->ploy_traj_opt_->f_B_cstr_pts(
+                                              cstr_pts_optimized_mjo, 
+                                              initial_mjo.getNumSegs(),
+                                              num_cstr_pts,
+                                              spheres_center,
+                                              spheres_radius);
+    
     /***************************/
     /* Print and display results for debugging
     /***************************/
-    // Display optimized paths
+
+    /* Publish all intermediate paths */
     visualization_->displayIntermediateMJO_xi(
       back_end_planner_->ploy_traj_opt_->intermediate_cstr_pts_xi_);
 
@@ -261,8 +286,7 @@ bool BackEndPlanner::generatePlanSFC( const Eigen::Vector3d& start_pos, const Ei
     // logInfo(str_fmt("Trajectory: Length(%f), Jerk Cost(%f), Duration(%f)", 
     //   traj_length, traj_jerk_cost, trajectory_duration));
 
-
-    // Publish back end trajectory for debugging with trajectory inspector
+    /* Publish back end trajectory for debugging with trajectory inspector */
     gestelt_debug_msgs::BackEndTrajectoryDebug debug_traj_msg;
     for (int i = 0; i < init_cstr_pts.cols(); ++i){
       geometry_msgs::Point pt;
@@ -276,9 +300,12 @@ bool BackEndPlanner::generatePlanSFC( const Eigen::Vector3d& start_pos, const Ei
     debug_traj_msg.num_segs = initial_mjo.getNumSegs();
     debug_traj_pub_.publish(debug_traj_msg);
 
+    /* Visualize optimized mjo trajectories */
+    visualization_->displayOptimalMJO_q(cstr_pts_optimized_mjo_q);
+
     if (plan_success)
     {
-      visualization_->displayOptimalList(cstr_pts_optimized_mjo, 0);
+      visualization_->displayOptimalMJO(cstr_pts_optimized_mjo, 0);
       break;
     }
     else{

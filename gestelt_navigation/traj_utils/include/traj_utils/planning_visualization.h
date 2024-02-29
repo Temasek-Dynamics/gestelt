@@ -22,16 +22,27 @@ namespace ego_planner
 
     ros::Publisher goal_point_pub;
     ros::Publisher global_list_pub;
+
+    /* Initial */
     ros::Publisher initial_mjo_pub_; // Publish unconstrained coordinates
     ros::Publisher initial_mjo_q_pub_; // Publish projected coordinates q
     ros::Publisher initial_mjo_xi_pub_; // Publish unconstrained coords xi
+    ros::Publisher initial_ctrl_pts_pub_; // Publish control points
+    ros::Publisher initial_ctrl_pts_xi_pub_; // Publish control points in xi
+    ros::Publisher initial_ctrl_pts_q_pub_; // Publish control points in q
 
-    ros::Publisher intmd_ctrl_pts_q_pub_; // Publish intermediate control points as they are being optimized
-    ros::Publisher intmd_ctrl_pts_xi_pub_; // Publish intermediate control points as they are being optimized
+    /* Intermediate */
+    ros::Publisher intmd_ctrl_pts_q_pub_; // (q coordinates) Publish intermediate control points as they are being optimized
+    ros::Publisher intmd_ctrl_pts_xi_pub_; // (xi coordinates) Publish intermediate control points as they are being optimized
 
+    /* Optimized */
+    ros::Publisher optimal_mjo_q_pub_; // Publish optimal constraint points in q space
+    ros::Publisher optimal_mjo_pub_;  // Publish original MJO
 
-    ros::Publisher optimal_list_pub;
+    /* Failed */
     ros::Publisher failed_list_pub;
+
+
     ros::Publisher a_star_list_pub;
 
     ros::Publisher planner_sv_pairs_pub_;
@@ -76,9 +87,19 @@ namespace ego_planner
 
     void displayGoalPoint(Eigen::Vector3d goal_point, Eigen::Vector4d color, const double scale, int id);
     void displayGlobalPathList(vector<Eigen::Vector3d> global_pts, const double scale, int id);
+
+    /* Initial MJO */
     void displayInitialMJO(vector<Eigen::Vector3d> init_pts, const double scale, int id);
     void displayInitialMJO_q(Eigen::MatrixXd pts, int id);
     void displayInitialMJO_xi(Eigen::MatrixXd pts, int id);
+
+    void displayInitialCtrlPts(Eigen::MatrixXd pts);
+    void displayInitialCtrlPts_xi(Eigen::MatrixXd pts);
+    void displayInitialCtrlPts_q(Eigen::MatrixXd pts);
+
+    /* Optimal MJO */
+    void displayOptimalMJO(Eigen::MatrixXd optimal_pts, int id);
+    void displayOptimalMJO_q(Eigen::MatrixXd pts);
 
     /**
      * @brief Display all intermediate MJO trajectory in xi coordinates
@@ -86,7 +107,6 @@ namespace ego_planner
      * @param pts 
      */
     void displayIntermediateMJO_xi(const std::vector<Eigen::MatrixXd>& trajectories); 
-
 
     /**
      * @brief Display all intermediate MJO trajectory
@@ -96,7 +116,7 @@ namespace ego_planner
     void displayIntermediateMJO_q(const std::vector<Eigen::MatrixXd>& trajectories); 
 
     // void displayMultiInitPathList(vector<vector<Eigen::Vector3d>> init_trajs, const double scale);
-    void displayOptimalList(Eigen::MatrixXd optimal_pts, int id);
+
     void displayFailedList(Eigen::MatrixXd failed_pts, int id);
     void displayAStarList(std::vector<std::vector<Eigen::Vector3d>> a_star_paths, int id);
     void displayArrowList(

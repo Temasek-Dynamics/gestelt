@@ -430,7 +430,7 @@ namespace ego_planner
          << ",avg_time(ms)=" << sum_time / count_success << std::endl;
     
     setLocalTrajFromOpt(best_MJO, touch_goal);
-    visualization_->displayOptimalList(initial_cstr_pts, 0);
+    visualization_->displayOptimalMJO(initial_cstr_pts, 0);
 
     // success. YoY
     continous_failures_count_ = 0;

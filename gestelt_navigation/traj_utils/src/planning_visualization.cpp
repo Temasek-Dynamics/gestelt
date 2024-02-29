@@ -12,16 +12,25 @@ namespace ego_planner
 
     goal_point_pub = nh.advertise<visualization_msgs::Marker>("goal_point", 2);
     global_list_pub = nh.advertise<visualization_msgs::Marker>("global_list", 2);
-    initial_mjo_pub_ = nh.advertise<visualization_msgs::Marker>("initial_mjo", 2);
-    optimal_list_pub = nh.advertise<visualization_msgs::Marker>("optimal_list", 2);
     failed_list_pub = nh.advertise<visualization_msgs::Marker>("failed_list", 2);
     a_star_list_pub = nh.advertise<visualization_msgs::Marker>("a_star_list", 20);
 
     // Debugging topics
+    /* Initial trajectories*/
+    initial_mjo_pub_ = nh.advertise<visualization_msgs::Marker>("initial_mjo", 2);
     initial_mjo_q_pub_ = nh.advertise<visualization_msgs::Marker>("initial_mjo_q", 20);
     initial_mjo_xi_pub_ = nh.advertise<visualization_msgs::Marker>("initial_mjo_xi", 20);
+    initial_ctrl_pts_pub_ = nh.advertise<visualization_msgs::Marker>("initial_ctrl_pts", 20);
+    initial_ctrl_pts_xi_pub_ = nh.advertise<visualization_msgs::Marker>("initial_ctrl_pts_xi", 20);
+    initial_ctrl_pts_q_pub_ = nh.advertise<visualization_msgs::Marker>("initial_ctrl_pts_q", 20);
+
+    /* Intermediate trajectories*/
     intmd_ctrl_pts_q_pub_ = nh.advertise<visualization_msgs::Marker>("intmd_ctrl_pts_q", 20);
     intmd_ctrl_pts_xi_pub_ = nh.advertise<visualization_msgs::Marker>("intmd_ctrl_pts_xi", 20);
+
+    /* Optimal trajectories*/
+    optimal_mjo_pub_ = nh.advertise<visualization_msgs::Marker>("optimal_mjo", 2);
+    optimal_mjo_q_pub_ = nh.advertise<visualization_msgs::Marker>("optimal_mjo_q", 20);
 
     // Publish (S,V) Pairs from ESDF-Free local planner
     planner_sv_pairs_pub_ = nh.advertise<visualization_msgs::MarkerArray>("planner_sv_pairs", 1000);
@@ -215,7 +224,7 @@ namespace ego_planner
         Eigen::Vector3d pt = trajectories[i].col(j).transpose();
         list.push_back(pt);
       }
-      displayMarkerList(intmd_ctrl_pts_xi_pub_, list, 0.075, colorRGBA, i);
+      displayMarkerList(intmd_ctrl_pts_xi_pub_, list, 0.03, colorRGBA, i);
     }
   }
 
@@ -246,7 +255,7 @@ namespace ego_planner
         Eigen::Vector3d pt = trajectories[i].col(j).transpose();
         list.push_back(pt);
       }
-      displayMarkerList(intmd_ctrl_pts_q_pub_, list, 0.075, colorRGBA, i);
+      displayMarkerList(intmd_ctrl_pts_q_pub_, list, 0.03, colorRGBA, i);
     }
   }
 
@@ -262,7 +271,7 @@ namespace ego_planner
       Eigen::Vector3d pt = pts.col(i).transpose();
       list.push_back(pt);
     }
-    Eigen::Vector4d color(0, 1, 1, 0.5); // Cyan
+    Eigen::Vector4d color(0, 1, 1, 0.75); // Cyan
     displayMarkerList(initial_mjo_xi_pub_, list, 0.075, color, id);
   }
 
@@ -294,9 +303,81 @@ namespace ego_planner
     displayMarkerList(initial_mjo_pub_, init_pts, scale, color, id);
   }
 
-  void PlanningVisualization::displayOptimalList(Eigen::MatrixXd optimal_pts, int id)
+  void PlanningVisualization::displayInitialCtrlPts(Eigen::MatrixXd pts)
   {
-    if (optimal_list_pub.getNumSubscribers() == 0)
+    int id = 0;
+
+    if (initial_ctrl_pts_pub_.getNumSubscribers() == 0)
+    {
+      return;
+    }
+    vector<Eigen::Vector3d> list;
+    for (int i = 0; i < pts.cols(); i++)
+    {
+      Eigen::Vector3d pt = pts.col(i).transpose();
+      list.push_back(pt);
+    }
+    Eigen::Vector4d color(0, 1, 0, 0.75); // Green
+    displayMarkerList(initial_ctrl_pts_pub_, list, 0.15, color, id);
+  }
+
+  void PlanningVisualization::displayInitialCtrlPts_q(Eigen::MatrixXd pts)
+  {
+    int id = 0;
+
+    if (initial_ctrl_pts_q_pub_.getNumSubscribers() == 0)
+    {
+      return;
+    }
+    vector<Eigen::Vector3d> list;
+    for (int i = 0; i < pts.cols(); i++)
+    {
+      Eigen::Vector3d pt = pts.col(i).transpose();
+      list.push_back(pt);
+    }
+    Eigen::Vector4d color(0.8, 0.8, 0.0, 0.5); // Dirty yellow
+    displayMarkerList(initial_ctrl_pts_q_pub_, list, 0.15, color, id);
+  }
+
+  void PlanningVisualization::displayInitialCtrlPts_xi(Eigen::MatrixXd pts)
+  {
+    int id = 0;
+
+    if (initial_ctrl_pts_xi_pub_.getNumSubscribers() == 0)
+    {
+      return;
+    }
+    vector<Eigen::Vector3d> list;
+    for (int i = 0; i < pts.cols(); i++)
+    {
+      Eigen::Vector3d pt = pts.col(i).transpose();
+      list.push_back(pt);
+    }
+    Eigen::Vector4d color(0, 1, 1, 0.75); // Cyan
+    displayMarkerList(initial_ctrl_pts_xi_pub_, list, 0.15, color, id);
+  }
+
+  void PlanningVisualization::displayOptimalMJO_q(Eigen::MatrixXd pts)
+  {
+    int id = 0;
+
+    if (optimal_mjo_q_pub_.getNumSubscribers() == 0)
+    {
+      return;
+    }
+    vector<Eigen::Vector3d> list;
+    for (int i = 0; i < pts.cols(); i++)
+    {
+      Eigen::Vector3d pt = pts.col(i).transpose();
+      list.push_back(pt);
+    }
+    Eigen::Vector4d color(0.8, 0.8, 0.0, 0.5); // Dirty yellow
+    displayMarkerList(optimal_mjo_q_pub_, list, 0.15, color, id);
+  }
+
+  void PlanningVisualization::displayOptimalMJO(Eigen::MatrixXd optimal_pts, int id)
+  {
+    if (optimal_mjo_pub_.getNumSubscribers() == 0)
     {
       return;
     }
@@ -307,7 +388,7 @@ namespace ego_planner
       list.push_back(pt);
     }
     Eigen::Vector4d color(1, 0, 0, 0.4);
-    displayMarkerList(optimal_list_pub, list, 0.1, color, id);
+    displayMarkerList(optimal_mjo_pub_, list, 0.1, color, id);
   }
 
   void PlanningVisualization::displayFailedList(Eigen::MatrixXd failed_pts, int id)

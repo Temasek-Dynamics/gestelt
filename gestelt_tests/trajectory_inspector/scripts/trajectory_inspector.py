@@ -31,7 +31,7 @@ class Spheres:
         self.alphas = np.empty([size], dtype=float)
 
 
-def f_B(xi, o, r):
+def f_B(xi, o_i, r_i):
     """Projection from n-dim state x to n-dim closed ball.
         Or from xi to q
 
@@ -39,7 +39,11 @@ def f_B(xi, o, r):
         o (np.array): center of sphere
         r (float): radius of sphere
     """
-    return o + (2 * r * xi) / (np.dot(xi.transpose(),xi) + 1.0)
+
+    xi_rel = xi - o_i # Point relative to sphere
+
+    return o_i + xi_rel * ((2 * r_i**2) / ( np.linalg.norm(xi_rel)**2 + r_i**2))
+
     
 def f_B_inv(q_i, o_i, r_i):
     """Local inverse of f_B(xi)
@@ -49,17 +53,13 @@ def f_B_inv(q_i, o_i, r_i):
         o_i (np.array): center of sphere i
         r_i (float): radius of sphere i
     """
-    q_i_ = q_i.flatten()
-    o_i_ = o_i.flatten()
-    v_i = q_i_ - o_i_
-
-    if (v_i )
+    v_i = q_i - o_i
 
     a = r_i   
-    b = r_i + np.sqrt(r_i**2 - np.linalg.norm(v_i)**2) # q has to be inside the sphere
+    b = r_i - np.sqrt(r_i**2 - np.linalg.norm(v_i)**2) # q has to be inside the sphere
 
-    xi_i = (a / b ) * v_i + o_i.flatten()
-    return xi_i
+    xi_i = o_i + (a / b ) * v_i
+    return xi_i.flatten()
 
 class TrajectoryInspector:
     
@@ -144,14 +144,14 @@ class TrajectoryInspector:
             cstr_pts.z.append(msg_be.initial_mjo[i].z)
 
         #####
-        # Transfrom from xi to q
+        # Transform from original constraint points 
         #####
         print("num_cp: ", num_cp)
         print("Num_segs: ", num_segs)
         print("cstr_pts size: ", len(cstr_pts.x))
         print("sfc_spheres size: ", sfc_spheres.radii.shape)
 
-
+        # Transform from original constraint points to q coordinates
         for i in range(0, num_segs): # For each segment
 
             for j in range(0, num_cp+1): # For each waypoint 
@@ -171,10 +171,9 @@ class TrajectoryInspector:
                 cstr_pts_q.y.append(pt[1])
                 cstr_pts_q.z.append(pt[2])
 
+        # Transform from original constraint points to xi coordinates
         for i in range(0, num_segs): # For each segment
-
             for j in range(0, num_cp+1): # For each waypoint 
-                
                 idx = i * num_cp + j
 
                 # The start (j=0) and end (j=num_cp-1) are intersection of the spheres, which
@@ -192,7 +191,7 @@ class TrajectoryInspector:
         #####
         # Plotting
         #####
-        self.fig1 = plt.figure(0)
+        self.fig1 = plt.figure(0, figsize=(25, 25))
         self.ax = make_3d_axis(ax_s=1, unit="m", n_ticks=5)
         plot_transform(ax=self.ax)
 
@@ -217,18 +216,25 @@ class TrajectoryInspector:
         #                 [sfc_waypoints_q.z[i],sfc_waypoints_q.z[i+1]], c='m')
 
         # 1e) Plot original constraint points 
-        self.ax.scatter(cstr_pts.x, cstr_pts.y, cstr_pts.z, s=20.0, c='b', marker='.')
+        self.ax.scatter(cstr_pts.x, cstr_pts.y, cstr_pts.z, s=20.0, c='b', marker='.', label='constraint_pts')
         for i in range(0, len(cstr_pts.x)-1): # Plot line connecting all SFC waypoints
             self.ax.plot([cstr_pts.x[i], cstr_pts.x[i+1]], 
                         [cstr_pts.y[i],cstr_pts.y[i+1]],
                         [cstr_pts.z[i],cstr_pts.z[i+1]], c='b')
 
-        # 1e) Plot original constraint points 
-        self.ax.scatter(cstr_pts_q.x, cstr_pts_q.y, cstr_pts_q.z, s=20.0, c='m', marker='o')
-        for i in range(0, len(cstr_pts_q.x)-1): # Plot line connecting all SFC waypoints
-            self.ax.plot([cstr_pts_q.x[i], cstr_pts_q.x[i+1]], 
-                        [cstr_pts_q.y[i],cstr_pts_q.y[i+1]],
-                        [cstr_pts_q.z[i],cstr_pts_q.z[i+1]], c='m')
+        # 1e) Plot constraint points in q 
+        # self.ax.scatter(cstr_pts_q.x, cstr_pts_q.y, cstr_pts_q.z, s=20.0, c='m', marker='o', label='cstr_pts_q')
+        # for i in range(0, len(cstr_pts_q.x)-1): # Plot line connecting all SFC waypoints
+        #     self.ax.plot([cstr_pts_q.x[i], cstr_pts_q.x[i+1]], 
+        #                 [cstr_pts_q.y[i],cstr_pts_q.y[i+1]],
+        #                 [cstr_pts_q.z[i],cstr_pts_q.z[i+1]], c='m')
+
+        # 1e) Plot constraint points in xi
+        self.ax.scatter(cstr_pts_xi.x, cstr_pts_xi.y, cstr_pts_xi.z, s=20.0, c='g', marker='x', label='cstr_pts_xi')
+        for i in range(0, len(cstr_pts_xi.x)-1): # Plot line connecting all SFC waypoints
+            self.ax.plot([cstr_pts_xi.x[i], cstr_pts_xi.x[i+1]], 
+                        [cstr_pts_xi.y[i],cstr_pts_xi.y[i+1]],
+                        [cstr_pts_xi.z[i],cstr_pts_xi.z[i+1]], c='g')
 
         # 2a) Plot all sampled sphere
         # self.plotSpheres(all_seg_samp_spheres[2])
@@ -243,13 +249,12 @@ class TrajectoryInspector:
         self.ax.set_zlim(-0.1, 6)
 
         # plt.tight_layout()
+        plt.legend()
         plt.show()  
 
 
-    
-
     def plotHistogram(self, spheres):
-        self.fig2, self.ax_hist = plt.subplots(nrows=2, ncols=2, figsize=(15, 8))
+        self.fig2, self.ax_hist = plt.subplots(nrows=2, ncols=2, figsize=(15, 15))
         self.fig2.suptitle("Segment i")
 
         self.ax_hist[0,0].set_title("Radii (m)")
