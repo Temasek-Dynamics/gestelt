@@ -1,0 +1,32 @@
+<launch>
+  <arg name="platform" default="laptop"/> <!-- for the python.prof check-->
+  <arg name="record" default="false"/>
+
+ 
+  <node pkg="gestelt_bringup" name="mission" type="learning_agile_mission.py" >
+        <param name="is_simulation" value="False"/>
+  </node>
+
+  <node pkg="gestelt_bringup" name="learning_agile_agent" type="learning_agile_node.py" output="screen" >  
+      <param name="hardware_platform" value="$(arg platform)"/>
+  </node>
+    
+
+  
+  <!--for running on the Radxa, This record does not start, 
+  instead rosbag record will run on the laptop, in a seperate launch-->
+  <arg name="record_topics" default="
+    (.*)mavros(.*)
+  (.*)traj_server(.*)
+  (.*)learning_agile_agent(.*)
+  "
+  />
+
+
+
+
+  <node if="$(arg record)" pkg="rosbag" type="record" name="record" output="screen" args="-o $(find gestelt_bringup)/data/
+  -e $(arg record_topics)"/>
+
+
+</launch>

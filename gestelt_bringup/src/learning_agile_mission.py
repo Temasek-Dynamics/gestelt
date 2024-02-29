@@ -170,6 +170,7 @@ def main():
         
         if (MISSION_MODE):
             # Already in MISSION 
+            time.sleep(1)
             break
         elif (not HOVER_MODE):
             # IDLE -> TAKE OFF -> HOVER
@@ -207,10 +208,10 @@ def main():
 
     #------------------------------------ for hovering test:-------------------------------------------#
     # gate position
-    waypoints.append(create_pose(-0.0,0.0,1.3)) # 3.0,2.0,3   2.0,-0.0,1.5
+    waypoints.append(create_pose(-0.0,0.0,1.2)) # 3.0,2.0,3   2.0,-0.0,1.5
 
     # end position
-    waypoints.append(create_pose(-0.0,0.0,1.3)) # 3.0,2.0,3   2.0,-0.0,1.5
+    waypoints.append(create_pose(-0.0,0.0,1.2)) # 3.0,2.0,3   2.0,-0.0,1.5
 
     #--------------------------------------------------------------------------------------------------#
     # the number of accelerations must be equal to the number of waypoints
@@ -226,9 +227,9 @@ def main():
     pub_waypoints(waypoints,accel_list,vel_list)
     ##--------------------- end of min snap trajectory--------------##
 
-    # spending initial state to the learning agile node    
-    # rospy.spin()
-    rospy.signal_shutdown("transfer to the MPC")
+    # sending initial state to the learning agile node    
+    rospy.spin()
+    # rospy.signal_shutdown("transfer to the MPC")
 if __name__ == '__main__':
     main()
     # cProfile.run('main()',filename='running_time_statistics.prof')

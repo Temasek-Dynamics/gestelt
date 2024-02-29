@@ -3,6 +3,9 @@
   (.*)mavros(.*)
   (.*)traj_server(.*)
   (.*)learning_agile_agent(.*)
+  (.*)planner(.*)
+  (.*)tf(.*)
+  (.*)tf_static(.*)
  "/>
 
 
