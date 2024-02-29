@@ -46,14 +46,8 @@ void TrajServer::init(ros::NodeHandle& nh)
   command_server_sub_ = nh.subscribe<gestelt_msgs::CommanderCommand>("/traj_server/command", 10, &TrajServer::serverCommandCb, this);
 
   // Subscription to planner
-  plan_traj_sub_ = nh.subscribe("/planner/trajectory", 10, &TrajServer::multiDOFJointTrajectoryCb, this);
   planner_hb_sub_ = nh.subscribe("/planner/heartbeat", 10, &TrajServer::plannerHeartbeatCb, this);
-  hover_pos_sub_ = nh.subscribe("/planner/hover_position", 10, &TrajServer::hoverPositionCb, this);
-  circular_traj_sub_ = nh.subscribe("/reference/flatsetpoint", 10, &TrajServer::circularTrajCb, this);
-  start_circular_srv_.request.data = false;
-  // circular traj client
-  circular_client_ = nh.serviceClient<std_srvs::SetBool>("start");
-
+ 
 
   //MPC control soft real time cmd subscriber
   mpc_soft_RT_cmd_sub_ = nh.subscribe("/learning_agile_agent/soft_RT_mpc_attitude", 1, &TrajServer::MPCControlCb, this);
@@ -73,8 +67,7 @@ void TrajServer::init(ros::NodeHandle& nh)
   pos_cmd_raw_pub_ = nh.advertise<mavros_msgs::PositionTarget>("/mavros/setpoint_raw/local", 50);
   uav_path_pub_ = nh.advertise<nav_msgs::Path>("/uav_path_trajectory", 50);
   server_state_pub_ = nh.advertise<gestelt_msgs::CommanderState>("/traj_server/state", 50);
-  // reference_pub_ = nh.advertise<geometry_msgs::TwistStamped>("/reference/setpoint_test", 50);
-  flat_reference_pub_ = nh.advertise<controller_msgs::FlatTarget>("/reference/flatsetpoint", 50);
+  
   /////////////////
   /* Service clients */
   /////////////////
@@ -107,11 +100,6 @@ void TrajServer::plannerHeartbeatCb(std_msgs::EmptyPtr msg)
   heartbeat_time_ = ros::Time::now();
 }
 
-void TrajServer::hoverPositionCb(const geometry_msgs::Pose::ConstPtr &msg)
-{
-  hover_pos_(0) = msg->position.x;
-  hover_pos_(1) = msg->position.y;
-}
 void TrajServer::multiDOFJointTrajectoryCb(const trajectory_msgs::MultiDOFJointTrajectory::ConstPtr &msg)
 {
   if (getServerState() != ServerState::MISSION){ 
@@ -274,29 +262,6 @@ void TrajServer::execTrajTimerCb(const ros::TimerEvent &e)
       execLand();
       break;
   }
-}
-/* request for circular mission*/
-void TrajServer::requestCircularMission()
-{   
-  ros::service::waitForService("start");
-  std_srvs::SetBool srv;
-  srv.request.data = true;
-  start_circular_srv_ = srv;
-  try {
-      // call the service
-      if (circular_client_.call(srv)) {
-          if (srv.response.success) {
-              ROS_INFO("Service call succeeded with message: %s", start_circular_srv_.response.message.c_str());
-          } else {
-              ROS_WARN("Service call failed with message: %s", start_circular_srv_.response.message.c_str());
-          }
-      } else {
-          ROS_ERROR("Failed to call service");
-      }
-  } catch (const std::exception& e) {
-      ROS_ERROR("Service call failed: %s", e.what());        
-  }
-
 }
 
 
