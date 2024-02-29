@@ -32,11 +32,17 @@
 
 #include "acados_sim_solver_ACADOS_model.h"
 #include "acados_solver_ACADOS_model.h"
-#include <casadi/casadi.hpp>
+#include <cmath>
 #endif 
+
+typedef ACADOS_model_solver_capsule* ACADOS_model_solver_capsule_ptr;
+typedef ocp_nlp_config* nlp_config_ptr;
+typedef ocp_nlp_dims* nlp_dims_ptr;
+typedef ocp_nlp_in* nlp_in_ptr;
+typedef ocp_nlp_out* nlp_out_ptr;
 class LearningAgile{
     public:
-        LearningAgent(ros::NodeHandle& nh);
+        void init(ros::NodeHandle& nh);
         
         void mission_start_cb(const gestelt_msgs::GoalsPtr &msg);
         void gate_state_estimation_cb(const ros::TimerEvent &e);
@@ -52,7 +58,7 @@ class LearningAgile{
     private:
     ros::Subscriber drone_pose_sub_;
     ros::Subscriber drone_twist_sub_;
-    ros::Subscriber waypoint_cb_;
+    ros::Subscriber waypoint_sub_;
 
     ros::Publisher next_attitude_setpoint_pub_;
     ros::Publisher gate_centroid_pub_;
@@ -61,20 +67,26 @@ class LearningAgile{
     ros::Publisher mpc_runtime_pub_;
     ros::Publisher current_pred_traj_pub_;
 
+    ros::Timer soft_RT_mpc_timer_;
+
     //environment setting
+    std::string origin_frame_="world";
+
+    // desired traverse state
     Eigen::Vector3d des_trav_point_={0,0,0};
     Eigen::Vector4d des_trav_quat_={0,0,0,0};
     double t_tra_=0.1;
 
     Eigen::Vector3d start_point_={0,0,0};
-    Eigen::Vector3d end_point_={0,0,0};
-    Eigen::Vector4d des_goal_quat_={0,0,0,0};
+    
+    // desired goal state
+    Eigen::VectorXd des_goal_state_=Eigen::VectorXd::Zero(10);
+    Eigen::Vector3d des_goal_point_={0,0,0};
+    Eigen::Vector4d des_goal_quat_={1,0,0,0};
     Eigen::Vector3d des_goal_vel_={0,0,0};
-    Eigen::VectorXd des_goal_state_= Eigen::VectorXd::Zero(10);
-
 
     //current drone state
-    Eigen::VectorXd drone_state_= Eigen::VectorXd::Zero(10);
+    Eigen::VectorXd drone_state_=Eigen::VectorXd::Zero(10);
     Eigen::Vector3d drone_pos_= {0,0,0};
     Eigen::Vector3d drone_vel_= {0,0,0};
     Eigen::Vector4d drone_quat_= {1,0,0,0};
@@ -86,9 +98,15 @@ class LearningAgile{
     Eigen::Vector4d last_input_={0,0,0,0};
 
     //MPC output
+    Eigen::VectorXd state_i_opt_;
     Eigen::MatrixXd state_traj_opt_;
+    
+    Eigen::VectorXd control_i_opt_;
     Eigen::MatrixXd control_traj_opt_;
     bool NO_SOLUTION_FLAG_=false;
+
+    // acados param
+    int status; // acados operation state
     
     //------------------- acados solver -------------------
     int n_nodes_;
@@ -96,6 +114,14 @@ class LearningAgile{
     int n_u_;
     int dt_=0.1;
 
-    
+    ACADOS_model_solver_capsule_ptr acados_ocp_capsule;
+    nlp_config_ptr nlp_config;
+    nlp_dims_ptr nlp_dims;
+    nlp_in_ptr nlp_in;
+    nlp_out_ptr nlp_out;
+
+
+    //threading
+    std::mutex cmd_mutex_; 
 
 };

@@ -5,9 +5,9 @@ void LearningAgile::init(ros::NodeHandle& nh)
     /////////////////
     /* Subscribers */
     /////////////////
-    drone_pose_sub_= nh.subscribe<geometry_msgs::PoseStamped>("/mavros/local_position/pose", 1, &LearningAgent::drone_state_pose_cb, this);
-    drone_twist_sub_= nh.subscribe<geometry_msgs::TwistStamped>("/mavros/local_position/velocity_local", 1, &LearningAgent::drone_state_twist_cb, this);
-    waypoint_cb_ = nh.subscribe<gestelt_msgs::Goals>("planner/goals_learning_agile", 1, &LearningAgent::mission_start_cb, this);
+    drone_pose_sub_= nh.subscribe("/mavros/local_position/pose", 1, &LearningAgile::drone_state_pose_cb, this);
+    drone_twist_sub_= nh.subscribe("/mavros/local_position/velocity_local", 1, &LearningAgile::drone_state_twist_cb, this);
+    waypoint_sub_ = nh.subscribe("planner/goals_learning_agile", 1, &LearningAgile::mission_start_cb, this);
 
 
     /////////////////
@@ -23,17 +23,17 @@ void LearningAgile::init(ros::NodeHandle& nh)
     /////////////////
     /* Timers */
     /////////////////
-    pub_freq=100;
-    soft_RT_mpc_timer_ = nh.createTimer(ros::Duration(1/pub_freq), &LearningAgent::setpoint_timer_cb, this);
+    double pub_freq=100;
+    soft_RT_mpc_timer_ = nh.createTimer(ros::Duration(1/pub_freq), &LearningAgile::setpoint_timer_cb, this);
     
 
-    IGNORE_ATTITUDE = mavros_msgs::AttitudeTarget::IGNORE_ATTITUDE;
+    
 }   
 
 void LearningAgile::solver_loading()
 {
     // Load the solver from the python interface generated code
-    nlp_solver_capsule *acados_ocp_capsule = ACADOS_model_acados_create_capsule();
+    acados_ocp_capsule = ACADOS_model_acados_create_capsule();
 
 
     status=ACADOS_model_acados_create(acados_ocp_capsule);
@@ -44,10 +44,10 @@ void LearningAgile::solver_loading()
         exit(1);
     }
 
-    ocp_nlp_config *nlp_config = ACADOS_model_acados_get_nlp_config(acados_ocp_capsule);
-    ocp_nlp_dims *nlp_dims = ACADOS_model_acados_get_nlp_dims(acados_ocp_capsule);
-    ocp_nlp_in *nlp_in = ACADOS_model_acados_get_nlp_in(acados_ocp_capsule);
-    ocp_nlp_out *nlp_out = ACADOS_model_acados_get_nlp_out(acados_ocp_capsule);
+    nlp_config = ACADOS_model_acados_get_nlp_config(acados_ocp_capsule);
+    nlp_dims = ACADOS_model_acados_get_nlp_dims(acados_ocp_capsule);
+    nlp_in = ACADOS_model_acados_get_nlp_in(acados_ocp_capsule);
+    nlp_out = ACADOS_model_acados_get_nlp_out(acados_ocp_capsule);
 
     // solver settings
     n_nodes_ = nlp_dims->N;
@@ -58,47 +58,74 @@ void LearningAgile::solver_loading()
 
 }
 
-void LearingAgile::solver_request(){
-    des_goal_state_ << goal_point_, goal_vel_, goal_quat_;
+void LearningAgile::solver_request(){
+
+    //set the goal state
+    des_goal_state_.segment(0,3) = des_goal_point_;
+    des_goal_state_.segment(3,3) = des_goal_vel_;
+    des_goal_state_.segment(6,4) = des_goal_quat_;
 
     for (int i = 0; i < n_nodes_; i++)
     {
         current_input_=last_input_;
-        varying_trav_weight=max_tra_w_*casadi::exp(-10*(dt_*i-t_tra_)**2)
+        double varying_trav_weight = max_tra_w_ * std::exp(-10 * std::pow(dt_ * i - t_tra_, 2));
 
         // set the external parameters for the solver
         // desired goal state, current input, desired traverse pose, varying traverse weight
-        Eigen::VectorXd solver_extern_param = des_goal_state_<< current_input_, des_trav_point_, des_trav_quat_, varying_trav_weight;
-        ocp_nlp_constraints_model_set(nlp_config, nlp_dims, nlp_in, i, "p",solver_extern_param);
+        Eigen::VectorXd solver_extern_param(22);
+        solver_extern_param.segment(0,10) = des_goal_state_;
+        solver_extern_param.segment(10,4) = current_input_;
+        solver_extern_param.segment(14,3) = des_trav_point_;
+        solver_extern_param.segment(17,4) = des_trav_quat_;
+        solver_extern_param(21) = varying_trav_weight;
+
+        
+        double *solver_extern_param_ptr = solver_extern_param.data();
+        ocp_nlp_constraints_model_set(nlp_config, nlp_dims, nlp_in, i, "p",solver_extern_param_ptr);
     }
     //TODO
     // set the initial GUESS
 
     // set the end desired state
+    Eigen::VectorXd solver_extern_param(22);
     double end_weight=0;
-    ocp_nlp_constraints_model_set(nlp_config, nlp_dims, nlp_in, n_nodes_, "p",solver_extern_param);
+    solver_extern_param.segment(0,10) = des_goal_state_;
+    solver_extern_param.segment(10,4) = current_input_;
+    solver_extern_param.segment(14,3) = des_trav_point_;
+    solver_extern_param.segment(17,4) = des_trav_quat_;
+    solver_extern_param(21) = end_weight;
+
+    
+    double *solver_extern_param_ptr = solver_extern_param.data();
+    ocp_nlp_constraints_model_set(nlp_config, nlp_dims, nlp_in, n_nodes_, "p",solver_extern_param_ptr);
 
     //set initial condition aligned with the current state
-    ocp_nlp_constraints_model_set(nlp_config, nlp_dims, nlp_in, 0, "lbx",drone_state_);
-    ocp_nlp_constraints_model_set(nlp_config, nlp_dims, nlp_in, 0, "ubx",drone_state_);
+    double *drone_state_ptr = drone_state_.data();
+    ocp_nlp_constraints_model_set(nlp_config, nlp_dims, nlp_in, 0, "lbx",drone_state_ptr);
+    ocp_nlp_constraints_model_set(nlp_config, nlp_dims, nlp_in, 0, "ubx",drone_state_ptr);
 
 
     // solve the problem
     status = ACADOS_model_acados_solve(acados_ocp_capsule);
-    if (status != 0):
-        NO_SOLUTION_FLAG=true;
+    if (status != 0)
+        NO_SOLUTION_FLAG_=true;
 
     // get the solution
     for (int i = 0; i < n_nodes_; i++)
-    {
-        ocp_nlp_out_get(nlp_config, nlp_dims, nlp_out, i, "x", state_traj_opt_);
-        ocp_nlp_out_get(nlp_config, nlp_dims, nlp_out, i, "u", control_traj_opt_);
+    {   
+        
+        ocp_nlp_out_get(nlp_config, nlp_dims, nlp_out, i, "x", &state_i_opt_);
+        ocp_nlp_out_get(nlp_config, nlp_dims, nlp_out, i, "u", &control_i_opt_);
+
+        state_traj_opt_.row(i) = state_i_opt_;
+        control_traj_opt_.row(i) = control_i_opt_;
     }
     // get the last state
-    ocp_nlp_out_get(nlp_config, nlp_dims, nlp_out, n_nodes_, "x", state_traj_opt_);
+    ocp_nlp_out_get(nlp_config, nlp_dims, nlp_out, n_nodes_, "x", &state_i_opt_);
+    state_traj_opt_.row(n_nodes_) = state_i_opt_;
 }
 
-void LearningAgile:: setpoint_timer_cb(const ros::TimerEvent &e);
+void LearningAgile:: setpoint_timer_cb(const ros::TimerEvent &e)
 {
     if (NO_SOLUTION_FLAG_)
     {
@@ -109,7 +136,7 @@ void LearningAgile:: setpoint_timer_cb(const ros::TimerEvent &e);
     mavros_msgs::AttitudeTarget mpc_cmd;
     mpc_cmd.header.stamp = ros::Time::now();
     mpc_cmd.header.frame_id = origin_frame_;
-    mpc_cmd.type_mask = IGNORE_ATTITUDE; // Ignore orientation
+    mpc_cmd.type_mask = mavros_msgs::AttitudeTarget::IGNORE_ATTITUDE;; // Ignore orientation
     mpc_cmd.thrust = control_traj_opt_(0,0);
     mpc_cmd.body_rate.x = control_traj_opt_(0,1);
     mpc_cmd.body_rate.y = control_traj_opt_(0,2);
@@ -126,7 +153,7 @@ void LearningAgile::drone_state_pose_cb(const geometry_msgs::PoseStamped::ConstP
     drone_state_.segment(6,4) = drone_quat_;
 }
 
-void LearingAgile::drone_state_twist_cb(const geometry_msgs::TwistStamped::ConstPtr& msg)
+void LearningAgile::drone_state_twist_cb(const geometry_msgs::TwistStamped::ConstPtr& msg)
 {
     drone_vel_ << msg->twist.linear.x, msg->twist.linear.y, msg->twist.linear.z;
     drone_ang_vel_ << msg->twist.angular.x, msg->twist.angular.y, msg->twist.angular.z;
@@ -136,9 +163,11 @@ void LearingAgile::drone_state_twist_cb(const geometry_msgs::TwistStamped::Const
 
 void LearningAgile::mission_start_cb(const gestelt_msgs::GoalsPtr &msg)
 {
-    des_trav_point_ << msg->gate_point.x, msg->gate_point.y, msg->gate_point.z;
-    des_trav_quat_ << msg->gate_quat.w, msg->gate_quat.x, msg->gate_quat.y, msg->gate_quat.z;
+    des_trav_point_ << msg->waypoints[0].position.x, msg->waypoints[0].position.y, msg->waypoints[0].position.z;
+    des_goal_point_ << msg->waypoints[1].position.x, msg->waypoints[1].position.y, msg->waypoints[1].position.z;
+    
+    des_trav_quat_ << msg->waypoints[0].orientation.w, msg->waypoints[0].orientation.x, msg->waypoints[0].orientation.y, msg->waypoints[0].orientation.z;
+    des_goal_quat_ << msg->waypoints[1].orientation.w, msg->waypoints[1].orientation.x, msg->waypoints[1].orientation.y, msg->waypoints[1].orientation.z;
 
-    start_point_ << msg->start_point.x, msg->start_point.y, msg->start_point.z;
-    end_point_ << msg->end_point.x, msg->end_point.y, msg->end_point.z;
+    
 }
