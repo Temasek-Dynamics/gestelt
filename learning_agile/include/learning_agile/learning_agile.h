@@ -99,10 +99,10 @@ class LearningAgile{
 
     //MPC output
     Eigen::VectorXd state_i_opt_;
-    Eigen::MatrixXd state_traj_opt_;
+    Eigen::MatrixXd state_traj_opt_=Eigen::MatrixXd::Zero(10,4);
     
     Eigen::VectorXd control_i_opt_;
-    Eigen::MatrixXd control_traj_opt_;
+    Eigen::MatrixXd control_traj_opt_=Eigen::MatrixXd::Zero(10,4);
     bool NO_SOLUTION_FLAG_=false;
 
     // acados param
