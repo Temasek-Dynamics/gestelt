@@ -85,15 +85,14 @@ link_directories(
 
 file(GLOB ocp_solver
         ../gestelt_bringup/src/Learning_Agile/c_generated_code/acados_solver_ACADOS_model.c
+        ../gestelt_bringup/src/Learning_Agile/c_generated_code/ACADOS_model_cost/*.c
         )
 
 file(GLOB casadi_fun
         ../gestelt_bringup/src/Learning_Agile/c_generated_code/ACADOS_model_model/ACADOS_model_expl_ode_fun.c
         ../gestelt_bringup/src/Learning_Agile/c_generated_code/ACADOS_model_model/ACADOS_model_expl_vde_forw.c)
 
-file(GLOB sim_solver
-        ../gestelt_bringup/src/Learning_Agile/c_generated_code/acados_sim_solver_ACADOS_model.c
-        )
+
 add_library(ocp_shared_lib SHARED ${ocp_solver} ${casadi_fun} )
 target_link_libraries(ocp_shared_lib acados qpOASES_e hpipm blasfeo)
 
@@ -124,7 +123,7 @@ add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catk
 target_link_libraries(${PROJECT_NAME}_node
   ${catkin_LIBRARIES}
 )
-target_link_libraries(${PROJECT_NAME}_node
+target_link_libraries(learning_agile_node
   ocp_shared_lib 
 )
 #############
