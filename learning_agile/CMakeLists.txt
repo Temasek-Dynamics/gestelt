@@ -15,9 +15,11 @@ find_package(catkin REQUIRED COMPONENTS
 )
 
 ## System dependencies are found with CMake's conventions
-# find_package(Boost REQUIRED COMPONENTS system)
+find_package(catkin REQUIRED COMPONENTS
+  ${ROS_PKGS}
+)
 
-
+find_package(Eigen3 REQUIRED)
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## Modules and global scripts declared therein get installed
 ## See http://ros.org/doc/api/catkin/html/user_guide/setup_dot_py.html
@@ -104,7 +106,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-#  INCLUDE_DIRS include
+ INCLUDE_DIRS include
 #  LIBRARIES learning_agile
 #  CATKIN_DEPENDS gestelt_msgs mavros_msgs roscpp std_msgs
 #  DEPENDS system_lib
@@ -117,14 +119,40 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
-# include
+  include
   ${catkin_INCLUDE_DIRS}
+  ${EIGEN3_INCLUDE_DIR}
 )
+## set the acados environment variable
+set(ACADOS_SOURCE_DIR $ENV{HOME}/acados)
+include_directories($ENV{ACADOS_SOURCE_DIR}/include)
+include_directories($ENV{ACADOS_SOURCE_DIR}/include/blasfeo/include)
+include_directories($ENV{ACADOS_SOURCE_DIR}/include/hpipm/include)
+include_directories($ENV{ACADOS_SOURCE_DIR}/include/acados)
+include_directories(../python/c_generated_code)
+
+link_directories($ENV{ACADOS_SOURCE_DIR}/lib)
+
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
 #   src/${PROJECT_NAME}/learning_agile.cpp
 # )
+
+file(GLOB ocp_solver
+        ../gestelt_bringup/src/Learning_Agile/c_generated_code/acados_solver_ACADOS_model.c
+        )
+
+file(GLOB casadi_fun
+        ../gestelt_bringup/src/Learning_Agile/c_generated_code/ACADOS_model_model/ACADOS_model_expl_ode_fun.c
+        ../gestelt_bringup/src/Learning_Agile/c_generated_code/ACADOS_model_model/ACADOS_model_expl_vde_forw.c)
+
+file(GLOB sim_solver
+        ../gestelt_bringup/src/Learning_Agile/c_generated_code/acados_sim_solver_ACADOS_model.c
+        )
+add_library(ocp_shared_lib SHARED ${ocp_solver} ${casadi_fun} )
+target_link_libraries(ocp_shared_lib acados hpipm blasfeo)
+
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
@@ -134,7 +162,9 @@ include_directories(
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-# add_executable(${PROJECT_NAME}_node src/learning_agile_node.cpp)
+add_executable(${PROJECT_NAME}_node src/learning_agile_node.cpp
+                                    src/learning_agile.cpp
+                                    )
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -144,13 +174,16 @@ include_directories(
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
-# add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
-# target_link_libraries(${PROJECT_NAME}_node
-#   ${catkin_LIBRARIES}
-# )
-
+target_link_libraries(${PROJECT_NAME}_node
+  ${catkin_LIBRARIES}
+)
+target_link_libraries(${PROJECT_NAME}_node
+  ocp_shared_lib 
+  sim_shared_lib
+)
 #############
 ## Install ##
 #############
