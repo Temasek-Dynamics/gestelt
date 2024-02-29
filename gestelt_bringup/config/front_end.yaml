@@ -34,8 +34,8 @@ sfc:
 
   # Initial time allocation
   # avg_vel: 1.5 # Average velocity (m/s) used for estimating initial time allocation
-  max_vel: 3.0 # Maximum velocity (m/s)
-  max_acc: 25.0 # Maximum velocity (m/s)
+  max_vel: 1.5 # Maximum velocity (m/s)
+  max_acc: 6.0 # Maximum velocity (m/s)
 
   # SFC Buffer 
   spherical_buffer: 0.125 # (m) Reduce spherical SFCs by this fixed amount to increase buffer from obstacles

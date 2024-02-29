@@ -200,9 +200,6 @@ bool BackEndPlanner::generatePlanSFC( const Eigen::Vector3d& start_pos, const Ei
     /***************************/
     /*4:  Optimize plan
     /***************************/
-
-    // plan_success = back_end_planner_->optimizeMJOTraj(initial_mjo, optimized_mjo, spheres_radius, spheres_center);
-    bool plan_success = false;
     poly_traj::Trajectory initial_traj = initial_mjo.getTraj();
 
     int num_segs = initial_traj.getPieceSize();
@@ -260,13 +257,6 @@ bool BackEndPlanner::generatePlanSFC( const Eigen::Vector3d& start_pos, const Ei
     optimized_mjo = back_end_planner_->ploy_traj_opt_->getMinJerkOpt();
     Eigen::MatrixXd cstr_pts_optimized_mjo = optimized_mjo.getInitConstraintPoints(num_cstr_pts);
 
-    auto cstr_pts_optimized_mjo_q = back_end_planner_->ploy_traj_opt_->f_B_cstr_pts(
-                                              cstr_pts_optimized_mjo, 
-                                              initial_mjo.getNumSegs(),
-                                              num_cstr_pts,
-                                              spheres_center,
-                                              spheres_radius);
-    
     /***************************/
     /* Print and display results for debugging
     /***************************/
@@ -301,7 +291,11 @@ bool BackEndPlanner::generatePlanSFC( const Eigen::Vector3d& start_pos, const Ei
     debug_traj_pub_.publish(debug_traj_msg);
 
     /* Visualize optimized mjo trajectories */
-    visualization_->displayOptimalMJO_q(cstr_pts_optimized_mjo_q);
+    // visualization_->displayOptimalMJO_q(cstr_pts_optimized_mjo_q);
+
+    back_end_planner_->ploy_traj_opt_->opt_costs_.printAll();
+
+    logInfo(str_fmt("Final cost: %f", final_cost));
 
     if (plan_success)
     {

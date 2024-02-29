@@ -12,6 +12,79 @@
 
 namespace ego_planner
 {
+  struct OptCosts{
+    /* Spatial */
+    std::vector<double> jerk;
+    std::vector<double> obs;
+    std::vector<double> swarm_avoidance;
+    std::vector<double> vel_acc_penalty;
+    std::vector<double> dist_var;
+    /* Temporal */
+    std::vector<double> time_cost;
+    
+    void addCosts(
+      const double& jerk_, 
+      const double& obs_, 
+      const double& swarm_avoidance_, 
+      const double& vel_acc_penalty_,
+      const double& dist_var_,
+      const double& time_cost_)
+    {
+      jerk.push_back(jerk_);
+      obs.push_back(obs_);
+      swarm_avoidance.push_back(swarm_avoidance_);
+      vel_acc_penalty.push_back(vel_acc_penalty_);
+      dist_var.push_back(dist_var_);
+      time_cost.push_back(time_cost_);
+    }
+
+    void printAll()
+    { 
+      std::cout<< "Number of iterations: " << jerk.size() << std::endl;
+
+      std::cout<< "obs: " << std::endl;
+      for (size_t i = 0; i < obs.size(); i++){
+        std::cout << obs[i] << ", ";
+      }
+      std::cout << std::endl;
+
+      std::cout<< "Jerk: " << std::endl;
+      for (size_t i = 0; i < jerk.size(); i++){
+        std::cout << jerk[i] << ", ";
+      }
+      std::cout << std::endl;
+
+      std::cout<< "vel_acc_penalty: " << std::endl;
+      for (size_t i = 0; i < vel_acc_penalty.size(); i++){
+        std::cout << vel_acc_penalty[i] << ", ";
+      }
+      std::cout << std::endl;
+
+      std::cout<< "dist_var: " << std::endl;
+      for (size_t i = 0; i < dist_var.size(); i++){
+        std::cout << dist_var[i] << ", ";
+      }
+      std::cout << std::endl;
+
+      std::cout<< "time_cost: " << std::endl;
+      for (size_t i = 0; i < time_cost.size(); i++){
+        std::cout << time_cost[i] << ", ";
+      }
+      std::cout << std::endl;
+
+    }
+
+    void reset()
+    {
+      jerk.clear();
+      obs.clear();
+      swarm_avoidance.clear();
+      vel_acc_penalty.clear();
+      dist_var.clear();
+      time_cost.clear();
+    }
+
+  };
 
   class ConstraintPoints
   {
@@ -80,7 +153,8 @@ namespace ego_planner
     /* Data structures */
     std::vector<Eigen::MatrixXd> intermediate_cstr_pts_xi_; // Intermediate constraint points unconstrained xi coordinates
     std::vector<Eigen::MatrixXd> intermediate_cstr_pts_q_; // Intermediate constraint points constrained q coordinates
-    
+      
+    OptCosts opt_costs_; // Structure containing vector of costs throughout all iterations
 
   private:
     std::shared_ptr<GridMap> grid_map_;

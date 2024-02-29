@@ -15,6 +15,8 @@ namespace ego_planner
       return false;
     }
 
+    opt_costs_.reset();
+
     intermediate_cstr_pts_xi_.clear();
     intermediate_cstr_pts_q_.clear();
 
@@ -25,12 +27,6 @@ namespace ego_planner
     //      inner_ctrl_pts is of size (3, M-1)
     Eigen::MatrixXd inner_ctrl_pts_xi = f_BInv_ctrl_pts(inner_ctrl_pts, spheres_center_, spheres_radius_); // (3, num_segs - 1);
     // Eigen::MatrixXd inner_ctrl_pts_xi = inner_ctrl_pts;
-
-    // 2) Optimization is done using xi as decision variables
-    //      a) Forward direction: cost evaluation done using q_i = f_B_ctrl_pts(xi)
-    //      b) Backward direction: p.d.(H/xi) = (2 * r_i * p.d.(H/q))/(xi_i.T * xi_i) - (4 * r_i * ( ... ))/(xi_i.T * xi_i + 1)**2 
-    
-    // 3) Transform back to q?
 
     piece_num_ = initT.size(); // Number of segments
     jerkOpt_.reset(iniState, finState, piece_num_);
@@ -185,9 +181,10 @@ namespace ego_planner
       opt->intermediate_cstr_pts_q_.push_back(opt->cstr_pts_q_);
     }
 
-    /* 1. Smoothness cost */
-    // jerk_cost is trajectory jerk cost
-    opt->initAndGetSmoothnessGradCost2PT(gradT, jerk_cost); // calls initGradCost(gdT, cost)
+    /** 1. Jerk cost 
+     * jerk_cost is trajectory jerk cost
+     */
+    opt->jerkOpt_.initGradCost(gradT, jerk_cost); // Among other things, do addGradJbyT(gdT) and addGradJbyC(gdC);
 
     /** 2. Time integral cost 
       *   2a. Static obstacle cost
@@ -203,13 +200,23 @@ namespace ego_planner
     // time_cost += opt->rho_ * T(0) * piece_nums;  // same t
     // grad[n - 1] = (gradT.sum() + opt->rho_ * piece_nums) * gdT2t(x[n - 1]);  // same t
 
+    /** 3. Time cost 
+    */
     opt->VirtualTGradCost(T, t, gradT, gradt, time_cost);
-
-    opt->iter_num_++;
 
     // Collect intermediate MJO trajectories for publishing later
     opt->intermediate_cstr_pts_xi_.push_back(opt->cstr_pts_xi_);
     opt->intermediate_cstr_pts_q_.push_back(opt->cstr_pts_q_);
+
+    opt->iter_num_++;
+
+    opt->opt_costs_.addCosts(
+      jerk_cost,
+      obs_swarm_feas_qvar_costs(0),
+      obs_swarm_feas_qvar_costs(1),
+      obs_swarm_feas_qvar_costs(2),
+      obs_swarm_feas_qvar_costs(3),
+      time_cost);
 
     return jerk_cost + obs_swarm_feas_qvar_costs.sum() + time_cost;
   }
@@ -264,11 +271,11 @@ namespace ego_planner
   }
 
   /* gradient and cost evaluation functions */
-  template <typename EIGENVEC>
-  void PolyTrajOptimizer::initAndGetSmoothnessGradCost2PT(EIGENVEC &gdT, double &cost)
-  {
-    jerkOpt_.initGradCost(gdT, cost);
-  }
+  // template <typename EIGENVEC>
+  // void PolyTrajOptimizer::initAndGetSmoothnessGradCost2PT(EIGENVEC &gdT, double &cost)
+  // {
+  //   jerkOpt_.initGradCost(gdT, cost);
+  // }
 
   template <typename EIGENVEC>
   void PolyTrajOptimizer::addPVAGradCost2CT_SFC(EIGENVEC &gdT, Eigen::VectorXd &costs, const int &K)
@@ -323,7 +330,7 @@ namespace ego_planner
 
         // Transform from xi to q. Forward cost evaluation is done in q
         // Eigen::Vector3d pos_q = f_B(pos, spheres_center_[i], spheres_radius_[i]);
-        // cstr_pts_q_.col(idx_cp) = pos_q;  
+        cstr_pts_q_.col(idx_cp) = pos;  
 
         /**
          * Penalty on static obstacle, vector of (x,y,z)
@@ -450,6 +457,7 @@ namespace ego_planner
     distanceSqrVarianceWithGradCost2p(cstr_pts_q_, gdp, var);
     // std::cout << "var=" << var <<std::endl;
 
+    // What cost is this?
     idx_cp = 0;
     for (int i = 0; i < N; ++i) // for each piece/segment number
     {
@@ -481,6 +489,7 @@ namespace ego_planner
         }
       } // end iteration through all constraint points in segment
     } // end iteration through all pieces
+
     costs(3) += var;
 
   }
@@ -589,8 +598,6 @@ namespace ego_planner
     return;
   }
 
-
-
   /* helper functions */
   void PolyTrajOptimizer::setParam(ros::NodeHandle &pnh)
   {
@@ -676,7 +683,7 @@ namespace ego_planner
 
     /* 1. Smoothness cost */
     // jerk_cost is the cost of the jerk minimization trajectory
-    opt->initAndGetSmoothnessGradCost2PT(gradT, jerk_cost); 
+    opt->jerkOpt_.initGradCost(gradT, jerk_cost); // does addGradJbyT(gdT) and addGradJbyC(gdC);
 
     /** 2. Time integral cost 
       *   2a. Static obstacle cost
