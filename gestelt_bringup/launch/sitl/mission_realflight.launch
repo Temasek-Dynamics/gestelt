@@ -1,13 +1,13 @@
 <launch>
   <!-- Launches a test mission -->
-  <node pkg="gestelt_bringup" name="mission" type="learning_agile_mission.py">  
+  <node pkg="gestelt_bringup" name="mission" type="learning_agile_mission.py" >
         <param name="is_simulation" value="False"/>
   </node>
 
+  <node pkg="gestelt_bringup" name="learning_agile_agent" type="learning_agile_node.py" output="screen" >  
 
-  <node pkg="gestelt_bringup" name="learning_agile_agent" type="learning_agent_node.py" output="screen">  
   </node>
-
+    
   
   <!-- Start rosbag to record setpoint_raw and local_position -->
   <!-- path have to be absolute path-->
