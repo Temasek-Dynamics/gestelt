@@ -208,7 +208,7 @@ def main():
     angle_2=60
     angle_rad_1=math.radians(angle_1)
     angle_rad_2=math.radians(angle_2)
-    num_passes = 2
+    num_passes = 3
         # 1/4 test
         # world frame is the initial position of the drone
         # map frame is the origin of the map
@@ -217,15 +217,14 @@ def main():
 
         waypoints.append(create_pose(1.5,0.0,1.5))   
         waypoints.append(create_pose(0.0,-1.5,1.2)) 
-        waypoints.append(create_pose(-1.5, 0.0, 1.7))
+        waypoints.append(create_pose(-1.5, 0.0, 1.8))
         waypoints.append(create_pose(0.0,1.5,1.4))
         
     
         accel_list.append(create_accel(-f*math.sin(angle_rad_1),0.0,g+f*math.cos(angle_rad_1)))   
         accel_list.append(create_accel(None,None,None))
         accel_list.append(create_accel(None,None,None))
-        accel_list.append(create_accel(-f*math.sin(angle_rad_2),0.0,g+f*math.cos(angle_rad_2)))
-        # accel_list.append(create_accel(-f*math.sin(angle_rad),0.0,g+f*math.cos(angle_rad)))
+        # accel_list.append(create_accel(-f*math.sin(angle_rad_2),0.0,g+f*math.cos(angle_rad_2))) #for 2 angles on different gates
         accel_list.append(create_accel(None,None,None))
 
 
@@ -233,8 +232,7 @@ def main():
         vel_list.append(create_vel(None,None,None))
         vel_list.append(create_vel(None,None,None))
         vel_list.append(create_vel(None,None,None))
-        # vel_list.append(create_vel(None,None,None))
-        vel_list.append(create_vel(0,0,0))
+        vel_list.append(create_vel(None,None,None))
 
     
     # end of the trajectory
