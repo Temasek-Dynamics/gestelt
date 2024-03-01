@@ -150,30 +150,33 @@ bool ExamplePlanner::planTrajectory(const std::vector<Eigen::Vector3d>& wp_pos,
   segment_times = estimateSegmentTimesVelocityRamp(vertices, max_v_, max_a_);
   segment_times[0] = segment_times[1];
   for(int i = 0; i<segment_times.size(); i++){
-    std::cout<<"Time allocation of segment "<<i+1<<": "<<segment_times[i]<<std::endl;
-    segment_times[i] *= 0.9;        //works for 85 deg angle
+    // std::cout<<"Time allocation of segment "<<i+1<<": "<<segment_times[i]<<std::endl;
+    // segment_times[i] *= 0.9;        //works for 85 deg angle
 
     
     // works for 60 deg angle
     
-    // if (i%4 == 0 && i == 0){
-    //   segment_times[i] *= 0.8;
-    // }
-    // if (i%4 == 0 && i > 3){
-    //   segment_times[i] *= 0.85;
-    // }
-    // if (i%4 == 1 && i>3){
-    //   segment_times[i] *= 1;
-    // }
-    // if (i%4 == 1 && i == 1){
-    //   segment_times[i] *= 1.1;
-    // }
-    // if (i%4 == 2){
-    //   segment_times[i] *= 1.1;
-    // }
-    // if (i%4 == 3){
-    //   segment_times[i] *= 1.3;
-    // }
+    if (i%4 == 0){
+      segment_times[i] *= 0.8;
+    }
+    if (i%4 == 1 && i < 3){
+      segment_times[i] *= 1;
+    }
+    if (i%4 == 1 && i >3){
+      segment_times[i] *= 1;
+    }
+    if (i%4 == 2 && i < 12){
+      segment_times[i] *= 0.8;
+    }
+    if (i%4 == 2 && i > 12){
+      segment_times[i] *= 0.8;
+    }
+    if (i%4 == 3 && i < 12){
+      segment_times[i] *= 0.8;
+    }
+    if (i%4 == 3 && i>12){
+      segment_times[i] *= 1;
+    }
 
   
     // std::cout<<"MODIFIED Time allocation of segment "<<i+1<<": "<<segment_times[i]<<std::endl;
@@ -213,7 +216,9 @@ bool ExamplePlanner::planTrajectory(const std::vector<Eigen::Vector3d>& wp_pos,
   opt.getSegments(&segments);
 
   opt.getTrajectory(&(*trajectory));
-
+  for(int i = 0; i<segment_times.size(); i++){
+    std::cout<<"Time allocation of segment "<<i+1<<": "<<segment_times[i]<<std::endl;
+  }
   /*
   * Non-linear optimization
   */
