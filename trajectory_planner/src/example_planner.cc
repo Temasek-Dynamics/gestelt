@@ -151,13 +151,16 @@ bool ExamplePlanner::planTrajectory(const std::vector<Eigen::Vector3d>& wp_pos,
   segment_times[0] = segment_times[1];
   for(int i = 0; i<segment_times.size(); i++){
     // std::cout<<"Time allocation of segment "<<i+1<<": "<<segment_times[i]<<std::endl;
-    // segment_times[i] *= 0.9;        //works for 85 deg angle
+    // segment_times[i] *= 0.9;        //works for 85 deg angle 1 gate //DONT CHANGE IT
 
     
     // works for 60 deg angle
     
-    if (i%4 == 0){
-      segment_times[i] *= 0.8;
+    if (i%4 == 0 && i<3){
+      segment_times[i] *= 0.9;
+    }
+    if (i%4 == 0 && i>=3){
+      segment_times[i] *= 1;
     }
     if (i%4 == 1 && i < 3){
       segment_times[i] *= 1;
@@ -165,16 +168,16 @@ bool ExamplePlanner::planTrajectory(const std::vector<Eigen::Vector3d>& wp_pos,
     if (i%4 == 1 && i >3){
       segment_times[i] *= 1;
     }
-    if (i%4 == 2 && i < 12){
-      segment_times[i] *= 0.8;
+    if (i%4 == 2 && i < 8){
+      segment_times[i] *= 0.9;
     }
-    if (i%4 == 2 && i > 12){
-      segment_times[i] *= 0.8;
+    if (i%4 == 2 && i > 8){
+      segment_times[i] *= 0.9;
     }
-    if (i%4 == 3 && i < 12){
-      segment_times[i] *= 0.8;
+    if (i%4 == 3 && i < 8){
+      segment_times[i] *= 0.85;
     }
-    if (i%4 == 3 && i>12){
+    if (i%4 == 3 && i>8){
       segment_times[i] *= 1;
     }
 
