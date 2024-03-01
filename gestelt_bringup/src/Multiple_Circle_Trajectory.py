@@ -205,7 +205,7 @@ def main():
     g=-9.81 #m/s^2  # down force, negative
     f=1*(-g) #N  # up force, positive
     angle_1=85
-    angle_2=60
+    angle_2=-60
     angle_rad_1=math.radians(angle_1)
     angle_rad_2=math.radians(angle_2)
     num_passes = 3 
@@ -223,8 +223,8 @@ def main():
     
         accel_list.append(create_accel(-f*math.sin(angle_rad_1),0.0,g+f*math.cos(angle_rad_1)))   
         accel_list.append(create_accel(None,None,None))
-        accel_list.append(create_accel(None,None,None))
-        # accel_list.append(create_accel(-f*math.sin(angle_rad_2),0.0,g+f*math.cos(angle_rad_2))) #for 2 angles on different gates
+        # accel_list.append(create_accel(None,None,None))
+        accel_list.append(create_accel(-f*math.sin(angle_rad_2),0.0,g+f*math.cos(angle_rad_2))) #for 2 angles on different gates
         accel_list.append(create_accel(None,None,None))
 
 
