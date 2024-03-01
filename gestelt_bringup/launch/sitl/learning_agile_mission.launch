@@ -7,10 +7,13 @@
         <param name="is_simulation" value="True"/>
   </node>
 
-  <node pkg="gestelt_bringup" name="learning_agile_agent" type="learning_agile_node.py" output="screen" >  
+  <!-- <node pkg="gestelt_bringup" name="learning_agile_agent" type="learning_agile_node.py" output="screen" >  
       <param name="hardware_platform" value="$(arg platform)"/>
   </node>
-    
+   -->
+  <!--cpp node-->
+  <node pkg="learning_agile" name="learning_agile_node" type="learning_agile_node" output="screen">  
+  </node>
 
   
   <!--for running on the Radxa, This record does not start, 

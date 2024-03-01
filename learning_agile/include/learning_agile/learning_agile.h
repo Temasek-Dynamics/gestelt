@@ -74,7 +74,7 @@ class LearningAgile{
 
     // desired traverse state
     Eigen::Vector3d des_trav_point_={0,0,0};
-    Eigen::Vector4d des_trav_quat_={0,0,0,0};
+    Eigen::Vector4d des_trav_quat_={1,0,0,0};
     double t_tra_=0.1;
 
     Eigen::Vector3d start_point_={0,0,0};
@@ -99,11 +99,13 @@ class LearningAgile{
 
     //MPC output
     Eigen::VectorXd state_i_opt_;
-    Eigen::MatrixXd state_traj_opt_=Eigen::MatrixXd::Zero(10,4);
+    Eigen::MatrixXd state_traj_opt_;
     
-    Eigen::VectorXd control_i_opt_;
-    Eigen::MatrixXd control_traj_opt_=Eigen::MatrixXd::Zero(10,4);
+    // Eigen::VectorXd control_i_opt_;
+    double control_opt_[4] = {0,0,0,0};
+    Eigen::MatrixXd control_traj_opt_;
     bool NO_SOLUTION_FLAG_=false;
+    bool start_soft_RT_mpc_timer_=false;
 
     // acados param
     int status; // acados operation state
