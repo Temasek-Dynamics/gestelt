@@ -16,8 +16,8 @@ void LearningAgile::init(ros::NodeHandle& nh)
     next_attitude_setpoint_pub_ = nh.advertise<mavros_msgs::AttitudeTarget>("/learning_agile_agent/soft_RT_mpc_attitude", 1);
     // gate_centroid_pub_ = nh.advertise<geometry_msgs::PoseStamped>("/learning_agile_agent/gate_centroid", 1);
 
-    // traverse_time_pub_ = nh.advertise<std_msgs::Int8>("/learning_agile_agent/traverse_time", 10);
-    mpc_runtime_pub_ = nh.advertise<std_msgs::Int8>("/learning_agile_agent/callback_runtime", 10);
+    // traverse_time_pub_ = nh.advertise<std_msgs::Float32>>("/learning_agile_agent/traverse_time", 10);
+    mpc_runtime_pub_ = nh.advertise<std_msgs::Float64>("/learning_agile_agent/callback_runtime", 10);
     current_pred_traj_pub_ = nh.advertise<geometry_msgs::PoseArray>("/learning_agile_agent/current_pred_traj", 10);
 
     /////////////////
@@ -60,7 +60,7 @@ void LearningAgile::solver_loading()
 }
 
 void LearningAgile::solver_request(){
-
+    
     ocp_nlp_out_set(nlp_config, nlp_dims, nlp_out, n_nodes_,"x", des_goal_state_.data());
 
     for (int i = 0; i < n_nodes_; i++)
@@ -107,7 +107,6 @@ void LearningAgile::solver_request(){
 
 
     // solve the problem
-    ROS_INFO("Solving the problem");
     status = ACADOS_model_acados_solve(acados_ocp_capsule);
     if (status != 0){
         NO_SOLUTION_FLAG_=true;
@@ -149,9 +148,11 @@ void LearningAgile::solver_request(){
 }
 
 void LearningAgile::setpoint_timer_cb(const ros::TimerEvent &e)
-{
+{   
+
     std::lock_guard<std::mutex> cmd_guard(cmd_mutex_);
-   
+    auto start = std::chrono::high_resolution_clock::now();
+
     if (start_soft_RT_mpc_timer_==true)
     {
         if (NO_SOLUTION_FLAG_)
@@ -165,12 +166,20 @@ void LearningAgile::setpoint_timer_cb(const ros::TimerEvent &e)
         mavros_msgs::AttitudeTarget mpc_cmd;
         mpc_cmd.header.stamp = ros::Time::now();
         mpc_cmd.header.frame_id = origin_frame_;
-        mpc_cmd.type_mask = mavros_msgs::AttitudeTarget::IGNORE_ATTITUDE;; // Ignore orientation
+        mpc_cmd.type_mask = mavros_msgs::AttitudeTarget::IGNORE_ATTITUDE; // Ignore orientation
         mpc_cmd.thrust = control_opt_[0]/((0.8706)*4);
         mpc_cmd.body_rate.x = control_opt_[1];
         mpc_cmd.body_rate.y = control_opt_[2];
         mpc_cmd.body_rate.z = control_opt_[3];
         next_attitude_setpoint_pub_.publish(mpc_cmd);
+
+        auto end = std::chrono::high_resolution_clock::now();
+
+        double preloop_dur = std::chrono::duration_cast<std::chrono::duration<double>>(end - start).count();
+        
+        std_msgs::Float64 mpc_runtime;
+        mpc_runtime.data = preloop_dur;
+        mpc_runtime_pub_.publish(mpc_runtime);
         }  
     }  
 }
