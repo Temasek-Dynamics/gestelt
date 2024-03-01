@@ -8,7 +8,7 @@ front_end:
   debug_viz: true          # If true, publish visualization for debugging
   tie_breaker: 1.0001       # Tie breaker as weight for f-cost (cost-to-go)
 
-  planner_frequency: 2.0
+  planner_frequency: 1.0
 
 sfc:
   max_iterations: 100     # Corresponds to maximum number of spheres

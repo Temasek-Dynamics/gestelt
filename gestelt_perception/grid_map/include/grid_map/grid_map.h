@@ -24,9 +24,6 @@
 
 #include <tf2_ros/transform_listener.h>
 #include <tf2_ros/message_filter.h>
-// #include "tf2_geometry_msgs/tf2_geometry_msgs.h"
-// #include <tf2/transform_datatypes.h>
-// #include <swarm_benchmark/timebenchmark.h>
 
 #include <octomap/octomap.h>
 #include <octomap/OcTree.h>

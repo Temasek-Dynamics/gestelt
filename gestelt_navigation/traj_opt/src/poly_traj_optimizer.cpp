@@ -160,8 +160,8 @@ namespace ego_planner
     Eigen::VectorXd obs_swarm_feas_qvar_costs(4); // Vector of costs containing (Static obstacles, swarm, dynamic, feasibility, qvar)
 
     // Discretize trajectory into inner constraint points
-    opt->cstr_pts_xi_ = opt->jerkOpt_.getInitConstraintPoints(opt->cps_num_perPiece_);
-    opt->cstr_pts_q_ = opt->f_B_cstr_pts(opt->cstr_pts_xi_, 
+    opt->cstr_pts_q_ = opt->jerkOpt_.getInitConstraintPoints(opt->cps_num_perPiece_);
+    opt->cstr_pts_xi_ = opt->f_BInv_cstr_pts(opt->cstr_pts_q_, 
                                           opt->jerkOpt_.getNumSegs(),
                                           opt->cps_num_perPiece_, 
                                           opt->spheres_center_,

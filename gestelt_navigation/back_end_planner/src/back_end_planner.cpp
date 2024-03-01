@@ -89,6 +89,8 @@ void BackEndPlanner::odometryCB(const nav_msgs::OdometryConstPtr &msg)
 }
 
 void BackEndPlanner::sfcTrajectoryCB(const gestelt_msgs::SphericalSFCTrajectoryConstPtr& msg){
+  std::cout << "SFC Trajectory CB" << std::endl;
+
   // logInfo(str_fmt("Received callback to SFC Trajectory with %ld waypoints", msg->waypoints.size()));
   std::vector<double> spheres_radius;
   std::vector<Eigen::Vector3d> spheres_center;
@@ -97,12 +99,6 @@ void BackEndPlanner::sfcTrajectoryCB(const gestelt_msgs::SphericalSFCTrajectoryC
     spheres_radius.push_back(sphere.radius);
     spheres_center.push_back(Eigen::Vector3d{sphere.center.x, sphere.center.y, sphere.center.z});
   }
-
-  std::cout << "Sphere size: " << spheres_radius.size() << std::endl;
-  std::cout << "Sphere size: " << spheres_radius.size() << std::endl;
-  std::cout << "Sphere size: " << spheres_radius.size() << std::endl;
-  std::cout << "Sphere size: " << spheres_radius.size() << std::endl;
-  std::cout << "Sphere size: " << spheres_radius.size() << std::endl;
 
   Eigen::VectorXd segs_t_dur(msg->segments_time_duration.size());
   for (size_t i = 0; i < msg->segments_time_duration.size(); i++){

@@ -105,6 +105,14 @@ void FrontEndPlanner::planTimerCB(const ros::TimerEvent &e)
   if (!sampleBackEndTrajectory(ros::Time::now().toSec() ,start_pos_)){
     // If we are unable to sample the back end trajectory, we set the starting position as the quadrotor's current position
     start_pos_ = cur_pos_;
+    std::cout << "============"<< std::endl;
+    std::cout << "From current pos: Set start pose to be " << start_pos_ << std::endl;
+    std::cout << "============"<< std::endl;
+  }
+  else{
+    std::cout << "============"<< std::endl;
+    std::cout << "From back-end traj: Set start pose to be " << start_pos_ << std::endl;
+    std::cout << "============"<< std::endl;
   }
 
   // Generate a front-end path
@@ -116,10 +124,10 @@ void FrontEndPlanner::planTimerCB(const ros::TimerEvent &e)
 */
 
 bool FrontEndPlanner::generatePlan(const Eigen::Vector3d& start_pos, const Eigen::Vector3d& goal_pos){
-  // logInfo(str_fmt("generatePlan() from (%f, %f, %f) to (%f, %f, %f)",
-  //   start_pos(0), start_pos(1), start_pos(2),
-  //   goal_pos(0), goal_pos(1), goal_pos(2))
-  // );
+  logInfo(str_fmt("generatePlan() from (%f, %f, %f) to (%f, %f, %f)",
+    start_pos(0), start_pos(1), start_pos(2),
+    goal_pos(0), goal_pos(1), goal_pos(2))
+  );
 
   ros::Time front_end_plan_start_time = ros::Time::now();
 
