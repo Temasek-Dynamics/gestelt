@@ -209,9 +209,9 @@ void PositionControl::_RPTControl(const float dt)
 	// desired system responds parameters
 	// xy outer-loop controller
 	float wn_xy = 0.4f; 		// natural frequency
-	float sigma_xy = 1.1f * 1.5f * 2.0f; 	// settling time
+	float sigma_xy = 1.1f * 1.5f * 2.0f; // damping ratio	
 	float ki_xy = 0.8f * 1.5f; 	// pole placement
-	float eps_xy = 1.0f * 0.4f; 	// damping ratio
+	float eps_xy = 1.0f * 0.4f; 	 // settling time
 	float F_xy[5];
 
 	// xy outer-loop controller
@@ -229,7 +229,7 @@ void PositionControl::_RPTControl(const float dt)
 
 	// z outer-loop controller
 	float wn_z = 0.5f;			// natural frequency
-	float sigma_z = 1.1f * 1.5f * 1.25f;	// settling time
+	float sigma_z = 1.1f * 1.5f;	// settling time
 	float ki_z = 0.8f * 1.5f;		// pole placement
 	float eps_z = 1.0f * 0.3f;		// damping ratio
 

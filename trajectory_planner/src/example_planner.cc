@@ -160,19 +160,19 @@ bool ExamplePlanner::planTrajectory(const std::vector<Eigen::Vector3d>& wp_pos,
       segment_times[i] *= 0.9;
     }
     if (i%4 == 0 && i>=3){
-      segment_times[i] *= 1;
+      segment_times[i] *= 0.6;
     }
     if (i%4 == 1 && i < 3){
-      segment_times[i] *= 1;
+      segment_times[i] *= 0.6;
     }
     if (i%4 == 1 && i >3){
-      segment_times[i] *= 1;
+      segment_times[i] *= 0.6;
     }
     if (i%4 == 2 && i < 8){
-      segment_times[i] *= 0.9;
+      segment_times[i] *= 0.6;
     }
     if (i%4 == 2 && i > 8){
-      segment_times[i] *= 0.9;
+      segment_times[i] *= 0.6;
     }
     if (i%4 == 3 && i < 8){
       segment_times[i] *= 0.85;

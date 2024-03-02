@@ -53,3 +53,4 @@ qtcreator-*
 CATKIN_IGNORE
 *.npy
 *.pth
+gestelt_bringup/src/Learning_Agile/*
