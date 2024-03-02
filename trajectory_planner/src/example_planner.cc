@@ -151,15 +151,15 @@ bool ExamplePlanner::planTrajectory(const std::vector<Eigen::Vector3d>& wp_pos,
   segment_times[0] = segment_times[1];
   for(int i = 0; i<segment_times.size(); i++){
 
-    // // time allocation for 1 gate trajectory
+    // // time allocation for 2 gates trajectory - 85deg and 60deg passes
     // if (i%4 == 0 && i<3){
-    //   segment_times[i] *= 0.9;
+    //   segment_times[i] *= 0.8;
     // }
     // if (i%4 == 0 && i>=3){
-    //   segment_times[i] *= 1;
+    //   segment_times[i] *= 0.8;
     // }
     // if (i%4 == 1 && i < 3){
-    //   segment_times[i] *= 1;
+    //   segment_times[i] *= 0.9;
     // }
     // if (i%4 == 1 && i >3){
     //   segment_times[i] *= 1;
@@ -168,7 +168,7 @@ bool ExamplePlanner::planTrajectory(const std::vector<Eigen::Vector3d>& wp_pos,
     //   segment_times[i] *= 0.9;
     // }
     // if (i%4 == 2 && i > 8){
-    //   segment_times[i] *= 0.9;
+    //   segment_times[i] *= 0.7;
     // }
     // if (i%4 == 3 && i < 8){
     //   segment_times[i] *= 0.85;
@@ -179,55 +179,40 @@ bool ExamplePlanner::planTrajectory(const std::vector<Eigen::Vector3d>& wp_pos,
 
 
 
-    // time allocation for 2 gates trajecotry - 85deg and 60deg.
-    if (i%4 == 0 && i<3){
+    // time allocation for 2 gates trajectory - 85deg and 0deg passes.
+    if (i == 0 || i == segment_times.size()-1){
       segment_times[i] *= 1;
     }
-    if (i%4 == 0 && i>=3){
+    else{
       segment_times[i] *= 0.6;
     }
-    if (i%4 == 1 && i < 3){
-      segment_times[i] *= 0.6;
-    }
-    if (i%4 == 1 && i >3){
-      segment_times[i] *= 0.6;
-    }
-    if (i%4 == 2 && i < 8){
-      segment_times[i] *= 0.6;
-    }
-    if (i%4 == 2 && i > 8){
-      segment_times[i] *= 0.6;
-    }
-    if (i%4 == 3 && i < 8){
-      segment_times[i] *= 0.6;
-    }
-    if (i%4 == 3 && i>8){
-      segment_times[i] *= 1;
-    }
+    // if (i%4 == 0 && i>=3){
+    //   segment_times[i] *= 0.6;
+    // }
+    // if (i%4 == 1 && i < 3){
+    //   segment_times[i] *= 0.6;
+    // }
+    // if (i%4 == 1 && i >3){
+    //   segment_times[i] *= 0.6;
+    // }
+    // if (i%4 == 2 && i < 8){
+    //   segment_times[i] *= 0.6;
+    // }
+    // if (i%4 == 2 && i > 8){
+    //   segment_times[i] *= 0.6;
+    // }
+    // if (i%4 == 3 && i < 8){
+    //   segment_times[i] *= 0.6;
+    // }
+    // if (i%4 == 3 && i>8){
+    //   segment_times[i] *= 1;
+    // }
 
   
     // std::cout<<"MODIFIED Time allocation of segment "<<i+1<<": "<<segment_times[i]<<std::endl;
   }
   
 
-  //changing time allocation
-
-  
-
-  // for (size_t i = 0; i < vertices.size()-1; ++i) {
-  //   // if (i==0 || i==1 || i==4 || i==5){
-  //   //   segment_times[i] *= 0.8;
-  //   // }
-
-  //   if(i%4==0 || i%4==1){
-  //     segment_times[i] *= 1;
-  //   }
-
-  //   //extra time factor
-  //   if(i==0 || i==1){
-  //     segment_times[i] *= 1.2;
-  //   }
-  
 
   /*
   * Linear optimization
