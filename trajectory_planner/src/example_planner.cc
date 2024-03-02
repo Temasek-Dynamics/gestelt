@@ -181,7 +181,7 @@ bool ExamplePlanner::planTrajectory(const std::vector<Eigen::Vector3d>& wp_pos,
 
     // time allocation for 2 gates trajecotry - 85deg and 60deg.
     if (i%4 == 0 && i<3){
-      segment_times[i] *= 0.8;
+      segment_times[i] *= 1;
     }
     if (i%4 == 0 && i>=3){
       segment_times[i] *= 0.6;
@@ -199,7 +199,7 @@ bool ExamplePlanner::planTrajectory(const std::vector<Eigen::Vector3d>& wp_pos,
       segment_times[i] *= 0.6;
     }
     if (i%4 == 3 && i < 8){
-      segment_times[i] *= 0.85;
+      segment_times[i] *= 0.6;
     }
     if (i%4 == 3 && i>8){
       segment_times[i] *= 1;
