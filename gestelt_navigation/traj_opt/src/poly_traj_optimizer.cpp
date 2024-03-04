@@ -23,10 +23,10 @@ namespace ego_planner
     spheres_radius_ = spheres_radius;
     spheres_center_ = spheres_center;
 
-    // 1) Initial SFC is in coordinates of unconstrained variables xi 
+    // 1) Convert initial SFC points from q into xi variables
     //      inner_ctrl_pts is of size (3, M-1)
-    Eigen::MatrixXd inner_ctrl_pts_xi = f_BInv_ctrl_pts(inner_ctrl_pts, spheres_center_, spheres_radius_); // (3, num_segs - 1);
-    // Eigen::MatrixXd inner_ctrl_pts_xi = inner_ctrl_pts;
+    // Eigen::MatrixXd inner_ctrl_pts_xi = f_BInv_ctrl_pts(inner_ctrl_pts, spheres_center_, spheres_radius_); // (3, num_segs - 1);
+    Eigen::MatrixXd inner_ctrl_pts_xi = inner_ctrl_pts;
 
     piece_num_ = initT.size(); // Number of segments
     jerkOpt_.reset(iniState, finState, piece_num_);
@@ -175,11 +175,11 @@ namespace ego_planner
                                             opt->spheres_radius_); 
     opt->jerkOpt_.generate(P_q, T);
 
-    if (opt->iter_num_ == 0){
-      // Collect intermediate MJO trajectories for publishing later
-      opt->intermediate_cstr_pts_xi_.push_back(opt->cstr_pts_xi_);
-      opt->intermediate_cstr_pts_q_.push_back(opt->cstr_pts_q_);
-    }
+    // if (opt->iter_num_ == 0){
+    //   // Collect intermediate MJO trajectories for publishing later
+    //   opt->intermediate_cstr_pts_xi_.push_back(opt->cstr_pts_xi_);
+    //   opt->intermediate_cstr_pts_q_.push_back(opt->cstr_pts_q_);
+    // }
 
     /** 1. Jerk cost 
      * jerk_cost is trajectory jerk cost

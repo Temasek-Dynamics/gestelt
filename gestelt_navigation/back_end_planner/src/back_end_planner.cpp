@@ -149,9 +149,9 @@ bool BackEndPlanner::generatePlanSFC( const Eigen::Vector3d& start_pos, const Ei
                                       const std::vector<double>& spheres_radius, const std::vector<Eigen::Vector3d>& spheres_center,
                                       poly_traj::MinJerkOpt& optimized_mjo)
 {
-  // logInfo(str_fmt("Generating plan from SFC from (%f, %f, %f) to (%f, %f, %f)", 
-  //   start_pos(0), start_pos(1), start_pos(2), 
-  //   goal_pos(0), goal_pos(1), goal_pos(2)));
+  logInfo(str_fmt("Generating plan from SFC from (%f, %f, %f) to (%f, %f, %f)", 
+    start_pos(0), start_pos(1), start_pos(2), 
+    goal_pos(0), goal_pos(1), goal_pos(2)));
   
   bool plan_success = false;
   int num_segs = inner_wps.size()+ 1;// Number of path segments
@@ -248,7 +248,7 @@ bool BackEndPlanner::generatePlanSFC( const Eigen::Vector3d& start_pos, const Ei
     // visualization_->displayInitialMJO_q(cstr_pts_q, 0); 
 
     // Optimize trajectory!
-    double final_cost; // Not used for now
+    double final_cost; 
     plan_success = back_end_planner_->ploy_traj_opt_->optimizeTrajectorySFC( 
           headState, tailState,                         // Start and end position
           init_inner_ctrl_pts,                               // Inner control points

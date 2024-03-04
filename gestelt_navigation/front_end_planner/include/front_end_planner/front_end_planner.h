@@ -10,6 +10,7 @@
 #include <ros/ros.h>
 #include <std_msgs/Empty.h>
 #include <geometry_msgs/Pose.h>
+#include <geometry_msgs/PoseStamped.h>
 #include <nav_msgs/Odometry.h>
 #include <visualization_msgs/Marker.h>
 
@@ -42,6 +43,7 @@ private:
   // Subscribers and publishers
   ros::Subscriber odom_sub_; // Subscriber to drone odometry
   ros::Subscriber goal_sub_; // Subscriber to user-defined goals
+  ros::Subscriber single_goal_sub_; // Subscriber to single goals
 
   ros::Subscriber plan_traj_sub_; // Subscriber to back end planner trajectory
 
@@ -111,6 +113,13 @@ private:
   void goalsCB(const gestelt_msgs::GoalsConstPtr &msg);
 
   /**
+   * @brief Callback for single goal
+   * 
+   * @param msg 
+   */
+  void singleGoalCB(const geometry_msgs::PoseStampedConstPtr& msg);
+
+  /**
    * @brief Callback for odometry message
    * 
    * @param msg 
@@ -170,7 +179,6 @@ private:
           msg->position.z});
   }
 
-
   /**
    * @brief callback to debug goal topic for setting starting point of plan
    * 
@@ -184,7 +192,6 @@ private:
     );
     generatePlan(cur_pos_, waypoints_.nextWP());
   }
-
 
   /* Planner methods */
 

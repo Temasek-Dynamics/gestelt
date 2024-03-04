@@ -39,11 +39,14 @@ void FrontEndPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
 
   pnh.param("sfc/spherical_buffer", sfc_params.spherical_buffer, 0.0);
   
+  /* Subscribers */
   odom_sub_ = nh.subscribe("odom", 5, &FrontEndPlanner::odometryCB, this);
   goal_sub_ = nh.subscribe("planner/goals", 5, &FrontEndPlanner::goalsCB, this);
+  single_goal_sub_ = nh.subscribe("planner/single_goal", 5, &FrontEndPlanner::singleGoalCB, this);
 
   plan_traj_sub_ = nh.subscribe("back_end/trajectory", 5, &FrontEndPlanner::backEndTrajCB, this);
 
+  /* Publishers */
   spherical_sfc_traj_pub_ = nh.advertise<gestelt_msgs::SphericalSFCTrajectory>("front_end/sfc_trajectory", 10);
 
   front_end_plan_viz_pub_ = nh.advertise<visualization_msgs::Marker>("plan_viz", 10);
@@ -231,7 +234,6 @@ bool FrontEndPlanner::generatePlan(const Eigen::Vector3d& start_pos, const Eigen
   dbg_sfc_traj_msg.sfc_spheres = sfc_traj_msg.spheres;
 
   dbg_sfc_traj_msg.sfc_waypoints = sfc_traj_msg.waypoints;
-
   
   dbg_sfc_traj_pub_.publish(dbg_sfc_traj_msg);
 
@@ -315,6 +317,21 @@ bool FrontEndPlanner::sampleBackEndTrajectory(
   }
 
   return true;
+}
+
+void FrontEndPlanner::singleGoalCB(const geometry_msgs::PoseStampedConstPtr& msg)
+{
+  logInfo(str_fmt("Received debug goal (%f, %f, %f). Note: position.z is set to default of 1.5m", 
+        msg->pose.position.x,
+        msg->pose.position.y,
+        1.0));
+  waypoints_.reset();
+  waypoints_.addWP(Eigen::Vector3d{
+        msg->pose.position.x,
+        msg->pose.position.y,
+        1.0});
+
+  generatePlan(cur_pos_, waypoints_.nextWP());
 }
 
 void FrontEndPlanner::goalsCB(const gestelt_msgs::GoalsConstPtr &msg)

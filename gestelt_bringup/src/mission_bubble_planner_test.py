@@ -33,8 +33,8 @@ def main():
     ###############
     # Forest10x10
     ###############
-    start = create_pose(0.0, 0.0, 1.0)
-    goal = create_pose(5.5, 5.5, 1.0)
+    start = create_pose(0.0, 0.0, 1.5)
+    goal = create_pose(6.5, 6.5, 1.5)
     # start = create_pose(-5.5, -5.5, 1.0)
     # goal = create_pose(5.5, 5.5, 1.0)
 
