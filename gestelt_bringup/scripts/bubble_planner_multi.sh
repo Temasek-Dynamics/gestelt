@@ -27,16 +27,16 @@ roslaunch gestelt_bringup multi_fake_drones.launch
 
 # Start up rviz
 CMD_1="
-roslaunch gestelt_bringup fake_map_central.launch rviz_config:=bubble
+roslaunch --wait gestelt_bringup fake_map_central.launch rviz_config:=bubble
 "
 
 # Start up central bridge and nodes
 CMD_2="
-roslaunch gestelt_bringup record_single.launch drone_id:=0
+roslaunch --wait gestelt_bringup record_single.launch drone_id:=0
 "
 
 # Start up script to send commands
-CMD_3="roslaunch gestelt_bringup mission_bubble_planner.launch"
+CMD_3="roslaunch --wait gestelt_bringup mission_bubble_planner.launch"
 
 if [ "$SESSIONEXISTS" = "" ]
 then 
@@ -48,11 +48,8 @@ then
     tmux split-window -t $SESSION:0.0 -h
 
     tmux send-keys -t $SESSION:0.0 "$SOURCE_WS $CMD_0" C-m 
-    sleep 2
     tmux send-keys -t $SESSION:0.1 "$SOURCE_WS $CMD_1" C-m 
-    sleep 0.5
     tmux send-keys -t $SESSION:0.2 "$SOURCE_WS $CMD_2" C-m 
-    sleep 0.5
     tmux send-keys -t $SESSION:0.3 "$SOURCE_WS $CMD_3" C-m
 fi
 

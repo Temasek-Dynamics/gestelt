@@ -8,6 +8,8 @@ Panels:
         - /TF1/Frames1
         - /drone0_mavros1/Localization1//mavros/local_position/pose1
         - /d0/planner1
+        - /d0/planner1/back_end1
+        - /d0/planner1/back_end1/Planning_back_end1
         - /d2/planner1/front-end1/plan_viz1
         - /collision_viz1
       Splitter Ratio: 0.4941634237766266
@@ -540,13 +542,13 @@ Visualization Manager:
                   Queue Size: 100
                   Value: false
                 - Class: rviz/Marker
-                  Enabled: false
+                  Enabled: true
                   Marker Topic: /drone0/back_end_planner/intmd_ctrl_pts_xi
                   Name: intmd_ctrl_pts_xi
                   Namespaces:
                     {}
                   Queue Size: 100
-                  Value: false
+                  Value: true
                 - Class: rviz/Marker
                   Enabled: false
                   Marker Topic: /drone0/back_end_planner/intmd_ctrl_pts_q
@@ -1084,7 +1086,7 @@ Visualization Manager:
           Marker Topic: /drone0/grid_map/collision_viz
           Name: drone0/collision_viz
           Namespaces:
-            {}
+            collision_viz: true
           Queue Size: 100
           Value: true
         - Class: rviz/Marker
@@ -1167,7 +1169,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/XYOrbit
-      Distance: 4.309681415557861
+      Distance: 8.70961856842041
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -1175,17 +1177,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 1.2461589574813843
-        Y: 1.3420934677124023
+        X: 3.8172764778137207
+        Y: 2.116316795349121
         Z: 3.5762786865234375e-06
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.3247965574264526
+      Pitch: 1.5697963237762451
       Target Frame: my_view
-      Yaw: 5.458625316619873
+      Yaw: 5.023622035980225
     Saved:
       - Class: rviz/FPS
         Enable Stereo Rendering:
