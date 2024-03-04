@@ -5,6 +5,7 @@ ExamplePlanner::ExamplePlanner(ros::NodeHandle& nh) :
     max_v_(5.0),
     max_a_(8.0),
     max_j_(10.0),
+    segment_time_factor_(0.6),
     current_velocity_(Eigen::Vector3d::Zero()),
     current_pose_(Eigen::Affine3d::Identity()) {
       
@@ -13,6 +14,9 @@ ExamplePlanner::ExamplePlanner(ros::NodeHandle& nh) :
     ROS_WARN("[example_planner] param max_v not found");
   }
   if (!nh_.getParam(ros::this_node::getName() + "/max_a", max_a_)){
+    ROS_WARN("[example_planner] param max_a not found");
+  }
+  if (!nh_.getParam(ros::this_node::getName() + "/segment_time_scaling_factor", segment_time_factor_)){
     ROS_WARN("[example_planner] param max_a not found");
   }
 
@@ -31,7 +35,7 @@ ExamplePlanner::ExamplePlanner(ros::NodeHandle& nh) :
 
   goal_waypoints_sub_ = nh.subscribe("/waypoints", 1, &ExamplePlanner::waypointsCB, this);
 
-  std::cout<<"Max vel: "<<max_v_<<std::endl<<"Max Acc: " <<max_a_<<std::endl <<"Max Jerk: "<<max_j_<<std::endl;
+  // std::cout<<"Max vel: "<<max_v_<<std::endl<<"Max Acc: " <<max_a_<<std::endl <<"Max Jerk: "<<max_j_<<std::endl;
 
 }
 
@@ -184,7 +188,7 @@ bool ExamplePlanner::planTrajectory(const std::vector<Eigen::Vector3d>& wp_pos,
       segment_times[i] *= 1;
     }
     else{
-      segment_times[i] *= 0.6;
+      segment_times[i] *= segment_time_factor_;
     }
     // if (i%4 == 0 && i>=3){
     //   segment_times[i] *= 0.6;

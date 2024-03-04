@@ -208,7 +208,7 @@ def main():
     angle_2=-60
     angle_rad_1=math.radians(angle_1)
     angle_rad_2=math.radians(angle_2)
-    num_passes = 3 
+    num_passes = 5
         # 1/4 test
         # world frame is the initial position of the drone
         # map frame is the origin of the map
@@ -223,8 +223,8 @@ def main():
     
         accel_list.append(create_accel(-f*math.sin(angle_rad_1),0.0,g+f*math.cos(angle_rad_1)))   
         accel_list.append(create_accel(None,None,None))
-        accel_list.append(create_accel(None,None,None))
-        # accel_list.append(create_accel(-f*math.sin(angle_rad_2),0.0,g+f*math.cos(angle_rad_2))) #for 2 angles on different gates
+        # accel_list.append(create_accel(None,None,None))
+        accel_list.append(create_accel(-f*math.sin(angle_rad_2),0.0,g+f*math.cos(angle_rad_2))) #for 2 angles on different gates
         accel_list.append(create_accel(None,None,None))
 
 

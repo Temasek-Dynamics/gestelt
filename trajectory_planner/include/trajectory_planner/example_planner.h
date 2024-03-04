@@ -64,6 +64,7 @@ class ExamplePlanner {
   double max_ang_v_;
   double max_ang_a_;
   double max_j_;
+  double segment_time_factor_;
 
   std::vector<Eigen::Vector3d> goal_waypoints_;
   std::vector<Eigen::Vector3d> goal_waypoints_vel_;
