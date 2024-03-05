@@ -208,7 +208,7 @@ def main():
     angle_2=-60
     angle_rad_1=math.radians(angle_1)
     angle_rad_2=math.radians(angle_2)
-    num_passes = 5
+    num_passes = 3
         # 1/4 test
         # world frame is the initial position of the drone
         # map frame is the origin of the map
