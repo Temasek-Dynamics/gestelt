@@ -760,40 +760,39 @@ namespace poly_traj
 
         // zxzx
         /**
-         * @brief 
+         * @brief Locate the (seg_index, t_in_segment / dur_segment) pair given the time
          * 
          * @param t Current time 
-         * @return std::pair<int, double> Returns a pair with index as the first value 
-         * and ratio of current time to the whole piece as the second value
+         * @return std::pair<int, double> Returns a pair of 
+         * (segment_index, ratio of current time in segment to the total segment duration) 
          */
-        std::pair<int, double> locatePieceIdxWithRatio(double &t) const
+        std::pair<int, double> getIdxTimeRatioAtTime(double &t) const
         {
-            int N = getPieceSize();
-            int idx;
-            double dur;
-            double time_within_piece = t;
-            // Given the point at desired time (t), get the index (idx) of the piece which corresponds to it
-            for (idx = 0;
-                 idx < N &&
-                 time_within_piece > (dur = pieces[idx].getDuration());
-                 idx++)
+            int N = getPieceSize(); // Number of segments
+            int seg_idx;    // Index of the segment
+            double seg_dur; // Duration of the current segment
+            double t_in_segment = t; // Time locally within the segment
+            // Given the point at desired time (t), get the index (seg_idx) of the segment which corresponds to it
+            for (seg_idx = 0;
+                 seg_idx < N && t_in_segment > (seg_dur = pieces[seg_idx].getDuration());
+                 seg_idx++)
             {
-                time_within_piece -= dur;
+                t_in_segment -= seg_dur;
             }
-            if (idx == N)
+            if (seg_idx == N) // IF final segment
             {
-                idx--;
-                time_within_piece += pieces[idx].getDuration();
+                seg_idx--;
+                t_in_segment += pieces[seg_idx].getDuration();
             }
-            std::pair<int, double> idx_ratio;
-            idx_ratio.first = idx;
-            idx_ratio.second = time_within_piece / dur;
-            return idx_ratio;
+            std::pair<int, double> idx_time_ratio_pair{
+                seg_idx, (t_in_segment / seg_dur)
+            };
+            return idx_time_ratio_pair;
         }
 
         Eigen::Vector3d getPoswithIdxRatio(double t, std::pair<int, double> &idx_ratio) const
         {
-            idx_ratio = locatePieceIdxWithRatio(t);
+            idx_ratio = getIdxTimeRatioAtTime(t);
             return pieces[idx_ratio.first].getPos(t);
         }
 

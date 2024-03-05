@@ -156,7 +156,7 @@ bool SphericalSFC::generateSFC(const std::vector<Eigen::Vector3d> &path)
 
         publishVizSphericalSFC(sfc_spheres_, sfc_spherical_viz_pub_, "world");
 
-        computeSFCTrajectory(sfc_spheres_, path[0], path.back(), sfc_traj_);
+        constructSFCTrajectory(sfc_spheres_, path[0], path.back(), sfc_traj_);
         publishVizPiecewiseTrajectory(sfc_traj_.waypoints, sfc_waypoints_viz_pub_);
     }
 
@@ -455,7 +455,7 @@ Eigen::Vector3d SphericalSFC::getIntersectionCenter(const Sphere& B_a, const Sph
     return pt_intersect;
 }
 
-void SphericalSFC::computeSFCTrajectory(
+void SphericalSFC::constructSFCTrajectory(
     const std::vector<SphericalSFC::Sphere>& sfc_spheres, 
     const Eigen::Vector3d& start_pos, 
     const Eigen::Vector3d& goal_pos, 
@@ -475,9 +475,7 @@ void SphericalSFC::computeSFCTrajectory(
     /* 2: Get time allocation  */
     std::vector<double> segs_time_durations(num_segs); // Vector of time durations for each segment {t_1, t_2, ..., t_M}
 
-    // We can either use triangle or trapezoidal time profile.
-    // We use a trapezoidal time profile
-
+    // We either use either triangle or trapezoidal time profile.
     for (size_t i = 0 ; i < num_segs; i++){
         double traj_dist = (traj_waypoints[i+1] - traj_waypoints[i]).norm();
         
@@ -490,17 +488,12 @@ void SphericalSFC::computeSFCTrajectory(
             t_d = t_s;
             t_c = 0.0;
         }
-        else{
+        else{ // Follow trapezoidal profile
             t_s = sfc_params_.max_vel / sfc_params_.max_acc;
             t_d = t_s;
         }
         segs_time_durations[i] = t_s + t_c + t_d;
     }
-
-    // for (size_t i = 0 ; i < traj_waypoints.size()-1; i++){
-    //     // Using constant velocity time allocation
-    //     segs_time_durations[i] = (traj_waypoints[i+1] - traj_waypoints[i]).norm() / sfc_params_.avg_vel ;
-    // }
 
     sfc_traj.spheres = sfc_spheres;
     sfc_traj.waypoints = traj_waypoints;

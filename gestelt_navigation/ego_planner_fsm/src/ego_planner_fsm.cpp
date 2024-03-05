@@ -959,7 +959,7 @@ namespace ego_planner
     PtsChk_t pts_chk = info->pts_chk; // Points to use for checking
 
     const double CLEARANCE = 0.8 * planner_manager_->getSwarmClearance();
-    auto id_ratio = info->traj.locatePieceIdxWithRatio(t_cur);
+    auto id_ratio = info->traj.getIdxTimeRatioAtTime(t_cur);
     // std::cout << "t_cur=" << t_cur << " info->duration=" << info->duration << std::endl;
     
     // i_start is piece index

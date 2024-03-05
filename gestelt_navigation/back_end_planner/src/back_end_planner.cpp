@@ -191,7 +191,7 @@ bool BackEndPlanner::generatePlanSFC( const Eigen::Vector3d& start_pos, const Ei
                                             goal_pos, goal_vel, // Goal states
                                             segs_t_dur, // Time duration of segments
                                             initial_mjo); // Initial Minimum jerk trajectory
-
+    
     Eigen::MatrixXd init_cstr_pts = initial_mjo.getInitConstraintPoints(num_cstr_pts);
 
     std::vector<Eigen::Vector3d> initial_mjo_viz; // Visualization of the initial minimum jerk trajectory
@@ -319,97 +319,97 @@ bool BackEndPlanner::generatePlanSFC( const Eigen::Vector3d& start_pos, const Ei
 bool BackEndPlanner::generatePlanESDFFree(const Eigen::Vector3d& start_pos, const Eigen::Vector3d& start_vel, 
                                           const Eigen::Vector3d& goal_pos, const int& num_opt_retries)
 {
-  logInfo("generatePlanESDFFree");
-  Eigen::Vector3d start_acc;
-  Eigen::Vector3d goal_vel;
-  Eigen::Vector3d goal_acc;
+  // logInfo("generatePlanESDFFree");
+  // Eigen::Vector3d start_acc;
+  // Eigen::Vector3d goal_vel;
+  // Eigen::Vector3d goal_acc;
 
-  start_acc.setZero();
-  goal_vel.setZero();
-  goal_acc.setZero();
+  // start_acc.setZero();
+  // goal_vel.setZero();
+  // goal_acc.setZero();
 
-  /*1:  Plan initial minimum jerk trajectory */
-  poly_traj::MinJerkOpt globalMJO; // Global minimum jerk trajectory
-
-
-  std::vector<Eigen::Vector3d> waypoints;
-  waypoints.push_back(goal_pos);
-  // Generate initial minimum jerk trajectory starting from agent's current position with 0 starting/ending acceleration and velocity.
-  bool plan_success = back_end_planner_->planGlobalTrajWaypoints(
-      globalMJO,
-      start_pos, start_vel, start_acc,
-      waypoints, goal_vel, goal_acc);
-
-  // Publishes to "goal_point"
-  visualization_->displayGoalPoint(goal_pos, Eigen::Vector4d(0, 0.5, 0.5, 1), 0.3, 0);
-
-  if (!plan_success)
-  {
-    logError("Unable to generate initial global minimum jerk trajectory!");
-    return false;
-  }
-
-  back_end_planner_->traj_.setGlobalTraj(globalMJO.getTraj(), ros::Time::now().toSec());
+  // /*1:  Plan initial minimum jerk trajectory */
+  // poly_traj::MinJerkOpt globalMJO; // Global minimum jerk trajectory
 
 
-  std::vector<Eigen::Vector3d> global_traj = back_end_planner_->traj_.getGlobalTrajViz(0.1);
+  // std::vector<Eigen::Vector3d> waypoints;
+  // waypoints.push_back(goal_pos);
+  // // Generate initial minimum jerk trajectory starting from agent's current position with 0 starting/ending acceleration and velocity.
+  // bool plan_success = back_end_planner_->planGlobalTrajWaypoints(
+  //     globalMJO,
+  //     start_pos, start_vel, start_acc,
+  //     waypoints, goal_vel, goal_acc);
 
-  // Publishes to "global_list"
-  visualization_->displayGlobalPathList(global_traj, 0.1, 0);
+  // // Publishes to "goal_point"
+  // visualization_->displayGoalPoint(goal_pos, Eigen::Vector4d(0, 0.5, 0.5, 1), 0.3, 0);
 
+  // if (!plan_success)
+  // {
+  //   logError("Unable to generate initial global minimum jerk trajectory!");
+  //   return false;
+  // }
 
-  /*2:  Plan global trajectory */
-  bool flag_polyInit = true; // Initialize new polynomial
-  bool flag_randomPolyTraj = true; // Random polynomial coefficients
-  bool touch_goal = false;
-
-  Eigen::Vector3d local_target_pos;
-  Eigen::Vector3d local_target_vel;
-
-  // If this is the first time planning has been called, then initialize a random polynomial
-  for (int i = 0; i < num_opt_retries; i++)
-  {
-    // Get local target based on planning horizon
-    back_end_planner_->getLocalTarget(
-        planning_horizon_, start_pos, goal_pos,
-        local_target_pos, local_target_vel,
-        touch_goal);
+  // back_end_planner_->traj_.setGlobalTraj(globalMJO.getTraj(), ros::Time::now().toSec());
 
 
-    // Optimizer plans to local target and goal
-    plan_success = back_end_planner_->reboundReplan(
-        start_pos, start_vel, start_acc, 
-        local_target_pos, local_target_vel, 
-        flag_polyInit, flag_randomPolyTraj, 
-        touch_goal);
+  // std::vector<Eigen::Vector3d> global_traj = back_end_planner_->traj_.getGlobalTrajViz(0.1);
 
-    if (plan_success)
-    {
-      // Print results for benchmarking
-      poly_traj::MinJerkOpt optimized_mjo = back_end_planner_->getMinJerkOpt();
+  // // Publishes to "global_list"
+  // visualization_->displayGlobalPathList(global_traj, 0.1, 0);
+
+
+  // /*2:  Plan global trajectory */
+  // bool flag_polyInit = true; // Initialize new polynomial
+  // bool flag_randomPolyTraj = true; // Random polynomial coefficients
+  // bool touch_goal = false;
+
+  // Eigen::Vector3d local_target_pos;
+  // Eigen::Vector3d local_target_vel;
+
+  // // If this is the first time planning has been called, then initialize a random polynomial
+  // for (int i = 0; i < num_opt_retries; i++)
+  // {
+  //   // Get local target based on planning horizon
+  //   back_end_planner_->getLocalTarget(
+  //       planning_horizon_, start_pos, goal_pos,
+  //       local_target_pos, local_target_vel,
+  //       touch_goal);
+
+
+  //   // Optimizer plans to local target and goal
+  //   plan_success = back_end_planner_->reboundReplan(
+  //       start_pos, start_vel, start_acc, 
+  //       local_target_pos, local_target_vel, 
+  //       flag_polyInit, flag_randomPolyTraj, 
+  //       touch_goal);
+
+  //   if (plan_success)
+  //   {
+  //     // Print results for benchmarking
+  //     poly_traj::MinJerkOpt optimized_mjo = back_end_planner_->getMinJerkOpt();
       
-      double traj_length = back_end_planner_->getTrajectoryLength(optimized_mjo);
-      double traj_jerk_cost = optimized_mjo.getTrajJerkCost();
-      double trajectory_duration = back_end_planner_->getTrajectoryDuration(optimized_mjo);
+  //     double traj_length = back_end_planner_->getTrajectoryLength(optimized_mjo);
+  //     double traj_jerk_cost = optimized_mjo.getTrajJerkCost();
+  //     double trajectory_duration = back_end_planner_->getTrajectoryDuration(optimized_mjo);
 
-      // logInfo(str_fmt("Trajectory: Length(%f), Jerk Cost(%f), Duration(%f)", 
-      //   traj_length, traj_jerk_cost, trajectory_duration));
+  //     // logInfo(str_fmt("Trajectory: Length(%f), Jerk Cost(%f), Duration(%f)", 
+  //     //   traj_length, traj_jerk_cost, trajectory_duration));
 
-      // double max_speed =
-      // double max_acc = 
+  //     // double max_speed =
+  //     // double max_acc = 
 
-      logInfo("Back-end planning successful!");
-      break;
-    }
-  }
+  //     logInfo("Back-end planning successful!");
+  //     break;
+  //   }
+  // }
 
-  if (!plan_success)
-  {
-    logError("back_end_planner_->reboundReplan not successful");
-    return false;
-  }
+  // if (!plan_success)
+  // {
+  //   logError("back_end_planner_->reboundReplan not successful");
+  //   return false;
+  // }
 
-  return true;
+  // return true;
 }
 
 void BackEndPlanner::mjoToMsg(const poly_traj::MinJerkOpt& mjo, 

@@ -197,31 +197,80 @@ public: // Public structs
   }; // struct SphericalSFCParams
 
   struct SFCTrajectory{ // SFCTrajectory contains the spheres, trajectory waypoints and time allocation
-    std::vector<SphericalSFC::Sphere> spheres;  // Vector of Spheres 
-    std::vector<Eigen::Vector3d> waypoints;     // Vector of 3d waypoint positions {p1, p2, ... p_M+1}
-    std::vector<double> segs_t_dur;          // Vector of time durations of each segment {t_1, t_2, ..., t_M}
-
     SFCTrajectory(){} // Default constructor
 
+    /**
+     * @brief Clear all data structures
+     * 
+     */
     void clear(){
       spheres.clear();
       segs_t_dur.clear();
       waypoints.clear();
     }
 
-    Eigen::Vector3d const getStartPos(){
+    Eigen::Vector3d const getStartPos() {
       if (waypoints.size() < 2){
         throw std::runtime_error("SFCTrajectory does not contain at least 2 waypoints");
       }
       return waypoints[0];
     }
 
-    Eigen::Vector3d const getGoalPos(){
+    Eigen::Vector3d const getGoalPos() {
       if (waypoints.size() < 2){
         throw std::runtime_error("SFCTrajectory does not contain at least 2 waypoints");
       }
       return waypoints.back();
     }
+
+    Eigen::VectorXd getSegmentTimeDurations() {
+      Eigen::VectorXd segs_t_dur(segs_t_dur.size());
+
+      for (size_t i = 0; i < segs_t_dur.size(); i++){
+        segs_t_dur(i) = segs_t_dur[i];
+      }
+
+      return segs_t_dur;
+    }
+
+    std::vector<double> getSpheresRadii() {
+      std::vector<double> spheres_radii;
+
+      for (auto sphere : spheres){
+        spheres_radii.push_back(sphere.radius);
+      }
+
+      return spheres_radii;
+    }
+
+    std::vector<Eigen::Vector3d> getSpheresCenter() {
+      std::vector<Eigen::Vector3d> spheres_center;
+
+      for (auto sphere : spheres){
+        spheres_center.push_back(
+          Eigen::Vector3d{sphere.center.x, sphere.center.y, sphere.center.z});
+      }
+
+      return spheres_center;
+    }
+
+    Eigen::MatrixXd getInnerWaypoints() {
+      Eigen::MatrixXd inner_wps(3, waypoints.size()); // matrix of inner waypoints
+
+      for (size_t i = 1; i < waypoints.size()-1; i++){
+        inner_wps.col(i) = waypoints[i];
+      }
+
+      return inner_wps;
+    }
+
+    int getNumSegments() const{
+      return spheres.size();
+    }
+
+    std::vector<SphericalSFC::Sphere> spheres;  // Vector of Spheres 
+    std::vector<Eigen::Vector3d> waypoints;     // Vector of 3d waypoint positions {p1, p2, ... p_M+1}
+    std::vector<double> segs_t_dur;          // Vector of time durations of each segment {t_1, t_2, ..., t_M}
 
   }; // struct SFCTrajectory
 

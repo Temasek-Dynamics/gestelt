@@ -601,6 +601,8 @@ namespace ego_planner
   /* helper functions */
   void PolyTrajOptimizer::setParam(ros::NodeHandle &pnh)
   {
+    pnh.param("drone_id", drone_id_, -1);
+
     pnh.param("optimization/constraint_points_perPiece", cps_num_perPiece_, -1);
     pnh.param("optimization/weight_obstacle", wei_obs_, -1.0);
     pnh.param("optimization/weight_obstacle_soft", wei_obs_soft_, -1.0);
