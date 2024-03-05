@@ -51,6 +51,15 @@ void PositionControl::setVelocityGains(const Vector3f &P, const Vector3f &I, con
 	_gain_vel_d = D;
 }
 
+void PositionControl::setRPTGains(const Vector3f &WN, const Vector3f &SIGMA, const Vector3f &KI, const Vector3f &EPS)
+{
+	_gain_RPT_wn = WN;
+	_gain_RPT_sigma = SIGMA;
+	_gain_RPT_ki = KI;
+	_gain_RPT_eps = EPS;
+}
+
+
 void PositionControl::setVelocityLimits(const float vel_horizontal, const float vel_up, const float vel_down)
 {
 	_lim_vel_horizontal = vel_horizontal;
@@ -208,10 +217,10 @@ void PositionControl::_RPTControl(const float dt)
 {
 	// desired system responds parameters
 	// xy outer-loop controller
-	float wn_xy = 0.4f; 		// natural frequency
-	float sigma_xy = 1.1f * 1.5f * 2.0f; // damping ratio	
-	float ki_xy = 0.8f * 1.5f; 	// pole placement
-	float eps_xy = 1.0f * 0.4f; 	 // settling time
+	float wn_xy =_gain_RPT_wn(0);      //0.4f; 		// natural frequency
+	float sigma_xy = _gain_RPT_sigma(0);  //1.1f * 1.5f; // damping ratio
+	float ki_xy = _gain_RPT_ki(0);      //0.8f * 1.5f; 	// pole placement
+	float eps_xy = _gain_RPT_eps(0);   //1.0f * 0.4f; 	 // settling time
 	float F_xy[5];
 
 	// xy outer-loop controller
@@ -228,10 +237,10 @@ void PositionControl::_RPTControl(const float dt)
 	// F_xy[4]=-6.3f;
 
 	// z outer-loop controller
-	float wn_z = 0.5f;			// natural frequency
-	float sigma_z = 1.1f * 1.5f;	// settling time
-	float ki_z = 0.8f * 1.5f;		// pole placement
-	float eps_z = 1.0f * 0.3f;		// damping ratio
+	float wn_z = _gain_RPT_wn(2);      //0.5f;			// natural frequency
+	float sigma_z = _gain_RPT_sigma(2); //1.1f * 1.5f;	// settling time
+	float ki_z = _gain_RPT_ki(2);      //0.8f * 1.5f;		// pole placement
+	float eps_z = _gain_RPT_eps(2);   //1.0f * 0.3f;		// damping ratio
 
 	float F_z[5];
 

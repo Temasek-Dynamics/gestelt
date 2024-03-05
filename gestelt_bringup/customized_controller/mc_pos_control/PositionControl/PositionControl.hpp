@@ -92,6 +92,18 @@ public:
 	 */
 	void setVelocityGains(const matrix::Vector3f &P, const matrix::Vector3f &I, const matrix::Vector3f &D);
 
+
+	/**
+	 * Set the RPT control gains
+	 * @param wn 3D vector of natural frequency for x,y,z axis
+	 * @param sigma 3D vector of damping ratio for x,y,z axis
+	 * @param ki pole placements for x,y,z axis
+	 * @param eps settling time for x,y,z axis
+	 */
+
+	void setRPTGains(const matrix::Vector3f &wn, const matrix::Vector3f &sigma, const matrix::Vector3f &ki, const matrix::Vector3f &eps);
+
+
 	/**
 	 * Set the maximum velocity to execute with feed forward and position control
 	 * @param vel_horizontal horizontal velocity limit
@@ -190,6 +202,11 @@ private:
 	matrix::Vector3f _gain_vel_p; ///< Velocity control proportional gain
 	matrix::Vector3f _gain_vel_i; ///< Velocity control integral gain
 	matrix::Vector3f _gain_vel_d; ///< Velocity control derivative gain
+
+	matrix::Vector3f _gain_RPT_wn;  //<RPT control natural frequency
+	matrix::Vector3f _gain_RPT_sigma; //<RPT control damping ratio
+	matrix::Vector3f _gain_RPT_ki; //<RPT control pole placements
+	matrix::Vector3f _gain_RPT_eps; //<RPT control settling time
 
 	// Limits
 	float _lim_vel_horizontal{}; ///< Horizontal velocity limit with feed forward and position control
