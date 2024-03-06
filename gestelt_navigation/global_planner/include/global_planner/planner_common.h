@@ -8,7 +8,7 @@
 #include <queue>
 
 using namespace Eigen;
-constexpr double inf = std::numeric_limits<float>::infinity();
+constexpr double infinity = std::numeric_limits<float>::infinity();
 constexpr double epsilon = std::numeric_limits<double>::epsilon();
 
 struct OccNode; //forward declration
@@ -36,7 +36,7 @@ struct OccNode
   }
 
 	Eigen::Vector3i idx;
-	double g_cost{inf}, f_cost{inf};
+	double g_cost{infinity}, f_cost{infinity};
 	std::shared_ptr<OccNode> parent{nullptr};
   CellState state{CellState::UNDEFINED};
 

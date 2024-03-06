@@ -247,8 +247,7 @@ public: // Public structs
       std::vector<Eigen::Vector3d> spheres_center;
 
       for (auto sphere : spheres){
-        spheres_center.push_back(
-          Eigen::Vector3d{sphere.center.x, sphere.center.y, sphere.center.z});
+        spheres_center.push_back(Eigen::Vector3d{sphere.center(0), sphere.center(1), sphere.center(2)});
       }
 
       return spheres_center;
@@ -423,7 +422,7 @@ private: // Private methods
    * @param goal_pos 
    * @param sfc_traj 
    */
-  void computeSFCTrajectory(
+  void constructSFCTrajectory(
     const std::vector<SphericalSFC::Sphere>& sfc_spheres, 
     const Eigen::Vector3d& start_pos, 
     const Eigen::Vector3d& goal_pos, 

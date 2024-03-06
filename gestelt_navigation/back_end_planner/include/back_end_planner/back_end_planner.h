@@ -67,7 +67,7 @@ private:
 
   Eigen::Vector3d cur_pos_, cur_vel_; // Current position and velocity
 
-  std::shared_ptr<std::unordered_map<int, ego_planner::LocalTrajData>> swarm_minco_trajs_; // Swarm MINCO trajectories
+  std::shared_ptr<std::unordered_map<int, ego_planner::LocalTrajData>> swarm_local_trajs_; // Swarm MINCO trajectories
   
   /* Mutexes */
   std::mutex odom_mutex_; // mutex for Odom

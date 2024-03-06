@@ -164,7 +164,7 @@ namespace ego_planner
     poly_traj::MinJerkOpt jerkOpt_;
 
     SwarmTrajData *swarm_trajs_{NULL}; // Can not use shared_ptr and no need to free
-    std::shared_ptr<std::unordered_map<int, ego_planner::LocalTrajData>> swarm_minco_trajs_; // Swarm MINCO trajectories
+    std::shared_ptr<std::unordered_map<int, ego_planner::LocalTrajData>> swarm_local_trajs_; // Swarm MINCO trajectories
 
     ConstraintPoints cps_;
     // PtsChk_t pts_check_;
@@ -220,7 +220,7 @@ namespace ego_planner
     void setDroneId(const int drone_id);
     void setIfTouchGoal(const bool touch_goal);
 
-    void assignSwarmTrajs(std::shared_ptr<std::unordered_map<int, ego_planner::LocalTrajData>>& swarm_minco_trajs);
+    void assignSwarmTrajs(std::shared_ptr<std::unordered_map<int, ego_planner::LocalTrajData>>& swarm_local_trajs);
 
     /**
      * Returns the minimum jerk optimizer object

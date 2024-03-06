@@ -4,19 +4,19 @@
 #####
 # drone_id: 0       # Set in launch file
 # debug_planning: false       # Set in launch file
-planner_frequency: 1.0       # [Hz]
-safety_check_frequency: 20.0 # [Hz]
-goal_tolerance: 0.3          # [m]
+planner_frequency: 1.0        # [Hz]
+safety_check_frequency: 20.0  # [Hz]
+goal_tolerance: 0.3           # [m] 
+time_to_col_threshold: 0.8    # [s] Threshold for seconds to collision.
 
-#####
-# Front-end params
-#####
+##### Front-end params
 front_end:
-  cost_function_type: 0    # Type of cost function to use 
   max_iterations: 99999  
   debug_viz: true          # If true, publish visualization for debugging
   tie_breaker: 1.0001       # Tie breaker as weight for f-cost (cost-to-go)
+  cost_function_type: 0    # Type of cost function to use 
 
+##### Safe flight corridor
 sfc:
   max_iterations: 100     # Corresponds to maximum number of spheres
   debug_viz: true        # If true, publish visualization for debugging
@@ -47,16 +47,11 @@ sfc:
   # SFC Buffer 
   spherical_buffer: 0.125 # (m) Reduce spherical SFCs by this fixed amount to increase buffer from obstacles
 
-#####
-# Back-end params
-#####
+##### Back-end 
 back_end:
   num_replan_retries: 10 # Number of times for back-end to retry
 
-
-#####
-# Optimization params
-#####
+##### Optimization params
 optimization:
   constraint_points_perPiece: 10
   weight_obstacle: 10000.0 
@@ -72,9 +67,7 @@ optimization:
   max_acc: 6.0
   max_jer: 20.0
 
-#####
-# Mapping params
-#####
+##### Mapping params
 grid_map:
   # global_frame: "world"
   map_size_x: 80.0
@@ -85,6 +78,7 @@ grid_map:
   local_map_size_z: 2.5 
 
   ground_height: 0.0
+
   occ_grid:
     resolution: 0.1
     inflation: 0.2
@@ -93,11 +87,12 @@ grid_map:
     depth_stride: 4 
     voxel_size: 0.1
 
-  sensor/max_range: 5.0
-
+  # For visualizing collision with static obstacles
   collision_check:
     warn_radius: 0.225
     fatal_radius: 0.14
+
+  sensor/max_range: 5.0
 
   # camera intrinsic parameters 
   k_depth_scaling_factor: 1000.0

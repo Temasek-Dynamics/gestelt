@@ -1,7 +1,7 @@
 #ifndef _NAVIGATOR_H_
 #define _NAVIGATOR_H_
 
-#include <front_end_planner/front_end_helper.h>
+#include <navigator/navigator_helper.h>
 
 #include <algorithm>
 #include <unordered_map>
@@ -16,12 +16,13 @@
 #include <visualization_msgs/Marker.h>
 
 /* Planning messages */
+#include <gestelt_msgs/Command.h>
 #include <gestelt_msgs/Goals.h>
 #include <gestelt_msgs/SphericalSFCTrajectory.h>
 #include <traj_utils/PolyTraj.h>
 #include <traj_utils/MINCOTraj.h>
 
-/* Debug messages */
+/* Debugging */
 #include <gestelt_debug_msgs/BackEndTrajectoryDebug.h>
 #include <gestelt_debug_msgs/SFCTrajectory.h>
 #include <gestelt_debug_msgs/SFCSegment.h>
@@ -174,11 +175,21 @@ private:
    */
   bool isGoalReached(const Eigen::Vector3d& pos, const Eigen::Vector3d& goal);
 
-  bool isInCollisionSwarm();
+  /**
+   * @brief Check if time has timed out
+   * 
+   * @param last_state_time 
+   * @return true 
+   * @return false 
+   */
+  bool isTimeout(const double& last_state_time, const double& threshold);
 
-  bool isInCollisionObstacle();
+  bool isTrajectorySafe(
+    std::shared_ptr<std::unordered_map<int, ego_planner::LocalTrajData>> swarm_local_trajs, 
+    bool& e_stop, bool& must_replan);
 
-  bool isTrajectorySafe(LocalTrajData* traj, bool& obs_col, bool& swarm_col);
+  bool isTrajectoryDynFeasible(LocalTrajData* traj, bool& is_feasible);
+
 
   /* Helper methods */
 
@@ -193,31 +204,52 @@ private:
   bool sampleBackEndTrajectory(const double& time_samp, Eigen::Vector3d& pos);
 
   /**
-   * @brief MINCO Message to trajectory
+   * @brief MINCO Message to local trajectory
    * 
    * @param msg 
    * @param traj 
    */
   void mincoMsgToTraj(const traj_utils::MINCOTraj &msg, ego_planner::LocalTrajData& traj);
 
+  /**
+   * @brief Convert MJO trajectory to MINCO message
+   * 
+   * @param mjo 
+   * @param poly_msg 
+   * @param MINCO_msg 
+   */
   void mjoToMsg(const poly_traj::MinJerkOpt& mjo, 
                 traj_utils::PolyTraj &poly_msg, traj_utils::MINCOTraj &MINCO_msg);
+
+  /**
+   * @brief Publish command to trajectory server
+   * 
+   * @param cmd 
+   */
+  void pubTrajServerCmd(const int& cmd);
 
 private: /* ROS subs, pubs and timers*/
   ros::NodeHandle node_;
 
-  // Subscribers and publishers
+  /* Navigator */
   ros::Subscriber odom_sub_; // Subscriber to drone odometry
   ros::Subscriber goal_sub_; // Subscriber to user-defined goals
   ros::Subscriber single_goal_sub_; // Subscriber to single goals
 
-  ros::Subscriber plan_traj_sub_; // Subscriber to back end planner trajectory
-
+  /* Front end Publishers */
   ros::Subscriber debug_start_sub_; // DEBUG: Subscriber to user-defined start point
   ros::Subscriber debug_goal_sub_; // DEBUG: Subscriber to user-defined goal point
   ros::Subscriber plan_on_demand_sub_; // DEBUG: Subscriber to trigger planning on demand
 
+  /* SFC Publishers */
   ros::Publisher spherical_sfc_traj_pub_; // Publish safe flight corridor spherical trajectory
+
+  /* Back-end */
+  ros::Publisher debug_traj_pub_; // back-end trajectory for debugging
+  ros::Publisher be_traj_pub_; // Publish back end trajectory 
+
+  /* To Trajectory server */
+  ros::Publisher traj_server_command_pub_; // Publish command to trajectory server
 
   /* Visualization for Front End Planner*/
   ros::Publisher front_end_plan_pub_; // Publish front end plan to back-end optimizer
@@ -258,7 +290,10 @@ private: /* Planner members */
 
   boost::shared_ptr<poly_traj::Trajectory> be_traj_; //Subscribed back end trajectory
 
-  std::shared_ptr<std::unordered_map<int, ego_planner::LocalTrajData>> swarm_minco_trajs_; // Swarm MINCO trajectories, maps drone_id to local trajectory data
+  std::shared_ptr<std::unordered_map<int, ego_planner::LocalTrajData>> swarm_local_trajs_; // Swarm MINCO trajectories, maps drone_id to local trajectory data
+
+  /* Timestamps for detecting timeouts*/
+  ros::Time last_state_output_t_; // Last time stamp at which UAV odom is received
 
 private: /* Params */
   /* planner parameters */
@@ -282,7 +317,6 @@ private: /* Params */
 
   /* Mutexes */
   std::mutex odom_mutex_; // mutex for Odom
-
 
 private: /* Logging functions */
   

@@ -42,10 +42,10 @@ void BackEndPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   back_end_planner_->initPlanModules(nh, pnh, visualization_);
 
   // Initialize own trajectory
-  swarm_minco_trajs_ = std::make_shared<std::unordered_map<int, ego_planner::LocalTrajData>>();
-  (*swarm_minco_trajs_)[drone_id_] = ego_planner::LocalTrajData();
+  swarm_local_trajs_ = std::make_shared<std::unordered_map<int, ego_planner::LocalTrajData>>();
+  (*swarm_local_trajs_)[drone_id_] = ego_planner::LocalTrajData();
 
-  back_end_planner_->setSwarmTrajectories(swarm_minco_trajs_);
+  back_end_planner_->setSwarmTrajectories(swarm_local_trajs_);
 }
 
 /**
@@ -76,7 +76,7 @@ void BackEndPlanner::swarmMincoTrajCB(const traj_utils::MINCOTrajConstPtr &msg)
   ego_planner::LocalTrajData swarm_minco_traj;
   mincoMsgToTraj(*msg, swarm_minco_traj);
 
-  (*swarm_minco_trajs_)[msg->drone_id] = swarm_minco_traj;
+  (*swarm_local_trajs_)[msg->drone_id] = swarm_minco_traj;
 }
 
 void BackEndPlanner::odometryCB(const nav_msgs::OdometryConstPtr &msg)
@@ -139,7 +139,7 @@ void BackEndPlanner::sfcTrajectoryCB(const gestelt_msgs::SphericalSFCTrajectoryC
   ego_planner::LocalTrajData swarm_minco_traj;
   mincoMsgToTraj(MINCO_msg, swarm_minco_traj);
 
-  (*swarm_minco_trajs_)[drone_id_] = swarm_minco_traj;
+  (*swarm_local_trajs_)[drone_id_] = swarm_minco_traj;
 }
 
 /* Planning methods */

@@ -518,7 +518,7 @@ namespace ego_planner
 
     double pt_time = t_now_ + t;
 
-    for (auto& it : *swarm_minco_trajs_){ // Iterate through trajectories
+    for (auto& it : *swarm_local_trajs_){ // Iterate through trajectories
       int id = it.first;
 
       if ((id < 0) || id == drone_id_)
@@ -631,8 +631,8 @@ namespace ego_planner
   }
 
   void PolyTrajOptimizer::assignSwarmTrajs(
-    std::shared_ptr<std::unordered_map<int, ego_planner::LocalTrajData>>& swarm_minco_trajs) {
-    swarm_minco_trajs_ = swarm_minco_trajs;
+    std::shared_ptr<std::unordered_map<int, ego_planner::LocalTrajData>>& swarm_local_trajs) {
+    swarm_local_trajs_ = swarm_local_trajs;
   }
 
   void PolyTrajOptimizer::setSwarmTrajs(SwarmTrajData *swarm_trajs_ptr) { 

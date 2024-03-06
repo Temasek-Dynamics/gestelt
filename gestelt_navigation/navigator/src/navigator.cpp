@@ -6,6 +6,10 @@ void Navigator::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
 { 
   logInfo("Initialized Navigator");
 
+  // Reset all data used for checking later
+  last_state_output_t_ = ros::Time::now();
+
+
   initParams(nh, pnh);
   initPublishers(nh, pnh);
   initSubscribers(nh, pnh);
@@ -32,8 +36,8 @@ void Navigator::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   );
 
   // Initialize own trajectory
-  swarm_minco_trajs_ = std::make_shared<std::unordered_map<int, ego_planner::LocalTrajData>>();
-  (*swarm_minco_trajs_)[drone_id_] = ego_planner::LocalTrajData();
+  swarm_local_trajs_ = std::make_shared<std::unordered_map<int, ego_planner::LocalTrajData>>();
+  (*swarm_local_trajs_)[drone_id_] = ego_planner::LocalTrajData();
 
   // Initialize back-end planner
   back_end_optimizer_ = std::make_unique<PolyTrajOptimizer>();
@@ -41,7 +45,7 @@ void Navigator::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   back_end_optimizer_->setEnvironment(grid_map_);
 
   back_end_optimizer_->setVisualizer(visualization_);
-  back_end_optimizer_->assignSwarmTrajs(swarm_minco_trajs_);
+  back_end_optimizer_->assignSwarmTrajs(swarm_local_trajs_);
 
   /* Initialize Timer */
   if (!debug_planning_){
@@ -60,7 +64,8 @@ void Navigator::initParams(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   pnh.param("planner_frequency", planner_freq_, -1.0);
   pnh.param("safety_check_frequency", safety_check_freq_, -1.0);
   pnh.param("debug_planning", debug_planning_, false);
-
+  pnh.param("time_to_col_threshold", time_to_col_threshold_, 0.8);
+  
   /* Front end params */
   pnh.param("front_end/max_iterations", astar_params_.max_iterations, -1);
   pnh.param("front_end/tie_breaker", astar_params_.tie_breaker, -1.0);
@@ -134,9 +139,11 @@ void Navigator::initPublishers(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   /* Back-end */
   debug_traj_pub_ = nh.advertise<gestelt_debug_msgs::BackEndTrajectoryDebug>(
     "back_end/debug_trajectory", 10, true); 
-  plan_traj_pub_ = nh.advertise<traj_utils::PolyTraj>("back_end/trajectory", 10); 
+  be_traj_pub_ = nh.advertise<traj_utils::PolyTraj>("back_end/trajectory", 10); 
   swarm_minco_traj_pub_ = nh.advertise<traj_utils::MINCOTraj>("/swarm/global/minco", 10);
 
+  /* To trajectory server */
+  traj_server_command_pub_ = nh.advertise<gestelt_msgs::Command>("traj_server/command", 5); 
 }
 
 /* Timer callbacks */
@@ -183,23 +190,40 @@ void Navigator::planTimerCB(const ros::TimerEvent &e)
   traj_utils::MINCOTraj MINCO_msg; 
 
   mjoToMsg(optimized_mjo_, poly_msg, MINCO_msg);
-  plan_traj_pub_.publish(poly_msg); // (In drone origin frame) Publish to corresponding drone for execution
+  be_traj_pub_.publish(poly_msg); // (In drone origin frame) Publish to corresponding drone for execution
   swarm_minco_traj_pub_.publish(MINCO_msg); // (In world frame) Broadcast to all other drones for replanning to optimize in avoiding swarm collision
 
   // Update optimized trajectory 
-  mincoMsgToTraj(MINCO_msg, (*swarm_minco_trajs_)[drone_id_]);
+  mincoMsgToTraj(MINCO_msg, (*swarm_local_trajs_)[drone_id_]);
 }
 
 void Navigator::safetyChecksTimerCB(const ros::TimerEvent &e)
 {
-  bool obs_col{true}, swarm_col{true};
+  bool e_stop{true}, must_replan{true};
+  bool is_feasible{true};
 
-  isTrajectorySafe(&((*swarm_minco_trajs_)[drone_id_]), obs_col, swarm_col);
-
-  if (obs_col || swarm_col){
-    commandTrajectoryServer(ESTOP);
+  if (!isTrajectorySafe(swarm_local_trajs_, e_stop, must_replan)){
+    logError("Trajectory not safe!");
+    if (e_stop){
+      pubTrajServerCmd(Gestelt_msgs::HOVER);
+    }
+    if (must_replan){
+      // replan
+    }
   }
-  
+
+  if (!isTrajectoryDynFeasible(&((*swarm_local_trajs_)[drone_id_]), is_feasible)){
+    logError("Trajectory is infeasible!");
+    if (!is_feasible){
+      // replan
+    }
+  }
+
+  if (isTimeout(last_state_output_t_.toSec(), 0.5)) 
+  {
+    logError("UAV State exceeded timeout of 0.5s, switching to HOVER!");
+    pubTrajServerCmd(Gestelt_msgs::HOVER);
+  }
 }
 
 /**
@@ -437,9 +461,17 @@ bool Navigator::generateBackEndPlan(
       back_end_optimizer_->intermediate_cstr_pts_q_);
 
     // Print results for benchmarking
-    double traj_length = getTrajectoryLength(optimized_mjo);
+
+    poly_traj::Trajectory optimized_traj = optimized_mjo.getTraj();
+    double total_duration = optimized_traj.getDurations().sum();
+    double traj_length = 0.0;
+    for (double t = 0; t < total_duration-dt; t += dt)
+    {
+      traj_length += (optimized_traj.getPos(t+dt) - optimized_traj.getPos(t)).norm();
+    }
+
     double traj_jerk_cost = optimized_mjo.getTrajJerkCost();
-    double trajectory_duration = getTrajectoryDuration(optimized_mjo);
+    double trajectory_duration = optimized_mjo.getTraj().getDurations().sum();
 
     // logInfo(str_fmt("Trajectory: Length(%f), Jerk Cost(%f), Duration(%f)", 
     //   traj_length, traj_jerk_cost, trajectory_duration));
@@ -490,6 +522,8 @@ void Navigator::odometryCB(const nav_msgs::OdometryConstPtr &msg)
   cur_pos_= Eigen::Vector3d{msg->pose.pose.position.x, msg->pose.pose.position.y, msg->pose.pose.position.z};
   cur_vel_= Eigen::Vector3d{msg->twist.twist.linear.x, msg->twist.twist.linear.y, msg->twist.twist.linear.z};
   odom_mutex_.unlock();
+
+  last_state_output_t_ = ros::Time::now();
 }
 
 void Navigator::singleGoalCB(const geometry_msgs::PoseStampedConstPtr& msg)
@@ -553,7 +587,7 @@ void Navigator::swarmMincoTrajCB(const traj_utils::MINCOTrajConstPtr &msg)
     }
   }
 
-  mincoMsgToTraj(*msg, (*swarm_minco_trajs_)[msg->drone_id]);
+  mincoMsgToTraj(*msg, (*swarm_local_trajs_)[msg->drone_id]);
 }
 
 /* Checking methods */
@@ -566,17 +600,22 @@ bool Navigator::isGoalReached(const Eigen::Vector3d& pos, const Eigen::Vector3d&
   return false;
 }
 
-bool Navigator::isInCollisionSwarm(const Eigen::Vector3d& waypoints)
-
-bool Navigator::isTrajectorySafe(LocalTrajData* traj, bool& obs_col, bool& swarm_col)
+bool Navigator::isTimeout(const double& last_state_time, const double& threshold)
 {
-  obs_col = false;
-  swarm_col = false;
+  return (ros::Time::now().toSec() - last_state_time) <= threshold;
+} 
 
-  LocalTrajData *traj = &((*swarm_minco_trajs_)[drone_id_]);
+bool Navigator::isTrajectorySafe(
+  std::shared_ptr<std::unordered_map<int, ego_planner::LocalTrajData>> swarm_local_trajs, 
+  bool& e_stop, bool& must_replan)
+{
+  e_stop = false;
+  must_replan = false;
+
+  LocalTrajData *traj = &((*swarm_local_trajs)[drone_id_]);
   
   if (traj->traj_id <= 0){ // Return if no local trajectory yet
-    return false;
+    return true;
   }
 
   double traj_t_cur = ros::Time::now().toSec() - traj->start_time;
@@ -622,58 +661,71 @@ bool Navigator::isTrajectorySafe(LocalTrajData* traj, bool& obs_col, bool& swarm
 
         if (!in_obs_grid){ // If free from obstacle 
           
-          for (size_t k = 0; k < (*swarm_minco_trajs_).size(); k++) // Iterate through trajectories of other agents
+          for (auto& swarm_traj : *swarm_local_trajs) // Iterate through trajectories of other agents
           {
-              // Check that it's not a null pointer
-              if (!(*swarm_minco_trajs_)[k]){
-                  logError(str_fmt("Swarm agent %d has empty trajectory", k))
-                  continue;
-              }
-              LocalTrajData *agent_k_traj = &((*swarm_minco_trajs_)[k]);
+            // Check that it's not a null pointer
+            // if (!(*swarm_local_trajs)[k]){
+            //   logError(str_fmt("Swarm agent %d has empty trajectory", k))
+            //   continue;
+            // }
 
-              if (agent_k_traj->drone_id == drone_id_)
+            int k = swarm_traj.first;
+             
+            LocalTrajData *agent_k_traj = &(swarm_traj.second);
+
+            if (agent_k_traj->drone_id == drone_id_)
+            {
+              // Own trajectory
+              continue;
+            }
+
+            if (agent_k_traj->drone_id != (int)k)
+            {
+              logError(str_fmt("Swarm agent %d's trajectory does not match it's prescribed ID %d", k, agent_k_traj->drone_id))
+              continue;
+            }
+
+            // Calculate time for other drone
+            
+            double t_X = t - (traj->start_time - agent_k_traj->start_time);
+            // If time t_X is within the duration of the k-th agent trajectory
+            if (t_X > 0 && t_X < agent_k_traj->duration) 
+            {
+              Eigen::Vector3d agent_predicted_pos = agent_k_traj->traj.getPos(t_X);
+              double inter_agent_dist = (pos - agent_predicted_pos).norm();
+
+              if (inter_agent_dist < swarm_clearance_)
               {
-                  // Own trajectory
-                  continue;
-              }
-
-              if (agent_k_traj->drone_id != (int)k)
-              {
-                  logError(str_fmt("Swarm agent %d's trajectory does not match it's prescribed ID %d", k, agent_k_traj->drone_id))
-                  continue;
-              }
-
-              // Calculate time for other drone
+              logWarn(str_fmt("Clearance between drones %d and %d is %f, too close!",
+                      drone_id_, (int)id, inter_agent_dist));
               
-              double t_X = t - (traj->start_time - agent_k_traj->start_time);
-              // If time t_X is within the duration of the k-th agent trajectory
-              if (t_X > 0 && t_X < agent_k_traj->duration) 
-              {
-                  Eigen::Vector3d agent_predicted_pos = agent_k_traj->traj.getPos(t_X);
-                  double inter_agent_dist = (pos - agent_predicted_pos).norm();
-
-                  if (inter_agent_dist < swarm_clearance_)
-                  {
-                  logWarn(str_fmt("Clearance between drones %d and %d is %f, too close!",
-                          drone_id_, (int)id, inter_agent_dist));
-                  
-                  // swarm_col: indicates that a collision is imminent in "time_to_col_threshold_" seconds
-                  swarm_col = (t - traj_t_cur) < time_to_col_threshold_;
-                  return true;
-                  }
+              // e_stop: indicates that a collision is imminent in "time_to_col_threshold_" seconds
+              if ((t - traj_t_cur) < time_to_col_threshold_){
+                e_stop =  true;
               }
+
+              must_replan = true;
+
+              return false;
+              }
+            }
           }
         }
         else {
-          obs_col = true;
-          return true;
+
+          if ((t - traj_t_cur) < time_to_col_threshold_){
+            e_stop =  true;
+          }
+
+          must_replan = true;
+          return false;
         }
 
       }
       idx_pt = 0; // reset to start of path
     }
 
-    return false;
+    return true;
 }
 
 /* Helper methods */
@@ -827,9 +879,12 @@ void Navigator::mjoToMsg(const poly_traj::MinJerkOpt& mjo,
 
 }
 
-void Navigator::commandTrajectoryServer()
+void Navigator::pubTrajServerCmd(const int& cmd)
 {
-
+  Gestelt_msgs::Command cmd_msg;
+  cmd_msg.header = ros::Time::now();
+  cmd_msg.command = cmd;
+  traj_server_command_pub_.publish(cmd_msg);
 }
 
 // void Navigator::polyTrajMsgToPolyTraj(const traj_utils::PolyTrajPtr msg)
