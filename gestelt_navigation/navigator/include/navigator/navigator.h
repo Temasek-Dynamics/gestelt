@@ -59,6 +59,15 @@ private:
    */
   void planTimerCB(const ros::TimerEvent &e);
 
+  /**
+   * @brief Timer for checking if
+   * 1. Trajectory is safe (w.r.t inter-agent and static obstacle collision)
+   * 2. Timeout for odom
+   * 
+   * @param e 
+   */
+  void safetyChecksTimerCB(const ros::TimerEvent &e);
+
   /* Planner methods */
 
   /**
@@ -169,6 +178,8 @@ private:
 
   bool isInCollisionObstacle();
 
+  bool isTrajectorySafe(LocalTrajData* traj, bool& obs_col, bool& swarm_col);
+
   /* Helper methods */
 
   /**
@@ -260,6 +271,7 @@ private: /* Params */
   bool debug_planning_; // IF true, then debug mode is activated
   double squared_goal_tol_; // Squared goal tolerance
   double planner_freq_; // Planner timer frequency
+  double safety_check_freq_; // Planner timer frequency
 
   /* Back-end params */
   int optimizer_num_retries_;
