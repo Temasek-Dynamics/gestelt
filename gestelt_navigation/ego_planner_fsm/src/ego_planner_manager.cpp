@@ -86,7 +86,7 @@ namespace ego_planner
       final_cost);
 
     // Optimized minimum jerk trajectory
-    optimized_mjo = ploy_traj_opt_->getMinJerkOpt();
+    optimized_mjo = ploy_traj_opt_->getOptimizedMJO();
 
     return plan_success;
   }
@@ -406,7 +406,7 @@ namespace ego_planner
                                                       inner_ctrl_pts, initTraj.getDurations(),
                                                       initial_cstr_pts, final_cost);
 
-    best_MJO = ploy_traj_opt_->getMinJerkOpt();
+    best_MJO = ploy_traj_opt_->getOptimizedMJO();
 
     t_opt = ros::Time::now() - t_start;
 

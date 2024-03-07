@@ -9,7 +9,7 @@
 
   <!-- Front end planner -->
   <group ns="$(arg drone_id_ns)">
-    <node pkg="front_end_planner" type="front_end_planner_node" name="front_end_planner" required="true" output="screen">
+    <node pkg="navigator" type="navigator_node" name="navigator" required="true" output="screen">
         <rosparam command="load" file="$(arg cfg_filepath)" />
 
         <param name="drone_id" value="$(arg drone_id)"/>
@@ -25,6 +25,3 @@
   </group>
 
 </launch>
-
-
-

@@ -168,8 +168,8 @@ namespace ego_planner
      * 
      * @return poly_traj::MinJerkOpt 
      */
-    poly_traj::MinJerkOpt getMinJerkOpt(){
-      return ploy_traj_opt_->getMinJerkOpt();
+    poly_traj::MinJerkOpt getOptimizedMJO(){
+      return ploy_traj_opt_->getOptimizedMJO();
     }
 
     /**

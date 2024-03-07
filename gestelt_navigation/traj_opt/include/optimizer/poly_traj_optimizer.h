@@ -161,7 +161,8 @@ namespace ego_planner
     AStar::Ptr a_star_;
     PlanningVisualization::Ptr visualization_;
 
-    poly_traj::MinJerkOpt jerkOpt_;
+    poly_traj::MinJerkOpt mjo_q_;   // Minimum jerk trajectory in q space
+    poly_traj::MinJerkOpt mjo_xi_;  // Minimum jerk trajectory in xi space
 
     SwarmTrajData *swarm_trajs_{NULL}; // Can not use shared_ptr and no need to free
     std::shared_ptr<std::unordered_map<int, ego_planner::LocalTrajData>> swarm_local_trajs_; // Swarm MINCO trajectories
@@ -171,7 +172,7 @@ namespace ego_planner
 
     int drone_id_;            // ID of drone
     int variable_num_;       // optimization variables
-    int piece_num_;          // poly traj piece numbers
+    int num_segs_;          // poly traj piece numbers
     int iter_num_;           // iteration of the solver
     double min_ellip_dist2_; // min trajectory distance in swarm
     bool touch_goal_;
@@ -225,7 +226,9 @@ namespace ego_planner
     /**
      * Returns the minimum jerk optimizer object
     */
-    const poly_traj::MinJerkOpt &getMinJerkOpt(void) { return jerkOpt_; }
+    const poly_traj::MinJerkOpt &getOptimizedMJO(void) { 
+      return mjo_q_; 
+    }
 
     /**
      * @brief Get the parameter value for number of constraint points per piece.
@@ -257,7 +260,7 @@ namespace ego_planner
      * @return true 
      * @return false 
      */
-    bool optimizeTrajectorySFC(const Eigen::MatrixXd &iniState, const Eigen::MatrixXd &finState,
+    bool optimizeTrajectorySFC(const Eigen::Matrix3d &startPVA, const Eigen::Matrix3d &endPVA,
                             const Eigen::MatrixXd &inner_ctrl_pts, const Eigen::VectorXd &initT,
                             const std::vector<double>& spheres_radius,
                             const std::vector<Eigen::Vector3d>& spheres_centers,
@@ -287,12 +290,12 @@ namespace ego_planner
         return false;
       }
 
-      piece_num_ = initT.size();
+      num_segs_ = initT.size();
 
-      jerkOpt_.reset(iniState, finState, piece_num_);
+      mjo_xi_.reset(iniState, finState, num_segs_);
 
       // Number of coefficients
-      variable_num_ = 4 * (piece_num_ - 1) + 1;
+      variable_num_ = 4 * (num_segs_ - 1) + 1;
 
       ros::Time t0 = ros::Time::now(), t1, t2;
       int restart_nums = 0, rebound_times = 0;
@@ -354,7 +357,7 @@ namespace ego_planner
           /* Check for collisions in the path */
           std::vector<std::pair<int, int>> segments_nouse;
           if (min_ellip_dist2_ > pow((swarm_clearance_ * 1.25), 2) &&
-              finelyCheckAndSetConstraintPoints(segments_nouse, jerkOpt_, false) == CHK_RET::OBS_FREE)
+              finelyCheckAndSetConstraintPoints(segments_nouse, mjo_xi_, false) == CHK_RET::OBS_FREE)
           {
             flag_success = true;
             // printf("\033[32miter=%d,time(ms)=%5.3f,total_t(ms)=%5.3f,cost=%5.3f\n\033[0m", iter_num_, time_ms, total_time_ms, final_cost);
@@ -1143,10 +1146,6 @@ namespace ego_planner
                           const Eigen::VectorXd &gdRT, EIGENVECGD &gdVT,
                           double &costT);
 
-    /* gradient and cost evaluation functions */
-    template <typename EIGENVEC>
-    void initAndGetSmoothnessGradCost2PT(EIGENVEC &gdT, double &cost);
-
     /**
      * @brief Get cost for constraints on PVA
      * 
@@ -1156,7 +1155,8 @@ namespace ego_planner
      * @param K Constraint points per piece, or total sample number
      */
     template <typename EIGENVEC>
-    void addPVAGradCost2CT_SFC(EIGENVEC &gdT, Eigen::VectorXd &costs, const int &K);
+    void addPVAGradCost2CT_SFC(
+      EIGENVEC &gdT, Eigen::VectorXd &costs, const int &K, poly_traj::MinJerkOpt& mjo);
 
     /**
      * @brief Cost of swarm 
@@ -1223,10 +1223,10 @@ namespace ego_planner
       double t = 0;
       for (int i = 0; i < N; ++i) // for each piece/segment number
       {
-        const Eigen::Matrix<double, 6, 3> &c = jerkOpt_.get_b().block<6, 3>(i * 6, 0); // Polynomial coefficients 
-        double T_i = jerkOpt_.get_T1()(i);
+        const Eigen::Matrix<double, 6, 3> &c = mjo_xi_.get_b().block<6, 3>(i * 6, 0); // Polynomial coefficients 
+        double T_i = mjo_xi_.get_T1()(i);
         step = T_i / K; // Duration of each piece / sample number.
-        // step = jerkOpt_.get_T1()(i) / K;
+        // step = mjo_xi_.get_T1()(i) / K;
         s1 = 0.0; // Time t, it will increase with each step of f the constraint point
 
         for (int j = 0; j <= K; ++j) // For each constraint point (or sample) in the segment. This is also known as the sample index
@@ -1296,7 +1296,7 @@ namespace ego_planner
             }
             
             // Sum up sampled costs
-            jerkOpt_.get_gdC().block<6, 3>(i * 6, 0) += pd_cost_c_i_static;
+            mjo_xi_.get_gdC().block<6, 3>(i * 6, 0) += pd_cost_c_i_static;
             gdT(i) += pd_cost_t_static; 
             costs(0) += cost_static; 
           }
@@ -1309,7 +1309,7 @@ namespace ego_planner
           {
             gradViolaPc = beta0 * gradp.transpose();
             gradViolaPt = alpha * gradt;
-            jerkOpt_.get_gdC().block<6, 3>(i * 6, 0) += omega * step * gradViolaPc;
+            mjo_xi_.get_gdC().block<6, 3>(i * 6, 0) += omega * step * gradViolaPc;
             gdT(i) += omega * (costp / K + step * gradViolaPt);
             if (i > 0)
             {
@@ -1338,7 +1338,7 @@ namespace ego_planner
             double pd_cost_t = cost / T_i  + pd_cost_constr * pd_constr_t * pd_t_T_i;// P.D. of cost w.r.t t // (1,1)
 
             // Sum up sampled costs
-            jerkOpt_.get_gdC().block<6, 3>(i * 6, 0) += pd_cost_c_i;
+            mjo_xi_.get_gdC().block<6, 3>(i * 6, 0) += pd_cost_c_i;
             gdT(i) += pd_cost_t; 
             costs(2) += cost; 
 
@@ -1364,7 +1364,7 @@ namespace ego_planner
             double pd_cost_t = cost / T_i  + pd_cost_constr * pd_constr_t * pd_t_T_i;// P.D. of cost w.r.t t // (1,1)
 
             // Sum up sampled costs
-            jerkOpt_.get_gdC().block<6, 3>(i * 6, 0) += pd_cost_c_i;
+            mjo_xi_.get_gdC().block<6, 3>(i * 6, 0) += pd_cost_c_i;
             gdT(i) += pd_cost_t; 
             costs(2) += cost; 
           }
@@ -1377,7 +1377,7 @@ namespace ego_planner
           }
         }
 
-        t += jerkOpt_.get_T1()(i);
+        t += mjo_xi_.get_T1()(i);
       }
 
       /**
@@ -1391,7 +1391,7 @@ namespace ego_planner
       idx_cp = 0;
       for (int i = 0; i < N; ++i) // for each piece/segment number
       {
-        step = jerkOpt_.get_T1()(i) / K;
+        step = mjo_xi_.get_T1()(i) / K;
         s1 = 0.0;
 
         for (int j = 0; j <= K; ++j) // For each constraint point
@@ -1403,13 +1403,13 @@ namespace ego_planner
           beta0 << 1.0, s1, s2, s3, s4, s5;
           beta1 << 0.0, 1.0, 2.0 * s1, 3.0 * s2, 4.0 * s3, 5.0 * s4;
           alpha = 1.0 / K * j;
-          vel = jerkOpt_.get_b().block<6, 3>(i * 6, 0).transpose() * beta1;
+          vel = mjo_xi_.get_b().block<6, 3>(i * 6, 0).transpose() * beta1;
 
           omega = (j == 0 || j == K) ? 0.5 : 1.0;
 
           gradViolaPc = beta0 * gdp.col(idx_cp).transpose();
           gradViolaPt = alpha * gdp.col(idx_cp).transpose() * vel;
-          jerkOpt_.get_gdC().block<6, 3>(i * 6, 0) += omega * gradViolaPc;
+          mjo_xi_.get_gdC().block<6, 3>(i * 6, 0) += omega * gradViolaPc;
           gdT(i) += omega * (gradViolaPt);
 
           s1 += step;

@@ -1519,6 +1519,53 @@ namespace poly_traj
          * @param num_cp Number of constraint points per piece
          * @return Eigen::MatrixXd Matrix of points of size (3, N*num_cp+1)
          */
+        std::vector<std::vector<std::pair<double, Eigen::Vector3d>>> getTimePositionPairs(const int num_cp) const
+        {   
+            std::vector<std::vector<std::pair<double, Eigen::Vector3d>>> pts_check;
+            pts_check.resize(N);
+
+            Eigen::Vector3d pos;
+            Eigen::Matrix<double, 6, 1> beta0; //Time values
+            double s1, s2, s3, s4, s5; //Time basis
+            double traj_t = 0.0; // Time from start of trajectory
+
+            for (int i = 0; i < N; ++i) // For each trajectory segment/piece
+            {
+                const auto &c = b.block<6, 3>(i * 6, 0);
+                double step = T1(i) / num_cp; // step is time duration / number of constraint points
+                s1 = 0.0; // Time stamp
+
+                std::vector<std::pair<double, Eigen::Vector3d>> segment;
+                for (int j = 0; j <= num_cp; ++j) // For each constraint point
+                {
+                    s2 = s1 * s1; // t^2
+                    s3 = s2 * s1; // t^3
+                    s4 = s2 * s2; // t^4
+                    s5 = s4 * s1; // t^5
+                    beta0 << 1.0, s1, s2, s3, s4, s5;
+                    
+                    
+                    pos = c.transpose() * beta0; // pos = c_5*(t**5) + c_4*(t**4) + c_3*(t**3) + c_2*(t**2) + c_1*(t) + c_0
+                    segment.push_back(std::make_pair(traj_t, pos));
+
+                    // step through time
+                    s1 += step; 
+                    traj_t += step;
+                }
+                // add entire segment 
+                pts_check.push_back(segment);
+            }
+
+            return pts_check;
+        }
+
+        /**
+         * @brief Given desired number of constraint points per segment, get all constraint points 
+         * along trajectory. This is done by stepping through time and sampling the polynomial segment
+         * 
+         * @param num_cp Number of constraint points per piece
+         * @return Eigen::MatrixXd Matrix of points of size (3, N*num_cp+1)
+         */
         Eigen::MatrixXd getInitConstraintPoints(const int num_cp) const
         {   
             Eigen::MatrixXd pts(3, N * num_cp + 1); // Each column of pts is a 3d position value
@@ -1580,6 +1627,9 @@ namespace poly_traj
                         const std::vector<Eigen::Vector3d>& spheres_center,
                         const std::vector<double>& spheres_radius)
         {
+            // std::cout << "getGrad2TP" << std::endl;
+            // std::cout << "  gdC: " << gdC << std::endl;
+
             // gdC is of size (6 * N, 3);
 
             // Solves  (A.T) x = gdC 
@@ -1613,6 +1663,11 @@ namespace poly_traj
                 gradP.col(i) = a - b;
             }
             
+
+            // std::cout << "  G: " << gdC << std::endl;
+            // std::cout << "  gdT: " << gdT << std::endl;
+            // std::cout << "  gradP: " << gradP << std::endl;
+
             return;
         }
 

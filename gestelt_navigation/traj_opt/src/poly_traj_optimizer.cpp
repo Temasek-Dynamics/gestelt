@@ -3,7 +3,7 @@
 namespace ego_planner
 {
   bool PolyTrajOptimizer::optimizeTrajectorySFC(
-      const Eigen::MatrixXd &iniState, const Eigen::MatrixXd &finState,
+      const Eigen::Matrix3d &startPVA, const Eigen::Matrix3d &endPVA,
       const Eigen::MatrixXd &inner_ctrl_pts, const Eigen::VectorXd &initT,
       const std::vector<double>& spheres_radius, const std::vector<Eigen::Vector3d>& spheres_center,
       double &final_cost)
@@ -15,24 +15,20 @@ namespace ego_planner
       return false;
     }
 
-    opt_costs_.reset();
-
-    intermediate_cstr_pts_xi_.clear();
-    intermediate_cstr_pts_q_.clear();
-
+    // assign all necessary variables
     spheres_radius_ = spheres_radius;
     spheres_center_ = spheres_center;
 
-    // 1) Convert initial SFC points from q into xi variables
-    //      inner_ctrl_pts is of size (3, M-1)
-    // Eigen::MatrixXd inner_ctrl_pts_xi = f_BInv_ctrl_pts(inner_ctrl_pts, spheres_center_, spheres_radius_); // (3, num_segs - 1);
-    Eigen::MatrixXd inner_ctrl_pts_xi = inner_ctrl_pts;
+    // reset all existing variables
+    opt_costs_.reset();
+    intermediate_cstr_pts_xi_.clear();
+    intermediate_cstr_pts_q_.clear();
 
-    piece_num_ = initT.size(); // Number of segments
-    jerkOpt_.reset(iniState, finState, piece_num_);
-
-    // Number of decision variables: Position (3 x (M-1)) + Time (1 x (M-1) + 1) 
-    variable_num_ = 4 * (piece_num_ - 1) + 1;
+    // Initialize minimum jerk trajectory
+    num_segs_ = initT.size(); // Number of segments
+    variable_num_ = 4 * (num_segs_ - 1) + 1; //  Number of decision variables. Position (size 3 x (M-1)) + Time ( size 1 x (M-1) + 1) 
+    mjo_xi_.reset(startPVA, endPVA, num_segs_);
+    mjo_q_.reset(startPVA, endPVA, num_segs_);
 
     ros::Time t0 = ros::Time::now(), t1, t2;
     int restart_nums = 0, rebound_times = 0;
@@ -40,11 +36,10 @@ namespace ego_planner
 
     double x_init[variable_num_]; // Initial decision variables: Array of [ inner_ctrl_pts_xi, initT ]
 
-    // copy the inner_ctrl_pts to x_init
-    // memcpy(x_init, inner_ctrl_pts.data(), inner_ctrl_pts.size() * sizeof(x_init[0]));
-    // Virtual Time Vt
-    // Eigen::Map<Eigen::VectorXd> Vt(x_init + inner_ctrl_pts.size(), initT.size()); // Virtual Time
-
+    // Convert initial SFC points from q into xi variables
+    //      (inner_ctrl_pts is of size (3, M-1))
+    // Eigen::MatrixXd inner_ctrl_pts_xi = f_BInv_ctrl_pts(inner_ctrl_pts, spheres_center_, spheres_radius_); // (3, num_segs_ - 1);
+    Eigen::MatrixXd inner_ctrl_pts_xi = inner_ctrl_pts;
     // XJP: Copy transformed inner_ctrl_pts_xi
     memcpy(x_init, inner_ctrl_pts_xi.data(), inner_ctrl_pts_xi.size() * sizeof(x_init[0]));
     // Virtual Time Vt
@@ -126,65 +121,50 @@ namespace ego_planner
   /* callbacks by the L-BFGS optimizer */
   double PolyTrajOptimizer::costFunctionCallbackSFC(void *func_data, const double *x, double *grad, const int n)
   {
-    // func_data = instance of class                                  // The user data sent for lbfgs_optimize() function by the client.
-    // x         = x_init = [inner_ctrl_pts, virtual_time_durations]  // The current values of variables.
-    // grad      = (gradP, gradt)                                     // The gradient vector. The callback function must compute the gradient values for the current variables.
-    // n         = variable_num_ = 4 * (piece_num_ - 1) + 1           // The number of variables.
-
     // Pointer to current instance of PolyTrajOptimizer
     PolyTrajOptimizer *opt = reinterpret_cast<PolyTrajOptimizer *>(func_data);
 
-    opt->min_ellip_dist2_ = std::numeric_limits<double>::max();
+    // func_data = instance of class                                  // The user data sent for lbfgs_optimize() function by the client.
+    // x         = x_init = [inner_ctrl_pts, virtual_time_durations]  // x is pointer to start of the array/matrix. The current values of variables.
+    // grad      = (gradP, gradt)                                     // The gradient vector. The callback function must compute the gradient values for the current variables.
+    // n         = variable_num_ = 4 * (num_segs_ - 1) + 1           // The number of variables.
 
-    // x is pointer to start of the array/matrix
-
-    // P_xi IS CONTROL POINTS IN XI UNCONSTRAINED COORDINATES
+    // P_xi IS CONTROL POINTS IN XI UNCONSTRAINED SPACE
     //      Taken from decision variables at start of iteration. inner 3d position of trajectory
-    Eigen::Map<const Eigen::MatrixXd> P_xi(x, 3, opt->piece_num_ - 1); // 3 x (M-1)
-    // we specify "x + (3 * (opt->piece_num_ - 1))" because that is the address, its not the value
-    Eigen::Map<const Eigen::VectorXd> t(x + (3 * (opt->piece_num_ - 1)), opt->piece_num_);
-    
-    Eigen::Map<Eigen::MatrixXd> gradP(grad, 3, opt->piece_num_ - 1); // p.d.(H / xi)
-    Eigen::Map<Eigen::VectorXd> gradt(grad + (3 * (opt->piece_num_ - 1)), opt->piece_num_); // p.d.(H / t_i)
-
+    Eigen::Map<const Eigen::MatrixXd> P_xi(x, 3, opt->num_segs_ - 1); // 3 x (M-1)
+    //      we specify "x + (3 * (opt->num_segs_ - 1))" because that is the address, its not the value
+    Eigen::Map<const Eigen::VectorXd> t(x + (3 * (opt->num_segs_ - 1)), opt->num_segs_);
     // convert from virtual time t to real time T
-    Eigen::VectorXd T(opt->piece_num_);
+    Eigen::VectorXd T(opt->num_segs_);
     opt->VirtualT2RealT(t, T); 
-    
+
+    // gradP: start from grad[0]
+    Eigen::Map<Eigen::MatrixXd> gradP(grad, 3, opt->num_segs_ - 1); // p.d.(H / xi)
+    // gradt: start from grad[3 * (M-1)]
+    Eigen::Map<Eigen::VectorXd> gradt(grad + (3 * (opt->num_segs_ - 1)), opt->num_segs_); // p.d.(H / t_i)
     // gradT: P.D. of objective function H w.r.t time T, A vector of size (M, 1)
     //        Each element is a value of the gradient
-    Eigen::VectorXd gradT(opt->piece_num_); 
-    double jerk_cost = 0;
-    double time_cost = 0;
+    Eigen::VectorXd gradT(opt->num_segs_); 
 
-    Eigen::VectorXd obs_swarm_feas_qvar_costs(4); // Vector of costs containing (Static obstacles, swarm, dynamic, feasibility, qvar)
+    // Initialize values
+    double jerk_cost = 0, time_cost = 0;
+    opt->min_ellip_dist2_ = std::numeric_limits<double>::max();
 
-    // Discretize trajectory into inner constraint points
-    opt->cstr_pts_q_ = opt->jerkOpt_.getInitConstraintPoints(opt->cps_num_perPiece_);
-    opt->cstr_pts_xi_ = opt->f_BInv_cstr_pts(opt->cstr_pts_q_, 
-                                          opt->jerkOpt_.getNumSegs(),
-                                          opt->cps_num_perPiece_, 
-                                          opt->spheres_center_,
-                                          opt->spheres_radius_);
-
-    // Generate minimum jerk trajectory from given inner control points
-
-    // Get decision variables P_xi in constrained q form
+    // For forward cost evaluation: Get minimum jerk trajectory coordinates in q space
     Eigen::MatrixXd P_q = opt->f_B_ctrl_pts(P_xi,
                                             opt->spheres_center_,
                                             opt->spheres_radius_); 
-    opt->jerkOpt_.generate(P_q, T);
+    opt->mjo_q_.generate(P_q, T); // Generate minimum jerk trajectory
+    opt->cstr_pts_q_ = opt->mjo_q_.getInitConstraintPoints(opt->cps_num_perPiece_); // Discretize trajectory into inner constraint points
 
-    // if (opt->iter_num_ == 0){
-    //   // Collect intermediate MJO trajectories for publishing later
-    //   opt->intermediate_cstr_pts_xi_.push_back(opt->cstr_pts_xi_);
-    //   opt->intermediate_cstr_pts_q_.push_back(opt->cstr_pts_q_);
-    // }
+    // For visualization: Get minimum jerk trajectory coordinates in xi space
+    opt->mjo_xi_.generate(P_xi, T); // Generate minimum jerk trajectory
+    opt->cstr_pts_xi_ = opt->mjo_xi_.getInitConstraintPoints(opt->cps_num_perPiece_);
 
     /** 1. Jerk cost 
      * jerk_cost is trajectory jerk cost
      */
-    opt->jerkOpt_.initGradCost(gradT, jerk_cost); // Among other things, do addGradJbyT(gdT) and addGradJbyC(gdC);
+    opt->mjo_q_.initGradCost(gradT, jerk_cost); // Among other things, do addGradJbyT(gdT) and addGradJbyC(gdC);
 
     /** 2. Time integral cost 
       *   2a. Static obstacle cost
@@ -192,11 +172,12 @@ namespace ego_planner
       *   2c. Dynamical feasibility
       *   2d. Uniformity of points
     */
-    opt->addPVAGradCost2CT_SFC(gradT, obs_swarm_feas_qvar_costs, opt->cps_num_perPiece_); 
+    Eigen::VectorXd obs_swarm_feas_qvar_costs(4); // Vector of costs containing (Static obstacles, swarm, dynamic, feasibility, qvar)
+    opt->addPVAGradCost2CT_SFC(gradT, obs_swarm_feas_qvar_costs, opt->cps_num_perPiece_, opt->mjo_q_); 
 
     // Update the gradient costs p.d.(H / T_i) 
     //                       and p.d.(H / xi)
-    opt->jerkOpt_.getGrad2TP(gradT, gradP, P_xi, opt->spheres_center_, opt->spheres_radius_);
+    opt->mjo_q_.getGrad2TP(gradT, gradP, P_xi, opt->spheres_center_, opt->spheres_radius_);
     // time_cost += opt->rho_ * T(0) * piece_nums;  // same t
     // grad[n - 1] = (gradT.sum() + opt->rho_ * piece_nums) * gdT2t(x[n - 1]);  // same t
 
@@ -270,26 +251,20 @@ namespace ego_planner
     costT = RT.sum() * wei_time_;
   }
 
-  /* gradient and cost evaluation functions */
-  // template <typename EIGENVEC>
-  // void PolyTrajOptimizer::initAndGetSmoothnessGradCost2PT(EIGENVEC &gdT, double &cost)
-  // {
-  //   jerkOpt_.initGradCost(gdT, cost);
-  // }
-
   template <typename EIGENVEC>
-  void PolyTrajOptimizer::addPVAGradCost2CT_SFC(EIGENVEC &gdT, Eigen::VectorXd &costs, const int &K)
+  void PolyTrajOptimizer::addPVAGradCost2CT_SFC(
+      EIGENVEC &gdT, Eigen::VectorXd &costs, const int &K, poly_traj::MinJerkOpt& mjo)
   {
-    int N = gdT.size();
+    int N = num_segs_; // N: Number of segments
     Eigen::Vector3d pos, vel, acc, jer;
     Eigen::Vector3d gradp, gradv, grada; // Each Gradient is a vector with (x,y,z) components
-    double costp, costv, costa;
+    double costp, costv, costa; 
     Eigen::Matrix<double, 6, 1> beta0, beta1, beta2, beta3; // Time basis
-    double s1, s2, s3, s4, s5;
-    double step, alpha;
+    double s1, s2, s3, s4, s5;    // time (s1 = t, s2 = t^2, ..., s5 = t^5)
+    double step, alpha;           // step: time step, alpha: 
     Eigen::Matrix<double, 6, 3> gradViolaPc, gradViolaVc, gradViolaAc;
     double gradViolaPt, gradViolaVt, gradViolaAt;
-    double omega;
+    double omega;    // Quadrature coefficient
     int idx_cp = 0; // Index of constraint point
     costs.setZero();
 
@@ -297,8 +272,8 @@ namespace ego_planner
     for (int i = 0; i < N; ++i) // for each piece/segment number
     {
       // c: Polynomial coefficients 
-      const Eigen::Matrix<double, 6, 3> &c = jerkOpt_.get_b().block<6, 3>(i * 6, 0); 
-      double T_i = jerkOpt_.get_T1()(i);
+      const Eigen::Matrix<double, 6, 3> &c = mjo.get_b().block<6, 3>(i * 6, 0); 
+      double T_i = mjo.get_T1()(i);
       step = T_i / K; // Duration of each piece / sample number.
       s1 = 0.0; // Time t, it will increase with each step of the constraint point
 
@@ -323,14 +298,6 @@ namespace ego_planner
 
         // omega: quadrature coefficients using trapezoid rule
         omega = (j == 0 || j == K) ? 0.5 : 1.0;
-
-        // set cstr_pts_xi_ for obtaining inner waypoint positions in 
-        //    obtaining costs for certain types of penalties
-        // cstr_pts_xi_.col(idx_cp) = pos; // NOTE: pos is in xi coordinates
-
-        // Transform from xi to q. Forward cost evaluation is done in q
-        // Eigen::Vector3d pos_q = f_B(pos, spheres_center_[i], spheres_radius_[i]);
-        // cstr_pts_q_.col(idx_cp) = pos_q;  
 
         /**
          * Penalty on static obstacle, vector of (x,y,z)
@@ -363,7 +330,7 @@ namespace ego_planner
         //   double pd_cost_t = cost / T_i  + pd_cost_constr * pd_constr_t * pd_t_T_i;// P.D. of cost w.r.t t // (1,1)
 
         //   // Sum up sampled costs
-        //   jerkOpt_.get_gdC().block<6, 3>(i * 6, 0) += pd_cost_c_i; // Gradient of cost w.r.t polynomial coefficients, shape is (m,2s)
+        //   mjo.get_gdC().block<6, 3>(i * 6, 0) += pd_cost_c_i; // Gradient of cost w.r.t polynomial coefficients, shape is (m,2s)
         //   gdT(i) += pd_cost_t; // Gradient of cost w.r.t time
         //   costs(0) += cost; 
         // }
@@ -376,7 +343,7 @@ namespace ego_planner
         {
           gradViolaPc = beta0 * gradp.transpose();
           gradViolaPt = alpha * gradt;
-          jerkOpt_.get_gdC().block<6, 3>(i * 6, 0) += omega * step * gradViolaPc;
+          mjo.get_gdC().block<6, 3>(i * 6, 0) += omega * step * gradViolaPc;
           gdT(i) += omega * (costp / K + step * gradViolaPt);
           if (i > 0)
           {
@@ -405,7 +372,7 @@ namespace ego_planner
           double pd_cost_t = cost / T_i  + pd_cost_constr * pd_constr_t * pd_t_T_i;// P.D. of cost w.r.t t // (1,1)
 
           // Sum up sampled costs
-          jerkOpt_.get_gdC().block<6, 3>(i * 6, 0) += pd_cost_c_i; // Gradient of cost w.r.t polynomial coefficients
+          mjo.get_gdC().block<6, 3>(i * 6, 0) += pd_cost_c_i; // Gradient of cost w.r.t polynomial coefficients
           gdT(i) += pd_cost_t; 
           costs(2) += cost; 
         }
@@ -430,7 +397,7 @@ namespace ego_planner
           double pd_cost_t = cost / T_i  + pd_cost_constr * pd_constr_t * pd_t_T_i;// P.D. of cost w.r.t t // (1,1)
 
           // Sum up sampled costs
-          jerkOpt_.get_gdC().block<6, 3>(i * 6, 0) += pd_cost_c_i; // Gradient of cost w.r.t polynomial coefficients
+          mjo.get_gdC().block<6, 3>(i * 6, 0) += pd_cost_c_i; // Gradient of cost w.r.t polynomial coefficients
           gdT(i) += pd_cost_t; 
           costs(2) += cost; 
         }
@@ -446,7 +413,7 @@ namespace ego_planner
         }
       } // end iteration through all constraint points in segment
 
-      t += jerkOpt_.get_T1()(i);
+      t += mjo.get_T1()(i);
     } // end iteration through all segments
 
     /**
@@ -461,7 +428,7 @@ namespace ego_planner
     idx_cp = 0;
     for (int i = 0; i < N; ++i) // for each piece/segment number
     {
-      step = jerkOpt_.get_T1()(i) / K;
+      step = mjo.get_T1()(i) / K;
       s1 = 0.0;
 
       for (int j = 0; j <= K; ++j) // For each constraint point
@@ -473,13 +440,13 @@ namespace ego_planner
         beta0 << 1.0, s1, s2, s3, s4, s5;
         beta1 << 0.0, 1.0, 2.0 * s1, 3.0 * s2, 4.0 * s3, 5.0 * s4;
         alpha = 1.0 / K * j;
-        vel = jerkOpt_.get_b().block<6, 3>(i * 6, 0).transpose() * beta1;
+        vel = mjo.get_b().block<6, 3>(i * 6, 0).transpose() * beta1;
 
         omega = (j == 0 || j == K) ? 0.5 : 1.0;
 
         gradViolaPc = beta0 * gdp.col(idx_cp).transpose();
         gradViolaPt = alpha * gdp.col(idx_cp).transpose() * vel;
-        jerkOpt_.get_gdC().block<6, 3>(i * 6, 0) += omega * gradViolaPc;
+        mjo.get_gdC().block<6, 3>(i * 6, 0) += omega * gradViolaPc;
         gdT(i) += omega * (gradViolaPt);
 
         s1 += step;
@@ -492,7 +459,7 @@ namespace ego_planner
 
     costs(3) += var;
 
-  }
+  } // end func addPVAGradCost2CT_SFC
 
   bool PolyTrajOptimizer::swarmGradCostP(const int idx_cp,
                                          const double t,
@@ -573,25 +540,32 @@ namespace ego_planner
                                                             Eigen::MatrixXd &gdp,
                                                             double &var)
   {
-    int N = ps.cols() - 1;
-    // dps: distance between consecutive points
-    Eigen::MatrixXd dps = ps.rightCols(N) - ps.leftCols(N);
-    // dsqrs: Get squared norm of the distance between consecutive points 
-    Eigen::VectorXd dsqrs = dps.colwise().squaredNorm().transpose();
-    double dquarsum = dsqrs.squaredNorm();
-    double dquarmean = dquarsum / N;
+    size_t num_pts = ps.cols();
+    // dist_btw_all_pts: distance between consecutive points
+    //    ps.rightCols(num_pts-1): block containing all columns except first one
+    //    ps.rightCols(num_pts-1): block containing all columns except last one
+    Eigen::MatrixXd dist_btw_all_pts = ps.rightCols(num_pts - 1 ) - ps.leftCols(num_pts - 1);
+    // dsqrs: Get squared norm of dist_btw_all_pts
+    Eigen::VectorXd dsqrs = dist_btw_all_pts.colwise().squaredNorm().transpose();
+    // dquarsum: Get squared norm of of all dsqrs
+    double dquarsum = dsqrs.squaredNorm(); 
+
+    // dquarmean: Mean of all squared distance
+    double dquarmean = dquarsum / (num_pts-1);
+
     var = wei_sqrvar_ * (dquarmean);
-    gdp.resize(3, N + 1);
+    gdp.resize(3, num_pts);
     gdp.setZero();
-    for (int i = 0; i <= N; i++)
+
+    for (size_t i = 0; i < num_pts; i++) // iterate through all points 
     {
-      if (i != 0)
+      if (i != 0) // If not first point
       {
-        gdp.col(i) += wei_sqrvar_ * (4.0 * (dsqrs(i - 1)) / N * dps.col(i - 1));
+        gdp.col(i) += wei_sqrvar_ * (4.0 * (dsqrs(i - 1)) / (num_pts-1) * dist_btw_all_pts.col(i - 1));
       }
-      if (i != N)
+      if (i != (num_pts-1)) // If not last point
       {
-        gdp.col(i) += wei_sqrvar_ * (-4.0 * (dsqrs(i)) / N * dps.col(i));
+        gdp.col(i) += wei_sqrvar_ * (-4.0 * (dsqrs(i)) / (num_pts-1) * dist_btw_all_pts.col(i));
       }
     }
 
@@ -658,56 +632,58 @@ namespace ego_planner
   /* callbacks by the L-BFGS optimizer */
   double PolyTrajOptimizer::costFunctionCallback(void *func_data, const double *x, double *grad, const int n)
   {
-    // Pointer to current instance of PolyTrajOptimizer
-    PolyTrajOptimizer *opt = reinterpret_cast<PolyTrajOptimizer *>(func_data);
+    // // Pointer to current instance of PolyTrajOptimizer
+    // PolyTrajOptimizer *opt = reinterpret_cast<PolyTrajOptimizer *>(func_data);
 
-    opt->min_ellip_dist2_ = std::numeric_limits<double>::max();
+    // opt->min_ellip_dist2_ = std::numeric_limits<double>::max();
 
-    // x is pointer to start of the array/matrix
-    Eigen::Map<const Eigen::MatrixXd> P(x, 3, opt->piece_num_ - 1); // 3 x (M-1)
-    // Eigen::VectorXd T(Eigen::VectorXd::Constant(piece_nums, opt->t2T(x[n - 1]))); // same t
-    // we specify "x + (3 * (opt->piece_num_ - 1))" because that is the address, its not the value
-    Eigen::Map<const Eigen::VectorXd> t(x + (3 * (opt->piece_num_ - 1)), opt->piece_num_);
+    // // x is pointer to start of the array/matrix
+    // Eigen::Map<const Eigen::MatrixXd> P(x, 3, opt->num_segs_ - 1); // 3 x (M-1)
+    // // Eigen::VectorXd T(Eigen::VectorXd::Constant(piece_nums, opt->t2T(x[n - 1]))); // same t
+    // // we specify "x + (3 * (opt->num_segs_ - 1))" because that is the address, its not the value
+    // Eigen::Map<const Eigen::VectorXd> t(x + (3 * (opt->num_segs_ - 1)), opt->num_segs_);
 
-    // Gradient values of P and t
-    Eigen::Map<Eigen::MatrixXd> gradP(grad, 3, opt->piece_num_ - 1);
-    Eigen::Map<Eigen::VectorXd> gradt(grad + (3 * (opt->piece_num_ - 1)), opt->piece_num_);
+    // // Gradient values of P and t
+    // Eigen::Map<Eigen::MatrixXd> gradP(grad, 3, opt->num_segs_ - 1);
+    // Eigen::Map<Eigen::VectorXd> gradt(grad + (3 * (opt->num_segs_ - 1)), opt->num_segs_);
 
-    // from virtual time t to real time T
-    Eigen::VectorXd T(opt->piece_num_);
-    opt->VirtualT2RealT(t, T);
+    // // from virtual time t to real time T
+    // Eigen::VectorXd T(opt->num_segs_);
+    // opt->VirtualT2RealT(t, T);
 
-    Eigen::VectorXd gradT(opt->piece_num_); // P.D. of costs w.r.t time t, A vector of size (M, 1)
-    double jerk_cost = 0, time_cost = 0;
-    Eigen::VectorXd obs_swarm_feas_qvar_costs(4); // Vector of costs containing (Static obstacles, swarm, dynamic, feasibility, qvar)
+    // Eigen::VectorXd gradT(opt->num_segs_); // P.D. of costs w.r.t time t, A vector of size (M, 1)
+    // double jerk_cost = 0, time_cost = 0;
+    // Eigen::VectorXd obs_swarm_feas_qvar_costs(4); // Vector of costs containing (Static obstacles, swarm, dynamic, feasibility, qvar)
 
-    opt->jerkOpt_.generate(P, T);
+    // opt->mjo_xi_.generate(P, T);
 
-    /* 1. Smoothness cost */
-    // jerk_cost is the cost of the jerk minimization trajectory
-    opt->jerkOpt_.initGradCost(gradT, jerk_cost); // does addGradJbyT(gdT) and addGradJbyC(gdC);
+    // /* 1. Smoothness cost */
+    // // jerk_cost is the cost of the jerk minimization trajectory
+    // opt->mjo_xi_.initGradCost(gradT, jerk_cost); // does addGradJbyT(gdT) and addGradJbyC(gdC);
 
-    /** 2. Time integral cost 
-      *   2a. Static obstacle cost
-      *   2b. Swarm cost
-      *   2c. Dynamical feasibility
-      *   2d. Uniformity of points
-    */
-    opt->addPVAGradCost2CT(gradT, obs_swarm_feas_qvar_costs, opt->cps_num_perPiece_); 
+    // /** 2. Time integral cost 
+    //   *   2a. Static obstacle cost
+    //   *   2b. Swarm cost
+    //   *   2c. Dynamical feasibility
+    //   *   2d. Uniformity of points
+    // */
+    // opt->addPVAGradCost2CT(gradT, obs_swarm_feas_qvar_costs, opt->cps_num_perPiece_); 
 
-    if (opt->iter_num_ > 3 && jerk_cost / opt->piece_num_ < 10.0) // 10.0 is an experimental value that indicates the trajectory is smooth enough.
-    {
-      opt->roughlyCheckConstraintPoints();
-    }
+    // if (opt->iter_num_ > 3 && jerk_cost / opt->num_segs_ < 10.0) // 10.0 is an experimental value that indicates the trajectory is smooth enough.
+    // {
+    //   opt->roughlyCheckConstraintPoints();
+    // }
 
-    opt->jerkOpt_.getGrad2TP(gradT, gradP);
-    // time_cost += opt->rho_ * T(0) * piece_nums;  // same t
-    // grad[n - 1] = (gradT.sum() + opt->rho_ * piece_nums) * gdT2t(x[n - 1]);  // same t
+    // opt->mjo_xi_.getGrad2TP(gradT, gradP);
+    // // time_cost += opt->rho_ * T(0) * piece_nums;  // same t
+    // // grad[n - 1] = (gradT.sum() + opt->rho_ * piece_nums) * gdT2t(x[n - 1]);  // same t
 
-    opt->VirtualTGradCost(T, t, gradT, gradt, time_cost);
+    // opt->VirtualTGradCost(T, t, gradT, gradt, time_cost);
 
-    opt->iter_num_ += 1;
-    return jerk_cost + obs_swarm_feas_qvar_costs.sum() + time_cost;
+    // opt->iter_num_ += 1;
+    // return jerk_cost + obs_swarm_feas_qvar_costs.sum() + time_cost;
+
+    return 0;
   }
 
 } // namespace ego_planner

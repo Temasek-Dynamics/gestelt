@@ -22,13 +22,19 @@ void SphericalSFC::reset()
 {
     // Clear planning data
     sfc_spheres_.clear();
-    sfc_traj_.clear();
+    sfc_traj_.reset();
     front_end_path_.clear();
 
     // Clear visualizations
     p_cand_vec_hist_.clear();
     sampling_dist_hist_.markers.clear();
     samp_dir_vec_hist_.markers.clear();
+
+    sfc_sampled_spheres_.clear();
+    samp_dir_vec_.clear();
+    guide_points_vec_.clear();
+    
+    front_end_path_.clear();
 
     clearVisualizations();
 }   
@@ -68,6 +74,8 @@ void SphericalSFC::clearVisualizations()
 
 bool SphericalSFC::generateSFC(const std::vector<Eigen::Vector3d> &path)
 {
+    bool planning_success = true;
+
     reset();
     front_end_path_ = path;
     guide_path_kdtree_ = 
@@ -117,6 +125,7 @@ bool SphericalSFC::generateSFC(const std::vector<Eigen::Vector3d> &path)
 
         if (!getForwardPointOnPath(path, path_idx_cur, B_cur)){
             std::cout << "getForwardPointOnPath: Failed to get forward point on the path" << std::endl;
+            planning_success = false;
             break;
         }
 
@@ -126,6 +135,7 @@ bool SphericalSFC::generateSFC(const std::vector<Eigen::Vector3d> &path)
 
         if (!BatchSample(path[path_idx_cur], B_cur)){
             std::cout << "Batch sample failed" << std::endl;
+            planning_success = false;
             break;
         }
 
@@ -139,13 +149,27 @@ bool SphericalSFC::generateSFC(const std::vector<Eigen::Vector3d> &path)
 
         get_fwd_pt_durs += std::chrono::duration_cast<std::chrono::duration<double>>(
             get_fwd_pt_end - get_fwd_pt).count();
-
         batch_sample_durs += std::chrono::duration_cast<std::chrono::duration<double>>(
             batch_sample_end - batch_sample).count();
 
         itr_++;
     }
     auto c = std::chrono::high_resolution_clock::now();
+
+    if (!sfc_spheres_.back().contains(path.back())){ 
+        std::cout << "[SphericalSFC] Final safe flight corridor does not contain the goal" << std::endl;
+
+        if (itr_ > sfc_params_.max_itr){
+            std::cout << "[SphericalSFC] Maximum iterations " << sfc_params_.max_itr 
+                    << " exceeded. Consumed " << itr_ << " iterations." << std::endl;
+        }
+
+        planning_success = false;
+    }
+    
+    if (planning_success){
+        constructSFCTrajectory(sfc_spheres_, path[0], path.back(), sfc_traj_);
+    }
 
     // Publish candidate points and 3d distribution visualization
     if (sfc_params_.debug_viz){
@@ -156,38 +180,23 @@ bool SphericalSFC::generateSFC(const std::vector<Eigen::Vector3d> &path)
 
         publishVizSphericalSFC(sfc_spheres_, sfc_spherical_viz_pub_, "world");
 
-        constructSFCTrajectory(sfc_spheres_, path[0], path.back(), sfc_traj_);
         publishVizPiecewiseTrajectory(sfc_traj_.waypoints, sfc_waypoints_viz_pub_);
-    }
 
-    auto d = std::chrono::high_resolution_clock::now();
+        auto d = std::chrono::high_resolution_clock::now();
+        auto e = std::chrono::high_resolution_clock::now();
 
-    if (!sfc_spheres_.back().contains(path.back())){ 
-        std::cout << "[SphericalSFC] Final safe flight corridor does not contain the goal" << std::endl;
+        auto total_loop_dur = std::chrono::duration_cast<std::chrono::duration<double>>(
+            e - a).count();
 
-        if (itr_ > sfc_params_.max_itr){
-            std::cout << "[SphericalSFC] Maximum iterations " << sfc_params_.max_itr 
-                    << " exceeded. Consumed " << itr_ << " iterations." << std::endl;
-        }
+        auto preloop_dur = std::chrono::duration_cast<std::chrono::duration<double>>(
+            b - a).count();
 
-        return false;
-    }
+        auto loop_dur = std::chrono::duration_cast<std::chrono::duration<double>>(
+            c - b).count();
 
-    auto e = std::chrono::high_resolution_clock::now();
+        auto pub_dur = std::chrono::duration_cast<std::chrono::duration<double>>(
+            d - c).count();
 
-    auto total_loop_dur = std::chrono::duration_cast<std::chrono::duration<double>>(
-        e - a).count();
-
-    auto preloop_dur = std::chrono::duration_cast<std::chrono::duration<double>>(
-        b - a).count();
-
-    auto loop_dur = std::chrono::duration_cast<std::chrono::duration<double>>(
-        c - b).count();
-
-    auto pub_dur = std::chrono::duration_cast<std::chrono::duration<double>>(
-        d - c).count();
-    
-    if (sfc_params_.debug_viz){
         // std::cout << "Spherical SFC runtimes [ms]: " << std::endl;
 
         // std::cout << "  Total dur: " << total_loop_dur *1000   << std::endl;
@@ -199,7 +208,7 @@ bool SphericalSFC::generateSFC(const std::vector<Eigen::Vector3d> &path)
         // std::cout << "  publish dur: " << pub_dur  *1000       << "s, pct:" << pub_dur / total_loop_dur * 100<< "%" << std::endl;
     }
 
-    return true;
+    return planning_success;
 }   
 
 bool SphericalSFC::generateFreeSphere(const Eigen::Vector3d& point, Sphere& B)
@@ -247,8 +256,6 @@ bool SphericalSFC::BatchSample(const Eigen::Vector3d& pt_guide, Sphere& B_cur)
     // Calculate orientation and standard deviation of normal sampling distribution
     Eigen::Vector3d dir_vec = (pt_guide - B_cur.center); // Direction vector from previous sphere to pt_guide
     Eigen::Vector3d dir_vec_unit = dir_vec.normalized();
-
-    
 
     // Method A: Use collision point
 
@@ -303,8 +310,8 @@ bool SphericalSFC::BatchSample(const Eigen::Vector3d& pt_guide, Sphere& B_cur)
     std::vector<SphericalSFC::Sphere> sampled_spheres; // Vector of all sampled spheres used for debugging
 
     for (auto& p_cand: p_cand_vec){
-        // Generate candidate sphere, calculate score and add to priority queue
 
+        // Generate candidate sphere, calculate score and add to priority queue
         auto d1 = std::chrono::high_resolution_clock::now();
 
         std::shared_ptr<Sphere> B_cand = std::make_shared<Sphere>();
@@ -313,17 +320,18 @@ bool SphericalSFC::BatchSample(const Eigen::Vector3d& pt_guide, Sphere& B_cur)
             continue;
         }
 
-        sampled_spheres.push_back(*B_cand);
+        sampled_spheres.push_back(*B_cand); // For debugging
 
         // Condition for a valid candidate sphere
         // 1) Cand sphere contains guide point
         // 2) Cand sphere is within minimum and maximum volume bounds 
         // 3) Cand sphere is not completely contained within previous sphere
+        // 4) Cand sphere is intersecting the previous sphere
 
         // 1) Sphere must contain guide point
-        if (!B_cand->contains(pt_guide)){
-            continue;
-        }
+        // if (!B_cand->contains(pt_guide)){
+        //     continue;
+        // }
 
         // 2) Sphere is bounded by a minimum and maximum volume 
         if (B_cand->getVolume() < sfc_params_.min_sphere_vol || B_cand->getVolume() > sfc_params_.max_sphere_vol) 
@@ -339,11 +347,16 @@ bool SphericalSFC::BatchSample(const Eigen::Vector3d& pt_guide, Sphere& B_cur)
             }
         }
 
+        // 4) Cand sphere is intersecting previous sphere
+        if(getIntersectingVolume(*B_cand, B_cur) < 0.0000000001){
+            continue;
+        }
+
         auto d2 = std::chrono::high_resolution_clock::now();
 
         B_cand->score = computeCandSphereScore(*B_cand, B_cur); 
 
-        if (B_cand->score > 0){ // If score is positive, add sphere to priority queue
+        if (B_cand->score > 0) { // If score is positive, add sphere to priority queue
             B_cand_pq.push(B_cand); 
         }
 
@@ -355,8 +368,6 @@ bool SphericalSFC::BatchSample(const Eigen::Vector3d& pt_guide, Sphere& B_cur)
     }
 
     auto e = std::chrono::high_resolution_clock::now();
-
-    B_cur = Sphere(B_cand_pq.top());
 
     double chpt_b = std::chrono::duration_cast<std::chrono::duration<double>>(
         b - a).count() * 1000.0;
@@ -391,9 +402,12 @@ bool SphericalSFC::BatchSample(const Eigen::Vector3d& pt_guide, Sphere& B_cur)
     guide_points_vec_.push_back(samp_mean);
 
     if (B_cand_pq.empty()){
-        std::cout << "Unable to generate next candidate sphere"<< std::endl;
+        std::cout << "Unable to generate next candidate sphere, B_cand_pq empty!" << std::endl;
         return false;
     }
+
+    B_cur = Sphere(B_cand_pq.top());
+
     // std::cout << "Assigned next candidate sphere of radius " << B_cand_pq.top()->radius 
     //             << ", with volume " << B_cand_pq.top()->getVolume() 
     //             << ", intersecting volume " << getIntersectingVolume(*B_cand_pq.top(), B_cur ) 
@@ -432,13 +446,15 @@ double SphericalSFC::computeCandSphereScore(Sphere& B_cand, Sphere& B_prev)
 double SphericalSFC::getIntersectingVolume(Sphere& B_a, Sphere& B_b)
 {
     double d = (B_a.center - B_b.center).norm(); // distance between center of spheres
-
     // Check for non-intersection
     if (d >= (B_a.radius + B_b.radius)){ 
         return -1;
     }
-    
-    double vol_intersect = (1/12) * M_PI * (4* B_a.radius + d) * (2 * B_a.radius - d) * (2 * B_a.radius - d);
+
+    double h = (B_a.radius - (d - B_b.radius))/2;
+    double a = sqrt( B_a.radius*B_a.radius - (d - B_b.radius +h )*(d - B_b.radius +h ));
+
+    double vol_intersect = 2.0 * (1.0/6.0) * (M_PI * h) * (3*a*a + h*h) ;
 
     return vol_intersect;
 }
@@ -453,6 +469,15 @@ Eigen::Vector3d SphericalSFC::getIntersectionCenter(const Sphere& B_a, const Sph
     Eigen::Vector3d pt_intersect = B_a.center + (d_intersect/d_centroids) * dir_vec;
 
     return pt_intersect;
+}
+
+void SphericalSFC::postProcessSpheres(std::vector<SphericalSFC::Sphere>& sfc_spheres)
+{
+    // Check for overlap between spheres and remove them
+    // For example 
+    //      for 0, 1, 2. check if 0 intersects 2, if so then remove 1,
+    //      then move on to check 0, 2, 3., and so on until no intersection is detected, 
+    //      then move on to check index 2
 }
 
 void SphericalSFC::constructSFCTrajectory(

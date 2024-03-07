@@ -26,9 +26,6 @@ namespace ego_planner
     /* Initial */
     ros::Publisher initial_mjo_pub_; // Publish unconstrained coordinates
     ros::Publisher initial_mjo_q_pub_; // Publish projected coordinates q
-    ros::Publisher initial_mjo_xi_pub_; // Publish unconstrained coords xi
-    ros::Publisher initial_ctrl_pts_pub_; // Publish control points
-    ros::Publisher initial_ctrl_pts_xi_pub_; // Publish control points in xi
     ros::Publisher initial_ctrl_pts_q_pub_; // Publish control points in q
 
     /* Intermediate */
@@ -36,7 +33,6 @@ namespace ego_planner
     ros::Publisher intmd_ctrl_pts_xi_pub_; // (xi coordinates) Publish intermediate control points as they are being optimized
 
     /* Optimized */
-    ros::Publisher optimal_mjo_q_pub_; // Publish optimal constraint points in q space
     ros::Publisher optimal_mjo_pub_;  // Publish original MJO
 
     /* Failed */
@@ -91,10 +87,7 @@ namespace ego_planner
     /* Initial MJO */
     void displayInitialMJO(vector<Eigen::Vector3d> init_pts, const double scale, int id);
     void displayInitialMJO_q(Eigen::MatrixXd pts, int id);
-    void displayInitialMJO_xi(Eigen::MatrixXd pts, int id);
 
-    void displayInitialCtrlPts(Eigen::MatrixXd pts);
-    void displayInitialCtrlPts_xi(Eigen::MatrixXd pts);
     void displayInitialCtrlPts_q(Eigen::MatrixXd pts);
 
     /* Optimal MJO */

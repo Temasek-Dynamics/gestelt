@@ -74,6 +74,9 @@ public:
   virtual void checksTimerCB(const ros::TimerEvent &e){
     if (!ignore_heartbeat_checks_){
       if (isPlannerHBTimeout()){
+        
+        std::cerr << "PLANNER HEARTBEAT TIMEOUT!!" << std::endl;
+
         // If planner heartbeat timeout exceeded, send emergency stop
         gestelt_msgs::Command traj_server_cmd_msg;
         traj_server_cmd_msg.header.stamp = ros::Time::now(); 

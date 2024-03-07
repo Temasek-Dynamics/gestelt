@@ -710,6 +710,16 @@ bool GridMap::getInflateOccupancy(const Eigen::Vector3d &pos)
   return withinObsRadius(pos, mp_.inflation_);
 }
 
+bool GridMap::getInflateOccupancy(const Eigen::Vector3d &pos, const double& inflation)
+{
+  /* Using KDTree to check for inflation */
+  if (!isInGlobalMap(pos)){
+    return true;
+  }
+
+  return withinObsRadius(pos, inflation);
+}
+
 bool GridMap::isInGlobalMap(const Eigen::Vector3d &pos)
 {
   if (pos(0) <= -mp_.global_map_size_(0)/2 || pos(0) >= mp_.global_map_size_(0)/2

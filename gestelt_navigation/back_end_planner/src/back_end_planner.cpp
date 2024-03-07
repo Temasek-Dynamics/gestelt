@@ -213,39 +213,20 @@ bool BackEndPlanner::generatePlanSFC( const Eigen::Vector3d& start_pos, const Ei
     headState << initial_traj.getJuncPos(0),        initial_traj.getJuncVel(0),        initial_traj.getJuncAcc(0);
     tailState << initial_traj.getJuncPos(num_segs), initial_traj.getJuncVel(num_segs), initial_traj.getJuncAcc(num_segs);
 
-    visualization_->displayInitialCtrlPts(init_inner_ctrl_pts);
-
-    // Display initial control points in xi coordinates
-    Eigen::MatrixXd init_inner_ctrl_pts_xi = back_end_planner_->ploy_traj_opt_->f_BInv_ctrl_pts(
-                                              init_inner_ctrl_pts, 
-                                              spheres_center,
-                                              spheres_radius);
-
-    visualization_->displayInitialCtrlPts_xi(init_inner_ctrl_pts_xi);
-
     Eigen::MatrixXd init_inner_ctrl_pts_q = back_end_planner_->ploy_traj_opt_->f_B_ctrl_pts(
-                                              init_inner_ctrl_pts_xi, 
+                                              init_inner_ctrl_pts, 
                                               spheres_center,
                                               spheres_radius);
 
     visualization_->displayInitialCtrlPts_q(init_inner_ctrl_pts_q);
 
-    // Display initial MJO trajectory in xi coordinates
-    // Eigen::MatrixXd cstr_pts_xi = 
-    //   back_end_planner_->ploy_traj_opt_->f_BInv_cstr_pts(init_cstr_pts, 
-    //                                           initial_mjo.getNumSegs(),
-    //                                           num_cstr_pts,
-    //                                           spheres_center,
-    //                                           spheres_radius);
-    // visualization_->displayInitialMJO_xi(cstr_pts_xi, 0); 
-
-    // Eigen::MatrixXd cstr_pts_q = 
-    //   back_end_planner_->ploy_traj_opt_->f_B_cstr_pts(cstr_pts, 
-    //                                           initial_mjo.getNumSegs(),
-    //                                           num_cstr_pts,
-    //                                           spheres_center,
-    //                                           spheres_radius);
-    // visualization_->displayInitialMJO_q(cstr_pts_q, 0); 
+    Eigen::MatrixXd cstr_pts_q = 
+      back_end_planner_->ploy_traj_opt_->f_B_cstr_pts(init_cstr_pts, 
+                                              initial_mjo.getNumSegs(),
+                                              num_cstr_pts,
+                                              spheres_center,
+                                              spheres_radius);
+    visualization_->displayInitialMJO_q(cstr_pts_q, 0); 
 
     // Optimize trajectory!
     double final_cost; 
@@ -257,7 +238,7 @@ bool BackEndPlanner::generatePlanSFC( const Eigen::Vector3d& start_pos, const Ei
           final_cost);
 
     // Optimized minimum jerk trajectory
-    optimized_mjo = back_end_planner_->ploy_traj_opt_->getMinJerkOpt();
+    optimized_mjo = back_end_planner_->ploy_traj_opt_->getOptimizedMJO();
     Eigen::MatrixXd cstr_pts_optimized_mjo = optimized_mjo.getInitConstraintPoints(num_cstr_pts);
 
     /***************************/
@@ -294,8 +275,6 @@ bool BackEndPlanner::generatePlanSFC( const Eigen::Vector3d& start_pos, const Ei
     debug_traj_pub_.publish(debug_traj_msg);
 
     /* Visualize optimized mjo trajectories */
-    // visualization_->displayOptimalMJO_q(cstr_pts_optimized_mjo_q);
-
     back_end_planner_->ploy_traj_opt_->opt_costs_.printAll();
 
     logInfo(str_fmt("Final cost: %f", final_cost));
@@ -386,7 +365,7 @@ bool BackEndPlanner::generatePlanESDFFree(const Eigen::Vector3d& start_pos, cons
   //   if (plan_success)
   //   {
   //     // Print results for benchmarking
-  //     poly_traj::MinJerkOpt optimized_mjo = back_end_planner_->getMinJerkOpt();
+  //     poly_traj::MinJerkOpt optimized_mjo = back_end_planner_->getOptimizedMJO();
       
   //     double traj_length = back_end_planner_->getTrajectoryLength(optimized_mjo);
   //     double traj_jerk_cost = optimized_mjo.getTrajJerkCost();

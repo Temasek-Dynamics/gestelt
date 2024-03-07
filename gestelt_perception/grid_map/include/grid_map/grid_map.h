@@ -168,6 +168,8 @@ public:
   // Get occupancy value of given position in inflated Occupancy grid
   bool getInflateOccupancy(const Eigen::Vector3d &pos);
 
+  bool getInflateOccupancy(const Eigen::Vector3d &pos, const double& inflation);
+
   /**
    * @brief Get the Nearest Occupied Cell  
    * 

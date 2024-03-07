@@ -72,13 +72,47 @@ private:
   /* Planner methods */
 
   /**
-   * @brief Generate a plan
+   * @brief Stop all planning loops 
    * 
+   */
+  void stopAllPlanning();
+
+  /**
+   * @brief Generate plan from entire planning pipeline
+   * 
+   * @param start_pos 
+   * @param goal_pos 
+   * @param optimized_mjo Optimized minimum jerk trajectory
+   * @return true 
+   * @return false 
+   */
+  bool planAll(const Eigen::Vector3d& start_pos, const Eigen::Vector3d& goal_pos);
+
+  /**
+   * @brief Generate a front-end plan with safe flight corridor
+   * 
+   * @param start_pos 
+   * @param goal_pos 
+   * @param sfc_traj 
+   * @return true 
+   * @return false 
    */
   bool generateFrontEndPlan(
     const Eigen::Vector3d& start_pos, const Eigen::Vector3d& goal_pos,
     SphericalSFC::SFCTrajectory& sfc_traj);
 
+  /**
+   * @brief Generate a back-end plan
+   * 
+   * @param start_pos 
+   * @param start_vel 
+   * @param goal_pos 
+   * @param sfc_traj 
+   * @param optimized_mjo 
+   * @param num_retries 
+   * @return true 
+   * @return false 
+   */
   bool generateBackEndPlan( 
     const Eigen::Vector3d& start_pos, const Eigen::Vector3d& start_vel, 
     const Eigen::Vector3d& goal_pos, 
@@ -162,7 +196,10 @@ private:
       cur_pos_(0), cur_pos_(1), cur_pos_(2),
       waypoints_.nextWP()(0), waypoints_.nextWP()(1), waypoints_.nextWP()(2))
     );
-    generateFrontEndPlan(cur_pos_, waypoints_.nextWP());
+
+    SphericalSFC::SFCTrajectory sfc_traj;
+
+    generateFrontEndPlan(cur_pos_, waypoints_.nextWP(), sfc_traj);
   }
 
   /* Checks */
@@ -188,8 +225,7 @@ private:
     std::shared_ptr<std::unordered_map<int, ego_planner::LocalTrajData>> swarm_local_trajs, 
     bool& e_stop, bool& must_replan);
 
-  bool isTrajectoryDynFeasible(LocalTrajData* traj, bool& is_feasible);
-
+  bool isTrajectoryDynFeasible(ego_planner::LocalTrajData* traj, bool& is_feasible);
 
   /* Helper methods */
 
@@ -222,6 +258,16 @@ private:
                 traj_utils::PolyTraj &poly_msg, traj_utils::MINCOTraj &MINCO_msg);
 
   /**
+   * @brief Get local trajectory from poly_traj::MinJerkOpt
+   * 
+   * @param mjo 
+   * @param traj_id 
+   * @param drone_id 
+   * @return ego_planner::LocalTrajData 
+   */
+  ego_planner::LocalTrajData getLocalTraj(poly_traj::MinJerkOpt& mjo, const int& num_cp, const int& traj_id, const int& drone_id);
+
+  /**
    * @brief Publish command to trajectory server
    * 
    * @param cmd 
@@ -247,9 +293,14 @@ private: /* ROS subs, pubs and timers*/
   /* Back-end */
   ros::Publisher debug_traj_pub_; // back-end trajectory for debugging
   ros::Publisher be_traj_pub_; // Publish back end trajectory 
+  ros::Publisher swarm_minco_traj_pub_; // publisher for MINCO Trajectory
+  ros::Subscriber swarm_minco_traj_sub_; // Subscriber to MINCO trajectory for inter-agent collision avoidance
 
   /* To Trajectory server */
   ros::Publisher traj_server_command_pub_; // Publish command to trajectory server
+
+  /* To planner adaptor */
+  ros::Publisher heartbeat_pub_; //publish heartbeat
 
   /* Visualization for Front End Planner*/
   ros::Publisher front_end_plan_pub_; // Publish front end plan to back-end optimizer
@@ -258,7 +309,6 @@ private: /* ROS subs, pubs and timers*/
 
   /* Visualization for SFC*/
   ros::Publisher sfc_spherical_viz_pub_; // Visualization of SFC spheres
-
   ros::Publisher sfc_p_cand_viz_pub_; // Visualization of SFC sampling points
   ros::Publisher sfc_dist_viz_pub_; // Visualization of SFC sampling distribution
   ros::Publisher samp_dir_vec_pub_; // Visualization of SFC sampling direction vectors
@@ -268,7 +318,8 @@ private: /* ROS subs, pubs and timers*/
   ros::Publisher dbg_sfc_traj_pub_; // Publishers to trajectory inspector for debugging 
   
   /* Timers */
-  ros::Timer plan_timer_; // Timer for planning loop
+  ros::Timer plan_timer_;           // Planning loop
+  ros::Timer safety_checks_timer_;  // Safety checks
 
 private: /* Planner members */
   /* Mapping */
@@ -281,14 +332,14 @@ private: /* Planner members */
   std::unique_ptr<AStarPlanner> front_end_planner_; // Front-end planner
   std::unique_ptr<SphericalSFC> sfc_generation_; // Safe flight corridor generator
 
-  std::unique_ptr<PolyTrajOptimizer> back_end_optimizer_; // Polynomial trajectory optimizer
+  std::unique_ptr<ego_planner::PolyTrajOptimizer> back_end_optimizer_; // Polynomial trajectory optimizer
 
   /* Data structs */
   Waypoint waypoints_; // Waypoint handler object
   Eigen::Vector3d cur_pos_, cur_vel_;   // current state
   Eigen::Vector3d start_pos_;   // start state
 
-  boost::shared_ptr<poly_traj::Trajectory> be_traj_; //Subscribed back end trajectory
+  std::shared_ptr<poly_traj::Trajectory> be_traj_; //Subscribed back end trajectory
 
   std::shared_ptr<std::unordered_map<int, ego_planner::LocalTrajData>> swarm_local_trajs_; // Swarm MINCO trajectories, maps drone_id to local trajectory data
 
@@ -296,6 +347,8 @@ private: /* Planner members */
   ros::Time last_state_output_t_; // Last time stamp at which UAV odom is received
 
 private: /* Params */
+  int traj_id_{0}; // Trajectory id that increments with every planning cycle
+
   /* planner parameters */
   AStarPlanner::AStarParams astar_params_; 
   SphericalSFC::SphericalSFCParams sfc_params_; 

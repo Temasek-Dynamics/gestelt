@@ -19,7 +19,7 @@
   </include>
 
   <!-- Planning module -->
-  <include file="$(find gestelt_bringup)/launch/bubble_planner/include/planner_module.xml">
+  <include file="$(find gestelt_bringup)/launch/bubble_planner/include/navigation_module.xml">
       <arg name="drone_id" value="$(arg drone_id)"/>
   </include>
 
@@ -37,6 +37,5 @@
 
       <remap from="uav/sensor_cloud" to="/$(arg drone_id_ns)/$(arg cloud_topic)"/>
   </node> -->
-
 
 </launch>

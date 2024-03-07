@@ -82,7 +82,7 @@ void TrajectoryServer::init(ros::NodeHandle& nh, ros::NodeHandle& pnh)
 void TrajectoryServer::execTrajCb(const gestelt_msgs::ExecTrajectory::ConstPtr &msg)
 {
   if (getServerState() != ServerState::MISSION){ 
-    logError("Executing Joint Trajectory while not in MISSION mode. Ignoring!");
+    logErrorThrottled("Executing Joint Trajectory while not in MISSION mode. Ignoring!", 1.0);
     return;
   }
 
@@ -183,7 +183,7 @@ void TrajectoryServer::execTrajTimerCb(const ros::TimerEvent &e)
       break;
 
     case ServerState::E_STOP:
-      // Do nothing, drone should stop all motors immediately
+      // Drone should stop all motors immediately
       execLand();
       break;
   }

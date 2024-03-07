@@ -10,27 +10,26 @@ namespace ego_planner
 
     nh.param("grid_map/uav_origin_frame", origin_frame_, std::string("world"));
 
-    goal_point_pub = nh.advertise<visualization_msgs::Marker>("goal_point", 2);
+    goal_point_pub = nh.advertise<visualization_msgs::Marker>("back_end/goal_point", 2);
+
     global_list_pub = nh.advertise<visualization_msgs::Marker>("global_list", 2);
-    failed_list_pub = nh.advertise<visualization_msgs::Marker>("failed_list", 2);
     a_star_list_pub = nh.advertise<visualization_msgs::Marker>("a_star_list", 20);
+
+
 
     // Debugging topics
     /* Initial trajectories*/
-    initial_mjo_pub_ = nh.advertise<visualization_msgs::Marker>("initial_mjo", 2);
-    initial_mjo_q_pub_ = nh.advertise<visualization_msgs::Marker>("initial_mjo_q", 20);
-    initial_mjo_xi_pub_ = nh.advertise<visualization_msgs::Marker>("initial_mjo_xi", 20);
-    initial_ctrl_pts_pub_ = nh.advertise<visualization_msgs::Marker>("initial_ctrl_pts", 20);
-    initial_ctrl_pts_xi_pub_ = nh.advertise<visualization_msgs::Marker>("initial_ctrl_pts_xi", 20);
-    initial_ctrl_pts_q_pub_ = nh.advertise<visualization_msgs::Marker>("initial_ctrl_pts_q", 20);
+    initial_mjo_pub_ = nh.advertise<visualization_msgs::Marker>("back_end/dbg/initial_mjo", 2);
+    initial_mjo_q_pub_ = nh.advertise<visualization_msgs::Marker>("back_end/dbg/initial_mjo_q", 20);
+    initial_ctrl_pts_q_pub_ = nh.advertise<visualization_msgs::Marker>("back_end/dbg/initial_ctrl_pts_q", 20);
 
     /* Intermediate trajectories*/
-    intmd_ctrl_pts_q_pub_ = nh.advertise<visualization_msgs::Marker>("intmd_ctrl_pts_q", 20);
-    intmd_ctrl_pts_xi_pub_ = nh.advertise<visualization_msgs::Marker>("intmd_ctrl_pts_xi", 20);
+    intmd_ctrl_pts_q_pub_ = nh.advertise<visualization_msgs::Marker>("back_end/dbg/intmd_ctrl_pts_q", 20);
+    intmd_ctrl_pts_xi_pub_ = nh.advertise<visualization_msgs::Marker>("back_end/dbg/intmd_ctrl_pts_xi", 20);
 
     /* Optimal trajectories*/
-    optimal_mjo_pub_ = nh.advertise<visualization_msgs::Marker>("optimal_mjo", 2);
-    optimal_mjo_q_pub_ = nh.advertise<visualization_msgs::Marker>("optimal_mjo_q", 20);
+    optimal_mjo_pub_ = nh.advertise<visualization_msgs::Marker>("back_end/optimal_mjo", 2);
+    failed_list_pub = nh.advertise<visualization_msgs::Marker>("back_end/dbg/failed_list", 2);
 
     // Publish (S,V) Pairs from ESDF-Free local planner
     planner_sv_pairs_pub_ = nh.advertise<visualization_msgs::MarkerArray>("planner_sv_pairs", 1000);
@@ -259,22 +258,6 @@ namespace ego_planner
     }
   }
 
-  void PlanningVisualization::displayInitialMJO_xi(Eigen::MatrixXd pts, int id)
-  {
-    if (initial_mjo_xi_pub_.getNumSubscribers() == 0)
-    {
-      return;
-    }
-    vector<Eigen::Vector3d> list;
-    for (int i = 0; i < pts.cols(); i++)
-    {
-      Eigen::Vector3d pt = pts.col(i).transpose();
-      list.push_back(pt);
-    }
-    Eigen::Vector4d color(0, 1, 1, 0.75); // Cyan
-    displayMarkerList(initial_mjo_xi_pub_, list, 0.075, color, id);
-  }
-
   void PlanningVisualization::displayInitialMJO_q(Eigen::MatrixXd pts, int id)
   {
     if (initial_mjo_q_pub_.getNumSubscribers() == 0)
@@ -303,24 +286,6 @@ namespace ego_planner
     displayMarkerList(initial_mjo_pub_, init_pts, scale, color, id);
   }
 
-  void PlanningVisualization::displayInitialCtrlPts(Eigen::MatrixXd pts)
-  {
-    int id = 0;
-
-    if (initial_ctrl_pts_pub_.getNumSubscribers() == 0)
-    {
-      return;
-    }
-    vector<Eigen::Vector3d> list;
-    for (int i = 0; i < pts.cols(); i++)
-    {
-      Eigen::Vector3d pt = pts.col(i).transpose();
-      list.push_back(pt);
-    }
-    Eigen::Vector4d color(0, 1, 0, 0.75); // Green
-    displayMarkerList(initial_ctrl_pts_pub_, list, 0.15, color, id);
-  }
-
   void PlanningVisualization::displayInitialCtrlPts_q(Eigen::MatrixXd pts)
   {
     int id = 0;
@@ -337,42 +302,6 @@ namespace ego_planner
     }
     Eigen::Vector4d color(0.8, 0.8, 0.0, 0.5); // Dirty yellow
     displayMarkerList(initial_ctrl_pts_q_pub_, list, 0.15, color, id);
-  }
-
-  void PlanningVisualization::displayInitialCtrlPts_xi(Eigen::MatrixXd pts)
-  {
-    int id = 0;
-
-    if (initial_ctrl_pts_xi_pub_.getNumSubscribers() == 0)
-    {
-      return;
-    }
-    vector<Eigen::Vector3d> list;
-    for (int i = 0; i < pts.cols(); i++)
-    {
-      Eigen::Vector3d pt = pts.col(i).transpose();
-      list.push_back(pt);
-    }
-    Eigen::Vector4d color(0, 1, 1, 0.75); // Cyan
-    displayMarkerList(initial_ctrl_pts_xi_pub_, list, 0.15, color, id);
-  }
-
-  void PlanningVisualization::displayOptimalMJO_q(Eigen::MatrixXd pts)
-  {
-    int id = 0;
-
-    if (optimal_mjo_q_pub_.getNumSubscribers() == 0)
-    {
-      return;
-    }
-    vector<Eigen::Vector3d> list;
-    for (int i = 0; i < pts.cols(); i++)
-    {
-      Eigen::Vector3d pt = pts.col(i).transpose();
-      list.push_back(pt);
-    }
-    Eigen::Vector4d color(0.8, 0.8, 0.0, 0.5); // Dirty yellow
-    displayMarkerList(optimal_mjo_q_pub_, list, 0.15, color, id);
   }
 
   void PlanningVisualization::displayOptimalMJO(Eigen::MatrixXd optimal_pts, int id)

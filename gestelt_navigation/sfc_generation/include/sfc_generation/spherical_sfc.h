@@ -203,7 +203,7 @@ public: // Public structs
      * @brief Clear all data structures
      * 
      */
-    void clear(){
+    void reset(){
       spheres.clear();
       segs_t_dur.clear();
       waypoints.clear();
@@ -221,16 +221,6 @@ public: // Public structs
         throw std::runtime_error("SFCTrajectory does not contain at least 2 waypoints");
       }
       return waypoints.back();
-    }
-
-    Eigen::VectorXd getSegmentTimeDurations() {
-      Eigen::VectorXd segs_t_dur(segs_t_dur.size());
-
-      for (size_t i = 0; i < segs_t_dur.size(); i++){
-        segs_t_dur(i) = segs_t_dur[i];
-      }
-
-      return segs_t_dur;
     }
 
     std::vector<double> getSpheresRadii() {
@@ -254,13 +244,28 @@ public: // Public structs
     }
 
     Eigen::MatrixXd getInnerWaypoints() {
-      Eigen::MatrixXd inner_wps(3, waypoints.size()); // matrix of inner waypoints
-
-      for (size_t i = 1; i < waypoints.size()-1; i++){
-        inner_wps.col(i) = waypoints[i];
+      if (waypoints.size() <= 2){
+        Eigen::MatrixXd inner_wps; // matrix of inner waypoints
+        return inner_wps;
+      }
+      Eigen::MatrixXd inner_wps(3, waypoints.size()-2); // matrix of inner waypoints
+      
+      for (size_t i = 1, inner_wp_idx = 0 ; i < waypoints.size()-1; i++, inner_wp_idx++){
+        inner_wps.col(inner_wp_idx) = waypoints[i];
       }
 
       return inner_wps;
+    }
+
+    Eigen::VectorXd getSegmentTimeDurations() {
+      // Eigen::VectorXd segs_t_dur_vectorxd(segs_t_dur.size());
+
+      // for (size_t i = 0; i < segs_t_dur.size(); i++){
+      //   segs_t_dur_vectorxd(i) = segs_t_dur[i];
+      // }
+      // return segs_t_dur_vectorxd;
+
+      return Eigen::VectorXd::Map(segs_t_dur.data(), static_cast<Eigen::Index>(segs_t_dur.size()));
     }
 
     int getNumSegments() const{
@@ -378,6 +383,13 @@ private: // Private methods
    * @return Eigen::Vector3d 
    */
   Eigen::Vector3d getIntersectionCenter(const Sphere& B_a, const Sphere& B_b);
+
+  /**
+   * @brief Post process spheres to remove any overlap
+   * 
+   * @param sfc_spheres 
+   */
+  void postProcessSpheres(std::vector<SphericalSFC::Sphere>& sfc_spheres);
 
   /**
    * @brief Compute the score of the candidate sphere, given the previous sphere in the SFC
