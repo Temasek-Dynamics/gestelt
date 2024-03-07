@@ -168,6 +168,7 @@ bool SphericalSFC::generateSFC(const std::vector<Eigen::Vector3d> &path)
     }
     
     if (planning_success){
+        postProcessSpheres(sfc_spheres_);
         constructSFCTrajectory(sfc_spheres_, path[0], path.back(), sfc_traj_);
     }
 
@@ -348,7 +349,7 @@ bool SphericalSFC::BatchSample(const Eigen::Vector3d& pt_guide, Sphere& B_cur)
         }
 
         // 4) Cand sphere is intersecting previous sphere
-        if(getIntersectingVolume(*B_cand, B_cur) < 0.0000000001){
+        if(getIntersectingVolume(*B_cand, B_cur) < 0.0001){
             continue;
         }
 
@@ -445,18 +446,23 @@ double SphericalSFC::computeCandSphereScore(Sphere& B_cand, Sphere& B_prev)
 
 double SphericalSFC::getIntersectingVolume(Sphere& B_a, Sphere& B_b)
 {
-    double d = (B_a.center - B_b.center).norm(); // distance between center of spheres
-    // Check for non-intersection
-    if (d >= (B_a.radius + B_b.radius)){ 
+    if (!isIntersect(B_a, B_b)){ 
         return -1;
     }
 
-    double h = (B_a.radius - (d - B_b.radius))/2;
-    double a = sqrt( B_a.radius*B_a.radius - (d - B_b.radius +h )*(d - B_b.radius +h ));
+    double d = (B_a.center - B_b.center).norm(); // distance between center of spheres
+    double h = (B_a.radius - (d - B_b.radius))/2; // Height of spherical cap
+    double a = sqrt( B_a.radius*B_a.radius - (d - B_b.radius +h )*(d - B_b.radius +h )); // Radius of spherical cap
 
     double vol_intersect = 2.0 * (1.0/6.0) * (M_PI * h) * (3*a*a + h*h) ;
 
     return vol_intersect;
+}
+
+bool SphericalSFC::isIntersect(const Sphere& B_a, const Sphere& B_b)
+{
+    // Check for non-intersection
+    return (B_a.center - B_b.center).norm() < (B_a.radius + B_b.radius);
 }
 
 Eigen::Vector3d SphericalSFC::getIntersectionCenter(const Sphere& B_a, const Sphere& B_b)
@@ -478,6 +484,34 @@ void SphericalSFC::postProcessSpheres(std::vector<SphericalSFC::Sphere>& sfc_sph
     //      for 0, 1, 2. check if 0 intersects 2, if so then remove 1,
     //      then move on to check 0, 2, 3., and so on until no intersection is detected, 
     //      then move on to check index 2
+
+    std::vector<SphericalSFC::Sphere> sfc_spheres_proc; // post-processed
+
+    for (size_t i = 0; i < sfc_spheres.size(); i++)
+    {
+        sfc_spheres_proc.push_back(sfc_spheres[i]); 
+
+        size_t skip = 0; // Number of next spheres to skip (i.e. remove from post processed sphere)
+
+        for (size_t j= i + 2; j < sfc_spheres.size(); j++)
+        {
+            if (isIntersect(sfc_spheres[i], sfc_spheres[j])){
+                // We can skip the next sphere
+                skip++;
+            }
+            else {
+                // Sphere j does not intersect sphere i,
+                // So we have no more spheres in between them to skip
+                break;
+            }
+        }
+        i += skip;
+    }
+
+    std::cout << "sfc_spheres_proc.size() vs sfc_spheres.size(): " 
+                << sfc_spheres_proc.size()  << " vs " << sfc_spheres.size() << std::endl;
+
+    sfc_spheres = sfc_spheres_proc;
 }
 
 void SphericalSFC::constructSFCTrajectory(

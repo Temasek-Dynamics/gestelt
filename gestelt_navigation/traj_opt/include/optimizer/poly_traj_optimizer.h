@@ -1489,7 +1489,6 @@ namespace ego_planner
       Eigen::MatrixXd q(3, M-1);
 
       //for each segment i (excluding boundary points)
-      // Therefore starting and final sphere is excluded
       for (size_t i = 0; i < M-1; i++)
       {
         auto r_i = sphere_radius[i];

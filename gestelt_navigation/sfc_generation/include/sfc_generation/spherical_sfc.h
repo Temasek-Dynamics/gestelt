@@ -419,6 +419,16 @@ private: // Private methods
   double getIntersectingVolume(Sphere& B_a, Sphere& B_b);
 
   /**
+   * @brief Returns true if both spheres are intersecting, else return false
+   * 
+   * @param B_a 
+   * @param B_b 
+   * @return true 
+   * @return false 
+   */
+  bool isIntersect(const Sphere& B_a, const Sphere& B_b);
+
+  /**
    * @brief Get rotation matrix that aligns vector z to vector d
    * 
    * @param z 

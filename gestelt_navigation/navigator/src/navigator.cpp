@@ -525,8 +525,6 @@ bool Navigator::generateBackEndPlan(
     }
   }
 
-  std::cout << "exit generateBackEndPlan" << std::endl;
-
   return plan_success;
 }
 

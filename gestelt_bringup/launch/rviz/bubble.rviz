@@ -11,6 +11,7 @@ Panels:
         - /d0/planner1/front-end1
         - /d0/planner1/sfc1
         - /d0/planner1/back_end1
+        - /d0/planner1/back_end1/Planning_back_end1
         - /d2/planner1/front-end1/plan_viz1
         - /drone0/pose1
         - /collision_viz1
@@ -441,13 +442,13 @@ Visualization Manager:
               Queue Size: 100
               Value: true
             - Class: rviz/MarkerArray
-              Enabled: true
+              Enabled: false
               Marker Topic: /drone0/sfc_samp_dir_vec
               Name: sfc_samp_dir_vec
               Namespaces:
-                sfc_samp_dir_vec: true
+                {}
               Queue Size: 100
-              Value: true
+              Value: false
             - Class: rviz/Marker
               Enabled: true
               Marker Topic: /drone0/sfc_cand_points
@@ -461,8 +462,7 @@ Visualization Manager:
               Marker Topic: /drone0/sfc_waypoints
               Name: sfc_waypoints
               Namespaces:
-                sfc_trajectory_line: true
-                sfc_trajectory_waypoints: true
+                {}
               Queue Size: 100
               Value: true
           Enabled: true
@@ -500,7 +500,7 @@ Visualization Manager:
                   Marker Topic: /drone0/back_end/dbg/initial_mjo
                   Name: initial_mjo (green)
                   Namespaces:
-                    "": true
+                    {}
                   Queue Size: 100
                   Value: true
                 - Class: rviz/Marker
@@ -521,7 +521,7 @@ Visualization Manager:
                   Value: false
                 - Class: rviz/Marker
                   Enabled: false
-                  Marker Topic: /drone0/back_end_planner/intmd_ctrl_pts_q
+                  Marker Topic: /drone0/back_end/dbg/intmd_ctrl_pts_q
                   Name: intmd_ctrl_pts_q
                   Namespaces:
                     {}
@@ -532,7 +532,7 @@ Visualization Manager:
                   Marker Topic: /drone0/back_end/optimal_mjo
                   Name: optimal_mjo
                   Namespaces:
-                    "": true
+                    {}
                   Queue Size: 100
                   Value: true
               Enabled: true
@@ -1056,7 +1056,7 @@ Visualization Manager:
           Marker Topic: /drone0/grid_map/collision_viz
           Name: drone0/collision_viz
           Namespaces:
-            collision_viz: true
+            {}
           Queue Size: 100
           Value: true
         - Class: rviz/Marker
@@ -1138,26 +1138,20 @@ Visualization Manager:
   Value: true
   Views:
     Current:
-      Class: rviz/XYOrbit
-      Distance: 20.917203903198242
+      Angle: 0.030000023543834686
+      Class: rviz/TopDownOrtho
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
-      Field of View: 0.7853981852531433
-      Focal Point:
-        X: 3.0839667320251465
-        Y: -4.877002716064453
-        Z: 7.3909759521484375e-06
-      Focal Shape Fixed Size: true
-      Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.5697963237762451
+      Scale: 124.99413299560547
       Target Frame: my_view
-      Yaw: 4.503607749938965
+      X: 2.934267520904541
+      Y: 3.4755311012268066
     Saved:
       - Class: rviz/FPS
         Enable Stereo Rendering:
