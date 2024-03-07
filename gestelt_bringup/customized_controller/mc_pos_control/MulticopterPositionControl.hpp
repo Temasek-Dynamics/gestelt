@@ -158,6 +158,8 @@ private:
 		(ParamFloat<px4::params::MPC_RPT_XY_EPS>)    _param_mpc_rpt_xy_eps,
 		(ParamFloat<px4::params::MPC_RPT_Z_EPS>)     _param_mpc_rpt_z_eps,
 
+		(ParamFloat<px4::params::MPC_RPT_XY_MAX_I>)    _param_mpc_rpt_max_xy_integration,
+
 
 		// Takeoff / Land
 		(ParamFloat<px4::params::MPC_SPOOLUP_TIME>) _param_mpc_spoolup_time, /**< time to let motors spool up after arming */

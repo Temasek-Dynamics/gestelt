@@ -327,6 +327,11 @@ PARAM_DEFINE_FLOAT(MPC_RPT_XY_KI, 1.2f); //0.8*1.5
 PARAM_DEFINE_FLOAT(MPC_RPT_XY_EPS, 0.4f);
 
 
+/**
+ * RPT controller XY integration limit: default value is 0.5
+ * @decimal 2
+ */
+PARAM_DEFINE_FLOAT(MPC_RPT_XY_MAX_I,0.5f);
 
 /**
  * Proportional gain for horizontal velocity error

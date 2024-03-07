@@ -51,12 +51,17 @@ void PositionControl::setVelocityGains(const Vector3f &P, const Vector3f &I, con
 	_gain_vel_d = D;
 }
 
-void PositionControl::setRPTGains(const Vector3f &WN, const Vector3f &SIGMA, const Vector3f &KI, const Vector3f &EPS)
+void PositionControl::setRPTGains(const Vector3f &WN,
+				const Vector3f &SIGMA,
+				const Vector3f &KI,
+				const Vector3f &EPS,
+				const float MAX_XY_INTEGRATION)
 {
 	_gain_RPT_wn = WN;
 	_gain_RPT_sigma = SIGMA;
 	_gain_RPT_ki = KI;
 	_gain_RPT_eps = EPS;
+	_max_xy_integration = MAX_XY_INTEGRATION;
 }
 
 
@@ -230,17 +235,13 @@ void PositionControl::_RPTControl(const float dt)
 	F_xy[3] = -(wn_xy * wn_xy + 2 * sigma_xy * wn_xy * ki_xy) / (eps_xy * eps_xy);
 	F_xy[4] = -(2 * sigma_xy * wn_xy + ki_xy) / eps_xy;
 
-	// F_xy[0]=10.9f;
-	// F_xy[1]=6.3f;
-	// F_xy[2]=3.0f;
-	// F_xy[3]=-10.9f;
-	// F_xy[4]=-6.3f;
+
 
 	// z outer-loop controller
 	float wn_z = _gain_RPT_wn(2);      //0.5f;			// natural frequency
-	float sigma_z = _gain_RPT_sigma(2); //1.1f * 1.5f;	// settling time
+	float sigma_z = _gain_RPT_sigma(2); //1.1f * 1.5f;	// damping ratio
 	float ki_z = _gain_RPT_ki(2);      //0.8f * 1.5f;		// pole placement
-	float eps_z = _gain_RPT_eps(2);   //1.0f * 0.3f;		// damping ratio
+	float eps_z = _gain_RPT_eps(2);   //1.0f * 0.3f;		// settling time
 
 	float F_z[5];
 
@@ -250,11 +251,7 @@ void PositionControl::_RPTControl(const float dt)
 	F_z[2] = ki_z * wn_z * wn_z / (eps_z * eps_z * eps_z);
 	F_z[3] = -(wn_z * wn_z + 2 * sigma_z * wn_z * ki_z) / (eps_z * eps_z);
 	F_z[4] = -(2 * sigma_z * wn_z + ki_z) / eps_z;
-	// F_z[0]=24.78f;
-	// F_z[1]=9.5f;
-	// F_z[2]=11.11f;
-	// F_z[3]=-24.78f;
-	// F_z[4]=-9.5f;
+
 
 	// Constrain velocity in z-direction.
 	ControlMath::setZeroIfNanVector3f(_vel_sp);
@@ -282,6 +279,20 @@ void PositionControl::_RPTControl(const float dt)
 	//i
 	Vector3f inte_pos_gain = Vector3f(F_xy[2], F_xy[2], F_z[2]);
 	Vector3f u_pos_int = _pos_int;
+	// PX4_WARN("u_pos_int: %8.4f %8.4f %8.4f", (double)u_pos_int(0), (double)u_pos_int(1), (double)u_pos_int(2));
+
+
+	_rpt_integrator_msg.timestamp = hrt_absolute_time();
+	_rpt_integrator_msg.x = u_pos_int(0);
+	_rpt_integrator_msg.y = u_pos_int(1);
+	_rpt_integrator_msg.z = u_pos_int(2);
+
+	_rpt_integrator_pub.publish(_rpt_integrator_msg);
+
+	// anti-windup for xy axes
+	float MAX_INT = _max_xy_integration;
+	_pos_int(0)=math::min(fabsf(_pos_int(0)),MAX_INT) * sign(_pos_int(0));
+	_pos_int(1)=math::min(fabsf(_pos_int(1)),MAX_INT) * sign(_pos_int(1));
 
 	// No control input from setpoints or corresponding states which are NAN
 	// desired feed-forward acceleration: _acc_sp
