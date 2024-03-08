@@ -157,6 +157,8 @@ namespace ego_planner
     opt->mjo_q_.generate(P_q, T); // Generate minimum jerk trajectory
     opt->cstr_pts_q_ = opt->mjo_q_.getInitConstraintPoints(opt->cps_num_perPiece_); // Discretize trajectory into inner constraint points
 
+    opt->ctrl_pts_q_optimal_ = P_q;
+
     // For visualization: Get minimum jerk trajectory coordinates in xi space
     opt->mjo_xi_.generate(P_xi, T); // Generate minimum jerk trajectory
     opt->cstr_pts_xi_ = opt->mjo_xi_.getInitConstraintPoints(opt->cps_num_perPiece_);

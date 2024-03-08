@@ -1253,9 +1253,9 @@ namespace poly_traj
          * @param endPVA    Boundary end condition: Matrix consisting of 3d (position, velocity acceleration) 
          * @param pieceNum  Number of path segments
          */
-        void reset(const Eigen::Matrix3d &startPVA,
-                          const Eigen::Matrix3d &endPVA,
-                          const int &pieceNum)
+        void reset( const Eigen::Matrix3d &startPVA,
+                    const Eigen::Matrix3d &endPVA,
+                    const int &pieceNum)
         {
             N = pieceNum;
             headPVA = startPVA;
@@ -1264,7 +1264,6 @@ namespace poly_traj
             A.create(6 * N, 6, 6);
             b.resize(6 * N, 3);
             gdC.resize(6 * N, 3);
-            // gdT.resize(6 * N);
             return;
         }
 
@@ -1362,10 +1361,10 @@ namespace poly_traj
             {
                 T1 = ts; // Time duration vector
                 // cwiseProduct: coefficient-wise product
-                T2 = T1.cwiseProduct(T1); // Time squared
-                T3 = T2.cwiseProduct(T1); // Time cubed
-                T4 = T2.cwiseProduct(T2); 
-                T5 = T4.cwiseProduct(T1);
+                T2 = T1.cwiseProduct(T1); // t^2
+                T3 = T2.cwiseProduct(T1); // t^3
+                T4 = T2.cwiseProduct(T2); // t^4
+                T5 = T4.cwiseProduct(T1); // t^5
 
                 A.reset();
                 b.setZero();
@@ -1377,7 +1376,7 @@ namespace poly_traj
                 b.row(1) = headPVA.col(1).transpose();
                 b.row(2) = headPVA.col(2).transpose();
 
-                for (int i = 0; i < N - 1; i++)
+                for (int i = 0; i < N - 1; i++) // For each segment
                 {
                     A(6 * i + 3, 6 * i + 3) = 6.0;
                     A(6 * i + 3, 6 * i + 4) = 24.0 * T1(i);
@@ -1414,6 +1413,7 @@ namespace poly_traj
                     b.row(6 * i + 5) = inPs.col(i).transpose();
                 }
 
+                // Final 
                 A(6 * N - 3, 6 * N - 6) = 1.0;
                 A(6 * N - 3, 6 * N - 5) = T1(N - 1);
                 A(6 * N - 3, 6 * N - 4) = T2(N - 1);
@@ -1434,7 +1434,7 @@ namespace poly_traj
                 b.row(6 * N - 2) = tailPVA.col(1).transpose();
                 b.row(6 * N - 1) = tailPVA.col(2).transpose();
 
-                A.factorizeLU();
+                A.factorizeLU(); // banded LU factorization in place
                 A.solve(b);
 
                 return;
@@ -1474,6 +1474,7 @@ namespace poly_traj
         size_t getNumSegs(){
             return N;
         }
+
         /**
          * @brief Original code: Get the cost of jerk for the entire trajectory 
          * 

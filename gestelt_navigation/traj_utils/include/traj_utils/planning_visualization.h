@@ -33,7 +33,8 @@ namespace ego_planner
     ros::Publisher intmd_ctrl_pts_xi_pub_; // (xi coordinates) Publish intermediate control points as they are being optimized
 
     /* Optimized */
-    ros::Publisher optimal_mjo_pub_;  // Publish original MJO
+    ros::Publisher optimal_mjo_pub_;  // Publish optimal MJO
+    ros::Publisher optimal_ctrl_pts_q_pub_;  // Publish optimal control points in q
 
     /* Failed */
     ros::Publisher failed_list_pub;
@@ -92,7 +93,7 @@ namespace ego_planner
 
     /* Optimal MJO */
     void displayOptimalMJO(Eigen::MatrixXd optimal_pts, int id);
-    void displayOptimalMJO_q(Eigen::MatrixXd pts);
+    void displayOptimalCtrlPts_q(Eigen::MatrixXd pts);
 
     /**
      * @brief Display all intermediate MJO trajectory in xi coordinates

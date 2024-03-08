@@ -184,9 +184,9 @@ void Navigator::safetyChecksTimerCB(const ros::TimerEvent &e)
 
   if (!isTrajectorySafe(swarm_local_trajs_, e_stop, must_replan)){
     if (e_stop){
-      logError("Activating emergency stop!");
-      pubTrajServerCmd(gestelt_msgs::Command::HOVER);
-      stopAllPlanning();
+      // logError("Activating emergency stop!");
+      // pubTrajServerCmd(gestelt_msgs::Command::HOVER);
+      // stopAllPlanning();
     }
     if (must_replan){
       // replan
@@ -206,6 +206,7 @@ void Navigator::safetyChecksTimerCB(const ros::TimerEvent &e)
     pubTrajServerCmd(gestelt_msgs::Command::HOVER);
     stopAllPlanning();
   }
+
 }
 
 /**
@@ -515,7 +516,8 @@ bool Navigator::generateBackEndPlan(
     {
       logInfo("Planning successful!");
       visualization_->displayOptimalMJO(cstr_pts_optimized_mjo, 0);
-      std::cout << "displayOptimalMJO" << std::endl;
+
+      visualization_->displayOptimalCtrlPts_q(back_end_optimizer_->getOptimizedCtrlPts());
       break;
     }
     else{

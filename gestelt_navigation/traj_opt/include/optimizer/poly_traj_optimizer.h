@@ -202,6 +202,8 @@ namespace ego_planner
     Eigen::MatrixXd cstr_pts_xi_; // inner CONSTRAINT points of trajectory (excludes boundary points), this is finer than the inner CONTROL points
     Eigen::MatrixXd cstr_pts_q_; // inner CONSTRAINT points of trajectory (excludes boundary points), this is finer than the inner CONTROL points
 
+    Eigen::MatrixXd ctrl_pts_q_optimal_; // Optimized control points in q
+
   public:
     PolyTrajOptimizer(){}
     ~PolyTrajOptimizer() {}
@@ -228,6 +230,13 @@ namespace ego_planner
     */
     const poly_traj::MinJerkOpt &getOptimizedMJO(void) { 
       return mjo_q_; 
+    }
+
+    /**
+     * Returns the minimum jerk optimizer object
+    */
+    const Eigen::MatrixXd &getOptimizedCtrlPts(void) { 
+      return ctrl_pts_q_optimal_; 
     }
 
     /**

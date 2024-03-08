@@ -15,8 +15,6 @@ namespace ego_planner
     global_list_pub = nh.advertise<visualization_msgs::Marker>("global_list", 2);
     a_star_list_pub = nh.advertise<visualization_msgs::Marker>("a_star_list", 20);
 
-
-
     // Debugging topics
     /* Initial trajectories*/
     initial_mjo_pub_ = nh.advertise<visualization_msgs::Marker>("back_end/dbg/initial_mjo", 2);
@@ -29,6 +27,7 @@ namespace ego_planner
 
     /* Optimal trajectories*/
     optimal_mjo_pub_ = nh.advertise<visualization_msgs::Marker>("back_end/optimal_mjo", 2);
+    optimal_ctrl_pts_q_pub_ = nh.advertise<visualization_msgs::Marker>("back_end/optimal_ctrl_pts_q", 2);
     failed_list_pub = nh.advertise<visualization_msgs::Marker>("back_end/dbg/failed_list", 2);
 
     // Publish (S,V) Pairs from ESDF-Free local planner
@@ -319,6 +318,25 @@ namespace ego_planner
     Eigen::Vector4d color(1, 0, 0, 0.4);
     displayMarkerList(optimal_mjo_pub_, list, 0.1, color, id);
   }
+
+  void PlanningVisualization::displayOptimalCtrlPts_q(Eigen::MatrixXd pts)
+  {
+    int id = 0;
+
+    if (optimal_ctrl_pts_q_pub_.getNumSubscribers() == 0)
+    {
+      return;
+    }
+    vector<Eigen::Vector3d> list;
+    for (int i = 0; i < pts.cols(); i++)
+    {
+      Eigen::Vector3d pt = pts.col(i).transpose();
+      list.push_back(pt);
+    }
+    Eigen::Vector4d color(0, 1, 0, 1.0); // Green
+    displayMarkerList(optimal_ctrl_pts_q_pub_, list, 0.15, color, id);
+  }
+
 
   void PlanningVisualization::displayFailedList(Eigen::MatrixXd failed_pts, int id)
   {
