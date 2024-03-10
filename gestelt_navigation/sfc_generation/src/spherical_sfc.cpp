@@ -468,13 +468,15 @@ bool SphericalSFC::isIntersect(const Sphere& B_a, const Sphere& B_b)
 Eigen::Vector3d SphericalSFC::getIntersectionCenter(const Sphere& B_a, const Sphere& B_b)
 {   
     Eigen::Vector3d dir_vec = B_b.center - B_a.center; 
-    double d_centroids = (dir_vec).norm(); // scalar distance between spheres B_a and B_b 
+    double r_a = B_a.radius, r_b = B_b.radius;
+
+    double d_ctrd = (dir_vec).norm(); // scalar distance between spheres B_a and B_b 
     // Get distance to intersection along direction vector dir_vec from center of B_a to center of B_b
-    double d_intersect = (B_a.radius*B_a.radius + d_centroids*d_centroids - B_b.radius*B_b.radius ) / (2*d_centroids);
+    double d_intxn = (r_a * r_a + d_ctrd * d_ctrd - r_b * r_b) / (2 * d_ctrd);
 
-    Eigen::Vector3d pt_intersect = B_a.center + (d_intersect/d_centroids) * dir_vec;
+    Eigen::Vector3d pt_intxn = B_a.center + (d_intxn / d_ctrd) * dir_vec;
 
-    return pt_intersect;
+    return pt_intxn;
 }
 
 void SphericalSFC::postProcessSpheres(std::vector<SphericalSFC::Sphere>& sfc_spheres)
@@ -520,23 +522,27 @@ void SphericalSFC::constructSFCTrajectory(
     const Eigen::Vector3d& goal_pos, 
     SphericalSFC::SFCTrajectory& sfc_traj)
 {
-    size_t num_segs = sfc_spheres.size(); // Number of 
-    /* 1: Retrieve waypoints from the intersections between the spheres */
-    std::vector<Eigen::Vector3d> traj_waypoints(num_segs+1);
+    size_t num_segs = sfc_spheres.size(); // Number of segments
+    size_t num_wps = sfc_spheres.size() + 1; // Number of waypoints
+
+    /* 1: Retrieve waypoints which are the center of the intersections between the spheres */
+    sfc_traj.waypoints.clear();
+    sfc_traj.waypoints.resize(num_wps);
  
-    traj_waypoints[0] = start_pos; // Add start state
+    sfc_traj.waypoints[0] = start_pos; // Add start state
     for (size_t i = 1; i < num_segs; i++){
         // Add intersection between 2 spheres
-        traj_waypoints[i] = getIntersectionCenter(sfc_spheres[i-1], sfc_spheres[i]) ;
+        sfc_traj.waypoints[i] = getIntersectionCenter(sfc_spheres[i-1], sfc_spheres[i]) ;
     }
-    traj_waypoints.back() = goal_pos; // Add goal state
+    sfc_traj.waypoints.back() = goal_pos; // Add goal state
 
     /* 2: Get time allocation  */
-    std::vector<double> segs_time_durations(num_segs); // Vector of time durations for each segment {t_1, t_2, ..., t_M}
+    sfc_traj.segs_t_dur.clear();
+    sfc_traj.segs_t_dur.resize(num_segs); // Vector of time durations for each segment {t_1, t_2, ..., t_M}
 
     // We either use either triangle or trapezoidal time profile.
     for (size_t i = 0 ; i < num_segs; i++){
-        double traj_dist = (traj_waypoints[i+1] - traj_waypoints[i]).norm();
+        double traj_dist = (sfc_traj.waypoints[i+1] - sfc_traj.waypoints[i]).norm();
         
         // For trapezoidal time profile: t_s, t_c and t_d is the time taken to 
         //  accelerate, travel at maximum velocity, and decelerate respectively.
@@ -551,12 +557,25 @@ void SphericalSFC::constructSFCTrajectory(
             t_s = sfc_params_.max_vel / sfc_params_.max_acc;
             t_d = t_s;
         }
-        segs_time_durations[i] = t_s + t_c + t_d;
+        sfc_traj.segs_t_dur[i] = t_s + t_c + t_d;
     }
 
+    /* 3: Get distance and vector to center of spherical cap (the intersection between 2 spheres) */
+    sfc_traj.intxn_plane_vec.clear();
+    sfc_traj.intxn_plane_dist.clear();
+    sfc_traj.intxn_plane_vec.resize(num_segs-1);
+    sfc_traj.intxn_plane_dist.resize(num_segs-1);
+
+    for (size_t i = 0; i < num_segs-1; i++){
+        // Get vector from center of sphere to the center of the spherical cap (intersection between sphere i and i+1)
+        sfc_traj.intxn_plane_vec[i] = 
+            getIntersectionCenter(sfc_spheres[i], sfc_spheres[i+1]) - sfc_spheres[i].center;
+        // Get distance from sphere center to intersection center
+        sfc_traj.intxn_plane_dist[i] = sfc_traj.intxn_plane_vec[i].norm();
+    }
+    
+    /* 4: Assign spheres */
     sfc_traj.spheres = sfc_spheres;
-    sfc_traj.waypoints = traj_waypoints;
-    sfc_traj.segs_t_dur = segs_time_durations;
 }
 
 Eigen::Matrix<double, 3, 3> SphericalSFC::rotationAlign(

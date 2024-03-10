@@ -213,29 +213,14 @@ bool BackEndPlanner::generatePlanSFC( const Eigen::Vector3d& start_pos, const Ei
     headState << initial_traj.getJuncPos(0),        initial_traj.getJuncVel(0),        initial_traj.getJuncAcc(0);
     tailState << initial_traj.getJuncPos(num_segs), initial_traj.getJuncVel(num_segs), initial_traj.getJuncAcc(num_segs);
 
-    Eigen::MatrixXd init_inner_ctrl_pts_q = back_end_planner_->ploy_traj_opt_->f_B_ctrl_pts(
-                                              init_inner_ctrl_pts, 
-                                              spheres_center,
-                                              spheres_radius);
-
-    visualization_->displayInitialCtrlPts_q(init_inner_ctrl_pts_q);
-
-    Eigen::MatrixXd cstr_pts_q = 
-      back_end_planner_->ploy_traj_opt_->f_B_cstr_pts(init_cstr_pts, 
-                                              initial_mjo.getNumSegs(),
-                                              num_cstr_pts,
-                                              spheres_center,
-                                              spheres_radius);
-    visualization_->displayInitialMJO_q(cstr_pts_q, 0); 
-
     // Optimize trajectory!
     double final_cost; 
-    plan_success = back_end_planner_->ploy_traj_opt_->optimizeTrajectorySFC( 
-          headState, tailState,                         // Start and end position
-          init_inner_ctrl_pts,                               // Inner control points
-          initial_traj.getDurations(),                  // Time durations
-          spheres_radius, spheres_center,               // SFC
-          final_cost);
+    // plan_success = back_end_planner_->ploy_traj_opt_->optimizeTrajectorySFC( 
+    //       headState, tailState,                         // Start and end position
+    //       init_inner_ctrl_pts,                               // Inner control points
+    //       initial_traj.getDurations(),                  // Time durations
+    //       spheres_radius, spheres_center,               // SFC
+    //       final_cost);
 
     // Optimized minimum jerk trajectory
     optimized_mjo = back_end_planner_->ploy_traj_opt_->getOptimizedMJO();

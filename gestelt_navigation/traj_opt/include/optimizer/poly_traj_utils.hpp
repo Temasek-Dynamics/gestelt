@@ -1626,7 +1626,9 @@ namespace poly_traj
                         EIGENMAT &gradP,
                         const Eigen::MatrixXd &inner_ctrl_pts,
                         const std::vector<Eigen::Vector3d>& spheres_center,
-                        const std::vector<double>& spheres_radius)
+                        const std::vector<double>& spheres_radius,
+                        const std::vector<Eigen::Vector3d>& intxn_plane_vec,
+                        const std::vector<double>& intxn_plane_dist)
         {
             // std::cout << "getGrad2TP" << std::endl;
             // std::cout << "  gdC: " << gdC << std::endl;
@@ -1644,26 +1646,46 @@ namespace poly_traj
 
             // eqn (66): p.d.(H / q) = (G_1.T * e1, ..., G_(M-1).T * e1)
             // eqn (79): p.d.(H / xi) = ...
+            // for (int i = 0; i < N - 1; i++) // For each segment (except start and end)
+            // {   
+            //     Eigen::Vector3d g_i = gdC.row(6 * i + 5).transpose(); 
+
+            //     double r_i = spheres_radius[i];
+            //     Eigen::Vector3d o_i = spheres_center[i];
+            //     Eigen::Vector3d xi_i = inner_ctrl_pts.block<3,1>(0, i);
+
+            //     double r_i_sqr = r_i * r_i;
+            //     Eigen::Vector3d v_i = xi_i - o_i;
+
+            //     double c = v_i.squaredNorm() + r_i_sqr;
+                
+            //     Eigen::Vector3d a = (2 * r_i_sqr * g_i) / c ;
+
+            //     Eigen::Vector3d b = (4 * r_i_sqr * v_i.dot(g_i) * v_i)/(c*c);
+
+            //     gradP.col(i) = a - b;
+            // }
+            
             for (int i = 0; i < N - 1; i++) // For each segment (except start and end)
             {   
                 Eigen::Vector3d g_i = gdC.row(6 * i + 5).transpose(); 
 
                 double r_i = spheres_radius[i];
                 Eigen::Vector3d o_i = spheres_center[i];
+                double f_i = intxn_plane_dist[i];
                 Eigen::Vector3d xi_i = inner_ctrl_pts.block<3,1>(0, i);
 
-                double r_i_sqr = r_i * r_i;
                 Eigen::Vector3d v_i = xi_i - o_i;
 
-                double c = v_i.squaredNorm() + r_i_sqr;
+                double j = f_i - r_i;
+                double c = v_i.squaredNorm() + j*j;
                 
-                Eigen::Vector3d a = (2 * r_i_sqr * g_i) / c ;
+                Eigen::Vector3d a = (2 * j * r_i * g_i) / c ;
 
-                Eigen::Vector3d b = (4 * r_i_sqr * v_i.dot(g_i) * v_i)/(c*c);
+                Eigen::Vector3d b = (4 * r_i * j * v_i.dot(g_i) * v_i)/(c*c);
 
-                gradP.col(i) = a - b;
+                gradP.col(i) = -a + b;
             }
-            
 
             // std::cout << "  G: " << gdC << std::endl;
             // std::cout << "  gdT: " << gdT << std::endl;

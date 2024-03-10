@@ -209,21 +209,21 @@ public: // Public structs
       waypoints.clear();
     }
 
-    Eigen::Vector3d const getStartPos() {
+    Eigen::Vector3d  getStartPos() const {
       if (waypoints.size() < 2){
         throw std::runtime_error("SFCTrajectory does not contain at least 2 waypoints");
       }
       return waypoints[0];
     }
 
-    Eigen::Vector3d const getGoalPos() {
+    Eigen::Vector3d  getGoalPos() const {
       if (waypoints.size() < 2){
         throw std::runtime_error("SFCTrajectory does not contain at least 2 waypoints");
       }
       return waypoints.back();
     }
 
-    std::vector<double> getSpheresRadii() {
+    std::vector<double> getSpheresRadii() const {
       std::vector<double> spheres_radii;
 
       for (auto sphere : spheres){
@@ -233,7 +233,7 @@ public: // Public structs
       return spheres_radii;
     }
 
-    std::vector<Eigen::Vector3d> getSpheresCenter() {
+    std::vector<Eigen::Vector3d> getSpheresCenter() const {
       std::vector<Eigen::Vector3d> spheres_center;
 
       for (auto sphere : spheres){
@@ -243,7 +243,7 @@ public: // Public structs
       return spheres_center;
     }
 
-    Eigen::MatrixXd getInnerWaypoints() {
+    Eigen::MatrixXd getInnerWaypoints() const {
       if (waypoints.size() <= 2){
         Eigen::MatrixXd inner_wps; // matrix of inner waypoints
         return inner_wps;
@@ -257,24 +257,27 @@ public: // Public structs
       return inner_wps;
     }
 
-    Eigen::VectorXd getSegmentTimeDurations() {
-      // Eigen::VectorXd segs_t_dur_vectorxd(segs_t_dur.size());
-
-      // for (size_t i = 0; i < segs_t_dur.size(); i++){
-      //   segs_t_dur_vectorxd(i) = segs_t_dur[i];
-      // }
-      // return segs_t_dur_vectorxd;
-
+    Eigen::VectorXd getSegmentTimeDurations() const {
       return Eigen::VectorXd::Map(segs_t_dur.data(), static_cast<Eigen::Index>(segs_t_dur.size()));
+    }
+
+    std::vector<Eigen::Vector3d> getIntxnPlaneVec() const{
+      return intxn_plane_vec;
+    }
+
+    std::vector<double> getIntxnPlaneDist() const{
+      return intxn_plane_dist;
     }
 
     int getNumSegments() const{
       return spheres.size();
     }
 
+    std::vector<Eigen::Vector3d> intxn_plane_vec;       // Vector to center of spherical cap (the intersection between 2 spheres)
+    std::vector<double> intxn_plane_dist;       // Distance to center of spherical cap (the intersection between 2 spheres)
     std::vector<SphericalSFC::Sphere> spheres;  // Vector of Spheres 
     std::vector<Eigen::Vector3d> waypoints;     // Vector of 3d waypoint positions {p1, p2, ... p_M+1}
-    std::vector<double> segs_t_dur;          // Vector of time durations of each segment {t_1, t_2, ..., t_M}
+    std::vector<double> segs_t_dur;             // Vector of time durations of each segment {t_1, t_2, ..., t_M}
 
   }; // struct SFCTrajectory
 

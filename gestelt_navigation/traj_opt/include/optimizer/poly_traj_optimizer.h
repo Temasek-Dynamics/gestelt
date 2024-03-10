@@ -197,8 +197,11 @@ namespace ego_planner
 
     /* Data structures */
 
-    std::vector<double> spheres_radius_;                // Vector of sphere radius, size is no. of segments/pieces
-    std::vector<Eigen::Vector3d> spheres_center_; // Vector of sphere centers, size is no. of segments/pieces
+    std::vector<double> spheres_radius_;            // Vector of sphere radius, size is no. of segments/pieces
+    std::vector<Eigen::Vector3d> spheres_center_;   // Vector of sphere centers, size is no. of segments/pieces
+    std::vector<Eigen::Vector3d> intxn_plane_vec_;  // Vector to center of spherical cap (the intersection between 2 spheres)
+    std::vector<double> intxn_plane_dist_;          // Distance to center of spherical cap (the intersection between 2 spheres)
+    
     Eigen::MatrixXd cstr_pts_xi_; // inner CONSTRAINT points of trajectory (excludes boundary points), this is finer than the inner CONTROL points
     Eigen::MatrixXd cstr_pts_q_; // inner CONSTRAINT points of trajectory (excludes boundary points), this is finer than the inner CONTROL points
 
@@ -269,11 +272,13 @@ namespace ego_planner
      * @return true 
      * @return false 
      */
-    bool optimizeTrajectorySFC(const Eigen::Matrix3d &startPVA, const Eigen::Matrix3d &endPVA,
-                            const Eigen::MatrixXd &inner_ctrl_pts, const Eigen::VectorXd &initT,
-                            const std::vector<double>& spheres_radius,
-                            const std::vector<Eigen::Vector3d>& spheres_centers,
-                            double &final_cost);
+    bool optimizeTrajectorySFC( const Eigen::Matrix3d &startPVA, const Eigen::Matrix3d &endPVA,
+                                const Eigen::MatrixXd &inner_ctrl_pts, const Eigen::VectorXd &initT,
+                                const std::vector<Eigen::Vector3d>& spheres_center,
+                                const std::vector<double>& spheres_radius, 
+                                const std::vector<Eigen::Vector3d>& spheres_intxn_plane_vec,
+                                const std::vector<double>& spheres_intxn_plane_dist,
+                                double &final_cost);
 
     /**
      * @brief Optimize a trajectory given boundary conditions, inner points and segment durations.
@@ -1443,18 +1448,29 @@ namespace ego_planner
      * @param xi  Decision variable
      * @param o   Center of sphere 
      * @param r   radius of sphere
+     * @param f   offset plane distance from sphere center
      * @return Eigen::MatrixXd 
      */
     Eigen::Vector3d f_B(
       const Eigen::Vector3d& xi, 
       const Eigen::Vector3d& o, 
-      const double& r)
+      const double& r,
+      const Eigen::Vector3d& f_vec, 
+      const double& f_dist)
     {
-      // xi_relative: xi relative to center of sphere
-      auto xi_relative = xi - o;
-      auto r_sqr = r*r;
+      // // xi_rel: xi relative to center of sphere
+      // auto xi_rel = xi - o;
+      // auto r_sqr = r*r;
 
-      return o + xi_relative * ((2 * r_sqr ) / (xi_relative.squaredNorm() + r_sqr));
+      // return o + xi_rel * ((2 * r_sqr ) / (xi_rel.squaredNorm() + r_sqr));
+
+      // xi_rel: xi relative to center of sphere
+      Eigen::Vector3d xi_rel = xi - o;
+      double j = f_dist - r;
+
+      Eigen::Vector3d pt = o - xi_rel * ((2 * j * r ) / (xi_rel.squaredNorm() + j*j));
+      
+      return pt;
     }
 
     /**
@@ -1464,21 +1480,25 @@ namespace ego_planner
      * @param xi  Decision variable
      * @param o   Center of sphere 
      * @param r   radius of sphere
+     * @param f   offset plane distance from sphere center
      * @return Eigen::MatrixXd 
      */
     Eigen::Vector3d f_B_inv(
       const Eigen::Vector3d& q, 
       const Eigen::Vector3d& o, 
-      const double& r)
+      const double& r,
+      const Eigen::Vector3d& f_vec, 
+      const double& f_dist)
     {
-      auto v = q - o; // Vector from center of sphere to point q
-      // std::cout << v << std::endl;
-      // if (r*r - v.squaredNorm() < 0.0){
-        // ROS_ERROR("ERROR!!!!!!!!!!!");
-      // }
-      auto b = r - sqrt( r*r - v.squaredNorm());
+      // auto v = q - o; // Vector from center of sphere to point q
+      // auto b = r - sqrt( r*r - v.squaredNorm());
 
-      return o + v * (r/b);
+      // return o + v * (r/b);
+
+      auto v = q - o; // Vector from center of sphere to point q
+      auto b = r - sqrt( r*r - v.squaredNorm())- f_dist;
+
+      return o + v * ((r - f_dist)/b);
     }
 
     /**
@@ -1490,140 +1510,148 @@ namespace ego_planner
     Eigen::MatrixXd f_B_ctrl_pts(
       const Eigen::MatrixXd& xi, 
       const std::vector<Eigen::Vector3d>& spheres_center, 
-      const std::vector<double>& sphere_radius)
+      const std::vector<double>& sphere_radius,
+      const std::vector<Eigen::Vector3d>& intxn_plane_vec,
+      const std::vector<double>& intxn_plane_dist)
     {
       // Expects array of size (3, M-1)
-      size_t M = xi.cols() + 1;
+      size_t M = xi.cols() + 1; // Number of segments
 
       Eigen::MatrixXd q(3, M-1);
 
       //for each segment i (excluding boundary points)
       for (size_t i = 0; i < M-1; i++)
       {
-        auto r_i = sphere_radius[i];
-        auto o_i = spheres_center[i];
+        double r_i = sphere_radius[i];
+        Eigen::Vector3d o_i = spheres_center[i];
         auto xi_i = xi.block<3,1>(0, i);
+        Eigen::Vector3d f_vec = intxn_plane_vec[i];
+        double f_dist = intxn_plane_dist[i];
 
-        q.block<3,1>(0, i) =  f_B(xi_i, o_i, r_i);
+        q.block<3,1>(0, i) =  f_B(xi_i, o_i, r_i, f_vec, f_dist);
       }
 
       return q;
     }
 
-    /**
-     * @brief Inverse transform from variable q to decision variable xi 
-     * Part of constraint elimination concept.
-     * @param xi Decision variables to be optimized
-     * @return eigen::Vector 
-     */
-    Eigen::MatrixXd f_BInv_ctrl_pts(
-      const Eigen::MatrixXd& q_inner,
-      const std::vector<Eigen::Vector3d>& spheres_center, 
-      const std::vector<double>& sphere_radius)
-    {
-      // Expects array of size (3, M-1)
-      size_t M = q_inner.cols() + 1;
+    // /**
+    //  * @brief Inverse transform from variable q to decision variable xi 
+    //  * Part of constraint elimination concept.
+    //  * @param xi Decision variables to be optimized
+    //  * @return eigen::Vector 
+    //  */
+    // Eigen::MatrixXd f_BInv_ctrl_pts(
+    //   const Eigen::MatrixXd& q_inner,
+    //   const std::vector<Eigen::Vector3d>& spheres_center, 
+    //   const std::vector<double>& sphere_radius,
+    //   const std::vector<Eigen::Vector3d>& intxn_plane_vec,
+    //   const std::vector<double>& intxn_plane_dist)
+    // {
+    //   // Expects array of size (3, M-1)
+    //   size_t M = q_inner.cols() + 1;
 
-      Eigen::MatrixXd xi(3, M-1);
+    //   Eigen::MatrixXd xi(3, M-1);
 
-      //for each segment i (excluding boundary points)
-      // Therefore starting and final sphere is excluded
-      for (size_t i = 0; i < M-1; i++)
-      {
-        auto r_i = sphere_radius[i];
-        auto o_i = spheres_center[i];
-        auto q_i = q_inner.block<3,1>(0, i);
+    //   //for each segment i (excluding boundary points)
+    //   // Therefore starting and final sphere is excluded
+    //   for (size_t i = 0; i < M-1; i++)
+    //   {
+    //     auto r_i = sphere_radius[i];
+    //     auto o_i = spheres_center[i];
+    //     auto q_i = q_inner.block<3,1>(0, i);
+    //     double f_vec = intxn_plane_vec[i];
+    //     double f_dist = intxn_plane_dist[i];
 
-        xi.block<3,1>(0, i) = f_B_inv(q_i, o_i, r_i);
-      }
+    //     xi.block<3,1>(0, i) = f_B_inv(q_i, o_i, r_i, f_vec, f_dist);
+    //   }
 
-      return xi;
-    }
+    //   return xi;
+    // }
 
-    /**
-     * @brief 
-     * 
-     * @param xi Unconstrained decision variables to be optimized
-     * @param M number of segments
-     * @param num_cp number of constraint points
-     * @param spheres_center 
-     * @param sphere_radius 
-     * @return Eigen::MatrixXd 
-     */
-    Eigen::MatrixXd f_B_cstr_pts(
-      const Eigen::MatrixXd& xi, 
-      const size_t M,
-      const size_t num_cp,
-      const std::vector<Eigen::Vector3d>& spheres_center, 
-      const std::vector<double>& sphere_radius)
-    {
-      // Expects array of size (3, M*num_cp + 1)
-      Eigen::MatrixXd q(3, xi.cols());  // Constrained variable q
+    // /**
+    //  * @brief 
+    //  * 
+    //  * @param xi Unconstrained decision variables to be optimized
+    //  * @param M number of segments
+    //  * @param num_cp number of constraint points
+    //  * @param spheres_center 
+    //  * @param sphere_radius 
+    //  * @return Eigen::MatrixXd 
+    //  */
+    // Eigen::MatrixXd f_B_cstr_pts(
+    //   const Eigen::MatrixXd& xi, 
+    //   const size_t M,
+    //   const size_t num_cp,
+    //   const std::vector<Eigen::Vector3d>& spheres_center, 
+    //   const std::vector<double>& sphere_radius)
+    // {
+    //   // Expects array of size (3, M*num_cp + 1)
+    //   Eigen::MatrixXd q(3, xi.cols());  // Constrained variable q
 
 
-      //for each segment i (excluding boundary points)
-      for (size_t i = 0; i < M; i++)
-      {
-        auto r_i = sphere_radius[i];
-        auto o_i = spheres_center[i];
+    //   //for each segment i (excluding boundary points)
+    //   for (size_t i = 0; i < M; i++)
+    //   {
+    //     auto r_i = sphere_radius[i];
+    //     auto o_i = spheres_center[i];
 
-        for (int j = 1; j < num_cp+1; j++){ // For every constraint point
-          size_t idx = i * num_cp + j; // For segment 0, idx = [0, num_cp-1]
+    //     for (int j = 1; j < num_cp+1; j++){ // For every constraint point
+    //       size_t idx = i * num_cp + j; // For segment 0, idx = [0, num_cp-1]
 
-          auto xi_i = xi.block<3,1>(0, idx);
+    //       auto xi_i = xi.block<3,1>(0, idx);
 
-          if ( (idx == 0) || j == q.cols()-1){
-            // If start or goal, retain original points
-            // q.block<3,1>(0, idx);
-          }
-          else {
-            q.block<3,1>(0, idx) =  f_B(xi_i, o_i, r_i);
-          }
-        }
-      }
+    //       if ( (idx == 0) || j == q.cols()-1){
+    //         // If start or goal, retain original points
+    //         // q.block<3,1>(0, idx);
+    //       }
+    //       else {
+    //         q.block<3,1>(0, idx) =  f_B(xi_i, o_i, r_i);
+    //       }
+    //     }
+    //   }
 
-      return q;
-    }
+    //   return q;
+    // }
 
-    /**
-     * @brief Inverse transform from variable q to decision variable xi 
-     * Part of constraint elimination concept.
-     * @param xi Decision variables to be optimized
-     * @return eigen::Vector 
-     */
-    Eigen::MatrixXd f_BInv_cstr_pts(
-      const Eigen::MatrixXd& q,
-      const size_t M,
-      const size_t num_cp,
-      const std::vector<Eigen::Vector3d>& spheres_center, 
-      const std::vector<double>& sphere_radius)
-    {
-      // Expects array of size (3, M*num_cp + 1)
-      Eigen::MatrixXd xi(3, q.cols());  // Constrained variable q
+    // /**
+    //  * @brief Inverse transform from variable q to decision variable xi 
+    //  * Part of constraint elimination concept.
+    //  * @param xi Decision variables to be optimized
+    //  * @return eigen::Vector 
+    //  */
+    // Eigen::MatrixXd f_BInv_cstr_pts(
+    //   const Eigen::MatrixXd& q,
+    //   const size_t M,
+    //   const size_t num_cp,
+    //   const std::vector<Eigen::Vector3d>& spheres_center, 
+    //   const std::vector<double>& sphere_radius)
+    // {
+    //   // Expects array of size (3, M*num_cp + 1)
+    //   Eigen::MatrixXd xi(3, q.cols());  // Constrained variable q
 
-      //for each segment i (excluding boundary points)
-      // Therefore starting and final sphere is excluded
-      for (size_t i = 0; i < M; i++)
-      {
-        auto r_i = sphere_radius[i];
-        auto o_i = spheres_center[i];
+    //   //for each segment i (excluding boundary points)
+    //   // Therefore starting and final sphere is excluded
+    //   for (size_t i = 0; i < M; i++)
+    //   {
+    //     auto r_i = sphere_radius[i];
+    //     auto o_i = spheres_center[i];
 
-        for (int j = 0; j <= num_cp; j++){ // For every constraint point
-          size_t idx = i*num_cp + j;
+    //     for (int j = 0; j <= num_cp; j++){ // For every constraint point
+    //       size_t idx = i*num_cp + j;
 
-          auto q_i = q.block<3,1>(0, idx);
+    //       auto q_i = q.block<3,1>(0, idx);
             
-          if (j == 0 || j == num_cp ){
-            // Nothing is done, retain original points
-          }
-          else {
-            xi.block<3,1>(0, i) = f_B_inv(q_i, o_i, r_i);
-          }
-        }
-      }
+    //       if (j == 0 || j == num_cp ){
+    //         // Nothing is done, retain original points
+    //       }
+    //       else {
+    //         xi.block<3,1>(0, i) = f_B_inv(q_i, o_i, r_i);
+    //       }
+    //     }
+    //   }
 
-      return xi;
-    }
+    //   return xi;
+    // }
 
   }; // class PolyTrajOptimizer
 

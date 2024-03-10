@@ -5,7 +5,10 @@ namespace ego_planner
   bool PolyTrajOptimizer::optimizeTrajectorySFC(
       const Eigen::Matrix3d &startPVA, const Eigen::Matrix3d &endPVA,
       const Eigen::MatrixXd &inner_ctrl_pts, const Eigen::VectorXd &initT,
-      const std::vector<double>& spheres_radius, const std::vector<Eigen::Vector3d>& spheres_center,
+      const std::vector<Eigen::Vector3d>& spheres_center,
+      const std::vector<double>& spheres_radius, 
+      const std::vector<Eigen::Vector3d>& spheres_intxn_plane_vec,
+      const std::vector<double>& spheres_intxn_plane_dist,
       double &final_cost)
   {
     // IF size of inner points and segment durations are not the same, there is a bug
@@ -18,6 +21,8 @@ namespace ego_planner
     // assign all necessary variables
     spheres_radius_ = spheres_radius;
     spheres_center_ = spheres_center;
+    intxn_plane_vec_ = spheres_intxn_plane_vec;
+    intxn_plane_dist_ = spheres_intxn_plane_dist;
 
     // reset all existing variables
     opt_costs_.reset();
@@ -153,7 +158,9 @@ namespace ego_planner
     // For forward cost evaluation: Get minimum jerk trajectory coordinates in q space
     Eigen::MatrixXd P_q = opt->f_B_ctrl_pts(P_xi,
                                             opt->spheres_center_,
-                                            opt->spheres_radius_); 
+                                            opt->spheres_radius_,
+                                            opt->intxn_plane_vec_,
+                                            opt->intxn_plane_dist_);
     opt->mjo_q_.generate(P_q, T); // Generate minimum jerk trajectory
     opt->cstr_pts_q_ = opt->mjo_q_.getInitConstraintPoints(opt->cps_num_perPiece_); // Discretize trajectory into inner constraint points
 
@@ -179,7 +186,9 @@ namespace ego_planner
 
     // Update the gradient costs p.d.(H / T_i) 
     //                       and p.d.(H / xi)
-    opt->mjo_q_.getGrad2TP(gradT, gradP, P_xi, opt->spheres_center_, opt->spheres_radius_);
+    opt->mjo_q_.getGrad2TP(gradT, gradP, P_xi, 
+                            opt->spheres_center_, opt->spheres_radius_,
+                            opt->intxn_plane_vec_, opt->intxn_plane_dist_);
     // time_cost += opt->rho_ * T(0) * piece_nums;  // same t
     // grad[n - 1] = (gradT.sum() + opt->rho_ * piece_nums) * gdT2t(x[n - 1]);  // same t
 

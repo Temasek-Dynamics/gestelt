@@ -436,21 +436,37 @@ bool Navigator::generateBackEndPlan(
     Eigen::MatrixXd init_inner_ctrl_pts_q = back_end_optimizer_->f_B_ctrl_pts(
                                               sfc_traj.getInnerWaypoints(), 
                                               sfc_traj.getSpheresCenter(),
-                                              sfc_traj.getSpheresRadii());
+                                              sfc_traj.getSpheresRadii(),
+                                              sfc_traj.getIntxnPlaneVec(),
+                                              sfc_traj.getIntxnPlaneDist());
     visualization_->displayInitialCtrlPts_q(init_inner_ctrl_pts_q);
 
     // Visualize initial constraint points in constrained q space
-    Eigen::MatrixXd cstr_pts_q = 
-      back_end_optimizer_->f_B_cstr_pts(init_cstr_pts, 
-                                        num_segs,
-                                        num_cstr_pts,
-                                        sfc_traj.getSpheresCenter(),
-                                        sfc_traj.getSpheresRadii());
-    visualization_->displayInitialMJO_q(cstr_pts_q, 0); 
+    // Eigen::MatrixXd cstr_pts_q = 
+    //   back_end_optimizer_->f_B_cstr_pts(init_cstr_pts, 
+    //                                     num_segs,
+    //                                     num_cstr_pts,
+    //                                     sfc_traj.getSpheresCenter(),
+    //                                     sfc_traj.getSpheresRadii());
+    // visualization_->displayInitialMJO_q(cstr_pts_q, 0); 
 
     /***************************/
     /*4:  Optimize plan
     /***************************/
+
+    std::cout << "sfc_traj.getIntxnPlaneDist() " << std::endl;
+    for (auto dist : sfc_traj.getIntxnPlaneDist() )
+    {
+      std::cout << dist << ",";
+    }
+    std::cout << std::endl;
+
+    std::cout << "sfc_traj.getIntxnPlaneVec() " << std::endl;
+    for (auto vec : sfc_traj.getIntxnPlaneVec() )
+    {
+      std::cout << vec << ",";
+    }
+    std::cout << std::endl;
 
     // Optimize trajectory!
     double final_cost = 0; 
@@ -458,8 +474,8 @@ bool Navigator::generateBackEndPlan(
           startPVA, endPVA,                   // Start and end (pos, vel, acc)
           sfc_traj.getInnerWaypoints(),       // Inner control points
           sfc_traj.getSegmentTimeDurations(), // Time durations of each segment
-          sfc_traj.getSpheresRadii(),   
-          sfc_traj.getSpheresCenter(),   
+          sfc_traj.getSpheresCenter(), sfc_traj.getSpheresRadii(),   
+          sfc_traj.getIntxnPlaneVec(), sfc_traj.getIntxnPlaneDist(),
           final_cost);                      
 
     // Optimized minimum jerk trajectory

@@ -79,11 +79,11 @@ namespace ego_planner
     
     double final_cost; // Not used for now
 
-    plan_success = ploy_traj_opt_->optimizeTrajectorySFC( 
-      headState, tailState,
-      inner_ctrl_pts, initial_traj.getDurations(), 
-      spheres_radius, spheres_center,
-      final_cost);
+    // plan_success = ploy_traj_opt_->optimizeTrajectorySFC( 
+    //   headState, tailState,
+    //   inner_ctrl_pts, initial_traj.getDurations(), 
+    //   spheres_radius, spheres_center,
+    //   final_cost);
 
     // Optimized minimum jerk trajectory
     optimized_mjo = ploy_traj_opt_->getOptimizedMJO();
