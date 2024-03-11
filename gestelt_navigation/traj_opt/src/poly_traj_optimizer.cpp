@@ -5,10 +5,9 @@ namespace ego_planner
   bool PolyTrajOptimizer::optimizeTrajectorySFC(
       const Eigen::Matrix3d &startPVA, const Eigen::Matrix3d &endPVA,
       const Eigen::MatrixXd &inner_ctrl_pts, const Eigen::VectorXd &initT,
-      const std::vector<Eigen::Vector3d>& spheres_center,
-      const std::vector<double>& spheres_radius, 
-      const std::vector<Eigen::Vector3d>& spheres_intxn_plane_vec,
-      const std::vector<double>& spheres_intxn_plane_dist,
+      const std::vector<Eigen::Vector3d>& spheres_center, const std::vector<double>& spheres_radius, 
+      const std::vector<Eigen::Vector3d>& spheres_intxn_plane_vec, const std::vector<double>& spheres_intxn_plane_dist,
+      const std::vector<Eigen::Vector3d>& sfc_traj_waypoints, const std::vector<double>& intxn_circle_radius,
       double &final_cost)
   {
     // IF size of inner points and segment durations are not the same, there is a bug
@@ -23,6 +22,8 @@ namespace ego_planner
     spheres_center_ = spheres_center;
     intxn_plane_vec_ = spheres_intxn_plane_vec;
     intxn_plane_dist_ = spheres_intxn_plane_dist;
+    intxn_center_ = sfc_traj_waypoints;
+    intxn_circle_radius_ = intxn_circle_radius;
 
     // reset all existing variables
     opt_costs_.reset();
@@ -156,11 +157,16 @@ namespace ego_planner
     opt->min_ellip_dist2_ = std::numeric_limits<double>::max();
 
     // For forward cost evaluation: Get minimum jerk trajectory coordinates in q space
-    Eigen::MatrixXd P_q = opt->f_B_ctrl_pts(P_xi,
-                                            opt->spheres_center_,
-                                            opt->spheres_radius_,
-                                            opt->intxn_plane_vec_,
-                                            opt->intxn_plane_dist_);
+    Eigen::MatrixXd P_q;
+    if (opt->iter_num_ == 0){
+      P_q = P_xi;
+    }
+    else {
+      P_q = opt->f_B_ctrl_pts(P_xi,
+                              opt->spheres_center_, opt->spheres_radius_,
+                              opt->intxn_plane_vec_, opt->intxn_plane_dist_,
+                              opt->intxn_center_, opt->intxn_circle_radius_);
+    }
     opt->mjo_q_.generate(P_q, T); // Generate minimum jerk trajectory
     opt->cstr_pts_q_ = opt->mjo_q_.getInitConstraintPoints(opt->cps_num_perPiece_); // Discretize trajectory into inner constraint points
 
@@ -188,7 +194,8 @@ namespace ego_planner
     //                       and p.d.(H / xi)
     opt->mjo_q_.getGrad2TP(gradT, gradP, P_xi, 
                             opt->spheres_center_, opt->spheres_radius_,
-                            opt->intxn_plane_vec_, opt->intxn_plane_dist_);
+                            opt->intxn_plane_vec_, opt->intxn_plane_dist_,
+                            opt->intxn_center_, opt->intxn_circle_radius_);
     // time_cost += opt->rho_ * T(0) * piece_nums;  // same t
     // grad[n - 1] = (gradT.sum() + opt->rho_ * piece_nums) * gdT2t(x[n - 1]);  // same t
 
@@ -197,10 +204,10 @@ namespace ego_planner
     opt->VirtualTGradCost(T, t, gradT, gradt, time_cost);
 
     // Collect intermediate MJO trajectories for publishing later
-    opt->intermediate_cstr_pts_xi_.push_back(opt->cstr_pts_xi_);
-    opt->intermediate_cstr_pts_q_.push_back(opt->cstr_pts_q_);
+    opt->intermediate_cstr_pts_xi_.push_back(P_xi);
+    opt->intermediate_cstr_pts_q_.push_back(P_q);
 
-    opt->iter_num_++;
+    opt->visualization_->displayIntermediateGrad("aggregate_position", P_xi, gradP);
 
     opt->opt_costs_.addCosts(
       jerk_cost,
@@ -209,6 +216,8 @@ namespace ego_planner
       obs_swarm_feas_qvar_costs(2),
       obs_swarm_feas_qvar_costs(3),
       time_cost);
+
+    opt->iter_num_++;
 
     return jerk_cost + obs_swarm_feas_qvar_costs.sum() + time_cost;
   }
@@ -379,7 +388,9 @@ namespace ego_planner
           double pd_t_T_i = (j / K); // P.D. of time t w.r.t T_i
 
           // Partial derivatives of Cost J
+          //    w.r.t coefficients c_i
           Eigen::Matrix<double, 6, 3> pd_cost_c_i = pd_cost_constr * pd_constr_c_i; // P.D. of cost w.r.t c_i. Uses chain rule // (m,2s)
+          //    w.r.t time t
           double pd_cost_t = cost / T_i  + pd_cost_constr * pd_constr_t * pd_t_T_i;// P.D. of cost w.r.t t // (1,1)
 
           // Sum up sampled costs
@@ -403,8 +414,10 @@ namespace ego_planner
           double cost = (T_i / K) * omega * wei_feas_ * pow(acc_pen,3);
           double pd_t_T_i = (j / K); // P.D. of time t w.r.t T_i
 
-          // Partial derivatives of Cost J
+          // Partial derivatives of Cost J 
+          //    w.r.t coefficients c_i
           Eigen::Matrix<double, 6, 3> pd_cost_c_i = pd_cost_constr * pd_constr_c_i; // P.D. of cost w.r.t c_i. Uses chain rule // (m,2s)
+          //    w.r.t time t
           double pd_cost_t = cost / T_i  + pd_cost_constr * pd_constr_t * pd_t_T_i;// P.D. of cost w.r.t t // (1,1)
 
           // Sum up sampled costs
@@ -469,6 +482,10 @@ namespace ego_planner
     } // end iteration through all pieces
 
     costs(3) += var;
+
+    /* Publish visualization of gradients*/
+    // visualization_->displayIntermediateGrad("smoothness", ctrl_pts_q_, mjo.get_gdC());
+    visualization_->displayIntermediateGrad("dist_variance", cstr_pts_q_, gdp);
 
   } // end func addPVAGradCost2CT_SFC
 

@@ -9,13 +9,16 @@ void SphericalSFC::addVizPublishers(
     ros::Publisher& dist_viz_pub, 
     ros::Publisher& sfc_spherical_viz_pub,
     ros::Publisher&  sfc_waypoints_viz_pub,
-    ros::Publisher& samp_dir_vec_pub)
+    ros::Publisher& samp_dir_vec_pub,
+    ros::Publisher& intxn_spheres_pub
+    )
 {
     p_cand_viz_pub_ = p_cand_viz_pub;
     dist_viz_pub_ = dist_viz_pub;
     samp_dir_vec_pub_ = samp_dir_vec_pub;
     sfc_spherical_viz_pub_ = sfc_spherical_viz_pub;
     sfc_waypoints_viz_pub_ = sfc_waypoints_viz_pub;
+    intxn_spheres_pub_ = intxn_spheres_pub;
 }
 
 void SphericalSFC::reset()
@@ -107,6 +110,7 @@ bool SphericalSFC::generateSFC(const std::vector<Eigen::Vector3d> &path)
         }
         // Check if new sphere contains start point
         if (!B_cur.contains(path[0])){
+            B_cur = B_starting;
             break;
         }
         path_idx_cur = i;
@@ -180,6 +184,8 @@ bool SphericalSFC::generateSFC(const std::vector<Eigen::Vector3d> &path)
         samp_dir_vec_pub_.publish(samp_dir_vec_hist_);
 
         publishVizSphericalSFC(sfc_spheres_, sfc_spherical_viz_pub_, "world");
+
+        publishVizIntxnSpheres(sfc_traj_.intxn_spheres, intxn_spheres_pub_, "world");
 
         publishVizPiecewiseTrajectory(sfc_traj_.waypoints, sfc_waypoints_viz_pub_);
 
@@ -472,11 +478,23 @@ Eigen::Vector3d SphericalSFC::getIntersectionCenter(const Sphere& B_a, const Sph
 
     double d_ctrd = (dir_vec).norm(); // scalar distance between spheres B_a and B_b 
     // Get distance to intersection along direction vector dir_vec from center of B_a to center of B_b
-    double d_intxn = (r_a * r_a + d_ctrd * d_ctrd - r_b * r_b) / (2 * d_ctrd);
+    double h = (r_a + r_b - d_ctrd)/2;
+    double d_intxn = h + d_ctrd - r_b;
 
     Eigen::Vector3d pt_intxn = B_a.center + (d_intxn / d_ctrd) * dir_vec;
 
     return pt_intxn;
+}
+
+double SphericalSFC::getIntersectionRadius(const Sphere& B_a, const Sphere& B_b)
+{   
+    double r_a = B_a.radius, r_b = B_b.radius;
+
+    double d_ctrd = (B_b.center - B_a.center).norm(); // scalar distance between spheres B_a and B_b 
+    double h = (r_a + r_b - d_ctrd)/2;
+    double intxn_radius = sqrt(r_a * r_a  - (d_ctrd - r_b + h) * (d_ctrd - r_b + h) );
+
+    return intxn_radius;
 }
 
 void SphericalSFC::postProcessSpheres(std::vector<SphericalSFC::Sphere>& sfc_spheres)
@@ -489,13 +507,13 @@ void SphericalSFC::postProcessSpheres(std::vector<SphericalSFC::Sphere>& sfc_sph
 
     std::vector<SphericalSFC::Sphere> sfc_spheres_proc; // post-processed
 
-    for (size_t i = 0; i < sfc_spheres.size(); i++)
+    for (size_t i = 0; i < sfc_spheres.size(); i++) // First sphere to compare from
     {
         sfc_spheres_proc.push_back(sfc_spheres[i]); 
 
         size_t skip = 0; // Number of next spheres to skip (i.e. remove from post processed sphere)
 
-        for (size_t j= i + 2; j < sfc_spheres.size(); j++)
+        for (size_t j= i + 2; j < sfc_spheres.size(); j++) // Second sphere to compare against 
         {
             if (isIntersect(sfc_spheres[i], sfc_spheres[j])){
                 // We can skip the next sphere
@@ -563,17 +581,32 @@ void SphericalSFC::constructSFCTrajectory(
     /* 3: Get distance and vector to center of spherical cap (the intersection between 2 spheres) */
     sfc_traj.intxn_plane_vec.clear();
     sfc_traj.intxn_plane_dist.clear();
+    sfc_traj.intxn_circle_radius.clear();
+    sfc_traj.intxn_spheres.clear();
+
     sfc_traj.intxn_plane_vec.resize(num_segs-1);
     sfc_traj.intxn_plane_dist.resize(num_segs-1);
+    sfc_traj.intxn_circle_radius.resize(num_segs-1);
+    sfc_traj.intxn_spheres.resize(num_segs-1);
 
     for (size_t i = 0; i < num_segs-1; i++){
+        auto vec_to_intxn_plane = getIntersectionCenter(sfc_spheres[i], sfc_spheres[i+1]) - sfc_spheres[i].center;
         // Get vector from center of sphere to the center of the spherical cap (intersection between sphere i and i+1)
-        sfc_traj.intxn_plane_vec[i] = 
-            getIntersectionCenter(sfc_spheres[i], sfc_spheres[i+1]) - sfc_spheres[i].center;
+        sfc_traj.intxn_plane_vec[i] = vec_to_intxn_plane.normalized() * sfc_spheres[i].radius;
+
+        if (i == 0){
+            std::cout << getIntersectionRadius(sfc_spheres[i], sfc_spheres[i+1]) << std::endl;
+            std::cout << getIntersectionRadius(sfc_spheres[i], sfc_spheres[i+1]) << std::endl;
+        }
+        sfc_traj.intxn_circle_radius[i] = getIntersectionRadius(sfc_spheres[i], sfc_spheres[i+1]);
+
         // Get distance from sphere center to intersection center
-        sfc_traj.intxn_plane_dist[i] = sfc_traj.intxn_plane_vec[i].norm();
+        sfc_traj.intxn_plane_dist[i] = vec_to_intxn_plane.norm();
+
+        // Construct intersection spheres for visualization
+        sfc_traj.intxn_spheres[i] = Sphere(sfc_traj.waypoints[i+1], sfc_traj.intxn_circle_radius[i]);
     }
-    
+
     /* 4: Assign spheres */
     sfc_traj.spheres = sfc_spheres;
 }
@@ -701,6 +734,23 @@ void SphericalSFC::publishVizPoints(
     publisher.publish(sphere_list);
 }
 
+
+
+void SphericalSFC::publishVizIntxnSpheres(
+    const std::vector<SphericalSFC::Sphere>& sfc_spheres, 
+    ros::Publisher& publisher, const std::string& frame_id)  
+{
+    visualization_msgs::MarkerArray sfc_spheres_marker_arr;
+
+    for (size_t i = 0; i < sfc_spheres.size(); i++){
+        sfc_spheres_marker_arr.markers.push_back(
+            createVizSphere(sfc_spheres[i].center, sfc_spheres[i].getDiameter(), 
+                            Eigen::Vector4d{0.0, 0.0, 1.0, 0.4},
+                            frame_id, i, "intxn_spheres"));
+    }
+    publisher.publish(sfc_spheres_marker_arr);
+}
+
 void SphericalSFC::publishVizSphericalSFC(  
     const std::vector<SphericalSFC::Sphere>& sfc_spheres, 
     ros::Publisher& publisher, const std::string& frame_id)  
@@ -708,7 +758,10 @@ void SphericalSFC::publishVizSphericalSFC(
     visualization_msgs::MarkerArray sfc_spheres_marker_arr;
 
     for (size_t i = 0; i < sfc_spheres.size(); i++){
-        sfc_spheres_marker_arr.markers.push_back(createVizSphere(sfc_spheres[i].center, sfc_spheres[i].getDiameter(), frame_id, i));
+        sfc_spheres_marker_arr.markers.push_back(
+            createVizSphere(sfc_spheres[i].center, sfc_spheres[i].getDiameter(), 
+                            Eigen::Vector4d{0.5, 0.5, 0.5, 0.3},
+                            frame_id, i, "sfc_spheres"));
     }
     publisher.publish(sfc_spheres_marker_arr);
 }
@@ -753,11 +806,12 @@ visualization_msgs::Marker SphericalSFC::createArrow(
 
 visualization_msgs::Marker SphericalSFC::createVizSphere( 
     const Eigen::Vector3d& center, const double& diameter, 
-    const std::string& frame_id, const int& id)
+    const Eigen::Vector4d& color,
+    const std::string& frame_id, const int& id, const std::string& ns)
 {
     visualization_msgs::Marker sphere;
 
-    sphere.ns = "sfc_spheres";
+    sphere.ns = ns; 
     sphere.header.frame_id = frame_id;
     sphere.header.stamp = ros::Time::now();
     sphere.type = visualization_msgs::Marker::SPHERE;
@@ -765,10 +819,12 @@ visualization_msgs::Marker SphericalSFC::createVizSphere(
     sphere.id = id;
     sphere.pose.orientation.w = 1.0;
 
-    sphere.color.r = 0.5;
-    sphere.color.g = 0.5;
-    sphere.color.b = 0.5;
-    sphere.color.a = 0.3;
+    
+
+    sphere.color.r = color(0);
+    sphere.color.g = color(1);
+    sphere.color.b = color(2);
+    sphere.color.a = color(3);
     sphere.scale.x = diameter;
     sphere.scale.y = diameter;
     sphere.scale.z = diameter;

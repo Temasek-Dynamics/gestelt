@@ -197,11 +197,15 @@ namespace ego_planner
 
     /* Data structures */
 
-    std::vector<double> spheres_radius_;            // Vector of sphere radius, size is no. of segments/pieces
+
     std::vector<Eigen::Vector3d> spheres_center_;   // Vector of sphere centers, size is no. of segments/pieces
+    std::vector<double> spheres_radius_;            // Vector of sphere radius, size is no. of segments/pieces
     std::vector<Eigen::Vector3d> intxn_plane_vec_;  // Vector to center of spherical cap (the intersection between 2 spheres)
     std::vector<double> intxn_plane_dist_;          // Distance to center of spherical cap (the intersection between 2 spheres)
-    
+    std::vector<Eigen::Vector3d> intxn_center_;     // Center of intersection
+    std::vector<double> intxn_circle_radius_;        // 
+
+
     Eigen::MatrixXd cstr_pts_xi_; // inner CONSTRAINT points of trajectory (excludes boundary points), this is finer than the inner CONTROL points
     Eigen::MatrixXd cstr_pts_q_; // inner CONSTRAINT points of trajectory (excludes boundary points), this is finer than the inner CONTROL points
 
@@ -274,10 +278,9 @@ namespace ego_planner
      */
     bool optimizeTrajectorySFC( const Eigen::Matrix3d &startPVA, const Eigen::Matrix3d &endPVA,
                                 const Eigen::MatrixXd &inner_ctrl_pts, const Eigen::VectorXd &initT,
-                                const std::vector<Eigen::Vector3d>& spheres_center,
-                                const std::vector<double>& spheres_radius, 
-                                const std::vector<Eigen::Vector3d>& spheres_intxn_plane_vec,
-                                const std::vector<double>& spheres_intxn_plane_dist,
+                                const std::vector<Eigen::Vector3d>& spheres_center, const std::vector<double>& spheres_radius, 
+                                const std::vector<Eigen::Vector3d>& spheres_intxn_plane_vec, const std::vector<double>& spheres_intxn_plane_dist,
+                                const std::vector<Eigen::Vector3d>& sfc_traj_waypoints, const std::vector<double>& intxn_circle_radius,
                                 double &final_cost);
 
     /**
@@ -1442,14 +1445,16 @@ namespace ego_planner
 
   /* Constraint elimination methods */
   public:
+
     /**
      * @brief Stereographic projection from (n) hyperplane onto (n+1) sphere and then orthographic projection onto (n) circle 
      * 
      * @param xi  Decision variable
      * @param o   Center of sphere 
      * @param r   radius of sphere
-     * @param f   offset plane distance from sphere center
-     * @return Eigen::MatrixXd 
+     * @param f_vec vector to intersection plane but with length of sphere's radius
+     * @param f_dist offset distance to intersection plane from sphere center
+     * @return Eigen::Vector3d 
      */
     Eigen::Vector3d f_B(
       const Eigen::Vector3d& xi, 
@@ -1458,19 +1463,40 @@ namespace ego_planner
       const Eigen::Vector3d& f_vec, 
       const double& f_dist)
     {
+      /* 1. Assuming north pole sphere */
+
+      // v: xi relative to center of sphere
+      auto v = xi - o;
+      auto r_sqr = r*r;
+
+      return o + v * ((2 * r_sqr ) / (v.squaredNorm() + r_sqr));
+
+      /* 2. Assuming north pole sphere but with offset plane */
+
       // // xi_rel: xi relative to center of sphere
-      // auto xi_rel = xi - o;
-      // auto r_sqr = r*r;
+      // Eigen::Vector3d xi_rel = xi - o;
+      // double j = f_dist - r;
 
-      // return o + xi_rel * ((2 * r_sqr ) / (xi_rel.squaredNorm() + r_sqr));
-
-      // xi_rel: xi relative to center of sphere
-      Eigen::Vector3d xi_rel = xi - o;
-      double j = f_dist - r;
-
-      Eigen::Vector3d pt = o - xi_rel * ((2 * j * r ) / (xi_rel.squaredNorm() + j*j));
+      // Eigen::Vector3d pt = o - xi_rel * ((2 * j * r ) / (xi_rel.squaredNorm() + j*j));
       
-      return pt;
+      // /* 3. With arbitary vector (with length of sphere's radius) to project onto sphere */
+
+      // // v: xi relative to center of sphere
+      // Eigen::Vector3d v = xi - o;
+
+      // // t: scalar to scale the vector 
+      // double t = -2 * (f_vec.dot(v - f_vec)) / ((v - f_vec).squaredNorm());
+      // // pt_wrt_o: point with respect to center of sphere
+      // Eigen::Vector3d pt_wrt_o = f_vec + t * (v - f_vec);
+
+      // if ((v.norm()) <= r){ // If xi is inside the sphere
+      //   pt_wrt_o = -pt_wrt_o;
+      // }
+
+      // // pt: point with respect to global origin
+      // Eigen::Vector3d pt = o + pt_wrt_o;
+
+      // return pt;
     }
 
     /**
@@ -1490,15 +1516,32 @@ namespace ego_planner
       const Eigen::Vector3d& f_vec, 
       const double& f_dist)
     {
-      // auto v = q - o; // Vector from center of sphere to point q
-      // auto b = r - sqrt( r*r - v.squaredNorm());
-
-      // return o + v * (r/b);
-
+      /* 1. Assuming north pole sphere */
       auto v = q - o; // Vector from center of sphere to point q
-      auto b = r - sqrt( r*r - v.squaredNorm())- f_dist;
+      auto b = r - sqrt( r*r - v.squaredNorm());
 
-      return o + v * ((r - f_dist)/b);
+      return o + v * (r/b);
+
+      /* 2. Assuming north pole sphere but with offset plane */
+      // auto v = q - o; // Vector from center of sphere to point q
+      // auto b = r - sqrt( r*r - v.squaredNorm())- f_dist;
+
+      // return o + v * ((r - f_dist)/b);
+
+      /* 3. With arbitary vector (with length of sphere's radius) to project onto sphere */ 
+
+      // // v: q relative to center of sphere
+      // auto v = q - o; 
+      // // t: scalar to scale the vector 
+      // double t = (f_vec(2))/( f_vec(2) - sqrt( r*r - (v).squaredNorm()) );
+
+      // // pt_wrt_o: point with respect to center of sphere
+      // Eigen::Vector3d pt_wrt_o = f_vec + t * (v - f_vec);
+
+      // // pt: point with respect to global origin
+      // Eigen::Vector3d pt = o + pt_wrt_o;
+
+      // return pt;
     }
 
     /**
@@ -1509,11 +1552,32 @@ namespace ego_planner
      */
     Eigen::MatrixXd f_B_ctrl_pts(
       const Eigen::MatrixXd& xi, 
-      const std::vector<Eigen::Vector3d>& spheres_center, 
-      const std::vector<double>& sphere_radius,
-      const std::vector<Eigen::Vector3d>& intxn_plane_vec,
-      const std::vector<double>& intxn_plane_dist)
+      const std::vector<Eigen::Vector3d>& spheres_center,  const std::vector<double>& sphere_radius,
+      const std::vector<Eigen::Vector3d>& intxn_plane_vec, const std::vector<double>& intxn_plane_dist,
+      const std::vector<Eigen::Vector3d>& intxn_center, const std::vector<double>& intxn_circle_radius)
     {
+      /* 1. Projection to original sphere*/
+
+      // // Expects array of size (3, M-1)
+      // size_t M = xi.cols() + 1; // Number of segments
+
+      // Eigen::MatrixXd q(3, M-1);
+
+      // //for each segment i (excluding boundary points)
+      // for (size_t i = 0; i < M-1; i++)
+      // {
+      //   double r_i = sphere_radius[i];
+      //   Eigen::Vector3d o_i = spheres_center[i];
+      //   auto xi_i = xi.block<3,1>(0, i);
+      //   Eigen::Vector3d f_vec = intxn_plane_vec[i];
+      //   double f_dist = intxn_plane_dist[i];
+
+      //   q.block<3,1>(0, i) =  f_B(xi_i, o_i, r_i, f_vec, f_dist);
+      // }
+
+      // return q;
+
+      /* 2. Projection to sphere intersection*/
       // Expects array of size (3, M-1)
       size_t M = xi.cols() + 1; // Number of segments
 
@@ -1522,8 +1586,8 @@ namespace ego_planner
       //for each segment i (excluding boundary points)
       for (size_t i = 0; i < M-1; i++)
       {
-        double r_i = sphere_radius[i];
-        Eigen::Vector3d o_i = spheres_center[i];
+        double r_i = intxn_circle_radius[i];
+        Eigen::Vector3d o_i = intxn_center[i];
         auto xi_i = xi.block<3,1>(0, i);
         Eigen::Vector3d f_vec = intxn_plane_vec[i];
         double f_dist = intxn_plane_dist[i];

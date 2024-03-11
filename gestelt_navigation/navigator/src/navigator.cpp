@@ -31,7 +31,8 @@ void Navigator::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
     sfc_dist_viz_pub_, 
     sfc_spherical_viz_pub_, 
     sfc_waypoints_viz_pub_,
-    samp_dir_vec_pub_
+    samp_dir_vec_pub_,
+    intxn_spheres_pub_
   );
 
   // Initialize own trajectory
@@ -48,7 +49,7 @@ void Navigator::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
 
   /* Initialize Timer */
   if (!debug_planning_){
-    plan_timer_ = nh.createTimer(ros::Duration(1.0/planner_freq_), &Navigator::planTimerCB, this);
+    // plan_timer_ = nh.createTimer(ros::Duration(1.0/planner_freq_), &Navigator::planTimerCB, this);
   }
 
   safety_checks_timer_ = nh.createTimer(ros::Duration(1.0/safety_check_freq_), &Navigator::safetyChecksTimerCB, this);
@@ -127,6 +128,7 @@ void Navigator::initPublishers(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   sfc_spherical_viz_pub_ = nh.advertise<visualization_msgs::MarkerArray>("sfc_spherical", 10);
   sfc_waypoints_viz_pub_ = nh.advertise<visualization_msgs::Marker>("sfc_waypoints", 10);
   samp_dir_vec_pub_ = nh.advertise<visualization_msgs::MarkerArray>("sfc_samp_dir_vec", 10);
+  intxn_spheres_pub_ = nh.advertise<visualization_msgs::MarkerArray>("sfc_intxn_spheres", 10);
 
   dbg_sfc_traj_pub_ = nh.advertise<gestelt_debug_msgs::SFCTrajectory>("sfc/debug_trajectory", 10, true);
 
@@ -435,11 +437,14 @@ bool Navigator::generateBackEndPlan(
     // Visualize initial control points in constrained q space
     Eigen::MatrixXd init_inner_ctrl_pts_q = back_end_optimizer_->f_B_ctrl_pts(
                                               sfc_traj.getInnerWaypoints(), 
-                                              sfc_traj.getSpheresCenter(),
-                                              sfc_traj.getSpheresRadii(),
-                                              sfc_traj.getIntxnPlaneVec(),
-                                              sfc_traj.getIntxnPlaneDist());
+                                              sfc_traj.getSpheresCenter(), sfc_traj.getSpheresRadii(),
+                                              sfc_traj.getIntxnPlaneVec(), sfc_traj.getIntxnPlaneDist(),
+                                              sfc_traj.getIntxnCenters(), sfc_traj.getIntxnCircleRadius());
     visualization_->displayInitialCtrlPts_q(init_inner_ctrl_pts_q);
+
+    // Display sphere intersection vectors
+    
+    visualization_->displaySphereIntxnVec(sfc_traj.getSpheresCenter(), sfc_traj.getIntxnPlaneVec());
 
     // Visualize initial constraint points in constrained q space
     // Eigen::MatrixXd cstr_pts_q = 
@@ -454,19 +459,19 @@ bool Navigator::generateBackEndPlan(
     /*4:  Optimize plan
     /***************************/
 
-    std::cout << "sfc_traj.getIntxnPlaneDist() " << std::endl;
-    for (auto dist : sfc_traj.getIntxnPlaneDist() )
-    {
-      std::cout << dist << ",";
-    }
-    std::cout << std::endl;
+    // std::cout << "sfc_traj.getIntxnPlaneDist() " << std::endl;
+    // for (auto dist : sfc_traj.getIntxnPlaneDist() )
+    // {
+    //   std::cout << dist << ",";
+    // }
+    // std::cout << std::endl;
 
-    std::cout << "sfc_traj.getIntxnPlaneVec() " << std::endl;
-    for (auto vec : sfc_traj.getIntxnPlaneVec() )
-    {
-      std::cout << vec << ",";
-    }
-    std::cout << std::endl;
+    // std::cout << "sfc_traj.getIntxnPlaneVec() " << std::endl;
+    // for (auto vec : sfc_traj.getIntxnPlaneVec() )
+    // {
+    //   std::cout << vec << ",";
+    // }
+    // std::cout << std::endl;
 
     // Optimize trajectory!
     double final_cost = 0; 
@@ -476,6 +481,7 @@ bool Navigator::generateBackEndPlan(
           sfc_traj.getSegmentTimeDurations(), // Time durations of each segment
           sfc_traj.getSpheresCenter(), sfc_traj.getSpheresRadii(),   
           sfc_traj.getIntxnPlaneVec(), sfc_traj.getIntxnPlaneDist(),
+          sfc_traj.getIntxnCenters(), sfc_traj.getIntxnCircleRadius(),
           final_cost);                      
 
     // Optimized minimum jerk trajectory

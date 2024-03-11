@@ -268,16 +268,37 @@ public: // Public structs
     std::vector<double> getIntxnPlaneDist() const{
       return intxn_plane_dist;
     }
+    std::vector<double> getIntxnCircleRadius() const{
+      return intxn_circle_radius;
+    }
+
+    std::vector<Eigen::Vector3d> getIntxnCenters() const {
+      if (waypoints.size() <= 2){
+        return waypoints;
+      }
+      std::vector<Eigen::Vector3d> inner_waypoints;      
+      inner_waypoints.resize(waypoints.size()-2);
+      
+      for (size_t i = 1, inner_wp_idx = 0 ; i < waypoints.size()-1; i++, inner_wp_idx++){
+        inner_waypoints[inner_wp_idx] = waypoints[i];
+      }
+
+      return inner_waypoints;
+    }
 
     int getNumSegments() const{
       return spheres.size();
     }
 
-    std::vector<Eigen::Vector3d> intxn_plane_vec;       // Vector to center of spherical cap (the intersection between 2 spheres)
-    std::vector<double> intxn_plane_dist;       // Distance to center of spherical cap (the intersection between 2 spheres)
     std::vector<SphericalSFC::Sphere> spheres;  // Vector of Spheres 
     std::vector<Eigen::Vector3d> waypoints;     // Vector of 3d waypoint positions {p1, p2, ... p_M+1}
     std::vector<double> segs_t_dur;             // Vector of time durations of each segment {t_1, t_2, ..., t_M}
+
+    std::vector<SphericalSFC::Sphere> intxn_spheres;
+    std::vector<Eigen::Vector3d> intxn_plane_vec;       // Vector to center of spherical cap (the intersection between 2 spheres)
+    std::vector<double> intxn_plane_dist;       // Distance to center of spherical cap (the intersection between 2 spheres)
+    std::vector<double> intxn_circle_radius;       // Radius of intersection circle.
+
 
   }; // struct SFCTrajectory
 
@@ -308,7 +329,8 @@ public:
   void addVizPublishers(
     ros::Publisher& p_cand_viz_pub, 
     ros::Publisher& dist_viz_pub, ros::Publisher& samp_dir_vec_pub,
-    ros::Publisher& sfc_spherical_viz_pub, ros::Publisher&  sfc_waypoints_viz_pub
+    ros::Publisher& sfc_spherical_viz_pub, ros::Publisher&  sfc_waypoints_viz_pub,
+    ros::Publisher& intxn_spheres_pub
   );
 
   /**
@@ -388,6 +410,15 @@ private: // Private methods
   Eigen::Vector3d getIntersectionCenter(const Sphere& B_a, const Sphere& B_b);
 
   /**
+   * @brief Get the radius of circle of intersection between 2 spheres
+   * 
+   * @param B_a 
+   * @param B_b 
+   * @return double 
+   */
+  double getIntersectionRadius(const Sphere& B_a, const Sphere& B_b);
+
+  /**
    * @brief Post process spheres to remove any overlap
    * 
    * @param sfc_spheres 
@@ -464,13 +495,17 @@ private: // Private methods
 
   void publishVizSphericalSFC(const std::vector<SphericalSFC::Sphere>& sfc_spheres, 
                               ros::Publisher& publisher, const std::string& frame_id = "world");
+  void publishVizIntxnSpheres(const std::vector<SphericalSFC::Sphere>& sfc_spheres, 
+                              ros::Publisher& publisher, const std::string& frame_id = "world");
 
   visualization_msgs::Marker createArrow(
     const Eigen::Vector3d& start_pt, const Eigen::Vector3d& dir_vec, 
     const std::string& frame_id, const int& id);
 
   visualization_msgs::Marker createVizSphere( const Eigen::Vector3d& center, const double& diameter, 
-                                              const std::string& frame_id, const int& id);
+                                              const Eigen::Vector4d& color,
+                                              const std::string& frame_id, 
+                                              const int& id, const std::string& ns="");
 
   visualization_msgs::Marker createVizEllipsoid(const Eigen::Vector3d& center, const Eigen::Vector3d& stddev, const Eigen::Quaterniond& orientation, const std::string& frame_id, const int& id);
 
@@ -483,6 +518,8 @@ private: // Private members
   ros::Publisher sfc_spherical_viz_pub_; // (visualization_msgs::MarkerArray) Visualization of spherical SFC
   ros::Publisher sfc_waypoints_viz_pub_; // (visualization_msgs::Marker) Visualization of trajectory waypoints
   ros::Publisher samp_dir_vec_pub_; // (visualization_msgs::MarkerArray) Visualization of direction vectors used for sampling
+  ros::Publisher intxn_spheres_pub_; // (visualization_msgs::MarkerArray) Visualization of intersecting spheres
+
 
   /* Params */
   int itr_; // Iteration number

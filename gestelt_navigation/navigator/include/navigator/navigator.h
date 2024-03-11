@@ -313,6 +313,7 @@ private: /* ROS subs, pubs and timers*/
   ros::Publisher sfc_dist_viz_pub_; // Visualization of SFC sampling distribution
   ros::Publisher samp_dir_vec_pub_; // Visualization of SFC sampling direction vectors
   ros::Publisher sfc_waypoints_viz_pub_; // Visualization of SFC waypoints
+  ros::Publisher intxn_spheres_pub_; // Visualization of intersecting spheres
 
   /* Debugging */
   ros::Publisher dbg_sfc_traj_pub_; // Publishers to trajectory inspector for debugging 

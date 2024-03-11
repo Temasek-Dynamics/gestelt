@@ -1018,7 +1018,7 @@ namespace poly_traj
         Eigen::VectorXd T3; // T1**3
         Eigen::VectorXd T4; // T1**4
         Eigen::VectorXd T5; // T1**5
-        Eigen::MatrixXd gdC; // Gradient of cost w.r.t polynomial coefficients
+        Eigen::MatrixXd gdC; // Gradient of cost w.r.t polynomial coefficients. Size (6 * N, 3);
 
     private:
         template <typename EIGENVEC>
@@ -1257,7 +1257,7 @@ namespace poly_traj
                     const Eigen::Matrix3d &endPVA,
                     const int &pieceNum)
         {
-            N = pieceNum;
+            N = pieceNum; // Number of segments
             headPVA = startPVA;
             tailPVA = endPVA;
             T1.resize(N);
@@ -1628,7 +1628,9 @@ namespace poly_traj
                         const std::vector<Eigen::Vector3d>& spheres_center,
                         const std::vector<double>& spheres_radius,
                         const std::vector<Eigen::Vector3d>& intxn_plane_vec,
-                        const std::vector<double>& intxn_plane_dist)
+                        const std::vector<double>& intxn_plane_dist,
+                        const std::vector<Eigen::Vector3d>& intxn_center,
+                        const std::vector<double>& intxn_circle_radius)
         {
             // std::cout << "getGrad2TP" << std::endl;
             // std::cout << "  gdC: " << gdC << std::endl;
@@ -1644,8 +1646,10 @@ namespace poly_traj
             // eqn (70): p.d.(H / T_i) = p.d.(F/T_i) - Tr{ G_i.T * p.d.(E_i/T_i) * c_i}
             addPropCtoT(gdC, gdT); // Adds to gdT
 
-            // eqn (66): p.d.(H / q) = (G_1.T * e1, ..., G_(M-1).T * e1)
-            // eqn (79): p.d.(H / xi) = ...
+            /* 1. Original formulation */
+
+            // // eqn (66): p.d.(H / q) = (G_1.T * e1, ..., G_(M-1).T * e1)
+            // // eqn (79): p.d.(H / xi) = ...
             // for (int i = 0; i < N - 1; i++) // For each segment (except start and end)
             // {   
             //     Eigen::Vector3d g_i = gdC.row(6 * i + 5).transpose(); 
@@ -1659,37 +1663,80 @@ namespace poly_traj
 
             //     double c = v_i.squaredNorm() + r_i_sqr;
                 
-            //     Eigen::Vector3d a = (2 * r_i_sqr * g_i) / c ;
-
+            //     Eigen::Vector3d a = (2 * r_i_sqr * g_i) / c;
             //     Eigen::Vector3d b = (4 * r_i_sqr * v_i.dot(g_i) * v_i)/(c*c);
 
             //     gradP.col(i) = a - b;
             // }
             
+            /* 2. Formulation with offset plan*/
+
+            // for (int i = 0; i < N - 1; i++) // For each segment (except start and end)
+            // {   
+            //     Eigen::Vector3d g_i = gdC.row(6 * i + 5).transpose(); 
+
+            //     double r_i = spheres_radius[i];
+            //     Eigen::Vector3d o_i = spheres_center[i];
+            //     double f_i = intxn_plane_dist[i];
+            //     Eigen::Vector3d xi_i = inner_ctrl_pts.block<3,1>(0, i);
+
+            //     Eigen::Vector3d v_i = xi_i - o_i;
+
+            //     double j = f_i - r_i;
+            //     double c = v_i.squaredNorm() + j*j;
+                
+            //     Eigen::Vector3d a = (2 * j * r_i * g_i) / c ;
+
+            //     Eigen::Vector3d b = (4 * r_i * j * v_i.dot(g_i) * v_i)/(c*c);
+
+            //     gradP.col(i) = -a + b;
+            // }
+
+            /* 3. Formulation with offset plane and arbitrary vector for projection into sphere */
+            // for (int i = 0; i < N - 1; i++) // For each segment (except start and end)
+            // {   
+            //     Eigen::Vector3d g_i = gdC.row(6 * i + 5).transpose(); 
+
+            //     // Sphere values
+            //     Eigen::Vector3d o_i = spheres_center[i];
+            //     double r_i = spheres_radius[i];
+            //     Eigen::Vector3d f_i = intxn_plane_vec[i];
+
+            //     Eigen::Vector3d xi_gbl = inner_ctrl_pts.block<3,1>(0, i);
+            //     Eigen::Vector3d xi = xi_gbl - o_i; //v_i: xi relative to sphere center
+            //     Eigen::Vector3d w = xi - f_i;
+                
+            //     Eigen::Vector3d a = (2 * f_i.dot(w) * g_i) / (w.squaredNorm()) ;
+            //     Eigen::Vector3d b = (4 * f_i.dot(w) * w.dot(g_i) * w)/ ( w.squaredNorm() * w.squaredNorm());
+
+            //     gradP.col(i) = - a + b;
+            // }
+
+            /* 4. Projection to intersecting sphere*/
+
+
+            /* 1. Original formulation */
+
+            // eqn (66): p.d.(H / q) = (G_1.T * e1, ..., G_(M-1).T * e1)
+            // eqn (79): p.d.(H / xi) = ...
             for (int i = 0; i < N - 1; i++) // For each segment (except start and end)
             {   
                 Eigen::Vector3d g_i = gdC.row(6 * i + 5).transpose(); 
 
-                double r_i = spheres_radius[i];
-                Eigen::Vector3d o_i = spheres_center[i];
-                double f_i = intxn_plane_dist[i];
+                double r_i = intxn_circle_radius[i];
+                Eigen::Vector3d o_i = intxn_center[i];
                 Eigen::Vector3d xi_i = inner_ctrl_pts.block<3,1>(0, i);
 
+                double r_i_sqr = r_i * r_i;
                 Eigen::Vector3d v_i = xi_i - o_i;
 
-                double j = f_i - r_i;
-                double c = v_i.squaredNorm() + j*j;
+                double c = v_i.squaredNorm() + r_i_sqr;
                 
-                Eigen::Vector3d a = (2 * j * r_i * g_i) / c ;
+                Eigen::Vector3d a = (2 * r_i_sqr * g_i) / c;
+                Eigen::Vector3d b = (4 * r_i_sqr * v_i.dot(g_i) * v_i)/(c*c);
 
-                Eigen::Vector3d b = (4 * r_i * j * v_i.dot(g_i) * v_i)/(c*c);
-
-                gradP.col(i) = -a + b;
+                gradP.col(i) = a - b;
             }
-
-            // std::cout << "  G: " << gdC << std::endl;
-            // std::cout << "  gdT: " << gdT << std::endl;
-            // std::cout << "  gradP: " << gradP << std::endl;
 
             return;
         }
