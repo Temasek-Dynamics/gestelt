@@ -377,7 +377,7 @@ void PositionControl::_accelerationControl()
 		_acc_sp(2) = CONSTANTS_ONE_G;
 
 	}
-	ControlMath::limitTilt(body_z, Vector3f(0, 0, 1), _lim_tilt);
+	// ControlMath::limitTilt(body_z, Vector3f(0, 0, 1), _lim_tilt);
 	// Scale thrust assuming hover thrust produces standard gravity
 	// float collective_thrust = _acc_sp(2) * (_hover_thrust / CONSTANTS_ONE_G) - _hover_thrust;
 
