@@ -221,12 +221,10 @@ def main():
         waypoints.append(create_pose(-2.0,1.8,1.25))
         waypoints.append(create_pose(-1.0,1.8,2.0))
         
-    
-        # accel_list.append(create_accel(-f*math.sin(angle_rad_1),0.0,g+f*math.cos(angle_rad_1)))   
+       
         accel_list.append(create_accel(None,None,None))
         accel_list.append(create_accel(None,None,None))
         accel_list.append(create_accel(None,None,None))
-        # accel_list.append(create_accel(-f*math.sin(angle_rad_2),0.0,g+f*math.cos(angle_rad_2))) #for 2 angles on different gates
         accel_list.append(create_accel(None,None,None))
 
 
@@ -236,11 +234,7 @@ def main():
         vel_list.append(create_vel(None,None,None))
         vel_list.append(create_vel(None,None,None))
 
-    
-    # # end of the trajectory
-    # waypoints.append(create_pose(-0.0,1.8,1.25))
-    # accel_list.append(create_accel(None,None,None))
-    # vel_list.append(create_vel(None,None,None))
+
 
     pub_waypoints(waypoints,accel_list,vel_list)
     rospy.spin()
