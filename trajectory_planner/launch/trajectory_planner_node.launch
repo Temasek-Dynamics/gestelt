@@ -9,7 +9,7 @@
     <!--- Trajectory planner -->
     <node name="trajectory_planner" pkg="trajectory_planner" type="trajectory_generator" output="screen">
         <param name="/max_v" value="3" type="double"/> <!-- 3 m/s -->
-        <param name="/max_a" value="8" type="double"/> <!-- 5.0 m/s^2 -->
+        <param name="/max_a" value="10" type="double"/> <!-- 5.0 m/s^2 -->
         <param name="/segment_time_scaling_factor" value="0.6" type="double"/>  <!-- 0.6 -->
         <!-- subscribed topics -->
         <remap from="uav_pose" to="/$(arg odometry_topic)"/>

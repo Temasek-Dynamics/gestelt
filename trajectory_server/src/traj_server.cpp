@@ -155,7 +155,7 @@ void TrajServer::multiDOFJointTrajectoryCb(const trajectory_msgs::MultiDOFJointT
   // ROS_INFO("mission_type_mask_: %d", mission_type_mask_);
 
   //calculate the yaw angle as the tangent of the position
-  last_mission_yaw_ = atan2(last_mission_vel_(1), last_mission_vel_(0));
+  // last_mission_yaw_ = atan2(last_mission_vel_(1), last_mission_vel_(0));
 }
 
 void TrajServer::UAVStateCb(const mavros_msgs::State::ConstPtr &msg)
