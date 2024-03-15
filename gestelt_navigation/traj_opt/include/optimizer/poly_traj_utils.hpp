@@ -1512,6 +1512,31 @@ namespace poly_traj
             }
             return traj;
         }
+
+        /**
+         * @brief Get Trajectory and set starting time
+         * 
+         * @param traj_start_t 
+         * @return Trajectory 
+         */
+        Trajectory getTraj(const double& traj_start_t) const
+        {
+            Trajectory traj;
+            traj.reserve(N);
+            for (int i = 0; i < N; i++) // For each polynomial segment
+            {
+                // Block of size (6,3) at (0,0), (6,0), ... (6*(N-1), 0)
+                // Reverse rowwise (i.e. left to right -> right to left)
+
+                // To trajectory, append (time duration of each piece, 5th order polynomial coefficients of 3 axes (x,y,z))
+                traj.emplace_back(T1(i), b.block<6, 3>(6 * i, 0).transpose().rowwise().reverse());
+            }
+
+            traj.setGlobalStartTime(traj_start_t);
+            
+            return traj;
+        }
+
         
         /**
          * @brief Given desired number of constraint points per segment, get all constraint points 

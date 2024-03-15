@@ -2,7 +2,7 @@
 
 import rospy
 from gestelt_msgs.msg import Command, CommanderState, Goals
-from geometry_msgs.msg import Transform
+from geometry_msgs.msg import Transform, PoseStamped
 from std_msgs.msg import Int8
 
 num_drones = 1
@@ -11,6 +11,10 @@ num_drones = 1
 goal_publishers = []
 for i in range(0, num_drones):
     goal_publishers.append(rospy.Publisher(f'/drone{i}/planner_adaptor/goals', Goals, queue_size=2))
+
+
+single_goal_pub = rospy.Publisher('/drone0/planner/single_goal', PoseStamped, queue_size=2)
+
 
 # Dictionary of UAV states
 server_states = {}
@@ -53,6 +57,19 @@ def create_transform(x, y, z):
     pos.rotation.y = 0
     pos.rotation.z = 0
     pos.rotation.w = 1
+
+    return pos
+
+def create_pose(x, y, z):
+    pos = PoseStamped()
+    pos.pose.position.x = x
+    pos.pose.position.y = y
+    pos.pose.position.z = z
+
+    pos.pose.orientation.x = 0
+    pos.pose.orientation.y = 0
+    pos.pose.orientation.z = 0
+    pos.pose.orientation.w = 0
 
     return pos
 
@@ -117,6 +134,9 @@ def main():
     goals_0.append(create_transform(-5.189, -0.0734, 1.0))
     pub_goals([goals_0])
 
+    # Testing of sphere packing 
+    # Start from (-5.088635", "6.043959")
+    # single_goal_pub.publish(create_pose(6.151271, -4.923104, 1.000000))
 
 if __name__ == '__main__':
     main()

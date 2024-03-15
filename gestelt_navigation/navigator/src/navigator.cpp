@@ -49,7 +49,7 @@ void Navigator::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
 
   /* Initialize Timer */
   if (!debug_planning_){
-    // plan_timer_ = nh.createTimer(ros::Duration(1.0/planner_freq_), &Navigator::planTimerCB, this);
+    plan_timer_ = nh.createTimer(ros::Duration(1.0/planner_freq_), &Navigator::planTimerCB, this);
   }
 
   safety_checks_timer_ = nh.createTimer(ros::Duration(1.0/safety_check_freq_), &Navigator::safetyChecksTimerCB, this);
@@ -65,6 +65,7 @@ void Navigator::initParams(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   pnh.param("safety_check_frequency", safety_check_freq_, -1.0);
   pnh.param("debug_planning", debug_planning_, false);
   pnh.param("time_to_col_threshold", time_to_col_threshold_, 0.8);
+  pnh.param("receding_horizon_planning_dist", rhp_dist_, 7.5);
   
   /* Front end params */
   pnh.param("front_end/max_iterations", astar_params_.max_iterations, -1);
@@ -116,6 +117,12 @@ void Navigator::initSubscribers(ros::NodeHandle &nh, ros::NodeHandle &pnh)
 
 void Navigator::initPublishers(ros::NodeHandle &nh, ros::NodeHandle &pnh)
 {
+  /* navigator */
+  heartbeat_pub_ = nh.advertise<std_msgs::Empty>("planner/heartbeat", 5); 
+  // To trajectory server
+  traj_server_command_pub_ = nh.advertise<gestelt_msgs::Command>("traj_server/command", 5); 
+  rhp_goal_pub_ = nh.advertise<geometry_msgs::PoseStamped>("navigator/rhp_goal", 5); 
+
   /* Front-end */
   front_end_plan_viz_pub_ = nh.advertise<visualization_msgs::Marker>("plan_viz", 10);
   closed_list_viz_pub_ = nh.advertise<visualization_msgs::Marker>("closed_list_viz", 10);
@@ -144,11 +151,8 @@ void Navigator::initPublishers(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   be_traj_pub_ = nh.advertise<traj_utils::PolyTraj>("back_end/trajectory", 10); 
   swarm_minco_traj_pub_ = nh.advertise<traj_utils::MINCOTraj>("/swarm/global/minco", 10);
 
-  /* To trajectory server */
-  traj_server_command_pub_ = nh.advertise<gestelt_msgs::Command>("traj_server/command", 5); 
+  
 
-  /* To planner adaptor */
-  heartbeat_pub_ = nh.advertise<std_msgs::Empty>("planner/heartbeat", 5); 
 }
 
 /* Timer callbacks */
@@ -165,18 +169,61 @@ void Navigator::planTimerCB(const ros::TimerEvent &e)
     return;
   }
 
+  double req_plan_time = ros::Time::now().toSec(); // Time at which plan was requested
+
   // Sample the starting position from the back end trajectory
-  if (!sampleBackEndTrajectory(ros::Time::now().toSec() ,start_pos_)){
+  if (!sampleBackEndTrajectory(req_plan_time, start_pos_)){
     // If we are unable to sample the back end trajectory, we set the starting position as the quadrotor's current position
     start_pos_ = cur_pos_;
   }
 
-  // Generate plan
-  planAll(start_pos_, waypoints_.nextWP());
+  // Get Receding Horizon Planning goal 
+  Eigen::Vector3d rhp_goal;
+  getRHPGoal(waypoints_.nextWP(), start_pos_, rhp_dist_, rhp_goal);
+  // Publish RHP goal
+  geometry_msgs::PoseStamped rhp_goal_msg;
+  rhp_goal_msg.header.stamp = ros::Time::now();
+  rhp_goal_msg.header.frame_id = "world";
+  rhp_goal_msg.pose.position.x = rhp_goal(0);
+  rhp_goal_msg.pose.position.y = rhp_goal(1);
+  rhp_goal_msg.pose.position.z = rhp_goal(2);
+  rhp_goal_pub_.publish(rhp_goal_msg);
+
+  // Generate plan 
+  planAll(start_pos_, rhp_goal, req_plan_time);
 
   // Publish heartbeat
   std_msgs::Empty empty_msg;
   heartbeat_pub_.publish(empty_msg);
+}
+
+bool Navigator::getRHPGoal(
+  const Eigen::Vector3d& global_goal, const Eigen::Vector3d& start_pos, 
+  const double& rhp_dist, Eigen::Vector3d& rhp_goal) const
+{
+  if ((global_goal - start_pos).norm() <= rhp_dist){
+    // If within distance of goal
+    rhp_goal = global_goal;
+    return true;
+  }
+
+  // Plan straight line to goal
+  Eigen::Vector3d vec_to_goal = (global_goal - start_pos).normalized();
+  rhp_goal = start_pos + rhp_dist * vec_to_goal;
+
+  // While RHP goal is in obstacle, backtrack.
+  double dec = 0.15;
+  double backtrack_dist = 0.0;
+  while (map_->getInflateOccupancy(rhp_goal))
+  {
+    rhp_goal -= dec * vec_to_goal;
+    backtrack_dist += dec;
+    if (backtrack_dist >= rhp_dist){
+      return false;
+    }
+  }
+
+  return true;
 }
 
 void Navigator::safetyChecksTimerCB(const ros::TimerEvent &e)
@@ -221,7 +268,9 @@ void Navigator::stopAllPlanning()
   safety_checks_timer_.stop();
 }
 
-bool Navigator::planAll(const Eigen::Vector3d& start_pos, const Eigen::Vector3d& goal_pos)
+bool Navigator::planAll(
+  const Eigen::Vector3d& start_pos, const Eigen::Vector3d& goal_pos, 
+  const double& req_plan_time)
 {
   // Generate a front-end plan
   SphericalSFC::SFCTrajectory sfc_traj;
@@ -241,18 +290,20 @@ bool Navigator::planAll(const Eigen::Vector3d& start_pos, const Eigen::Vector3d&
   }
   
   // Save and publish message
-  be_traj_ = std::make_shared<poly_traj::Trajectory>(optimized_mjo.getTraj());
+  be_traj_ = std::make_shared<poly_traj::Trajectory>(optimized_mjo.getTraj(req_plan_time));
 
   traj_utils::PolyTraj poly_msg; 
   traj_utils::MINCOTraj MINCO_msg; 
 
-  mjoToMsg(optimized_mjo, poly_msg, MINCO_msg);
+  mjoToMsg(optimized_mjo, req_plan_time, poly_msg, MINCO_msg);
   be_traj_pub_.publish(poly_msg); // (In drone origin frame) Publish to corresponding drone for execution
   swarm_minco_traj_pub_.publish(MINCO_msg); // (In world frame) Broadcast to all other drones for replanning to optimize in avoiding swarm collision
 
   // Update optimized trajectory 
   (*swarm_local_trajs_)[drone_id_] = getLocalTraj(
-    optimized_mjo, back_end_optimizer_->get_cps_num_perPiece_() , traj_id_, drone_id_);
+    optimized_mjo, req_plan_time, 
+    back_end_optimizer_->get_cps_num_perPiece_(), 
+    traj_id_, drone_id_);
 
   traj_id_++; // Increment trajectory id
 
@@ -574,8 +625,13 @@ void Navigator::singleGoalCB(const geometry_msgs::PoseStampedConstPtr& msg)
         1.0));
   
   Eigen::Vector3d goal_pos = Eigen::Vector3d{msg->pose.position.x, msg->pose.position.y, 1.0};
+  
+  // 1. One shot planning
+  // planAll(cur_pos_, goal_pos);
 
-  planAll(cur_pos_, goal_pos);
+  // 2. Continuous re-planning
+  waypoints_.reset();
+  waypoints_.addWP(goal_pos);
 }
 
 void Navigator::goalsCB(const gestelt_msgs::GoalsConstPtr &msg)
@@ -847,8 +903,8 @@ void Navigator::mincoMsgToTraj(const traj_utils::MINCOTraj &msg, ego_planner::Lo
   traj.start_pos = trajectory.getPos(0.0);
 }
 
-void Navigator::mjoToMsg(const poly_traj::MinJerkOpt& mjo, 
-                              traj_utils::PolyTraj &poly_msg, traj_utils::MINCOTraj &MINCO_msg)
+void Navigator::mjoToMsg(const poly_traj::MinJerkOpt& mjo, const double& req_plan_time,
+                          traj_utils::PolyTraj &poly_msg, traj_utils::MINCOTraj &MINCO_msg)
 {
 
   poly_traj::Trajectory traj = mjo.getTraj();
@@ -857,7 +913,7 @@ void Navigator::mjoToMsg(const poly_traj::MinJerkOpt& mjo,
   int piece_num = traj.getPieceSize();
   poly_msg.drone_id = drone_id_;
   poly_msg.traj_id = traj_id_;
-  poly_msg.start_time = ros::Time::now();
+  poly_msg.start_time = ros::Time(req_plan_time);
   poly_msg.order = 5; 
   poly_msg.duration.resize(piece_num);
   poly_msg.coef_x.resize(6 * piece_num);
@@ -883,7 +939,7 @@ void Navigator::mjoToMsg(const poly_traj::MinJerkOpt& mjo,
 
   MINCO_msg.drone_id = drone_id_;
   MINCO_msg.traj_id = traj_id_;
-  MINCO_msg.start_time = ros::Time::now();
+  MINCO_msg.start_time = ros::Time(req_plan_time);
   MINCO_msg.order = 5; 
   MINCO_msg.duration.resize(piece_num);
 
@@ -924,7 +980,9 @@ void Navigator::mjoToMsg(const poly_traj::MinJerkOpt& mjo,
 
 }
 
-ego_planner::LocalTrajData Navigator::getLocalTraj(poly_traj::MinJerkOpt& mjo, const int& num_cp, const int& traj_id, const int& drone_id)
+ego_planner::LocalTrajData Navigator::getLocalTraj(
+  poly_traj::MinJerkOpt& mjo, const double& req_plan_time, 
+  const int& num_cp, const int& traj_id, const int& drone_id)
 {
   poly_traj::Trajectory traj = mjo.getTraj();
 
@@ -934,7 +992,7 @@ ego_planner::LocalTrajData Navigator::getLocalTraj(poly_traj::MinJerkOpt& mjo, c
   local_traj.traj_id = traj_id;
   local_traj.duration = traj.getTotalDuration();
   local_traj.start_pos = traj.getJuncPos(0);
-  local_traj.start_time = ros::Time::now().toSec();
+  local_traj.start_time = req_plan_time;
   local_traj.traj = traj;
   local_traj.pts_chk = mjo.getTimePositionPairs(num_cp);
 

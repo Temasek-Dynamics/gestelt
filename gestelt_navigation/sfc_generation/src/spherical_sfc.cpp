@@ -218,17 +218,19 @@ bool SphericalSFC::generateSFC(const std::vector<Eigen::Vector3d> &path)
     return planning_success;
 }   
 
-bool SphericalSFC::generateFreeSphere(const Eigen::Vector3d& point, Sphere& B)
+bool SphericalSFC::generateFreeSphere(const Eigen::Vector3d& center, Sphere& B)
 {
-    Eigen::Vector3d occ_nearest;
-    double dist_to_nearest_obs;
+    Eigen::Vector3d obs_pos;
+    double R; // R: Radius of largest possible free sphere from center, i.e. distance to nearest obstacle
+    double bfr = sfc_params_.spherical_buffer; // b: buffer
 
-    if (grid_map_->getNearestOccupiedCell(point, occ_nearest, dist_to_nearest_obs)){
-        B.center = point;
-        if (dist_to_nearest_obs <= sfc_params_.spherical_buffer){
+    if (grid_map_->getNearestOccupiedCell(center, obs_pos, R)){
+        if (R <= bfr){
             return false;
         }
-        B.setRadius(dist_to_nearest_obs - sfc_params_.spherical_buffer);
+        B.center = center;
+        B.setRadius(R - bfr);
+
         return true;
     }
     return false;
@@ -596,16 +598,36 @@ void SphericalSFC::constructSFCTrajectory(
 
         if (i == 0){
             std::cout << getIntersectionRadius(sfc_spheres[i], sfc_spheres[i+1]) << std::endl;
-            std::cout << getIntersectionRadius(sfc_spheres[i], sfc_spheres[i+1]) << std::endl;
         }
         sfc_traj.intxn_circle_radius[i] = getIntersectionRadius(sfc_spheres[i], sfc_spheres[i+1]);
 
         // Get distance from sphere center to intersection center
         sfc_traj.intxn_plane_dist[i] = vec_to_intxn_plane.norm();
 
+        // If intersection spheres are within a buffer distance of the obstacle, 
+        // Reduce the radius of the intersecting spheres to fulfill the buffer
+        Eigen::Vector3d obs_pos;
+        double dist_to_obs; // R: Radius of largest possible free sphere from center,
+        if (grid_map_->getNearestOccupiedCell(sfc_traj.waypoints[i+1], obs_pos, dist_to_obs)){
+            if (dist_to_obs <= sfc_params_.spherical_buffer){
+                // Distance to obstacle is smaller than spherical buffer!
+                throw std::runtime_error("SFC Intersection sphere is too close to obstacle!");
+            }
+
+            if (dist_to_obs < sfc_traj.intxn_circle_radius[i] + sfc_params_.spherical_buffer){
+                sfc_traj.intxn_circle_radius[i] = dist_to_obs - sfc_params_.spherical_buffer;
+            }
+
+            if (sfc_traj.intxn_circle_radius[i] <= 0)
+            {
+                throw std::runtime_error("SFC Intersection sphere has negative radius!");
+            }
+        }
+
         // Construct intersection spheres for visualization
         sfc_traj.intxn_spheres[i] = Sphere(sfc_traj.waypoints[i+1], sfc_traj.intxn_circle_radius[i]);
     }
+
 
     /* 4: Assign spheres */
     sfc_traj.spheres = sfc_spheres;
@@ -733,8 +755,6 @@ void SphericalSFC::publishVizPoints(
 
     publisher.publish(sphere_list);
 }
-
-
 
 void SphericalSFC::publishVizIntxnSpheres(
     const std::vector<SphericalSFC::Sphere>& sfc_spheres, 

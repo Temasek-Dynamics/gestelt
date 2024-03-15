@@ -60,11 +60,11 @@ public:
     // The chunk of code below is just converting the received 
     // trajectories into poly_traj::Trajectory type and storing it
 
-    // piece_nums is the number of Pieces in the trajectory 
-    int piece_nums = msg->duration.size();
-    std::vector<double> dura(piece_nums);
-    std::vector<poly_traj::CoefficientMat> cMats(piece_nums);
-    for (int i = 0; i < piece_nums; ++i)
+    // num_segs: number of trajectory segments 
+    size_t num_segs = msg->duration.size();
+    std::vector<double> dura(num_segs); // vector of segment time durations
+    std::vector<poly_traj::CoefficientMat> cMats(num_segs);
+    for (int i = 0; i < num_segs; i++)
     {
       int i6 = i * 6;
       cMats[i].row(0) <<  msg->coef_x[i6 + 0], msg->coef_x[i6 + 1], msg->coef_x[i6 + 2],
@@ -77,8 +77,10 @@ public:
       dura[i] = msg->duration[i];
     }
 
+    be_traj_mutex_.lock();
     be_traj_.reset(new poly_traj::Trajectory(dura, cMats));
     be_traj_->setGlobalStartTime(msg->start_time.toSec());
+    be_traj_mutex_.unlock();
   }
 
   virtual void samplePlanTimerCB(const ros::TimerEvent &e){
@@ -97,23 +99,27 @@ public:
 
     ros::Time time_now = ros::Time::now();
 
+    be_traj_mutex_.lock();
+    poly_traj::Trajectory traj = *be_traj_;
+    be_traj_mutex_.unlock();
+
     // t_cur: time elapsed since start of trajectory
-    double t_cur = (time_now).toSec() - be_traj_->getGlobalStartTime();
+    double t_cur = (time_now).toSec() - traj.getGlobalStartTime();
 
     Eigen::Vector3d pos(Eigen::Vector3d::Zero()), vel(Eigen::Vector3d::Zero()), acc(Eigen::Vector3d::Zero()), jer(Eigen::Vector3d::Zero());
     Eigen::Quaterniond quat{0,0,0,1};
     std::pair<double, double> yaw_yawdot(0, 0);
 
     // IF time elapsed is below duration of trajectory, then continue to send command
-    if (t_cur >= 0.0 && t_cur < be_traj_->getTotalDuration())
+    if (t_cur >= 0.0 && t_cur < traj.getTotalDuration())
     {
-      pos = be_traj_->getPos(t_cur);
-      vel = be_traj_->getVel(t_cur);
-      acc = be_traj_->getAcc(t_cur);
-      jer = be_traj_->getJer(t_cur);
+      pos = traj.getPos(t_cur);
+      vel = traj.getVel(t_cur);
+      acc = traj.getAcc(t_cur);
+      jer = traj.getJer(t_cur);
 
       /*** calculate yaw ***/
-      yaw_yawdot = calculate_yaw(t_cur, pos, (time_now - time_since_last_samp_).toSec());
+      yaw_yawdot = calculate_yaw(traj, t_cur, pos, (time_now - time_since_last_samp_).toSec());
 
       quat = RPYToQuaternion(0.0, 0.0, yaw_yawdot.first);
 
@@ -123,7 +129,7 @@ public:
       forwardExecTrajectory(pos, quat, vel, acc, jer, type_mask_);
     }
     // IF time elapsed is longer then duration of trajectory, then nothing is done
-    else if (t_cur >= be_traj_->getTotalDuration()) // Finished trajectory
+    else if (t_cur >= traj.getTotalDuration()) // Finished trajectory
     {
       return;
     }
@@ -141,14 +147,14 @@ public:
    * @param dt 
    * @return std::pair<double, double> 
    */
-  std::pair<double, double> calculate_yaw(const double& t_cur, const Eigen::Vector3d& pos, const double& dt)
+  std::pair<double, double> calculate_yaw(const poly_traj::Trajectory& traj, const double& t_cur, const Eigen::Vector3d& pos, const double& dt)
   {
     std::pair<double, double> yaw_yawdot(0, 0);
 
     // get direction vector
-    Eigen::Vector3d dir = t_cur + time_forward_ <= be_traj_->getTotalDuration()
-                              ? be_traj_->getPos(t_cur + time_forward_) - pos
-                              : be_traj_->getPos(be_traj_->getTotalDuration()) - pos;
+    Eigen::Vector3d dir = t_cur + time_forward_ <= traj.getTotalDuration()
+                              ? traj.getPos(t_cur + time_forward_) - pos
+                              : traj.getPos(traj.getTotalDuration()) - pos;
     
     double yaw_temp = dir.norm() > 0.1
                           ? atan2(dir(1), dir(0))
@@ -227,6 +233,8 @@ private:
   // Params
   const double YAW_DOT_MAX_PER_SEC{ 2 * M_PI};
   const double YAW_DOT_DOT_MAX_PER_SEC{ 5 * M_PI};
+
+  std::mutex be_traj_mutex_; // Mutex lock for back end trajectory
 
 // protected:
 }; // class EgoPlannerAdaptor

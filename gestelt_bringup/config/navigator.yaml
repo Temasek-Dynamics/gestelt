@@ -4,16 +4,17 @@
 #####
 # drone_id: 0       # Set in launch file
 # debug_planning: false       # Set in launch file
-planner_frequency: 2.0        # [Hz]
+planner_frequency: 1.0        # [Hz]
 safety_check_frequency: 20.0  # [Hz]
 goal_tolerance: 0.3           # [m] 
 time_to_col_threshold: 0.2    # [s] Threshold for seconds to collision.
+receding_horizon_planning_dist: 7.5        # [m] Receding horizon planning
 
 ##### Front-end params
 front_end:
-  max_iterations: 99999  
+  max_iterations: 999909  
   debug_viz: true          # If true, publish visualization for debugging
-  tie_breaker: 1.0001       # Tie breaker as weight for f-cost (cost-to-go)
+  tie_breaker: 1.001       # Tie breaker as weight for f-cost (cost-to-go)
   cost_function_type: 0    # Type of cost function to use 
 
 ##### Safe flight corridor
@@ -21,19 +22,19 @@ sfc:
   max_iterations: 100     # Corresponds to maximum number of spheres
   debug_viz: true        # If true, publish visualization for debugging
   # Sampling
-  max_sample_points: 300 # Maximum sample points for candidate sphere
+  max_sample_points: 100 # Maximum sample points for candidate sphere
   # standard deviation: remember 68–95–99.7 rule
   # mult_stddev_x: 0.1      # if mult_stddev_x is too high, the spheres cannot round corners and generate loads of spheres around the same area around corners
   # mult_stddev_y: 0.3      # 
   # mult_stddev_z: 0.3      # 
 
-  mult_stddev_x: 1.0      # 
-  mult_stddev_y: 0.7      # 
-  mult_stddev_z: 0.7      # 
+  # mult_stddev_x: 1.0      # 
+  # mult_stddev_y: 0.7      # 
+  # mult_stddev_z: 0.7      # 
 
-  # mult_stddev_x: 1.5      # 
-  # mult_stddev_y: 1.0      # 
-  # mult_stddev_z: 1.0      # 
+  mult_stddev_x: 0.7      # 
+  mult_stddev_y: 0.5      # 
+  mult_stddev_z: 0.5      # 
 
   W_cand_vol: 5         # Weight for candidate sphere volume
   W_intersect_vol: 10    # Weight for volume of intersection between spheres
@@ -45,8 +46,8 @@ sfc:
 
   # Initial time allocation
   # avg_vel: 1.5 # Average velocity (m/s) used for estimating initial time allocation
-  max_vel: 0.5 # Maximum velocity (m/s)
-  max_acc: 3.0 # Maximum velocity (m/s)
+  max_vel: 1.5 # Maximum velocity (m/s)
+  max_acc: 6.0 # Maximum velocity (m/s)
 
   # SFC Buffer 
   spherical_buffer: 0.125 # (m) Reduce spherical SFCs by this fixed amount to increase buffer from obstacles

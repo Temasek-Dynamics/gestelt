@@ -371,12 +371,12 @@ private: // Private methods
    * @brief Generate a free space sphere the given point. It's radius is determined by
    * the distance to the nearest obstacle
    * 
-   * @param point 
+   * @param center center of sphere
    * @param sphere 
    * @return true 
    * @return false 
    */
-  bool generateFreeSphere(const Eigen::Vector3d& point, Sphere& B);
+  bool generateFreeSphere(const Eigen::Vector3d& center, Sphere& B);
 
   /**
    * @brief Get nearest point on guide path outside the given sphere

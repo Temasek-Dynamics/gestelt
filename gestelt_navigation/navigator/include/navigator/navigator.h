@@ -60,6 +60,10 @@ private:
    */
   void planTimerCB(const ros::TimerEvent &e);
 
+  bool getRHPGoal(
+    const Eigen::Vector3d& global_goal, const Eigen::Vector3d& start_pos, 
+    const double& rhp_dist, Eigen::Vector3d& rhp_goal) const;
+
   /**
    * @brief Timer for checking if
    * 1. Trajectory is safe (w.r.t inter-agent and static obstacle collision)
@@ -78,15 +82,16 @@ private:
   void stopAllPlanning();
 
   /**
-   * @brief Generate plan from entire planning pipeline
+   * @brief Generate front-end and back-end plan using entire planning pipeline
    * 
    * @param start_pos 
    * @param goal_pos 
-   * @param optimized_mjo Optimized minimum jerk trajectory
+   * @param req_plan_time 
    * @return true 
    * @return false 
    */
-  bool planAll(const Eigen::Vector3d& start_pos, const Eigen::Vector3d& goal_pos);
+  bool planAll(const Eigen::Vector3d& start_pos, const Eigen::Vector3d& goal_pos,
+              const double& req_plan_time);
 
   /**
    * @brief Generate a front-end plan with safe flight corridor
@@ -240,7 +245,7 @@ private:
   bool sampleBackEndTrajectory(const double& time_samp, Eigen::Vector3d& pos);
 
   /**
-   * @brief MINCO Message to local trajectory
+   * @brief Convert received MINCO msgs from other agents to ego_planner::LocalTrajData type
    * 
    * @param msg 
    * @param traj 
@@ -254,18 +259,22 @@ private:
    * @param poly_msg 
    * @param MINCO_msg 
    */
-  void mjoToMsg(const poly_traj::MinJerkOpt& mjo, 
+  void mjoToMsg(const poly_traj::MinJerkOpt& mjo, const double& req_plan_time,
                 traj_utils::PolyTraj &poly_msg, traj_utils::MINCOTraj &MINCO_msg);
 
   /**
    * @brief Get local trajectory from poly_traj::MinJerkOpt
    * 
    * @param mjo 
+   * @param req_plan_time 
+   * @param num_cp 
    * @param traj_id 
    * @param drone_id 
    * @return ego_planner::LocalTrajData 
    */
-  ego_planner::LocalTrajData getLocalTraj(poly_traj::MinJerkOpt& mjo, const int& num_cp, const int& traj_id, const int& drone_id);
+  ego_planner::LocalTrajData getLocalTraj(
+    poly_traj::MinJerkOpt& mjo, const double& req_plan_time, 
+    const int& num_cp, const int& traj_id, const int& drone_id);
 
   /**
    * @brief Publish command to trajectory server
@@ -278,11 +287,14 @@ private: /* ROS subs, pubs and timers*/
   ros::NodeHandle node_;
 
   /* Navigator */
-  ros::Subscriber odom_sub_; // Subscriber to drone odometry
-  ros::Subscriber goal_sub_; // Subscriber to user-defined goals
-  ros::Subscriber single_goal_sub_; // Subscriber to single goals
+  ros::Subscriber odom_sub_;                // Subscriber to drone odometry
+  ros::Subscriber goal_sub_;                // Subscriber to user-defined goals
+  ros::Subscriber single_goal_sub_;         // Subscriber to single goals
+  ros::Publisher traj_server_command_pub_;  // Publish command to trajectory server
+  ros::Publisher heartbeat_pub_;            // Publish heartbeat to planner adaptor
+  ros::Publisher rhp_goal_pub_;             // Publish receding horizon planning goals
 
-  /* Front end Publishers */
+  /* Front end  */
   ros::Subscriber debug_start_sub_; // DEBUG: Subscriber to user-defined start point
   ros::Subscriber debug_goal_sub_; // DEBUG: Subscriber to user-defined goal point
   ros::Subscriber plan_on_demand_sub_; // DEBUG: Subscriber to trigger planning on demand
@@ -296,11 +308,6 @@ private: /* ROS subs, pubs and timers*/
   ros::Publisher swarm_minco_traj_pub_; // publisher for MINCO Trajectory
   ros::Subscriber swarm_minco_traj_sub_; // Subscriber to MINCO trajectory for inter-agent collision avoidance
 
-  /* To Trajectory server */
-  ros::Publisher traj_server_command_pub_; // Publish command to trajectory server
-
-  /* To planner adaptor */
-  ros::Publisher heartbeat_pub_; //publish heartbeat
 
   /* Visualization for Front End Planner*/
   ros::Publisher front_end_plan_pub_; // Publish front end plan to back-end optimizer
@@ -357,10 +364,11 @@ private: /* Params */
   /* Coordinator params */
   std::string node_name_{"Navigator"};
   int drone_id_{-1};
-  bool debug_planning_; // IF true, then debug mode is activated
-  double squared_goal_tol_; // Squared goal tolerance
-  double planner_freq_; // Planner timer frequency
-  double safety_check_freq_; // Planner timer frequency
+  bool debug_planning_;       // IF true, then debug mode is activated
+  double squared_goal_tol_;   // Squared goal tolerance
+  double planner_freq_;       // Planner timer frequency
+  double safety_check_freq_;  // Planner timer frequency
+  double rhp_dist_;           // Receding horizon planning dist
 
   /* Back-end params */
   int optimizer_num_retries_;
