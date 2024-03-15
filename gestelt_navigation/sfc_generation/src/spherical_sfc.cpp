@@ -254,6 +254,9 @@ bool SphericalSFC::getForwardPointOnPath(
 
 bool SphericalSFC::BatchSample(const Eigen::Vector3d& pt_guide, Sphere& B_cur)
 {
+    std::cout << "Guide point: " << pt_guide << std::endl; 
+    std::cout << "B_cur.center: " << B_cur.center << std::endl; 
+
     auto a = std::chrono::high_resolution_clock::now();
 
     // Priority queue of candidate spheres sorted by highest score first
@@ -265,24 +268,6 @@ bool SphericalSFC::BatchSample(const Eigen::Vector3d& pt_guide, Sphere& B_cur)
     // Calculate orientation and standard deviation of normal sampling distribution
     Eigen::Vector3d dir_vec = (pt_guide - B_cur.center); // Direction vector from previous sphere to pt_guide
     Eigen::Vector3d dir_vec_unit = dir_vec.normalized();
-
-    // Method A: Use collision point
-
-    // static double step_size = 0.05;
-    // Eigen::Vector3d pt_col = pt_guide; // point just before collision with obstacle 
-    // // Iterate along direction vector and check if it hits an occupied obstacle
-    // while ((pt_col - B_cur.center).norm() < B_cur.radius*2){ // Is this a good condition for getting the dir vector?
-    //     Eigen::Vector3d pt_check = pt_col.array() + (dir_vec_unit * step_size).array();
-    //     if (grid_map_->getOccupancy(pt_check)){
-    //         // Collision detected, get out!
-    //         break;
-    //     }
-    //     pt_col = pt_check;
-    // }
-    // Eigen::Vector3d samp_dir_vec = (pt_col.array() - B_cur.center.array());
-    // Eigen::Vector3d samp_mean = 0.5 * (pt_col.array() + B_cur.center.array());
-
-    // Method B: Default 
 
     Eigen::Vector3d samp_dir_vec = dir_vec;
     Eigen::Vector3d samp_mean = pt_guide;
@@ -304,6 +289,8 @@ bool SphericalSFC::BatchSample(const Eigen::Vector3d& pt_guide, Sphere& B_cur)
 
     // Sample the points first
     p_cand_vec = sampler_.sample(sfc_params_.max_sample_points);
+
+
 
     auto c = std::chrono::high_resolution_clock::now();
 
@@ -637,12 +624,21 @@ Eigen::Matrix<double, 3, 3> SphericalSFC::rotationAlign(
     const Eigen::Vector3d & z, const Eigen::Vector3d & d)
 {
     // TODO: IF either vector is a unit vector, possibility to speed this up
-
     // The code below has been taken from https://iquilezles.org/articles/noacos/, where it explains
     // how to more efficiently compute a rotation matrix aligning vector z to d.
+
+    // v: axis of rotation
     const Eigen::Vector3d v = z.cross(d);
-    const double c = z.dot(d);
-    const double k = 1.0f/(1.0f+c);
+    double c = z.dot(d);
+    
+    double k;
+    // Detect singularity
+    if ( (1.0+c) < 0.000001){
+        k = 0.0;
+    }
+    else {
+        k = 1.0f/(1.0f+c);
+    }
 
     Eigen::Matrix<double, 3, 3> rot_mat; 
     rot_mat <<  v(0)*v(0)*k + c,     v(1)*v(0)*k - v(2),    v(2)*v(0)*k + v(1),
@@ -650,7 +646,6 @@ Eigen::Matrix<double, 3, 3> SphericalSFC::rotationAlign(
                 v(0)*v(2)*k - v(1),   v(1)*v(2)*k + v(0),    v(2)*v(2)*k + c ;
 
     return rot_mat;
-
 }
 
 void SphericalSFC::publishVizPiecewiseTrajectory(

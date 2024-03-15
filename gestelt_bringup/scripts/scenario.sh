@@ -1,7 +1,19 @@
 #!/bin/bash
 
-SESSION="ego_single_fake"
+SESSION="scenario_sh"
 SESSIONEXISTS=$(tmux list-sessions | grep $SESSION)
+
+#####
+# Get arguments
+#####
+# getopts: function to read flags in input
+# OPTARG: refers to corresponding values
+while getopts s: flag
+do
+    case "${flag}" in
+        s) SCENARIO=${OPTARG};; 
+    esac
+done
 
 #####
 # Directories
@@ -20,23 +32,23 @@ source $SCRIPT_DIR/../../../devel/setup.bash &&
 #####
 # Commands
 #####
-# Start fake drone instance
+# Start drones with planner modules
 CMD_0="
-roslaunch gestelt_bringup fake_drone.launch drone_id:=0
+roslaunch gestelt_bringup $SCENARIO.launch 
 "
 
-# Start up ego planner, trajectory server and planner adaptor
+# Start up rviz
 CMD_1="
-roslaunch gestelt_bringup ego_planner.launch drone_id:=0
+roslaunch --wait gestelt_bringup fake_map_central.launch scenario:=$SCENARIO
 "
 
 # Start up central bridge and nodes
-CMD_2="
-roslaunch gestelt_bringup ego_central.launch rviz_config:=ego
-"
+# CMD_2="
+# roslaunch --wait gestelt_bringup record_single.launch drone_id:=0
+# "
 
 # Start up script to send commands
-CMD_3="roslaunch gestelt_bringup mission_ego.launch"
+CMD_3="roslaunch --wait gestelt_bringup scenario_mission.launch scenario:=$SCENARIO"
 
 if [ "$SESSIONEXISTS" = "" ]
 then 
@@ -48,11 +60,8 @@ then
     tmux split-window -t $SESSION:0.0 -h
 
     tmux send-keys -t $SESSION:0.0 "$SOURCE_WS $CMD_0" C-m 
-    sleep 1
     tmux send-keys -t $SESSION:0.1 "$SOURCE_WS $CMD_1" C-m 
-    sleep 1
-    tmux send-keys -t $SESSION:0.2 "$SOURCE_WS $CMD_2" C-m 
-    sleep 1
+    # tmux send-keys -t $SESSION:0.2 "$SOURCE_WS $CMD_2" C-m 
     tmux send-keys -t $SESSION:0.3 "$SOURCE_WS $CMD_3" C-m
 fi
 

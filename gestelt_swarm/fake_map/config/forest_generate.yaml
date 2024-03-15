@@ -1,4 +1,5 @@
-polar_obs: 100 # Number of cylinder obstacles
+filename: new_map
+polar_obs: 0 # Number of cylinder obstacles
 circle_obs: 0 # Number of hoops
 seed: 1
 

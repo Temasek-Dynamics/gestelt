@@ -23,7 +23,7 @@
       <arg name="drone_id" value="$(arg drone_id)"/>
   </include>
 
-  <!-- Fake sensor data node -->
+  <!-- Fake sensor node -->
   <!-- <node pkg="fake_map" type="fake_map_node" name="fake_map_$(arg drone_id_ns)" output="screen">
       <rosparam command="load" file="$(find gestelt_bringup)/config/fake_laser_params.yaml" />
 

@@ -1,5 +1,5 @@
 # gestelt
-A Receding Horizon Planning (RHP) framework with a focus on inter-robot navigation in cluttered environments. 
+A Receding Horizon Planning (RHP) framework with a focus on multi-UAV navigation in cluttered environments. 
 
 For simulation and deployment on a physical drone, PX4 is the firmware of choice, although it is possible to remap the topics for use with Ardupilot or any other Mavlink-compatible system.
 
@@ -97,7 +97,6 @@ The second one is a fake drone with no physics and be used to test the architect
 ```
 catkin build -DCMAKE_BUILD_TYPE=debug
 ```
-
 
 # Acknowledgements
 1. [EGO-Planner-V2 repo](https://github.com/ZJU-FAST-Lab/EGO-Planner-v2)

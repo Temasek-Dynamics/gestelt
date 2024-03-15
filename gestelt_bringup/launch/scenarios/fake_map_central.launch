@@ -1,8 +1,11 @@
 <launch>
+  <arg name="scenario" default="forest_single"/>
+
+  <arg name="map_filepath" default="$(find gestelt_bringup)/simulation/fake_maps/$(arg scenario).pcd" />
   <arg name="rviz_config" default="default"/>
-  <arg name="cloud_topic_downsample_in" default="camera/depth/points" />
-  <arg name="cloud_topic_downsample_out" default="camera/depth/points_downsampled" />
-  <arg name="map_filepath" default="$(find gestelt_bringup)/simulation/fake_maps/demo_map.pcd" />
+
+  <!-- <arg name="cloud_topic_downsample_in" default="camera/depth/points" />
+  <arg name="cloud_topic_downsample_out" default="camera/depth/points_downsampled" /> -->
 
   <!-- Add static transform from world to map -->
   <node pkg="tf" type="static_transform_publisher" 
@@ -16,7 +19,7 @@
       <remap from="/fake_map" to="/fake_map"/>
 
       <param name="map/file_path" value="$(arg map_filepath)"/>
-      <param name="map/publish_freq" value="2"/>
+      <param name="map/publish_freq" value="1.0"/>
       <param name="map/frame_id" value="world"/>
   </node>
 

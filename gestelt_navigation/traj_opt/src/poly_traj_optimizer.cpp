@@ -514,6 +514,13 @@ namespace ego_planner
     double pt_time = t_now_ + t;
 
     for (auto& it : *swarm_local_trajs_){ // Iterate through trajectories
+      if (swarm_local_trajs_ == nullptr){
+        std::cout << "SWARM LOCAL TRAJ MISSING!!" << std::endl;
+        std::cout << "SWARM LOCAL TRAJ MISSING!!" << std::endl;
+        std::cout << "SWARM LOCAL TRAJ MISSING!!" << std::endl;
+        std::cout << "SWARM LOCAL TRAJ MISSING!!" << std::endl;
+        std::cout << "SWARM LOCAL TRAJ MISSING!!" << std::endl;
+      }
       int id = it.first;
 
       if ((id < 0) || id == drone_id_)

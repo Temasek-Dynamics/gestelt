@@ -60,6 +60,7 @@ class DeterministicForest
 			_nh.param<int>("circle_obs", _circle_obs_num, 1);
 			_nh.param<int>("seed", _seed, 1);
 
+			_nh.param<std::string>("filename", filename_, "new_map");
 			_nh.param<std::string>("path", file_path_, "");
 
 			_nh.param<double>("map/resolution", _resolution, 0.05);
@@ -221,10 +222,17 @@ class DeterministicForest
 			return cloud_map;
 		}
 
-		std::string get_directory() 
+		std::string get_directory() const
 		{
 			return file_path_;
 		}
+
+
+		std::string get_filename() const
+		{
+			return filename_;
+		}
+		
 
 		void addSquareViz(pcl::visualization::PCLVisualizer& viewer, double x_min, double y_min, double x_max, double y_max, const std::string& id)
 		{
@@ -256,7 +264,6 @@ class DeterministicForest
 		}
 
 	private:
-
 
 		/**
 		 * @brief Generate map with random cylinders and circles
@@ -647,6 +654,7 @@ class DeterministicForest
 		std::vector<double> _state;
 
 		std::string file_path_;
+		std::string filename_;
 
 		int _seed;
 
@@ -685,29 +693,22 @@ int main(int argc, char **argv)
 
 	DeterministicForest forest(_nh);
 
-	time_t rawtime;
-	struct tm * timeinfo;
-	char buffer[80];
-
-	time (&rawtime);
-	timeinfo = localtime(&rawtime);
-	
-	strftime(buffer,sizeof(buffer),"%d-%m-%Y_%H:%M:%S",timeinfo);
-	std::string get_time(buffer);
-
-	// std::string file_name = forest.get_directory() + get_time + ".pcd";
-	std::string file_name = forest.get_directory() + "demo_map.pcd";
-
-	printf("saved to path: %s\n", 
-		file_name.c_str());
-
 	pcl::PointCloud<pcl::PointXYZ> cloud_map = forest.get_pcl();
 
-	pcl::io::savePCDFileASCII(
-		file_name, forest.get_pcl());
+	// time_t rawtime;
+	// struct tm * timeinfo;
+	// char buffer[80];
+	// time (&rawtime);
+	// timeinfo = localtime(&rawtime);
+	// strftime(buffer,sizeof(buffer),"%d-%m-%Y_%H:%M:%S",timeinfo);
+	// std::string get_time(buffer);
+	// std::string file_name = forest.get_directory() + get_time + ".pcd";
+
+	std::string file_path = forest.get_directory() + forest.get_filename() + ".pcd";
+	pcl::io::savePCDFileASCII(file_path, cloud_map);
+	printf("saved to path: %s\n",  file_path.c_str());
 
 	pcl::visualization::CloudViewer viewer("Simple Cloud Viewer");
-
 	viewer.showCloud(cloud_map.makeShared());
 
 	// viewer.runOnVisualizationThreadOnce(&DeterministicForest::viewerOneOff);

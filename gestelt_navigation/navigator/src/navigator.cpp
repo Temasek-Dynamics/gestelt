@@ -680,7 +680,10 @@ void Navigator::swarmMincoTrajCB(const traj_utils::MINCOTrajConstPtr &msg)
     }
   }
 
-  mincoMsgToTraj(*msg, (*swarm_local_trajs_)[msg->drone_id]);
+  ego_planner::LocalTrajData traj;
+  mincoMsgToTraj(*msg, traj);
+  
+  (*swarm_local_trajs_)[msg->drone_id] = traj;
 }
 
 /* Checking methods */
