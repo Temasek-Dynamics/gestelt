@@ -254,9 +254,6 @@ bool SphericalSFC::getForwardPointOnPath(
 
 bool SphericalSFC::BatchSample(const Eigen::Vector3d& pt_guide, Sphere& B_cur)
 {
-    std::cout << "Guide point: " << pt_guide << std::endl; 
-    std::cout << "B_cur.center: " << B_cur.center << std::endl; 
-
     auto a = std::chrono::high_resolution_clock::now();
 
     // Priority queue of candidate spheres sorted by highest score first
@@ -516,9 +513,6 @@ void SphericalSFC::postProcessSpheres(std::vector<SphericalSFC::Sphere>& sfc_sph
         }
         i += skip;
     }
-
-    std::cout << "sfc_spheres_proc.size() vs sfc_spheres.size(): " 
-                << sfc_spheres_proc.size()  << " vs " << sfc_spheres.size() << std::endl;
 
     sfc_spheres = sfc_spheres_proc;
 }
