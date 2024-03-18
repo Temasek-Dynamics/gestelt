@@ -46,7 +46,7 @@ roslaunch trajectory_planner trajectory_planner_node.launch
 "
 
 # Start up script to send commands
-CMD_3="roslaunch gestelt_bringup dive_mission.launch"
+CMD_3="roslaunch gestelt_bringup reverse_circle_mission.launch"
 
 # disarm drone
 # CMD_4="rosservice call /drone_commander/disarm"
