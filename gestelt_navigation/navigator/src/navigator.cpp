@@ -216,7 +216,7 @@ bool Navigator::getRHPGoal(
   // While RHP goal is in obstacle, backtrack.
   double dec = 0.15;
   double backtrack_dist = 0.0;
-  while (map_->getInflateOccupancy(rhp_goal, sfc_params_.spherical_buffer + map_.getInflation())))
+  while (map_->getInflateOccupancy(rhp_goal, sfc_params_.spherical_buffer + map_->getInflation()))
   {
     rhp_goal -= dec * vec_to_goal;
     backtrack_dist += dec;
