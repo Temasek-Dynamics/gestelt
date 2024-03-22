@@ -1,6 +1,6 @@
 <launch>
   <!-- Launches a test mission -->
-  <node pkg="gestelt_bringup" name="mission" type="Multiple_Circle_Trajectory.py">  
+  <node pkg="gestelt_bringup" name="mission" type="demo_trajectory.py">  
         <param name="is_simulation" value="True"/>
   </node>
    <!-- Start rosbag to record setpoint_raw and local_position -->

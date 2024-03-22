@@ -205,31 +205,22 @@ def main():
     g=-9.81 #m/s^2  # down force, negative
     f=1*(-g) #N  # up force, positive
     angle_1=85
-    angle_2=-60
+    # angle_2=-60
     angle_rad_1=math.radians(angle_1)
-    angle_rad_2=math.radians(angle_2)
-    num_passes = 7
-    radius = 1.8
-    min_height = 1
-    max_height = 2
-    step_diff_height =  (max_height-min_height)/num_passes
-    height = min_height
+    # angle_rad_2=math.radians(angle_2)
+    num_passes = 1
         # 1/4 test
         # world frame is the initial position of the drone
         # map frame is the origin of the map
         # waypoints are under the map frame, will be transformed to world frame
     for i in range(num_passes):
-        
-        
-        # radius = min(1.8, radius)
 
-        waypoints.append(create_pose(radius, 0.0,   height + (0/4)*step_diff_height ))   
-        waypoints.append(create_pose(0.0,-radius ,  height + (1/4)*step_diff_height ))
-        waypoints.append(create_pose(-radius, 0.0,  height + (2/4)*step_diff_height ))
-        waypoints.append(create_pose(0.0,radius,    height + (3/4)*step_diff_height ))
+        # forward pass
+        waypoints.append(create_pose(0.0,1.8,2))
+        waypoints.append(create_pose(0.0, 0.9, 1))
+        waypoints.append(create_pose(0.0, 0.0, 2))
         
-        accel_list.append(create_accel(None,None,None))
-        accel_list.append(create_accel(None,None,None))
+        accel_list.append(create_accel(0,0,2*g))
         accel_list.append(create_accel(None,None,None))
         accel_list.append(create_accel(None,None,None))
 
@@ -237,11 +228,7 @@ def main():
         vel_list.append(create_vel(None,None,None))
         vel_list.append(create_vel(None,None,None))
         vel_list.append(create_vel(None,None,None))
-        vel_list.append(create_vel(None,None,None))
 
-        radius -= radius*(i/num_passes)
-        height += step_diff_height
-        height = min(max_height, height)
     
     # end of the trajectory
 

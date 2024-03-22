@@ -749,6 +749,61 @@
       <accelerometerTurnOnBiasSigma>0.196</accelerometerTurnOnBiasSigma>
     </plugin>
 
+    <!-- 
+    <plugin name="lift_drag_plugin_0" filename="libLiftDragPlugin.so">
+      <a0>0.0</a0>
+      <cla>0.000</cla>
+      <cda>0.0005</cda>
+      <cma>0.00</cma>
+      <cp>0.0 0.0 0</cp>   
+      <area>0.2</area>
+      <air_density>1.2041</air_density>
+      <forward>1 0 0</forward>
+      <upward>0 0 1</upward>
+      <link_name>rotor_0</link_name>
+    </plugin>
+
+    <plugin name="lift_drag_plugin_1" filename="libLiftDragPlugin.so">
+      <a0>0.0</a0>
+      <cla>0.000</cla>
+      <cda>0.0005</cda>
+      <cma>0.00</cma>
+      <cp>0.0 0.0 0</cp>   
+      <area>0.2</area>
+      <air_density>1.2041</air_density>
+      <forward>1 0 0</forward>
+      <upward>0 0 1</upward>
+      <link_name>rotor_1</link_name>
+    </plugin>
+
+    <plugin name="lift_drag_plugin_2" filename="libLiftDragPlugin.so">
+      <a0>0.0</a0>
+      <cla>0.000</cla>
+      <cda>0.0005</cda>
+      <cma>0.00</cma>
+      <cp>0.0 0.0 0</cp>   
+      <area>0.2</area>
+      <air_density>1.2041</air_density>
+      <forward>1 0 0</forward>
+      <upward>0 0 1</upward>
+      <link_name>rotor_2</link_name>
+    </plugin>
+
+    <plugin name="lift_drag_plugin_3" filename="libLiftDragPlugin.so">
+      <a0>0.0</a0>
+      <cla>0.000</cla>
+      <cda>0.0005</cda>
+      <cma>0.00</cma>
+      <cp>0.0 0.0 0</cp>   
+      <area>0.2</area>
+      <air_density>1.2041</air_density>
+      <forward>1 0 0</forward>
+      <upward>0 0 1</upward>
+      <link_name>rotor_3</link_name>
+    </plugin> 
+
+   -->
+
     <gazebo reference='gps0_joint'>
       <disableFixedJointLumping>true</disableFixedJointLumping>
     </gazebo>
