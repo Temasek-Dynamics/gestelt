@@ -78,6 +78,7 @@ void SphericalSFC::clearVisualizations()
 bool SphericalSFC::generateSFC(const std::vector<Eigen::Vector3d> &path)
 {
     bool planning_success = true;
+    bool skip_main_loop = false;
 
     reset();
     front_end_path_ = path;
@@ -119,11 +120,15 @@ bool SphericalSFC::generateSFC(const std::vector<Eigen::Vector3d> &path)
     
     // Add first sphere
     sfc_spheres_.push_back(B_starting);
+    // Skip main loop if goal is in starting sphere
+    if (sfc_spheres_.back().contains(path.back())){
+        skip_main_loop = true; 
+    }
     
     auto b = std::chrono::high_resolution_clock::now();
 
     itr_ = 0;
-    while (itr_ < sfc_params_.max_itr)
+    while (itr_ < sfc_params_.max_itr && !skip_main_loop)
     {
         auto get_fwd_pt = std::chrono::high_resolution_clock::now();
 
@@ -134,7 +139,6 @@ bool SphericalSFC::generateSFC(const std::vector<Eigen::Vector3d> &path)
         }
 
         auto get_fwd_pt_end = std::chrono::high_resolution_clock::now();
-
         auto batch_sample = std::chrono::high_resolution_clock::now();
 
         if (!BatchSample(path[path_idx_cur], B_cur)){

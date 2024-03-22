@@ -10,5 +10,7 @@ A few scenarios are provided to test the planner algorithms:
 # narrow_corridor
 ./scenario.sh -s narrow_corridor
 # antipodal_swap
-./scenario.sh -s antipodal_swap
+./scenario.sh -s antipodal_swap12
+# Forest scene for 16 drones 
+./scenario.sh -s forest16_50obs
 ```

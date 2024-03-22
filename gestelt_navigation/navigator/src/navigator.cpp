@@ -179,7 +179,9 @@ void Navigator::planTimerCB(const ros::TimerEvent &e)
 
   // Get Receding Horizon Planning goal 
   Eigen::Vector3d rhp_goal;
-  getRHPGoal(waypoints_.nextWP(), start_pos_, rhp_dist_, rhp_goal);
+  if (!getRHPGoal(waypoints_.nextWP(), start_pos_, rhp_dist_, rhp_goal)){
+    return;
+  }
   // Publish RHP goal
   geometry_msgs::PoseStamped rhp_goal_msg;
   rhp_goal_msg.header.stamp = ros::Time::now();
@@ -209,12 +211,12 @@ bool Navigator::getRHPGoal(
 
   // Plan straight line to goal
   Eigen::Vector3d vec_to_goal = (global_goal - start_pos).normalized();
-  rhp_goal = start_pos + rhp_dist * vec_to_goal;
+  rhp_goal = start_pos + (rhp_dist * vec_to_goal);
 
   // While RHP goal is in obstacle, backtrack.
   double dec = 0.15;
   double backtrack_dist = 0.0;
-  while (map_->getInflateOccupancy(rhp_goal))
+  while (map_->getInflateOccupancy(rhp_goal, sfc_params_.spherical_buffer + map_.getInflation())))
   {
     rhp_goal -= dec * vec_to_goal;
     backtrack_dist += dec;

@@ -94,8 +94,8 @@ class DeterministicForest
 
 			_polar_obs_num = std::min(_polar_obs_num, (int)_x_size * 10);
 
-			// Create regions where obstacles cannot be created.
-			obs_free_radial_.push_back(ObsFreeRadial(0.0, 0.0, 0.1));
+			// // Create regions where obstacles cannot be created.
+			// obs_free_radial_.push_back(ObsFreeRadial(0.0, 0.0, 0.1));
 
 			// We can either:
 			// A) Generate a test map for the vicon room
@@ -104,12 +104,12 @@ class DeterministicForest
 			// 	-2.8, 2.8, -2.8, 2.8);
 
 			// B) Generate a random forest map for benchmarking
-			unsigned int seed = rd();
-			eng.seed(_seed);
-			RandomMapGenerate();
-			// Add floor and ceiling
-			generateHorizontalPlane(_x_size, _y_size, 0.0);
-			// generateHorizontalPlane(_x_size, _y_size, _z_size);
+			// unsigned int seed = rd();
+			// eng.seed(_seed);
+			// RandomMapGenerate();
+			// // Add floor and ceiling
+			// generateHorizontalPlane(_x_size, _y_size, 0.0);
+			// // generateHorizontalPlane(_x_size, _y_size, _z_size);
 
 			// C) Generate a tunnel for benchmarking
 			// generateRectangularTunnel(Eigen::Vector3d{0.0, 0.0, 0.0}, 10.0, 2.0, 2.0);
@@ -134,6 +134,28 @@ class DeterministicForest
 
 			// // Generate floor
 			// generateHorizontalPlane(20.0, 20.0, 0.0);	
+
+			// // E) Generate anti-podal map
+			// double a = 2.0;
+			// double b = 2.0;
+			// double buffer_rad = 0.3;
+
+			// // Add all 4 origin positions of the drones + 0.5 buffer
+			// obs_free_radial_.push_back(ObsFreeRadial(a+b, a+b, b + buffer_rad));
+			// obs_free_radial_.push_back(ObsFreeRadial(a+b, -a-b, b + buffer_rad));
+			// obs_free_radial_.push_back(ObsFreeRadial(-a-b, -a-b, b + buffer_rad));
+			// obs_free_radial_.push_back(ObsFreeRadial(-a-b, a+b, b + buffer_rad));
+
+			// eng.seed(_seed);
+			// RandomMapGenerate();
+			// generateHorizontalPlane(_x_size, _y_size, 0.0); // Add floor
+			// // generateHorizontalPlane(_x_size, _y_size, _z_size); // Add ceiling
+
+			// F) Generate forest map
+			eng.seed(_seed);
+			RandomMapGenerate();
+			generateHorizontalPlane(_x_size, _y_size, 0.0); // Add floor
+			// generateHorizontalPlane(_x_size, _y_size, _z_size); // Add ceiling
 
 			cloud_map.width = cloud_map.points.size();
 			cloud_map.height = 1;

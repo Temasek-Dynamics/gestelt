@@ -6,10 +6,25 @@ Panels:
       Expanded:
         - /Global Options1
         - /TF1/Frames1
+        - /d0/planner(Red)1
         - /d0/planner(Red)1/front-end1/closed_list_viz1
         - /d0/planner(Red)1/back_end1/Planning_back_end1
-      Splitter Ratio: 0.6941176652908325
-    Tree Height: 559
+        - /d1/planner(orange)1/odom1/Shape1
+        - /d2/planner(yellow)1/odom1/Shape1
+        - /d3/planner(green)1/odom1/Shape1
+        - /d4/planner(lightblue)1/odom1/Shape1
+        - /d5/planner(purple)1/odom1/Shape1
+        - /d5/planner(purple)1/front-end1
+        - /d5/planner(purple)1/front-end1/closed_list_viz1
+        - /d6/planner(tan)1/odom1/Shape1
+        - /d7/planner(gray)1/odom1/Shape1
+        - /d7/planner(gray)1/front-end1
+        - /d8/planner(silver)1/odom1/Shape1
+        - /d10/planner(brightgreen)1/odom1/Shape1
+        - /d11/planner(blue)1/odom1/Shape1
+        - /drone13/planner(Red)1/odom1/Shape1
+      Splitter Ratio: 0.3220779299736023
+    Tree Height: 441
   - Class: rviz/Selection
     Name: Selection
   - Class: rviz/Tool Properties
@@ -285,6 +300,38 @@ Visualization Manager:
             collision_viz: true
           Queue Size: 100
           Value: true
+        - Class: rviz/Marker
+          Enabled: true
+          Marker Topic: /drone4/grid_map/collision_viz
+          Name: drone4/collision_viz
+          Namespaces:
+            collision_viz: true
+          Queue Size: 100
+          Value: true
+        - Class: rviz/Marker
+          Enabled: true
+          Marker Topic: /drone5/grid_map/collision_viz
+          Name: drone5/collision_viz
+          Namespaces:
+            collision_viz: true
+          Queue Size: 100
+          Value: true
+        - Class: rviz/Marker
+          Enabled: true
+          Marker Topic: /drone6/grid_map/collision_viz
+          Name: drone6/collision_viz
+          Namespaces:
+            collision_viz: true
+          Queue Size: 100
+          Value: true
+        - Class: rviz/Marker
+          Enabled: true
+          Marker Topic: /drone7/grid_map/collision_viz
+          Name: drone7/collision_viz
+          Namespaces:
+            collision_viz: true
+          Queue Size: 100
+          Value: true
       Enabled: true
       Name: collision_viz
     - Class: rviz/Group
@@ -322,7 +369,7 @@ Visualization Manager:
               Scale: 1
               Value: true
             Value: true
-          Enabled: false
+          Enabled: true
           Keep: 1000
           Name: odom
           Position Tolerance: 0.10000000149011612
@@ -339,7 +386,7 @@ Visualization Manager:
             Value: Arrow
           Topic: /drone0/mavros/local_position/odom
           Unreliable: false
-          Value: false
+          Value: true
         - Alpha: 1
           Axes Length: 0.20000000298023224
           Axes Radius: 0.029999999329447746
@@ -391,7 +438,7 @@ Visualization Manager:
               Marker Topic: /drone0/sfc_spherical
               Name: sfc_spherical
               Namespaces:
-                {}
+                sfc_spheres: true
               Queue Size: 100
               Value: true
             - Class: rviz/MarkerArray
@@ -415,7 +462,8 @@ Visualization Manager:
               Marker Topic: /drone0/sfc_waypoints
               Name: sfc_waypoints
               Namespaces:
-                {}
+                sfc_trajectory_line: true
+                sfc_trajectory_waypoints: true
               Queue Size: 100
               Value: true
             - Class: rviz/MarkerArray
@@ -434,7 +482,7 @@ Visualization Manager:
                 {}
               Queue Size: 100
               Value: false
-          Enabled: false
+          Enabled: true
           Name: sfc
         - Class: rviz/Group
           Displays:
@@ -536,7 +584,7 @@ Visualization Manager:
           Axes Length: 1
           Axes Radius: 0.10000000149011612
           Class: rviz/Pose
-          Color: 239; 41; 41
+          Color: 252; 175; 62
           Enabled: true
           Head Length: 0.20000000298023224
           Head Radius: 0.15000000596046448
@@ -565,7 +613,7 @@ Visualization Manager:
               Scale: 1
               Value: true
             Value: true
-          Enabled: false
+          Enabled: true
           Keep: 1000
           Name: odom
           Position Tolerance: 0.10000000149011612
@@ -574,7 +622,7 @@ Visualization Manager:
             Alpha: 0.6000000238418579
             Axes Length: 1
             Axes Radius: 0.10000000149011612
-            Color: 255; 25; 0
+            Color: 252; 175; 62
             Head Length: 0.20000000298023224
             Head Radius: 0.10000000149011612
             Shaft Length: 0.25
@@ -582,7 +630,7 @@ Visualization Manager:
             Value: Arrow
           Topic: /drone1/mavros/local_position/odom
           Unreliable: false
-          Value: false
+          Value: true
         - Alpha: 1
           Axes Length: 0.20000000298023224
           Axes Radius: 0.029999999329447746
@@ -604,7 +652,7 @@ Visualization Manager:
           Marker Topic: /drone1/back_end/optimal_mjo
           Name: optimal_mjo
           Namespaces:
-            {}
+            "": true
           Queue Size: 100
           Value: true
         - Class: rviz/Group
@@ -772,14 +820,14 @@ Visualization Manager:
           Enabled: true
           Name: back_end
       Enabled: true
-      Name: d1/planner(Red)
+      Name: d1/planner(orange)
     - Class: rviz/Group
       Displays:
         - Alpha: 1
           Axes Length: 1
           Axes Radius: 0.10000000149011612
           Class: rviz/Pose
-          Color: 239; 41; 41
+          Color: 252; 233; 79
           Enabled: true
           Head Length: 0.20000000298023224
           Head Radius: 0.15000000596046448
@@ -808,7 +856,7 @@ Visualization Manager:
               Scale: 1
               Value: true
             Value: true
-          Enabled: false
+          Enabled: true
           Keep: 1000
           Name: odom
           Position Tolerance: 0.10000000149011612
@@ -817,7 +865,7 @@ Visualization Manager:
             Alpha: 0.6000000238418579
             Axes Length: 1
             Axes Radius: 0.10000000149011612
-            Color: 255; 25; 0
+            Color: 252; 233; 79
             Head Length: 0.20000000298023224
             Head Radius: 0.10000000149011612
             Shaft Length: 0.25
@@ -825,7 +873,7 @@ Visualization Manager:
             Value: Arrow
           Topic: /drone2/mavros/local_position/odom
           Unreliable: false
-          Value: false
+          Value: true
         - Alpha: 1
           Axes Length: 0.20000000298023224
           Axes Radius: 0.029999999329447746
@@ -877,7 +925,7 @@ Visualization Manager:
               Marker Topic: /drone2/sfc_spherical
               Name: sfc_spherical
               Namespaces:
-                {}
+                sfc_spheres: true
               Queue Size: 100
               Value: true
             - Class: rviz/MarkerArray
@@ -901,7 +949,8 @@ Visualization Manager:
               Marker Topic: /drone2/sfc_waypoints
               Name: sfc_waypoints
               Namespaces:
-                {}
+                sfc_trajectory_line: true
+                sfc_trajectory_waypoints: true
               Queue Size: 100
               Value: true
             - Class: rviz/MarkerArray
@@ -920,7 +969,7 @@ Visualization Manager:
                 {}
               Queue Size: 100
               Value: false
-          Enabled: false
+          Enabled: true
           Name: sfc
         - Class: rviz/Group
           Displays:
@@ -1015,14 +1064,14 @@ Visualization Manager:
           Enabled: true
           Name: back_end
       Enabled: true
-      Name: d2/planner(Red)
+      Name: d2/planner(yellow)
     - Class: rviz/Group
       Displays:
         - Alpha: 1
           Axes Length: 1
           Axes Radius: 0.10000000149011612
           Class: rviz/Pose
-          Color: 239; 41; 41
+          Color: 138; 226; 52
           Enabled: true
           Head Length: 0.20000000298023224
           Head Radius: 0.15000000596046448
@@ -1051,7 +1100,7 @@ Visualization Manager:
               Scale: 1
               Value: true
             Value: true
-          Enabled: false
+          Enabled: true
           Keep: 1000
           Name: odom
           Position Tolerance: 0.10000000149011612
@@ -1060,7 +1109,7 @@ Visualization Manager:
             Alpha: 0.6000000238418579
             Axes Length: 1
             Axes Radius: 0.10000000149011612
-            Color: 255; 25; 0
+            Color: 138; 226; 52
             Head Length: 0.20000000298023224
             Head Radius: 0.10000000149011612
             Shaft Length: 0.25
@@ -1068,13 +1117,13 @@ Visualization Manager:
             Value: Arrow
           Topic: /drone3/mavros/local_position/odom
           Unreliable: false
-          Value: false
+          Value: true
         - Alpha: 1
           Axes Length: 0.20000000298023224
           Axes Radius: 0.029999999329447746
           Class: rviz/Pose
           Color: 255; 25; 0
-          Enabled: false
+          Enabled: true
           Head Length: 0.30000001192092896
           Head Radius: 0.10000000149011612
           Name: rhp_goal
@@ -1084,7 +1133,7 @@ Visualization Manager:
           Shape: Axes
           Topic: /drone3/navigator/rhp_goal
           Unreliable: false
-          Value: false
+          Value: true
         - Class: rviz/Marker
           Enabled: true
           Marker Topic: /drone3/back_end/optimal_mjo
@@ -1258,14 +1307,14 @@ Visualization Manager:
           Enabled: true
           Name: back_end
       Enabled: true
-      Name: d3/planner(Red)
+      Name: d3/planner(green)
     - Class: rviz/Group
       Displays:
         - Alpha: 1
           Axes Length: 1
           Axes Radius: 0.10000000149011612
           Class: rviz/Pose
-          Color: 239; 41; 41
+          Color: 114; 159; 207
           Enabled: true
           Head Length: 0.20000000298023224
           Head Radius: 0.15000000596046448
@@ -1294,7 +1343,7 @@ Visualization Manager:
               Scale: 1
               Value: true
             Value: true
-          Enabled: false
+          Enabled: true
           Keep: 1000
           Name: odom
           Position Tolerance: 0.10000000149011612
@@ -1303,7 +1352,7 @@ Visualization Manager:
             Alpha: 0.6000000238418579
             Axes Length: 1
             Axes Radius: 0.10000000149011612
-            Color: 255; 25; 0
+            Color: 114; 159; 207
             Head Length: 0.20000000298023224
             Head Radius: 0.10000000149011612
             Shaft Length: 0.25
@@ -1311,7 +1360,7 @@ Visualization Manager:
             Value: Arrow
           Topic: /drone4/mavros/local_position/odom
           Unreliable: false
-          Value: false
+          Value: true
         - Alpha: 1
           Axes Length: 0.20000000298023224
           Axes Radius: 0.029999999329447746
@@ -1501,14 +1550,14 @@ Visualization Manager:
           Enabled: true
           Name: back_end
       Enabled: true
-      Name: d4/planner(Red)
+      Name: d4/planner(lightblue)
     - Class: rviz/Group
       Displays:
         - Alpha: 1
           Axes Length: 1
           Axes Radius: 0.10000000149011612
           Class: rviz/Pose
-          Color: 239; 41; 41
+          Color: 173; 127; 168
           Enabled: true
           Head Length: 0.20000000298023224
           Head Radius: 0.15000000596046448
@@ -1537,7 +1586,7 @@ Visualization Manager:
               Scale: 1
               Value: true
             Value: true
-          Enabled: false
+          Enabled: true
           Keep: 1000
           Name: odom
           Position Tolerance: 0.10000000149011612
@@ -1546,7 +1595,7 @@ Visualization Manager:
             Alpha: 0.6000000238418579
             Axes Length: 1
             Axes Radius: 0.10000000149011612
-            Color: 255; 25; 0
+            Color: 173; 127; 168
             Head Length: 0.20000000298023224
             Head Radius: 0.10000000149011612
             Shaft Length: 0.25
@@ -1554,13 +1603,13 @@ Visualization Manager:
             Value: Arrow
           Topic: /drone5/mavros/local_position/odom
           Unreliable: false
-          Value: false
+          Value: true
         - Alpha: 1
           Axes Length: 0.20000000298023224
           Axes Radius: 0.029999999329447746
           Class: rviz/Pose
           Color: 255; 25; 0
-          Enabled: false
+          Enabled: true
           Head Length: 0.30000001192092896
           Head Radius: 0.10000000149011612
           Name: rhp_goal
@@ -1570,7 +1619,7 @@ Visualization Manager:
           Shape: Axes
           Topic: /drone5/navigator/rhp_goal
           Unreliable: false
-          Value: false
+          Value: true
         - Class: rviz/Marker
           Enabled: true
           Marker Topic: /drone5/back_end/optimal_mjo
@@ -1582,22 +1631,22 @@ Visualization Manager:
         - Class: rviz/Group
           Displays:
             - Class: rviz/Marker
-              Enabled: true
+              Enabled: false
               Marker Topic: /drone5/closed_list_viz
               Name: closed_list_viz
               Namespaces:
                 {}
               Queue Size: 100
-              Value: true
+              Value: false
             - Class: rviz/Marker
               Enabled: true
               Marker Topic: /drone5/plan_viz
               Name: plan_viz
               Namespaces:
-                {}
+                viz_spheres: true
               Queue Size: 100
               Value: true
-          Enabled: false
+          Enabled: true
           Name: front-end
         - Class: rviz/Group
           Displays:
@@ -1606,7 +1655,7 @@ Visualization Manager:
               Marker Topic: /drone5/sfc_spherical
               Name: sfc_spherical
               Namespaces:
-                {}
+                sfc_spheres: true
               Queue Size: 100
               Value: true
             - Class: rviz/MarkerArray
@@ -1630,7 +1679,8 @@ Visualization Manager:
               Marker Topic: /drone5/sfc_waypoints
               Name: sfc_waypoints
               Namespaces:
-                {}
+                sfc_trajectory_line: true
+                sfc_trajectory_waypoints: true
               Queue Size: 100
               Value: true
             - Class: rviz/MarkerArray
@@ -1649,7 +1699,7 @@ Visualization Manager:
                 {}
               Queue Size: 100
               Value: false
-          Enabled: false
+          Enabled: true
           Name: sfc
         - Class: rviz/Group
           Displays:
@@ -1744,14 +1794,14 @@ Visualization Manager:
           Enabled: true
           Name: back_end
       Enabled: true
-      Name: d5/planner(Red)
+      Name: d5/planner(purple)
     - Class: rviz/Group
       Displays:
         - Alpha: 1
           Axes Length: 1
           Axes Radius: 0.10000000149011612
           Class: rviz/Pose
-          Color: 239; 41; 41
+          Color: 233; 185; 110
           Enabled: true
           Head Length: 0.20000000298023224
           Head Radius: 0.15000000596046448
@@ -1780,7 +1830,7 @@ Visualization Manager:
               Scale: 1
               Value: true
             Value: true
-          Enabled: false
+          Enabled: true
           Keep: 1000
           Name: odom
           Position Tolerance: 0.10000000149011612
@@ -1789,7 +1839,7 @@ Visualization Manager:
             Alpha: 0.6000000238418579
             Axes Length: 1
             Axes Radius: 0.10000000149011612
-            Color: 255; 25; 0
+            Color: 233; 185; 110
             Head Length: 0.20000000298023224
             Head Radius: 0.10000000149011612
             Shaft Length: 0.25
@@ -1797,7 +1847,7 @@ Visualization Manager:
             Value: Arrow
           Topic: /drone6/mavros/local_position/odom
           Unreliable: false
-          Value: false
+          Value: true
         - Alpha: 1
           Axes Length: 0.20000000298023224
           Axes Radius: 0.029999999329447746
@@ -1987,14 +2037,14 @@ Visualization Manager:
           Enabled: true
           Name: back_end
       Enabled: true
-      Name: d6/planner(Red)
+      Name: d6/planner(tan)
     - Class: rviz/Group
       Displays:
         - Alpha: 1
           Axes Length: 1
           Axes Radius: 0.10000000149011612
           Class: rviz/Pose
-          Color: 239; 41; 41
+          Color: 136; 138; 133
           Enabled: true
           Head Length: 0.20000000298023224
           Head Radius: 0.15000000596046448
@@ -2023,7 +2073,7 @@ Visualization Manager:
               Scale: 1
               Value: true
             Value: true
-          Enabled: false
+          Enabled: true
           Keep: 1000
           Name: odom
           Position Tolerance: 0.10000000149011612
@@ -2032,7 +2082,7 @@ Visualization Manager:
             Alpha: 0.6000000238418579
             Axes Length: 1
             Axes Radius: 0.10000000149011612
-            Color: 255; 25; 0
+            Color: 136; 138; 133
             Head Length: 0.20000000298023224
             Head Radius: 0.10000000149011612
             Shaft Length: 0.25
@@ -2040,13 +2090,13 @@ Visualization Manager:
             Value: Arrow
           Topic: /drone7/mavros/local_position/odom
           Unreliable: false
-          Value: false
+          Value: true
         - Alpha: 1
           Axes Length: 0.20000000298023224
           Axes Radius: 0.029999999329447746
           Class: rviz/Pose
           Color: 255; 25; 0
-          Enabled: false
+          Enabled: true
           Head Length: 0.30000001192092896
           Head Radius: 0.10000000149011612
           Name: rhp_goal
@@ -2056,34 +2106,34 @@ Visualization Manager:
           Shape: Axes
           Topic: /drone7/navigator/rhp_goal
           Unreliable: false
-          Value: false
+          Value: true
         - Class: rviz/Marker
           Enabled: true
           Marker Topic: /drone7/back_end/optimal_mjo
           Name: optimal_mjo
           Namespaces:
-            {}
+            "": true
           Queue Size: 100
           Value: true
         - Class: rviz/Group
           Displays:
             - Class: rviz/Marker
-              Enabled: true
+              Enabled: false
               Marker Topic: /drone7/closed_list_viz
               Name: closed_list_viz
               Namespaces:
                 {}
               Queue Size: 100
-              Value: true
+              Value: false
             - Class: rviz/Marker
               Enabled: true
               Marker Topic: /drone7/plan_viz
               Name: plan_viz
               Namespaces:
-                {}
+                viz_spheres: true
               Queue Size: 100
               Value: true
-          Enabled: false
+          Enabled: true
           Name: front-end
         - Class: rviz/Group
           Displays:
@@ -2092,7 +2142,7 @@ Visualization Manager:
               Marker Topic: /drone7/sfc_spherical
               Name: sfc_spherical
               Namespaces:
-                {}
+                sfc_spheres: true
               Queue Size: 100
               Value: true
             - Class: rviz/MarkerArray
@@ -2116,7 +2166,8 @@ Visualization Manager:
               Marker Topic: /drone7/sfc_waypoints
               Name: sfc_waypoints
               Namespaces:
-                {}
+                sfc_trajectory_line: true
+                sfc_trajectory_waypoints: true
               Queue Size: 100
               Value: true
             - Class: rviz/MarkerArray
@@ -2135,7 +2186,7 @@ Visualization Manager:
                 {}
               Queue Size: 100
               Value: false
-          Enabled: false
+          Enabled: true
           Name: sfc
         - Class: rviz/Group
           Displays:
@@ -2230,14 +2281,14 @@ Visualization Manager:
           Enabled: true
           Name: back_end
       Enabled: true
-      Name: d7/planner(Red)
+      Name: d7/planner(gray)
     - Class: rviz/Group
       Displays:
         - Alpha: 1
           Axes Length: 1
           Axes Radius: 0.10000000149011612
           Class: rviz/Pose
-          Color: 239; 41; 41
+          Color: 238; 238; 236
           Enabled: true
           Head Length: 0.20000000298023224
           Head Radius: 0.15000000596046448
@@ -2266,7 +2317,7 @@ Visualization Manager:
               Scale: 1
               Value: true
             Value: true
-          Enabled: false
+          Enabled: true
           Keep: 1000
           Name: odom
           Position Tolerance: 0.10000000149011612
@@ -2275,7 +2326,7 @@ Visualization Manager:
             Alpha: 0.6000000238418579
             Axes Length: 1
             Axes Radius: 0.10000000149011612
-            Color: 255; 25; 0
+            Color: 238; 238; 236
             Head Length: 0.20000000298023224
             Head Radius: 0.10000000149011612
             Shaft Length: 0.25
@@ -2283,7 +2334,7 @@ Visualization Manager:
             Value: Arrow
           Topic: /drone8/mavros/local_position/odom
           Unreliable: false
-          Value: false
+          Value: true
         - Alpha: 1
           Axes Length: 0.20000000298023224
           Axes Radius: 0.029999999329447746
@@ -2305,7 +2356,7 @@ Visualization Manager:
           Marker Topic: /drone8/back_end/optimal_mjo
           Name: optimal_mjo
           Namespaces:
-            {}
+            "": true
           Queue Size: 100
           Value: true
         - Class: rviz/Group
@@ -2473,14 +2524,14 @@ Visualization Manager:
           Enabled: true
           Name: back_end
       Enabled: true
-      Name: drone8/planner(Red)
+      Name: d8/planner(silver)
     - Class: rviz/Group
       Displays:
         - Alpha: 1
           Axes Length: 1
           Axes Radius: 0.10000000149011612
           Class: rviz/Pose
-          Color: 239; 41; 41
+          Color: 0; 255; 255
           Enabled: true
           Head Length: 0.20000000298023224
           Head Radius: 0.15000000596046448
@@ -2509,7 +2560,7 @@ Visualization Manager:
               Scale: 1
               Value: true
             Value: true
-          Enabled: false
+          Enabled: true
           Keep: 1000
           Name: odom
           Position Tolerance: 0.10000000149011612
@@ -2518,7 +2569,7 @@ Visualization Manager:
             Alpha: 0.6000000238418579
             Axes Length: 1
             Axes Radius: 0.10000000149011612
-            Color: 255; 25; 0
+            Color: 0; 255; 255
             Head Length: 0.20000000298023224
             Head Radius: 0.10000000149011612
             Shaft Length: 0.25
@@ -2526,7 +2577,7 @@ Visualization Manager:
             Value: Arrow
           Topic: /drone9/mavros/local_position/odom
           Unreliable: false
-          Value: false
+          Value: true
         - Alpha: 1
           Axes Length: 0.20000000298023224
           Axes Radius: 0.029999999329447746
@@ -2548,7 +2599,7 @@ Visualization Manager:
           Marker Topic: /drone9/back_end/optimal_mjo
           Name: optimal_mjo
           Namespaces:
-            {}
+            "": true
           Queue Size: 100
           Value: true
         - Class: rviz/Group
@@ -2716,14 +2767,14 @@ Visualization Manager:
           Enabled: true
           Name: back_end
       Enabled: true
-      Name: drone9/planner(Red)
+      Name: d9/planner(cyan)
     - Class: rviz/Group
       Displays:
         - Alpha: 1
           Axes Length: 1
           Axes Radius: 0.10000000149011612
           Class: rviz/Pose
-          Color: 239; 41; 41
+          Color: 0; 255; 0
           Enabled: true
           Head Length: 0.20000000298023224
           Head Radius: 0.15000000596046448
@@ -2752,7 +2803,7 @@ Visualization Manager:
               Scale: 1
               Value: true
             Value: true
-          Enabled: false
+          Enabled: true
           Keep: 1000
           Name: odom
           Position Tolerance: 0.10000000149011612
@@ -2761,7 +2812,7 @@ Visualization Manager:
             Alpha: 0.6000000238418579
             Axes Length: 1
             Axes Radius: 0.10000000149011612
-            Color: 255; 25; 0
+            Color: 0; 255; 0
             Head Length: 0.20000000298023224
             Head Radius: 0.10000000149011612
             Shaft Length: 0.25
@@ -2769,7 +2820,7 @@ Visualization Manager:
             Value: Arrow
           Topic: /drone10/mavros/local_position/odom
           Unreliable: false
-          Value: false
+          Value: true
         - Alpha: 1
           Axes Length: 0.20000000298023224
           Axes Radius: 0.029999999329447746
@@ -2791,7 +2842,7 @@ Visualization Manager:
           Marker Topic: /drone10/back_end/optimal_mjo
           Name: optimal_mjo
           Namespaces:
-            {}
+            "": true
           Queue Size: 100
           Value: true
         - Class: rviz/Group
@@ -2959,14 +3010,14 @@ Visualization Manager:
           Enabled: true
           Name: back_end
       Enabled: true
-      Name: drone10/planner(Red)
+      Name: d10/planner(brightgreen)
     - Class: rviz/Group
       Displays:
         - Alpha: 1
           Axes Length: 1
           Axes Radius: 0.10000000149011612
           Class: rviz/Pose
-          Color: 239; 41; 41
+          Color: 29; 108; 212
           Enabled: true
           Head Length: 0.20000000298023224
           Head Radius: 0.15000000596046448
@@ -2995,7 +3046,7 @@ Visualization Manager:
               Scale: 1
               Value: true
             Value: true
-          Enabled: false
+          Enabled: true
           Keep: 1000
           Name: odom
           Position Tolerance: 0.10000000149011612
@@ -3004,7 +3055,7 @@ Visualization Manager:
             Alpha: 0.6000000238418579
             Axes Length: 1
             Axes Radius: 0.10000000149011612
-            Color: 255; 25; 0
+            Color: 29; 108; 212
             Head Length: 0.20000000298023224
             Head Radius: 0.10000000149011612
             Shaft Length: 0.25
@@ -3012,7 +3063,7 @@ Visualization Manager:
             Value: Arrow
           Topic: /drone11/mavros/local_position/odom
           Unreliable: false
-          Value: false
+          Value: true
         - Alpha: 1
           Axes Length: 0.20000000298023224
           Axes Radius: 0.029999999329447746
@@ -3034,7 +3085,7 @@ Visualization Manager:
           Marker Topic: /drone11/back_end/optimal_mjo
           Name: optimal_mjo
           Namespaces:
-            {}
+            "": true
           Queue Size: 100
           Value: true
         - Class: rviz/Group
@@ -3202,14 +3253,14 @@ Visualization Manager:
           Enabled: true
           Name: back_end
       Enabled: true
-      Name: drone11/planner(Red)
+      Name: d11/planner(blue)
     - Class: rviz/Group
       Displays:
         - Alpha: 1
           Axes Length: 1
           Axes Radius: 0.10000000149011612
           Class: rviz/Pose
-          Color: 239; 41; 41
+          Color: 255; 255; 0
           Enabled: true
           Head Length: 0.20000000298023224
           Head Radius: 0.15000000596046448
@@ -3238,7 +3289,7 @@ Visualization Manager:
               Scale: 1
               Value: true
             Value: true
-          Enabled: false
+          Enabled: true
           Keep: 1000
           Name: odom
           Position Tolerance: 0.10000000149011612
@@ -3247,7 +3298,7 @@ Visualization Manager:
             Alpha: 0.6000000238418579
             Axes Length: 1
             Axes Radius: 0.10000000149011612
-            Color: 255; 25; 0
+            Color: 255; 255; 0
             Head Length: 0.20000000298023224
             Head Radius: 0.10000000149011612
             Shaft Length: 0.25
@@ -3255,7 +3306,7 @@ Visualization Manager:
             Value: Arrow
           Topic: /drone12/mavros/local_position/odom
           Unreliable: false
-          Value: false
+          Value: true
         - Alpha: 1
           Axes Length: 0.20000000298023224
           Axes Radius: 0.029999999329447746
@@ -3277,7 +3328,7 @@ Visualization Manager:
           Marker Topic: /drone12/back_end/optimal_mjo
           Name: optimal_mjo
           Namespaces:
-            {}
+            "": true
           Queue Size: 100
           Value: true
         - Class: rviz/Group
@@ -3445,7 +3496,7 @@ Visualization Manager:
           Enabled: true
           Name: back_end
       Enabled: true
-      Name: drone12/planner(Red)
+      Name: d12/planner(brightyellow)
     - Class: rviz/Group
       Displays:
         - Alpha: 1
@@ -3481,7 +3532,7 @@ Visualization Manager:
               Scale: 1
               Value: true
             Value: true
-          Enabled: false
+          Enabled: true
           Keep: 1000
           Name: odom
           Position Tolerance: 0.10000000149011612
@@ -3498,7 +3549,7 @@ Visualization Manager:
             Value: Arrow
           Topic: /drone13/mavros/local_position/odom
           Unreliable: false
-          Value: false
+          Value: true
         - Alpha: 1
           Axes Length: 0.20000000298023224
           Axes Radius: 0.029999999329447746
@@ -3520,7 +3571,7 @@ Visualization Manager:
           Marker Topic: /drone13/back_end/optimal_mjo
           Name: optimal_mjo
           Namespaces:
-            {}
+            "": true
           Queue Size: 100
           Value: true
         - Class: rviz/Group
@@ -3763,7 +3814,7 @@ Visualization Manager:
           Marker Topic: /drone14/back_end/optimal_mjo
           Name: optimal_mjo
           Namespaces:
-            {}
+            "": true
           Queue Size: 100
           Value: true
         - Class: rviz/Group
@@ -4006,7 +4057,7 @@ Visualization Manager:
           Marker Topic: /drone15/back_end/optimal_mjo
           Name: optimal_mjo
           Namespaces:
-            {}
+            "": true
           Queue Size: 100
           Value: true
         - Class: rviz/Group
@@ -4416,7 +4467,7 @@ Visualization Manager:
               Name: gradients
           Enabled: true
           Name: back_end
-      Enabled: true
+      Enabled: false
       Name: drone16/planner(Red)
     - Class: rviz/Group
       Displays:
@@ -4659,7 +4710,7 @@ Visualization Manager:
               Name: gradients
           Enabled: true
           Name: back_end
-      Enabled: true
+      Enabled: false
       Name: drone17/planner(Red)
     - Class: rviz/Group
       Displays:
@@ -4902,7 +4953,7 @@ Visualization Manager:
               Name: gradients
           Enabled: true
           Name: back_end
-      Enabled: true
+      Enabled: false
       Name: drone18/planner(Red)
     - Class: rviz/Group
       Displays:
@@ -5145,7 +5196,7 @@ Visualization Manager:
               Name: gradients
           Enabled: true
           Name: back_end
-      Enabled: true
+      Enabled: false
       Name: drone19/planner(Red)
     - Class: rviz/Group
       Displays:
@@ -5388,7 +5439,7 @@ Visualization Manager:
               Name: gradients
           Enabled: true
           Name: back_end
-      Enabled: true
+      Enabled: false
       Name: drone20/planner(Red)
   Enabled: true
   Global Options:
@@ -5416,26 +5467,20 @@ Visualization Manager:
   Value: true
   Views:
     Current:
-      Class: rviz/XYOrbit
-      Distance: 7.994367599487305
+      Angle: -0.004999996162950993
+      Class: rviz/TopDownOrtho
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
-      Field of View: 0.7853981852531433
-      Focal Point:
-        X: -2.2884905338287354
-        Y: -1.1363226175308228
-        Z: -4.76837158203125e-06
-      Focal Shape Fixed Size: false
-      Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.7147998809814453
+      Scale: 72.68476104736328
       Target Frame: my_view
-      Yaw: 3.3503873348236084
+      X: -0.5831335783004761
+      Y: 0.08278638869524002
     Saved:
       - Class: rviz/FPS
         Enable Stereo Rendering:
@@ -5570,11 +5615,11 @@ Visualization Manager:
         Yaw: 5.702403545379639
 Window Geometry:
   Displays:
-    collapsed: false
+    collapsed: true
   Height: 948
-  Hide Left Dock: false
+  Hide Left Dock: true
   Hide Right Dock: false
-  QMainWindow State: 000000ff00000000fd0000000400000000000001560000035afc020000003afb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073010000003d0000026c000000c900fffffffc000002af000000e8000000a400fffffffa000000010100000002fb0000000a0049006d0061006700650000000000ffffffff0000000000000000fb0000000a005600690065007700730100000000000001d70000010000fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb0000000c00430061006d00650072006100000001d1000000b50000000000000000fb0000000a006400650070007400680000000265000000c00000000000000000fb0000000a0049006d00610067006500000002590000013e0000000000000000fb0000000a0049006d00610067006501000003f4000001190000000000000000fb0000000a0064006500700074006800000004a2000000ac0000000000000000fb0000000a0064006500700074006800000001ef000001b60000000000000000fb0000000a0064006500700074006800000004b9000000950000000000000000fb0000000a006400650070007400680000000481000000cd0000000000000000fb0000000a006400650070007400680000000429000001250000000000000000fb0000000a0064006500700074006800000003b7000000af0000000000000000fb0000000a0064006500700074006800000003d5000000b50000000000000000fb0000000a006400650070007400680000000444000001260000000000000000fb0000000a00640065007000740068000000041f0000014b0000000000000000fb0000000a0064006500700074006800000001b8000000160000000000000000fb0000000a0064006500700074006800000001c1000000160000000000000000fb0000000a0064006500700074006800000004b1000000550000000000000000fb0000000a006400650070007400680000000505000000650000000000000000fb0000000a006400650070007400680000000502000000680000000000000000fb0000000a0064006500700074006800000004f9000000710000000000000000fb0000000a0064006500700074006800000003dd0000018d0000000000000000fb0000000a0064006500700074006800000004de0000008c0000000000000000fb0000000a0064006500700074006800000004cc0000009e0000000000000000fb0000000a00640065007000740068000000048a000000c40000000000000000fb0000000a0064006500700074006800000004aa000000c00000000000000000fb0000000a0049006d00610067006500000003fa000001540000000000000000fb0000000a0049006d00610067006501000002e1000002890000000000000000fb0000000a006400650070007400680000000495000000d50000000000000000fb0000000a0064006500700074006800000001b60000001b0000000000000000fb0000000a0064006500700074006800000001c10000002f0000000000000000fb0000000a0064006500700074006800000001d3000000300000000000000000fb0000000a0064006500700074006800000001e6000000320000000000000000fb0000000a0064006500700074006800000004dc0000008e0000000000000000fb0000000a0064006500700074006800000004f4000000760000000000000000fb0000000a0064006500700074006800000004f2000000780000000000000000fb0000000a006400650070007400680000000503000000670000000000000000fb0000000a006400650070007400680000000509000000610000000000000000fb0000000a006400650070007400680000000511000000590000000000000000fb0000000a006400650070007400680000000517000000530000000000000000fb0000000a00640065007000740068000000051d0000004d0000000000000000fb0000000a00640065007000740068000000051d0000004d0000000000000000fb0000000a006400650070007400680000000526000000440000000000000000fb0000000a00640065007000740068000000052b0000003f0000000000000000fb0000000a00640065007000740068000000052b0000003f0000000000000000fb0000000a00640065007000740068000000052f0000003b0000000000000000fb0000000a006400650070007400680000000532000000380000000000000000fb0000000a006400650070007400680000000536000000340000000000000000fb0000001800640065007000740068005f00630061006d00650072006100000002f8000000af0000000000000000fb0000000a0049006d00610067006501000002d0000000c70000000000000000fb0000000a0049006d00610067006501000002880000010f0000000000000000000000010000010f00000385fc0200000002fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000007800000003bfc0100000002fb0000000800540069006d00650000000000000007800000041800fffffffb0000000800540069006d00650100000000000004500000000000000000000006240000035a00000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd0000000400000000000003040000035afc020000003afb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073000000003d0000026c000000c900fffffffc000002af000000e80000000000fffffffa000000000100000002fb0000000a0049006d0061006700650000000000ffffffff0000000000000000fb0000000a005600690065007700730000000000000001d70000010000fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb0000000c00430061006d00650072006100000001d1000000b50000000000000000fb0000000a006400650070007400680000000265000000c00000000000000000fb0000000a0049006d00610067006500000002590000013e0000000000000000fb0000000a0049006d00610067006501000003f4000001190000000000000000fb0000000a0064006500700074006800000004a2000000ac0000000000000000fb0000000a0064006500700074006800000001ef000001b60000000000000000fb0000000a0064006500700074006800000004b9000000950000000000000000fb0000000a006400650070007400680000000481000000cd0000000000000000fb0000000a006400650070007400680000000429000001250000000000000000fb0000000a0064006500700074006800000003b7000000af0000000000000000fb0000000a0064006500700074006800000003d5000000b50000000000000000fb0000000a006400650070007400680000000444000001260000000000000000fb0000000a00640065007000740068000000041f0000014b0000000000000000fb0000000a0064006500700074006800000001b8000000160000000000000000fb0000000a0064006500700074006800000001c1000000160000000000000000fb0000000a0064006500700074006800000004b1000000550000000000000000fb0000000a006400650070007400680000000505000000650000000000000000fb0000000a006400650070007400680000000502000000680000000000000000fb0000000a0064006500700074006800000004f9000000710000000000000000fb0000000a0064006500700074006800000003dd0000018d0000000000000000fb0000000a0064006500700074006800000004de0000008c0000000000000000fb0000000a0064006500700074006800000004cc0000009e0000000000000000fb0000000a00640065007000740068000000048a000000c40000000000000000fb0000000a0064006500700074006800000004aa000000c00000000000000000fb0000000a0049006d00610067006500000003fa000001540000000000000000fb0000000a0049006d00610067006501000002e1000002890000000000000000fb0000000a006400650070007400680000000495000000d50000000000000000fb0000000a0064006500700074006800000001b60000001b0000000000000000fb0000000a0064006500700074006800000001c10000002f0000000000000000fb0000000a0064006500700074006800000001d3000000300000000000000000fb0000000a0064006500700074006800000001e6000000320000000000000000fb0000000a0064006500700074006800000004dc0000008e0000000000000000fb0000000a0064006500700074006800000004f4000000760000000000000000fb0000000a0064006500700074006800000004f2000000780000000000000000fb0000000a006400650070007400680000000503000000670000000000000000fb0000000a006400650070007400680000000509000000610000000000000000fb0000000a006400650070007400680000000511000000590000000000000000fb0000000a006400650070007400680000000517000000530000000000000000fb0000000a00640065007000740068000000051d0000004d0000000000000000fb0000000a00640065007000740068000000051d0000004d0000000000000000fb0000000a006400650070007400680000000526000000440000000000000000fb0000000a00640065007000740068000000052b0000003f0000000000000000fb0000000a00640065007000740068000000052b0000003f0000000000000000fb0000000a00640065007000740068000000052f0000003b0000000000000000fb0000000a006400650070007400680000000532000000380000000000000000fb0000000a006400650070007400680000000536000000340000000000000000fb0000001800640065007000740068005f00630061006d00650072006100000002f8000000af0000000000000000fb0000000a0049006d00610067006501000002d0000000c70000000000000000fb0000000a0049006d00610067006501000002880000010f0000000000000000000000010000010f00000385fc0200000002fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000007800000003bfc0100000002fb0000000800540069006d00650000000000000007800000041800fffffffb0000000800540069006d00650100000000000004500000000000000000000007800000035a00000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Selection:
     collapsed: false
   Time:
@@ -5582,7 +5627,7 @@ Window Geometry:
   Tool Properties:
     collapsed: false
   Views:
-    collapsed: false
+    collapsed: true
   Width: 1920
   X: 0
   Y: 27
