@@ -13,6 +13,7 @@ void GridMap::initMap(pcl::PointCloud<pcl::PointXYZ>::Ptr pcd, const Eigen::Vect
   mp_.resolution_ = resolution;
 
   mp_.global_map_num_voxels_ = (mp_.global_map_size_.cwiseProduct(Eigen::Vector3d::Constant(1/mp_.resolution_))).cast<int>();
+  mp_.voxel_map_origin_ = Eigen::Vector3i(mp_.global_map_num_voxels_(0) / 2, mp_.global_map_num_voxels_(1) / 2, 0);
 
   reset(mp_.resolution_);
 
@@ -21,7 +22,6 @@ void GridMap::initMap(pcl::PointCloud<pcl::PointXYZ>::Ptr pcd, const Eigen::Vect
 
 void GridMap::initMapROS(ros::NodeHandle &nh, ros::NodeHandle &pnh)
 {  
-  std::cout << "initMapROS" << std::endl;
   readROSParams(nh, pnh);
 
   reset(mp_.resolution_);
@@ -33,10 +33,15 @@ void GridMap::initMapROS(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   md_.cam2body_.block<3, 3>(0, 0) =  (Eigen::AngleAxisd((M_PI/180.0) * md_.cam2body_rpy_deg(0), Eigen::Vector3d::UnitX())
                                       * Eigen::AngleAxisd((M_PI/180.0) * md_.cam2body_rpy_deg(1), Eigen::Vector3d::UnitY())
                                       * Eigen::AngleAxisd((M_PI/180.0) * md_.cam2body_rpy_deg(2), Eigen::Vector3d::UnitZ())).toRotationMatrix();
+  
+  // Map origin is at bottom corner of the map (Therefore indices will never be negative)
+  // Position (0,0,0) is at the center of the map
   mp_.map_origin_ = Eigen::Vector3d(-mp_.global_map_size_(0) / 2.0, -mp_.global_map_size_(1) / 2.0, mp_.ground_height_);
   
   mp_.global_map_num_voxels_ = (mp_.global_map_size_.cwiseProduct(Eigen::Vector3d::Constant(1/mp_.resolution_))).cast<int>();
+  mp_.local_map_num_voxels_ = (mp_.local_map_size_.cwiseProduct(Eigen::Vector3d::Constant(1/mp_.resolution_))).cast<int>();
 
+  mp_.voxel_map_origin_ = Eigen::Vector3i(mp_.global_map_num_voxels_(0) / 2, mp_.global_map_num_voxels_(1) / 2, 0);
 
   if (dbg_input_entire_map_){
     ROS_INFO("[%s] DEBUG: INPUT ENTIRE MAP", node_name_.c_str());
@@ -85,7 +90,9 @@ void GridMap::initMapROS(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   // // ROS_INFO("[%s] Local map size (%f, %f, %f)", node_name_.c_str(), 
   // //   mp_.local_map_size_(0), mp_.local_map_size_(1), mp_.local_map_size_(2));
   // ROS_INFO("[%s] Resolution %f m, Inflation %f m", node_name_.c_str(), 
-  //   mp_.resolution_, mp_.inflation_);
+    // mp_.resolution_, mp_.inflation_);
+
+  
 }
 
 void GridMap::initROSPubSubTimers(ros::NodeHandle &nh, ros::NodeHandle &pnh)
@@ -221,14 +228,6 @@ void GridMap::reset(const double& resolution){
   // Initialize data structures for occupancy map and point clouds
   // vox_grid_filter_.setLeafSize(mp_.voxel_size_, mp_.voxel_size_, mp_.voxel_size_);
 
-  // Set up octree data structure
-  // octree_ = std::make_shared<octomap::OcTree>(mp_.resolution_);
-  // octomap::point3d bbx_min(-mp_.global_map_size_(0), -mp_.global_map_size_(1), -mp_.global_map_size_(2));
-  // octomap::point3d bbx_max(mp_.global_map_size_(0), mp_.global_map_size_(1), mp_.global_map_size_(2));
-  // octree_->setBBXMin(bbx_min);
-  // octree_->setBBXMax(bbx_max);
-  // octree_->useBBXLimit(true);
-
   // Set up Bonxai data structure
   bonxai_map_ = std::make_unique<BonxaiT>(resolution);
 
@@ -242,6 +241,7 @@ void GridMap::reset(const double& resolution){
 void GridMap::visTimerCB(const ros::TimerEvent & /*event*/)
 {
   publishOccMap();
+
   // ROS_INFO_THROTTLE(1.0, "No. of Point clouds: %ld", global_map_in_origin_->points.size());
   // ROS_INFO_THROTTLE(1.0, "Octree memory usage: %ld kilobytes", octree_->memoryUsage()/1000);
   // ROS_INFO_STREAM_THROTTLE(1.0, "Octree Bounding Box: " << octree_->getBBXMin() << ", " << octree_->getBBXMax());
@@ -354,21 +354,13 @@ void GridMap::updateLocalMap(){
   }
   
   // Update bounds of local map 
-  md_.local_map_min_ << -mp_.local_map_size_(0) + md_.cam2origin_.col(3)(0), 
-                        -mp_.local_map_size_(1) + md_.cam2origin_.col(3)(1),
-                        -mp_.local_map_size_(2) + md_.cam2origin_.col(3)(2);
+  // md_.local_map_min_ << -mp_.local_map_size_(0) + md_.cam2origin_.col(3)(0), 
+  //                       -mp_.local_map_size_(1) + md_.cam2origin_.col(3)(1),
+  //                       -mp_.local_map_size_(2) + md_.cam2origin_.col(3)(2);
 
-  md_.local_map_max_ << mp_.local_map_size_(0) + md_.cam2origin_.col(3)(0), 
-                        mp_.local_map_size_(1) + md_.cam2origin_.col(3)(1),
-                        mp_.local_map_size_(2) + md_.cam2origin_.col(3)(2);
-
-  // Update bounds of octomap
-  // if (!mp_.keep_global_map_){
-    // octomap::point3d bbx_min(md_.local_map_min_(0), md_.local_map_min_(1), md_.local_map_min_(2));
-    // octomap::point3d bbx_max(md_.local_map_max_(0), md_.local_map_max_(1), md_.local_map_max_(2));
-    // octree_->setBBXMin(bbx_min);
-    // octree_->setBBXMax(bbx_max);
-  // }
+  // md_.local_map_max_ << mp_.local_map_size_(0) + md_.cam2origin_.col(3)(0), 
+  //                       mp_.local_map_size_(1) + md_.cam2origin_.col(3)(1),
+  //                       mp_.local_map_size_(2) + md_.cam2origin_.col(3)(2);
 }
 
 void GridMap::getCamToGlobalPose(const geometry_msgs::Pose &pose)
@@ -391,55 +383,6 @@ void GridMap::getCamToGlobalPose(const geometry_msgs::Pose &pose)
 
 void GridMap::pcdMsgToMap(const sensor_msgs::PointCloud2 &msg)
 {
-  /* Octomap*/
-
-  // // Input Point cloud is assumed to be in frame id of the sensor
-  // if (!isPoseValid()){
-  //   ROS_INFO("invalid pose");
-  //   return;
-  // }
-
-  // // Remove anything outside of local map bounds
-  // updateLocalMap();
-
-  // ROS_INFO("[grid_map] Size of data: %ld", msg.data.size());
-
-  // if (msg.data.empty()){
-  //   ROS_WARN_THROTTLE(1.0, "[grid_map]: Empty point cloud received");
-  //   // return;
-  // }
-
-
-  // pcl::fromROSMsg(msg, *global_map_in_origin_);
-
-  // // Transform point cloud from camera frame to uav origin frame
-  // pcl::transformPointCloud (*global_map_in_origin_, *global_map_in_origin_, md_.cam2origin_);
-
-  // ROS_INFO("After transformPointCloud");
-
-  // // Downsample point cloud
-  // // if (mp_.downsample_cloud_){
-  // //   vox_grid_filter_.setInputCloud(cloud);
-  // //   vox_grid_filter_.filter(*cloud);
-  // // }
-
-  // ROS_INFO("Before pclToOctomapPC");
-
-  // octomap::Pointcloud octomap_cloud;
-  // pclToOctomapPC(global_map_in_origin_, octomap_cloud);
-
-  // ROS_INFO("[grid_map] Size of octree data: %ld", octomap_cloud.size());
-
-  // ROS_INFO("After pclToOctomapPC");
-
-  // // octomap::point3d sensor_origin(md_.cam2origin_(0, 3), md_.cam2origin_(1, 3), md_.cam2origin_(2, 3));
-  // // octree_->insertPointCloud(octomap_cloud, sensor_origin, mp_.max_range);
-
-  // octomap::point3d sensor_origin(0.0, 0.0, 0.0);
-  // octree_->insertPointCloud(octomap_cloud, sensor_origin);
-
-  // ROS_INFO("After insertPointCloud");
-
   /* Bonxai*/
 
   // Input Point cloud is assumed to be in frame id of the sensor
@@ -456,6 +399,7 @@ void GridMap::pcdMsgToMap(const sensor_msgs::PointCloud2 &msg)
     // return;
   }
 
+  std::cout << "before fromROSMsg" << std::endl;
   pcl::PointCloud<pcl::PointXYZ>::Ptr pcd;
   pcd.reset(new pcl::PointCloud<pcl::PointXYZ>);
 
@@ -498,34 +442,6 @@ void GridMap::pcdToMap(pcl::PointCloud<pcl::PointXYZ>::Ptr pcd)
   ROS_INFO("[grid_map] Completed pcdToMap");
 }
 
-void GridMap::pclToOctomapPC(const pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_cloud , octomap::Pointcloud& octomap_cloud) {
-  // Iterate through all the points in the point cloud 
-  for (size_t i = 0; i < pcl_cloud->points.size(); i++){
-    octomap::point3d endpoint(pcl_cloud->points[i].x, pcl_cloud->points[i].y, pcl_cloud->points[i].z);
-    octomap_cloud.push_back(endpoint);
-  }
-}
-
-void GridMap::octreeToPclPC(std::shared_ptr<octomap::OcTree> tree, pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_cloud) {
-  std::vector<octomap::point3d> pcl;
-  pcl_cloud->points.clear();
-  for (octomap::OcTree::iterator it = tree->begin(); it != tree->end(); ++it)
-  {
-    if (it == NULL){
-      continue;
-    }
-    if(tree->isNodeOccupied(*it))
-    {
-      octomap::point3d occ_point = it.getCoordinate();
-      pcl::PointXYZ pcl_occ_point(occ_point(0), occ_point(1), occ_point(2));
-      pcl_cloud->push_back(pcl_occ_point);
-    }
-  }
-  
-  pcl_cloud->height = 1;
-  pcl_cloud->width = pcl_cloud->points.size();
-}
-
 /* Checks */
 
 bool GridMap::isPoseValid() {
@@ -556,20 +472,6 @@ void GridMap::publishOccMap()
   if (occ_map_pub_.getNumSubscribers() == 0){
     return;
   }
-
-  /* Octree */
-
-  // thread_local pcl::PointCloud<pcl::PointXYZ> pcl_cloud;
-  // pcl_cloud.clear();
-
-  // octreeToPclPC(octree_, pcl_cloud);
-
-  // sensor_msgs::PointCloud2 cloud_msg;
-  // pcl::toROSMsg(*pcl_cloud, cloud_msg);
-  // cloud_msg.header.frame_id = mp_.uav_origin_frame_;
-  // cloud_msg.header.stamp = ros::Time::now();
-
-  // occ_map_pub_.publish(cloud_msg);
 
   /* Bonxai */
 
@@ -644,198 +546,3 @@ void GridMap::publishCollisionSphere(
   collision_viz_pub_.publish(sphere);
 }
 
-/** Gridmap operations */
-
-bool GridMap::getOccupancy(const Eigen::Vector3d &pos)
-{
-
-  /* Octree */
-
-  // // If not in map or not in octree bounding box. return -1 
-  // if (!isInGlobalMap(pos)){
-  //   return -1;
-  // }
-
-  // octomap::point3d octo_pos(pos(0), pos(1), pos(2));
-  // octomap::OcTreeNode* node = octree_->search(octo_pos);
-  // if (node == NULL){
-  //   // Return 0 if node is not occupied
-  //   return 0;
-  // }
-  // if (octree_->isNodeOccupied(node)){
-  //   return 1;
-  // }
-
-  // // Return 0 if node is not occupied
-  // return 0;
-
-  /* Bonxai */
-
-  // If not in map or not in octree bounding box. return -1 
-  if (!isInGlobalMap(pos)){
-    return true;
-  }
-
-  Bonxai::CoordT coord = bonxai_map_->grid().posToCoord(pos(0), pos(1), pos(2));
-
-  return bonxai_map_->isOccupied(coord);
-
-
-}
-
-bool GridMap::getInflateOccupancy(const Eigen::Vector3d &pos)
-{
-  /* Bonxai */
-
-  // if (!isInGlobalMap(pos)){
-  //   return true;
-  // }
-
-  // for(float x = pos(0) - mp_.inflation_; x <= pos(0) + mp_.inflation_; x += mp_.resolution_)
-  // {
-  //   for(float y = pos(1) - mp_.inflation_; y <= pos(1) + mp_.inflation_; y += mp_.resolution_)
-  //   {
-  //     for(float z = pos(2) - mp_.inflation_; z <= pos(2) + mp_.inflation_; z += mp_.resolution_)
-  //     {
-  //       Bonxai::CoordT coord = bonxai_map_->grid().posToCoord(x, y, z);
-  //       if (bonxai_map_->isOccupied(coord)){
-  //         return true;
-  //       }
-  //     }
-  //   }
-  // }
-  // Return 0 if node is not occupied
-  // return false;
-
-  /* Using KDTree to check for inflation */
-
-  if (!isInGlobalMap(pos)){
-    return true;
-  }
-
-  return withinObsRadius(pos, mp_.inflation_);
-}
-
-bool GridMap::getInflateOccupancy(const Eigen::Vector3d &pos, const double& inflation)
-{
-  /* Using KDTree to check for inflation */
-  if (!isInGlobalMap(pos)){
-    return true;
-  }
-
-  return withinObsRadius(pos, inflation);
-}
-
-bool GridMap::isInGlobalMap(const Eigen::Vector3d &pos)
-{
-  if (pos(0) <= -mp_.global_map_size_(0)/2 || pos(0) >= mp_.global_map_size_(0)/2
-    || pos(1) <= -mp_.global_map_size_(1)/2 || pos(1) >= mp_.global_map_size_(1)/2
-    || pos(2) <= -mp_.global_map_size_(2)/2 || pos(2) >= mp_.global_map_size_(2)/2)
-  {
-    return false;
-  }
-
-  return true;
-}
-
-bool GridMap::isInLocalMap(const Eigen::Vector3d &pos)
-{
-  if (pos(0) <= md_.local_map_min_(0) || pos(0) >= md_.local_map_max_(0)
-    || pos(1) <= md_.local_map_min_(1) || pos(1) >= md_.local_map_max_(1)
-    || pos(2) <= md_.local_map_min_(2) || pos(2) >= md_.local_map_max_(2))
-  {
-    return false;
-  }
-
-  return true;
-}
-
-bool GridMap::withinObsRadius(const Eigen::Vector3d &pos, const double& radius)
-{
-  pcl::PointXYZ search_point(pos(0), pos(1), pos(2));
-  std::vector<pcl::PointXYZ, Eigen::aligned_allocator<pcl::PointXYZ>> nb_points;
-  kdtree_->Radius_Search(search_point, radius, nb_points);
-
-  return !nb_points.empty();
-}
-
-bool GridMap::getNearestOccupiedCell(const Eigen::Vector3d &pos, Eigen::Vector3d& occ_nearest, double& dist_to_nearest_nb){
-
-  int nearest_num_nb = 1;
-  pcl::PointXYZ search_point(pos(0), pos(1), pos(2));
-  std::vector<pcl::PointXYZ, Eigen::aligned_allocator<pcl::PointXYZ>> nb_points;
-  std::vector<float> nb_radius_vec;
-
-  kdtree_->Nearest_Search(search_point, nearest_num_nb, nb_points, nb_radius_vec);
-
-  if (nb_points.empty()){
-    return false;
-  }
-
-  dist_to_nearest_nb = sqrt(nb_radius_vec[0]);
-
-  occ_nearest = Eigen::Vector3d{nb_points[0].x, nb_points[0].y, nb_points[0].z};
-
-  return true;
-}
-
-void GridMap::depthToCloudMap(const sensor_msgs::ImageConstPtr &msg)
-{
-  // // TODO: Still necessary?
-  // if (!isPoseValid()){
-  //   return;
-  // }
-
-  // /* get depth image */
-  // cv_bridge::CvImagePtr cv_ptr;
-  // cv_ptr = cv_bridge::toCvCopy(msg, msg->encoding);
-
-  // if (msg->encoding == sensor_msgs::image_encodings::TYPE_32FC1)
-  // {
-  //   (cv_ptr->image).convertTo(cv_ptr->image, CV_16UC1, mp_.k_depth_scaling_factor_);
-  // }
-  // cv_ptr->image.copyTo(md_.depth_image_);
-
-  // // pcl header.stamp must have the timestamp in microseconds or TF will not
-  // // be able to resolve the transformation
-  // local_map_in_origin_->header.stamp = msg->header.stamp.toNSec() * 1e-3;
-
-  // local_map_in_origin_->height = 1;
-  // local_map_in_origin_->width = (md_.depth_image_.cols * md_.depth_image_.rows) / (mp_.depth_stride_ * mp_.depth_stride_);
-
-  // local_map_in_origin_->points.resize(local_map_in_origin_->width);
-  // local_map_in_origin_->is_dense = true;
-
-  // uint16_t *row_ptr;
-
-  // int cloud_idx = 0;
-
-  // for (int v = 0; v < md_.depth_image_.rows; v+=mp_.depth_stride_){
-  //   row_ptr = md_.depth_image_.ptr<uint16_t>(v);
-  //   for (int u = 0; u < md_.depth_image_.cols; u+=mp_.depth_stride_, row_ptr+=mp_.depth_stride_, cloud_idx++){
-
-  //     pcl::PointXYZ& pt = local_map_in_origin_->points[cloud_idx];
-
-  //     float bad_point = std::numeric_limits<float>::quiet_NaN ();
-
-  //     if (*row_ptr == 0 || *row_ptr == bad_point || *row_ptr == 255){
-  //       pt.x = pt.y = pt.z = bad_point;
-  //       // local_map_in_origin_->is_dense = false;
-  //     }
-  //     else{
-  //       pt.z = (*row_ptr) / 1000.0;
-  //       pt.x = (u - mp_.cx_) * pt.z * mp_.fx_inv_;
-  //       pt.y = (v - mp_.cy_) * pt.z * mp_.fy_inv_;
-  //     }
-    
-  //   }
-  // }
-
-  // // Downsample point cloud
-  // if (mp_.downsample_cloud_){
-  //   vox_grid_filter_.setInputCloud(local_map_in_origin_);
-  //   vox_grid_filter_.filter(*local_map_in_origin_);
-  // }
-
-  // pcl::transformPointCloud(*local_map_in_origin_, *local_map_in_origin_, md_.cam2origin_);
-}

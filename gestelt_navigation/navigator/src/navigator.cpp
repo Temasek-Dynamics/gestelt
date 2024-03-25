@@ -21,8 +21,9 @@ void Navigator::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   visualization_ = std::make_shared<ego_planner::PlanningVisualization>(nh);
 
   // Initialize front end planner 
-  front_end_planner_ = std::make_unique<AStarPlanner>(map_, astar_params_);
-  front_end_planner_->addVizPublishers(closed_list_viz_pub_);
+  // front_end_planner_ = std::make_unique<AStarPlanner>(map_, astar_params_);
+  // front_end_planner_->addVizPublishers(closed_list_viz_pub_);
+  front_end_planner_ = std::make_unique<JPSWrapper>(map_, jps_params_);
 
   // Initialize safe flight corridor generation
   sfc_generation_ = std::make_unique<SphericalSFC>(map_, sfc_params_);
@@ -182,6 +183,7 @@ void Navigator::planTimerCB(const ros::TimerEvent &e)
   if (!getRHPGoal(waypoints_.nextWP(), start_pos_, rhp_dist_, rhp_goal)){
     return;
   }
+
   // Publish RHP goal
   geometry_msgs::PoseStamped rhp_goal_msg;
   rhp_goal_msg.header.stamp = ros::Time::now();
@@ -281,33 +283,33 @@ bool Navigator::planAll(
     return false;
   }
 
-  // Generate a back-end trajectory from front-end plan
-  poly_traj::MinJerkOpt optimized_mjo; // Optimized minimum jerk trajectory
-  if (!generateBackEndPlan( start_pos, cur_vel_, goal_pos, 
-                            sfc_traj, 
-                            optimized_mjo,
-                            5)){
-    logError("Failed to generate back end plan!");
-    return false;
-  }
+  // // Generate a back-end trajectory from front-end plan
+  // poly_traj::MinJerkOpt optimized_mjo; // Optimized minimum jerk trajectory
+  // if (!generateBackEndPlan( start_pos, cur_vel_, goal_pos, 
+  //                           sfc_traj, 
+  //                           optimized_mjo,
+  //                           5)){
+  //   logError("Failed to generate back end plan!");
+  //   return false;
+  // }
   
-  // Save and publish message
-  be_traj_ = std::make_shared<poly_traj::Trajectory>(optimized_mjo.getTraj(req_plan_time));
+  // // Save and publish message
+  // be_traj_ = std::make_shared<poly_traj::Trajectory>(optimized_mjo.getTraj(req_plan_time));
 
-  traj_utils::PolyTraj poly_msg; 
-  traj_utils::MINCOTraj MINCO_msg; 
+  // traj_utils::PolyTraj poly_msg; 
+  // traj_utils::MINCOTraj MINCO_msg; 
 
-  mjoToMsg(optimized_mjo, req_plan_time, poly_msg, MINCO_msg);
-  be_traj_pub_.publish(poly_msg); // (In drone origin frame) Publish to corresponding drone for execution
-  swarm_minco_traj_pub_.publish(MINCO_msg); // (In world frame) Broadcast to all other drones for replanning to optimize in avoiding swarm collision
+  // mjoToMsg(optimized_mjo, req_plan_time, poly_msg, MINCO_msg);
+  // be_traj_pub_.publish(poly_msg); // (In drone origin frame) Publish to corresponding drone for execution
+  // swarm_minco_traj_pub_.publish(MINCO_msg); // (In world frame) Broadcast to all other drones for replanning to optimize in avoiding swarm collision
 
-  // Update optimized trajectory 
-  (*swarm_local_trajs_)[drone_id_] = getLocalTraj(
-    optimized_mjo, req_plan_time, 
-    back_end_optimizer_->get_cps_num_perPiece_(), 
-    traj_id_, drone_id_);
+  // // Update optimized trajectory 
+  // (*swarm_local_trajs_)[drone_id_] = getLocalTraj(
+  //   optimized_mjo, req_plan_time, 
+  //   back_end_optimizer_->get_cps_num_perPiece_(), 
+  //   traj_id_, drone_id_);
 
-  traj_id_++; // Increment trajectory id
+  // traj_id_++; // Increment trajectory id
 
   return true;
 }
@@ -325,18 +327,21 @@ bool Navigator::generateFrontEndPlan(
 
   if (!front_end_planner_->generatePlan(start_pos, goal_pos)){
     logError("Path generation failed!");
-    viz_helper::publishVizCubes(front_end_planner_->getClosedList(), "world", closed_list_viz_pub_);
+    // viz_helper::publishVizCubes(front_end_planner_->getClosedList(), "world", closed_list_viz_pub_);
     return false;
   }
 
   double front_end_plan_time_ms = (ros::Time::now() - front_end_plan_start_time).toSec() * 1000;
 
+  logInfo(str_fmt("Front-end Planning Time: %f ms", front_end_plan_time_ms));
+
   std::vector<Eigen::Vector3d> front_end_path = front_end_planner_->getPathPos();
-  std::vector<Eigen::Vector3d> closed_list = front_end_planner_->getClosedList();
+  std::cout << "front_end_path size: " << front_end_path.size() << std::endl;
+  // std::vector<Eigen::Vector3d> closed_list = front_end_planner_->getClosedList();
 
   // Publish front end plan
   viz_helper::publishVizSpheres(front_end_path, "world", front_end_plan_viz_pub_) ;
-  viz_helper::publishVizCubes(closed_list, "world", closed_list_viz_pub_);
+  // viz_helper::publishVizCubes(closed_list, "world", closed_list_viz_pub_);
 
   ros::Time sfc_plan_start_time = ros::Time::now();
 
@@ -426,9 +431,9 @@ bool Navigator::generateFrontEndPlan(
   dbg_sfc_traj_msg.sfc_waypoints = sfc_traj_msg.waypoints;
   dbg_sfc_traj_pub_.publish(dbg_sfc_traj_msg);
 
-  // logInfo(str_fmt("Front-end Planning Time: %f ms", front_end_plan_time_ms));
-  // logInfo(str_fmt("SFC Planning Time: %f ms", sfc_plan_time_ms));
-  // logInfo(str_fmt("Number of waypoints in front-end path: %ld", front_end_path.size()));
+  logInfo(str_fmt("Front-end Planning Time: %f ms", front_end_plan_time_ms));
+  logInfo(str_fmt("SFC Planning Time: %f ms", sfc_plan_time_ms));
+  logInfo(str_fmt("Number of waypoints in front-end path: %ld", front_end_path.size()));
   // logInfo(str_fmt("Size of closed list (expanded nodes): %ld", closed_list.size()));
   // logInfo(str_fmt("[SFC] Number of spheres in SFC Spherical corridor: %ld", sfc_traj.spheres.size()));
   // logInfo(str_fmt("[SFC] Number of waypoints: %ld", sfc_traj.waypoints.size()));

@@ -423,7 +423,7 @@ namespace ego_planner
     {
       pts_check.clear();
       pts_check.resize(num_pieces);
-      const double RES = grid_map_->getResolution();
+      const double RES = grid_map_->getRes();
       const double RES_2 = RES / 2;
 
       Eigen::VectorXd durations = traj.getDurations();
@@ -510,7 +510,7 @@ namespace ego_planner
 
     vector<std::pair<int, int>> segment_ids; // Vector of (seg_start_idx, seg_end_idx)
     constexpr int ENOUGH_INTERVAL = 2; // Threshold for repeated occupancy values
-    // double step_size = grid_map_->getResolution() / ((init_points.col(0) - init_points.rightCols(1)).norm() / (init_points.cols() - 1)) / 1.5;
+    // double step_size = grid_map_->getRes() / ((init_points.col(0) - init_points.rightCols(1)).norm() / (init_points.cols() - 1)) / 1.5;
     int seg_start_idx = -1, seg_end_idx = -1;
     int same_occ_state_times = ENOUGH_INTERVAL + 1;
     bool occ, last_occ = false;
@@ -591,7 +591,7 @@ namespace ego_planner
     {
       // Search from back to head
       Eigen::Vector3d pt_a(init_points.col(segment_ids[i].second)), pt_b(init_points.col(segment_ids[i].first));
-      ASTAR_RET ret = a_star_->AstarSearch(/*(pt_a-pt_b).norm()/10+0.05*/ grid_map_->getResolution(), pt_a, pt_b);
+      ASTAR_RET ret = a_star_->AstarSearch(/*(pt_a-pt_b).norm()/10+0.05*/ grid_map_->getRes(), pt_a, pt_b);
       if (ret == ASTAR_RET::SUCCESS)
       {
         a_star_paths.push_back(a_star_->getPath());
@@ -757,14 +757,14 @@ namespace ego_planner
             cps_.flag_temp[j] = true;
             // Iterate from intersection point to current point
             // Obtain the {p,v} values for the constraint point
-            for (double a = length; a >= 0.0; a -= grid_map_->getResolution())
+            for (double a = length; a >= 0.0; a -= grid_map_->getRes())
             {
               bool occ = grid_map_->getInflateOccupancy((a / length) * intersection_point + (1 - a / length) * init_points.col(j));
 
-              if (occ || a < grid_map_->getResolution())
+              if (occ || a < grid_map_->getRes())
               {
                 if (occ){
-                  a += grid_map_->getResolution();
+                  a += grid_map_->getRes();
                 }
                 cps_.base_point[j].push_back((a / length) * intersection_point + (1 - a / length) * init_points.col(j));
                 cps_.direction[j].push_back((intersection_point - init_points.col(j)).normalized());
@@ -887,7 +887,7 @@ namespace ego_planner
         {
           for (size_t k = 0; k < cps_.direction[i].size(); ++k)
           {
-            if ((cps_.points.col(i) - cps_.base_point[i][k]).dot(cps_.direction[i][k]) < 1 * grid_map_->getResolution()) // current point is outside all the collision_points.
+            if ((cps_.points.col(i) - cps_.base_point[i][k]).dot(cps_.direction[i][k]) < 1 * grid_map_->getRes()) // current point is outside all the collision_points.
             {
               occ = false;
               break;
@@ -946,7 +946,7 @@ namespace ego_planner
         {
           /*** a star search ***/
           Eigen::Vector3d pt_a(cps_.points.col(segment_ids[i].second)), pt_b(cps_.points.col(segment_ids[i].first));
-          ASTAR_RET ret = a_star_->AstarSearch(/*(pt_a-pt_b).norm()/10+0.05*/ grid_map_->getResolution(), pt_a, pt_b);
+          ASTAR_RET ret = a_star_->AstarSearch(/*(pt_a-pt_b).norm()/10+0.05*/ grid_map_->getRes(), pt_a, pt_b);
           if (ret == ASTAR_RET::SUCCESS)
           {
             a_star_paths.push_back(a_star_->getPath());
@@ -1033,14 +1033,14 @@ namespace ego_planner
               if (length > 1e-5)
               {
                 cps_.flag_temp[j] = true;
-                for (double a = length; a >= 0.0; a -= grid_map_->getResolution())
+                for (double a = length; a >= 0.0; a -= grid_map_->getRes())
                 {
                   bool occ = grid_map_->getInflateOccupancy((a / length) * intersection_point + (1 - a / length) * cps_.points.col(j));
 
-                  if (occ || a < grid_map_->getResolution())
+                  if (occ || a < grid_map_->getRes())
                   {
                     if (occ)
-                      a += grid_map_->getResolution();
+                      a += grid_map_->getRes();
                     cps_.base_point[j].push_back((a / length) * intersection_point + (1 - a / length) * cps_.points.col(j));
                     cps_.direction[j].push_back((intersection_point - cps_.points.col(j)).normalized());
                     break;

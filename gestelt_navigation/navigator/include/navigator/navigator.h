@@ -35,6 +35,7 @@
 /* Planner  */
 #include <grid_map/grid_map.h> // Map representation
 #include <global_planner/a_star.h>
+#include <global_planner/jps_wrapper.h>
 #include <sfc_generation/spherical_sfc.h>
 #include <optimizer/poly_traj_optimizer.h>
 
@@ -337,7 +338,8 @@ private: /* Planner members */
   std::shared_ptr<ego_planner::PlanningVisualization> visualization_; // For publishing visualizations
 
   /* Planner */
-  std::unique_ptr<AStarPlanner> front_end_planner_; // Front-end planner
+  // std::unique_ptr<AStarPlanner> front_end_planner_; // Front-end planner
+  std::unique_ptr<JPSWrapper> front_end_planner_; // Front-end planner
   std::unique_ptr<SphericalSFC> sfc_generation_; // Safe flight corridor generator
 
   std::unique_ptr<ego_planner::PolyTrajOptimizer> back_end_optimizer_; // Polynomial trajectory optimizer
@@ -358,6 +360,7 @@ private: /* Params */
   int traj_id_{0}; // Trajectory id that increments with every planning cycle
 
   /* planner parameters */
+  JPSWrapper::JPSParams jps_params_; 
   AStarPlanner::AStarParams astar_params_; 
   SphericalSFC::SphericalSFCParams sfc_params_; 
 
