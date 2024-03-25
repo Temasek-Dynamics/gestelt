@@ -51,7 +51,7 @@
 #include <uORB/Publication.hpp>
 #include <uORB/Subscription.hpp>
 #include <drivers/drv_hrt.h>
-#include <uORB/topics/rpt_integrator.h>
+// #include <uORB/topics/rpt_integrator.h>
 struct PositionControlStates {
 	matrix::Vector3f position;
 	matrix::Vector3f velocity;

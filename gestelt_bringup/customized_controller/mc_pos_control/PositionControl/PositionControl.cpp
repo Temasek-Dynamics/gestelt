@@ -282,12 +282,12 @@ void PositionControl::_RPTControl(const float dt)
 	// PX4_WARN("u_pos_int: %8.4f %8.4f %8.4f", (double)u_pos_int(0), (double)u_pos_int(1), (double)u_pos_int(2));
 
 
-	_rpt_integrator_msg.timestamp = hrt_absolute_time();
-	_rpt_integrator_msg.x = u_pos_int(0);
-	_rpt_integrator_msg.y = u_pos_int(1);
-	_rpt_integrator_msg.z = u_pos_int(2);
+	// _rpt_integrator_msg.timestamp = hrt_absolute_time();
+	// _rpt_integrator_msg.x = u_pos_int(0);
+	// _rpt_integrator_msg.y = u_pos_int(1);
+	// _rpt_integrator_msg.z = u_pos_int(2);
 
-	_rpt_integrator_pub.publish(_rpt_integrator_msg);
+	// _rpt_integrator_pub.publish(_rpt_integrator_msg);
 
 	// anti-windup for xy axes
 	float MAX_INT = _max_xy_integration;

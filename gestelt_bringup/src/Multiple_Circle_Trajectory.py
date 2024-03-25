@@ -208,7 +208,7 @@ def main():
     angle_2=-60
     angle_rad_1=math.radians(angle_1)
     angle_rad_2=math.radians(angle_2)
-    num_passes = 6
+    num_passes = 16
         # 1/4 test
         # world frame is the initial position of the drone
         # map frame is the origin of the map
@@ -219,7 +219,7 @@ def main():
         waypoints.append(create_pose(1.0,0.0,1.4)) 
         waypoints.append(create_pose(0.0, 0.0, 0.8))
         waypoints.append(create_pose(-1.0,0.0,1.4))
-        waypoints.append(create_pose(0.0,0.0,2.0))
+        waypoints.append(create_pose(0.0,0.0,2.8))
         
        
         accel_list.append(create_accel(None,None,None))
