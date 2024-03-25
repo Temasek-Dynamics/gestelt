@@ -117,7 +117,7 @@ def main():
     print(f"Sending waypoints to UAVs")
 
     goals_0 = []
-    goals_0.append(create_transform(1.0, 1.0, 1.0))
+    goals_0.append(create_transform(2.0, 2.0, 2.0))
     goals_0.append(create_transform(5.0, 5.0, 1.0))
     pub_goals([goals_0])
 
