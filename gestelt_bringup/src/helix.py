@@ -205,51 +205,51 @@ def main():
     g=-9.81 #m/s^2  # down force, negative
     f=1*(-g) #N  # up force, positive
     angle_1=85
-    # angle_2=-60
+    angle_2=-60
     angle_rad_1=math.radians(angle_1)
-    # angle_rad_2=math.radians(angle_2)
-    num_passes = 2
+    angle_rad_2=math.radians(angle_2)
+    num_passes = 7
+    radius = 0.4
+    min_height = 1
+    max_height = 2
+    step_diff_height =  (max_height-min_height)/num_passes
+    height = min_height
         # 1/4 test
         # world frame is the initial position of the drone
         # map frame is the origin of the map
         # waypoints are under the map frame, will be transformed to world frame
-    for i in range(num_passes):
+    # waypoints.append(create_pose(radius, 0.0,   height + (0/4)*step_diff_height )) 
+    # accel_list.append(create_accel(None,None,None))
+    # vel_list.append(create_vel(0.0,0.0,0.0))
 
-        # forward pass
-        waypoints.append(create_pose(1.8,0.0,1.5))   
-        waypoints.append(create_pose(0.0,-1.8,1.4)) 
-        waypoints.append(create_pose(-1.8, 0.0, 1.8))
-        waypoints.append(create_pose(0.0,1.8,1.4))
-        # backward pass
+
+
+
+
+    for i in range(num_passes):
         
-        waypoints.append(create_pose(-1.8, 0.0, 1.8))
-        waypoints.append(create_pose(0.0,-1.8,1.4)) 
-        waypoints.append(create_pose(1.8,0.0,1.5))   
-        waypoints.append(create_pose(0.0,1.8,1.4))
-    
-        # accel_list.append(create_accel(-f*math.sin(angle_rad_1),0.0,g+f*math.cos(angle_rad_1)))   
+        
+        # radius = min(1.8, radius)
+
+        waypoints.append(create_pose(radius, 0.0,   height + (0/4)*step_diff_height ))       
+        waypoints.append(create_pose(0.0,-radius ,  height + (1/4)*step_diff_height ))
+        waypoints.append(create_pose(-radius, 0.0,  height + (2/4)*step_diff_height ))
+        waypoints.append(create_pose(0.0,radius,    height + (3/4)*step_diff_height ))
+        
         accel_list.append(create_accel(None,None,None))
         accel_list.append(create_accel(None,None,None))
         accel_list.append(create_accel(None,None,None))
-        accel_list.append(create_accel(None,None,None))
-        accel_list.append(create_accel(None,None,None))
-        accel_list.append(create_accel(None,None,None))
-        accel_list.append(create_accel(None,None,None))
-        # accel_list.append(create_accel(-f*math.sin(angle_rad_1),0.0,g+f*math.cos(angle_rad_1))) 
         accel_list.append(create_accel(None,None,None))
 
         # velocities constraint
         vel_list.append(create_vel(None,None,None))
         vel_list.append(create_vel(None,None,None))
         vel_list.append(create_vel(None,None,None))
-        # vel_list.append(create_vel(0,0,0))
-        vel_list.append(create_vel(None,None,None))
-        vel_list.append(create_vel(None,None,None))
-        vel_list.append(create_vel(None,None,None))
-        vel_list.append(create_vel(None,None,None))
         vel_list.append(create_vel(None,None,None))
 
-        # vel_list.append(create_vel(0,0,0))
+        # radius -= radius*(i/num_passes)
+        height += step_diff_height
+        height = min(max_height, height)
     
     # end of the trajectory
 

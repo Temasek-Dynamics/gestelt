@@ -218,8 +218,10 @@ def main():
         waypoints.append(create_pose(0.0, 1.8, 1.5))
                         
         accel_list.append(create_accel(-f*math.sin(angle_rad_1),0.0,g+f*math.cos(angle_rad_1))) 
+        # accel_list.append(create_accel(None,None,None))
+        # accel_list.append(create_accel(-f*math.sin(angle_rad_1),0.0,g+f*math.cos(angle_rad_1)))
         accel_list.append(create_accel(None,None,None))
-        accel_list.append(create_accel(-f*math.sin(angle_rad_1),0.0,g+f*math.cos(angle_rad_1)))
+        accel_list.append(create_accel(None,None,None))
         accel_list.append(create_accel(None,None,None))
         
         vel_list.append(create_vel(None,None,None))
@@ -229,44 +231,44 @@ def main():
         vel_list.append(create_vel(None,None,None))
         # vel_list.append(create_vel(0.0, 0.0, 0.0))
 
-    waypoints.append(create_pose(0.0, 1.8, 1.45))
-    waypoints.append(create_pose(0.0, 1.8, 1.4))
-    accel_list.append(create_accel(None,None,None))
-    accel_list.append(create_accel(None,None,None))
-    vel_list.append(create_vel(0.0, 0.0, 0.0))
-    vel_list.append(create_vel(0.0, 0.0, 0.0))
+    # waypoints.append(create_pose(0.0, 1.8, 1.45))
+    # waypoints.append(create_pose(0.0, 1.8, 1.4))
+    # accel_list.append(create_accel(None,None,None))
+    # accel_list.append(create_accel(None,None,None))
+    # vel_list.append(create_vel(0.0, 0.0, 0.0))
+    # vel_list.append(create_vel(0.0, 0.0, 0.0))
     
-    for _ in range(2):
-        # forward pass
-        waypoints.append(create_pose(1.8,0.0,1.5))   
-        waypoints.append(create_pose(0.0,-1.8,1.4)) 
-        waypoints.append(create_pose(-1.8, 0.0, 1.8))
-        waypoints.append(create_pose(0.0,1.8,1.4))
-        # backward pass
+    # for _ in range(2):
+    #     # forward pass
+    #     waypoints.append(create_pose(1.8,0.0,1.5))   
+    #     waypoints.append(create_pose(0.0,-1.8,1.4)) 
+    #     waypoints.append(create_pose(-1.8, 0.0, 1.8))
+    #     waypoints.append(create_pose(0.0,1.8,1.4))
+    #     # backward pass
         
-        waypoints.append(create_pose(-1.8, 0.0, 1.8))
-        waypoints.append(create_pose(0.0,-1.8,1.4)) 
-        waypoints.append(create_pose(1.8,0.0,1.5))   
-        waypoints.append(create_pose(0.0,1.8,1.4))
+    #     waypoints.append(create_pose(-1.8, 0.0, 1.8))
+    #     waypoints.append(create_pose(0.0,-1.8,1.4)) 
+    #     waypoints.append(create_pose(1.8,0.0,1.5))   
+    #     waypoints.append(create_pose(0.0,1.8,1.4))
     
-        accel_list.append(create_accel(-f*math.sin(angle_rad_1),0.0,g+f*math.cos(angle_rad_1)))   
-        accel_list.append(create_accel(None,None,None))
-        accel_list.append(create_accel(None,None,None))
-        accel_list.append(create_accel(None,None,None))
-        accel_list.append(create_accel(None,None,None))
-        accel_list.append(create_accel(None,None,None))
-        accel_list.append(create_accel(-f*math.sin(angle_rad_1),0.0,g+f*math.cos(angle_rad_1))) 
-        accel_list.append(create_accel(None,None,None))
+    #     accel_list.append(create_accel(-f*math.sin(angle_rad_1),0.0,g+f*math.cos(angle_rad_1)))   
+    #     accel_list.append(create_accel(None,None,None))
+    #     accel_list.append(create_accel(None,None,None))
+    #     accel_list.append(create_accel(None,None,None))
+    #     accel_list.append(create_accel(None,None,None))
+    #     accel_list.append(create_accel(None,None,None))
+    #     accel_list.append(create_accel(-f*math.sin(angle_rad_1),0.0,g+f*math.cos(angle_rad_1))) 
+    # #     accel_list.append(create_accel(None,None,None))
 
-        # velocities constraint
-        vel_list.append(create_vel(None,None,None))
-        vel_list.append(create_vel(None,None,None))
-        vel_list.append(create_vel(None,None,None))
-        vel_list.append(create_vel(0,0,0))
-        vel_list.append(create_vel(None,None,None))
-        vel_list.append(create_vel(None,None,None))
-        vel_list.append(create_vel(None,None,None))
-        vel_list.append(create_vel(0,0,0))
+    #     # velocities constraint
+    #     vel_list.append(create_vel(None,None,None))
+    #     vel_list.append(create_vel(None,None,None))
+    #     vel_list.append(create_vel(None,None,None))
+    #     vel_list.append(create_vel(0,0,0))
+    #     vel_list.append(create_vel(None,None,None))
+    #     vel_list.append(create_vel(None,None,None))
+    #     vel_list.append(create_vel(None,None,None))
+    #     vel_list.append(create_vel(0,0,0))
     # for i in range(num_passes):
 
     #     waypoints.append(create_pose(1.8,0.0,1.5))   
