@@ -397,7 +397,7 @@
             <far>7.5</far>
           </clip>
         </camera>
-        <!-- <plugin filename="libgazebo_ros_openni_kinect.so" name="camera_controller">
+        <plugin filename="libgazebo_ros_openni_kinect.so" name="camera_controller">
           <cameraName>camera</cameraName>
           <robotNamespace></robotNamespace>
           <alwaysOn>true</alwaysOn>
@@ -415,7 +415,7 @@
           <distortion_k3>0.0</distortion_k3>
           <distortion_t1>0.0</distortion_t1>
           <distortion_t2>0.0</distortion_t2>
-        </plugin> -->
+        </plugin>
       </sensor>
     </link>
     <joint name="depth_camera_joint" type="fixed">
@@ -460,7 +460,7 @@
       <maxRotVelocity>2700</maxRotVelocity>
       <!-- motorConstant (units of [rad/s]) -->
       <!-- Thrust of each motor = rotor_speed^2 * motorConstant -->
-      <motorConstant>3.383e-07</motorConstant>
+      <motorConstant>2.9265e-07</motorConstant>
       <!-- momentConstant (units of [m]) is used to calculate rotor torque magnitude -->
       <momentConstant>8.8e-3</momentConstant>
       <!-- rotorDragCoefficient accounts for the H-force due to the perpendicular air velocity, resulting in drag -->
@@ -480,7 +480,7 @@
       <timeConstantUp>0.0125</timeConstantUp>
       <timeConstantDown>0.025</timeConstantDown>
       <maxRotVelocity>2700</maxRotVelocity>
-      <motorConstant>3.383e-07</motorConstant>
+      <motorConstant>2.9265e-07</motorConstant>
       <momentConstant>8.8e-3</momentConstant>
       <rotorDragCoefficient>8.06428e-05</rotorDragCoefficient>
       <rollingMomentCoefficient>1e-06</rollingMomentCoefficient>
@@ -497,7 +497,7 @@
       <timeConstantUp>0.0125</timeConstantUp>
       <timeConstantDown>0.025</timeConstantDown>
       <maxRotVelocity>2700</maxRotVelocity>
-      <motorConstant>3.383e-07</motorConstant>
+      <motorConstant>2.9265e-07</motorConstant>
       <momentConstant>8.8e-3</momentConstant>
       <rotorDragCoefficient>8.06428e-05</rotorDragCoefficient>
       <rollingMomentCoefficient>1e-06</rollingMomentCoefficient>
@@ -514,7 +514,7 @@
       <timeConstantUp>0.0125</timeConstantUp>
       <timeConstantDown>0.025</timeConstantDown>
       <maxRotVelocity>2700</maxRotVelocity>
-      <motorConstant>3.383e-07</motorConstant>
+      <motorConstant>2.9265e-07</motorConstant>
       <momentConstant>8.8e-3</momentConstant>
       <rotorDragCoefficient>8.06428e-05</rotorDragCoefficient>
       <rollingMomentCoefficient>1e-06</rollingMomentCoefficient>
@@ -643,7 +643,7 @@
           <input_offset>0</input_offset>
           <input_scaling>2700</input_scaling>
           <zero_position_disarmed>0</zero_position_disarmed>
-          <zero_position_armed>100</zero_position_armed>
+          <zero_position_armed>1075</zero_position_armed>
           <joint_control_type>velocity</joint_control_type>
         </channel>
         <channel name='rotor2'>
@@ -651,7 +651,7 @@
           <input_offset>0</input_offset>
           <input_scaling>2700</input_scaling>
           <zero_position_disarmed>0</zero_position_disarmed>
-          <zero_position_armed>100</zero_position_armed>
+          <zero_position_armed>1075</zero_position_armed>
           <joint_control_type>velocity</joint_control_type>
         </channel>
         <channel name='rotor3'>
@@ -659,7 +659,7 @@
           <input_offset>0</input_offset>
           <input_scaling>2700</input_scaling>
           <zero_position_disarmed>0</zero_position_disarmed>
-          <zero_position_armed>100</zero_position_armed>
+          <zero_position_armed>1075</zero_position_armed>
           <joint_control_type>velocity</joint_control_type>
         </channel>
         <channel name='rotor4'>
@@ -667,7 +667,7 @@
           <input_offset>0</input_offset>
           <input_scaling>2700</input_scaling>
           <zero_position_disarmed>0</zero_position_disarmed>
-          <zero_position_armed>100</zero_position_armed>
+          <zero_position_armed>1075</zero_position_armed>
           <joint_control_type>velocity</joint_control_type>
         </channel>
         <channel name='rotor5'>

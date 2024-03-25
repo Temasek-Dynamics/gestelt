@@ -167,7 +167,7 @@ void LearningAgile::setpoint_timer_cb(const ros::TimerEvent &e)
         mpc_cmd.header.stamp = ros::Time::now();
         mpc_cmd.header.frame_id = origin_frame_;
         mpc_cmd.type_mask = mavros_msgs::AttitudeTarget::IGNORE_ATTITUDE; // Ignore orientation
-        mpc_cmd.thrust = control_opt_[0]/((0.8706)*4);
+        mpc_cmd.thrust = control_opt_[0]/(2.1334185*4);
         mpc_cmd.body_rate.x = control_opt_[1];
         mpc_cmd.body_rate.y = control_opt_[2];
         mpc_cmd.body_rate.z = control_opt_[3];
