@@ -246,6 +246,6 @@ private:
 	float _yawspeed_sp{}; /** desired yaw-speed */
 
 	// publisher
-	uORB::Publication<rpt_integrator_s> _rpt_integrator_pub{ORB_ID(rpt_integrator)};
-	rpt_integrator_s _rpt_integrator_msg{};
+	// uORB::Publication<rpt_integrator_s> _rpt_integrator_pub{ORB_ID(rpt_integrator)};
+	// rpt_integrator_s _rpt_integrator_msg{};
 };
