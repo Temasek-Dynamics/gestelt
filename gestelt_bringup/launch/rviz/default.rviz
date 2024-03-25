@@ -7,6 +7,7 @@ Panels:
         - /Global Options1
         - /TF1/Frames1
         - /collision_viz1/swarm_collision_checker1
+        - /d0/planner(Red)1
         - /d0/planner(Red)1/front-end1/closed_list_viz1
         - /d0/planner(Red)1/back_end1/Planning_back_end1
         - /d1/planner(orange)1/odom1/Shape1
@@ -335,7 +336,7 @@ Visualization Manager:
           Marker Topic: /swarm_collision_checker/collision
           Name: swarm_collision_checker
           Namespaces:
-            swarm_collision: true
+            {}
           Queue Size: 100
           Value: true
       Enabled: true
@@ -487,7 +488,7 @@ Visualization Manager:
                 {}
               Queue Size: 100
               Value: false
-          Enabled: false
+          Enabled: true
           Name: sfc
         - Class: rviz/Group
           Displays:
@@ -930,7 +931,7 @@ Visualization Manager:
               Marker Topic: /drone2/sfc_spherical
               Name: sfc_spherical
               Namespaces:
-                {}
+                sfc_spheres: true
               Queue Size: 100
               Value: true
             - Class: rviz/MarkerArray
@@ -954,7 +955,8 @@ Visualization Manager:
               Marker Topic: /drone2/sfc_waypoints
               Name: sfc_waypoints
               Namespaces:
-                {}
+                sfc_trajectory_line: true
+                sfc_trajectory_waypoints: true
               Queue Size: 100
               Value: true
             - Class: rviz/MarkerArray
@@ -973,7 +975,7 @@ Visualization Manager:
                 {}
               Queue Size: 100
               Value: false
-          Enabled: false
+          Enabled: true
           Name: sfc
         - Class: rviz/Group
           Displays:
@@ -5481,10 +5483,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Scale: 76.84054565429688
+      Scale: 68.95147705078125
       Target Frame: my_view
-      X: -0.26881325244903564
-      Y: 0.0025159299839287996
+      X: -0.9070870876312256
+      Y: 0.26945382356643677
     Saved:
       - Class: rviz/FPS
         Enable Stereo Rendering:

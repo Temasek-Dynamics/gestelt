@@ -47,9 +47,9 @@ sfc:
   # Initial time allocation
   # max_vel: 3.0 # Maximum velocity (m/s)
   # max_acc: 12.0 # Maximum velocity (m/s)
-  avg_vel: 1.5 # Average velocity (m/s) used for estimating initial time allocation
-  max_acc: 3.0 # Maximum velocity (m/s)
-
+  # avg_vel: 1.5 # Average velocity (m/s) used for estimating initial time allocation
+  max_vel: 5.0 # Maximum velocity (m/s)
+  max_acc: 20.0 # Maximum velocity (m/s)
 
   # SFC Buffer 
   spherical_buffer: 0.125 # (m) Reduce spherical SFCs by this fixed amount to increase buffer from obstacles
@@ -70,12 +70,9 @@ optimization:
   # obstacle_clearance: 0.35 
   # obstacle_clearance_soft: 0.5 
   swarm_clearance: 0.4 
-  # max_vel: 3.0
-  # max_acc: 12.0
-  # max_jer: 40.0
-  max_vel: 1.5
-  max_acc: 6.0
-  max_jer: 20.0
+  # max_vel: 1.5
+  max_vel: 5.0
+  max_acc: 20.0 # Maximum velocity (m/s)
 
 ##### Mapping params
 grid_map:
