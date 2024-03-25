@@ -1,0 +1,14 @@
+<launch>
+  <arg name="num_drones" default="1"/>
+  <arg name="pose_topic" default="mavros/local_position/pose"/>
+
+  <node pkg="swarm_collision_checker" name="swarm_collision_checker" 
+        type="swarm_collision_checker_node" output="screen">
+    <param name="num_drones" value="$(arg num_drones)"/>
+    <param name="pose_topic" value="$(arg pose_topic)"/>
+    <param name="check_collision_freq" value="10.0"/>
+    <param name="collision_check/warn_radius" value="0.225"/>
+    <param name="collision_check/fatal_radius" value="0.14"/>
+  </node>
+
+</launch>

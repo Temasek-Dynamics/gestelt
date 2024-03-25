@@ -220,7 +220,6 @@ public:
   // Checks if camera pose is valid
   bool isPoseValid();
 
-
   /** Getter methods */
 
   double getInflation() const{

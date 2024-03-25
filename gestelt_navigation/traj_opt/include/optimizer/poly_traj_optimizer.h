@@ -230,7 +230,7 @@ namespace ego_planner
     void setDroneId(const int drone_id);
     void setIfTouchGoal(const bool touch_goal);
 
-    void assignSwarmTrajs(std::shared_ptr<std::unordered_map<int, ego_planner::LocalTrajData>>& swarm_local_trajs);
+    void assignSwarmTrajs(std::shared_ptr<std::unordered_map<int, ego_planner::LocalTrajData>> swarm_local_trajs);
 
     /**
      * Returns the minimum jerk optimizer object

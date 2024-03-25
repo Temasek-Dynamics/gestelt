@@ -513,14 +513,12 @@ namespace ego_planner
 
     double pt_time = t_now_ + t;
 
+    if (swarm_local_trajs_ == nullptr){
+      return false;
+    }
+
     for (auto& it : *swarm_local_trajs_){ // Iterate through trajectories
-      if (swarm_local_trajs_ == nullptr){
-        std::cout << "SWARM LOCAL TRAJ MISSING!!" << std::endl;
-        std::cout << "SWARM LOCAL TRAJ MISSING!!" << std::endl;
-        std::cout << "SWARM LOCAL TRAJ MISSING!!" << std::endl;
-        std::cout << "SWARM LOCAL TRAJ MISSING!!" << std::endl;
-        std::cout << "SWARM LOCAL TRAJ MISSING!!" << std::endl;
-      }
+
       int id = it.first;
 
       if ((id < 0) || id == drone_id_)
@@ -640,7 +638,7 @@ namespace ego_planner
   }
 
   void PolyTrajOptimizer::assignSwarmTrajs(
-    std::shared_ptr<std::unordered_map<int, ego_planner::LocalTrajData>>& swarm_local_trajs) {
+    std::shared_ptr<std::unordered_map<int, ego_planner::LocalTrajData>> swarm_local_trajs) {
     swarm_local_trajs_ = swarm_local_trajs;
   }
 

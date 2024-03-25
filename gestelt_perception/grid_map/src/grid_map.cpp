@@ -24,8 +24,6 @@ void GridMap::initMapROS(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   std::cout << "initMapROS" << std::endl;
   readROSParams(nh, pnh);
 
-  std::cout << "read ros params" << std::endl;
-
   reset(mp_.resolution_);
 
   Eigen::Matrix3d rot_mat = (Eigen::AngleAxisd((M_PI/180.0) * md_.cam2body_rpy_deg(0), Eigen::Vector3d::UnitX())
@@ -39,7 +37,6 @@ void GridMap::initMapROS(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   
   mp_.global_map_num_voxels_ = (mp_.global_map_size_.cwiseProduct(Eigen::Vector3d::Constant(1/mp_.resolution_))).cast<int>();
 
-  std::cout << "before dbg_input_entire_map_" << std::endl;
 
   if (dbg_input_entire_map_){
     ROS_INFO("[%s] DEBUG: INPUT ENTIRE MAP", node_name_.c_str());
@@ -81,14 +78,14 @@ void GridMap::initMapROS(ros::NodeHandle &nh, ros::NodeHandle &pnh)
     initROSPubSubTimers(nh, pnh);
   }
 
-  ROS_INFO("[%s] Map origin (%f, %f, %f)", node_name_.c_str(), 
-    mp_.map_origin_(0), mp_.map_origin_(1), mp_.map_origin_(2));
-  ROS_INFO("[%s] Global map size (%f, %f, %f)", node_name_.c_str(), 
-    mp_.global_map_size_(0), mp_.global_map_size_(1), mp_.global_map_size_(2));
-  // ROS_INFO("[%s] Local map size (%f, %f, %f)", node_name_.c_str(), 
-  //   mp_.local_map_size_(0), mp_.local_map_size_(1), mp_.local_map_size_(2));
-  ROS_INFO("[%s] Resolution %f m, Inflation %f m", node_name_.c_str(), 
-    mp_.resolution_, mp_.inflation_);
+  // ROS_INFO("[%s] Map origin (%f, %f, %f)", node_name_.c_str(), 
+  //   mp_.map_origin_(0), mp_.map_origin_(1), mp_.map_origin_(2));
+  // ROS_INFO("[%s] Global map size (%f, %f, %f)", node_name_.c_str(), 
+  //   mp_.global_map_size_(0), mp_.global_map_size_(1), mp_.global_map_size_(2));
+  // // ROS_INFO("[%s] Local map size (%f, %f, %f)", node_name_.c_str(), 
+  // //   mp_.local_map_size_(0), mp_.local_map_size_(1), mp_.local_map_size_(2));
+  // ROS_INFO("[%s] Resolution %f m, Inflation %f m", node_name_.c_str(), 
+  //   mp_.resolution_, mp_.inflation_);
 }
 
 void GridMap::initROSPubSubTimers(ros::NodeHandle &nh, ros::NodeHandle &pnh)
@@ -459,7 +456,6 @@ void GridMap::pcdMsgToMap(const sensor_msgs::PointCloud2 &msg)
     // return;
   }
 
-  std::cout << "before fromROSMsg" << std::endl;
   pcl::PointCloud<pcl::PointXYZ>::Ptr pcd;
   pcd.reset(new pcl::PointCloud<pcl::PointXYZ>);
 
@@ -620,12 +616,22 @@ void GridMap::publishCollisionSphere(
 
   // Make the alpha and red color value scale from 0.0 to 1.0 depending on the distance to the obstacle. 
   // With the upper limit being the warn_radius, and the lower limit being the fatal_radius
-  double fatal_ratio = std::clamp((warn_radius - dist_to_obs)/(warn_radius - fatal_radius), 0.0, 1.0);
-  sphere.color.r = fatal_ratio;
-  sphere.color.g = 0.0;
-  sphere.color.b = fatal_ratio < 1.0 ? 1.0 : 0.0; // If fatal, make blue value 0.0, so sphere is entire red.
-  sphere.color.a = fatal_ratio < 1.0 ? 0.35 : 0.7;
+  double fatal_ratio = std::clamp((warn_radius - dist_to_obs)/(warn_radius - fatal_radius), 0.0, 1.001);
   
+  if (fatal_ratio >= 1.0){
+    sphere.color.r = 1.0;
+    sphere.color.g = 0.0;
+    sphere.color.b = 0.0; 
+    sphere.color.a = 0.8;
+  }
+  else {
+    // Goes from blue to purple
+    sphere.color.r = fatal_ratio*(1.0);
+    sphere.color.g = 0.0;
+    sphere.color.b = 1.0; // If fatal, make blue value 0.0, so sphere is entire red.
+    sphere.color.a = 0.3 + (fatal_ratio*(0.8-0.3));
+  }
+
   double scale = fatal_ratio < 1.0 ? 0.35 : 0.6;
 
   sphere.scale.x = scale;
