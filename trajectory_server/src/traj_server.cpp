@@ -65,6 +65,7 @@ void TrajServer::init(ros::NodeHandle& nh)
   server_state_pub_ = nh.advertise<gestelt_msgs::CommanderState>("/traj_server/state", 50);
   // reference_pub_ = nh.advertise<geometry_msgs::TwistStamped>("/reference/setpoint_test", 50);
   flat_reference_pub_ = nh.advertise<controller_msgs::FlatTarget>("/reference/flatsetpoint", 50);
+  se3_yaw_pub_= nh.advertise<std_msgs::Float32>("/reference/yaw", 50);
   /////////////////
   /* Service clients */
   /////////////////
@@ -664,6 +665,10 @@ void TrajServer::pubflatrefState( Vector3d p, Vector3d v, Vector3d a, Vector3d j
   msg.acceleration.y = a.y();
   msg.acceleration.z = a.z();
   flat_reference_pub_.publish(msg);
+
+  std_msgs::Float32 yaw_msg;
+  yaw_msg.data = yaw;
+  se3_yaw_pub_.publish(yaw_msg);
 }
 
 

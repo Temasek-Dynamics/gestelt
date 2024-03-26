@@ -219,7 +219,7 @@ def main():
         waypoints.append(create_pose(1.0,0.0,1.4)) 
         waypoints.append(create_pose(0.0, 0.0, 0.8))
         waypoints.append(create_pose(-1.0,0.0,1.4))
-        waypoints.append(create_pose(0.0,0.0,2.8))
+        waypoints.append(create_pose(0.0,0.0,2.0))
         
        
         accel_list.append(create_accel(None,None,None))

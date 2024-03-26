@@ -30,6 +30,8 @@
 #include "controller_msgs/FlatTarget.h"
 #include <geometry_msgs/TwistStamped.h>
 #include <std_srvs/SetBool.h> // for service client
+
+#include <std_msgs/Float32.h>
 using namespace Eigen;
 
 /* State machine  */
@@ -384,7 +386,9 @@ private: // Member variables
   ros::Publisher server_state_pub_; // Publisher of current uav and server state
   ros::Publisher flat_reference_pub_; // Publisher of flat reference for controller
   ros::Publisher reference_pub_; // Publisher of reference velocity for controller
-  
+  ros::Publisher se3_yaw_pub_; // Publisher of yaw for controller
+
+
   /* Subscriber */
   ros::Subscriber plan_traj_sub_; // Subscriber for planner trajectory
 
