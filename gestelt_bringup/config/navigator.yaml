@@ -77,12 +77,12 @@ optimization:
 ##### Mapping params
 grid_map:
   # global_frame: "world"
-  map_size_x: 80.0
-  map_size_y: 80.0
+  map_size_x: 20.0
+  map_size_y: 20.0
   map_size_z: 20.0
-  local_map_size_x: 10.0
-  local_map_size_y: 10.0 
-  local_map_size_z: 10.0
+  local_map_size_x: 15.0
+  local_map_size_y: 15.0 
+  local_map_size_z: 5.0
 
   ground_height: 0.0
 

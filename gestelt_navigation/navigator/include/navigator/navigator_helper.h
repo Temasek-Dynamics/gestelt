@@ -168,7 +168,7 @@ namespace viz_helper{
    */
   inline void publishVizSpheres(const std::vector<Eigen::Vector3d>& pts, const std::string& frame_id, ros::Publisher& publisher) {
     visualization_msgs::Marker sphere_list;
-    double radius = 0.075;
+    double radius = 0.15;
     double alpha = 0.8;
 
     sphere_list.header.frame_id = frame_id;
@@ -189,7 +189,7 @@ namespace viz_helper{
     sphere_list.scale.z = radius;
 
     geometry_msgs::Point pt;
-    for (int i = 1; i < pts.size() - 1; i++){
+    for (int i = 0; i < pts.size(); i++){
       pt.x = pts[i](0);
       pt.y = pts[i](1);
       pt.z = pts[i](2);

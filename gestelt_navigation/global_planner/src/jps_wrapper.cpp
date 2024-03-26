@@ -15,29 +15,46 @@ void JPSWrapper::reset()
 
 bool JPSWrapper::generatePlan(const Eigen::Vector3d &start_pos, const Eigen::Vector3d &goal_pos)
 {
+
     reset();
     
     std::cout << "JPS generate plan " << std::endl;
     std::shared_ptr<JPS::VoxelMapUtil> map_util = ::std::make_shared<JPS::VoxelMapUtil>();
 
+    tm_jps_map_.start();
+
     map_->updateLocalMapData();
-    // map_util->setMap(map_->getOrigin(), map_->getLocalMapNumVoxels(), map_->getData(),
+    // map_util->setMap(map_->getGlobalOrigin(), map_->getLocalMapNumVoxels(), map_->getData(),
     //                  map_->getRes());
-    map_util->setMap(Eigen::Vector3d(0.0, 0.0,0.0), map_->getLocalMapNumVoxels(), map_->getData(),
+    // map_util->setMap(Eigen::Vector3d(0.0, 0.0,0.0), map_->getLocalMapNumVoxels(), map_->getData(),
+    //                  map_->getRes());
+
+    map_util->setMap(map_->getLocalOrigin(), 
+                     map_->getLocalMapNumVoxels(), 
+                     map_->getData(),
                      map_->getRes());
 
     jps_planner_->setMapUtil(map_util);
     jps_planner_->updateMap();
 
+    tm_jps_map_.stop(print_timers_);
+
     // define start and goal
     // Eigen::Vector3d start_pos_offset = start_pos;
-    Eigen::Vector3d start_pos_offset = Eigen::Vector3d(2.0, 2.0, 2.0);
-    Eigen::Vector3d goal_pos_offset = Eigen::Vector3d(5.0, 5.0, 5.0);
+    Eigen::Vector3d start_pos_offset = Eigen::Vector3d(1.0, 1.0, 1.0);
+    Eigen::Vector3d goal_pos_offset = Eigen::Vector3d(5.5, 5.5, 1.0);
+
+    tm_jps_plan_.start();
 
     if (!jps_planner_->plan(start_pos_offset, goal_pos_offset, 1, true)){
+        tm_jps_plan_.stop(print_timers_);
         return false;
     }
+    
+    tm_jps_plan_.stop(print_timers_);
 
+
+    // auto path_jps = jps_planner_->getRawPath();
     auto path_jps = jps_planner_->getRawPath();
 
     // Convert from float to double 

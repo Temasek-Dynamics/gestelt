@@ -9,11 +9,10 @@ void GridMap::initMap(pcl::PointCloud<pcl::PointXYZ>::Ptr pcd, const Eigen::Vect
 
   mp_.inflation_ = inflation;
   mp_.uav_origin_frame_ = "world";
-  mp_.map_origin_ = Eigen::Vector3d(mp_.global_map_size_(0) / 2.0, mp_.global_map_size_(1) / 2.0, 0.0);
+  mp_.global_map_origin_ = Eigen::Vector3d(-mp_.global_map_size_(0) / 2.0, -mp_.global_map_size_(1) / 2.0, 0.0);
   mp_.resolution_ = resolution;
 
   mp_.global_map_num_voxels_ = (mp_.global_map_size_.cwiseProduct(Eigen::Vector3d::Constant(1/mp_.resolution_))).cast<int>();
-  mp_.voxel_map_origin_ = Eigen::Vector3i(mp_.global_map_num_voxels_(0) / 2, mp_.global_map_num_voxels_(1) / 2, 0);
 
   reset(mp_.resolution_);
 
@@ -34,14 +33,14 @@ void GridMap::initMapROS(ros::NodeHandle &nh, ros::NodeHandle &pnh)
                                       * Eigen::AngleAxisd((M_PI/180.0) * md_.cam2body_rpy_deg(1), Eigen::Vector3d::UnitY())
                                       * Eigen::AngleAxisd((M_PI/180.0) * md_.cam2body_rpy_deg(2), Eigen::Vector3d::UnitZ())).toRotationMatrix();
   
-  // Map origin is at bottom corner of the map (Therefore indices will never be negative)
-  // Position (0,0,0) is at the center of the map
-  mp_.map_origin_ = Eigen::Vector3d(-mp_.global_map_size_(0) / 2.0, -mp_.global_map_size_(1) / 2.0, mp_.ground_height_);
-  
+  // Global map origin is at a corner of the global map i.e. (-W/2, -L/2, 0)
+  mp_.global_map_origin_ = Eigen::Vector3d(-mp_.global_map_size_(0) / 2.0, -mp_.global_map_size_(1) / 2.0, mp_.ground_height_);
+  // Local map origin is at a corner of the local map i.e. (-local_W/2, -local_L/2, 0)
+  // Local map origin_ is relative to the current position of the robot
+  mp_.local_map_origin_ = Eigen::Vector3d(-mp_.local_map_size_(0) / 2.0, -mp_.local_map_size_(1) / 2.0, mp_.ground_height_);
+
   mp_.global_map_num_voxels_ = (mp_.global_map_size_.cwiseProduct(Eigen::Vector3d::Constant(1/mp_.resolution_))).cast<int>();
   mp_.local_map_num_voxels_ = (mp_.local_map_size_.cwiseProduct(Eigen::Vector3d::Constant(1/mp_.resolution_))).cast<int>();
-
-  mp_.voxel_map_origin_ = Eigen::Vector3i(mp_.global_map_num_voxels_(0) / 2, mp_.global_map_num_voxels_(1) / 2, 0);
 
   if (dbg_input_entire_map_){
     ROS_INFO("[%s] DEBUG: INPUT ENTIRE MAP", node_name_.c_str());
@@ -84,7 +83,7 @@ void GridMap::initMapROS(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   }
 
   // ROS_INFO("[%s] Map origin (%f, %f, %f)", node_name_.c_str(), 
-  //   mp_.map_origin_(0), mp_.map_origin_(1), mp_.map_origin_(2));
+  //   mp_.global_map_origin_(0), mp_.global_map_origin_(1), mp_.global_map_origin_(2));
   // ROS_INFO("[%s] Global map size (%f, %f, %f)", node_name_.c_str(), 
   //   mp_.global_map_size_(0), mp_.global_map_size_(1), mp_.global_map_size_(2));
   // // ROS_INFO("[%s] Local map size (%f, %f, %f)", node_name_.c_str(), 
@@ -352,15 +351,6 @@ void GridMap::updateLocalMap(){
   if (!isPoseValid()){
     return;
   }
-  
-  // Update bounds of local map 
-  // md_.local_map_min_ << -mp_.local_map_size_(0) + md_.cam2origin_.col(3)(0), 
-  //                       -mp_.local_map_size_(1) + md_.cam2origin_.col(3)(1),
-  //                       -mp_.local_map_size_(2) + md_.cam2origin_.col(3)(2);
-
-  // md_.local_map_max_ << mp_.local_map_size_(0) + md_.cam2origin_.col(3)(0), 
-  //                       mp_.local_map_size_(1) + md_.cam2origin_.col(3)(1),
-  //                       mp_.local_map_size_(2) + md_.cam2origin_.col(3)(2);
 }
 
 void GridMap::getCamToGlobalPose(const geometry_msgs::Pose &pose)

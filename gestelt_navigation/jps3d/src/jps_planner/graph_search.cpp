@@ -145,8 +145,9 @@ bool GraphSearch::plan(StatePtr &currNode_ptr, int maxExpand, int start_id,
     currNode_ptr->closed = true; // Add to closed list
 
     if (currNode_ptr->id == goal_id) {
-      if (verbose_)
-        printf("Goal Reached!!!!!!\n\n");
+      if (verbose_){
+        printf("Goal Reached with %d iterations!!!!!!\n\n", expand_iteration);
+      }
       break;
     }
 

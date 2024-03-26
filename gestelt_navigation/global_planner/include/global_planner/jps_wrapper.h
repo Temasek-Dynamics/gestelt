@@ -1,5 +1,5 @@
-#ifndef _JPSWRAPPER_H_
-#define _JPSWRAPPER_H_
+#ifndef _JPS_WRAPPER_H_
+#define _JPS_WRAPPER_H_
 
 #include <ros/ros.h>
 
@@ -8,7 +8,93 @@
 #include <jps_planner/jps_planner/jps_planner.h>
 #include <jps_planner/distance_map_planner/distance_map_planner.h>
 
-#include <chrono/chrono>
+#include <chrono>
+
+class Timer
+{
+public:
+  Timer(const std::string& name, bool autostart = false)
+  : name_(name)
+  {
+    if (autostart){
+      start();
+    }
+  } 
+
+  // start timer
+  bool start() {
+    if (timer_running_){ // True if timer is not running
+      std::cout << "Timer " << name_ << " is already running, ignoring start() function call!" << std::endl;
+      return false;
+    }
+
+    std::lock_guard<std::mutex> cmd_guard(timer_mutex_);
+
+    t_start_cpu_ = std::chrono::high_resolution_clock::now();
+    t_start_wall_ = std::chrono::system_clock::now();
+    timer_running_ = true;
+
+    return true;
+  }
+
+  // stop timer
+  bool stop(bool print_dur = false) {
+    if (!timer_running_){ // True if timer is not running
+      std::cout << "Timer " << name_ << " is not running, ignoring stop() function call!" << std::endl;
+      return false;
+    }
+
+    std::lock_guard<std::mutex> cmd_guard(timer_mutex_);
+
+    double t_dur_cpu = std::chrono::duration_cast<std::chrono::duration<double>>(
+            std::chrono::high_resolution_clock::now() - t_start_cpu_).count() * 1000.0;
+    double t_dur_wall = std::chrono::duration_cast<std::chrono::duration<double>>(
+            std::chrono::system_clock::now() - t_start_wall_).count() * 1000.0;
+
+    timer_running_ = false;
+
+    t_cum_dur_cpu_ += t_dur_cpu;
+    t_cum_dur_wall_ += t_dur_wall;
+
+    if (print_dur) {
+      // std::cout << "Timer(" << name_ << ")-cpu: " << t_dur_cpu << " ms" << std::endl;
+      std::cout << "Timer(" << name_ << ")-wall: " << t_dur_wall << " ms" << std::endl;
+    }
+
+    return true;
+  }
+
+  // Get cumulative CPU Ticks 
+  double getCPUCumulative(bool print_dur = false) const {
+    if (print_dur) {
+      std::cout << "Timer("<< name_ << ")-cum,cpu: " << t_cum_dur_cpu_ << " ms" << std::endl;
+    }
+
+    return t_cum_dur_cpu_;
+  }
+
+  // Get cumulative Wall time
+  double getWallCumulative(bool print_dur = false) const {
+    if (print_dur) {
+      std::cout << "Timer("<< name_ << ")-cum,wall: " << t_cum_dur_wall_ << " ms" << std::endl;
+    }
+
+    return t_cum_dur_wall_;
+  }
+
+private:
+  std::string name_; // name of timer
+  bool timer_running_{false}; // Indicates if timer is running
+
+  std::chrono::time_point<std::chrono::high_resolution_clock> t_start_cpu_; // cpu time 
+  std::chrono::time_point<std::chrono::system_clock> t_start_wall_; // wall time
+
+  double t_cum_dur_cpu_{0.0}; // Accumulative duration in ms
+  double t_cum_dur_wall_{0.0}; // Accumulative duration in ms
+
+  std::mutex timer_mutex_; // mutex for timer
+  
+}; // class Timer
 
 class JPSWrapper
 {
@@ -50,14 +136,18 @@ private:
   std::vector<Eigen::Vector3d> path_pos_; // Path in terms of 3d position
 
   /* Params */
-  bool planner_verbose_ = true;
+  bool print_timers_{true};
+  bool planner_verbose_{true};
   JPSParams jps_params_;
 
   std::shared_ptr<GridMap> map_;
 
   // std::shared_ptr<path_finding_util::GraphSearch> jps_planner_;
   std::shared_ptr<JPSPlanner3D> jps_planner_;
+  
+  Timer tm_jps_map_{"jps_map"};
+  Timer tm_jps_plan_{"jps_plan"};
 
 }; // class JPSWrapper
 
-#endif // _JPSWRAPPER_H_
+#endif // _JPS_WRAPPER_H_

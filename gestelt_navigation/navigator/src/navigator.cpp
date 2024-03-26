@@ -318,10 +318,10 @@ bool Navigator::generateFrontEndPlan(
   const Eigen::Vector3d& start_pos, const Eigen::Vector3d& goal_pos,
   SphericalSFC::SFCTrajectory& sfc_traj)
 {
-  logInfo(str_fmt("generateFrontEndPlan() from (%f, %f, %f) to (%f, %f, %f)",
-    start_pos(0), start_pos(1), start_pos(2),
-    goal_pos(0), goal_pos(1), goal_pos(2))
-  );
+  // logInfo(str_fmt("generateFrontEndPlan() from (%f, %f, %f) to (%f, %f, %f)",
+  //   start_pos(0), start_pos(1), start_pos(2),
+  //   goal_pos(0), goal_pos(1), goal_pos(2))
+  // );
 
   ros::Time front_end_plan_start_time = ros::Time::now();
 
@@ -332,7 +332,6 @@ bool Navigator::generateFrontEndPlan(
   }
 
   double front_end_plan_time_ms = (ros::Time::now() - front_end_plan_start_time).toSec() * 1000;
-
   logInfo(str_fmt("Front-end Planning Time: %f ms", front_end_plan_time_ms));
 
   std::vector<Eigen::Vector3d> front_end_path = front_end_planner_->getPathPos();
@@ -343,97 +342,100 @@ bool Navigator::generateFrontEndPlan(
   viz_helper::publishVizSpheres(front_end_path, "world", front_end_plan_viz_pub_) ;
   // viz_helper::publishVizCubes(closed_list, "world", closed_list_viz_pub_);
 
-  ros::Time sfc_plan_start_time = ros::Time::now();
 
-  // Generate safe flight corridor from front end path
-  if (!sfc_generation_->generateSFC(front_end_path)){
-    logError("Failed to generate safe flight corridor!");
-    return false;
-  }
+  /* UNCOMMENT EVERYTHING FROM HERE*/
 
-  double sfc_plan_time_ms = (ros::Time::now() - sfc_plan_start_time).toSec() * 1000;
+  // ros::Time sfc_plan_start_time = ros::Time::now();
 
-  sfc_traj = sfc_generation_->getSFCTrajectory();
+  // // Generate safe flight corridor from front end path
+  // if (!sfc_generation_->generateSFC(front_end_path)){
+  //   logError("Failed to generate safe flight corridor!");
+  //   return false;
+  // }
 
-  gestelt_msgs::SphericalSFCTrajectory sfc_traj_msg;
+  // double sfc_plan_time_ms = (ros::Time::now() - sfc_plan_start_time).toSec() * 1000;
 
-  for (auto sphere : sfc_traj.spheres){
-    gestelt_msgs::Sphere sphere_msg;
-    sphere_msg.radius = sphere.radius;
-    sphere_msg.center.x = sphere.center(0);
-    sphere_msg.center.y = sphere.center(1);
-    sphere_msg.center.z = sphere.center(2);
-    sfc_traj_msg.spheres.push_back(sphere_msg);
-  }
+  // sfc_traj = sfc_generation_->getSFCTrajectory();
 
-  for (auto wp : sfc_traj.waypoints)
-  {
-    geometry_msgs::Point wp_msg;
-    wp_msg.x = wp(0);
-    wp_msg.y = wp(1);
-    wp_msg.z = wp(2);
-    sfc_traj_msg.waypoints.push_back(wp_msg);
-  }
+  // gestelt_msgs::SphericalSFCTrajectory sfc_traj_msg;
 
-  sfc_traj_msg.segments_time_duration = sfc_traj.segs_t_dur;
-  spherical_sfc_traj_pub_.publish(sfc_traj_msg);
+  // for (auto sphere : sfc_traj.spheres){
+  //   gestelt_msgs::Sphere sphere_msg;
+  //   sphere_msg.radius = sphere.radius;
+  //   sphere_msg.center.x = sphere.center(0);
+  //   sphere_msg.center.y = sphere.center(1);
+  //   sphere_msg.center.z = sphere.center(2);
+  //   sfc_traj_msg.spheres.push_back(sphere_msg);
+  // }
+
+  // for (auto wp : sfc_traj.waypoints)
+  // {
+  //   geometry_msgs::Point wp_msg;
+  //   wp_msg.x = wp(0);
+  //   wp_msg.y = wp(1);
+  //   wp_msg.z = wp(2);
+  //   sfc_traj_msg.waypoints.push_back(wp_msg);
+  // }
+
+  // sfc_traj_msg.segments_time_duration = sfc_traj.segs_t_dur;
+  // spherical_sfc_traj_pub_.publish(sfc_traj_msg);
   
-  // Publish debug SFC trajectory
-  std::vector<std::vector<SphericalSFC::Sphere>> sfc_sampled_spheres;
-  std::vector<Eigen::Vector3d> samp_dir_vec, guide_points_vec;
+  // // Publish debug SFC trajectory
+  // std::vector<std::vector<SphericalSFC::Sphere>> sfc_sampled_spheres;
+  // std::vector<Eigen::Vector3d> samp_dir_vec, guide_points_vec;
 
-  sfc_generation_->getSFCTrajectoryDebug(
-    sfc_sampled_spheres, samp_dir_vec, guide_points_vec);
+  // sfc_generation_->getSFCTrajectoryDebug(
+  //   sfc_sampled_spheres, samp_dir_vec, guide_points_vec);
 
-  if (sfc_sampled_spheres.size() != samp_dir_vec.size() 
-      || samp_dir_vec.size() != guide_points_vec.size() 
-      || sfc_sampled_spheres.size() != guide_points_vec.size()){
-    ROS_ERROR("ERROR, SFC Debug trajectory fields do not all have the same size (same number of semgments)!");
-  }
+  // if (sfc_sampled_spheres.size() != samp_dir_vec.size() 
+  //     || samp_dir_vec.size() != guide_points_vec.size() 
+  //     || sfc_sampled_spheres.size() != guide_points_vec.size()){
+  //   ROS_ERROR("ERROR, SFC Debug trajectory fields do not all have the same size (same number of semgments)!");
+  // }
 
-  gestelt_debug_msgs::SFCTrajectory dbg_sfc_traj_msg;
-  for (size_t i = 0; i < guide_points_vec.size(); i++)
-  {
-    gestelt_debug_msgs::SFCSegment segment;
-    for (auto& sphere : sfc_sampled_spheres[i])
-    {
-      gestelt_msgs::Sphere sphere_msg;
-      sphere_msg.radius = sphere.radius;
-      sphere_msg.center.x = sphere.center(0);
-      sphere_msg.center.y = sphere.center(1);
-      sphere_msg.center.z = sphere.center(2);
+  // gestelt_debug_msgs::SFCTrajectory dbg_sfc_traj_msg;
+  // for (size_t i = 0; i < guide_points_vec.size(); i++)
+  // {
+  //   gestelt_debug_msgs::SFCSegment segment;
+  //   for (auto& sphere : sfc_sampled_spheres[i])
+  //   {
+  //     gestelt_msgs::Sphere sphere_msg;
+  //     sphere_msg.radius = sphere.radius;
+  //     sphere_msg.center.x = sphere.center(0);
+  //     sphere_msg.center.y = sphere.center(1);
+  //     sphere_msg.center.z = sphere.center(2);
 
-      segment.sampled_spheres.push_back(sphere_msg);
-    }
+  //     segment.sampled_spheres.push_back(sphere_msg);
+  //   }
 
-    segment.guide_point.x = guide_points_vec[i](0);
-    segment.guide_point.y = guide_points_vec[i](1);
-    segment.guide_point.z = guide_points_vec[i](2);
+  //   segment.guide_point.x = guide_points_vec[i](0);
+  //   segment.guide_point.y = guide_points_vec[i](1);
+  //   segment.guide_point.z = guide_points_vec[i](2);
 
-    segment.sampling_vector.x = samp_dir_vec[i](0);
-    segment.sampling_vector.y = samp_dir_vec[i](1);
-    segment.sampling_vector.z = samp_dir_vec[i](2);
+  //   segment.sampling_vector.x = samp_dir_vec[i](0);
+  //   segment.sampling_vector.y = samp_dir_vec[i](1);
+  //   segment.sampling_vector.z = samp_dir_vec[i](2);
 
-    dbg_sfc_traj_msg.segments.push_back(segment);
-  }
+  //   dbg_sfc_traj_msg.segments.push_back(segment);
+  // }
 
-  for (size_t i = 0; i < front_end_path.size(); i++)
-  {
-    geometry_msgs::Point front_end_pt;
-    front_end_pt.x = front_end_path[i](0);
-    front_end_pt.y = front_end_path[i](1);
-    front_end_pt.z = front_end_path[i](2);
+  // for (size_t i = 0; i < front_end_path.size(); i++)
+  // {
+  //   geometry_msgs::Point front_end_pt;
+  //   front_end_pt.x = front_end_path[i](0);
+  //   front_end_pt.y = front_end_path[i](1);
+  //   front_end_pt.z = front_end_path[i](2);
 
-    dbg_sfc_traj_msg.front_end_path.push_back(front_end_pt);
-  }
+  //   dbg_sfc_traj_msg.front_end_path.push_back(front_end_pt);
+  // }
 
-  dbg_sfc_traj_msg.sfc_spheres = sfc_traj_msg.spheres;
-  dbg_sfc_traj_msg.sfc_waypoints = sfc_traj_msg.waypoints;
-  dbg_sfc_traj_pub_.publish(dbg_sfc_traj_msg);
+  // dbg_sfc_traj_msg.sfc_spheres = sfc_traj_msg.spheres;
+  // dbg_sfc_traj_msg.sfc_waypoints = sfc_traj_msg.waypoints;
+  // dbg_sfc_traj_pub_.publish(dbg_sfc_traj_msg);
 
-  logInfo(str_fmt("Front-end Planning Time: %f ms", front_end_plan_time_ms));
-  logInfo(str_fmt("SFC Planning Time: %f ms", sfc_plan_time_ms));
-  logInfo(str_fmt("Number of waypoints in front-end path: %ld", front_end_path.size()));
+  // logInfo(str_fmt("Front-end Planning Time: %f ms", front_end_plan_time_ms));
+  // logInfo(str_fmt("SFC Planning Time: %f ms", sfc_plan_time_ms));
+  // logInfo(str_fmt("Number of waypoints in front-end path: %ld", front_end_path.size()));
   // logInfo(str_fmt("Size of closed list (expanded nodes): %ld", closed_list.size()));
   // logInfo(str_fmt("[SFC] Number of spheres in SFC Spherical corridor: %ld", sfc_traj.spheres.size()));
   // logInfo(str_fmt("[SFC] Number of waypoints: %ld", sfc_traj.waypoints.size()));

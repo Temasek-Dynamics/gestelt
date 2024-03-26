@@ -52,8 +52,8 @@ using vec_Veci = vec_E<Veci<N>>;
 struct MappingParameters
 {
   /* map properties */
-  Eigen::Vector3d map_origin_; // Origin of map (Set to be the origin of the starting point of the robot)
-  Eigen::Vector3i voxel_map_origin_; // Origin of voxel map
+  Eigen::Vector3d global_map_origin_; // Origin of map (Set to be the corner of the map)
+  Eigen::Vector3d local_map_origin_; // Origin of local map (Set to be the center of the robot)
   
   Eigen::Vector3d global_map_size_; //  Size of global occupancy map  (m)
   Eigen::Vector3d local_map_size_; //  Size of local occupancy map (m)
@@ -102,9 +102,6 @@ struct MappingData
   Eigen::Matrix4d body2origin_{Eigen::Matrix4d::Identity(4, 4)};
   // Homogenous Transformation matrix of camera to UAV origin frame
   Eigen::Matrix4d cam2origin_{Eigen::Matrix4d::Identity(4, 4)};
-
-  Eigen::Vector3d local_map_min_; // minimum 3d bound of local map in (x,y,z)
-  Eigen::Vector3d local_map_max_; // maximum 3d bound of local map in (x,y,z)
 
   // depth image data
   // cv::Mat depth_image_;
@@ -217,10 +214,11 @@ public:
   // Get occupancy grid resolution
   double getRes() { return mp_.resolution_; }
 
-  // Get map origin
-  Eigen::Vector3d getOrigin() { return mp_.map_origin_; }
+  // Get global map origin (This is defined to be a corner of the global map i.e. (-W/2, -L/2, 0))
+  Eigen::Vector3d getGlobalOrigin() { return mp_.global_map_origin_; }
 
-  Eigen::Vector3i getVoxelOrigin() { return mp_.voxel_map_origin_; }
+  // Get local map origin (This is defined to be a corner of the local map i.e. (-local_W/2, -local_L/2, 0))
+  Eigen::Vector3d getLocalOrigin() { return mp_.local_map_origin_; }
 
   // Get number of voxels in global map
   Eigen::Vector3i getGlobalMapNumVoxels() const { return mp_.global_map_num_voxels_; }
@@ -343,6 +341,7 @@ public:
     // #define ENV_BUILDER_FREE 0
     // #define ENV_BUILDER_UNK -1
 
+    // In voxel space, everything is relative to the local/global origin defined
     local_map_data_.resize( mp_.local_map_num_voxels_(0) 
                             * mp_.local_map_num_voxels_(1) 
                             * mp_.local_map_num_voxels_(2), 0);
@@ -353,12 +352,24 @@ public:
 
     for (auto& coord : occ_coords)
     {
-      if (!isInLocalMap(Eigen::Vector3d(coord.x, coord.y, coord.z))){
+      // obs_gbl_pos: global obstacle pos
+      Bonxai::Point3D obs_gbl_pos = bonxai_map_->grid().coordToPos(coord);
+
+      if (!isInLocalMap(Eigen::Vector3d(obs_gbl_pos.x, obs_gbl_pos.y, obs_gbl_pos.z))){
         continue;
       }
-      int idx = coord.x 
-                + coord.y * mp_.local_map_num_voxels_(0) 
-                + coord.z * mp_.local_map_num_voxels_(0) * mp_.local_map_num_voxels_(1);
+
+      // Convert to voxel space. For local map, TAKE NOTE that the origin must be that of the local map.
+      Eigen::Vector3i vox_idx = ((Eigen::Vector3d{obs_gbl_pos.x, obs_gbl_pos.y, obs_gbl_pos.z } 
+                                  - getLocalOrigin()) / getRes() ).cast<int>() ; 
+
+      size_t idx = vox_idx(0)
+                + vox_idx(1) * mp_.local_map_num_voxels_(0) 
+                + vox_idx(2)* mp_.local_map_num_voxels_(0) * mp_.local_map_num_voxels_(1);
+
+      if (idx >= local_map_data_.size()) {
+        std::cout << "Exceed map size of " << local_map_data_.size() << ",idx " << idx << std::endl;
+      }
       local_map_data_[idx] = 100;
     }
   }
@@ -370,9 +381,9 @@ public:
   // True if given GLOBAL position is within the GLOBAL map boundaries, else False
   bool isInGlobalMap(const Eigen::Vector3d &pos)
   {
-    if (pos(0) > -mp_.global_map_size_(0)/2 && pos(0) < mp_.global_map_size_(0)/2
-      && pos(1) > -mp_.global_map_size_(1)/2 && pos(1) < mp_.global_map_size_(1)/2
-      && pos(2) > -mp_.global_map_size_(2)/2 && pos(2) < mp_.global_map_size_(2)/2)
+    if (pos(0) >= -mp_.global_map_size_(0)/2 && pos(0) < mp_.global_map_size_(0)/2
+      && pos(1) >= -mp_.global_map_size_(1)/2 && pos(1) < mp_.global_map_size_(1)/2
+      && pos(2) >= -mp_.global_map_size_(2)/2 && pos(2) < mp_.global_map_size_(2)/2)
     {
       return true;
     }
@@ -383,9 +394,9 @@ public:
   // True if given GLOBAL position is within the LOCAL map boundaries, else False
   bool isInLocalMap(const Eigen::Vector3d &pos)
   {
-    if (pos(0) > -md_.local_map_min_(0)/2 && pos(0) < md_.local_map_min_(0)/2
-      && pos(1) > -md_.local_map_min_(1)/2 && pos(1) < md_.local_map_min_(1)/2
-      && pos(2) > -md_.local_map_min_(2)/2 && pos(2) < md_.local_map_min_(2)/2)
+    if (pos(0) > -mp_.local_map_size_(0)/2 && pos(0) < mp_.local_map_size_(0)/2
+      && pos(1) > -mp_.local_map_size_(1)/2 && pos(1) < mp_.local_map_size_(1)/2
+      && pos(2) > -mp_.local_map_size_(2)/2 && pos(2) < mp_.local_map_size_(2)/2)
     {
       return true;
     }
@@ -581,37 +592,18 @@ public:
 
   /// Float position to discrete cell coordinate
   Veci<3> floatToInt(const Eigen::Vector3d &pos) {
-    // Veci<3> pn;
-    // for (int i = 0; i < 3; i++)
-    //   pn(i) = std::round((pt(i) - getOrigin()(i)) / getRes() - 0.5);
-    // return pn;
 
-
-    // std::cout << "GridMap::floatToInt " << std::endl;
-    // std::cout << "=========" << std::endl;
-    // std::cout << "(pos): " << 
-    //   pos.transpose() << std::endl;
-    // std::cout << "(getOrigin): " << 
-    //   getOrigin().transpose() << std::endl;
-
-    // std::cout << "(pos - getOrigin()): " << 
-    //   (pos - getOrigin()).transpose() << std::endl;
-    // std::cout << "(pos - getOrigin()) / getRes(): " << 
-    //   ((pos - getOrigin()) / getRes()).transpose() << std::endl;
-
-    // std::cout << "=========" << std::endl;
-
-    // Veci<3> idx = (((pos - getOrigin()) / getRes() ) - Eigen::Vector3d::Constant(0.5)).cast<int>() ;
-    Veci<3> idx = ((pos - getOrigin()) / getRes() ).cast<int>() ;
+    // Veci<3> idx = (((pos - getGlobalOrigin()) / getRes() ) - Eigen::Vector3d::Constant(0.5)).cast<int>() ;
+    Veci<3> idx = ((pos - getGlobalOrigin()) / getRes() ).cast<int>() ;
     return idx;
   }
 
   /// Discrete cell coordinate to float position
   Eigen::Vector3d intToFloat(const Veci<3> &idx) {
-    // return (idx.template cast<double>() + Vecf<3>::Constant(0.5)) * getRes() + getOrigin();
+    // return (idx.template cast<double>() + Vecf<3>::Constant(0.5)) * getRes() + getGlobalOrigin();
 
-    // Eigen::Vector3d pos = (idx.cast<double>() + Eigen::Vector3d::Constant(0.5))  * getRes() + getOrigin();
-    Eigen::Vector3d pos = (idx.cast<double>())  * getRes() + getOrigin();
+    // Eigen::Vector3d pos = (idx.cast<double>() + Eigen::Vector3d::Constant(0.5))  * getRes() + getGlobalOrigin();
+    Eigen::Vector3d pos = (idx.cast<double>())  * getRes() + getGlobalOrigin();
     return pos;
   }
 

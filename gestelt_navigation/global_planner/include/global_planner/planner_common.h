@@ -333,12 +333,12 @@ public:
 
   // Convert from 3d position to gridmap index
   void posToIdx(const Eigen::Vector3d& pos, PosIdx& idx) {
-    idx.setIdx(((pos - map_->getOrigin()) / map_->getRes()).array().ceil().cast<int>());
+    idx.setIdx(((pos - map_->getGlobalOrigin()) / map_->getRes()).array().ceil().cast<int>());
   }
 
   // Convert from gridmap index to 3d position
   void idxToPos(const PosIdx& idx, Eigen::Vector3d& pos){
-    pos = (idx.getIdx()).cast<double>() * map_->getRes() + map_->getOrigin();
+    pos = (idx.getIdx()).cast<double>() * map_->getRes() + map_->getGlobalOrigin();
   }
 
   bool isInGlobalMap(const PosIdx& idx){
