@@ -121,13 +121,13 @@ def create_vel(vel_x,vel_y,vel_z):
 
 def pub_waypoints(waypoints,accels,vels):
     wp_msg = Goals()
-    wp_pos_msg=PoseArray()
-    wp_acc_msg=AccelStamped()
+    # wp_pos_msg=PoseArray()    
+    # wp_acc_msg=AccelStamped()
 
     wp_msg.header.frame_id = "world"
     # wp_msg.waypoints.header.frame_id = "world"
-    wp_pos_msg.header.frame_id = "world"
-    wp_acc_msg.header.frame_id = "world"
+    # wp_pos_msg.header.frame_id = "world"
+    # wp_acc_msg.header.frame_id = "world"
 
     wp_msg.waypoints = waypoints
     wp_msg.accelerations= [accel[0] for accel in accels]
@@ -139,13 +139,13 @@ def pub_waypoints(waypoints,accels,vels):
 
 
     # for waypoints and acceleration vector visualization
-    wp_pos_msg.poses = waypoints
-    if len(accels)>0:
-        wp_acc_msg.accel=accels[1][0]
+    # wp_pos_msg.poses = waypoints
+    # if len(accels)>0:
+    #     wp_acc_msg.accel=accels[1][0]
     
     waypoints_pub.publish(wp_msg)
-    waypoints_pos_pub.publish(wp_pos_msg)
-    waypoints_acc_pub.publish(wp_acc_msg)
+    # waypoints_pos_pub.publish(wp_pos_msg)
+    # waypoints_acc_pub.publish(wp_acc_msg)
 
 # def hover_position():
     
@@ -197,6 +197,8 @@ def main():
     # Send waypoints to UAVs
     # frame is ENU
     print(f"Sending waypoints to UAVs")
+
+
     waypoints = []
     vel_list = []
     accel_list = []
@@ -204,95 +206,148 @@ def main():
     # side length 5m
     g=-9.81 #m/s^2  # down force, negative
     f=1*(-g) #N  # up force, positive
-    angle_1=60  
+    angle_1=85
     angle_2=-60
     angle_rad_1=math.radians(angle_1)
     angle_rad_2=math.radians(angle_2)
-    num_passes = 8
-    
+    num_passes = 2
+        # 1/4 test
+        # world frame is the initial position of the drone
+        # map frame is the origin of the map
+        # waypoints are under the map frame, will be transformed to world frame
+    for i in range(num_passes):
 
-    for _ in range(2):
-        waypoints.append(create_pose(0.0, 0.0, 1.5))  
-        waypoints.append(create_pose(0.0, -1.8, 1.5))
-        waypoints.append(create_pose(0.0, 0.0, 1.5))
-        waypoints.append(create_pose(0.0, 1.8, 1.5))
-                        
-        accel_list.append(create_accel(-f*math.sin(angle_rad_1),0.0,g+f*math.cos(angle_rad_1))) 
-        # accel_list.append(create_accel(None,None,None))
-        # accel_list.append(create_accel(-f*math.sin(angle_rad_1),0.0,g+f*math.cos(angle_rad_1)))
+        waypoints.append(create_pose(1.8,0.0,1.5))   
+        waypoints.append(create_pose(0.0,-1.8,1.4)) 
+        waypoints.append(create_pose(-1.8, 0.0, 1.8))
+        waypoints.append(create_pose(0.0,1.8,1.4))
+        
+    
+        accel_list.append(create_accel(-f*math.sin(angle_rad_1),0.0,g+f*math.cos(angle_rad_1)))   
         accel_list.append(create_accel(None,None,None))
         accel_list.append(create_accel(None,None,None))
+        # accel_list.append(create_accel(-f*math.sin(angle_rad_2),0.0,g+f*math.cos(angle_rad_2))) #for 2 angles on different gates
         accel_list.append(create_accel(None,None,None))
-        
+
+
+        # velocities constraint
         vel_list.append(create_vel(None,None,None))
         vel_list.append(create_vel(None,None,None))
         vel_list.append(create_vel(None,None,None))
-        # vel_list.append(create_vel(0.0, 0.0, 0.0))
         vel_list.append(create_vel(None,None,None))
-        # vel_list.append(create_vel(0.0, 0.0, 0.0))
-
-    # waypoints.append(create_pose(0.0, 1.8, 1.45))
-    # waypoints.append(create_pose(0.0, 1.8, 1.4))
-    # accel_list.append(create_accel(None,None,None))
-    # accel_list.append(create_accel(None,None,None))
-    # vel_list.append(create_vel(0.0, 0.0, 0.0))
-    # vel_list.append(create_vel(0.0, 0.0, 0.0))
-    
-    # for _ in range(2):
-    #     # forward pass
-    #     waypoints.append(create_pose(1.8,0.0,1.5))   
-    #     waypoints.append(create_pose(0.0,-1.8,1.4)) 
-    #     waypoints.append(create_pose(-1.8, 0.0, 1.8))
-    #     waypoints.append(create_pose(0.0,1.8,1.4))
-    #     # backward pass
-        
-    #     waypoints.append(create_pose(-1.8, 0.0, 1.8))
-    #     waypoints.append(create_pose(0.0,-1.8,1.4)) 
-    #     waypoints.append(create_pose(1.8,0.0,1.5))   
-    #     waypoints.append(create_pose(0.0,1.8,1.4))
-    
-    #     accel_list.append(create_accel(-f*math.sin(angle_rad_1),0.0,g+f*math.cos(angle_rad_1)))   
-    #     accel_list.append(create_accel(None,None,None))
-    #     accel_list.append(create_accel(None,None,None))
-    #     accel_list.append(create_accel(None,None,None))
-    #     accel_list.append(create_accel(None,None,None))
-    #     accel_list.append(create_accel(None,None,None))
-    #     accel_list.append(create_accel(-f*math.sin(angle_rad_1),0.0,g+f*math.cos(angle_rad_1))) 
-    # #     accel_list.append(create_accel(None,None,None))
-
-    #     # velocities constraint
-    #     vel_list.append(create_vel(None,None,None))
-    #     vel_list.append(create_vel(None,None,None))
-    #     vel_list.append(create_vel(None,None,None))
-    #     vel_list.append(create_vel(0,0,0))
-    #     vel_list.append(create_vel(None,None,None))
-    #     vel_list.append(create_vel(None,None,None))
-    #     vel_list.append(create_vel(None,None,None))
-    #     vel_list.append(create_vel(0,0,0))
-    # for i in range(num_passes):
-
-    #     waypoints.append(create_pose(1.8,0.0,1.5))   
-    #     waypoints.append(create_pose(0.0,-1.8,1.4)) 
-    #     waypoints.append(create_pose(-1.8, 0.0, 1.8))
-    #     waypoints.append(create_pose(0.0,1.8,1.4))
-        
-    #     # acceleration constraints
-    #     accel_list.append(create_accel(-f*math.sin(angle_rad_1),0.0,g+f*math.cos(angle_rad_1)))   
-    #     accel_list.append(create_accel(None,None,None))
-    #     accel_list.append(create_accel(None,None,None))
-    #     accel_list.append(create_accel(None,None,None))
-
-
-    #     # velocities constraint
-    #     vel_list.append(create_vel(None,None,None))
-    #     vel_list.append(create_vel(None,None,None))
-    #     vel_list.append(create_vel(None,None,None))
-    #     vel_list.append(create_vel(None,None,None))
 
     
     # end of the trajectory
 
     pub_waypoints(waypoints,accel_list,vel_list)
+
+
+
+    time.sleep(10)
+    waypoints = []
+    vel_list = []
+    accel_list = []
+
+    # side length 5m
+    g=-9.81 #m/s^2  # down force, negative
+    num_passes = 2
+    for _ in range(num_passes):
+
+        # forward pass
+        waypoints.append(create_pose(1.8,0.0,1.5))   
+        waypoints.append(create_pose(0.0,-1.8,1.4)) 
+        waypoints.append(create_pose(-1.8, 0.0, 1.8))
+        waypoints.append(create_pose(0.0,1.8,1.4))
+        # backward pass
+        
+        waypoints.append(create_pose(-1.8, 0.0, 1.8))
+        waypoints.append(create_pose(0.0,-1.8,1.4)) 
+        waypoints.append(create_pose(1.8,0.0,1.5))   
+        waypoints.append(create_pose(0.0,1.8,1.4))
+    
+        accel_list.append(create_accel(None,None,None))
+        accel_list.append(create_accel(None,None,None))
+        accel_list.append(create_accel(None,None,None))
+        accel_list.append(create_accel(None,None,None))
+        accel_list.append(create_accel(None,None,None))
+        accel_list.append(create_accel(None,None,None))
+        accel_list.append(create_accel(None,None,None))
+        accel_list.append(create_accel(None,None,None))
+
+        # velocities constraint
+        vel_list.append(create_vel(None,None,None))
+        vel_list.append(create_vel(None,None,None))
+        vel_list.append(create_vel(None,None,None))
+        vel_list.append(create_vel(None,None,None))
+        vel_list.append(create_vel(None,None,None))
+        vel_list.append(create_vel(None,None,None))
+        vel_list.append(create_vel(None,None,None))
+        vel_list.append(create_vel(None,None,None))
+
+        # vel_list.append(create_vel(0,0,0))
+    
+    # end of the trajectory
+    pub_waypoints(waypoints,accel_list,vel_list)
+    
+    time.sleep(15)
+    waypoints = []
+    vel_list = []
+    accel_list = []
+
+
+    waypoints.append(create_pose(0.0, 0.8, 1.2))
+    waypoints.append(create_pose(0.0, 0.4, 1))
+    accel_list.append(create_accel(None,None,None))
+    accel_list.append(create_accel(None,None,None))
+    vel_list.append(create_vel(None,None,None))
+    vel_list.append(create_vel(None,None,None))
+    pub_waypoints(waypoints,accel_list,vel_list)
+    
+    time.sleep(10)
+    waypoints = []
+    vel_list = []
+    accel_list = [] 
+
+    num_passes = 7
+    radius = 0.4
+    min_height = 1
+    max_height = 2
+    step_diff_height =  (max_height-min_height)/num_passes
+    height = min_height
+
+    for i in range(num_passes):
+        
+        
+        # radius = min(1.8, radius)
+
+        waypoints.append(create_pose(radius, 0.0,   height + (0/4)*step_diff_height ))       
+        waypoints.append(create_pose(0.0,-radius ,  height + (1/4)*step_diff_height ))
+        waypoints.append(create_pose(-radius, 0.0,  height + (2/4)*step_diff_height ))
+        waypoints.append(create_pose(0.0,radius,    height + (3/4)*step_diff_height ))
+        
+        accel_list.append(create_accel(None,None,None))
+        accel_list.append(create_accel(None,None,None))
+        accel_list.append(create_accel(None,None,None))
+        accel_list.append(create_accel(None,None,None))
+
+        # velocities constraint
+        vel_list.append(create_vel(None,None,None))
+        vel_list.append(create_vel(None,None,None))
+        vel_list.append(create_vel(None,None,None))
+        vel_list.append(create_vel(None,None,None))
+
+        # radius -= radius*(i/num_passes)
+        height += step_diff_height
+        height = min(max_height, height)
+    
+    # end of the trajectory
+
+    pub_waypoints(waypoints,accel_list,vel_list)
+    waypoints = []
+    vel_list = []
+    accel_list = [] 
+
+
     rospy.spin()
 if __name__ == '__main__':
     main()
