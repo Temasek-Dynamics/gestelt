@@ -155,33 +155,6 @@ bool ExamplePlanner::planTrajectory(const std::vector<Eigen::Vector3d>& wp_pos,
   segment_times[0] = segment_times[1];
   for(int i = 0; i<segment_times.size(); i++){
 
-    // // time allocation for 2 gates trajectory - 85deg and 60deg passes
-    // if (i%4 == 0 && i<3){
-    //   segment_times[i] *= 0.8;
-    // }
-    // if (i%4 == 0 && i>=3){
-    //   segment_times[i] *= 0.8;
-    // }
-    // if (i%4 == 1 && i < 3){
-    //   segment_times[i] *= 0.9;
-    // }
-    // if (i%4 == 1 && i >3){
-    //   segment_times[i] *= 1;
-    // }
-    // if (i%4 == 2 && i < 8){
-    //   segment_times[i] *= 0.9;
-    // }
-    // if (i%4 == 2 && i > 8){
-    //   segment_times[i] *= 0.7;
-    // }
-    // if (i%4 == 3 && i < 8){
-    //   segment_times[i] *= 0.85;
-    // }
-    // if (i%4 == 3 && i>8){
-    //   segment_times[i] *= 1;
-    // }
-
-
 
     // time allocation for 2 gates trajectory - 85deg and 0deg passes.
     if (i == 0 || i == segment_times.size()-1){
@@ -190,28 +163,7 @@ bool ExamplePlanner::planTrajectory(const std::vector<Eigen::Vector3d>& wp_pos,
     else{
       segment_times[i] *= segment_time_factor_;
     }
-    // if (i%4 == 0 && i>=3){
-    //   segment_times[i] *= 0.6;
-    // }
-    // if (i%4 == 1 && i < 3){
-    //   segment_times[i] *= 0.6;
-    // }
-    // if (i%4 == 1 && i >3){
-    //   segment_times[i] *= 0.6;
-    // }
-    // if (i%4 == 2 && i < 8){
-    //   segment_times[i] *= 0.6;
-    // }
-    // if (i%4 == 2 && i > 8){
-    //   segment_times[i] *= 0.6;
-    // }
-    // if (i%4 == 3 && i < 8){
-    //   segment_times[i] *= 0.6;
-    // }
-    // if (i%4 == 3 && i>8){
-    //   segment_times[i] *= 1;
-    // }
-
+    
   
     // std::cout<<"MODIFIED Time allocation of segment "<<i+1<<": "<<segment_times[i]<<std::endl;
   }
