@@ -91,7 +91,7 @@ private:
    * @return true 
    * @return false 
    */
-  bool planAll(const Eigen::Vector3d& start_pos, const Eigen::Vector3d& goal_pos,
+  bool plan(const Eigen::Vector3d& start_pos, const Eigen::Vector3d& goal_pos,
               const double& req_plan_time);
 
   /**
@@ -360,8 +360,8 @@ private: /* Params */
   int traj_id_{0}; // Trajectory id that increments with every planning cycle
 
   /* planner parameters */
-  JPSWrapper::JPSParams jps_params_; 
-  AStarPlanner::AStarParams astar_params_; 
+  JPSWrapper::JPSParams front_end_params_; 
+  // AStarPlanner::AStarParams front_end_params_; 
   SphericalSFC::SphericalSFCParams sfc_params_; 
 
   /* Coordinator params */

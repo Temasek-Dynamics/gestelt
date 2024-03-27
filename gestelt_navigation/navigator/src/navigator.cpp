@@ -21,9 +21,9 @@ void Navigator::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   visualization_ = std::make_shared<ego_planner::PlanningVisualization>(nh);
 
   // Initialize front end planner 
-  // front_end_planner_ = std::make_unique<AStarPlanner>(map_, astar_params_);
+  // front_end_planner_ = std::make_unique<AStarPlanner>(map_, front_end_params_);
   // front_end_planner_->addVizPublishers(closed_list_viz_pub_);
-  front_end_planner_ = std::make_unique<JPSWrapper>(map_, jps_params_);
+  front_end_planner_ = std::make_unique<JPSWrapper>(map_, front_end_params_);
 
   // Initialize safe flight corridor generation
   sfc_generation_ = std::make_unique<SphericalSFC>(map_, sfc_params_);
@@ -69,23 +69,27 @@ void Navigator::initParams(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   pnh.param("receding_horizon_planning_dist", rhp_dist_, 7.5);
   
   /* Front end params */
-  pnh.param("front_end/max_iterations", astar_params_.max_iterations, -1);
-  pnh.param("front_end/tie_breaker", astar_params_.tie_breaker, -1.0);
-  pnh.param("front_end/debug_viz", astar_params_.debug_viz, false);
-  pnh.param("front_end/cost_function_type", astar_params_.cost_function_type, 2);
+  pnh.param("front_end/max_iterations", front_end_params_.max_iterations, -1);
+  pnh.param("front_end/tie_breaker", front_end_params_.tie_breaker, -1.0);
+  pnh.param("front_end/debug_viz", front_end_params_.debug_viz, false);
+  pnh.param("front_end/cost_function_type", front_end_params_.cost_function_type, 2);
   
+  pnh.param("front_end/dmp_search_radius",    front_end_params_.dmp_search_rad, 1.5);
+  pnh.param("front_end/dmp_potential_radius", front_end_params_.dmp_pot_rad, 1.0);
+  pnh.param("front_end/dmp_collision_weight", front_end_params_.dmp_col_weight, 1.0);
+
   /* Front SFC params */
   pnh.param("sfc/max_iterations", sfc_params_.max_itr, -1);
-  pnh.param("sfc/debug_viz", sfc_params_.debug_viz, false);
+  pnh.param("sfc/debug_viz",      sfc_params_.debug_viz, false);
 
   pnh.param("sfc/max_sample_points", sfc_params_.max_sample_points, -1);
   pnh.param("sfc/mult_stddev_x", sfc_params_.mult_stddev_x, -1.0);
   pnh.param("sfc/mult_stddev_y", sfc_params_.mult_stddev_y, -1.0);
   pnh.param("sfc/mult_stddev_z", sfc_params_.mult_stddev_z, -1.0);
 
-  pnh.param("sfc/W_cand_vol", sfc_params_.W_cand_vol, -1.0);
-  pnh.param("sfc/W_intersect_vol", sfc_params_.W_intersect_vol, -1.0);
-  pnh.param("sfc/W_progress", sfc_params_.W_progress, -1.0);
+  pnh.param("sfc/W_cand_vol",       sfc_params_.W_cand_vol, -1.0);
+  pnh.param("sfc/W_intersect_vol",  sfc_params_.W_intersect_vol, -1.0);
+  pnh.param("sfc/W_progress",       sfc_params_.W_progress, -1.0);
 
   pnh.param("sfc/min_sphere_vol", sfc_params_.min_sphere_vol, -1.0);
   pnh.param("sfc/max_sphere_vol", sfc_params_.max_sphere_vol, -1.0);
@@ -194,7 +198,7 @@ void Navigator::planTimerCB(const ros::TimerEvent &e)
   rhp_goal_pub_.publish(rhp_goal_msg);
 
   // Generate plan 
-  planAll(start_pos_, rhp_goal, req_plan_time);
+  plan(start_pos_, rhp_goal, req_plan_time);
 
   // Publish heartbeat
   std_msgs::Empty empty_msg;
@@ -272,7 +276,7 @@ void Navigator::stopAllPlanning()
   safety_checks_timer_.stop();
 }
 
-bool Navigator::planAll(
+bool Navigator::plan(
   const Eigen::Vector3d& start_pos, const Eigen::Vector3d& goal_pos, 
   const double& req_plan_time)
 {
@@ -327,7 +331,7 @@ bool Navigator::generateFrontEndPlan(
 
   if (!front_end_planner_->generatePlan(start_pos, goal_pos)){
     logError("Path generation failed!");
-    // viz_helper::publishVizCubes(front_end_planner_->getClosedList(), "world", closed_list_viz_pub_);
+    // viz_helper::publishClosedList(front_end_planner_->getClosedList(), "world", closed_list_viz_pub_);
     return false;
   }
 
@@ -335,13 +339,15 @@ bool Navigator::generateFrontEndPlan(
   logInfo(str_fmt("Front-end Planning Time: %f ms", front_end_plan_time_ms));
 
   std::vector<Eigen::Vector3d> front_end_path = front_end_planner_->getPathPos();
+  std::vector<Eigen::Vector3d> dmp_search_region = front_end_planner_->getDMPSearchRegion();
   std::cout << "front_end_path size: " << front_end_path.size() << std::endl;
+  std::cout << "dmp_search_region size: " << dmp_search_region.size() << std::endl;
   // std::vector<Eigen::Vector3d> closed_list = front_end_planner_->getClosedList();
 
   // Publish front end plan
-  viz_helper::publishVizSpheres(front_end_path, "world", front_end_plan_viz_pub_) ;
-  // viz_helper::publishVizCubes(closed_list, "world", closed_list_viz_pub_);
-
+  viz_helper::publishFrontEndPath(front_end_path, "world", front_end_plan_viz_pub_) ;
+  viz_helper::publishClosedList(dmp_search_region, "world", closed_list_viz_pub_);
+  // viz_helper::publishClosedList(closed_list, "world", closed_list_viz_pub_);
 
   /* UNCOMMENT EVERYTHING FROM HERE*/
 
@@ -636,7 +642,7 @@ void Navigator::singleGoalCB(const geometry_msgs::PoseStampedConstPtr& msg)
   Eigen::Vector3d goal_pos = Eigen::Vector3d{msg->pose.position.x, msg->pose.position.y, 1.0};
   
   // 1. One shot planning
-  // planAll(cur_pos_, goal_pos);
+  // plan(cur_pos_, goal_pos);
 
   // 2. Continuous re-planning
   waypoints_.reset();
@@ -1019,39 +1025,5 @@ void Navigator::pubTrajServerCmd(const int& cmd)
   traj_server_command_pub_.publish(cmd_msg);
 }
 
-// void Navigator::polyTrajMsgToPolyTraj(const traj_utils::PolyTrajPtr msg)
-// {
-//     if (msg->order != 5)
-//     {
-//       // Only support trajectory order equals 5 now!
-//       return;
-//     }
-//     if (msg->duration.size() * (msg->order + 1) != msg->coef_x.size())
-//     {
-//       // WRONG trajectory parameters
-//       return;
-//     }
-
-//     // The chunk of code below is just converting the received 
-//     // trajectories into poly_traj::Trajectory type and storing it
-
-//     // piece_nums is the number of Pieces in the trajectory 
-//     int piece_nums = msg->duration.size();
-//     std::vector<double> dura(piece_nums);
-//     std::vector<poly_traj::CoefficientMat> cMats(piece_nums);
-//     for (int i = 0; i < piece_nums; ++i)
-//     {
-//       int i6 = i * 6;
-//       cMats[i].row(0) <<  msg->coef_x[i6 + 0], msg->coef_x[i6 + 1], msg->coef_x[i6 + 2],
-//                           msg->coef_x[i6 + 3], msg->coef_x[i6 + 4], msg->coef_x[i6 + 5];
-//       cMats[i].row(1) <<  msg->coef_y[i6 + 0], msg->coef_y[i6 + 1], msg->coef_y[i6 + 2],
-//                           msg->coef_y[i6 + 3], msg->coef_y[i6 + 4], msg->coef_y[i6 + 5];
-//       cMats[i].row(2) <<  msg->coef_z[i6 + 0], msg->coef_z[i6 + 1], msg->coef_z[i6 + 2],
-//                           msg->coef_z[i6 + 3], msg->coef_z[i6 + 4], msg->coef_z[i6 + 5];
-
-//       dura[i] = msg->duration[i];
-//     }
-
-//     be_traj_.reset(new poly_traj::Trajectory(dura, cMats));
 //     be_traj_->setGlobalStartTime(msg->start_time.toSec());
 // }

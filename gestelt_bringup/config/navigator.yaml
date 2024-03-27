@@ -13,9 +13,12 @@ receding_horizon_planning_dist: 7.5        # [m] Receding horizon planning
 ##### Front-end params
 front_end:
   max_iterations: 9999  
-  debug_viz: true          # If true, publish visualization for debugging
-  tie_breaker: 1.00001       # Tie breaker as weight for f-cost (cost-to-go)
-  cost_function_type: 0    # Type of cost function to use 
+  debug_viz: true           # If true, publish visualization for debugging
+  tie_breaker: 1.00001      # Tie breaker as weight for f-cost (cost-to-go)
+  cost_function_type: 0     # Type of cost function to use 
+  dmp_search_radius: 1.5      # Search radius
+  dmp_potential_radius: 4.0   # Potential radius
+  dmp_collision_weight: 4.0   # Collision weight
 
 ##### Safe flight corridor
 sfc:
@@ -31,7 +34,6 @@ sfc:
   # mult_stddev_x: 1.0      # 
   # mult_stddev_y: 0.7      # 
   # mult_stddev_z: 0.7      # 
-
   mult_stddev_x: 0.7      # 
   mult_stddev_y: 0.5      # 
   mult_stddev_z: 0.5      # 

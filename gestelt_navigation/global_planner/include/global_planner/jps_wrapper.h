@@ -87,7 +87,7 @@ private:
   bool timer_running_{false}; // Indicates if timer is running
 
   std::chrono::time_point<std::chrono::high_resolution_clock> t_start_cpu_; // cpu time 
-  std::chrono::time_point<std::chrono::system_clock> t_start_wall_; // wall time
+  std::chrono::time_point<std::chrono::system_clock>          t_start_wall_; // wall time
 
   double t_cum_dur_cpu_{0.0}; // Accumulative duration in ms
   double t_cum_dur_wall_{0.0}; // Accumulative duration in ms
@@ -105,6 +105,11 @@ public:
     double tie_breaker;
     bool debug_viz; // Publish visualization messages for debugging 
     int cost_function_type; // Type of cost function to use
+    bool print_timers{true};
+    bool planner_verbose{true};
+    double dmp_search_rad{1.5}; // DMP search radius
+    double dmp_pot_rad{2.0};    // DMP potential radius
+    double dmp_col_weight{1.0}; // DMP Collision weight
   }; // struct SphericalSFCParams
 
   JPSWrapper(std::shared_ptr<GridMap> map, const JPSParams& jps_params);
@@ -126,19 +131,42 @@ public:
   bool generatePlan(const Eigen::Vector3d& start_pos, const Eigen::Vector3d& goal_pos);
 
   /**
-   * @brief Get path with positions
-   * 
-   * @return std::vector<Eigen::Vector3d> 
+   * @brief Get successful JPS+DMP plan in terms of path positions (x,y,z)
+   *
+   * @return std::vector<Eigen::Vector3d>
    */
-  std::vector<Eigen::Vector3d> getPathPos();
+  std::vector<Eigen::Vector3d> getPathPos()
+  {
+    return path_dmp_;
+  }
+
+  /**
+   * @brief Get successful JPS plan in terms of path positions (x,y,z)
+   *
+   * @return std::vector<Eigen::Vector3d>
+   */
+  std::vector<Eigen::Vector3d> getPathRaw()
+  {
+    return path_jps_;
+  }
+
+  /**
+   * @brief Get DMP search region
+   *
+   * @return std::vector<Eigen::Vector3d>
+   */
+  std::vector<Eigen::Vector3d> getDMPSearchRegion()
+  {
+    return dmp_search_region_;
+  }
 
 private:
-  std::vector<Eigen::Vector3d> path_pos_; // Path in terms of 3d position
+  std::vector<Eigen::Vector3d> path_jps_; // JPS Path in (x,y,z)
+  std::vector<Eigen::Vector3d> path_dmp_; // DMP Path in (x,y,z)
+  std::vector<Eigen::Vector3d> dmp_search_region_; // Search region of DMP
 
   /* Params */
-  bool print_timers_{true};
-  bool planner_verbose_{true};
-  JPSParams jps_params_;
+  JPSParams params_;
 
   std::shared_ptr<GridMap> map_;
 
@@ -147,6 +175,7 @@ private:
   
   Timer tm_jps_map_{"jps_map"};
   Timer tm_jps_plan_{"jps_plan"};
+  Timer tm_dmp_plan_{"dmp_plan"};
 
 }; // class JPSWrapper
 
