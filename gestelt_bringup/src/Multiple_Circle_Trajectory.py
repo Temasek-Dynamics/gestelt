@@ -208,7 +208,7 @@ def main():
     angle_2=-60
     angle_rad_1=math.radians(angle_1)
     angle_rad_2=math.radians(angle_2)
-    num_passes = 2
+    num_passes = 10
         # 1/4 test
         # world frame is the initial position of the drone
         # map frame is the origin of the map
@@ -216,11 +216,11 @@ def main():
     for i in range(num_passes):
 
          
-        waypoints.append(create_pose(1.0,0.0,1.4)) 
-        waypoints.append(create_pose(0.0, 0.0, 0.8))
-        waypoints.append(create_pose(-1.0,0.0,1.4))
-        waypoints.append(create_pose(0.0,0.0,2.0))
-        
+         
+        waypoints.append(create_pose(0.0, 0.0, 0.65))
+        waypoints.append(create_pose(-0.75,0.0,1.4))
+        waypoints.append(create_pose(0.0,0.0,2.15))
+        waypoints.append(create_pose(0.75,0.0,1.4))
        
         accel_list.append(create_accel(None,None,None))
         accel_list.append(create_accel(None,None,None))
@@ -234,9 +234,17 @@ def main():
         vel_list.append(create_vel(None,None,None))
         vel_list.append(create_vel(None,None,None))
 
+    waypoints.append(create_pose(0.0, 0.0, 0.65))
+    accel_list.append(create_accel(None,None,None))
+    vel_list.append(create_vel(None,None,None))
 
+    waypoints.append(create_pose(-1.0,0.0,1.4))
+    accel_list.append(create_accel(None,None,None))
+    vel_list.append(create_vel(None,None,None))
 
     pub_waypoints(waypoints,accel_list,vel_list)
     rospy.spin()
+    
+
 if __name__ == '__main__':
     main()
