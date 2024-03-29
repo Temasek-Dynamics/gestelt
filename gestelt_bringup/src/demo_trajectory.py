@@ -215,6 +215,8 @@ def main():
         # world frame is the initial position of the drone
         # map frame is the origin of the map
         # waypoints are under the map frame, will be transformed to world frame
+    
+    # N
     for i in range(num_passes):
 
         waypoints.append(create_pose(1.8,0.0,1.5))   
@@ -295,12 +297,12 @@ def main():
     accel_list = []
 
 
-    waypoints.append(create_pose(0.0, 0.8, 1.2))
+    waypoints.append(create_pose(0.0, 0.8, 1))
     waypoints.append(create_pose(0.0, 0.4, 1))
     accel_list.append(create_accel(None,None,None))
     accel_list.append(create_accel(None,None,None))
-    vel_list.append(create_vel(None,None,None))
-    vel_list.append(create_vel(None,None,None))
+    vel_list.append(create_vel(0,0,0))
+    vel_list.append(create_vel(0,0,0))
     pub_waypoints(waypoints,accel_list,vel_list)
     
     time.sleep(10)
@@ -341,11 +343,47 @@ def main():
         height = min(max_height, height)
     
     # end of the trajectory
-
+    waypoints.append(create_pose(0.0, 0.0, 2))
+    accel_list.append(create_accel(None,None,None))
+    vel_list.append(create_vel(0,0,0))  
     pub_waypoints(waypoints,accel_list,vel_list)
+    time.sleep(15)
     waypoints = []
     vel_list = []
     accel_list = [] 
+
+    
+    
+    # waypoints.append(create_pose(0.0, 0.0, 2))
+    # accel_list.append(create_accel(None,None,None))
+    # vel_list.append(create_vel(0,0,0))
+    # pub_waypoints(waypoints,accel_list,vel_list)
+
+
+    time.sleep(10)
+    waypoints = []
+    vel_list = []
+    accel_list = [] 
+    waypoints.append(create_pose(0.0, 0.0, 1.5))
+    waypoints.append(create_pose(0.0, 0.0, 1))
+    waypoints.append(create_pose(0.0, 0.7, 0.5))
+    waypoints.append(create_pose(0.0, 1.4, 1.5))
+    
+    # accel_list.append(create_accel(0,0,2*g))
+    accel_list.append(create_accel(None,None,None))
+    accel_list.append(create_accel(None,None,None))
+    accel_list.append(create_accel(None,None,None))
+    accel_list.append(create_accel(None,None,None))    
+
+    # velocities constraint
+    vel_list.append(create_vel(None,None,None))
+    vel_list.append(create_vel(None,None,None))
+    vel_list.append(create_vel(None,None,None))
+    vel_list.append(create_vel(None,None,None))
+    
+    # end of the trajectory
+
+    pub_waypoints(waypoints,accel_list,vel_list)
 
 
     rospy.spin()
