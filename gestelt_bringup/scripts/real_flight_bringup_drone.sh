@@ -60,7 +60,7 @@ then
     tmux split-window -t $SESSION:0.1 -h
     tmux split-window -t $SESSION:0.0 -h
 
-    tmux send-keys -t $SESSION:0.0 "$SOURCE_PX4_AUTOPILOT " #C-m 
+    tmux send-keys -t $SESSION:0.0 "" #C-m 
     sleep 2
     tmux send-keys -t $SESSION:0.1 "$SOURCE_WS $EXPORT_ROS_MASTER_URI $CMD_1" C-m 
     sleep 1
