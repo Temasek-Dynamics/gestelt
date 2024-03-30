@@ -65,8 +65,8 @@ geometricCtrl::geometricCtrl(const ros::NodeHandle &nh, const ros::NodeHandle &n
   ctrltriggerServ_ = nh_.advertiseService("trigger_rlcontroller", &geometricCtrl::ctrltriggerCallback, this);
   cmdloop_timer_ = nh_.createTimer(ros::Duration(0.01), &geometricCtrl::cmdloopCallback,
                                    this);  // Define timer for constant loop rate
-  statusloop_timer_ = nh_.createTimer(ros::Duration(1), &geometricCtrl::statusloopCallback,
-                                      this);  // Define timer for constant loop rate
+  // statusloop_timer_ = nh_.createTimer(ros::Duration(1), &geometricCtrl::statusloopCallback,
+  //                                     this);  // Define timer for constant loop rate
 
   angularVelPub_ = nh_.advertise<mavros_msgs::AttitudeTarget>("command/bodyrate_command", 1);
   referencePosePub_ = nh_.advertise<geometry_msgs::PoseStamped>("reference/pose", 1);
@@ -79,7 +79,7 @@ geometricCtrl::geometricCtrl(const ros::NodeHandle &nh, const ros::NodeHandle &n
 
   nh_private_.param<string>("mavname", mav_name_, "iris");
   nh_private_.param<int>("ctrl_mode", ctrl_mode_, ERROR_QUATERNION);
-  nh_private_.param<bool>("enable_sim", sim_enable_, true);
+  // nh_private_.param<bool>("enable_sim", sim_enable_, true);
   nh_private_.param<bool>("velocity_yaw", velocity_yaw_, false);
   nh_private_.param<double>("max_acc", max_fb_acc_, 9.0);
   nh_private_.param<double>("yaw_heading", mavYaw_, 0.0);
@@ -272,29 +272,29 @@ void geometricCtrl::cmdloopCallback(const ros::TimerEvent &event) {
 
 void geometricCtrl::mavstateCallback(const mavros_msgs::State::ConstPtr &msg) { current_state_ = *msg; }
 
-void geometricCtrl::statusloopCallback(const ros::TimerEvent &event) {
-  if (sim_enable_) {
-    // Enable OFFBoard mode and arm automatically
-    // This will only run if the vehicle is simulated
-    mavros_msgs::SetMode offb_set_mode;
-    arm_cmd_.request.value = true;
-    offb_set_mode.request.custom_mode = "OFFBOARD";
-    if (current_state_.mode != "OFFBOARD" && (ros::Time::now() - last_request_ > ros::Duration(5.0))) {
-      if (set_mode_client_.call(offb_set_mode) && offb_set_mode.response.mode_sent) {
-        ROS_INFO("Offboard enabled");
-      }
-      last_request_ = ros::Time::now();
-    } else {
-      if (!current_state_.armed && (ros::Time::now() - last_request_ > ros::Duration(5.0))) {
-        if (arming_client_.call(arm_cmd_) && arm_cmd_.response.success) {
-          ROS_INFO("Vehicle armed");
-        }
-        last_request_ = ros::Time::now();
-      }
-    }
-  }
-  pubSystemStatus();
-}
+// void geometricCtrl::statusloopCallback(const ros::TimerEvent &event) {
+//   if (sim_enable_) {
+//     // Enable OFFBoard mode and arm automatically
+//     // This will only run if the vehicle is simulated
+//     mavros_msgs::SetMode offb_set_mode;
+//     arm_cmd_.request.value = true;
+//     offb_set_mode.request.custom_mode = "OFFBOARD";
+//     if (current_state_.mode != "OFFBOARD" && (ros::Time::now() - last_request_ > ros::Duration(5.0))) {
+//       if (set_mode_client_.call(offb_set_mode) && offb_set_mode.response.mode_sent) {
+//         ROS_INFO("Offboard enabled");
+//       }
+//       last_request_ = ros::Time::now();
+//     } else {
+//       if (!current_state_.armed && (ros::Time::now() - last_request_ > ros::Duration(5.0))) {
+//         if (arming_client_.call(arm_cmd_) && arm_cmd_.response.success) {
+//           ROS_INFO("Vehicle armed");
+//         }
+//         last_request_ = ros::Time::now();
+//       }
+//     }
+//   }
+//   pubSystemStatus();
+// }
 
 void geometricCtrl::pubReferencePose(const Eigen::Vector3d &target_position, const Eigen::Vector4d &target_attitude) {
   geometry_msgs::PoseStamped msg;
@@ -407,7 +407,7 @@ void geometricCtrl::computeBodyRateCmd(Eigen::Vector4d &bodyrate_cmd, const Eige
   double thrust_command = controller_->getDesiredThrust().z();
   ROS_INFO("Thrust command: %f", thrust_command);
   bodyrate_cmd(3) =
-      std::max(0.1, std::min(1.0, norm_thrust_const_ * thrust_command +
+      std::max(0.05, std::min(1.0, norm_thrust_const_ * thrust_command +
                                       norm_thrust_offset_));  // Calculate thrustcontroller_->getDesiredThrust()(3);
 }
 

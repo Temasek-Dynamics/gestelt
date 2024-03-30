@@ -457,7 +457,7 @@
       <!-- timeConstantDown is time taken for motor to decelerate and reach 63-70% of desired vel, is fed to the first order filter -->
       <timeConstantDown>0.025</timeConstantDown>
       <!-- maxRotVelocity (units of [rad/s]) -->
-      <maxRotVelocity>5400</maxRotVelocity>
+      <maxRotVelocity>3000</maxRotVelocity>
       <!-- motorConstant (units of [rad/s]) -->
       <!-- Thrust of each motor = rotor_speed^2 * motorConstant -->
       <motorConstant>2.9265e-07</motorConstant>
@@ -479,7 +479,7 @@
       <turningDirection>ccw</turningDirection>
       <timeConstantUp>0.0125</timeConstantUp>
       <timeConstantDown>0.025</timeConstantDown>
-      <maxRotVelocity>5400</maxRotVelocity>
+      <maxRotVelocity>3000</maxRotVelocity>
       <motorConstant>2.9265e-07</motorConstant>
       <momentConstant>8.8e-3</momentConstant>
       <rotorDragCoefficient>8.06428e-05</rotorDragCoefficient>
@@ -496,7 +496,7 @@
       <turningDirection>cw</turningDirection>
       <timeConstantUp>0.0125</timeConstantUp>
       <timeConstantDown>0.025</timeConstantDown>
-      <maxRotVelocity>5400</maxRotVelocity>
+      <maxRotVelocity>3000</maxRotVelocity>
       <motorConstant>2.9265e-07</motorConstant>
       <momentConstant>8.8e-3</momentConstant>
       <rotorDragCoefficient>8.06428e-05</rotorDragCoefficient>
@@ -513,7 +513,7 @@
       <turningDirection>cw</turningDirection>
       <timeConstantUp>0.0125</timeConstantUp>
       <timeConstantDown>0.025</timeConstantDown>
-      <maxRotVelocity>5400</maxRotVelocity>
+      <maxRotVelocity>3000</maxRotVelocity>
       <motorConstant>2.9265e-07</motorConstant>
       <momentConstant>8.8e-3</momentConstant>
       <rotorDragCoefficient>8.06428e-05</rotorDragCoefficient>
