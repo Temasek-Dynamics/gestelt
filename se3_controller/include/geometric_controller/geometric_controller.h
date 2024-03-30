@@ -138,7 +138,7 @@ class geometricCtrl {
   Eigen::Vector3d gravity_{Eigen::Vector3d(0.0, 0.0, -9.8)};
   Eigen::Vector4d mavAtt_, q_des;
   Eigen::Vector4d cmdBodyRate_;  //{wx, wy, wz, Thrust}
-  Eigen::Vector3d Kpos_, Kvel_, D_;
+  Eigen::Vector3d Kpos_, Kvel_, drag_;
   double Kpos_x_, Kpos_y_, Kpos_z_, Kvel_x_, Kvel_y_, Kvel_z_;
   int posehistory_window_;
 

@@ -88,8 +88,8 @@ geometricCtrl::geometricCtrl(const ros::NodeHandle &nh, const ros::NodeHandle &n
   nh_private_.param<double>("drag_dx", dx, 0.0);
   nh_private_.param<double>("drag_dy", dy, 0.0);
   nh_private_.param<double>("drag_dz", dz, 0.0);
-  D_ << dx, dy, dz;
-
+  drag_ << dx, dy, dz;
+  ROS_INFO("Drag Coefficients: dx = %.2f, dy = %.2f, dz = %.2f", dx, dy, dz);
   double attctrl_tau;
   nh_private_.param<double>("attctrl_constant", attctrl_tau, 0.1);
   nh_private_.param<double>("normalizedthrust_constant", norm_thrust_const_, 0.05);  // 1 / max acceleration
@@ -390,7 +390,7 @@ Eigen::Vector3d geometricCtrl::controlPosition(const Eigen::Vector3d &target_pos
   const Eigen::Vector3d a_fb = poscontroller(pos_error, vel_error);
 
   // Rotor Drag compensation
-  const Eigen::Vector3d a_rd = R_ref * D_.asDiagonal() * R_ref.transpose() * target_vel;  // Rotor drag
+  const Eigen::Vector3d a_rd =-R_ref * drag_.asDiagonal() * R_ref.transpose() * target_vel;  // Rotor drag
 
   // Reference acceleration
   const Eigen::Vector3d a_des = a_fb + a_ref - a_rd - gravity_;
