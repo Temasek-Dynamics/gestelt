@@ -400,15 +400,16 @@ Eigen::Vector3d geometricCtrl::controlPosition(const Eigen::Vector3d &target_pos
 
 void geometricCtrl::computeBodyRateCmd(Eigen::Vector4d &bodyrate_cmd, const Eigen::Vector3d &a_des) {
   // Reference attitude
+  if (current_state_.armed){
   q_des = acc2quaternion(a_des, mavYaw_);
 
   controller_->Update(mavAtt_, q_des, a_des, targetJerk_);  // Calculate BodyRate
   bodyrate_cmd.head(3) = controller_->getDesiredRate();
   double thrust_command = controller_->getDesiredThrust().z();
-  ROS_INFO("Thrust command: %f", thrust_command);
   bodyrate_cmd(3) =
-      std::max(0.05, std::min(1.0, norm_thrust_const_ * thrust_command +
+      std::max(0.1, std::min(1.0, norm_thrust_const_ * thrust_command +
                                       norm_thrust_offset_));  // Calculate thrustcontroller_->getDesiredThrust()(3);
+  }
 }
 
 Eigen::Vector3d geometricCtrl::poscontroller(const Eigen::Vector3d &pos_error, const Eigen::Vector3d &vel_error) {

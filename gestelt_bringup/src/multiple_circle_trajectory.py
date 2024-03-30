@@ -198,7 +198,7 @@ def main():
     angle_rad_1=math.radians(angle_1)
     angle_rad_2=math.radians(angle_2)
 
-    TIME_FACTOR=1.0
+    TIME_FACTOR=0.8
     time_factor_msg=Float32()
     time_factor_msg.data=TIME_FACTOR
     
