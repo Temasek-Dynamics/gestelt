@@ -1,0 +1,17 @@
+  <launch>
+   <arg name="record_topics" default="
+    (.*)mavros(.*)
+  (.*)traj_server(.*)
+  (.*)planner(.*)
+  "
+  />
+
+
+  <node pkg="rosbag" type="record" name="record" output="screen" args="-o $(find gestelt_bringup)/data/
+  $(arg record_topics)"/> 
+
+  <!-- record all topics -->
+  <!-- <node pkg="rosbag" type="record" name="record" output="screen" args="-a -o $(find gestelt_bringup)/data/"/> -->
+
+  </launch>
+

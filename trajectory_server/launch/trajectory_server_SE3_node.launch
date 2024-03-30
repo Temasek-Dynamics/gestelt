@@ -73,7 +73,7 @@
           <param name="max_acc" value="15.0" />
           <!--Params specific for raynor copter-->
           <param name="attctrl_constant" value="0.2"/>
-          <param name="normalizedthrust_constant" value="0.029"/>
+          <param name="normalizedthrust_constant" value="0.032"/>
           <param name="normalizedthrust_offset" value="0.0"/>
           <param name="Kp_x" value="8.0" />
           <param name="Kp_y" value="8.0" />
