@@ -19,8 +19,8 @@ source $SCRIPT_DIR/../../../devel/setup.bash &&
 # export ROS_MASTER_URI (for distributed simulation)
 # drone's side ROS_MASTER_URI should be the laptop
 EXPORT_ROS_MASTER_URI="
-export ROS_HOSTNAME=172.20.10.3 &&
-export ROS_MASTER_URI=http://172.20.10.4:11311
+export ROS_HOSTNAME=192.168.31.38 &&
+export ROS_MASTER_URI=http://192.168.31.38:11311
 "
 
 # PX4 v1.13.0
@@ -28,29 +28,15 @@ SOURCE_PX4_AUTOPILOT="
 source $PX4_AUTOPILOT_REPO_DIR/Tools/setup_gazebo.bash $PX4_AUTOPILOT_REPO_DIR $PX4_AUTOPILOT_REPO_DIR/build/px4_sitl_default &&
 export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:$gestelt_bringup_DIR:$PX4_AUTOPILOT_REPO_DIR:$PX4_AUTOPILOT_REPO_DIR/Tools/sitl_gazebo &&
 "
-
-# let the cpu run in the highest performance
-CPU_PERFORMANCE="
-cpufreq-set -g performance
-"
-
 #####
 # Commands
 #####
 # Start Gazebo and PX4 SITL instances
-# CMD_0="
-# roslaunch gestelt_bringup sitl_drone.launch 
-# "
 
-# Start up drone commander (Handles taking off, execution of mission and landing etc.)
-# trajectory_server_SE3_node: geometric controller
-# trajectory_server_node: PX4 RPT controller
-CMD_1="
-roslaunch trajectory_server trajectory_server_SE3_node.launch rviz_config:=gz_sim
-"
+
 
 # Start up script to send commands
-CMD_3="roslaunch gestelt_bringup mission_realfight.launch"
+CMD_3="roslaunch gestelt_bringup mission_realflight.launch"
 
 # disarm drone
 # CMD_4="rosservice call /drone_commander/disarm"
@@ -66,7 +52,7 @@ then
 
     tmux send-keys -t $SESSION:0.0 "$SOURCE_PX4_AUTOPILOT " #C-m 
     sleep 2
-    tmux send-keys -t $SESSION:0.1 "$SOURCE_WS $EXPORT_ROS_MASTER_URI $CMD_1" C-m 
+    tmux send-keys -t $SESSION:0.1 "$SOURCE_WS $EXPORT_ROS_MASTER_URI" #C-m 
     sleep 1
     tmux send-keys -t $SESSION:0.2 "$SOURCE_WS " #C-m 
     sleep 1
