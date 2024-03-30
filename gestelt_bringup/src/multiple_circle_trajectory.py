@@ -4,7 +4,7 @@ import rospy
 from gestelt_msgs.msg import CommanderState, Goals, CommanderCommand
 from geometry_msgs.msg import Pose, Accel,PoseArray,AccelStamped, Twist
 from mavros_msgs.msg import PositionTarget
-from std_msgs.msg import Int8, Bool
+from std_msgs.msg import Int8, Bool, Float32
 import math
 import time
 import tf
@@ -15,6 +15,7 @@ is_simulation=rospy.get_param('mission/is_simulation', False)
 server_event_pub = rospy.Publisher('/traj_server/command', CommanderCommand, queue_size=10)
 # Publisher of server events to trigger change of states for trajectory server 
 waypoints_pub = rospy.Publisher('/planner/goals', Goals, queue_size=10)
+time_factor_pub = rospy.Publisher('/planner/time_factor', Float32, queue_size=10)
 
 # Publisher for desired hover setpoint
 hover_position_pub = rospy.Publisher('/planner/hover_position', Pose, queue_size=10)
@@ -147,18 +148,6 @@ def pub_waypoints(waypoints,accels,vels):
     waypoints_pos_pub.publish(wp_pos_msg)
     waypoints_acc_pub.publish(wp_acc_msg)
 
-# def hover_position():
-    
-#      # transform waypoints from map to world
-#     trans,rot=transform_map_to_world()
-
-#     hover_position = Pose()
-#     hover_position.position.x = 0.0+trans[0]
-#     hover_position.position.y = 0.0+trans[1]
-#     # z is the same as the takeoff height
-
-#     hover_position_pub.publish(hover_position)
-
 
 def main():
     rospy.init_node('mission_startup', anonymous=True)
@@ -208,43 +197,43 @@ def main():
     angle_2=-60
     angle_rad_1=math.radians(angle_1)
     angle_rad_2=math.radians(angle_2)
-    num_passes = 10
+
+    TIME_FACTOR=1.0
+    time_factor_msg=Float32()
+    time_factor_msg.data=TIME_FACTOR
+    
+
+    num_passes = 8
         # 1/4 test
         # world frame is the initial position of the drone
         # map frame is the origin of the map
         # waypoints are under the map frame, will be transformed to world frame
     for i in range(num_passes):
 
-         
-         
-        waypoints.append(create_pose(0.0, 0.0, 0.65))
-        waypoints.append(create_pose(-0.75,0.0,1.4))
-        waypoints.append(create_pose(0.0,0.0,2.15))
-        waypoints.append(create_pose(0.75,0.0,1.4))
-       
+        waypoints.append(create_pose(1.8,0.0,1.5))   
+        waypoints.append(create_pose(0.0,-1.8,1.4)) 
+        waypoints.append(create_pose(-1.8, 0.0, 1.8))
+        waypoints.append(create_pose(0.0,1.8,1.4))
+        
+        accel_list.append(create_accel(None,None,None))
+        # accel_list.append(create_accel(-f*math.sin(angle_rad_1),0.0,g+f*math.cos(angle_rad_1)))   
         accel_list.append(create_accel(None,None,None))
         accel_list.append(create_accel(None,None,None))
-        accel_list.append(create_accel(None,None,None))
+        # accel_list.append(create_accel(-f*math.sin(angle_rad_2),0.0,g+f*math.cos(angle_rad_2))) #for 2 angles on different gates
         accel_list.append(create_accel(None,None,None))
 
 
-        # velocites constraint
+        # velocities constraint
         vel_list.append(create_vel(None,None,None))
         vel_list.append(create_vel(None,None,None))
         vel_list.append(create_vel(None,None,None))
         vel_list.append(create_vel(None,None,None))
 
-    waypoints.append(create_pose(0.0, 0.0, 0.65))
-    accel_list.append(create_accel(None,None,None))
-    vel_list.append(create_vel(None,None,None))
-
-    waypoints.append(create_pose(-1.5,0.0,1.4))
-    accel_list.append(create_accel(None,None,None))
-    vel_list.append(create_vel(None,None,None))
-
+    
+    # end of the trajectory
+    
+    time_factor_pub.publish(time_factor_msg)
     pub_waypoints(waypoints,accel_list,vel_list)
     rospy.spin()
-    
-
 if __name__ == '__main__':
     main()

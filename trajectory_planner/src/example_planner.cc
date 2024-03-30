@@ -16,9 +16,9 @@ ExamplePlanner::ExamplePlanner(ros::NodeHandle& nh) :
   if (!nh_.getParam(ros::this_node::getName() + "/max_a", max_a_)){
     ROS_WARN("[example_planner] param max_a not found");
   }
-  if (!nh_.getParam(ros::this_node::getName() + "/segment_time_scaling_factor", segment_time_factor_)){
-    ROS_WARN("[example_planner] param max_a not found");
-  }
+  // if (!nh_.getParam(ros::this_node::getName() + "/segment_time_scaling_factor", segment_time_factor_)){
+  //   ROS_WARN("[example_planner] param max_a not found");
+  // }
 
   nh.param("trajectory_frame", trajectory_frame_id_, std::string("world"));
 
@@ -35,6 +35,8 @@ ExamplePlanner::ExamplePlanner(ros::NodeHandle& nh) :
 
   goal_waypoints_sub_ = nh.subscribe("/waypoints", 1, &ExamplePlanner::waypointsCB, this);
 
+  time_factor_sub_ = nh.subscribe("/planner/time_factor", 1, &ExamplePlanner::timeFactorCB, this);
+
   // std::cout<<"Max vel: "<<max_v_<<std::endl<<"Max Acc: " <<max_a_<<std::endl <<"Max Jerk: "<<max_j_<<std::endl;
 
 }
@@ -48,6 +50,11 @@ void ExamplePlanner::uavOdomCallback(const nav_msgs::Odometry::ConstPtr& odom) {
   tf::vectorMsgToEigen(odom->twist.twist.linear, current_velocity_);
 }
 
+
+// Callback to get the time factor of each segment
+void ExamplePlanner::timeFactorCB(const std_msgs::Float32::ConstPtr &msg){
+  segment_time_factor_ = msg->data;
+}
 // Callback to get waypoints
 void ExamplePlanner::waypointsCB(const gestelt_msgs::GoalsPtr &msg){
   goal_waypoints_.clear(); // Clear existing goal waypoints
