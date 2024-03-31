@@ -91,6 +91,8 @@ void TrajServer::init(ros::NodeHandle& nh)
   IGNORE_ATTITUDE = mavros_msgs::AttitudeTarget::IGNORE_ATTITUDE;
 
   logInfo("Initialized");
+
+  mpc_controller_=std::make_shared<LearningAgile>();
 }
 
 /* Subscriber Callbacks */
@@ -235,8 +237,9 @@ void TrajServer::execTrajTimerCb(const ros::TimerEvent &e)
       break;
     
     case ServerState::MISSION:
+      // UpdateMPC();
       if (!isExecutingMission()){
-       
+      // if (MPC_NO_SOLUTION_FLAG_){
         logInfoThrottled("Waiting for mission", 5.0);
 
         // this is critical for the HOVER->MISSION transition, keep it!
@@ -252,6 +255,7 @@ void TrajServer::execTrajTimerCb(const ros::TimerEvent &e)
           execHover();
         }
         // ROS_INFO("final ServerState::MISSION,mission_vel: %f, %f, %f", last_mission_vel_(0), last_mission_vel_(1), last_mission_vel_(2));
+        
         execMPCControl();
         
       }
@@ -269,7 +273,7 @@ void TrajServer::MPCControlCb(const mavros_msgs::AttitudeTarget::ConstPtr &msg)
 { 
  
 
-  std::lock_guard<std::mutex> cmd_guard(cmd_mutex_);
+  // std::lock_guard<std::mutex> cmd_guard(cmd_mutex_);
   last_traj_msg_time_ = ros::Time::now();
   last_mission_thrust_ = msg->thrust;
   last_mission_bodyrates_(0) = msg->body_rate.x;
@@ -586,13 +590,29 @@ void TrajServer::execMission()
 
 
 }
+
+// try to merge the learning_agile.cpp to here
+void TrajServer::UpdateMPC()
+{
+    MPC_NO_SOLUTION_FLAG_=mpc_controller_->Update();
+    
+}
 void TrajServer::execMPCControl()
 {
-  std::lock_guard<std::mutex> cmd_guard(cmd_mutex_);
+  // std::lock_guard<std::mutex> cmd_guard(cmd_mutex_);
   mavros_msgs::AttitudeTarget mpc_cmd;
   mpc_cmd.header.stamp = ros::Time::now();
   mpc_cmd.header.frame_id = origin_frame_;
   mpc_cmd.type_mask = IGNORE_ATTITUDE; // Ignore orientation
+  
+  // double* control_opt;
+  // control_opt=mpc_controller_->getcontrolOpt();
+
+  // last_mission_thrust_=control_opt[0]/(2.1334185*4);
+  // last_mission_bodyrates_(0)=control_opt[1];
+  // last_mission_bodyrates_(1)=control_opt[2];
+  // last_mission_bodyrates_(2)=control_opt[3];
+
   mpc_cmd.thrust = last_mission_thrust_;
   mpc_cmd.body_rate.x = last_mission_bodyrates_(0);
   mpc_cmd.body_rate.y = last_mission_bodyrates_(1);

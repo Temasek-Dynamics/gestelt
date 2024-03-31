@@ -47,7 +47,7 @@ catkin_package(
     ${acados_include}/../
     ${solver_code}
     ${catkin_INCLUDE_DIRS}
-#  LIBRARIES learning_agile
+    LIBRARIES learning_agile
 #  CATKIN_DEPENDS gestelt_msgs mavros_msgs roscpp std_msgs
 #  DEPENDS system_lib
 )
@@ -79,9 +79,6 @@ link_directories(
 
 
 ## Declare a C++ library
-# add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/learning_agile.cpp
-# )
 
 file(GLOB ocp_solver
         ../gestelt_bringup/src/Learning_Agile/c_generated_code/acados_solver_ACADOS_model.c
@@ -96,7 +93,17 @@ file(GLOB casadi_fun
 add_library(ocp_shared_lib SHARED ${ocp_solver} ${casadi_fun} )
 target_link_libraries(ocp_shared_lib acados qpOASES_e hpipm blasfeo)
 
-
+add_library(${PROJECT_NAME} SHARED
+            src/learning_agile_node.cpp
+            src/learning_agile.cpp
+            )
+target_link_libraries(${PROJECT_NAME} 
+                      ${catkin_LIBRARIES}
+                      ocp_shared_lib 
+                      )
+                      
+add_dependencies(${PROJECT_NAME}  ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_include_directories(${PROJECT_NAME} PUBLIC include)
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
 ## either from message generation or dynamic reconfigure

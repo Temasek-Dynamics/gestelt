@@ -223,3 +223,20 @@ void LearningAgile::mission_start_cb(const gestelt_msgs::GoalsPtr &msg)
     start_soft_RT_mpc_timer_=true;
     
 }
+
+
+// This is the function where the traj_server called, by calling the Update
+// inside the traj_server, there will be no individual learning_agile node
+// input: current state, desired goal state, desired traverse point, desired traverse quaternion
+// output: control input
+bool LearningAgile::Update()
+{   
+
+    
+    if (start_soft_RT_mpc_timer_==true)
+    {   
+        solver_request();
+        
+    }  
+    return NO_SOLUTION_FLAG_;
+}

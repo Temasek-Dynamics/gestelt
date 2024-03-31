@@ -31,6 +31,9 @@
 #include "controller_msgs/FlatTarget.h"
 #include <geometry_msgs/TwistStamped.h>
 #include <std_srvs/SetBool.h> // for service client
+
+#include <learning_agile/learning_agile.h>
+
 using namespace Eigen;
 
 /* State machine  */
@@ -197,6 +200,7 @@ private: // Class Methods
    * @brief Execute MPC hard Real Time Control
    * 
    */
+  void UpdateMPC();
   void execMPCControl();
   /* Conditional checking methods */
 
@@ -444,6 +448,8 @@ private: // Member variables
   Eigen::Vector3d last_mission_acc_{0.0, 0.0, 0.0}, last_mission_jerk_{0.0, 0.0, 0.0};
 
   // last MPC control input
+  std::shared_ptr<LearningAgile> mpc_controller_;
+  bool MPC_NO_SOLUTION_FLAG_=true;
   Eigen::Vector3d last_mission_bodyrates_{0.0, 0.0, 0.0}; // Last received mission body rates
   double last_mission_thrust_{0.0}; // Last received mission thrust
 

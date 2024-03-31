@@ -20,13 +20,14 @@ set(ROS_LIBRARIES
 find_package(Eigen3 REQUIRED)
 find_package(catkin REQUIRED COMPONENTS
   ${ROS_LIBRARIES}
+  learning_agile
 )
 
 catkin_package(
  INCLUDE_DIRS include
  LIBRARIES trajectory_server
-#  CATKIN_DEPENDS ${ROS_DEPENDS}
-#  DEPENDS system_lib
+ CATKIN_DEPENDS learning_agile
+ CATKIN_DEPENDS ${ROS_DEPENDS}
 )
 
 include_directories(
@@ -35,16 +36,22 @@ include_directories(
   ${catkin_INCLUDE_DIRS} 
   ${PROJECT_SOURCE_DIR}/include
   ${EIGEN3_INCLUDE_DIR}
+  # ${learning_agile_INCLUDE_DIRS}
 )
 
 add_executable(traj_server_node 
   src/traj_server_node.cpp
   src/traj_server.cpp
 )
+link_directories(
+  ${catkin_LIBRARY_DIRS}
+)
 target_link_libraries(traj_server_node 
   ${catkin_LIBRARIES}
   ${EIGEN3_LIBRARIES}
 )
+
+
 # add_dependencies(traj_server ${${PROJECT_NAME}_EXPORTED_TARGETS})
 
 

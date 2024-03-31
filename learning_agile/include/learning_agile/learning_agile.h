@@ -57,6 +57,9 @@ class LearningAgile{
         void solver_loading();
         void solver_request();
 
+        double* getcontrolOpt() { return control_opt_; };
+        bool Update();
+
     private:
     ros::Subscriber drone_pose_sub_;
     ros::Subscriber drone_twist_sub_;
