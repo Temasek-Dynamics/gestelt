@@ -121,7 +121,7 @@ cp -r ~/gestelt_ws/src/gestelt/gestelt_bringup/jmavsim ~/gestelt_ws/PX4-Autopilo
 make px4_sitl_default jmavsim 
 ```  
 
-3. Close the opened simulation, and the following simulation script 
+3. Close the opened simulation, and run the following simulation script 
 ```bash
 cd ~/gestelt_ws/src/gestelt/gestelt_bringup/scripts
 # Run the script, the script sources all the relevant workspaces so you don't have to worry about sourcing. 
