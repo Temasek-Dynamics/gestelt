@@ -38,6 +38,7 @@ cd ~/gestelt_ws/PX4-Autopilot
 # Copy the custom controller over
 cp -r ~/gestelt_ws/src/gestelt/gestelt_bringup/customized_controller/PositionControl ~/gestelt_ws/PX4-Autopilot/src/modules/mc_pos_control/
 
+
 bash ./Tools/setup/ubuntu.sh 
 # Make SITL target for Gazebo simulation
 DONT_RUN=1 make px4_sitl gazebo-classic
@@ -106,6 +107,26 @@ The second one is a fake drone with no physics and be used to test the architect
 2. Trajectory Server.
 3. Minimum Snap Trajectory Planner and Sampler.
 4. Mission commands.
+
+
+## 3. Run PX4 SITL with jMAVSim.
+To use the jMAVsim as the simulator in SITL with NUSWARM drone model
+1. Copy the customized drone model
+```bash
+cp -r ~/gestelt_ws/src/gestelt/gestelt_bringup/jmavsim ~/gestelt_ws/PX4-Autopilot/Tools/src/me/drton/jmavsim
+```
+
+2. Make SITL target for jMAVSim simulation
+```bash
+make px4_sitl_default jmavsim 
+```  
+
+3. Close the opened simulation, and the following simulation script 
+```bash
+cd ~/gestelt_ws/src/gestelt/gestelt_bringup/scripts
+# Run the script, the script sources all the relevant workspaces so you don't have to worry about sourcing. 
+./sitl_drone_bringup_jmavsim.sh
+```  
 
 # Acknowledgements
 1. [EGO-Planner-V2 repo](https://github.com/ZJU-FAST-Lab/EGO-Planner-v2)
