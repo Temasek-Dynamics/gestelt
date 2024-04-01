@@ -59,7 +59,7 @@ CMD_3="roslaunch gestelt_bringup mission_sitl.launch record:=false"
 
 
 # Start up a separate SE3 controller
-CMD_4="roslaunch se3_controller se3_controller.launch"
+CMD_4="taskset -c 0 roslaunch se3_controller se3_controller.launch"
 # disarm drone
 # CMD_4="rosservice call /drone_commander/disarm"
 # CMD_4="rosrun mavros mavparam set COM_RCL_EXCEPT 4"
