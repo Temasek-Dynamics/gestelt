@@ -11,7 +11,7 @@
   (.*)planner(.*)
   "
   />
-  <node if="$(arg record)" pkg="rosbag" type="record" name="record" output="screen" args="-o $(find gestelt_bringup)/data/
+  <node pkg="rosbag" type="record" name="record" output="screen" args="-o $(find gestelt_bringup)/data/
   -e $(arg record_topics)"/> 
   <!-- <node pkg="rosbag" type="record" name="record" output="screen" args="-a -o /home/tianchensun/gestelt_ws/data/ "/> -->
 
