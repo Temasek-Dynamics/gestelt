@@ -595,7 +595,7 @@ void TrajServer::execMission()
   std::lock_guard<std::mutex> cmd_guard(cmd_mutex_);
 
   mission_type_mask_ = IGNORE_YAW_RATE; // Ignore yaw rate 
-  ROS_INFO("execMission() mission_vel: %f, %f, %f", last_mission_vel_(0), last_mission_vel_(1), last_mission_vel_(2));
+  // ROS_INFO("execMission() mission_vel: %f, %f, %f", last_mission_vel_(0), last_mission_vel_(1), last_mission_vel_(2));
   publishCmd( last_mission_pos_, last_mission_vel_, 
               last_mission_acc_, last_mission_jerk_, 
               last_mission_yaw_, last_mission_yaw_dot_, 
