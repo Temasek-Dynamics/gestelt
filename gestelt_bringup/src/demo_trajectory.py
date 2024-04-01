@@ -4,7 +4,7 @@ import rospy
 from gestelt_msgs.msg import CommanderState, Goals, CommanderCommand
 from geometry_msgs.msg import Pose, Accel,PoseArray,AccelStamped, Twist
 from mavros_msgs.msg import PositionTarget
-from std_msgs.msg import Int8, Bool
+from std_msgs.msg import Int8, Bool,Float32
 import math
 import time
 import tf
@@ -18,6 +18,7 @@ waypoints_pub = rospy.Publisher('/planner/goals', Goals, queue_size=10)
 
 # Publisher for desired hover setpoint
 hover_position_pub = rospy.Publisher('/planner/hover_position', Pose, queue_size=10)
+time_factor_pub = rospy.Publisher('/planner/time_factor', Float32, queue_size=10)
 
 # for visualization
 waypoints_pos_pub = rospy.Publisher('/planner/goals_pos', PoseArray, queue_size=10)
@@ -147,19 +148,6 @@ def pub_waypoints(waypoints,accels,vels):
     # waypoints_pos_pub.publish(wp_pos_msg)
     # waypoints_acc_pub.publish(wp_acc_msg)
 
-# def hover_position():
-    
-#      # transform waypoints from map to world
-#     trans,rot=transform_map_to_world()
-
-#     hover_position = Pose()
-#     hover_position.position.x = 0.0+trans[0]
-#     hover_position.position.y = 0.0+trans[1]
-#     # z is the same as the takeoff height
-
-#     hover_position_pub.publish(hover_position)
-
-
 def main():
     rospy.init_node('mission_startup', anonymous=True)
     pub_freq = 25 # hz
@@ -198,11 +186,13 @@ def main():
     # frame is ENU
     print(f"Sending waypoints to UAVs")
 
-
+    ###########################################################################
+    # Trajectory 1: multiple passes through a gate
+    ###########################################################################
     waypoints = []
     vel_list = []
     accel_list = []
-
+    
     # side length 5m
     g=-9.81 #m/s^2  # down force, negative
     f=1*(-g) #N  # up force, positive
@@ -217,6 +207,7 @@ def main():
         # waypoints are under the map frame, will be transformed to world frame
     
     # N
+    
     for i in range(num_passes):
 
         waypoints.append(create_pose(1.8,0.0,1.5))   
@@ -246,6 +237,10 @@ def main():
 
 
     time.sleep(10)
+
+    ###########################################################################
+    # Trajectory 2: REVERSE multiple passes through a gate
+    ###########################################################################
     waypoints = []
     vel_list = []
     accel_list = []
@@ -292,6 +287,10 @@ def main():
     pub_waypoints(waypoints,accel_list,vel_list)
     
     time.sleep(15)
+
+    ###########################################################################
+    # Trajectory 3: go to the helix start point
+    ###########################################################################
     waypoints = []
     vel_list = []
     accel_list = []
@@ -306,6 +305,10 @@ def main():
     pub_waypoints(waypoints,accel_list,vel_list)
     
     time.sleep(10)
+
+    ###########################################################################
+    # Trajectory 4: Helix
+    ###########################################################################
     waypoints = []
     vel_list = []
     accel_list = [] 
@@ -361,6 +364,9 @@ def main():
 
 
     time.sleep(10)
+    ###########################################################################
+    # Trajectory 6: diving
+    ###########################################################################
     waypoints = []
     vel_list = []
     accel_list = [] 
