@@ -1,4 +1,15 @@
   <launch>
+  <arg name="rviz" default="false"/>
+  <arg name="rqt_reconfigure" default="true"/>
+   <!-- RVIZ -->
+  <node if="$(arg rviz)" name="rviz" pkg="rviz" type="rviz" required="true" 
+    args="-d $(find gestelt_bringup)/launch/rviz/gz_sim.rviz"/>
+
+
+   <!-- Launch rqt_reconfigure for adjust controller gains-->
+  <node if="$(arg rqt_reconfigure)" pkg="rqt_reconfigure" type="rqt_reconfigure" output="screen" name="rqt_reconfigure" />
+
+
   <arg name="record_topics" default="
   (.*)mavros(.*)
   (.*)traj_server(.*)

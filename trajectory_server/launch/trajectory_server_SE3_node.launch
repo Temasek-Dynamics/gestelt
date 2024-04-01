@@ -16,6 +16,7 @@
     <arg name="mav_name" default="iris"/>
     <arg name="command_input" default="2" />
     <arg name="gazebo_simulation" default="true" />
+    <arg name="rqt_reconfigure" default="false"/>
 
     <!-- Trajectory server -->
     <node pkg="trajectory_server" name="trajectory_server" type="traj_server_node" output="screen">

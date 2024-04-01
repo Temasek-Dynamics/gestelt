@@ -46,7 +46,7 @@ roslaunch gestelt_bringup sitl_drone.launch
 # trajectory_server_SE3_node: geometric controller
 # trajectory_server_node: PX4 RPT controller
 CMD_1="
-roslaunch trajectory_server trajectory_server_SE3_node.launch rviz_config:=gz_sim
+roslaunch trajectory_server trajectory_server_SE3_node.launch 
 "
 
 # Start up minimum snap trajectory planner and sampler 

@@ -37,7 +37,7 @@ roslaunch gestelt_bringup sitl_drone.launch
 "
 
 CMD_2="
-roslaunch gestelt_bringup record.launch
+roslaunch gestelt_bringup record.launch rviz:=true rviz_config:=gz_sim rqt_reconfigure:=true
 "
 
 
