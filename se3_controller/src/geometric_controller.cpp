@@ -406,7 +406,7 @@ void geometricCtrl::computeBodyRateCmd(Eigen::Vector4d &bodyrate_cmd, const Eige
   controller_->Update(mavAtt_, q_des, a_des, targetJerk_);  // Calculate BodyRate
   bodyrate_cmd.head(3) = controller_->getDesiredRate();
   double thrust_command = controller_->getDesiredThrust().z();
-  ROS_INFO("Thrust command: %.2f", thrust_command);
+  // ROS_INFO("Thrust command: %.2f", thrust_command);
   bodyrate_cmd(3) =
       std::max(0.1, std::min(1.0, norm_thrust_const_ * thrust_command +
                                       norm_thrust_offset_));  // Calculate thrustcontroller_->getDesiredThrust()(3);

@@ -37,7 +37,7 @@ export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:$gestelt_bringup_DIR:$PX4_AUTOPILOT_RE
 # trajectory_server_SE3_node: geometric controller
 # trajectory_server_node: PX4 RPT controller
 CMD_1="
-roslaunch trajectory_server trajectory_server_SE3_node.launch rviz_config:=gz_sim
+roslaunch trajectory_server trajectory_server_SE3_node.launch rqt_reconfigure:=false
 "
 
 # Start up minimum snap trajectory planner and sampler 
