@@ -30,7 +30,7 @@
   </node>
 
   <!-- Launch rqt_reconfigure -->
-  <node pkg="rqt_reconfigure" type="rqt_reconfigure" output="screen" name="rqt_reconfigure" />
+  <!-- <node pkg="rqt_reconfigure" type="rqt_reconfigure" output="screen" name="rqt_reconfigure" /> -->
 
 
 </launch>

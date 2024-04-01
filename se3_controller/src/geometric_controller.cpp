@@ -401,6 +401,7 @@ Eigen::Vector3d geometricCtrl::controlPosition(const Eigen::Vector3d &target_pos
 void geometricCtrl::computeBodyRateCmd(Eigen::Vector4d &bodyrate_cmd, const Eigen::Vector3d &a_des) {
   // Reference attitude
   if (current_state_.armed){
+  auto start = std::chrono::high_resolution_clock::now();
   start_time=ros::Time::now();
   q_des = acc2quaternion(a_des, mavYaw_);
 
@@ -411,9 +412,11 @@ void geometricCtrl::computeBodyRateCmd(Eigen::Vector4d &bodyrate_cmd, const Eige
   bodyrate_cmd(3) =
       std::max(0.1, std::min(1.0, norm_thrust_const_ * thrust_command +
                                       norm_thrust_offset_));  // Calculate thrustcontroller_->getDesiredThrust()(3);
+  
+  auto end = std::chrono::high_resolution_clock::now();
+  double preloop_dur = std::chrono::duration_cast<std::chrono::duration<double>>(end - start).count();
+  // ROS_INFO("Computation time: %.2f", preloop_dur);  
   }
-  comp_time=ros::Time::now()-start_time;
-  ROS_INFO("Computation time: %.2f", comp_time.toSec());
 }
 
 Eigen::Vector3d geometricCtrl::poscontroller(const Eigen::Vector3d &pos_error, const Eigen::Vector3d &vel_error) {
