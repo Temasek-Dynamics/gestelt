@@ -30,8 +30,20 @@ echo "The system is booting..."
 
 cd ${init_path}
 
+# let the cpu run in the highest performance
+echo "Will let the cpu run in the highest performance, need sudo"
+sudo cpufreq-set -g performance
+
+# export ip for remote rosbag record
+SELF_IP="192.168.31.38"
+EXPORT_SELF_IP="export ROS_IP=${SELF_IP} && 
+                export ROS_HOSTNAME=${SELF_IP} && 
+                export ROS_MASTER_URI=http://${SELF_IP}:11311"
+#cpu highest performance
+
+#--------------------------------------------
 # roscore
-screen -d -m -S roscore bash -c "source devel/setup.bash; roscore; exec bash -i"
+screen -d -m -S roscore bash -c "$EXPORT_SELF_IP source devel/setup.bash; roscore; exec bash -i"
 sleep ${module_delay}
 sleep ${module_delay}
 sleep ${module_delay}
@@ -45,7 +57,7 @@ source devel/setup.bash
 
 #################################################################################################################################
 # -1 vectornav & gprmc
-screen -d -m -S vicon_bridge bash -c "source devel/setup.bash; roslaunch vicon_bridge vicon.launch  ; exec bash -i"
+screen -d -m -S vicon_bridge bash -c "$EXPORT_SELF_IP source devel/setup.bash; roslaunch vicon_bridge vicon.launch  ; exec bash -i"
 sleep ${module_delay}
 sleep ${module_delay}
 sleep ${module_delay}
@@ -56,7 +68,7 @@ echo "vicon_bridge ready."
 
 #################################################################################################################################
 # -1 mavros
-screen -d -m -S mavros bash -c "source devel/setup.bash; roslaunch mavros px4.launch  ; exec bash -i"
+screen -d -m -S mavros bash -c "$EXPORT_SELF_IP source devel/setup.bash; roslaunch mavros px4.launch  ; exec bash -i"
 sleep ${module_delay}
 sleep ${module_delay}
 sleep ${module_delay}
@@ -64,16 +76,16 @@ echo "mavros ready."
 
 #################################################################################################################################
 # -2 trajectory server
-screen -d -m -S trajectory_server bash -c "source devel/setup.bash; roslaunch trajectory_server trajectory_server_node.launch; exec bash -i"
-sleep ${module_delay}
-echo "trajectory_server ready."
+# screen -d -m -S trajectory_server bash -c "source devel/setup.bash; roslaunch trajectory_server trajectory_server_node.launch; exec bash -i"
+# sleep ${module_delay}
+# echo "trajectory_server ready."
 
 #################################################################################################################################
 # 3. trajectory planner
-screen -d -m -S trajectory_planner bash -c "source devel/setup.bash;roslaunch trajectory_planner trajectory_planner_node.launch 
-; exec bash -i"
-sleep ${module_delay}
-echo "trajectory_planner ready."
+# screen -d -m -S trajectory_planner bash -c "source devel/setup.bash;roslaunch trajectory_planner trajectory_planner_node.launch 
+# ; exec bash -i"
+# sleep ${module_delay}
+# echo "trajectory_planner ready."
 
 #################################################################################################################################
 
