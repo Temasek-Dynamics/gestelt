@@ -46,7 +46,7 @@ roslaunch trajectory_planner trajectory_planner_node.launch
 "
 
 # Start up script to send commands
-CMD_3="roslaunch gestelt_bringup mission_realflight.launch"
+# CMD_3="roslaunch gestelt_bringup mission_realflight.launch"
 
 
 # Start up a separate SE3 controller
