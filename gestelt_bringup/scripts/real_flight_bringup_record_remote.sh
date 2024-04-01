@@ -16,11 +16,14 @@ PX4_AUTOPILOT_REPO_DIR="$SCRIPT_DIR/../../../PX4-Autopilot"
 SOURCE_WS="
 source $SCRIPT_DIR/../../../devel/setup.bash &&
 "
-# export ROS_MASTER_URI (for distributed simulation)
-# drone's side ROS_MASTER_URI should be the laptop
+# export ROS_MASTER_URI (for remote record)
+# ROS_IP; ROS_HOSTNAME should be the laptop's IP
+# ROS_MASTER_URI should be the drone's IP
+SELF_IP=$(hostname -I | awk '{print $1}')
+
 EXPORT_ROS_MASTER_URI="
-export ROS_IP=192.168.31.204 && 
-export ROS_HOSTNAME=192.168.31.204 &&
+export ROS_IP=${SELF_IP} && 
+export ROS_HOSTNAME=${SELF_IP} &&
 export ROS_MASTER_URI=http://192.168.31.38:11311
 "
 # PX4 v1.13.0

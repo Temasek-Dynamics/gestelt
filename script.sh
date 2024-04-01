@@ -35,7 +35,9 @@ echo "Will let the cpu run in the highest performance, need sudo"
 sudo cpufreq-set -g performance
 
 # export ip for remote rosbag record
-SELF_IP="192.168.31.38"
+SELF_IP=$(hostname -I | awk '{print $1}')
+echo "My SELF_IP is ${SELF_IP}"
+
 EXPORT_SELF_IP="export ROS_IP=${SELF_IP} && 
                 export ROS_HOSTNAME=${SELF_IP} && 
                 export ROS_MASTER_URI=http://${SELF_IP}:11311"
