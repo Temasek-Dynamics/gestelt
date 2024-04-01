@@ -402,7 +402,6 @@ void geometricCtrl::computeBodyRateCmd(Eigen::Vector4d &bodyrate_cmd, const Eige
   // Reference attitude
   if (current_state_.armed){
   auto start = std::chrono::high_resolution_clock::now();
-  start_time=ros::Time::now();
   q_des = acc2quaternion(a_des, mavYaw_);
 
   controller_->Update(mavAtt_, q_des, a_des, targetJerk_);  // Calculate BodyRate
