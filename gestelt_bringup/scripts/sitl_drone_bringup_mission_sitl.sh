@@ -50,9 +50,8 @@ roslaunch trajectory_planner trajectory_planner_node.launch
 # Start up script to send commands
 CMD_3="roslaunch gestelt_bringup mission_sitl.launch record:=true"
 
-# disarm drone
-# CMD_4="rosservice call /drone_commander/disarm"
-# CMD_4="rosrun mavros mavparam set COM_RCL_EXCEPT 4"
+# Start up a separate SE3 controller
+CMD_4="roslaunch se3_controller se3_controller.launch"
 if [ "$SESSIONEXISTS" = "" ]
 then 
 
@@ -61,6 +60,7 @@ then
     tmux split-window -t $SESSION:0.0 -v
     tmux split-window -t $SESSION:0.1 -h
     tmux split-window -t $SESSION:0.0 -h
+    tmux split-window -t $SESSION:0.3 -v
 
     tmux send-keys -t $SESSION:0.0 "$SOURCE_PX4_AUTOPILOT $CMD_0" C-m 
     sleep 2
@@ -68,7 +68,9 @@ then
     sleep 1
     tmux send-keys -t $SESSION:0.2 "$SOURCE_WS $CMD_2" C-m 
     sleep 4
-    tmux send-keys -t $SESSION:0.3 "$SOURCE_WS $CMD_3" C-m
+    tmux send-keys -t $SESSION:0.3 "$SOURCE_WS $CMD_3 " C-m
+    
+    tmux send-keys -t $SESSION:0.4 "$SOURCE_WS $CMD_4 " C-m
 fi
 
 # Attach session on the first window
