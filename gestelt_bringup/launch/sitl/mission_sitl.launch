@@ -1,4 +1,5 @@
 <launch>
+<arg name="record" default="false"/>
   <!-- Launches a test mission -->
   <node pkg="gestelt_bringup" name="mission" type="setpoint_mission.py">  
         <param name="is_simulation" value="True"/>
@@ -11,8 +12,9 @@
   (.*)planner(.*)
   "
   />
-  <node pkg="rosbag" type="record" name="record" output="screen" args="-o /home/tianchensun/gestelt_ws/data/ 
-  -e $(arg record_topics)"/>
+  <node if="$(arg record)" pkg="rosbag" type="record" name="record" output="screen" args="-o $(find gestelt_bringup)/data/
+  -e $(arg record_topics)"/> 
+
   <!-- <node pkg="rosbag" type="record" name="record" output="screen" args="-a -o /home/tianchensun/gestelt_ws/data/ "/> -->
 
 </launch>

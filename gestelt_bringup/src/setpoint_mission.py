@@ -210,8 +210,8 @@ def main():
         # waypoints are under the map frame, will be transformed to world frame
     for i in range(num_passes):
 
-        waypoints.append(create_pose(1.8,0.0,1.5))   
-        waypoints.append(create_pose(0.0,-1.8,1.4)) 
+        waypoints.append(create_pose(0.0,0.0,1.4))   
+        waypoints.append(create_pose(-1.0,0.0,1.4)) 
 
         
         accel_list.append(create_accel(None,None,None))
