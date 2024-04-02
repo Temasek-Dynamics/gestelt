@@ -124,7 +124,7 @@ def create_vel(vel_x,vel_y,vel_z):
         vel_mask.data=True
     return vel,vel_mask
 
-def pub_waypoints(waypoints,accels,vels,time_factor):
+def pub_waypoints(waypoints,accels,vels,time_factor,max_vel=3,max_accel=5):
     wp_msg = Goals()
     # wp_pos_msg=PoseArray()    
     # wp_acc_msg=AccelStamped()
@@ -142,6 +142,8 @@ def pub_waypoints(waypoints,accels,vels,time_factor):
     wp_msg.velocities_mask=[vel[1] for vel in vels]
     
     wp_msg.time_factor.data=time_factor
+    wp_msg.max_vel.data=max_vel
+    wp_msg.max_acc.data=max_accel  
 
     # for waypoints and acceleration vector visualization
     # wp_pos_msg.poses = waypoints
@@ -159,7 +161,7 @@ def traj_time_callback(msg):
     # frame is ENU
     
     print("sleeping for",current_traj_time)
-    rospy.sleep(current_traj_time+0.5)
+    rospy.sleep(current_traj_time+5.5)
         
     print(f"Sending the following waypoints to UAVs")
     global TRAJ_NUM
@@ -171,7 +173,8 @@ def traj_time_callback(msg):
     ###########################################################################
     if TRAJ_NUM==2:
         TIME_FACTOR=0.6
-        
+        MAX_VEL=3
+        MAX_ACCEL=8
     
 
         waypoints = []
@@ -179,21 +182,20 @@ def traj_time_callback(msg):
         accel_list = []
 
         # side length 5m
-        g=-9.81 #m/s^2  # down force, negative
         num_passes = 2
         for _ in range(num_passes):
 
             # forward pass
+            waypoints.append(create_pose(-1.8, 0.0, 1.2))
+            waypoints.append(create_pose(0.0,1.8,1.2))
             waypoints.append(create_pose(1.8,0.0,1.5))   
-            waypoints.append(create_pose(0.0,-1.8,1.4)) 
-            waypoints.append(create_pose(-1.8, 0.0, 1.8))
-            waypoints.append(create_pose(0.0,1.8,1.4))
-            # backward pass
+            waypoints.append(create_pose(0.0,-1.8,1.2)) 
             
-            waypoints.append(create_pose(-1.8, 0.0, 1.8))
-            waypoints.append(create_pose(0.0,-1.8,1.4)) 
+            # backward pass
             waypoints.append(create_pose(1.8,0.0,1.5))   
-            waypoints.append(create_pose(0.0,1.8,1.4))
+            waypoints.append(create_pose(0.0,1.8,1.2))
+            waypoints.append(create_pose(-1.8, 0.0, 1.2))
+            waypoints.append(create_pose(0.0,-1.8,1.2))
         
             accel_list.append(create_accel(None,None,None))
             accel_list.append(create_accel(None,None,None))
@@ -213,8 +215,6 @@ def traj_time_callback(msg):
             vel_list.append(create_vel(None,None,None))
             vel_list.append(create_vel(None,None,None))
             vel_list.append(create_vel(None,None,None))
-
-            # vel_list.append(create_vel(0,0,0))
         
         # end of the trajectory
     
@@ -226,22 +226,23 @@ def traj_time_callback(msg):
     ###########################################################################
     if TRAJ_NUM==3:
         TIME_FACTOR=1.2
-        
+        MAX_VEL=2
+        MAX_ACCEL=2
     
         waypoints = []
         vel_list = []
         accel_list = []
 
+        waypoints.append(create_pose(0.0, -1.6, 1.2))
+        waypoints.append(create_pose(0.0, -0.7, 1))
+        waypoints.append(create_pose(0.0, -0.4, 0.8))
+        accel_list.append(create_accel(None,None,None))
+        accel_list.append(create_accel(None,None,None))
+        accel_list.append(create_accel(None,None,None))
+        vel_list.append(create_vel(None,None,None))
+        vel_list.append(create_vel(None,None,None))
+        vel_list.append(create_vel(None,None,None))
 
-        waypoints.append(create_pose(0.0, 1.6, 1.3))
-        waypoints.append(create_pose(0.0, 0.5, 1.1))
-        waypoints.append(create_pose(0.0, 0.4, 1))
-        accel_list.append(create_accel(None,None,None))
-        accel_list.append(create_accel(None,None,None))
-        accel_list.append(create_accel(None,None,None))
-        vel_list.append(create_vel(None,None,None))
-        vel_list.append(create_vel(None,None,None))
-        vel_list.append(create_vel(None,None,None))
     
     
 
@@ -250,7 +251,8 @@ def traj_time_callback(msg):
     ###########################################################################
     if TRAJ_NUM==4:
         TIME_FACTOR=0.6
-        
+        MAX_VEL=3
+        MAX_ACCEL=8
     
         waypoints = []
         vel_list = []
@@ -258,20 +260,20 @@ def traj_time_callback(msg):
 
         num_passes = 7
         radius = 0.4
-        min_height = 1
+        min_height = 0.8
         max_height = 2
         step_diff_height =  (max_height-min_height)/num_passes
         height = min_height
 
-        for i in range(num_passes):
+        for _ in range(num_passes):
             
             
             # radius = min(1.8, radius)
 
-            waypoints.append(create_pose(radius, 0.0,   height + (0/4)*step_diff_height ))       
-            waypoints.append(create_pose(0.0,-radius ,  height + (1/4)*step_diff_height ))
-            waypoints.append(create_pose(-radius, 0.0,  height + (2/4)*step_diff_height ))
-            waypoints.append(create_pose(0.0,radius,    height + (3/4)*step_diff_height ))
+            waypoints.append(create_pose(-radius, 0.0,   height + (0/4)*step_diff_height ))       
+            waypoints.append(create_pose(0.0,radius ,  height + (1/4)*step_diff_height ))
+            waypoints.append(create_pose(radius, 0.0,  height + (2/4)*step_diff_height ))
+            waypoints.append(create_pose(0.0,-radius,    height + (3/4)*step_diff_height ))
             
             accel_list.append(create_accel(None,None,None))
             accel_list.append(create_accel(None,None,None))
@@ -289,52 +291,51 @@ def traj_time_callback(msg):
             height = min(max_height, height)
         
         # end of the trajectory
-        waypoints.append(create_pose(0.0, 0.0, 2))
-        accel_list.append(create_accel(None,None,None))
-        vel_list.append(create_vel(0,0,0))  
+        # waypoints.append(create_pose(0.0, 0.0, 2))
+        # accel_list.append(create_accel(None,None,None))
+        # vel_list.append(create_vel(None,None,None))  
 
     
     
-
-
 
     ###########################################################################
     # Trajectory 5: diving
     ###########################################################################
-    if TRAJ_NUM==5:
-        TIME_FACTOR=0.8
-        
+    # if TRAJ_NUM==5:
+    #     TIME_FACTOR=0.8
+        # MAX_VEL=3
+        # MAX_ACCEL=8
     
-        waypoints = []
-        vel_list = []
-        accel_list = [] 
-        waypoints.append(create_pose(0.0, 0.0, 1.5))
-        waypoints.append(create_pose(0.0, 0.0, 1))
-        waypoints.append(create_pose(0.0, 0.7, 0.5))
-        waypoints.append(create_pose(0.0, 1.4, 1.5))
+    #     waypoints = []
+    #     vel_list = []
+    #     accel_list = [] 
+    #     waypoints.append(create_pose(0.0, 0.0, 1.5))
+    #     waypoints.append(create_pose(0.0, 0.0, 1))
+    #     waypoints.append(create_pose(0.0, 0.7, 0.5))
+    #     waypoints.append(create_pose(0.0, 1.4, 1.5))
         
-        # accel_list.append(create_accel(0,0,2*g))
-        accel_list.append(create_accel(None,None,None))
-        accel_list.append(create_accel(None,None,None))
-        accel_list.append(create_accel(None,None,None))
-        accel_list.append(create_accel(None,None,None))    
+    #     # accel_list.append(create_accel(0,0,2*g))
+    #     accel_list.append(create_accel(None,None,None))
+    #     accel_list.append(create_accel(None,None,None))
+    #     accel_list.append(create_accel(None,None,None))
+    #     accel_list.append(create_accel(None,None,None))    
 
-        # velocities constraint
-        vel_list.append(create_vel(None,None,None))
-        vel_list.append(create_vel(None,None,None))
-        vel_list.append(create_vel(None,None,None))
-        vel_list.append(create_vel(None,None,None))
+    #     # velocities constraint
+    #     vel_list.append(create_vel(None,None,None))
+    #     vel_list.append(create_vel(None,None,None))
+    #     vel_list.append(create_vel(None,None,None))
+    #     vel_list.append(create_vel(None,None,None))
         
         # end of the trajectory
     
-    elif TRAJ_NUM>5:
+    elif TRAJ_NUM>4:
         rospy.signal_shutdown("ALL trajectory done!, finish")
         
         
 
     print(TRAJ_NUM)
         
-    pub_waypoints(waypoints,accel_list,vel_list,TIME_FACTOR)
+    pub_waypoints(waypoints,accel_list,vel_list,TIME_FACTOR,MAX_VEL,MAX_ACCEL)
     TRAJ_NUM=TRAJ_NUM+1
     
 
@@ -389,39 +390,18 @@ def main():
     # side length 5m
     g=-9.81 #m/s^2  # down force, negative
     f=1*(-g) #N  # up force, positive
-    angle_1=85
-    angle_2=-60
+    angle_1=80
     angle_rad_1=math.radians(angle_1)
-    angle_rad_2=math.radians(angle_2)
-    num_passes = 2
-        # 1/4 test
-        # world frame is the initial position of the drone
-        # map frame is the origin of the map
-        # waypoints are under the map frame, will be transformed to world frame
     
-    
-    for i in range(num_passes):
+    waypoints.append(create_pose(1.8,0.0,1.5))   
+    waypoints.append(create_pose(0.0,-1.8,1.2))
 
-        waypoints.append(create_pose(1.8,0.0,1.5))   
-        waypoints.append(create_pose(0.0,-1.8,1.4)) 
-        waypoints.append(create_pose(-1.8, 0.0, 1.8))
-        waypoints.append(create_pose(0.0,1.8,1.4))
-        
-    
-        accel_list.append(create_accel(-f*math.sin(angle_rad_1),0.0,g+f*math.cos(angle_rad_1)))   
-        accel_list.append(create_accel(None,None,None))
-        accel_list.append(create_accel(None,None,None))
-        # accel_list.append(create_accel(-f*math.sin(angle_rad_2),0.0,g+f*math.cos(angle_rad_2))) #for 2 angles on different gates
-        accel_list.append(create_accel(None,None,None))
+    accel_list.append(create_accel(-f*math.sin(angle_rad_1),0.0,g+f*math.cos(angle_rad_1)))
+    accel_list.append(create_accel(None,None,None))
 
+    vel_list.append(create_vel(None,None,None))
+    vel_list.append(create_vel(None,None,None))
 
-        # velocities constraint
-        vel_list.append(create_vel(None,None,None))
-        vel_list.append(create_vel(None,None,None))
-        vel_list.append(create_vel(None,None,None))
-        vel_list.append(create_vel(None,None,None))
-
-    
     # end of the trajectory
     pub_waypoints(waypoints,accel_list,vel_list,TIME_FACTOR)    
         

@@ -59,6 +59,9 @@ void ExamplePlanner::waypointsCB(const gestelt_msgs::GoalsPtr &msg){
   goal_waypoints_vel_.clear(); // Clear existing goal waypoints vel
   goal_waypoints_acc_.clear(); // Clear existing goal waypoints acc
   segment_time_factor_ = msg->time_factor.data;
+  max_v_ = msg->max_vel.data;
+  max_a_ = msg->max_acc.data;
+
   ROS_INFO("[Trajectory Planner] No. of waypoints: %ld", msg->waypoints.size());
    
   for (auto pose : msg->waypoints) {
