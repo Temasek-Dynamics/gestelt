@@ -34,7 +34,7 @@ ExamplePlanner::ExamplePlanner(ros::NodeHandle& nh) :
       nh.subscribe("uav_pose", 1, &ExamplePlanner::uavOdomCallback, this);
 
   goal_waypoints_sub_ = nh.subscribe("/waypoints", 1, &ExamplePlanner::waypointsCB, this);
-
+  time_factor_sub_ = nh.subscribe("/planner/time_factor", 1, &ExamplePlanner::timeFactorCB, this);
   // std::cout<<"Max vel: "<<max_v_<<std::endl<<"Max Acc: " <<max_a_<<std::endl <<"Max Jerk: "<<max_j_<<std::endl;
 
 }
@@ -47,7 +47,10 @@ void ExamplePlanner::uavOdomCallback(const nav_msgs::Odometry::ConstPtr& odom) {
   // store current velocity
   tf::vectorMsgToEigen(odom->twist.twist.linear, current_velocity_);
 }
-
+// Callback to get the time factor of each segment
+void ExamplePlanner::timeFactorCB(const std_msgs::Float32::ConstPtr &msg){
+  segment_time_factor_ = msg->data;
+}
 // Callback to get waypoints
 void ExamplePlanner::waypointsCB(const gestelt_msgs::GoalsPtr &msg){
   goal_waypoints_.clear(); // Clear existing goal waypoints
@@ -155,34 +158,6 @@ bool ExamplePlanner::planTrajectory(const std::vector<Eigen::Vector3d>& wp_pos,
   segment_times[0] = segment_times[1];
   for(int i = 0; i<segment_times.size(); i++){
 
-    // // time allocation for 2 gates trajectory - 85deg and 60deg passes
-    // if (i%4 == 0 && i<3){
-    //   segment_times[i] *= 0.8;
-    // }
-    // if (i%4 == 0 && i>=3){
-    //   segment_times[i] *= 0.8;
-    // }
-    // if (i%4 == 1 && i < 3){
-    //   segment_times[i] *= 0.9;
-    // }
-    // if (i%4 == 1 && i >3){
-    //   segment_times[i] *= 1;
-    // }
-    // if (i%4 == 2 && i < 8){
-    //   segment_times[i] *= 0.9;
-    // }
-    // if (i%4 == 2 && i > 8){
-    //   segment_times[i] *= 0.7;
-    // }
-    // if (i%4 == 3 && i < 8){
-    //   segment_times[i] *= 0.85;
-    // }
-    // if (i%4 == 3 && i>8){
-    //   segment_times[i] *= 1;
-    // }
-
-
-
     // time allocation for 2 gates trajectory - 85deg and 0deg passes.
     if (i == 0 || i == segment_times.size()-1){
       segment_times[i] *= 1;
@@ -190,27 +165,7 @@ bool ExamplePlanner::planTrajectory(const std::vector<Eigen::Vector3d>& wp_pos,
     else{
       segment_times[i] *= segment_time_factor_;
     }
-    // if (i%4 == 0 && i>=3){
-    //   segment_times[i] *= 0.6;
-    // }
-    // if (i%4 == 1 && i < 3){
-    //   segment_times[i] *= 0.6;
-    // }
-    // if (i%4 == 1 && i >3){
-    //   segment_times[i] *= 0.6;
-    // }
-    // if (i%4 == 2 && i < 8){
-    //   segment_times[i] *= 0.6;
-    // }
-    // if (i%4 == 2 && i > 8){
-    //   segment_times[i] *= 0.6;
-    // }
-    // if (i%4 == 3 && i < 8){
-    //   segment_times[i] *= 0.6;
-    // }
-    // if (i%4 == 3 && i>8){
-    //   segment_times[i] *= 1;
-    // }
+    
 
   
     // std::cout<<"MODIFIED Time allocation of segment "<<i+1<<": "<<segment_times[i]<<std::endl;

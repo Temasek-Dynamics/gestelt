@@ -192,7 +192,10 @@ def main():
     waypoints = []
     vel_list = []
     accel_list = []
-    
+    TIME_FACTOR=0.6
+    time_factor_msg=Float32()
+    time_factor_msg.data=TIME_FACTOR
+
     # side length 5m
     g=-9.81 #m/s^2  # down force, negative
     f=1*(-g) #N  # up force, positive
@@ -231,7 +234,7 @@ def main():
 
     
     # end of the trajectory
-
+    time_factor_pub.publish(time_factor_msg)
     pub_waypoints(waypoints,accel_list,vel_list)
 
 
@@ -241,6 +244,10 @@ def main():
     ###########################################################################
     # Trajectory 2: REVERSE multiple passes through a gate
     ###########################################################################
+    TIME_FACTOR=0.6
+    time_factor_msg=Float32()
+    time_factor_msg.data=TIME_FACTOR
+
     waypoints = []
     vel_list = []
     accel_list = []
@@ -284,6 +291,7 @@ def main():
         # vel_list.append(create_vel(0,0,0))
     
     # end of the trajectory
+    time_factor_pub.publish(time_factor_msg)
     pub_waypoints(waypoints,accel_list,vel_list)
     
     time.sleep(15)
@@ -291,17 +299,22 @@ def main():
     ###########################################################################
     # Trajectory 3: go to the helix start point
     ###########################################################################
+    TIME_FACTOR=1.0
+    time_factor_msg=Float32()
+    time_factor_msg.data=TIME_FACTOR
     waypoints = []
     vel_list = []
     accel_list = []
 
 
-    waypoints.append(create_pose(0.0, 0.8, 1))
+    waypoints.append(create_pose(0.0, 1.1, 1.2))
     waypoints.append(create_pose(0.0, 0.4, 1))
     accel_list.append(create_accel(None,None,None))
     accel_list.append(create_accel(None,None,None))
-    vel_list.append(create_vel(0,0,0))
-    vel_list.append(create_vel(0,0,0))
+    vel_list.append(create_vel(None,None,None))
+    vel_list.append(create_vel(None,None,None))
+
+    time_factor_pub.publish(time_factor_msg)
     pub_waypoints(waypoints,accel_list,vel_list)
     
     time.sleep(10)
@@ -309,6 +322,9 @@ def main():
     ###########################################################################
     # Trajectory 4: Helix
     ###########################################################################
+    TIME_FACTOR=0.6
+    time_factor_msg=Float32()
+    time_factor_msg.data=TIME_FACTOR
     waypoints = []
     vel_list = []
     accel_list = [] 
@@ -349,6 +365,8 @@ def main():
     waypoints.append(create_pose(0.0, 0.0, 2))
     accel_list.append(create_accel(None,None,None))
     vel_list.append(create_vel(0,0,0))  
+
+    time_factor_pub.publish(time_factor_msg)
     pub_waypoints(waypoints,accel_list,vel_list)
     time.sleep(15)
     waypoints = []
@@ -365,8 +383,11 @@ def main():
 
     time.sleep(10)
     ###########################################################################
-    # Trajectory 6: diving
+    # Trajectory 5: diving
     ###########################################################################
+    TIME_FACTOR=0.8
+    time_factor_msg=Float32()
+    time_factor_msg.data=TIME_FACTOR
     waypoints = []
     vel_list = []
     accel_list = [] 
@@ -388,7 +409,7 @@ def main():
     vel_list.append(create_vel(None,None,None))
     
     # end of the trajectory
-
+    time_factor_pub.publish(time_factor_msg)
     pub_waypoints(waypoints,accel_list,vel_list)
 
 
