@@ -222,15 +222,15 @@ def traj_time_callback(msg):
     # Trajectory 3: go to the helix start point
     ###########################################################################
     if TRAJ_NUM==3:
-        TIME_FACTOR=2
+        TIME_FACTOR=1.2
         
     
         waypoints = []
         vel_list = []
         accel_list = []
 
-        waypoints.append(create_pose(0.0, -1.5, 1.2))
-        waypoints.append(create_pose(0.0, -1, 1))
+        waypoints.append(create_pose(0.0, -1.6, 1.2))
+        waypoints.append(create_pose(0.0, -0.7, 1))
         waypoints.append(create_pose(0.0, -0.4, 0.8))
         accel_list.append(create_accel(None,None,None))
         accel_list.append(create_accel(None,None,None))
