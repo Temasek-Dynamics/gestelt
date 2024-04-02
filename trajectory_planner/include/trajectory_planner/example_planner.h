@@ -52,10 +52,13 @@ class ExamplePlanner {
  private:
   ros::Publisher pub_markers_;
   ros::Publisher pub_trajectory_;
+  ros::Publisher pub_traj_total_time_;
+
+  
   ros::Subscriber sub_odom_;
   ros::Subscriber goal_waypoints_sub_;
   ros::Subscriber time_factor_sub_;
-  
+
   ros::NodeHandle& nh_;
   Eigen::Affine3d current_pose_;
   Eigen::Vector3d current_velocity_;
