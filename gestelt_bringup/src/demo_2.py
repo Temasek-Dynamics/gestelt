@@ -229,8 +229,14 @@ def traj_time_callback(msg):
         vel_list = []
         accel_list = []
 
+        waypoints.append(create_pose(0.0, -1.5, 1.2))
+        waypoints.append(create_pose(0.0, -1, 1))
         waypoints.append(create_pose(0.0, -0.4, 0.8))
         accel_list.append(create_accel(None,None,None))
+        accel_list.append(create_accel(None,None,None))
+        accel_list.append(create_accel(None,None,None))
+        vel_list.append(create_vel(None,None,None))
+        vel_list.append(create_vel(None,None,None))
         vel_list.append(create_vel(None,None,None))
 
     
