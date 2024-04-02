@@ -159,7 +159,7 @@ def traj_time_callback(msg):
     # frame is ENU
     
     print("sleeping for",current_traj_time)
-    rospy.sleep(current_traj_time+0.5)
+    rospy.sleep(current_traj_time+5.5)
         
     print(f"Sending the following waypoints to UAVs")
     global TRAJ_NUM
@@ -286,9 +286,9 @@ def traj_time_callback(msg):
             height = min(max_height, height)
         
         # end of the trajectory
-        waypoints.append(create_pose(0.0, 0.0, 2))
-        accel_list.append(create_accel(None,None,None))
-        vel_list.append(create_vel(None,None,None))  
+        # waypoints.append(create_pose(0.0, 0.0, 2))
+        # accel_list.append(create_accel(None,None,None))
+        # vel_list.append(create_vel(None,None,None))  
 
     
     
@@ -296,33 +296,33 @@ def traj_time_callback(msg):
     ###########################################################################
     # Trajectory 5: diving
     ###########################################################################
-    if TRAJ_NUM==5:
-        TIME_FACTOR=0.8
+    # if TRAJ_NUM==5:
+    #     TIME_FACTOR=0.8
         
     
-        waypoints = []
-        vel_list = []
-        accel_list = [] 
-        waypoints.append(create_pose(0.0, 0.0, 1.5))
-        waypoints.append(create_pose(0.0, 0.0, 1))
-        waypoints.append(create_pose(0.0, 0.7, 0.5))
-        waypoints.append(create_pose(0.0, 1.4, 1.5))
+    #     waypoints = []
+    #     vel_list = []
+    #     accel_list = [] 
+    #     waypoints.append(create_pose(0.0, 0.0, 1.5))
+    #     waypoints.append(create_pose(0.0, 0.0, 1))
+    #     waypoints.append(create_pose(0.0, 0.7, 0.5))
+    #     waypoints.append(create_pose(0.0, 1.4, 1.5))
         
-        # accel_list.append(create_accel(0,0,2*g))
-        accel_list.append(create_accel(None,None,None))
-        accel_list.append(create_accel(None,None,None))
-        accel_list.append(create_accel(None,None,None))
-        accel_list.append(create_accel(None,None,None))    
+    #     # accel_list.append(create_accel(0,0,2*g))
+    #     accel_list.append(create_accel(None,None,None))
+    #     accel_list.append(create_accel(None,None,None))
+    #     accel_list.append(create_accel(None,None,None))
+    #     accel_list.append(create_accel(None,None,None))    
 
-        # velocities constraint
-        vel_list.append(create_vel(None,None,None))
-        vel_list.append(create_vel(None,None,None))
-        vel_list.append(create_vel(None,None,None))
-        vel_list.append(create_vel(None,None,None))
+    #     # velocities constraint
+    #     vel_list.append(create_vel(None,None,None))
+    #     vel_list.append(create_vel(None,None,None))
+    #     vel_list.append(create_vel(None,None,None))
+    #     vel_list.append(create_vel(None,None,None))
         
         # end of the trajectory
     
-    elif TRAJ_NUM>5:
+    elif TRAJ_NUM>4:
         rospy.signal_shutdown("ALL trajectory done!, finish")
         
         
