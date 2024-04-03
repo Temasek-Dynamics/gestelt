@@ -18,8 +18,11 @@ ExamplePlanner::ExamplePlanner(ros::NodeHandle& nh) :
   }
   if (!nh_.getParam(ros::this_node::getName() + "/segment_time_scaling_factor", segment_time_factor_)){
     ROS_WARN("[example_planner] param max_a not found");
-  }
 
+  if (!nh_.getParam(ros::this_node::getName() + "/terminal_segment_time_scaling_factor", segment_time_factor_terminal_)){
+    ROS_WARN("[example_planner] param max_a not found");
+  }
+  }
   nh.param("trajectory_frame", trajectory_frame_id_, std::string("world"));
 
   // create publisher for RVIZ markers
@@ -58,6 +61,7 @@ void ExamplePlanner::waypointsCB(const gestelt_msgs::GoalsPtr &msg){
   goal_waypoints_.clear(); // Clear existing goal waypoints
   goal_waypoints_vel_.clear(); // Clear existing goal waypoints vel
   goal_waypoints_acc_.clear(); // Clear existing goal waypoints acc
+  segment_time_factor_terminal_ = msg->time_factor_terminal.data;
   segment_time_factor_ = msg->time_factor.data;
   max_v_ = msg->max_vel.data;
   max_a_ = msg->max_acc.data;
@@ -165,7 +169,7 @@ bool ExamplePlanner::planTrajectory(const std::vector<Eigen::Vector3d>& wp_pos,
 
     // time allocation for 2 gates trajectory - 85deg and 0deg passes.
     if (i == 0 || i == segment_times.size()-1){
-      segment_times[i] *= 1;
+      segment_times[i] *= segment_time_factor_terminal_;
     }
     else{
       segment_times[i] *= segment_time_factor_;

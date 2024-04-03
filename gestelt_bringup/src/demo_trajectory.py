@@ -124,7 +124,7 @@ def create_vel(vel_x,vel_y,vel_z):
         vel_mask.data=True
     return vel,vel_mask
 
-def pub_waypoints(waypoints,accels,vels,time_factor,max_vel=3,max_accel=5):
+def pub_waypoints(waypoints,accels,vels,time_factor_terminal=1,time_factor=0.6,max_vel=3,max_accel=5):
     wp_msg = Goals()
     # wp_pos_msg=PoseArray()    
     # wp_acc_msg=AccelStamped()
@@ -141,6 +141,7 @@ def pub_waypoints(waypoints,accels,vels,time_factor,max_vel=3,max_accel=5):
     wp_msg.accelerations_mask=[accel[1] for accel in accels]
     wp_msg.velocities_mask=[vel[1] for vel in vels]
     
+    wp_msg.time_factor_terminal.data=time_factor_terminal
     wp_msg.time_factor.data=time_factor
     wp_msg.max_vel.data=max_vel
     wp_msg.max_acc.data=max_accel  
@@ -161,7 +162,7 @@ def traj_time_callback(msg):
     # frame is ENU
     
     print("sleeping for",current_traj_time)
-    rospy.sleep(current_traj_time+5.5)
+    rospy.sleep(current_traj_time+1)
         
     print(f"Sending the following waypoints to UAVs")
     global TRAJ_NUM
@@ -172,6 +173,7 @@ def traj_time_callback(msg):
     # Trajectory 2: REVERSE multiple passes through a gate
     ###########################################################################
     if TRAJ_NUM==2:
+        TIME_FACTOR_TERMINAL=1
         TIME_FACTOR=0.6
         MAX_VEL=3
         MAX_ACCEL=8
@@ -225,6 +227,7 @@ def traj_time_callback(msg):
     # Trajectory 3: go to the helix start point
     ###########################################################################
     if TRAJ_NUM==3:
+        TIME_FACTOR_TERMINAL=1
         TIME_FACTOR=1.2
         MAX_VEL=2
         MAX_ACCEL=2
@@ -250,6 +253,7 @@ def traj_time_callback(msg):
     # Trajectory 4: Helix
     ###########################################################################
     if TRAJ_NUM==4:
+        TIME_FACTOR_TERMINAL=1.2
         TIME_FACTOR=0.6
         MAX_VEL=3
         MAX_ACCEL=8
@@ -302,6 +306,7 @@ def traj_time_callback(msg):
     # Trajectory 5: diving
     ###########################################################################
     # if TRAJ_NUM==5:
+        # TIME_FACTOR_TERMINAL=1
     #     TIME_FACTOR=0.8
         # MAX_VEL=3
         # MAX_ACCEL=8
@@ -335,7 +340,7 @@ def traj_time_callback(msg):
 
     print(TRAJ_NUM)
         
-    pub_waypoints(waypoints,accel_list,vel_list,TIME_FACTOR,MAX_VEL,MAX_ACCEL)
+    pub_waypoints(waypoints,accel_list,vel_list,TIME_FACTOR_TERMINAL,TIME_FACTOR,MAX_VEL,MAX_ACCEL)
     TRAJ_NUM=TRAJ_NUM+1
     
 
@@ -383,6 +388,9 @@ def main():
     waypoints = []
     vel_list = []
     accel_list = []
+    MAX_VEL=3
+    MAX_ACCEL=8
+    TIME_FACTOR_TERMINAL=1
     TIME_FACTOR=0.6
     
 
@@ -403,7 +411,7 @@ def main():
     vel_list.append(create_vel(None,None,None))
 
     # end of the trajectory
-    pub_waypoints(waypoints,accel_list,vel_list,TIME_FACTOR)    
+    pub_waypoints(waypoints,accel_list,vel_list,TIME_FACTOR_TERMINAL,TIME_FACTOR,MAX_VEL,MAX_ACCEL)    
         
     rospy.spin()
    
