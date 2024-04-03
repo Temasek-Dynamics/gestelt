@@ -78,8 +78,33 @@ Eigen::Vector3d shapetrajectory::getPosition(double time) {
       break;
 
     case TRAJ_CIRCLE:
+      // gently increase the velocity
+      std::cout<<"time: "<<time<<std::endl;
+      std::cout<<"traj_omega_: "<<traj_omega_<<std::endl;
+      
+      varying_omega_=traj_omega_;
 
-      theta = traj_omega_ * time;
+      decrease_time_=stop_time_-acc_deacc_time_;
+
+      if (time<=acc_deacc_time_ && time>0)
+      {
+        varying_omega_=(time/acc_deacc_time_)*traj_omega_;
+      }
+      else if (time>acc_deacc_time_ && time<=decrease_time_)
+      {
+        varying_omega_=traj_omega_;
+      }
+      else if (time>decrease_time_ && time <=stop_time_)
+      {
+        varying_omega_=traj_omega_-((time - decrease_time_)/acc_deacc_time_)*traj_omega_;
+      }
+      else
+      {
+        varying_omega_=0;
+      }
+      
+      std::cout<<"varying_omega_: "<<varying_omega_<<std::endl;
+      theta = varying_omega_ * time;
       position = std::cos(theta) * traj_radial_ + std::sin(theta) * traj_axis_.cross(traj_radial_) +
                  (1 - std::cos(theta)) * traj_axis_.dot(traj_radial_) * traj_axis_ + traj_origin_;
       break;
@@ -105,7 +130,7 @@ Eigen::Vector3d shapetrajectory::getVelocity(double time) {
   switch (type_) {
     case TRAJ_CIRCLE:
 
-      velocity = traj_omega_ * traj_axis_.cross(getPosition(time));
+      velocity = varying_omega_ * traj_axis_.cross(getPosition(time));
       break;
     case TRAJ_STATIONARY:
 
@@ -134,7 +159,7 @@ Eigen::Vector3d shapetrajectory::getAcceleration(double time) {
   switch (type_) {
     case TRAJ_CIRCLE:
 
-      acceleration = traj_omega_ * traj_axis_.cross(getVelocity(time));
+      acceleration = varying_omega_* traj_axis_.cross(getVelocity(time));
       break;
     case TRAJ_STATIONARY:
 

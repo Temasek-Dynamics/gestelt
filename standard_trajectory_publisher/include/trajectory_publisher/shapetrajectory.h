@@ -55,8 +55,10 @@ class shapetrajectory : public trajectory {
   Eigen::Vector3d traj_axis_;
   Eigen::Vector3d traj_origin_;
   Eigen::Vector3d traj_radial_;
-  double traj_radius_, traj_omega_;
-
+  double traj_radius_, traj_omega_, varying_omega_;
+  double acc_deacc_time_=2;
+  double stop_time_=10;
+  double decrease_time_;
  public:
   shapetrajectory(int type);
   virtual ~shapetrajectory();
