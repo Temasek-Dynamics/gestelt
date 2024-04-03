@@ -1,6 +1,6 @@
 <launch>
   <!-- Launches a test mission -->
-    <node pkg="gestelt_bringup" name="mission" type="demo_trajectory.py">  
+    <node pkg="gestelt_bringup" name="mission" type="figure_8.py">  
         <param name="is_simulation" value="False"/>
   </node>
 
