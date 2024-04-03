@@ -148,6 +148,18 @@ def pub_waypoints(waypoints,accels,vels):
     waypoints_pos_pub.publish(wp_pos_msg)
     waypoints_acc_pub.publish(wp_acc_msg)
 
+# def hover_position():
+    
+#      # transform waypoints from map to world
+#     trans,rot=transform_map_to_world()
+
+#     hover_position = Pose()
+#     hover_position.position.x = 0.0+trans[0]
+#     hover_position.position.y = 0.0+trans[1]
+#     # z is the same as the takeoff height
+
+#     hover_position_pub.publish(hover_position)
+
 
 def main():
     rospy.init_node('mission_startup', anonymous=True)
@@ -156,22 +168,7 @@ def main():
 
     HOVER_MODE = False
     MISSION_MODE = False
-<<<<<<< HEAD
-    hover_count=0
-    hover_duration=2*pub_freq # 2 seconds
-    ramp_steps = 25*1
-    t=0
-
-    last_pos_x = 0
-    last_pos_y = 0
-    last_pos_z = 0
-
-    UP=False
-    DOWN=True
-
-=======
     
->>>>>>> vertical-loops
     while not rospy.is_shutdown():
         get_server_state_callback()
 
@@ -182,16 +179,8 @@ def main():
         
         if (MISSION_MODE):
             # Already in MISSION 
-<<<<<<< HEAD
-             # Send waypoints to UAVs
-            # frame is ENU
-            print(f"Sending single setpoint to UAVs")
-            break
-    
-=======
             time.sleep(5)
             break
->>>>>>> vertical-loops
         elif (not HOVER_MODE):
             # IDLE -> TAKE OFF -> HOVER
             # hover_position()
@@ -205,55 +194,7 @@ def main():
 
         print("tick!")
         rate.sleep()
-    
-    # In the mission mode
-    while not rospy.is_shutdown():
-        # If current drone at 1.5m, send to down to 1.2m
-        # vice versa
-        t=t+1
 
-        if t==10*pub_freq:
-            t=0
-            if UP:
-                last_pos_z=0.0
-                UP=False
-                DOWN=True
-            elif DOWN:
-                last_pos_z=0.3
-                UP=True
-                DOWN=False
-
-
-        setpoint = PositionTarget()
-        setpoint.header.stamp = rospy.Time.now()
-        setpoint.header.frame_id = "world"
-        setpoint.coordinate_frame = PositionTarget.FRAME_LOCAL_NED
-        setpoint.type_mask = PositionTarget.IGNORE_VX+PositionTarget.IGNORE_VY+PositionTarget.IGNORE_VZ+PositionTarget.IGNORE_AFX + PositionTarget.IGNORE_AFY + PositionTarget.IGNORE_AFZ + PositionTarget.IGNORE_YAW_RATE\
-                            + PositionTarget.IGNORE_YAW
-        # setpoint.velocity.x = 3
-        # setpoint.velocity.y = 3
-        # setpoint.velocity.z = 3
-        # last_pos_x +=setpoint.velocity.x*(1/pub_freq)
-        # last_pos_y +=setpoint.velocity.y*(1/pub_freq)
-        # last_pos_z +=setpoint.velocity.z*(1/pub_freq)
-        
-        last_pos_x = 0.0
-        last_pos_y = 0.0
-
-        setpoint.position.x = last_pos_x
-        setpoint.position.y = last_pos_y
-        setpoint.position.z = last_pos_z+1.2
-        
-        setpoint.acceleration_or_force.x = 0
-        setpoint.acceleration_or_force.y = 0
-        setpoint.acceleration_or_force.z = 0
-
-<<<<<<< HEAD
-        single_setpoint_pub.publish(setpoint)
-   
-        print("tick!")
-        rate.sleep()
-=======
     # Send waypoints to UAVs
     # frame is ENU
     print(f"Sending waypoints to UAVs")
@@ -269,37 +210,49 @@ def main():
     angle_rad_1=math.radians(angle_1)
     angle_rad_2=math.radians(angle_2)
 
-    TIME_FACTOR=1.5
+    TIME_FACTOR=0.6
     time_factor_msg=Float32()
     time_factor_msg.data=TIME_FACTOR
     
 
-    num_passes = 1
+    num_passes = 10
         # 1/4 test
         # world frame is the initial position of the drone
         # map frame is the origin of the map
         # waypoints are under the map frame, will be transformed to world frame
     for i in range(num_passes):
 
-        waypoints.append(create_pose(0.0,0.0,1.4))   
-        waypoints.append(create_pose(-1.0,0.0,1.4)) 
->>>>>>> vertical-loops
-
-        
+         
+         
+        waypoints.append(create_pose(0.0, 0.0, 0.65))
+        waypoints.append(create_pose(-0.75,0.0,1.4))
+        waypoints.append(create_pose(0.0,0.0,2.15))
+        waypoints.append(create_pose(0.75,0.0,1.4))
+       
         accel_list.append(create_accel(None,None,None))
         accel_list.append(create_accel(None,None,None))
-        
+        accel_list.append(create_accel(None,None,None))
+        accel_list.append(create_accel(None,None,None))
 
 
-        # velocities constraint
+        # velocites constraint
         vel_list.append(create_vel(None,None,None))
         vel_list.append(create_vel(None,None,None))
-    
-    
-    # end of the trajectory
-    
+        vel_list.append(create_vel(None,None,None))
+        vel_list.append(create_vel(None,None,None))
+
+    waypoints.append(create_pose(0.0, 0.0, 0.65))
+    accel_list.append(create_accel(None,None,None))
+    vel_list.append(create_vel(None,None,None))
+
+    waypoints.append(create_pose(-1.5,0.0,1.4))
+    accel_list.append(create_accel(None,None,None))
+    vel_list.append(create_vel(None,None,None))
+
     time_factor_pub.publish(time_factor_msg)
     pub_waypoints(waypoints,accel_list,vel_list)
     rospy.spin()
+    
+
 if __name__ == '__main__':
     main()
