@@ -1,6 +1,6 @@
 <launch>
 
-  <node pkg="trajectory_publisher" type="trajectory_publisher" name="trajectory_publisher" output="screen">
+  <node pkg="standard_trajectory_publisher" type="standard_trajectory_publisher" name="standard_trajectory_publisher" output="screen">
         <param name="trajectory_type" value="1" />
         <param name="shape_omega" value="1.2" /> 
         <param name="initpos_z" value="1.2" />

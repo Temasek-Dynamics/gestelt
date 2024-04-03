@@ -167,14 +167,21 @@ void TrajServer::UAVStateCb(const mavros_msgs::State::ConstPtr &msg)
 
 void TrajServer::UAVPoseCB(const geometry_msgs::PoseStamped::ConstPtr &msg)
 {
-  if (first_pose_){
+  //for setpoint TAKEOFF AND HOVER, lock the first pose to the current pose
+  if (getServerState()==ServerState::TAKEOFF || getServerState()==ServerState::HOVER ){
+    first_pose_ = true;
+    // ROS_INFO("Taking off pose locked to (%f, %f)", last_mission_pos_(0), last_mission_pos_(1));
+  }
+  else {
+    first_pose_ = false;
+  }
+  
+  if (first_pose_)
+  {
     last_mission_pos_(0) = uav_pose_.pose.position.x;
     last_mission_pos_(1) = uav_pose_.pose.position.y;
-    num_pose_msgs_++;
-    if (num_pose_msgs_ > 100){
-      first_pose_ = false;
-      // ROS_INFO("Taking off pose locked to (%f, %f)", last_mission_pos_(0), last_mission_pos_(1));
-    }
+    
+    
   }
 
   uav_pose_ = *msg; 
@@ -185,6 +192,7 @@ void TrajServer::UAVPoseCB(const geometry_msgs::PoseStamped::ConstPtr &msg)
   }
 
 }
+
 
 void TrajServer::UAVOdomCB(const nav_msgs::Odometry::ConstPtr &msg)
 {
@@ -245,8 +253,8 @@ void TrajServer::execTrajTimerCb(const ros::TimerEvent &e)
         // execHover();
 
         //-----only for circular mission-----//
-        // mission_has_entered_=true;
-        // execMission();
+        mission_has_entered_=true;
+        execMission();
       }
       else {
         // ROS_INFO("ServerState received velocity: %f, %f, %f", last_mission_vel_(0), last_mission_vel_(1), last_mission_vel_(2));
@@ -503,6 +511,7 @@ void TrajServer::debugTimerCb(const ros::TimerEvent &e){
 /*circular traj callback*/
 void TrajServer::circularTrajCb(const controller_msgs::FlatTarget::ConstPtr &msg)
 {
+  if (getServerState()==ServerState::MISSION){
   int type_mask = IGNORE_YAW | IGNORE_YAW_RATE ;
  
   last_mission_pos_(0) = msg->position.x;
@@ -514,7 +523,7 @@ void TrajServer::circularTrajCb(const controller_msgs::FlatTarget::ConstPtr &msg
   last_mission_acc_(0) = msg->acceleration.x;
   last_mission_acc_(1) = msg->acceleration.y;
   last_mission_acc_(2) = msg->acceleration.z;
-
+  }
 
 }
 /* Trajectory execution methods */
@@ -530,10 +539,10 @@ void TrajServer::execLand()
               Vector3d::Zero(), Vector3d::Zero(), 
               last_mission_yaw_, 0, 
               type_mask);
-  pubflatrefState(pos, Vector3d::Zero(), 
-          Vector3d::Zero(), Vector3d::Zero(), 
-          last_mission_yaw_, 0, 
-          type_mask);
+  // pubflatrefState(pos, Vector3d::Zero(), 
+  //         Vector3d::Zero(), Vector3d::Zero(), 
+  //         last_mission_yaw_, 0, 
+  //         type_mask);
 }
 
 void TrajServer::execTakeOff()
@@ -565,10 +574,10 @@ void TrajServer::execTakeOff()
               last_mission_yaw_, 0, 
               type_mask);
 
-  pubflatrefState(pos, Vector3d::Zero(), 
-          Vector3d::Zero(), Vector3d::Zero(), 
-          last_mission_yaw_, 0, 
-          type_mask);
+  // pubflatrefState(pos, Vector3d::Zero(), 
+  //         Vector3d::Zero(), Vector3d::Zero(), 
+  //         last_mission_yaw_, 0, 
+  //         type_mask);
   }
 
 void TrajServer::execHover()
@@ -584,10 +593,10 @@ void TrajServer::execHover()
               Vector3d::Zero(), Vector3d::Zero(), 
               last_mission_yaw_, 0, 
               type_mask);
-  pubflatrefState(pos, Vector3d::Zero(), 
-            Vector3d::Zero(), Vector3d::Zero(), 
-            last_mission_yaw_, 0, 
-            type_mask);
+  // pubflatrefState(pos, Vector3d::Zero(), 
+  //           Vector3d::Zero(), Vector3d::Zero(), 
+  //           last_mission_yaw_, 0, 
+            // type_mask);
 }
 
 void TrajServer::execMission()
