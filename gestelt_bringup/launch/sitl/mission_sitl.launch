@@ -1,7 +1,7 @@
 <launch>
 <arg name="record" default="false"/>
   <!-- Launches a test mission -->
-  <node pkg="gestelt_bringup" name="mission" type="setpoint_mission.py">  
+  <node pkg="gestelt_bringup" name="mission" type="demo_trajectory.py">  
         <param name="is_simulation" value="True"/>
   </node>
    <!-- Start rosbag to record setpoint_raw and local_position -->
