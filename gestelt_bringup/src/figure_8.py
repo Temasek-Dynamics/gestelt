@@ -194,7 +194,7 @@ def main():
     TIME_FACTOR_TERMINAL=1
     TIME_FACTOR=0.6
     MAX_VEL=3
-    MAX_ACCEL=8
+    MAX_ACCEL=5
     waypoints = []
     vel_list = []
     accel_list = []
@@ -210,12 +210,12 @@ def main():
         # waypoints are under the map frame, will be transformed to world frame
     for i in range(num_passes):
 
-        waypoints.append(create_pose(1.5,-1.8,2.0))  
+        waypoints.append(create_pose(1.5,-1.8,1.8))  
         waypoints.append(create_pose(1.5, 1.5,0.6))   
 
-        waypoints.append(create_pose(0.0, 0.15,1.3))  
+        waypoints.append(create_pose(0.0, 0.15,1.2))  
  
-        waypoints.append(create_pose(-1.5,-1.8,2.0)) 
+        waypoints.append(create_pose(-1.5,-1.8,1.8)) 
         waypoints.append(create_pose(-1.5,1.5,0.6))  
           
 
