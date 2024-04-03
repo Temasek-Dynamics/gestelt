@@ -52,8 +52,11 @@ using vec_Veci = vec_E<Veci<N>>;
 struct MappingParameters
 {
   /* map properties */
+  // Local and global map are bounded 3d boxes
   Eigen::Vector3d global_map_origin_; // Origin of map (Set to be the corner of the map)
-  Eigen::Vector3d local_map_origin_; // Origin of local map (Set to be the center of the robot)
+  Eigen::Vector3d local_map_origin_rel_uav_; // Origin of local map relative to UAV (Set to be the corner of the map)
+  Eigen::Vector3d local_map_origin_; // Origin of local map (Set to be the corner of the map)
+  Eigen::Vector3d local_map_max_; // max position of local map (Set to be the corner of the map)
   
   Eigen::Vector3d global_map_size_; //  Size of global occupancy map  (m)
   Eigen::Vector3d local_map_size_; //  Size of local occupancy map (m)
@@ -186,9 +189,6 @@ public:
   // done here
   void depthToCloudMap(const sensor_msgs::ImageConstPtr &msg){}
 
-  // Update the local map
-  void updateLocalMap();
-
   /** Helper methods */
   
   // Checks if camera pose is valid
@@ -219,6 +219,9 @@ public:
 
   // Get local map origin (This is defined to be a corner of the local map i.e. (-local_W/2, -local_L/2, 0))
   Eigen::Vector3d getLocalOrigin() { return mp_.local_map_origin_; }
+  
+  // Get local map origin relative to UAV
+  Eigen::Vector3d getLocalOriginRelUAV() { return mp_.local_map_origin_rel_uav_; }
 
   // Get number of voxels in global map
   Eigen::Vector3i getGlobalMapNumVoxels() const { return mp_.global_map_num_voxels_; }
@@ -325,7 +328,7 @@ private:
   
   std::shared_ptr<KD_TREE<pcl::PointXYZ>> kdtree_; // KD-Tree 
 
-  std::vector<int8_t> local_map_data_; // 1D array used in path planning
+  std::vector<int8_t> local_map_data_; // 1D array used by path planners for collision checking
 
   // pcl::VoxelGrid<pcl::PointXYZ> vox_grid_filter_; // Voxel filter
 
@@ -336,43 +339,8 @@ public:
 
   /* Gridmap operation methods */
 
-  void updateLocalMapData() {
-    // #define ENV_BUILDER_OCC 100
-    // #define ENV_BUILDER_FREE 0
-    // #define ENV_BUILDER_UNK -1
-
-    // In voxel space, everything is relative to the local/global origin defined
-    local_map_data_.resize( mp_.local_map_num_voxels_(0) 
-                            * mp_.local_map_num_voxels_(1) 
-                            * mp_.local_map_num_voxels_(2), 0);
-    
-    // Get all occupied coordinates 
-    std::vector<Bonxai::CoordT> occ_coords;
-    bonxai_map_->getOccupiedVoxels(occ_coords);
-
-    for (auto& coord : occ_coords)
-    {
-      // obs_gbl_pos: global obstacle pos
-      Bonxai::Point3D obs_gbl_pos = bonxai_map_->grid().coordToPos(coord);
-
-      if (!isInLocalMap(Eigen::Vector3d(obs_gbl_pos.x, obs_gbl_pos.y, obs_gbl_pos.z))){
-        continue;
-      }
-
-      // Convert to voxel space. For local map, TAKE NOTE that the origin must be that of the local map.
-      Eigen::Vector3i vox_idx = ((Eigen::Vector3d{obs_gbl_pos.x, obs_gbl_pos.y, obs_gbl_pos.z } 
-                                  - getLocalOrigin()) / getRes() ).cast<int>() ; 
-
-      size_t idx = vox_idx(0)
-                + vox_idx(1) * mp_.local_map_num_voxels_(0) 
-                + vox_idx(2)* mp_.local_map_num_voxels_(0) * mp_.local_map_num_voxels_(1);
-
-      if (idx >= local_map_data_.size()) {
-        std::cout << "Exceed map size of " << local_map_data_.size() << ",idx " << idx << std::endl;
-      }
-      local_map_data_[idx] = 100;
-    }
-  }
+  // Update the local map
+  void updateLocalMap();
 
   std::vector<int8_t> getData() const {
     return local_map_data_;
@@ -394,9 +362,9 @@ public:
   // True if given GLOBAL position is within the LOCAL map boundaries, else False
   bool isInLocalMap(const Eigen::Vector3d &pos)
   {
-    if (pos(0) > -mp_.local_map_size_(0)/2 && pos(0) < mp_.local_map_size_(0)/2
-      && pos(1) > -mp_.local_map_size_(1)/2 && pos(1) < mp_.local_map_size_(1)/2
-      && pos(2) > -mp_.local_map_size_(2)/2 && pos(2) < mp_.local_map_size_(2)/2)
+    if (pos(0) >= mp_.local_map_origin_(0)   && pos(0) < mp_.local_map_max_(0)
+      && pos(1) >= mp_.local_map_origin_(1)  && pos(1) < mp_.local_map_max_(1)
+      && pos(2) >= mp_.local_map_origin_(2)  && pos(2) < mp_.local_map_max_(2))
     {
       return true;
     }

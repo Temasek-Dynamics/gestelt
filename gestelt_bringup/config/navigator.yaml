@@ -15,28 +15,30 @@ front_end:
   max_iterations: 9999  
   debug_viz: true           # If true, publish visualization for debugging
   tie_breaker: 1.00001      # Tie breaker as weight for f-cost (cost-to-go)
-  cost_function_type: 0     # Type of cost function to use 
-  dmp_search_radius: 1.5      # Search radius
-  dmp_potential_radius: 4.0   # Potential radius
-  dmp_collision_weight: 4.0   # Collision weight
+  cost_function_type: 0     # [AStar] Type of cost function to use 
+  dmp_search_radius: 0.75      # DMP Search radius
+  dmp_potential_radius: 0.4   # DMP radius of distance field (Value has significant effect on runtime)
+  dmp_collision_weight: 0.25   # DMP Collision weight 
+  dmp_heuristic_weight: 0.0   # DMP Heuristic weight
+  dmp_pow: 1    # DMP power index 
 
 ##### Safe flight corridor
 sfc:
-  max_iterations: 100     # Corresponds to maximum number of spheres
+  max_iterations: 60     # Corresponds to maximum number of spheres
   debug_viz: true        # If true, publish visualization for debugging
   # Sampling
-  max_sample_points: 100 # Maximum sample points for candidate sphere
+  max_sample_points: 50 # Maximum sample points for candidate sphere
   # standard deviation: remember 68–95–99.7 rule
   # mult_stddev_x: 0.1      # if mult_stddev_x is too high, the spheres cannot round corners and generate loads of spheres around the same area around corners
   # mult_stddev_y: 0.3      # 
   # mult_stddev_z: 0.3      # 
 
-  # mult_stddev_x: 1.0      # 
-  # mult_stddev_y: 0.7      # 
-  # mult_stddev_z: 0.7      # 
-  mult_stddev_x: 0.7      # 
-  mult_stddev_y: 0.5      # 
-  mult_stddev_z: 0.5      # 
+  # mult_stddev_x: 0.7      # 
+  # mult_stddev_y: 0.5      # 
+  # mult_stddev_z: 0.5      # 
+  mult_stddev_x: 0.15      # 
+  mult_stddev_y: 0.3      # 
+  mult_stddev_z: 0.3      # 
 
   W_cand_vol: 5         # Weight for candidate sphere volume
   W_intersect_vol: 10    # Weight for volume of intersection between spheres
@@ -79,11 +81,14 @@ optimization:
 ##### Mapping params
 grid_map:
   # global_frame: "world"
-  map_size_x: 20.0
-  map_size_y: 20.0
+  map_size_x: 50.0
+  map_size_y: 50.0
   map_size_z: 20.0
-  local_map_size_x: 15.0
-  local_map_size_y: 15.0 
+  # map_size_x: 20.0
+  # map_size_y: 20.0
+  # map_size_z: 20.0
+  local_map_size_x: 15.5
+  local_map_size_y: 15.5 
   local_map_size_z: 5.0
 
   ground_height: 0.0

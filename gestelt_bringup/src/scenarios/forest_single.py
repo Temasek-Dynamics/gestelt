@@ -136,8 +136,9 @@ def main():
     # pub_goals([goals_0])
 
     goals_0 = []
-    goals_0.append(create_transform(-0.621, 5.135, 1.0))
-    goals_0.append(create_transform(-5.189, -0.0734, 1.0))
+    # goals_0.append(create_transform(-0.621, 5.135, 1.0))
+    # goals_0.append(create_transform(-5.189, -0.0734, 1.0))
+    goals_0.append(create_transform(6.0, 4.5, 1.0))
     pub_goals([goals_0])
 
 if __name__ == '__main__':

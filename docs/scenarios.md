@@ -4,6 +4,8 @@ A few scenarios are provided to test the planner algorithms:
 - antipodal_swap
 - narrow_corridor
 
+See [scenarios](gestelt_bringup/launch/scenarios/scenarios/)
+
 ```bash
 # forest_single scenario
 ./scenario.sh -s forest_single
@@ -13,4 +15,5 @@ A few scenarios are provided to test the planner algorithms:
 ./scenario.sh -s antipodal_swap12
 # Forest scene for 16 drones 
 ./scenario.sh -s forest16_50obs
+./scenario.sh -s forest8_50obs
 ```

@@ -1,30 +1,7 @@
 #ifndef _LOGGER_H_
 #define _LOGGER_H_
 
-#include <front_end_planner/front_end_helper.h>
-
-#include <algorithm>
-
-#include <Eigen/Eigen>
-
 #include <ros/ros.h>
-#include <std_msgs/Empty.h>
-#include <geometry_msgs/Pose.h>
-#include <geometry_msgs/PoseStamped.h>
-#include <nav_msgs/Odometry.h>
-#include <visualization_msgs/Marker.h>
-
-#include <gestelt_msgs/Goals.h>
-#include <gestelt_msgs/SphericalSFCTrajectory.h>
-
-#include <gestelt_debug_msgs/SFCTrajectory.h>
-#include <gestelt_debug_msgs/SFCSegment.h>
-
-#include <optimizer/poly_traj_utils.hpp>
-#include <traj_utils/PolyTraj.h>
-
-#include <global_planner/a_star.h>
-#include <sfc_generation/spherical_sfc.h>
 
 template<typename ... Args>
 std::string StringFmt( const std::string& format, Args ... args )
@@ -44,7 +21,7 @@ private:
   std::string node_name_;
 
 public:
-  Logger(const int& drone_id_, const std::string& node_name)
+  Logger(const int& drone_id, const std::string& node_name)
   : drone_id_(drone_id), node_name_(node_name)
   {}
 
@@ -89,6 +66,6 @@ public:
       drone_id_, str.c_str());
   }
 
-}; // class Navigator
+}; // class Logger
 
 #endif // _LOGGER_H_

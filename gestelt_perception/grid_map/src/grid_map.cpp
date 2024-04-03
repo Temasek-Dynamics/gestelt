@@ -4,19 +4,22 @@
 
 void GridMap::initMap(pcl::PointCloud<pcl::PointXYZ>::Ptr pcd, const Eigen::Vector3d& map_size, const double& inflation, const double& resolution)
 {
-  md_.has_pose_ = true;
-  mp_.global_map_size_ = map_size;
+  // md_.has_pose_ = true;
+  // mp_.global_map_size_ = map_size;
 
-  mp_.inflation_ = inflation;
-  mp_.uav_origin_frame_ = "world";
-  mp_.global_map_origin_ = Eigen::Vector3d(-mp_.global_map_size_(0) / 2.0, -mp_.global_map_size_(1) / 2.0, 0.0);
-  mp_.resolution_ = resolution;
+  // mp_.inflation_ = inflation;
+  // mp_.uav_origin_frame_ = "world";
+  // mp_.global_map_origin_ = Eigen::Vector3d(
+  //   -mp_.global_map_size_(0) / 2.0, 
+  //   -mp_.global_map_size_(1) / 2.0, 
+  //   0.0);
+  // mp_.resolution_ = resolution;
 
-  mp_.global_map_num_voxels_ = (mp_.global_map_size_.cwiseProduct(Eigen::Vector3d::Constant(1/mp_.resolution_))).cast<int>();
+  // mp_.global_map_num_voxels_ = (mp_.global_map_size_.cwiseProduct(Eigen::Vector3d::Constant(1/mp_.resolution_))).cast<int>();
 
-  reset(mp_.resolution_);
+  // reset(mp_.resolution_);
 
-  pcdToMap(pcd);
+  // pcdToMap(pcd);
 }
 
 void GridMap::initMapROS(ros::NodeHandle &nh, ros::NodeHandle &pnh)
@@ -34,10 +37,26 @@ void GridMap::initMapROS(ros::NodeHandle &nh, ros::NodeHandle &pnh)
                                       * Eigen::AngleAxisd((M_PI/180.0) * md_.cam2body_rpy_deg(2), Eigen::Vector3d::UnitZ())).toRotationMatrix();
   
   // Global map origin is at a corner of the global map i.e. (-W/2, -L/2, 0)
-  mp_.global_map_origin_ = Eigen::Vector3d(-mp_.global_map_size_(0) / 2.0, -mp_.global_map_size_(1) / 2.0, mp_.ground_height_);
-  // Local map origin is at a corner of the local map i.e. (-local_W/2, -local_L/2, 0)
+  mp_.global_map_origin_ = Eigen::Vector3d(
+    -mp_.global_map_size_(0) / 2.0, 
+    -mp_.global_map_size_(1) / 2.0, 
+    mp_.ground_height_);
+  // Local map origin is at a corner of the local map i.e. (uav_pos_x-local_W/2, uav_pos_y-local_L/2, 0)
   // Local map origin_ is relative to the current position of the robot
-  mp_.local_map_origin_ = Eigen::Vector3d(-mp_.local_map_size_(0) / 2.0, -mp_.local_map_size_(1) / 2.0, mp_.ground_height_);
+  mp_.local_map_origin_ = Eigen::Vector3d(
+    -mp_.local_map_size_(0) / 2.0, 
+    -mp_.local_map_size_(1) / 2.0, 
+    mp_.ground_height_);
+  //local_map_origin_rel_uav_: local map origin relative to current position of the drone
+  mp_.local_map_origin_rel_uav_ = Eigen::Vector3d(
+    -mp_.local_map_size_(0) / 2.0, 
+    -mp_.local_map_size_(1) / 2.0, 
+    mp_.ground_height_);
+
+  mp_.local_map_max_ = Eigen::Vector3d(
+    mp_.local_map_size_(0) / 2.0, 
+    mp_.local_map_size_(1) / 2.0, 
+    mp_.ground_height_ + mp_.local_map_size_(2));
 
   mp_.global_map_num_voxels_ = (mp_.global_map_size_.cwiseProduct(Eigen::Vector3d::Constant(1/mp_.resolution_))).cast<int>();
   mp_.local_map_num_voxels_ = (mp_.local_map_size_.cwiseProduct(Eigen::Vector3d::Constant(1/mp_.resolution_))).cast<int>();
@@ -350,6 +369,61 @@ void GridMap::cameraInfoCallback(const sensor_msgs::CameraInfoConstPtr &msg)
 void GridMap::updateLocalMap(){
   if (!isPoseValid()){
     return;
+  }
+  // #define ENV_BUILDER_OCC 100
+  // #define ENV_BUILDER_FREE 0
+  // #define ENV_BUILDER_UNK -1
+  
+  // std::cout << "mp_.local_map_origin_: " << mp_.local_map_origin_ .transpose() << std::endl; 
+  // std::cout << "mp_.local_map_max_: " << mp_.local_map_max_ .transpose() << std::endl; 
+
+  // Update local map origin based on current UAV position
+  mp_.local_map_origin_ = Eigen::Vector3d(
+    md_.body2origin_.block<3,1>(0,3)(0) - (mp_.local_map_size_(0) / 2.0), 
+    md_.body2origin_.block<3,1>(0,3)(1) - (mp_.local_map_size_(1) / 2.0), 
+    mp_.ground_height_);
+  // Update local map max position based on current UAV position
+  mp_.local_map_max_ = Eigen::Vector3d(
+    md_.body2origin_.block<3,1>(0,3)(0) + (mp_.local_map_size_(0) / 2.0), 
+    md_.body2origin_.block<3,1>(0,3)(1) + (mp_.local_map_size_(1) / 2.0), 
+    mp_.ground_height_ + mp_.local_map_size_(2) );
+
+  // In voxel space, everything is relative to the mp_.local_map_origin_
+  // local_map_data_: relative to local_map_origin_
+  local_map_data_.clear();
+  local_map_data_.resize( mp_.local_map_num_voxels_(0) 
+                          * mp_.local_map_num_voxels_(1) 
+                          * mp_.local_map_num_voxels_(2), 0);
+  
+  // Get all occupied coordinates 
+  std::vector<Bonxai::CoordT> occ_coords;
+  bonxai_map_->getOccupiedVoxels(occ_coords);
+
+  for (auto& coord : occ_coords) // For each occupied coordinate
+  {
+    // obs_gbl_pos: global obstacle pos
+    // Check if the obstacle within local map bounds
+    Bonxai::Point3D obs_gbl_pos_pt3d = bonxai_map_->grid().coordToPos(coord);
+    // Eigen::Vector3d obs_gbl_pos = Eigen::Vector3d(obs_gbl_pos_pt3d.x, obs_gbl_pos_pt3d.y, obs_gbl_pos_pt3d.z)
+    //                               - md_.body2origin_.block<3,1>(0,3);
+    Eigen::Vector3d obs_gbl_pos(obs_gbl_pos_pt3d.x, obs_gbl_pos_pt3d.y, obs_gbl_pos_pt3d.z);
+    if (!isInLocalMap(obs_gbl_pos)){
+      continue;
+    }
+
+    // Convert to voxel index. This is relative to mp_.local_map_origin_.
+    Eigen::Vector3i vox_idx_3d = ((obs_gbl_pos - getLocalOrigin()) / getRes() - Eigen::Vector3d::Constant(0.5) ).cast<int>() ; 
+
+    size_t vox_idx_1d = vox_idx_3d(0)
+                    + vox_idx_3d(1) * mp_.local_map_num_voxels_(0) 
+                    + vox_idx_3d(2) * mp_.local_map_num_voxels_(0) * mp_.local_map_num_voxels_(1);
+
+    if (vox_idx_1d >= local_map_data_.size()) {
+      std::cout << "Exceed map size of " << local_map_data_.size() << ",idx " << vox_idx_1d << std::endl;
+      throw std::runtime_error( "Index exceeded map size when updating local map!");
+    }
+
+    local_map_data_[vox_idx_1d] = 100;
   }
 }
 

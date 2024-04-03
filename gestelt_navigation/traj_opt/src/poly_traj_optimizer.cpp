@@ -99,9 +99,7 @@ namespace ego_planner
       {
         flag_force_return = false;
         // TODO: Add collision-checking in the path
-        std::cout << "[PolyTrajOptimizer] Optimization Succeeded!" << std::endl;
-        printf("\033[32m iter=%d, time(ms)=%5.3f, total_t(ms)=%5.3f, cost=%5.3f\n \033[0m", iter_num_, time_ms, total_time_ms, final_cost);
-
+        printf("\033[32m [PolyTrajOptimizer] Optimization Succeeded! iter=%d, time(ms)=%5.3f, total_t(ms)=%5.3f, cost=%5.3f\n \033[0m", iter_num_, time_ms, total_time_ms, final_cost);
         flag_success = true;
       }
       // ELSE IF Cancelled

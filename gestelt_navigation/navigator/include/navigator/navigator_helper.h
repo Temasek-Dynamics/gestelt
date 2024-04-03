@@ -132,7 +132,7 @@ namespace viz_helper{
   inline void publishClosedList(const std::vector<Eigen::Vector3d>& closed_list, const std::string& frame_id, ros::Publisher& publisher) {
     visualization_msgs::Marker closed_nodes;
     double cube_length = 0.075;
-    double alpha = 0.2;
+    double alpha = 0.35;
 
     closed_nodes.header.frame_id = frame_id;
     closed_nodes.header.stamp = ros::Time::now();

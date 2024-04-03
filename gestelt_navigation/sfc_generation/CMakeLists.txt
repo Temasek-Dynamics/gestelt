@@ -8,6 +8,9 @@ add_compile_options(-std=c++17)
 set(ROS_LIBRARIES
   roscpp
   grid_map
+  decomp_util
+  convex_decomp_util
+  jps3d
 )
 
 ## Find catkin macros and libraries
@@ -38,11 +41,13 @@ include_directories(
   include
   ${catkin_INCLUDE_DIRS}
   ${EIGEN3_INCLUDE_DIRS} 
+  ${DECOMP_UTIL_INCLUDE_DIRS} 
 )
 
 ## Declare a C++ library
 add_library( ${PROJECT_NAME} 
   src/spherical_sfc.cpp
+  src/polytope_sfc.cpp
 )
 
 ## Specify libraries to link a library or executable target against

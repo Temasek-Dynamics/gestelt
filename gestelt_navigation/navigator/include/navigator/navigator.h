@@ -27,6 +27,7 @@
 #include <gestelt_debug_msgs/SFCTrajectory.h>
 #include <gestelt_debug_msgs/SFCSegment.h>
 #include <traj_utils/planning_visualization.h>
+#include <logger/timer.h>
 
 /* Trajectory representation */
 #include <traj_utils/plan_container.hpp>
@@ -368,6 +369,7 @@ private: /* Params */
   std::string node_name_{"Navigator"};
   int drone_id_{-1};
   bool debug_planning_;       // IF true, then debug mode is activated
+  bool verbose_planning_{true};     // Print debug info during planning
   double squared_goal_tol_;   // Squared goal tolerance
   double planner_freq_;       // Planner timer frequency
   double safety_check_freq_;  // Planner timer frequency
@@ -382,6 +384,11 @@ private: /* Params */
 
   /* Mutexes */
   std::mutex odom_mutex_; // mutex for Odom
+
+  /* Timers */
+  Timer tm_front_end_plan_{"front_end_plan"};
+  Timer tm_sfc_plan_{"sfc_plan"};
+  Timer tm_back_end_plan_{"back_end_plan"};
 
 private: /* Logging functions */
   

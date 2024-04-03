@@ -5,13 +5,12 @@ set(CMAKE_BUILD_TYPE "Release")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g")
 add_compile_options(-std=c++17)
 
-set(ROS_LIBRARIES
-  roscpp
-) 
+# set(ROS_LIBRARIES
+#   roscpp
+# ) 
 
-find_package(Eigen3 REQUIRED)
 find_package(catkin REQUIRED COMPONENTS
-  ${ROS_LIBRARIES}
+  # ${ROS_LIBRARIES}
 )
 
 catkin_package(
@@ -20,12 +19,22 @@ catkin_package(
 #  CATKIN_DEPENDS 
 )
 
+## Specify additional locations of header files
+## Your package locations should be listed before other locations
 include_directories(
   include
-  SYSTEM
-  ${catkin_INCLUDE_DIRS} 
-  ${PROJECT_SOURCE_DIR}/include
-  ${EIGEN3_INCLUDE_DIR}
-  )
+  ${catkin_INCLUDE_DIRS}
+)
+
+## Declare a C++ library
+add_library( ${PROJECT_NAME} 
+  # include/logger/logger.h
+  src/timer.cpp
+)
+
+## Specify libraries to link a library or executable target against
+target_link_libraries( ${PROJECT_NAME}
+  ${catkin_LIBRARIES}
+)
 
 

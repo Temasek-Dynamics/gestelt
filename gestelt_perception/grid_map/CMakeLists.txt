@@ -41,7 +41,6 @@ add_definitions(${PCL_DEFINITIONS})
 link_directories(${PCL_LIBRARY_DIRS})
 
 add_library(${PROJECT_NAME} 
-    include/grid_map/grid_map.h 
     src/grid_map.cpp 
 )
 

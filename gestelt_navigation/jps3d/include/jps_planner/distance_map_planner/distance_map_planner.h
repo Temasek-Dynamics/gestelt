@@ -2,8 +2,8 @@
  * @file distance_map_planner.h
  * @brief distance map planner!
  */
-#ifndef DMPLANNER_H
-#define DMPLANNER_H
+#ifndef DMP_LANNER_H
+#define DMP_LANNER_H
 
 #include "graph_search.h"
 #include <jps_collision/map_util.h>
@@ -73,8 +73,6 @@ public:
   vec_Vecf<Dim> getSearchRegion();
   /// Get the internal map util
   std::shared_ptr<JPS::MapUtil<Dim>> getMapUtil();
-  /// Get the data of the map 
-  std::vector<int8_t>& getMap();
 
   /**
    * @brief Generate distance map

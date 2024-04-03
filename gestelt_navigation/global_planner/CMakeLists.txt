@@ -7,11 +7,12 @@ add_compile_options(-std=c++17)
 
 set(ROS_LIBRARIES
   roscpp
-  grid_map
   std_msgs
   geometry_msgs
   visualization_msgs
+  grid_map
   jps3d
+  logger
 )
 
 ## Find catkin macros and libraries
@@ -28,7 +29,7 @@ find_package(Eigen3 REQUIRED)
 catkin_package(
  INCLUDE_DIRS include
  LIBRARIES global_planner # Exported libraries
- CATKIN_DEPENDS grid_map jps3d # Export grid_map as part of this package
+ CATKIN_DEPENDS grid_map jps3d logger # Export grid_map as part of this package
 #  DEPENDS system_lib
 )
 

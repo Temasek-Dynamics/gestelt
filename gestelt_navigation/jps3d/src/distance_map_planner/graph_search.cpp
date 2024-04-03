@@ -66,7 +66,7 @@ inline double GraphSearch::getHeur(int x, int y, int z) const {
 }
 
 double GraphSearch::plan(int xStart, int yStart, int xGoal, int yGoal,
-                         std::vector<bool> in_region) {
+                       std::vector<bool> in_region) {
   use_2d_ = true;
   pq_.clear();
   path_.clear();
@@ -246,10 +246,6 @@ void GraphSearch::getSucc(const StatePtr &curr, std::vector<int> &succ_ids,
       if (!isFree(new_x, new_y, new_z))
         continue;
 
-      // check if it is traversable
-      if (!isTraversable(curr->x, curr->y, curr->z, d[0], d[1], d[2]))
-        continue;
-
       int new_id = coordToId(new_x, new_y, new_z);
       if (!global_ && !in_region_[new_id])
         continue;
@@ -276,98 +272,6 @@ std::vector<StatePtr> GraphSearch::getOpenSet() const {
       ss.push_back(it);
   }
   return ss;
-}
-
-inline bool GraphSearch::isTraversable(int x, int y, int z, int dx, int dy,
-                                       int dz) {
-  // first check if the norm is bigger than one; if not return true
-  const int norm1 = std::abs(dx) + std::abs(dy) + std::abs(dz);
-  if (norm1 < 2) {
-    return true;
-  } else {
-    // if the norm is 2, then check if we can get to it from the sides
-    if (norm1 == 2) {
-      int x_1, y_1, z_1;
-      int x_2, y_2, z_2;
-      if (dx == 0) {
-        x_1 = x;
-        y_1 = y + dy;
-        z_1 = z;
-
-        x_2 = x;
-        y_2 = y;
-        z_2 = z + dz;
-      } else if (dy == 0) {
-        x_1 = x + dx;
-        y_1 = y;
-        z_1 = z;
-
-        x_2 = x;
-        y_2 = y;
-        z_2 = z + dz;
-      } else {
-        x_1 = x + dx;
-        y_1 = y;
-        z_1 = z;
-
-        x_2 = x;
-        y_2 = y + dy;
-        z_2 = z;
-      }
-      if (isFree(x_1, y_1, z_1) || isFree(x_2, y_2, z_2)) {
-        return true;
-      } else {
-        return false;
-      }
-    } else if (norm1 == 3) {
-      int x_1, y_1, z_1;
-      int x_2, y_2, z_2;
-      int x_3, y_3, z_3;
-      int x_4, y_4, z_4;
-      int x_5, y_5, z_5;
-      int x_6, y_6, z_6;
-
-      x_1 = x + dx;
-      y_1 = y;
-      z_1 = z;
-
-      x_2 = x + dx;
-      y_2 = y + dy;
-      z_2 = z;
-
-      x_3 = x;
-      y_3 = y + dy;
-      z_3 = z;
-
-      if (isFree(x_2, y_2, z_2) &&
-          (isFree(x_1, y_1, z_1) || isFree(x_3, y_3, z_3)))
-        return true;
-
-      x_4 = x;
-      y_4 = y;
-      z_4 = z + dz;
-
-      x_5 = x;
-      y_5 = y + dy;
-      z_5 = z + dz;
-
-      x_6 = x + dx;
-      y_6 = y;
-      z_6 = z + dz;
-
-      if (isFree(x_4, y_4, z_4) &&
-          (isFree(x_5, y_5, z_5) || isFree(x_6, y_6, z_6)))
-        return true;
-
-      if ((isFree(x_1, y_1, z_1) && isFree(x_6, y_6, z_6)) ||
-          (isFree(x_3, y_3, z_3) && isFree(x_5, y_5, z_5)))
-        return true;
-
-      return false;
-    } else {
-      return false;
-    }
-  }
 }
 
 std::vector<StatePtr> GraphSearch::getCloseSet() const {
