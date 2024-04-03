@@ -2,8 +2,10 @@
 
 ExamplePlanner::ExamplePlanner(ros::NodeHandle& nh) :
     nh_(nh),
-    max_v_(2.0),
-    max_a_(2.0),
+    max_v_(5.0),
+    max_a_(8.0),
+    max_j_(10.0),
+    segment_time_factor_(0.6),
     current_velocity_(Eigen::Vector3d::Zero()),
     current_pose_(Eigen::Affine3d::Identity()) {
       
@@ -14,7 +16,13 @@ ExamplePlanner::ExamplePlanner(ros::NodeHandle& nh) :
   if (!nh_.getParam(ros::this_node::getName() + "/max_a", max_a_)){
     ROS_WARN("[example_planner] param max_a not found");
   }
+  if (!nh_.getParam(ros::this_node::getName() + "/segment_time_scaling_factor", segment_time_factor_)){
+    ROS_WARN("[example_planner] param max_a not found");
 
+  if (!nh_.getParam(ros::this_node::getName() + "/terminal_segment_time_scaling_factor", segment_time_factor_terminal_)){
+    ROS_WARN("[example_planner] param max_a not found");
+  }
+  }
   nh.param("trajectory_frame", trajectory_frame_id_, std::string("world"));
 
   // create publisher for RVIZ markers
@@ -24,12 +32,16 @@ ExamplePlanner::ExamplePlanner(ros::NodeHandle& nh) :
   pub_trajectory_ =
       nh.advertise<mav_planning_msgs::PolynomialTrajectory4D>("trajectory",
                                                               0);
+
+  pub_traj_total_time_ = nh.advertise<std_msgs::Float32>("trajectory_total_time", 0);
   // subscriber for Odometry
   sub_odom_ =
       nh.subscribe("uav_pose", 1, &ExamplePlanner::uavOdomCallback, this);
 
   goal_waypoints_sub_ = nh.subscribe("/waypoints", 1, &ExamplePlanner::waypointsCB, this);
-
+  // time_factor_sub_ = nh.subscribe("/planner/time_factor", 1, &ExamplePlanner::timeFactorCB, this);
+  // std::cout<<"Max vel: "<<max_v_<<std::endl<<"Max Acc: " <<max_a_<<std::endl <<"Max Jerk: "<<max_j_<<std::endl;
+  
 }
 
 // Callback to get current Pose of UAV
@@ -40,12 +52,19 @@ void ExamplePlanner::uavOdomCallback(const nav_msgs::Odometry::ConstPtr& odom) {
   // store current velocity
   tf::vectorMsgToEigen(odom->twist.twist.linear, current_velocity_);
 }
-
+// // Callback to get the time factor of each segment
+// void ExamplePlanner::timeFactorCB(const std_msgs::Float32::ConstPtr &msg){
+//   segment_time_factor_ = msg->data;
+// }
 // Callback to get waypoints
 void ExamplePlanner::waypointsCB(const gestelt_msgs::GoalsPtr &msg){
   goal_waypoints_.clear(); // Clear existing goal waypoints
   goal_waypoints_vel_.clear(); // Clear existing goal waypoints vel
   goal_waypoints_acc_.clear(); // Clear existing goal waypoints acc
+  segment_time_factor_terminal_ = msg->time_factor_terminal.data;
+  segment_time_factor_ = msg->time_factor.data;
+  max_v_ = msg->max_vel.data;
+  max_a_ = msg->max_acc.data;
 
   ROS_INFO("[Trajectory Planner] No. of waypoints: %ld", msg->waypoints.size());
    
@@ -56,7 +75,7 @@ void ExamplePlanner::waypointsCB(const gestelt_msgs::GoalsPtr &msg){
         pose.position.z);
     // Transform received waypoints from world to UAV origin frame
     goal_waypoints_.push_back(wp);
-    ROS_INFO("MSG waypoints: %f, %f, %f", wp[0], wp[1], wp[2]);
+    // ROS_INFO("MSG waypoints: %f, %f, %f", wp[0], wp[1], wp[2]);
   }
   for (auto vel : msg->velocities) {
     Eigen::Vector3d wp_vel(
@@ -65,7 +84,7 @@ void ExamplePlanner::waypointsCB(const gestelt_msgs::GoalsPtr &msg){
         vel.linear.z);
     // Transform received waypoints from world to UAV origin frame
     goal_waypoints_vel_.push_back(wp_vel);
-    ROS_INFO("MSG_VEL waypoints: %f, %f, %f", wp_vel[0], wp_vel[1], wp_vel[2]);
+    // ROS_INFO("MSG_VEL waypoints: %f, %f, %f", wp_vel[0], wp_vel[1], wp_vel[2]);
   }
 
   for (auto acc : msg->accelerations) {
@@ -75,7 +94,7 @@ void ExamplePlanner::waypointsCB(const gestelt_msgs::GoalsPtr &msg){
         acc.linear.z);
     // Transform received waypoints from world to UAV origin frame
     goal_waypoints_acc_.push_back(wp_acc);
-    ROS_INFO("MSG_ACC waypoints: %f, %f, %f", wp_acc[0], wp_acc[1], wp_acc[2]);
+    // ROS_INFO("MSG_ACC waypoints: %f, %f, %f", wp_acc[0], wp_acc[1], wp_acc[2]);
   }
 
   mav_trajectory_generation::Trajectory trajectory;
@@ -86,6 +105,7 @@ void ExamplePlanner::waypointsCB(const gestelt_msgs::GoalsPtr &msg){
 // Method to set maximum speed.
 void ExamplePlanner::setMaxSpeed(const double max_v) {
   max_v_ = max_v;
+  // std::cout<<max_v<<std::endl;
 }
 
 // Plans a trajectory from the current position to the a goal position and velocity
@@ -166,28 +186,33 @@ bool ExamplePlanner::planTrajectory(const std::vector<Eigen::Vector3d>& wp_pos,
   //     segment_times.insert(segment_times.end(), current_segment_times.begin(), current_segment_times.end());
   // } 
   segment_times = estimateSegmentTimesVelocityRamp(vertices, max_v_, max_a_);
-  for (size_t i = 0; i < vertices.size()-1; ++i) {
-    // if (i==0 || i==1 || i==4 || i==5){
-    //   segment_times[i] *= 0.8;
-    // }
 
-    if(i%4==0 || i%4==1){
-      segment_times[i] *= 0.8;
-    }
+  for(int i = 0; i<segment_times.size(); i++){
 
-    //extra time factor
-    if(i==0 || i==1){
-      segment_times[i] *= 1.2;
+    // time allocation for 2 gates trajectory - 85deg and 0deg passes.
+    if (i == 0 || i == segment_times.size()-1){
+      segment_times[i] *= segment_time_factor_terminal_;
     }
+    else{
+      segment_times[i] *= segment_time_factor_;
+    }
+    
+
   
+    // std::cout<<"MODIFIED Time allocation of segment "<<i+1<<": "<<segment_times[i]<<std::endl;
   }
-
+  
+  double total_traj_time = std::accumulate(segment_times.begin(), segment_times.end(), 0.0);
+  std_msgs::Float32 total_time_msg;
+  total_time_msg.data = total_traj_time;
+  pub_traj_total_time_.publish(total_time_msg);
   /*
   * Linear optimization
   */
   const int N = 10;
   mav_trajectory_generation::PolynomialOptimization<N> opt(dimension);
   opt.setupFromVertices(vertices, segment_times, derivative_to_optimize);
+
   opt.solveLinear();
 
   // Get segments
@@ -195,7 +220,9 @@ bool ExamplePlanner::planTrajectory(const std::vector<Eigen::Vector3d>& wp_pos,
   opt.getSegments(&segments);
 
   opt.getTrajectory(&(*trajectory));
-
+  for(int i = 0; i<segment_times.size(); i++){
+    std::cout<<"Time allocation of segment "<<i+1<<": "<<segment_times[i]<<std::endl;
+  }
   /*
   * Non-linear optimization
   */
@@ -218,13 +245,14 @@ bool ExamplePlanner::planTrajectory(const std::vector<Eigen::Vector3d>& wp_pos,
   // // constrain velocity and acceleration
   // opt.addMaximumMagnitudeConstraint(mav_trajectory_generation::derivative_order::VELOCITY, max_v_);
   // opt.addMaximumMagnitudeConstraint(mav_trajectory_generation::derivative_order::ACCELERATION, max_a_);
-
+  // // opt.addMaximumMagnitudeConstraint(mav_trajectory_generation::derivative_order::JERK, max_j_);
+  // opt.addMaximumMagnitudeConstraint(mav_trajectory_generation::derivative_order::SNAP, 0.0);
   // // solve trajectory
   // opt.optimize();
 
   // // get trajectory as polynomial parameters
   // opt.getTrajectory(&(*trajectory));
-
+  // trajectory->scaleSegmentTimesToMeetConstraints(max_v_, max_a_);
   return true;
 }
 

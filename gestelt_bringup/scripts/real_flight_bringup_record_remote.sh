@@ -1,0 +1,70 @@
+#!/bin/bash
+
+SESSION="gz_sim_single_uav"
+SESSIONEXISTS=$(tmux list-sessions | grep $SESSION)
+
+#####
+# Directories
+#####
+SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )/.."
+gestelt_bringup_DIR="$SCRIPT_DIR/.."
+PX4_AUTOPILOT_REPO_DIR="$SCRIPT_DIR/../../../PX4-Autopilot"
+
+#####
+# Sourcing
+#####
+SOURCE_WS="
+source $SCRIPT_DIR/../../../devel/setup.bash &&
+"
+# export ROS_MASTER_URI (for remote record)
+# ROS_IP; ROS_HOSTNAME should be the laptop's IP
+# ROS_MASTER_URI should be the drone's IP
+SELF_IP=$(hostname -I | awk '{print $1}')
+
+EXPORT_ROS_MASTER_URI="
+export ROS_IP=${SELF_IP} && 
+export ROS_HOSTNAME=${SELF_IP} &&
+export ROS_MASTER_URI=http://192.168.31.38:11311
+"
+# PX4 v1.13.0
+SOURCE_PX4_AUTOPILOT="
+source $PX4_AUTOPILOT_REPO_DIR/Tools/setup_gazebo.bash $PX4_AUTOPILOT_REPO_DIR $PX4_AUTOPILOT_REPO_DIR/build/px4_sitl_default &&
+export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:$gestelt_bringup_DIR:$PX4_AUTOPILOT_REPO_DIR:$PX4_AUTOPILOT_REPO_DIR/Tools/sitl_gazebo &&
+"
+#####
+# Commands
+#####
+# Start Gazebo and PX4 SITL instances
+
+
+# Start up drone commander (Handles taking off, execution of mission and landing etc.)
+
+
+CMD_2="
+roslaunch gestelt_bringup record.launch rviz:=true rviz_config:=gz_sim rqt_reconfigure:=true
+"
+
+
+# disarm drone
+# CMD_4="rosservice call /drone_commander/disarm"
+# CMD_4="rosrun mavros mavparam set COM_RCL_EXCEPT 4"
+if [ "$SESSIONEXISTS" = "" ]
+then 
+
+    tmux new-session -d -s $SESSION
+
+    tmux split-window -t $SESSION:0.0 -v
+    tmux split-window -t $SESSION:0.1 -h
+    tmux split-window -t $SESSION:0.0 -h
+
+    tmux send-keys -t $SESSION:0.0 "$SOURCE_PX4_AUTOPILOT $EXPORT_ROS_MASTER_URI " #C-m 
+    sleep 1
+    tmux send-keys -t $SESSION:0.1 "$SOURCE_WS $EXPORT_ROS_MASTER_URI " #C-m 
+    sleep 1
+    tmux send-keys -t $SESSION:0.2 "$SOURCE_WS $EXPORT_ROS_MASTER_URI $CMD_2" C-m 
+    sleep 1
+    tmux send-keys -t $SESSION:0.3 "$SOURCE_WS $EXPORT_ROS_MASTER_URI " #C-m 
+fi
+
+# Attach session on the first window
+tmux attach-session -t "$SESSION:0"

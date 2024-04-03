@@ -1,11 +1,18 @@
 <launch>
   <!-- Launches a test mission -->
-  <node pkg="gestelt_bringup" name="mission" type="hover_anywhere_mission.py">  
+  <node pkg="gestelt_bringup" name="mission" type="figure_8.py" output="screen">  
         <param name="is_simulation" value="True"/>
   </node>
    <!-- Start rosbag to record setpoint_raw and local_position -->
    <!-- path have to be absolute path-->
-  <node pkg="rosbag" type="record" name="record" output="screen" args="-o /home/tianchensun/gestelt_ws/data/ /mavros/setpoint_raw/local /mavros/local_position/pose  /planner/sample_trajectory"/>
+   <arg name="record_topics" default="
+    (.*)mavros(.*)
+  (.*)traj_server(.*)
+  (.*)planner(.*)
+  "
+  />
+  <node pkg="rosbag" type="record" name="record" output="screen" args="-o $(find gestelt_bringup)/data/
+  -e $(arg record_topics)"/> 
   <!-- <node pkg="rosbag" type="record" name="record" output="screen" args="-a -o /home/tianchensun/gestelt_ws/data/ "/> -->
 
 </launch>

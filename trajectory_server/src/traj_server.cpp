@@ -28,9 +28,9 @@ void TrajServer::init(ros::NodeHandle& nh)
   nh.param("traj_server/safety_box/min_z", safety_box_.min_z, -1.0);
 
   // Frequency params
-  nh.param("traj_server/pub_cmd_freq", pub_cmd_freq_, 50.0); // frequency to publish commands
+  nh.param("traj_server/pub_cmd_freq", pub_cmd_freq_, 100.0); // frequency to publish commands
   double state_machine_tick_freq; // Frequency to tick the state machine transitions
-  nh.param("traj_server/state_machine_tick_freq", state_machine_tick_freq, 50.0);
+  nh.param("traj_server/state_machine_tick_freq", state_machine_tick_freq, 100.0);
   double debug_freq; // Frequency to publish debug information
   nh.param("traj_server/debug_freq", debug_freq, 10.0);
 
@@ -65,6 +65,7 @@ void TrajServer::init(ros::NodeHandle& nh)
   server_state_pub_ = nh.advertise<gestelt_msgs::CommanderState>("/traj_server/state", 50);
   // reference_pub_ = nh.advertise<geometry_msgs::TwistStamped>("/reference/setpoint_test", 50);
   flat_reference_pub_ = nh.advertise<controller_msgs::FlatTarget>("/reference/flatsetpoint", 50);
+  se3_yaw_pub_= nh.advertise<std_msgs::Float32>("/reference/yaw", 50);
   /////////////////
   /* Service clients */
   /////////////////
@@ -529,6 +530,10 @@ void TrajServer::execLand()
               Vector3d::Zero(), Vector3d::Zero(), 
               last_mission_yaw_, 0, 
               type_mask);
+  pubflatrefState(pos, Vector3d::Zero(), 
+          Vector3d::Zero(), Vector3d::Zero(), 
+          last_mission_yaw_, 0, 
+          type_mask);
 }
 
 void TrajServer::execTakeOff()
@@ -538,22 +543,7 @@ void TrajServer::execTakeOff()
   Eigen::Vector3d pos = last_mission_pos_;
   
   if(isUAVReady()){
-    // x direction takeoff ramp
-    // if (abs(takeoff_ramp_(0)) < abs(hover_pos_(0))){
-    //   takeoff_ramp_(0) += (hover_pos_(0)*pub_cmd_freq_)/(pub_cmd_freq_*400)*hover_pos_.array().sign()(0); // 25Hz, then the addition is 0.01m, for 0.04s
-    // }
-    // else {
-    //   takeoff_ramp_(0) = hover_pos_(0);
-    // }
-
-    // // y direction takeoff ramp
-    // if (abs(takeoff_ramp_(1)) < abs(hover_pos_(1))){
-    //   takeoff_ramp_(1) += (hover_pos_(1)*pub_cmd_freq_)/(pub_cmd_freq_*400)*hover_pos_.array().sign()(1); // 25Hz, then the addition is 0.01m, for 0.04s
-    // }
-    // else {
-    //   takeoff_ramp_(1) = hover_pos_(1);
-    // }
- 
+    
     // z axis takeoff ramp
     if (takeoff_ramp_(2) < takeoff_height_){
       takeoff_ramp_(2) += pub_cmd_freq_/(pub_cmd_freq_*200); // 25Hz, then the addition is 0.01m, for 0.04s
@@ -574,7 +564,12 @@ void TrajServer::execTakeOff()
               Vector3d::Zero(), Vector3d::Zero(), 
               last_mission_yaw_, 0, 
               type_mask);
-}
+
+  pubflatrefState(pos, Vector3d::Zero(), 
+          Vector3d::Zero(), Vector3d::Zero(), 
+          last_mission_yaw_, 0, 
+          type_mask);
+  }
 
 void TrajServer::execHover()
 {
@@ -589,6 +584,10 @@ void TrajServer::execHover()
               Vector3d::Zero(), Vector3d::Zero(), 
               last_mission_yaw_, 0, 
               type_mask);
+  pubflatrefState(pos, Vector3d::Zero(), 
+            Vector3d::Zero(), Vector3d::Zero(), 
+            last_mission_yaw_, 0, 
+            type_mask);
 }
 
 void TrajServer::execMission()
@@ -664,6 +663,10 @@ void TrajServer::pubflatrefState( Vector3d p, Vector3d v, Vector3d a, Vector3d j
   msg.acceleration.y = a.y();
   msg.acceleration.z = a.z();
   flat_reference_pub_.publish(msg);
+
+  std_msgs::Float32 yaw_msg;
+  yaw_msg.data = yaw;
+  se3_yaw_pub_.publish(yaw_msg);
 }
 
 
@@ -801,4 +804,3 @@ Eigen::Vector3d TrajServer::quaternionToRPY(const geometry_msgs::Quaternion& qua
 
   return euler;
 }
-

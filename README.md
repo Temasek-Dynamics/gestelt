@@ -36,7 +36,7 @@ cd ~/gestelt_ws/PX4-Autopilot
 
 
 # Copy the custom controller over
-cp -r ~/gestelt_ws/src/gestelt/gestelt_bringup/customized_controller/PositionControl ~/gestelt_ws/PX4-Autopilot/src/modules/mc_pos_control/
+cp -r ~/gestelt_ws/src/gestelt/gestelt_bringup/customized_controller/mc_pos_control ~/gestelt_ws/PX4-Autopilot/src/modules/
 
 bash ./Tools/setup/ubuntu.sh 
 # Make SITL target for Gazebo simulation

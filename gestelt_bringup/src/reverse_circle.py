@@ -204,48 +204,56 @@ def main():
     # side length 5m
     g=-9.81 #m/s^2  # down force, negative
     f=1*(-g) #N  # up force, positive
-    angle=85
-    angle_rad=math.radians(angle)
-
+    angle_1=85
+    # angle_2=-60
+    angle_rad_1=math.radians(angle_1)
+    # angle_rad_2=math.radians(angle_2)
+    num_passes = 2
         # 1/4 test
         # world frame is the initial position of the drone
         # map frame is the origin of the map
         # waypoints are under the map frame, will be transformed to world frame
-    for i in range(5):
-        waypoints.append(create_pose(1.5,-0.0,1.5)) # 1.2,-0.0,1.4
-        waypoints.append(create_pose(0.0,-1.5,1.2))# 0.0,-1.8,1.4
-        waypoints.append(create_pose(-1.5, 0.0, 1.2))
-        waypoints.append(create_pose(-0.0,1.5,1.2))
+    for i in range(num_passes):
 
-        # waypoints.append(create_pose(0.0,0.0,1.2))# 5.0,2.0,3
-
+        # forward pass
+        waypoints.append(create_pose(1.8,0.0,1.5))   
+        waypoints.append(create_pose(0.0,-1.8,1.4)) 
+        waypoints.append(create_pose(-1.8, 0.0, 1.8))
+        waypoints.append(create_pose(0.0,1.8,1.4))
+        # backward pass
         
-        # the number of accelerations must be equal to the number of waypoints
-        
-        # accelerations constraint
-        # (0.0,0.0,0.0))
-        # (None,None,None)) means no constraint
-        
-        
-        accel_list.append(create_accel(-f*np.sin(angle_rad),0.0,g+f*np.cos(angle_rad)))
+        waypoints.append(create_pose(-1.8, 0.0, 1.8))
+        waypoints.append(create_pose(0.0,-1.8,1.4)) 
+        waypoints.append(create_pose(1.8,0.0,1.5))   
+        waypoints.append(create_pose(0.0,1.8,1.4))
+    
+        # accel_list.append(create_accel(-f*math.sin(angle_rad_1),0.0,g+f*math.cos(angle_rad_1)))   
         accel_list.append(create_accel(None,None,None))
         accel_list.append(create_accel(None,None,None))
         accel_list.append(create_accel(None,None,None))
+        accel_list.append(create_accel(None,None,None))
+        accel_list.append(create_accel(None,None,None))
+        accel_list.append(create_accel(None,None,None))
+        accel_list.append(create_accel(None,None,None))
+        # accel_list.append(create_accel(-f*math.sin(angle_rad_1),0.0,g+f*math.cos(angle_rad_1))) 
+        accel_list.append(create_accel(None,None,None))
 
-
-        # velocites constraint
-        
+        # velocities constraint
+        vel_list.append(create_vel(None,None,None))
+        vel_list.append(create_vel(None,None,None))
+        vel_list.append(create_vel(None,None,None))
+        # vel_list.append(create_vel(0,0,0))
         vel_list.append(create_vel(None,None,None))
         vel_list.append(create_vel(None,None,None))
         vel_list.append(create_vel(None,None,None))
         vel_list.append(create_vel(None,None,None))
+        vel_list.append(create_vel(None,None,None))
 
-
+        # vel_list.append(create_vel(0,0,0))
+    
+    # end of the trajectory
 
     pub_waypoints(waypoints,accel_list,vel_list)
-    # rospy.spin()
-    print(waypoints)
-    rospy.signal_shutdown("Mission completed!")
-    
+    rospy.spin()
 if __name__ == '__main__':
     main()
