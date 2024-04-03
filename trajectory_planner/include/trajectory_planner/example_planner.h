@@ -23,10 +23,9 @@ class ExamplePlanner {
 
   void waypointsCB(const gestelt_msgs::GoalsPtr &msg);
 
-  void timeFactorCB(const std_msgs::Float32::ConstPtr &msg);
+  void timeFactorCB(const std_msgs::Float32::ConstPtr &msg);     
 
   void setMaxSpeed(double max_v);
-
   // Plans a trajectory to take off from the current position and
   // fly to the given altitude (while maintaining x,y, and yaw).
   bool planTrajectory(const std::vector<Eigen::Vector3d>& wp_pos,
@@ -47,18 +46,19 @@ class ExamplePlanner {
                       const Eigen::VectorXd& start_pos,
                       const Eigen::VectorXd& start_vel,
                       double v_max, double a_max,
-                      mav_trajectory_generation::Trajectory* trajectory);
-                      
+                      mav_trajectory_generation::Trajectory* trajectory);               
   bool publishTrajectory(const mav_trajectory_generation::Trajectory& trajectory);
 
 
  private:
   ros::Publisher pub_markers_;
   ros::Publisher pub_trajectory_;
+  ros::Publisher pub_traj_total_time_;
+
+  
   ros::Subscriber sub_odom_;
   ros::Subscriber goal_waypoints_sub_;
   ros::Subscriber time_factor_sub_;
-
 
   ros::NodeHandle& nh_;
   Eigen::Affine3d current_pose_;
@@ -70,7 +70,8 @@ class ExamplePlanner {
   double max_ang_a_;
   double max_j_;
   double segment_time_factor_;
-  
+  double segment_time_factor_terminal_;
+
   std::vector<Eigen::Vector3d> goal_waypoints_;
   std::vector<Eigen::Vector3d> goal_waypoints_vel_;
   std::vector<Eigen::Vector3d> goal_waypoints_acc_;

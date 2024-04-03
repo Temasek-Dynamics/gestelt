@@ -16,10 +16,13 @@ ExamplePlanner::ExamplePlanner(ros::NodeHandle& nh) :
   if (!nh_.getParam(ros::this_node::getName() + "/max_a", max_a_)){
     ROS_WARN("[example_planner] param max_a not found");
   }
-  // if (!nh_.getParam(ros::this_node::getName() + "/segment_time_scaling_factor", segment_time_factor_)){
-  //   ROS_WARN("[example_planner] param max_a not found");
-  // }
+  if (!nh_.getParam(ros::this_node::getName() + "/segment_time_scaling_factor", segment_time_factor_)){
+    ROS_WARN("[example_planner] param max_a not found");
 
+  if (!nh_.getParam(ros::this_node::getName() + "/terminal_segment_time_scaling_factor", segment_time_factor_terminal_)){
+    ROS_WARN("[example_planner] param max_a not found");
+  }
+  }
   nh.param("trajectory_frame", trajectory_frame_id_, std::string("world"));
 
   // create publisher for RVIZ markers
@@ -29,16 +32,16 @@ ExamplePlanner::ExamplePlanner(ros::NodeHandle& nh) :
   pub_trajectory_ =
       nh.advertise<mav_planning_msgs::PolynomialTrajectory4D>("trajectory",
                                                               0);
+
+  pub_traj_total_time_ = nh.advertise<std_msgs::Float32>("trajectory_total_time", 0);
   // subscriber for Odometry
   sub_odom_ =
       nh.subscribe("uav_pose", 1, &ExamplePlanner::uavOdomCallback, this);
 
   goal_waypoints_sub_ = nh.subscribe("/waypoints", 1, &ExamplePlanner::waypointsCB, this);
-
-  time_factor_sub_ = nh.subscribe("/planner/time_factor", 1, &ExamplePlanner::timeFactorCB, this);
-
+  // time_factor_sub_ = nh.subscribe("/planner/time_factor", 1, &ExamplePlanner::timeFactorCB, this);
   // std::cout<<"Max vel: "<<max_v_<<std::endl<<"Max Acc: " <<max_a_<<std::endl <<"Max Jerk: "<<max_j_<<std::endl;
-
+  
 }
 
 // Callback to get current Pose of UAV
@@ -49,17 +52,19 @@ void ExamplePlanner::uavOdomCallback(const nav_msgs::Odometry::ConstPtr& odom) {
   // store current velocity
   tf::vectorMsgToEigen(odom->twist.twist.linear, current_velocity_);
 }
-
-
-// Callback to get the time factor of each segment
-void ExamplePlanner::timeFactorCB(const std_msgs::Float32::ConstPtr &msg){
-  segment_time_factor_ = msg->data;
-}
+// // Callback to get the time factor of each segment
+// void ExamplePlanner::timeFactorCB(const std_msgs::Float32::ConstPtr &msg){
+//   segment_time_factor_ = msg->data;
+// }
 // Callback to get waypoints
 void ExamplePlanner::waypointsCB(const gestelt_msgs::GoalsPtr &msg){
   goal_waypoints_.clear(); // Clear existing goal waypoints
   goal_waypoints_vel_.clear(); // Clear existing goal waypoints vel
   goal_waypoints_acc_.clear(); // Clear existing goal waypoints acc
+  segment_time_factor_terminal_ = msg->time_factor_terminal.data;
+  segment_time_factor_ = msg->time_factor.data;
+  max_v_ = msg->max_vel.data;
+  max_a_ = msg->max_acc.data;
 
   ROS_INFO("[Trajectory Planner] No. of waypoints: %ld", msg->waypoints.size());
    
@@ -159,24 +164,26 @@ bool ExamplePlanner::planTrajectory(const std::vector<Eigen::Vector3d>& wp_pos,
   // segment_times = estimateSegmentTimes(vertices, max_v_, max_a_);
  
   segment_times = estimateSegmentTimesVelocityRamp(vertices, max_v_, max_a_);
-  segment_times[0] = segment_times[1];
-  for(int i = 0; i<segment_times.size(); i++){
 
+  for(int i = 0; i<segment_times.size(); i++){
 
     // time allocation for 2 gates trajectory - 85deg and 0deg passes.
     if (i == 0 || i == segment_times.size()-1){
-      segment_times[i] *= 1;
+      segment_times[i] *= segment_time_factor_terminal_;
     }
     else{
       segment_times[i] *= segment_time_factor_;
     }
     
+
   
     // std::cout<<"MODIFIED Time allocation of segment "<<i+1<<": "<<segment_times[i]<<std::endl;
   }
   
-
-
+  double total_traj_time = std::accumulate(segment_times.begin(), segment_times.end(), 0.0);
+  std_msgs::Float32 total_time_msg;
+  total_time_msg.data = total_traj_time;
+  pub_traj_total_time_.publish(total_time_msg);
   /*
   * Linear optimization
   */
