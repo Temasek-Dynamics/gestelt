@@ -21,5 +21,13 @@
 
   </node>
 
-  <node pkg="rosbag" type="record" name="record" output="screen" args="-o /home/tianchensun/gestelt_ws/data/ /mavros/setpoint_raw/local /mavros/local_position/pose  /planner/sample_trajectory"/>
+  <arg name="record_topics" default="
+    (.*)mavros(.*)
+  (.*)traj_server(.*)
+  (.*)planner(.*)
+  (.*)trajectory_publisher(.*)
+  "
+  />
+  <node pkg="rosbag" type="record" name="record" output="screen" args="-o $(find gestelt_bringup)/data/
+  -e $(arg record_topics)"/> 
 </launch>

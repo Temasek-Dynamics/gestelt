@@ -54,6 +54,7 @@
 #include <nav_msgs/Path.h>
 #include <ros/ros.h>
 #include <std_msgs/Int32.h>
+#include <std_msgs/Float32.h>
 #include <std_msgs/String.h>
 #include <std_srvs/SetBool.h>
 #include "controller_msgs/FlatTarget.h"
@@ -75,6 +76,8 @@ class trajectoryPublisher {
   ros::Publisher flatreferencePub_;
   ros::Publisher rawreferencePub_;
   ros::Publisher global_rawreferencePub_;
+  ros::Publisher theta_pub_;
+
   std::vector<ros::Publisher> primitivePub_;
   ros::Subscriber motionselectorSub_;
   ros::Subscriber mavposeSub_;

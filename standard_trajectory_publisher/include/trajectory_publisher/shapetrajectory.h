@@ -55,13 +55,17 @@ class shapetrajectory : public trajectory {
   Eigen::Vector3d traj_axis_;
   Eigen::Vector3d traj_origin_;
   Eigen::Vector3d traj_radial_;
-  double traj_radius_, traj_omega_, varying_omega_;
-  double acc_deacc_time_=2;
-  double stop_time_=10;
+  double traj_radius_, traj_omega_, varying_omega_,last_theta_=0.0;
+  double acc_dec_time_=5;
+  double max_angular_vel_=1.2; //rad/s
+  double angular_acc_=max_angular_vel_/acc_dec_time_; //rad/s^2
+  double stop_time_=15;
   double decrease_time_;
+
  public:
   shapetrajectory(int type);
   virtual ~shapetrajectory();
+  double returnTheta(){return varying_omega_;};
   void initPrimitives(Eigen::Vector3d pos, Eigen::Vector3d axis, double omega);
   void generatePrimitives(Eigen::Vector3d pos);
   void generatePrimitives(Eigen::Vector3d pos, Eigen::Vector3d vel);

@@ -47,6 +47,8 @@ trajectoryPublisher::trajectoryPublisher(const ros::NodeHandle& nh, const ros::N
   flatreferencePub_ = nh_.advertise<controller_msgs::FlatTarget>("reference/flatsetpoint", 1);
   rawreferencePub_ = nh_.advertise<mavros_msgs::PositionTarget>("mavros/setpoint_raw/local", 1);
   global_rawreferencePub_ = nh_.advertise<mavros_msgs::GlobalPositionTarget>("mavros/setpoint_raw/global", 1);
+  theta_pub_=nh_.advertise<std_msgs::Float32>("trajectory_publisher/theta", 1);
+  
   motionselectorSub_ =
       nh_.subscribe("trajectory_publisher/motionselector", 1, &trajectoryPublisher::motionselectorCallback, this,
                     ros::TransportHints().tcpNoDelay());
@@ -117,6 +119,10 @@ void trajectoryPublisher::updateReference() {
   trigger_time_ = (curr_time_ - start_time_).toSec();
 
   p_targ = motionPrimitives_.at(motion_selector_)->getPosition(trigger_time_);
+  double theta=motionPrimitives_.at(motion_selector_)->returnTheta();
+  std_msgs::Float32 msg;
+  msg.data=theta;
+  theta_pub_.publish(msg);
   v_targ = motionPrimitives_.at(motion_selector_)->getVelocity(trigger_time_);
   if (pubreference_type_ != 0) a_targ = motionPrimitives_.at(motion_selector_)->getAcceleration(trigger_time_);
 }

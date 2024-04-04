@@ -11,7 +11,7 @@ import time
 from std_srvs.srv import SetBool
 # get ros params
 takeoff_height = rospy.get_param("mission/takeoff_height", 1.2)
-test_time = rospy.get_param("mission/test_time", 20.0)
+test_time = rospy.get_param("mission/test_time", 120.0)
 TIME_OUT = False
 global traj_callback
 
