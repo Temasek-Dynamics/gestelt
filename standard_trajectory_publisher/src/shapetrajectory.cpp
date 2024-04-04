@@ -87,7 +87,7 @@ Eigen::Vector3d shapetrajectory::getPosition(double time) {
       // reset theta if time is reset
       if (time < 0.1) {
         last_theta_=0.0;
-        std::cout<<"theta reset!!!: "<<time<<std::endl;
+        // std::cout<<"theta reset!!!: "<<time<<std::endl;
 
       }
       
@@ -126,10 +126,10 @@ Eigen::Vector3d shapetrajectory::getPosition(double time) {
       // last_theta_ += traj_omega_ * dt_;
       theta = last_theta_;
       
-      std::cout<<"time: "<<time<<std::endl;
-      std::cout<<"traj_omega_: "<<traj_omega_<<std::endl;
-      std::cout<<"varying_omega_: "<<varying_omega_<<std::endl;
-      std::cout<<"theta: "<<theta<<std::endl;
+      // std::cout<<"time: "<<time<<std::endl;
+      // std::cout<<"traj_omega_: "<<traj_omega_<<std::endl;
+      // std::cout<<"varying_omega_: "<<varying_omega_<<std::endl;
+      // std::cout<<"theta: "<<theta<<std::endl;
 
 
       position = std::cos(theta) * traj_radial_ + std::sin(theta) * traj_axis_.cross(traj_radial_) +
