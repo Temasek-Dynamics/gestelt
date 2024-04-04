@@ -60,7 +60,7 @@ void shapetrajectory::initPrimitives(Eigen::Vector3d pos, Eigen::Vector3d axis, 
   traj_omega_ = omega;
   T_ = 2 * 3.14 / traj_omega_;
   traj_axis_ = axis;
-  traj_radial_ << 0.0, 1.5, 0.0;
+  traj_radial_ << 0.0, -1.5, 0.0;
 }
 
 void shapetrajectory::generatePrimitives(Eigen::Vector3d pos) {}

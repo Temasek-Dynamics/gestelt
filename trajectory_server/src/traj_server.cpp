@@ -28,9 +28,9 @@ void TrajServer::init(ros::NodeHandle& nh)
   nh.param("traj_server/safety_box/min_z", safety_box_.min_z, -1.0);
 
   // Frequency params
-  nh.param("traj_server/pub_cmd_freq", pub_cmd_freq_, 100.0); // frequency to publish commands
+  nh.param("traj_server/pub_cmd_freq", pub_cmd_freq_, 50.0); // frequency to publish commands
   double state_machine_tick_freq; // Frequency to tick the state machine transitions
-  nh.param("traj_server/state_machine_tick_freq", state_machine_tick_freq, 100.0);
+  nh.param("traj_server/state_machine_tick_freq", state_machine_tick_freq, 50.0);
   double debug_freq; // Frequency to publish debug information
   nh.param("traj_server/debug_freq", debug_freq, 10.0);
 
@@ -167,21 +167,14 @@ void TrajServer::UAVStateCb(const mavros_msgs::State::ConstPtr &msg)
 
 void TrajServer::UAVPoseCB(const geometry_msgs::PoseStamped::ConstPtr &msg)
 {
-  //for setpoint TAKEOFF AND HOVER, lock the first pose to the current pose
-  if (getServerState()==ServerState::TAKEOFF || getServerState()==ServerState::HOVER ){
-    first_pose_ = true;
-    // ROS_INFO("Taking off pose locked to (%f, %f)", last_mission_pos_(0), last_mission_pos_(1));
-  }
-  else {
-    first_pose_ = false;
-  }
-  
-  if (first_pose_)
-  {
+  if (first_pose_){
     last_mission_pos_(0) = uav_pose_.pose.position.x;
     last_mission_pos_(1) = uav_pose_.pose.position.y;
-    
-    
+    num_pose_msgs_++;
+    if (num_pose_msgs_ > 100){
+      first_pose_ = false;
+      // ROS_INFO("Taking off pose locked to (%f, %f)", last_mission_pos_(0), last_mission_pos_(1));
+    }
   }
 
   uav_pose_ = *msg; 
