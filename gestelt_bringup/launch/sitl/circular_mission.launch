@@ -11,6 +11,9 @@
         <param name="trajectory_type" value="1" />
         <param name="shape_omega" value="1.2" /> 
 
+        <param name="acc_dec_time" value="10" />
+        <param name="stop_time" value="30" />
+        <param name="max_angular_vel" value="1.2" />
         <param name="initpos_x" value="$(arg circle_center_x)" />
         <param name="initpos_y" value="$(arg circle_center_y)" />
         <param name="initpos_z" value="1.2" />

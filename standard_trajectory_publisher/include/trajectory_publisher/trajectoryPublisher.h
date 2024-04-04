@@ -101,8 +101,10 @@ class trajectoryPublisher {
   double controlUpdate_dt_;
   double primitive_duration_;
   double trigger_time_;
+  double last_theta_;
   double init_pos_x_, init_pos_y_, init_pos_z_;
   double max_jerk_;
+  double acc_dec_time_,stop_time_,max_angular_vel_;
   int pubreference_type_;
   int num_primitives_;
   int motion_selector_;

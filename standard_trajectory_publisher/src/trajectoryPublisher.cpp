@@ -75,6 +75,10 @@ trajectoryPublisher::trajectoryPublisher(const ros::NodeHandle& nh, const ros::N
   nh_private_.param<int>("number_of_primitives", num_primitives_, 7);
   nh_private_.param<int>("reference_type", pubreference_type_, 2);
 
+
+  nh_private_.param<double>("acc_dec_time", acc_dec_time_, 10.0);
+  nh_private_.param<double>("stop_time", stop_time_, 20.0);
+  nh_private_.param<double>("max_angular_vel", max_angular_vel_, 1.2);
   inputs_.resize(num_primitives_);
 
   if (trajectory_type_ == 0) {  // Polynomial Trajectory
@@ -98,7 +102,7 @@ trajectoryPublisher::trajectoryPublisher(const ros::NodeHandle& nh, const ros::N
   } else {  // Shape trajectories
 
     num_primitives_ = 1;
-    motionPrimitives_.emplace_back(std::make_shared<shapetrajectory>(trajectory_type_));
+    motionPrimitives_.emplace_back(std::make_shared<shapetrajectory>(trajectory_type_,acc_dec_time_,stop_time_,max_angular_vel_));
     primitivePub_.push_back(nh_.advertise<nav_msgs::Path>("trajectory_publisher/primitiveset", 1));
   }
 
@@ -118,10 +122,16 @@ void trajectoryPublisher::updateReference() {
   }
   trigger_time_ = (curr_time_ - start_time_).toSec();
 
+  //send theta from the primitive trajectory (only for shape trajectories
+  motionPrimitives_.at(motion_selector_)->acquireTheta(last_theta_); 
+  
   p_targ = motionPrimitives_.at(motion_selector_)->getPosition(trigger_time_);
-  double theta=motionPrimitives_.at(motion_selector_)->returnTheta();
+  
+  // return the accumulated theta from the shape trajectory
+  // keep it for the next iteration
+  last_theta_=motionPrimitives_.at(motion_selector_)->returnTheta();
   std_msgs::Float32 msg;
-  msg.data=theta;
+  msg.data=last_theta_;
   theta_pub_.publish(msg);
   v_targ = motionPrimitives_.at(motion_selector_)->getVelocity(trigger_time_);
   if (pubreference_type_ != 0) a_targ = motionPrimitives_.at(motion_selector_)->getAcceleration(trigger_time_);

@@ -38,12 +38,16 @@
 
 #include "trajectory_publisher/shapetrajectory.h"
 
-shapetrajectory::shapetrajectory(int type) : trajectory(), N(0), dt_(0.1), T_(10.0), type_(type) {
+shapetrajectory::shapetrajectory(int type, double acc_dec_time, double stop_time, double max_angular_vel) : trajectory(), N(0), dt_(0.1), T_(10.0), type_(type) {
   traj_omega_ = 2.0;
   traj_axis_ << 0.0, 0.0, 1.0;
   traj_radial_ << 1.0, 0.0, 0.0;
   traj_origin_ << 0.0, 0.0, 1.0;
-  last_theta_=0.0;
+  last_theta_ = 0.0;
+  acc_dec_time_=acc_dec_time;
+  stop_time_=stop_time;
+  max_angular_vel_=max_angular_vel;
+  angular_acc_=max_angular_vel_/acc_dec_time_;
 };
 
 shapetrajectory::~shapetrajectory(){
@@ -81,7 +85,7 @@ Eigen::Vector3d shapetrajectory::getPosition(double time) {
     case TRAJ_CIRCLE:
       
       // reset theta if time is reset
-      if (time < 0.01) {
+      if (time < 0.1) {
         last_theta_=0.0;
         std::cout<<"theta reset!!!: "<<time<<std::endl;
 
@@ -107,7 +111,7 @@ Eigen::Vector3d shapetrajectory::getPosition(double time) {
       // decelerate stage
       else if (time>decrease_time_ && time <=stop_time_)
       {
-       varying_omega_=varying_omega_-angular_acc_*(time-decrease_time_);
+       varying_omega_=max_angular_vel_-angular_acc_*(time-decrease_time_);
       }
 
       // stop stage
@@ -117,15 +121,16 @@ Eigen::Vector3d shapetrajectory::getPosition(double time) {
       }
       
       dt_=0.01;
-      // theta = (0.01*varying_omega_) * dt_;
+      last_theta_ += varying_omega_ * dt_;
 
-      theta = traj_omega_ * time;
-      last_theta_ += theta;
+      // last_theta_ += traj_omega_ * dt_;
+      theta = last_theta_;
       
       std::cout<<"time: "<<time<<std::endl;
       std::cout<<"traj_omega_: "<<traj_omega_<<std::endl;
       std::cout<<"varying_omega_: "<<varying_omega_<<std::endl;
       std::cout<<"theta: "<<theta<<std::endl;
+
 
       position = std::cos(theta) * traj_radial_ + std::sin(theta) * traj_axis_.cross(traj_radial_) +
                  (1 - std::cos(theta)) * traj_axis_.dot(traj_radial_) * traj_axis_ + traj_origin_;
@@ -155,33 +160,32 @@ Eigen::Vector3d shapetrajectory::getVelocity(double time) {
       // time to decrease the velocity
       decrease_time_=stop_time_-acc_dec_time_;  
       
+
       //accelerate stage
       if (time<=acc_dec_time_ && time>=0)
       {
        varying_omega_=angular_acc_*time;
-
+       
       }
 
       // constant velocity stage
       else if (time>acc_dec_time_ && time<=decrease_time_)
       {
         varying_omega_=max_angular_vel_;
-
       }
       // decelerate stage
       else if (time>decrease_time_ && time <=stop_time_)
       {
-        varying_omega_=varying_omega_-angular_acc_*(time-decrease_time_);
-
+       varying_omega_=max_angular_vel_-angular_acc_*(time-decrease_time_);
       }
 
       // stop stage
       else if(time>stop_time_)
       {
         varying_omega_=0.0;
-        
       }
-      velocity = traj_omega_ * traj_axis_.cross(getPosition(time));
+
+      velocity = varying_omega_ * traj_axis_.cross(getPosition(time));
       break;
     case TRAJ_STATIONARY:
 
@@ -206,40 +210,42 @@ Eigen::Vector3d shapetrajectory::getVelocity(double time) {
 
 Eigen::Vector3d shapetrajectory::getAcceleration(double time) {
   Eigen::Vector3d acceleration;
-  double acc;
+  double curr_ang_acc;
   switch (type_) {
     case TRAJ_CIRCLE:
     // gently increase the velocity
       // time to decrease the velocity
       decrease_time_=stop_time_-acc_dec_time_;  
       
-       //accelerate stage
+
+      //accelerate stage
       if (time<=acc_dec_time_ && time>=0)
       {
        varying_omega_=angular_acc_*time;
-       acc=angular_acc_;
+       curr_ang_acc=angular_acc_;
       }
 
       // constant velocity stage
       else if (time>acc_dec_time_ && time<=decrease_time_)
       {
         varying_omega_=max_angular_vel_;
-        acc=0.0;
+        curr_ang_acc=0.0;
       }
       // decelerate stage
       else if (time>decrease_time_ && time <=stop_time_)
       {
-        varying_omega_=varying_omega_-angular_acc_*(time-decrease_time_);
-        acc=-angular_acc_;
+       varying_omega_=max_angular_vel_-angular_acc_*(time-decrease_time_);
+       curr_ang_acc=-angular_acc_;
       }
 
       // stop stage
       else if(time>stop_time_)
       {
         varying_omega_=0.0;
-        acc=0.0;
+        curr_ang_acc=0.0;
       }
-      acceleration = traj_omega_* traj_axis_.cross(getVelocity(time));
+
+      acceleration = curr_ang_acc * traj_axis_.cross(getPosition(time)) + varying_omega_* traj_axis_.cross(getVelocity(time));
       break;
     case TRAJ_STATIONARY:
 

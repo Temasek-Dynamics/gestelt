@@ -45,13 +45,14 @@ class polynomialtrajectory : public trajectory {
  private:
   int N;       // Degree of polynomial
   double dt_;  // Sampling time
-  double T_, theta_;
+  double T_, last_theta_;
   Eigen::Vector4d c_x_, c_y_, c_z_;  // Coefficients for polynomial representation
 
  public:
   polynomialtrajectory();
   virtual ~polynomialtrajectory();
-  double returnTheta(){return theta_;};
+  double returnTheta(){return last_theta_;};
+  void acquireTheta(double theta){last_theta_=theta;};
   void initPrimitives(Eigen::Vector3d pos, Eigen::Vector3d axis, double omega);
   void generatePrimitives(Eigen::Vector3d pos);
   void generatePrimitives(Eigen::Vector3d pos, Eigen::Vector3d vel);

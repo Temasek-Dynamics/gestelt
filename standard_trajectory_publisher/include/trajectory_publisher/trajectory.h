@@ -64,7 +64,8 @@ class trajectory {
   virtual void generatePrimitives(Eigen::Vector3d pos, Eigen::Vector3d vel, Eigen::Vector3d jerk) = 0;
   virtual void generatePrimitives(Eigen::Vector3d pos, Eigen::Vector3d vel, Eigen::Vector3d acc,
                                   Eigen::Vector3d jerk) = 0;
-  virtual double returnTheta() = 0;
+  virtual double returnTheta()=0 ;
+  virtual void acquireTheta(double theta)=0;
   virtual Eigen::Vector3d getPosition(double time) = 0;
   virtual Eigen::Vector3d getVelocity(double time) = 0;
   virtual Eigen::Vector3d getAcceleration(double time) = 0;
