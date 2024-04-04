@@ -12,15 +12,20 @@ receding_horizon_planning_dist: 7.5        # [m] Receding horizon planning
 
 ##### Front-end params
 front_end:
-  max_iterations: 9999  
-  debug_viz: true           # If true, publish visualization for debugging
-  tie_breaker: 1.00001      # Tie breaker as weight for f-cost (cost-to-go)
-  cost_function_type: 0     # [AStar] Type of cost function to use 
-  dmp_search_radius: 0.75      # DMP Search radius
-  dmp_potential_radius: 0.4   # DMP radius of distance field (Value has significant effect on runtime)
-  dmp_collision_weight: 0.25   # DMP Collision weight 
-  dmp_heuristic_weight: 0.0   # DMP Heuristic weight
-  dmp_pow: 1    # DMP power index 
+  a_star:
+    max_iterations: 9999  
+    debug_viz: true           # If true, publish visualization for debugging
+    tie_breaker: 1.00001      # Tie breaker as weight for f-cost (cost-to-go)
+    cost_function_type: 0     # [AStar] Type of cost function to use 
+
+  jps:
+    planner_verbose: false      # If true, print debug from planner
+    use_dmp: false
+    dmp_search_radius: 0.75      # DMP Search radius
+    dmp_potential_radius: 0.4   # DMP radius of distance field (Value has significant effect on runtime)
+    dmp_collision_weight: 0.25   # DMP Collision weight 
+    dmp_heuristic_weight: 0.0   # DMP Heuristic weight
+    dmp_pow: 1    # DMP power index 
 
 ##### Safe flight corridor
 sfc:
@@ -33,9 +38,6 @@ sfc:
   # mult_stddev_y: 0.3      # 
   # mult_stddev_z: 0.3      # 
 
-  # mult_stddev_x: 0.7      # 
-  # mult_stddev_y: 0.5      # 
-  # mult_stddev_z: 0.5      # 
   mult_stddev_x: 0.15      # 
   mult_stddev_y: 0.3      # 
   mult_stddev_z: 0.3      # 
@@ -57,6 +59,13 @@ sfc:
 
   # SFC Buffer 
   spherical_buffer: 0.125 # (m) Reduce spherical SFCs by this fixed amount to increase buffer from obstacles
+
+  poly:
+    max_iterations: 60
+    debug_viz: true
+    poly_max: 10
+    cvx_decomp_type: 2
+    num_expansion_itr: 60
 
 ##### Back-end 
 back_end:

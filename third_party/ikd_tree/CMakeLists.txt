@@ -5,6 +5,7 @@ set(CMAKE_BUILD_TYPE "Release")
 add_compile_options(-std=c++17)
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g")
 
+
 find_package(PCL REQUIRED COMPONENTS common io)
 find_package(catkin REQUIRED)
 find_package(Eigen3 REQUIRED)

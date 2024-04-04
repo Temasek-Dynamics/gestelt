@@ -240,7 +240,7 @@ namespace viz_helper{
     pt.z = path[0](2);
     path_line_strip.points.push_back(pt);
 
-    for (int i = 1; i < path.size()-1; i++){
+    for (size_t i = 1; i < path.size()-1; i++){
       pt.x = path[i](0);
       pt.y = path[i](1);
       pt.z = path[i](2);

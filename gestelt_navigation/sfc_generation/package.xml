@@ -14,11 +14,14 @@
   <exec_depend>roscpp</exec_depend>
 
   <depend>grid_map</depend>
-  <depend>decomp_util</depend>
-  <!-- <depend>decomp_ros_msgs</depend>
-  <depend>decomp_ros_utils</depend> -->
-  <depend>convex_decomp_util</depend>
+
   <depend>jps3d</depend>
+
+  <!-- <depend>decomp_util</depend> -->
+  <depend>decomp_ros_utils</depend> 
+
+  <depend>decomp_ros_msgs</depend>
+  <depend>convex_decomp_util</depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>

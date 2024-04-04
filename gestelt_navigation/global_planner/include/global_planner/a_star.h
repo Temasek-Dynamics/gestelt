@@ -73,7 +73,7 @@ public:
    */
   std::vector<Eigen::Vector3d> getClosedList();
 
-  void addVizPublishers(ros::Publisher& closed_list_viz_pub)
+  void addPublishers(ros::Publisher& closed_list_viz_pub)
   {
       closed_list_viz_pub_ = closed_list_viz_pub;
   }

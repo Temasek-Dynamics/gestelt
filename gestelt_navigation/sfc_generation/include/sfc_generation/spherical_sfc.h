@@ -326,11 +326,8 @@ public:
    * @param sfc_spherical_viz_pub 
    * @param sfc_waypoints_viz_pub 
    */
-  void addVizPublishers(
-    ros::Publisher& p_cand_viz_pub, 
-    ros::Publisher& dist_viz_pub, ros::Publisher& samp_dir_vec_pub,
-    ros::Publisher& sfc_spherical_viz_pub, ros::Publisher&  sfc_waypoints_viz_pub,
-    ros::Publisher& intxn_spheres_pub
+  void addPublishers(
+    std::unordered_map<std::string, ros::Publisher>& publisher_map
   );
 
   /**

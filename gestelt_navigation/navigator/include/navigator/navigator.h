@@ -13,7 +13,6 @@
 #include <geometry_msgs/PoseStamped.h>
 #include <nav_msgs/Odometry.h>
 #include <std_msgs/Empty.h>
-#include <visualization_msgs/Marker.h>
 
 /* Planning messages */
 #include <gestelt_msgs/Command.h>
@@ -22,11 +21,15 @@
 #include <traj_utils/PolyTraj.h>
 #include <traj_utils/MINCOTraj.h>
 
+/* Visualization */
+#include <decomp_ros_msgs/PolyhedronArray.h>
+#include <traj_utils/planning_visualization.h>
+#include <visualization_msgs/Marker.h>
+
 /* Debugging */
 #include <gestelt_debug_msgs/BackEndTrajectoryDebug.h>
 #include <gestelt_debug_msgs/SFCTrajectory.h>
 #include <gestelt_debug_msgs/SFCSegment.h>
-#include <traj_utils/planning_visualization.h>
 #include <logger/timer.h>
 
 /* Trajectory representation */
@@ -38,10 +41,22 @@
 #include <global_planner/a_star.h>
 #include <global_planner/jps_wrapper.h>
 #include <sfc_generation/spherical_sfc.h>
+#include <sfc_generation/polytope_sfc.h>
 #include <optimizer/poly_traj_optimizer.h>
 
 class Navigator
 {
+enum FrontEndType{
+  ASTAR,
+  JPS_AND_DMP
+};
+
+enum SFCType{
+  SPHERICAL,
+  POLYTOPE
+};
+
+
 public:  
   Navigator() {}
   ~Navigator() {}
@@ -317,12 +332,13 @@ private: /* ROS subs, pubs and timers*/
   ros::Publisher closed_list_viz_pub_; // Visualization of closed list
 
   /* Visualization for SFC*/
-  ros::Publisher sfc_spherical_viz_pub_; // Visualization of SFC spheres
-  ros::Publisher sfc_p_cand_viz_pub_; // Visualization of SFC sampling points
-  ros::Publisher sfc_dist_viz_pub_; // Visualization of SFC sampling distribution
-  ros::Publisher samp_dir_vec_pub_; // Visualization of SFC sampling direction vectors
-  ros::Publisher sfc_waypoints_viz_pub_; // Visualization of SFC waypoints
-  ros::Publisher intxn_spheres_pub_; // Visualization of intersecting spheres
+  std::unordered_map<std::string, ros::Publisher> sfc_publisher_map_;
+  // ros::Publisher sfc_spherical_viz_pub_; // Visualization of SFC spheres
+  // ros::Publisher sfc_p_cand_viz_pub_; // Visualization of SFC sampling points
+  // ros::Publisher sfc_dist_viz_pub_; // Visualization of SFC sampling distribution
+  // ros::Publisher samp_dir_vec_pub_; // Visualization of SFC sampling direction vectors
+  // ros::Publisher sfc_waypoints_viz_pub_; // Visualization of SFC waypoints
+  // ros::Publisher intxn_spheres_pub_; // Visualization of intersecting spheres
 
   /* Debugging */
   ros::Publisher dbg_sfc_traj_pub_; // Publishers to trajectory inspector for debugging 
@@ -341,7 +357,9 @@ private: /* Planner members */
   /* Planner */
   // std::unique_ptr<AStarPlanner> front_end_planner_; // Front-end planner
   std::unique_ptr<JPSWrapper> front_end_planner_; // Front-end planner
-  std::unique_ptr<SphericalSFC> sfc_generation_; // Safe flight corridor generator
+  // std::unique_ptr<SphericalSFC> sfc_generation_; // Spherical Safe flight corridor generator
+  // std::unique_ptr<PolytopeSFC> sfc_generation_; // Polytope Safe flight corridor generator
+  std::unique_ptr<SFCBase> sfc_generation_; // Safe flight corridor generator
 
   std::unique_ptr<ego_planner::PolyTrajOptimizer> back_end_optimizer_; // Polynomial trajectory optimizer
 
@@ -363,7 +381,9 @@ private: /* Params */
   /* planner parameters */
   JPSWrapper::JPSParams front_end_params_; 
   // AStarPlanner::AStarParams front_end_params_; 
-  SphericalSFC::SphericalSFCParams sfc_params_; 
+
+  SphericalSFC::SphericalSFCParams sph_sfc_params_; 
+  PolytopeSFC::PolytopeSFCParams ply_sfc_params_;   
 
   /* Coordinator params */
   std::string node_name_{"Navigator"};
@@ -374,6 +394,10 @@ private: /* Params */
   double planner_freq_;       // Planner timer frequency
   double safety_check_freq_;  // Planner timer frequency
   double rhp_dist_;           // Receding horizon planning dist
+  double rhp_buffer_;         // Buffer to put goal away from obstacles (in addition to inflation)
+
+  SFCType sfc_type_{SFCType::POLYTOPE}; // Indicates the SFC generation (e.g. polytope or spherical)
+  FrontEndType front_end_type_{FrontEndType::JPS_AND_DMP}; // Indicates the Front end planner (e.g. a* or JPS)
 
   /* Back-end params */
   int optimizer_num_retries_;

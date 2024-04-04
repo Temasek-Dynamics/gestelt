@@ -3,6 +3,7 @@ project(navigator)
 
 set(CMAKE_BUILD_TYPE "Release")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g")
+
 add_compile_options(-std=c++17)
 
 set(ROS_LIBRARIES
@@ -22,6 +23,7 @@ find_package(Eigen3 REQUIRED)
 find_package(catkin REQUIRED COMPONENTS
   ${ROS_LIBRARIES}
 )
+find_package(decomp_util)
 
 catkin_package(
  INCLUDE_DIRS include
@@ -33,9 +35,10 @@ include_directories(
   include
   SYSTEM
   ${catkin_INCLUDE_DIRS} 
-  ${PROJECT_SOURCE_DIR}/include
+  # ${PROJECT_SOURCE_DIR}/include
   ${EIGEN3_INCLUDE_DIR}
-  )
+  ${DECOMP_UTIL_INCLUDE_DIRS} 
+)
 
 add_executable(navigator_node
   src/navigator_node.cpp 

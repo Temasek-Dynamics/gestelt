@@ -18,6 +18,13 @@ public:
    */
   virtual bool generateSFC(const std::vector<Eigen::Vector3d> &path) = 0;
 
+  /**
+   * @brief Add ROS Publishers to the SFCBase class
+   * 
+   * @param publisher_map 
+   */
+  virtual void addPublishers(std::unordered_map<std::string, ros::Publisher> &publisher_map) = 0;
+
 protected:
   SFCBase(){};
 }; // class SFCBase

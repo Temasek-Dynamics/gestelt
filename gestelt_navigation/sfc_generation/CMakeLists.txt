@@ -3,15 +3,19 @@ project(sfc_generation)
 
 set(CMAKE_BUILD_TYPE "Release")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g")
+
 add_compile_options(-std=c++17)
 
 set(ROS_LIBRARIES
   roscpp
   grid_map
-  decomp_util
+  decomp_ros_msgs
+  decomp_ros_utils
   convex_decomp_util
   jps3d
 )
+
+find_package(decomp_util)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -27,8 +31,8 @@ find_package(Eigen3 REQUIRED)
 catkin_package(
  INCLUDE_DIRS include
  LIBRARIES ${PROJECT_NAME} # Exported libraries
-#  CATKIN_DEPENDS  # Export grid_map as part of this package
-#  DEPENDS 
+ CATKIN_DEPENDS decomp_ros_msgs decomp_ros_utils convex_decomp_util # Export grid_map as part of this package
+#  DEPENDS decomp_util 
 )
 
 ###########

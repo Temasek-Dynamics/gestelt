@@ -3,6 +3,7 @@ project(traj_utils)
 
 set(CMAKE_BUILD_TYPE "Release")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g")
+
 # set(ENABLE_PRECOMPILED_HEADERS "OFF")
 add_compile_options(-std=c++17)
 

@@ -21,6 +21,9 @@ public:
     int cost_function_type; // Type of cost function to use
     bool print_timers{true};
     bool planner_verbose{true};
+
+    bool use_dmp{false}; // True if using DMP
+
     double dmp_search_rad{1.5}; // DMP search radius
     double dmp_pot_rad{2.0};    // DMP potential radius
     double dmp_col_weight{1.0}; // DMP Collision weight
@@ -53,7 +56,12 @@ public:
    */
   std::vector<Eigen::Vector3d> getPathPos()
   {
-    return path_dmp_;
+    if (params_.use_dmp){
+      return path_dmp_;
+    }
+    else {
+      return path_jps_;
+    }
   }
 
   /**
@@ -63,19 +71,14 @@ public:
    */
   std::vector<Eigen::Vector3d> getPathPosRaw()
   {
-    return path_dmp_raw_;
+    if (params_.use_dmp){
+      return path_dmp_raw_;
+    }
+    else {
+      return path_jps_raw_;
+    }
   }
 
-
-  /**
-   * @brief Get successful JPS plan in terms of path positions (x,y,z)
-   *
-   * @return std::vector<Eigen::Vector3d>
-   */
-  std::vector<Eigen::Vector3d> getPathRaw()
-  {
-    return path_jps_;
-  }
 
   /**
    * @brief Get DMP search region
@@ -88,27 +91,27 @@ public:
   }
 
 private:
-  std::vector<Eigen::Vector3d> path_jps_; // JPS Path in (x,y,z)
-  std::vector<Eigen::Vector3d> path_dmp_; // DMP Path in (x,y,z)
-  std::vector<Eigen::Vector3d> path_dmp_raw_; // DMP Path in (x,y,z)
-  std::vector<Eigen::Vector3d> dmp_search_region_; // Search region of DMP
+  std::vector<Eigen::Vector3d> path_jps_;           // JPS Path in (x,y,z)
+  std::vector<Eigen::Vector3d> path_jps_raw_;       // JPS Path in (x,y,z)
+  std::vector<Eigen::Vector3d> path_dmp_;           // DMP Path in (x,y,z)
+  std::vector<Eigen::Vector3d> path_dmp_raw_;       // DMP Path in (x,y,z)
+  std::vector<Eigen::Vector3d> dmp_search_region_;  // Search region of DMP
 
   /* Params */
   JPSParams params_;
 
   std::shared_ptr<GridMap> map_;
 
-  // std::shared_ptr<path_finding_util::GraphSearch> jps_planner_;
   std::shared_ptr<JPSPlanner3D> jps_planner_;
   
   Timer tm_jps_map_{"jps_map", 3};
   Timer tm_jps_plan_{"jps_plan", 3};
   Timer tm_dmp_plan_{"dmp_plan", 3};
 
-  Timer tm_a_{"a",2};
-  Timer tm_b_{"b",2};
-  Timer tm_c_{"c",2};
-  Timer tm_d_{"d",2};
+  // Timer tm_a_{"a",2};
+  // Timer tm_b_{"b",2};
+  // Timer tm_c_{"c",2};
+  // Timer tm_d_{"d",2};
 
 }; // class JPSWrapper
 

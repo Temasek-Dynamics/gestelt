@@ -4,10 +4,15 @@ PolytopeSFC::PolytopeSFC(std::shared_ptr<GridMap> map, const PolytopeSFCParams& 
     map_(map), params_(sfc_params)
 {}   
 
+void PolytopeSFC::addPublishers(
+    std::unordered_map<std::string, ros::Publisher> &publisher_map)
+{
+    poly_sfc_pub_ = publisher_map["sfc/poly"];
+}
+
 // Need to use eigen aligned allocator
 // TODO: need to postprocess path before feeding to generateSFC
 // TODO: Change poly_const_vec to poly_constr_vec
-// CHANGE voxel_size to resolution
 
 bool PolytopeSFC::generateSFC(const std::vector<Eigen::Vector3d> &path_3d)
 {
@@ -36,7 +41,7 @@ bool PolytopeSFC::generateSFC(const std::vector<Eigen::Vector3d> &path_3d)
 
     // define vector for visualization of the polyhedra
     // vec_E<T> = std::vector<T, Eigen::aligned_allocator<T>>;
-    std::vector<Polyhedron3D> poly_vec_new;
+    std::vector<Polyhedron3D, Eigen::aligned_allocator<Polyhedron3D>> poly_vec_new;
 
     // keep the polyhedra that were used in the previous optimization for the
     // trajectory generation for feasibility guarantees
@@ -71,8 +76,8 @@ bool PolytopeSFC::generateSFC(const std::vector<Eigen::Vector3d> &path_3d)
     Eigen::Vector3d origin = map_util->getOrigin();
     Eigen::Vector3i dim = map_util->getDim();
 
-    /* generate new polyhedra using the global path until poly_hor_ */ 
-    while (n_poly < poly_hor_) { // While num poly < max poly to consider
+    /* generate new polyhedra using the global path until the number of polygons exceed poly_hor */ 
+    while (n_poly < params_.poly_hor) { // While num poly < max poly to consider
         Eigen::Vector3d next_pt(path_curr[path_idx][0], path_curr[path_idx][1], path_curr[path_idx][2]);
         Eigen::Vector3d diff = (next_pt - curr_pt);
         double dist_to_next_pt = diff.norm();   // Euclidean distance to next point
@@ -132,7 +137,6 @@ bool PolytopeSFC::generateSFC(const std::vector<Eigen::Vector3d> &path_3d)
         }
 
         /* generate polyhedron */
-        // bool use_cvx_new = toumieh_cvx_decomp_;    
         // // first check if the seed is constrained from a given direction
         // if (    (map_util->isOccupied(Eigen::Vector3i(seed[0] - 1, seed[1], seed[2])) 
         //             && map_util->isOccupied(Eigen::Vector3i(seed[0] + 1, seed[1], seed[2]))) // +- x
@@ -141,7 +145,7 @@ bool PolytopeSFC::generateSFC(const std::vector<Eigen::Vector3d> &path_3d)
         //     ||  (map_util->isOccupied(Eigen::Vector3i(seed[0], seed[1], seed[2] - 1)) 
         //             && map_util->isOccupied(Eigen::Vector3i(seed[0], seed[1], seed[2] + 1)))) // +- z
         // {
-        //     cvx_decomp_type_ = true;
+        //     cvx_decomp_type = CVXDecompType::TOUMIEH_NEW;
         // }
 
         // first push seed into the new poly_seeds list
@@ -156,20 +160,20 @@ bool PolytopeSFC::generateSFC(const std::vector<Eigen::Vector3d> &path_3d)
         // Check if use voxel grid based method or liu's method
         Polyhedron3D poly_new;
         std::vector<int8_t> grid_data = map_->getData();
-        switch (cvx_decomp_type_){
+        switch (params_.cvx_decomp_type){
             case CVXDecompType::LIU :
                 // Do nothing 
                 break;
             case CVXDecompType::TOUMIEH_OLD : 
                 // use original method
                 poly_new = convex_decomp_lib::GetPolyOcta3D(seed, grid_data, dim,
-                                                            n_it_decomp_, voxel_size,
+                                                            params_.n_it_decomp, voxel_size,
                                                             -(n_poly + 1), origin);
                 break;
             case CVXDecompType::TOUMIEH_NEW :
                 // if use new method
                 poly_new = convex_decomp_lib::GetPolyOcta3DNew(
-                    seed, grid_data, dim, n_it_decomp_, voxel_size, -(n_poly + 1),
+                    seed, grid_data, dim, params_.n_it_decomp, voxel_size, -(n_poly + 1),
                     origin);
                 break;
         }
@@ -190,12 +194,24 @@ bool PolytopeSFC::generateSFC(const std::vector<Eigen::Vector3d> &path_3d)
 
         // increment the number of polyhedra
         n_poly++;
-    } // end "while (n_poly < poly_hor_)"
+    } // end "while (n_poly < params_.poly_hor)"
 
     // save polyhedra and seeds
     poly_vec_ = poly_vec_new;
     poly_const_vec_ = poly_const_vec_new;
     poly_seeds_ = poly_seeds_new;
 
+    PublishPolyhedra(poly_vec_);
+
     return planning_success;
 }   
+
+void PolytopeSFC::PublishPolyhedra(
+    const std::vector<Polyhedron3D, Eigen::aligned_allocator<Polyhedron3D>>& poly_vec) {
+    // create polyhedra message
+    decomp_ros_msgs::PolyhedronArray poly_msg = 
+        DecompROS::polyhedron_array_to_ros(poly_vec);
+    poly_msg.header.frame_id = params_.world_frame;
+
+    poly_sfc_pub_.publish(poly_msg);
+}

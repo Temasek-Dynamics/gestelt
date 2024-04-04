@@ -3,6 +3,7 @@ project(logger)
 
 set(CMAKE_BUILD_TYPE "Release")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g")
+
 add_compile_options(-std=c++17)
 
 # set(ROS_LIBRARIES

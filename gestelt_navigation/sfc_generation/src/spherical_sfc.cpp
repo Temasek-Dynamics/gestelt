@@ -4,21 +4,16 @@ SphericalSFC::SphericalSFC(std::shared_ptr<GridMap> grid_map, const SphericalSFC
     grid_map_(grid_map), sfc_params_(sfc_params)
 {}   
 
-void SphericalSFC::addVizPublishers(
-    ros::Publisher& p_cand_viz_pub, 
-    ros::Publisher& dist_viz_pub, 
-    ros::Publisher& sfc_spherical_viz_pub,
-    ros::Publisher&  sfc_waypoints_viz_pub,
-    ros::Publisher& samp_dir_vec_pub,
-    ros::Publisher& intxn_spheres_pub
+void SphericalSFC::addPublishers(
+    std::unordered_map<std::string, ros::Publisher >& publisher_map
     )
 {
-    p_cand_viz_pub_ = p_cand_viz_pub;
-    dist_viz_pub_ = dist_viz_pub;
-    samp_dir_vec_pub_ = samp_dir_vec_pub;
-    sfc_spherical_viz_pub_ = sfc_spherical_viz_pub;
-    sfc_waypoints_viz_pub_ = sfc_waypoints_viz_pub;
-    intxn_spheres_pub_ = intxn_spheres_pub;
+    p_cand_viz_pub_ =        publisher_map["sfc_cand_points"];
+    dist_viz_pub_ =          publisher_map["sfc_dist"];
+    samp_dir_vec_pub_ =      publisher_map["sfc_spherical"];
+    sfc_spherical_viz_pub_ = publisher_map["sfc_waypoints"];
+    sfc_waypoints_viz_pub_ = publisher_map["sfc_samp_dir_vec"];
+    intxn_spheres_pub_ =     publisher_map["sfc_intxn_spheres"];
 }
 
 void SphericalSFC::reset()

@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package format="2">
   <name>global_planner</name>
-  <version>0.0.0</version>
+  <version>0.0.1</version>
   <description>The global_planner package</description>
 
   <maintainer email="johntgz@nus.edu.sg">john tan</maintainer>

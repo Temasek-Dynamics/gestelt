@@ -411,6 +411,9 @@ void GridMap::updateLocalMap(){
       continue;
     }
 
+    // Inflate voxel
+    
+
     // Convert to voxel index. This is relative to mp_.local_map_origin_.
     Eigen::Vector3i vox_idx_3d = ((obs_gbl_pos - getLocalOrigin()) / getRes() - Eigen::Vector3d::Constant(0.5) ).cast<int>() ; 
 

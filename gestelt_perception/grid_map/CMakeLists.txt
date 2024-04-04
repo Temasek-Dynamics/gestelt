@@ -1,9 +1,10 @@
 cmake_minimum_required(VERSION 3.0.2)
 project(grid_map)
 
-# set(CMAKE_BUILD_TYPE "Release")
+set(CMAKE_BUILD_TYPE "Release")
 add_compile_options(-std=c++17)
-# set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g")
+
 
 set(ROS_LIBRARIES
     roscpp
