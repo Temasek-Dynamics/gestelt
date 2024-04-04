@@ -121,7 +121,7 @@ private:
    */
   bool generateFrontEndPlan(
     const Eigen::Vector3d& start_pos, const Eigen::Vector3d& goal_pos,
-    SphericalSFC::SFCTrajectory& sfc_traj);
+    SSFC::SFCTrajectory& sfc_traj);
 
   /**
    * @brief Generate a back-end plan
@@ -138,7 +138,7 @@ private:
   bool generateBackEndPlan( 
     const Eigen::Vector3d& start_pos, const Eigen::Vector3d& start_vel, 
     const Eigen::Vector3d& goal_pos, 
-    SphericalSFC::SFCTrajectory& sfc_traj,
+    SSFC::SFCTrajectory& sfc_traj,
     poly_traj::MinJerkOpt& optimized_mjo,
     const int& num_retries=5);
 
@@ -219,7 +219,7 @@ private:
       waypoints_.nextWP()(0), waypoints_.nextWP()(1), waypoints_.nextWP()(2))
     );
 
-    SphericalSFC::SFCTrajectory sfc_traj;
+    SSFC::SFCTrajectory sfc_traj;
 
     generateFrontEndPlan(cur_pos_, waypoints_.nextWP(), sfc_traj);
   }
@@ -332,6 +332,7 @@ private: /* ROS subs, pubs and timers*/
   ros::Publisher closed_list_viz_pub_; // Visualization of closed list
 
   /* Visualization for SFC*/
+  std::unordered_map<std::string, ros::Publisher> front_end_publisher_map_;
   std::unordered_map<std::string, ros::Publisher> sfc_publisher_map_;
   // ros::Publisher sfc_spherical_viz_pub_; // Visualization of SFC spheres
   // ros::Publisher sfc_p_cand_viz_pub_; // Visualization of SFC sampling points
@@ -356,9 +357,7 @@ private: /* Planner members */
 
   /* Planner */
   // std::unique_ptr<AStarPlanner> front_end_planner_; // Front-end planner
-  std::unique_ptr<JPSWrapper> front_end_planner_; // Front-end planner
-  // std::unique_ptr<SphericalSFC> sfc_generation_; // Spherical Safe flight corridor generator
-  // std::unique_ptr<PolytopeSFC> sfc_generation_; // Polytope Safe flight corridor generator
+  std::unique_ptr<PlannerBase> front_end_planner_; // Front-end planner
   std::unique_ptr<SFCBase> sfc_generation_; // Safe flight corridor generator
 
   std::unique_ptr<ego_planner::PolyTrajOptimizer> back_end_optimizer_; // Polynomial trajectory optimizer
@@ -379,8 +378,8 @@ private: /* Params */
   int traj_id_{0}; // Trajectory id that increments with every planning cycle
 
   /* planner parameters */
-  JPSWrapper::JPSParams front_end_params_; 
-  // AStarPlanner::AStarParams front_end_params_; 
+  JPSWrapper::JPSParams jps_params_; 
+  AStarPlanner::AStarParams astar_params_; 
 
   SphericalSFC::SphericalSFCParams sph_sfc_params_; 
   PolytopeSFC::PolytopeSFCParams ply_sfc_params_;   

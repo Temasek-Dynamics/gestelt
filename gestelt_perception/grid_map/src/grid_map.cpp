@@ -215,6 +215,8 @@ void GridMap::readROSParams(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   pnh.param("grid_map/occ_grid/resolution", mp_.resolution_, -1.0);
   pnh.param("grid_map/occ_grid/inflation", mp_.inflation_, -1.0);
 
+  mp_.inf_num_voxels_ = std::ceil(mp_.inflation_/mp_.resolution_);
+
   /* Point cloud filter */
   pnh.param("grid_map/filter/depth_stride", mp_.depth_stride_, 4);
   pnh.param("grid_map/filter/downsample_cloud", mp_.downsample_cloud_, false);
@@ -412,21 +414,30 @@ void GridMap::updateLocalMap(){
     }
 
     // Inflate voxel
-    
 
     // Convert to voxel index. This is relative to mp_.local_map_origin_.
     Eigen::Vector3i vox_idx_3d = ((obs_gbl_pos - getLocalOrigin()) / getRes() - Eigen::Vector3d::Constant(0.5) ).cast<int>() ; 
 
-    size_t vox_idx_1d = vox_idx_3d(0)
-                    + vox_idx_3d(1) * mp_.local_map_num_voxels_(0) 
-                    + vox_idx_3d(2) * mp_.local_map_num_voxels_(0) * mp_.local_map_num_voxels_(1);
+    // Inflate voxel by inflation distance
+    for(int x = vox_idx_3d(0) - mp_.inf_num_voxels_; x <= vox_idx_3d(0) + mp_.inf_num_voxels_; x++)
+    {
+      for(int y = vox_idx_3d(1) - mp_.inf_num_voxels_; y <= vox_idx_3d(1) + mp_.inf_num_voxels_; y++)
+      {
+        for(int z = vox_idx_3d(2) - mp_.inf_num_voxels_; z <= vox_idx_3d(2) + mp_.inf_num_voxels_; z++)
+        {
+          size_t vox_idx_1d =   x
+                              + y * mp_.local_map_num_voxels_(0) 
+                              + z * mp_.local_map_num_voxels_(0) * mp_.local_map_num_voxels_(1);
 
-    if (vox_idx_1d >= local_map_data_.size()) {
-      std::cout << "Exceed map size of " << local_map_data_.size() << ",idx " << vox_idx_1d << std::endl;
-      throw std::runtime_error( "Index exceeded map size when updating local map!");
+          if (vox_idx_1d >= local_map_data_.size() || vox_idx_1d < 0) {
+            continue; // Exceeded map size
+          }
+
+          local_map_data_[vox_idx_1d] = 100;
+        }
+      }
     }
 
-    local_map_data_[vox_idx_1d] = 100;
   }
 }
 

@@ -10,8 +10,16 @@ JPSWrapper::JPSWrapper(std::shared_ptr<GridMap> map, const JPSParams& params):
 void JPSWrapper::reset()
 {
     path_jps_.clear();
+    path_jps_raw_.clear();
     path_dmp_.clear();
+    path_dmp_raw_.clear();
     dmp_search_region_.clear();
+}
+
+void JPSWrapper::addPublishers(
+    std::unordered_map<std::string, ros::Publisher> &publisher_map)
+{
+    // closed_list_viz_pub_ = publisher_map["front_end/closed_list"];
 }
 
 bool JPSWrapper::generatePlan(const Eigen::Vector3d &start_pos, const Eigen::Vector3d &goal_pos)
@@ -38,15 +46,12 @@ bool JPSWrapper::generatePlan(const Eigen::Vector3d &start_pos, const Eigen::Vec
         }
     tm_jps_plan_.stop(params_.print_timers);
 
-    auto path_jps_raw = jps_planner_->getRawPath();
-    for (auto& pt : path_jps_raw){
+    for (auto& pt : jps_planner_->getRawPath()){
         path_jps_raw_.push_back(pt);
     }
-    auto path_jps = jps_planner_->getPath();
-    for (auto& pt : path_jps){
+    for (auto& pt : jps_planner_->getPath()){
         path_jps_.push_back(pt);
     }
-
 
     if (params_.use_dmp){
         tm_dmp_plan_.start();
@@ -63,14 +68,18 @@ bool JPSWrapper::generatePlan(const Eigen::Vector3d &start_pos, const Eigen::Vec
             dmp.setMap(map_util, start_pos); 
 
             // Plan DMP path
-            if (!dmp.iterativeComputePath( start_pos, goal_pos, path_jps, 1)){ // Compute the path given the jps path
+            if (!dmp.iterativeComputePath( start_pos, goal_pos, jps_planner_->getRawPath(), 1)){ // Compute the path given the jps path
                 std::cout << "[Front-End] JPS Planner failed!" << std::endl;
                 return false;
             }
         tm_dmp_plan_.stop(params_.print_timers);
 
-        for (auto& pt : dmp.getRawPath()){
+        // TODO: Figure out way to assign vectors without iteration
+        for (auto& pt : dmp.getPath()){
             path_dmp_.push_back(pt);
+        }
+        for (auto& pt : dmp.getRawPath()){
+            path_dmp_raw_.push_back(pt);
         }
         // Get search region
         for (auto& pt : dmp.getSearchRegion()) {

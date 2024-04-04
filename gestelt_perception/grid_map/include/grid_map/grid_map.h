@@ -64,10 +64,11 @@ struct MappingParameters
   Eigen::Vector3i global_map_num_voxels_; //  Size of global occupancy grid (no. of voxels)
   Eigen::Vector3i local_map_num_voxels_; //  Size of local occupancy grid (no. of voxels)
 
-  double resolution_; // Voxel size for occupancy grid without inflation                  
-  double inflation_; // Voxel size for occupancy grid with inflation
-  int pose_type_; // Type of pose input (pose or odom)
-  int sensor_type_; // Type of sensor (cloud or depth image)
+  double resolution_;   // Also defined as the size of each individual voxel                 
+  double inflation_;    // Inflation in meters
+  int inf_num_voxels_;  // Inflation in number of voxels, = inflation_/resolution_ 
+  int pose_type_;       // Type of pose input (pose or odom)
+  int sensor_type_;     // Type of sensor (cloud or depth image)
 
   double pose_timeout_; // Timeout for pose update before emergency stop is activated
 

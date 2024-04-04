@@ -8,12 +8,12 @@ void SphericalSFC::addPublishers(
     std::unordered_map<std::string, ros::Publisher >& publisher_map
     )
 {
-    p_cand_viz_pub_ =        publisher_map["sfc_cand_points"];
-    dist_viz_pub_ =          publisher_map["sfc_dist"];
-    samp_dir_vec_pub_ =      publisher_map["sfc_spherical"];
-    sfc_spherical_viz_pub_ = publisher_map["sfc_waypoints"];
-    sfc_waypoints_viz_pub_ = publisher_map["sfc_samp_dir_vec"];
-    intxn_spheres_pub_ =     publisher_map["sfc_intxn_spheres"];
+    p_cand_viz_pub_ =           publisher_map["sfc_cand_points"];   // Marker
+    dist_viz_pub_ =             publisher_map["sfc_dist"];          // MarkerArray
+    sfc_spherical_viz_pub_ =    publisher_map["sfc_spherical"];     // MarkerArray
+    sfc_waypoints_viz_pub_ =    publisher_map["sfc_waypoints"];     // Marker
+    samp_dir_vec_pub_ =         publisher_map["sfc_samp_dir_vec"];  // MarkerArray
+    intxn_spheres_pub_ =        publisher_map["sfc_intxn_spheres"]; // MarkerArray
 }
 
 void SphericalSFC::reset()
@@ -86,8 +86,8 @@ bool SphericalSFC::generateSFC(const std::vector<Eigen::Vector3d> &path)
 
     auto a = std::chrono::high_resolution_clock::now();
 
-    Sphere B_starting; // starting sphere
-    Sphere B_cur; // current sphere being considered
+    SSFC::Sphere B_starting; // starting sphere
+    SSFC::Sphere B_cur; // current sphere being considered
 
     size_t path_idx_cur = 0; // Current index of guide path
 
@@ -217,7 +217,7 @@ bool SphericalSFC::generateSFC(const std::vector<Eigen::Vector3d> &path)
     return planning_success;
 }   
 
-bool SphericalSFC::generateFreeSphere(const Eigen::Vector3d& center, Sphere& B)
+bool SphericalSFC::generateFreeSphere(const Eigen::Vector3d& center, SSFC::Sphere& B)
 {
     Eigen::Vector3d obs_pos;
     double R; // R: Radius of largest possible free sphere from center, i.e. distance to nearest obstacle
@@ -236,7 +236,7 @@ bool SphericalSFC::generateFreeSphere(const Eigen::Vector3d& center, Sphere& B)
 }
 
 bool SphericalSFC::getForwardPointOnPath(
-    const std::vector<Eigen::Vector3d> &path, size_t& start_idx, const Sphere& B_prev)
+    const std::vector<Eigen::Vector3d> &path, size_t& start_idx, const SSFC::Sphere& B_prev)
 {
     for (size_t i = start_idx; i < path.size(); i++){
         // Iterate forward through the guide path to find a point outside the sphere 
@@ -251,13 +251,13 @@ bool SphericalSFC::getForwardPointOnPath(
     return false;
 }
 
-bool SphericalSFC::BatchSample(const Eigen::Vector3d& pt_guide, Sphere& B_cur)
+bool SphericalSFC::BatchSample(const Eigen::Vector3d& pt_guide, SSFC::Sphere& B_cur)
 {
     auto a = std::chrono::high_resolution_clock::now();
 
     // Priority queue of candidate spheres sorted by highest score first
-    std::priority_queue<std::shared_ptr<Sphere>, std::vector<std::shared_ptr<Sphere>>, Sphere::CompareScorePtr> B_cand_pq = 
-        std::priority_queue<std::shared_ptr<Sphere>, std::vector<std::shared_ptr<Sphere>>, Sphere::CompareScorePtr>();
+    std::priority_queue<std::shared_ptr<SSFC::Sphere>, std::vector<std::shared_ptr<SSFC::Sphere>>, SSFC::Sphere::CompareScorePtr> B_cand_pq = 
+        std::priority_queue<std::shared_ptr<SSFC::Sphere>, std::vector<std::shared_ptr<SSFC::Sphere>>, SSFC::Sphere::CompareScorePtr>();
 
     std::vector<Eigen::Vector3d> p_cand_vec; // vector of candidate points
 
@@ -299,14 +299,14 @@ bool SphericalSFC::BatchSample(const Eigen::Vector3d& pt_guide, Sphere& B_cur)
     double d2_dur{0};
     double d3_dur{0};
 
-    std::vector<SphericalSFC::Sphere> sampled_spheres; // Vector of all sampled spheres used for debugging
+    std::vector<SSFC::Sphere> sampled_spheres; // Vector of all sampled spheres used for debugging
 
     for (auto& p_cand: p_cand_vec){
 
         // Generate candidate sphere, calculate score and add to priority queue
         auto d1 = std::chrono::high_resolution_clock::now();
 
-        std::shared_ptr<Sphere> B_cand = std::make_shared<Sphere>();
+        std::shared_ptr<SSFC::Sphere> B_cand = std::make_shared<SSFC::Sphere>();
         
         if (!generateFreeSphere(p_cand, *B_cand)){
             continue;
@@ -320,12 +320,12 @@ bool SphericalSFC::BatchSample(const Eigen::Vector3d& pt_guide, Sphere& B_cur)
         // 3) Cand sphere is not completely contained within previous sphere
         // 4) Cand sphere is intersecting the previous sphere
 
-        // 1) Sphere must contain guide point
+        // 1) SSFC::Sphere must contain guide point
         // if (!B_cand->contains(pt_guide)){
         //     continue;
         // }
 
-        // 2) Sphere is bounded by a minimum and maximum volume 
+        // 2) SSFC::Sphere is bounded by a minimum and maximum volume 
         if (B_cand->getVolume() < sfc_params_.min_sphere_vol || B_cand->getVolume() > sfc_params_.max_sphere_vol) 
         {
             // If candidate sphere's volume is below minimum or maximum volume
@@ -398,7 +398,7 @@ bool SphericalSFC::BatchSample(const Eigen::Vector3d& pt_guide, Sphere& B_cur)
         return false;
     }
 
-    B_cur = Sphere(B_cand_pq.top());
+    B_cur = SSFC::Sphere(B_cand_pq.top());
 
     // std::cout << "Assigned next candidate sphere of radius " << B_cand_pq.top()->radius 
     //             << ", with volume " << B_cand_pq.top()->getVolume() 
@@ -416,7 +416,7 @@ void SphericalSFC::transformPoints(std::vector<Eigen::Vector3d>& pts, Eigen::Vec
     }
 }
 
-double SphericalSFC::computeCandSphereScore(Sphere& B_cand, Sphere& B_prev)
+double SphericalSFC::computeCandSphereScore(SSFC::Sphere& B_cand, SSFC::Sphere& B_prev)
 {      
     std::vector<double> query_pt(3);
     query_pt[0] = B_cand.center(0);
@@ -435,7 +435,7 @@ double SphericalSFC::computeCandSphereScore(Sphere& B_cand, Sphere& B_prev)
         + sfc_params_.W_progress * progress;
 }
 
-double SphericalSFC::getIntersectingVolume(Sphere& B_a, Sphere& B_b)
+double SphericalSFC::getIntersectingVolume(SSFC::Sphere& B_a, SSFC::Sphere& B_b)
 {
     if (!isIntersect(B_a, B_b)){ 
         return -1;
@@ -450,13 +450,13 @@ double SphericalSFC::getIntersectingVolume(Sphere& B_a, Sphere& B_b)
     return vol_intersect;
 }
 
-bool SphericalSFC::isIntersect(const Sphere& B_a, const Sphere& B_b)
+bool SphericalSFC::isIntersect(const SSFC::Sphere& B_a, const SSFC::Sphere& B_b)
 {
     // Check for non-intersection
     return (B_a.center - B_b.center).norm() < (B_a.radius + B_b.radius);
 }
 
-Eigen::Vector3d SphericalSFC::getIntersectionCenter(const Sphere& B_a, const Sphere& B_b)
+Eigen::Vector3d SphericalSFC::getIntersectionCenter(const SSFC::Sphere& B_a, const SSFC::Sphere& B_b)
 {   
     Eigen::Vector3d dir_vec = B_b.center - B_a.center; 
     double r_a = B_a.radius, r_b = B_b.radius;
@@ -471,7 +471,7 @@ Eigen::Vector3d SphericalSFC::getIntersectionCenter(const Sphere& B_a, const Sph
     return pt_intxn;
 }
 
-double SphericalSFC::getIntersectionRadius(const Sphere& B_a, const Sphere& B_b)
+double SphericalSFC::getIntersectionRadius(const SSFC::Sphere& B_a, const SSFC::Sphere& B_b)
 {   
     double r_a = B_a.radius, r_b = B_b.radius;
 
@@ -482,7 +482,7 @@ double SphericalSFC::getIntersectionRadius(const Sphere& B_a, const Sphere& B_b)
     return intxn_radius;
 }
 
-void SphericalSFC::postProcessSpheres(std::vector<SphericalSFC::Sphere>& sfc_spheres)
+void SphericalSFC::postProcessSpheres(std::vector<SSFC::Sphere>& sfc_spheres)
 {
     // Check for overlap between spheres and remove them
     // For example 
@@ -490,7 +490,7 @@ void SphericalSFC::postProcessSpheres(std::vector<SphericalSFC::Sphere>& sfc_sph
     //      then move on to check 0, 2, 3., and so on until no intersection is detected, 
     //      then move on to check index 2
 
-    std::vector<SphericalSFC::Sphere> sfc_spheres_proc; // post-processed
+    std::vector<SSFC::Sphere> sfc_spheres_proc; // post-processed
 
     for (size_t i = 0; i < sfc_spheres.size(); i++) // First sphere to compare from
     {
@@ -517,10 +517,10 @@ void SphericalSFC::postProcessSpheres(std::vector<SphericalSFC::Sphere>& sfc_sph
 }
 
 void SphericalSFC::constructSFCTrajectory(
-    const std::vector<SphericalSFC::Sphere>& sfc_spheres, 
+    const std::vector<SSFC::Sphere>& sfc_spheres, 
     const Eigen::Vector3d& start_pos, 
     const Eigen::Vector3d& goal_pos, 
-    SphericalSFC::SFCTrajectory& sfc_traj)
+    SSFC::SFCTrajectory& sfc_traj)
 {
     size_t num_segs = sfc_spheres.size(); // Number of segments
     size_t num_wps = sfc_spheres.size() + 1; // Number of waypoints
@@ -605,7 +605,7 @@ void SphericalSFC::constructSFCTrajectory(
         }
 
         // Construct intersection spheres for visualization
-        sfc_traj.intxn_spheres[i] = Sphere(sfc_traj.waypoints[i+1], sfc_traj.intxn_circle_radius[i]);
+        sfc_traj.intxn_spheres[i] = SSFC::Sphere(sfc_traj.waypoints[i+1], sfc_traj.intxn_circle_radius[i]);
     }
 
 
@@ -745,7 +745,7 @@ void SphericalSFC::publishVizPoints(
 }
 
 void SphericalSFC::publishVizIntxnSpheres(
-    const std::vector<SphericalSFC::Sphere>& sfc_spheres, 
+    const std::vector<SSFC::Sphere>& sfc_spheres, 
     ros::Publisher& publisher, const std::string& frame_id)  
 {
     visualization_msgs::MarkerArray sfc_spheres_marker_arr;
@@ -760,7 +760,7 @@ void SphericalSFC::publishVizIntxnSpheres(
 }
 
 void SphericalSFC::publishVizSphericalSFC(  
-    const std::vector<SphericalSFC::Sphere>& sfc_spheres, 
+    const std::vector<SSFC::Sphere>& sfc_spheres, 
     ros::Publisher& publisher, const std::string& frame_id)  
 {
     visualization_msgs::MarkerArray sfc_spheres_marker_arr;

@@ -21,14 +21,23 @@ void Navigator::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   visualization_ = std::make_shared<ego_planner::PlanningVisualization>(nh);
 
   // Initialize front end planner 
-  // front_end_planner_ = std::make_unique<AStarPlanner>(map_, front_end_params_);
-  // front_end_planner_->addPublishers(closed_list_viz_pub_);
-  front_end_planner_ = std::make_unique<JPSWrapper>(map_, front_end_params_);
+  if (front_end_type_ == FrontEndType::JPS_AND_DMP){
+    front_end_planner_ = std::make_unique<JPSWrapper>(map_, jps_params_);
+  }
+  else if (front_end_type_ == FrontEndType::ASTAR){
+    front_end_planner_ = std::make_unique<AStarPlanner>(map_, astar_params_);
+  }
+  front_end_planner_->addPublishers(front_end_publisher_map_);
 
   // Initialize safe flight corridor generation
-  sfc_generation_ = std::make_unique<PolytopeSFC>(map_, ply_sfc_params_);
-  // sfc_generation_ = std::make_unique<SphericalSFC>(map_, sph_sfc_params_);
+  if (sfc_type_ == SFCType::POLYTOPE){
+    sfc_generation_ = std::make_unique<PolytopeSFC>(map_, ply_sfc_params_);
 
+  }
+  else if (sfc_type_ == SFCType::SPHERICAL) {
+    ROS_INFO("Spherical!");
+    sfc_generation_ = std::make_unique<SphericalSFC>(map_, sph_sfc_params_);
+  }
   sfc_generation_->addPublishers(sfc_publisher_map_);
 
   // Initialize own trajectory
@@ -65,27 +74,25 @@ void Navigator::initParams(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   
   /* Front end params */
 
-
   if (front_end_type_ == FrontEndType::JPS_AND_DMP){
-    pnh.param("front_end/jps/planner_verbose",    front_end_params_.planner_verbose, false);
-    pnh.param("front_end/jps/use_dmp",    front_end_params_.use_dmp, false);
+    pnh.param("front_end/jps/planner_verbose",    jps_params_.planner_verbose, false);
+    pnh.param("front_end/jps/use_dmp",    jps_params_.use_dmp, false);
     
-    pnh.param("front_end/jps/dmp_search_radius",    front_end_params_.dmp_search_rad, 0.5);
-    pnh.param("front_end/jps/dmp_potential_radius", front_end_params_.dmp_pot_rad, 1.0);
-    pnh.param("front_end/jps/dmp_collision_weight", front_end_params_.dmp_col_weight, 0.1);
-    pnh.param("front_end/jps/dmp_heuristic_weight", front_end_params_.dmp_heuristic_weight, 0.0);
-    pnh.param("front_end/jps/dmp_pow", front_end_params_.dmp_pow, 1);
+    pnh.param("front_end/jps/dmp_search_radius",    jps_params_.dmp_search_rad, 0.5);
+    pnh.param("front_end/jps/dmp_potential_radius", jps_params_.dmp_pot_rad, 1.0);
+    pnh.param("front_end/jps/dmp_collision_weight", jps_params_.dmp_col_weight, 0.1);
+    pnh.param("front_end/jps/dmp_heuristic_weight", jps_params_.dmp_heuristic_weight, 0.0);
+    pnh.param("front_end/jps/dmp_pow", jps_params_.dmp_pow, 1);
   }
   else if (front_end_type_ == FrontEndType::ASTAR){
-    pnh.param("front_end/a_star/max_iterations", front_end_params_.max_iterations, -1);
-    pnh.param("front_end/a_star/debug_viz", front_end_params_.debug_viz, false);
+    pnh.param("front_end/a_star/max_iterations", astar_params_.max_iterations, -1);
+    pnh.param("front_end/a_star/debug_viz", astar_params_.debug_viz, false);
 
-    pnh.param("front_end/a_star/tie_breaker", front_end_params_.tie_breaker, -1.0);
-    pnh.param("front_end/a_star/cost_function_type", front_end_params_.cost_function_type, 2);
+    pnh.param("front_end/a_star/tie_breaker", astar_params_.tie_breaker, -1.0);
+    pnh.param("front_end/a_star/cost_function_type", astar_params_.cost_function_type, 2);
   }
 
   /* SFC params */
-
   if (sfc_type_ == SFCType::POLYTOPE){
     pnh.param("sfc/poly/max_iterations", ply_sfc_params_.max_itr, -1);
     pnh.param("sfc/poly/debug_viz",      ply_sfc_params_.debug_viz, false);
@@ -154,7 +161,7 @@ void Navigator::initPublishers(ros::NodeHandle &nh, ros::NodeHandle &pnh)
 
   /* Front-end */
   front_end_plan_viz_pub_ = nh.advertise<visualization_msgs::Marker>("plan_viz", 10);
-  closed_list_viz_pub_ = nh.advertise<visualization_msgs::Marker>("closed_list_viz", 10);
+  front_end_publisher_map_["front_end/closed_list"] = nh.advertise<visualization_msgs::Marker>("closed_list_viz", 10);
 
   /* SFC */
   if (sfc_type_ == SFCType::POLYTOPE){
@@ -169,7 +176,7 @@ void Navigator::initPublishers(ros::NodeHandle &nh, ros::NodeHandle &pnh)
     sfc_publisher_map_["sfc_intxn_spheres"] =  nh.advertise<visualization_msgs::MarkerArray>("sfc_intxn_spheres", 10);
 
     spherical_sfc_traj_pub_ = nh.advertise<gestelt_msgs::SphericalSFCTrajectory>("front_end/sfc_trajectory", 10);
-    dbg_sfc_traj_pub_ = nh.advertise<gestelt_debug_msgs::SFCTrajectory>("sfc/debug_trajectory", 10, true);
+    // dbg_sfc_traj_pub_ = nh.advertise<gestelt_debug_msgs::SFCTrajectory>("sfc/debug_trajectory", 10, true);
   }
 
   if (debug_planning_){
@@ -306,7 +313,7 @@ bool Navigator::plan(
   const double& req_plan_time)
 {
   // Generate a front-end plan
-  SphericalSFC::SFCTrajectory sfc_traj;
+  SSFC::SFCTrajectory sfc_traj;
   if (!generateFrontEndPlan(start_pos, goal_pos, sfc_traj)){
     logError("Failed to generate front end plan!");
     return false;
@@ -347,7 +354,7 @@ bool Navigator::plan(
 
 bool Navigator::generateFrontEndPlan(
   const Eigen::Vector3d& start_pos, const Eigen::Vector3d& goal_pos,
-  SphericalSFC::SFCTrajectory& sfc_traj)
+  SSFC::SFCTrajectory& sfc_traj)
 {
   // logInfo(str_fmt("generateFrontEndPlan() from (%f, %f, %f) to (%f, %f, %f)",
   //   start_pos(0), start_pos(1), start_pos(2),
@@ -364,13 +371,13 @@ bool Navigator::generateFrontEndPlan(
 
   tm_front_end_plan_.stop(verbose_planning_);
 
-  std::vector<Eigen::Vector3d> front_end_path = front_end_planner_->getPathPos();
-  std::vector<Eigen::Vector3d> dmp_search_region = front_end_planner_->getDMPSearchRegion();
+  std::vector<Eigen::Vector3d> front_end_path = front_end_planner_->getPathPosRaw();
+  // std::vector<Eigen::Vector3d> dmp_search_region = front_end_planner_->getDMPSearchRegion();
   // std::vector<Eigen::Vector3d> closed_list = front_end_planner_->getClosedList();
 
   // Publish front end plan
   viz_helper::publishFrontEndPath(front_end_path, "world", front_end_plan_viz_pub_) ;
-  viz_helper::publishClosedList(dmp_search_region, "world", closed_list_viz_pub_);
+  // viz_helper::publishClosedList(dmp_search_region, "world", closed_list_viz_pub_);
   // viz_helper::publishClosedList(closed_list, "world", closed_list_viz_pub_);
 
   /* UNCOMMENT EVERYTHING FROM HERE*/
@@ -385,7 +392,8 @@ bool Navigator::generateFrontEndPlan(
 
   tm_sfc_plan_.stop(verbose_planning_);
 
-  // sfc_traj = sfc_generation_->getSFCTrajectory();
+  // sfc_traj = sfc_generation_->getSSFCTrajectory();
+  // poly_sfc = sfc_generation_->getPolySFC();
 
   // gestelt_msgs::SphericalSFCTrajectory sfc_traj_msg;
 
@@ -411,7 +419,7 @@ bool Navigator::generateFrontEndPlan(
   // spherical_sfc_traj_pub_.publish(sfc_traj_msg);
   
   // Publish debug SFC trajectory
-  // std::vector<std::vector<SphericalSFC::Sphere>> sfc_sampled_spheres;
+  // std::vector<std::vector<SSFC::Sphere>> sfc_sampled_spheres;
   // std::vector<Eigen::Vector3d> samp_dir_vec, guide_points_vec;
 
   // sfc_generation_->getSFCTrajectoryDebug(
@@ -475,7 +483,7 @@ bool Navigator::generateFrontEndPlan(
 bool Navigator::generateBackEndPlan( 
   const Eigen::Vector3d& start_pos, const Eigen::Vector3d& start_vel, 
   const Eigen::Vector3d& goal_pos, 
-  SphericalSFC::SFCTrajectory& sfc_traj,
+  SSFC::SFCTrajectory& sfc_traj,
   poly_traj::MinJerkOpt& optimized_mjo,
   const int& num_retries)
 {

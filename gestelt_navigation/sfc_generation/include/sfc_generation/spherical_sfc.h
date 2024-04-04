@@ -21,73 +21,6 @@ class SphericalSFC : public SFCBase
 {
 public: // Public structs
 
-  struct Sphere {
-    double radius{-1.0};
-    double radius_sqr{-1.0};
-    Eigen::Vector3d center{0.0, 0.0, 0.0};
-    double score{-1.0};
-    double volume{-1.0};
-
-    Sphere(){}
-
-    Sphere(const double& x, const double& y, const double& z, const double& radius):
-      center(Eigen::Vector3d{x,y,z}), radius(radius), radius_sqr(radius*radius), volume(1.333 * M_PI * radius * radius * radius)
-    {}
-
-    Sphere(const Eigen::Vector3d& center, const double& radius):
-      center(center), radius(radius), radius_sqr(radius*radius), volume(1.333 * M_PI * radius * radius * radius)
-    {}
-
-    // Copy constructor from shared_ptr
-    Sphere(const std::shared_ptr<Sphere>& sphere): 
-      radius(sphere->radius), 
-      radius_sqr(sphere->radius_sqr), 
-      center(sphere->center),
-      score(sphere->score),
-      volume(sphere->volume)
-    {}
-
-    /**
-     * @brief Returns true if point is contained inside sphere (including at it's
-     * boundary). Else return false
-     * 
-     * @param pt point to check
-     * @return true 
-     * @return false 
-     */
-    bool contains(const Eigen::Vector3d& pt) const
-    {
-      return (this->center - pt).squaredNorm() <= this->radius_sqr;
-    }
-
-    double getDiameter() const
-    {
-      return this->radius * 2;
-    }
-
-    double getVolume() const
-    {
-      return this->volume;
-    }
-
-    void setRadius(const double& radius)
-    {
-      this->radius = radius;
-      this->radius_sqr = radius * radius;
-      this->volume = 1.333 * M_PI * radius * radius * radius;
-    }
-
-    // Comparison operator between pointers
-    struct CompareScorePtr
-    {
-      bool operator()(const std::shared_ptr<Sphere>& l_sphere, const std::shared_ptr<Sphere>& r_sphere)
-      {
-        return l_sphere->score < r_sphere->score;
-      }
-    };
-
-  }; // struct Sphere
-
   struct SamplerNormal {
     std::default_random_engine gen; 
 
@@ -196,112 +129,6 @@ public: // Public structs
 
   }; // struct SphericalSFCParams
 
-  struct SFCTrajectory{ // SFCTrajectory contains the spheres, trajectory waypoints and time allocation
-    SFCTrajectory(){} // Default constructor
-
-    /**
-     * @brief Clear all data structures
-     * 
-     */
-    void reset(){
-      spheres.clear();
-      segs_t_dur.clear();
-      waypoints.clear();
-    }
-
-    Eigen::Vector3d  getStartPos() const {
-      if (waypoints.size() < 2){
-        throw std::runtime_error("SFCTrajectory does not contain at least 2 waypoints");
-      }
-      return waypoints[0];
-    }
-
-    Eigen::Vector3d  getGoalPos() const {
-      if (waypoints.size() < 2){
-        throw std::runtime_error("SFCTrajectory does not contain at least 2 waypoints");
-      }
-      return waypoints.back();
-    }
-
-    std::vector<double> getSpheresRadii() const {
-      std::vector<double> spheres_radii;
-
-      for (auto sphere : spheres){
-        spheres_radii.push_back(sphere.radius);
-      }
-
-      return spheres_radii;
-    }
-
-    std::vector<Eigen::Vector3d> getSpheresCenter() const {
-      std::vector<Eigen::Vector3d> spheres_center;
-
-      for (auto sphere : spheres){
-        spheres_center.push_back(Eigen::Vector3d{sphere.center(0), sphere.center(1), sphere.center(2)});
-      }
-
-      return spheres_center;
-    }
-
-    Eigen::MatrixXd getInnerWaypoints() const {
-      if (waypoints.size() <= 2){
-        Eigen::MatrixXd inner_wps; // matrix of inner waypoints
-        return inner_wps;
-      }
-      Eigen::MatrixXd inner_wps(3, waypoints.size()-2); // matrix of inner waypoints
-      
-      for (size_t i = 1, inner_wp_idx = 0 ; i < waypoints.size()-1; i++, inner_wp_idx++){
-        inner_wps.col(inner_wp_idx) = waypoints[i];
-      }
-
-      return inner_wps;
-    }
-
-    Eigen::VectorXd getSegmentTimeDurations() const {
-      return Eigen::VectorXd::Map(segs_t_dur.data(), static_cast<Eigen::Index>(segs_t_dur.size()));
-    }
-
-    std::vector<Eigen::Vector3d> getIntxnPlaneVec() const{
-      return intxn_plane_vec;
-    }
-
-    std::vector<double> getIntxnPlaneDist() const{
-      return intxn_plane_dist;
-    }
-    std::vector<double> getIntxnCircleRadius() const{
-      return intxn_circle_radius;
-    }
-
-    std::vector<Eigen::Vector3d> getIntxnCenters() const {
-      if (waypoints.size() <= 2){
-        return waypoints;
-      }
-      std::vector<Eigen::Vector3d> inner_waypoints;      
-      inner_waypoints.resize(waypoints.size()-2);
-      
-      for (size_t i = 1, inner_wp_idx = 0 ; i < waypoints.size()-1; i++, inner_wp_idx++){
-        inner_waypoints[inner_wp_idx] = waypoints[i];
-      }
-
-      return inner_waypoints;
-    }
-
-    int getNumSegments() const{
-      return spheres.size();
-    }
-
-    std::vector<SphericalSFC::Sphere> spheres;  // Vector of Spheres 
-    std::vector<Eigen::Vector3d> waypoints;     // Vector of 3d waypoint positions {p1, p2, ... p_M+1}
-    std::vector<double> segs_t_dur;             // Vector of time durations of each segment {t_1, t_2, ..., t_M}
-
-    std::vector<SphericalSFC::Sphere> intxn_spheres;
-    std::vector<Eigen::Vector3d> intxn_plane_vec;       // Vector to center of spherical cap (the intersection between 2 spheres)
-    std::vector<double> intxn_plane_dist;       // Distance to center of spherical cap (the intersection between 2 spheres)
-    std::vector<double> intxn_circle_radius;       // Radius of intersection circle.
-
-
-  }; // struct SFCTrajectory
-
 public:
   SphericalSFC(std::shared_ptr<GridMap> grid_map, const SphericalSFCParams& sfc_params);
 
@@ -341,12 +168,18 @@ public:
 
   /* Getter methods */
 
-  SphericalSFC::SFCTrajectory const getSFCTrajectory(){
+  SSFC::SFCTrajectory const getSSFCTrajectory(){
     return sfc_traj_;
   }
 
+  // NOT USED: This function is implemented to fulfill the virtual methods of the base class 
+  std::vector<Polyhedron3D, Eigen::aligned_allocator<Polyhedron3D>> getPolySFC() {
+    std::vector<Polyhedron3D, Eigen::aligned_allocator<Polyhedron3D>> poly_vec;
+    return poly_vec;
+  }
+
   void getSFCTrajectoryDebug(
-    std::vector<std::vector<SphericalSFC::Sphere>>& sfc_sampled_spheres,
+    std::vector<std::vector<SSFC::Sphere>>& sfc_sampled_spheres,
     std::vector<Eigen::Vector3d>& samp_dir_vec,
     std::vector<Eigen::Vector3d>& guide_points_vec)
   {
@@ -373,7 +206,7 @@ private: // Private methods
    * @return true 
    * @return false 
    */
-  bool generateFreeSphere(const Eigen::Vector3d& center, Sphere& B);
+  bool generateFreeSphere(const Eigen::Vector3d& center, SSFC::Sphere& B);
 
   /**
    * @brief Get nearest point on guide path outside the given sphere
@@ -385,7 +218,7 @@ private: // Private methods
    * @return false 
    */
   bool getForwardPointOnPath(
-    const std::vector<Eigen::Vector3d> &path, size_t& start_idx, const Sphere& B_prev);
+    const std::vector<Eigen::Vector3d> &path, size_t& start_idx, const SSFC::Sphere& B_prev);
 
   /**
    * @brief Sample a batch of spheres
@@ -395,7 +228,7 @@ private: // Private methods
    * @return true 
    * @return false 
    */
-  bool BatchSample(const Eigen::Vector3d& pt_guide, Sphere& B_cur);
+  bool BatchSample(const Eigen::Vector3d& pt_guide, SSFC::Sphere& B_cur);
 
   /**
    * @brief Get the center of the curve of intersection made between spheres B_a and B_b
@@ -404,7 +237,7 @@ private: // Private methods
    * @param B_b 
    * @return Eigen::Vector3d 
    */
-  Eigen::Vector3d getIntersectionCenter(const Sphere& B_a, const Sphere& B_b);
+  Eigen::Vector3d getIntersectionCenter(const SSFC::Sphere& B_a, const SSFC::Sphere& B_b);
 
   /**
    * @brief Get the radius of circle of intersection between 2 spheres
@@ -413,14 +246,14 @@ private: // Private methods
    * @param B_b 
    * @return double 
    */
-  double getIntersectionRadius(const Sphere& B_a, const Sphere& B_b);
+  double getIntersectionRadius(const SSFC::Sphere& B_a, const SSFC::Sphere& B_b);
 
   /**
    * @brief Post process spheres to remove any overlap
    * 
    * @param sfc_spheres 
    */
-  void postProcessSpheres(std::vector<SphericalSFC::Sphere>& sfc_spheres);
+  void postProcessSpheres(std::vector<SSFC::Sphere>& sfc_spheres);
 
   /**
    * @brief Compute the score of the candidate sphere, given the previous sphere in the SFC
@@ -429,7 +262,7 @@ private: // Private methods
    * @param B_prev 
    * @return double 
    */
-  double computeCandSphereScore(Sphere& B_cand, Sphere& B_prev);
+  double computeCandSphereScore(SSFC::Sphere& B_cand, SSFC::Sphere& B_prev);
 
   /**
    * @brief Transform points about the origin
@@ -447,7 +280,7 @@ private: // Private methods
    * @param B_b 
    * @return double Returns -1 if 2 spheres do not intersect, else return volume of intersection 
    */
-  double getIntersectingVolume(Sphere& B_a, Sphere& B_b);
+  double getIntersectingVolume(SSFC::Sphere& B_a, SSFC::Sphere& B_b);
 
   /**
    * @brief Returns true if both spheres are intersecting, else return false
@@ -457,7 +290,7 @@ private: // Private methods
    * @return true 
    * @return false 
    */
-  bool isIntersect(const Sphere& B_a, const Sphere& B_b);
+  bool isIntersect(const SSFC::Sphere& B_a, const SSFC::Sphere& B_b);
 
   /**
    * @brief Get rotation matrix that aligns vector z to vector d
@@ -476,10 +309,10 @@ private: // Private methods
    * @param sfc_traj 
    */
   void constructSFCTrajectory(
-    const std::vector<SphericalSFC::Sphere>& sfc_spheres, 
+    const std::vector<SSFC::Sphere>& sfc_spheres, 
     const Eigen::Vector3d& start_pos, 
     const Eigen::Vector3d& goal_pos, 
-    SphericalSFC::SFCTrajectory& sfc_traj);
+    SSFC::SFCTrajectory& sfc_traj);
 
   /* Visualization methods */
 
@@ -490,9 +323,9 @@ private: // Private methods
   void publishVizPiecewiseTrajectory( const std::vector<Eigen::Vector3d>& pts, 
                                       ros::Publisher& publisher, const std::string& frame_id = "world");
 
-  void publishVizSphericalSFC(const std::vector<SphericalSFC::Sphere>& sfc_spheres, 
+  void publishVizSphericalSFC(const std::vector<SSFC::Sphere>& sfc_spheres, 
                               ros::Publisher& publisher, const std::string& frame_id = "world");
-  void publishVizIntxnSpheres(const std::vector<SphericalSFC::Sphere>& sfc_spheres, 
+  void publishVizIntxnSpheres(const std::vector<SSFC::Sphere>& sfc_spheres, 
                               ros::Publisher& publisher, const std::string& frame_id = "world");
 
   visualization_msgs::Marker createArrow(
@@ -524,8 +357,8 @@ private: // Private members
   
   /* Data structs */
   std::shared_ptr<GridMap> grid_map_; 
-  std::vector<SphericalSFC::Sphere> sfc_spheres_; // Waypoints of the spherical flight corridor
-  SphericalSFC::SFCTrajectory sfc_traj_;          // SFC Trajectory 
+  std::vector<SSFC::Sphere> sfc_spheres_; // Waypoints of the spherical flight corridor
+  SSFC::SFCTrajectory sfc_traj_;          // SFC Trajectory 
 
   std::unique_ptr<KDTreeVectorOfVectorsAdaptor<std::vector<Eigen::Vector3d>, double>>   
     guide_path_kdtree_; // KD Tree for guide path
@@ -535,7 +368,7 @@ private: // Private members
   visualization_msgs::MarkerArray sampling_dist_hist_; // history of sampling distributions (1 s.d.)
   visualization_msgs::MarkerArray samp_dir_vec_hist_; // history of sampling distributions (1 s.d.)
 
-  std::vector<std::vector<SphericalSFC::Sphere>> sfc_sampled_spheres_ ; // Outer index is segment, each segment contains a number of sampled spheres
+  std::vector<std::vector<SSFC::Sphere>> sfc_sampled_spheres_ ; // Outer index is segment, each segment contains a number of sampled spheres
   std::vector<Eigen::Vector3d> samp_dir_vec_; // vector of sampling vectors
   std::vector<Eigen::Vector3d> guide_points_vec_; // vector of sampling guide points
 

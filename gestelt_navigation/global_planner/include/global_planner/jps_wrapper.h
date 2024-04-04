@@ -1,6 +1,8 @@
 #ifndef _JPS_WRAPPER_H_
 #define _JPS_WRAPPER_H_
 
+#include <global_planner/planner_base.h>
+
 #include <ros/ros.h>
 
 #include <grid_map/grid_map.h>
@@ -10,7 +12,7 @@
 
 #include <logger/timer.h>
 
-class JPSWrapper
+class JPSWrapper : public PlannerBase
 {
 public:
 
@@ -32,6 +34,9 @@ public:
   }; // struct SphericalSFCParams
 
   JPSWrapper(std::shared_ptr<GridMap> map, const JPSParams& jps_params);
+
+  // Add ROS Publishers
+  void addPublishers(std::unordered_map<std::string, ros::Publisher> &publisher_map);
 
   /**
    * @brief Clear closed, open list and reset planning_successful flag for new plan generation

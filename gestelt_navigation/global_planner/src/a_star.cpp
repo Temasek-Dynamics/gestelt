@@ -20,6 +20,13 @@ void AStarPlanner::reset()
     clearVisualizations();
 }
 
+void AStarPlanner::addPublishers(
+    std::unordered_map<std::string, ros::Publisher> &publisher_map)
+{
+    closed_list_viz_pub_ = publisher_map["front_end/closed_list"];
+}
+
+
 void AStarPlanner::clearVisualizations()
 {
     visualization_msgs::Marker marker;
@@ -208,6 +215,16 @@ bool AStarPlanner::generatePlan(const Eigen::Vector3d &start_pos, const Eigen::V
  * @return std::vector<Eigen::Vector3d>
  */
 std::vector<Eigen::Vector3d> AStarPlanner::getPathPos()
+{
+    return path_pos_;
+}
+
+/**
+ * @brief Get successful plan in terms of path positions
+ *
+ * @return std::vector<Eigen::Vector3d>
+ */
+std::vector<Eigen::Vector3d> AStarPlanner::getPathPosRaw()
 {
     return path_pos_;
 }

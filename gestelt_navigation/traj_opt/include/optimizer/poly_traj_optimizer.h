@@ -185,6 +185,7 @@ namespace ego_planner
     } force_stop_type_;
 
     /* optimization parameters */
+    double wei_sph_bounds_;                                       // Weight to keep trajectory within bounds of sphere
     double wei_obs_, wei_obs_soft_;                               // obstacle weight
     double wei_swarm_;                                            // swarm weight
     double wei_feas_;                                             // feasibility weight

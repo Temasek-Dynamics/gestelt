@@ -20,11 +20,15 @@ front_end:
 
   jps:
     planner_verbose: false      # If true, print debug from planner
-    use_dmp: false
-    dmp_search_radius: 0.75      # DMP Search radius
+    use_dmp: true
+    dmp_search_radius: 0.4      # DMP Search radius
     dmp_potential_radius: 0.4   # DMP radius of distance field (Value has significant effect on runtime)
-    dmp_collision_weight: 0.25   # DMP Collision weight 
+    dmp_collision_weight: 0.1   # DMP Collision weight 
     dmp_heuristic_weight: 0.0   # DMP Heuristic weight
+    # dmp_search_radius: 0.75      # DMP Search radius
+    # dmp_potential_radius: 0.4   # DMP radius of distance field (Value has significant effect on runtime)
+    # dmp_collision_weight: 0.25   # DMP Collision weight 
+    # dmp_heuristic_weight: 0.0   # DMP Heuristic weight
     dmp_pow: 1    # DMP power index 
 
 ##### Safe flight corridor
@@ -76,6 +80,7 @@ optimization:
   constraint_points_perPiece: 5
   # weight_obstacle: 10000.0 
   # weight_obstacle_soft: 5000.0 
+  wei_sph_bounds_: 10000.0
   weight_swarm: 50000.0 
   weight_feasibility: 10000.0
   weight_sqrvariance: 10000.0 
