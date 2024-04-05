@@ -185,7 +185,7 @@ Eigen::Vector3d shapetrajectory::getVelocity(double time) {
         varying_omega_=0.0;
       }
 
-      velocity = varying_omega_ * traj_axis_.cross(getPosition(time));
+      velocity = varying_omega_ * traj_axis_.cross((getPosition(time)-traj_origin_));
       break;
     case TRAJ_STATIONARY:
 
@@ -245,7 +245,7 @@ Eigen::Vector3d shapetrajectory::getAcceleration(double time) {
         curr_ang_acc=0.0;
       }
 
-      acceleration = curr_ang_acc * traj_axis_.cross(getPosition(time)) + varying_omega_* traj_axis_.cross(getVelocity(time));
+      acceleration = curr_ang_acc * traj_axis_.cross((getPosition(time)-traj_origin_)) + varying_omega_* traj_axis_.cross(getVelocity(time));
       break;
     case TRAJ_STATIONARY:
 
