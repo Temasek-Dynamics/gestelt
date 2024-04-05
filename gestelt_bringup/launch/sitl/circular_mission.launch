@@ -1,5 +1,6 @@
 <launch>
   <arg name="simulation" default="false" />
+  <arg name="test_time" default="40" />
 
   <arg if="$(arg simulation)" name="circle_center_x" default="0.0" />
   <arg if="$(arg simulation)" name="circle_center_y" default="1.5" /> <!-- oppsite with the drone position -->
@@ -12,7 +13,7 @@
         <!-- <param name="shape_omega" value="" />  -->
 
         <param name="acc_dec_time" value="10" />
-        <param name="stop_time" value="30" />
+        <param name="stop_time" value="$(arg test_time)" />
         <param name="max_angular_vel" value="0.8" />
         <param name="initpos_x" value="$(arg circle_center_x)" />
         <param name="initpos_y" value="$(arg circle_center_y)" />
@@ -21,6 +22,7 @@
   </node> 
 
   <node pkg="gestelt_bringup" name="mission" type="circular_mission_modify_mavros.py">
+        <param name="mission/test_time" value="$(arg test_time)" />
 
   </node>
 

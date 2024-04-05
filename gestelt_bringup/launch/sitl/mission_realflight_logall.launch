@@ -1,4 +1,5 @@
 <launch>
+  <arg name="test_time" default="40" />
   <arg name="circle_center_x" default="0.0" />
   <arg name="circle_center_y" default="0.0" />
 
@@ -7,7 +8,7 @@
         <!-- <param name="shape_omega" value="1.2" />  -->
 
         <param name="acc_dec_time" value="10" />
-        <param name="stop_time" value="40" />
+        <param name="stop_time" value="$(arg test_time)" />
         <param name="max_angular_vel" value="1.5" />
         <param name="initpos_x" value="$(arg circle_center_x)" />
         <param name="initpos_y" value="$(arg circle_center_y)" />
@@ -16,6 +17,8 @@
   </node> 
 
   <node pkg="gestelt_bringup" name="mission" type="circular_mission_modify_mavros.py"> 
+    <param name="mission/test_time" value="$(arg test_time)" />
+
   </node>
   
   <!-- Start rosbag to record setpoint_raw and local_position -->
