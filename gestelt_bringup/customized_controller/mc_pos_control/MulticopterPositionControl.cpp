@@ -172,7 +172,8 @@ void MulticopterPositionControl::parameters_update(bool force)
 			Vector3f(_param_mpc_rpt_xy_sigma.get(), _param_mpc_rpt_xy_sigma.get(), _param_mpc_rpt_z_sigma.get()),
 			Vector3f(_param_mpc_rpt_xy_ki.get(), _param_mpc_rpt_xy_ki.get(), _param_mpc_rpt_z_ki.get()),
 			Vector3f(_param_mpc_rpt_xy_eps.get(), _param_mpc_rpt_xy_eps.get(), _param_mpc_rpt_z_eps.get()),
-			_param_mpc_rpt_max_xy_integration.get()
+			_param_mpc_rpt_max_xy_integration.get(),
+			Vector3f(_param_mpc_rpt_rotor_drag_x.get(),_param_mpc_rpt_rotor_drag_y.get(),_param_mpc_rpt_rotor_drag_z.get())
 		);
 
 		_control.setHorizontalThrustMargin(_param_mpc_thr_xy_marg.get());

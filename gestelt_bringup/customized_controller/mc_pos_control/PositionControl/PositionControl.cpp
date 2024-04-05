@@ -55,13 +55,15 @@ void PositionControl::setRPTGains(const Vector3f &WN,
 				const Vector3f &SIGMA,
 				const Vector3f &KI,
 				const Vector3f &EPS,
-				const float MAX_XY_INTEGRATION)
+				const float MAX_XY_INTEGRATION,
+				const Vector3f &rotor_drag)
 {
 	_gain_RPT_wn = WN;
 	_gain_RPT_sigma = SIGMA;
 	_gain_RPT_ki = KI;
 	_gain_RPT_eps = EPS;
 	_max_xy_integration = MAX_XY_INTEGRATION;
+	_rotor_drag = rotor_drag;
 }
 
 
@@ -294,6 +296,12 @@ void PositionControl::_RPTControl(const float dt)
 	_pos_int(0)=math::min(fabsf(_pos_int(0)),MAX_INT) * sign(_pos_int(0));
 	_pos_int(1)=math::min(fabsf(_pos_int(1)),MAX_INT) * sign(_pos_int(1));
 
+	// rotor drag compensation, the current _acc_sp is only the feedforward acceleration
+	_accel2RotationMatrix(_acc_sp);
+
+	matrix::Matrix3f Drag_matrix=matrix::diag(_rotor_drag);
+	Vector3f u_drag = _R_ref*Drag_matrix*_R_ref.transpose()*_vel_sp;
+
 	// No control input from setpoints or corresponding states which are NAN
 	// desired feed-forward acceleration: _acc_sp
 	// PX4_WARN("feedforward acc_sp: %8.4f %8.4f %8.4f", (double)_acc_sp(0), (double)_acc_sp(1), (double)_acc_sp(2));
@@ -301,8 +309,10 @@ void PositionControl::_RPTControl(const float dt)
 	ControlMath::addIfNotNanVector3f(_acc_sp, u_pos_error);
 	ControlMath::addIfNotNanVector3f(_acc_sp, u_vel_error);
 	ControlMath::addIfNotNanVector3f(_acc_sp, u_pos_int);
+	ControlMath::addIfNotNanVector3f(_acc_sp, u_drag);
 
-	// PX4_WARN("output acc_sp: %8.4f %8.4f %8.4f", (double)_acc_sp(0), (double)_acc_sp(1), (double)_acc_sp(2));
+
+
 
 	//anti-windup
 	_accelerationControl();
@@ -353,6 +363,36 @@ void PositionControl::_RPTControl(const float dt)
 	_pos_int(2) = math::min(fabsf(_pos_int(2)), CONSTANTS_ONE_G) * sign(_pos_int(2));
 
 }
+
+
+
+void PositionControl::_accel2RotationMatrix(matrix::Vector3f acc_ref)
+
+{
+	// zero vector, no direction, set safe level value
+	if (acc_ref.norm_squared() < FLT_EPSILON) {
+		acc_ref(2) = 1.f;
+	}
+	Vector3f body_z_ref = Vector3f(-acc_ref(0), -acc_ref(1), -acc_ref(2)+CONSTANTS_ONE_G).normalized();
+
+	const Vector3f x_C{cosf(_yaw_sp), sinf(_yaw_sp), 0.f};
+
+	// desired body_y axis, orthogonal to body_z_ref
+	Vector3f body_y_ref = body_z_ref % x_C;
+	body_y_ref.normalize();
+
+	// calculate the body_x
+	Vector3f body_x_ref = body_y_ref % body_z_ref;
+
+
+	// fill rotation matrix
+	for (int i = 0; i < 3; i++) {
+		_R_ref(i, 0) = body_x_ref(i);
+		_R_ref(i, 1) = body_y_ref(i);
+		_R_ref(i, 2) = body_z_ref(i);
+	}
+}
+
 void PositionControl::_accelerationControl()
 {
 	// Assume standard acceleration due to gravity in vertical direction for attitude generation
