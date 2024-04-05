@@ -194,7 +194,7 @@ def main():
     TIME_FACTOR_TERMINAL=1
     TIME_FACTOR=0.6
     MAX_VEL=2
-    MAX_ACCEL=8
+    MAX_ACCEL=6
     waypoints = []
     vel_list = []
     accel_list = []
@@ -202,7 +202,7 @@ def main():
     # side length 5m
     g=-9.81 #m/s^2  # down force, negative
     f=1*(-g) #N  # up force, positive
-    angle_1=90
+    angle_1=-90
     angle_rad_1=math.radians(angle_1)
 
     # 1/4 test
@@ -221,7 +221,7 @@ def main():
         
 
     
-    accel_list.append(create_accel(0.0,f*math.sin(angle_rad_1),g+f*math.cos(angle_rad_1))) 
+    accel_list.append(create_accel(f*math.sin(angle_rad_1),0.0,g+f*math.cos(angle_rad_1))) 
     # accel_list.append(create_accel(None,None,None))  
     accel_list.append(create_accel(None,None,None))
 
