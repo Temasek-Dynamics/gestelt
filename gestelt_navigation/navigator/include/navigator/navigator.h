@@ -395,7 +395,7 @@ private: /* Params */
   double rhp_dist_;           // Receding horizon planning dist
   double rhp_buffer_;         // Buffer to put goal away from obstacles (in addition to inflation)
 
-  SFCType sfc_type_{SFCType::POLYTOPE}; // Indicates the SFC generation (e.g. polytope or spherical)
+  SFCType sfc_type_{SFCType::SPHERICAL}; // Indicates the SFC generation (e.g. polytope or spherical)
   FrontEndType front_end_type_{FrontEndType::JPS_AND_DMP}; // Indicates the Front end planner (e.g. a* or JPS)
 
   /* Back-end params */

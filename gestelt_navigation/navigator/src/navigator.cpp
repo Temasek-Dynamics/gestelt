@@ -75,8 +75,9 @@ void Navigator::initParams(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   /* Front end params */
 
   if (front_end_type_ == FrontEndType::JPS_AND_DMP){
-    pnh.param("front_end/jps/planner_verbose",    jps_params_.planner_verbose, false);
-    pnh.param("front_end/jps/use_dmp",    jps_params_.use_dmp, false);
+    pnh.param("front_end/jps/planner_verbose",      jps_params_.planner_verbose, false);
+    pnh.param("front_end/jps/interpolate",          jps_params_.interpolate, false);
+    pnh.param("front_end/jps/use_dmp",              jps_params_.use_dmp, false);
     
     pnh.param("front_end/jps/dmp_search_radius",    jps_params_.dmp_search_rad, 0.5);
     pnh.param("front_end/jps/dmp_potential_radius", jps_params_.dmp_pot_rad, 1.0);
@@ -319,35 +320,35 @@ bool Navigator::plan(
     return false;
   }
 
-  // tm_back_end_plan_.start();
-  // // Generate a back-end trajectory from front-end plan
-  // poly_traj::MinJerkOpt optimized_mjo; // Optimized minimum jerk trajectory
-  // if (!generateBackEndPlan( start_pos, cur_vel_, goal_pos, 
-  //                           sfc_traj, 
-  //                           optimized_mjo,
-  //                           5)){
-  //   logError("Failed to generate back end plan!");
-  //   return false;
-  // }
-  // tm_back_end_plan_.stop(verbose_planning_);
+  tm_back_end_plan_.start();
+  // Generate a back-end trajectory from front-end plan
+  poly_traj::MinJerkOpt optimized_mjo; // Optimized minimum jerk trajectory
+  if (!generateBackEndPlan( start_pos, cur_vel_, goal_pos, 
+                            sfc_traj, 
+                            optimized_mjo,
+                            5)){
+    logError("Failed to generate back end plan!");
+    return false;
+  }
+  tm_back_end_plan_.stop(verbose_planning_);
 
-  // // Save and publish message
-  // be_traj_ = std::make_shared<poly_traj::Trajectory>(optimized_mjo.getTraj(req_plan_time));
+  // Save and publish message
+  be_traj_ = std::make_shared<poly_traj::Trajectory>(optimized_mjo.getTraj(req_plan_time));
 
-  // traj_utils::PolyTraj poly_msg; 
-  // traj_utils::MINCOTraj MINCO_msg; 
+  traj_utils::PolyTraj poly_msg; 
+  traj_utils::MINCOTraj MINCO_msg; 
 
-  // mjoToMsg(optimized_mjo, req_plan_time, poly_msg, MINCO_msg);
-  // be_traj_pub_.publish(poly_msg); // (In drone origin frame) Publish to corresponding drone for execution
-  // swarm_minco_traj_pub_.publish(MINCO_msg); // (In world frame) Broadcast to all other drones for replanning to optimize in avoiding swarm collision
+  mjoToMsg(optimized_mjo, req_plan_time, poly_msg, MINCO_msg);
+  be_traj_pub_.publish(poly_msg); // (In drone origin frame) Publish to corresponding drone for execution
+  swarm_minco_traj_pub_.publish(MINCO_msg); // (In world frame) Broadcast to all other drones for replanning to optimize in avoiding swarm collision
 
-  // // Update optimized trajectory 
-  // (*swarm_local_trajs_)[drone_id_] = getLocalTraj(
-  //   optimized_mjo, req_plan_time, 
-  //   back_end_optimizer_->get_cps_num_perPiece_(), 
-  //   traj_id_, drone_id_);
+  // Update optimized trajectory 
+  (*swarm_local_trajs_)[drone_id_] = getLocalTraj(
+    optimized_mjo, req_plan_time, 
+    back_end_optimizer_->get_cps_num_perPiece_(), 
+    traj_id_, drone_id_);
 
-  // traj_id_++; // Increment trajectory id
+  traj_id_++; // Increment trajectory id
 
   return true;
 }
@@ -392,84 +393,90 @@ bool Navigator::generateFrontEndPlan(
 
   tm_sfc_plan_.stop(verbose_planning_);
 
-  // sfc_traj = sfc_generation_->getSSFCTrajectory();
-  // poly_sfc = sfc_generation_->getPolySFC();
+  if (sfc_type_ == SFCType::POLYTOPE){
+    // poly_sfc = sfc_generation_->getPolySFC();
+  }
+  else if (sfc_type_ == SFCType::SPHERICAL) {
+    sfc_traj = sfc_generation_->getSSFCTrajectory();
 
-  // gestelt_msgs::SphericalSFCTrajectory sfc_traj_msg;
+    gestelt_msgs::SphericalSFCTrajectory sfc_traj_msg;
 
-  // for (auto sphere : sfc_traj.spheres){
-  //   gestelt_msgs::Sphere sphere_msg;
-  //   sphere_msg.radius = sphere.radius;
-  //   sphere_msg.center.x = sphere.center(0);
-  //   sphere_msg.center.y = sphere.center(1);
-  //   sphere_msg.center.z = sphere.center(2);
-  //   sfc_traj_msg.spheres.push_back(sphere_msg);
-  // }
+    for (auto sphere : sfc_traj.spheres){
+      gestelt_msgs::Sphere sphere_msg;
+      sphere_msg.radius = sphere.radius;
+      sphere_msg.center.x = sphere.center(0);
+      sphere_msg.center.y = sphere.center(1);
+      sphere_msg.center.z = sphere.center(2);
+      sfc_traj_msg.spheres.push_back(sphere_msg);
+    }
 
-  // for (auto wp : sfc_traj.waypoints)
-  // {
-  //   geometry_msgs::Point wp_msg;
-  //   wp_msg.x = wp(0);
-  //   wp_msg.y = wp(1);
-  //   wp_msg.z = wp(2);
-  //   sfc_traj_msg.waypoints.push_back(wp_msg);
-  // }
+    for (auto wp : sfc_traj.waypoints)
+    {
+      geometry_msgs::Point wp_msg;
+      wp_msg.x = wp(0);
+      wp_msg.y = wp(1);
+      wp_msg.z = wp(2);
+      sfc_traj_msg.waypoints.push_back(wp_msg);
+    }
 
-  // sfc_traj_msg.segments_time_duration = sfc_traj.segs_t_dur;
-  // spherical_sfc_traj_pub_.publish(sfc_traj_msg);
-  
-  // Publish debug SFC trajectory
-  // std::vector<std::vector<SSFC::Sphere>> sfc_sampled_spheres;
-  // std::vector<Eigen::Vector3d> samp_dir_vec, guide_points_vec;
+    sfc_traj_msg.segments_time_duration = sfc_traj.segs_t_dur;
+    spherical_sfc_traj_pub_.publish(sfc_traj_msg);
+    
+    // Publish debug SFC trajectory
+    // std::vector<std::vector<SSFC::Sphere>> sfc_sampled_spheres;
+    // std::vector<Eigen::Vector3d> samp_dir_vec, guide_points_vec;
 
-  // sfc_generation_->getSFCTrajectoryDebug(
-  //   sfc_sampled_spheres, samp_dir_vec, guide_points_vec);
+    // sfc_generation_->getSFCTrajectoryDebug(
+    //   sfc_sampled_spheres, samp_dir_vec, guide_points_vec);
 
-  // if (sfc_sampled_spheres.size() != samp_dir_vec.size() 
-  //     || samp_dir_vec.size() != guide_points_vec.size() 
-  //     || sfc_sampled_spheres.size() != guide_points_vec.size()){
-  //   ROS_ERROR("ERROR, SFC Debug trajectory fields do not all have the same size (same number of semgments)!");
-  // }
+    // if (sfc_sampled_spheres.size() != samp_dir_vec.size() 
+    //     || samp_dir_vec.size() != guide_points_vec.size() 
+    //     || sfc_sampled_spheres.size() != guide_points_vec.size()){
+    //   ROS_ERROR("ERROR, SFC Debug trajectory fields do not all have the same size (same number of semgments)!");
+    // }
 
-  // gestelt_debug_msgs::SFCTrajectory dbg_sfc_traj_msg;
-  // for (size_t i = 0; i < guide_points_vec.size(); i++)
-  // {
-  //   gestelt_debug_msgs::SFCSegment segment;
-  //   for (auto& sphere : sfc_sampled_spheres[i])
-  //   {
-  //     gestelt_msgs::Sphere sphere_msg;
-  //     sphere_msg.radius = sphere.radius;
-  //     sphere_msg.center.x = sphere.center(0);
-  //     sphere_msg.center.y = sphere.center(1);
-  //     sphere_msg.center.z = sphere.center(2);
+    // gestelt_debug_msgs::SFCTrajectory dbg_sfc_traj_msg;
+    // for (size_t i = 0; i < guide_points_vec.size(); i++)
+    // {
+    //   gestelt_debug_msgs::SFCSegment segment;
+    //   for (auto& sphere : sfc_sampled_spheres[i])
+    //   {
+    //     gestelt_msgs::Sphere sphere_msg;
+    //     sphere_msg.radius = sphere.radius;
+    //     sphere_msg.center.x = sphere.center(0);
+    //     sphere_msg.center.y = sphere.center(1);
+    //     sphere_msg.center.z = sphere.center(2);
 
-  //     segment.sampled_spheres.push_back(sphere_msg);
-  //   }
+    //     segment.sampled_spheres.push_back(sphere_msg);
+    //   }
 
-  //   segment.guide_point.x = guide_points_vec[i](0);
-  //   segment.guide_point.y = guide_points_vec[i](1);
-  //   segment.guide_point.z = guide_points_vec[i](2);
+    //   segment.guide_point.x = guide_points_vec[i](0);
+    //   segment.guide_point.y = guide_points_vec[i](1);
+    //   segment.guide_point.z = guide_points_vec[i](2);
 
-  //   segment.sampling_vector.x = samp_dir_vec[i](0);
-  //   segment.sampling_vector.y = samp_dir_vec[i](1);
-  //   segment.sampling_vector.z = samp_dir_vec[i](2);
+    //   segment.sampling_vector.x = samp_dir_vec[i](0);
+    //   segment.sampling_vector.y = samp_dir_vec[i](1);
+    //   segment.sampling_vector.z = samp_dir_vec[i](2);
 
-  //   dbg_sfc_traj_msg.segments.push_back(segment);
-  // }
+    //   dbg_sfc_traj_msg.segments.push_back(segment);
+    // }
 
-  // for (size_t i = 0; i < front_end_path.size(); i++)
-  // {
-  //   geometry_msgs::Point front_end_pt;
-  //   front_end_pt.x = front_end_path[i](0);
-  //   front_end_pt.y = front_end_path[i](1);
-  //   front_end_pt.z = front_end_path[i](2);
+    // for (size_t i = 0; i < front_end_path.size(); i++)
+    // {
+    //   geometry_msgs::Point front_end_pt;
+    //   front_end_pt.x = front_end_path[i](0);
+    //   front_end_pt.y = front_end_path[i](1);
+    //   front_end_pt.z = front_end_path[i](2);
 
-  //   dbg_sfc_traj_msg.front_end_path.push_back(front_end_pt);
-  // }
+    //   dbg_sfc_traj_msg.front_end_path.push_back(front_end_pt);
+    // }
 
-  // dbg_sfc_traj_msg.sfc_spheres = sfc_traj_msg.spheres;
-  // dbg_sfc_traj_msg.sfc_waypoints = sfc_traj_msg.waypoints;
-  // dbg_sfc_traj_pub_.publish(dbg_sfc_traj_msg);
+    // dbg_sfc_traj_msg.sfc_spheres = sfc_traj_msg.spheres;
+    // dbg_sfc_traj_msg.sfc_waypoints = sfc_traj_msg.waypoints;
+    // dbg_sfc_traj_pub_.publish(dbg_sfc_traj_msg);
+
+  }
+
 
   // logInfo(str_fmt("Number of waypoints in front-end path: %ld", front_end_path.size()));
   // logInfo(str_fmt("Size of closed list (expanded nodes): %ld", closed_list.size()));
@@ -538,9 +545,8 @@ bool Navigator::generateBackEndPlan(
                                               sfc_traj.getIntxnCenters(), sfc_traj.getIntxnCircleRadius());
     visualization_->displayInitialCtrlPts_q(init_inner_ctrl_pts_q);
 
-    // Display sphere intersection vectors
-    
-    visualization_->displaySphereIntxnVec(sfc_traj.getSpheresCenter(), sfc_traj.getIntxnPlaneVec());
+    // Display intersection sphere north vectors
+    visualization_->displaySphereIntxnVec(sfc_traj.getIntxnCenters(), sfc_traj.getIntxnPlaneVec());
 
     // Visualize initial constraint points in constrained q space
     // Eigen::MatrixXd cstr_pts_q = 
@@ -571,6 +577,8 @@ bool Navigator::generateBackEndPlan(
 
     // Optimize trajectory!
     double final_cost = 0; 
+    Eigen::MatrixXd opt_inner_pts; //optimized inner points
+
     plan_success = back_end_optimizer_->optimizeTrajectorySFC( 
           startPVA, endPVA,                   // Start and end (pos, vel, acc)
           sfc_traj.getInnerWaypoints(),       // Inner control points
@@ -582,7 +590,9 @@ bool Navigator::generateBackEndPlan(
 
     // Optimized minimum jerk trajectory
     optimized_mjo = back_end_optimizer_->getOptimizedMJO();
-    Eigen::MatrixXd cstr_pts_optimized_mjo = optimized_mjo.getInitConstraintPoints(num_cstr_pts);
+
+    Eigen::MatrixXd cstr_pts_optimized_mjo = 
+      optimized_mjo.getInitConstraintPoints(num_cstr_pts);
 
     /***************************/
     /* Print and display results for debugging

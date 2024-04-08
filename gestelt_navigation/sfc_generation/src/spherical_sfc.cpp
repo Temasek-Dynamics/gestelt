@@ -572,14 +572,15 @@ void SphericalSFC::constructSFCTrajectory(
     sfc_traj.intxn_spheres.resize(num_segs-1);
 
     for (size_t i = 0; i < num_segs-1; i++){
-        auto vec_to_intxn_plane = getIntersectionCenter(sfc_spheres[i], sfc_spheres[i+1]) - sfc_spheres[i].center;
-        // Get vector from center of sphere to the center of the spherical cap (intersection between sphere i and i+1)
-        sfc_traj.intxn_plane_vec[i] = vec_to_intxn_plane.normalized() * sfc_spheres[i].radius;
-
         if (i == 0){
             std::cout << getIntersectionRadius(sfc_spheres[i], sfc_spheres[i+1]) << std::endl;
         }
         sfc_traj.intxn_circle_radius[i] = getIntersectionRadius(sfc_spheres[i], sfc_spheres[i+1]);
+
+        auto vec_to_intxn_plane = getIntersectionCenter(sfc_spheres[i], sfc_spheres[i+1]) - sfc_spheres[i].center;
+        // Get vector from center of sphere to the center of the spherical cap (intersection between sphere i and i+1)
+        // i.e. normal to intersection plane
+        sfc_traj.intxn_plane_vec[i] = vec_to_intxn_plane.normalized() * sfc_traj.intxn_circle_radius[i];
 
         // Get distance from sphere center to intersection center
         sfc_traj.intxn_plane_dist[i] = vec_to_intxn_plane.norm();

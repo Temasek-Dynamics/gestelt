@@ -1,7 +1,8 @@
 #pragma once
 
 #include "bonxai/bonxai.hpp"
-#include <eigen3/Eigen/Geometry>
+// #include <eigen3/Eigen/Geometry>
+#include <eigen3/Eigen/Eigen>
 #include <unordered_set>
 
 namespace Bonxai

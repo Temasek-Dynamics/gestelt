@@ -20,7 +20,8 @@ front_end:
 
   jps:
     planner_verbose: false      # If true, print debug from planner
-    use_dmp: true
+    interpolate: true           # Interpolate JPS (necessary for spherical safe flight generation)
+    use_dmp: false               # 
     dmp_search_radius: 0.4      # DMP Search radius
     dmp_potential_radius: 0.4   # DMP radius of distance field (Value has significant effect on runtime)
     dmp_collision_weight: 0.1   # DMP Collision weight 

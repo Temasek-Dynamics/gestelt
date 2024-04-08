@@ -1138,113 +1138,6 @@ namespace poly_traj
             return;
         }
 
-        // template <typename EIGENVEC>
-        // void addTimeIntPenalty(const Eigen::VectorXi cons,
-        //                               const Eigen::VectorXi &idxHs,
-        //                               const std::vector<Eigen::MatrixXd> &cfgHs,
-        //                               const double vmax,
-        //                               const double amax,
-        //                               const Eigen::Vector3d ci,
-        //                               double &cost,
-        //                               EIGENVEC &gdT,
-        //                               Eigen::MatrixXd &gdC) const
-        // {
-        //     double pena = 0.0;
-        //     const double vmaxSqr = vmax * vmax;
-        //     const double amaxSqr = amax * amax;
-
-        //     Eigen::Vector3d pos, vel, acc, jer;
-        //     double step, alpha;
-        //     double s1, s2, s3, s4, s5;
-        //     Eigen::Matrix<double, 6, 1> beta0, beta1, beta2, beta3;
-        //     Eigen::Vector3d outerNormal;
-        //     int K;
-        //     double violaPos, violaVel, violaAcc;
-        //     double violaPosPenaD, violaVelPenaD, violaAccPenaD;
-        //     double violaPosPena, violaVelPena, violaAccPena;
-        //     Eigen::Matrix<double, 6, 3> gradViolaVc, gradViolaAc;
-        //     double gradViolaVt, gradViolaAt;
-        //     double omg;
-
-        //     int innerLoop, idx;
-        //     for (int i = 0; i < N; i++)
-        //     {
-        //         const auto &c = b.block<6, 3>(i * 6, 0);
-        //         step = T1(i) / cons(i);
-        //         s1 = 0.0;
-        //         innerLoop = cons(i) + 1;
-        //         for (int j = 0; j < innerLoop; j++)
-        //         {
-        //             s2 = s1 * s1;
-        //             s3 = s2 * s1;
-        //             s4 = s2 * s2;
-        //             s5 = s4 * s1;
-        //             beta0 << 1.0, s1, s2, s3, s4, s5;
-        //             beta1 << 0.0, 1.0, 2.0 * s1, 3.0 * s2, 4.0 * s3, 5.0 * s4;
-        //             beta2 << 0.0, 0.0, 2.0, 6.0 * s1, 12.0 * s2, 20.0 * s3;
-        //             beta3 << 0.0, 0.0, 0.0, 6.0, 24.0 * s1, 60.0 * s2;
-        //             alpha = 1.0 / cons(i) * j;
-        //             pos = c.transpose() * beta0;
-        //             vel = c.transpose() * beta1;
-        //             acc = c.transpose() * beta2;
-        //             jer = c.transpose() * beta3;
-        //             violaVel = vel.squaredNorm() - vmaxSqr;
-        //             violaAcc = acc.squaredNorm() - amaxSqr;
-
-        //             omg = (j == 0 || j == innerLoop - 1) ? 0.5 : 1.0;
-
-        //             idx = idxHs(i);
-        //             K = cfgHs[idx].cols();
-        //             for (int k = 0; k < K; k++)
-        //             {
-        //                 outerNormal = cfgHs[idx].col(k).head<3>();
-        //                 violaPos = outerNormal.dot(pos - cfgHs[idx].col(k).tail<3>());
-        //                 if (violaPos > 0.0)
-        //                 {
-        //                     violaPosPenaD = violaPos * violaPos;
-        //                     violaPosPena = violaPosPenaD * violaPos;
-        //                     violaPosPenaD *= 3.0;
-        //                     gdC.block<6, 3>(i * 6, 0) += omg * step * ci(0) * violaPosPenaD * beta0 * outerNormal.transpose();
-        //                     gdT(i) += omg * (ci(0) * violaPosPenaD * alpha * outerNormal.dot(vel) * step +
-        //                                      ci(0) * violaPosPena / cons(i));
-        //                     pena += omg * step * ci(0) * violaPosPena;
-        //                 }
-        //             }
-
-        //             if (violaVel > 0.0)
-        //             {
-        //                 violaVelPenaD = violaVel * violaVel;
-        //                 violaVelPena = violaVelPenaD * violaVel;
-        //                 violaVelPenaD *= 3.0;
-        //                 gradViolaVc = 2.0 * beta1 * vel.transpose();
-        //                 gradViolaVt = 2.0 * alpha * vel.transpose() * acc;
-        //                 gdC.block<6, 3>(i * 6, 0) += omg * step * ci(1) * violaVelPenaD * gradViolaVc;
-        //                 gdT(i) += omg * (ci(1) * violaVelPenaD * gradViolaVt * step +
-        //                                  ci(1) * violaVelPena / cons(i));
-        //                 pena += omg * step * ci(1) * violaVelPena;
-        //             }
-
-        //             if (violaAcc > 0.0)
-        //             {
-        //                 violaAccPenaD = violaAcc * violaAcc;
-        //                 violaAccPena = violaAccPenaD * violaAcc;
-        //                 violaAccPenaD *= 3.0;
-        //                 gradViolaAc = 2.0 * beta2 * acc.transpose();
-        //                 gradViolaAt = 2.0 * alpha * acc.transpose() * jer;
-        //                 gdC.block<6, 3>(i * 6, 0) += omg * step * ci(2) * violaAccPenaD * gradViolaAc;
-        //                 gdT(i) += omg * (ci(2) * violaAccPenaD * gradViolaAt * step +
-        //                                  ci(2) * violaAccPena / cons(i));
-        //                 pena += omg * step * ci(2) * violaAccPena;
-        //             }
-
-        //             s1 += step;
-        //         }
-        //     }
-
-        //     cost += pena;
-        //     return;
-        // }
-
     public:
         /**
          * @brief Set the boundary states and resize 
@@ -1671,97 +1564,57 @@ namespace poly_traj
             // eqn (70): p.d.(H / T_i) = p.d.(F/T_i) - Tr{ G_i.T * p.d.(E_i/T_i) * c_i}
             addPropCtoT(gdC, gdT); // Adds to gdT
 
-            /* 1. Original formulation */
-
-            // // eqn (66): p.d.(H / q) = (G_1.T * e1, ..., G_(M-1).T * e1)
-            // // eqn (79): p.d.(H / xi) = ...
-            // for (int i = 0; i < N - 1; i++) // For each segment (except start and end)
-            // {   
-            //     Eigen::Vector3d g_i = gdC.row(6 * i + 5).transpose(); 
-
-            //     double r_i = spheres_radius[i];
-            //     Eigen::Vector3d o_i = spheres_center[i];
-            //     Eigen::Vector3d xi_i = inner_ctrl_pts.block<3,1>(0, i);
-
-            //     double r_i_sqr = r_i * r_i;
-            //     Eigen::Vector3d v_i = xi_i - o_i;
-
-            //     double c = v_i.squaredNorm() + r_i_sqr;
-                
-            //     Eigen::Vector3d a = (2 * r_i_sqr * g_i) / c;
-            //     Eigen::Vector3d b = (4 * r_i_sqr * v_i.dot(g_i) * v_i)/(c*c);
-
-            //     gradP.col(i) = a - b;
-            // }
-            
-            /* 2. Formulation with offset plan*/
-
-            // for (int i = 0; i < N - 1; i++) // For each segment (except start and end)
-            // {   
-            //     Eigen::Vector3d g_i = gdC.row(6 * i + 5).transpose(); 
-
-            //     double r_i = spheres_radius[i];
-            //     Eigen::Vector3d o_i = spheres_center[i];
-            //     double f_i = intxn_plane_dist[i];
-            //     Eigen::Vector3d xi_i = inner_ctrl_pts.block<3,1>(0, i);
-
-            //     Eigen::Vector3d v_i = xi_i - o_i;
-
-            //     double j = f_i - r_i;
-            //     double c = v_i.squaredNorm() + j*j;
-                
-            //     Eigen::Vector3d a = (2 * j * r_i * g_i) / c ;
-
-            //     Eigen::Vector3d b = (4 * r_i * j * v_i.dot(g_i) * v_i)/(c*c);
-
-            //     gradP.col(i) = -a + b;
-            // }
-
-            /* 3. Formulation with offset plane and arbitrary vector for projection into sphere */
-            // for (int i = 0; i < N - 1; i++) // For each segment (except start and end)
-            // {   
-            //     Eigen::Vector3d g_i = gdC.row(6 * i + 5).transpose(); 
-
-            //     // Sphere values
-            //     Eigen::Vector3d o_i = spheres_center[i];
-            //     double r_i = spheres_radius[i];
-            //     Eigen::Vector3d f_i = intxn_plane_vec[i];
-
-            //     Eigen::Vector3d xi_gbl = inner_ctrl_pts.block<3,1>(0, i);
-            //     Eigen::Vector3d xi = xi_gbl - o_i; //v_i: xi relative to sphere center
-            //     Eigen::Vector3d w = xi - f_i;
-                
-            //     Eigen::Vector3d a = (2 * f_i.dot(w) * g_i) / (w.squaredNorm()) ;
-            //     Eigen::Vector3d b = (4 * f_i.dot(w) * w.dot(g_i) * w)/ ( w.squaredNorm() * w.squaredNorm());
-
-            //     gradP.col(i) = - a + b;
-            // }
-
-            /* 4. Projection to intersecting sphere*/
-
-
-            /* 1. Original formulation */
+            // /* 1. Original formulation */
 
             // eqn (66): p.d.(H / q) = (G_1.T * e1, ..., G_(M-1).T * e1)
             // eqn (79): p.d.(H / xi) = ...
+            
             for (int i = 0; i < N - 1; i++) // For each segment (except start and end)
             {   
                 Eigen::Vector3d g_i = gdC.row(6 * i + 5).transpose(); 
 
-                double r_i = intxn_circle_radius[i];
-                Eigen::Vector3d o_i = intxn_center[i];
-                Eigen::Vector3d xi_i = inner_ctrl_pts.block<3,1>(0, i);
+                double r = intxn_circle_radius[i];
+                Eigen::Vector3d O = intxn_center[i];
+                Eigen::Vector3d xi_gbl = inner_ctrl_pts.block<3,1>(0, i);
 
-                double r_i_sqr = r_i * r_i;
-                Eigen::Vector3d v_i = xi_i - o_i;
-
-                double c = v_i.squaredNorm() + r_i_sqr;
+                double c = (xi_gbl - O).squaredNorm() + (r * r);
                 
-                Eigen::Vector3d a = (2 * r_i_sqr * g_i) / c;
-                Eigen::Vector3d b = (4 * r_i_sqr * v_i.dot(g_i) * v_i)/(c*c);
+                Eigen::Vector3d a = (2 * (r * r) * g_i) / c;
+                Eigen::Vector3d b = -(4 * (r * r) * (xi_gbl - O).dot(g_i) * (xi_gbl - O))/(c*c);
 
-                gradP.col(i) = a - b;
+                gradP.col(i) = (a + b);
             }
+
+            // /* 2. New formulation */
+
+            // // eqn (66): p.d.(H / q) = (G_1.T * e1, ..., G_(M-1).T * e1)
+            // // eqn (79): p.d.(H / xi) = ...
+
+            // for (int i = 0; i < N - 1; i++) // For each segment (except start and end)
+            // {   
+            //     Eigen::Vector3d g_i = gdC.row(6 * i + 5).transpose(); 
+
+            //     double r =                  intxn_circle_radius[i];          // Radius of intersection sphere
+            //     Eigen::Vector3d O =         intxn_center[i];                // Center of intersection sphere
+            //     Eigen::Vector3d N_vec =     intxn_plane_vec[i]; // Normal vector to plane
+            //     Eigen::Vector3d xi_gbl =    inner_ctrl_pts.block<3,1>(0, i); // xi in global coordinates
+
+            //     Eigen::Vector3d N_norm = N_vec.normalized(); // Normalized N vector
+
+            //     Eigen::Vector3d xi =  xi_gbl - O; // xi relative to sphere center
+            //     // xi = xi - (xi).transpose().dot(N_norm) * N_norm; // Get xi projected to plane
+
+            //     double c = (xi - N_vec).squaredNorm();
+
+            //     // First term
+            //     Eigen::Vector3d a_vec = (2 * r * r * g_i) / ( c );
+            //     Eigen::Vector3d b_vec = -(4 * r * r * (xi - N_vec).dot(g_i) * (xi - N_vec)) / (c * c);
+                
+            //     Eigen::Vector3d pd_p_wrt_xi = a_vec + b_vec;
+
+            //     // gradP.col(i) = pd_p_wrt_xi;
+            //     gradP.col(i) = pd_p_wrt_xi - (pd_p_wrt_xi.dot(N_norm)) * N_norm ;
+            // }
 
             return;
         }

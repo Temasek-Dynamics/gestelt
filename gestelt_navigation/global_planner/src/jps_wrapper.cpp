@@ -49,6 +49,12 @@ bool JPSWrapper::generatePlan(const Eigen::Vector3d &start_pos, const Eigen::Vec
     for (auto& pt : jps_planner_->getRawPath()){
         path_jps_raw_.push_back(pt);
     }
+
+    if (params_.interpolate)
+    {
+        path_jps_intp_ = interpolatePath(path_jps_raw_);
+    }
+
     for (auto& pt : jps_planner_->getPath()){
         path_jps_.push_back(pt);
     }
@@ -89,3 +95,41 @@ bool JPSWrapper::generatePlan(const Eigen::Vector3d &start_pos, const Eigen::Vec
 
     return true;
 }
+
+
+std::vector<Eigen::Vector3d> JPSWrapper::interpolatePath(const std::vector<Eigen::Vector3d>& path)
+{
+    std::vector<Eigen::Vector3d> path_intp; // Interpolated path
+
+    double unit_diag_dist = sqrt(2 * map_->getRes()* map_->getRes()) + 0.00001;
+
+    for (size_t i = 0; i < path.size()-1; i++)
+    {
+        double dist_btw_pts = (path[i+1] - path[i]).norm();
+
+        // Compare current point [i] and next point [i+1] to see if their distance 
+        //      exceeds a threshold. If so, interpolate between them
+        if (dist_btw_pts >= unit_diag_dist)
+        {
+            Eigen::Vector3d fwd_vec = (path[i+1] - path[i]).normalized();
+            
+            Eigen::Vector3d pt_intp = path[i]; // Interpolated point
+
+            int step = 0;
+            while ((pt_intp - path[i]).norm() < dist_btw_pts){
+                pt_intp = path[i] + step * map_->getRes() * fwd_vec;
+
+                path_intp.push_back(pt_intp);
+                step++;
+            }
+        }
+        else {
+            path_intp.push_back(path[i]);
+        }
+    }
+    // Push the goal
+    path_intp.push_back(path.back());
+
+    return path_intp;
+}   
+ 
