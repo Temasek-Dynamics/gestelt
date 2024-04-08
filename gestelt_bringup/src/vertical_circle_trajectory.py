@@ -120,15 +120,15 @@ def create_vel(vel_x,vel_y,vel_z):
         vel_mask.data=True
     return vel,vel_mask
 
-def pub_waypoints(waypoints,accels,vels):
+def pub_waypoints(waypoints,accels,vels,time_factor_terminal=1,time_factor=0.6,max_vel=3,max_accel=5):
     wp_msg = Goals()
-    wp_pos_msg=PoseArray()
-    wp_acc_msg=AccelStamped()
+    # wp_pos_msg=PoseArray()    
+    # wp_acc_msg=AccelStamped()
 
     wp_msg.header.frame_id = "world"
     # wp_msg.waypoints.header.frame_id = "world"
-    wp_pos_msg.header.frame_id = "world"
-    wp_acc_msg.header.frame_id = "world"
+    # wp_pos_msg.header.frame_id = "world"
+    # wp_acc_msg.header.frame_id = "world"
 
     wp_msg.waypoints = waypoints
     wp_msg.accelerations= [accel[0] for accel in accels]
@@ -137,29 +137,19 @@ def pub_waypoints(waypoints,accels,vels):
     wp_msg.accelerations_mask=[accel[1] for accel in accels]
     wp_msg.velocities_mask=[vel[1] for vel in vels]
     
-
+    wp_msg.time_factor_terminal.data=time_factor_terminal
+    wp_msg.time_factor.data=time_factor
+    wp_msg.max_vel.data=max_vel
+    wp_msg.max_acc.data=max_accel  
 
     # for waypoints and acceleration vector visualization
-    wp_pos_msg.poses = waypoints
-    if len(accels)>0:
-        wp_acc_msg.accel=accels[1][0]
+    # wp_pos_msg.poses = waypoints
+    # if len(accels)>0:
+    #     wp_acc_msg.accel=accels[1][0]
     
     waypoints_pub.publish(wp_msg)
-    waypoints_pos_pub.publish(wp_pos_msg)
-    waypoints_acc_pub.publish(wp_acc_msg)
-
-# def hover_position():
-    
-#      # transform waypoints from map to world
-#     trans,rot=transform_map_to_world()
-
-#     hover_position = Pose()
-#     hover_position.position.x = 0.0+trans[0]
-#     hover_position.position.y = 0.0+trans[1]
-#     # z is the same as the takeoff height
-
-#     hover_position_pub.publish(hover_position)
-
+    # waypoints_pos_pub.publish(wp_pos_msg)
+    # waypoints_acc_pub.publish(wp_acc_msg)
 
 def main():
     rospy.init_node('mission_startup', anonymous=True)
@@ -209,8 +199,11 @@ def main():
     angle_2=-60
     angle_rad_1=math.radians(angle_1)
     angle_rad_2=math.radians(angle_2)
-
+    TIME_FACTOR_TERMINAL=1
     TIME_FACTOR=0.6
+    MAX_VEL=5
+    MAX_ACCEL=10
+    
     time_factor_msg=Float32()
     time_factor_msg.data=TIME_FACTOR
     
@@ -250,7 +243,7 @@ def main():
     vel_list.append(create_vel(None,None,None))
 
     time_factor_pub.publish(time_factor_msg)
-    pub_waypoints(waypoints,accel_list,vel_list)
+    pub_waypoints(waypoints,accel_list,vel_list,TIME_FACTOR_TERMINAL,TIME_FACTOR,MAX_VEL,MAX_ACCEL)    
     rospy.spin()
     
 

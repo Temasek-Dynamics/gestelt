@@ -14,7 +14,8 @@ void TrajServer::init(ros::NodeHandle& nh)
 
   // Operational params
   nh.param("traj_server/takeoff_height", takeoff_height_, 1.0);
-  nh.param("traj_server/drone_yaw", last_mission_yaw_, -M_PI/2);
+  nh.param("traj_server/drone_fix_yaw", last_mission_yaw_, -M_PI/2);
+  nh.param("traj_server/yaw_follow", YAW_FOLLOW_, false);
   nh.param("traj_server/planner_heartbeat_timeout", planner_heartbeat_timeout_, 0.5);
   nh.param("traj_server/ignore_planner_heartbeat", ignore_heartbeat_, false);
 
@@ -155,7 +156,10 @@ void TrajServer::multiDOFJointTrajectoryCb(const trajectory_msgs::MultiDOFJointT
   // ROS_INFO("mission_type_mask_: %d", mission_type_mask_);
 
   //calculate the yaw angle as the tangent of the position
-  last_mission_yaw_ = atan2(last_mission_vel_(1), last_mission_vel_(0));
+  if (YAW_FOLLOW_){
+    last_mission_yaw_ = atan2(last_mission_vel_(1), last_mission_vel_(0));
+  }
+
 }
 
 void TrajServer::UAVStateCb(const mavros_msgs::State::ConstPtr &msg)

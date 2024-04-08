@@ -450,6 +450,10 @@ private: // Member variables
   uint16_t IGNORE_AFZ;    //Ignore acceleration/force in z in typemask      //new
   uint16_t mission_type_mask_{0}; // Current type mask
 
+
+  //yaw control
+  bool YAW_FOLLOW_=false;   //follow the yaw of the mission
+  
   std::mutex cmd_mutex_; // mutex for PVA Commands
 
   /* Params */ 
