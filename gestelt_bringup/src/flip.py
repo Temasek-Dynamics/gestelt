@@ -192,7 +192,7 @@ def main():
     print(f"Sending waypoints to UAVs")
 
     TIME_FACTOR_TERMINAL=1
-    TIME_FACTOR=0.9
+    TIME_FACTOR=0.6
     MAX_VEL=2
     MAX_ACCEL=6
     waypoints = []
@@ -202,7 +202,7 @@ def main():
     # side length 5m
     g=-9.81 #m/s^2  # down force, negative
     f=1*(-g) #N  # up force, positive
-    angle_1=-90
+    angle_1=90
     angle_rad_1=math.radians(angle_1)
 
     # 1/4 test
