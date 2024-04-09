@@ -36,13 +36,18 @@
 #include <traj_utils/plan_container.hpp>
 #include <optimizer/poly_traj_utils.hpp>
 
-/* Planner  */
+/* Front-end Planner  */
 #include <grid_map/grid_map.h> // Map representation
 #include <global_planner/a_star.h>
 #include <global_planner/jps_wrapper.h>
+
+/* SFC */
 #include <sfc_generation/spherical_sfc.h>
 #include <sfc_generation/polytope_sfc.h>
+
+/* Back-end optimization */
 #include <optimizer/poly_traj_optimizer.h>
+#include <ego_planner_fsm/ego_planner_manager.h>
 
 class Navigator
 {
@@ -54,6 +59,11 @@ enum FrontEndType{
 enum SFCType{
   SPHERICAL,
   POLYTOPE
+};
+
+enum BackEndType{
+  SSFC,
+  EGO
 };
 
 
@@ -141,6 +151,15 @@ private:
     SSFC::SFCTrajectory& sfc_traj,
     poly_traj::MinJerkOpt& optimized_mjo,
     const int& num_retries=5);
+
+  // EDSF Free optimization
+  bool EGOOptimize(const Eigen::Matrix3d& startPVA, const Eigen::Matrix3d& endPVA, 
+                  poly_traj::MinJerkOpt& optimized_mjo);
+
+  // Spherical safe flight corridor optimization
+  bool SSFCOptimize(const Eigen::Matrix3d& startPVA, const Eigen::Matrix3d& endPVA, 
+                  SSFC::SFCTrajectory& sfc_traj,
+                  poly_traj::MinJerkOpt& optimized_mjo);
 
   /* Subscriber callbacks */
 
@@ -361,6 +380,7 @@ private: /* Planner members */
   std::unique_ptr<SFCBase> sfc_generation_; // Safe flight corridor generator
 
   std::unique_ptr<ego_planner::PolyTrajOptimizer> back_end_optimizer_; // Polynomial trajectory optimizer
+  std::unique_ptr<ego_planner::EGOPlannerManager> ego_optimizer_; // Back-end planner
 
   /* Data structs */
   Waypoint waypoints_; // Waypoint handler object
@@ -397,6 +417,7 @@ private: /* Params */
 
   SFCType sfc_type_{SFCType::SPHERICAL}; // Indicates the SFC generation (e.g. polytope or spherical)
   FrontEndType front_end_type_{FrontEndType::JPS_AND_DMP}; // Indicates the Front end planner (e.g. a* or JPS)
+  BackEndType back_end_type_{BackEndType::EGO}; // Indicates the Front end planner (e.g. a* or JPS)
 
   /* Back-end params */
   int optimizer_num_retries_;

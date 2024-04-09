@@ -390,11 +390,6 @@ namespace ego_planner
           break;
         }
 
-        // if (checkGroundHeight){
-        //   setServerEvent(PLAN_LOCAL_TRAJ_E);
-        //   break;
-        // }
-
         std::pair<bool,bool> GoalReachedAndReplanNeededCheck = isGoalReachedAndReplanNeeded();
 
         if (GoalReachedAndReplanNeededCheck.first) {
@@ -938,14 +933,6 @@ namespace ego_planner
     return false;
   }
 
-  bool EGOReplanFSM::checkGroundHeight()
-  {
-    // TODO: Implement ground height checking
-    double height;
-    measureGroundHeight(height);
-
-    return false;
-  }
 
   bool EGOReplanFSM::checkTrajectoryClearance()
   {
@@ -1144,47 +1131,6 @@ namespace ego_planner
     for (int i = 0; i < piece_num; i++){
       MINCO_msg.duration[i] = durs[i];
     }
-  }
-
-  bool EGOReplanFSM::measureGroundHeight(double &height)
-  {
-    if (planner_manager_->traj_.local_traj.pts_chk.size() < 3) // means planning have not started
-    {
-      return false;
-    }
-
-    auto traj = &planner_manager_->traj_.local_traj;
-    auto map = planner_manager_->grid_map_;
-    ros::Time t_now = ros::Time::now();
-
-    double forward_t = 2.0 / planner_manager_->pp_.max_vel_; //2.0m
-    double traj_t = (t_now.toSec() - traj->start_time) + forward_t;
-    if (traj_t <= traj->duration)
-    {
-      Eigen::Vector3d forward_p = traj->traj.getPos(traj_t);
-
-      double reso = map->getResolution();
-      for (;; forward_p(2) -= reso)
-      {
-        int ret = map->getOccupancy(forward_p);
-        if (ret == -1) // reach map bottom
-        {
-          return false;
-        }
-        if (ret == 1) // reach the ground
-        {
-          height = forward_p(2);
-
-          std_msgs::Float64 height_msg;
-          height_msg.data = height;
-          ground_height_pub_.publish(height_msg);
-
-          return true;
-        }
-      }
-    }
-
-    return false;
   }
 
   bool EGOReplanFSM::callEmergencyStop(Eigen::Vector3d stop_pos)

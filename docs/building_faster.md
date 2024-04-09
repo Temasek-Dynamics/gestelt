@@ -5,9 +5,9 @@ catkin build --env-cache
 
 # Add packages to skiplist to save time
 ```bash
-catkin config --skiplist bonxai catkin_simple ikd_tree planner_adaptor logger gestelt_test trajectory_inspector fake_drone fake_map swarm_bridge swarm_collision_checker central_benchmark ego_planner_fsm  jps3d trajectory_server gestelt_debug_msgs gestelt_msgs vrpn_client_ros simple_quad_sim path_searching decomp_test_node
+catkin config --skiplist bonxai catkin_simple ikd_tree planner_adaptor logger gestelt_test trajectory_inspector fake_drone fake_map swarm_bridge swarm_collision_checker central_benchmark  jps3d trajectory_server gestelt_debug_msgs gestelt_msgs vrpn_client_ros simple_quad_sim path_searching decomp_test_node
 
-# convex_decomp_util decomp_ros_msgs decomp_ros_utils decomp_util grid_map traj_opt traj_utils
+# convex_decomp_util decomp_ros_msgs decomp_ros_utils decomp_util grid_map traj_opt traj_utils global_planner navigator ego_planner_fsm
 
 # Clear from skiplist
 catkin config --no-skiplist

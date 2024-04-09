@@ -73,8 +73,9 @@ sfc:
     num_expansion_itr: 60
 
 ##### Back-end 
-back_end:
-  num_replan_retries: 10 # Number of times for back-end to retry
+back_end: 
+  type: 1               # 0: SSFC, 1: EGO
+  num_replan_retries: 5 # Number of times for back-end to retry
 
 ##### Optimization params
 optimization:

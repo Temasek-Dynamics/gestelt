@@ -26,6 +26,7 @@
 
   <depend>gestelt_debug_msgs</depend>
 
+  <depend>ego_planner_fsm</depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>

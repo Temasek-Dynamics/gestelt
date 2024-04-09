@@ -396,7 +396,6 @@ private:
   ServerEvent safetyChecks();
 
   bool checkSensorTimeout();
-  bool checkGroundHeight();
   bool checkTrajectoryClearance();
 
   /* Subscriber callbacks */
@@ -421,7 +420,6 @@ private:
   
   /* Helper methods */
   void polyTraj2ROSMsg(traj_utils::PolyTraj &poly_msg, traj_utils::MINCOTraj &MINCO_msg);
-  bool measureGroundHeight(double &height);
 
   // Transform the trajectory from UAV frame to world frame
   void transformMINCOFromOriginToWorld(traj_utils::MINCOTraj & MINCO_msg){
