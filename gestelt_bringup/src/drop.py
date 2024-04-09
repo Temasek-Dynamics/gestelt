@@ -202,7 +202,7 @@ def main():
     # side length 5m
     g=-9.81 #m/s^2  # down force, negative
     f=1*(-g) #N  # up force, positive
-    angle_1=-90
+    angle_1=90
     angle_rad_1=math.radians(angle_1)
 
     # 1/4 test
@@ -211,8 +211,8 @@ def main():
     # waypoints are under the map frame, will be transformed to world frame
 
 
-    waypoints.append(create_pose(0, 1.8,1.7))  
-    waypoints.append(create_pose(0, 1.8,0.6))   
+    waypoints.append(create_pose(0, 0, 1.7))  # drop take-off height is 1.8m
+    waypoints.append(create_pose(0, 0, 0.6))   
 
     # waypoints.append(create_pose(0.0, 0.15,1.2))  
 

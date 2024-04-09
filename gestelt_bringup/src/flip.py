@@ -217,7 +217,7 @@ def main():
     # waypoints.append(create_pose(0.0, 0.15,1.2))  
 
     # waypoints.append(create_pose(-1.5,-1.8,1.8)) 
-    # waypoints.append(create_pose(-1.5,1.5,0.6))  
+    # waypoints.append(create_pose(-1.5,1.5,0.8))  
         
 
     
