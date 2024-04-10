@@ -211,7 +211,7 @@ def main():
     # waypoints are under the map frame, will be transformed to world frame
 
 
-    waypoints.append(create_pose(0, 0, 1.7))  # drop take-off height is 1.8m
+    waypoints.append(create_pose(0, 0, 1.8))  # drop take-off height is 1.8m
     waypoints.append(create_pose(0, 0, 0.6))   
 
     # waypoints.append(create_pose(0.0, 0.15,1.2))  
@@ -221,7 +221,7 @@ def main():
         
 
     
-    accel_list.append(create_accel(0.5*f*math.sin(angle_rad_1),0.0,g+f*math.cos(angle_rad_1))) 
+    accel_list.append(create_accel(0.2*f*math.sin(angle_rad_1),0.0,g+f*math.cos(angle_rad_1))) 
     # accel_list.append(create_accel(None,None,None))  
     accel_list.append(create_accel(None,None,None))
 
