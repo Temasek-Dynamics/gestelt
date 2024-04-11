@@ -45,12 +45,19 @@ void Navigator::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   (*swarm_local_trajs_)[drone_id_] = ego_planner::LocalTrajData();
 
   // Initialize back-end planner
-  back_end_optimizer_ = std::make_unique<ego_planner::PolyTrajOptimizer>();
-  back_end_optimizer_->setParam(pnh);
-  back_end_optimizer_->setEnvironment(map_);
+  if (back_end_type_ == BackEndType::EGO){
+    ego_optimizer_ = std::make_unique<ego_planner::EGOPlannerManager>();
+    ego_optimizer_->initPlanModules(nh, pnh, map_, visualization_);
+    ego_optimizer_->setSwarmTrajectories(swarm_local_trajs_);
+  }
+  else if (back_end_type_ == BackEndType::SSFC) {
+    back_end_optimizer_ = std::make_unique<ego_planner::PolyTrajOptimizer>();
+    back_end_optimizer_->setParam(pnh);
+    back_end_optimizer_->setEnvironment(map_);
 
-  back_end_optimizer_->setVisualizer(visualization_);
-  back_end_optimizer_->assignSwarmTrajs(swarm_local_trajs_);
+    back_end_optimizer_->setVisualizer(visualization_);
+    back_end_optimizer_->assignSwarmTrajs(swarm_local_trajs_);
+  }
 
   /* Initialize Timer */
   if (!debug_planning_){
@@ -71,9 +78,50 @@ void Navigator::initParams(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   pnh.param("debug_planning", debug_planning_, false);
   pnh.param("time_to_col_threshold", time_to_col_threshold_, 0.8);
   pnh.param("receding_horizon_planning_dist", rhp_dist_, 7.5);
-  
-  /* Front end params */
 
+  /* Planner type*/
+  int fe_type, sfc_type, be_type;
+  pnh.param("front_end/planner_type", fe_type, 0);
+  pnh.param("sfc/planner_type", sfc_type, 0);
+  pnh.param("back_end/planner_type", be_type, 0);
+
+  auto fe_type_enum = static_cast<FrontEndType>(fe_type);
+  switch (fe_type_enum) {
+    case FrontEndType::JPS_AND_DMP:
+      front_end_type_ = FrontEndType::JPS_AND_DMP;
+      break;
+    case FrontEndType::ASTAR:
+      front_end_type_ = FrontEndType::ASTAR;
+      break;
+    default:
+      throw std::runtime_error("Invalid Front-End Planner type!");
+  } 
+
+  auto sfc_type_enum = static_cast<SFCType>(sfc_type);
+  switch (sfc_type_enum) {
+    case SFCType::SPHERICAL:
+      sfc_type_ = SFCType::SPHERICAL;
+      break;
+    case SFCType::POLYTOPE:
+      sfc_type_ = SFCType::POLYTOPE;
+      break;
+    default:
+      throw std::runtime_error("Invalid SFC type!");
+  } 
+
+  auto be_type_enum = static_cast<BackEndType>(be_type);
+  switch (be_type_enum) {
+    case BackEndType::SSFC:
+      back_end_type_ = BackEndType::SSFC;
+      break;
+    case BackEndType::EGO:
+      back_end_type_ = BackEndType::EGO;
+      break;
+    default:
+      throw std::runtime_error("Invalid Back-End Planner type!");
+  } 
+
+  /* Front end params */
   if (front_end_type_ == FrontEndType::JPS_AND_DMP){
     pnh.param("front_end/jps/planner_verbose",      jps_params_.planner_verbose, false);
     pnh.param("front_end/jps/interpolate",          jps_params_.interpolate, false);
@@ -108,46 +156,34 @@ void Navigator::initParams(ros::NodeHandle &nh, ros::NodeHandle &pnh)
     rhp_buffer_ = 0.05;
   }
   else if (sfc_type_ == SFCType::SPHERICAL) {
-    pnh.param("sfc/max_iterations", sph_sfc_params_.max_itr, -1);
-    pnh.param("sfc/debug_viz",      sph_sfc_params_.debug_viz, false);
+    pnh.param("sfc/spherical/max_iterations", sph_sfc_params_.max_itr, -1);
+    pnh.param("sfc/spherical/debug_viz",      sph_sfc_params_.debug_viz, false);
 
-    pnh.param("sfc/max_sample_points", sph_sfc_params_.max_sample_points, -1);
-    pnh.param("sfc/mult_stddev_x", sph_sfc_params_.mult_stddev_x, -1.0);
-    pnh.param("sfc/mult_stddev_y", sph_sfc_params_.mult_stddev_y, -1.0);
-    pnh.param("sfc/mult_stddev_z", sph_sfc_params_.mult_stddev_z, -1.0);
+    pnh.param("sfc/spherical/max_sample_points", sph_sfc_params_.max_sample_points, -1);
+    pnh.param("sfc/spherical/mult_stddev_x", sph_sfc_params_.mult_stddev_x, -1.0);
+    pnh.param("sfc/spherical/mult_stddev_y", sph_sfc_params_.mult_stddev_y, -1.0);
+    pnh.param("sfc/spherical/mult_stddev_z", sph_sfc_params_.mult_stddev_z, -1.0);
 
-    pnh.param("sfc/W_cand_vol",       sph_sfc_params_.W_cand_vol, -1.0);
-    pnh.param("sfc/W_intersect_vol",  sph_sfc_params_.W_intersect_vol, -1.0);
-    pnh.param("sfc/W_progress",       sph_sfc_params_.W_progress, -1.0);
+    pnh.param("sfc/spherical/W_cand_vol",       sph_sfc_params_.W_cand_vol, -1.0);
+    pnh.param("sfc/spherical/W_intersect_vol",  sph_sfc_params_.W_intersect_vol, -1.0);
+    pnh.param("sfc/spherical/W_progress",       sph_sfc_params_.W_progress, -1.0);
 
-    pnh.param("sfc/min_sphere_vol", sph_sfc_params_.min_sphere_vol, -1.0);
-    pnh.param("sfc/max_sphere_vol", sph_sfc_params_.max_sphere_vol, -1.0);
+    pnh.param("sfc/spherical/min_sphere_vol", sph_sfc_params_.min_sphere_vol, -1.0);
+    pnh.param("sfc/spherical/max_sphere_vol", sph_sfc_params_.max_sphere_vol, -1.0);
 
-    pnh.param("sfc/spherical_buffer", sph_sfc_params_.spherical_buffer, 0.0);
+    pnh.param("sfc/spherical/spherical_buffer", sph_sfc_params_.spherical_buffer, 0.0);
 
-    pnh.param("sfc/max_vel", sph_sfc_params_.max_vel, 3.0);
-    pnh.param("sfc/max_acc", sph_sfc_params_.max_acc, 10.0);
+    pnh.param("sfc/spherical/max_vel", sph_sfc_params_.max_vel, 3.0);
+    pnh.param("sfc/spherical/max_acc", sph_sfc_params_.max_acc, 10.0);
+
+    pnh.param("sfc/spherical/time_allocation_type", sph_sfc_params_.time_allocation_type, 0);
+
 
     rhp_buffer_ = sph_sfc_params_.spherical_buffer;
   }
 
   /* Back-end params */
-
-  int be_type;
-  pnh.param("back_end/type", be_type, 0);
   pnh.param("back_end/num_replan_retries", optimizer_num_retries_, -1);
-
-  switch (be_type) {
-    case 0:
-      back_end_type_ = BackEndType::SSFC;
-      break;
-    case 1:
-      back_end_type_ = BackEndType::EGO;
-      break;
-    default:
-      back_end_type_ = BackEndType::SSFC;
-      break;
-  } 
 
 }
 
@@ -328,44 +364,48 @@ bool Navigator::plan(
   const Eigen::Vector3d& start_pos, const Eigen::Vector3d& goal_pos, 
   const double& req_plan_time)
 {
+  SSFC::SFCTrajectory sfc_traj;
+
   // Generate a front-end plan
   if (!(back_end_type_ == BackEndType::EGO)){ // If not using EGO Planner
-    SSFC::SFCTrajectory sfc_traj;
     if (!generateFrontEndPlan(start_pos, goal_pos, sfc_traj)){
       logError("Failed to generate front end plan!");
       return false;
     }
   }
 
-  tm_back_end_plan_.start();
-  // Generate a back-end trajectory from front-end plan
-  poly_traj::MinJerkOpt optimized_mjo; // Optimized minimum jerk trajectory
-  if (!generateBackEndPlan( start_pos, cur_vel_, goal_pos, 
-                            sfc_traj, 
-                            optimized_mjo,
-                            optimizer_num_retries_)){
-    logError("Failed to generate back end plan!");
-    return false;
+  if (! (sfc_type_ == SFCType::POLYTOPE)){ 
+    poly_traj::MinJerkOpt optimized_mjo; // Optimized minimum jerk trajectory
+
+    tm_back_end_plan_.start();
+    // Generate a back-end trajectory from front-end plan
+    if (!generateBackEndPlan( start_pos, cur_vel_, goal_pos, 
+                              sfc_traj, 
+                              optimized_mjo,
+                              optimizer_num_retries_)){
+      logError("Failed to generate back end plan!");
+      return false;
+    }
+    tm_back_end_plan_.stop(verbose_planning_);
+
+    // Save and publish message
+    be_traj_ = std::make_shared<poly_traj::Trajectory>(optimized_mjo.getTraj(req_plan_time));
+
+    traj_utils::PolyTraj poly_msg; 
+    traj_utils::MINCOTraj MINCO_msg; 
+
+    mjoToMsg(optimized_mjo, req_plan_time, poly_msg, MINCO_msg);
+    be_traj_pub_.publish(poly_msg); // (In drone origin frame) Publish to corresponding drone for execution
+    swarm_minco_traj_pub_.publish(MINCO_msg); // (In world frame) Broadcast to all other drones for replanning to optimize in avoiding swarm collision
+
+    // Update optimized trajectory 
+    (*swarm_local_trajs_)[drone_id_] = getLocalTraj(
+      optimized_mjo, req_plan_time, 
+      back_end_optimizer_->getNumCstrPtsPerSeg(), 
+      traj_id_, drone_id_);
+
+    traj_id_++; // Increment trajectory id
   }
-  tm_back_end_plan_.stop(verbose_planning_);
-
-  // Save and publish message
-  be_traj_ = std::make_shared<poly_traj::Trajectory>(optimized_mjo.getTraj(req_plan_time));
-
-  traj_utils::PolyTraj poly_msg; 
-  traj_utils::MINCOTraj MINCO_msg; 
-
-  mjoToMsg(optimized_mjo, req_plan_time, poly_msg, MINCO_msg);
-  be_traj_pub_.publish(poly_msg); // (In drone origin frame) Publish to corresponding drone for execution
-  swarm_minco_traj_pub_.publish(MINCO_msg); // (In world frame) Broadcast to all other drones for replanning to optimize in avoiding swarm collision
-
-  // Update optimized trajectory 
-  (*swarm_local_trajs_)[drone_id_] = getLocalTraj(
-    optimized_mjo, req_plan_time, 
-    back_end_optimizer_->get_cps_num_perPiece_(), 
-    traj_id_, drone_id_);
-
-  traj_id_++; // Increment trajectory id
 
   return true;
 }
@@ -505,13 +545,13 @@ bool Navigator::generateFrontEndPlan(
 }
 
 
-bool SSFCOptimize(const Eigen::Matrix3d& startPVA, const Eigen::Matrix3d& endPVA, 
+bool Navigator::SSFCOptimize(const Eigen::Matrix3d& startPVA, const Eigen::Matrix3d& endPVA, 
                   SSFC::SFCTrajectory& sfc_traj,
                   poly_traj::MinJerkOpt& optimized_mjo){
 
   bool plan_success;
 
-  int num_cstr_pts = back_end_optimizer_->get_cps_num_perPiece_();
+  int num_cstr_pts = back_end_optimizer_->getNumCstrPtsPerSeg();
   int num_segs = sfc_traj.getNumSegments(); // Number of path segments
 
   /***************************/
@@ -621,16 +661,16 @@ bool SSFCOptimize(const Eigen::Matrix3d& startPVA, const Eigen::Matrix3d& endPVA
 }
 
 // ESDF-free Gradient optimization
-bool EGOOptimize(const Eigen::Matrix3d& startPVA, const Eigen::Matrix3d& endPVA, 
+bool Navigator::EGOOptimize(const Eigen::Matrix3d& startPVA, const Eigen::Matrix3d& endPVA, 
                   poly_traj::MinJerkOpt& optimized_mjo){
 
   std::vector<Eigen::Vector3d> waypoints;
-  waypoints.push_back(goal_pos);
+  waypoints.push_back(endPVA.col(0));
   // Generate initial minimum jerk trajectory starting from agent's current position with 0 starting/ending acceleration and velocity.
   bool plan_success = ego_optimizer_->planGlobalTrajWaypoints(
       optimized_mjo,
       startPVA.col(0), startPVA.col(1), startPVA.col(2),
-      endPVA.col(0), endPVA.col(1), endPVA.col(2));
+      waypoints, endPVA.col(1), endPVA.col(2));
 
   // Publishes to "goal_point"
   visualization_->displayGoalPoint(endPVA.col(0), Eigen::Vector4d(0, 0.5, 0.5, 1), 0.3, 0);
@@ -658,7 +698,7 @@ bool EGOOptimize(const Eigen::Matrix3d& startPVA, const Eigen::Matrix3d& endPVA,
 
   // Get local target based on planning horizon
   ego_optimizer_->getLocalTarget(
-      planning_horizon_, startPVA.col(0), endPVA.col(0),
+      rhp_dist_, startPVA.col(0), endPVA.col(0),
       local_target_pos, local_target_vel,
       touch_goal);
 
@@ -701,11 +741,14 @@ bool Navigator::generateBackEndPlan(
 
   for (int itr = 0; itr < num_retries; itr++)
   {
+    int num_cstr_pts;
     if (back_end_type_ == BackEndType::EGO){
       plan_success = EGOOptimize(startPVA, endPVA, optimized_mjo);
+      num_cstr_pts = ego_optimizer_->getNumCstrPtsPerSeg();
     }
     else if (back_end_type_ == BackEndType::SSFC){
-      plan_success = SSFCOptimize(startPVA, endPVA, optimized_mjo);
+      plan_success = SSFCOptimize(startPVA, endPVA, sfc_traj, optimized_mjo);
+      num_cstr_pts = back_end_optimizer_->getNumCstrPtsPerSeg();
     }
 
     Eigen::MatrixXd cstr_pts_optimized_mjo = 
@@ -713,7 +756,6 @@ bool Navigator::generateBackEndPlan(
 
     if (plan_success)
     {
-      // logInfo("Back-end planning successful!");
       visualization_->displayOptimalMJO(cstr_pts_optimized_mjo, 0);
       // visualization_->displayOptimalCtrlPts_q(back_end_optimizer_->getOptimizedCtrlPts());
       break;
@@ -850,7 +892,7 @@ bool Navigator::isTrajectorySafe(
   std::pair<int, double> idx_time_ratio_pair = traj->traj.getIdxTimeRatioAtTime(traj_t_cur);
   
   // idx_seg is starting segment index, computed by multiplying segment index and it's fraction with the number of constraints per segment
-  size_t idx_seg = floor((idx_time_ratio_pair.first + idx_time_ratio_pair.second) * back_end_optimizer_->get_cps_num_perPiece_());
+  size_t idx_seg = floor((idx_time_ratio_pair.first + idx_time_ratio_pair.second) * back_end_optimizer_->getNumCstrPtsPerSeg());
 
   size_t idx_pt = 0; // idx of point within constraint piece
   for (; idx_seg < num_segs; idx_seg++) // iterate through each segment

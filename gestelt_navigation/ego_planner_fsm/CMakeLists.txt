@@ -47,13 +47,13 @@ target_link_libraries(${PROJECT_NAME}
   ${catkin_LIBRARIES}
 )
 
-add_executable(ego_planner_fsm_node
-  src/ego_planner_fsm_node.cpp 
-  src/ego_planner_fsm.cpp 
-  src/ego_planner_manager.cpp 
-)
-target_link_libraries(ego_planner_fsm_node 
-  ${catkin_LIBRARIES}
-)
+# add_executable(ego_planner_fsm_node
+#   src/ego_planner_fsm_node.cpp 
+#   src/ego_planner_fsm.cpp 
+#   src/ego_planner_manager.cpp 
+# )
+# target_link_libraries(ego_planner_fsm_node 
+#   ${catkin_LIBRARIES}
+# )
 
 

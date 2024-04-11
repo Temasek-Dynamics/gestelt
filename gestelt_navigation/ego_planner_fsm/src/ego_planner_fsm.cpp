@@ -14,7 +14,7 @@ namespace ego_planner
     /* initialize main modules */
     visualization_.reset(new PlanningVisualization(pnh));
     planner_manager_.reset(new EGOPlannerManager);
-    planner_manager_->initPlanModules(nh, pnh, visualization_);
+    planner_manager_->initPlanModules(nh, pnh, NULL, visualization_);
 
     /* Benchmarking */
     // time_benchmark_ = std::make_shared<TimeBenchmark>();
@@ -950,7 +950,7 @@ namespace ego_planner
     // std::cout << "t_cur=" << t_cur << " info->duration=" << info->duration << std::endl;
     
     // i_start is piece index
-    size_t i_start = floor((id_ratio.first + id_ratio.second) * planner_manager_->getCpsNumPrePiece());
+    size_t i_start = floor((id_ratio.first + id_ratio.second) * planner_manager_->getNumCstrPtsPerSeg());
 
     if (i_start >= pts_chk.size())
     {

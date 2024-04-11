@@ -610,19 +610,19 @@ namespace ego_planner
   {
     pnh.param("drone_id", drone_id_, -1);
 
-    pnh.param("optimization/constraint_points_perPiece", cps_num_perPiece_, -1);
-    pnh.param("optimization/weight_spherical_bounds", wei_sph_bounds_, -1.0);
-    pnh.param("optimization/weight_obstacle", wei_obs_, -1.0);
-    pnh.param("optimization/weight_obstacle_soft", wei_obs_soft_, -1.0);
+    pnh.param("optimization/num_cstr_pts_per_seg", cps_num_perPiece_, -1);
+    pnh.param("optimization/weight_sph_bounds", wei_sph_bounds_, -1.0);
     pnh.param("optimization/weight_swarm", wei_swarm_, -1.0);
     pnh.param("optimization/weight_feasibility", wei_feas_, -1.0);
     pnh.param("optimization/weight_sqrvariance", wei_sqrvar_, -1.0);
     pnh.param("optimization/weight_time", wei_time_, -1.0);
-    pnh.param("optimization/obstacle_clearance", obs_clearance_, -1.0);
-    pnh.param("optimization/obstacle_clearance_soft", obs_clearance_soft_, -1.0);
     pnh.param("optimization/swarm_clearance", swarm_clearance_, -1.0);
     pnh.param("optimization/max_vel", max_vel_, -1.0);
     pnh.param("optimization/max_acc", max_acc_, -1.0);
+
+    // EGO-Planner only params
+    pnh.param("optimization/obstacle_clearance", obs_clearance_, -1.0);
+    pnh.param("optimization/weight_obstacle", wei_obs_, -1.0);
   }
 
   void PolyTrajOptimizer::setEnvironment(const std::shared_ptr<GridMap> &map)

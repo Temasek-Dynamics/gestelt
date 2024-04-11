@@ -52,18 +52,18 @@
 class Navigator
 {
 enum FrontEndType{
-  ASTAR,
+  ASTAR,        
   JPS_AND_DMP
 };
 
 enum SFCType{
-  SPHERICAL,
-  POLYTOPE
+  SPHERICAL,  
+  POLYTOPE    
 };
 
 enum BackEndType{
-  SSFC,
-  EGO
+  SSFC, // Spherical safe flight corridor
+  EGO   // ESDF-Free Gradient planner
 };
 
 
@@ -158,8 +158,8 @@ private:
 
   // Spherical safe flight corridor optimization
   bool SSFCOptimize(const Eigen::Matrix3d& startPVA, const Eigen::Matrix3d& endPVA, 
-                  SSFC::SFCTrajectory& sfc_traj,
-                  poly_traj::MinJerkOpt& optimized_mjo);
+                    SSFC::SFCTrajectory& sfc_traj,
+                    poly_traj::MinJerkOpt& optimized_mjo);
 
   /* Subscriber callbacks */
 
@@ -417,7 +417,7 @@ private: /* Params */
 
   SFCType sfc_type_{SFCType::SPHERICAL}; // Indicates the SFC generation (e.g. polytope or spherical)
   FrontEndType front_end_type_{FrontEndType::JPS_AND_DMP}; // Indicates the Front end planner (e.g. a* or JPS)
-  BackEndType back_end_type_{BackEndType::EGO}; // Indicates the Front end planner (e.g. a* or JPS)
+  BackEndType back_end_type_{BackEndType::SSFC}; // Indicates the Front end planner (e.g. a* or JPS)
 
   /* Back-end params */
   int optimizer_num_retries_;

@@ -540,25 +540,44 @@ void SphericalSFC::constructSFCTrajectory(
     sfc_traj.segs_t_dur.clear();
     sfc_traj.segs_t_dur.resize(num_segs); // Vector of time durations for each segment {t_1, t_2, ..., t_M}
 
-    // We either use either triangle or trapezoidal time profile.
-    for (size_t i = 0 ; i < num_segs; i++){
-        double traj_dist = (sfc_traj.waypoints[i+1] - sfc_traj.waypoints[i]).norm();
-        
-        // For trapezoidal time profile: t_s, t_c and t_d is the time taken to 
-        //  accelerate, travel at maximum velocity, and decelerate respectively.
-        double t_s, t_c, t_d;
-        t_c = ( (traj_dist / sfc_params_.max_vel) - (sfc_params_.max_vel / sfc_params_.max_acc) );
-        if (t_c <= 0){ // Follow triangle profile
-            t_s = sqrt(traj_dist/(2*sfc_params_.max_acc));
-            t_d = t_s;
-            t_c = 0.0;
+    if (sfc_params_.time_allocation_type == 0) // Average speed time allocation
+    {
+        // We either use either triangle or trapezoidal time profile.
+        for (size_t i = 0 ; i < num_segs; i++){
+            double traj_dist = (sfc_traj.waypoints[i+1] - sfc_traj.waypoints[i]).norm();
+            sfc_traj.segs_t_dur[i] = traj_dist / sfc_params_.max_vel;
         }
-        else{ // Follow trapezoidal profile
-            t_s = sfc_params_.max_vel / sfc_params_.max_acc;
-            t_d = t_s;
-        }
-        sfc_traj.segs_t_dur[i] = t_s + t_c + t_d;
     }
+    else if (sfc_params_.time_allocation_type == 1){ // Trapezoidal time allocation
+        // d_triangle: distance travelled with maximum acceleration to maximum velocity before instantly decelerating to rest.
+        double d_triangle = sfc_params_.max_vel * sfc_params_.max_vel / sfc_params_.max_acc;
+
+        // We either use either triangle or trapezoidal time profile.
+        for (size_t i = 0 ; i < num_segs; i++){
+            double traj_dist = (sfc_traj.waypoints[i+1] - sfc_traj.waypoints[i]).norm();
+            
+            // For trapezoidal time profile: t_s, t_c and t_d is the time taken to 
+            //  accelerate, travel at maximum velocity, and decelerate respectively.
+            double t_s, t_c, t_d;
+
+            if (d_triangle >= traj_dist){ // Follow triangle profile
+                t_s = 2*sqrt(traj_dist/(sfc_params_.max_acc));  //Acceleration phase
+                t_d = t_s;      //Deceleration phase
+                t_c = 0.0;       // Constant maximum velocity phase
+            }
+            else{ // Follow trapezoidal profile
+                t_s = sfc_params_.max_vel / sfc_params_.max_acc; //Acceleration phase
+                t_d = t_s; //Deceleration phase
+                t_c = (traj_dist - d_triangle)/sfc_params_.max_vel;  // Constant maximum velocity phase
+            }
+            sfc_traj.segs_t_dur[i] = t_s + t_c + t_d;
+        }
+    }
+    else {
+
+    }
+
+
 
     /* 3: Get distance and vector to center of spherical cap (the intersection between 2 spheres) */
     sfc_traj.intxn_plane_vec.clear();

@@ -186,12 +186,12 @@ namespace ego_planner
 
     /* optimization parameters */
     double wei_sph_bounds_;                                       // Weight to keep trajectory within bounds of sphere
-    double wei_obs_, wei_obs_soft_;                               // obstacle weight
+    double wei_obs_;                                              // obstacle weight
     double wei_swarm_;                                            // swarm weight
     double wei_feas_;                                             // feasibility weight
     double wei_sqrvar_;                                           // squared variance weight
     double wei_time_;                                             // time weight
-    double obs_clearance_, obs_clearance_soft_, swarm_clearance_; // safe distance
+    double obs_clearance_, swarm_clearance_; // safe distance
     double max_vel_, max_acc_;                                    // dynamic limits
 
     double t_now_;
@@ -248,19 +248,18 @@ namespace ego_planner
     }
 
     /**
-     * @brief Get the parameter value for number of constraint points per piece.
-     * This is user-defined
+     * @brief Get the user-defined value for number of constraint points per segment.
      * 
      * @return int 
      */
-    int get_cps_num_perPiece_(void) { return cps_num_perPiece_; }
+    int getNumCstrPtsPerSeg(void) { return cps_num_perPiece_; }
 
     /**
      * @brief Get the user-defined swarm clearance parameter
      * 
      * @return double 
      */
-    double get_swarm_clearance_(void) { return swarm_clearance_; }
+    double getSwarmClearance(void) { return swarm_clearance_; }
 
     /* main planning API */
 
@@ -1289,7 +1288,6 @@ namespace ego_planner
 
               double dist = (pos - s_obs).dot(v_obs);
               double obs_penalty = obs_clearance_ - dist;
-              // double dist_err_soft = obs_clearance_soft_ - dist;
 
               if (obs_penalty > 0) // If clearance requirements from obstacle is not met
               {

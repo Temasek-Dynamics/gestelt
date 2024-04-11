@@ -26,7 +26,7 @@ namespace ego_planner
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
     /* main planning interface */
-    void initPlanModules(ros::NodeHandle &nh, ros::NodeHandle &pnh, PlanningVisualization::Ptr vis = NULL);
+    void initPlanModules(ros::NodeHandle &nh, ros::NodeHandle &pnh, std::shared_ptr<GridMap> map, PlanningVisualization::Ptr vis = NULL);
 
     /**
      * @brief Generate a minimum jerk trajectory given boundary conditions and inner waypoints while ignoring obstacles
@@ -150,16 +150,16 @@ namespace ego_planner
     bool setLocalTrajFromOpt(const poly_traj::MinJerkOpt &opt, const bool touch_goal);
     
     double getSwarmClearance(void) { 
-      return ploy_traj_opt_->get_swarm_clearance_(); 
+      return ploy_traj_opt_->getSwarmClearance(); 
     }
 
     /**
-     * @brief Return Number of constraint points per piece
+     * @brief Return Number of constraint points per segment
      * 
-     * @return int Number of constraint points per piece
+     * @return int Number of constraint points per segment
      */
-    int getCpsNumPrePiece(void) { 
-      return ploy_traj_opt_->get_cps_num_perPiece_(); 
+    int getNumCstrPtsPerSeg(void) { 
+      return ploy_traj_opt_->getNumCstrPtsPerSeg(); 
     }
     // PtsChk_t getPtsCheck(void) { return ploy_traj_opt_->get_pts_check_(); }
 
@@ -193,7 +193,7 @@ namespace ego_planner
     void setSwarmTrajectories(std::shared_ptr<std::unordered_map<int, ego_planner::LocalTrajData>>& swarm_minco_trajs);
 
     PlanParameters pp_;
-    GridMap::Ptr grid_map_;
+    std::shared_ptr<GridMap> grid_map_;
     TrajContainer traj_;
 
   private:

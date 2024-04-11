@@ -10,7 +10,7 @@ namespace ego_planner
     std::cout << "destroyed EGOPlannerManager" << std::endl; 
   }
 
-  void EGOPlannerManager::initPlanModules(ros::NodeHandle &nh, ros::NodeHandle &pnh, PlanningVisualization::Ptr vis)
+  void EGOPlannerManager::initPlanModules(ros::NodeHandle &nh, ros::NodeHandle &pnh, std::shared_ptr<GridMap> map, PlanningVisualization::Ptr vis)
   {
     pnh.param("drone_id", pp_.drone_id, -1);
 
@@ -22,8 +22,10 @@ namespace ego_planner
     pnh.param("manager/planning_horizon", pp_.planning_horizon_, 5.0);
     pnh.param("manager/use_distinctive_trajs", pp_.use_distinctive_trajs, false);
 
-    grid_map_.reset(new GridMap);
-    grid_map_->initMapROS(nh, pnh);
+    // grid_map_.reset(new GridMap);
+    // grid_map_->initMapROS(nh, pnh);
+
+    grid_map_ = map;
 
     ploy_traj_opt_.reset(new PolyTrajOptimizer());
     ploy_traj_opt_->setParam(pnh);
@@ -321,7 +323,7 @@ namespace ego_planner
   bool EGOPlannerManager::setLocalTrajFromOpt(const poly_traj::MinJerkOpt &opt, const bool touch_goal)
   {
     poly_traj::Trajectory traj = opt.getTraj();
-    Eigen::MatrixXd cps = opt.getInitConstraintPoints(getCpsNumPrePiece());
+    Eigen::MatrixXd cps = opt.getInitConstraintPoints(getNumCstrPtsPerSeg());
     PtsChk_t pts_to_check;
     bool ret = ploy_traj_opt_->computePointsToCheck(traj, ConstraintPoints::two_thirds_id(cps, touch_goal), pts_to_check);
     if (ret){
@@ -368,7 +370,7 @@ namespace ego_planner
 
     /*** STEP 1b: Get initail constraint points ***/
 
-    Eigen::MatrixXd initial_cstr_pts = initMJO.getInitConstraintPoints(ploy_traj_opt_->get_cps_num_perPiece_());
+    Eigen::MatrixXd initial_cstr_pts = initMJO.getInitConstraintPoints(ploy_traj_opt_->getNumCstrPtsPerSeg());
     vector<std::pair<int, int>> segments; // segments are only needed for ESDF Local planner and distinctive trajectories
 
     // Check for collision along path and set {p,v} pairs to constraint points.

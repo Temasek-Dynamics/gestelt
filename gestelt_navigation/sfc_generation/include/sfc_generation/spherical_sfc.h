@@ -121,9 +121,10 @@ public: // Public structs
     double min_sphere_vol; // Minimum volume of sphere
     double max_sphere_vol; // Maximum volume of spheres
 
-    // /* Time allocation */
-    double max_vel; // Maximum velocity
-    double max_acc; // Maximum acceleration
+    /* Time allocation */
+    int time_allocation_type; // Time allocation type 0: Max vel assignment, 1: Trapezoidal assignment
+    double max_vel;          // Maximum velocity
+    double max_acc;          // Maximum acceleration
 
     double spherical_buffer; // Reduce sampled spherical corridors by this amount as a buffer
 
