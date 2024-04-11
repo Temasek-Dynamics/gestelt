@@ -255,8 +255,8 @@ def traj_time_callback(msg):
     if TRAJ_NUM==4:
         TIME_FACTOR_TERMINAL=1.2
         TIME_FACTOR=0.6
-        MAX_VEL=5
-        MAX_ACCEL=12
+        MAX_VEL=3 
+        MAX_ACCEL=8 
     
         waypoints = []
         vel_list = []   
@@ -306,61 +306,43 @@ def traj_time_callback(msg):
     # Trajectory 5: diving
     ###########################################################################
     # if TRAJ_NUM==5:
-        # TIME_FACTOR_TERMINAL=1
-    #     TIME_FACTOR=0.8
-        # MAX_VEL=3
-        # MAX_ACCEL=8
-    
+    #     TIME_FACTOR_TERMINAL=1
+    #     TIME_FACTOR=0.6
+    #     MAX_VEL=2
+    #     MAX_ACCEL=6
     #     waypoints = []
     #     vel_list = []
-    #     accel_list = [] 
-    #     waypoints.append(create_pose(0.0, -0.4, 1.5))
-    #     waypoints.append(create_pose(0.0, -0.4, 1))
-    #     waypoints.append(create_pose(-0.7, -0.4, 0.5))
-    #     waypoints.append(create_pose(-1.4, -0.4, 1.5))
-        
-    #     # accel_list.append(create_accel(0,0,2*g))
-    #     accel_list.append(create_accel(None,None,None))
-    #     accel_list.append(create_accel(None,None,None))
-    #     accel_list.append(create_accel(None,None,None))
-    #     accel_list.append(create_accel(None,None,None))    
+    #     accel_list = []
 
-    #     # velocities constraint
+    #     # side length 5m
+    #     g=-9.81 #m/s^2  # down force, negative
+    #     f=1*(-g) #N  # up force, positive
+    #     angle_1=90
+    #     angle_rad_1=math.radians(angle_1)
+
+    #     # 1/4 test
+    #     # world frame is the initial position of the drone
+    #     # map frame is the origin of the map
+    #     # waypoints are under the map frame, will be transformed to world frame
+
+
+    #     waypoints.append(create_pose(0, 0, 1.8))  # drop take-off height is 1.8m
+    #     waypoints.append(create_pose(0, 0, 0.6))   
+
+            
+    #     accel_list.append(create_accel(0.2*f*math.sin(angle_rad_1),0.0,g+f*math.cos(angle_rad_1))) 
+    #     accel_list.append(create_accel(None,None,None))
+
+
+    #     # velocites constraint
     #     vel_list.append(create_vel(None,None,None))
     #     vel_list.append(create_vel(None,None,None))
-    #     vel_list.append(create_vel(None,None,None))
-    #     vel_list.append(create_vel(None,None,None))
+
         
         # end of the trajectory
 
 
-    # ##########################################################################
-    # Trajectory 5: diving part 2 (transverse to dive point)
-    # ##########################################################################
-    # if TRAJ_NUM==5:
-    #     TIME_FACTOR_TERMINAL=1
-    #     TIME_FACTOR=1
-    #     MAX_VEL=2
-    #     MAX_ACCEL=2
-    
-    #     waypoints = []
-    #     vel_list = []
-    #     accel_list = [] 
-    #     waypoints.append(create_pose(-0.5, 0.5, 2))
-    #     waypoints.append(create_pose(-1, 1, 2))
-    #     waypoints.append(create_pose(-1.5, 1.5, 2))
-        
-    #     # accel_list.append(create_accel(0,0,2*g))
-    #     accel_list.append(create_accel(None,None,None))
-    #     accel_list.append(create_accel(None,None,None))
-    #     accel_list.append(create_accel(None,None,None))
 
-    #     # velocities constraint
-    #     vel_list.append(create_vel(None,None,None))
-    #     vel_list.append(create_vel(None,None,None))
-    #     vel_list.append(create_vel(None,None,None))
-        
-    #     # end of the trajectory
 
 
     # ###########################################################################
@@ -485,3 +467,33 @@ def main():
    
 if __name__ == '__main__':
     main()
+
+
+
+    # ##########################################################################
+    # Trajectory 5: diving part 2 (transverse to dive point)
+    # ##########################################################################
+    # if TRAJ_NUM==5:
+    #     TIME_FACTOR_TERMINAL=1
+    #     TIME_FACTOR=1
+    #     MAX_VEL=2
+    #     MAX_ACCEL=2
+    
+    #     waypoints = []
+    #     vel_list = []
+    #     accel_list = [] 
+    #     waypoints.append(create_pose(-0.5, 0.5, 2))
+    #     waypoints.append(create_pose(-1, 1, 2))
+    #     waypoints.append(create_pose(-1.5, 1.5, 2))
+        
+    #     # accel_list.append(create_accel(0,0,2*g))
+    #     accel_list.append(create_accel(None,None,None))
+    #     accel_list.append(create_accel(None,None,None))
+    #     accel_list.append(create_accel(None,None,None))
+
+    #     # velocities constraint
+    #     vel_list.append(create_vel(None,None,None))
+    #     vel_list.append(create_vel(None,None,None))
+    #     vel_list.append(create_vel(None,None,None))
+        
+    #     # end of the trajectory
