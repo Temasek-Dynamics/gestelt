@@ -162,7 +162,7 @@ def traj_time_callback(msg):
     # frame is ENU
     
     print("sleeping for",current_traj_time)
-    rospy.sleep(current_traj_time + 1)
+    rospy.sleep(current_traj_time + 2.5)
         
     print(f"Sending the following waypoints to UAVs")
     global TRAJ_NUM
