@@ -210,7 +210,11 @@ def main():
     # Send waypoints to UAVs
     # frame is ENU
     print(f"Sending waypoints to UAVs")
-    set_PX4_parameters("MPC_RPT_Z_KI", 0.2)
+
+    # dynamic reconfiguration
+    set_PX4_parameters("MPC_RPT_Z_KI", 0.5) #0.5
+    set_PX4_parameters("MPC_RPT_Z_SIGMA", 2.5) #2.5
+    
     time.sleep(2)
     TIME_FACTOR_TERMINAL=1
     TIME_FACTOR=0.6

@@ -3,8 +3,9 @@ import numpy as np
 import rospy
 from gestelt_msgs.msg import CommanderState, Goals, CommanderCommand
 from geometry_msgs.msg import Pose, Accel,PoseArray,AccelStamped, Twist
-from mavros_msgs.msg import PositionTarget
 from std_msgs.msg import Int8, Bool,Float32
+from mavros_msgs.srv import ParamSet
+from mavros_msgs.msg import ParamValue
 import math
 import time
 import tf
@@ -29,6 +30,9 @@ TRAJ_NUM=2
 
 # Dictionary of UAV states
 server_states = {}
+
+# PX4 parameters dynamic reconfigure client
+px4_param_reconfig_client_=rospy.ServiceProxy('/mavros/param/set',ParamSet)
 
 # Check if UAV has achived desired traj_server_state
 def check_traj_server_states(des_traj_server_state):
@@ -155,6 +159,23 @@ def pub_waypoints(waypoints,accels,vels,time_factor_terminal=1,time_factor=0.6,m
     # waypoints_pos_pub.publish(wp_pos_msg)
     # waypoints_acc_pub.publish(wp_acc_msg)
 
+def set_PX4_parameters(param_id, value):
+    rospy.wait_for_service('/mavros/param/set')
+    try:
+        # call the service
+        param_value = ParamValue()
+        param_value.integer = 0
+        param_value.real = value
+        response = px4_param_reconfig_client_(param_id=param_id,value=param_value)
+        if response.success:
+            rospy.loginfo("Parameter '{}' set to '{}'".format(param_id, value))
+        else:
+            rospy.logwarn("PX4 param reconfigure Service call failed with message: %s", response.message)
+
+    except rospy.ServiceException as e:
+        rospy.logerr("Service call failed: %s", str(e))
+
+
 
 def traj_time_callback(msg):
     current_traj_time = msg.data
@@ -162,7 +183,7 @@ def traj_time_callback(msg):
     # frame is ENU
     
     print("sleeping for",current_traj_time)
-    rospy.sleep(current_traj_time + 2.5)
+    rospy.sleep(current_traj_time + 1)
         
     print(f"Sending the following waypoints to UAVs")
     global TRAJ_NUM
@@ -306,6 +327,12 @@ def traj_time_callback(msg):
     # Trajectory 5: drop with flip
     ###########################################################################
     if TRAJ_NUM==5:
+        # dynamic reconfiguration
+        time.sleep(2)
+        set_PX4_parameters("MPC_RPT_Z_KI", 0.5) #0.5
+        set_PX4_parameters("MPC_RPT_Z_SIGMA", 2.5) #2.5
+        time.sleep(2)
+
         TIME_FACTOR_TERMINAL=1
         TIME_FACTOR=0.6
         MAX_VEL=2
