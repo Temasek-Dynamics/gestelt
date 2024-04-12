@@ -3,11 +3,13 @@ import numpy as np
 import rospy
 from gestelt_msgs.msg import CommanderState, Goals, CommanderCommand
 from geometry_msgs.msg import Pose, Accel,PoseArray,AccelStamped, Twist
-from mavros_msgs.msg import PositionTarget
+from mavros_msgs.srv import ParamSet
+from mavros_msgs.msg import ParamValue
 from std_msgs.msg import Int8, Bool, Float32
 import math
 import time
 import tf
+from dynamic_reconfigure.client import Client
 # get ros params from rosparam server
 is_simulation=rospy.get_param('mission/is_simulation', False)
 
@@ -24,6 +26,10 @@ waypoints_pos_pub = rospy.Publisher('/planner/goals_pos', PoseArray, queue_size=
 waypoints_acc_pub = rospy.Publisher('/planner/goals_acc', AccelStamped, queue_size=10)
 # Dictionary of UAV states
 server_states = {}
+
+
+# PX4 parameters dynamic reconfigure client
+px4_param_reconfig_client_=rospy.ServiceProxy('/mavros/param/set',ParamSet)
 
 # Check if UAV has achived desired traj_server_state
 def check_traj_server_states(des_traj_server_state):
@@ -150,7 +156,21 @@ def pub_waypoints(waypoints,accels,vels,time_factor_terminal=1,time_factor=0.6,m
     # waypoints_pos_pub.publish(wp_pos_msg)
     # waypoints_acc_pub.publish(wp_acc_msg)
 
+def set_PX4_parameters(param_id, value):
+    rospy.wait_for_service('/mavros/param/set')
+    try:
+        # call the service
+        param_value = ParamValue()
+        param_value.integer = 0
+        param_value.real = value
+        response = px4_param_reconfig_client_(param_id=param_id,value=param_value)
+        if response.success:
+            rospy.loginfo("Parameter '{}' set to '{}'".format(param_id, value))
+        else:
+            rospy.logwarn("PX4 param reconfigure Service call failed with message: %s", response.message)
 
+    except rospy.ServiceException as e:
+        rospy.logerr("Service call failed: %s", str(e))
 
 
 def main():
@@ -190,7 +210,7 @@ def main():
     # Send waypoints to UAVs
     # frame is ENU
     print(f"Sending waypoints to UAVs")
-
+    set_PX4_parameters("MPC_RPT_Z_KI", 0.2)
     TIME_FACTOR_TERMINAL=1
     TIME_FACTOR=0.6
     MAX_VEL=2

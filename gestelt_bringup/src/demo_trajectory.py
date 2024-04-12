@@ -303,43 +303,42 @@ def traj_time_callback(msg):
     
 
     ###########################################################################
-    # Trajectory 5: diving
+    # Trajectory 5: drop with flip
     ###########################################################################
-    # if TRAJ_NUM==5:
-    #     TIME_FACTOR_TERMINAL=1
-    #     TIME_FACTOR=0.6
-    #     MAX_VEL=2
-    #     MAX_ACCEL=6
-    #     waypoints = []
-    #     vel_list = []
-    #     accel_list = []
+    if TRAJ_NUM==5:
+        TIME_FACTOR_TERMINAL=1
+        TIME_FACTOR=0.6
+        MAX_VEL=2
+        MAX_ACCEL=6
+        waypoints = []
+        vel_list = []
+        accel_list = []
 
-    #     # side length 5m
-    #     g=-9.81 #m/s^2  # down force, negative
-    #     f=1*(-g) #N  # up force, positive
-    #     angle_1=90
-    #     angle_rad_1=math.radians(angle_1)
+        # side length 5m
+        g=-9.81 #m/s^2  # down force, negative
+        f=1*(-g) #N  # up force, positive
+        angle_1=90
+        angle_rad_1=math.radians(angle_1)
 
-    #     # 1/4 test
-    #     # world frame is the initial position of the drone
-    #     # map frame is the origin of the map
-    #     # waypoints are under the map frame, will be transformed to world frame
+        # 1/4 test
+        # world frame is the initial position of the drone
+        # map frame is the origin of the map
+        # waypoints are under the map frame, will be transformed to world frame
 
 
-    #     waypoints.append(create_pose(0, 0, 1.8))  # drop take-off height is 1.8m
-    #     waypoints.append(create_pose(0, 0, 0.6))   
+        waypoints.append(create_pose(0, -0.4, 1.8))  # drop take-off height is 1.8m
+        waypoints.append(create_pose(0, -0.4, 0.6))   
 
             
-    #     accel_list.append(create_accel(0.2*f*math.sin(angle_rad_1),0.0,g+f*math.cos(angle_rad_1))) 
-    #     accel_list.append(create_accel(None,None,None))
+        accel_list.append(create_accel(0.2*f*math.sin(angle_rad_1),0.0,g+f*math.cos(angle_rad_1))) 
+        accel_list.append(create_accel(None,None,None))
 
 
-    #     # velocites constraint
-    #     vel_list.append(create_vel(None,None,None))
-    #     vel_list.append(create_vel(None,None,None))
+        # velocites constraint
+        vel_list.append(create_vel(None,None,None))
+        vel_list.append(create_vel(None,None,None))
 
         
-        # end of the trajectory
 
 
 
@@ -382,7 +381,7 @@ def traj_time_callback(msg):
 
 
     
-    elif TRAJ_NUM>4:
+    elif TRAJ_NUM>5:
         rospy.signal_shutdown("ALL trajectory done!, finish")
         
         
