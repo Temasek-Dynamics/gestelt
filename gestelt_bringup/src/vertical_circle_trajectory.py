@@ -201,7 +201,7 @@ def main():
     angle_rad_2=math.radians(angle_2)
     TIME_FACTOR_TERMINAL=1
     TIME_FACTOR=0.6
-    MAX_VEL=5
+    MAX_VEL=2
     MAX_ACCEL=10
     
     time_factor_msg=Float32()
