@@ -202,7 +202,7 @@ def main():
     TIME_FACTOR_TERMINAL=1
     TIME_FACTOR=0.6
     MAX_VEL=3
-    MAX_ACCEL=10
+    MAX_ACCEL=9
     
     time_factor_msg=Float32()
     time_factor_msg.data=TIME_FACTOR
