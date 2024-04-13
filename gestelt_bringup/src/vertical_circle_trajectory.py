@@ -207,8 +207,11 @@ def main():
     time_factor_msg=Float32()
     time_factor_msg.data=TIME_FACTOR
     
+    highest_point=2.0
+    lowest_point=0.5
+    middle_point=highest_point-(highest_point-lowest_point)/2
 
-    num_passes = 10
+    num_passes = 2
         # 1/4 test
         # world frame is the initial position of the drone
         # map frame is the origin of the map
@@ -217,10 +220,10 @@ def main():
 
          
          
-        waypoints.append(create_pose(0.0, 0.0, 0.65))
-        waypoints.append(create_pose(-0.75,0.0,1.4))
-        waypoints.append(create_pose(0.0,0.0,2.15))
-        waypoints.append(create_pose(0.75,0.0,1.4))
+        waypoints.append(create_pose(0.0, 0.0, lowest_point))
+        waypoints.append(create_pose(-0.75,0.0,middle_point))
+        waypoints.append(create_pose(0.0,0.0,highest_point))
+        waypoints.append(create_pose(0.75,0.0,middle_point))
        
         accel_list.append(create_accel(None,None,None))
         accel_list.append(create_accel(None,None,None))
@@ -234,11 +237,11 @@ def main():
         vel_list.append(create_vel(None,None,None))
         vel_list.append(create_vel(None,None,None))
 
-    waypoints.append(create_pose(0.0, 0.0, 0.65))
+    waypoints.append(create_pose(0.0, 0.0, lowest_point))
     accel_list.append(create_accel(None,None,None))
     vel_list.append(create_vel(None,None,None))
 
-    waypoints.append(create_pose(-1.5,0.0,1.4))
+    waypoints.append(create_pose(-1.5,0.0,middle_point))
     accel_list.append(create_accel(None,None,None))
     vel_list.append(create_vel(None,None,None))
 
