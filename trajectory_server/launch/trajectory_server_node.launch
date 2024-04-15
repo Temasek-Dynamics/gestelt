@@ -33,7 +33,7 @@
         <param name="traj_server/safety_box/max_x" value="6.0" type="double"/>
         <param name="traj_server/safety_box/max_y" value="6.0" type="double"/>
         <param name="traj_server/safety_box/max_z" value="5.0" type="double"/>
-        <param name="traj_server/yaw_follow" value="true" type="bool"/>
+        <param name="traj_server/yaw_follow" value="false" type="bool"/>
 
         <!-- Subscribed Topics -->
         <!-- <remap from="/planner/trajectory" to="/planner/trajectory"/> -->
