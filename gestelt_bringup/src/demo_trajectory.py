@@ -446,7 +446,7 @@ def main():
             # set PX4 parameters
             set_PX4_parameters("MPC_RPT_Z_KI", 1.2) #0.5
             set_PX4_parameters("MPC_RPT_Z_SIGMA", 3) #2.5
-            set_PX4_parameters("MPC_Z_VEL_MAX_DN", 1) #2.5
+            # cannot write set_PX4_parameters("MPC_Z_VEL_MAX_DN", 1) #2.5
             time.sleep(2)
             break
         elif (not HOVER_MODE):

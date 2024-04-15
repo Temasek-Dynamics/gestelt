@@ -26,6 +26,9 @@ waypoints_acc_pub = rospy.Publisher('/planner/goals_acc', AccelStamped, queue_si
 # Dictionary of UAV states
 server_states = {}
 
+# maximum down velocity limitation option publisher
+max_down_vel_limit_pub = rospy.Publisher('/planner/max_down_vel_limit', Bool, queue_size=10)
+
 # Check if UAV has achived desired traj_server_state
 def check_traj_server_states(des_traj_server_state):
     if len(server_states.items()) == 0:
@@ -151,6 +154,12 @@ def pub_waypoints(waypoints,accels,vels,time_factor_terminal=1,time_factor=0.6,m
     # waypoints_pos_pub.publish(wp_pos_msg)
     # waypoints_acc_pub.publish(wp_acc_msg)
 
+def pub_max_down_vel_limit(option):
+    limit_msg = Bool()
+    limit_msg.data = option
+    max_down_vel_limit_pub.publish(limit_msg)
+
+
 def main():
     rospy.init_node('mission_startup', anonymous=True)
     pub_freq = 25 # hz
@@ -203,7 +212,9 @@ def main():
     TIME_FACTOR=0.6
     MAX_VEL=2.5
     MAX_ACCEL=9
+    MAX_DOWN_VEL_LIMIT=False
     
+
     time_factor_msg=Float32()
     time_factor_msg.data=TIME_FACTOR
     
@@ -246,6 +257,8 @@ def main():
     vel_list.append(create_vel(None,None,None))
 
     time_factor_pub.publish(time_factor_msg)
+
+    pub_max_down_vel_limit(MAX_DOWN_VEL_LIMIT)
     pub_waypoints(waypoints,accel_list,vel_list,TIME_FACTOR_TERMINAL,TIME_FACTOR,MAX_VEL,MAX_ACCEL)    
     rospy.spin()
     

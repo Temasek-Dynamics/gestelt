@@ -27,6 +27,8 @@ waypoints_acc_pub = rospy.Publisher('/planner/goals_acc', AccelStamped, queue_si
 # Dictionary of UAV states
 server_states = {}
 
+# maximum down velocity limitation option publisher
+max_down_vel_limit_pub = rospy.Publisher('/planner/max_down_vel_limit', Bool, queue_size=10)
 
 # PX4 parameters dynamic reconfigure client
 px4_param_reconfig_client_=rospy.ServiceProxy('/mavros/param/set',ParamSet)
@@ -172,6 +174,11 @@ def set_PX4_parameters(param_id, value):
     except rospy.ServiceException as e:
         rospy.logerr("Service call failed: %s", str(e))
 
+def pub_max_down_vel_limit(option):
+    limit_msg = Bool()
+    limit_msg.data = option
+    max_down_vel_limit_pub.publish(limit_msg)
+
 
 def main():
     rospy.init_node('mission_startup', anonymous=True)
@@ -220,6 +227,9 @@ def main():
     TIME_FACTOR=0.6
     MAX_VEL=2
     MAX_ACCEL=6
+    MAX_DOWN_VEL_LIMIT=True
+    
+
     waypoints = []
     vel_list = []
     accel_list = []
@@ -249,7 +259,7 @@ def main():
     vel_list.append(create_vel(None,None,None))
 
     # end of the trajectory
-
+    pub_max_down_vel_limit(MAX_DOWN_VEL_LIMIT)
     pub_waypoints(waypoints,accel_list,vel_list,TIME_FACTOR_TERMINAL,TIME_FACTOR,MAX_VEL,MAX_ACCEL)    
        
     rospy.spin()

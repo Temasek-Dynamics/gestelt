@@ -19,6 +19,7 @@
 #include <std_msgs/Empty.h>
 #include <std_msgs/Int8.h>
 #include <std_msgs/String.h>
+#include <std_msgs/Bool.h>
 #include <trajectory_msgs/MultiDOFJointTrajectory.h>
 
 #include <gestelt_msgs/CommanderCommand.h>
@@ -124,7 +125,7 @@ private: // Class Methods
    * @brief Callback for Mavros state 
    */
   void UAVStateCb(const mavros_msgs::State::ConstPtr &msg);
-
+  void downVelLimitCB(const std_msgs::Bool::ConstPtr &msg);
   /**
    * @brief Callback for UAV Pose
    */
@@ -397,7 +398,7 @@ private: // Member variables
   ros::Subscriber odom_sub_; // Subscriber to UAV State (MavROS)
   // TODO: make this a service server
   ros::Subscriber command_server_sub_; // Subscriber to trajectory server commands
-
+  ros::Subscriber down_vel_limit_sub_; // Subscriber to down velocity limit
   /* Timer */
   ros::Timer exec_traj_timer_; // Timer to generate PVA commands for trajectory execution
   ros::Timer tick_state_timer_; // Timer to tick the state machine 
@@ -453,6 +454,9 @@ private: // Member variables
 
   //yaw control
   bool YAW_FOLLOW_=false;   //follow the yaw of the mission
+
+  // MAX down velocity limits
+  bool MAX_DOWN_VEL_LIMIT_=true; //limit the down velocity to a certain value
   
   std::mutex cmd_mutex_; // mutex for PVA Commands
 

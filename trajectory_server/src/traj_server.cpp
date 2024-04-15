@@ -57,7 +57,7 @@ void TrajServer::init(ros::NodeHandle& nh)
   uav_state_sub_ = nh.subscribe<mavros_msgs::State>("/mavros/state", 10, &TrajServer::UAVStateCb, this);
   pose_sub_ = nh.subscribe<geometry_msgs::PoseStamped>("/mavros/local_position/pose", 1, &TrajServer::UAVPoseCB, this);
   odom_sub_ = nh.subscribe<nav_msgs::Odometry>("/mavros/local_position/odom", 1, &TrajServer::UAVOdomCB, this);
-
+  down_vel_limit_sub_=nh.subscribe<std_msgs::Bool>("/planner/max_down_vel_limit", 1, &TrajServer::downVelLimitCB, this);
   /////////////////
   /* Publishers */
   /////////////////
@@ -167,6 +167,11 @@ void TrajServer::UAVStateCb(const mavros_msgs::State::ConstPtr &msg)
 {
   // logInfoThrottled(string_format("State: Mode[%s], Connected[%d], Armed[%d]", msg->mode.c_str(), msg->connected, msg->armed), 1.0);
   uav_current_state_ = *msg;
+}
+
+void TrajServer::downVelLimitCB(const std_msgs::Bool::ConstPtr &msg)
+{
+  MAX_DOWN_VEL_LIMIT_ = msg->data;
 }
 
 void TrajServer::UAVPoseCB(const geometry_msgs::PoseStamped::ConstPtr &msg)
@@ -602,7 +607,10 @@ void TrajServer::execMission()
   if (!YAW_FOLLOW_){
   mission_type_mask_ = IGNORE_YAW_RATE; // Ignore yaw rate 
   }
-  
+  if (MAX_DOWN_VEL_LIMIT_ && last_mission_vel_(2) < 0){
+    last_mission_vel_(2) = std::max(last_mission_vel_(2), -1.0);
+  }
+
   // ROS_INFO("execMission() mission_vel: %f, %f, %f", last_mission_vel_(0), last_mission_vel_(1), last_mission_vel_(2));
   publishCmd( last_mission_pos_, last_mission_vel_, 
               last_mission_acc_, last_mission_jerk_, 
