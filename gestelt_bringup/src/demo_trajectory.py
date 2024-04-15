@@ -428,6 +428,9 @@ def main():
     HOVER_MODE = False
     MISSION_MODE = False
     
+
+
+
     rospy.Subscriber("/trajectory_total_time", Float32, traj_time_callback)
 
     while not rospy.is_shutdown():
@@ -439,7 +442,11 @@ def main():
         
         if (MISSION_MODE):
             # Already in MISSION 
-            time.sleep(5)
+            time.sleep(3)
+            # set PX4 parameters
+            set_PX4_parameters("MPC_RPT_Z_KI", 1.2) #0.5
+            set_PX4_parameters("MPC_RPT_Z_SIGMA", 3) #2.5
+            time.sleep(2)
             break
         elif (not HOVER_MODE):
             # IDLE -> TAKE OFF -> HOVER
