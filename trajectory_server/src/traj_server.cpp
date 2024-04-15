@@ -518,7 +518,9 @@ void TrajServer::circularTrajCb(const controller_msgs::FlatTarget::ConstPtr &msg
   last_mission_acc_(2) = msg->acceleration.z;
 
     //calculate the yaw angle as the tangent of the position
-  // last_mission_yaw_ = atan2(last_mission_vel_(1), last_mission_vel_(0));
+  last_mission_yaw_ = atan2(last_mission_vel_(1), last_mission_vel_(0));
+  last_mission_yaw_dot_ = atan2(last_mission_acc_(1), last_mission_acc_(0));
+  
   }
 
 }
@@ -599,7 +601,7 @@ void TrajServer::execMission()
 {
   std::lock_guard<std::mutex> cmd_guard(cmd_mutex_);
 
-  mission_type_mask_ = IGNORE_YAW_RATE; // Ignore yaw rate 
+  // mission_type_mask_ = IGNORE_YAW_RATE; // Ignore yaw rate 
   // ROS_INFO("execMission() mission_vel: %f, %f, %f", last_mission_vel_(0), last_mission_vel_(1), last_mission_vel_(2));
   publishCmd( last_mission_pos_, last_mission_vel_, 
               last_mission_acc_, last_mission_jerk_, 
