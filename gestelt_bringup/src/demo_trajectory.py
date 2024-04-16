@@ -379,6 +379,7 @@ def traj_time_callback(msg):
     # Trajectory 6: go to the vertical loop start point
     ###########################################################################
     if TRAJ_NUM==6:
+        time.sleep(1)
         TIME_FACTOR_TERMINAL=1
         TIME_FACTOR=1
         MAX_VEL=2
@@ -468,9 +469,9 @@ def traj_time_callback(msg):
         accel_list = []
 
         TIME_FACTOR_TERMINAL=1
-        TIME_FACTOR=0.8
-        MAX_VEL=4
-        MAX_ACCEL=8
+        TIME_FACTOR=0.9
+        MAX_VEL=3
+        MAX_ACCEL=5
         MAX_DOWN_VEL_LIMIT=True
         
         waypoints.append(create_pose(-1.5, -1.0, 1.5))
@@ -526,7 +527,7 @@ def main():
         
         if (MISSION_MODE):
             # Already in MISSION 
-            time.sleep(3)
+            time.sleep(5)
             # set PX4 parameters
             set_PX4_parameters("MPC_RPT_XY_KI", 0.5) #0.5
             set_PX4_parameters("MPC_RPT_Z_KI", 1.2) #0.5
