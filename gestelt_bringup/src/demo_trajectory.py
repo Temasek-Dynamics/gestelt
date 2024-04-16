@@ -198,8 +198,8 @@ def traj_time_callback(msg):
     ###########################################################################
     # Extract trajectory to test
     ###########################################################################        
-    # if TRAJ_NUM>3:
-    #     rospy.signal_shutdown("ALL trajectory done!, finish")        
+    if TRAJ_NUM>4:
+        rospy.signal_shutdown("ALL trajectory done!, finish")        
     ###########################################################################
     # Trajectory 2: REVERSE multiple passes through a gate
     ###########################################################################
