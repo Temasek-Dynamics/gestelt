@@ -31,6 +31,9 @@ TRAJ_NUM=2
 # Dictionary of UAV states
 server_states = {}
 
+# maximum down velocity limitation option publisher
+max_down_vel_limit_pub = rospy.Publisher('/planner/max_down_vel_limit', Bool, queue_size=10)
+
 # PX4 parameters dynamic reconfigure client
 px4_param_reconfig_client_=rospy.ServiceProxy('/mavros/param/set',ParamSet)
 
@@ -175,6 +178,10 @@ def set_PX4_parameters(param_id, value):
     except rospy.ServiceException as e:
         rospy.logerr("Service call failed: %s", str(e))
 
+def pub_max_down_vel_limit(option):
+    limit_msg = Bool()
+    limit_msg.data = option
+    max_down_vel_limit_pub.publish(limit_msg)
 
 
 def traj_time_callback(msg):
@@ -188,8 +195,11 @@ def traj_time_callback(msg):
     print(f"Sending the following waypoints to UAVs")
     global TRAJ_NUM
             
-            
-            
+    ###########################################################################
+    # Extract trajectory to test
+    ###########################################################################        
+    # if TRAJ_NUM>3:
+    #     rospy.signal_shutdown("ALL trajectory done!, finish")        
     ###########################################################################
     # Trajectory 2: REVERSE multiple passes through a gate
     ###########################################################################
@@ -249,8 +259,8 @@ def traj_time_callback(msg):
     ###########################################################################
     if TRAJ_NUM==3:
         TIME_FACTOR_TERMINAL=1
-        TIME_FACTOR=1.2
-        MAX_VEL=2
+        TIME_FACTOR=1
+        MAX_VEL=1
         MAX_ACCEL=2
     
         waypoints = []
@@ -258,12 +268,11 @@ def traj_time_callback(msg):
         accel_list = []
 
         waypoints.append(create_pose(0.0, -1.6, 1.2))
-        waypoints.append(create_pose(0.0, -0.7, 1))
         waypoints.append(create_pose(0.0, -0.4, 0.7))
+        
         accel_list.append(create_accel(None,None,None))
         accel_list.append(create_accel(None,None,None))
-        accel_list.append(create_accel(None,None,None))
-        vel_list.append(create_vel(None,None,None))
+        
         vel_list.append(create_vel(None,None,None))
         vel_list.append(create_vel(None,None,None))
 
@@ -274,10 +283,10 @@ def traj_time_callback(msg):
     # Trajectory 4: Helix
     ###########################################################################
     if TRAJ_NUM==4:
-        TIME_FACTOR_TERMINAL=1.2
+        TIME_FACTOR_TERMINAL=1.5
         TIME_FACTOR=0.6
-        MAX_VEL=3 
-        MAX_ACCEL=8 
+        MAX_VEL=5 
+        MAX_ACCEL=10 
     
         waypoints = []
         vel_list = []   
@@ -329,8 +338,8 @@ def traj_time_callback(msg):
     if TRAJ_NUM==5:
         # dynamic reconfiguration
         time.sleep(2)
-        set_PX4_parameters("MPC_RPT_Z_KI", 0.5) #0.5
-        set_PX4_parameters("MPC_RPT_Z_SIGMA", 2.5) #2.5
+        set_PX4_parameters("MPC_RPT_Z_KI", 0.15) #0.5
+        set_PX4_parameters("MPC_RPT_Z_SIGMA", 2.0) #2.5
         time.sleep(2)
 
         TIME_FACTOR_TERMINAL=1
@@ -347,7 +356,7 @@ def traj_time_callback(msg):
         angle_1=90
         angle_rad_1=math.radians(angle_1)
 
-        # 1/4 test
+       
         # world frame is the initial position of the drone
         # map frame is the origin of the map
         # waypoints are under the map frame, will be transformed to world frame
@@ -365,50 +374,123 @@ def traj_time_callback(msg):
         vel_list.append(create_vel(None,None,None))
         vel_list.append(create_vel(None,None,None))
 
-        
-
-
-
-
-
-    # ###########################################################################
-    # # Trajectory 6: dive (around the gate)
-    # ###########################################################################
-    # if TRAJ_NUM==6:
-    #     TIME_FACTOR_TERMINAL=1
-    #     TIME_FACTOR=0.8
-    #     MAX_VEL=3
-    #     MAX_ACCEL=8
+    ###########################################################################
+    # Trajectory 6: go to the vertical loop start point
+    ###########################################################################
+    if TRAJ_NUM==6:
+        TIME_FACTOR_TERMINAL=1
+        TIME_FACTOR=1
+        MAX_VEL=2
+        MAX_ACCEL=2
     
-    #     waypoints = []
-    #     vel_list = []
-    #     accel_list = [] 
-    #     waypoints.append(create_pose(1.8, 0.5, 0.8))
-    #     waypoints.append(create_pose(2.5, 0.0, 0.5))
-    #     waypoints.append(create_pose(1.8, -0.5, 0.8))
-    #     waypoints.append(create_pose(-1.5, -1.5, 2))
+        waypoints = []
+        vel_list = []
+        accel_list = []
+
+        waypoints.append(create_pose(0.0, -0.4, 0.7))
+        waypoints.append(create_pose(-1.5, -1.0, 1.5))
         
-    #     # accel_list.append(create_accel(0,0,2*g))
-    #     accel_list.append(create_accel(None,None,None))
-    #     accel_list.append(create_accel(None,None,None))
-    #     accel_list.append(create_accel(None,None,None))
-    #     accel_list.append(create_accel(None,None,None))
+        accel_list.append(create_accel(None,None,None))
+        accel_list.append(create_accel(None,None,None))
+       
+        vel_list.append(create_vel(None,None,None))
+        vel_list.append(create_vel(None,None,None))    
 
 
-    #     # velocities constraint
-    #     vel_list.append(create_vel(None,None,None))
-    #     vel_list.append(create_vel(None,None,None))
-    #     vel_list.append(create_vel(None,None,None))
-    #     vel_list.append(create_vel(None,None,None))
+
+
+
+    ###########################################################################
+    # Trajectory 7: vertical loops
+    ###########################################################################
+    if TRAJ_NUM==7:
+        waypoints = []
+        vel_list = []
+        accel_list = []
+
+        TIME_FACTOR_TERMINAL=1
+        TIME_FACTOR=0.6
+        MAX_VEL=2.5
+        MAX_ACCEL=9
+        MAX_DOWN_VEL_LIMIT=False
+        
+        
+        highest_point=2.0
+        lowest_point=0.5
+        middle_point=highest_point-(highest_point-lowest_point)/2
+
+        num_passes = 4
+            
+        # world frame is the initial position of the drone
+        # map frame is the origin of the map
+        # waypoints are under the map frame, will be transformed to world frame
+        for i in range(num_passes):
 
         
-    #     # end of the trajectory
+            waypoints.append(create_pose(0.0,  -1.0, lowest_point))
+            waypoints.append(create_pose(0.75, -1.0, middle_point))
+            waypoints.append(create_pose(0.0,  -1.0, highest_point))
+            waypoints.append(create_pose(-0.75,-1.0, middle_point))
+        
+            accel_list.append(create_accel(None,None,None))
+            accel_list.append(create_accel(None,None,None))
+            accel_list.append(create_accel(None,None,None))
+            accel_list.append(create_accel(None,None,None))
 
 
+            # velocites constraint
+            vel_list.append(create_vel(None,None,None))
+            vel_list.append(create_vel(None,None,None))
+            vel_list.append(create_vel(None,None,None))
+            vel_list.append(create_vel(None,None,None))
 
+        waypoints.append(create_pose(0.0, -1.0, lowest_point))
+        accel_list.append(create_accel(None,None,None))
+        vel_list.append(create_vel(None,None,None))
 
+        waypoints.append(create_pose(1.5,-1.0,1.5))
+        accel_list.append(create_accel(None,None,None))
+        vel_list.append(create_vel(None,None,None))
+        
+        
+         # end of the trajectory#
+        
+        # close the max down velocity limitation
+        pub_max_down_vel_limit(MAX_DOWN_VEL_LIMIT)
+
+    ###########################################################################
+    # Trajectory 8: Square
+    ###########################################################################
+    if TRAJ_NUM==8:
+        waypoints = []
+        vel_list = []
+        accel_list = []
+
+        TIME_FACTOR_TERMINAL=1
+        TIME_FACTOR=0.8
+        MAX_VEL=4
+        MAX_ACCEL=8
+        MAX_DOWN_VEL_LIMIT=False
+        
+        waypoints.append(create_pose(-1.5, -1.0, 1.5))
+        waypoints.append(create_pose(-1.5, 1.5, 1.5))
+        waypoints.append(create_pose(0.0,  1.5, 1.5))
+        
     
-    elif TRAJ_NUM>5:
+        accel_list.append(create_accel(None,None,None))
+        accel_list.append(create_accel(None,None,None))
+        accel_list.append(create_accel(None,None,None))
+        
+
+
+        # velocites constraint
+        vel_list.append(create_vel(0,0,0))
+        vel_list.append(create_vel(0,0,0))
+        vel_list.append(create_vel(0,0,0))
+     
+        
+    
+    elif TRAJ_NUM>8:
         rospy.signal_shutdown("ALL trajectory done!, finish")
         
         
@@ -446,7 +528,6 @@ def main():
             # set PX4 parameters
             set_PX4_parameters("MPC_RPT_Z_KI", 1.2) #0.5
             set_PX4_parameters("MPC_RPT_Z_SIGMA", 3) #2.5
-            # cannot write set_PX4_parameters("MPC_Z_VEL_MAX_DN", 1) #2.5
             time.sleep(2)
             break
         elif (not HOVER_MODE):
@@ -529,5 +610,39 @@ if __name__ == '__main__':
     #     vel_list.append(create_vel(None,None,None))
     #     vel_list.append(create_vel(None,None,None))
     #     vel_list.append(create_vel(None,None,None))
+        
+    #     # end of the trajectory
+
+
+    # ###########################################################################
+    # # Trajectory 6: dive (around the gate)
+    # ###########################################################################
+    # if TRAJ_NUM==6:
+    #     TIME_FACTOR_TERMINAL=1
+    #     TIME_FACTOR=0.8
+    #     MAX_VEL=3
+    #     MAX_ACCEL=8
+    
+    #     waypoints = []
+    #     vel_list = []
+    #     accel_list = [] 
+    #     waypoints.append(create_pose(1.8, 0.5, 0.8))
+    #     waypoints.append(create_pose(2.5, 0.0, 0.5))
+    #     waypoints.append(create_pose(1.8, -0.5, 0.8))
+    #     waypoints.append(create_pose(-1.5, -1.5, 2))
+        
+    #     # accel_list.append(create_accel(0,0,2*g))
+    #     accel_list.append(create_accel(None,None,None))
+    #     accel_list.append(create_accel(None,None,None))
+    #     accel_list.append(create_accel(None,None,None))
+    #     accel_list.append(create_accel(None,None,None))
+
+
+    #     # velocities constraint
+    #     vel_list.append(create_vel(None,None,None))
+    #     vel_list.append(create_vel(None,None,None))
+    #     vel_list.append(create_vel(None,None,None))
+    #     vel_list.append(create_vel(None,None,None))
+
         
     #     # end of the trajectory
