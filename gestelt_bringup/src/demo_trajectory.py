@@ -338,6 +338,7 @@ def traj_time_callback(msg):
     if TRAJ_NUM==5:
         # dynamic reconfiguration
         time.sleep(2)
+        set_PX4_parameters("MPC_RPT_XY_KI",0.1) #0.5
         set_PX4_parameters("MPC_RPT_Z_KI", 0.15) #0.5
         set_PX4_parameters("MPC_RPT_Z_SIGMA", 2.0) #2.5
         time.sleep(2)
@@ -412,7 +413,7 @@ def traj_time_callback(msg):
         TIME_FACTOR=0.6
         MAX_VEL=2.5
         MAX_ACCEL=9
-        MAX_DOWN_VEL_LIMIT=False
+        MAX_DOWN_VEL_LIMIT=False # default value in the traj_server is true
         
         
         highest_point=2.0
@@ -470,7 +471,7 @@ def traj_time_callback(msg):
         TIME_FACTOR=0.8
         MAX_VEL=4
         MAX_ACCEL=8
-        MAX_DOWN_VEL_LIMIT=False
+        MAX_DOWN_VEL_LIMIT=True
         
         waypoints.append(create_pose(-1.5, -1.0, 1.5))
         waypoints.append(create_pose(-1.5, 1.5, 1.5))
@@ -488,7 +489,8 @@ def traj_time_callback(msg):
         vel_list.append(create_vel(0,0,0))
         vel_list.append(create_vel(0,0,0))
      
-        
+        # open the max down velocity limitation
+        pub_max_down_vel_limit(MAX_DOWN_VEL_LIMIT)
     
     elif TRAJ_NUM>8:
         rospy.signal_shutdown("ALL trajectory done!, finish")
@@ -526,6 +528,7 @@ def main():
             # Already in MISSION 
             time.sleep(3)
             # set PX4 parameters
+            set_PX4_parameters("MPC_RPT_XY_KI", 0.5) #0.5
             set_PX4_parameters("MPC_RPT_Z_KI", 1.2) #0.5
             set_PX4_parameters("MPC_RPT_Z_SIGMA", 3) #2.5
             time.sleep(2)

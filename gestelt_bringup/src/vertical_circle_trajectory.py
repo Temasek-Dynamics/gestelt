@@ -210,8 +210,8 @@ def main():
     angle_rad_2=math.radians(angle_2)
     TIME_FACTOR_TERMINAL=1
     TIME_FACTOR=0.6
-    MAX_VEL=2.5
-    MAX_ACCEL=9
+    MAX_VEL=5 #2.5
+    MAX_ACCEL=11 #9
     MAX_DOWN_VEL_LIMIT=False
     
 
