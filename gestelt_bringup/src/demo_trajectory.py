@@ -198,8 +198,8 @@ def traj_time_callback(msg):
     ###########################################################################
     # Extract trajectory to test
     ###########################################################################        
-    if TRAJ_NUM>4:
-        rospy.signal_shutdown("ALL trajectory done!, finish")        
+    # if TRAJ_NUM>4:
+        # rospy.signal_shutdown("ALL trajectory done!, finish")        
     ###########################################################################
     # Trajectory 2: REVERSE multiple passes through a gate
     ###########################################################################
@@ -285,8 +285,8 @@ def traj_time_callback(msg):
     if TRAJ_NUM==4:
         TIME_FACTOR_TERMINAL=1.5
         TIME_FACTOR=0.6
-        MAX_VEL=5 
-        MAX_ACCEL=10 
+        MAX_VEL=3 
+        MAX_ACCEL=8 
     
         waypoints = []
         vel_list = []   
@@ -421,7 +421,7 @@ def traj_time_callback(msg):
         lowest_point=0.6
         middle_point=highest_point-(highest_point-lowest_point)/2
 
-        num_passes = 4
+        num_passes = 3
             
         # world frame is the initial position of the drone
         # map frame is the origin of the map
