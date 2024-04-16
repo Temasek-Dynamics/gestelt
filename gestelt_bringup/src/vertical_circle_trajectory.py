@@ -218,8 +218,8 @@ def main():
     time_factor_msg=Float32()
     time_factor_msg.data=TIME_FACTOR
     
-    highest_point=2.0
-    lowest_point=0.5
+    highest_point=2.1
+    lowest_point=0.6
     middle_point=highest_point-(highest_point-lowest_point)/2
 
     num_passes = 2

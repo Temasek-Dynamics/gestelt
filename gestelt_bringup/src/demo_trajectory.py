@@ -411,13 +411,13 @@ def traj_time_callback(msg):
 
         TIME_FACTOR_TERMINAL=1
         TIME_FACTOR=0.6
-        MAX_VEL=2.5
-        MAX_ACCEL=9
+        MAX_VEL=5
+        MAX_ACCEL=11
         MAX_DOWN_VEL_LIMIT=False # default value in the traj_server is true
         
         
-        highest_point=2.0
-        lowest_point=0.5
+        highest_point=2.1
+        lowest_point=0.6
         middle_point=highest_point-(highest_point-lowest_point)/2
 
         num_passes = 4
