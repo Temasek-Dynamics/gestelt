@@ -9,7 +9,7 @@
 
         <param name="acc_dec_time" value="10" />
         <param name="stop_time" value="$(arg test_time)" />
-        <param name="max_angular_vel" value="1.5" />
+        <param name="max_angular_vel" value="0.5" />
         <param name="initpos_x" value="$(arg circle_center_x)" />
         <param name="initpos_y" value="$(arg circle_center_y)" />
         <param name="initpos_z" value="1.2" />
