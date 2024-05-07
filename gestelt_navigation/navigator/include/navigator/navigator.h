@@ -263,7 +263,7 @@ private:
   bool isTimeout(const double& last_state_time, const double& threshold);
 
   bool isTrajectorySafe(
-    std::shared_ptr<std::unordered_map<int, ego_planner::LocalTrajData>> swarm_local_trajs, 
+    std::shared_ptr<std::vector<ego_planner::LocalTrajData>> swarm_local_trajs, 
     bool& e_stop, bool& must_replan);
 
   bool isTrajectoryDynFeasible(ego_planner::LocalTrajData* traj, bool& is_feasible);
@@ -389,7 +389,7 @@ private: /* Planner members */
 
   std::shared_ptr<poly_traj::Trajectory> be_traj_; //Subscribed back end trajectory
 
-  std::shared_ptr<std::unordered_map<int, ego_planner::LocalTrajData>> swarm_local_trajs_; // Swarm MINCO trajectories, maps drone_id to local trajectory data
+  std::shared_ptr<std::vector<ego_planner::LocalTrajData>> swarm_local_trajs_; // Swarm MINCO trajectories, maps drone_id to local trajectory data
 
   /* Timestamps for detecting timeouts*/
   ros::Time last_state_output_t_; // Last time stamp at which UAV odom is received
@@ -397,12 +397,16 @@ private: /* Planner members */
 private: /* Params */
   int traj_id_{0}; // Trajectory id that increments with every planning cycle
 
-  /* planner parameters */
+  /* Front end planner parameters */
   JPSWrapper::JPSParams jps_params_; 
   AStarPlanner::AStarParams astar_params_; 
 
+  /* SFC parameters */
   SphericalSFC::SphericalSFCParams sph_sfc_params_; 
   PolytopeSFC::PolytopeSFCParams ply_sfc_params_;   
+
+  /* Back-end optimizer parameters */
+  ego_planner::EGOPlannerParams ego_params_;
 
   /* Coordinator params */
   std::string node_name_{"Navigator"};
@@ -414,6 +418,7 @@ private: /* Params */
   double safety_check_freq_;  // Planner timer frequency
   double rhp_dist_;           // Receding horizon planning dist
   double rhp_buffer_;         // Buffer to put goal away from obstacles (in addition to inflation)
+  int max_drones_{100};        // Maximum number of drones. Used to preallocate swarm trajectory data structure
 
   SFCType sfc_type_{SFCType::SPHERICAL}; // Indicates the SFC generation (e.g. polytope or spherical)
   FrontEndType front_end_type_{FrontEndType::JPS_AND_DMP}; // Indicates the Front end planner (e.g. a* or JPS)
@@ -421,6 +426,7 @@ private: /* Params */
 
   /* Back-end params */
   int optimizer_num_retries_;
+  int num_cstr_pts_per_seg_; // Number of constraint points per segment
 
   /* Collision checking params*/
   double swarm_clearance_; // Required clearance between swarm agents
@@ -433,6 +439,12 @@ private: /* Params */
   Timer tm_front_end_plan_{"front_end_plan"};
   Timer tm_sfc_plan_{"sfc_plan"};
   Timer tm_back_end_plan_{"back_end_plan"};
+
+
+  /* Logic Flags */
+  bool init_new_poly_traj_{true};   // If true: initialize new polynomial. Else: start from previous polynomial
+  bool touch_goal_{false};   // If true:  Local target is global target
+
 
 private: /* Logging functions */
   

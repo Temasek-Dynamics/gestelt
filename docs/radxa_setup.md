@@ -165,7 +165,10 @@ scp path/to/radxa_setup.sh rock@IP_ADDR:/home/rock/radxa_setup.sh
         send: true # Set to true
         ...
     ```
-    - In the mavros launch file, set the FCU url to the address of the serial port connecting to the flight controller. And set the GCS URL to the ip address of the computer runnig QGroundControl.
+    - In the mavros launch file, set the FCU url to the address of the serial port connecting to the flight controller. 
+        - [DEPRECATED] For pins (6, 8, 10) or (GND, UART_AO_A_TXD, UART_AO_A_RXD), use `/dev/ttyAML0:230400`
+        - For pins (7, 9, 11) or (UART_AO_B_RX, GND, UART_AO_B_TX), use `/dev/ttyAML1:230400`
+    - Set the GCS URL to the ip address of the computer runnig QGroundControl.
 
 ## Useful info
 

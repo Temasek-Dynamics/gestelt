@@ -12,7 +12,7 @@ receding_horizon_planning_dist: 7.5        # [m] Receding horizon planning
 
 ##### Set planner types
 front_end/planner_type: 1         # 0: ASTAR, 1: JPS_AND_DMP
-sfc/planner_type: 1               # 0: SPHERICAL, 1: POLYTOPE
+sfc/planner_type: 0               # 0: SPHERICAL, 1: POLYTOPE
 back_end/planner_type: 0          # 0: SSFC, 1: EGO
 
 ##### Front-end params
@@ -68,7 +68,7 @@ sfc:
 
     time_allocation_type: 1 #  0: Max vel assignment, 1: Trapezoidal assignment
     max_vel: 5.0 # Maximum velocity (m/s)
-    max_acc: 20.0 # Maximum velocity (m/s)
+    max_acc: 20.0 # Maximum acceleration (m/s^2)
 
     # SFC Buffer 
     spherical_buffer: 0.175 # (m) Reduce spherical SFCs by this fixed amount to increase buffer from obstacles
@@ -83,19 +83,21 @@ sfc:
 ##### Back-end 
 back_end: 
   num_replan_retries: 5 # Number of times for back-end to retry
+  ego:
+    segment_length: 1.5 # Length of one segment i.e. distance between adjacent spline control points
 
 ##### Optimization params
 optimization:
-  num_cstr_pts_per_seg: 5
+  num_cstr_pts_per_seg: 5 # Number of constraint points per trajectory segment i.e. discretization.
   # Weights
-  weight_sph_bounds: 100000.0
+  weight_sph_bounds: 10000.0
   weight_swarm: 50000.0 
   weight_feasibility: 10000.0
   weight_sqrvariance: 10000.0 
   weight_time: 10.0 
   swarm_clearance: 0.4 
-  max_vel: 5.0
-  max_acc: 20.0 # Maximum velocity (m/s)
+  max_vel: 5.0 # Maximum velocity (m/s)
+  max_acc: 20.0 # Maximum acceleration (m/s^2)
 
   # EGO params
   weight_obstacle: 10000.0 

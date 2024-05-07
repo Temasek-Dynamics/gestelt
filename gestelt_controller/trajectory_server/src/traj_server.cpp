@@ -73,8 +73,6 @@ void TrajectoryServer::init(ros::NodeHandle& nh, ros::NodeHandle& pnh)
   USE_FORCE = mavros_msgs::PositionTarget::FORCE;
   IGNORE_YAW = mavros_msgs::PositionTarget::IGNORE_YAW;
   IGNORE_YAW_RATE = mavros_msgs::PositionTarget::IGNORE_YAW_RATE;
-
-  logInfo("Initialized");
 }
 
 /* Subscriber Callbacks */
@@ -203,7 +201,7 @@ void TrajectoryServer::tickServerStateTimerCb(const ros::TimerEvent &e)
           setServerState(ServerState::IDLE);
         }
         else {
-          logInfoThrottled("[INIT] Initializing Server, waiting for connection to FCU...", 2.0 );
+          logInfoThrottled("[INIT] Initializing Trajectory Server, waiting for connection to FCU...", 2.0 );
         }
 
         break;

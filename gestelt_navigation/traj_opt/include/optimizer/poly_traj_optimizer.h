@@ -164,8 +164,7 @@ namespace ego_planner
     poly_traj::MinJerkOpt mjo_q_;   // Minimum jerk trajectory in q space
     poly_traj::MinJerkOpt mjo_xi_;  // Minimum jerk trajectory in xi space
 
-    SwarmTrajData *swarm_trajs_{NULL}; // Can not use shared_ptr and no need to free
-    std::shared_ptr<std::unordered_map<int, ego_planner::LocalTrajData>> swarm_local_trajs_; // Swarm MINCO trajectories
+    std::shared_ptr<std::vector<ego_planner::LocalTrajData>> swarm_local_trajs_; // Swarm MINCO trajectories
 
     ConstraintPoints cps_;
     // PtsChk_t pts_check_;
@@ -175,7 +174,7 @@ namespace ego_planner
     int num_segs_;          // poly traj piece numbers
     int iter_num_;           // iteration of the solver
     double min_ellip_dist2_; // min trajectory distance in swarm
-    bool touch_goal_;
+    bool touch_goal_;       // value is set externally from ego_planner_manager
 
     enum FORCE_STOP_OPTIMIZE_TYPE
     {
@@ -227,17 +226,22 @@ namespace ego_planner
     void setParam(ros::NodeHandle &pnh);
     void setEnvironment(const std::shared_ptr<GridMap> &map);
     void setVisualizer(PlanningVisualization::Ptr vis);
-    void setSwarmTrajs(SwarmTrajData *swarm_trajs_ptr);
-    void setDroneId(const int drone_id);
     void setIfTouchGoal(const bool touch_goal);
 
-    void assignSwarmTrajs(std::shared_ptr<std::unordered_map<int, ego_planner::LocalTrajData>> swarm_local_trajs);
+    void assignSwarmTrajs(std::shared_ptr<std::vector<ego_planner::LocalTrajData>> swarm_local_trajs);
 
     /**
      * Returns the minimum jerk optimizer object
     */
     const poly_traj::MinJerkOpt &getOptimizedMJO(void) { 
       return mjo_q_; 
+    }
+
+    /**
+     * Returns the minimum jerk optimizer object
+    */
+    const poly_traj::MinJerkOpt &getOptimizedMJO_EGO(void) { 
+      return mjo_xi_; 
     }
 
     /**
@@ -346,7 +350,7 @@ namespace ego_planner
         t_now_ = ros::Time::now().toSec();
 
         /* ---------- optimize ---------- */
-        t1 = ros::Time::now();
+        auto opt_start_time = ros::Time::now();
         int result = lbfgs::lbfgs_optimize(
             variable_num_,                  // The number of variables
             x_init,                         // The array of variables.
@@ -357,8 +361,8 @@ namespace ego_planner
             this,                           // A user data for the client program. The callback functions will receive the value of this argument.
             &lbfgs_params);                 // The pointer to a structure representing parameters for L-BFGS optimization. A client program can set this parameter to NULL to use the default parameters
 
-        t2 = ros::Time::now();
-        double time_ms = (t2 - t1).toSec() * 1000;
+        auto opt_end_time = ros::Time::now();
+        double time_ms = (opt_end_time - opt_start_time).toSec() * 1000;
         // double total_time_ms = (t2 - t0).toSec() * 1000;
 
         /* ---------- get result and check collision ---------- */
@@ -398,7 +402,7 @@ namespace ego_planner
         else
         {
           std::cout << "iter=" << iter_num_ << ",time(ms)=" << time_ms << ",error." <<std::endl;
-          ROS_WARN("[PolyTrajOptimizer::optimizeTrajectory] Solver error. Return = %d, %s. Skip this planning.", result, lbfgs::lbfgs_strerror(result));
+          ROS_WARN("[PolyTrajOptimizer]: UAV %d: Solver error. Return = %d, %s. Skip this planning.", drone_id_, result, lbfgs::lbfgs_strerror(result));
         }
 
       } while (
@@ -1098,8 +1102,6 @@ namespace ego_planner
     //  *                          variables.
     //  */
     static double costFunctionCallback(void *func_data, const double *x, double *grad, const int n);
-
-
 
   private:
 

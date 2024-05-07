@@ -1,13 +1,13 @@
-filename: forest16_50obs
-polar_obs: 50 # Number of cylinder obstacles
+filename: empty_world
+polar_obs: 0 # Number of cylinder obstacles
 circle_obs: 0 # Number of hoops
 seed: 1
 
 map:
   inter_obstacle_clearance: 0.3 # Minimum separation distance between center of obstacle primitives
   resolution: 0.1
-  x_size: 20.0
-  y_size: 11.5
+  x_size: 5.9
+  y_size: 5.9
   z_size: 3.0
 
 obstacle:

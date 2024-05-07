@@ -4,7 +4,9 @@ namespace ego_planner
 {
   // SECTION interfaces for setup and query
 
-  EGOPlannerManager::EGOPlannerManager() {}
+  EGOPlannerManager::EGOPlannerManager(const ego_planner::EGOPlannerParams& params) {
+    params_ = params;
+  }
 
   EGOPlannerManager::~EGOPlannerManager() { 
     std::cout << "destroyed EGOPlannerManager" << std::endl; 
@@ -12,30 +14,13 @@ namespace ego_planner
 
   void EGOPlannerManager::initPlanModules(ros::NodeHandle &nh, ros::NodeHandle &pnh, std::shared_ptr<GridMap> map, PlanningVisualization::Ptr vis)
   {
-    pnh.param("drone_id", pp_.drone_id, -1);
-
-    /* read algorithm parameters */
-    pnh.param("manager/max_vel", pp_.max_vel_, -1.0);
-    pnh.param("manager/max_acc", pp_.max_acc_, -1.0);
-    pnh.param("manager/feasibility_tolerance", pp_.feasibility_tolerance_, 0.0);
-    pnh.param("manager/polyTraj_piece_length", pp_.polyTraj_piece_length, -1.0);
-    pnh.param("manager/planning_horizon", pp_.planning_horizon_, 5.0);
-    pnh.param("manager/use_distinctive_trajs", pp_.use_distinctive_trajs, false);
-
-    // grid_map_.reset(new GridMap);
-    // grid_map_->initMapROS(nh, pnh);
-
     grid_map_ = map;
+    visualization_ = vis;
 
     ploy_traj_opt_.reset(new PolyTrajOptimizer());
     ploy_traj_opt_->setParam(pnh);
     ploy_traj_opt_->setEnvironment(grid_map_);
-
-    visualization_ = vis;
-
     ploy_traj_opt_->setVisualizer(visualization_);
-
-    ploy_traj_opt_->setDroneId(pp_.drone_id);
   }
 
   bool EGOPlannerManager::generateMinJerkTraj(
@@ -62,35 +47,6 @@ namespace ego_planner
     mj_opt.generate(inner_ctrl_pts, segs_t_dur);
 
     return true;
-  }
-
-  bool EGOPlannerManager::optimizeMJOTraj(
-    const poly_traj::MinJerkOpt &initial_mjo, poly_traj::MinJerkOpt& optimized_mjo,
-    const std::vector<double>& spheres_radius, const std::vector<Eigen::Vector3d>& spheres_center)
-  {
-    bool plan_success = false;
-    poly_traj::Trajectory initial_traj = initial_mjo.getTraj();
-
-    int num_segs = initial_traj.getPieceSize();
-    // Eigen::MatrixXd all_pos = initial_traj.getPositions();
-    // Get inner_ctrl_pts, a block of size (3, num_segs-1) from (row 0, column 1) onwards. This excludes the boundary points (start and goal).
-    Eigen::MatrixXd inner_ctrl_pts = initial_traj.getPositions().block(0, 1, 3, num_segs - 1);
-    Eigen::Matrix<double, 3, 3> headState, tailState;
-    headState << initial_traj.getJuncPos(0),        initial_traj.getJuncVel(0),        initial_traj.getJuncAcc(0);
-    tailState << initial_traj.getJuncPos(num_segs), initial_traj.getJuncVel(num_segs), initial_traj.getJuncAcc(num_segs);
-    
-    double final_cost; // Not used for now
-
-    // plan_success = ploy_traj_opt_->optimizeTrajectorySFC( 
-    //   headState, tailState,
-    //   inner_ctrl_pts, initial_traj.getDurations(), 
-    //   spheres_radius, spheres_center,
-    //   final_cost);
-
-    // Optimized minimum jerk trajectory
-    optimized_mjo = ploy_traj_opt_->getOptimizedMJO();
-
-    return plan_success;
   }
 
   bool EGOPlannerManager::computeInitState(
@@ -156,7 +112,7 @@ namespace ego_planner
 
       /* generate the actual init trajectory */
       // Get actual number of pieces/segments
-      piece_nums = round((headState.col(0) - tailState.col(0)).norm() / pp_.polyTraj_piece_length); // num pieces/segments = (dist btw. start and goal) / (length of each piece/segment)
+      piece_nums = round((headState.col(0) - tailState.col(0)).norm() / params_.seg_length); // num pieces/segments = (dist btw. start and goal) / (length of each piece/segment)
       piece_nums = piece_nums < 2 ? 2: piece_nums; // ensure piece_nums is at least 2
 
       // Segment duration assumed to be equal
@@ -177,7 +133,7 @@ namespace ego_planner
 
       if (idx != piece_nums - 1)
       {
-        ROS_ERROR("Drone %d: [EGOPlannerManager::computeInitState] (idx != piece_nums - 1). Unexpected error", pp_.drone_id);
+        ROS_ERROR("Drone %d: [EGOPlannerManager::computeInitState] (idx != piece_nums - 1). Unexpected error", params_.drone_id);
         return false;
       }
       
@@ -193,7 +149,7 @@ namespace ego_planner
       {
         ROS_ERROR("Drone %d: [EGOPlannerManager::computeInitState] You are initializing a \\
                   trajectory from a previous optimal trajectory, but no \\
-                  previous trajectories up to now.", pp_.drone_id);
+                  previous trajectories up to now.", params_.drone_id);
         return false;
       }
 
@@ -206,7 +162,7 @@ namespace ego_planner
       if ( t_to_local_traj_end < 0 )
       { 
         ROS_INFO("Drone %d: [EGOPlannerManager::computeInitState] Time left to complete local trajectory \\
-          is negative, exit and wait for another call.", pp_.drone_id);
+          is negative, exit and wait for another call.", params_.drone_id);
         return false;
       }
       // t_to_local_tgt: Time to reach local target
@@ -214,7 +170,7 @@ namespace ego_planner
                            (traj_.global_traj.glb_t_of_lc_tgt - traj_.global_traj.last_glb_t_of_lc_tgt);
 
       // Number of pieces = remaining distance / piece length 
-      int piece_nums = ceil((start_pos - local_target_pos).norm() / pp_.polyTraj_piece_length);
+      int piece_nums = ceil((start_pos - local_target_pos).norm() / params_.seg_length);
       piece_nums = piece_nums < 2 ? 2: piece_nums; // ensure piece_nums is always minimally 2
 
       Eigen::Matrix3d headState;
@@ -248,7 +204,7 @@ namespace ego_planner
         else
         {
           // time t should not exceed t_to_local_Tgt
-          ROS_ERROR("Drone %d: [EGOPlannerManager::computeInitState] t=%.2f, t_to_local_traj_end=%.2f, t_to_local_tgt=%.2f", pp_.drone_id, t, t_to_local_traj_end, t_to_local_tgt);
+          ROS_ERROR("Drone %d: [EGOPlannerManager::computeInitState] t=%.2f, t_to_local_traj_end=%.2f, t_to_local_tgt=%.2f", params_.drone_id, t, t_to_local_traj_end, t_to_local_tgt);
         }
 
         t += piece_dur_vec(i + 1);
@@ -272,7 +228,7 @@ namespace ego_planner
     // Set the last global traj local target timestamp to be that of the current global plan
     traj_.global_traj.last_glb_t_of_lc_tgt = traj_.global_traj.glb_t_of_lc_tgt;
 
-    double t_step = planning_horizon / 20 / pp_.max_vel_;
+    double t_step = planning_horizon / 20 / params_.max_vel;
     // double dist_min = 9999, dist_min_t = 0.0;
 
     // Iterate through the start of global plan until it
@@ -310,7 +266,7 @@ namespace ego_planner
     //    Then it is possible to cover the remaining distance with zero velocity at local target
     // ELSE
     //    We require a non-zero velocity at the local target
-    if ((global_end_pt - local_target_pos).norm() < (pp_.max_vel_ * pp_.max_vel_) / (2 * pp_.max_acc_))
+    if ((global_end_pt - local_target_pos).norm() < (params_.max_vel * params_.max_vel) / (2 * params_.max_acc))
     {
       local_target_vel = Eigen::Vector3d::Zero();
     }
@@ -341,7 +297,7 @@ namespace ego_planner
   {
     static int count = 0;
     printf("\033[47;30m\n[drone %d replan %d]==============================================\033[0m\n",
-           pp_.drone_id, count++);
+           params_.drone_id, count++);
     std::cout.precision(3);
     std::cout << "start: " << start_pos.transpose() << ", " << start_vel.transpose() << "\ngoal:" << local_target_pos.transpose() << ", " << local_target_vel.transpose()
          <<std::endl;
@@ -354,7 +310,7 @@ namespace ego_planner
     /*** STEP 1: INIT. Get initial trajectory and {p,v} pairs ***/
 
     // t_seg_dur: duration of segment = distance between control points / maximum velocity
-    double t_seg_dur = pp_.polyTraj_piece_length / pp_.max_vel_;
+    double t_seg_dur = params_.seg_length / params_.max_vel;
 
     poly_traj::MinJerkOpt initMJO; // Initial minimum jerk trajectory optimizer
 
@@ -408,7 +364,7 @@ namespace ego_planner
                                                       inner_ctrl_pts, initTraj.getDurations(),
                                                       initial_cstr_pts, final_cost);
 
-    best_MJO = ploy_traj_opt_->getOptimizedMJO();
+    best_MJO = ploy_traj_opt_->getOptimizedMJO_EGO();
 
     t_opt = ros::Time::now() - t_start;
 
@@ -501,7 +457,8 @@ namespace ego_planner
     globalMJO.reset(headState, tailState, waypoints.size());
 
     // TODO Why is max_vel divided by 1.5?
-    double des_vel = pp_.max_vel_ / 1.5;
+    // double des_vel = params_.max_vel / 1.5;
+    double des_vel = params_.max_vel / 1.2;
     Eigen::VectorXd time_vec(waypoints.size());
 
     // Try replanning up to 2 times if the velocity constraints are not fulfilled
@@ -520,9 +477,9 @@ namespace ego_planner
       globalMJO.generate(inner_ctrl_pts, time_vec);
 
       // check if any point in trajectory exceeds maximum velocity
-      if (globalMJO.getTraj().getMaxVelRate() < pp_.max_vel_ ||
-          start_vel.norm() > pp_.max_vel_ ||
-          end_vel.norm() > pp_.max_vel_)
+      if (globalMJO.getTraj().getMaxVelRate() < params_.max_vel ||
+          start_vel.norm() > params_.max_vel ||
+          end_vel.norm() > params_.max_vel)
       {
         break;
       }
@@ -537,7 +494,7 @@ namespace ego_planner
       }
 
       // Reduce desired velocity by a factor of 1.5 and try again
-      des_vel /= 1.5;
+      des_vel /= 1.2;
     }
 
 
@@ -547,9 +504,8 @@ namespace ego_planner
 
   /* Utility methods */
 
-  void EGOPlannerManager::setSwarmTrajectories(std::shared_ptr<std::unordered_map<int, ego_planner::LocalTrajData>>& swarm_minco_trajs)
+  void EGOPlannerManager::setSwarmTrajectories(std::shared_ptr<std::vector<ego_planner::LocalTrajData>>& swarm_minco_trajs)
   {
-    // ploy_traj_opt_->setSwarmTrajs(&traj_.swarm_traj);
     ploy_traj_opt_->assignSwarmTrajs(swarm_minco_trajs);
   }
 

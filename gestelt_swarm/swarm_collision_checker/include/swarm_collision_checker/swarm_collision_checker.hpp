@@ -42,7 +42,7 @@ public:
 
       drones_pose_sub_.push_back(pose_sub);
 
-      (*drone_poses_).push_back(Eigen::Vector3d::Zero());
+      (*drone_poses_).push_back(Eigen::Vector3d::Constant(999.9));
     }
 
     // Timers

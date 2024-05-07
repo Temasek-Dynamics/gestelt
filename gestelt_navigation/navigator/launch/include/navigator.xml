@@ -8,8 +8,29 @@
   <arg name="debug_planning" default="false"/>
 
   <!-- Front end planner -->
+  <!-- <group ns="$(arg drone_id_ns)">
+    <node pkg="navigator" type="navigator_node" name="navigator" 
+      launch-prefix="valgrind"
+      required="true" output="screen">
+        <rosparam command="load" file="$(arg cfg_filepath)" />
+
+        <param name="drone_id" value="$(arg drone_id)"/>
+
+        <param name="front_end/debug_planning" value="$(arg debug_planning)"/>
+
+        <remap from="odom" to="$(arg odometry_topic)"/>
+        <remap from="planner/goals" to="planner/goals"/>
+
+        <param name="grid_map/debug_input_entire_map" value="true"/>
+        <param name="grid_map/entire_pcd_map_topic" value="/fake_map"/>
+    </node>
+  </group> -->
+
+
+  <!-- Front end planner -->
   <group ns="$(arg drone_id_ns)">
-    <node pkg="navigator" type="navigator_node" name="navigator" required="true" output="screen">
+    <node pkg="navigator" type="navigator_node" name="navigator" 
+      required="true" output="screen">
         <rosparam command="load" file="$(arg cfg_filepath)" />
 
         <param name="drone_id" value="$(arg drone_id)"/>

@@ -60,10 +60,7 @@ manager:
   max_acc: 6.0
   # polyTraj_piece_length: distance between adjacent spline control points
   polyTraj_piece_length: 1.5
-  # feasibility_tolerance: permitted ratio of vel/acc exceeding limits 
-  feasibility_tolerance: 0.05 
   planning_horizon: 7.5
-  use_distinctive_trajs: false
 
 #####
 # Optimization params

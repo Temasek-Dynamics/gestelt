@@ -103,7 +103,7 @@ namespace ego_planner
       {
         flag_force_return = false;
         // TODO: Add collision-checking in the path
-        printf("\033[32m [PolyTrajOptimizer] Optimization Succeeded! iter=%d, time(ms)=%5.3f, total_t(ms)=%5.3f, cost=%5.3f\n \033[0m", iter_num_, time_ms, total_time_ms, final_cost);
+        printf("\033[32m [PolyTrajOptimizer]: UAV %d: Optimization Succeeded! iter=%d, time(ms)=%5.3f, total_t(ms)=%5.3f, cost=%5.3f\n \033[0m", drone_id_, iter_num_, time_ms, total_time_ms, final_cost);
         flag_success = true;
       }
       // ELSE IF Cancelled
@@ -118,7 +118,7 @@ namespace ego_planner
       else
       {
         std::cout << "iter=" << iter_num_ << ",time(ms)=" << time_ms << ",error." <<std::endl;
-        ROS_WARN("[PolyTrajOptimizer] Solver error. Return = %d, %s. Skip this planning.", result, lbfgs::lbfgs_strerror(result));
+        ROS_WARN("[PolyTrajOptimizer] UAV %d: Solver error. Return = %d, %s. Skip this planning.", drone_id_, result, lbfgs::lbfgs_strerror(result));
       }
 
     } while ((flag_force_return && force_stop_type_ == STOP_FOR_REBOUND && rebound_times <= 20));
@@ -329,7 +329,7 @@ namespace ego_planner
         Eigen::Vector3d sph_ctr_to_pos_vec = pos - spheres_center_[i]; // Sphere center to pos vector
         double sph_ctr_to_pos_dist = sph_ctr_to_pos_vec.norm();
 
-        double obs_static_pen = sph_ctr_to_pos_dist * sph_ctr_to_pos_dist - spheres_radius_[i] * spheres_radius_[i] ; 
+        double obs_static_pen = sph_ctr_to_pos_vec.norm() * sph_ctr_to_pos_vec.norm() - spheres_radius_[i] * spheres_radius_[i] ; 
 
         if (obs_static_pen > 0){  // If current point is outside the sphere/on boundary 
         
@@ -341,8 +341,8 @@ namespace ego_planner
           double pd_constr_t =  2 * beta1.transpose() * c * sph_ctr_to_pos_vec;// P.D. of constraint w.r.t t // (1,1) = (1, 2s) * (2s, m) * (m, 1)
 
           // Intermediate calculations for chain rule to get partial derivatives of cost J
-          double pd_cost_constr = 3 * (T_i / K) * omega * wei_sph_bounds_ * pow(obs_static_pen,2) ; // P.D. of cost w.r.t constraint
-          double cost = (T_i / K) * omega * wei_sph_bounds_ * pow(obs_static_pen,3);
+          double pd_cost_constr = 3 * (T_i / K) * omega * wei_sph_bounds_ * pow(obs_static_pen, 2) ; // P.D. of cost w.r.t constraint
+          double cost = (T_i / K) * omega * wei_sph_bounds_ * pow(obs_static_pen, 3);
           double pd_t_T_i = (j / K); // P.D. of time t w.r.t T_i
 
           // Partial derivatives of Cost J
@@ -517,29 +517,29 @@ namespace ego_planner
       return false;
     }
 
-    for (auto& it : *swarm_local_trajs_){ // Iterate through trajectories
+    // std::shared_ptr<std::vector<ego_planner::LocalTrajData>> swarm_local_trajs_;
 
-      int id = it.first;
+    for (const auto& agent_traj : *swarm_local_trajs_){ // Iterate through trajectories
 
-      if ((id < 0) || id == drone_id_)
+      if ((agent_traj.drone_id < 0) || agent_traj.drone_id == drone_id_)
       {
         // Ignore 
         continue;
       }
 
-      double traj_i_start_time = it.second.start_time;
+      double traj_i_start_time = agent_traj.start_time;
 
       Eigen::Vector3d swarm_p, swarm_v;
-      if (pt_time < traj_i_start_time + it.second.duration)
+      if (pt_time < traj_i_start_time + agent_traj.duration)
       {
-        swarm_p = it.second.traj.getPos(pt_time - traj_i_start_time);
-        swarm_v = it.second.traj.getVel(pt_time - traj_i_start_time);
+        swarm_p = agent_traj.traj.getPos(pt_time - traj_i_start_time);
+        swarm_v = agent_traj.traj.getVel(pt_time - traj_i_start_time);
       }
       else
       {
-        double exceed_time = pt_time - (traj_i_start_time + it.second.duration);
-        swarm_v = it.second.traj.getVel(it.second.duration);
-        swarm_p = it.second.traj.getPos(it.second.duration) +
+        double exceed_time = pt_time - (traj_i_start_time + agent_traj.duration);
+        swarm_v = agent_traj.traj.getVel(agent_traj.duration);
+        swarm_p = agent_traj.traj.getPos(agent_traj.duration) +
                   exceed_time * swarm_v;
       }
       Eigen::Vector3d dist_vec = p - swarm_p;
@@ -639,16 +639,8 @@ namespace ego_planner
   }
 
   void PolyTrajOptimizer::assignSwarmTrajs(
-    std::shared_ptr<std::unordered_map<int, ego_planner::LocalTrajData>> swarm_local_trajs) {
+    std::shared_ptr<std::vector<ego_planner::LocalTrajData>> swarm_local_trajs) {
     swarm_local_trajs_ = swarm_local_trajs;
-  }
-
-  void PolyTrajOptimizer::setSwarmTrajs(SwarmTrajData *swarm_trajs_ptr) { 
-    swarm_trajs_ = swarm_trajs_ptr; 
-  }
-
-  void PolyTrajOptimizer::setDroneId(const int drone_id) { 
-    drone_id_ = drone_id; 
   }
 
   void PolyTrajOptimizer::setIfTouchGoal(const bool touch_goal) { 
@@ -663,7 +655,7 @@ namespace ego_planner
   }
 
 
-  /* callbacks by the L-BFGS optimizer */
+  /* EGO Planner algorithm: callbacks by the L-BFGS optimizer */
   double PolyTrajOptimizer::costFunctionCallback(void *func_data, const double *x, double *grad, const int n)
   {
     // Pointer to current instance of PolyTrajOptimizer

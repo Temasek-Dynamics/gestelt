@@ -98,10 +98,17 @@ class DeterministicForest
 			// obs_free_radial_.push_back(ObsFreeRadial(0.0, 0.0, 0.1));
 
 			// We can either:
-			// A) Generate a test map for the vicon room
+			// A1) Generate a test map for the vicon room
 			// generateViconTest();
 			// generateRoomBoundaries(5.6, 5.6, 3.0, 
 			// 	-2.8, 2.8, -2.8, 2.8);
+
+			// A2) Generate a antipodal map for the vicon room
+			// generateViconTestAntipodal();
+			// generateRoomBoundaries(	 5.9, 5.9, 3.0, 
+			// 						-2.95, 2.95, -2.95, 2.95);
+
+			generateHorizontalPlane(10.0, 10.0, 0.0);
 
 			// B) Generate a random forest map for benchmarking
 			// unsigned int seed = rd();
@@ -152,9 +159,9 @@ class DeterministicForest
 			// // generateHorizontalPlane(_x_size, _y_size, _z_size); // Add ceiling
 
 			// F) Generate forest map
-			eng.seed(_seed);
-			RandomMapGenerate();
-			generateHorizontalPlane(_x_size, _y_size, 0.0); // Add floor
+			// eng.seed(_seed);
+			// RandomMapGenerate();
+			// generateHorizontalPlane(_x_size, _y_size, 0.0); // Add floor
 			// generateHorizontalPlane(_x_size, _y_size, _z_size); // Add ceiling
 
 			cloud_map.width = cloud_map.points.size();
@@ -194,6 +201,30 @@ class DeterministicForest
 
 			generatePredeterminedCyclinders(cylinders);
 		}
+
+		// Generate antipodal swap map for 6 drones
+		void generateViconTestAntipodal(){
+			// No obstacle space
+			double buffer_rad = 0.3;
+			for (size_t i = 0; i < 6; i++){ 
+				Eigen::Matrix3d rot_mat = Eigen::AngleAxisd((M_PI/180.0) * i * 60, Eigen::Vector3d::UnitZ()).matrix();
+
+				Eigen::Vector3d drone_pos = rot_mat * Eigen::Vector3d{2.4, 0, 0};
+				obs_free_radial_.push_back(ObsFreeRadial(drone_pos(0), drone_pos(1), buffer_rad));
+
+				std::cout << "drone_pos: " << drone_pos.transpose() << std::endl;
+			}
+
+			std::vector<Cylinder> cylinders;
+
+			cylinders.push_back(Cylinder(1.25, 0.0, 0.15, 3.0));
+			cylinders.push_back(Cylinder(0.0, -1.25, 0.15, 3.0));
+			cylinders.push_back(Cylinder(-1.25, 0.0, 0.15, 3.0));
+			cylinders.push_back(Cylinder(0.0, 1.25, 0.15, 3.0));
+
+			generatePredeterminedCyclinders(cylinders);
+		}
+
 
 		/**
 		 * @brief Generate a rectangular tunnel 
@@ -448,7 +479,7 @@ class DeterministicForest
 				{
 					int heiNum = ceil(height / _resolution);
 					// Iterate through height cells
-					for (int t = -10; t < heiNum; t++)
+					for (int t = 0; t < heiNum; t++)
 					{
 						// Convert back to meters
 						double temp_x = ctr_x + (r * _resolution) + 1e-2;

@@ -169,15 +169,13 @@ git tag v1.13.0-0.1.0
     - [VICON with PX4](https://docs.px4.io/main/en/ros/external_position_estimation.html)
 
 ## Interface with Radxa
-1. Set up headless mode on Radxa:
-    - edit `/boot/uEnv.txt` and remove line with `console=ttyAML0,115200`, which removes this port as a debugging console
-2. Connection between FCU and Radxa
+1. Connection between FCU and Radxa
     - FCU: Connected as MAV_0_CONFIG to one of the UART (should be UART4, which is registered as TEL2 in PX4)
-    - Radxa: Connected to UART_AO_A (/dev/ttyAML0)
-3. Launch mavros bridge
+    - Radxa: Connected to UART_AO_B (/dev/ttyAML1)
+2. Launch mavros bridge
     - Might need to perform the following in root mode. Enter with `sudo su`
     - `source /home/rock/.bashrc`
-    - `roslaunch mavros apm.launch fcu_url:=/dev/ttyAML0:230400`
+    - `roslaunch mavros apm.launch fcu_url:=/dev/ttyAML1:230400`
 
 - References:
     - https://wiki.radxa.com/Zero/dev/serial-console

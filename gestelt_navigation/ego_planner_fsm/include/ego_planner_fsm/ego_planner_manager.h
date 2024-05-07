@@ -16,11 +16,21 @@
 
 namespace ego_planner
 {
+
+  struct EGOPlannerParams
+  {
+    int drone_id; // single drone: drone_id <= 0, swarm: drone_id >= 1
+
+    double max_vel; // Maximum velocity 
+    double max_acc; // Maximum acceleration
+    double seg_length;  // Length of one segment i.e. distance between adjacent spline control points
+  }; // struct EGOPlannerParams
+
   // Key algorithms of mapping and planning are called
   class EGOPlannerManager
   {
   public:
-    EGOPlannerManager();
+    EGOPlannerManager(const ego_planner::EGOPlannerParams& params);
     ~EGOPlannerManager();
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
@@ -48,16 +58,6 @@ namespace ego_planner
       const Eigen::Vector3d &local_target_pos, const Eigen::Vector3d &local_target_vel,
       const Eigen::VectorXd &segs_t_dur,
       poly_traj::MinJerkOpt &mj_opt);
-
-    /**
-     * @brief Given an initial minimum jerk trajectory, optimize it
-     * 
-     */
-    bool optimizeMJOTraj(
-      const poly_traj::MinJerkOpt &initial_mjo,
-      poly_traj::MinJerkOpt& optimized_mjo,
-      const std::vector<double>& spheres_radius,
-      const std::vector<Eigen::Vector3d>& spheres_center);
 
     /**
      * @brief Compute an initial minimum jerk trajectory given boundary conditions while ignoring obstacles
@@ -164,15 +164,6 @@ namespace ego_planner
     // PtsChk_t getPtsCheck(void) { return ploy_traj_opt_->get_pts_check_(); }
 
     /**
-     * @brief Get the minimum jerk trajectory currently being optimized
-     * 
-     * @return poly_traj::MinJerkOpt 
-     */
-    poly_traj::MinJerkOpt getOptimizedMJO(){
-      return ploy_traj_opt_->getOptimizedMJO();
-    }
-
-    /**
      * @brief Get the path length of the minimum jerk trajectory
      * 
      * @param mjo minimum jerk trajectory
@@ -190,11 +181,12 @@ namespace ego_planner
     double getTrajectoryDuration(poly_traj::MinJerkOpt& mjo);
 
     
-    void setSwarmTrajectories(std::shared_ptr<std::unordered_map<int, ego_planner::LocalTrajData>>& swarm_minco_trajs);
+    void setSwarmTrajectories(std::shared_ptr<std::vector<ego_planner::LocalTrajData>>& swarm_minco_trajs);
 
-    PlanParameters pp_;
     std::shared_ptr<GridMap> grid_map_;
     TrajContainer traj_;
+
+    EGOPlannerParams params_;
 
   private:
     PlanningVisualization::Ptr visualization_;

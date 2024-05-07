@@ -27,7 +27,7 @@ namespace ego_planner
   {
     poly_traj::Trajectory traj;
     PtsChk_t pts_chk;
-    int drone_id; // A negative value indicates no received trajectories.
+    int drone_id{-1}; // A negative value indicates that a trajectory has not been initialized 
     int traj_id; // Trajectory id
     double duration; // Total duration of trajectory
     double start_time; // world time in seconds
@@ -35,14 +35,12 @@ namespace ego_planner
     Eigen::Vector3d start_pos; // starting position
   };
 
-  typedef std::vector<LocalTrajData> SwarmTrajData;
-
   class TrajContainer
   {
   public:
     GlobalTrajData global_traj; // Global trajectory from start to actual goal
     LocalTrajData local_traj; // Local trajectory from start to local target/goal
-    SwarmTrajData swarm_traj;
+    std::vector<LocalTrajData> swarm_traj;
 
     TrajContainer()
     {
@@ -95,23 +93,6 @@ namespace ego_planner
 
   };
 
-  struct PlanParameters
-  {
-    /* planning algorithm parameters */
-    double max_vel_, max_acc_;     // physical limits
-    double polyTraj_piece_length;  // Length of each segment
-    double feasibility_tolerance_; // permitted ratio of vel/acc exceeding limits
-    double planning_horizon_; // Distance to plan ahead
-    bool use_distinctive_trajs; // If true, enables planning of multiple distinctive trajectories
-    bool touch_goal; // Local target is global target
-    // Denotes if it is a single drone or a swarm
-    int drone_id; // single drone: drone_id <= 0, swarm: drone_id >= 1
-
-    /* processing time */
-    double time_search_ = 0.0;
-    double time_optimize_ = 0.0;
-    double time_adjust_ = 0.0;
-  };
 
 } // namespace ego_planner
 
