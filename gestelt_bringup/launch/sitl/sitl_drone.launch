@@ -5,7 +5,7 @@
   <arg name="init_x" default="0.0"/>
   <arg name="init_y" default="1.8"/>
   <!-- world_filename_rel is defined relative to gestelt_bringup/simulations/worlds -->
-  <arg name="world_filename_rel" default="empty.world" />
+  <arg name="world_filename_rel" default="empty_gate.world" />
   <!-- world_filename_abs is absolute filepath -->
   <arg name="world_filename_abs" default="$(find gestelt_bringup)/simulation/worlds/$(arg world_filename_rel)" />
 

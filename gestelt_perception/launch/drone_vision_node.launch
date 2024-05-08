@@ -1,0 +1,5 @@
+<launch>
+
+    <node name = "drone_vision" pkg="gestelt_perception" type="drone_vision" output="screen"/>
+
+</launch>

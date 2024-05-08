@@ -56,7 +56,7 @@ def publishCommand(event_enum):
     server_event_pub.publish(commander_cmd)
 
 def get_server_state_callback():
-    msg = rospy.wait_for_message(f"/traj_server/state", CommanderState, timeout=5.0)
+    msg = rospy.wait_for_message(f"/traj_server/state", CommanderState, timeout=50000.0)
     server_states[str(msg.drone_id)] = msg
     # print("==================")
     # print(msg)
@@ -542,7 +542,7 @@ def main():
         elif (HOVER_MODE):
             # HOVER -> desired position -> MISSION
             print("Setting to MISSION mode!")
-            publishCommand(CommanderCommand.MISSION)
+            # publishCommand(CommanderCommand.MISSION)
 
 
         print("tick!")
