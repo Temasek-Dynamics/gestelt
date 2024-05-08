@@ -1,0 +1,12 @@
+<launch>
+  <!-- Launches a test mission -->
+  <node pkg="gestelt_bringup" name="mission" type="Multiple_Circle_Trajectory_Dev.py">  
+        <param name="is_simulation" value="True"/>
+  </node>
+   <!-- Start rosbag to record setpoint_raw and local_position -->
+   <!-- path have to be absolute path-->
+  <!-- <node pkg="rosbag" type="record" name="record" output="screen" args="-o /home/agile_flight/data/ /mavros/local_position/pose  /planner/sample_trajectory"/> -->
+  <!-- <node pkg="rosbag" type="record" name="record" output="screen" args="-a -o /home/tianchensun/gestelt_ws/data/ "/> -->
+  <node pkg="rosbag" type="record" name="record" output="screen" args="-o /home/lin/agile_flight/data/ /mavros/setpoint_raw/local /mavros/local_position/pose  /planner/sample_trajectory"/>
+
+</launch>
