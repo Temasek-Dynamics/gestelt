@@ -195,9 +195,12 @@ namespace ego_planner
 
     double t_now_;
 
+    /* Parameters for barrier function */
+    double bar_alp_{-1.0};
+    double bar_buf_{-1.0};
+    double wei_barrier_{-1.0};
+
     /* Data structures */
-
-
     std::vector<Eigen::Vector3d> spheres_center_;   // Vector of sphere centers, size is no. of segments/pieces
     std::vector<double> spheres_radius_;            // Vector of sphere radius, size is no. of segments/pieces
     std::vector<Eigen::Vector3d> intxn_plane_vec_;  // Vector to center of spherical cap (the intersection between 2 spheres)
@@ -210,6 +213,9 @@ namespace ego_planner
     Eigen::MatrixXd cstr_pts_q_; // inner CONSTRAINT points of trajectory (excludes boundary points), this is finer than the inner CONTROL points
 
     Eigen::MatrixXd ctrl_pts_q_optimal_; // Optimized control points in q
+
+
+
 
   public:
     PolyTrajOptimizer(){}

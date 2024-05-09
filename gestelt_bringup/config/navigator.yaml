@@ -71,7 +71,7 @@ sfc:
     max_acc: 20.0 # Maximum acceleration (m/s^2)
 
     # SFC Buffer 
-    spherical_buffer: 0.175 # (m) Reduce spherical SFCs by this fixed amount to increase buffer from obstacles
+    spherical_buffer: 0.2 # (m) Reduce spherical SFCs by this fixed amount to increase buffer from obstacles
 
   poly:
     max_iterations: 60
@@ -90,18 +90,23 @@ back_end:
 optimization:
   num_cstr_pts_per_seg: 5 # Number of constraint points per trajectory segment i.e. discretization.
   # Weights
-  weight_sph_bounds: 10000.0
+  weight_sph_bounds: 1000.0
   weight_swarm: 50000.0 
   weight_feasibility: 10000.0
   weight_sqrvariance: 10000.0 
-  weight_time: 10.0 
+  weight_time: 100.0 
   swarm_clearance: 0.4 
-  max_vel: 5.0 # Maximum velocity (m/s)
+  max_vel: 1.0 # Maximum velocity (m/s)
   max_acc: 20.0 # Maximum acceleration (m/s^2)
 
   # EGO params
   weight_obstacle: 10000.0 
   obstacle_clearance: 0.35 
+
+  barrier:
+    alpha: 3.0
+    buffer: 0.5
+    opt_weight: 1.0
 
 ##### Mapping params
 grid_map:

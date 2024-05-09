@@ -329,20 +329,45 @@ namespace ego_planner
         Eigen::Vector3d sph_ctr_to_pos_vec = pos - spheres_center_[i]; // Sphere center to pos vector
         double sph_ctr_to_pos_dist = sph_ctr_to_pos_vec.norm();
 
-        double obs_static_pen = sph_ctr_to_pos_vec.norm() * sph_ctr_to_pos_vec.norm() - spheres_radius_[i] * spheres_radius_[i] ; 
+        double obs_static_pen = sph_ctr_to_pos_dist * sph_ctr_to_pos_dist - spheres_radius_[i] * spheres_radius_[i] ; 
 
-        if (obs_static_pen > 0){  // If current point is outside the sphere/on boundary 
+        // if (obs_static_pen > 0){  // If current point is outside the sphere/on boundary 
         
-          // std::cout << "Segment " << i << ": ," << "Penalty " << obs_static_pen << ", POINT (" << pos.transpose() 
-          //   << ") is outside sphere with center ("<< spheres_center_[i].transpose() << ") with radius " << spheres_radius_[i] << std::endl;
+        //   // std::cout << "Segment " << i << ": ," << "Penalty " << obs_static_pen << ", POINT (" << pos.transpose() 
+        //   //   << ") is outside sphere with center ("<< spheres_center_[i].transpose() << ") with radius " << spheres_radius_[i] << std::endl;
 
+        //   // Partial derivatives of Constraint
+        //   Eigen::Matrix<double, 6, 3> pd_constr_c_i = 2 * beta0 * sph_ctr_to_pos_vec.transpose(); // Partial derivative of constraint w.r.t c_i // (2s, m) = (2s, 1) * (1, m)
+        //   double pd_constr_t =  2 * beta1.transpose() * c * sph_ctr_to_pos_vec;// P.D. of constraint w.r.t t // (1,1) = (1, 2s) * (2s, m) * (m, 1)
+
+        //   // Intermediate calculations for chain rule to get partial derivatives of cost J
+        //   double pd_cost_constr = 3 * (T_i / K) * omega * wei_sph_bounds_ * pow(obs_static_pen, 2) ; // P.D. of cost w.r.t constraint
+        //   double cost = (T_i / K) * omega * wei_sph_bounds_ * pow(obs_static_pen, 3);
+        //   double pd_t_T_i = (j / K); // P.D. of time t w.r.t T_i
+
+        //   // Partial derivatives of Cost J
+        //   Eigen::Matrix<double, 6, 3> pd_cost_c_i = pd_cost_constr * pd_constr_c_i; // P.D. of cost w.r.t c_i. Uses chain rule // (m,2s)
+        //   double pd_cost_t = cost / T_i  + pd_cost_constr * pd_constr_t * pd_t_T_i;// P.D. of cost w.r.t t // (1,1)
+
+        //   // Sum up sampled costs
+        //   mjo.get_gdC().block<6, 3>(i * 6, 0) += pd_cost_c_i; // Gradient of cost w.r.t polynomial coefficients, shape is (m,2s)
+        //   gdT(i) += pd_cost_t; // Gradient of cost w.r.t time
+        //   costs(0) += cost; 
+        // }
+        if (sph_ctr_to_pos_vec.norm() < (spheres_radius_[i] + bar_buf_)) {
+
+          double obs_pen_barrier = 1/( -pow(sph_ctr_to_pos_dist, bar_alp_) + pow(spheres_radius_[i] + bar_buf_, bar_alp_ ) );
+        
           // Partial derivatives of Constraint
-          Eigen::Matrix<double, 6, 3> pd_constr_c_i = 2 * beta0 * sph_ctr_to_pos_vec.transpose(); // Partial derivative of constraint w.r.t c_i // (2s, m) = (2s, 1) * (1, m)
-          double pd_constr_t =  2 * beta1.transpose() * c * sph_ctr_to_pos_vec;// P.D. of constraint w.r.t t // (1,1) = (1, 2s) * (2s, m) * (m, 1)
+          double coeff = bar_alp_ * (pow(sph_ctr_to_pos_dist, bar_alp_-1)) * (obs_pen_barrier*obs_pen_barrier);
+          
+          Eigen::Matrix<double, 6, 3> pd_constr_c_i = coeff * ( 2 * beta0 * sph_ctr_to_pos_vec.transpose())/ sph_ctr_to_pos_dist ; // Partial derivative of constraint w.r.t c_i // (2s, m) = (2s, 1) * (1, m)
+          double pd_constr_t =  2 * beta1.transpose() * c * sph_ctr_to_pos_vec ;// P.D. of constraint w.r.t t // (1,1) = (1, 2s) * (2s, m) * (m, 1)
+          pd_constr_t = coeff * pd_constr_t / sph_ctr_to_pos_dist;
 
           // Intermediate calculations for chain rule to get partial derivatives of cost J
-          double pd_cost_constr = 3 * (T_i / K) * omega * wei_sph_bounds_ * pow(obs_static_pen, 2) ; // P.D. of cost w.r.t constraint
-          double cost = (T_i / K) * omega * wei_sph_bounds_ * pow(obs_static_pen, 3);
+          double pd_cost_constr = 3 * (T_i / K) * omega * wei_barrier_ * pow(obs_pen_barrier, 2) ; // P.D. of cost w.r.t constraint
+          double cost = (T_i / K) * omega * wei_barrier_  * pow(obs_pen_barrier, 3);
           double pd_t_T_i = (j / K); // P.D. of time t w.r.t T_i
 
           // Partial derivatives of Cost J
@@ -354,6 +379,29 @@ namespace ego_planner
           gdT(i) += pd_cost_t; // Gradient of cost w.r.t time
           costs(0) += cost; 
         }
+
+        // else if (sph_ctr_to_pos_vec.norm() < spheres_radius_[i]) {
+        //   double obs_pen_barrier = - log(-sph_ctr_to_pos_vec.norm() * sph_ctr_to_pos_vec.norm() + (spheres_radius_[i]+0.5) * (spheres_radius_[i]+0.5));
+
+        //   // Partial derivatives of Constraint
+        //   Eigen::Matrix<double, 6, 3> pd_constr_c_i = -(2 * beta0 * sph_ctr_to_pos_vec.transpose()) / obs_static_pen; // Partial derivative of constraint w.r.t c_i // (2s, m) = (2s, 1) * (1, m)
+        //   double pd_constr_t =  -(1/obs_static_pen) * 2 * beta1.transpose() * c * sph_ctr_to_pos_vec  ;// P.D. of constraint w.r.t t // (1,1) = (1, 2s) * (2s, m) * (m, 1)
+        //   // double pd_constr_t =  -(2 * beta1.transpose() * c * sph_ctr_to_pos_vec) / obs_static_pen; // P.D. of constraint w.r.t t // (1,1) = (1, 2s) * (2s, m) * (m, 1)
+
+        //   // Intermediate calculations for chain rule to get partial derivatives of cost J
+        //   double pd_cost_constr = 3 * (T_i / K) * omega * 1 * pow(obs_pen_barrier, 2) ; // P.D. of cost w.r.t constraint
+        //   double cost = (T_i / K) * omega * 1 * pow(obs_pen_barrier, 3);
+        //   double pd_t_T_i = (j / K); // P.D. of time t w.r.t T_i
+
+        //   // Partial derivatives of Cost J
+        //   Eigen::Matrix<double, 6, 3> pd_cost_c_i = pd_cost_constr * pd_constr_c_i; // P.D. of cost w.r.t c_i. Uses chain rule // (m,2s)
+        //   double pd_cost_t = cost / T_i  + pd_cost_constr * pd_constr_t * pd_t_T_i;// P.D. of cost w.r.t t // (1,1)
+
+        //   // Sum up sampled costs
+        //   mjo.get_gdC().block<6, 3>(i * 6, 0) += pd_cost_c_i; // Gradient of cost w.r.t polynomial coefficients, shape is (m,2s)
+        //   gdT(i) += pd_cost_t; // Gradient of cost w.r.t time
+        //   costs(0) += cost; 
+        // }
 
         /**
          * Penalty on clearance to swarm/dynamic obstacles
@@ -623,6 +671,12 @@ namespace ego_planner
     // EGO-Planner only params
     pnh.param("optimization/obstacle_clearance", obs_clearance_, -1.0);
     pnh.param("optimization/weight_obstacle", wei_obs_, -1.0);
+
+    // Barrier function
+    pnh.param("optimization/barrier/alpha", bar_alp_, -1.0);
+    pnh.param("optimization/barrier/buffer", bar_buf_, -1.0);
+    pnh.param("optimization/barrier/opt_weight", wei_barrier_, -1.0);
+
   }
 
   void PolyTrajOptimizer::setEnvironment(const std::shared_ptr<GridMap> &map)
