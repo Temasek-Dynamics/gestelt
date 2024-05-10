@@ -21,8 +21,8 @@ public:
     double tie_breaker;
     bool debug_viz; // Publish visualization messages for debugging 
     int cost_function_type; // Type of cost function to use
-    bool print_timers{true};
-    bool planner_verbose{true};
+    bool print_timers{false};
+    bool planner_verbose{false};
 
     bool use_dmp{false}; // True if using DMP
     bool interpolate{true}; // True if interpolating JPS

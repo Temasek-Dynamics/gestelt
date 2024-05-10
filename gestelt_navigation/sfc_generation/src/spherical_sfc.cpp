@@ -573,11 +573,9 @@ void SphericalSFC::constructSFCTrajectory(
             sfc_traj.segs_t_dur[i] = t_s + t_c + t_d;
         }
     }
-    else {
+    else { // TODO: S-curve
 
     }
-
-
 
     /* 3: Get distance and vector to center of spherical cap (the intersection between 2 spheres) */
     sfc_traj.intxn_plane_vec.clear();
@@ -591,9 +589,9 @@ void SphericalSFC::constructSFCTrajectory(
     sfc_traj.intxn_spheres.resize(num_segs-1);
 
     for (size_t i = 0; i < num_segs-1; i++){
-        if (i == 0){
-            std::cout << getIntersectionRadius(sfc_spheres[i], sfc_spheres[i+1]) << std::endl;
-        }
+        // if (i == 0){
+        //     std::cout << getIntersectionRadius(sfc_spheres[i], sfc_spheres[i+1]) << std::endl;
+        // }
         sfc_traj.intxn_circle_radius[i] = getIntersectionRadius(sfc_spheres[i], sfc_spheres[i+1]);
 
         auto vec_to_intxn_plane = getIntersectionCenter(sfc_spheres[i], sfc_spheres[i+1]) - sfc_spheres[i].center;

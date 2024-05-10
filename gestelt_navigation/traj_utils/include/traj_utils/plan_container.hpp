@@ -28,7 +28,7 @@ namespace ego_planner
     poly_traj::Trajectory traj;
     PtsChk_t pts_chk;
     int drone_id{-1}; // A negative value indicates that a trajectory has not been initialized 
-    int traj_id; // Trajectory id
+    int traj_id{-1}; // Trajectory id
     double duration; // Total duration of trajectory
     double start_time; // world time in seconds
     double end_time;   // world time in seconds

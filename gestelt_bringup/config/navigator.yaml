@@ -4,11 +4,11 @@
 #####
 # drone_id: 0       # Set in launch file
 # debug_planning: false       # Set in launch file
-planner_frequency: 5.0        # [Hz]
-safety_check_frequency: 20.0  # [Hz]
+safety_check_frequency: 30.0  # [Hz]
 goal_tolerance: 0.3           # [m] Tolerance for goal to have been reached
 time_to_col_threshold: 0.2    # [s] Threshold for seconds to collision.
 receding_horizon_planning_dist: 7.5        # [m] Receding horizon planning
+verbose_planning: false     # Print out planning times
 
 ##### Set planner types
 front_end/planner_type: 1         # 0: ASTAR, 1: JPS_AND_DMP
@@ -17,6 +17,8 @@ back_end/planner_type: 0          # 0: SSFC, 1: EGO
 
 ##### Front-end params
 front_end:
+  planner_frequency: 30.0        # [Hz]
+
   a_star:
     max_iterations: 9999  
     debug_viz: true           # If true, publish visualization for debugging
@@ -82,6 +84,8 @@ sfc:
 
 ##### Back-end 
 back_end: 
+  planner_frequency: 2.0       # [Hz]
+
   num_replan_retries: 5 # Number of times for back-end to retry
   ego:
     segment_length: 1.5 # Length of one segment i.e. distance between adjacent spline control points
