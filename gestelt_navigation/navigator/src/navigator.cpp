@@ -30,7 +30,6 @@ void Navigator::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   // Initialize safe flight corridor generation
   if (sfc_type_ == SFCType::POLYTOPE){
     sfc_generation_ = std::make_unique<PolytopeSFC>(map_, ply_sfc_params_);
-
   }
   else if (sfc_type_ == SFCType::SPHERICAL) {
     sfc_generation_ = std::make_unique<SphericalSFC>(map_, sph_sfc_params_);
@@ -60,7 +59,7 @@ void Navigator::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
 
   /* Initialize Timer */
   if (!debug_planning_){
-    plan_timer_ = nh.createTimer(ros::Duration(1.0/planner_freq_), &Navigator::planTimerCB, this);
+    plan_timer_ = nh.createTimer(ros::Duration(1.0/planner_freq_), &Navigator::planFrontEndTimerCB, this);
   }
 
   safety_checks_timer_ = nh.createTimer(ros::Duration(1.0/safety_check_freq_), &Navigator::safetyChecksTimerCB, this);
@@ -174,7 +173,6 @@ void Navigator::initParams(ros::NodeHandle &nh, ros::NodeHandle &pnh)
 
     pnh.param("sfc/spherical/time_allocation_type", sph_sfc_params_.time_allocation_type, 0);
 
-
     rhp_buffer_ = sph_sfc_params_.spherical_buffer;
   }
 
@@ -232,25 +230,27 @@ void Navigator::initPublishers(ros::NodeHandle &nh, ros::NodeHandle &pnh)
     sfc_publisher_map_["sfc_intxn_spheres"] =  nh.advertise<visualization_msgs::MarkerArray>("sfc_intxn_spheres", 10);
 
     spherical_sfc_traj_pub_ = nh.advertise<gestelt_msgs::SphericalSFCTrajectory>("front_end/sfc_trajectory", 10);
-    // dbg_sfc_traj_pub_ = nh.advertise<gestelt_debug_msgs::SFCTrajectory>("sfc/debug_trajectory", 10, true);
   }
 
   if (debug_planning_){
     debug_start_sub_ = pnh.subscribe("debug/plan_start", 5, &Navigator::debugStartCB, this);
     debug_goal_sub_ = pnh.subscribe("debug/plan_goal", 5, &Navigator::debugGoalCB, this);
     plan_on_demand_sub_ = pnh.subscribe("plan_on_demand", 5, &Navigator::planOnDemandCB, this);
+
+    dbg_sfc_traj_pub_ = nh.advertise<gestelt_debug_msgs::SFCTrajectory>("sfc/debug_trajectory", 10, true);
+
+    debug_traj_pub_ = nh.advertise<gestelt_debug_msgs::BackEndTrajectoryDebug>(
+      "back_end/debug_trajectory", 10, true); 
   }
 
   /* Back-end */
-  debug_traj_pub_ = nh.advertise<gestelt_debug_msgs::BackEndTrajectoryDebug>(
-    "back_end/debug_trajectory", 10, true); 
   be_traj_pub_ = nh.advertise<traj_utils::PolyTraj>("back_end/trajectory", 10); 
   swarm_minco_traj_pub_ = nh.advertise<traj_utils::MINCOTraj>("/swarm/global/minco", 10);
 }
 
 /* Timer callbacks */
 
-void Navigator::planTimerCB(const ros::TimerEvent &e)
+void Navigator::planFrontEndTimerCB(const ros::TimerEvent &e)
 {
   // Check if waypoint queue is empty
   if (waypoints_.empty()){
@@ -265,8 +265,10 @@ void Navigator::planTimerCB(const ros::TimerEvent &e)
   double req_plan_time = ros::Time::now().toSec(); // Time at which plan was requested
 
   // Sample the starting position from the back end trajectory
-  if (!sampleBackEndTrajectory(req_plan_time, start_pos_)){
-    // If we are unable to sample the back end trajectory, we set the starting position as the quadrotor's current position
+  if (!sampleBackEndTrajectory(be_traj_, req_plan_time, start_pos_, start_vel_)){
+    // If we are unable to sample the back end trajectory, we set the starting 
+    // position as the quadrotor's current position
+
     start_pos_ = cur_pos_;
   }
 
@@ -291,35 +293,6 @@ void Navigator::planTimerCB(const ros::TimerEvent &e)
   // Publish heartbeat
   std_msgs::Empty empty_msg;
   heartbeat_pub_.publish(empty_msg);
-}
-
-bool Navigator::getRHPGoal(
-  const Eigen::Vector3d& global_goal, const Eigen::Vector3d& start_pos, 
-  const double& rhp_dist, Eigen::Vector3d& rhp_goal) const
-{
-  if ((global_goal - start_pos).norm() <= rhp_dist){
-    // If within distance of goal
-    rhp_goal = global_goal;
-    return true;
-  }
-
-  // Plan straight line to goal
-  Eigen::Vector3d vec_to_goal = (global_goal - start_pos).normalized();
-  rhp_goal = start_pos + (rhp_dist * vec_to_goal);
-  
-  // While RHP goal is in obstacle, backtrack.
-  double dec = 0.15;
-  double backtrack_dist = 0.0;
-  while (map_->getInflateOccupancy(rhp_goal, rhp_buffer_ + map_->getInflation()))
-  {
-    rhp_goal -= dec * vec_to_goal;
-    backtrack_dist += dec;
-    if (backtrack_dist >= rhp_dist){
-      return false;
-    }
-  }
-
-  return true;
 }
 
 void Navigator::safetyChecksTimerCB(const ros::TimerEvent &e)
@@ -384,10 +357,17 @@ bool Navigator::plan(
 
   /* Generate a back-end plan */
   poly_traj::MinJerkOpt optimized_mjo; // Optimized minimum jerk trajectory
-
+  
   tm_back_end_plan_.start();
+
+  if (!sampleBackEndTrajectory(be_traj_, ros::Time::now().toSec(), start_pos_, start_vel_))
+  {
+    start_pos_ = start_pos;
+    start_vel_ = cur_vel_;
+  }
+  
   // Generate a back-end trajectory from front-end plan
-  if (!generateBackEndPlan( start_pos, cur_vel_, goal_pos, 
+  if (!generateBackEndPlan( start_pos_, start_vel_, goal_pos, 
                             sfc_traj, 
                             optimized_mjo,
                             optimizer_num_retries_)){
@@ -401,6 +381,7 @@ bool Navigator::plan(
 
   traj_utils::PolyTraj poly_msg; 
   traj_utils::MINCOTraj MINCO_msg; 
+  
 
   mjoToMsg(optimized_mjo, req_plan_time, poly_msg, MINCO_msg);
   be_traj_pub_.publish(poly_msg); // (In drone origin frame) Publish to corresponding drone for execution
@@ -550,6 +531,62 @@ bool Navigator::generateFrontEndPlan(
 
   return true;
 }
+
+bool Navigator::generateBackEndPlan( 
+  const Eigen::Vector3d& start_pos, const Eigen::Vector3d& start_vel, 
+  const Eigen::Vector3d& goal_pos, 
+  SSFC::SFCTrajectory& sfc_traj,
+  poly_traj::MinJerkOpt& optimized_mjo,
+  const int& num_retries)
+{
+  // logInfo(str_fmt("generateBackEndPlan() from (%f, %f, %f) to (%f, %f, %f)", 
+  //   start_pos(0), start_pos(1), start_pos(2), 
+  //   goal_pos(0), goal_pos(1), goal_pos(2)));
+  
+  visualization_->displayGoalPoint(goal_pos, Eigen::Vector4d(0, 0.5, 0.5, 1), 0.3, 0);
+
+  bool plan_success = false;
+
+  Eigen::Vector3d start_acc;
+  Eigen::Vector3d goal_vel;
+  Eigen::Vector3d goal_acc;
+
+  start_acc.setZero();
+  goal_vel.setZero();
+  goal_acc.setZero();
+
+  Eigen::Matrix3d startPVA, endPVA;   // Boundary start and end condition: Matrix consisting of 3d (position, velocity acceleration) 
+  startPVA << start_pos, start_vel, start_acc;            // Start (position, velocity, acceleration)
+  endPVA << goal_pos, goal_vel, goal_acc;  // Goal (P)
+
+  for (int itr = 0; itr < num_retries; itr++)
+  {
+    if (back_end_type_ == BackEndType::EGO){
+      plan_success = EGOOptimize(startPVA, endPVA, optimized_mjo);
+    }
+    else if (back_end_type_ == BackEndType::SSFC){
+      plan_success = SSFCOptimize(startPVA, endPVA, sfc_traj, optimized_mjo);
+    }
+
+    Eigen::MatrixXd cstr_pts_optimized_mjo = 
+      optimized_mjo.getInitConstraintPoints(num_cstr_pts_per_seg_);
+
+    if (plan_success)
+    {
+      visualization_->displayOptimalMJO(cstr_pts_optimized_mjo, 0);
+      // visualization_->displayOptimalCtrlPts_q(back_end_optimizer_->getOptimizedCtrlPts());
+      break;
+    }
+    else{
+      logError(str_fmt("Trajectory optimization unsuccessful! Number retries left: %d", 
+        num_retries - itr));
+      visualization_->displayFailedList(cstr_pts_optimized_mjo, 0);
+    }
+  }
+
+  return plan_success;
+}
+
 
 bool Navigator::SSFCOptimize(const Eigen::Matrix3d& startPVA, const Eigen::Matrix3d& endPVA, 
                   SSFC::SFCTrajectory& sfc_traj,
@@ -720,60 +757,6 @@ bool Navigator::EGOOptimize(const Eigen::Matrix3d& startPVA, const Eigen::Matrix
   return plan_success;
 }
 
-bool Navigator::generateBackEndPlan( 
-  const Eigen::Vector3d& start_pos, const Eigen::Vector3d& start_vel, 
-  const Eigen::Vector3d& goal_pos, 
-  SSFC::SFCTrajectory& sfc_traj,
-  poly_traj::MinJerkOpt& optimized_mjo,
-  const int& num_retries)
-{
-  // logInfo(str_fmt("generateBackEndPlan() from (%f, %f, %f) to (%f, %f, %f)", 
-  //   start_pos(0), start_pos(1), start_pos(2), 
-  //   goal_pos(0), goal_pos(1), goal_pos(2)));
-  
-  visualization_->displayGoalPoint(goal_pos, Eigen::Vector4d(0, 0.5, 0.5, 1), 0.3, 0);
-
-  bool plan_success = false;
-
-  Eigen::Vector3d start_acc;
-  Eigen::Vector3d goal_vel;
-  Eigen::Vector3d goal_acc;
-
-  start_acc.setZero();
-  goal_vel.setZero();
-  goal_acc.setZero();
-
-  Eigen::Matrix3d startPVA, endPVA;   // Boundary start and end condition: Matrix consisting of 3d (position, velocity acceleration) 
-  startPVA << start_pos, start_vel, start_acc;            // Start (position, velocity, acceleration)
-  endPVA << goal_pos, goal_vel, goal_acc;  // Goal (P)
-
-  for (int itr = 0; itr < num_retries; itr++)
-  {
-    if (back_end_type_ == BackEndType::EGO){
-      plan_success = EGOOptimize(startPVA, endPVA, optimized_mjo);
-    }
-    else if (back_end_type_ == BackEndType::SSFC){
-      plan_success = SSFCOptimize(startPVA, endPVA, sfc_traj, optimized_mjo);
-    }
-
-    Eigen::MatrixXd cstr_pts_optimized_mjo = 
-      optimized_mjo.getInitConstraintPoints(num_cstr_pts_per_seg_);
-
-    if (plan_success)
-    {
-      visualization_->displayOptimalMJO(cstr_pts_optimized_mjo, 0);
-      // visualization_->displayOptimalCtrlPts_q(back_end_optimizer_->getOptimizedCtrlPts());
-      break;
-    }
-    else{
-      logError(str_fmt("Trajectory optimization unsuccessful! Number retries left: %d", 
-        num_retries - itr));
-      visualization_->displayFailedList(cstr_pts_optimized_mjo, 0);
-    }
-  }
-
-  return plan_success;
-}
 
 /**
  * Subscriber Callbacks
@@ -999,21 +982,51 @@ bool Navigator::isTrajectoryDynFeasible(ego_planner::LocalTrajData* traj, bool& 
 
 /* Helper methods */
 
-bool Navigator::sampleBackEndTrajectory(
-  const double& time_samp, 
-  Eigen::Vector3d& pos)
+bool Navigator::getRHPGoal(
+  const Eigen::Vector3d& global_goal, const Eigen::Vector3d& start_pos, 
+  const double& rhp_dist, Eigen::Vector3d& rhp_goal) const
 {
-  if (!be_traj_)
+  if ((global_goal - start_pos).norm() <= rhp_dist){
+    // If within distance of goal
+    rhp_goal = global_goal;
+    return true;
+  }
+
+  // Plan straight line to goal
+  Eigen::Vector3d vec_to_goal = (global_goal - start_pos).normalized();
+  rhp_goal = start_pos + (rhp_dist * vec_to_goal);
+  
+  // While RHP goal is in obstacle, backtrack.
+  double dec = 0.15;
+  double backtrack_dist = 0.0;
+  while (map_->getInflateOccupancy(rhp_goal, rhp_buffer_ + map_->getInflation()))
+  {
+    rhp_goal -= dec * vec_to_goal;
+    backtrack_dist += dec;
+    if (backtrack_dist >= rhp_dist){
+      return false;
+    }
+  }
+
+  return true;
+}
+
+bool Navigator::sampleBackEndTrajectory(
+  std::shared_ptr<poly_traj::Trajectory> be_traj,
+  const double& time_samp, Eigen::Vector3d& pos, Eigen::Vector3d& vel)
+{
+  if (!be_traj)
   {
     // ROS_INFO_THROTTLE(5.0, "[EGO Planner Adaptor] No trajectory received!");
     return false;
   }
 
-  double t = time_samp - be_traj_->getGlobalStartTime();
+  double t = time_samp - be_traj->getGlobalStartTime();
 
-  if (t >= 0.0 && t < be_traj_->getTotalDuration())
+  if (t >= 0.0 && t < be_traj->getTotalDuration())
   {
-    pos = be_traj_->getPos(t);
+    pos = be_traj->getPos(t);
+    vel = be_traj->getVel(t);
   }
   else {
     return false;

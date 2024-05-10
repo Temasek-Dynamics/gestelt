@@ -85,7 +85,7 @@ private:
    * @brief Timer callback to generate plan
    * @param e 
    */
-  void planTimerCB(const ros::TimerEvent &e);
+  void planFrontEndTimerCB(const ros::TimerEvent &e);
 
   bool getRHPGoal(
     const Eigen::Vector3d& global_goal, const Eigen::Vector3d& start_pos, 
@@ -273,12 +273,14 @@ private:
   /**
    * @brief Sample the back end trajectory 
    * 
+   * @param be_traj Back end trajectory
    * @param time_samp time at which back end trajectory is sampled
    * @param pos sampled position to assign value to
    * @return true 
    * @return false 
    */
-  bool sampleBackEndTrajectory(const double& time_samp, Eigen::Vector3d& pos);
+  bool sampleBackEndTrajectory(std::shared_ptr<poly_traj::Trajectory> be_traj, 
+    const double& time_samp, Eigen::Vector3d& pos, Eigen::Vector3d& vel);
 
   /**
    * @brief Convert received MINCO msgs from other agents to ego_planner::LocalTrajData type
@@ -385,7 +387,7 @@ private: /* Planner members */
   /* Data structs */
   Waypoint waypoints_; // Waypoint handler object
   Eigen::Vector3d cur_pos_, cur_vel_;   // current state
-  Eigen::Vector3d start_pos_;   // start state
+  Eigen::Vector3d start_pos_, start_vel_;   // start state
 
   std::shared_ptr<poly_traj::Trajectory> be_traj_; //Subscribed back end trajectory
 
