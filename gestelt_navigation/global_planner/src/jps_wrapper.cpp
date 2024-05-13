@@ -75,7 +75,7 @@ bool JPSWrapper::generatePlan(const Eigen::Vector3d &start_pos, const Eigen::Vec
 
             // Plan DMP path
             if (!dmp.iterativeComputePath( start_pos, goal_pos, jps_planner_->getRawPath(), 1)){ // Compute the path given the jps path
-                std::cout << "[Front-End] JPS Planner failed!" << std::endl;
+                std::cout << "[Front-End] DMP Planner failed!" << std::endl;
                 return false;
             }
         tm_dmp_plan_.stop(params_.print_timers);

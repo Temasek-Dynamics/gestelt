@@ -14,7 +14,7 @@ public:
 
   virtual void init_planner_specific_topics(ros::NodeHandle& nh){
     planner_goals_pub_ = nh.advertise<gestelt_msgs::Goals>("planner/goals", 5); 
-    plan_traj_sub_ = nh.subscribe("back_end/trajectory", 10, 
+    plan_traj_sub_ = nh.subscribe("back_end/trajectory", 2, 
                                   &EgoPlannerAdaptor::planTrajectoryCB, this);
   }
 
@@ -97,12 +97,11 @@ public:
       return;
     }
 
-    ros::Time time_now = ros::Time::now();
-
     be_traj_mutex_.lock();
     poly_traj::Trajectory traj = *be_traj_;
     be_traj_mutex_.unlock();
 
+    ros::Time time_now = ros::Time::now();
     // t_cur: time elapsed since start of trajectory
     double t_cur = (time_now).toSec() - traj.getGlobalStartTime();
 

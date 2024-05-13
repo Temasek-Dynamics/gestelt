@@ -1,6 +1,6 @@
-#include <fake_map/fake_map.h>
+#include <fake_map/fake_sensor.h>
 
-FakeMap::FakeMap(ros::NodeHandle &nodeHandle) : _nh(nodeHandle) {
+FakeSensor::FakeSensor(ros::NodeHandle &nodeHandle) : _nh(nodeHandle) {
 	// Laser ray tracing params
 	int _hrz_laser_line_num;
 	int _vtc_laser_line_num;
@@ -39,7 +39,7 @@ FakeMap::FakeMap(ros::NodeHandle &nodeHandle) : _nh(nodeHandle) {
 
 	/** Subscriber to quad pose */
 	// pose_sub_ = _nh.subscribe<geometry_msgs::PoseStamped>(
-	// 	"/uav/pose", 10, &FakeMap::poseCB, this);
+	// 	"/uav/pose", 10, &FakeSensor::poseCB, this);
 		
 	/** Publisher that publishes local pointcloud */
 	fake_sensor_cloud_pub_ = _nh.advertise<sensor_msgs::PointCloud2>(
@@ -50,11 +50,11 @@ FakeMap::FakeMap(ros::NodeHandle &nodeHandle) : _nh(nodeHandle) {
 	*/
 	tf_listen_timer_ = _nh.createTimer(
 		ros::Duration(1.0/tf_listen_freq), 
-		&FakeMap::TFListenCB, this, false, false);
+		&FakeSensor::TFListenCB, this, false, false);
 
 	sensor_refresh_timer_ = _nh.createTimer(
 		ros::Duration(1.0/sensor_refresh_freq), 
-		&FakeMap::sensorRefreshTimerCB, this, false, false);
+		&FakeSensor::sensorRefreshTimerCB, this, false, false);
 	
 
 	if (input_pcd_file){
@@ -101,7 +101,7 @@ FakeMap::FakeMap(ros::NodeHandle &nodeHandle) : _nh(nodeHandle) {
 	sensor_refresh_timer_.start();
 }
 
-FakeMap::~FakeMap()
+FakeSensor::~FakeSensor()
 {
 	tf_listen_timer_.stop();
 	sensor_refresh_timer_.stop();
@@ -109,7 +109,7 @@ FakeMap::~FakeMap()
 }
 
 /* Subscriber Callbacks*/
-// void FakeMap::poseCB(const geometry_msgs::PoseStamped::ConstPtr &msg)
+// void FakeSensor::poseCB(const geometry_msgs::PoseStamped::ConstPtr &msg)
 // {
 // 	pose_sensor_mutex.lock();
 // 	pose_ = *msg;
@@ -118,13 +118,13 @@ FakeMap::~FakeMap()
 
 /* Timer Callbacks*/
 
-void FakeMap::TFListenCB(const ros::TimerEvent &)
+void FakeSensor::TFListenCB(const ros::TimerEvent &)
 {
 	/** For visualization */
 	getCamLinkTF();
 }
 
-void FakeMap::sensorRefreshTimerCB(const ros::TimerEvent &)
+void FakeSensor::sensorRefreshTimerCB(const ros::TimerEvent &)
 {
 	// ros::Time start = ros::Time::now();
 
@@ -195,10 +195,9 @@ void FakeMap::sensorRefreshTimerCB(const ros::TimerEvent &)
 
 /* TF methods */
 
-void FakeMap::getCamLinkTF()
+void FakeSensor::getCamLinkTF()
 {
 	sensor_tf_mutex_.lock();
-    bool lookup_success = false;
 	try
     {
 		// Get transform from sensor_frame to global frame
@@ -207,11 +206,9 @@ void FakeMap::getCamLinkTF()
     catch (const tf2::TransformException &ex)
     {
       ROS_ERROR_THROTTLE(1,
-          "[Fake map]: Error in lookupTransform of %s in %s", sensor_frame_.c_str(), global_frame_.c_str());
+          "[Fake sensor]: Error in lookupTransform of %s in %s", sensor_frame_.c_str(), global_frame_.c_str());
       ROS_WARN_THROTTLE(1, "%s",ex.what());
-	  lookup_success = false;
     }
-	got_tf_ = lookup_success;
 
 	sensor_tf_mutex_.unlock();
 }

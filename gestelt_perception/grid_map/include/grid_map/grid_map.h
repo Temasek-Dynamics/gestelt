@@ -335,6 +335,8 @@ private:
 
   double col_warn_radius_, col_fatal_radius_; // collision check radius
 
+  double node_start_time_{-1.0}; // Time that node was started 
+
 // Frequently used methods
 public:
 

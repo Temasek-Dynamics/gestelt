@@ -45,7 +45,7 @@ class FakeDrone
             Eigen::Quaterniond q;
         };
 
-        struct State 
+        struct Pose 
         {
            geometry_msgs::PoseStamped pose;
            nav_msgs::Odometry odom;
@@ -66,7 +66,7 @@ class FakeDrone
         ros::Timer sim_update_timer_; // TImer to update simulation
         
         /* Params */
-        int uav_id_;
+        int drone_id_{-1};
 
         std::string uav_origin_frame_, base_link_frame_;
 
@@ -75,9 +75,11 @@ class FakeDrone
         double offboard_timeout_; // Timeout for PX4 offboard to continuously receive commands
         Eigen::Vector3d init_pos_;
 
+        bool start_in_offboard_{false}; // Start in takeoff mode
+
         /* Data */
 
-        FakeDrone::State state_cur_; // Current state (pose, odom)
+        FakeDrone::Pose cur_pose_; // Current state (pose, odom)
         FakeDrone::Command cmd_des_; // Desired command
 
         std::mutex cmd_mutex_;
@@ -89,10 +91,7 @@ class FakeDrone
         ros::Time last_mavros_state_pub_time_; // Last timestamp that mavros state was published 
 
         // Current state of the UAV (Mavros)
-        MavrosState mavros_state_{
-            false, 
-            "AUTO.LOITER"
-        };
+        MavrosState mavros_state_{false, "AUTO.LOITER"};
 
         // TF transformation 
         tf2_ros::TransformBroadcaster tf_broadcaster_;
@@ -141,7 +140,7 @@ class FakeDrone
         // Publish mavros state
         void pubMavrosState();
 
-        void setStateFromCmd(FakeDrone::State& state, const FakeDrone::Command& cmd);
+        void setStateFromCmd(FakeDrone::Pose& state, const FakeDrone::Command& cmd);
 };
 
 #endif // FAKE_DRONE_H

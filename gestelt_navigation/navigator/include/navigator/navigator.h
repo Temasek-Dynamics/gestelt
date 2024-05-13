@@ -167,7 +167,7 @@ private:
    */
   bool generateBackEndPlan( 
     const Eigen::Vector3d& goal_pos, 
-    std::shared_ptr<poly_traj::Trajectory>& be_traj,
+    const ego_planner::LocalTrajData& local_traj,
     std::shared_ptr<SSFC::SFCTrajectory> sfc_traj,
     poly_traj::MinJerkOpt& mjo_opt,
     double req_be_plan_time,
@@ -282,7 +282,7 @@ private:
   bool isTimeout(const double& last_state_time, const double& threshold);
 
   bool isTrajectorySafe(
-    std::shared_ptr<std::vector<ego_planner::LocalTrajData>> swarm_local_trajs, 
+    const std::vector<ego_planner::LocalTrajData>& swarm_local_trajs, 
     bool& e_stop, bool& must_replan);
 
   bool isTrajectoryDynFeasible(ego_planner::LocalTrajData* traj, bool& is_feasible);
@@ -292,13 +292,13 @@ private:
   /**
    * @brief Sample the back end trajectory 
    * 
-   * @param be_traj Back end trajectory
+   * @param local_traj Back end trajectory
    * @param time_samp time at which back end trajectory is sampled
    * @param pos sampled position to assign value to
    * @return true 
    * @return false 
    */
-  bool sampleBackEndTrajectory(std::shared_ptr<poly_traj::Trajectory> be_traj, 
+  bool sampleBackEndTrajectory(const ego_planner::LocalTrajData& local_traj, 
     const double& time_samp, Eigen::Vector3d& pos, Eigen::Vector3d& vel, Eigen::Vector3d& acc);
 
   /**
@@ -313,24 +313,25 @@ private:
    * @brief Convert MJO trajectory to MINCO message
    * 
    * @param mjo 
+   * @param traj_start_time 
    * @param poly_msg 
    * @param MINCO_msg 
    */
-  void mjoToMsg(const poly_traj::MinJerkOpt& mjo, const double& req_plan_time,
+  void mjoToMsg(const poly_traj::MinJerkOpt& mjo, const double& traj_start_time,
                 traj_utils::PolyTraj &poly_msg, traj_utils::MINCOTraj &MINCO_msg);
 
   /**
    * @brief Get local trajectory from poly_traj::MinJerkOpt
    * 
    * @param mjo 
-   * @param req_plan_time 
+   * @param traj_start_time 
    * @param num_cp 
    * @param traj_id 
    * @param drone_id 
    * @return ego_planner::LocalTrajData 
    */
   ego_planner::LocalTrajData getLocalTraj(
-    const poly_traj::MinJerkOpt& mjo, const double& req_plan_time, 
+    const poly_traj::MinJerkOpt& mjo, const double& traj_start_time, 
     const int& num_cp, const int& traj_id, const int& drone_id);
 
   /**
@@ -339,6 +340,7 @@ private:
    * @param cmd 
    */
   void pubTrajServerCmd(const int& cmd);
+
 
 private: /* ROS subs, pubs and timers*/
   ros::NodeHandle node_;
@@ -412,8 +414,7 @@ private: /* Planner members */
   Eigen::Vector3d rhp_goal_pos_; // Receding horizon planning goal
 
   std::shared_ptr<SSFC::SFCTrajectory> sfc_traj_{nullptr};   // Safe flight corridor trajectory
-  std::shared_ptr<poly_traj::Trajectory> be_traj_{nullptr};  // Back end trajectory (used for checking collision and dynamic feasibility)
-
+  // std::shared_ptr<poly_traj::Trajectory> be_traj_{nullptr};  // Back end trajectory (used for checking collision and dynamic feasibility)
 
   std::shared_ptr<std::vector<ego_planner::LocalTrajData>> swarm_local_trajs_; // Swarm MINCO trajectories, maps drone_id to local trajectory data
 
@@ -460,9 +461,6 @@ private: /* Params */
   double swarm_clearance_; // Required clearance between swarm agents
   double time_to_col_threshold_; // Threshold for time to collision before emergency measures are activated
 
-  /* Mutexes */
-  std::mutex odom_mutex_; // mutex for Odom
-
   /* Timers */
   Timer tm_front_end_plan_{"front_end_plan"};
   Timer tm_sfc_plan_{"sfc_plan"};
@@ -473,6 +471,8 @@ private: /* Params */
   bool touch_goal_{false};   // (EGO PLANNER ONLY) If true:  Local target is global target
 
   bool new_goal_{true}; // True is new goal. Used to ensure planning of back end trajectory at the start. 
+
+  std::mutex req_be_plan_mutex_;
 
 private: /* Logging functions */
   

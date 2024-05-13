@@ -5,7 +5,7 @@ FakeDrone::FakeDrone(ros::NodeHandle& nh, ros::NodeHandle& pnh) {
 	double sim_update_freq;
 
 	/* ROS Params */
-	pnh.param<int>("uav/id", uav_id_, 0);
+	pnh.param<int>("uav/id", drone_id_, -1);
 	pnh.param<double>("uav/sim_update_frequency", sim_update_freq, -1.0);
 	pnh.param<double>("uav/pose_pub_frequency", pose_pub_freq_, -1.0);
 	pnh.param<double>("uav/tf_broadcast_frequency", tf_broadcast_freq_, -1.0);
@@ -18,7 +18,11 @@ FakeDrone::FakeDrone(ros::NodeHandle& nh, ros::NodeHandle& pnh) {
 	pnh.param<double>("uav/init_y", init_pos_(1), 0.0);
 	pnh.param<double>("uav/init_z", init_pos_(2), 0.0);
 
-	node_name_ = "fake_drone" + std::to_string(uav_id_);
+	pnh.param<bool>("uav/start_in_offboard", start_in_offboard_, false);
+
+	node_name_ = "fake_drone" + std::to_string(drone_id_);
+	
+	/* Subscribers and publishers*/
 
 	setpoint_raw_local_sub_ = nh.subscribe<mavros_msgs::PositionTarget>(
 		"mavros/setpoint_raw/local", 5, &FakeDrone::setpointRawCmdCb, this);
@@ -32,7 +36,6 @@ FakeDrone::FakeDrone(ros::NodeHandle& nh, ros::NodeHandle& pnh) {
 	/**
 	 * Timers that handles drone state at each time frame 
 	*/
-
 	sim_update_timer_ = nh.createTimer(
 		ros::Duration(1/sim_update_freq), 
 		&FakeDrone::simUpdateTimer, this, false, false);
@@ -54,7 +57,7 @@ FakeDrone::FakeDrone(ros::NodeHandle& nh, ros::NodeHandle& pnh) {
 
 	cmd_des_.q = Eigen::Quaterniond(1.0, 0.0, 0.0, 0.0);
 
-	setStateFromCmd(state_cur_, cmd_des_);
+	setStateFromCmd(cur_pose_, cmd_des_);
 
 	// // Choose a color for the trajectory using random values
 	// std::random_device dev;
@@ -62,16 +65,22 @@ FakeDrone::FakeDrone(ros::NodeHandle& nh, ros::NodeHandle& pnh) {
 	// std::uniform_real_distribution<double> dis(0.0, 1.0);
 	// color_vect_ = Eigen::Vector4d(dis(generator), dis(generator), dis(generator), 0.5);
 
-	printf("[fake_drone] %sdrone%d%s start_pose [%s%.2lf %.2lf %.2lf%s]! \n", 
-		KGRN, uav_id_, KNRM,
+	printf("[fake_drone] %sdrone%d%s created with start_pose [%s%.2lf %.2lf %.2lf%s]! \n", 
+		KGRN, drone_id_, KNRM,
 		KBLU, init_pos_(0), init_pos_(1), init_pos_(2), KNRM);
-
-	printf("[fake_drone] %sdrone%d%s created! \n", KGRN, uav_id_, KNRM);
 	
 	last_pose_pub_time_ = ros::Time::now();
 	last_tf_broadcast_time_ = ros::Time::now();
 	last_cmd_received_time_ = ros::Time::now();
 	last_mavros_state_pub_time_ = ros::Time::now();
+
+	if (start_in_offboard_){
+		printf("[fake_drone] %sdrone%d%s starting in offboard mode! \n", 
+			KGRN, drone_id_, KNRM);
+
+		mavros_state_.armed = true;
+		mavros_state_.custom_mode = "OFFBOARD";
+	}
 
 	sim_update_timer_.start();
 }
@@ -134,7 +143,7 @@ bool FakeDrone::setModeCb(mavros_msgs::SetMode::Request &req,
 
 void FakeDrone::simUpdateTimer(const ros::TimerEvent &)
 {
-	setStateFromCmd(state_cur_, cmd_des_);
+	setStateFromCmd(cur_pose_, cmd_des_);
 
 	if ((ros::Time::now() - last_mavros_state_pub_time_).toSec() > (1/pose_pub_freq_))
 	{
@@ -145,8 +154,8 @@ void FakeDrone::simUpdateTimer(const ros::TimerEvent &)
 	if ((ros::Time::now() - last_pose_pub_time_).toSec() > (1/pose_pub_freq_))
 	{
 		state_mutex_.lock();
-		odom_pub_.publish(state_cur_.odom);
-		pose_pub_.publish(state_cur_.pose);
+		odom_pub_.publish(cur_pose_.odom);
+		pose_pub_.publish(cur_pose_.pose);
 		state_mutex_.unlock();
 
 		last_pose_pub_time_ = ros::Time::now();
@@ -161,11 +170,11 @@ void FakeDrone::simUpdateTimer(const ros::TimerEvent &)
 		o_to_bl_tf.header.frame_id = uav_origin_frame_;
 		o_to_bl_tf.child_frame_id = base_link_frame_;
 		
-		o_to_bl_tf.transform.translation.x = state_cur_.pose.pose.position.x;
-		o_to_bl_tf.transform.translation.y = state_cur_.pose.pose.position.y;
-		o_to_bl_tf.transform.translation.z = state_cur_.pose.pose.position.z;
+		o_to_bl_tf.transform.translation.x = cur_pose_.pose.pose.position.x;
+		o_to_bl_tf.transform.translation.y = cur_pose_.pose.pose.position.y;
+		o_to_bl_tf.transform.translation.z = cur_pose_.pose.pose.position.z;
 
-		o_to_bl_tf.transform.rotation = state_cur_.pose.pose.orientation;
+		o_to_bl_tf.transform.rotation = cur_pose_.pose.pose.orientation;
 		
 		tf_broadcaster_.sendTransform(o_to_bl_tf);
 
@@ -210,7 +219,7 @@ Eigen::Quaterniond FakeDrone::calcUAVOrientation(
 	return q;
 }
 
-void FakeDrone::setStateFromCmd(FakeDrone::State& state, const FakeDrone::Command& cmd ){
+void FakeDrone::setStateFromCmd(FakeDrone::Pose& state, const FakeDrone::Command& cmd ){
 	state_mutex_.lock();
 
 	// Set odom
@@ -249,3 +258,4 @@ void FakeDrone::pubMavrosState()
 
 	mavros_state_pub_.publish(msg);
 }
+

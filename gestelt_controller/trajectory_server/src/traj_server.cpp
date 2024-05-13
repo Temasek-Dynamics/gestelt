@@ -37,13 +37,13 @@ void TrajectoryServer::init(ros::NodeHandle& nh, ros::NodeHandle& pnh)
   /* Subscribers */
   /////////////////
   // Subscription to commands
-  command_server_sub_ = nh.subscribe<gestelt_msgs::Command>("traj_server/command", 10, &TrajectoryServer::serverCommandCb, this);
+  command_server_sub_ = nh.subscribe<gestelt_msgs::Command>("traj_server/command", 5, &TrajectoryServer::serverCommandCb, this);
 
   // Subscription to planner adaptor
-  exec_traj_sub_ = nh.subscribe<gestelt_msgs::ExecTrajectory>("planner_adaptor/exec_trajectory", 50, &TrajectoryServer::execTrajCb, this);
+  exec_traj_sub_ = nh.subscribe<gestelt_msgs::ExecTrajectory>("planner_adaptor/exec_trajectory", 5, &TrajectoryServer::execTrajCb, this);
 
   // Subscription to UAV (via MavROS)
-  uav_state_sub_ = nh.subscribe<mavros_msgs::State>("mavros/state", 10, &TrajectoryServer::UAVStateCb, this);
+  uav_state_sub_ = nh.subscribe<mavros_msgs::State>("mavros/state", 5, &TrajectoryServer::UAVStateCb, this);
   pose_sub_ = nh.subscribe<geometry_msgs::PoseStamped>("mavros/local_position/pose", 5, &TrajectoryServer::UAVPoseCB, this);
   odom_sub_ = nh.subscribe<nav_msgs::Odometry>("mavros/local_position/odom", 5, &TrajectoryServer::UAVOdomCB, this);
 

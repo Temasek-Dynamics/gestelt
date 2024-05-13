@@ -30,11 +30,11 @@
 #define KCYN  "\033[36m"
 #define KWHT  "\033[37m"
 
-class FakeMap
+class FakeSensor
 {
     public:
-        FakeMap(ros::NodeHandle &nodeHandle);
-        ~FakeMap();
+        FakeSensor(ros::NodeHandle &nodeHandle);
+        ~FakeSensor();
 
         // Main timer for updating UAV state 
         void TFListenCB(const ros::TimerEvent &);
@@ -90,8 +90,6 @@ class FakeMap
         // Current odom of UAV
         geometry_msgs::PoseStamped pose_;
 
-        /* Flags */
-        bool got_tf_{false};
 };
 
 #endif // FAKE_MAP_H

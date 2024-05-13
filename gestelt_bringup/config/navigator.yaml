@@ -4,8 +4,8 @@
 #####
 # drone_id: 0       # Set in launch file
 # debug_planning: false       # Set in launch file
-safety_check_frequency: 30.0  # [Hz]
-goal_tolerance: 0.3           # [m] Tolerance for goal to have been reached
+safety_check_frequency: 20.0  # [Hz]
+goal_tolerance: 0.2           # [m] Tolerance for goal to have been reached
 time_to_col_threshold: 0.2    # [s] Threshold for seconds to collision.
 receding_horizon_planning_dist: 7.5        # [m] Receding horizon planning
 verbose_planning: false     # Print out planning times
@@ -17,7 +17,7 @@ back_end/planner_type: 0          # 0: SSFC, 1: EGO
 
 ##### Front-end params
 front_end:
-  planner_frequency: 30.0        # [Hz]
+  planner_frequency: 20.0        # [Hz]
 
   a_star:
     max_iterations: 9999  
@@ -63,12 +63,7 @@ sfc:
     min_sphere_vol: 0.001 # (m^3) Minimum volume of sphere
     max_sphere_vol: 99999.9 # (m^3) Maximum allowed sphere volume
 
-    # Initial time allocation
-    # max_vel: 3.0 # Maximum velocity (m/s)
-    # max_acc: 12.0 # Maximum velocity (m/s)
-    # avg_vel: 1.5 # Average velocity (m/s) used for estimating initial time allocation
-
-    time_allocation_type: 1 #  0: Max vel assignment, 1: Trapezoidal assignment
+    time_allocation_type: 1 #  0: Max vel assignment(DANGEROUS), 1: Trapezoidal assignment
     max_vel: 5.0 # Maximum velocity (m/s)
     max_acc: 20.0 # Maximum acceleration (m/s^2)
 
@@ -84,7 +79,7 @@ sfc:
 
 ##### Back-end 
 back_end: 
-  planner_frequency: 2.0       # [Hz]
+  planner_frequency: 20.0       # [Hz]
 
   num_replan_retries: 5 # Number of times for back-end to retry
   ego:
@@ -98,7 +93,7 @@ optimization:
   weight_swarm: 50000.0 
   weight_feasibility: 10000.0
   weight_sqrvariance: 10000.0 
-  weight_time: 100.0 
+  weight_time: 10.0 
   swarm_clearance: 0.4 
   max_vel: 5.0 # Maximum velocity (m/s)
   max_acc: 20.0 # Maximum acceleration (m/s^2)
@@ -109,11 +104,12 @@ optimization:
 
   barrier:
     alpha: 2.0
-    buffer: 0.5
-    opt_weight: 0.1
+    buffer: 0.4
+    opt_weight: 0.0
 
 ##### Mapping params
 grid_map:
+
   # global_frame: "world"
   map_size_x: 50.0
   map_size_y: 50.0
@@ -121,8 +117,8 @@ grid_map:
   # map_size_x: 20.0
   # map_size_y: 20.0
   # map_size_z: 20.0
-  local_map_size_x: 15.5
-  local_map_size_y: 15.5 
+  local_map_size_x: 20.0
+  local_map_size_y: 20.0 
   local_map_size_z: 5.0
 
   ground_height: 0.0

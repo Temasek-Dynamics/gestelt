@@ -23,6 +23,7 @@
 
     <arg name="drone_id"        value="$(arg drone_id)"/>
     
+    <arg name="cloud_topic" value="$(arg cloud_topic)" />
     <arg name="odometry_topic"  value="$(arg odometry_topic)" />
     <arg name="debug_planning"  value="false"/>
   </include>

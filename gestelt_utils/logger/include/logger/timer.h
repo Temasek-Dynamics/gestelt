@@ -23,7 +23,7 @@ public:
   // start timer
   bool start() {
     if (timer_running_){ // True if timer is not running
-      std::cout << "Timer " << name_ << " is already running, ignoring start() function call!" << std::endl;
+      // std::cout << "Timer " << name_ << " is already running, ignoring start() function call!" << std::endl;
       return false;
     }
 

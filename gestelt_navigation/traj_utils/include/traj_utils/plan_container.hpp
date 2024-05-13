@@ -30,7 +30,7 @@ namespace ego_planner
     int drone_id{-1}; // A negative value indicates that a trajectory has not been initialized 
     int traj_id{-1}; // Trajectory id
     double duration; // Total duration of trajectory
-    double start_time; // world time in seconds
+    double start_time{-1.0}; // world time in seconds
     double end_time;   // world time in seconds
     Eigen::Vector3d start_pos; // starting position
   };

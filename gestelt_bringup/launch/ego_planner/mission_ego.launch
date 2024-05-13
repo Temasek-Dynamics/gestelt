@@ -1,4 +1,0 @@
-<launch>
-  <!-- Launches a test mission -->
-  <node pkg="gestelt_bringup" name="mission_ego" type="mission_ego.py" output="screen" />
-</launch>

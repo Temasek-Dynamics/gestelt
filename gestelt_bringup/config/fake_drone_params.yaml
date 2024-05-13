@@ -8,3 +8,6 @@ uav:
   tf_broadcast_frequency: 50
   # Units in seconds, PX4 default timeout is 500 ms between offboard commands
   offboard_timeout: 2.0
+
+  # Start in takeoff mode
+  start_in_takeoff: true

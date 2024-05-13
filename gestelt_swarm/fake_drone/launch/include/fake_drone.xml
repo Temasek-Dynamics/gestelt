@@ -23,41 +23,40 @@
     args="0.08 0 0.02 0 0 0 1 $(arg drone_id_ns)_base_link $(arg drone_id_ns)_cam_link 100" />
 
   <group ns="$(arg drone_id_ns)">
+    <!-- Simulated quadcopter -->
+    <node pkg="fake_drone" type="fake_drone_node" name="fake_drone_$(arg drone_id)" required="true" output="screen">
+        <rosparam command="load" file="$(arg cfg_filepath)" />
 
-  <!-- Simulated quadcopter -->
-  <node pkg="fake_drone" type="fake_drone_node" name="fake_drone_$(arg drone_id)" required="true" output="screen">
-      <rosparam command="load" file="$(arg cfg_filepath)" />
+        <remap from="mavros/setpoint_raw/local" to="$(arg command_topic)"/>
+        <remap from="mavros/local_position/odom" to="$(arg odometry_topic)"/>
+        <remap from="mavros/local_position/pose" to="$(arg pose_topic)"/>
 
-      <remap from="mavros/setpoint_raw/local" to="$(arg command_topic)"/>
-      <remap from="mavros/local_position/odom" to="$(arg odometry_topic)"/>
-      <remap from="mavros/local_position/pose" to="$(arg pose_topic)"/>
+        <param name="uav/id" value="$(arg drone_id)"/>
+        <param name="uav/init_x" value="$(arg init_x)"/>
+        <param name="uav/init_y" value="$(arg init_y)"/>
+        <param name="uav/init_z" value="$(arg init_z)"/>
 
-      <param name="uav/id" value="$(arg drone_id)"/>
-      <param name="uav/init_x" value="$(arg init_x)"/>
-      <param name="uav/init_y" value="$(arg init_y)"/>
-      <param name="uav/init_z" value="$(arg init_z)"/>
+        <param name="uav/origin_frame" value="$(arg drone_origin_frame)"/>
+        <param name="uav/base_link_frame" value="$(arg drone_base_link_frame)"/>
+    </node>
 
-      <param name="uav/origin_frame" value="$(arg drone_origin_frame)"/>
-      <param name="uav/base_link_frame" value="$(arg drone_base_link_frame)"/>
-  </node>
+    <!-- Drone Visualization -->
+    <node pkg="mavros_extras" type="visualization" name="mavros_visualization" required="false" output="screen">
 
-  <!-- Drone Visualization -->
-  <node pkg="mavros_extras" type="visualization" name="mavros_visualization" required="false" output="screen">
+      <remap from="local_position" to="$(arg pose_topic)"/>
+      <remap from="local_setpoint" to="mavros/setpoint_position/local"/>
+      
+      <param name="fixed_frame_id" value="$(arg drone_origin_frame)"/>
+      <param name="child_frame_id" value="$(arg drone_base_link_frame)"/>
 
-    <remap from="local_position" to="$(arg pose_topic)"/>
-    <remap from="local_setpoint" to="mavros/setpoint_position/local"/>
-    
-    <param name="fixed_frame_id" value="$(arg drone_origin_frame)"/>
-    <param name="child_frame_id" value="$(arg drone_base_link_frame)"/>
+      <param name="marker_scale" value="1.0"/>
+      <param name="num_rotors" value="4"/>
+      <param name="arm_len" value="0.085"/>
+      <param name="body_width" value="0.1"/>
+      <param name="body_height" value="0.11"/>
+      <param name="max_track_size" value="1000"/>
 
-    <param name="marker_scale" value="1.0"/>
-    <param name="num_rotors" value="4"/>
-    <param name="arm_len" value="0.085"/>
-    <param name="body_width" value="0.1"/>
-    <param name="body_height" value="0.11"/>
-    <param name="max_track_size" value="1000"/>
-
-  </node>
+    </node>
 
   </group>
 

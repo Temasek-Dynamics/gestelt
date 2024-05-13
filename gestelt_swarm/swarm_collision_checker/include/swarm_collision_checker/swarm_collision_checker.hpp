@@ -45,6 +45,8 @@ public:
       (*drone_poses_).push_back(Eigen::Vector3d::Constant(999.9));
     }
 
+    node_start_time_ = ros::Time::now().toSec(); // buffer time used to prevent checking for collision until all drone states are received
+
     // Timers
     check_collision_timer_ = nh.createTimer(ros::Duration(1/check_collision_freq_), &SwarmCollisionChecker::checkCollisionTimerCb, this);
   }
@@ -60,6 +62,10 @@ private:
   // Timer callback for checking collision between swarm agentss
   void checkCollisionTimerCb(const ros::TimerEvent &e)
   {
+    if (ros::Time::now().toSec() - node_start_time_ < 3.0){
+      return;
+    }
+
     const size_t        num_closest = 1;
     std::vector<size_t> out_indices(num_closest);
     std::vector<double> out_distances_sq(num_closest);
@@ -150,6 +156,8 @@ private:
 
   std::shared_ptr<std::vector<Eigen::Vector3d>> drone_poses_;
 
+  double node_start_time_{-1.0}; // Time that node was started 
+
   /* Params */
 
   int num_drones_{-1};
@@ -158,6 +166,7 @@ private:
 
   double col_warn_radius_{-1.0};
   double col_fatal_radius_{-1.0};
+
 
 }; // class SwarmCollisionChecker
 

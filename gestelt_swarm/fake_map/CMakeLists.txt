@@ -68,11 +68,11 @@ target_link_libraries(fake_laser
   Eigen3::Eigen
 )
 
-add_executable (fake_map_node
-  src/fake_map_node.cpp
-  src/fake_map.cpp
+add_executable (fake_sensor_node
+  src/fake_sensor_node.cpp
+  src/fake_sensor.cpp
 )
-target_link_libraries(fake_map_node
+target_link_libraries(fake_sensor_node
   ${catkin_LIBRARIES}
   ${PCL_LIBRARIES}
   fake_laser

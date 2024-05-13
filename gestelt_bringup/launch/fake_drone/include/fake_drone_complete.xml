@@ -2,10 +2,20 @@
 
 <launch>
   <arg name="drone_id" default="0"/>
+  <arg name="drone_id_ns" value="drone$(arg drone_id)"/>
   <arg name="fake_drone_cfg_filepath" default="$(find gestelt_bringup)/config/fake_drone_params.yaml"/>
   <arg name="init_x" default="0.0"/>
   <arg name="init_y" default="0.0"/>
   <arg name="init_z" default="0.0"/>
+
+  <arg name="cloud_topic_raw" default="camera/depth/points"/>
+  <arg name="cloud_topic_downsampled" default="camera/depth/points_ds"/>
+
+  <!-- Planning module -->
+  <include file="$(find gestelt_bringup)/launch/navigator/include/navigation_module.xml">
+      <arg name="drone_id" value="$(arg drone_id)"/>
+      <arg name="cloud_topic" value="$(arg cloud_topic_downsampled)"/>
+  </include>
 
   <!-- Fake drone -->
   <include file="$(find fake_drone)/launch/include/fake_drone.xml">
@@ -18,13 +28,8 @@
       <arg name="init_z" value="$(arg init_z)"/>
   </include>
 
-  <!-- Planning module -->
-  <include file="$(find gestelt_bringup)/launch/bubble_planner/include/navigation_module.xml">
-      <arg name="drone_id" value="$(arg drone_id)"/>
-  </include>
-
   <!-- Fake sensor node -->
-  <!-- <node pkg="fake_map" type="fake_map_node" name="fake_map_$(arg drone_id_ns)" output="screen">
+  <node pkg="fake_map" type="fake_sensor_node" name="fake_sensor_$(arg drone_id_ns)" output="screen">
       <rosparam command="load" file="$(find gestelt_bringup)/config/fake_laser_params.yaml" />
 
       <param name="map/use_pcd_file" value="false"/>
@@ -32,10 +37,22 @@
 
       <param name="uav/id" value="$(arg drone_id_ns)"/>
       <param name="uav/global_frame" value="world"/>
-      <param name="uav/origin_frame" value="$(arg drone_id_ns)_origin"/>
+      <param name="uav/origin_frame" value="world"/>
+      <!-- <param name="uav/origin_frame" value="$(arg drone_id_ns)_origin"/> -->
       <param name="uav/sensor_frame" value="$(arg drone_id_ns)_cam_link"/>
 
-      <remap from="uav/sensor_cloud" to="/$(arg drone_id_ns)/$(arg cloud_topic)"/>
-  </node> -->
+      <remap from="uav/sensor_cloud" to="/$(arg drone_id_ns)/$(arg cloud_topic_raw)"/>
+  </node>
+
+  <!-- Cloud downsampler node -->
+  <node pkg="perception_tools" type="cloud_downsampler" 
+    name="cloud_downsampler_$(arg drone_id_ns)" output="screen">
+    <param name="~queue_size" value="5" />
+    <param name="~voxel_size" value="0.1" />
+
+    <remap from="~cloud_in" to="/$(arg drone_id_ns)/$(arg cloud_topic_raw)" />
+    <remap from="~cloud_out" to="/$(arg drone_id_ns)/$(arg cloud_topic_downsampled)" />
+  </node>
+
 
 </launch>
