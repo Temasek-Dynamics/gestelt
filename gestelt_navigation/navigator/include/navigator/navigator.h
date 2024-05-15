@@ -151,6 +151,7 @@ private:
    */
   bool generateFrontEndPlan(
     const Eigen::Vector3d& start_pos, const Eigen::Vector3d& goal_pos,
+    const double& req_plan_t,
     std::shared_ptr<SSFC::SFCTrajectory> sfc_traj);
 
   /**
@@ -179,7 +180,8 @@ private:
 
   // Spherical safe flight corridor optimization
   bool SSFCOptimize(const Eigen::Matrix3d& startPVA, const Eigen::Matrix3d& endPVA, 
-                    std::shared_ptr<SSFC::SFCTrajectory> sfc_traj,
+                    const double& req_be_plan_time,
+                    std::shared_ptr<SSFC::SFCTrajectory> sfc_traj_ptr,
                     poly_traj::MinJerkOpt& mjo_opt);
 
   /* Subscriber callbacks */
@@ -259,7 +261,7 @@ private:
       waypoints_.nextWP()(0), waypoints_.nextWP()(1), waypoints_.nextWP()(2))
     );
 
-    generateFrontEndPlan(cur_pos_, waypoints_.nextWP(), sfc_traj_);
+    generateFrontEndPlan(cur_pos_, waypoints_.nextWP(), ros::Time::now().toSec(), sfc_traj_);
   }
 
   /* Checks */
@@ -461,7 +463,7 @@ private: /* Params */
   double swarm_clearance_; // Required clearance between swarm agents
   double time_to_col_threshold_; // Threshold for time to collision before emergency measures are activated
 
-  /* Timers */
+  /* Stopwatch for profiling performance */
   Timer tm_front_end_plan_{"front_end_plan"};
   Timer tm_sfc_plan_{"sfc_plan"};
   Timer tm_back_end_plan_{"back_end_plan"};

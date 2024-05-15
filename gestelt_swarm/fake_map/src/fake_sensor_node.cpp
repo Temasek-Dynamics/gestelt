@@ -5,8 +5,13 @@
 int main (int argc, char** argv) 
 {        
     ros::init (argc, argv, "fake_sensor");
-    ros::NodeHandle nh("~");
-    FakeSensor fake_sensor(nh);
-    ros::spin();
+    ros::NodeHandle nh;
+    ros::NodeHandle pnh("~");
+    FakeSensor fake_sensor(nh, pnh);
+
+    ros::AsyncSpinner async_spinner(2);
+    async_spinner.start();
+    ros::waitForShutdown();
+
     return 0;
 }

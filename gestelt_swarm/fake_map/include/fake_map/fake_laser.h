@@ -80,7 +80,7 @@ class FakeLaser
 
         void set_parameters(double resolution,
             double sensing_range,
-            pcl::PointCloud<pcl::PointXYZ> global_map,
+            const pcl::PointCloud<pcl::PointXYZ>& global_map,
             double vtc_laser_range_dgr,
             double hrz_laser_range_dgr,
             double vtc_laser_line_num,

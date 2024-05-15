@@ -169,7 +169,16 @@ public:
 
   /* Getter methods */
 
-  SSFC::SFCTrajectory const getSSFCTrajectory(){
+  // Set trajectory start time
+
+  /**
+   * @brief Get the spherical safe corridor trajectory. It is important to set the trajectory start time for reference. 
+   * 
+   * @param traj_start_time 
+   * @return SSFC::SFCTrajectory const 
+   */
+  SSFC::SFCTrajectory const getSSFCTrajectory(const double& traj_start_time){
+    sfc_traj_.start_time = traj_start_time;
     return sfc_traj_;
   }
 

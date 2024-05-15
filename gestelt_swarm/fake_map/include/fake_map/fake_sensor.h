@@ -8,6 +8,7 @@
 #include <pcl/point_types.h>
 #include <pcl/conversions.h>
 #include <pcl/common/transforms.h>
+#include <pcl/filters/voxel_grid.h>
 #include <pcl_ros/point_cloud.h>
 
 #include <ros/ros.h>
@@ -33,62 +34,64 @@
 class FakeSensor
 {
     public:
-        FakeSensor(ros::NodeHandle &nodeHandle);
+        FakeSensor(ros::NodeHandle &nh, ros::NodeHandle &pnh);
         ~FakeSensor();
+
+        // reset all data structures
+        void reset(); 
 
         // Main timer for updating UAV state 
         void TFListenCB(const ros::TimerEvent &);
 
         // Main timer for refreshing sensor for rendering point clouds 
-        void sensorRefreshTimerCB(const ros::TimerEvent &);
+        void sensorUpdateTimerCB(const ros::TimerEvent &);
 
         /* Subscription callbacks */
         // void poseCB(const geometry_msgs::PoseStamped::ConstPtr &msg);
 
-        /* TF methods */
-        void getCamLinkTF();
-
     private:
         FakeLaser fake_laser_; // Laser object for rendering fake point clouds
 
-        ros::NodeHandle _nh;
-
         /* Publishers, subscribers, timers and services */
-        ros::Subscriber pose_sub_;
+        // ros::Subscriber pose_sub_;
+        ros::Publisher fake_sensor_cloud_pub_; // publisher for fake sensor point cloud
 
-        ros::Publisher fake_sensor_cloud_pub_;
-
-        ros::Timer tf_listen_timer_;
-        ros::Timer sensor_refresh_timer_;
+        ros::Timer tf_listen_timer_; // Timer for listening to tf transformations and publishing them
+        ros::Timer sensor_update_timer_; // Timer for updating sensor output
 
         // TF transformation 
         tf2_ros::Buffer tfBuffer_;
         std::unique_ptr<tf2_ros::TransformListener> tfListener_;
 
-        geometry_msgs::TransformStamped sens_to_gbl_tf_;
+        geometry_msgs::TransformStamped sens_to_gbl_tf_; // sensor to global frame transform
 
         /* Params */
-        int uav_id;
-        std::string global_frame_;
-        std::string uav_origin_frame_;
-        std::string sensor_frame_;
+        int uav_id_;    // ID of drone
+        std::string global_frame_; // Global inertial reference frame
+        std::string uav_origin_frame_; // Reference frame of UAV
+        std::string sensor_frame_;  // Frame of camera sensor
         
-        std::string _id; 
         std::string map_filepath_;
 
-        double _map_interval;
-        double _map_pub_rate;
+        bool downsampler_active_; // True if downsampler is active
+        double ds_voxel_size_; // downsampling voxel size
 
         /* Data */
-        pcl::PointCloud<pcl::PointXYZ> _global_map; // Global map point cloud
+        pcl::PointCloud<pcl::PointXYZ> global_map_; // Global point cloud map
         pcl::PointCloud<pcl::PointXYZ>::Ptr sensor_cloud_; // Point cloud from fake laser
 
         // Mutex to ensure that pose data is not written to while being read
-        std::mutex pose_sensor_mutex;
+        // std::mutex pose_sensor_mutex_;
         std::mutex sensor_tf_mutex_;
         
         // Current odom of UAV
-        geometry_msgs::PoseStamped pose_;
+        // geometry_msgs::PoseStamped pose_;
+        
+        /* Flags */
+        bool cam_tf_valid_{false}; // True if camera transform is valid
+
+        /* Voxel filter for downsampling*/
+        std::shared_ptr<pcl::VoxelGrid<pcl::PointXYZ>> vox_grid_{nullptr};
 
 };
 

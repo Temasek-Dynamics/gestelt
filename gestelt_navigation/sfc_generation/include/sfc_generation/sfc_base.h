@@ -171,6 +171,27 @@ namespace SSFC{
       return spheres.size();
     }
 
+    // Prune a given number of segments from the start
+    void pruneFromStart(const int& num_seg_prunes) {
+      // if (num_seg_prunes <= 0){
+      //   return;
+      // }
+
+      if (num_seg_prunes >= getNumSegments()){
+        std::cout << "[SSFC] Error pruning SSFC" << std::endl;
+        return;
+      }
+
+      spheres.erase(spheres.begin(), spheres.begin()+num_seg_prunes);
+      waypoints.erase(waypoints.begin(), waypoints.begin()+num_seg_prunes);
+      segs_t_dur.erase(segs_t_dur.begin(), segs_t_dur.begin()+num_seg_prunes);
+      intxn_spheres.erase(intxn_spheres.begin(), intxn_spheres.begin()+num_seg_prunes);
+      intxn_plane_vec.erase(intxn_plane_vec.begin(), intxn_plane_vec.begin()+num_seg_prunes);
+      intxn_plane_dist.erase(intxn_plane_dist.begin(), intxn_plane_dist.begin()+num_seg_prunes);
+      intxn_circle_radius.erase(intxn_circle_radius.begin(), intxn_circle_radius.begin()+num_seg_prunes);
+    }
+
+    double start_time; // Trajectory start time
     std::vector<SSFC::Sphere> spheres;  // Vector of Spheres 
     std::vector<Eigen::Vector3d> waypoints;     // Vector of 3d waypoint positions {p1, p2, ... p_M+1}
     std::vector<double> segs_t_dur;             // Vector of time durations of each segment {t_1, t_2, ..., t_M}
@@ -205,7 +226,7 @@ public:
   virtual void addPublishers(std::unordered_map<std::string, ros::Publisher> &publisher_map) = 0;
 
   // Get Spherical SFC Trajectory
-  virtual SSFC::SFCTrajectory const getSSFCTrajectory() = 0;
+  virtual SSFC::SFCTrajectory const getSSFCTrajectory(const double& traj_start_time) = 0;
 
   // Get Polytope SFC Trajectory
   virtual std::vector<Polyhedron3D, Eigen::aligned_allocator<Polyhedron3D>> getPolySFC() = 0;

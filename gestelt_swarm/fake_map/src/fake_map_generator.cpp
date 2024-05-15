@@ -54,20 +54,20 @@ class DeterministicForest
 {
 	public:
 
-		DeterministicForest(ros::NodeHandle &nodeHandle) : _nh(nodeHandle)
+		DeterministicForest(ros::NodeHandle &nodeHandle) : nh_(nodeHandle)
 		{
-			_nh.param<int>("polar_obs", _polar_obs_num, 1);
-			_nh.param<int>("circle_obs", _circle_obs_num, 1);
-			_nh.param<int>("seed", _seed, 1);
+			nh_.param<int>("polar_obs", _polar_obs_num, 1);
+			nh_.param<int>("circle_obs", _circle_obs_num, 1);
+			nh_.param<int>("seed", _seed, 1);
 
-			_nh.param<std::string>("filename", filename_, "new_map");
-			_nh.param<std::string>("path", file_path_, "");
+			nh_.param<std::string>("filename", filename_, "new_map");
+			nh_.param<std::string>("path", file_path_, "");
 
-			_nh.param<double>("map/resolution", _resolution, 0.05);
-			_nh.param<double>("map/inter_obstacle_clearance", inter_obs_clearance_, 1.0);
-			_nh.param<double>("map/x_size", _x_size, 5.0);
-			_nh.param<double>("map/y_size", _y_size, 5.0);
-			_nh.param<double>("map/z_size", _z_size, 5.0);
+			nh_.param<double>("map/resolution", _resolution, 0.05);
+			nh_.param<double>("map/inter_obstacle_clearance", inter_obs_clearance_, 1.0);
+			nh_.param<double>("map/x_size", _x_size, 5.0);
+			nh_.param<double>("map/y_size", _y_size, 5.0);
+			nh_.param<double>("map/z_size", _z_size, 5.0);
 
 			max_x_ = _x_size/2;
 			max_y_ = _y_size/2;
@@ -75,16 +75,16 @@ class DeterministicForest
 			min_y_ = -_y_size/2;
 		
 			// Params for cylinders
-			_nh.param<double>("obstacle/lower_rad", _w_l, 0.3);
-			_nh.param<double>("obstacle/upper_rad", _w_h, 0.8);
-			_nh.param<double>("obstacle/lower_hei", _h_l, 3.0);
-			_nh.param<double>("obstacle/upper_hei", _h_h, 7.0);
+			nh_.param<double>("obstacle/lower_rad", _w_l, 0.3);
+			nh_.param<double>("obstacle/upper_rad", _w_h, 0.8);
+			nh_.param<double>("obstacle/lower_hei", _h_l, 3.0);
+			nh_.param<double>("obstacle/upper_hei", _h_h, 7.0);
 			// Params for circles
-			_nh.param<double>("obstacle/radius_l", radius_l_, 7.0);
-			_nh.param<double>("obstacle/radius_h", radius_h_, 7.0);
-			_nh.param<double>("obstacle/z_l", z_l_, 7.0);
-			_nh.param<double>("obstacle/z_h", z_h_, 7.0);
-			_nh.param<double>("obstacle/theta", theta_, 7.0);
+			nh_.param<double>("obstacle/radius_l", radius_l_, 7.0);
+			nh_.param<double>("obstacle/radius_h", radius_h_, 7.0);
+			nh_.param<double>("obstacle/z_l", z_l_, 7.0);
+			nh_.param<double>("obstacle/z_h", z_h_, 7.0);
+			nh_.param<double>("obstacle/theta", theta_, 7.0);
 
 			_x_l = -_x_size / 2.0;
 			_x_h = +_x_size / 2.0;
@@ -695,7 +695,7 @@ class DeterministicForest
 		}
 
 
-		ros::NodeHandle _nh;
+		ros::NodeHandle nh_;
 
 		std::random_device rd;
 		std::default_random_engine eng;
@@ -742,9 +742,9 @@ class DeterministicForest
 int main(int argc, char **argv)
 {
 	ros::init(argc, argv, "map_generation");
-	ros::NodeHandle _nh("~");
+	ros::NodeHandle nh_("~");
 
-	DeterministicForest forest(_nh);
+	DeterministicForest forest(nh_);
 
 	pcl::PointCloud<pcl::PointXYZ> cloud_map = forest.get_pcl();
 

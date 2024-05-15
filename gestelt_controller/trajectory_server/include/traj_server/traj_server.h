@@ -397,35 +397,35 @@ private: // Member variables
 
 private:
   void logInfo(const std::string& str){
-    ROS_INFO_NAMED(node_name_, "UAV_%i: %s", drone_id_, str.c_str());
+    ROS_INFO("[%s] UAV_%i: %s", node_name_.c_str(), drone_id_, str.c_str());
   }
 
   void logWarn(const std::string& str){
-    ROS_WARN_NAMED(node_name_, "UAV_%i: %s", drone_id_, str.c_str());
+    ROS_WARN("[%s] UAV_%i: %s", node_name_.c_str(), drone_id_, str.c_str());
   }
 
   void logError(const std::string& str){
-    ROS_ERROR_NAMED(node_name_, "UAV_%i: %s", drone_id_, str.c_str());
+    ROS_ERROR("[%s] UAV_%i: %s", node_name_.c_str(), drone_id_, str.c_str());
   }
 
   void logFatal(const std::string& str){
-    ROS_FATAL_NAMED(node_name_, "UAV_%i: %s", drone_id_, str.c_str());
+    ROS_FATAL("[%s] UAV_%i: %s", node_name_.c_str(), drone_id_, str.c_str());
   }
 
   void logInfoThrottled(const std::string& str, double period){
-    ROS_INFO_THROTTLE_NAMED(period, node_name_, "UAV_%i: %s", drone_id_, str.c_str());
+    ROS_INFO_THROTTLE(period, "[%s] UAV_%i: %s", node_name_.c_str(), drone_id_, str.c_str());
   }
 
   void logWarnThrottled(const std::string& str, double period){
-    ROS_WARN_THROTTLE_NAMED(period, node_name_, "UAV_%i: %s", drone_id_, str.c_str());
+    ROS_WARN_THROTTLE(period, "[%s] UAV_%i: %s", node_name_.c_str(), drone_id_, str.c_str());
   }
 
   void logErrorThrottled(const std::string& str, double period){
-    ROS_ERROR_THROTTLE_NAMED(period, node_name_, "UAV_%i: %s", drone_id_, str.c_str());
+    ROS_ERROR_THROTTLE(period, "[%s] UAV_%i: %s", node_name_.c_str(), drone_id_, str.c_str());
   }
 
   void logFatalThrottled(const std::string& str, double period){
-    ROS_FATAL_THROTTLE_NAMED(period, node_name_, "UAV_%i: %s", drone_id_, str.c_str());
+    ROS_FATAL_THROTTLE(period, "[%s] UAV_%i: %s", node_name_.c_str(), drone_id_, str.c_str());
   }
 
 };

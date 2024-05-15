@@ -177,6 +177,7 @@ inline void ProbabilisticMap::insertPointCloud(const std::vector<PointT, Alloc>&
     }
   }
   updateFreeCells(from);
+
 }
 
 template <class Functor> inline

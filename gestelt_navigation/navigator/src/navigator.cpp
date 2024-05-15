@@ -60,7 +60,7 @@ void Navigator::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   /* Initialize Timer */
   if (!debug_planning_){
     fe_plan_timer_ = nh.createTimer(ros::Duration(1.0/fe_planner_freq_), &Navigator::planFrontEndTimerCB, this);
-    be_plan_timer_ = nh.createTimer(ros::Duration(1.0/be_planner_freq_), &Navigator::planBackEndTimerCB, this);
+    // be_plan_timer_ = nh.createTimer(ros::Duration(1.0/be_planner_freq_), &Navigator::planBackEndTimerCB, this);
   }
 
   hb_timer_ = nh.createTimer(ros::Duration(1.0/hb_freq_), &Navigator::heartbeatTimerCB, this);
@@ -272,18 +272,24 @@ void Navigator::planFrontEndTimerCB(const ros::TimerEvent &e)
     // If goals is within a given tolerance, then pop this goal and plan next goal (if available)
     waypoints_.popWP();
     new_goal_ = true;
+    // Invalidate current sfc_traj
+    sfc_traj_ = nullptr;
 
     return;
   }
 
   Eigen::Vector3d start_pos, start_vel, start_acc;
 
-  // Sample the starting position from the back end trajectory
-  if (!sampleBackEndTrajectory((*swarm_local_trajs_)[drone_id_], ros::Time::now().toSec(), start_pos, start_vel, start_acc)){
-    // If we are unable to sample the back end trajectory, we set the starting 
-    // position as the quadrotor's current position
-    start_pos = cur_pos_;
-  }
+  double req_plan_t = ros::Time::now().toSec(); // time at which back end plan was requested
+  
+  // // Sample the starting position from the back end trajectory
+  // if (!sampleBackEndTrajectory((*swarm_local_trajs_)[drone_id_], req_plan_t, start_pos, start_vel, start_acc)){
+  //   // If we are unable to sample the back end trajectory, we set the starting 
+  //   // position as the quadrotor's current position
+  //   start_pos = cur_pos_;
+  // }
+
+  start_pos = cur_pos_;
 
   // Get Receding Horizon Planning goal 
   if (!getRHPGoal(waypoints_.nextWP(), start_pos, rhp_dist_, rhp_goal_pos_)){
@@ -294,22 +300,22 @@ void Navigator::planFrontEndTimerCB(const ros::TimerEvent &e)
   visualization_->displayGoalPoint(rhp_goal_pos_, Eigen::Vector4d(0, 0.5, 0.5, 1), 0.3, 0);
 
   if (!(back_end_type_ == BackEndType::EGO)){ // If not using EGO Planner
-    if (!generateFrontEndPlan(start_pos, rhp_goal_pos_, sfc_traj_)){
+    if (!generateFrontEndPlan(start_pos, rhp_goal_pos_, req_plan_t, sfc_traj_)){
       logError("Failed to generate front end plan!");
       return;
     }
   }
 
-  if (new_goal_){
-    requestBackEndPlan();
-    new_goal_ = false;
-  }
+  // if (new_goal_){
+  requestBackEndPlan();
+    // new_goal_ = false;
+  // }
 
 }
 
 void Navigator::planBackEndTimerCB(const ros::TimerEvent &e)
 {
-  requestBackEndPlan();
+  // requestBackEndPlan();
 }
 
 void Navigator::safetyChecksTimerCB(const ros::TimerEvent &e)
@@ -326,9 +332,9 @@ void Navigator::safetyChecksTimerCB(const ros::TimerEvent &e)
       // stopAllPlanning();
     }
     if (must_replan){
-      if (!requestBackEndPlan()){
-        //estop
-      }
+      // if (!requestBackEndPlan()){
+      //   //estop
+      // }
     }
   }
 
@@ -370,23 +376,21 @@ bool Navigator::requestBackEndPlan()
   /* Generate a back-end plan */
   tm_back_end_plan_.start();
 
-  std::unique_lock<std::mutex> lck(req_be_plan_mutex_, std::try_to_lock);
-  bool gotlock = lck.owns_lock();
+  // std::unique_lock<std::mutex> lck(req_be_plan_mutex_, std::try_to_lock);
+  // bool gotlock = lck.owns_lock();
 
-  if (gotlock){
+  // if (gotlock){
     // double req_be_plan_time = ros::Time::now().toSec(); // time at which back end plan was requested
-    double req_plan_start_t = ros::Time::now().toSec(); // time at which back end plan was requested
 
     poly_traj::MinJerkOpt mjo_opt;  // MINCO trajectory 
 
-    ego_planner::LocalTrajData local_traj = (*swarm_local_trajs_)[drone_id_];
-
+    double req_plan_t = ros::Time::now().toSec(); // time at which back end plan was requested
     // Generate a back-end trajectory from front-end plan
     if (!generateBackEndPlan(rhp_goal_pos_, 
-                              local_traj,
+                              (*swarm_local_trajs_)[drone_id_],
                               sfc_traj_, 
                               mjo_opt,
-                              req_plan_start_t,
+                              req_plan_t,
                               optimizer_num_retries_)){
       // logError("Failed to generate back end plan!");
       return false;
@@ -410,13 +414,14 @@ bool Navigator::requestBackEndPlan()
       traj_id_, drone_id_);
 
     traj_id_++; // Increment trajectory id
-  }
+  // }
 
-  return gotlock;
+  return true;
 }
 
 bool Navigator::generateFrontEndPlan(
   const Eigen::Vector3d& start_pos, const Eigen::Vector3d& goal_pos,
+  const double& req_plan_t,
   std::shared_ptr<SSFC::SFCTrajectory> sfc_traj)
 {
   // logInfo(str_fmt("generateFrontEndPlan() from (%f, %f, %f) to (%f, %f, %f)",
@@ -461,87 +466,7 @@ bool Navigator::generateFrontEndPlan(
     // poly_sfc = sfc_generation_->getPolySFC();
   }
   else if (sfc_type_ == SFCType::SPHERICAL) {
-    sfc_traj_ = std::make_shared<SSFC::SFCTrajectory>(sfc_generation_->getSSFCTrajectory());
-
-
-    // gestelt_msgs::SphericalSFCTrajectory sfc_traj_msg;
-
-    // for (auto sphere : (*sfc_traj_).spheres){
-    //   gestelt_msgs::Sphere sphere_msg;
-    //   sphere_msg.radius = sphere.radius;
-    //   sphere_msg.center.x = sphere.center(0);
-    //   sphere_msg.center.y = sphere.center(1);
-    //   sphere_msg.center.z = sphere.center(2);
-    //   sfc_traj_msg.spheres.push_back(sphere_msg);
-    // }
-
-    // for (auto wp : (*sfc_traj_).waypoints)
-    // {
-    //   geometry_msgs::Point wp_msg;
-    //   wp_msg.x = wp(0);
-    //   wp_msg.y = wp(1);
-    //   wp_msg.z = wp(2);
-    //   sfc_traj_msg.waypoints.push_back(wp_msg);
-    // }
-
-    // sfc_traj_msg.segments_time_duration = (*sfc_traj_).segs_t_dur;
-    // spherical_sfc_traj_pub_.publish(sfc_traj_msg);
-    
-
-
-    // Publish debug SFC trajectory
-    // std::vector<std::vector<SSFC::Sphere>> sfc_sampled_spheres;
-    // std::vector<Eigen::Vector3d> samp_dir_vec, guide_points_vec;
-
-    // sfc_generation_->getSFCTrajectoryDebug(
-    //   sfc_sampled_spheres, samp_dir_vec, guide_points_vec);
-
-    // if (sfc_sampled_spheres.size() != samp_dir_vec.size() 
-    //     || samp_dir_vec.size() != guide_points_vec.size() 
-    //     || sfc_sampled_spheres.size() != guide_points_vec.size()){
-    //   ROS_ERROR("ERROR, SFC Debug trajectory fields do not all have the same size (same number of semgments)!");
-    // }
-
-    // gestelt_debug_msgs::SFCTrajectory dbg_sfc_traj_msg;
-    // for (size_t i = 0; i < guide_points_vec.size(); i++)
-    // {
-    //   gestelt_debug_msgs::SFCSegment segment;
-    //   for (auto& sphere : sfc_sampled_spheres[i])
-    //   {
-    //     gestelt_msgs::Sphere sphere_msg;
-    //     sphere_msg.radius = sphere.radius;
-    //     sphere_msg.center.x = sphere.center(0);
-    //     sphere_msg.center.y = sphere.center(1);
-    //     sphere_msg.center.z = sphere.center(2);
-
-    //     segment.sampled_spheres.push_back(sphere_msg);
-    //   }
-
-    //   segment.guide_point.x = guide_points_vec[i](0);
-    //   segment.guide_point.y = guide_points_vec[i](1);
-    //   segment.guide_point.z = guide_points_vec[i](2);
-
-    //   segment.sampling_vector.x = samp_dir_vec[i](0);
-    //   segment.sampling_vector.y = samp_dir_vec[i](1);
-    //   segment.sampling_vector.z = samp_dir_vec[i](2);
-
-    //   dbg_sfc_traj_msg.segments.push_back(segment);
-    // }
-
-    // for (size_t i = 0; i < front_end_path.size(); i++)
-    // {
-    //   geometry_msgs::Point front_end_pt;
-    //   front_end_pt.x = front_end_path[i](0);
-    //   front_end_pt.y = front_end_path[i](1);
-    //   front_end_pt.z = front_end_path[i](2);
-
-    //   dbg_sfc_traj_msg.front_end_path.push_back(front_end_pt);
-    // }
-
-    // dbg_sfc_traj_msg.sfc_spheres = sfc_traj_msg.spheres;
-    // dbg_sfc_traj_msg.sfc_waypoints = sfc_traj_msg.waypoints;
-    // dbg_sfc_traj_pub_.publish(dbg_sfc_traj_msg);
-
+    sfc_traj_ = std::make_shared<SSFC::SFCTrajectory>(sfc_generation_->getSSFCTrajectory(req_plan_t));
   }
 
   // logInfo(str_fmt("Number of waypoints in front-end path: %ld", front_end_path.size()));
@@ -564,19 +489,22 @@ bool Navigator::generateBackEndPlan(
   // logInfo(str_fmt("generateBackEndPlan() from (%f, %f, %f) to (%f, %f, %f)", 
   //   start_pos(0), start_pos(1), start_pos(2), 
   //   goal_pos(0), goal_pos(1), goal_pos(2)));
-  
 
   bool plan_success = false;
 
   Eigen::Vector3d start_pos, start_vel, start_acc;
   Eigen::Vector3d goal_vel, goal_acc;
 
-  if (!sampleBackEndTrajectory(local_traj, req_be_plan_time, start_pos, start_vel, start_acc))
-  {
-    start_pos = cur_pos_;
-    start_vel = cur_vel_;
-    start_acc.setZero();
-  }
+  // if (!sampleBackEndTrajectory(local_traj, req_be_plan_time, start_pos, start_vel, start_acc))
+  // {
+  //   start_pos = cur_pos_;
+  //   start_vel = cur_vel_;
+  //   start_acc.setZero();
+  // }
+  start_pos = cur_pos_;
+  start_vel = cur_vel_;
+  start_acc.setZero();
+  
 
   goal_vel.setZero();
   goal_acc.setZero();
@@ -591,7 +519,7 @@ bool Navigator::generateBackEndPlan(
       plan_success = EGOOptimize(startPVA, endPVA, mjo_opt);
     }
     else if (back_end_type_ == BackEndType::SSFC){
-      plan_success = SSFCOptimize(startPVA, endPVA, sfc_traj, mjo_opt);
+      plan_success = SSFCOptimize(startPVA, endPVA, req_be_plan_time, sfc_traj, mjo_opt);
     }
 
     Eigen::MatrixXd cstr_pts_mjo_opt = mjo_opt.getInitConstraintPoints(num_cstr_pts_per_seg_);
@@ -615,13 +543,32 @@ bool Navigator::generateBackEndPlan(
 }
 
 bool Navigator::SSFCOptimize(const Eigen::Matrix3d& startPVA, const Eigen::Matrix3d& endPVA, 
-                  std::shared_ptr<SSFC::SFCTrajectory> sfc_traj,
+                  const double& req_be_plan_time,
+                  std::shared_ptr<SSFC::SFCTrajectory> sfc_traj_ptr,
                   poly_traj::MinJerkOpt& mjo_opt){
 
   bool plan_success{false};
 
+  SSFC::SFCTrajectory sfc_traj = *sfc_traj_ptr;
+
+  // Prune sfc_traj to start from current time
+  double fe_start_et = req_be_plan_time - sfc_traj.start_time; // front-end elapsed times
+  double t_sfc = 0.0; // Time elapsed relative to start of sfc
+  int num_seg_prunes = 0;
+  auto sfc_time_dur = sfc_traj.getSegmentTimeDurations();
+  for (int i = 0; i < sfc_time_dur.cols(); i++)
+  {
+    if (t_sfc > fe_start_et){
+      break;
+    }
+    t_sfc += sfc_time_dur(i);
+    num_seg_prunes++;
+  }
+
+  sfc_traj.pruneFromStart(num_seg_prunes);
+
   int num_cstr_pts = back_end_optimizer_->getNumCstrPtsPerSeg();
-  int num_segs = (*sfc_traj).getNumSegments(); // Number of path segments
+  int num_segs = sfc_traj.getNumSegments(); // Number of path segments
 
   /***************************/
   /*3:  Display initial MJO */
@@ -630,7 +577,7 @@ bool Navigator::SSFCOptimize(const Eigen::Matrix3d& startPVA, const Eigen::Matri
   poly_traj::MinJerkOpt initial_mjo; // Initial minimum jerk trajectory
   initial_mjo.reset(startPVA, endPVA, num_segs);
 
-  initial_mjo.generate((*sfc_traj).getInnerWaypoints(), (*sfc_traj).getSegmentTimeDurations());
+  initial_mjo.generate(sfc_traj.getInnerWaypoints(), sfc_traj.getSegmentTimeDurations());
 
   Eigen::MatrixXd init_cstr_pts = initial_mjo.getInitConstraintPoints(num_cstr_pts);
 
@@ -642,14 +589,14 @@ bool Navigator::SSFCOptimize(const Eigen::Matrix3d& startPVA, const Eigen::Matri
 
   // Visualize initial control points in constrained q space
   // Eigen::MatrixXd init_inner_ctrl_pts_q = back_end_optimizer_->f_B_ctrl_pts(
-  //                                           (*sfc_traj).getInnerWaypoints(), 
-  //                                           (*sfc_traj).getSpheresCenter(), (*sfc_traj).getSpheresRadii(),
-  //                                           (*sfc_traj).getIntxnPlaneVec(), (*sfc_traj).getIntxnPlaneDist(),
-  //                                           (*sfc_traj).getIntxnCenters(), (*sfc_traj).getIntxnCircleRadius());
+  //                                           sfc_traj.getInnerWaypoints(), 
+  //                                           sfc_traj.getSpheresCenter(), sfc_traj.getSpheresRadii(),
+  //                                           sfc_traj.getIntxnPlaneVec(), sfc_traj.getIntxnPlaneDist(),
+  //                                           sfc_traj.getIntxnCenters(), sfc_traj.getIntxnCircleRadius());
   // visualization_->displayInitialCtrlPts_q(init_inner_ctrl_pts_q);
 
   // Display intersection sphere north vectors
-  // visualization_->displaySphereIntxnVec((*sfc_traj).getIntxnCenters(), (*sfc_traj).getIntxnPlaneVec());
+  // visualization_->displaySphereIntxnVec(sfc_traj.getIntxnCenters(), sfc_traj.getIntxnPlaneVec());
 
   // Visualize initial constraint points in constrained q space
   // Eigen::MatrixXd cstr_pts_q = 
@@ -670,11 +617,11 @@ bool Navigator::SSFCOptimize(const Eigen::Matrix3d& startPVA, const Eigen::Matri
 
   plan_success = back_end_optimizer_->optimizeTrajectorySFC( 
         startPVA, endPVA,                   // Start and end (pos, vel, acc)
-        (*sfc_traj).getInnerWaypoints(),       // Inner control points
-        (*sfc_traj).getSegmentTimeDurations(), // Time durations of each segment
-        (*sfc_traj).getSpheresCenter(), (*sfc_traj).getSpheresRadii(),   
-        (*sfc_traj).getIntxnPlaneVec(), (*sfc_traj).getIntxnPlaneDist(),
-        (*sfc_traj).getIntxnCenters(), (*sfc_traj).getIntxnCircleRadius(),
+        sfc_traj.getInnerWaypoints(),       // Inner control points
+        sfc_traj.getSegmentTimeDurations(), // Time durations of each segment
+        sfc_traj.getSpheresCenter(), sfc_traj.getSpheresRadii(),   
+        sfc_traj.getIntxnPlaneVec(), sfc_traj.getIntxnPlaneDist(),
+        sfc_traj.getIntxnCenters(), sfc_traj.getIntxnCircleRadius(),
         final_cost);                      
 
   // Optimized minimum jerk trajectory
@@ -1026,7 +973,7 @@ bool Navigator::getRHPGoal(
     return true;
   }
 
-  // Plan straight line to goal
+  // Form straight line to goal
   Eigen::Vector3d vec_to_goal = (global_goal - start_pos).normalized();
   rhp_goal = start_pos + (rhp_dist * vec_to_goal);
   

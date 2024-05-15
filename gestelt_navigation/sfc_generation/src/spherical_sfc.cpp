@@ -93,7 +93,7 @@ bool SphericalSFC::generateSFC(const std::vector<Eigen::Vector3d> &path)
 
     // Initialize largest sphere at initial position
     if (!generateFreeSphere(path[0], B_cur)){
-        std::cout << "Failed to generate free sphere centered on start point" << std::endl;
+        std::cout << "[SSFC] Failed to generate free sphere centered on start point" << std::endl;
         return false;
     }
 
@@ -137,7 +137,7 @@ bool SphericalSFC::generateSFC(const std::vector<Eigen::Vector3d> &path)
         auto batch_sample = std::chrono::high_resolution_clock::now();
 
         if (!BatchSample(path[path_idx_cur], B_cur)){
-            std::cout << "Batch sample failed" << std::endl;
+            std::cout << "[SSFC] Batch sample failed" << std::endl;
             planning_success = false;
             break;
         }
@@ -160,10 +160,10 @@ bool SphericalSFC::generateSFC(const std::vector<Eigen::Vector3d> &path)
     auto c = std::chrono::high_resolution_clock::now();
 
     if (!sfc_spheres_.back().contains(path.back())){ 
-        std::cout << "[SphericalSFC] Final safe flight corridor does not contain the goal" << std::endl;
+        std::cout << "[SSFC] Final safe flight corridor does not contain the goal" << std::endl;
 
         if (itr_ > sfc_params_.max_itr){
-            std::cout << "[SphericalSFC] Maximum iterations " << sfc_params_.max_itr 
+            std::cout << "[SSFC] Maximum iterations " << sfc_params_.max_itr 
                     << " exceeded. Consumed " << itr_ << " iterations." << std::endl;
         }
 
@@ -394,7 +394,7 @@ bool SphericalSFC::BatchSample(const Eigen::Vector3d& pt_guide, SSFC::Sphere& B_
     guide_points_vec_.push_back(samp_mean);
 
     if (B_cand_pq.empty()){
-        std::cout << "Unable to generate next candidate sphere, B_cand_pq empty!" << std::endl;
+        // std::cout << "[SSFC] Unable to generate next candidate sphere, B_cand_pq empty!" << std::endl;
         return false;
     }
 

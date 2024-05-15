@@ -5,20 +5,20 @@ FakeDrone::FakeDrone(ros::NodeHandle& nh, ros::NodeHandle& pnh) {
 	double sim_update_freq;
 
 	/* ROS Params */
-	pnh.param<int>("uav/id", drone_id_, -1);
-	pnh.param<double>("uav/sim_update_frequency", sim_update_freq, -1.0);
-	pnh.param<double>("uav/pose_pub_frequency", pose_pub_freq_, -1.0);
-	pnh.param<double>("uav/tf_broadcast_frequency", tf_broadcast_freq_, -1.0);
+	pnh.param<int>("drone_id", drone_id_, -1);
+	pnh.param<double>("sim_update_frequency", sim_update_freq, -1.0);
+	pnh.param<double>("pose_pub_frequency", pose_pub_freq_, -1.0);
+	pnh.param<double>("tf_broadcast_frequency", tf_broadcast_freq_, -1.0);
 
-	pnh.param<std::string>("uav/origin_frame", uav_origin_frame_, "world");
-	pnh.param<std::string>("uav/base_link_frame", base_link_frame_, "base_link");
+	pnh.param<std::string>("origin_frame", uav_origin_frame_, "world");
+	pnh.param<std::string>("base_link_frame", base_link_frame_, "base_link");
 
-	pnh.param<double>("uav/offboard_timeout", offboard_timeout_, -1.0);
-	pnh.param<double>("uav/init_x", init_pos_(0), 0.0);
-	pnh.param<double>("uav/init_y", init_pos_(1), 0.0);
-	pnh.param<double>("uav/init_z", init_pos_(2), 0.0);
+	pnh.param<double>("offboard_timeout", offboard_timeout_, -1.0);
+	pnh.param<double>("init_x", init_pos_(0), 0.0);
+	pnh.param<double>("init_y", init_pos_(1), 0.0);
+	pnh.param<double>("init_z", init_pos_(2), 0.0);
 
-	pnh.param<bool>("uav/start_in_offboard", start_in_offboard_, false);
+	pnh.param<bool>("start_in_offboard", start_in_offboard_, false);
 
 	node_name_ = "fake_drone" + std::to_string(drone_id_);
 	
@@ -113,13 +113,13 @@ void FakeDrone::setpointRawCmdCb(const mavros_msgs::PositionTarget::ConstPtr &ms
 bool FakeDrone::armSrvCb(mavros_msgs::CommandBool::Request &req,
 		mavros_msgs::CommandBool::Response &res)
 {
-	ROS_INFO_NAMED(node_name_, "Received request to arm");
+	ROS_INFO("[fake_drone] drone%d Received request to arm", drone_id_);
 
 	// ros::Duration(1.0).sleep();
 	mavros_state_.armed = req.value;
 	res.success = true;
 
-	ROS_INFO_NAMED(node_name_, "Arming successful");
+	ROS_INFO("[fake_drone] drone%d Arming successful", drone_id_);
 
 	return true;
 }
@@ -127,15 +127,14 @@ bool FakeDrone::armSrvCb(mavros_msgs::CommandBool::Request &req,
 bool FakeDrone::setModeCb(mavros_msgs::SetMode::Request &req,
 		mavros_msgs::SetMode::Response &res)
 {
-	ROS_INFO_NAMED(node_name_, "Received request set mode from %s to %s", 
-		mavros_state_.custom_mode.c_str() ,req.custom_mode.c_str());
+	ROS_INFO("[fake_drone] drone%d Received request set mode from %s to %s", 
+				drone_id_, mavros_state_.custom_mode.c_str() ,req.custom_mode.c_str());
 
 	// ros::Duration(1.0).sleep();
 	mavros_state_.custom_mode = req.custom_mode;
 	res.mode_sent = true;
 	
-	ROS_INFO_NAMED(node_name_, "Set mode to %s successful", req.custom_mode.c_str());
-
+	ROS_INFO("[fake_drone] drone%d Set mode to %s successful", drone_id_, req.custom_mode.c_str());
 	return true;
 }
 

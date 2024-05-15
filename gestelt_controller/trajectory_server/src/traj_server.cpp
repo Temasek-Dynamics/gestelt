@@ -120,7 +120,7 @@ void TrajectoryServer::UAVPoseCB(const geometry_msgs::PoseStamped::ConstPtr &msg
     num_pose_msgs_++;
     if (num_pose_msgs_ > 100){
       first_pose_ = false;
-      ROS_INFO("Taking off 2d pose locked to (%f, %f)", last_mission_pos_(0), last_mission_pos_(1));
+      logInfo(str_fmt("Taking off 2d pose locked to (%f, %f)", last_mission_pos_(0), last_mission_pos_(1)));
     }
   }
 

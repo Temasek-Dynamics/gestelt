@@ -29,6 +29,10 @@
 #include <bonxai/pcl_utils.hpp>
 #include <bonxai/probabilistic_map.hpp>
 
+/* For debugging */
+#include <logger/timer.h>
+#include <geometry_msgs/PolygonStamped.h>
+#include <geometry_msgs/Point32.h>
 
 ///Pre-allocated std::vector for Eigen using vec_E
 template <typename T>
@@ -54,7 +58,6 @@ struct MappingParameters
   /* map properties */
   // Local and global map are bounded 3d boxes
   Eigen::Vector3d global_map_origin_; // Origin of map (Set to be the corner of the map)
-  Eigen::Vector3d local_map_origin_rel_uav_; // Origin of local map relative to UAV (Set to be the corner of the map)
   Eigen::Vector3d local_map_origin_; // Origin of local map (Set to be the corner of the map)
   Eigen::Vector3d local_map_max_; // max position of local map (Set to be the corner of the map)
   
@@ -65,22 +68,18 @@ struct MappingParameters
   Eigen::Vector3i local_map_num_voxels_; //  Size of local occupancy grid (no. of voxels)
 
   double resolution_;   // Also defined as the size of each individual voxel                 
-  double inflation_;    // Inflation in meters
-  int inf_num_voxels_;  // Inflation in number of voxels, = inflation_/resolution_ 
-  int pose_type_;       // Type of pose input (pose or odom)
-  int sensor_type_;     // Type of sensor (cloud or depth image)
+  double inflation_;    // Inflation in units of meters
+  int inf_num_voxels_;  // Inflation in units of number of voxels, = inflation_/resolution_ 
+  int pose_type_;       // Type of pose input (pose, odom or TF)
 
   double pose_timeout_; // Timeout for pose update before emergency stop is activated
 
-  /* camera parameters */
-  double cx_, cy_, fx_, fy_, fx_inv_, fy_inv_; // Intrinsic camera parameters
-  double k_depth_scaling_factor_; // Scaling factor for depth value of depth image
   double max_range;
 
   /* Cloud downsampler parameters */
-  bool downsample_cloud_; // True if downsampling cloud before input to octree occupancy
-  int depth_stride_; // Number of depth pixels to skip
-  double voxel_size_; // Size of voxel for voxel grid filter
+  // bool downsample_cloud_; // True if downsampling cloud before input to octree occupancy
+  // int depth_stride_; // Number of depth pixels to skip
+  // double voxel_size_; // Size of voxel for voxel grid filter
 
   /* visualization and computation time display */
   double ground_height_; // Lowest possible height (z-axis)
@@ -89,7 +88,7 @@ struct MappingParameters
   std::string global_frame_; // frame id of global reference 
   std::string uav_origin_frame_; // frame id of UAV origin
 
-  bool keep_global_map_{false}; // If true, octomap will not discard any nodes outside of the local map bounds. We will map the entire area but at the cost of additional memory.
+  // bool keep_global_map_{false}; // If true, Bonxai will not discard any nodes outside of the local map bounds. We will map the entire area but at the cost of additional memory.
 
 };
 
@@ -107,15 +106,12 @@ struct MappingData
   // Homogenous Transformation matrix of camera to UAV origin frame
   Eigen::Matrix4d cam2origin_{Eigen::Matrix4d::Identity(4, 4)};
 
-  // depth image data
-  // cv::Mat depth_image_;
-
   // True if pose has been received
   bool has_pose_{false};
 
   // TODO: Use this to flag timeout
   // True if depth and odom has timed out
-  bool flag_sensor_timeout_{false};
+  double last_sensor_msg_time{-1.0};
 
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 };
@@ -150,12 +146,6 @@ public:
     INVALID_IDX = -10000
   };
 
-  enum SensorType
-  {
-    SENSOR_CLOUD = 1,
-    SENSOR_DEPTH = 2,
-  };
-
   /* Initialization methods */
 
   GridMap() {}
@@ -166,7 +156,7 @@ public:
   void reset(const double& resolution);
 
   // Initialize gridmap without ros
-  void initMap(pcl::PointCloud<pcl::PointXYZ>::Ptr pcd, const Eigen::Vector3d& map_size, const double& inflation, const double& resolution);
+  // void initMap(pcl::PointCloud<pcl::PointXYZ>::Ptr pcd, const Eigen::Vector3d& map_size, const double& inflation, const double& resolution);
 
   // Initialize gridmap for ros
   void initMapROS(ros::NodeHandle &nh, ros::NodeHandle &pnh);
@@ -186,31 +176,8 @@ public:
   // Convert point cloud to point cloud map, transform it from camera-to-global frame and save it. 
   void pcdToMap(pcl::PointCloud<pcl::PointXYZ>::Ptr pcd);
 
-  // Take in depth image as octree map.  Transformation from camera-to-global frame is 
-  // done here
-  void depthToCloudMap(const sensor_msgs::ImageConstPtr &msg){}
-
-  /** Helper methods */
-  
-  // Checks if camera pose is valid
-  bool isPoseValid();
-
-  /** Publisher methods */
-
-  /**
-   * @brief Publish map for visualization
-   * 
-   */
-  void publishOccMap();
-
-  void publishCollisionSphere(
-    const Eigen::Vector3d &pos, const double& dist_to_obs, 
-    const double& fatal_radius, const double& warn_radius);
 
   /** Getter methods */
-
-  // Get odometry depth timeout
-  bool getPoseDepthTimeout() { return md_.flag_sensor_timeout_; }
 
   // Get occupancy grid resolution
   double getRes() { return mp_.resolution_; }
@@ -220,9 +187,6 @@ public:
 
   // Get local map origin (This is defined to be a corner of the local map i.e. (-local_W/2, -local_L/2, 0))
   Eigen::Vector3d getLocalOrigin() { return mp_.local_map_origin_; }
-  
-  // Get local map origin relative to UAV
-  Eigen::Vector3d getLocalOriginRelUAV() { return mp_.local_map_origin_rel_uav_; }
 
   // Get number of voxels in global map
   Eigen::Vector3i getGlobalMapNumVoxels() const { return mp_.global_map_num_voxels_; }
@@ -232,6 +196,32 @@ public:
 
   // Get inflation value
   double getInflation() const{ return mp_.inflation_; }
+
+  /* Checks */
+
+  // Checks if time elapsed has exceeded a given threshold
+  bool isTimeout(const double& last_state_time, const double& threshold){
+    return (ros::Time::now().toSec() - last_state_time) >= threshold;
+  } 
+
+  // Checks if camera pose is valid
+  bool isPoseValid();
+
+  /** Publisher methods */
+
+  /**
+   * @brief Publish map for visualization
+   * 
+   */
+  void publishOccMap(const pcl::PointCloud<pcl::PointXYZ>& occ_map_pts);
+
+  // Publish sphere to indicate collision with interpolated colors between fatal and warning radius
+  void publishCollisionSphere(
+    const Eigen::Vector3d &pos, const double& dist_to_obs, 
+    const double& fatal_radius, const double& warn_radius);
+
+  // Publish local map bounds
+  void publishLocalMapBounds();
 
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
@@ -244,19 +234,8 @@ private:
    * Subscriber Callbacks
   */
 
-  // Subscriber callback to camera info 
-  void cameraInfoCallback(const sensor_msgs::CameraInfoConstPtr &msg);
-
   // Subscriber callback to odom for collision checking
   void odomColCheckCB( const nav_msgs::OdometryConstPtr &msg_odom);
-
-  // Subscriber callback to depth image and base_link odom
-  void depthOdomCB( const sensor_msgs::ImageConstPtr &msg_img, 
-                    const nav_msgs::OdometryConstPtr &msg_odom);
-
-  // Subscriber callback to depth image and base_link pose
-  void depthPoseCB(const sensor_msgs::ImageConstPtr &msg_img,
-                    const geometry_msgs::PoseStampedConstPtr &msg_pose);
 
   // Subscriber callback to point cloud and odom
   void cloudOdomCB( const sensor_msgs::PointCloud2ConstPtr &msg_pc, 
@@ -279,21 +258,29 @@ private:
   void visTimerCB(const ros::TimerEvent & /*event*/);
 
   /**
+   * @brief This timer updates the local map for use by planners
+  */
+  void updateLocalMapTimerCB(const ros::TimerEvent & /*event*/);
+
+  // /**
+  //  * @brief Timer for building KDTree
+  // */
+  // void buildKDTreeTimerCB(const ros::TimerEvent & /*event*/);
+
+  /**
    * @brief Timer for checking collision of drone with obstacles
    * 
    */
   void checkCollisionsTimerCB(const ros::TimerEvent & /*event*/);
 
+
 private: 
   /* ROS Publishers, subscribers and Timers */
 
   // Message filters for point cloud/depth camera and pose/odom
-  SynchronizerImagePose sync_image_pose_;
-  SynchronizerImageOdom sync_image_odom_;
   SynchronizerCloudPose sync_cloud_pose_;
   SynchronizerCloudOdom sync_cloud_odom_;
   
-  std::shared_ptr<message_filters::Subscriber<sensor_msgs::Image>> depth_sub_;
   std::shared_ptr<message_filters::Subscriber<sensor_msgs::PointCloud2>> cloud_sub_;
   std::shared_ptr<message_filters::Subscriber<geometry_msgs::PoseStamped>> pose_sub_;
   std::shared_ptr<message_filters::Subscriber<nav_msgs::Odometry>> odom_sub_;
@@ -308,9 +295,12 @@ private:
 
   ros::Publisher occ_map_pub_; // Publisher for occupancy map
   ros::Publisher collision_viz_pub_; // Publisher for collision visualization spheres
+  ros::Publisher local_map_poly_pub_;
 
-  ros::Timer vis_timer_; // Timer for visualization
+  ros::Timer vis_occ_timer_; // Timer for visualization
   ros::Timer check_collisions_timer_; // Timer for checking collisions
+  ros::Timer update_local_map_timer_; // Timer for updating local map
+  // ros::Timer build_kd_tree_timer_; // Timer for updating local map
 
   // TF transformation 
   tf2_ros::Buffer tfBuffer_;
@@ -319,13 +309,19 @@ private:
   /* Params */
   bool dbg_input_entire_map_; // flag to indicate that map will be constructed at the start from the entire pcd map (instead of through incremental sensor data)
   std::string entire_pcd_map_topic_; // Topic to listen for an entire PCD for debugging
-  bool check_collisions_{true}; // Flag for checking collisions
+
+  double col_warn_radius_, col_fatal_radius_; // collision check radius
+
+  double viz_occ_map_freq_{-1.0}; // Frequency to publish occupancy map visualization
+  double update_local_map_freq_{-1.0};  // Frequency to update local map
+  // double build_kd_tree_freq_{-1.0};  // Frequency to build kdtree
 
   /* Data structures for point clouds */
   pcl::PointCloud<pcl::PointXYZ>::Ptr local_map_in_origin_;  // Point cloud local map in UAV origin frame
   pcl::PointCloud<pcl::PointXYZ>::Ptr global_map_in_origin_;  // Point cloud global map in UAV Origin frame
 
   std::unique_ptr<BonxaiT> bonxai_map_; // Bonxai data structure 
+  pcl::PointCloud<pcl::PointXYZ> occ_map_pts_; // Occupancy map points formed by Bonxai probabilistic mapping
   
   std::shared_ptr<KD_TREE<pcl::PointXYZ>> kdtree_; // KD-Tree 
 
@@ -333,16 +329,23 @@ private:
 
   // pcl::VoxelGrid<pcl::PointXYZ> vox_grid_filter_; // Voxel filter
 
-  double col_warn_radius_, col_fatal_radius_; // collision check radius
+  /* Logic flags*/
 
-  double node_start_time_{-1.0}; // Time that node was started 
+  bool check_collisions_{true}; // Flag for checking collisions
+
+  /* Mutexes */
+  std::mutex occ_map_pts_mutex_;
+
+  /* Stopwatch for profiling performance */
+  Timer tm_bonxai_insert_{"bonxai->insertPointCloud"};
+  Timer tm_kdtree_build_{"kdtree_->Build"};
 
 // Frequently used methods
 public:
 
   /* Gridmap operation methods */
 
-  // Update the local map
+  // Called by planners to update the local map
   void updateLocalMap();
 
   std::vector<int8_t> getData() const {
@@ -538,7 +541,7 @@ public:
   
   /// Check if the ray from p1 to p2 is occluded
   // TODO Remove val
-  bool isBlocked(const Vecf<3> &p1, const Vecf<3> &p2, int8_t val = 100) {
+  bool isBlocked(const Vecf<3> &p1, const Vecf<3> &p2) {
     vec_Veci<3> pns = rayTrace(p1, p2);
     for (const auto &pn : pns) {
       if (isOccupied(pn)) {

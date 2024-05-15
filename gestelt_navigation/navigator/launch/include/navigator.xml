@@ -73,7 +73,7 @@
         <param name="grid_map/sensor_type" value="1"/>
 
         <!-- For debugging use -->
-        <param name="grid_map/debug_input_entire_map" value="false"/>
+        <param name="grid_map/debug_input_entire_map" value="true"/>
         <param name="grid_map/entire_pcd_map_topic" value="/fake_map"/>
     </node>
   </group>

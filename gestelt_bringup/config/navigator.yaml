@@ -17,7 +17,7 @@ back_end/planner_type: 0          # 0: SSFC, 1: EGO
 
 ##### Front-end params
 front_end:
-  planner_frequency: 20.0        # [Hz]
+  planner_frequency: 5.0        # [Hz]
 
   a_star:
     max_iterations: 9999  
@@ -42,18 +42,22 @@ front_end:
 ##### Safe flight corridor
 sfc:
   spherical: 
-    max_iterations: 60     # Corresponds to maximum number of spheres
+    max_iterations: 100     # Corresponds to maximum number of spheres
     debug_viz: true        # If true, publish visualization for debugging
     # Sampling
-    max_sample_points: 100 # Maximum sample points for candidate sphere
+    max_sample_points: 150 # Maximum sample points for candidate sphere
     # standard deviation: remember 68–95–99.7 rule
     # mult_stddev_x: 0.1      # if mult_stddev_x is too high, the spheres cannot round corners and generate loads of spheres around the same area around corners
     # mult_stddev_y: 0.3      # 
     # mult_stddev_z: 0.3      # 
 
-    mult_stddev_x: 0.15      # 
-    mult_stddev_y: 0.3      # 
-    mult_stddev_z: 0.3      # 
+    mult_stddev_x: 0.3      # 
+    mult_stddev_y: 0.4      # 
+    mult_stddev_z: 0.4      # 
+
+    # mult_stddev_x: 0.3      # 
+    # mult_stddev_y: 0.5      # 
+    # mult_stddev_z: 0.5      # 
 
     W_cand_vol: 5         # Weight for candidate sphere volume
     W_intersect_vol: 10    # Weight for volume of intersection between spheres
@@ -74,14 +78,14 @@ sfc:
     max_iterations: 60
     debug_viz: true
     poly_max: 10
-    cvx_decomp_type: 2
+    cvx_decomp_type: 2 #Convex decomposition type
     num_expansion_itr: 60
 
 ##### Back-end 
 back_end: 
-  planner_frequency: 20.0       # [Hz]
+  planner_frequency: 1.0       # [Hz]
 
-  num_replan_retries: 5 # Number of times for back-end to retry
+  num_replan_retries: 2 # Number of times for back-end to retry
   ego:
     segment_length: 1.5 # Length of one segment i.e. distance between adjacent spline control points
 
@@ -109,42 +113,40 @@ optimization:
 
 ##### Mapping params
 grid_map:
+  global_map:
+    size_x: 50.0
+    size_y: 50.0
+    size_z: 20.0
+  local_map:      #local_map parameters must consider the "receding_horizon_planning_dist"!
+    # size_x: 15.5
+    # size_y: 15.5 
+    # size_z: 5.0
+    size_x: 20.0
+    size_y: 20.0
+    size_z: 5.0
+    update_frequency: 30.0
+    viz_frequency: 10.0
+    # build_kdtree_frequency: 30.0
 
-  # global_frame: "world"
-  map_size_x: 50.0
-  map_size_y: 50.0
-  map_size_z: 20.0
-  # map_size_x: 20.0
-  # map_size_y: 20.0
-  # map_size_z: 20.0
-  local_map_size_x: 20.0
-  local_map_size_y: 20.0 
-  local_map_size_z: 5.0
-
-  ground_height: 0.0
-
-  occ_grid:
+  occ_map:
     resolution: 0.1
     inflation: 0.2
-  filter:
-    downsample_cloud: false 
-    depth_stride: 4 
-    voxel_size: 0.1
+    ground_height: 0.0
+    max_range: 30.0
 
   # For visualizing collision with static obstacles
   collision_check:
     warn_radius: 0.225
     fatal_radius: 0.14
 
-  sensor/max_range: 5.0
-
-  # camera intrinsic parameters 
-  k_depth_scaling_factor: 1000.0
   # camera extrinsic parameters 
   camera_to_body: 
-    roll: 90.0
-    pitch: 180.0
-    yaw: 90.0
-    t_x: 0.0
+    # roll: 90.0
+    # pitch: 180.0
+    # yaw: 90.0
+    roll: 0.0
+    pitch: 0.0
+    yaw: 0.0 
+    t_x: 0.0 # x translation
     t_y: 0.0
     t_z: 0.0

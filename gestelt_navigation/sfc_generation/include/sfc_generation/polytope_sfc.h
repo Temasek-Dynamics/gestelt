@@ -57,7 +57,7 @@ public: // Public structs
   /* Getter methods */
 
   // NOT USED: This function is implemented to fulfill the virtual methods of the base class 
-  SSFC::SFCTrajectory const getSSFCTrajectory(){
+  SSFC::SFCTrajectory const getSSFCTrajectory(const double& traj_start_time){
     SSFC::SFCTrajectory sfc_traj;
     return sfc_traj;
   }

@@ -2,64 +2,22 @@
 
 /** Initialization methods */
 
-void GridMap::initMap(pcl::PointCloud<pcl::PointXYZ>::Ptr pcd, const Eigen::Vector3d& map_size, const double& inflation, const double& resolution)
-{
-  // md_.has_pose_ = true;
-  // mp_.global_map_size_ = map_size;
-
-  // mp_.inflation_ = inflation;
-  // mp_.uav_origin_frame_ = "world";
-  // mp_.global_map_origin_ = Eigen::Vector3d(
-  //   -mp_.global_map_size_(0) / 2.0, 
-  //   -mp_.global_map_size_(1) / 2.0, 
-  //   0.0);
-  // mp_.resolution_ = resolution;
-
-  // mp_.global_map_num_voxels_ = (mp_.global_map_size_.cwiseProduct(Eigen::Vector3d::Constant(1/mp_.resolution_))).cast<int>();
-
-  // reset(mp_.resolution_);
-
-  // pcdToMap(pcd);
-}
-
 void GridMap::initMapROS(ros::NodeHandle &nh, ros::NodeHandle &pnh)
 {  
   readROSParams(nh, pnh);
 
   reset(mp_.resolution_);
 
-  Eigen::Matrix3d rot_mat = (Eigen::AngleAxisd((M_PI/180.0) * md_.cam2body_rpy_deg(0), Eigen::Vector3d::UnitX())
-                              * Eigen::AngleAxisd((M_PI/180.0) * md_.cam2body_rpy_deg(1), Eigen::Vector3d::UnitY())
-                              * Eigen::AngleAxisd((M_PI/180.0) * md_.cam2body_rpy_deg(2), Eigen::Vector3d::UnitZ())).toRotationMatrix();
-
-  md_.cam2body_.block<3, 3>(0, 0) =  (Eigen::AngleAxisd((M_PI/180.0) * md_.cam2body_rpy_deg(0), Eigen::Vector3d::UnitX())
-                                      * Eigen::AngleAxisd((M_PI/180.0) * md_.cam2body_rpy_deg(1), Eigen::Vector3d::UnitY())
-                                      * Eigen::AngleAxisd((M_PI/180.0) * md_.cam2body_rpy_deg(2), Eigen::Vector3d::UnitZ())).toRotationMatrix();
-  
-  // Global map origin is at a corner of the global map i.e. (-W/2, -L/2, 0)
-  mp_.global_map_origin_ = Eigen::Vector3d(
-    -mp_.global_map_size_(0) / 2.0, 
-    -mp_.global_map_size_(1) / 2.0, 
-    mp_.ground_height_);
-  // Local map origin is at a corner of the local map i.e. (uav_pos_x-local_W/2, uav_pos_y-local_L/2, 0)
-  // Local map origin_ is relative to the current position of the robot
-  mp_.local_map_origin_ = Eigen::Vector3d(
-    -mp_.local_map_size_(0) / 2.0, 
-    -mp_.local_map_size_(1) / 2.0, 
-    mp_.ground_height_);
-  //local_map_origin_rel_uav_: local map origin relative to current position of the drone
-  mp_.local_map_origin_rel_uav_ = Eigen::Vector3d(
-    -mp_.local_map_size_(0) / 2.0, 
-    -mp_.local_map_size_(1) / 2.0, 
-    mp_.ground_height_);
-
-  mp_.local_map_max_ = Eigen::Vector3d(
-    mp_.local_map_size_(0) / 2.0, 
-    mp_.local_map_size_(1) / 2.0, 
-    mp_.ground_height_ + mp_.local_map_size_(2));
-
-  mp_.global_map_num_voxels_ = (mp_.global_map_size_.cwiseProduct(Eigen::Vector3d::Constant(1/mp_.resolution_))).cast<int>();
-  mp_.local_map_num_voxels_ = (mp_.local_map_size_.cwiseProduct(Eigen::Vector3d::Constant(1/mp_.resolution_))).cast<int>();
+  if (check_collisions_){ // True if we want to publish collision visualizations between the agent and static obstacles
+    odom_col_check_sub_ = nh.subscribe<nav_msgs::Odometry>(
+      "odom", 1, &GridMap::odomColCheckCB, this);
+    // Publisher for collision visualizations
+    collision_viz_pub_ = nh.advertise<visualization_msgs::Marker>("grid_map/collision_viz", 10);
+    check_collisions_timer_ = 
+      nh.createTimer(ros::Duration(0.025), &GridMap::checkCollisionsTimerCB, this);
+    pnh.param("grid_map/collision_check/warn_radius", col_warn_radius_, -1.0); // 0.25
+    pnh.param("grid_map/collision_check/fatal_radius", col_fatal_radius_, -1.0); // 0.126
+  }
 
   if (dbg_input_entire_map_){
     ROS_INFO("[%s] DEBUG: INPUT ENTIRE MAP", node_name_.c_str());
@@ -79,30 +37,25 @@ void GridMap::initMapROS(ros::NodeHandle &nh, ros::NodeHandle &pnh)
 		}
     pcdMsgToMap(pc_msg);
 
-    // Initialize publisher for occupancy map
     occ_map_pub_ = nh.advertise<sensor_msgs::PointCloud2>("grid_map/occupancy", 10);
-    // Publisher for collision visualizations
-    collision_viz_pub_ = nh.advertise<visualization_msgs::Marker>("grid_map/collision_viz", 10);
+    local_map_poly_pub_ = nh.advertise<geometry_msgs::PolygonStamped>("local_map/bounds", 5);
+    // update_local_map_timer_ = nh.createTimer(ros::Duration(1.0/update_local_map_freq_), &GridMap::updateLocalMapTimerCB, this);
+    updateLocalMap();
 
-
-    /* Initialize Timer */
-    vis_timer_ = nh.createTimer(ros::Duration(0.1), &GridMap::visTimerCB, this);
-    
+    return;
   }
   else {
     initROSPubSubTimers(nh, pnh);
   }
 
-  // Initialize subscriber
-  if (check_collisions_){
-    node_start_time_ = ros::Time::now().toSec();
-    odom_col_check_sub_ = nh.subscribe<nav_msgs::Odometry>(
-      "odom", 1, &GridMap::odomColCheckCB, this);
-    check_collisions_timer_ = 
-      nh.createTimer(ros::Duration(0.025), &GridMap::checkCollisionsTimerCB, this);
-    pnh.param("grid_map/collision_check/warn_radius", col_warn_radius_, -1.0); // 0.25
-    pnh.param("grid_map/collision_check/fatal_radius", col_fatal_radius_, -1.0); // 0.126
-  }
+  // Initialize publisher for occupancy map
+  occ_map_pub_ = nh.advertise<sensor_msgs::PointCloud2>("grid_map/occupancy", 10);
+  local_map_poly_pub_ = nh.advertise<geometry_msgs::PolygonStamped>("local_map/bounds", 5);
+
+  /* Initialize ROS Timers */
+  // vis_occ_timer_ = nh.createTimer(ros::Duration(1.0/viz_occ_map_freq_), &GridMap::visTimerCB, this);
+  update_local_map_timer_ = nh.createTimer(ros::Duration(1.0/update_local_map_freq_), &GridMap::updateLocalMapTimerCB, this);
+  // build_kd_tree_timer_ = nh.createTimer(ros::Duration(1.0/build_kd_tree_freq_), &GridMap::buildKDTreeTimerCB, this);
 
   // ROS_INFO("[%s] Map origin (%f, %f, %f)", node_name_.c_str(), 
   //   mp_.global_map_origin_(0), mp_.global_map_origin_(1), mp_.global_map_origin_(2));
@@ -112,31 +65,13 @@ void GridMap::initMapROS(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   // //   mp_.local_map_size_(0), mp_.local_map_size_(1), mp_.local_map_size_(2));
   // ROS_INFO("[%s] Resolution %f m, Inflation %f m", node_name_.c_str(), 
     // mp_.resolution_, mp_.inflation_);
-  
 }
 
 void GridMap::initROSPubSubTimers(ros::NodeHandle &nh, ros::NodeHandle &pnh)
 {
   /* Initialize ROS Subscribers, publishers */
-  camera_info_sub_ = nh.subscribe<sensor_msgs::CameraInfo>(
-    "grid_map/camera_info", 1, &GridMap::cameraInfoCallback, this);
-
-  // From sensor type, determine what type of sensor message to subscribe to
-  if (mp_.sensor_type_ == SensorType::SENSOR_CLOUD)
-  {
-    ROS_INFO("[%s] Point clouds as input", node_name_.c_str());
-    cloud_sub_.reset(new message_filters::Subscriber<sensor_msgs::PointCloud2>(
-      nh, "grid_map/cloud", 5, ros::TransportHints().tcpNoDelay()));
-  }
-  else if (mp_.sensor_type_ == SensorType::SENSOR_DEPTH) {
-    ROS_INFO("[%s] Depth image as input", node_name_.c_str());
-    depth_sub_.reset(new message_filters::Subscriber<sensor_msgs::Image>(
-      nh, "grid_map/depth", 5, ros::TransportHints().tcpNoDelay()));
-  }
-  else {
-    ROS_ERROR("[%s] Unknown SENSOR_TYPE", node_name_.c_str());
-    ros::shutdown();
-  }
+  cloud_sub_.reset(new message_filters::Subscriber<sensor_msgs::PointCloud2>(
+    nh, "grid_map/cloud", 5, ros::TransportHints().tcpNoDelay()));
 
   // From pose type, determine what type of localization message to subscribe to
   if (mp_.pose_type_ == PoseType::POSE_STAMPED) // Pose
@@ -144,62 +79,33 @@ void GridMap::initROSPubSubTimers(ros::NodeHandle &nh, ros::NodeHandle &pnh)
     ROS_INFO("[%s] Pose as camera pose input", node_name_.c_str());
     pose_sub_.reset(new message_filters::Subscriber<geometry_msgs::PoseStamped>(
       nh, "grid_map/pose", 5, ros::TransportHints().udp()));
+    sync_cloud_pose_.reset(new message_filters::Synchronizer<SyncPolicyCloudPose>(
+        SyncPolicyCloudPose(5), *cloud_sub_, *pose_sub_));
+    sync_cloud_pose_->registerCallback(boost::bind(&GridMap::cloudPoseCB, this, _1, _2));
   }
   else if (mp_.pose_type_ == PoseType::ODOMETRY) // Odom
   {
     ROS_INFO("[%s] Odometry as camera pose input", node_name_.c_str());
     odom_sub_.reset(new message_filters::Subscriber<nav_msgs::Odometry>(
       nh, "grid_map/odom", 5, ros::TransportHints().udp()));
+
+    sync_cloud_odom_.reset(new message_filters::Synchronizer<SyncPolicyCloudOdom>(
+        SyncPolicyCloudOdom(5), *cloud_sub_, *odom_sub_));
+    sync_cloud_odom_->registerCallback(boost::bind(&GridMap::cloudOdomCB, this, _1, _2));
   }
   else if (mp_.pose_type_ == PoseType::TF) // TF
   {
     ROS_INFO("[%s] TF as camera pose input", node_name_.c_str());
     tfListener_.reset(new tf2_ros::TransformListener(tfBuffer_));
     tf_cloud_filter_.reset(new tf2_ros::MessageFilter<sensor_msgs::PointCloud2>(*cloud_sub_, tfBuffer_, mp_.uav_origin_frame_, 5, 0));
+
+    tf_cloud_filter_->registerCallback( boost::bind(&GridMap::cloudTFCB, this, _1) );
   }
   else { // UNKNOWN
     ROS_ERROR("[%s] Unknown POSE_TYPE", node_name_.c_str());
     ros::shutdown();
   }
 
-  // From pose and sensor type, determine the pose/sensor pairing 
-  if (mp_.pose_type_ == PoseType::POSE_STAMPED) { // Pose
-    if (mp_.sensor_type_ == SensorType::SENSOR_CLOUD) { // Point cloud
-      sync_cloud_pose_.reset(new message_filters::Synchronizer<SyncPolicyCloudPose>(
-          SyncPolicyCloudPose(5), *cloud_sub_, *pose_sub_));
-      sync_cloud_pose_->registerCallback(boost::bind(&GridMap::cloudPoseCB, this, _1, _2));
-    }
-    else { // Depth image
-      sync_image_pose_.reset(new message_filters::Synchronizer<SyncPolicyImagePose>(
-          SyncPolicyImagePose(5), *depth_sub_, *pose_sub_));
-      sync_image_pose_->registerCallback(boost::bind(&GridMap::depthPoseCB, this, _1, _2));
-    }
-  }
-  else if (mp_.pose_type_ == PoseType::ODOMETRY) { // Odom
-    if (mp_.sensor_type_ == SensorType::SENSOR_CLOUD) { // Point cloud
-      std::cout << "ODOM CLOUD SUBSCRIPTION!!" << std::endl;
-      std::cout << "ODOM CLOUD SUBSCRIPTION!!" << std::endl;
-      std::cout << "ODOM CLOUD SUBSCRIPTION!!" << std::endl;
-      std::cout << "ODOM CLOUD SUBSCRIPTION!!" << std::endl;
-
-      sync_cloud_odom_.reset(new message_filters::Synchronizer<SyncPolicyCloudOdom>(
-          SyncPolicyCloudOdom(5), *cloud_sub_, *odom_sub_));
-      sync_cloud_odom_->registerCallback(boost::bind(&GridMap::cloudOdomCB, this, _1, _2));
-    }
-    else { // Depth image
-      sync_image_odom_.reset(new message_filters::Synchronizer<SyncPolicyImageOdom>(
-          SyncPolicyImageOdom(5), *depth_sub_, *odom_sub_));
-      sync_image_odom_->registerCallback(boost::bind(&GridMap::depthOdomCB, this, _1, _2));
-    }
-  }
-  else if (mp_.pose_type_ == PoseType::TF) { // TF
-    tf_cloud_filter_->registerCallback( boost::bind(&GridMap::cloudTFCB, this, _1) );
-  }
-
-  occ_map_pub_ = nh.advertise<sensor_msgs::PointCloud2>("grid_map/occupancy", 10);
-
-  /* Initialize ROS Timers */
-  vis_timer_ = nh.createTimer(ros::Duration(0.1), &GridMap::visTimerCB, this);
 }
 
 void GridMap::readROSParams(ros::NodeHandle &nh, ros::NodeHandle &pnh)
@@ -208,39 +114,38 @@ void GridMap::readROSParams(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   pnh.param("grid_map/debug_input_entire_map", dbg_input_entire_map_, false);
   pnh.param("grid_map/entire_pcd_map_topic", entire_pcd_map_topic_, std::string("/fake_map"));
 
-  pnh.param("grid_map/ground_height", mp_.ground_height_, 0.0);
-  pnh.param("grid_map/map_size_x", mp_.global_map_size_(0), -1.0);
-  pnh.param("grid_map/map_size_y", mp_.global_map_size_(1), -1.0);
-  pnh.param("grid_map/map_size_z", mp_.global_map_size_(2), -1.0);
+  pnh.param("grid_map/global_map/size_x", mp_.global_map_size_(0), -1.0);
+  pnh.param("grid_map/global_map/size_y", mp_.global_map_size_(1), -1.0);
+  pnh.param("grid_map/global_map/size_z", mp_.global_map_size_(2), -1.0);
 
-  pnh.param("grid_map/local_map_size_x", mp_.local_map_size_(0), -1.0);
-  pnh.param("grid_map/local_map_size_y", mp_.local_map_size_(1), -1.0);
-  pnh.param("grid_map/local_map_size_z", mp_.local_map_size_(2), -1.0);
+  pnh.param("grid_map/local_map/size_x", mp_.local_map_size_(0), -1.0);
+  pnh.param("grid_map/local_map/size_y", mp_.local_map_size_(1), -1.0);
+  pnh.param("grid_map/local_map/size_z", mp_.local_map_size_(2), -1.0);
 
-  pnh.param("grid_map/keep_global_map", mp_.keep_global_map_, false);
+  pnh.param("grid_map/local_map/update_frequency", update_local_map_freq_, -1.0);
+  pnh.param("grid_map/local_map/viz_frequency", viz_occ_map_freq_, -1.0);
+  // pnh.param("grid_map/local_map/build_kdtree_frequency", build_kd_tree_freq_, -1.0);
 
-  pnh.param("grid_map/occ_grid/resolution", mp_.resolution_, -1.0);
-  pnh.param("grid_map/occ_grid/inflation", mp_.inflation_, -1.0);
+  // pnh.param("grid_map/keep_global_map", mp_.keep_global_map_, false);
+
+  pnh.param("grid_map/occ_map/resolution", mp_.resolution_, -1.0);
+  pnh.param("grid_map/occ_map/inflation", mp_.inflation_, -1.0);
+  pnh.param("grid_map/occ_map/max_range", mp_.max_range, -1.0);
+  pnh.param("grid_map/occ_map/ground_height", mp_.ground_height_, 0.0);
 
   mp_.inf_num_voxels_ = std::ceil(mp_.inflation_/mp_.resolution_);
 
   /* Point cloud filter */
-  pnh.param("grid_map/filter/depth_stride", mp_.depth_stride_, 4);
-  pnh.param("grid_map/filter/downsample_cloud", mp_.downsample_cloud_, false);
-  pnh.param("grid_map/filter/voxel_size", mp_.voxel_size_, -1.0);
+  // pnh.param("grid_map/filter/depth_stride", mp_.depth_stride_, 4);
+  // pnh.param("grid_map/filter/downsample_cloud", mp_.downsample_cloud_, false);
+  // pnh.param("grid_map/filter/voxel_size", mp_.voxel_size_, -1.0);
 
   /* Sensor inputs */
   pnh.param("grid_map/pose_type", mp_.pose_type_, 1);
-  pnh.param("grid_map/sensor_type", mp_.sensor_type_, 1);
-
-  /* Camera parameters  */
-  pnh.param("grid_map/k_depth_scaling_factor", mp_.k_depth_scaling_factor_, 1000.0);
 
   pnh.param("grid_map/cam_frame", mp_.cam_frame_, std::string("cam_link"));
   pnh.param("grid_map/global_frame", mp_.global_frame_, std::string("world"));
-  pnh.param("grid_map/uav_origin_frame", mp_.uav_origin_frame_, std::string("world"));
-
-  pnh.param("grid_map/sensor/max_range", mp_.max_range, -1.0);
+  pnh.param("grid_map/uav_origin_frame", mp_.uav_origin_frame_, std::string("map"));
 
   /* Camera extrinsic parameters  */
   pnh.param("grid_map/camera_to_body/roll", md_.cam2body_rpy_deg(0), 0.0);
@@ -259,9 +164,39 @@ void GridMap::reset(const double& resolution){
   bonxai_map_ = std::make_unique<BonxaiT>(resolution);
 
   // Set up kdtree for generating safe flight corridors
+  // KD_TREE(float delete_param = 0.5, float balance_param = 0.6 , float box_length = 0.2);
   kdtree_ = std::make_shared<KD_TREE<pcl::PointXYZ>>(0.5, 0.6, 0.1);
 
   global_map_in_origin_.reset(new pcl::PointCloud<pcl::PointXYZ>());
+
+  md_.last_sensor_msg_time = ros::Time::now().toSec();
+
+  // Camera to body transform
+  md_.cam2body_.block<3, 3>(0, 0) =  (Eigen::AngleAxisd((M_PI/180.0) * md_.cam2body_rpy_deg(2), Eigen::Vector3d::UnitZ())
+                                      * Eigen::AngleAxisd((M_PI/180.0) * md_.cam2body_rpy_deg(1), Eigen::Vector3d::UnitY())
+                                      * Eigen::AngleAxisd((M_PI/180.0) * md_.cam2body_rpy_deg(0), Eigen::Vector3d::UnitX())).toRotationMatrix();
+
+  // Global map origin is FIXED at a corner of the global map i.e. (-W/2, -L/2, 0)
+  mp_.global_map_origin_ = Eigen::Vector3d(
+    -mp_.global_map_size_(0) / 2.0, 
+    -mp_.global_map_size_(1) / 2.0, 
+    mp_.ground_height_);
+
+  /* LOCAL MAP COORDINATES ARE NOT FIXED! */
+  // Local map min is at a corner of the local map i.e. (uav_pos_x - local_sz_x /2, uav_pos_y - local_sz_y /2, 0), relative to the current position of the robot
+  mp_.local_map_origin_ = Eigen::Vector3d(
+    -mp_.local_map_size_(0) / 2.0, 
+    -mp_.local_map_size_(1) / 2.0, 
+    mp_.ground_height_);
+
+  // Local map max is at the other corner of the local map i.e. (uav_pos_x + local_sz_x /2, uav_pos_y + local_sz_y/2, 0), relative to the current position of the robot
+  mp_.local_map_max_ = Eigen::Vector3d(
+    mp_.local_map_size_(0) / 2.0, 
+    mp_.local_map_size_(1) / 2.0, 
+    mp_.ground_height_ + mp_.local_map_size_(2));
+
+  mp_.global_map_num_voxels_ = (mp_.global_map_size_.cwiseProduct(Eigen::Vector3d::Constant(1/mp_.resolution_))).cast<int>();
+  mp_.local_map_num_voxels_ = (mp_.local_map_size_.cwiseProduct(Eigen::Vector3d::Constant(1/mp_.resolution_))).cast<int>();
 
 }
 
@@ -269,16 +204,25 @@ void GridMap::reset(const double& resolution){
 
 void GridMap::visTimerCB(const ros::TimerEvent & /*event*/)
 {
-  publishOccMap();
-
+  // publishOccMap();
   // ROS_INFO_THROTTLE(1.0, "No. of Point clouds: %ld", global_map_in_origin_->points.size());
   // ROS_INFO_THROTTLE(1.0, "Octree memory usage: %ld kilobytes", octree_->memoryUsage()/1000);
   // ROS_INFO_STREAM_THROTTLE(1.0, "Octree Bounding Box: " << octree_->getBBXMin() << ", " << octree_->getBBXMax());
 }
 
+// void GridMap::buildKDTreeTimerCB(const ros::TimerEvent & /*event*/)
+// {
+
+// }
+
+void GridMap::updateLocalMapTimerCB(const ros::TimerEvent & /*event*/)
+{
+  updateLocalMap();
+}
+
 void GridMap::checkCollisionsTimerCB(const ros::TimerEvent & /*event*/)
 {
-  if (ros::Time::now().toSec() - node_start_time_ < 3.0){
+  if (!isPoseValid()){
     return;
   }
 
@@ -302,36 +246,25 @@ void GridMap::odomColCheckCB(const nav_msgs::OdometryConstPtr &msg_odom)
   getCamToGlobalPose(msg_odom->pose.pose);
 }
 
-void GridMap::depthOdomCB( const sensor_msgs::ImageConstPtr &msg_img, 
-                          const nav_msgs::OdometryConstPtr &msg_odom) 
-{
-  // getCamToGlobalPose(msg_odom->pose.pose);
-  // depthToCloudMap(msg_img);
-}
-
-void GridMap::depthPoseCB( const sensor_msgs::ImageConstPtr &msg_img,
-                            const geometry_msgs::PoseStampedConstPtr &msg_pose)
-{
-  // getCamToGlobalPose(msg_pose->pose);
-  // depthToCloudMap(msg_img);
-}
-
 void GridMap::cloudOdomCB( const sensor_msgs::PointCloud2ConstPtr &msg_pc, 
                             const nav_msgs::OdometryConstPtr &msg_odom)
 {
   getCamToGlobalPose(msg_odom->pose.pose);
   pcdMsgToMap(*msg_pc);
+  md_.last_sensor_msg_time = ros::Time::now().toSec();
 }
 
 void GridMap::cloudPoseCB( const sensor_msgs::PointCloud2ConstPtr &msg_pc,
                             const geometry_msgs::PoseStampedConstPtr &msg_pose)
 {
-  // getCamToGlobalPose(msg_pose->pose);
-  // pcdMsgToMap(*msg_pc);
+  getCamToGlobalPose(msg_pose->pose);
+  pcdMsgToMap(*msg_pc);
+  md_.last_sensor_msg_time = ros::Time::now().toSec();
 }
 
 void GridMap::cloudTFCB( const sensor_msgs::PointCloud2ConstPtr &msg_pc) 
 {
+
   geometry_msgs::TransformStamped cam_to_origin_tf;
 
   sensor_msgs::PointCloud2 pc_out;
@@ -359,24 +292,8 @@ void GridMap::cloudTFCB( const sensor_msgs::PointCloud2ConstPtr &msg_pc)
   md_.has_pose_ = true;
 
   pcdMsgToMap(*msg_pc);
-}
 
-void GridMap::cameraInfoCallback(const sensor_msgs::CameraInfoConstPtr &msg) 
-{
-  camera_info_sub_.shutdown();
-
-  // Intrinsic camera matrix for the raw (distorted) images.
-  //     [fx  0 cx]
-  // K = [ 0 fy cy]
-  //     [ 0  0  1]
-  mp_.fx_ = msg->K[0];
-  mp_.fy_ = msg->K[4];
-  mp_.cx_ = msg->K[2];
-  mp_.cy_ = msg->K[5];
-
-  mp_.fx_inv_ = 1.0 / msg->K[0];
-  mp_.fy_inv_ = 1.0 / msg->K[4];
-
+  md_.last_sensor_msg_time = ros::Time::now().toSec();
 }
 
 /* Gridmap conversion methods */
@@ -385,12 +302,10 @@ void GridMap::updateLocalMap(){
   if (!isPoseValid()){
     return;
   }
-  // #define ENV_BUILDER_OCC 100
-  // #define ENV_BUILDER_FREE 0
-  // #define ENV_BUILDER_UNK -1
-  
-  // std::cout << "mp_.local_map_origin_: " << mp_.local_map_origin_ .transpose() << std::endl; 
-  // std::cout << "mp_.local_map_max_: " << mp_.local_map_max_ .transpose() << std::endl; 
+
+  // OCCUPIED VALUE: 100
+  // FREE VALUE: 0
+  // UNKNOWN VALUE: -1
 
   // Update local map origin based on current UAV position
   mp_.local_map_origin_ = Eigen::Vector3d(
@@ -414,6 +329,18 @@ void GridMap::updateLocalMap(){
   std::vector<Bonxai::CoordT> occ_coords;
   bonxai_map_->getOccupiedVoxels(occ_coords);
 
+  if (occ_coords.size() <= 1){
+    // ROS_WARN("[grid_map] Nothing to publish, bonxai is empty");
+    return;
+  }
+
+  // std::unique_lock<std::mutex> lck(occ_map_pts_mutex_, std::try_to_lock);
+  // if (!lck.owns_lock()){
+  //   return;
+  // }
+
+  occ_map_pts_.clear();
+
   for (auto& coord : occ_coords) // For each occupied coordinate
   {
     // obs_gbl_pos: global obstacle pos
@@ -422,13 +349,13 @@ void GridMap::updateLocalMap(){
     // Eigen::Vector3d obs_gbl_pos = Eigen::Vector3d(obs_gbl_pos_pt3d.x, obs_gbl_pos_pt3d.y, obs_gbl_pos_pt3d.z)
     //                               - md_.body2origin_.block<3,1>(0,3);
     Eigen::Vector3d obs_gbl_pos(obs_gbl_pos_pt3d.x, obs_gbl_pos_pt3d.y, obs_gbl_pos_pt3d.z);
-    if (!isInLocalMap(obs_gbl_pos)){
+    if (!isInLocalMap(obs_gbl_pos)){ // Point is outside the local map
       continue;
     }
 
-    // Inflate voxel
+    occ_map_pts_.push_back(pcl::PointXYZ(obs_gbl_pos_pt3d.x, obs_gbl_pos_pt3d.y, obs_gbl_pos_pt3d.z));
 
-    // Convert to voxel index. This is relative to mp_.local_map_origin_.
+    // Convert to voxel index. This is relative to mp_.local_map_origin_
     Eigen::Vector3i vox_idx_3d = ((obs_gbl_pos - getLocalOrigin()) / getRes() - Eigen::Vector3d::Constant(0.5) ).cast<int>() ; 
 
     // Inflate voxel by inflation distance
@@ -446,12 +373,20 @@ void GridMap::updateLocalMap(){
             continue; // Exceeded map size
           }
 
+          // Assign as occupied voxel
           local_map_data_[vox_idx_1d] = 100;
         }
       }
     }
-
   }
+
+  // tm_kdtree_build_.start();
+  kdtree_->Build(occ_map_pts_.points);
+  // tm_kdtree_build_.stop(false);
+
+  publishLocalMapBounds();
+
+  publishOccMap(occ_map_pts_);
 }
 
 void GridMap::getCamToGlobalPose(const geometry_msgs::Pose &pose)
@@ -470,6 +405,7 @@ void GridMap::getCamToGlobalPose(const geometry_msgs::Pose &pose)
   md_.cam2origin_ = md_.body2origin_ * md_.cam2body_;
 
   md_.has_pose_ = true;
+
 }
 
 void GridMap::pcdMsgToMap(const sensor_msgs::PointCloud2 &msg)
@@ -478,19 +414,13 @@ void GridMap::pcdMsgToMap(const sensor_msgs::PointCloud2 &msg)
 
   // Input Point cloud is assumed to be in frame id of the sensor
   if (!isPoseValid()){
-    std::cout << "[GridMap]: invalid pose" << std::endl;
     return;
   }
 
-  // Remove anything outside of local map bounds
-  // updateLocalMap();
-
-  if (msg.data.empty() || msg.data.size() < 20){
-    ROS_WARN_THROTTLE(1.0, "[grid_map]: Empty point cloud received");
+  if (msg.data.empty()){
+    // ROS_WARN_THROTTLE(1.0, "[grid_map]: Empty point cloud received");
     return;
   }
-
-  std::cout << "[grid_map] msg.data.size(): " << msg.data.size() << std::endl;
 
   pcl::PointCloud<pcl::PointXYZ>::Ptr pcd;
   pcd.reset(new pcl::PointCloud<pcl::PointXYZ>);
@@ -498,12 +428,12 @@ void GridMap::pcdMsgToMap(const sensor_msgs::PointCloud2 &msg)
   pcl::fromROSMsg(msg, *pcd);
 
   pcdToMap(pcd);
+
+
 }
 
 void GridMap::pcdToMap(pcl::PointCloud<pcl::PointXYZ>::Ptr pcd)
 {
-  ROS_INFO("[grid_map] Size of point clouds: %ld", pcd->points.size());
-
   // Transform point cloud from camera frame to uav origin frame (the global reference frame)
   pcl::transformPointCloud(*pcd, *global_map_in_origin_, md_.cam2origin_);
   global_map_in_origin_->header.frame_id = mp_.uav_origin_frame_;
@@ -511,43 +441,41 @@ void GridMap::pcdToMap(pcl::PointCloud<pcl::PointXYZ>::Ptr pcd)
   // Getting the Translation from the sensor to the Global Reference Frame
   const pcl::PointXYZ sensor_origin(md_.cam2origin_(0, 3), md_.cam2origin_(1, 3), md_.cam2origin_(2, 3));
 
-  ROS_INFO("[grid_map] before bonxai_map_->insertPointCloud(...)");
+  // tm_bonxai_insert_.start();
+  bonxai_map_->insertPointCloud(global_map_in_origin_->points, sensor_origin, mp_.max_range);
+  // tm_bonxai_insert_.stop(false);
 
-  auto bonxai_start = std::chrono::high_resolution_clock::now();
-  bonxai_map_->insertPointCloud(global_map_in_origin_->points, sensor_origin, 30.0);
-  auto bonxai_end = std::chrono::high_resolution_clock::now();
+  if (dbg_input_entire_map_){
+    kdtree_->Build((*global_map_in_origin_).points);
+  }
 
-  ROS_INFO("[grid_map] before kdtree: %ld", pcd->points.size());
-
-  auto kdtree_set_input_cloud_start = std::chrono::high_resolution_clock::now();
-  kdtree_->Build((*global_map_in_origin_).points);
-
-  auto kdtree_set_input_cloud_end = std::chrono::high_resolution_clock::now();
-
-  ROS_INFO("[grid_map] kdtree_set_input_cloud duration: %f", std::chrono::duration_cast<std::chrono::duration<double>>(
-        kdtree_set_input_cloud_end - kdtree_set_input_cloud_start).count() * 1000.0);
-  ROS_INFO("[grid_map] bonxai duration: %f", std::chrono::duration_cast<std::chrono::duration<double>>(
-        bonxai_end - bonxai_start).count() * 1000.0);
-
-  ROS_INFO("[grid_map] Completed pcdToMap");
 }
 
 /* Checks */
 
 bool GridMap::isPoseValid() {
+  if (dbg_input_entire_map_){ // If in debug mode, no need to check for valid camera pose
+    return true;
+  }
+
   if (!md_.has_pose_){
-    ROS_ERROR("[%s] No pose/odom received", node_name_.c_str());
+    ROS_ERROR_THROTTLE(1.0, "[%s] No pose/odom received", node_name_.c_str());
     return false;
   }
 
-  if (isnan(md_.cam2origin_.col(3)(0)) || isnan(md_.cam2origin_.col(3)(1)) || isnan(md_.cam2origin_.col(3)(2))){
-    ROS_ERROR("[%s] Camera pose has NAN value", node_name_.c_str());
+  if (isTimeout(md_.last_sensor_msg_time, 0.25)){
+    ROS_ERROR_THROTTLE(1.0, "[%s] Sensor message timeout exceeded 0.25s: (%f, %f)", node_name_.c_str(), md_.last_sensor_msg_time, ros::Time::now().toSec());
     return false;
   }
+
+	if (md_.cam2origin_.array().isNaN().any()){
+    ROS_ERROR("[%s] Camera pose has NAN value", node_name_.c_str());
+    return false;
+	}
 
   if (!isInGlobalMap(md_.cam2origin_.block<3,1>(0,3)))
   {
-    ROS_ERROR("[%s] Camera pose (%.2f, %.2f, %.2f) is not within map boundary", 
+    ROS_ERROR("[%s] Camera pose (%.2f, %.2f, %.2f) is not within global map boundary", 
       node_name_.c_str(), md_.cam2origin_.col(3)(0), md_.cam2origin_.col(3)(1), md_.cam2origin_.col(3)(2));
     return false;
   }
@@ -557,38 +485,22 @@ bool GridMap::isPoseValid() {
 
 /** Publishers */
 
-void GridMap::publishOccMap()
+void GridMap::publishOccMap(const pcl::PointCloud<pcl::PointXYZ>& occ_map_pts)
 {
-  if (occ_map_pub_.getNumSubscribers() == 0){
-    return;
+  if (occ_map_pub_.getNumSubscribers() > 0){
+    sensor_msgs::PointCloud2 cloud_msg;
+    pcl::toROSMsg(occ_map_pts, cloud_msg);
+
+    cloud_msg.header.frame_id = mp_.uav_origin_frame_;
+    cloud_msg.header.stamp = ros::Time::now();
+    occ_map_pub_.publish(cloud_msg);
+    // ROS_INFO("Published occupancy grid with %ld voxels", occ_map_pts_.points.size());
   }
 
-  /* Bonxai */
-
-  thread_local std::vector<Eigen::Vector3d> bonxai_result;
-  bonxai_result.clear();
-  bonxai_map_->getOccupiedVoxels(bonxai_result);
-
-  if (bonxai_result.size() <= 1)
-  {
-    // ROS_WARN("[grid_map] Nothing to publish, bonxai is empty");
-    return;
-  }
-
-  thread_local pcl::PointCloud<pcl::PointXYZ> pcl_cloud;
-  pcl_cloud.clear();
-
-  for (const auto& voxel : bonxai_result)
-  {
-    pcl_cloud.push_back(pcl::PointXYZ(voxel.x(), voxel.y(), voxel.z()));
-  }
-  sensor_msgs::PointCloud2 cloud_msg;
-  pcl::toROSMsg(pcl_cloud, cloud_msg);
-
-  cloud_msg.header.frame_id = mp_.uav_origin_frame_;
-  cloud_msg.header.stamp = ros::Time::now();
-  occ_map_pub_.publish(cloud_msg);
-  // ROS_INFO("Published occupancy grid with %ld voxels", pcl_cloud.points.size());
+  // std::unique_lock<std::mutex> lck(occ_map_pts_mutex_, std::try_to_lock);
+  // if (!lck.owns_lock()){
+  //   return;
+  // }
 }
 
 void GridMap::publishCollisionSphere(
@@ -636,3 +548,31 @@ void GridMap::publishCollisionSphere(
   collision_viz_pub_.publish(sphere);
 }
 
+void GridMap::publishLocalMapBounds()
+{
+  geometry_msgs::PolygonStamped local_map_poly;
+  local_map_poly.header.frame_id = mp_.uav_origin_frame_;
+  local_map_poly.header.stamp = ros::Time::now();
+
+  geometry_msgs::Point32 min_corner, corner_0, corner_1, max_corner;
+  min_corner.x = mp_.local_map_origin_(0);
+  min_corner.y = mp_.local_map_origin_(1);
+
+  corner_0.x = mp_.local_map_max_(0);
+  corner_0.y = mp_.local_map_origin_(1);
+
+  corner_1.x = mp_.local_map_origin_(0);
+  corner_1.y = mp_.local_map_max_(1);
+
+  max_corner.x = mp_.local_map_max_(0);
+  max_corner.y = mp_.local_map_max_(1);
+
+  min_corner.z = corner_0.z = corner_1.z = max_corner.z = mp_.local_map_origin_(2);;
+
+  local_map_poly.polygon.points.push_back(min_corner);
+  local_map_poly.polygon.points.push_back(corner_0);
+  local_map_poly.polygon.points.push_back(max_corner);
+  local_map_poly.polygon.points.push_back(corner_1);
+
+  local_map_poly_pub_.publish(local_map_poly);
+}

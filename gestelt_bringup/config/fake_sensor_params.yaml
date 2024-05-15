@@ -1,9 +1,12 @@
-# map parameters
+# fake sensor parameters
+uav: 
+  tf_listen_freq: 30.0
+
 fake_laser:
   # Units in meters, Cut-off range of laser lines
-  sensing_range: 5.0
+  sensor_range: 5.0
   # Units in Hz
-  sensor_refresh_freq: 30
+  sensor_refresh_frequency: 30
   # Units in meters, this should be the same as the resolution of the global map
   resolution: 0.1
 
@@ -18,3 +21,7 @@ fake_laser:
     laser_line_num: 15
     # Units in degree, vertical angle range
     laser_range_dgr: 90.0
+
+downsampler: 
+  active: true
+  voxel_size: 0.1

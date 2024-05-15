@@ -1,3 +1,14 @@
+/**
+ * @file fake_laser.cpp
+ * @author ZheJiang University 
+ * @brief Originally from ZJU FAST Lab, with very minor modifications by JohnTGZ
+ * @version 0.1
+ * @date 2024-05-14
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #include <fake_map/fake_laser.h>
 
 /**
@@ -84,7 +95,7 @@ inline void FakeLaser::idx_to_pt(int x, int y, double dis, Eigen::Vector3d &pt)
 void FakeLaser::set_parameters(
     double resolution,
     double sensing_range,
-    pcl::PointCloud<pcl::PointXYZ> global_map,
+    const pcl::PointCloud<pcl::PointXYZ>& global_map,
     double vtc_laser_range_dgr,
     double hrz_laser_range_dgr,
     double vtc_laser_line_num,

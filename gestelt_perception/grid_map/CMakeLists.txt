@@ -14,6 +14,7 @@ set(ROS_LIBRARIES
     message_filters
     bonxai
     ikd_tree
+    logger
 )
 
 find_package(octomap REQUIRED)
@@ -26,7 +27,7 @@ find_package(Eigen3 REQUIRED)
 catkin_package(
  INCLUDE_DIRS include
  LIBRARIES ${PROJECT_NAME}
- CATKIN_DEPENDS tf2_ros bonxai ikd_tree
+ CATKIN_DEPENDS tf2_ros bonxai ikd_tree logger
  DEPENDS PCL 
 )
 
