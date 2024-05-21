@@ -463,6 +463,27 @@ namespace poly_traj
         }
 
         /**
+         * @brief Get a vector of duration of every point
+         * 
+         * @return Eigen::VectorXd 
+         */
+        std::vector<double> getSegDurationsDouble() const
+        {
+            int N = getPieceSize();
+            std::vector<double> durations(N);
+            // Eigen::VectorXd durations(N);
+            for (int i = 0; i < N; i++)
+            {
+                // durations(i) = pieces[i].getDuration();
+                durations[i] = pieces[i].getDuration();
+            }
+
+            // return std::vector<double>(durations.data(), durations.data() + durations.cols());
+            return durations;
+        }
+
+
+        /**
          * @brief Get the total duration of the trajectory
          * 
          * @return double 
@@ -1344,11 +1365,31 @@ namespace poly_traj
          * 
          * @return const Eigen::VectorXd& 
          */
-        const Eigen::VectorXd &get_T1() const
+        const Eigen::VectorXd &getSegDurations() const
         {
             return T1;
         }
-        
+
+        /**
+         * @brief Return a vector of time durations of each piece/segment
+         * 
+         * @return const Eigen::VectorXd& 
+         */
+        std::vector<double> getSegDurationsDouble() const
+        {
+            // std::vector<double> seg_durs(T1.cols());
+
+            // for (int i = 0; i < T1.cols(); i++) // For each polynomial segment
+            // {
+            //     seg_durs[i] = T1(i);
+            // }
+
+            // return seg_durs;
+
+            return std::vector<double>(T1.data(), T1.data() + T1.cols());
+        }
+
+
         /**
          * @brief Get the gradient of cost w.r.t polynomial coefficients 
          * 

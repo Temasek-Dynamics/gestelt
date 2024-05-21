@@ -2,22 +2,25 @@
 #####
 # Navigator params
 #####
-# drone_id: 0       # Set in launch file
-# debug_planning: false       # Set in launch file
-safety_check_frequency: 20.0  # [Hz]
-goal_tolerance: 0.2           # [m] Tolerance for goal to have been reached
-time_to_col_threshold: 0.2    # [s] Threshold for seconds to collision.
-receding_horizon_planning_dist: 7.5        # [m] Receding horizon planning
+# debug_planning: false     # Set in launch file. Used to allow certain topics for debugging planning algorithms
 verbose_planning: false     # Print out planning times
+
+goal_tolerance: 0.2                     # [m] Tolerance for goal to be considered reached
+time_to_col_threshold: 0.2              # [s] Threshold for seconds to collision.
+receding_horizon_planning_dist: 7.5     # [m] Receding horizon planning
+receding_horizon_corridor_dist: 3.0     # [m] Receding horizon corridor
+
+safety_check_frequency: 20.0            # [Hz] Timer thread for checking safety of trajectory
+heartbeat_frequency: 20.0               # [Hz] Frequency to indicate if planner is still alive
 
 ##### Set planner types
 front_end/planner_type: 1         # 0: ASTAR, 1: JPS_AND_DMP
-sfc/planner_type: 0               # 0: SPHERICAL, 1: POLYTOPE
-back_end/planner_type: 0          # 0: SSFC, 1: EGO
+sfc/planner_type: 1               # 0: SPHERICAL, 1: POLYTOPE
+back_end/planner_type: 2          # 0: SSFC, 1: EGO, 2: POLY
 
 ##### Front-end params
 front_end:
-  planner_frequency: 5.0        # [Hz]
+  planner_frequency: 5.0        # [Hz] Front-end planning frequency
 
   a_star:
     max_iterations: 9999  
@@ -37,15 +40,15 @@ front_end:
     # dmp_potential_radius: 0.4   # DMP radius of distance field (Value has significant effect on runtime)
     # dmp_collision_weight: 0.25   # DMP Collision weight 
     # dmp_heuristic_weight: 0.0   # DMP Heuristic weight
-    dmp_pow: 1    # DMP power index 
+    dmp_pow: 1                  # DMP power index 
 
 ##### Safe flight corridor
 sfc:
   spherical: 
     max_iterations: 100     # Corresponds to maximum number of spheres
-    debug_viz: true        # If true, publish visualization for debugging
+    debug_viz: true         # If true, publish visualization for debugging
     # Sampling
-    max_sample_points: 150 # Maximum sample points for candidate sphere
+    max_sample_points: 100  # Maximum sample points for candidate sphere
     # standard deviation: remember 68–95–99.7 rule
     # mult_stddev_x: 0.1      # if mult_stddev_x is too high, the spheres cannot round corners and generate loads of spheres around the same area around corners
     # mult_stddev_y: 0.3      # 
@@ -59,9 +62,9 @@ sfc:
     # mult_stddev_y: 0.5      # 
     # mult_stddev_z: 0.5      # 
 
-    W_cand_vol: 5         # Weight for candidate sphere volume
-    W_intersect_vol: 10    # Weight for volume of intersection between spheres
-    W_progress: 0        # Weight for progress along guide path
+    W_cand_vol: 5           # Weight for candidate sphere volume
+    W_intersect_vol: 10     # Weight for volume of intersection between spheres
+    W_progress: 0           # Weight for progress along guide path
 
     # Criteria for valid spheres
     min_sphere_vol: 0.001 # (m^3) Minimum volume of sphere
@@ -77,13 +80,13 @@ sfc:
   poly:
     max_iterations: 60
     debug_viz: true
-    poly_max: 10
+    poly_max: 6
     cvx_decomp_type: 2 #Convex decomposition type
     num_expansion_itr: 60
 
 ##### Back-end 
 back_end: 
-  planner_frequency: 1.0       # [Hz]
+  # planner_frequency: 1.0       # [Hz]
 
   num_replan_retries: 2 # Number of times for back-end to retry
   ego:

@@ -6,8 +6,6 @@
 
 #include <grid_map/grid_map.h>
 
-#include <decomp_geometry/polyhedron.h>
-
 namespace SSFC{
 
   struct Sphere {
@@ -90,20 +88,6 @@ namespace SSFC{
       waypoints.clear();
     }
 
-    Eigen::Vector3d  getStartPos() const {
-      if (waypoints.size() < 2){
-        throw std::runtime_error("SFCTrajectory does not contain at least 2 waypoints");
-      }
-      return waypoints[0];
-    }
-
-    Eigen::Vector3d  getGoalPos() const {
-      if (waypoints.size() < 2){
-        throw std::runtime_error("SFCTrajectory does not contain at least 2 waypoints");
-      }
-      return waypoints.back();
-    }
-
     std::vector<double> getSpheresRadii() const {
       std::vector<double> spheres_radii;
 
@@ -138,8 +122,12 @@ namespace SSFC{
       return inner_wps;
     }
 
-    Eigen::VectorXd getSegmentTimeDurations() const {
+    Eigen::VectorXd const getSegmentTimeDurations() const {
       return Eigen::VectorXd::Map(segs_t_dur.data(), static_cast<Eigen::Index>(segs_t_dur.size()));
+    }
+
+    std::vector<double> const getSegmentDurations() const {
+      return segs_t_dur;
     }
 
     std::vector<Eigen::Vector3d> getIntxnPlaneVec() const{
@@ -171,24 +159,93 @@ namespace SSFC{
       return spheres.size();
     }
 
-    // Prune a given number of segments from the start
-    void pruneFromStart(const int& num_seg_prunes) {
-      // if (num_seg_prunes <= 0){
-      //   return;
-      // }
+    /**
+     * @brief Get the number of segments that have been traversed since start of plan until the given time,
+     * INCLUDING the segment it is currently traversing. That is to say if I am travelling on the first segment,
+     * it will return 1
+     * 
+     * @param time_now 
+     * @return int 
+     */
+    int getNumSegmentsTraversed(const double& time_now){
+      int segments_traversed = 0; // Number of segments traversed given time_now
+      
+      {
+        double et_since_plan_start = time_now - start_time; // elapsed time since start of previous plan
+        double et_sfc_segments = 0.0; // Cumulative time elapsed from iterative summing of sfc segments 
+        for (auto& seg_dur : segs_t_dur){
+          if (et_sfc_segments > et_since_plan_start){ // Cumul. sum of trajectories exceed the time elapsed
+            break;
+          }
+          et_sfc_segments += seg_dur;
+          segments_traversed++;
+        } 
+      }
 
-      if (num_seg_prunes >= getNumSegments()){
-        std::cout << "[SSFC] Error pruning SSFC" << std::endl;
+      return segments_traversed;
+    }
+
+    /**
+     * @brief Get maximum waypoint index within a given distance of the given point pt
+     * 
+     * @param time_now 
+     * @return int Maximum waypoint index within a distance of the given point pt
+     */
+    int getMaxWaypointWithinDist(const Eigen::Vector3d& pt, const double& dist){
+      int max_wp_idx = -1;
+
+      for (const auto& wp: waypoints)
+      {
+        if ((wp - pt).norm() >= dist){
+          break;
+        }
+        max_wp_idx++;
+      }
+
+      return max_wp_idx;
+    }
+
+    /**
+     * @brief keep a given number of segments from start_idx to end_idx (INCLUSIVE)
+     * 
+     * @param num_seg_prunes 
+     */
+    void keep(const int& end_idx) {
+
+      if ((end_idx + 1) >= getNumSegments() ){
+        std::cout << "[SSFC] Error pruning SSFC, number of segments to be kept exceeds total" << std::endl;
         return;
       }
 
-      spheres.erase(spheres.begin(), spheres.begin()+num_seg_prunes);
-      waypoints.erase(waypoints.begin(), waypoints.begin()+num_seg_prunes);
-      segs_t_dur.erase(segs_t_dur.begin(), segs_t_dur.begin()+num_seg_prunes);
-      intxn_spheres.erase(intxn_spheres.begin(), intxn_spheres.begin()+num_seg_prunes);
-      intxn_plane_vec.erase(intxn_plane_vec.begin(), intxn_plane_vec.begin()+num_seg_prunes);
-      intxn_plane_dist.erase(intxn_plane_dist.begin(), intxn_plane_dist.begin()+num_seg_prunes);
-      intxn_circle_radius.erase(intxn_circle_radius.begin(), intxn_circle_radius.begin()+num_seg_prunes);
+      spheres.erase(spheres.begin()+end_idx+1, spheres.end());
+      waypoints.erase(waypoints.begin()+end_idx+1, waypoints.end());
+      segs_t_dur.erase(segs_t_dur.begin()+end_idx+1, segs_t_dur.end());
+      intxn_spheres.erase(intxn_spheres.begin()+end_idx+1, intxn_spheres.end());
+      intxn_plane_vec.erase(intxn_plane_vec.begin()+end_idx+1, intxn_plane_vec.end());
+      intxn_plane_dist.erase(intxn_plane_dist.begin()+end_idx+1, intxn_plane_dist.end());
+      intxn_circle_radius.erase(intxn_circle_radius.begin()+end_idx+1, intxn_circle_radius.end());
+    }
+
+    /**
+     * @brief Prune a given number of segments from start_idx to end_idx (EXCLUSIVE OF END_IDX)
+     * 
+     * @param start_idx 
+     * @param end_idx 
+     */
+    void prune(const int& start_idx, const int& end_idx) {
+
+      if ((end_idx-start_idx)+1 >= getNumSegments()){
+        std::cout << "[SSFC] Error pruning SSFC, number to be segments to be pruned exceeds total" << std::endl;
+        return;
+      }
+
+      spheres.erase(spheres.begin()+start_idx, spheres.begin()+end_idx);
+      waypoints.erase(waypoints.begin()+start_idx, waypoints.begin()+end_idx);
+      segs_t_dur.erase(segs_t_dur.begin()+start_idx, segs_t_dur.begin()+end_idx);
+      intxn_spheres.erase(intxn_spheres.begin()+start_idx, intxn_spheres.begin()+end_idx);
+      intxn_plane_vec.erase(intxn_plane_vec.begin()+start_idx, intxn_plane_vec.begin()+end_idx);
+      intxn_plane_dist.erase(intxn_plane_dist.begin()+start_idx, intxn_plane_dist.begin()+end_idx);
+      intxn_circle_radius.erase(intxn_circle_radius.begin()+start_idx, intxn_circle_radius.begin()+end_idx);
     }
 
     double start_time; // Trajectory start time
@@ -216,7 +273,11 @@ public:
    * @return true 
    * @return false 
    */
-  virtual bool generateSFC(const std::vector<Eigen::Vector3d> &path) = 0;
+  virtual bool generateSFC( const std::vector<Eigen::Vector3d> &path,
+                            const bool& enable_rhc_plan,
+                            const double& rhc_dist,
+                            const Eigen::Vector3d& start_pos,
+                            const double& req_plan_time) = 0;
 
   /**
    * @brief Add ROS Publishers to the SFCBase class
@@ -228,8 +289,7 @@ public:
   // Get Spherical SFC Trajectory
   virtual SSFC::SFCTrajectory const getSSFCTrajectory(const double& traj_start_time) = 0;
 
-  // Get Polytope SFC Trajectory
-  virtual std::vector<Polyhedron3D, Eigen::aligned_allocator<Polyhedron3D>> getPolySFC() = 0;
+  SSFC::SFCTrajectory sfc_traj_;          // SFC Trajectory 
 
 protected:
   SFCBase(){};

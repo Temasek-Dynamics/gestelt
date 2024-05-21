@@ -43,8 +43,10 @@ include_directories(
 
 add_library(traj_opt 
     src/poly_traj_optimizer.cpp 
+    src/polyhedron_sfc_optimizer.cpp
 )
 target_link_libraries(traj_opt
     ${catkin_LIBRARIES} 
-    # ${EIGEN3_LIBRARIES}
 )  
+
+

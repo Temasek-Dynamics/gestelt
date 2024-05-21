@@ -110,8 +110,8 @@ public: // Public structs
     /* Sampling */
     int max_sample_points; // Maximum allowed sampling points
     double mult_stddev_x; // Multiplier for x standard deviation in sampling 
-    double mult_stddev_y; // Multiplier for x standard deviation in sampling 
-    double mult_stddev_z; // Multiplier for x standard deviation in sampling 
+    double mult_stddev_y; // Multiplier for y standard deviation in sampling 
+    double mult_stddev_z; // Multiplier for z standard deviation in sampling 
 
     /* Scoring metric*/
     double W_cand_vol;    // Weight of candidate volume
@@ -165,7 +165,11 @@ public:
    * @return true 
    * @return false 
    */
-  bool generateSFC(const std::vector<Eigen::Vector3d> &path);
+  bool generateSFC(const std::vector<Eigen::Vector3d> &path, 
+                    const bool& enable_rhc_plan = false,
+                    const double& rhc_dist = 0.0,
+                    const Eigen::Vector3d& start_pos = Eigen::Vector3d{0.0, 0.0, 0.0},
+                    const double& req_plan_time = 0.0);
 
   /* Getter methods */
 
@@ -182,12 +186,6 @@ public:
     return sfc_traj_;
   }
 
-  // NOT USED: This function is implemented to fulfill the virtual methods of the base class 
-  std::vector<Polyhedron3D, Eigen::aligned_allocator<Polyhedron3D>> getPolySFC() {
-    std::vector<Polyhedron3D, Eigen::aligned_allocator<Polyhedron3D>> poly_vec;
-    return poly_vec;
-  }
-
   void getSFCTrajectoryDebug(
     std::vector<std::vector<SSFC::Sphere>>& sfc_sampled_spheres,
     std::vector<Eigen::Vector3d>& samp_dir_vec,
@@ -198,6 +196,9 @@ public:
     guide_points_vec = guide_points_vec_;
   }
 
+  /* Data structs */
+
+  SSFC::SFCTrajectory sfc_traj_;          // SFC Trajectory 
 
 private: // Private methods
 
@@ -360,7 +361,6 @@ private: // Private members
   ros::Publisher samp_dir_vec_pub_; // (visualization_msgs::MarkerArray) Visualization of direction vectors used for sampling
   ros::Publisher intxn_spheres_pub_; // (visualization_msgs::MarkerArray) Visualization of intersecting spheres
 
-
   /* Params */
   int itr_; // Iteration number
   SphericalSFCParams sfc_params_; // SFC parameters
@@ -368,7 +368,6 @@ private: // Private members
   /* Data structs */
   std::shared_ptr<GridMap> grid_map_; 
   std::vector<SSFC::Sphere> sfc_spheres_; // Waypoints of the spherical flight corridor
-  SSFC::SFCTrajectory sfc_traj_;          // SFC Trajectory 
 
   std::unique_ptr<KDTreeVectorOfVectorsAdaptor<std::vector<Eigen::Vector3d>, double>>   
     guide_path_kdtree_; // KD Tree for guide path

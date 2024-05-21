@@ -294,7 +294,7 @@ namespace ego_planner
     {
       // c: Polynomial coefficients 
       const Eigen::Matrix<double, 6, 3> &c = mjo.get_b().block<6, 3>(i * 6, 0); 
-      double T_i = mjo.get_T1()(i);
+      double T_i = mjo.getSegDurations()(i);
       step = T_i / K; // Duration of each piece / sample number.
       s1 = 0.0; // Time t, it will increase with each step of the constraint point
 
@@ -485,7 +485,7 @@ namespace ego_planner
         }
       } // end iteration through all constraint points in segment
 
-      t += mjo.get_T1()(i);
+      t += mjo.getSegDurations()(i);
     } // end iteration through all segments
 
     /**
@@ -500,7 +500,7 @@ namespace ego_planner
     idx_cp = 0;
     for (int i = 0; i < N; ++i) // for each piece/segment number
     {
-      step = mjo.get_T1()(i) / K;
+      step = mjo.getSegDurations()(i) / K;
       s1 = 0.0;
 
       for (int j = 0; j <= K; ++j) // For each constraint point
@@ -707,7 +707,6 @@ namespace ego_planner
 
     return (opt->force_stop_type_ == STOP_FOR_ERROR || opt->force_stop_type_ == STOP_FOR_REBOUND);
   }
-
 
   /* EGO Planner algorithm: callbacks by the L-BFGS optimizer */
   double PolyTrajOptimizer::costFunctionCallback(void *func_data, const double *x, double *grad, const int n)

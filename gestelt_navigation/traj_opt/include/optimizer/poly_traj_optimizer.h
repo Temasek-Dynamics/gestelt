@@ -1248,9 +1248,9 @@ namespace ego_planner
       for (int i = 0; i < N; ++i) // for each piece/segment number
       {
         const Eigen::Matrix<double, 6, 3> &c = mjo_xi_.get_b().block<6, 3>(i * 6, 0); // Polynomial coefficients 
-        double T_i = mjo_xi_.get_T1()(i);
+        double T_i = mjo_xi_.getSegDurations()(i);
         step = T_i / K; // Duration of each piece / sample number.
-        // step = mjo_xi_.get_T1()(i) / K;
+        // step = mjo_xi_.getSegDurations()(i) / K;
         s1 = 0.0; // Time t, it will increase with each step of f the constraint point
 
         for (int j = 0; j <= K; ++j) // For each constraint point (or sample) in the segment. This is also known as the sample index
@@ -1400,7 +1400,7 @@ namespace ego_planner
           }
         }
 
-        t += mjo_xi_.get_T1()(i);
+        t += mjo_xi_.getSegDurations()(i);
       }
 
       /**
@@ -1414,7 +1414,7 @@ namespace ego_planner
       idx_cp = 0;
       for (int i = 0; i < N; ++i) // for each piece/segment number
       {
-        step = mjo_xi_.get_T1()(i) / K;
+        step = mjo_xi_.getSegDurations()(i) / K;
         s1 = 0.0;
 
         for (int j = 0; j <= K; ++j) // For each constraint point

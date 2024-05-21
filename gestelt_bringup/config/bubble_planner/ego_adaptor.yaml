@@ -1,4 +1,4 @@
 planner_hb_timeout: 0.5
 ignore_hb_checks: true
 checks_freq: 10.0
-sample_plan_freq: 30.0
+sample_plan_freq: 75.0

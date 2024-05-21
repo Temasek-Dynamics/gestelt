@@ -26,7 +26,7 @@ public:
     pnh.param("ignore_hb_checks", ignore_heartbeat_checks_, false);
     double checks_freq, sample_plan_freq;
     pnh.param("checks_freq", checks_freq, 10.0);
-    pnh.param("sample_plan_freq", sample_plan_freq, 30.0);
+    pnh.param("sample_plan_freq", sample_plan_freq, 50.0);
 
     // Subscribers
     adaptor_goals_sub_ = nh.subscribe("planner_adaptor/goals", 10, &PlannerAdaptor::goalsCB, this); // Subscription to user-defined goals, these goals are processed and sent to the planner
@@ -34,7 +34,7 @@ public:
 
     // Publishers
     traj_server_cmd_pub_ = nh.advertise<gestelt_msgs::Command>("traj_server/command", 1); // Publishes commands to trajectory server
-    exec_traj_pub_ = nh.advertise<gestelt_msgs::ExecTrajectory>("planner_adaptor/exec_trajectory", 5); // Trajectory points to be published to Trajectory Server
+    exec_traj_pub_ = nh.advertise<gestelt_msgs::ExecTrajectory>("planner_adaptor/exec_trajectory", 3); // Trajectory points to be published to Trajectory Server
 
     // Timers
     checks_timer_ = nh.createTimer(ros::Duration(1/checks_freq), &PlannerAdaptor::checksTimerCB, this); // Timer for checking planner heartbeat.

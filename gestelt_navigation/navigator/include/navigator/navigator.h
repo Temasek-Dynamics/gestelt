@@ -47,6 +47,7 @@
 
 /* Back-end optimization */
 #include <optimizer/poly_traj_optimizer.h>
+#include "optimizer/polyhedron_sfc_optimizer.h"
 #include <ego_planner_fsm/ego_planner_manager.h>
 
 class Navigator
@@ -63,9 +64,9 @@ enum SFCType{
 
 enum BackEndType{
   SSFC, // Spherical safe flight corridor
-  EGO   // ESDF-Free Gradient planner
+  EGO,   // ESDF-Free Gradient planner
+  POLY // Polytope safe flight corridor
 };
-
 
 public:  
   Navigator() {}
@@ -86,13 +87,6 @@ private:
    * @param e 
    */
   void planFrontEndTimerCB(const ros::TimerEvent &e);
-
-  /**
-   * @brief Timer callback to generate plan
-   * @param e 
-   */
-  void planBackEndTimerCB(const ros::TimerEvent &e);
-
 
   /**
    * @brief Get receding horizon planning goal
@@ -151,28 +145,7 @@ private:
    */
   bool generateFrontEndPlan(
     const Eigen::Vector3d& start_pos, const Eigen::Vector3d& goal_pos,
-    const double& req_plan_t,
     std::shared_ptr<SSFC::SFCTrajectory> sfc_traj);
-
-  /**
-   * @brief Generate a back-end plan
-   * 
-   * @param goal_pos 
-   * @param be_traj back end trajectory for sampling start position
-   * @param sfc_traj 
-   * @param mjo_opt 
-   * @param req_be_plan_time Time at which back end plan is requested
-   * @param num_retries 
-   * @return true 
-   * @return false 
-   */
-  bool generateBackEndPlan( 
-    const Eigen::Vector3d& goal_pos, 
-    const ego_planner::LocalTrajData& local_traj,
-    std::shared_ptr<SSFC::SFCTrajectory> sfc_traj,
-    poly_traj::MinJerkOpt& mjo_opt,
-    double req_be_plan_time,
-    const int& num_retries=5);
 
   // EDSF Free optimization
   bool EGOOptimize(const Eigen::Matrix3d& startPVA, const Eigen::Matrix3d& endPVA, 
@@ -180,8 +153,13 @@ private:
 
   // Spherical safe flight corridor optimization
   bool SSFCOptimize(const Eigen::Matrix3d& startPVA, const Eigen::Matrix3d& endPVA, 
-                    const double& req_be_plan_time,
-                    std::shared_ptr<SSFC::SFCTrajectory> sfc_traj_ptr,
+                    const double& req_plan_time,
+                    std::shared_ptr<SSFC::SFCTrajectory> ssfc_ptr,
+                    poly_traj::MinJerkOpt& mjo_opt);
+
+  bool PolySFCOptimize(const Eigen::Matrix3d& startPVA, const Eigen::Matrix3d& endPVA, 
+                    const double& req_plan_time,
+                    const std::vector<Eigen::Matrix3Xd>& poly_sfc,
                     poly_traj::MinJerkOpt& mjo_opt);
 
   /* Subscriber callbacks */
@@ -198,14 +176,52 @@ private:
    * 
    * @param msg 
    */
-  void singleGoalCB(const geometry_msgs::PoseStampedConstPtr& msg);
+  void singleGoalCB(const geometry_msgs::PoseStampedConstPtr& msg)
+  {
+    logInfo(str_fmt("Received debug goal (%f, %f, %f). Note: position.z is set to default of 1.0m", 
+          msg->pose.position.x,
+          msg->pose.position.y,
+          1.0));
+    
+    Eigen::Vector3d goal_pos = Eigen::Vector3d{msg->pose.position.x, msg->pose.position.y, 1.0};
+    
+    // 1. One shot planning
+    // plan(cur_pos_, goal_pos);
+
+    // 2. Continuous re-planning
+    waypoints_.reset();
+    waypoints_.addWP(goal_pos);
+  }
+
 
   /**
    * @brief callback to multiple user-defined goal waypoints 
    * 
    * @param msg 
    */
-  void goalsCB(const gestelt_msgs::GoalsConstPtr &msg);
+  void goalsCB(const gestelt_msgs::GoalsConstPtr &msg)
+  {
+    if (msg->transforms.size() <= 0)
+    {
+      logError("Received empty waypoints");
+      return;
+    }
+    if (msg->header.frame_id != "world" && msg->header.frame_id != "map" )
+    {
+      logError("Only waypoint goals in 'world' or 'map' frame are accepted, ignoring waypoints.");
+      return;
+    }
+
+    std::vector<Eigen::Vector3d> wp_vec;
+
+    for (auto& pos : msg->transforms) {
+      // Transform received waypoints from world to UAV origin frame
+      wp_vec.push_back(Eigen::Vector3d{pos.translation.x, pos.translation.y, pos.translation.z});
+    }
+
+    waypoints_.addMultipleWP(wp_vec);
+  }
+
 
   /**
    * @brief Callback for swarm MINCO trajectories
@@ -261,7 +277,7 @@ private:
       waypoints_.nextWP()(0), waypoints_.nextWP()(1), waypoints_.nextWP()(2))
     );
 
-    generateFrontEndPlan(cur_pos_, waypoints_.nextWP(), ros::Time::now().toSec(), sfc_traj_);
+    generateFrontEndPlan(cur_pos_, waypoints_.nextWP(), ssfc_);
   }
 
   /* Checks */
@@ -272,7 +288,12 @@ private:
    * @return true 
    * @return false 
    */
-  bool isGoalReached(const Eigen::Vector3d& pos, const Eigen::Vector3d& goal);
+  bool isGoalReached(const Eigen::Vector3d& pos, const Eigen::Vector3d& goal)
+  {
+    init_new_poly_traj_ = true;
+
+    return (pos - goal).squaredNorm() < squared_goal_tol_;
+  }
 
   /**
    * @brief Check if time has timed out
@@ -281,7 +302,12 @@ private:
    * @return true 
    * @return false 
    */
-  bool isTimeout(const double& last_state_time, const double& threshold);
+  bool isTimeout(const double& last_state_time, const double& threshold)
+  {
+    return (ros::Time::now().toSec() - last_state_time) >= threshold;
+  } 
+
+
 
   bool isTrajectorySafe(
     const std::vector<ego_planner::LocalTrajData>& swarm_local_trajs, 
@@ -337,12 +363,21 @@ private:
     const int& num_cp, const int& traj_id, const int& drone_id);
 
   /**
+   * @brief Get optimized segment durations
+   * 
+   * @param local_traj 
+   * @param time_dur 
+   * @return true If local trajectory is valid
+   * @return false 
+   */
+  bool getOptSegDur(const ego_planner::LocalTrajData& local_traj, std::vector<double>& time_dur);
+
+  /**
    * @brief Publish command to trajectory server
    * 
    * @param cmd 
    */
   void pubTrajServerCmd(const int& cmd);
-
 
 private: /* ROS subs, pubs and timers*/
   ros::NodeHandle node_;
@@ -361,7 +396,7 @@ private: /* ROS subs, pubs and timers*/
   ros::Subscriber plan_on_demand_sub_; // DEBUG: Subscriber to trigger planning on demand
 
   /* SFC Publishers */
-  // ros::Publisher spherical_sfc_traj_pub_; // Publish safe flight corridor spherical trajectory
+  // ros::Publisher spherical_ssfc_pub_; // Publish safe flight corridor spherical trajectory
 
   /* Back-end */
   ros::Publisher debug_traj_pub_; // back-end trajectory for debugging
@@ -377,7 +412,7 @@ private: /* ROS subs, pubs and timers*/
 
   /* Visualization for SFC*/
   std::unordered_map<std::string, ros::Publisher> front_end_publisher_map_;
-  std::unordered_map<std::string, ros::Publisher> sfc_publisher_map_;
+  std::unordered_map<std::string, ros::Publisher> sfc_publisher_map_; // Map of publisher topic to ROS publisher
   // ros::Publisher sfc_spherical_viz_pub_; // Visualization of SFC spheres
   // ros::Publisher sfc_p_cand_viz_pub_; // Visualization of SFC sampling points
   // ros::Publisher sfc_dist_viz_pub_; // Visualization of SFC sampling distribution
@@ -386,14 +421,12 @@ private: /* ROS subs, pubs and timers*/
   // ros::Publisher intxn_spheres_pub_; // Visualization of intersecting spheres
 
   /* Debugging */
-  ros::Publisher dbg_sfc_traj_pub_; // Publishers to trajectory inspector for debugging 
+  ros::Publisher dbg_ssfc_pub_; // Publishers to trajectory inspector for debugging 
   
   /* Timers */
   ros::Timer fe_plan_timer_;           // Front-end planning loop
-  ros::Timer be_plan_timer_;           // Back-end planning loop
   ros::Timer safety_checks_timer_;  // Safety checks
   ros::Timer hb_timer_;             // Heartbeat timer
-
 
 private: /* Planner members */
   /* Mapping */
@@ -405,20 +438,24 @@ private: /* Planner members */
   /* Planner */
   // std::unique_ptr<AStarPlanner> front_end_planner_; // Front-end planner
   std::unique_ptr<PlannerBase> front_end_planner_; // Front-end planner
-  std::unique_ptr<SFCBase> sfc_generation_; // Safe flight corridor generator
+  std::unique_ptr<SFCBase> sfc_generation_; // Spherical safe flight corridor generator
+  std::unique_ptr<PolytopeSFC> poly_sfc_gen_; // Polytope safe flight corridor generator
 
+  std::unique_ptr<back_end::PolyhedronSFCOptimizer> polyhedron_sfc_optimizer_; // Polynomial trajectory optimizer
   std::unique_ptr<ego_planner::PolyTrajOptimizer> back_end_optimizer_; // Polynomial trajectory optimizer
   std::unique_ptr<ego_planner::EGOPlannerManager> ego_optimizer_; // Back-end planner
 
   /* Data structs */
-  Waypoint waypoints_; // Waypoint handler object
+  Waypoint waypoints_; // Goal waypoint handler object
   Eigen::Vector3d cur_pos_, cur_vel_;   // current state
   Eigen::Vector3d rhp_goal_pos_; // Receding horizon planning goal
-
-  std::shared_ptr<SSFC::SFCTrajectory> sfc_traj_{nullptr};   // Safe flight corridor trajectory
-  // std::shared_ptr<poly_traj::Trajectory> be_traj_{nullptr};  // Back end trajectory (used for checking collision and dynamic feasibility)
-
   std::shared_ptr<std::vector<ego_planner::LocalTrajData>> swarm_local_trajs_; // Swarm MINCO trajectories, maps drone_id to local trajectory data
+
+  std::shared_ptr<SSFC::SFCTrajectory> ssfc_{nullptr};   // Safe flight corridor trajectory
+
+  // Polyhedron sfc data 
+  std::vector<Polyhedron3D, Eigen::aligned_allocator<Polyhedron3D>> poly_sfc_hyp_;
+  std::vector<Eigen::Matrix3Xd> poly_sfc_vtx_;
 
   /* Timestamps for detecting timeouts*/
   ros::Time last_state_output_t_; // Last time stamp at which UAV odom is received
@@ -440,28 +477,34 @@ private: /* Params */
   /* Coordinator params */
   std::string node_name_{"Navigator"};
   int drone_id_{-1};
-  double hb_freq_{0.05};       // Default at 20 Hz
-  bool debug_planning_;       // IF true, then debug mode is activated
-  bool verbose_planning_{true};     // Print debug info during planning
-  double squared_goal_tol_;   // Squared goal tolerance
-  double fe_planner_freq_;       // Front end planner timer frequency
-  double be_planner_freq_;       // Back end planner timer frequency
-  double safety_check_freq_;  // Planner timer frequency
+  int max_drones_{100};        // Maximum number of drones. Used to preallocate swarm trajectory data structure
+  
+  double hb_freq_{20.0};       // Default at 20 Hz
+  
+  bool debug_planning_{false};       // IF true, then debug mode is activated
+  bool verbose_planning_{false};     // Print debug info during planning
+  
+  double squared_goal_tol_{-1.0};   // Squared goal tolerance, if within this tolerance, goal is considered to have been reached
+
+  double fe_planner_freq_{-1.0};       // Front end planner timer frequency
+  double be_planner_freq_{-1.0};       // Back end planner timer frequency
+  double safety_check_freq_{-1.0};  // Planner timer frequency
   double rhp_dist_{-1.0};           // Receding horizon planning dist
   double rhp_buffer_{-1.0};         // Buffer to put goal away from obstacles (in addition to inflation)
-  int max_drones_{100};        // Maximum number of drones. Used to preallocate swarm trajectory data structure
+
+  double rhc_dist_{0.0}; // Receding horizon corridor: Keep safe flight corridors up to this distance
 
   SFCType sfc_type_{SFCType::SPHERICAL}; // Indicates the SFC generation (e.g. polytope or spherical)
   FrontEndType front_end_type_{FrontEndType::JPS_AND_DMP}; // Indicates the Front end planner (e.g. a* or JPS)
   BackEndType back_end_type_{BackEndType::SSFC}; // Indicates the Front end planner (e.g. a* or JPS)
 
   /* Back-end params */
-  int optimizer_num_retries_;
-  int num_cstr_pts_per_seg_; // Number of constraint points per segment
+  int optimizer_num_retries_{-1}; // Number of retries for back-end optimizer
+  int num_cstr_pts_per_seg_{-1}; // Number of constraint points per segment
 
   /* Collision checking params*/
-  double swarm_clearance_; // Required clearance between swarm agents
-  double time_to_col_threshold_; // Threshold for time to collision before emergency measures are activated
+  double swarm_clearance_{-1.0}; // Required clearance between swarm agents
+  double time_to_col_threshold_{-1.0}; // Threshold for time to collision before emergency measures are activated
 
   /* Stopwatch for profiling performance */
   Timer tm_front_end_plan_{"front_end_plan"};
@@ -472,9 +515,8 @@ private: /* Params */
   bool init_new_poly_traj_{true};   // (EGO PLANNER ONLY) If true: initialize new polynomial. Else: start from previous polynomial
   bool touch_goal_{false};   // (EGO PLANNER ONLY) If true:  Local target is global target
 
-  bool new_goal_{true}; // True is new goal. Used to ensure planning of back end trajectory at the start. 
-
-  std::mutex req_be_plan_mutex_;
+  /* Logic Flags */
+  bool enable_rhc_plan_{false}; // True if RHC plan is enabled
 
 private: /* Logging functions */
   

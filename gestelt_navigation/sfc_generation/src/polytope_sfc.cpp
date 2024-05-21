@@ -10,14 +10,22 @@ void PolytopeSFC::addPublishers(
     poly_sfc_pub_ = publisher_map["sfc/poly"];
 }
 
-// Need to use eigen aligned allocator
-// TODO: need to postprocess path before feeding to generateSFC
-// TODO: Change poly_const_vec to poly_constr_vec
-
-bool PolytopeSFC::generateSFC(const std::vector<Eigen::Vector3d> &path_3d)
+void PolytopeSFC::reset()
 {
-    bool planning_success = true;
+    poly_vec_hyp_.clear();
+    poly_vec_vtx_.clear();
+    poly_vec_.clear();
+    poly_seeds_.clear();
+    poly_constr_vec_.clear();
 
+}
+
+bool PolytopeSFC::generateSFC(const std::vector<Eigen::Vector3d> &path_3d,
+                                const bool& enable_rhc_plan,
+                                const double& rhc_dist,
+                                const Eigen::Vector3d& start_pos,
+                                const double& req_plan_time)
+{
     std::vector<std::vector<double>> path;
     for (auto& pt3d : path_3d) {
         std::vector<double> pt_vec{pt3d(0), pt3d(1), pt3d(2)};
@@ -26,18 +34,18 @@ bool PolytopeSFC::generateSFC(const std::vector<Eigen::Vector3d> &path_3d)
 
     std::shared_ptr<JPS::VoxelMapUtil> map_util = ::std::make_shared<JPS::VoxelMapUtil>();
 
-    map_->updateLocalMap();
+    // map_->updateLocalMap();
     // Origin of local map should be set relative to UAV current position (i.e. doesn't change unless we change the local map size)
-    map_util->setMap(map_->getLocalOrigin(), 
-                    map_->getLocalMapNumVoxels(), 
-                    map_->getData(),
-                    map_->getRes());
+    map_util->setMap(   map_->getLocalOrigin(), 
+                        map_->getLocalMapNumVoxels(), 
+                        map_->getData(),
+                        map_->getRes());
 
     // define new polyhedra for visualization
     std::vector<std::vector<double>> poly_seeds_new;
 
     // define new contraints
-    std::vector<LinearConstraint3D> poly_const_vec_new;
+    std::vector<LinearConstraint3D> poly_constr_vec_new;
 
     // define vector for visualization of the polyhedra
     // vec_E<T> = std::vector<T, Eigen::aligned_allocator<T>>;
@@ -45,25 +53,24 @@ bool PolytopeSFC::generateSFC(const std::vector<Eigen::Vector3d> &path_3d)
 
     // keep the polyhedra that were used in the previous optimization for the
     // trajectory generation for feasibility guarantees
-    if (poly_const_vec_.size() > 0) {
+    if (!poly_constr_vec_.empty()) {
         // insert poly, constraints and seed
         for (int i = 0; i < int(poly_used_idx_.size()); i++) {
             if (poly_used_idx_[i]) {
                 poly_vec_new.push_back(poly_vec_[i]);
-                poly_const_vec_new.push_back(poly_const_vec_[i]);
+                poly_constr_vec_new.push_back(poly_constr_vec_[i]);
                 poly_seeds_new.push_back(poly_seeds_[i]);
             }
         }
     }
 
     // Copy the global path and add the current state to it
-    std::deque<std::vector<double>> path_curr(  path.begin(),
-                                                path.end());
+    std::deque<std::vector<double>> path_curr( path.begin(), path.end());
     // path_curr.push_front({path[0][0], path[0][1], path[0][2]});
     
-    // then find segment outside the polyhedra in our poly_const_vec_new by
+    // then find segment outside the polyhedra in our poly_constr_vec_new by
     // walking on the path starting from the current position
-    int n_poly = poly_const_vec_new.size();
+    int n_poly = poly_constr_vec_new.size();
 
     /* generate new poly */
     // start by sampling the path until we reach a point that is outside the
@@ -100,8 +107,8 @@ bool PolytopeSFC::generateSFC(const std::vector<Eigen::Vector3d> &path_3d)
 
         /* check if point is in at least one poly */
         bool inside_at_least_one_poly = false;
-        for (int i = 0; i < int(poly_const_vec_new.size()); i++) { // Itr through all polytopes
-            if (poly_const_vec_new[i].inside(Eigen::Vector3d(curr_pt(0), curr_pt(1), curr_pt(2)))) {
+        for (int i = 0; i < int(poly_constr_vec_new.size()); i++) { // Itr through all polytopes
+            if (poly_constr_vec_new[i].inside(Eigen::Vector3d(curr_pt(0), curr_pt(1), curr_pt(2)))) {
                 inside_at_least_one_poly = true;
                 break;
             }
@@ -190,7 +197,7 @@ bool PolytopeSFC::generateSFC(const std::vector<Eigen::Vector3d> &path_3d)
             b_poly(i) = poly_inf[i].first.dot(poly_inf[i].second);  // point.dot(normal)
         }
         poly_vec_new.push_back(poly_new);
-        poly_const_vec_new.push_back(LinearConstraint3D(A_poly, b_poly));
+        poly_constr_vec_new.push_back(LinearConstraint3D(A_poly, b_poly));
 
         // increment the number of polyhedra
         n_poly++;
@@ -198,13 +205,34 @@ bool PolytopeSFC::generateSFC(const std::vector<Eigen::Vector3d> &path_3d)
 
     // save polyhedra and seeds
     poly_vec_ = poly_vec_new;
-    poly_const_vec_ = poly_const_vec_new;
+    poly_constr_vec_ = poly_constr_vec_new;
     poly_seeds_ = poly_seeds_new;
-
+     
     PublishPolyhedra(poly_vec_);
 
-    return planning_success;
+    // Convert from hyperplane representation to vertex representation 
+    std::vector<Eigen::MatrixX4d> poly_vec_hyp; 
+    std::vector<Eigen::Matrix3Xd> poly_vec_vtx; 
+    for (const auto& lin_constr: poly_constr_vec_){
+        poly_vec_hyp.push_back(lin_constr.getHypMatrix());
+    }
+
+    for (size_t i = 0; i < poly_vec_hyp.size(); i++)
+    {
+        const Eigen::ArrayXd norms = poly_vec_hyp[i].leftCols<3>().rowwise().norm();
+        poly_vec_hyp[i].array().colwise() /= norms;
+    }
+
+    if (!processCorridor(poly_vec_hyp, poly_vec_vtx))
+    {
+        return false;
+    }
+    poly_vec_hyp_ = poly_vec_hyp;
+    poly_vec_vtx_ = poly_vec_vtx;
+
+    return true;
 }   
+
 
 void PolytopeSFC::PublishPolyhedra(
     const std::vector<Polyhedron3D, Eigen::aligned_allocator<Polyhedron3D>>& poly_vec) {

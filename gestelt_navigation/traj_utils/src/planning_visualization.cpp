@@ -16,6 +16,9 @@ namespace ego_planner
     a_star_list_pub = nh.advertise<visualization_msgs::Marker>("a_star_list", 20);
 
     // Debugging topics
+
+    initial_poly_sfc_path_pub_ = nh.advertise<visualization_msgs::Marker>("back_end/dbg/initial_poly_path", 2);
+
     /* Initial trajectories*/
     initial_mjo_pub_ = nh.advertise<visualization_msgs::Marker>("back_end/dbg/initial_mjo", 2);
     initial_mjo_q_pub_ = nh.advertise<visualization_msgs::Marker>("back_end/dbg/initial_mjo_q", 20);
@@ -198,6 +201,23 @@ namespace ego_planner
 
     Eigen::Vector4d color(0, 0.5, 0.5, 1);
     displayMarkerList(global_list_pub, init_pts, scale, color, id);
+  }
+
+  void PlanningVisualization::displayInitialPolyPath(Eigen::Matrix3Xd pts, int id)
+  {
+    if (initial_poly_sfc_path_pub_.getNumSubscribers() == 0)
+    {
+      return;
+    }
+
+    vector<Eigen::Vector3d> list;
+    for (int i = 0; i < pts.cols(); i++)
+    {
+      Eigen::Vector3d pt = pts.col(i).transpose();
+      list.push_back(pt);
+    }
+    Eigen::Vector4d color(1, 0, 1, 0.5); // Purple
+    displayMarkerList(initial_poly_sfc_path_pub_, list, 0.075, color, id);
   }
 
   void PlanningVisualization::displayIntermediateMJO_xi(

@@ -24,6 +24,7 @@ namespace ego_planner
 
     /* Debugging */
     ros::Publisher sphere_intxn_vec_pub_; // Publish sphere intersection vector
+    ros::Publisher initial_poly_sfc_path_pub_; // Publish initial polyhedron sfc trajectory
 
     /* Initial */
     ros::Publisher initial_mjo_pub_; // Publish unconstrained coordinates
@@ -66,6 +67,11 @@ namespace ego_planner
 
     void displayGoalPoint(Eigen::Vector3d goal_point, Eigen::Vector4d color, const double scale, int id);
     void displayGlobalPathList(vector<Eigen::Vector3d> global_pts, const double scale, int id);
+
+    /* Debugging (Polyhedron) */
+
+    // Display initial polyhedron sfc path
+    void displayInitialPolyPath(Eigen::Matrix3Xd pts, int id = 0); 
 
     /* Debugging */
     void displaySphereIntxnVec(std::vector<Eigen::Vector3d> sphere_centers, std::vector<Eigen::Vector3d> intxn_plane_vec);

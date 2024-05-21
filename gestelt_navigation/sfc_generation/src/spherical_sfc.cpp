@@ -19,6 +19,7 @@ void SphericalSFC::addPublishers(
 void SphericalSFC::reset()
 {
     // Clear planning data
+    itr_ = 0;
     sfc_spheres_.clear();
     sfc_traj_.reset();
     front_end_path_.clear();
@@ -70,79 +71,124 @@ void SphericalSFC::clearVisualizations()
     samp_dir_vec_pub_.publish(markerarray); 
 }
 
-bool SphericalSFC::generateSFC(const std::vector<Eigen::Vector3d> &path)
+bool SphericalSFC::generateSFC( const std::vector<Eigen::Vector3d> &path,
+                                const bool& enable_rhc_plan,
+                                const double& rhc_dist,
+                                const Eigen::Vector3d& start_pos,
+                                const double& req_plan_time)
 {
+    // IF nearing the end of goal, disable RHC Planning
+    bool do_rhc_planning = enable_rhc_plan && sfc_traj_.spheres.size() > 3;
+
+    if (do_rhc_planning){ // enable receding horizon corridor planning
+        // Prune trajectory segments that have been traversed
+        // PRUNE FROM 0 TO NUM_SEGS_TRAVERSED
+        int num_segs_traversed = sfc_traj_.getNumSegmentsTraversed(req_plan_time);
+        sfc_traj_.prune(0, num_segs_traversed);
+
+        // Keep segments up to maximum waypoint index and prune the rest
+        // PRUNE FROM MAX_WP_IDX TO END
+        int max_wp_idx = sfc_traj_.getMaxWaypointWithinDist(start_pos, rhc_dist);
+        sfc_traj_.keep(max_wp_idx);
+    }
+    else { // Plan from scratch
+        reset(); //reset all data structures
+    }
+
+    /* Initialize all data structures */
+
+    front_end_path_ = path; // front_end path
+    guide_path_kdtree_ = 
+        std::make_unique<KDTreeVectorOfVectorsAdaptor<std::vector<Eigen::Vector3d>, double>>(
+            3, path, 10); //kd tree used to query nearest point on the front-end path
+
+    SSFC::Sphere B_cur; // current sphere being considered
+    size_t path_idx_cur = 0; // Current index of guide path
     bool planning_success = true;
     bool skip_main_loop = false;
 
-    reset();
-    front_end_path_ = path;
-    guide_path_kdtree_ = 
-        std::make_unique<KDTreeVectorOfVectorsAdaptor<std::vector<Eigen::Vector3d>, double>>(
-            3, path, 10);
+    if (do_rhc_planning) { // enable receding horizon corridor planning
+        // std::vector<double> query_pt;
+        // if (sfc_traj_.waypoints.empty()){
+        //     query_pt = {sfc_traj_.waypoints.back()(0), 
+        //                 sfc_traj_.waypoints.back()(1), 
+        //                 sfc_traj_.waypoints.back()(2)};
+        // }
+        // else {
+        //     query_pt = {start_pos(0), 
+        //                 start_pos(1), 
+        //                 start_pos(2)};
+        // }
 
-    double get_fwd_pt_durs{0};      // for checking runtime
-    double batch_sample_durs{0};    // for checking runtime
+        // Get nearest point from last sfc waypoint to front end path
+        std::vector<double> query_pt = {sfc_traj_.waypoints.back()(0), 
+                                        sfc_traj_.waypoints.back()(1), 
+                                        sfc_traj_.waypoints.back()(2)};
+        std::vector<size_t> out_indices(1);
+        std::vector<double> out_distances_sq(1);
 
-    auto a = std::chrono::high_resolution_clock::now();
+        guide_path_kdtree_->query(&query_pt[0], 1, &out_indices[0], &out_distances_sq[0]);
 
-    SSFC::Sphere B_starting; // starting sphere
-    SSFC::Sphere B_cur; // current sphere being considered
+        path_idx_cur = out_indices[0];
+        
+        // Assign spheres from receding horizon corridor
+        sfc_spheres_ = sfc_traj_.spheres;
+        B_cur = sfc_spheres_.back();
 
-    size_t path_idx_cur = 0; // Current index of guide path
-
-    // Initialize largest sphere at initial position
-    if (!generateFreeSphere(path[0], B_cur)){
-        std::cout << "[SSFC] Failed to generate free sphere centered on start point" << std::endl;
-        return false;
-    }
-
-    // Intialize largest sphere along guide path containing start point
-    for (size_t i = 0; i < path.size(); i++){
-        // Generate free sphere and check if it contains start point
-        //      IF NOT, then stop and pick previous sphere
-        if (!generateFreeSphere(path[i], B_cur)){
-            break;
+        // Skip main loop if goal is in starting sphere
+        if (sfc_spheres_.back().contains(path.back())){
+            skip_main_loop = true; 
         }
-        // Check if new sphere contains start point
-        if (!B_cur.contains(path[0])){
-            B_cur = B_starting;
-            break;
+    }
+    else { // Plan from scratch
+        SSFC::Sphere B_start; // starting sphere
+        
+        // Initialize largest sphere at initial position
+        if (!generateFreeSphere(path[0], B_cur)){
+            std::cout << "[SSFC] Failed to generate free sphere centered on start point" << std::endl;
+            return false;
         }
-        path_idx_cur = i;
-        B_starting = B_cur;
+
+        // Initialize largest sphere along guide path containing start point
+        for (size_t i = 0; i < path.size(); i++){
+            // Generate free sphere and check if it contains start point
+            //      IF NOT, then stop and pick previous sphere
+            if (!generateFreeSphere(path[i], B_cur)){
+                break;
+            }
+            // Check if new sphere contains start point
+            if (!B_cur.contains(path[0])){
+                B_cur = B_start;
+                break;
+            }
+            path_idx_cur = i;
+            B_start = B_cur;
+        }
+        
+        // Add first sphere
+        sfc_spheres_.push_back(B_start);
+        // Skip main loop if goal is in starting sphere
+        if (sfc_spheres_.back().contains(path.back())){
+            skip_main_loop = true; 
+        }
     }
-    
-    // Add first sphere
-    sfc_spheres_.push_back(B_starting);
-    // Skip main loop if goal is in starting sphere
-    if (sfc_spheres_.back().contains(path.back())){
-        skip_main_loop = true; 
-    }
-    
-    auto b = std::chrono::high_resolution_clock::now();
+
+    /* Main loop */
 
     itr_ = 0;
     while (itr_ < sfc_params_.max_itr && !skip_main_loop)
     {
-        auto get_fwd_pt = std::chrono::high_resolution_clock::now();
-
         if (!getForwardPointOnPath(path, path_idx_cur, B_cur)){
             std::cout << "getForwardPointOnPath: Failed to get forward point on the path" << std::endl;
             planning_success = false;
             break;
         }
 
-        auto get_fwd_pt_end = std::chrono::high_resolution_clock::now();
-        auto batch_sample = std::chrono::high_resolution_clock::now();
-
         if (!BatchSample(path[path_idx_cur], B_cur)){
             std::cout << "[SSFC] Batch sample failed" << std::endl;
             planning_success = false;
             break;
         }
-
-        auto batch_sample_end = std::chrono::high_resolution_clock::now();
         
         sfc_spheres_.push_back(B_cur);
 
@@ -150,14 +196,8 @@ bool SphericalSFC::generateSFC(const std::vector<Eigen::Vector3d> &path)
             break;
         }
 
-        get_fwd_pt_durs += std::chrono::duration_cast<std::chrono::duration<double>>(
-            get_fwd_pt_end - get_fwd_pt).count();
-        batch_sample_durs += std::chrono::duration_cast<std::chrono::duration<double>>(
-            batch_sample_end - batch_sample).count();
-
         itr_++;
     }
-    auto c = std::chrono::high_resolution_clock::now();
 
     if (!sfc_spheres_.back().contains(path.back())){ 
         std::cout << "[SSFC] Final safe flight corridor does not contain the goal" << std::endl;
@@ -187,31 +227,6 @@ bool SphericalSFC::generateSFC(const std::vector<Eigen::Vector3d> &path)
         publishVizIntxnSpheres(sfc_traj_.intxn_spheres, intxn_spheres_pub_, "world");
 
         publishVizPiecewiseTrajectory(sfc_traj_.waypoints, sfc_waypoints_viz_pub_);
-
-        auto d = std::chrono::high_resolution_clock::now();
-        auto e = std::chrono::high_resolution_clock::now();
-
-        auto total_loop_dur = std::chrono::duration_cast<std::chrono::duration<double>>(
-            e - a).count();
-
-        auto preloop_dur = std::chrono::duration_cast<std::chrono::duration<double>>(
-            b - a).count();
-
-        auto loop_dur = std::chrono::duration_cast<std::chrono::duration<double>>(
-            c - b).count();
-
-        auto pub_dur = std::chrono::duration_cast<std::chrono::duration<double>>(
-            d - c).count();
-
-        // std::cout << "Spherical SFC runtimes [ms]: " << std::endl;
-
-        // std::cout << "  Total dur: " << total_loop_dur *1000   << std::endl;
-        // std::cout << "  Preloop dur: " << preloop_dur *1000    << ", pct:" << preloop_dur / total_loop_dur * 100 << "%" << std::endl;
-        // std::cout << "  loop dur: " << loop_dur  *1000         << ", pct:" << loop_dur / total_loop_dur * 100<< "%" << std::endl;
-        // std::cout << "      get_fwd_pt_durs: " << get_fwd_pt_durs  *1000         << ", pct:" << get_fwd_pt_durs / total_loop_dur * 100<< "%" << std::endl;
-        // std::cout << "      batch_sample_durs: " << batch_sample_durs  *1000     << ", pct:" << batch_sample_durs / total_loop_dur * 100<< "%" << std::endl;
-
-        // std::cout << "  publish dur: " << pub_dur  *1000       << "s, pct:" << pub_dur / total_loop_dur * 100<< "%" << std::endl;
     }
 
     return planning_success;
@@ -253,7 +268,6 @@ bool SphericalSFC::getForwardPointOnPath(
 
 bool SphericalSFC::BatchSample(const Eigen::Vector3d& pt_guide, SSFC::Sphere& B_cur)
 {
-    auto a = std::chrono::high_resolution_clock::now();
 
     // Priority queue of candidate spheres sorted by highest score first
     std::priority_queue<std::shared_ptr<SSFC::Sphere>, std::vector<std::shared_ptr<SSFC::Sphere>>, SSFC::Sphere::CompareScorePtr> B_cand_pq = 
@@ -280,31 +294,20 @@ bool SphericalSFC::BatchSample(const Eigen::Vector3d& pt_guide, SSFC::Sphere& B_
     // Set up seed for sampler
     uint64_t seed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
     sampler_.setParams(samp_mean, stddev_3d, seed);
-    
-    auto b = std::chrono::high_resolution_clock::now();
 
     // Sample the points first
     p_cand_vec = sampler_.sample(sfc_params_.max_sample_points);
-
-
-
-    auto c = std::chrono::high_resolution_clock::now();
 
     // Transform set of sampled points to have its mean at pt_guide and rotated along dir_vec
     // TODO: Use matrix parallelization for transformations
     transformPoints(p_cand_vec, samp_mean, ellipse_rot_mat);
 
-    auto d = std::chrono::high_resolution_clock::now();
-
-    double d2_dur{0};
-    double d3_dur{0};
 
     std::vector<SSFC::Sphere> sampled_spheres; // Vector of all sampled spheres used for debugging
 
     for (auto& p_cand: p_cand_vec){
 
         // Generate candidate sphere, calculate score and add to priority queue
-        auto d1 = std::chrono::high_resolution_clock::now();
 
         std::shared_ptr<SSFC::Sphere> B_cand = std::make_shared<SSFC::Sphere>();
         
@@ -344,7 +347,6 @@ bool SphericalSFC::BatchSample(const Eigen::Vector3d& pt_guide, SSFC::Sphere& B_
             continue;
         }
 
-        auto d2 = std::chrono::high_resolution_clock::now();
 
         B_cand->score = computeCandSphereScore(*B_cand, B_cur); 
 
@@ -352,37 +354,8 @@ bool SphericalSFC::BatchSample(const Eigen::Vector3d& pt_guide, SSFC::Sphere& B_
             B_cand_pq.push(B_cand); 
         }
 
-        auto d3 = std::chrono::high_resolution_clock::now();
-        d2_dur += std::chrono::duration_cast<std::chrono::duration<double>>(
-            d2 - d1).count() * 1000.0;
-        d3_dur += std::chrono::duration_cast<std::chrono::duration<double>>(
-            d3 - d2).count() * 1000.0;
     }
 
-    auto e = std::chrono::high_resolution_clock::now();
-
-    double chpt_b = std::chrono::duration_cast<std::chrono::duration<double>>(
-        b - a).count() * 1000.0;
-    double chpt_c = std::chrono::duration_cast<std::chrono::duration<double>>(
-        c - b).count() * 1000.0;
-    double chpt_d = std::chrono::duration_cast<std::chrono::duration<double>>(
-        d - c).count() * 1000.0;
-    double chpt_e = std::chrono::duration_cast<std::chrono::duration<double>>(
-        e - d).count() * 1000.0;
-
-    double total_dur = chpt_b + chpt_c + chpt_d + chpt_e;
-    if (sfc_params_.debug_viz){
-    
-        // std::cout << "==========" << std::endl;
-
-        // std::cout << "          b: " << chpt_b *1000  << ", pct:" << chpt_b / total_dur * 100 << "%" << std::endl;
-        // std::cout << "          c: " << chpt_c *1000  << ", pct:" << chpt_c / total_dur * 100 << "%" << std::endl;
-        // std::cout << "          d: " << chpt_d *1000  << ", pct:" << chpt_d / total_dur * 100 << "%" << std::endl;
-        // std::cout << "              d2: " << d2_dur *1000  << ", pct:" << d2_dur / total_dur * 100 << "%" << std::endl;
-        // std::cout << "              d3: " << d3_dur *1000  << ", pct:" << d3_dur / total_dur * 100 << "%" << std::endl;
-        // std::cout << "          e: " << chpt_e *1000  << ", pct:" << chpt_e / total_dur * 100 << "%" << std::endl;
-        // std::cout << "==========" << std::endl;
-    }
 
     p_cand_vec_hist_.insert(p_cand_vec_hist_.end(), p_cand_vec.begin(), p_cand_vec.end());
     sampling_dist_hist_.markers.push_back(createVizEllipsoid(samp_mean, stddev_3d, ellipse_orientation, "world", itr_));
@@ -418,17 +391,18 @@ void SphericalSFC::transformPoints(std::vector<Eigen::Vector3d>& pts, Eigen::Vec
 
 double SphericalSFC::computeCandSphereScore(SSFC::Sphere& B_cand, SSFC::Sphere& B_prev)
 {      
-    std::vector<double> query_pt(3);
-    query_pt[0] = B_cand.center(0);
-    query_pt[1] = B_cand.center(1);
-    query_pt[2] = B_cand.center(2);
+    std::vector<double> query_pt = {B_cand.center(0), B_cand.center(1), B_cand.center(2)};
     
     const size_t        num_closest = 1;
     std::vector<size_t> out_indices(num_closest);
     std::vector<double> out_distances_sq(num_closest);
 
-    guide_path_kdtree_->query(&query_pt[0], num_closest, &out_indices[0], &out_distances_sq[0]);
-    double progress = double(out_indices[0]) / front_end_path_.size();
+    // Progress measures how much progress the candidate sphere has made along the path
+    double progress = 0.0;
+    if (sfc_params_.W_progress > 0){
+        guide_path_kdtree_->query(&query_pt[0], num_closest, &out_indices[0], &out_distances_sq[0]);
+        progress = double(out_indices[0]) / front_end_path_.size();
+    }
 
     return sfc_params_.W_cand_vol * B_cand.getVolume() 
         + sfc_params_.W_intersect_vol * getIntersectingVolume(B_cand, B_prev) 

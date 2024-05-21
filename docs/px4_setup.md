@@ -4,7 +4,7 @@
 1. Building and uploading the bootloader
 ```bash
 # Install dfu-util 
-sudo apt install dfu-util
+sudo apt install dfu-util python-is-python2
 # Clone the PX4 bootloader repository
 git clone https://github.com/PX4/PX4-Bootloader.git
 cd ./PX4-Bootloader

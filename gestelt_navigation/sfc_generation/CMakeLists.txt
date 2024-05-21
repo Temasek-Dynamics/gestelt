@@ -24,6 +24,7 @@ find_package(catkin REQUIRED COMPONENTS
   ${ROS_LIBRARIES}
 )
 find_package(Eigen3 REQUIRED)
+find_package(ompl REQUIRED)
 
 ###################################
 ## catkin specific configuration ##

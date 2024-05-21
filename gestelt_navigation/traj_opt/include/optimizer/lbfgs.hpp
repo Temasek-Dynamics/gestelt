@@ -968,18 +968,18 @@ namespace lbfgs
      * Default L-BFGS parameters.
      */
     static const lbfgs_parameter_t _default_param = {
-        8,
-        1e-5,
-        0,
-        1e-5,
-        0,
-        40,
-        1e-20,
-        1e20,
-        1e-4,
-        0.9,
-        1,
-        1.0e-16,
+        8,          // mem_size
+        1e-5,       // g_epsilon
+        0,          // past
+        1e-5,       // delta
+        0,          // max_iterations
+        40,         // max_linesearch
+        1e-20,      // min_step
+        1e20,       // max_step
+        1e-4,       // f_dec_coeff
+        0.9,        // s_curv_coeff
+        1,          // abs_curv_cond
+        1.0e-16,    // xtol
     };
 
     /**
