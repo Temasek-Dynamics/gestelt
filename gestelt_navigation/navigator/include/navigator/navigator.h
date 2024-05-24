@@ -47,7 +47,8 @@
 
 /* Back-end optimization */
 #include <optimizer/poly_traj_optimizer.h>
-#include "optimizer/polyhedron_sfc_optimizer.h"
+#include <optimizer/polyhedron_sfc_optimizer.h>
+#include <optimizer/spherical_sfc_optimizer.h>
 #include <ego_planner_fsm/ego_planner_manager.h>
 
 class Navigator
@@ -290,8 +291,6 @@ private:
    */
   bool isGoalReached(const Eigen::Vector3d& pos, const Eigen::Vector3d& goal)
   {
-    init_new_poly_traj_ = true;
-
     return (pos - goal).squaredNorm() < squared_goal_tol_;
   }
 
@@ -306,8 +305,6 @@ private:
   {
     return (ros::Time::now().toSec() - last_state_time) >= threshold;
   } 
-
-
 
   bool isTrajectorySafe(
     const std::vector<ego_planner::LocalTrajData>& swarm_local_trajs, 
@@ -442,7 +439,7 @@ private: /* Planner members */
   std::unique_ptr<PolytopeSFC> poly_sfc_gen_; // Polytope safe flight corridor generator
 
   std::unique_ptr<back_end::PolyhedronSFCOptimizer> polyhedron_sfc_optimizer_; // Polynomial trajectory optimizer
-  std::unique_ptr<ego_planner::PolyTrajOptimizer> back_end_optimizer_; // Polynomial trajectory optimizer
+  std::unique_ptr<back_end::SphericalSFCOptimizer> ssfc_optimizer_; // Spherical SFC optimizer
   std::unique_ptr<ego_planner::EGOPlannerManager> ego_optimizer_; // Back-end planner
 
   /* Data structs */

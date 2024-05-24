@@ -238,13 +238,19 @@ namespace back_end
         {
             l = vIdx(i);
             k = vPolys[l].cols();
+            std::cout << "l: " << l << std::endl;
+            std::cout << "k: " << k << std::endl;
 
             ovPoly.resize(3, k + 1);
             ovPoly.col(0) = P.col(i);
             ovPoly.rightCols(k) = vPolys[l];
 
+            std::cout << "Before fill" << std::endl;
+
             double x[k]; // Total number of vertices for each "overlap" polyhedron
             std::fill(x, x + k, sqrt(1.0 / k));
+
+            std::cout << "Before lbfgs_optimize" << std::endl;
 
             int num_decis_var = k;
             lbfgs::lbfgs_optimize(
@@ -257,7 +263,13 @@ namespace back_end
                                   &ovPoly,
                                   &lbfgs_params);
 
-            xi = Eigen::Map<Eigen::VectorXd>(x, k);
+            std::cout << "After lbfgs_optimize" << std::endl;
+
+
+            std::cout << "j: " << j << std::endl;
+            std::cout << "k: " << k << std::endl;
+            xi.segment(j, k) = Eigen::Map<Eigen::VectorXd>(x+j, k);
+            // xi.block<k, 1>(j, 0) = 
             // xi.segment(j, k) = x;
         }
 
@@ -305,7 +317,59 @@ namespace back_end
         return cost;
     }
 
+    static inline void forwardT(const Eigen::VectorXd &tau,
+                                Eigen::VectorXd &T)
+    {
+        const int sizeTau = tau.size();
+        T.resize(sizeTau);
+        for (int i = 0; i < sizeTau; i++)
+        {
+            T(i) = tau(i) > 0.0
+                        ? ((0.5 * tau(i) + 1.0) * tau(i) + 1.0)
+                        : 1.0 / ((0.5 * tau(i) - 1.0) * tau(i) + 1.0);
+        }
+        return;
+    }
 
+    template <typename EIGENVEC>
+    static inline void backwardT(const Eigen::VectorXd &T,
+                                  EIGENVEC &tau)
+    {
+        const int sizeT = T.size();
+        tau.resize(sizeT);
+        for (int i = 0; i < sizeT; i++)
+        {
+            tau(i) = T(i) > 1.0
+                          ? (sqrt(2.0 * T(i) - 1.0) - 1.0)
+                          : (1.0 - sqrt(2.0 / T(i) - 1.0));
+        }
+
+        return;
+    }
+
+    template <typename EIGENVEC>
+    static inline void backwardGradT(const Eigen::VectorXd &tau,
+                                      const Eigen::VectorXd &gradT,
+                                      EIGENVEC &gradTau)
+    {
+        const int sizeTau = tau.size();
+        gradTau.resize(sizeTau);
+        double denSqrt;
+        for (int i = 0; i < sizeTau; i++)
+        {
+            if (tau(i) > 0)
+            {
+                gradTau(i) = gradT(i) * (tau(i) + 1.0);
+            }
+            else
+            {
+                denSqrt = (0.5 * tau(i) - 1.0) * tau(i) + 1.0;
+                gradTau(i) = gradT(i) * (1.0 - tau(i)) / (denSqrt * denSqrt);
+            }
+        }
+
+        return;
+    }
 
   /* private class members */
   public:
@@ -320,17 +384,17 @@ namespace back_end
     ego_planner::PlanningVisualization::Ptr visualization_; // visualizer
     std::shared_ptr<std::vector<ego_planner::LocalTrajData>> swarm_local_trajs_; // Swarm MINCO trajectories
 
-    int drone_id_;            // ID of drone
-    int num_segs_;          // poly traj piece numbers
-    int iter_num_;           // iteration of the solver
-    double min_ellip_dist2_; // min trajectory distance in swarm
-
     enum FORCE_STOP_OPTIMIZE_TYPE
     {
       DONT_STOP,
       STOP_FOR_REBOUND,
       STOP_FOR_ERROR
     } force_stop_type_;
+
+    int drone_id_;            // ID of drone
+    int num_segs_;          // poly traj piece numbers
+    int iter_num_;           // iteration of the solver
+    double min_ellip_dist2_; // min trajectory distance in swarm
 
     /* optimization parameters */
     int cps_num_perPiece_;   // number of distinctive constraint points per piece
@@ -350,6 +414,12 @@ namespace back_end
 
     Eigen::MatrixXd cstr_pts_xi_; // inner CONSTRAINT points of trajectory (excludes boundary points), this is finer than the inner CONTROL points
     Eigen::MatrixXd cstr_pts_q_; // inner CONSTRAINT points of trajectory (excludes boundary points), this is finer than the inner CONTROL points
+
+    int num_decis_var_bary_, num_decis_var_t_; 
+
+    Eigen::VectorXi vPolyIdx;
+    std::vector<Eigen::Matrix3Xd> vPolytopes;
+    Eigen::MatrixXd inner_ctrl_pts_;
 
   }; // class PolyhedronSFCOptimizer
 

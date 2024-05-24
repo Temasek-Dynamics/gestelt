@@ -155,14 +155,15 @@ namespace ego_planner
 
       /* the trajectory time system is a little bit complicated... */
 
-      // Time elapsed since local trajectory jas started
-      double t_elapsed_lc_traj = ros::Time::now().toSec() - traj_.local_traj.start_time;
+      // Time elapsed since local trajectory has started
+      double et_local_traj_start = ros::Time::now().toSec() - traj_.local_traj.start_time;
       // t_to_local_traj_end: Time left to complete trajectory
-      double t_to_local_traj_end = traj_.local_traj.duration - t_elapsed_lc_traj;
+      double t_to_local_traj_end = traj_.local_traj.duration - et_local_traj_start;
       if ( t_to_local_traj_end < 0 )
       { 
-        ROS_INFO("Drone %d: [EGOPlannerManager::computeInitState] Time left to complete local trajectory \\
-          is negative, exit and wait for another call.", params_.drone_id);
+        ROS_ERROR("Drone %d: [EGOPlannerManager::computeInitState] Time elapsed since start of \
+                  local trajectory (%f) exceeds it's duration (%f). Terminating this planning instance", 
+                  params_.drone_id, et_local_traj_start, traj_.local_traj.duration);
         return false;
       }
       // t_to_local_tgt: Time to reach local target
@@ -191,7 +192,7 @@ namespace ego_planner
         // if not yet end of local trajectory
         if (t < t_to_local_traj_end) 
         {
-          innerPs.col(i) = traj_.local_traj.traj.getPos(t + t_elapsed_lc_traj);
+          innerPs.col(i) = traj_.local_traj.traj.getPos(t + et_local_traj_start);
         }
         // if not yet reached local target but exceed local trajectory
         // we need to use global trajectory 
@@ -283,7 +284,7 @@ namespace ego_planner
     PtsChk_t pts_to_check;
     bool ret = ploy_traj_opt_->computePointsToCheck(traj, ConstraintPoints::two_thirds_id(cps, touch_goal), pts_to_check);
     if (ret){
-      traj_.setLocalTraj(traj, pts_to_check, ros::Time::now().toSec());
+      traj_.setLocalTraj(traj, pts_to_check, ros::Time::now().toSec(), params_.drone_id);
     }
 
     return ret;
@@ -296,7 +297,7 @@ namespace ego_planner
       const bool flag_randomPolyTraj, const bool touch_goal)
   {
     static int count = 0;
-    printf("\033[47;30m\n[drone %d replan %d]==============================================\033[0m\n",
+    printf("\033[47;30m\n[drone %d [EGOPlannerManager::reboundReplan] replan %d]==============================================\033[0m\n",
            params_.drone_id, count++);
     std::cout.precision(3);
     std::cout << "start: " << start_pos.transpose() << ", " << start_vel.transpose() << "\ngoal:" << local_target_pos.transpose() << ", " << local_target_vel.transpose()
@@ -324,7 +325,7 @@ namespace ego_planner
       return false;
     }
 
-    /*** STEP 1b: Get initail constraint points ***/
+    /*** STEP 1b: Get initial constraint points ***/
 
     Eigen::MatrixXd initial_cstr_pts = initMJO.getInitConstraintPoints(ploy_traj_opt_->getNumCstrPtsPerSeg());
     vector<std::pair<int, int>> segments; // segments are only needed for ESDF Local planner and distinctive trajectories
@@ -382,12 +383,16 @@ namespace ego_planner
     sum_time += (t_init + t_opt).toSec();
     count_success++;
 
-    std::cout << "total time (ms):\033[42m" << (t_init + t_opt).toSec()*1000
+    std::cout << "[EGOPlannerManager::reboundReplan] total time (ms):\033[42m" << (t_init + t_opt).toSec()*1000
          << "\033[0m, init(ms):" << t_init.toSec()*1000
          << ",optimize(ms):" << t_opt.toSec()*1000
          << ",avg_time(ms)=" << sum_time / count_success << std::endl;
+
+    // std::cout << "best_MJO duration: " << best_MJO.getTraj().getTotalDuration() << std::endl;
+    // std::cout << "initTraj.getDurations(): " << initTraj.getDurations().transpose() << std::endl;
     
     setLocalTrajFromOpt(best_MJO, touch_goal);
+    
     visualization_->displayOptimalMJO(initial_cstr_pts, 0);
 
     // success. YoY
@@ -458,7 +463,7 @@ namespace ego_planner
 
     // TODO Why is max_vel divided by 1.5?
     // double des_vel = params_.max_vel / 1.5;
-    double des_vel = params_.max_vel / 1.2;
+    double des_vel = params_.max_vel / 1.5;
     Eigen::VectorXd time_vec(waypoints.size());
 
     // Try replanning up to 2 times if the velocity constraints are not fulfilled
@@ -494,10 +499,10 @@ namespace ego_planner
       }
 
       // Reduce desired velocity by a factor of 1.5 and try again
-      des_vel /= 1.2;
+      des_vel /= 1.5;
     }
 
-
+    traj_.setGlobalTraj(globalMJO.getTraj(), ros::Time::now().toSec());
 
     return true;
   }
