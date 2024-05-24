@@ -10,6 +10,11 @@
       <uri>model://ground_plane</uri>
     </include>
 
+    <!-- <include>
+      <uri>model://gate_final_3</uri>
+      <pose>0 0 0 0 0 0</pose>
+    </include> -->
+
     <physics default='1' type='ode'>
       <ode>
         <solver>

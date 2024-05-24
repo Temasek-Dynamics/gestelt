@@ -542,7 +542,7 @@ def main():
         elif (HOVER_MODE):
             # HOVER -> desired position -> MISSION
             print("Setting to MISSION mode!")
-            # publishCommand(CommanderCommand.MISSION)
+            publishCommand(CommanderCommand.MISSION)
 
 
         print("tick!")

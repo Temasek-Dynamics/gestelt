@@ -1,0 +1,4 @@
+gates:
+  name: gate_1
+  length_horizontal: 1        #length in m
+  length_vertical: 1        #length in m

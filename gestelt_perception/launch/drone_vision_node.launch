@@ -1,5 +1,4 @@
 <launch>
-
+    <rosparam command="load" file="$(find gestelt_perception)/config/config.yaml" />
     <node name = "drone_vision" pkg="gestelt_perception" type="drone_vision" output="screen"/>
-
 </launch>
