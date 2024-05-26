@@ -1,21 +1,21 @@
 <launch>
-  <!-- num_drones must be at least 2 even if we are planning for a single drone -->
   <arg name="drone_id"/>
   <arg name="drone_id_ns" value="drone$(arg drone_id)"/>
-  <arg name="drone_id_ns_ego" value="drone_$(arg drone_id)"/>
-
-  <!-- Input/output topics -->
-  <arg name="pose_topic"/>
 
   <node pkg="rosbag" type="record" name="$(arg drone_id_ns)_record" output="screen"
-    args="record -O /tmp/ego_planner_$(arg drone_id_ns_ego) 
-    /$(arg drone_id_ns_ego)_ego_planner_node/grid_map/occupancy
-    /$(arg drone_id_ns_ego)_ego_planner_node/optimal_list
-    /$(arg drone_id_ns_ego)_ego_planner_node/goal_point
-    /$(arg drone_id_ns)/uav_path
-    /$(arg drone_id_ns)/$(arg pose_topic)
-    /$(arg drone_id_ns)/model
-    ">
+    args="record -O /tmp/bubble_planner_$(arg drone_id_ns) 
+      /tf
+      /$(arg drone_id_ns)/front_end/sfc_trajectory
+      /$(arg drone_id_ns)/sfc_spherical
+      /$(arg drone_id_ns)/sfc_samp_dir_vec
+      /$(arg drone_id_ns)/sfc_dist
+      /$(arg drone_id_ns)/sfc_cand_points
+      /$(arg drone_id_ns)/sfc_waypoints
+      /$(arg drone_id_ns)/back_end_planner/optimal_list
+      /$(arg drone_id_ns)/mavros/local_position/pose
+      /$(arg drone_id_ns)/mavros/local_position/odom
+      /$(arg drone_id_ns)/grid_map/collision_viz
+  ">
   </node>
   
 </launch>

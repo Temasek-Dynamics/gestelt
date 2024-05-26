@@ -2,7 +2,7 @@ repositories:
   ../../PX4-Autopilot:
     type: git
     url: https://github.com/PX4/PX4-Autopilot.git
-    version: bb0f2875a94960a4c7a937e9786946b10415e252
+    version: 2110eae25d32ef102c5e44f2590fd7f9d65fc44d
   ../vrpn_client_ros:
     type: git
     url: https://github.com/ros-drivers/vrpn_client_ros.git

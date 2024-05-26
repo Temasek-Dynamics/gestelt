@@ -1,0 +1,7 @@
+<launch>
+  <arg name="scenario" default="forest_single"/>
+
+  <!-- Launches a test mission -->
+  <node pkg="gestelt_bringup" name="$(arg scenario)_mission" 
+    type="$(arg scenario).py" output="screen" />
+</launch>

@@ -1,22 +1,59 @@
 # PX4 setup
 
-## Building the firmware
-0. Building and uploading the bootloader
+## Building the FCU firmware
+1. Building and uploading the bootloader
 ```bash
-
+# Install dfu-util 
+sudo apt install dfu-util python-is-python2
+# Clone the PX4 bootloader repository
+git clone https://github.com/PX4/PX4-Bootloader.git
+cd ./PX4-Bootloader
+make omnibusf4sd_bl
+# bootloader file with ".hex" extension in PX4-Bootloader/build/omnibusf4sd_bl/omnibusf4sd_bl.hex
+dfu-util -a 0 --dfuse-address 0x08000000:force:mass-erase:leave -D build/omnibusf4sd_bl/omnibusf4sd_bl.bin
+dfu-util -a 0 --dfuse-address 0x08000000 -D  build/omnibusf4sd_bl/omnibusf4sd_bl.bin
 ```
+Please refer to ["PX4 Bootloader Flashing onto Betaflight Systems"](https://docs.px4.io/main/en/advanced_config/bootloader_update_from_betaflight.html) for flashing of bootloader onto the FCU
 
-1. Build the board firmware 
+2. Build the board firmware 
 ```bash 
 # Clone the custom version of PX4 
-git clone https://github.com/matthewoots/PX4-Autopilot.git
+git clone https://github.com/JohnTGZ/PX4-Autopilot.git --recursive -b f405-v1.13.0
 cd ./PX4-Autopilot/
-# Default build for Flywoo F405 AIO
-make flywoo_f405s_aio_default
+make flywoo_f405s_aio
 ```
-2. Upload firmware
+
+3. Upload firmware
 ```bash
-make flywoo_f405s_aio_default upload
+# MPU6000 Build (Old out of production flywoo gn405s AIO)
+make flywoo_f405s_aio_mpu6000 upload
+# ICM42688P Build (New flywoo gn405s AIO)
+make flywoo_f405s_aio_icm42688p upload
+```
+
+### (Advanced) Configuring the board configuration
+1. Launch GUI 
+```bash
+# Older PX4 firmwares ( < V1.11)
+make omnibus_f4sd menuconfig
+
+# Newer PX4 firmwares (V1.13)
+make flywoo_f405s_aio boardguiconfig
+
+# Save the file as ".config", the default filename, NO EXCEPTIONS! This will be saved in "PX4-Autopilot/platforms/nuttx/NuttX/nuttx" 
+# This ".config" file is the full configuration of your board and needs to be configured to a "defconfig" file which is usable by the FCU board.
+```
+2. Make `defconfig` files from `.config` files
+```bash
+# Navigate to "PX4-Autopilot/platforms/nuttx/NuttX/nuttx"
+# Generate a defconfig file using the following command:
+make savedefconfig
+# Copy the newly generated "defconfig" file in this directory to "PX4-Autopilot/boards/flywoo/f405s_aio/nuttx-config/nsh"
+```
+
+3. [Optional] Recover `.config` file from the `defconfig` file
+```
+make olddefconfig
 ```
 
 ### Troubleshooting
@@ -26,9 +63,7 @@ Make sure you create a git tag like so:
 ```bash
 git tag v1.13.0-0.1.0
 ```
-2. Unable to detect flywoo board from QGroundControl, and doing `dmesg` shows `USB disconnect` for the Flywoo FCU.
-- Install modemanager 
-
+2. Unable to detect flywoo board from QGroundControl, and doing `dmesg` shows `USB disconnect` for the Flywoo FCU. Refer to [link](https://docs.qgroundcontrol.com/master/en/getting_started/download_and_install.html#ubuntu)
 
 ## Configuration
 ### PX4 Parameters
@@ -50,11 +85,13 @@ git tag v1.13.0-0.1.0
       MAV_0_MODE: 2 (ONBOARD)
       MAV_0_RATE: 0 (Half maximum)
       MAV_0_FORWARD: 0 (DISABLED)
+      MAV_SYS_ID: (THIS NUMBER AFFECTS COMMUNICATION VIA MAVROS, SET TO MATCHING "target_system_id" on MAVROS)
     Connection to Lidar:
       MAV_1_CONFIG: UART6 
       MAV_1_MODE: Normal
       MAV_1_RATE: 1200 Byte/s
       MAV_1_FORWARD: True
+
 
 ################
 # Lidar/Range finder
@@ -132,15 +169,13 @@ git tag v1.13.0-0.1.0
     - [VICON with PX4](https://docs.px4.io/main/en/ros/external_position_estimation.html)
 
 ## Interface with Radxa
-1. Set up headless mode on Radxa:
-    - edit `/boot/uEnv.txt` and remove line with `console=ttyAML0,115200`, which removes this port as a debugging console
-2. Connection between FCU and Radxa
+1. Connection between FCU and Radxa
     - FCU: Connected as MAV_0_CONFIG to one of the UART (should be UART4, which is registered as TEL2 in PX4)
-    - Radxa: Connected to UART_AO_A (/dev/ttyAML0)
-3. Launch mavros bridge
+    - Radxa: Connected to UART_AO_B (/dev/ttyAML1)
+2. Launch mavros bridge
     - Might need to perform the following in root mode. Enter with `sudo su`
     - `source /home/rock/.bashrc`
-    - `roslaunch mavros apm.launch fcu_url:=/dev/ttyAML0:230400`
+    - `roslaunch mavros apm.launch fcu_url:=/dev/ttyAML1:230400`
 
 - References:
     - https://wiki.radxa.com/Zero/dev/serial-console
@@ -152,6 +187,14 @@ git tag v1.13.0-0.1.0
 2. Central computer IP: 192.168.31.22 or 192.168.31.173
 3. Radxa IP: 192.168.31.205
 4. GCS IP: 192.168.31.61
+
+### Transmitter-Receiver Binding (XSR Faast):
+1. Hold bind button (while Receiver has no power)
+2. Enter binding  mode on transmitter
+3. Provide power to receiver 
+4. If connection is successful, the receiver should have a solid green light
+5. Restart receiver
+Failsafe set to no pulse
 
 ## Troubleshooting
 
@@ -165,6 +208,9 @@ uorb status
 mavlink status streams
 # List processes
 top
+
+# Get diagnostic messages
+dmesg
 
 # List all modules
 ls /bin/
@@ -257,29 +303,3 @@ Some level of damping and stiffness is required
 References:
 1. SDF Format for specifying physics engines: http://sdformat.org/spec?elem=physics
 2. Examples: https://classic.gazebosim.org/tutorials?tut=haptix_world_sim_api&cat=haptix
-
-### PX4 SITL Troubleshooting
-```bash
-git submodule update --recursive
-
-###############
-# Multi-robot with scripts
-###############
-# Tools/simulation/gazebo-classic/sitl_multiple_run.sh [-m <model>] [-n <number_of_vehicles>] [-w <world>] [-s <script>] [-t <target>] [-l <label>]
-Tools/simulation/gazebo-classic/sitl_multiple_run.sh -m iris -n 2 -w empty 
-
-###############
-# Multi-robot with 
-###############
-source Tools/simulation/gazebo-classic/setup_gazebo.bash $(pwd) $(pwd)/build/px4_sitl_default
-export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:$(pwd):$(pwd)/Tools/simulation/gazebo-classic/sitl_gazebo-classic
-
-roslaunch px4 multi_uav_mavros_sitl.launch
-
-roslaunch px4 px4.launch
-
-# https://docs.px4.io/main/en/simulation/ros_interface.html
-
-cp ~/gestelt_ws/px4_bk/PX4-Autopilot/build/px4_sitl_default/bin/px4 ~/gestelt_ws/PX4-Autopilot/build/px4_sitl_default/bin/
-```
-

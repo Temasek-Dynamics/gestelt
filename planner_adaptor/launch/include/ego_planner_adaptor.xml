@@ -1,0 +1,14 @@
+<launch>
+    <arg name="cfg_filepath"/>
+
+    <!-- Drone id -->
+    <arg name="drone_id"/>
+    <arg name="drone_id_ns" value="drone$(arg drone_id)"/>
+    
+    <!-- Trajectory server -->
+    <node pkg="planner_adaptor" name="ego_planner_adaptor" 
+        type="ego_planner_adaptor_node" output="screen" ns="$(arg drone_id_ns)" >
+        <rosparam command="load" file="$(arg cfg_filepath)" />
+    </node>
+
+</launch>

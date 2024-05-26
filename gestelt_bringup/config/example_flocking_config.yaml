@@ -1,0 +1,47 @@
+##### Front-end params
+front_end:
+  a_star:
+    max_iterations: 9999  
+    debug_viz: true           # If true, publish visualization for debugging
+    tie_breaker: 1.00001      # Tie breaker as weight for f-cost (cost-to-go)
+    cost_function_type: 0     # [AStar] Type of cost function to use 
+
+##### Mapping params
+grid_map:
+  global_map:
+    size_x: 50.0
+    size_y: 50.0
+    size_z: 20.0
+  local_map:      #local_map parameters must consider the "receding_horizon_planning_dist"!
+    # size_x: 15.5
+    # size_y: 15.5 
+    # size_z: 5.0
+    size_x: 20.0
+    size_y: 20.0
+    size_z: 10.0
+    update_frequency: 30.0
+    viz_frequency: 10.0
+    # build_kdtree_frequency: 30.0
+
+  occ_map:
+    resolution: 0.1     # Resolution of grid
+    inflation: 0.2      # [m] Inflation radius
+    ground_height: 0.0
+    max_range: 30.0
+
+  # For visualizing collision with static obstacles
+  collision_check:
+    warn_radius: 0.225
+    fatal_radius: 0.14
+
+  # camera extrinsic parameters 
+  camera_to_body: 
+    # roll: 90.0
+    # pitch: 180.0
+    # yaw: 90.0
+    roll: 0.0
+    pitch: 0.0
+    yaw: 0.0 
+    t_x: 0.0 # x translation
+    t_y: 0.0
+    t_z: 0.0

@@ -1,4 +1,0 @@
-<launch>
-  <!-- Launches a test mission -->
-  <node pkg="gestelt_bringup" name="multi_mission" type="multi_mission.py" />
-</launch>

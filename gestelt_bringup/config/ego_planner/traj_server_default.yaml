@@ -1,0 +1,14 @@
+takeoff_height: 0.75
+
+# Safety bounding box
+enable_safety_box: false
+safety_box/min_x: -5.5
+safety_box/min_y: -5.5
+safety_box/min_z: -0.5
+safety_box/max_x: 5.5
+safety_box/max_y: 5.5
+safety_box/max_z: 3.0
+
+# Frequency for timers
+pub_cmd_freq: 25.0
+state_machine_tick_freq: 50.0

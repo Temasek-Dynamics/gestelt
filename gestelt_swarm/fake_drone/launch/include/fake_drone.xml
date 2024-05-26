@@ -1,0 +1,80 @@
+<!-- Spawns a fake drone for testing architecture and algorithms-->
+
+<launch>
+  <arg name="cfg_filepath" default="" />
+
+  <arg name="drone_id"/>
+  <arg name="drone_id_ns" value="drone$(arg drone_id)"/>
+  <!-- initial position -->
+  <arg name="init_x" default="0.0"/>
+  <arg name="init_y" default="0.0"/>
+  <arg name="init_z" default="0.0"/>
+  <!-- Mavros topics -->
+  <arg name="command_topic" default="mavros/setpoint_raw/local" />
+  <arg name="odometry_topic" default="mavros/local_position/odom" />
+  <arg name="pose_topic" default="mavros/local_position/pose" />
+  <arg name="cloud_topic" default="camera/depth/points" />
+
+  <arg name="global_frame" default="world"/>
+  <arg name="uav_origin_frame" default="map"/>
+  <arg name="base_link_frame" default="$(arg drone_id_ns)_base_link"/>
+  <arg name="cam_link_frame" default="$(arg drone_id_ns)_cam_link"/>
+
+  <!-- Static TF from base_link to camera_link -->
+  <node pkg="tf" type="static_transform_publisher" 
+    name="$(arg drone_id_ns)_base_link_to_cam_link_tf" 
+    args="0.08 0 0.02 0 0 0 1 $(arg base_link_frame) $(arg cam_link_frame) 100" />
+
+  <group ns="$(arg drone_id_ns)">
+    <!-- Simulated quadcopter -->
+    <node pkg="fake_drone" type="fake_drone_node" name="fake_drone_$(arg drone_id)" required="true" output="screen">
+        <rosparam command="load" file="$(arg cfg_filepath)" />
+
+        <remap from="mavros/setpoint_raw/local" to="$(arg command_topic)"/>
+        <remap from="mavros/local_position/odom" to="$(arg odometry_topic)"/>
+        <remap from="mavros/local_position/pose" to="$(arg pose_topic)"/>
+
+        <param name="drone_id" value="$(arg drone_id)"/>
+        <param name="init_x" value="$(arg init_x)"/>
+        <param name="init_y" value="$(arg init_y)"/>
+        <param name="init_z" value="$(arg init_z)"/>
+
+        <param name="origin_frame" value="$(arg uav_origin_frame)"/>
+        <param name="base_link_frame" value="$(arg base_link_frame)"/>
+    </node>
+
+    <!-- Fake sensor  -->
+    <node pkg="fake_map" type="fake_sensor_node" name="fake_sensor_$(arg drone_id_ns)" required="true" output="screen">
+        <rosparam command="load" file="$(find gestelt_bringup)/config/fake_sensor_params.yaml" />
+        <param name="drone_id" value="$(arg drone_id)"/>
+
+        <param name="fake_map/use_pcd_file" value="false"/>
+        <param name="fake_map/input_topic" value="/fake_map"/>
+
+        <param name="global_frame" value="$(arg global_frame)"/>
+        <param name="uav/origin_frame" value="$(arg uav_origin_frame)"/>
+        <param name="uav/sensor_frame" value="$(arg cam_link_frame)"/>
+
+        <remap from="/uav/sensor_cloud" to="/$(arg drone_id_ns)/$(arg cloud_topic)"/>
+    </node>
+
+    <!-- Drone Visualization -->
+    <node pkg="mavros_extras" type="visualization" name="mavros_visualization" required="false" output="screen">
+
+      <remap from="local_position" to="$(arg pose_topic)"/>
+      <remap from="local_setpoint" to="mavros/setpoint_position/local"/>
+      
+      <param name="fixed_frame_id" value="$(arg uav_origin_frame)"/>
+      <param name="child_frame_id" value="$(arg base_link_frame)"/>
+
+      <param name="marker_scale" value="1.0"/>
+      <param name="num_rotors" value="4"/>
+      <param name="arm_len" value="0.085"/>
+      <param name="body_width" value="0.1"/>
+      <param name="body_height" value="0.11"/>
+      <param name="max_track_size" value="1000"/>
+    </node>
+
+  </group>
+
+</launch>

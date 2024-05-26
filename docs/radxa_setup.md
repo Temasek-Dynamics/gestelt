@@ -53,9 +53,11 @@
 4. Install [Balena Etcher](https://github.com/balena-io/etcher)
 
 5. Flash Ubuntu OS onto Radxa
-    - Download images from [here](https://wiki.radxa.com/Zero/downloads), the file name should be something like `radxa-zero-ubuntu-focal-server-arm64-XXX-mbr.img`
-    - Decompress images using `xz -v --decompress IMAGE_COMPRESSED`
-    - Use BalenaEtcher to mount the image. After step 2 (erasing the eMMC), the radxa eMMC should appear as a flashable device
+    - If you are doing a fresh image flash, download images from [here](https://wiki.radxa.com/Zero/downloads), the file name should be something like `radxa-zero-ubuntu-focal-server-arm64-XXX-mbr.img`.
+        - Decompress images using `xz -v --decompress IMAGE_COMPRESSED`
+    - Else, if you are flashing from an existing image, get the .iso image ready.
+    - Hold the boot button on Radxa before connecting to the PC, then run `sudo boot-g12.py rz-udisk-loader.bin`, the radxa eMMC should appear as a flashable device.
+    - Use BalenaEtcher to mount the image.
 
 6. Disable debug port on OBC. This is so that the Flight controller unit can communicate with the radxa
 ```bash
@@ -89,7 +91,7 @@ scp path/to/radxa_setup.sh rock@IP_ADDR:/home/rock/radxa_setup.sh
 
 9. Synchronize time between ubuntu machines (radxas and central computer)
     - Make sure ntp daemon is installed on both host and client computer: `sudo apt-get install ntp`
-    - (Optional) Add network alias to /etc/hosts
+    - (Optional) Add network alias to /etc/hosts/: `192.168.31.22 master0`
 
     - Host computer
         1. modify the ntp config: `sudo vim /etc/ntp.conf` and add the following lines
@@ -163,7 +165,10 @@ scp path/to/radxa_setup.sh rock@IP_ADDR:/home/rock/radxa_setup.sh
         send: true # Set to true
         ...
     ```
-    - In the mavros launch file, set the FCU url to the address of the serial port connecting to the flight controller. And set the GCS URL to the ip address of the computer runnig QGroundControl.
+    - In the mavros launch file, set the FCU url to the address of the serial port connecting to the flight controller. 
+        - [DEPRECATED] For pins (6, 8, 10) or (GND, UART_AO_A_TXD, UART_AO_A_RXD), use `/dev/ttyAML0:230400`
+        - For pins (7, 9, 11) or (UART_AO_B_RX, GND, UART_AO_B_TX), use `/dev/ttyAML1:230400`
+    - Set the GCS URL to the ip address of the computer runnig QGroundControl.
 
 ## Useful info
 
@@ -182,11 +187,13 @@ export IMAGE_FILE_NAME=~/Downloads/gestelt_os_15_8_23.img
 sudo dd bs=4M if=$SD_CARD_DEVICE_NAME of=$IMAGE_FILE_NAME conv=fsync status=progress
 sudo chown $USER: $IMAGE_FILE_NAME
 
-# Installation of PiShrink
+# [For the first time] Installation of PiShrink
 cd ~
 wget https://raw.githubusercontent.com/Drewsif/PiShrink/master/pishrink.sh
 chmod +x pishrink.sh
 sudo mv pishrink.sh /usr/local/sbin/pishrink
+
+# Shrink image
 sudo pishrink $IMAGE_FILE_NAME
 
 # Compress image if necessary 

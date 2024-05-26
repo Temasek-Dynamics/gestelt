@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<launch>
+    <arg name="tcp_ip" default="0.0.0.0"/>
+    <arg name="tcp_port" default="10000"/>
+    <arg name="pose_topic" default="mavros/local_position/pose"/>
+
+    <node name="unity_endpoint" pkg="hifisim_task" type="server_endpoint.py" output="screen">
+        <param name="tcp_ip" type="string" value="$(arg tcp_ip)"/>
+        <param name="tcp_port" type="int" value="$(arg tcp_port)"/>
+        <remap from="/agent001/global/nwu_pose" to="/drone0/$(arg pose_topic)"/>
+        <remap from="/agent002/global/nwu_pose" to="/drone1/$(arg pose_topic)"/>
+        <remap from="/agent003/global/nwu_pose" to="/drone2/$(arg pose_topic)"/>
+        <remap from="/agent004/global/nwu_pose" to="/drone3/$(arg pose_topic)"/>
+        <remap from="/agent005/global/nwu_pose" to="/drone4/$(arg pose_topic)"/>
+        <remap from="/agent006/global/nwu_pose" to="/drone5/$(arg pose_topic)"/>
+        <remap from="/agent007/global/nwu_pose" to="/drone6/$(arg pose_topic)"/>
+        <remap from="/agent008/global/nwu_pose" to="/drone7/$(arg pose_topic)"/>
+        <remap from="/agent009/global/nwu_pose" to="/drone8/$(arg pose_topic)"/>
+        <remap from="/agent010/global/nwu_pose" to="/drone9/$(arg pose_topic)"/>
+    </node>
+    
+</launch>

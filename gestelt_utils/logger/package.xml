@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>logger</name>
+  <version>0.0.1</version>
+  <description>The logger package</description>
+
+  <maintainer email="johntgz@nus.edu.sg">john tan</maintainer>
+
+  <license>MIT</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <!-- <build_depend>roscpp</build_depend>
+  <build_export_depend>roscpp</build_export_depend>
+  <exec_depend>roscpp</exec_depend> -->
+
+  <!-- The export tag contains other, unspecified, tags -->
+  <export>
+    <!-- Other tools can request additional information be placed here -->
+
+  </export>
+</package>
+
+
+<!-- catkin_make -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=Yes -->

@@ -1,0 +1,81 @@
+<!-- Spawns a fake drone for testing architecture and algorithms-->
+<launch>
+  <arg name="drone_id" default="0"/>
+  <arg name="drone_id_ns" value="drone$(arg drone_id)"/>
+
+  <arg name="cfg_filepath" default="" />
+  <arg name="cloud_topic" default="camera/depth/points"/>
+  <arg name="odometry_topic" default="mavros/local_position/odom" />
+
+  <arg name="global_frame" default="world"/>
+  <arg name="uav_origin_frame" default="world"/>
+  <arg name="cam_frame" default="cam_link"/>
+
+  <arg name="debug_planning" default="false"/>
+
+  <!-- grid_map/pose_type: Toggle between subscription to
+      1 ("grid_map/pose") or 
+      2 ("grid_map/odom") or
+      3 ("/tf") 
+      for use as camera pose/odom-->
+  <!-- grid_map/sensor_type: Toggle between subscription to
+      1 ("grid_map/cloud") or 
+      2 ("grid_map/depth") or 
+      3 ("grid_map/cloud") [For use with POSE_TYPE 3]
+      for use as camera sensor input -->
+
+  <!-- Front end planner -->
+  <!-- <group ns="$(arg drone_id_ns)">
+    <node pkg="navigator" type="navigator_node" name="navigator" 
+      launch-prefix="valgrind"
+      required="true" output="screen">
+        <rosparam command="load" file="$(arg cfg_filepath)" />
+
+        <param name="drone_id" value="$(arg drone_id)"/>
+
+        <param name="front_end/debug_planning" value="$(arg debug_planning)"/>
+
+        <remap from="odom" to="$(arg odometry_topic)"/>
+
+        <remap from="grid_map/odom" to="$(arg odometry_topic)"/>
+        <remap from="grid_map/cloud" to="$(arg cloud_topic)"/>
+
+
+        <param name="grid_map/pose_type" value="2"/>
+        <param name="grid_map/sensor_type" value="1"/>
+
+        <param name="grid_map/debug_input_entire_map" value="false"/>
+        <param name="grid_map/entire_pcd_map_topic" value="/fake_map"/>
+    </node>
+  </group> -->
+
+
+  <!-- Front end planner -->
+  <group ns="$(arg drone_id_ns)">
+    <node pkg="navigator" type="navigator_node" name="navigator" 
+      required="true" output="screen">
+        <rosparam command="load" file="$(arg cfg_filepath)" />
+
+        <param name="drone_id" value="$(arg drone_id)"/>
+
+        <param name="front_end/debug_planning" value="$(arg debug_planning)"/>
+
+        <remap from="odom" to="$(arg odometry_topic)"/>
+
+        <remap from="grid_map/odom" to="$(arg odometry_topic)"/>
+        <remap from="grid_map/cloud" to="$(arg cloud_topic)"/>
+
+        <param name="grid_map/global_frame" value="$(arg global_frame)"/>
+        <param name="grid_map/uav_origin_frame" value="$(arg uav_origin_frame)"/>
+        <param name="grid_map/cam_frame" value="$(arg drone_id_ns)_$(arg cam_frame)"/>
+
+        <param name="grid_map/pose_type" value="2"/>
+        <param name="grid_map/sensor_type" value="1"/>
+
+        <!-- For debugging use -->
+        <param name="grid_map/debug_input_entire_map" value="true"/>
+        <param name="grid_map/entire_pcd_map_topic" value="/fake_map"/>
+    </node>
+  </group>
+
+</launch>

@@ -1,0 +1,22 @@
+filename: empty_world
+polar_obs: 0 # Number of cylinder obstacles
+circle_obs: 0 # Number of hoops
+seed: 1
+
+map:
+  inter_obstacle_clearance: 0.3 # Minimum separation distance between center of obstacle primitives
+  resolution: 0.1
+  x_size: 5.9
+  y_size: 5.9
+  z_size: 3.0
+
+obstacle:
+  lower_rad: 0.1 # Cylinder: Smallest radius
+  upper_rad: 0.5 # Cylinder: Largest radius
+  lower_hei: 5.0 # Cylinder: Lowest height
+  upper_hei: 5.0 # Cylinder: Tallest height
+  radius_l: 7.0 # Circle: Smallest radius
+  radius_h: 7.0 # Circle: Biggest radius
+  z_l: 7.0 # Circle: Smallest radius
+  z_h: 7.0 # Circle: Biggest radius
+  theta: 7.0 # Circle

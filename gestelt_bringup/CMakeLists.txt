@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.0.2)
 project(gestelt_bringup)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
-add_compile_options(-std=c++14)
+add_compile_options(-std=c++17)
 
 set(ROS_LIBRARIES
   roscpp
