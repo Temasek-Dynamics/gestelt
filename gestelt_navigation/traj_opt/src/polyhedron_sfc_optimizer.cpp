@@ -136,6 +136,8 @@ namespace back_end
     vPolytopes_ = vPolytopes;
     inner_ctrl_pts_ = inner_ctrl_pts;
 
+    time_seg_durs_ = init_seg_dur;
+
     /* Initialize decision variables*/
     double x_init[num_decis_var]; // Initial decision variables: Array of [ inner_ctrl_pts, init_seg_dur ]
 
@@ -232,40 +234,74 @@ namespace back_end
     const int dimTau = obj->num_decis_var_t_;
     const int dimXi =  obj->num_decis_var_bary_;
 
-    const double weightT = obj->rho;
     Eigen::Map<const Eigen::VectorXd> tau(x.data(), dimTau);
     Eigen::Map<const Eigen::VectorXd> xi(x.data() + dimTau, dimXi);
-    Eigen::Map<Eigen::VectorXd> gradTau(g.data(), dimTau);
-    Eigen::Map<Eigen::VectorXd> gradXi(g.data() + dimTau, dimXi);
 
-    forwardT(tau, obj->times);
-    // Convert from xi into q
-    forwardP(xi, obj->vPolyIdx_, obj->vPolytopes_, obj->inner_ctrl_pts_);
+    // Convert from virtual to real time
+    obj->VirtualT2RealT(tau, obj->time_seg_durs_);
+    // Convert from xi into q (inner_ctrl_pts_)
+    obj->forwardP(xi, obj->vPolyIdx_, obj->vPolytopes_, obj->inner_ctrl_pts_);
 
-    double cost;
-    // Generate MINCO trajectory from the inner points and time allocation
-    obj.minco.setParameters(obj.points, obj.times);
-    obj.minco.getEnergy(cost); // jerk cost
-    obj.minco.getEnergyPartialGradByCoeffs(obj.partialGradByCoeffs);
-    obj.minco.getEnergyPartialGradByTimes(obj.partialGradByTimes);
+    // Gradients 
+    Eigen::Map<Eigen::VectorXd> gradTau(grad.data(), dimTau);
+    Eigen::Map<Eigen::VectorXd> gradXi(grad.data() + dimTau, dimXi);
 
-    attachPenaltyFunctional(obj.times, obj.minco.getCoeffs(),
-                            obj.hPolyIdx, obj.hPolytopes,
-                            obj.smoothEps, obj.integralRes,
-                            obj.magnitudeBd, obj.penaltyWt, obj.flatmap,
-                            cost, obj.partialGradByTimes, obj.partialGradByCoeffs);
+    // Initialize cost values
+    double jerk_cost = 0, time_cost = 0;
+    opt->min_ellip_dist2_ = std::numeric_limits<double>::max();
 
-    obj.minco.propogateGrad(obj.partialGradByCoeffs, obj.partialGradByTimes,
-                            obj.gradByPoints, obj.gradByTimes);
 
-    cost += weightT * obj.times.sum();
-    obj.gradByTimes.array() += weightT;
+    // MJO in constrained q coordinates
+    opt->mjo_q_.generate(obj->inner_ctrl_pts_, obj->time_seg_durs_); // Generate minimum jerk trajectory
+    opt->cstr_pts_q_ = opt->mjo_q_.getInitConstraintPoints(opt->cps_num_perPiece_); // Discretize trajectory into inner constraint points
 
-    backwardGradT(tau, obj.gradByTimes, gradTau);
-    backwardGradP(xi, obj.vPolyIdx, obj.vPolytopes, obj.gradByPoints, gradXi);
-    normRetrictionLayer(xi, obj.vPolyIdx, obj.vPolytopes, cost, gradXi);
+    /** 1. Jerk cost 
+     * jerk_cost is trajectory jerk cost
+     */
+    opt->mjo_q_.initGradCost(gradT, jerk_cost); // In initGradCost(...), do addGradJbyT(gdT) and addGradJbyC(gdC);
+
+    /** 2. Time integral cost 
+      *   2a. Static obstacle cost
+      *   2b. Swarm cost
+      *   2c. Dynamical feasibility
+      *   2d. Uniformity of points
+    */
+    Eigen::VectorXd obs_swarm_feas_qvar_costs(4); // Vector of costs containing (Static obstacles, swarm, dynamic, feasibility, qvar)
+    opt->addPVAGradCost2CT(gradT, obs_swarm_feas_qvar_costs, opt->cps_num_perPiece_, opt->mjo_q_); 
+
+    /** 3. Time cost 
+    */
+    opt->VirtualTGradCost(T, t, gradT, gradt, time_cost);
+
+
+
+
+
+
+    attachPenaltyFunctional(obj->time_seg_durs_, obj->minco.getCoeffs(),
+                            obj->hPolyIdx, obj->hPolytopes,
+                            obj->smoothEps, obj->integralRes,
+                            obj->magnitudeBd, obj->penaltyWt, obj->flatmap,
+                            cost, obj->partialGradByTimes, obj->partialGradByCoeffs);
+
+    obj->minco.propogateGrad(obj->partialGradByCoeffs, obj->partialGradByTimes,
+                            obj->gradByPoints, obj->gradByTimes);
+
+    cost += wei_time_ * obj->time_seg_durs_.sum();
+    obj->gradByTimes.array() += wei_time_;
+
+    VirtualTGradCost(tau, obj->gradByTimes, gradTau);
+    backwardGradP(xi, obj->vPolyIdx, obj->vPolytopes, obj->gradByPoints, gradXi);
+    normRetrictionLayer(xi, obj->vPolyIdx, obj->vPolytopes, cost, gradXi);
 
     return cost;
+
+
+
+
+    opt->iter_num_++;
+
+    return jerk_cost + obs_swarm_feas_qvar_costs.sum() + time_cost;
   }
 
   /* callbacks by the L-BFGS optimizer */
@@ -296,7 +332,7 @@ namespace back_end
     //        Each element is a value of the gradient
     Eigen::VectorXd gradT(opt->num_segs_); 
 
-    // Initialize values
+    // Initialize cost values
     double jerk_cost = 0, time_cost = 0;
     opt->min_ellip_dist2_ = std::numeric_limits<double>::max();
 
@@ -363,6 +399,7 @@ namespace back_end
     pnh.param("drone_id", drone_id_, -1);
 
     pnh.param("optimization/num_cstr_pts_per_seg", cps_num_perPiece_, -1);
+    pnh.param("optimization/weight_poly_bounds", weight_poly_bounds_, -1.0);
     pnh.param("optimization/weight_swarm", wei_swarm_, -1.0);
     pnh.param("optimization/weight_feasibility", wei_feas_, -1.0);
     pnh.param("optimization/weight_sqrvariance", wei_sqrvar_, -1.0);
@@ -380,26 +417,17 @@ namespace back_end
     return (opt->force_stop_type_ == STOP_FOR_ERROR || opt->force_stop_type_ == STOP_FOR_REBOUND);
   }
 
-  template <typename EIGENVEC>
-  void PolyhedronSFCOptimizer::RealT2VirtualT(const Eigen::VectorXd &RT, EIGENVEC &VT)
-  {
-    for (int i = 0; i < RT.size(); ++i)
-    {
-      VT(i) = RT(i) > 1.0 ? (sqrt(2.0 * RT(i) - 1.0) - 1.0)
-                          : (1.0 - sqrt(2.0 / RT(i) - 1.0));
-    }
-  }
-
-  template <typename EIGENVEC>
-  void PolyhedronSFCOptimizer::VirtualT2RealT(const EIGENVEC &VT, Eigen::VectorXd &RT)
-  {
-    for (int i = 0; i < VT.size(); ++i)
-    {
-      RT(i) = VT(i) > 0.0 ? ((0.5 * VT(i) + 1.0) * VT(i) + 1.0)
-                          : 1.0 / ((0.5 * VT(i) - 1.0) * VT(i) + 1.0);
-    }
-  }
-
+  /**
+   * @brief 
+   * 
+   * @tparam EIGENVEC 
+   * @tparam EIGENVECGD 
+   * @param RT Real time
+   * @param VT Virtual time
+   * @param gdRT Gradient of real time
+   * @param gdVT Gradient of virtual time
+   * @param costT Time cost
+   */
   template <typename EIGENVEC, typename EIGENVECGD>
   void PolyhedronSFCOptimizer::VirtualTGradCost(
       const Eigen::VectorXd &RT, const EIGENVEC &VT,
@@ -431,7 +459,7 @@ namespace back_end
 
   template <typename EIGENVEC>
   void PolyhedronSFCOptimizer::addPVAGradCost2CT(
-      EIGENVEC &gdT, Eigen::VectorXd &costs, const int &K, poly_traj::MinJerkOpt& mjo)
+      EIGENVEC &gdT, Eigen::VectorXd &obs_swarm_feas_qvar_costs, const int &K, poly_traj::MinJerkOpt& mjo)
   {
     int N = num_segs_; // N: Number of segments
     Eigen::Vector3d pos, vel, acc, jer;
@@ -444,7 +472,7 @@ namespace back_end
     double gradViolaPt, gradViolaVt, gradViolaAt;
     double omega;    // Quadrature coefficient
     int idx_cp = 0; // Index of constraint point
-    costs.setZero();
+    obs_swarm_feas_qvar_costs.setZero();
 
     double t = 0;
     for (int i = 0; i < N; ++i) // for each piece/segment number
@@ -478,21 +506,66 @@ namespace back_end
         omega = (j == 0 || j == K) ? 0.5 : 1.0;
 
         /**
-         * Penalty on clearance to swarm/dynamic obstacles
+         * Penalty on exceeding bounds of polyhedrons
          */
-        double gradt, grad_prev_t;
-        if (swarmGradCostP(t + step * j, pos, vel, gradp, gradt, grad_prev_t, costp))
+        L = hIdx(i);
+        K = hPolys[L].rows(); // Get the rows(hyperplanes) of the L-th polyhedron
+        for (int k = 0; k < K; k++) // For each hyperplane in L-th polyhedron
         {
-          gradViolaPc = beta0 * gradp.transpose();
-          gradViolaPt = alpha * gradt;
-          mjo.get_gdC().block<6, 3>(i * 6, 0) += omega * step * gradViolaPc;
-          gdT(i) += omega * (costp / K + step * gradViolaPt);
-          if (i > 0)
-          {
-            gdT.head(i).array() += omega * step * grad_prev_t;
-          }
-          costs(1) += omega * step * costp;
+            Eigen::Vector3d outerNormal = hPolys[L].block<1, 3>(k, 0);
+            double poly_pen = outerNormal.dot(pos) + hPolys[L](k, 3);
+
+            if (poly_pen > 0){
+              // TODO: Partial derivatives of Constraint
+              Eigen::Matrix<double, 6, 3> pd_constr_c_i = beta0 * outerNormal.transpose(); // Partial derivative of constraint w.r.t c_i // (2s, m) = (2s, 1) * (1, m)
+              double pd_constr_t = (outerNormal).dot(vel);// P.D. of constraint w.r.t t // (1,1) = (1, 2s) * (2s, m) * (m, 1)
+
+              // Intermediate calculations for chain rule to get partial derivatives of cost J
+              double pd_cost_constr = 3 * (T_i / K) * omega * weight_poly_bounds_ * pow(poly_pen, 2) ; // P.D. of cost w.r.t constraint
+              double cost = (T_i / K) * omega * weight_poly_bounds_ * pow(poly_pen, 3); 
+              double pd_t_T_i = (j / K); // P.D. of time t w.r.t T_i
+
+              // Partial derivatives of Cost J
+              //    w.r.t coefficients c_i
+              Eigen::Matrix<double, 6, 3> pd_cost_c_i = pd_cost_constr * pd_constr_c_i; // P.D. of cost w.r.t c_i. Uses chain rule // (m,2s)
+              // mjo.get_gdC().block<6, 3>(i * 6, 0) += 3 * (T_i / K) * omega * weight_poly_bounds_ * pow(poly_pen, 2) * pd_constr_c_i
+
+              //    w.r.t time t
+              double pd_cost_t = cost / T_i  + pd_cost_constr * pd_constr_t * pd_t_T_i;// P.D. of cost w.r.t t // (1,1)
+              // pd_cost_t = ((T_i / K) * weight_poly_bounds_ * omega *  pow(poly_pen, 3)) / T_i  + (3 * (T_i / K) * omega * weight_poly_bounds_ * pow(poly_pen, 2)) * pd_constr_t * (j / K)
+
+              // Sum up sampled costs
+              mjo.get_gdC().block<6, 3>(i * 6, 0) += pd_cost_c_i; // Gradient of cost w.r.t polynomial coefficients
+              gdT(i) += pd_cost_t; 
+
+              obs_swarm_feas_qvar_costs(0) += cost;
+            }
+
+            // if (smoothedL1(violaPos, smoothFactor, violaPosPena, violaPosPenaD))
+            // {
+            //   gradPos += weight_poly_bounds_ * violaPosPenaD * outerNormal;
+            //   pena += weight_poly_bounds_ * violaPosPena;
+            // }
         }
+
+        // /**
+        //  * Penalty on clearance to swarm/dynamic obstacles
+        //  */
+        // double gradt, grad_prev_t;
+        // if (swarmGradCostP(t + step * j, pos, vel, gradp, gradt, grad_prev_t, costp))
+        // {
+        //   gradViolaPc = beta0 * gradp.transpose();
+        //   gradViolaPt = alpha * gradt;
+
+        //   // Sum up sampled costs
+        //   mjo.get_gdC().block<6, 3>(i * 6, 0) += omega * step * gradViolaPc;
+        //   gdT(i) += omega * (costp / K + step * gradViolaPt); // Add to gradient for i-th segment
+        //   if (i > 0) // If not the first segment
+        //   {
+        //     gdT.head(i).array() += omega * step * grad_prev_t;
+        //   }
+        //   obs_swarm_feas_qvar_costs(1) += omega * step * costp;
+        // }
         
         /**
          * Penalty on velocity constraint, vector of (x,y,z)
@@ -506,7 +579,7 @@ namespace back_end
 
           // Intermediate calculations for chain rule to get partial derivatives of cost J
           double pd_cost_constr = 3 * (T_i / K) * omega * wei_feas_ * pow(vel_pen,2) ; // P.D. of cost w.r.t constraint
-          double cost = (T_i / K) * omega * wei_feas_ * pow(vel_pen,3);
+          double cost = (T_i / K) * omega * wei_feas_ * pow(vel_pen,3); 
           double pd_t_T_i = (j / K); // P.D. of time t w.r.t T_i
 
           // Partial derivatives of Cost J
@@ -518,7 +591,7 @@ namespace back_end
           // Sum up sampled costs
           mjo.get_gdC().block<6, 3>(i * 6, 0) += pd_cost_c_i; // Gradient of cost w.r.t polynomial coefficients
           gdT(i) += pd_cost_t; 
-          costs(2) += cost; 
+          obs_swarm_feas_qvar_costs(2) += cost; 
         }
 
         /**
@@ -545,7 +618,7 @@ namespace back_end
           // Sum up sampled costs
           mjo.get_gdC().block<6, 3>(i * 6, 0) += pd_cost_c_i; // Gradient of cost w.r.t polynomial coefficients
           gdT(i) += pd_cost_t; 
-          costs(2) += cost; 
+          obs_swarm_feas_qvar_costs(2) += cost; 
         }
 
         // printf("L\n");
@@ -603,7 +676,7 @@ namespace back_end
       } // end iteration through all constraint points in segment
     } // end iteration through all pieces
 
-    costs(3) += var;
+    obs_swarm_feas_qvar_costs(3) += var;
 
     /* Publish visualization of gradients*/
     // visualization_->displayIntermediateGrad("smoothness", ctrl_pts_q_, mjo.get_gdC());

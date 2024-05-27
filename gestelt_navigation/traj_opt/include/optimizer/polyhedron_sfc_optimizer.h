@@ -99,7 +99,7 @@ namespace back_end
      */
     template <typename EIGENVEC>
     void addPVAGradCost2CT(
-      EIGENVEC &gdT, Eigen::VectorXd &costs, const int &K, poly_traj::MinJerkOpt& mjo);
+      EIGENVEC &gdT, Eigen::VectorXd &obs_swarm_feas_qvar_costs, const int &K, poly_traj::MinJerkOpt& mjo);
 
     /**
      * @brief Cost of swarm 
@@ -139,31 +139,47 @@ namespace back_end
                                 double* gradXi,
                                 const int n);
 
-    /**
-     * @brief Convert from real to virtual time
-     * 
-     * @tparam EIGENVEC 
-     * @param RT 
-     * @param VT 
-     */
-    template <typename EIGENVEC>
-    void RealT2VirtualT(const Eigen::VectorXd &RT, EIGENVEC &VT);
-
-    /**
-     * @brief Convert from virtual to real time
-     * 
-     * @tparam EIGENVEC 
-     * @param RT 
-     * @param VT 
-     */
-    template <typename EIGENVEC>
-    void VirtualT2RealT(const EIGENVEC &VT, Eigen::VectorXd &RT);
-
     // Get virtual time gradient cost
     template <typename EIGENVEC, typename EIGENVECGD>
     void VirtualTGradCost(const Eigen::VectorXd &RT, const EIGENVEC &VT,
                           const Eigen::VectorXd &gdRT, EIGENVECGD &gdVT,
                           double &costT);
+
+    /**
+     * @brief 
+     * 
+     * @param x 
+     * @param mu 
+     * @param f 
+     * @param df 
+     * @return true if cost is more than zero 
+     * @return false 
+     */
+    static inline bool smoothedL1(const double &x,
+                                  const double &mu,
+                                  double &f,
+                                  double &df)
+    {
+        if (x <= 0.0)
+        {
+          return false;
+        }
+        else if (x > mu)
+        {
+          f = x - 0.5 * mu;
+          df = 1.0;
+          return true;
+        }
+        else
+        {
+          const double xdmu = x / mu;
+          const double mumxd2 = mu - 0.5 * x;
+          f = mumxd2 * pow(xdmu,3);
+          df = pow(xdmu,2) * ((-0.5) * xdmu + 3.0 * mumxd2 / mu);
+          return true;
+        }
+    }
+
 
   public: 
 
@@ -211,8 +227,70 @@ namespace back_end
   public:
 
     /**
-     * @brief Minimize squared distance between f_H(xi) and P
+     * @brief Convert from real to virtual time
      * 
+     * @tparam EIGENVEC 
+     * @param RT 
+     * @param VT 
+     */
+    template <typename EIGENVEC>
+    void RealT2VirtualT(const Eigen::VectorXd &RT, EIGENVEC &VT)
+    {
+      for (int i = 0; i < RT.size(); ++i)
+      {
+        VT(i) = RT(i) > 1.0 ? (sqrt(2.0 * RT(i) - 1.0) - 1.0)
+                            : (1.0 - sqrt(2.0 / RT(i) - 1.0));
+      }
+    }
+
+    /**
+     * @brief Convert from virtual to real time
+     * 
+     * @tparam EIGENVEC 
+     * @param RT 
+     * @param VT 
+     */
+    template <typename EIGENVEC>
+    void VirtualT2RealT(const EIGENVEC &VT, Eigen::VectorXd &RT)
+    {
+      for (int i = 0; i < VT.size(); ++i)
+      {
+        RT(i) = VT(i) > 0.0 ? ((0.5 * VT(i) + 1.0) * VT(i) + 1.0)
+                            : 1.0 / ((0.5 * VT(i) - 1.0) * VT(i) + 1.0);
+      }
+    }
+
+    /**
+     * @brief Convert from unconstrained xi coordinates into q constrained coordinates
+     * 
+     * @param xi 
+     * @param vIdx 
+     * @param vPolys 
+     * @param P 
+     */
+    static inline void forwardP(const Eigen::VectorXd &xi,
+                                const Eigen::VectorXi &vIdx,
+                                const PolyhedraV &vPolys,
+                                Eigen::Matrix3Xd &P)
+    {
+        const int sizeP = vIdx.size();
+        P.resize(3, sizeP);
+        Eigen::VectorXd q;
+        for (int i = 0, j = 0, k, l; i < sizeP; i++, j += k)
+        {
+            l = vIdx(i);
+            k = vPolys[l].cols();
+            q = xi.segment(j, k).normalized().head(k - 1);
+            P.col(i) = vPolys[l].rightCols(k - 1) * q.cwiseProduct(q) +
+                        vPolys[l].col(0);
+        }
+        return;
+    }
+
+    /**
+     * @brief Convert from unconstrained xi coordinates into q constrained coordinates.
+     * This is done by minimizing the squared distance between f_H(xi) and P.
+     *  
      * @tparam EIGENVEC 
      * @param P 
      * @param vIdx 
@@ -238,19 +316,13 @@ namespace back_end
         {
             l = vIdx(i);
             k = vPolys[l].cols();
-            std::cout << "l: " << l << std::endl;
-            std::cout << "k: " << k << std::endl;
 
             ovPoly.resize(3, k + 1);
             ovPoly.col(0) = P.col(i);
             ovPoly.rightCols(k) = vPolys[l];
 
-            std::cout << "Before fill" << std::endl;
-
             double x[k]; // Total number of vertices for each "overlap" polyhedron
             std::fill(x, x + k, sqrt(1.0 / k));
-
-            std::cout << "Before lbfgs_optimize" << std::endl;
 
             int num_decis_var = k;
             lbfgs::lbfgs_optimize(
@@ -263,11 +335,6 @@ namespace back_end
                                   &ovPoly,
                                   &lbfgs_params);
 
-            std::cout << "After lbfgs_optimize" << std::endl;
-
-
-            std::cout << "j: " << j << std::endl;
-            std::cout << "k: " << k << std::endl;
             xi.segment(j, k) = Eigen::Map<Eigen::VectorXd>(x+j, k);
             // xi.block<k, 1>(j, 0) = 
             // xi.segment(j, k) = x;
@@ -315,36 +382,6 @@ namespace back_end
         }
 
         return cost;
-    }
-
-    static inline void forwardT(const Eigen::VectorXd &tau,
-                                Eigen::VectorXd &T)
-    {
-        const int sizeTau = tau.size();
-        T.resize(sizeTau);
-        for (int i = 0; i < sizeTau; i++)
-        {
-            T(i) = tau(i) > 0.0
-                        ? ((0.5 * tau(i) + 1.0) * tau(i) + 1.0)
-                        : 1.0 / ((0.5 * tau(i) - 1.0) * tau(i) + 1.0);
-        }
-        return;
-    }
-
-    template <typename EIGENVEC>
-    static inline void backwardT(const Eigen::VectorXd &T,
-                                  EIGENVEC &tau)
-    {
-        const int sizeT = T.size();
-        tau.resize(sizeT);
-        for (int i = 0; i < sizeT; i++)
-        {
-            tau(i) = T(i) > 1.0
-                          ? (sqrt(2.0 * T(i) - 1.0) - 1.0)
-                          : (1.0 - sqrt(2.0 / T(i) - 1.0));
-        }
-
-        return;
     }
 
     template <typename EIGENVEC>
@@ -399,6 +436,7 @@ namespace back_end
     /* optimization parameters */
     int cps_num_perPiece_;   // number of distinctive constraint points per piece
 
+    double weight_poly_bounds_;                                   // Polyhedron bounds weight
     double wei_swarm_;                                            // swarm weight
     double wei_feas_;                                             // feasibility weight
     double wei_sqrvar_;                                           // squared variance weight
@@ -415,11 +453,12 @@ namespace back_end
     Eigen::MatrixXd cstr_pts_xi_; // inner CONSTRAINT points of trajectory (excludes boundary points), this is finer than the inner CONTROL points
     Eigen::MatrixXd cstr_pts_q_; // inner CONSTRAINT points of trajectory (excludes boundary points), this is finer than the inner CONTROL points
 
-    int num_decis_var_bary_, num_decis_var_t_; 
+    int num_decis_var_bary_, num_decis_var_t_; // Number of decision variables for barycentric weights and segment time durations
 
-    Eigen::VectorXi vPolyIdx;
-    std::vector<Eigen::Matrix3Xd> vPolytopes;
+    Eigen::VectorXi vPolyIdx_;
+    std::vector<Eigen::Matrix3Xd> vPolytopes_;
     Eigen::MatrixXd inner_ctrl_pts_;
+    Eigen::VectorXd time_seg_durs_;
 
   }; // class PolyhedronSFCOptimizer
 
