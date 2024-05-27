@@ -11,6 +11,7 @@ Vision::Vision(ros::NodeHandle& nh) :
     drone_camera_image_sub__ = nh.subscribe("/drone/camera/rgb/image_raw", 1, &Vision::imageCallback, this);
     // drone_camera_depth_image_sub_ = nh.subscribe("/drone/camera/depth/image_raw", 1, &Vision::depthImageCallback, this);
     
+    waypoints_pub__ = nh.advertise<gestelt_msgs::Goals>("/planner/goals", 10);
     
 
     ros::spin();
@@ -101,13 +102,47 @@ void Vision::startPerceptionImpl(const cv_bridge::CvImagePtr& cv_ptr) {
     Vision::Coordinates camera_coords;
     Vision::pixelToCameraCoords(center, depth_mean, camera_coords);
 
-    std::cout<<camera_coords.x <<", "<<camera_coords.y<<", "<<camera_coords.z<<std::endl;
+    std::cout<<"Camera: "<<camera_coords.x <<", "<<camera_coords.y<<", "<<camera_coords.z<<std::endl;
     
     // Convert coordinates in camera frame to world
     Vision::Coordinates world_coords;
     Vision::tfCameraToWorld(camera_coords, world_coords);
-
     std::cout<<"world: "<<world_coords.x <<", "<<world_coords.y<<", "<<world_coords.z<<std::endl;
+
+    /////////////////////////////////////////////////////////////////////////////////////
+    // ----------------------------- Creating trajectory ----------------------------- //
+    float TIME_FACTOR_TERMINAL = 1;
+    float TIME_FACTOR = 1;
+    float MAX_VEL = 3;
+    float MAX_ACCEL = 8;
+
+    position_waypoints.push_back(Vision::createPose(world_coords.x, world_coords.y, world_coords.z));
+    position_waypoints.push_back(Vision::createPose(world_coords.x, world_coords.y+2, world_coords.z));
+    
+    acceleration_waypoints.push_back(Vision::createAcceleration(None(), 
+                                                                None(),
+                                                                None()));
+
+    acceleration_waypoints.push_back(Vision::createAcceleration(None(), 
+                                                                None(),
+                                                                None()));
+
+    velocity_waypoints.push_back(Vision::createVelocity(None(), 
+                                                        None(),
+                                                        None()));
+
+    velocity_waypoints.push_back(Vision::createVelocity(None(), 
+                                                        None(),
+                                                        None()));
+
+    
+    // ------------------------------------------------------------------------------- //
+    /////////////////////////////////////////////////////////////////////////////////////
+
+    // Publish the transformed coordinates to trajectory planner
+    Vision::waypointsPublisher(position_waypoints, acceleration_waypoints, velocity_waypoints,
+                                TIME_FACTOR_TERMINAL, TIME_FACTOR, MAX_VEL, MAX_ACCEL);
+    
 }
 
 void Vision::tfCameraToWorld(const Coordinates& camera_coordinates, Coordinates& world_coordinates){
@@ -160,4 +195,90 @@ void Vision::convertToCoordinates(const geometry_msgs::PointStamped& point, Coor
     coordinates.x = point.point.x;
     coordinates.y = point.point.y;
     coordinates.z = point.point.z;
+}
+
+geometry_msgs::Pose Vision::createPose(const double& x, const double& y, const double& z){
+    geometry_msgs::Pose wp__;
+    wp__.position.x = x;
+    wp__.position.y = y;
+    wp__.position.z = z;
+
+    wp__.orientation.x = 0;
+    wp__.orientation.y = 0;
+    wp__.orientation.z = -0.707;
+    wp__.orientation.w = 0.707;
+
+    return wp__;
+}
+
+std::pair<geometry_msgs::Accel, std_msgs::Bool> Vision::createAcceleration(
+        const double& acc_x, const double& acc_y, const double& acc_z){
+    
+    geometry_msgs::Accel acc;
+    std_msgs::Bool acc_mask;
+    if (acc_x != None()) {
+        acc.linear.x = acc_x;
+        acc.linear.y = acc_y;
+        acc.linear.z = acc_z;
+        acc_mask.data = false;
+    } else {
+        acc_mask.data = true;
+    }
+    return std::make_pair(acc, acc_mask);
+}
+
+std::pair<geometry_msgs::Twist, std_msgs::Bool> Vision::createVelocity(const double& vel_x, 
+                                                                        const double& vel_y, 
+                                                                        const double& vel_z) {
+    geometry_msgs::Twist vel;
+    std_msgs::Bool vel_mask;
+    if (vel_x != None()) {
+        vel.linear.x = vel_x;
+        vel.linear.y = vel_y;
+        vel.linear.z = vel_z;
+        vel_mask.data = false;
+    } else {
+        vel_mask.data = true;
+    }
+    return std::make_pair(vel, vel_mask);
+}
+
+
+void Vision::waypointsPublisher(const std::vector<geometry_msgs::Pose> &waypoints, 
+                                const std::vector<std::pair<geometry_msgs::Accel, std_msgs::Bool>> &accels, 
+                                const std::vector<std::pair<geometry_msgs::Twist, std_msgs::Bool>> &vels,
+                                const float& time_factor_terminal, const float& time_factor, 
+                                const float& max_vel, const float& max_accel) {
+    
+    gestelt_msgs::Goals wp_msg;
+    // geometry_msgs::PoseArray wp_pos_msg;
+    // geometry_msgs::AccelStamped wp_acc_msg;
+
+    wp_msg.header.frame_id = "world";
+    // wp_pos_msg.header.frame_id = "world";
+    // wp_acc_msg.header.frame_id = "world";
+
+    wp_msg.waypoints = waypoints;
+    for (const auto &accel : accels) {
+        wp_msg.accelerations.push_back(accel.first);
+        wp_msg.accelerations_mask.push_back(accel.second);
+    }
+    for (const auto &vel : vels) {
+        wp_msg.velocities.push_back(vel.first);
+        wp_msg.velocities_mask.push_back(vel.second);
+    }
+
+    // wp_pos_msg.poses = waypoints;
+    // if (!accels.empty()) {
+    //     wp_acc_msg.accel = accels[0].first;
+    // }
+    wp_msg.time_factor_terminal.data = time_factor_terminal;
+    wp_msg.time_factor.data = time_factor;
+    wp_msg.max_vel.data = max_vel;
+    wp_msg.max_acc.data = max_accel;
+
+    waypoints_pub__.publish(wp_msg);
+    // waypoints_pos_pub.publish(wp_pos_msg);
+    // waypoints_acc_pub.publish(wp_acc_msg);
+    // waypoints_pub__.shutdown();
 }

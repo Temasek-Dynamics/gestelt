@@ -13,9 +13,13 @@
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <geometry_msgs/PointStamped.h>
+#include <geometry_msgs/Pose.h>
+#include <geometry_msgs/Accel.h>
+#include <geometry_msgs/Twist.h>
 #include <gestelt_msgs/CommanderCommand.h>
 #include <gestelt_msgs/CommanderState.h>
-
+#include <gestelt_msgs/Goals.h>
+#include <std_msgs/Bool.h>
 
 /* State machine events */
 enum ServerEvent
@@ -55,11 +59,33 @@ class Vision{
         
         void pixelToCameraCoords(const cv::Point2f& pixel, const double& depth, Coordinates& camera_coords);
 
+        geometry_msgs::Pose createPose(const double& x, const double& y, const double& z);
+
+        std::pair<geometry_msgs::Accel, std_msgs::Bool> createAcceleration(
+                                                            const double& acc_x, 
+                                                            const double& acc_y, 
+                                                            const double& acc_z
+                                                            );
+
+        std::pair<geometry_msgs::Twist, std_msgs::Bool> createVelocity(const double& vel_x, 
+                                                                        const double& vel_y, 
+                                                                        const double& vel_z);
+
+        void waypointsPublisher(const std::vector<geometry_msgs::Pose> &waypoints, 
+                                const std::vector<std::pair<geometry_msgs::Accel, std_msgs::Bool>> &accels, 
+                                const std::vector<std::pair<geometry_msgs::Twist, std_msgs::Bool>> &vels, 
+                                const float& time_factor_terminal, const float& time_factor, 
+                                const float& max_vel, const float& max_accel);
+
         double estimateDepth(double realLength, const cv::Point2f& p1, const cv::Point2f& p2) {
             double focalLength = (cameraMatrix_.at<double>(0, 0) + cameraMatrix_.at<double>(1, 1) )/2;
             double pixelLength = cv::norm(p2 - p1);
             double depth = (focalLength * realLength) / pixelLength;    
             return depth;
+        }
+
+        inline double None(){
+            return std::numeric_limits<double>::max();
         }
 
 
@@ -70,7 +96,8 @@ class Vision{
         // ros::Subscriber drone_camera_depth_image_sub_;
         
         //ROS Publisher
-        
+        ros::Publisher waypoints_pub__;
+
         //opencv images variables
         cv::Mat gray_image_;
         cv::Mat binary_image_;
@@ -91,6 +118,9 @@ class Vision{
 
         bool start_image_pipeline__ = false;
 
+        std::vector<geometry_msgs::Pose> position_waypoints;
+        std::vector<std::pair<geometry_msgs::Accel, std_msgs::Bool>> acceleration_waypoints;
+        std::vector<std::pair<geometry_msgs::Twist, std_msgs::Bool>> velocity_waypoints;
 };  //Vision 
 
 #endif //DRONE_VISION_H

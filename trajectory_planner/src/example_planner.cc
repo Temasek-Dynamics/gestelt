@@ -75,7 +75,7 @@ void ExamplePlanner::waypointsCB(const gestelt_msgs::GoalsPtr &msg){
         pose.position.z);
     // Transform received waypoints from world to UAV origin frame
     goal_waypoints_.push_back(wp);
-    // ROS_INFO("MSG waypoints: %f, %f, %f", wp[0], wp[1], wp[2]);
+    ROS_INFO("MSG waypoints: %f, %f, %f", wp[0], wp[1], wp[2]);
   }
   for (auto vel : msg->velocities) {
     Eigen::Vector3d wp_vel(
@@ -84,7 +84,7 @@ void ExamplePlanner::waypointsCB(const gestelt_msgs::GoalsPtr &msg){
         vel.linear.z);
     // Transform received waypoints from world to UAV origin frame
     goal_waypoints_vel_.push_back(wp_vel);
-    // ROS_INFO("MSG_VEL waypoints: %f, %f, %f", wp_vel[0], wp_vel[1], wp_vel[2]);
+    ROS_INFO("MSG_VEL waypoints: %f, %f, %f", wp_vel[0], wp_vel[1], wp_vel[2]);
   }
 
   for (auto acc : msg->accelerations) {
@@ -94,7 +94,7 @@ void ExamplePlanner::waypointsCB(const gestelt_msgs::GoalsPtr &msg){
         acc.linear.z);
     // Transform received waypoints from world to UAV origin frame
     goal_waypoints_acc_.push_back(wp_acc);
-    // ROS_INFO("MSG_ACC waypoints: %f, %f, %f", wp_acc[0], wp_acc[1], wp_acc[2]);
+    ROS_INFO("MSG_ACC waypoints: %f, %f, %f", wp_acc[0], wp_acc[1], wp_acc[2]);
   }
 
   mav_trajectory_generation::Trajectory trajectory;
