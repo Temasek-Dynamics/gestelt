@@ -51,22 +51,28 @@ class Vision{
 
         void startPerceptionImpl(const cv_bridge::CvImagePtr& cv_ptr);
 
-        void tfCameraToWorld(const Vision::Coordinates& camera_coordinates, Vision::Coordinates& world_coordinates);
+        void transform(const Vision::Coordinates& from_coordinates, const std::string from_frame, 
+                        Vision::Coordinates& to_coordinates, const std::string to_frame);
 
-        void convertToPointStamp(const Coordinates& coordinates, geometry_msgs::PointStamped& point);
+        void transform(const double& from_x, const double& from_y, const double& from_z, 
+                        const std::string from_frame, 
+                        double& to_x, double& to_y, double& to_z, 
+                        const std::string to_frame);
+
+        void convertToPointStamp(const Coordinates& coordinates, geometry_msgs::PointStamped& point, 
+                                    const std::string& frame);
 
         void convertToCoordinates(const geometry_msgs::PointStamped& point, Coordinates& coordinates);
         
         void pixelToCameraCoords(const cv::Point2f& pixel, const double& depth, Coordinates& camera_coords);
 
-        geometry_msgs::Pose createPose(const double& x, const double& y, const double& z);
+        geometry_msgs::Pose createPose(const double& x,const  double& y,const  double& z);
 
         std::pair<geometry_msgs::Accel, std_msgs::Bool> createAcceleration(
                                                             const double& acc_x, 
                                                             const double& acc_y, 
-                                                            const double& acc_z
-                                                            );
-
+                                                            const double& acc_z);
+                                                            
         std::pair<geometry_msgs::Twist, std_msgs::Bool> createVelocity(const double& vel_x, 
                                                                         const double& vel_y, 
                                                                         const double& vel_z);
@@ -77,12 +83,7 @@ class Vision{
                                 const float& time_factor_terminal, const float& time_factor, 
                                 const float& max_vel, const float& max_accel);
 
-        double estimateDepth(double realLength, const cv::Point2f& p1, const cv::Point2f& p2) {
-            double focalLength = (cameraMatrix_.at<double>(0, 0) + cameraMatrix_.at<double>(1, 1) )/2;
-            double pixelLength = cv::norm(p2 - p1);
-            double depth = (focalLength * realLength) / pixelLength;    
-            return depth;
-        }
+        double estimateDepth(double realLength, const cv::Point2f& p1, const cv::Point2f& p2);
 
         inline double None(){
             return std::numeric_limits<double>::max();
@@ -117,6 +118,7 @@ class Vision{
         tf2_ros::TransformListener tfListener_;
 
         bool start_image_pipeline__ = false;
+        bool waypoints_published__ = false;
 
         std::vector<geometry_msgs::Pose> position_waypoints;
         std::vector<std::pair<geometry_msgs::Accel, std_msgs::Bool>> acceleration_waypoints;

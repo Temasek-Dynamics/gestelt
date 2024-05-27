@@ -14,7 +14,7 @@ Vision::Vision(ros::NodeHandle& nh) :
     waypoints_pub__ = nh.advertise<gestelt_msgs::Goals>("/planner/goals", 10);
     
 
-    ros::spin();
+    ros::spin ();
 }
 
 void Vision::serverEventCallback(const gestelt_msgs::CommanderCommand::ConstPtr& msg){
@@ -25,20 +25,17 @@ void Vision::serverEventCallback(const gestelt_msgs::CommanderCommand::ConstPtr&
 }
 
 void Vision::imageCallback(const sensor_msgs::Image::ConstPtr& msg){
-    try
-    {
-        // Convert the ROS image message to a CvImage suitable for OpenCV
-        cv_bridge::CvImagePtr cv_ptr;
-        cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
-
+    try{
         // Checking for trigger
         if (start_image_pipeline__){
+            // Convert the ROS image message to a CvImage suitable for OpenCV
+            cv_bridge::CvImagePtr cv_ptr;
+            cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
             startPerceptionImpl(cv_ptr);
         }
         
     }
-    catch (cv_bridge::Exception& e)
-    {
+    catch (cv_bridge::Exception& e){
         ROS_ERROR("Could not convert from '%s' to 'bgr8'.", msg->encoding.c_str());
     }
 }
@@ -102,67 +99,73 @@ void Vision::startPerceptionImpl(const cv_bridge::CvImagePtr& cv_ptr) {
     Vision::Coordinates camera_coords;
     Vision::pixelToCameraCoords(center, depth_mean, camera_coords);
 
-    std::cout<<"Camera: "<<camera_coords.x <<", "<<camera_coords.y<<", "<<camera_coords.z<<std::endl;
+    // Convert coordinates in camera frame to base_link
+    Vision::Coordinates base_coords;
+    Vision::transform(camera_coords, "cam_link", base_coords, "base_link");
+    std::cout<<"Base: "<<base_coords.x <<", "<<base_coords.y<<", "<<base_coords.z<<std::endl;
     
-    // Convert coordinates in camera frame to world
-    Vision::Coordinates world_coords;
-    Vision::tfCameraToWorld(camera_coords, world_coords);
-    std::cout<<"world: "<<world_coords.x <<", "<<world_coords.y<<", "<<world_coords.z<<std::endl;
+    // Convert coordinates in camera frame to map
+    Vision::Coordinates map_coords;
+    Vision::transform(camera_coords, "cam_link", map_coords, "map");
+    std::cout<<"Map: "<<map_coords.x <<", "<<map_coords.y<<", "<<map_coords.z<<std::endl<<std::endl;
 
     /////////////////////////////////////////////////////////////////////////////////////
     // ----------------------------- Creating trajectory ----------------------------- //
-    float TIME_FACTOR_TERMINAL = 1;
-    float TIME_FACTOR = 1;
-    float MAX_VEL = 3;
-    float MAX_ACCEL = 8;
+    if (!waypoints_published__){
 
-    position_waypoints.push_back(Vision::createPose(world_coords.x, world_coords.y, world_coords.z));
-    position_waypoints.push_back(Vision::createPose(world_coords.x, world_coords.y+2, world_coords.z));
-    
-    acceleration_waypoints.push_back(Vision::createAcceleration(None(), 
-                                                                None(),
-                                                                None()));
+        float TIME_FACTOR_TERMINAL = 1;
+        float TIME_FACTOR = 1;
+        float MAX_VEL = 3;
+        float MAX_ACCEL = 8;
 
-    acceleration_waypoints.push_back(Vision::createAcceleration(None(), 
-                                                                None(),
-                                                                None()));
+        position_waypoints.push_back(Vision::createPose(map_coords.x, map_coords.y, map_coords.z));
+        position_waypoints.push_back(Vision::createPose(map_coords.x, map_coords.y-2.0, map_coords.z));
+        
+        acceleration_waypoints.push_back(Vision::createAcceleration(None(), 
+                                                                    None(),
+                                                                    None()));
 
-    velocity_waypoints.push_back(Vision::createVelocity(None(), 
-                                                        None(),
-                                                        None()));
+        acceleration_waypoints.push_back(Vision::createAcceleration(None(), 
+                                                                    None(),
+                                                                    None()));
 
-    velocity_waypoints.push_back(Vision::createVelocity(None(), 
-                                                        None(),
-                                                        None()));
+        velocity_waypoints.push_back(Vision::createVelocity(None(), 
+                                                            None(),
+                                                            None()));
 
-    
+        velocity_waypoints.push_back(Vision::createVelocity(None(), 
+                                                            None(),
+                                                            None()));
+
+        // Publish the transformed coordinates to trajectory planner
+        Vision::waypointsPublisher(position_waypoints, acceleration_waypoints, velocity_waypoints,
+                                    TIME_FACTOR_TERMINAL, TIME_FACTOR, MAX_VEL, MAX_ACCEL);
+        waypoints_published__ = true;                        
+    }
     // ------------------------------------------------------------------------------- //
     /////////////////////////////////////////////////////////////////////////////////////
-
-    // Publish the transformed coordinates to trajectory planner
-    Vision::waypointsPublisher(position_waypoints, acceleration_waypoints, velocity_waypoints,
-                                TIME_FACTOR_TERMINAL, TIME_FACTOR, MAX_VEL, MAX_ACCEL);
     
 }
 
-void Vision::tfCameraToWorld(const Coordinates& camera_coordinates, Coordinates& world_coordinates){
-    geometry_msgs::PointStamped cam_point;
-    Vision::convertToPointStamp(camera_coordinates, cam_point);
+void Vision::transform(const Vision::Coordinates& from_coordinates, const std::string from_frame, 
+                        Vision::Coordinates& to_coordinates, const std::string to_frame){
+    geometry_msgs::PointStamped from_point;
+    Vision::convertToPointStamp(from_coordinates, from_point, from_frame);
     
     try
     {
         geometry_msgs::TransformStamped transformStamped;
 
         // Look up the transform from cam_link to world
-        transformStamped = tfBuffer_.lookupTransform("map", "cam_link", ros::Time(0));
+        transformStamped = tfBuffer_.lookupTransform(to_frame, from_frame, ros::Time(0));
 
-        geometry_msgs::PointStamped world_point;
-        tf2::doTransform(cam_point, world_point, transformStamped);
+        geometry_msgs::PointStamped to_point;
+        tf2::doTransform(from_point, to_point, transformStamped);
 
         // ROS_INFO("cam_link coordinates: x = %f, y = %f, z = %f", cam_point.point.x, cam_point.point.y, cam_point.point.z);
         // ROS_INFO("world coordinates: x = %f, y = %f, z = %f", world_point.point.x, world_point.point.y, world_point.point.z);
 
-        Vision::convertToCoordinates(world_point, world_coordinates);
+        Vision::convertToCoordinates(to_point, to_coordinates);
     }
     catch (tf2::TransformException &ex)
     {
@@ -181,10 +184,18 @@ void Vision::pixelToCameraCoords(const cv::Point2f& pixel, const double& depth, 
             camera_coords.x = static_cast<double>(normalized.x) * depth;
             camera_coords.y = static_cast<double>(normalized.y) * depth;
             camera_coords.z = depth;
+}
+
+double Vision::estimateDepth(double realLength, const cv::Point2f& p1, const cv::Point2f& p2) {
+            double focalLength = (cameraMatrix_.at<double>(0, 0) + cameraMatrix_.at<double>(1, 1) )/2;
+            double pixelLength = cv::norm(p2 - p1);
+            double depth = (focalLength * realLength) / pixelLength;    
+            return depth;
         }
 
-void Vision::convertToPointStamp(const Coordinates& coordinates, geometry_msgs::PointStamped& point){
-    point.header.frame_id = "cam_link";
+void Vision::convertToPointStamp(const Coordinates& coordinates, geometry_msgs::PointStamped& point,
+                                    const std::string& frame){
+    point.header.frame_id = frame;
     point.header.stamp = ros::Time::now();
     point.point.x = coordinates.x;
     point.point.y = coordinates.y;
@@ -197,12 +208,50 @@ void Vision::convertToCoordinates(const geometry_msgs::PointStamped& point, Coor
     coordinates.z = point.point.z;
 }
 
-geometry_msgs::Pose Vision::createPose(const double& x, const double& y, const double& z){
-    geometry_msgs::Pose wp__;
-    wp__.position.x = x;
-    wp__.position.y = y;
-    wp__.position.z = z;
+void Vision::transform(const double& from_x, const double& from_y, const double& from_z, 
+                        const std::string from_frame, 
+                        double& to_x, double& to_y, double& to_z, 
+                        const std::string to_frame){
+    
+    Vision::Coordinates from_coordinates, to_coordinates;
+    from_coordinates.x = from_x;
+    from_coordinates.y = from_y;
+    from_coordinates.z = from_z;
+    
+    geometry_msgs::PointStamped from_point;
+    Vision::convertToPointStamp(from_coordinates, from_point, from_frame);
+    try
+    {
+        geometry_msgs::TransformStamped transformStamped;
 
+        // Look up the transform from cam_link to world
+        transformStamped = tfBuffer_.lookupTransform(to_frame, from_frame, ros::Time(0));
+
+        geometry_msgs::PointStamped to_point;
+        tf2::doTransform(from_point, to_point, transformStamped);
+
+        // ROS_INFO("cam_link coordinates: x = %f, y = %f, z = %f", cam_point.point.x, cam_point.point.y, cam_point.point.z);
+        // ROS_INFO("world coordinates: x = %f, y = %f, z = %f", world_point.point.x, world_point.point.y, world_point.point.z);
+
+        Vision::convertToCoordinates(to_point, to_coordinates);
+        to_x = to_coordinates.x;
+        to_y = to_coordinates.y;
+        to_z = to_coordinates.z;
+    }
+    catch (tf2::TransformException &ex)
+    {
+        ROS_WARN("%s", ex.what());
+    }
+}
+
+
+geometry_msgs::Pose Vision::createPose(const double& x, const double& y, const double& z){
+    double transformed_x,  transformed_y,  transformed_z;
+    Vision::transform(x, y, z, "map", transformed_x, transformed_y, transformed_z, "world");
+    geometry_msgs::Pose wp__;
+    wp__.position.x = transformed_x;
+    wp__.position.y = transformed_y;
+    wp__.position.z = transformed_z;
     wp__.orientation.x = 0;
     wp__.orientation.y = 0;
     wp__.orientation.z = -0.707;
@@ -216,7 +265,7 @@ std::pair<geometry_msgs::Accel, std_msgs::Bool> Vision::createAcceleration(
     
     geometry_msgs::Accel acc;
     std_msgs::Bool acc_mask;
-    if (acc_x != None()) {
+    if (acc_x != None()  &&  acc_y != None() && acc_z !=None()) {
         acc.linear.x = acc_x;
         acc.linear.y = acc_y;
         acc.linear.z = acc_z;
@@ -232,7 +281,7 @@ std::pair<geometry_msgs::Twist, std_msgs::Bool> Vision::createVelocity(const dou
                                                                         const double& vel_z) {
     geometry_msgs::Twist vel;
     std_msgs::Bool vel_mask;
-    if (vel_x != None()) {
+    if (vel_x != None() && vel_y != None() && vel_z != None()) {
         vel.linear.x = vel_x;
         vel.linear.y = vel_y;
         vel.linear.z = vel_z;
@@ -280,5 +329,5 @@ void Vision::waypointsPublisher(const std::vector<geometry_msgs::Pose> &waypoint
     waypoints_pub__.publish(wp_msg);
     // waypoints_pos_pub.publish(wp_pos_msg);
     // waypoints_acc_pub.publish(wp_acc_msg);
-    // waypoints_pub__.shutdown();
+    
 }
