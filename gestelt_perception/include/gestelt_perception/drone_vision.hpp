@@ -2,6 +2,7 @@
 #define DRONE_VISION_H
 
 #include <iostream>
+#include <numeric>
 #include <ros/ros.h>
 // #include <opencv2/opencv.hpp>
 #include <sensor_msgs/Image.h>
@@ -22,8 +23,7 @@
 #include <std_msgs/Bool.h>
 
 /* State machine events */
-enum ServerEvent
-{
+enum ServerEvent{
   TAKEOFF,        // 0
   LAND,           // 1
   MISSION,        // 2

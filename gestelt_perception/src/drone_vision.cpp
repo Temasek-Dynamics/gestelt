@@ -14,7 +14,7 @@ Vision::Vision(ros::NodeHandle& nh) :
     waypoints_pub__ = nh.advertise<gestelt_msgs::Goals>("/planner/goals", 10);
     
 
-    ros::spin ();
+    ros::spin();
 }
 
 void Vision::serverEventCallback(const gestelt_msgs::CommanderCommand::ConstPtr& msg){
@@ -33,7 +33,6 @@ void Vision::imageCallback(const sensor_msgs::Image::ConstPtr& msg){
             cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
             startPerceptionImpl(cv_ptr);
         }
-        
     }
     catch (cv_bridge::Exception& e){
         ROS_ERROR("Could not convert from '%s' to 'bgr8'.", msg->encoding.c_str());
@@ -87,13 +86,14 @@ void Vision::startPerceptionImpl(const cv_bridge::CvImagePtr& cv_ptr) {
     cv::Point2f bottomRight(boundingRect.x + boundingRect.width, boundingRect.y + boundingRect.height);
     
     // Calculate depth based on true size and pixel coordinates
-    double depth_1 = Vision::estimateDepth(true_horizontal_length_ , topLeft, topRight);
-    double depth_2 = Vision::estimateDepth(true_vertical_length_ , topRight, bottomRight);
-    double depth_3 = Vision::estimateDepth(true_horizontal_length_ , bottomRight, bottomLeft);
-    double depth_4 = Vision::estimateDepth(true_vertical_length_ , bottomLeft, topLeft);
+    std::vector<double> depth;
+    depth.push_back(Vision::estimateDepth(true_horizontal_length_ , topLeft, topRight));
+    depth.push_back(Vision::estimateDepth(true_vertical_length_ , topRight, bottomRight));
+    depth.push_back(Vision::estimateDepth(true_horizontal_length_ , bottomRight, bottomLeft));
+    depth.push_back(Vision::estimateDepth(true_vertical_length_ , bottomLeft, topLeft));
 
     // Taking mean of all 4 depths
-    double depth_mean = (depth_1 + depth_2 + depth_3 + depth_4) / 4;
+    double depth_mean = accumulate(depth.begin(), depth.end(), 0.0/depth.size());
 
     // To convert pixels to camera coordinates   
     Vision::Coordinates camera_coords;
@@ -152,8 +152,7 @@ void Vision::transform(const Vision::Coordinates& from_coordinates, const std::s
     geometry_msgs::PointStamped from_point;
     Vision::convertToPointStamp(from_coordinates, from_point, from_frame);
     
-    try
-    {
+    try{
         geometry_msgs::TransformStamped transformStamped;
 
         // Look up the transform from cam_link to world
@@ -167,8 +166,7 @@ void Vision::transform(const Vision::Coordinates& from_coordinates, const std::s
 
         Vision::convertToCoordinates(to_point, to_coordinates);
     }
-    catch (tf2::TransformException &ex)
-    {
+    catch (tf2::TransformException &ex){
         ROS_WARN("%s", ex.what());
     } 
 }
@@ -220,8 +218,7 @@ void Vision::transform(const double& from_x, const double& from_y, const double&
     
     geometry_msgs::PointStamped from_point;
     Vision::convertToPointStamp(from_coordinates, from_point, from_frame);
-    try
-    {
+    try{
         geometry_msgs::TransformStamped transformStamped;
 
         // Look up the transform from cam_link to world
@@ -238,8 +235,7 @@ void Vision::transform(const double& from_x, const double& from_y, const double&
         to_y = to_coordinates.y;
         to_z = to_coordinates.z;
     }
-    catch (tf2::TransformException &ex)
-    {
+    catch (tf2::TransformException &ex){
         ROS_WARN("%s", ex.what());
     }
 }
