@@ -1,18 +1,13 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(global_planner)
+project(dynamic_brushfire)
 
-set(CMAKE_BUILD_TYPE "Release")
-add_compile_options(-std=c++17)
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g")
+# set(CMAKE_BUILD_TYPE "Release")
+# add_compile_options(-std=c++17)
+# set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g")
 
 set(ROS_LIBRARIES
   roscpp
-  std_msgs
-  geometry_msgs
-  visualization_msgs
-  grid_map
-  jps3d
-  logger
+  nav_msgs
 )
 
 ## Find catkin macros and libraries
@@ -22,14 +17,15 @@ find_package(catkin REQUIRED COMPONENTS
   ${ROS_LIBRARIES}
 )
 find_package(Eigen3 REQUIRED)
+find_package(SDL REQUIRED)
 
 ###################################
 ## catkin specific configuration ##
 ###################################
 catkin_package(
  INCLUDE_DIRS include
- LIBRARIES global_planner # Exported libraries
- CATKIN_DEPENDS grid_map jps3d logger # Export grid_map as part of this package
+ LIBRARIES dynamic_brushfire # Exported libraries
+#  CATKIN_DEPENDS 
 #  DEPENDS system_lib
 )
 
@@ -46,12 +42,25 @@ include_directories(
 )
 
 ## Declare a C++ library
-add_library(global_planner 
-  src/a_star.cpp
-  src/jps_wrapper.cpp
+add_library(static_brushfire 
+  src/static_brushfire.cpp
 )
 
 ## Specify libraries to link a library or executable target against
-target_link_libraries(global_planner
+target_link_libraries(static_brushfire
   ${catkin_LIBRARIES}
+  SDL SDL_image
 )
+
+
+add_executable(static_brushfire_node
+  src/dynamicvoronoi.cpp
+  src/static_brushfire_node.cpp 
+)
+target_link_libraries(static_brushfire_node 
+  ${catkin_LIBRARIES}
+  static_brushfire
+)
+
+
+

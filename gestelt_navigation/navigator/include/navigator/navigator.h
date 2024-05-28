@@ -49,7 +49,7 @@
 #include <optimizer/poly_traj_optimizer.h>
 #include <optimizer/polyhedron_sfc_optimizer.h>
 #include <optimizer/spherical_sfc_optimizer.h>
-#include <ego_planner_fsm/ego_planner_manager.h>
+#include <ego_planner_manager/ego_planner_manager.h>
 
 class Navigator
 {

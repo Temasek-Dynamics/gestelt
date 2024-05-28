@@ -17,7 +17,7 @@ set(ROS_LIBRARIES
   traj_utils
   traj_opt
   gestelt_debug_msgs
-  ego_planner_fsm
+  ego_planner_manager
 ) 
 
 find_package(Eigen3 REQUIRED)

@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>navigator</name>
+  <name>dynamic_brushfire</name>
   <version>0.0.1</version>
-  <description>The navigator package</description>
+  <description>The dynamic_brushfire package</description>
 
   <maintainer email="johntgz@nus.edu.sg">john tan</maintainer>
 
@@ -13,20 +13,7 @@
   <build_export_depend>roscpp</build_export_depend>
   <exec_depend>roscpp</exec_depend>
 
-  <depend>std_msgs</depend>
-  <depend>geometry_msgs</depend>
   <depend>nav_msgs</depend>
-  <depend>gestelt_msgs</depend>
-  <depend>global_planner</depend>
-
-  <depend>traj_utils</depend>
-  <depend>traj_opt</depend>
-
-  <depend>sfc_generation</depend>
-
-  <depend>gestelt_debug_msgs</depend>
-
-  <depend>ego_planner_manager</depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>
@@ -34,6 +21,3 @@
 
   </export>
 </package>
-
-
-<!-- catkin_make -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=Yes -->
