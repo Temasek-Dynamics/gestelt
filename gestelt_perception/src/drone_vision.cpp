@@ -217,28 +217,10 @@ void Vision::transform(const double& from_x, const double& from_y, const double&
     from_coordinates.y = from_y;
     from_coordinates.z = from_z;
     
-    geometry_msgs::PointStamped from_point;
-    Vision::convertToPointStamp(from_coordinates, from_point, from_frame);
-    try{
-        geometry_msgs::TransformStamped transformStamped;
-
-        // Look up the transform from cam_link to world
-        transformStamped = tfBuffer_.lookupTransform(to_frame, from_frame, ros::Time(0));
-
-        geometry_msgs::PointStamped to_point;
-        tf2::doTransform(from_point, to_point, transformStamped);
-
-        // ROS_INFO("cam_link coordinates: x = %f, y = %f, z = %f", cam_point.point.x, cam_point.point.y, cam_point.point.z);
-        // ROS_INFO("world coordinates: x = %f, y = %f, z = %f", world_point.point.x, world_point.point.y, world_point.point.z);
-
-        Vision::convertToCoordinates(to_point, to_coordinates);
-        to_x = to_coordinates.x;
-        to_y = to_coordinates.y;
-        to_z = to_coordinates.z;
-    }
-    catch (tf2::TransformException &ex){
-        ROS_WARN("%s", ex.what());
-    }
+    Vision::transform(from_coordinates, from_frame, to_coordinates, to_frame);
+    to_x = to_coordinates.x;
+    to_y = to_coordinates.y;
+    to_z = to_coordinates.z;
 }
 
 
