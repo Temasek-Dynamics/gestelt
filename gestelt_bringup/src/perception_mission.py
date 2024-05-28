@@ -202,12 +202,12 @@ def main():
         
         if (MISSION_MODE):
             # Already in MISSION 
-            time.sleep(5)
-            # set PX4 parameters
-            # set_PX4_parameters("MPC_RPT_XY_KI", 0.5) #0.5
-            # set_PX4_parameters("MPC_RPT_Z_KI", 1.2) #0.5
-            # set_PX4_parameters("MPC_RPT_Z_SIGMA", 3) #2.5
-            time.sleep(2)
+            # time.sleep(5)
+            # # set PX4 parameters
+            # # set_PX4_parameters("MPC_RPT_XY_KI", 0.5) #0.5
+            # # set_PX4_parameters("MPC_RPT_Z_KI", 1.2) #0.5
+            # # set_PX4_parameters("MPC_RPT_Z_SIGMA", 3) #2.5
+            # time.sleep(2)
             break
         elif (not HOVER_MODE):
             # IDLE -> TAKE OFF -> HOVER
@@ -217,6 +217,7 @@ def main():
         elif (HOVER_MODE):
             # HOVER -> desired position -> MISSION
             print("Setting to MISSION mode!")
+            time.sleep(10)
             publishCommand(CommanderCommand.MISSION)
             print(f"Starting perception pipeline...")
 

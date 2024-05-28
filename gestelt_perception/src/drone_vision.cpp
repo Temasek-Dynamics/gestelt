@@ -93,11 +93,12 @@ void Vision::startPerceptionImpl(const cv_bridge::CvImagePtr& cv_ptr) {
     depth.push_back(Vision::estimateDepth(true_vertical_length_ , bottomLeft, topLeft));
 
     // Taking mean of all 4 depths
-    double depth_mean = accumulate(depth.begin(), depth.end(), 0.0/depth.size());
+    double depth_mean = accumulate(depth.begin(), depth.end(), 0.0)/depth.size();
 
     // To convert pixels to camera coordinates   
     Vision::Coordinates camera_coords;
     Vision::pixelToCameraCoords(center, depth_mean, camera_coords);
+    std::cout<<"Camera: "<<camera_coords.x <<", "<<camera_coords.y<<", "<<camera_coords.z<<std::endl;
 
     // Convert coordinates in camera frame to base_link
     Vision::Coordinates base_coords;
@@ -179,9 +180,9 @@ void Vision::pixelToCameraCoords(const cv::Point2f& pixel, const double& depth, 
 
             // Convert to camera coordinates using the provided depth
             cv::Point2f normalized = undistortedPoints[0];
-            camera_coords.x = static_cast<double>(normalized.x) * depth;
-            camera_coords.y = static_cast<double>(normalized.y) * depth;
-            camera_coords.z = depth;
+            camera_coords.y = -static_cast<double>(normalized.x) * depth;
+            camera_coords.z = -static_cast<double>(normalized.y) * depth;
+            camera_coords.x = depth;
 }
 
 double Vision::estimateDepth(double realLength, const cv::Point2f& p1, const cv::Point2f& p2) {
@@ -266,7 +267,8 @@ std::pair<geometry_msgs::Accel, std_msgs::Bool> Vision::createAcceleration(
         acc.linear.y = acc_y;
         acc.linear.z = acc_z;
         acc_mask.data = false;
-    } else {
+    } 
+    else {
         acc_mask.data = true;
     }
     return std::make_pair(acc, acc_mask);
@@ -282,7 +284,8 @@ std::pair<geometry_msgs::Twist, std_msgs::Bool> Vision::createVelocity(const dou
         vel.linear.y = vel_y;
         vel.linear.z = vel_z;
         vel_mask.data = false;
-    } else {
+    } 
+    else {
         vel_mask.data = true;
     }
     return std::make_pair(vel, vel_mask);
