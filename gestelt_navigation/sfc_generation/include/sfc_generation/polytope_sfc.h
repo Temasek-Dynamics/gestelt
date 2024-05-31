@@ -36,12 +36,11 @@ public: // Public structs
 
   struct PolytopeSFCParams{
     /* SFC Generation */
-    int max_itr; // Corresponds to maximum number of spheres
     bool debug_viz; // If true, publish visualization for debugging
 
     std::string world_frame{"world"};
     int poly_hor{-1}; // number of polyhedra to consider at each planning iteration
-    CVXDecompType cvx_decomp_type{CVXDecompType::TOUMIEH_OLD};
+    CVXDecompType cvx_decomp_type{CVXDecompType::TOUMIEH_NEW};
     int n_it_decomp{60};  // no. of expansion iterations to generate the convex polyhedron
 
   }; // struct PolytopeSFCParams
@@ -75,8 +74,12 @@ public: // Public structs
     return poly_constr_vec_;
   }
 
-  std::vector<Polyhedron3D, Eigen::aligned_allocator<Polyhedron3D>> getPolySFCHyperplanes() const {
-    return poly_vec_;
+  // std::vector<Polyhedron3D, Eigen::aligned_allocator<Polyhedron3D>> getPolySFCHyperplanes() const {
+  //   return poly_vec_;
+  // }
+
+ std::vector<Eigen::MatrixX4d> getPolySFCHyperplanes() const {
+    return poly_vec_hyp_;
   }
 
   // Return matrix of Size (3, M). Representing an array of vertex-based polyhedrons.
@@ -84,6 +87,8 @@ public: // Public structs
   {
     return poly_vec_vtx_;
   }
+
+
 
   bool processCorridor(const std::vector<Eigen::MatrixX4d> &hPs,
                                       std::vector<Eigen::Matrix3Xd> &vPs)

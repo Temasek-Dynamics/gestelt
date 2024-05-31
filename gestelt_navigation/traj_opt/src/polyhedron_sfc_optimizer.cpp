@@ -110,15 +110,17 @@ namespace back_end
 
   bool PolyhedronSFCOptimizer::optimizeTrajectory(
       const Eigen::Matrix3d &startPVA, const Eigen::Matrix3d &endPVA,
-      const Eigen::MatrixXd &inner_ctrl_pts, const Eigen::VectorXd &init_seg_dur,
+      const Eigen::MatrixXd &P, const Eigen::VectorXd &init_seg_dur,
       const Eigen::VectorXi& vPolyIdx, const std::vector<Eigen::Matrix3Xd>& vPolytopes,
+      const Eigen::VectorXi& hPolyIdx, const std::vector<Eigen::MatrixX4d>& hPolytopes,
       const int& num_decis_var_t, const int& num_decis_var_bary,
       double &final_cost)
   {
+    std::cout << "PolyhedronSFCOptimizer::optimizeTrajectory" << std::endl;
     // IF size of inner points and segment durations are not the same, there is a bug
-    if (inner_ctrl_pts.cols() != (init_seg_dur.size() - 1))
+    if (P.cols() != (init_seg_dur.size() - 1))
     {
-      ROS_ERROR("[PolyhedronSFCOptimizer::optimizeTrajectory] inner_ctrl_pts.cols() != (init_seg_dur.size()-1)");
+      ROS_ERROR("[PolyhedronSFCOptimizer::optimizeTrajectory] P.cols() != (init_seg_dur.size()-1)");
       return false;
     }
 
@@ -132,27 +134,58 @@ namespace back_end
     
     num_decis_var_t_ = num_decis_var_t;
     num_decis_var_bary_ = num_decis_var_bary;
+    
     vPolyIdx_ = vPolyIdx;
     vPolytopes_ = vPolytopes;
-    inner_ctrl_pts_ = inner_ctrl_pts;
+    hPolyIdx_ = hPolyIdx;
+    hPolytopes_ = hPolytopes;
 
-    time_seg_durs_ = init_seg_dur;
+    P_ = P;             // assign initial inner control points
+    T_ = init_seg_dur;  // assign initial segment time durations
+    grad_P_.resize(3, num_decis_var_t - 1); // resize gradient of inner control points
 
     /* Initialize decision variables*/
-    double x_init[num_decis_var]; // Initial decision variables: Array of [ inner_ctrl_pts, init_seg_dur ]
+    double x_init[num_decis_var]; // Initial decision variables: Array of [ P, init_seg_dur ]
 
-    Eigen::Map<Eigen::VectorXd> Vt(x_init, num_decis_var_t); 
-    Eigen::Map<Eigen::VectorXd> xi(x_init + num_decis_var_t, num_decis_var_bary); 
+    Eigen::Map<Eigen::VectorXd> tau(x_init, num_decis_var_t_); 
+    Eigen::Map<Eigen::VectorXd> xi(x_init + num_decis_var_t_, num_decis_var_bary_); 
 
     // Eigen::Map<const Eigen::VectorXd> t(x + (3 * (opt->num_segs_ - 1)), opt->num_segs_);
 
-    // Convert from real to virtual time Vt
-    RealT2VirtualT(init_seg_dur, Vt);
+    // Convert from real to virtual time tau
+    RealT2VirtualT(init_seg_dur, tau);
     // // Convert from constrained coordinates q to barycentric coordinates xi
-    backwardP(inner_ctrl_pts, vPolyIdx, vPolytopes, xi);
+    backwardP(P_, vPolyIdx_, vPolytopes_, xi);
+
+
+    Eigen::VectorXd T_test = init_seg_dur;     
+    Eigen::MatrixXd P_test = P;     
+    /* Testing */
+    // Convert from virtual to real time
+    VirtualT2RealT(tau, T_test);
+    // Convert from xi into q (P_)
+    forwardP(xi, vPolyIdx_, vPolytopes_, P_test);
+
+    // std::cout << "---------INITIAL---------" << std::endl;
+
+    // std::cout << "P_: " << P_.transpose() << std::endl;
+    // std::cout << "--------------------" << std::endl;
+    // std::cout << "T: " << init_seg_dur.transpose() << std::endl;
+
+    // std::cout << "---------Backward pass---------" << std::endl;
+    // std::cout << "xi: " << xi.transpose() << std::endl;
+    // std::cout << "--------------------" << std::endl;
+    // std::cout << "tau: " << tau.transpose() << std::endl;
+
+    // std::cout << "---------Forward pass---------" << std::endl;
+    // std::cout << "T_test: " << T_test.transpose() << std::endl;
+    // std::cout << "--------------------" << std::endl;
+    // std::cout << "P_test: " << P_test.transpose() << std::endl;
+    // std::cout << "--------------------" << std::endl;
+
+    // std::cout << "---------INITIAL---------" << std::endl;
 
     /* Initialize minimum jerk trajectory */
-    mjo_xi_.reset(startPVA, endPVA, num_segs_);
     mjo_q_.reset(startPVA, endPVA, num_segs_);
 
     lbfgs::lbfgs_parameter_t lbfgs_params;
@@ -179,7 +212,7 @@ namespace back_end
       t_now_ = ros::Time::now().toSec();
 
       /* ---------- optimize ---------- */
-      t1 = ros::Time::now();
+      double t1 = ros::Time::now().toSec();
       int result = lbfgs::lbfgs_optimize(
           num_decis_var,                  // The number of variables 
           x_init,                         // The array of variables.
@@ -189,7 +222,7 @@ namespace back_end
           PolyhedronSFCOptimizer::earlyExitCallback,    // The callback function to receive the progress (the number of iterations, the current value of the objective function) of the minimization process.
           this,                           // A user data for the client program. The callback functions will receive the value of this argument.
           &lbfgs_params);                 // The pointer to a structure representing parameters for L-BFGS optimization. A client program can set this parameter to NULL to use the default parameters
-      double opt_time_ms = (ros::Time::now() - t1).toSec() * 1000;
+      double opt_time_ms = (ros::Time::now().toSec() - t1)* 1000;
 
       // IF converged, maxmimum_iteration, already minimized or stop
       if (result == lbfgs::LBFGS_CONVERGENCE ||
@@ -199,7 +232,7 @@ namespace back_end
       {
         flag_force_return = false;
         // TODO: Add collision-checking in the path
-        // printf("\033[32m [PolyhedronSFCOptimizer]: UAV %d: Optimization Succeeded! iter=%d, time(ms)=%5.3f, total_t(ms)=%5.3f, cost=%5.3f\n \033[0m", drone_id_, iter_num_, opt_time_ms, total_opt_time_ms, final_cost);
+        printf("\033[32m [PolyhedronSFCOptimizer::optimizeTrajectory]: UAV %d: Optimization Succeeded! iter=%d, time(ms)=%5.3f, cost=%5.3f\n \033[0m", drone_id_, iter_num_, opt_time_ms, final_cost);
         flag_success = true;
       }
       // ELSE IF Cancelled
@@ -207,14 +240,14 @@ namespace back_end
       {
         flag_force_return = true;
         num_retries++; 
-        std::cout << "[PolyhedronSFCOptimizer] Optimization Cancelled!" << std::endl;
+        std::cout << "[PolyhedronSFCOptimizer::optimizeTrajectory] Optimization Cancelled!" << std::endl;
         // std::cout << "iter=" << iter_num_ << ",time(ms)=" << opt_time_ms << ",rebound." <<std::endl;
       }
       // ELSE ERROR
       else
       {
         std::cout << "iter=" << iter_num_ << ",time(ms)=" << opt_time_ms << ",error." <<std::endl;
-        ROS_WARN("[PolyhedronSFCOptimizer] UAV %d: Solver error. Return = %d, %s. Skip this planning.", drone_id_, result, lbfgs::lbfgs_strerror(result));
+        ROS_WARN("[PolyhedronSFCOptimizer::optimizeTrajectory] UAV %d: Solver error. Return = %d, %s. Skip this planning.", drone_id_, result, lbfgs::lbfgs_strerror(result));
       }
 
     } while ((flag_force_return && force_stop_type_ == STOP_FOR_REBOUND && num_retries <= 20));
@@ -222,142 +255,53 @@ namespace back_end
     return flag_success;
   }
 
-
-
-
   /* callbacks by the L-BFGS optimizer */
   double PolyhedronSFCOptimizer::costFunctionCallback(void *func_data, const double *x, double *grad, const int n)
   {
-    // Pointer to current instance of PolyhedronSFCOptimizer
-    PolyhedronSFCOptimizer *obj = reinterpret_cast<PolyhedronSFCOptimizer *>(func_data);
 
-    const int dimTau = obj->num_decis_var_t_;
-    const int dimXi =  obj->num_decis_var_bary_;
-
-    Eigen::Map<const Eigen::VectorXd> tau(x.data(), dimTau);
-    Eigen::Map<const Eigen::VectorXd> xi(x.data() + dimTau, dimXi);
-
-    // Convert from virtual to real time
-    obj->VirtualT2RealT(tau, obj->time_seg_durs_);
-    // Convert from xi into q (inner_ctrl_pts_)
-    obj->forwardP(xi, obj->vPolyIdx_, obj->vPolytopes_, obj->inner_ctrl_pts_);
-
-    // Gradients 
-    Eigen::Map<Eigen::VectorXd> gradTau(grad.data(), dimTau);
-    Eigen::Map<Eigen::VectorXd> gradXi(grad.data() + dimTau, dimXi);
-
-    // Initialize cost values
-    double jerk_cost = 0, time_cost = 0;
-    opt->min_ellip_dist2_ = std::numeric_limits<double>::max();
-
-
-    // MJO in constrained q coordinates
-    opt->mjo_q_.generate(obj->inner_ctrl_pts_, obj->time_seg_durs_); // Generate minimum jerk trajectory
-    opt->cstr_pts_q_ = opt->mjo_q_.getInitConstraintPoints(opt->cps_num_perPiece_); // Discretize trajectory into inner constraint points
-
-    /** 1. Jerk cost 
-     * jerk_cost is trajectory jerk cost
-     */
-    opt->mjo_q_.initGradCost(gradT, jerk_cost); // In initGradCost(...), do addGradJbyT(gdT) and addGradJbyC(gdC);
-
-    /** 2. Time integral cost 
-      *   2a. Static obstacle cost
-      *   2b. Swarm cost
-      *   2c. Dynamical feasibility
-      *   2d. Uniformity of points
-    */
-    Eigen::VectorXd obs_swarm_feas_qvar_costs(4); // Vector of costs containing (Static obstacles, swarm, dynamic, feasibility, qvar)
-    opt->addPVAGradCost2CT(gradT, obs_swarm_feas_qvar_costs, opt->cps_num_perPiece_, opt->mjo_q_); 
-
-    /** 3. Time cost 
-    */
-    opt->VirtualTGradCost(T, t, gradT, gradt, time_cost);
-
-
-
-
-
-
-    attachPenaltyFunctional(obj->time_seg_durs_, obj->minco.getCoeffs(),
-                            obj->hPolyIdx, obj->hPolytopes,
-                            obj->smoothEps, obj->integralRes,
-                            obj->magnitudeBd, obj->penaltyWt, obj->flatmap,
-                            cost, obj->partialGradByTimes, obj->partialGradByCoeffs);
-
-    obj->minco.propogateGrad(obj->partialGradByCoeffs, obj->partialGradByTimes,
-                            obj->gradByPoints, obj->gradByTimes);
-
-    cost += wei_time_ * obj->time_seg_durs_.sum();
-    obj->gradByTimes.array() += wei_time_;
-
-    VirtualTGradCost(tau, obj->gradByTimes, gradTau);
-    backwardGradP(xi, obj->vPolyIdx, obj->vPolytopes, obj->gradByPoints, gradXi);
-    normRetrictionLayer(xi, obj->vPolyIdx, obj->vPolytopes, cost, gradXi);
-
-    return cost;
-
-
-
-
-    opt->iter_num_++;
-
-    return jerk_cost + obs_swarm_feas_qvar_costs.sum() + time_cost;
-  }
-
-  /* callbacks by the L-BFGS optimizer */
-  double PolyhedronSFCOptimizer::costFunctionCallback(void *func_data, const double *x, double *grad, const int n)
-  {
     // Pointer to current instance of PolyhedronSFCOptimizer
     PolyhedronSFCOptimizer *opt = reinterpret_cast<PolyhedronSFCOptimizer *>(func_data);
 
-    // func_data = instance of class                                  // The user data sent for lbfgs_optimize() function by the client.
-    // x         = x_init = [inner_ctrl_pts, virtual_time_durations]  // x is pointer to start of the array/matrix. The current values of variables.
-    // grad      = (gradP, gradt)                                     // The gradient vector. The callback function must compute the gradient values for the current variables.
-    // n         = num_decis_var = 4 * (num_segs_ - 1) + 1           // The number of variables.
+    const int dimTau = opt->num_decis_var_t_;
+    const int dimXi =  opt->num_decis_var_bary_;
 
-    // P_xi IS CONTROL POINTS IN XI UNCONSTRAINED SPACE
-    //      Taken from decision variables at start of iteration. inner 3d position of trajectory
-    Eigen::Map<const Eigen::MatrixXd> P_xi(x, 3, opt->num_segs_ - 1); // 3 x (M-1)
-    //      we specify "x + (3 * (opt->num_segs_ - 1))" because that is the address, its not the value
-    Eigen::Map<const Eigen::VectorXd> t(x + (3 * (opt->num_segs_ - 1)), opt->num_segs_);
-    // convert from virtual time t to real time T
-    Eigen::VectorXd T(opt->num_segs_);
-    opt->VirtualT2RealT(t, T); 
+    Eigen::Map<const Eigen::VectorXd> tau(x, dimTau);         // virtual time
+    Eigen::Map<const Eigen::VectorXd> xi(x + dimTau, dimXi);  // barycentric weights
 
-    // gradP: start from grad[0]
-    Eigen::Map<Eigen::MatrixXd> gradP(grad, 3, opt->num_segs_ - 1); // p.d.(H / xi)
-    // gradt: start from grad[3 * (M-1)]
-    Eigen::Map<Eigen::VectorXd> gradt(grad + (3 * (opt->num_segs_ - 1)), opt->num_segs_); // p.d.(H / t_i)
-    // gradT: P.D. of objective function H w.r.t time T, A vector of size (M, 1)
-    //        Each element is a value of the gradient
-    Eigen::VectorXd gradT(opt->num_segs_); 
+    // Convert from virtual to real time
+    opt->VirtualT2RealT(tau, opt->T_);
+    // Convert from xi into q (P_)
+    opt->forwardP(xi, opt->vPolyIdx_, opt->vPolytopes_, opt->P_);
+
+    std::cout << "  ---------A---------" << std::endl;
+    std::cout << "  opt->T_: " << opt->T_.transpose() << std::endl;
+    std::cout << "  opt->P_: " << opt->P_.transpose() << std::endl;
+    std::cout << "  ---------A---------" << std::endl;
+
+    // Gradients 
+    Eigen::Map<Eigen::VectorXd> grad_tau(grad, dimTau);         // gradient of virtual time
+    Eigen::Map<Eigen::VectorXd> grad_xi(grad + dimTau, dimXi);  // gradient of xi
+
+    Eigen::VectorXd grad_T(opt->num_decis_var_t_);  // p.d.(H / t_i)
 
     // Initialize cost values
     double jerk_cost = 0, time_cost = 0;
     opt->min_ellip_dist2_ = std::numeric_limits<double>::max();
 
-    // For forward cost evaluation: Get minimum jerk trajectory coordinates in q space
-    Eigen::MatrixXd P_q;
-    if (opt->iter_num_ == 0){
-      P_q = P_xi;
-    }
-    else {
-      // P_q = opt->f_B_ctrl_pts(P_xi,
-      //                         opt->spheres_center_, opt->spheres_radius_,
-      //                         opt->intxn_plane_vec_, opt->intxn_plane_dist_,
-      //                         opt->intxn_center_, opt->intxn_circle_radius_);
-    }
-    opt->mjo_q_.generate(P_q, T); // Generate minimum jerk trajectory
+    // MJO in constrained q coordinates
+    opt->mjo_q_.generate(opt->P_, opt->T_); // Generate minimum jerk trajectory
     opt->cstr_pts_q_ = opt->mjo_q_.getInitConstraintPoints(opt->cps_num_perPiece_); // Discretize trajectory into inner constraint points
-
-    // For visualization: Get minimum jerk trajectory coordinates in xi space
-    opt->mjo_xi_.generate(P_xi, T); // Generate minimum jerk trajectory
-    opt->cstr_pts_xi_ = opt->mjo_xi_.getInitConstraintPoints(opt->cps_num_perPiece_);
 
     /** 1. Jerk cost 
      * jerk_cost is trajectory jerk cost
      */
-    opt->mjo_q_.initGradCost(gradT, jerk_cost); // In initGradCost(...), do addGradJbyT(gdT) and addGradJbyC(gdC);
+    // Get gradient of real time and jerk cost
+    opt->mjo_q_.initGradCost(grad_T, jerk_cost); // In initGradCost(...), do addGradJbyT(gdT) and addGradJbyC(gdC);
+
+    std::cout << "  ---------B---------" << std::endl;
+    std::cout << "  grad_T: " << grad_T.transpose() << std::endl;
+    std::cout << "  jerk_cost: " << jerk_cost<< std::endl;
+    std::cout << "  ---------B---------" << std::endl;
 
     /** 2. Time integral cost 
       *   2a. Static obstacle cost
@@ -366,31 +310,44 @@ namespace back_end
       *   2d. Uniformity of points
     */
     Eigen::VectorXd obs_swarm_feas_qvar_costs(4); // Vector of costs containing (Static obstacles, swarm, dynamic, feasibility, qvar)
-    opt->addPVAGradCost2CT(gradT, obs_swarm_feas_qvar_costs, opt->cps_num_perPiece_, opt->mjo_q_); 
+    opt->addPVAGradCost2CT(grad_T, obs_swarm_feas_qvar_costs, 
+                            opt->cps_num_perPiece_, opt->mjo_q_,
+                            opt->hPolyIdx_, opt->hPolytopes_ ); 
 
-    // Update the gradient costs p.d.(H / T_i) 
-    //                       and p.d.(H / xi)
-    // opt->mjo_q_.getGrad2TP(gradT, gradP, P_xi, 
-    //                         opt->spheres_center_, opt->spheres_radius_,
-    //                         opt->intxn_plane_vec_, opt->intxn_plane_dist_,
-    //                         opt->intxn_center_, opt->intxn_circle_radius_);
-    // time_cost += opt->rho_ * T(0) * piece_nums;  // same t
-    // grad[n - 1] = (gradT.sum() + opt->rho_ * piece_nums) * gdT2t(x[n - 1]);  // same t
+    std::cout << "  ---------C---------" << std::endl;
+    std::cout << "  grad_T: " << grad_T.transpose() << std::endl;
+    std::cout << "  ---------C---------" << std::endl;
 
-    /** 3. Time cost 
+    /** 3. Update the gradient costs p.d.(H / T_i) and p.d.(H / xi)
     */
-    opt->VirtualTGradCost(T, t, gradT, gradt, time_cost);
+    opt->mjo_q_.getGrad2TP(grad_T, opt->grad_P_); // Update the p.d.(H/T_i) and p.d.(H/q) 
 
-    // Collect intermediate MJO trajectories for publishing later
-    opt->intermediate_cstr_pts_xi_.push_back(P_xi);
-    opt->intermediate_cstr_pts_q_.push_back(P_q);
+    std::cout << "  ---------D---------" << std::endl;
+    std::cout << "  grad_T: " << grad_T.transpose() << std::endl;
+    std::cout << "  opt->grad_P_: " << opt->grad_P_.transpose() << std::endl;
+    std::cout << "  ---------D---------" << std::endl;
 
-    // opt->visualization_->displayIntermediateGrad("aggregate_position", P_xi, gradP);
+    /** 3. Get gradients 
+    */
+    // Get gradient of virtual time (grad_tau)
+    opt->VirtualTGradCost(opt->T_, tau, grad_T, grad_tau, time_cost);
+
+    // Get gradient w.r.t xi (grad_xi)
+    backwardGradP(xi, opt->vPolyIdx_, opt->vPolytopes_, opt->grad_P_, grad_xi);
+    // normRetrictionLayer(xi, opt->vPolyIdx_, opt->vPolytopes_, jerk_cost, grad_xi);
+
+    std::cout << "  ---------F---------" << std::endl;
+    std::cout << "  grad_tau: " << grad_tau.transpose() << std::endl;
+    std::cout << "  time_cost: " << time_cost << std::endl;
+    std::cout << "  grad_xi: " << grad_xi.transpose() << std::endl;
+    std::cout << "  spatial_cost: " << jerk_cost + obs_swarm_feas_qvar_costs.sum() << std::endl;
+    std::cout << "  ---------F---------" << std::endl;
 
     opt->iter_num_++;
 
     return jerk_cost + obs_swarm_feas_qvar_costs.sum() + time_cost;
   }
+
 
   /* Cost functions */
 
@@ -417,49 +374,38 @@ namespace back_end
     return (opt->force_stop_type_ == STOP_FOR_ERROR || opt->force_stop_type_ == STOP_FOR_REBOUND);
   }
 
-  /**
-   * @brief 
-   * 
-   * @tparam EIGENVEC 
-   * @tparam EIGENVECGD 
-   * @param RT Real time
-   * @param VT Virtual time
-   * @param gdRT Gradient of real time
-   * @param gdVT Gradient of virtual time
-   * @param costT Time cost
-   */
+
   template <typename EIGENVEC, typename EIGENVECGD>
   void PolyhedronSFCOptimizer::VirtualTGradCost(
-      const Eigen::VectorXd &RT, const EIGENVEC &VT,
-      const Eigen::VectorXd &gdRT, EIGENVECGD &gdVT,
+      const Eigen::VectorXd &T, const EIGENVEC &tau,
+      const Eigen::VectorXd &grad_T, EIGENVECGD &grad_tau,
       double &costT)
   {
-    // VirtualTGradCost(T, t, gradT, gradt, time_cost)
-    // gdRT: gradT // Grad real time
-    // gdVT: gradt // Grad virtual time
 
-    for (int i = 0; i < VT.size(); ++i)
+    for (int i = 0; i < tau.size(); ++i)
     {
       double gdVT2Rt;
-      if (VT(i) > 0)
+      if (tau(i) > 0)
       {
-        gdVT2Rt = VT(i) + 1.0;
+        gdVT2Rt = tau(i) + 1.0;
       }
       else
       {
-        double denSqrt = (0.5 * VT(i) - 1.0) * VT(i) + 1.0;
-        gdVT2Rt = (1.0 - VT(i)) / (denSqrt * denSqrt);
+        double denSqrt = (0.5 * tau(i) - 1.0) * tau(i) + 1.0;
+        gdVT2Rt = (1.0 - tau(i)) / (denSqrt * denSqrt);
       }
 
-      gdVT(i) = (gdRT(i) + wei_time_) * gdVT2Rt;
+      grad_tau(i) = (grad_T(i) + wei_time_) * gdVT2Rt;
     }
 
-    costT = RT.sum() * wei_time_;
+    costT = T.sum() * wei_time_;
   }
 
   template <typename EIGENVEC>
   void PolyhedronSFCOptimizer::addPVAGradCost2CT(
-      EIGENVEC &gdT, Eigen::VectorXd &obs_swarm_feas_qvar_costs, const int &K, poly_traj::MinJerkOpt& mjo)
+      EIGENVEC &gdT, Eigen::VectorXd &obs_swarm_feas_qvar_costs, 
+      const int &K, poly_traj::MinJerkOpt& mjo,
+      const Eigen::VectorXi& hPolyIdx, const std::vector<Eigen::MatrixX4d>& hPolytopes)
   {
     int N = num_segs_; // N: Number of segments
     Eigen::Vector3d pos, vel, acc, jer;
@@ -508,64 +454,57 @@ namespace back_end
         /**
          * Penalty on exceeding bounds of polyhedrons
          */
-        L = hIdx(i);
-        K = hPolys[L].rows(); // Get the rows(hyperplanes) of the L-th polyhedron
-        for (int k = 0; k < K; k++) // For each hyperplane in L-th polyhedron
+        int L = hPolyIdx(i);          // Get the polytope index belonging to segment i
+        int num_hyp_planes = hPolytopes[L].rows(); // Get the rows(hyperplanes) of the L-th polyhedron
+        for (int k = 0; k < num_hyp_planes; k++) // For each hyperplane in L-th polyhedron
         {
-            Eigen::Vector3d outerNormal = hPolys[L].block<1, 3>(k, 0);
-            double poly_pen = outerNormal.dot(pos) + hPolys[L](k, 3);
+            Eigen::Vector3d outerNormal = hPolytopes[L].block<1, 3>(k, 0);
+            double poly_pen = outerNormal.dot(pos) + hPolytopes[L](k, 3); // polyhedron penalty
 
             if (poly_pen > 0){
               // TODO: Partial derivatives of Constraint
-              Eigen::Matrix<double, 6, 3> pd_constr_c_i = beta0 * outerNormal.transpose(); // Partial derivative of constraint w.r.t c_i // (2s, m) = (2s, 1) * (1, m)
-              double pd_constr_t = (outerNormal).dot(vel);// P.D. of constraint w.r.t t // (1,1) = (1, 2s) * (2s, m) * (m, 1)
+              Eigen::Matrix<double, 6, 3> pd_constr_c_i = beta0 * outerNormal.transpose();     // Partial derivative of constraint w.r.t c_i // (2s, m) = (2s, 1) * (1, m)
+              double pd_constr_t = (outerNormal).dot(vel);// P.D. of constraint w.r.t t        // (1,1) = (1, 2s) * (2s, m) * (m, 1)
 
               // Intermediate calculations for chain rule to get partial derivatives of cost J
-              double pd_cost_constr = 3 * (T_i / K) * omega * weight_poly_bounds_ * pow(poly_pen, 2) ; // P.D. of cost w.r.t constraint
-              double cost = (T_i / K) * omega * weight_poly_bounds_ * pow(poly_pen, 3); 
-              double pd_t_T_i = (j / K); // P.D. of time t w.r.t T_i
+              double pd_cost_constr = 3 * (T_i / K) * omega * weight_poly_bounds_ * pow(poly_pen, 2) ; // P.D. of cost J w.r.t constraint
+              double cost = (T_i / K) * omega * weight_poly_bounds_ * pow(poly_pen, 3);              
+              double pd_t_T_i = (j / K);                                                                // P.D. of time t w.r.t T_i
 
-              // Partial derivatives of Cost J
-              //    w.r.t coefficients c_i
-              Eigen::Matrix<double, 6, 3> pd_cost_c_i = pd_cost_constr * pd_constr_c_i; // P.D. of cost w.r.t c_i. Uses chain rule // (m,2s)
-              // mjo.get_gdC().block<6, 3>(i * 6, 0) += 3 * (T_i / K) * omega * weight_poly_bounds_ * pow(poly_pen, 2) * pd_constr_c_i
+              // 1) Partial derivatives of Cost J
+              //    1a) w.r.t coefficients c_i
+              Eigen::Matrix<double, 6, 3> pd_cost_c_i = pd_cost_constr * pd_constr_c_i; // P.D. of cost J w.r.t c_i. Uses chain rule // (m,2s)
 
-              //    w.r.t time t
+              //    1b) w.r.t time t
               double pd_cost_t = cost / T_i  + pd_cost_constr * pd_constr_t * pd_t_T_i;// P.D. of cost w.r.t t // (1,1)
-              // pd_cost_t = ((T_i / K) * weight_poly_bounds_ * omega *  pow(poly_pen, 3)) / T_i  + (3 * (T_i / K) * omega * weight_poly_bounds_ * pow(poly_pen, 2)) * pd_constr_t * (j / K)
+              // ANNOTATION: (EXPANDED) pd_cost_t = ((T_i / K) * weight_poly_bounds_ * omega *  pow(poly_pen, 3)) / T_i  + (3 * (T_i / K) * omega * weight_poly_bounds_ * pow(poly_pen, 2)) * pd_constr_t * (j / K)
 
               // Sum up sampled costs
-              mjo.get_gdC().block<6, 3>(i * 6, 0) += pd_cost_c_i; // Gradient of cost w.r.t polynomial coefficients
+              mjo.get_gdC().block<6, 3>(i * 6, 0) += pd_cost_c_i; // Gradient of cost J w.r.t polynomial coefficients
+              // ANNOTATION: (EXPANDED) mjo.get_gdC().block<6, 3>(i * 6, 0) += 3 * (T_i / K) * omega * weight_poly_bounds_ * pow(poly_pen, 2) * pd_constr_c_i
               gdT(i) += pd_cost_t; 
 
               obs_swarm_feas_qvar_costs(0) += cost;
             }
-
-            // if (smoothedL1(violaPos, smoothFactor, violaPosPena, violaPosPenaD))
-            // {
-            //   gradPos += weight_poly_bounds_ * violaPosPenaD * outerNormal;
-            //   pena += weight_poly_bounds_ * violaPosPena;
-            // }
         }
 
         // /**
         //  * Penalty on clearance to swarm/dynamic obstacles
         //  */
-        // double gradt, grad_prev_t;
-        // if (swarmGradCostP(t + step * j, pos, vel, gradp, gradt, grad_prev_t, costp))
-        // {
-        //   gradViolaPc = beta0 * gradp.transpose();
-        //   gradViolaPt = alpha * gradt;
-
-        //   // Sum up sampled costs
-        //   mjo.get_gdC().block<6, 3>(i * 6, 0) += omega * step * gradViolaPc;
-        //   gdT(i) += omega * (costp / K + step * gradViolaPt); // Add to gradient for i-th segment
-        //   if (i > 0) // If not the first segment
-        //   {
-        //     gdT.head(i).array() += omega * step * grad_prev_t;
-        //   }
-        //   obs_swarm_feas_qvar_costs(1) += omega * step * costp;
-        // }
+        double gradt, grad_prev_t;
+        if (swarmGradCostP(t + step * j, pos, vel, gradp, gradt, grad_prev_t, costp))
+        {
+          gradViolaPc = beta0 * gradp.transpose();
+          gradViolaPt = alpha * gradt;
+          // Sum up sampled costs
+          mjo.get_gdC().block<6, 3>(i * 6, 0) += omega * step * gradViolaPc;
+          gdT(i) += omega * (costp / K + step * gradViolaPt); // Add to gradient for i-th segment
+          if (i > 0) // If not the first segment
+          {
+            gdT.head(i).array() += omega * step * grad_prev_t;
+          }
+          obs_swarm_feas_qvar_costs(1) += omega * step * costp;
+        }
         
         /**
          * Penalty on velocity constraint, vector of (x,y,z)
@@ -799,7 +738,7 @@ namespace back_end
 
   double PolyhedronSFCOptimizer::distanceCost(void *func_data,
                                               const double* xi,
-                                              double* gradXi, 
+                                              double* grad_xi, 
                                               const int n)
   {
       void **dataPtrs = (void **)func_data;
@@ -852,7 +791,7 @@ namespace back_end
       {
           k = vPolys[2 * i + 1].cols();
           Eigen::Map<const Eigen::VectorXd> q(xi + j, k);
-          Eigen::Map<Eigen::VectorXd> gradQ(gradXi + j, k);
+          Eigen::Map<Eigen::VectorXd> gradQ(grad_xi + j, k);
           sqrNormQ = q.squaredNorm();
           invNormQ = 1.0 / sqrt(sqrNormQ);
           unitQ = q * invNormQ;

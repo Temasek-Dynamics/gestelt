@@ -66,7 +66,7 @@ vim /etc/ssh/sshd_config
 sudo systemcyl reload sshd
 
 vim /boot/uEnv.txt
-# Remove line with console=ttyAML0,115200
+# change the overlays line to "overlays=meson-g12a-uart-ao-b-on-gpioao-2-gpioao-3"
 ```
 
 7. Connect to a wifi network

@@ -173,15 +173,17 @@ bool PolytopeSFC::generateSFC(const std::vector<Eigen::Vector3d> &path_3d,
                 break;
             case CVXDecompType::TOUMIEH_OLD : 
                 // use original method
-                poly_new = convex_decomp_lib::GetPolyOcta3D(seed, grid_data, dim,
-                                                            params_.n_it_decomp, voxel_size,
-                                                            -(n_poly + 1), origin);
+                poly_new = convex_decomp_lib::GetPolyOcta3D(
+                    seed, grid_data, dim,
+                    params_.n_it_decomp, voxel_size,
+                    -(n_poly + 1), origin);
                 break;
             case CVXDecompType::TOUMIEH_NEW :
                 // if use new method
                 poly_new = convex_decomp_lib::GetPolyOcta3DNew(
-                    seed, grid_data, dim, params_.n_it_decomp, voxel_size, -(n_poly + 1),
-                    origin);
+                    seed, grid_data, dim, 
+                    params_.n_it_decomp, voxel_size, 
+                    -(n_poly + 1), origin);
                 break;
         }
 
@@ -213,11 +215,12 @@ bool PolytopeSFC::generateSFC(const std::vector<Eigen::Vector3d> &path_3d,
     // Convert from hyperplane representation to vertex representation 
     std::vector<Eigen::MatrixX4d> poly_vec_hyp; 
     std::vector<Eigen::Matrix3Xd> poly_vec_vtx; 
+
     for (const auto& lin_constr: poly_constr_vec_){
         poly_vec_hyp.push_back(lin_constr.getHypMatrix());
     }
 
-    for (size_t i = 0; i < poly_vec_hyp.size(); i++)
+    for (size_t i = 0; i < poly_vec_hyp.size(); i++) // For each polyhedron
     {
         const Eigen::ArrayXd norms = poly_vec_hyp[i].leftCols<3>().rowwise().norm();
         poly_vec_hyp[i].array().colwise() /= norms;
@@ -225,6 +228,7 @@ bool PolytopeSFC::generateSFC(const std::vector<Eigen::Vector3d> &path_3d,
 
     if (!processCorridor(poly_vec_hyp, poly_vec_vtx))
     {
+        std::cout << "[PolytopeSFC::generateSFC]: Failed to process corridor" << std::endl;
         return false;
     }
     poly_vec_hyp_ = poly_vec_hyp;

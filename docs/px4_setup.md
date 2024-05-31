@@ -9,11 +9,13 @@ sudo apt install dfu-util python-is-python2
 git clone https://github.com/PX4/PX4-Bootloader.git
 cd ./PX4-Bootloader
 make omnibusf4sd_bl
-# bootloader file with ".hex" extension in PX4-Bootloader/build/omnibusf4sd_bl/omnibusf4sd_bl.hex
+# You can either flash using 1) Betaflight or 2) DFU-util
+# 1) Beta flight: Install betaflight configurator and follow configuration instructions to write to DFU devices. Please refer to ["PX4 Bootloader Flashing onto Betaflight Systems"](https://docs.px4.io/main/en/advanced_config/bootloader_update_from_betaflight.html) for flashing of bootloader onto the FCU
+
+# 2) DFU Util bootloader file with ".hex" extension in PX4-Bootloader/build/omnibusf4sd_bl/omnibusf4sd_bl.hex
 dfu-util -a 0 --dfuse-address 0x08000000:force:mass-erase:leave -D build/omnibusf4sd_bl/omnibusf4sd_bl.bin
 dfu-util -a 0 --dfuse-address 0x08000000 -D  build/omnibusf4sd_bl/omnibusf4sd_bl.bin
 ```
-Please refer to ["PX4 Bootloader Flashing onto Betaflight Systems"](https://docs.px4.io/main/en/advanced_config/bootloader_update_from_betaflight.html) for flashing of bootloader onto the FCU
 
 2. Build the board firmware 
 ```bash 

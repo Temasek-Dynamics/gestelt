@@ -39,7 +39,7 @@ namespace back_end
      * 
      * @param startPVA        Starting position, velocity, acceleration
      * @param endPVA          Final position, velocity, acceleration
-     * @param inner_ctrl_pts  Initial inner control points
+     * @param P  Initial inner control points
      * @param init_seg_dur    Initial segment durations
      * @param vPolyIdx 
      * @param vPolytopes 
@@ -50,8 +50,9 @@ namespace back_end
      * @return false 
      */
     bool optimizeTrajectory(const Eigen::Matrix3d &startPVA, const Eigen::Matrix3d &endPVA,
-                            const Eigen::MatrixXd &inner_ctrl_pts, const Eigen::VectorXd &init_seg_dur,
+                            const Eigen::MatrixXd &P, const Eigen::VectorXd &init_seg_dur,
                             const Eigen::VectorXi& vPolyIdx, const std::vector<Eigen::Matrix3Xd>& vPolytopes,
+                             const Eigen::VectorXi& hPolyIdx, const std::vector<Eigen::MatrixX4d>& hPolytopes,
                             const int& num_decis_var_t, const int& num_decis_var_bary,
                             double &final_cost);
 
@@ -99,7 +100,9 @@ namespace back_end
      */
     template <typename EIGENVEC>
     void addPVAGradCost2CT(
-      EIGENVEC &gdT, Eigen::VectorXd &obs_swarm_feas_qvar_costs, const int &K, poly_traj::MinJerkOpt& mjo);
+      EIGENVEC &gdT, Eigen::VectorXd &obs_swarm_feas_qvar_costs, 
+      const int &K, poly_traj::MinJerkOpt& mjo,
+      const Eigen::VectorXi& hPolyIdx, const std::vector<Eigen::MatrixX4d>& hPolytopes);
 
     /**
      * @brief Cost of swarm 
@@ -136,49 +139,59 @@ namespace back_end
     // Get distance cost for calculating cost of trajectory
     static double distanceCost( void *func_data,
                                 const double* xi,
-                                double* gradXi,
+                                double* grad_xi,
                                 const int n);
-
-    // Get virtual time gradient cost
-    template <typename EIGENVEC, typename EIGENVECGD>
-    void VirtualTGradCost(const Eigen::VectorXd &RT, const EIGENVEC &VT,
-                          const Eigen::VectorXd &gdRT, EIGENVECGD &gdVT,
-                          double &costT);
 
     /**
      * @brief 
      * 
-     * @param x 
-     * @param mu 
-     * @param f 
-     * @param df 
-     * @return true if cost is more than zero 
-     * @return false 
+     * @tparam EIGENVEC 
+     * @tparam EIGENVECGD 
+     * @param T Real time
+     * @param tau Virtual time
+     * @param grad_T Gradient of real time
+     * @param grad_tau Gradient of virtual time
+     * @param costT Time cost
      */
-    static inline bool smoothedL1(const double &x,
-                                  const double &mu,
-                                  double &f,
-                                  double &df)
-    {
-        if (x <= 0.0)
-        {
-          return false;
-        }
-        else if (x > mu)
-        {
-          f = x - 0.5 * mu;
-          df = 1.0;
-          return true;
-        }
-        else
-        {
-          const double xdmu = x / mu;
-          const double mumxd2 = mu - 0.5 * x;
-          f = mumxd2 * pow(xdmu,3);
-          df = pow(xdmu,2) * ((-0.5) * xdmu + 3.0 * mumxd2 / mu);
-          return true;
-        }
-    }
+    template <typename EIGENVEC, typename EIGENVECGD>
+    void VirtualTGradCost(const Eigen::VectorXd &T, const EIGENVEC &tau,
+                          const Eigen::VectorXd &grad_T, EIGENVECGD &grad_tau,
+                          double &costT);
+
+    // /**
+    //  * @brief 
+    //  * 
+    //  * @param x 
+    //  * @param mu 
+    //  * @param f 
+    //  * @param df 
+    //  * @return true if cost is more than zero 
+    //  * @return false 
+    //  */
+    // static inline bool smoothedL1(const double &x,
+    //                               const double &mu,
+    //                               double &f,
+    //                               double &df)
+    // {
+    //     if (x <= 0.0)
+    //     {
+    //       return false;
+    //     }
+    //     else if (x > mu)
+    //     {
+    //       f = x - 0.5 * mu;
+    //       df = 1.0;
+    //       return true;
+    //     }
+    //     else
+    //     {
+    //       const double xdmu = x / mu;
+    //       const double mumxd2 = mu - 0.5 * x;
+    //       f = mumxd2 * pow(xdmu,3);
+    //       df = pow(xdmu,2) * ((-0.5) * xdmu + 3.0 * mumxd2 / mu);
+    //       return true;
+    //     }
+    // }
 
 
   public: 
@@ -201,6 +214,15 @@ namespace back_end
      */
     int getMaxVel(void) const { 
       return max_vel_; 
+    }
+
+    /**
+     * @brief Get the user-defined value for number of constraint points per segment.
+     * 
+     * @return int 
+     */
+    const poly_traj::MinJerkOpt& getMJO(void) const { 
+      return mjo_q_; 
     }
 
     /* setters */
@@ -230,16 +252,16 @@ namespace back_end
      * @brief Convert from real to virtual time
      * 
      * @tparam EIGENVEC 
-     * @param RT 
-     * @param VT 
+     * @param T 
+     * @param tau 
      */
     template <typename EIGENVEC>
-    void RealT2VirtualT(const Eigen::VectorXd &RT, EIGENVEC &VT)
+    void RealT2VirtualT(const Eigen::VectorXd &T, EIGENVEC &tau)
     {
-      for (int i = 0; i < RT.size(); ++i)
+      for (int i = 0; i < T.size(); ++i)
       {
-        VT(i) = RT(i) > 1.0 ? (sqrt(2.0 * RT(i) - 1.0) - 1.0)
-                            : (1.0 - sqrt(2.0 / RT(i) - 1.0));
+        tau(i) = T(i) > 1.0 ? (sqrt(2.0 * T(i) - 1.0) - 1.0)
+                            : (1.0 - sqrt(2.0 / T(i) - 1.0));
       }
     }
 
@@ -247,16 +269,16 @@ namespace back_end
      * @brief Convert from virtual to real time
      * 
      * @tparam EIGENVEC 
-     * @param RT 
-     * @param VT 
+     * @param T 
+     * @param tau 
      */
     template <typename EIGENVEC>
-    void VirtualT2RealT(const EIGENVEC &VT, Eigen::VectorXd &RT)
+    void VirtualT2RealT(const EIGENVEC &tau, Eigen::VectorXd &T)
     {
-      for (int i = 0; i < VT.size(); ++i)
+      for (int i = 0; i < tau.size(); ++i)
       {
-        RT(i) = VT(i) > 0.0 ? ((0.5 * VT(i) + 1.0) * VT(i) + 1.0)
-                            : 1.0 / ((0.5 * VT(i) - 1.0) * VT(i) + 1.0);
+        T(i) = tau(i) > 0.0 ? ((0.5 * tau(i) + 1.0) * tau(i) + 1.0)
+                            : 1.0 / ((0.5 * tau(i) - 1.0) * tau(i) + 1.0);
       }
     }
 
@@ -270,22 +292,23 @@ namespace back_end
      */
     static inline void forwardP(const Eigen::VectorXd &xi,
                                 const Eigen::VectorXi &vIdx,
-                                const PolyhedraV &vPolys,
-                                Eigen::Matrix3Xd &P)
+                                const std::vector<Eigen::Matrix3Xd> &vPolys,
+                                Eigen::MatrixXd &P)
     {
-        const int sizeP = vIdx.size();
-        P.resize(3, sizeP);
-        Eigen::VectorXd q;
-        for (int i = 0, j = 0, k, l; i < sizeP; i++, j += k)
-        {
-            l = vIdx(i);
-            k = vPolys[l].cols();
-            q = xi.segment(j, k).normalized().head(k - 1);
-            P.col(i) = vPolys[l].rightCols(k - 1) * q.cwiseProduct(q) +
-                        vPolys[l].col(0);
-        }
-        return;
+      const int sizeP = vIdx.size();
+      P.resize(3, sizeP);
+      Eigen::VectorXd q;
+      for (int i = 0, j = 0, k, l; i < sizeP; i++, j += k)
+      {
+        l = vIdx(i);
+        k = vPolys[l].cols();
+        q = xi.segment(j, k).normalized().head(k - 1);
+        P.col(i) = vPolys[l].rightCols(k - 1) * q.cwiseProduct(q) +
+                    vPolys[l].col(0);
+      }
+      return;
     }
+
 
     /**
      * @brief Convert from unconstrained xi coordinates into q constrained coordinates.
@@ -298,7 +321,7 @@ namespace back_end
      * @param xi 
      */
     template <typename EIGENVEC>
-    static inline void backwardP(const Eigen::Matrix3Xd &P,
+    static inline void backwardP(const Eigen::MatrixXd &P,
                                   const Eigen::VectorXi &vIdx,
                                   const std::vector<Eigen::Matrix3Xd> &vPolys,
                                   EIGENVEC &xi)
@@ -322,7 +345,7 @@ namespace back_end
             ovPoly.rightCols(k) = vPolys[l];
 
             double x[k]; // Total number of vertices for each "overlap" polyhedron
-            std::fill(x, x + k, sqrt(1.0 / k));
+            std::fill(x, x + k, sqrt(1.0 / k)); 
 
             int num_decis_var = k;
             lbfgs::lbfgs_optimize(
@@ -335,13 +358,70 @@ namespace back_end
                                   &ovPoly,
                                   &lbfgs_params);
 
-            xi.segment(j, k) = Eigen::Map<Eigen::VectorXd>(x+j, k);
+            xi.segment(j, k) = Eigen::Map<Eigen::VectorXd>(x, k);
             // xi.block<k, 1>(j, 0) = 
             // xi.segment(j, k) = x;
         }
 
         return;
     }
+
+
+    // /**
+    //  * @brief Convert from unconstrained xi coordinates into q constrained coordinates.
+    //  * This is done by minimizing the squared distance between f_H(xi) and P.
+    //  *  
+    //  * @tparam EIGENVEC 
+    //  * @param P 
+    //  * @param vIdx 
+    //  * @param vPolys 
+    //  * @param xi 
+    //  */
+    // template <typename EIGENVEC>
+    // static inline void backwardP(const Eigen::MatrixXd &P,
+    //                               const Eigen::VectorXi &vIdx,
+    //                               const std::vector<Eigen::Matrix3Xd> &vPolys,
+    //                               EIGENVEC &xi)
+    // {
+    //     double final_cost; // final cost in minimum squared distance
+
+    //     lbfgs::lbfgs_parameter_t lbfgs_params; // least squares
+    //     lbfgs_params.past = 0;
+    //     lbfgs_params.delta = 1.0e-5;
+    //     lbfgs_params.g_epsilon = FLT_EPSILON;
+    //     lbfgs_params.max_iterations = 128;
+
+    //     Eigen::Matrix3Xd ovPoly;
+    //     for (int i = 0, j = 0, k, l; i < P.cols(); i++, j += k) // For each inner point
+    //     {
+    //         l = vIdx(i);
+    //         k = vPolys[l].cols();
+
+    //         ovPoly.resize(3, k + 1);
+    //         ovPoly.col(0) = P.col(i);
+    //         ovPoly.rightCols(k) = vPolys[l];
+
+    //         double x[k]; // Total number of vertices for each "overlap" polyhedron
+    //         std::fill(x, x + k, sqrt(1.0 / k));
+
+    //         int num_decis_var = k;
+    //         lbfgs::lbfgs_optimize(
+    //                               num_decis_var,
+    //                               x,
+    //                               &final_cost,
+    //                               PolyhedronSFCOptimizer::costTinyNLS,
+    //                               NULL,
+    //                               NULL,
+    //                               &ovPoly,
+    //                               &lbfgs_params);
+
+    //         xi.segment(j, k) = Eigen::Map<Eigen::VectorXd>(x+j, k);
+    //         // xi.block<k, 1>(j, 0) = 
+    //         // xi.segment(j, k) = x;
+    //     }
+
+    //     return;
+    // }
 
     static inline double costTinyNLS( void *func_data,
                                       const double* xi_arr,
@@ -384,24 +464,71 @@ namespace back_end
         return cost;
     }
 
+    /**
+     * @brief Get gradient of xi
+     * 
+     * @tparam EIGENVEC 
+     * @param xi 
+     * @param vIdx 
+     * @param vPolys 
+     * @param gradP 
+     * @param gradXi 
+     */
     template <typename EIGENVEC>
-    static inline void backwardGradT(const Eigen::VectorXd &tau,
-                                      const Eigen::VectorXd &gradT,
-                                      EIGENVEC &gradTau)
+    static inline void backwardGradP(const Eigen::VectorXd &xi,
+                                      const Eigen::VectorXi &vIdx,
+                                      const std::vector<Eigen::Matrix3Xd> &vPolys,
+                                      const Eigen::MatrixXd &gradP,
+                                      EIGENVEC &gradXi)
     {
-        const int sizeTau = tau.size();
-        gradTau.resize(sizeTau);
-        double denSqrt;
-        for (int i = 0; i < sizeTau; i++)
+        const int sizeP = vIdx.size(); // Number of segments
+        gradXi.resize(xi.size());
+
+        double normInv;
+        Eigen::VectorXd q, gradQ, unitQ;
+        for (int i = 0, j = 0, k, l; i < sizeP; i++, j += k) // For each i-th segment
         {
-            if (tau(i) > 0)
+            l = vIdx(i);              // l: Index of polygon belonging to i-th segment
+            k = vPolys[l].cols();     // k: Number of barycentric weights
+            q = xi.segment(j, k);     // q: barycentric weight variables 
+            normInv = 1.0 / q.norm(); // 
+            unitQ = q * normInv;
+            gradQ.resize(k);
+            gradQ.head(k - 1) = (vPolys[l].rightCols(k - 1).transpose() * gradP.col(i)).array() *
+                                unitQ.head(k - 1).array() * 2.0;
+            gradQ(k - 1) = 0.0;
+            gradXi.segment(j, k) = (gradQ - unitQ * unitQ.dot(gradQ)) * normInv;
+        }
+
+        return;
+    }
+
+    template <typename EIGENVEC>
+    static inline void normRetrictionLayer(const Eigen::VectorXd &xi,
+                                            const Eigen::VectorXi &vIdx,
+                                            const std::vector<Eigen::Matrix3Xd> &vPolys,
+                                            double &cost,
+                                            EIGENVEC &gradXi)
+    {
+        const int sizeP = vIdx.size(); // Number of segments
+        gradXi.resize(xi.size());
+
+        double sqrNormQ, sqrNormViolation, c, dc;
+        Eigen::VectorXd q;
+        for (int i = 0, j = 0, k; i < sizeP; i++, j += k) // For each segment
+        {
+            k = vPolys[vIdx(i)].cols(); // k: Number of barycentric weights for polygon belonging to i-th segment  
+
+            q = xi.segment(j, k);
+            sqrNormQ = q.squaredNorm();
+            sqrNormViolation = sqrNormQ - 1.0;
+            if (sqrNormViolation > 0.0)
             {
-                gradTau(i) = gradT(i) * (tau(i) + 1.0);
-            }
-            else
-            {
-                denSqrt = (0.5 * tau(i) - 1.0) * tau(i) + 1.0;
-                gradTau(i) = gradT(i) * (1.0 - tau(i)) / (denSqrt * denSqrt);
+                c = sqrNormViolation * sqrNormViolation;
+                dc = 3.0 * c;
+                c *= sqrNormViolation;
+                cost += c;
+                gradXi.segment(j, k) += dc * 2.0 * q;
             }
         }
 
@@ -444,11 +571,10 @@ namespace back_end
     double obs_clearance_, swarm_clearance_;                      // safe distance
     double max_vel_, max_acc_;                                    // dynamic limits
 
-    double t_now_;
+    double t_now_;        // Time at the start of optimization
 
     /* Data structures */
     poly_traj::MinJerkOpt mjo_q_;   // Minimum jerk trajectory in q space
-    poly_traj::MinJerkOpt mjo_xi_;  // Minimum jerk trajectory in xi space
 
     Eigen::MatrixXd cstr_pts_xi_; // inner CONSTRAINT points of trajectory (excludes boundary points), this is finer than the inner CONTROL points
     Eigen::MatrixXd cstr_pts_q_; // inner CONSTRAINT points of trajectory (excludes boundary points), this is finer than the inner CONTROL points
@@ -456,9 +582,16 @@ namespace back_end
     int num_decis_var_bary_, num_decis_var_t_; // Number of decision variables for barycentric weights and segment time durations
 
     Eigen::VectorXi vPolyIdx_;
-    std::vector<Eigen::Matrix3Xd> vPolytopes_;
-    Eigen::MatrixXd inner_ctrl_pts_;
-    Eigen::VectorXd time_seg_durs_;
+    std::vector<Eigen::Matrix3Xd> vPolytopes_; // Vector of barycentric-represented polyhedrons: Size 3*M. M is the number of vertices.
+
+    Eigen::VectorXi hPolyIdx_;                  // Indexed by segment index with values as the hyperplane-based polyhedron index the segment belongs to 
+    std::vector<Eigen::MatrixX4d> hPolytopes_;   // Vector of halfplane-based polyhedrons: Size (N*4), N is the number of halfspaces, the i-th row is (h0, h1, h2, h3) defining a halfspace as h0*x + h1*y + h2*z + h3 <= 0.
+
+    Eigen::MatrixXd P_;     // Inner control points
+    Eigen::MatrixXd grad_P_;     // Gradient of inner control points
+
+    Eigen::VectorXd T_;     // Real time i.e. time duration of each segment 
+    // Eigen::VectorXd grad_T_;  // Gradient of real time i.e. time duration of each segment 
 
   }; // class PolyhedronSFCOptimizer
 

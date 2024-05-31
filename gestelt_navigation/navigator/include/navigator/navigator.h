@@ -160,8 +160,10 @@ private:
 
   bool PolySFCOptimize(const Eigen::Matrix3d& startPVA, const Eigen::Matrix3d& endPVA, 
                     const double& req_plan_time,
-                    const std::vector<Eigen::Matrix3Xd>& poly_sfc,
-                    poly_traj::MinJerkOpt& mjo_opt);
+                    const std::vector<Eigen::Matrix3Xd>& v_poly,
+                    const std::vector<Eigen::MatrixX4d>& h_poly,
+                    poly_traj::MinJerkOpt& mjo_opt,
+                    bool& valid_mjo);
 
   /* Subscriber callbacks */
 
@@ -451,8 +453,8 @@ private: /* Planner members */
   std::shared_ptr<SSFC::SFCTrajectory> ssfc_{nullptr};   // Safe flight corridor trajectory
 
   // Polyhedron sfc data 
-  std::vector<Polyhedron3D, Eigen::aligned_allocator<Polyhedron3D>> poly_sfc_hyp_;
-  std::vector<Eigen::Matrix3Xd> poly_sfc_vtx_;
+  std::vector<Eigen::MatrixX4d> h_poly_;
+  std::vector<Eigen::Matrix3Xd> v_poly_;
 
   /* Timestamps for detecting timeouts*/
   ros::Time last_state_output_t_; // Last time stamp at which UAV odom is received

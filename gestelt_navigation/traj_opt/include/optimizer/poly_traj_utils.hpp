@@ -1666,11 +1666,11 @@ namespace poly_traj
          * 
          * @tparam EIGENVEC 
          * @tparam EIGENMAT 
-         * @param gdT gradient of H w.r.t T
+         * @param gradT gradient of H w.r.t T
          * @param gradP gradient of H w.r.t P
          */
         template <typename EIGENVEC, typename EIGENMAT>
-        void getGrad2TP(EIGENVEC &gdT,
+        void getGrad2TP(EIGENVEC &gradT,
                         EIGENMAT &gradP)
         {
             // Solves  (A.T) x = gdC 
@@ -1680,7 +1680,7 @@ namespace poly_traj
             solveAdjGradC(gdC); 
 
             // eqn (70): p.d.(H / T_i) = p.d.(F/T_i) - Tr{ G_i.T * p.d.(E_i/T_i) * c_i}
-            addPropCtoT(gdC, gdT); // Adds to gdT
+            addPropCtoT(gdC, gradT); // Adds to gradT
 
             // eqn (66): p.d.(H / q) = (G_1.T * e1, ..., G_(M-1).T * e1)
             addPropCtoP(gdC, gradP); // Adds to gradP

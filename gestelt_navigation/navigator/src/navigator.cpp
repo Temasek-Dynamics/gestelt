@@ -159,7 +159,6 @@ void Navigator::initParams(ros::NodeHandle &nh, ros::NodeHandle &pnh)
 
   /* SFC params */
   if (sfc_type_ == SFCType::POLYTOPE){
-    pnh.param("sfc/poly/max_iterations", ply_sfc_params_.max_itr, -1);
     pnh.param("sfc/poly/debug_viz",      ply_sfc_params_.debug_viz, false);
 
     pnh.param("sfc/poly/poly_max", ply_sfc_params_.poly_hor, 10);
@@ -453,10 +452,8 @@ bool Navigator::generateFrontEndPlan(
   tm_sfc_plan_.stop(verbose_planning_);
 
   if (sfc_type_ == SFCType::POLYTOPE){
-    poly_sfc_hyp_ = poly_sfc_gen_->getPolySFCHyperplanes();
-    poly_sfc_vtx_ = poly_sfc_gen_->getPolySFCVertices();
-    std::cout << "poly_sfc_hyp_.size() " << poly_sfc_hyp_.size() << std::endl;
-    std::cout << "poly_sfc_vtx_.size() " << poly_sfc_vtx_.size() << std::endl;
+    h_poly_ = poly_sfc_gen_->getPolySFCHyperplanes();
+    v_poly_ = poly_sfc_gen_->getPolySFCVertices();
   }
   else if (sfc_type_ == SFCType::SPHERICAL) {
     ssfc_ = std::make_shared<SSFC::SFCTrajectory>(sfc_generation_->getSSFCTrajectory(req_plan_t));
@@ -515,6 +512,7 @@ bool Navigator::requestBackEndPlan()
   endPVA << goal_pos, goal_vel, goal_acc;  // Goal (P)
 
   bool plan_success = false;
+  bool valid_mjo = false;
 
   tm_back_end_plan_.start();
   for (int itr = 0; itr < optimizer_num_retries_; itr++)
@@ -526,22 +524,22 @@ bool Navigator::requestBackEndPlan()
       plan_success = SSFCOptimize(startPVA, endPVA, req_plan_t, ssfc_, mjo_opt);
     }
     else if (back_end_type_ == BackEndType::POLY){
-      plan_success = PolySFCOptimize(startPVA, endPVA, req_plan_t, poly_sfc_vtx_, mjo_opt);
+      plan_success = PolySFCOptimize(startPVA, endPVA, req_plan_t, v_poly_, h_poly_, mjo_opt, valid_mjo);
     }
 
-    // Eigen::MatrixXd cstr_pts_mjo_opt = mjo_opt.getInitConstraintPoints(num_cstr_pts_per_seg_);
-
-    // if (plan_success)
-    // {
-    //   visualization_->displayOptimalMJO(cstr_pts_mjo_opt, 0);
-    //   break;
-    // }
-    // else
-    // {
-    //   logError(str_fmt("Trajectory optimization unsuccessful! Number retries left: %d", 
-    //     optimizer_num_retries_ - itr));
-    //   visualization_->displayFailedList(cstr_pts_mjo_opt, 0);
-    // }
+    if (plan_success)
+    {
+      Eigen::MatrixXd cstr_pts_mjo_opt = mjo_opt.getInitConstraintPoints(num_cstr_pts_per_seg_);
+      visualization_->displayOptimalMJO(cstr_pts_mjo_opt, 0);
+      break;
+    }
+    else if (valid_mjo)
+    {
+      logError(str_fmt("Trajectory optimization unsuccessful! Number retries left: %d", 
+        optimizer_num_retries_ - itr));
+      Eigen::MatrixXd cstr_pts_mjo_opt = mjo_opt.getInitConstraintPoints(num_cstr_pts_per_seg_);
+      visualization_->displayFailedList(cstr_pts_mjo_opt, 0);
+    }
   }
   tm_back_end_plan_.stop(verbose_planning_);
 
@@ -572,8 +570,10 @@ bool Navigator::requestBackEndPlan()
 
 bool Navigator::PolySFCOptimize(const Eigen::Matrix3d& startPVA, const Eigen::Matrix3d& endPVA, 
                     const double& req_plan_time,
-                    const std::vector<Eigen::Matrix3Xd>& poly_sfc,
-                    poly_traj::MinJerkOpt& mjo_opt)
+                    const std::vector<Eigen::Matrix3Xd>& v_poly,
+                    const std::vector<Eigen::MatrixX4d>& h_poly,
+                    poly_traj::MinJerkOpt& mjo_opt,
+                    bool& valid_mjo)
 {
   bool plan_success{false};
 
@@ -581,8 +581,13 @@ bool Navigator::PolySFCOptimize(const Eigen::Matrix3d& startPVA, const Eigen::Ma
   /* 1. Generate initial path */
   // /***************************/
   Eigen::Matrix3Xd initial_path;
-  polyhedron_sfc_optimizer_->genInitialSFCTrajectory(startPVA.col(0), endPVA.col(0),
-                                                     poly_sfc, 0.01, initial_path);
+  if (!polyhedron_sfc_optimizer_->genInitialSFCTrajectory(startPVA.col(0), endPVA.col(0),
+                                                     v_poly, 0.01, initial_path))
+  {
+    logInfo("PolySFCOptimize: Failed to generate initial SFC trajectory");
+    valid_mjo = false;
+    return false;
+  }
 
   visualization_->displayInitialPolyPath(initial_path, 0);
 
@@ -593,7 +598,7 @@ bool Navigator::PolySFCOptimize(const Eigen::Matrix3d& startPVA, const Eigen::Ma
   // DEFINITION: super-segment: The segments between control points (their length can vary and depends on the initial path generation)
   // DEFINITION: segment: The segments between control points (Length is fixed by user-defined parameter)
 
-  int num_polyhedrons = poly_sfc_hyp_.size();
+  int num_polyhedrons = h_poly.size();
   // cp_deltas: change in control points position
   Eigen::Matrix3Xd cp_deltas = initial_path.rightCols(num_polyhedrons) - initial_path.leftCols(num_polyhedrons);
   // segs_in_super_seg: Elements are indexed by super-segment index and the value is number of segments belonging to that super-segment 
@@ -618,12 +623,12 @@ bool Navigator::PolySFCOptimize(const Eigen::Matrix3d& startPVA, const Eigen::Ma
           if (l < k - 1) // If not the last segment of the piece
           {
               vPolyIdx(j) = 2 * i; // segment j belongs to the (2*i)-th polyhedron (CURRENT) 
-              num_decis_var_bary += poly_sfc_vtx_[2 * i].cols(); // Add Number of vertices 
+              num_decis_var_bary += v_poly[2 * i].cols(); // Add Number of vertices 
           }
           else if (i < num_polyhedrons - 1) // Last segment of the super-segment
           {
               vPolyIdx(j) = 2 * i + 1; // segment j belongs to the (2*i+1)-th polyhedron (NEXT)
-              num_decis_var_bary += poly_sfc_vtx_[2 * i + 1].cols(); // Add Number of vertices
+              num_decis_var_bary += v_poly[2 * i + 1].cols(); // Add Number of vertices
           }
           hPolyIdx(j) = i;
       }
@@ -657,7 +662,6 @@ bool Navigator::PolySFCOptimize(const Eigen::Matrix3d& startPVA, const Eigen::Ma
   // /***************************/
   /* 4. Create initial MJO for visualization*/
   // /***************************/
-  std::cout << "===== Create initial MJO for visualization =====" << std::endl;
 
   poly_traj::MinJerkOpt initial_mjo; // Initial minimum jerk trajectory
   initial_mjo.reset(startPVA, endPVA, num_segs);
@@ -675,19 +679,19 @@ bool Navigator::PolySFCOptimize(const Eigen::Matrix3d& startPVA, const Eigen::Ma
   // /***************************/
   // /*5:  Optimize plan
   // /***************************/
-  std::cout << "===== Optimize plan =====" << std::endl;
-
   double final_cost = 0; 
 
   plan_success = polyhedron_sfc_optimizer_->optimizeTrajectory( 
         startPVA, endPVA,                   // Start and end (pos, vel, acc)
         inner_ctrl_pts, init_seg_dur,
-        vPolyIdx, poly_sfc,
+        vPolyIdx, v_poly,
+        hPolyIdx, h_poly,
         num_decis_var_t, num_decis_var_bary,
         final_cost);                      
 
-  // // Optimized minimum jerk trajectory
-  // mjo_opt = polyhedron_sfc_optimizer_->getOptimizedMJO();
+  // Optimized minimum jerk trajectory
+  mjo_opt = polyhedron_sfc_optimizer_->getMJO();
+  valid_mjo = true;
 
   return plan_success;
 }

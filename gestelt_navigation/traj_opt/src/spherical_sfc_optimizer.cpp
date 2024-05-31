@@ -54,6 +54,12 @@ namespace back_end
     // Convert from real time initT to virtual time Vt
     RealT2VirtualT(initT, Vt);
 
+
+    std::cout << "initT: " << initT.transpose() << std::endl;
+    std::cout << "--------------------" << std::endl;
+    std::cout << "Vt: " << Vt.transpose() << std::endl;
+    std::cout << "--------------------" << std::endl;
+
     lbfgs::lbfgs_parameter_t lbfgs_params;
     lbfgs::lbfgs_load_default_parameters(&lbfgs_params);
     lbfgs_params.mem_size = 16;
