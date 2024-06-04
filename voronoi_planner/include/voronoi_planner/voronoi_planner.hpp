@@ -1,7 +1,7 @@
 // Code inspired by benchmark_utils.cpp from Bonxai
 
-#ifndef _STATIC_BRUSHFIRE_HPP
-#define _STATIC_BRUSHFIRE_HPP
+#ifndef _VORONOI_PLANNER_HPP
+#define _VORONOI_PLANNER_HPP
 
 // #include <Eigen/Eigen>
 
@@ -15,7 +15,9 @@
 #include <limits>
 #include <queue>
 
-#include "dynamic_brushfire/dynamicvoronoi.h"
+#include "dynamic_voronoi/dynamicvoronoi.h"
+
+#include "global_planner/a_star.h"
 
 namespace cost_val
 {
@@ -28,7 +30,7 @@ static const int8_t UNKNOWN = -1;
 #define SQRT2 1.41421
 
 template<typename T, typename priority_t>
-struct PriorityQueue {
+struct PriorityQueueV {
   typedef std::pair<priority_t, T> PQElement;
   struct PQComp {
     constexpr bool operator()(
@@ -61,10 +63,10 @@ struct PriorityQueue {
   }
 };
 
-class StaticBrushfire
+class VoronoiPlanner
 {
 public:
-  // StaticBrushfire(){}
+  // VoronoiPlanner(){}
 
   void init(ros::NodeHandle &nh, ros::NodeHandle &pnh);
 
@@ -178,6 +180,37 @@ public:
     }
   }
 
+  // Convert from map to occupancy grid type
+  void occmapToOccGrid(const DynamicVoronoi& dyn_voro, const size_t& size_x, const size_t& size_y, nav_msgs::OccupancyGrid& occ_grid)
+  {
+    occ_grid.header.stamp = ros::Time::now();
+    occ_grid.header.frame_id = "map";
+    occ_grid.info.width = size_x;
+    occ_grid.info.height = size_y;
+    occ_grid.info.resolution = res_;
+    occ_grid.info.origin.position.x = origin_x_;
+    occ_grid.info.origin.position.y = origin_y_;
+    occ_grid.info.origin.position.z = 0.0;
+    tf2::Quaternion q;
+    q.setRPY(0, 0, yaw_);
+    occ_grid.info.origin.orientation.x = q.x();
+    occ_grid.info.origin.orientation.y = q.y();
+    occ_grid.info.origin.orientation.z = q.z();
+    occ_grid.info.origin.orientation.w = q.w();
+
+    occ_grid.data.resize(occ_grid.info.width * occ_grid.info.height);
+
+    for(int j = 0; j < size_y; j++)
+    {
+      for (int i = 0; i < size_x; i++)
+      {
+        size_t idx = map2Dto1DIdx(occ_grid.info.width, i, occ_grid.info.height - j - 1);
+        occ_grid.data[idx] = dyn_voro.isOccupied(i, j) ? 255: 0;
+      }
+    }
+
+  }
+
   // // Convert from map to occupancy grid type
   // void voronoimapToOccGrid(const std::vector<bool>& map, const size_t& width, const size_t& height, nav_msgs::OccupancyGrid& occ_grid)
   // {
@@ -193,9 +226,7 @@ public:
   //   occ_grid.info.origin.orientation.y = q.y();
   //   occ_grid.info.origin.orientation.z = q.z();
   //   occ_grid.info.origin.orientation.w = q.w();
-
   //   occ_grid.data.resize(occ_grid.info.width * occ_grid.info.height);
-
   //   for (size_t idx = 0; idx < map.size(); idx++)
   //   {
   //     occ_grid.data[idx] = map[idx] ? 255: 0;
@@ -353,6 +384,104 @@ public:
     }
   }
 
+  inline void publishFrontEndPath(const std::vector<Eigen::Vector3d>& path, const std::string& frame_id, ros::Publisher& publisher) {
+    visualization_msgs::Marker wp_sphere_list, path_line_strip;
+    visualization_msgs::Marker start_sphere, goal_sphere;
+    double radius = 0.15;
+    double alpha = 0.8; 
+
+    geometry_msgs::Point pt;
+
+    /* Start/goal sphere*/
+    start_sphere.header.frame_id = goal_sphere.header.frame_id = frame_id;
+    start_sphere.header.stamp = goal_sphere.header.stamp = ros::Time::now();
+    start_sphere.ns = goal_sphere.ns = "start_end_points";
+    start_sphere.type = goal_sphere.type = visualization_msgs::Marker::SPHERE;
+    start_sphere.action = goal_sphere.action = visualization_msgs::Marker::ADD;
+    start_sphere.id = 1;
+    goal_sphere.id = 2; 
+    start_sphere.pose.orientation.w = goal_sphere.pose.orientation.w = 1.0;
+
+    start_sphere.color.r = 1.0; 
+    start_sphere.color.g = 1.0; 
+    start_sphere.color.b = 0.0; 
+    start_sphere.color.a = goal_sphere.color.a = alpha;
+
+    goal_sphere.color.r = 0.0;
+    goal_sphere.color.g = 1.0;
+    goal_sphere.color.b = 0.0;
+
+    start_sphere.scale.x = goal_sphere.scale.x = radius;
+    start_sphere.scale.y = goal_sphere.scale.y = radius;
+    start_sphere.scale.z = goal_sphere.scale.z = radius;
+
+    /* wp_sphere_list: Sphere list (Waypoints) */
+    wp_sphere_list.header.frame_id = frame_id;
+    wp_sphere_list.header.stamp = ros::Time::now();
+    wp_sphere_list.ns = "front_end_sphere_list"; 
+    wp_sphere_list.type = visualization_msgs::Marker::SPHERE_LIST;
+    wp_sphere_list.action = visualization_msgs::Marker::ADD;
+    wp_sphere_list.id = 1; 
+    wp_sphere_list.pose.orientation.w = 1.0;
+
+    wp_sphere_list.color.r = 1.0;
+    wp_sphere_list.color.g = 0.5;
+    wp_sphere_list.color.b = 0.0;
+    wp_sphere_list.color.a = alpha;
+
+    wp_sphere_list.scale.x = radius;
+    wp_sphere_list.scale.y = radius;
+    wp_sphere_list.scale.z = radius;
+
+    /* path_line_strip: Line strips (Connecting waypoints) */
+    path_line_strip.header.frame_id = frame_id;
+    path_line_strip.header.stamp = ros::Time::now();
+    path_line_strip.ns = "front_end_path_lines"; 
+    path_line_strip.type = visualization_msgs::Marker::LINE_STRIP;
+    path_line_strip.action = visualization_msgs::Marker::ADD;
+    path_line_strip.id = 1;
+    path_line_strip.pose.orientation.w = 1.0;
+
+    path_line_strip.color.r = 1.0;
+    path_line_strip.color.g = 0.5;
+    path_line_strip.color.b = 0.0;
+    path_line_strip.color.a = alpha * 0.75;
+
+    path_line_strip.scale.x = radius * 0.5;
+
+    start_sphere.pose.position.x = path[0](0);
+    start_sphere.pose.position.y = path[0](1);
+    start_sphere.pose.position.z = path[0](2);
+
+    pt.x = path[0](0);
+    pt.y = path[0](1);
+    pt.z = path[0](2);
+    path_line_strip.points.push_back(pt);
+
+    for (size_t i = 1; i < path.size()-1; i++){
+      pt.x = path[i](0);
+      pt.y = path[i](1);
+      pt.z = path[i](2);
+
+      wp_sphere_list.points.push_back(pt);
+      path_line_strip.points.push_back(pt);
+    }
+
+    pt.x = path.back()(0);
+    pt.y = path.back()(1);
+    pt.z = path.back()(2);
+    path_line_strip.points.push_back(pt);
+
+    goal_sphere.pose.position.x = path.back()(0);
+    goal_sphere.pose.position.y = path.back()(1);
+    goal_sphere.pose.position.z = path.back()(2);
+
+    publisher.publish(start_sphere);
+    publisher.publish(goal_sphere);
+    publisher.publish(wp_sphere_list);
+    publisher.publish(path_line_strip);
+  }
+
 private:
   /* Params */
   std::string map_fname_;
@@ -366,16 +495,23 @@ private:
   ros::Publisher dist_occ_map_pub_; // Publishes distance map occupancy grid
   ros::Publisher voro_occ_grid_pub_; // Publishes voronoi map occupancy grid
 
+  ros::Publisher front_end_plan_viz_pub_;
+
+  std::unordered_map<std::string, ros::Publisher> front_end_publisher_map_;   // Publishes front-end map
+
   /* Data structs */
   bool **bool_map_{NULL};
   int size_x_, size_y_;
+
+  std::unique_ptr<AStarPlanner> front_end_planner_; // Front-end planner
+  std::shared_ptr<DynamicVoronoi>  dyn_voro_; // dynamic voronoi object
 
   nav_msgs::OccupancyGrid occ_grid_;
   std::vector<size_t> occ_idx_; // Indices of all occupied cells
   std::vector<size_t> free_idx_; // Indices of all free cells
   std::vector<size_t> unknown_idx_; // Indices of all unknown cells
 
-  PriorityQueue<int, double> open_queue_; // Min priority queue of (cell idx, priority value)
+  PriorityQueueV<int, double> open_queue_; // Min priority queue of (cell idx, priority value)
 
   std::vector<double> dist_map_; // index representing map position and values representing distance to nearest obstacle
   std::vector<double> obst_map_; // obstacle reference map, stores the location of the closest obstacle of each visited cell. Value of -1 indicates cleared
@@ -388,4 +524,4 @@ private:
   nav_msgs::OccupancyGrid voro_occ_grid_; // Visualization of voronoi map in occupancy grid form
 };
 
-#endif // _STATIC_BRUSHFIRE_HPP
+#endif // _VORONOI_PLANNER_HPP

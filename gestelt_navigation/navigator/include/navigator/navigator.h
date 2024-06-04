@@ -43,7 +43,7 @@
 
 /* SFC */
 #include <sfc_generation/spherical_sfc.h>
-#include <sfc_generation/polytope_sfc.h>
+// #include <sfc_generation/polytope_sfc.h>
 
 /* Back-end optimization */
 #include <optimizer/poly_traj_optimizer.h>

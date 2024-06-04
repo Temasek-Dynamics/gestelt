@@ -1,6 +1,5 @@
-# dynamic_brushfire
-This package contains the brushfire algorithm for generating generalized Voronoi diagrams
-
+# voronoi_planner
+This package contains a voronoi planner
 
 # Dependencies
 ```bash

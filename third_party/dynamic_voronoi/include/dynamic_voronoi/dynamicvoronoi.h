@@ -1,7 +1,6 @@
 #ifndef _DYNAMICVORONOI_H_
 #define _DYNAMICVORONOI_H_
 
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <limits.h>
@@ -20,29 +19,29 @@ public:
   //! Initialization with an empty map
   void initializeEmpty(int _sizeX, int _sizeY, bool initGridMap=true);
   //! Initialization with a given binary map (false==free, true==occupied)
-  void initializeMap(int _sizeX, int _sizeY, bool** _gridMap);
+  void initializeMap(int _sizeX, int _sizeY, bool** _gridMap) ;
 
   //! add an obstacle at the specified cell coordinate
-  void occupyCell(int x, int y);
+  void occupyCell(int x, int y) ;
   //! remove an obstacle at the specified cell coordinate
-  void clearCell(int x, int y);
+  void clearCell(int x, int y) ;
   //! remove old dynamic obstacles and add the new ones
-  void exchangeObstacles(std::vector<INTPOINT>& newObstacles);
+  void exchangeObstacles(std::vector<INTPOINT>& newObstacles) ;
 
   //! update distance map and Voronoi diagram to reflect the changes
-  void update(bool updateRealDist=true);
+  void update(bool updateRealDist=true) ;
   //! prune the Voronoi diagram
-  void prune();
+  void prune() ;
   //! prune the Voronoi diagram by globally revisiting all Voronoi nodes. Takes more time but gives a more sparsely pruned Voronoi graph. You need to call this after every call to udpate()
   void updateAlternativePrunedDiagram();
   //! retrieve the alternatively pruned diagram. see updateAlternativePrunedDiagram()
-  int** alternativePrunedDiagram(){
+  int** alternativePrunedDiagram() {
     return alternativeDiagram;
   };
   //! retrieve the number of neighbors that are Voronoi nodes (4-connected)
   int getNumVoronoiNeighborsAlternative(int x, int y);
   //! returns whether the specified cell is part of the alternatively pruned diagram. See updateAlternativePrunedDiagram.
-  bool isVoronoiAlternative(const int& x, const int& y ) const;
+  bool isVoronoiAlternative( const int& x, const int& y ) const;
   
   //! returns the obstacle distance at the specified location
   float getDistance( int x, int y );
@@ -74,8 +73,6 @@ private:
   typedef enum {invalidObstData = SHRT_MAX/2} ObstDataState;
   typedef enum {pruned, keep, retry} markerMatchResult;
 
-
-  
   // methods
   void setObstacle(int x, int y);
   void removeObstacle(int x, int y);
@@ -89,6 +86,32 @@ private:
   inline bool markerMatchAlternative(int x, int y);
   inline int getVoronoiPruneValence(int x, int y);
 
+/* Exposed methods used to interface with external planners */
+public:
+
+  /* Planning methods */
+  // Expand a voronoi bubble with all cells within the bubble filled as free space
+  void expandVoronoiBubble(const INTPOINT& grid_pos);
+  // Gets 8-connected neighbours
+  void getNeighbors(const INTPOINT& grid_pos, std::vector<INTPOINT>& neighbours);
+
+  /* Checking methods */
+  // If cell is in map
+  bool isInMap(int x, int y);
+  //! checks whether the specficied location is occupied
+  bool isOccupied(const INTPOINT& grid_pos) const;
+  //! checks whether the location is occupied
+  bool isOccupied(const size_t& x, const size_t& y) const ;
+
+  // Convert from position to index
+  bool posToIdx(const DblPoint& map_pos, INTPOINT& grid_pos);
+  // Convert from position to index
+  void idxToPos(const INTPOINT& grid_pos, DblPoint& map_pos);
+
+  // Get height of the map plane with respect to global origin
+  double getHeight() const;
+
+private:
   // queues
 
   BucketPrioQueue<INTPOINT> open;
@@ -114,6 +137,12 @@ private:
 
   //  dataCell** getData(){ return data; }
   int** alternativeDiagram;
+
+  double height_{0.0}; // Height offset of the voronoi map plane
+  double res_{0.1}; // Resolution of the voronoi map 
+
+  double origin_x_{0.0};
+  double origin_y_{0.0};
 };
 
 

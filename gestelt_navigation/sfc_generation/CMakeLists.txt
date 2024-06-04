@@ -24,7 +24,6 @@ find_package(catkin REQUIRED COMPONENTS
   ${ROS_LIBRARIES}
 )
 find_package(Eigen3 REQUIRED)
-find_package(ompl REQUIRED)
 
 ###################################
 ## catkin specific configuration ##
@@ -52,7 +51,7 @@ include_directories(
 ## Declare a C++ library
 add_library( ${PROJECT_NAME} 
   src/spherical_sfc.cpp
-  src/polytope_sfc.cpp
+  # src/polytope_sfc.cpp
 )
 
 ## Specify libraries to link a library or executable target against

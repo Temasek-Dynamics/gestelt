@@ -1,19 +1,24 @@
-#include <static_brushfire/static_brushfire.hpp>
+#include <voronoi_planner/voronoi_planner.hpp>
 
-void StaticBrushfire::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
+void VoronoiPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
 { 
-  occ_map_pub_ = nh.advertise<nav_msgs::OccupancyGrid>("dyn_brushfire/occ_map", 10, true);
-  dist_occ_map_pub_ = nh.advertise<nav_msgs::OccupancyGrid>("dyn_brushfire/dist_map", 10, true);
-  voro_occ_grid_pub_ = nh.advertise<nav_msgs::OccupancyGrid>("dyn_brushfire/voronoi_map", 10, true);
+  occ_map_pub_ = nh.advertise<nav_msgs::OccupancyGrid>("voronoi_planner/occ_map", 10, true);
+  dist_occ_map_pub_ = nh.advertise<nav_msgs::OccupancyGrid>("voronoi_planner/dist_map", 10, true);
+  voro_occ_grid_pub_ = nh.advertise<nav_msgs::OccupancyGrid>("voronoi_planner/voronoi_map", 10, true);
+  
+  front_end_publisher_map_["front_end/closed_list"] = nh.advertise<visualization_msgs::Marker>("closed_list_viz", 10, true);
+
+  front_end_plan_viz_pub_ = nh.advertise<visualization_msgs::Marker>("plan_viz", 1, true);
 
   initParams(pnh);
 
   pgmFileToBoolMap(&bool_map_, size_x_, size_y_, map_fname_);
 
-  DynamicVoronoi dyn_voro;
-  dyn_voro.initializeMap(size_x_, size_y_, bool_map_);
-  dyn_voro.update(); // update distance map and Voronoi diagram
-  dyn_voro.visualize("/home/john/gestelt_ws/src/gestelt/dynamic_brushfire/maps/final.ppm");
+  dyn_voro_ = std::make_shared<DynamicVoronoi>();
+
+  dyn_voro_->initializeMap(size_x_, size_y_, bool_map_);
+  dyn_voro_->update(); // update distance map and Voronoi diagram
+  dyn_voro_->visualize("/home/john/gestelt_ws/src/gestelt/voronoi_planner/maps/final.ppm");
 
   // if (doPrune){
   //   dyn_voro.prune();  // prune the Voronoi
@@ -22,19 +27,40 @@ void StaticBrushfire::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   //   dyn_voro.updateAlternativePrunedDiagram();  
   // }
 
-  // mapToOccGrid(dist_map_, occ_grid_.info.width, occ_grid_.info.height, dist_occ_grid_);
-  voronoimapToOccGrid(dyn_voro, size_x_, size_y_,  voro_occ_grid_);
+  // Set start and goal
+  DblPoint start_pos(0.5, 0.5);
+  DblPoint goal_pos(6.0, 6.0);
 
-  // occ_map_pub_.publish(occ_grid_);
-  // dist_occ_map_pub_.publish(dist_occ_grid_);
+  AStarPlanner::AStarParams astar_params_; 
+  astar_params_.max_iterations = 99999;
+  astar_params_.debug_viz = false;
+  astar_params_.tie_breaker = 1.00001;
+  astar_params_.cost_function_type  = 2;
+
+  front_end_planner_ = std::make_unique<AStarPlanner>(dyn_voro_, astar_params_);
+
+  front_end_planner_->addPublishers(front_end_publisher_map_);
+
+  if (!front_end_planner_->generatePlanVoronoi(start_pos, goal_pos)){
+    std::cout << "FRONT END FAILED!!!! front_end_planner_->generatePlan() from ("<< \
+      start_pos.x << ", " <<  start_pos.y << ") to (" << goal_pos.x << ", " <<  goal_pos.y << ")" << std::endl;
+
+    // viz_helper::publishClosedList(front_end_planner_->getClosedList(), "world", closed_list_viz_pub_);
+    return;
+  }
+
+  std::vector<Eigen::Vector3d> front_end_path = front_end_planner_->getPathPosRaw();
+
+  publishFrontEndPath(front_end_path, "map", front_end_plan_viz_pub_) ;
+
+  occmapToOccGrid(*dyn_voro_, size_x_, size_y_,  occ_grid_); // Occupancy map
+  voronoimapToOccGrid(*dyn_voro_, size_x_, size_y_,  voro_occ_grid_); // Voronoi map
+
   voro_occ_grid_pub_.publish(voro_occ_grid_);
-
-  // loadMapFromFile(occ_grid_, map_fname_);
-  // computeDistanceMap();
-
+  occ_map_pub_.publish( occ_grid_);
 }
 
-void StaticBrushfire::initParams(ros::NodeHandle &pnh)
+void VoronoiPlanner::initParams(ros::NodeHandle &pnh)
 {
   pnh.param("map_filename", map_fname_, std::string(""));
   pnh.param("resolution", res_, 0.1);
@@ -46,7 +72,7 @@ void StaticBrushfire::initParams(ros::NodeHandle &pnh)
   pnh.param("yaw", yaw_, 0.0);
 }
 
-void StaticBrushfire::pgmFileToBoolMap(bool ***map,
+void VoronoiPlanner::pgmFileToBoolMap(bool ***map,
                                       int& size_x, int& size_y,
                                       const std::string& fname)
 {
@@ -128,7 +154,7 @@ void StaticBrushfire::pgmFileToBoolMap(bool ***map,
 }
 
 
-void StaticBrushfire::loadMapFromFile(nav_msgs::OccupancyGrid& map,
+void VoronoiPlanner::loadMapFromFile(nav_msgs::OccupancyGrid& map,
                                       const std::string& fname)
 {
   SDL_Surface* img;
@@ -218,7 +244,7 @@ void StaticBrushfire::loadMapFromFile(nav_msgs::OccupancyGrid& map,
   SDL_FreeSurface(img);
 }
 
-// void StaticBrushfire::computeDistanceMap()
+// void VoronoiPlanner::computeDistanceMap()
 // {
 //   dist_map_.resize(occ_grid_.info.width * occ_grid_.info.height, -1);
 //   obst_map_.resize(occ_grid_.info.width * occ_grid_.info.height, -1); 
@@ -257,7 +283,7 @@ void StaticBrushfire::loadMapFromFile(nav_msgs::OccupancyGrid& map,
 // }
 
 
-void StaticBrushfire::lowerStatic(const size_t& idx)
+void VoronoiPlanner::lowerStatic(const size_t& idx)
 {
   for (const size_t& nb_idx: get8ConNeighbours(idx))
   { 
@@ -270,7 +296,7 @@ void StaticBrushfire::lowerStatic(const size_t& idx)
   }
 }
 
-void StaticBrushfire::computeDistanceMap()
+void VoronoiPlanner::computeDistanceMap()
 {
   dist_map_.resize(occ_grid_.info.width * occ_grid_.info.height, -1);
   obst_map_.resize(occ_grid_.info.width * occ_grid_.info.height, -1); 

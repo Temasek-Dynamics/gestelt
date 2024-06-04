@@ -6,6 +6,7 @@
 #include <limits>
 #include <Eigen/Eigen>
 #include <queue>
+#include <global_planner/point.h>
 
 using namespace Eigen;
 constexpr double infinity = std::numeric_limits<float>::infinity();
@@ -475,7 +476,43 @@ inline double getOctileDist(const PosIdx& a, const PosIdx& b)  {
   return (dx + dy + dz) + (SQRT2 - 2) * std::min(dx, std::min(dy, dz)); 
 }
 
-// ??? 
+
+
+
+// Get euclidean distance between node_1 and node_2
+// NOTE: This is in units of indices
+inline double getL1Norm2D(const INTPOINT& a, const INTPOINT& b) {
+  return abs(a.x - b.x) + abs(a.y - b.y);
+}
+
+// Get euclidean distance between node_1 and node_2
+// NOTE: This is in units of indices
+inline double getL2Norm2D(const INTPOINT& a, const INTPOINT& b) {
+  double dx = abs(a.x - b.x);
+  double dy = abs(a.y - b.y);
+
+  return sqrt(dx*dx + dy*dy);
+}
+
+// // Get octile distance
+inline double getChebyshevDist2D(const INTPOINT& a, const INTPOINT& b)  {
+  double dx = abs(a.x - b.x);
+  double dy = abs(a.y - b.y);
+
+  return (dx + dy) - std::min(dx, dy); 
+}
+
+// // Get chebyshev distance
+inline double getOctileDist2D(const INTPOINT& a, const INTPOINT& b)  {
+  double dx = abs(a.x - b.x);
+  double dy = abs(a.y - b.y);
+
+  return (dx + dy) + (SQRT2 - 2) * std::min(dx, dy); 
+}
+
+
+
+// ??? Taken from original EGOswarm code
 // double getDiagCost(OccNodePtr node_1, OccNodePtr node_2) {
 //   double dx = abs(node_1->idx(0) - node_2->idx(0));
 //   double dy = abs(node_1->idx(1) - node_2->idx(1));

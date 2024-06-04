@@ -1,0 +1,13 @@
+<launch>
+  <node pkg="voronoi_planner" type="voronoi_planner_node" 
+      name="voronoi_planner_node" output="screen">
+    <rosparam command="load" file="$(find voronoi_planner)/config/voronoi_planner.yaml" />
+    <param name="map_filename" value="$(find voronoi_planner)/maps/empty_room.pgm"/>
+    <!-- <param name="map_filename" value="$(find voronoi_planner)/maps/map_circular.pgm"/> -->
+    <!-- <param name="map_filename" value="$(find voronoi_planner)/maps/map.pgm"/> -->
+  </node>
+
+  <node name="rviz" pkg="rviz" type="rviz" required="true" 
+        args="-d $(find gestelt_bringup)/launch/rviz/testing.rviz"/>
+
+</launch>

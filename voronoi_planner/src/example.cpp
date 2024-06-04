@@ -1,4 +1,4 @@
-#include "dynamic_brushfire/dynamicvoronoi.h"
+#include "dynamic_voronoi/dynamicvoronoi.h"
 
 #include <iostream>
 #include <fstream>

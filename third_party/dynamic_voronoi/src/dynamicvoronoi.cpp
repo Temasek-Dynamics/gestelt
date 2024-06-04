@@ -1,4 +1,4 @@
-#include "dynamic_brushfire/dynamicvoronoi.h"
+#include "dynamic_voronoi/dynamicvoronoi.h"
 
 #include <math.h>
 #include <iostream>
@@ -116,6 +116,7 @@ void DynamicVoronoi::occupyCell(int x, int y) {
   gridMap[x][y] = 1;
   setObstacle(x,y);
 }
+
 void DynamicVoronoi::clearCell(int x, int y) {
   gridMap[x][y] = 0;
   removeObstacle(x,y);
@@ -307,7 +308,6 @@ void DynamicVoronoi::commitAndColorize(bool updateRealDist) {
   addList.clear();
 }
 
-
 void DynamicVoronoi::checkVoro(int x, int y, int nx, int ny, dataCell& c, dataCell& nc) {
 
   if ((c.sqdist>1 || nc.sqdist>1) && nc.obstX!=invalidObstData) { 
@@ -345,7 +345,6 @@ void DynamicVoronoi::checkVoro(int x, int y, int nx, int ny, dataCell& c, dataCe
   }
 }
 
-
 void DynamicVoronoi::reviveVoroNeighbors(int &x, int &y) {
   for (int dx=-1; dx<=1; dx++) {
     int nx = x+dx;
@@ -363,7 +362,6 @@ void DynamicVoronoi::reviveVoroNeighbors(int &x, int &y) {
     }
   }
 }
-
 
 bool DynamicVoronoi::isOccupied(int x, int y) {
   dataCell c = data[x][y];
@@ -647,7 +645,7 @@ int DynamicVoronoi::getNumVoronoiNeighborsAlternative(int x, int y) {
   int count = 0;
   for (int dx = -1; dx <= 1; dx++) {
     for (int dy = -1; dy <= 1; dy++) {
-      if ((dx == 0 && dy == 0) || (dx != 0 && dy != 0)) {
+      if ((dx == 0 && dy == 0) || (dx != 0 && dy != 0)) { // 4 Connected
         continue;
       }
 
@@ -663,8 +661,6 @@ int DynamicVoronoi::getNumVoronoiNeighborsAlternative(int x, int y) {
   }
   return count;
 }
-
-
 
 DynamicVoronoi::markerMatchResult DynamicVoronoi::markerMatch(int x, int y) {
   // implementation of connectivity patterns
@@ -708,8 +704,6 @@ DynamicVoronoi::markerMatchResult DynamicVoronoi::markerMatch(int x, int y) {
   // 4-connected
   if ((!f[0] && f[1] && f[3]) || (!f[2] && f[1] && f[4]) || (!f[5] && f[3] && f[6]) || (!f[7] && f[6] && f[4])) return keep;
   if ((f[3] && f[4] && !f[1] && !f[6]) || (f[1] && f[6] && !f[3] && !f[4])) return keep;
-  
-
 
   // keep voro cells inside of blocks and retry later
   if (voroCount>=5 && voroCountFour>=3 && data[x][y].voronoi!=voronoiRetry) {
@@ -718,3 +712,120 @@ DynamicVoronoi::markerMatchResult DynamicVoronoi::markerMatch(int x, int y) {
 
   return pruned;
 }
+
+
+/* Planning methods */
+void expandVoronoiBubble(const INTPOINT& grid_pos, bool makeGoalBubble)
+{
+  std::queue<IntPoint> q;
+  q.push(IntPoint(x,y));
+
+  while(!q.empty()) {
+    IntPoint p = q.front();
+    q.pop();
+    int x = p.x;
+    int y = p.y;
+
+    for (int dx=-1; dx<=1; dx++) {
+      int nx = x+dx;
+      if (nx<0 || nx>=sizeX) continue; // Skip if outside map
+      for (int dy=-1; dy<=1; dy++) {
+        int ny = y+dy;
+        if (dx && dy) continue;
+        if (ny<0 || ny>=sizeY) continue; // Skip if outside map
+        IntPoint n = IntPoint(nx, ny);
+
+        if (this->getSqrDistance(nx,ny)<1) 
+          continue;
+
+        bool isVoronoi = layer->isVoronoi(nx,ny);
+
+        Node *nd = MemoryManager<Node>::getNew();
+        nd->g = INT_MAX;
+        nd->h = HEURISTIC(nPose, goal);
+        nd->f = INT_MAX;
+        nd->prev = NULL;
+        nd->pos = nPose;
+        nd->state = Node::none;
+
+        if (makeGoalBubble){ 
+          nd->phase = Node::goaling;
+        }
+        else {
+          if (isVoronoi){
+            nd->phase = Node::voro;
+          }
+          else{
+            nd->phase = Node::starting;
+          }
+        }
+
+        data[nPose] = nd;
+        if (!isVoronoi){
+          q.push(n);
+
+        }
+      }
+
+    }
+  }
+}
+
+void DynamicVoronoi::getNeighbors(const INTPOINT& grid_pos, std::vector<INTPOINT>& neighbours) {
+  neighbours.clear();
+
+  for (int dx = -1; dx <= 1; dx++) {
+    for (int dy = -1; dy <= 1; dy++) {
+      if ((dx == 0 && dy == 0)) { // 8 Connected
+        continue;
+      }
+
+      int nx = grid_pos.x + dx;
+      int ny = grid_pos.y + dy;
+      if (!isInMap(nx, ny) || isOccupied(nx, ny)){
+        continue;
+      }
+
+      neighbours.push_back(IntPoint(nx, ny));
+    }
+  }
+}
+
+bool DynamicVoronoi::posToIdx(const DblPoint& map_pos, INTPOINT& grid_pos) {
+  grid_pos.x = (map_pos.x - origin_x_) / res_;
+  grid_pos.y = (map_pos.y - origin_y_) / res_;
+
+  if (!isInMap(grid_pos.x, grid_pos.y)){
+    std::cout << "[DynamicVoronoi::posToIdx] (" << grid_pos.x << "," << grid_pos.y << ") not in map" << std::endl;
+    return false;
+  }
+  return true;
+}
+
+/* Checking methods */
+
+bool DynamicVoronoi::isInMap(int x, int y) {
+  return !(x < 0 || x >= sizeX || y < 0 || y >= sizeY);
+}
+
+bool DynamicVoronoi::isOccupied(const INTPOINT& grid_pos) const {
+  dataCell c = data[grid_pos.x][grid_pos.y];
+  return (c.obstX==grid_pos.x && c.obstY==grid_pos.y);
+}
+
+
+bool DynamicVoronoi::isOccupied(const size_t& x, const size_t& y) const {
+  dataCell c = data[x][y];
+  return (c.obstX == x && c.obstY == y);
+}
+
+// Convert from position to index
+void DynamicVoronoi::idxToPos(const INTPOINT& grid_pos, DblPoint& map_pos) {
+  map_pos.x = grid_pos.x * res_ + origin_x_;
+  map_pos.y = grid_pos.y * res_ + origin_y_;
+}
+
+double DynamicVoronoi::getHeight() const {
+  return height_;
+}
+

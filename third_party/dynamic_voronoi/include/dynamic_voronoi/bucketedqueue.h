@@ -55,7 +55,7 @@ private:
   typename BucketType::iterator nextPop;
 };
 
-#include "bucketedqueue.hxx"
+#include "bucketedqueue.hpp"
 
 #endif
 

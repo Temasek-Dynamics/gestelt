@@ -13,6 +13,7 @@ set(ROS_LIBRARIES
   grid_map
   jps3d
   logger
+  dynamic_voronoi
 )
 
 ## Find catkin macros and libraries

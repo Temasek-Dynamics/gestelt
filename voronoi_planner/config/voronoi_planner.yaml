@@ -1,0 +1,7 @@
+resolution: 0.1
+negate: false
+occ_threshold: 0.65
+free_threshold: 0.196
+origin_x: 0.0
+origin_y: 0.0
+origin_z: 0.0

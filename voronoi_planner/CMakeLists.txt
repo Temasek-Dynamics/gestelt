@@ -1,13 +1,15 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(dynamic_brushfire)
+project(voronoi_planner)
 
-# set(CMAKE_BUILD_TYPE "Release")
-# add_compile_options(-std=c++17)
-# set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g")
+set(CMAKE_BUILD_TYPE "Release")
+add_compile_options(-std=c++17)
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g")
 
 set(ROS_LIBRARIES
   roscpp
   nav_msgs
+  global_planner
+  dynamic_voronoi
 )
 
 ## Find catkin macros and libraries
@@ -24,7 +26,7 @@ find_package(SDL REQUIRED)
 ###################################
 catkin_package(
  INCLUDE_DIRS include
- LIBRARIES dynamic_brushfire # Exported libraries
+ LIBRARIES voronoi_planner # Exported libraries
 #  CATKIN_DEPENDS 
 #  DEPENDS system_lib
 )
@@ -42,24 +44,13 @@ include_directories(
 )
 
 ## Declare a C++ library
-add_library(static_brushfire 
-  src/static_brushfire.cpp
+add_executable(voronoi_planner_node
+  src/voronoi_planner.cpp 
+  src/voronoi_planner_node.cpp 
 )
-
-## Specify libraries to link a library or executable target against
-target_link_libraries(static_brushfire
+target_link_libraries(voronoi_planner_node 
   ${catkin_LIBRARIES}
   SDL SDL_image
-)
-
-
-add_executable(static_brushfire_node
-  src/dynamicvoronoi.cpp
-  src/static_brushfire_node.cpp 
-)
-target_link_libraries(static_brushfire_node 
-  ${catkin_LIBRARIES}
-  static_brushfire
 )
 
 
