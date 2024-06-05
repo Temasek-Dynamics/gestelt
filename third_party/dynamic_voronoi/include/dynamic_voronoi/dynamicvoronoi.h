@@ -42,7 +42,13 @@ public:
   int getNumVoronoiNeighborsAlternative(int x, int y);
   //! returns whether the specified cell is part of the alternatively pruned diagram. See updateAlternativePrunedDiagram.
   bool isVoronoiAlternative( const int& x, const int& y ) const;
-  
+
+
+  int getSqrDistance( int x, int y ) {
+    //  if( (x>0) && (x<sizeX) && (y>0) && (y<sizeY)) 
+    return data[x][y].sqdist; 
+    //  else return -1;
+  }
   //! returns the obstacle distance at the specified location
   float getDistance( int x, int y );
   //! returns whether the specified cell is part of the (pruned) Voronoi graph
@@ -60,12 +66,12 @@ public:
 private:  
   struct dataCell {
     float dist;
+    int sqdist;
     char voronoi;
     char queueing;
     int obstX;
     int obstY;
     bool needsRaise;
-    int sqdist;
   };
 
   typedef enum {voronoiKeep=-4, freeQueued = -3, voronoiRetry=-2, voronoiPrune=-1, free=0, occupied=1} State;

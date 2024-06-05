@@ -160,6 +160,7 @@ struct PriorityQueue {
 
   std::priority_queue<PQElement, std::vector<PQElement>, PQComp > elements;
 
+
   inline bool empty() const {
      return elements.empty();
   }
@@ -438,8 +439,6 @@ public:
 
   std::shared_ptr<GridMap> map_; 
 };
-
-
 
 
 // Get euclidean distance between node_1 and node_2

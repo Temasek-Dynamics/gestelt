@@ -244,6 +244,61 @@ bool AStarPlanner::generatePlanVoronoi(const DblPoint& start_pos, const DblPoint
     return generatePlanVoronoi(start_pos, goal_pos, cost_function);
 }
 
+void AStarPlanner::expandVoronoiBubble(const INTPOINT& grid_pos, bool makeGoalBubble, IntPoint goal, int minSqrDist)
+{
+    std::queue<IntPoint> q;
+    q.push(IntPoint(x,y));
+
+    std::unordered_set<IntPoint> closed_list_exp; // All closed nodes
+
+    while(!q.empty()) {
+        IntPoint p = q.front();
+        q.pop();
+        int x = p.x;
+        int y = p.y;
+
+        for (int dx=-1; dx<=1; dx++) {
+        int nx = x+dx;
+        if (nx<0 || nx>=sizeX) continue; // Skip if outside map
+        for (int dy=-1; dy<=1; dy++) {
+            int ny = y+dy;
+            if (dx && dy) 
+                continue;
+            if (ny<0 || ny>=sizeY) 
+                continue; // Skip if outside map
+
+            IntPoint n = IntPoint(nx, ny);
+
+            // If already added to open list, then skip
+            if (closed_list_exp.find(nb_node) == closed_list_exp.end()) 
+            {
+                continue;
+            }
+
+            if (dyn_voro_->getSqrDistance(nx,ny)<1) 
+                continue;
+
+            bool isVoronoi = dyn_voro_->isVoronoi(nx,ny);
+
+            IntPoint n_grid_pos = IntPoint(nx,ny);
+
+            Node *nd = MemoryManager<Node>::getNew();
+            g_cost_v_[n_grid_pos] = std::numeric_limits<double>::max();
+            // double h_cost = getL2Norm(n_grid_pos, goal);
+            // open_list_v_.put(nb_node, std::numeric_limits<double>::max());
+            
+            // mark as closed
+            closed_list_exp.insert(n_grid_pos);
+
+            if (!isVoronoi){
+                q.push(n);
+            }
+        }
+
+        }
+    }
+}
+
 bool AStarPlanner::generatePlanVoronoi(const DblPoint& start_pos, const DblPoint& goal_pos, 
                                 std::function<double(const INTPOINT&, const INTPOINT&)> cost_function)
 {
@@ -267,13 +322,13 @@ bool AStarPlanner::generatePlanVoronoi(const DblPoint& start_pos, const DblPoint
     }
 
     // Create voronoi bubble around start and goal
-    dyn_voro_->expandVoronoiBubble(start_node);
-    dyn_voro_->expandVoronoiBubble(goal_node);
+    expandVoronoiBubble(start_node);
+    expandVoronoiBubble(goal_node);
 
     came_from_v_[start_node] = start_node;
     g_cost_v_[start_node] = 0;
 
-    open_list_v_.put(start_node, 0);
+    open_list_v_.put(start_node, 0); // start_node has 0 f cost
 
     int num_iter = 0;
 
@@ -314,7 +369,7 @@ bool AStarPlanner::generatePlanVoronoi(const DblPoint& start_pos, const DblPoint
             // std::cout << "[a_star] Exploring neighbor " << common_->getPosStr(nb_node).c_str() << std::endl;
             double tent_g_cost = g_cost_v_[cur_node] + cost_function(cur_node, nb_node);
 
-            // If tentative cost is better than previously computed cost, then update costs
+            // If g_cost is not found or tentative cost is better than previously computed cost, then update costs
             if (g_cost_v_.find(nb_node) == g_cost_v_.end() || tent_g_cost < g_cost_v_[nb_node])
             {
                 g_cost_v_[nb_node] = tent_g_cost;

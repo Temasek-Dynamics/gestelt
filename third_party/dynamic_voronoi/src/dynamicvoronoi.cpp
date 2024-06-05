@@ -715,61 +715,7 @@ DynamicVoronoi::markerMatchResult DynamicVoronoi::markerMatch(int x, int y) {
 
 
 /* Planning methods */
-void expandVoronoiBubble(const INTPOINT& grid_pos, bool makeGoalBubble)
-{
-  std::queue<IntPoint> q;
-  q.push(IntPoint(x,y));
 
-  while(!q.empty()) {
-    IntPoint p = q.front();
-    q.pop();
-    int x = p.x;
-    int y = p.y;
-
-    for (int dx=-1; dx<=1; dx++) {
-      int nx = x+dx;
-      if (nx<0 || nx>=sizeX) continue; // Skip if outside map
-      for (int dy=-1; dy<=1; dy++) {
-        int ny = y+dy;
-        if (dx && dy) continue;
-        if (ny<0 || ny>=sizeY) continue; // Skip if outside map
-        IntPoint n = IntPoint(nx, ny);
-
-        if (this->getSqrDistance(nx,ny)<1) 
-          continue;
-
-        bool isVoronoi = layer->isVoronoi(nx,ny);
-
-        Node *nd = MemoryManager<Node>::getNew();
-        nd->g = INT_MAX;
-        nd->h = HEURISTIC(nPose, goal);
-        nd->f = INT_MAX;
-        nd->prev = NULL;
-        nd->pos = nPose;
-        nd->state = Node::none;
-
-        if (makeGoalBubble){ 
-          nd->phase = Node::goaling;
-        }
-        else {
-          if (isVoronoi){
-            nd->phase = Node::voro;
-          }
-          else{
-            nd->phase = Node::starting;
-          }
-        }
-
-        data[nPose] = nd;
-        if (!isVoronoi){
-          q.push(n);
-
-        }
-      }
-
-    }
-  }
-}
 
 void DynamicVoronoi::getNeighbors(const INTPOINT& grid_pos, std::vector<INTPOINT>& neighbours) {
   neighbours.clear();
