@@ -80,8 +80,6 @@ private:
   typedef enum {pruned, keep, retry} markerMatchResult;
 
   // methods
-  void setObstacle(int x, int y);
-  void removeObstacle(int x, int y);
   inline void checkVoro(int x, int y, int nx, int ny, dataCell& c, dataCell& nc);
   void recheckVoro();
   void commitAndColorize(bool updateRealDist=true);
@@ -95,9 +93,13 @@ private:
 /* Exposed methods used to interface with external planners */
 public:
 
+  /* Mapping methods */
+  void setObstacle(int x, int y);
+  void removeObstacle(int x, int y);
+
   /* Planning methods */
   // Expand a voronoi bubble with all cells within the bubble filled as free space
-  void expandVoronoiBubble(const INTPOINT& grid_pos);
+  // void expandVoronoiBubble(const INTPOINT& grid_pos);
   // Gets 8-connected neighbours
   void getNeighbors(const INTPOINT& grid_pos, std::vector<INTPOINT>& neighbours);
 
@@ -116,6 +118,14 @@ public:
 
   // Get height of the map plane with respect to global origin
   double getHeight() const;
+
+  double getSizeX() const {
+    return sizeX;
+  }
+
+  double getSizeY() const {
+    return sizeY;
+  }
 
 private:
   // queues

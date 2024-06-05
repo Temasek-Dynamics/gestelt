@@ -86,11 +86,18 @@ public:
   std::vector<Eigen::Vector3d> getPathPosRaw();
 
   /**
-   * @brief Get successful plan in terms of path positions
+   * @brief Get visited cells
    * 
    * @return std::vector<Eigen::Vector3d> 
    */
   std::vector<Eigen::Vector3d> getClosedList();
+
+  /**
+   * @brief Get visited cells
+   * 
+   * @return std::vector<Eigen::Vector3d> 
+   */
+  std::vector<Eigen::Vector3d> getClosedListVoronoi();
 
   void addPublishers(ros::Publisher& closed_list_viz_pub)
   {
@@ -99,13 +106,17 @@ public:
 
 private:
 
+  void expandVoronoiBubble(
+    const INTPOINT& grid_pos, const bool& makeGoalBubble);
+
+
   void tracePath(PosIdx final_node);
 
   void tracePathVoronoi(IntPoint final_node);
 
   void clearVisualizations();
 
-  void publishVizPoints(const std::vector<Eigen::Vector3d>& pts, ros::Publisher& publisher, Eigen::Vector3d color = Eigen::Vector3d{0.0, 0.0, 0.0}, double radius = 0.1, const std::string& frame_id = "world")
+  void publishVizPoints(const std::vector<Eigen::Vector3d>& pts, ros::Publisher& publisher, Eigen::Vector3d color = Eigen::Vector3d{0.0, 0.0, 0.0}, double radius = 0.1, const std::string& frame_id = "map")
   {
     if (!astar_params_.debug_viz || pts.empty()){
       return;
@@ -175,6 +186,8 @@ private:
   std::unordered_map<IntPoint, IntPoint> came_from_v_;
   PriorityQueue<IntPoint, double> open_list_v_; // Min priority queue 
   std::unordered_set<IntPoint> closed_list_v_; // All closed nodes
+
+  std::unordered_set<IntPoint> marked_bubble_cells_; // Cells that are marked as part of the voronoi bubble
 
   std::vector<IntPoint> path_idx_v_; // Path in terms of indices
 };

@@ -18,7 +18,7 @@ void VoronoiPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
 
   dyn_voro_->initializeMap(size_x_, size_y_, bool_map_);
   dyn_voro_->update(); // update distance map and Voronoi diagram
-  dyn_voro_->visualize("/home/john/gestelt_ws/src/gestelt/voronoi_planner/maps/final.ppm");
+  // dyn_voro_->visualize("/home/john/gestelt_ws/src/gestelt/voronoi_planner/maps/final.ppm");
 
   // if (doPrune){
   //   dyn_voro.prune();  // prune the Voronoi
@@ -31,27 +31,36 @@ void VoronoiPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   DblPoint start_pos(0.5, 0.5);
   DblPoint goal_pos(6.0, 6.0);
 
+  // INTPOINT start_node, goal_node;
+  // if (!dyn_voro_->posToIdx(start_pos, start_node) || !dyn_voro_->posToIdx(goal_pos, goal_node))
+  // {   
+  //   std::cerr << "[VoronoiPlanner] Start or goal position is not within map bounds!" << std::endl;
+  //   return ;
+  // }
+
+  // dyn_voro_->setObstacle(start_node.x, start_node.y);
+  // dyn_voro_->setObstacle(goal_node.x, goal_node.y);
+
+  // dyn_voro_->update(); // update distance map and Voronoi diagram
+
   AStarPlanner::AStarParams astar_params_; 
   astar_params_.max_iterations = 99999;
-  astar_params_.debug_viz = false;
+  astar_params_.debug_viz = true;
   astar_params_.tie_breaker = 1.00001;
   astar_params_.cost_function_type  = 2;
 
   front_end_planner_ = std::make_unique<AStarPlanner>(dyn_voro_, astar_params_);
-
   front_end_planner_->addPublishers(front_end_publisher_map_);
-
   if (!front_end_planner_->generatePlanVoronoi(start_pos, goal_pos)){
     std::cout << "FRONT END FAILED!!!! front_end_planner_->generatePlan() from ("<< \
       start_pos.x << ", " <<  start_pos.y << ") to (" << goal_pos.x << ", " <<  goal_pos.y << ")" << std::endl;
 
     // viz_helper::publishClosedList(front_end_planner_->getClosedList(), "world", closed_list_viz_pub_);
-    return;
   }
-
-  std::vector<Eigen::Vector3d> front_end_path = front_end_planner_->getPathPosRaw();
-
-  publishFrontEndPath(front_end_path, "map", front_end_plan_viz_pub_) ;
+  else{
+    std::vector<Eigen::Vector3d> front_end_path = front_end_planner_->getPathPosRaw();
+    publishFrontEndPath(front_end_path, "map", front_end_plan_viz_pub_) ;
+  }
 
   occmapToOccGrid(*dyn_voro_, size_x_, size_y_,  occ_grid_); // Occupancy map
   voronoimapToOccGrid(*dyn_voro_, size_x_, size_y_,  voro_occ_grid_); // Voronoi map
