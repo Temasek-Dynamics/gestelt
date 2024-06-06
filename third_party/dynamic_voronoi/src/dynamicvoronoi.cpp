@@ -716,8 +716,9 @@ DynamicVoronoi::markerMatchResult DynamicVoronoi::markerMatch(int x, int y) {
 
 /* Planning methods */
 
-
-void DynamicVoronoi::getNeighbors(const INTPOINT& grid_pos, std::vector<INTPOINT>& neighbours) {
+// 8 Connected search for valid neighbours
+void DynamicVoronoi::getNeighbors(const INTPOINT& grid_pos, std::vector<INTPOINT>& neighbours) 
+{
   neighbours.clear();
 
   for (int dx = -1; dx <= 1; dx++) {
@@ -737,15 +738,60 @@ void DynamicVoronoi::getNeighbors(const INTPOINT& grid_pos, std::vector<INTPOINT
   }
 }
 
+// 8 Connected search for valid neighbours used in voronoi search
+void DynamicVoronoi::getVoroNeighbors(const INTPOINT& grid_pos, std::vector<INTPOINT>& neighbours,
+                                      const INTPOINT& goal_grid_pos) 
+{
+  neighbours.clear();
+
+  for (int dx = -1; dx <= 1; dx++) {
+    for (int dy = -1; dy <= 1; dy++) {
+      if ((dx == 0 && dy == 0)) { 
+        continue;
+      }
+
+      int nx = grid_pos.x + dx;
+      int ny = grid_pos.y + dy;
+
+      // if (!(nx == goal_grid_pos.x && ny == goal_grid_pos.y)) // if not a goal
+      // { 
+        if (!isInMap(nx, ny) || isOccupied(nx, ny)){
+          continue;
+        }
+      // }
+
+      neighbours.push_back(IntPoint(nx, ny));
+    }
+  }
+}
+
+// Convert from index to position
 bool DynamicVoronoi::posToIdx(const DblPoint& map_pos, INTPOINT& grid_pos) {
   grid_pos.x = (map_pos.x - origin_x_) / res_;
-  grid_pos.y = (map_pos.y - origin_y_) / res_;
+
+  if (flip_y_){
+    grid_pos.y = sizeY - (map_pos.y - origin_y_) / res_;
+  }
+  else {
+    grid_pos.y = (map_pos.y - origin_y_) / res_;
+  }
 
   if (!isInMap(grid_pos.x, grid_pos.y)){
     std::cout << "[DynamicVoronoi::posToIdx] (" << grid_pos.x << "," << grid_pos.y << ") not in map" << std::endl;
     return false;
   }
   return true;
+}
+
+// Convert from position to index
+void DynamicVoronoi::idxToPos(const INTPOINT& grid_pos, DblPoint& map_pos) {
+  map_pos.x = grid_pos.x * res_ + origin_x_;
+  if (flip_y_){
+    map_pos.y = (- grid_pos.y + sizeY) * res_ + origin_y_;
+  }
+  else {
+    map_pos.y = grid_pos.y * res_ + origin_y_;
+  }
 }
 
 /* Checking methods */
@@ -764,14 +810,3 @@ bool DynamicVoronoi::isOccupied(const size_t& x, const size_t& y) const {
   dataCell c = data[x][y];
   return (c.obstX == x && c.obstY == y);
 }
-
-// Convert from position to index
-void DynamicVoronoi::idxToPos(const INTPOINT& grid_pos, DblPoint& map_pos) {
-  map_pos.x = grid_pos.x * res_ + origin_x_;
-  map_pos.y = grid_pos.y * res_ + origin_y_;
-}
-
-double DynamicVoronoi::getHeight() const {
-  return height_;
-}
-

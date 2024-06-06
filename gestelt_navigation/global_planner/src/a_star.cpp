@@ -254,6 +254,8 @@ void AStarPlanner::expandVoronoiBubble(
     std::queue<IntPoint> q;
     q.push(grid_pos);
 
+    marked_bubble_cells_.insert(grid_pos);
+
     while(!q.empty()) {
         IntPoint p = q.front();
         q.pop();
@@ -273,8 +275,8 @@ void AStarPlanner::expandVoronoiBubble(
 
                 IntPoint n_grid_pos = IntPoint(nx,ny);
 
-                if (marked_bubble_cells_.find(n_grid_pos) == marked_bubble_cells_.end()) 
-                    continue; // If already added to open list, then skip
+                if (marked_bubble_cells_.find(n_grid_pos) != marked_bubble_cells_.end()) 
+                    continue; // If already added to marked bubble list, then skip
 
                 if (dyn_voro_->getSqrDistance(nx,ny)<1) 
                     continue;   // Skip if occupied or near obstacle
@@ -325,8 +327,11 @@ bool AStarPlanner::generatePlanVoronoi(const DblPoint& start_pos, const DblPoint
     dyn_voro_->update(); // update distance map and Voronoi diagram
 
     // Create voronoi bubble around start and goal
-    expandVoronoiBubble(start_node, false);
-    expandVoronoiBubble(goal_node, true);
+    expandVoronoiBubble(start_node, false   );
+    expandVoronoiBubble(goal_node, true     );
+
+    dyn_voro_->removeObstacle(start_node.x, start_node.y);
+    dyn_voro_->removeObstacle(goal_node.x, goal_node.y  );
 
     came_from_v_[start_node] = start_node;
     g_cost_v_[start_node] = 0;
@@ -335,19 +340,12 @@ bool AStarPlanner::generatePlanVoronoi(const DblPoint& start_pos, const DblPoint
 
     int num_iter = 0;
 
-    double explore_nb_durs = 0;
-    double loop_durs = 0;
-    double chkpt_1_durs = 0;
-    double get_nb_durs = 0;
-    double get_occ_durs = 0;
-
     std::vector<INTPOINT> neighbours; // 3d indices of neighbors
 
     while (!open_list_v_.empty() && num_iter < astar_params_.max_iterations)
     {
-
         if (num_iter%10 == 1){
-            std::cout << "[a_star] Iteration " << num_iter << std::endl;
+            // std::cout << "[a_star] Iteration " << num_iter << std::endl;
 
             publishVizPoints(getClosedListVoronoi(), closed_list_viz_pub_);
         }
@@ -357,20 +355,19 @@ bool AStarPlanner::generatePlanVoronoi(const DblPoint& start_pos, const DblPoint
 
         if (cur_node == goal_node)
         {
-            dyn_voro_->removeObstacle(start_node.x, start_node.y);
-            dyn_voro_->removeObstacle(goal_node.x, goal_node.y);
-
             // Goal reached, terminate search and obtain path
             tracePathVoronoi(cur_node);
 
             return true;
         }
 
-        dyn_voro_->getNeighbors(cur_node, neighbours);
+        // Get neighbours that are within the map
+        dyn_voro_->getVoroNeighbors(cur_node, neighbours, goal_node);
 
         // Explore neighbors of current node
         for (const INTPOINT& nb_node : neighbours)
         {
+            // Only allow voronoi and bubbled cells 
             if (!(dyn_voro_->isVoronoi(nb_node.x, nb_node.y) 
                 || marked_bubble_cells_.find(nb_node) != marked_bubble_cells_.end())){
                 continue;
@@ -398,7 +395,8 @@ bool AStarPlanner::generatePlanVoronoi(const DblPoint& start_pos, const DblPoint
         num_iter++;
     }
 
-    std::cerr << "[a_star] Unable to find goal with maximum iteration " << num_iter << std::endl;
+    std::cerr   << "[a_star] Unable to find goal node ("<< goal_node.x << ", " << goal_node.y 
+                << ") with maximum iteration " << num_iter << std::endl;
 
     return false;
 }

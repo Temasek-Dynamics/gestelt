@@ -10,11 +10,27 @@
 
 //! A DynamicVoronoi object computes and updates a distance map and Voronoi diagram.
 class DynamicVoronoi {
-  
+
+public:
+  struct DynamicVoronoiParams{
+    double height{0.0};
+    double resolution{0.1};
+    double origin_x{0.0};
+    double origin_y{0.0};
+  }; // struct DynamicVoronoiParams
+
 public:
   
   DynamicVoronoi();
   ~DynamicVoronoi();
+
+  DynamicVoronoi(const DynamicVoronoiParams& params)
+  {
+    height_ = params.height;
+    res_ = params.resolution;
+    origin_x_ = params.origin_x;
+    origin_y_ = params.origin_y;
+  }
 
   //! Initialization with an empty map
   void initializeEmpty(int _sizeX, int _sizeY, bool initGridMap=true);
@@ -100,8 +116,13 @@ public:
   /* Planning methods */
   // Expand a voronoi bubble with all cells within the bubble filled as free space
   // void expandVoronoiBubble(const INTPOINT& grid_pos);
+
   // Gets 8-connected neighbours
   void getNeighbors(const INTPOINT& grid_pos, std::vector<INTPOINT>& neighbours);
+
+  // Gets 8-connected neighbours
+  void getVoroNeighbors(const INTPOINT& grid_pos, std::vector<INTPOINT>& neighbours,
+                        const INTPOINT& goal_grid_pos);
 
   /* Checking methods */
   // If cell is in map
@@ -117,7 +138,9 @@ public:
   void idxToPos(const INTPOINT& grid_pos, DblPoint& map_pos);
 
   // Get height of the map plane with respect to global origin
-  double getHeight() const;
+  double getHeight() const {
+    return height_;
+  }
 
   double getSizeX() const {
     return sizeX;
@@ -139,6 +162,7 @@ private:
   std::vector<INTPOINT> lastObstacles;
 
   // maps
+  bool flip_y_{true};
   int sizeY;
   int sizeX;
   dataCell** data;

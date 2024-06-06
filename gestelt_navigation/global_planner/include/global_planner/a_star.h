@@ -30,14 +30,15 @@ public:
      * 4: 
      */
     int cost_function_type; // Type of cost function to use
-  }; // struct SphericalSFCParams
+  }; // struct AStarParams
 
   AStarPlanner(std::shared_ptr<GridMap> grid_map, const AStarParams& astar_params);
 
   AStarPlanner(std::shared_ptr<DynamicVoronoi> dyn_voro, const AStarParams& astar_params);
 
   /**
-   * @brief Clear closed, open list and reset planning_successful flag for new plan generation
+   * @brief Clear closed, open list and reset planning_successful flag for 
+   * new plan generation
    * 
    */
   void reset();
@@ -69,7 +70,7 @@ public:
   bool generatePlanVoronoi(const DblPoint& start_pos, const DblPoint& goal_pos);
 
   bool generatePlanVoronoi(const DblPoint& start_pos, const DblPoint& goal_pos, 
-                                std::function<double(const INTPOINT&, const INTPOINT&)> cost_function);
+                          std::function<double(const INTPOINT&, const INTPOINT&)> cost_function);
 
   /**
    * @brief Get successful plan in terms of path positions

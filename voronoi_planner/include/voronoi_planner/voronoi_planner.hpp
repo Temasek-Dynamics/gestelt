@@ -12,12 +12,17 @@
 #include <nav_msgs/OccupancyGrid.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
+#include <geometry_msgs/PointStamped.h>
+#include <geometry_msgs/PoseStamped.h>
+
 #include <limits>
 #include <queue>
 
 #include "dynamic_voronoi/dynamicvoronoi.h"
 
 #include "global_planner/a_star.h"
+
+#include <logger/timer.h>
 
 namespace cost_val
 {
@@ -74,6 +79,9 @@ public:
 
   void loadMapFromFile(nav_msgs::OccupancyGrid& map,
                        const std::string& fname);
+
+  void realignBoolMap(bool ***map, bool ***map_og, 
+                      int& size_x, int& size_y);
 
   void pgmFileToBoolMap(bool ***map,
                         int& size_x, int& size_y,
@@ -384,6 +392,48 @@ public:
     }
   }
 
+  void publishStartAndGoal(const DblPoint& start, const DblPoint& goal, const std::string& frame_id, ros::Publisher& publisher1, ros::Publisher& publisher2){
+    visualization_msgs::Marker start_sphere, goal_sphere;
+    double radius = 0.5;
+    double alpha = 0.8; 
+
+    /* Start/goal sphere*/
+    start_sphere.header.frame_id = goal_sphere.header.frame_id = frame_id;
+    start_sphere.header.stamp = goal_sphere.header.stamp = ros::Time::now();
+    start_sphere.ns = goal_sphere.ns = "start_goal_points";
+    start_sphere.type = goal_sphere.type = visualization_msgs::Marker::SPHERE;
+    start_sphere.action = goal_sphere.action = visualization_msgs::Marker::ADD;
+    start_sphere.id = 1;
+    goal_sphere.id = 2; 
+    start_sphere.pose.orientation.w = goal_sphere.pose.orientation.w = 1.0;
+
+    start_sphere.color.r = 1.0; 
+    start_sphere.color.g = 1.0; 
+    start_sphere.color.b = 0.0; 
+    start_sphere.color.a = goal_sphere.color.a = alpha;
+
+    goal_sphere.color.r = 0.0;
+    goal_sphere.color.g = 1.0;
+    goal_sphere.color.b = 0.0;
+
+    start_sphere.scale.x = goal_sphere.scale.x = radius;
+    start_sphere.scale.y = goal_sphere.scale.y = radius;
+    start_sphere.scale.z = goal_sphere.scale.z = radius;
+
+    /* Set Start */
+    start_sphere.pose.position.x = start.x;
+    start_sphere.pose.position.y = start.y;
+    start_sphere.pose.position.z = dyn_voro_->getHeight();
+
+    /* Set Goal */
+    goal_sphere.pose.position.x = goal.x;
+    goal_sphere.pose.position.y = goal.y;
+    goal_sphere.pose.position.z = dyn_voro_->getHeight();
+
+    publisher1.publish(start_sphere);
+    publisher2.publish(goal_sphere);
+  }
+
   inline void publishFrontEndPath(const std::vector<Eigen::Vector3d>& path, const std::string& frame_id, ros::Publisher& publisher) {
     visualization_msgs::Marker wp_sphere_list, path_line_strip;
     visualization_msgs::Marker start_sphere, goal_sphere;
@@ -398,8 +448,8 @@ public:
     start_sphere.ns = goal_sphere.ns = "start_end_points";
     start_sphere.type = goal_sphere.type = visualization_msgs::Marker::SPHERE;
     start_sphere.action = goal_sphere.action = visualization_msgs::Marker::ADD;
-    start_sphere.id = 1;
-    goal_sphere.id = 2; 
+    start_sphere.id = 0;
+    goal_sphere.id = 1; 
     start_sphere.pose.orientation.w = goal_sphere.pose.orientation.w = 1.0;
 
     start_sphere.color.r = 1.0; 
@@ -482,9 +532,54 @@ public:
     publisher.publish(path_line_strip);
   }
 
+  void plan(const DblPoint& start, const DblPoint& goal){
+    publishStartAndGoal(start, goal, "map", start_pt_pub_, goal_pt_pub_) ;
+
+    tm_front_end_plan_.start();
+
+    if (!front_end_planner_->generatePlanVoronoi(start, goal)){
+      std::cout << "FRONT END FAILED!!!! front_end_planner_->generatePlan() from ("<< \
+        start.x << ", " <<  start.y << ") to (" << goal.x << ", " <<  goal.y << ")" << std::endl;
+
+      // viz_helper::publishClosedList(front_end_planner_->getClosedList(), "world", closed_list_viz_pub_);
+    }
+    else{
+      std::vector<Eigen::Vector3d> front_end_path = front_end_planner_->getPathPosRaw();
+      publishFrontEndPath(front_end_path, "map", front_end_plan_viz_pub_) ;
+    }
+
+    tm_front_end_plan_.stop(verbose_planning_);
+
+    occmapToOccGrid(*dyn_voro_, size_x_, size_y_,  occ_grid_); // Occupancy map
+    voronoimapToOccGrid(*dyn_voro_, size_x_, size_y_,  voro_occ_grid_); // Voronoi map
+
+    voro_occ_grid_pub_.publish(voro_occ_grid_);
+    occ_map_pub_.publish( occ_grid_);
+
+  }
+
+/* Subscriber callbacks */
+private:
+  void startPointCB(const geometry_msgs::PointStampedConstPtr &msg){
+    start_pos_.x = msg->point.x;
+    start_pos_.y = msg->point.y;
+  }
+
+  void goalPointCB(const geometry_msgs::PoseStampedConstPtr &msg){
+    goal_pos_.x = msg->pose.position.x;
+    goal_pos_.y = msg->pose.position.y;
+
+
+
+    plan(start_pos_, goal_pos_);
+
+  }
+
+
 private:
   /* Params */
   std::string map_fname_;
+  bool verbose_planning_{true};  // enables printing of planning time
   bool negate_{false};
   double res_;
   double occ_th_, free_th_;
@@ -496,11 +591,21 @@ private:
   ros::Publisher voro_occ_grid_pub_; // Publishes voronoi map occupancy grid
 
   ros::Publisher front_end_plan_viz_pub_;
+  ros::Publisher start_pt_pub_;
+  ros::Publisher goal_pt_pub_;
+
+  ros::Subscriber start_sub_;
+  ros::Subscriber goal_sub_;
 
   std::unordered_map<std::string, ros::Publisher> front_end_publisher_map_;   // Publishes front-end map
 
+  /* Planning */
+  DblPoint start_pos_{0.0, 0.0};
+  DblPoint goal_pos_{0.0, 0.0};
+
   /* Data structs */
   bool **bool_map_{NULL};
+  bool **bool_map_og_{NULL};
   int size_x_, size_y_;
 
   std::unique_ptr<AStarPlanner> front_end_planner_; // Front-end planner
@@ -522,6 +627,12 @@ private:
 
   nav_msgs::OccupancyGrid dist_occ_grid_; // Visualization of distance map in occupancy grid form
   nav_msgs::OccupancyGrid voro_occ_grid_; // Visualization of voronoi map in occupancy grid form
+
+
+  /* Debugging */
+  Timer tm_front_end_plan_{"front_end_plan"};
+  Timer tm_voronoi_map_init_{"voronoi_map_init"};
+
 };
 
 #endif // _VORONOI_PLANNER_HPP

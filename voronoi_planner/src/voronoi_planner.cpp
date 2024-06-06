@@ -6,19 +6,37 @@ void VoronoiPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   dist_occ_map_pub_ = nh.advertise<nav_msgs::OccupancyGrid>("voronoi_planner/dist_map", 10, true);
   voro_occ_grid_pub_ = nh.advertise<nav_msgs::OccupancyGrid>("voronoi_planner/voronoi_map", 10, true);
   
+  /* Publishers */
+
   front_end_publisher_map_["front_end/closed_list"] = nh.advertise<visualization_msgs::Marker>("closed_list_viz", 10, true);
 
-  front_end_plan_viz_pub_ = nh.advertise<visualization_msgs::Marker>("plan_viz", 1, true);
+  front_end_plan_viz_pub_ = nh.advertise<visualization_msgs::Marker>("plan_viz", 5, true);
+  start_pt_pub_ = nh.advertise<visualization_msgs::Marker>("start_point", 5, true);
+  goal_pt_pub_ = nh.advertise<visualization_msgs::Marker>("goal_point", 5, true);
+
+  /* Subscribers */
+  start_sub_ = nh.subscribe("/start_pt", 5, &VoronoiPlanner::startPointCB, this);
+  goal_sub_ = nh.subscribe("/goal_pt", 5, &VoronoiPlanner::goalPointCB, this);
 
   initParams(pnh);
 
   pgmFileToBoolMap(&bool_map_, size_x_, size_y_, map_fname_);
+
+  // DynamicVoronoi::DynamicVoronoiParams dyn_voro_params;
+  // dyn_voro_params.height = 0.0;
+  // dyn_voro_params.resolution = res_;
+  // dyn_voro_params.origin_x = 0.0;
+  // dyn_voro_params.origin_y = 0.0;
+
+  tm_voronoi_map_init_.start();
 
   dyn_voro_ = std::make_shared<DynamicVoronoi>();
 
   dyn_voro_->initializeMap(size_x_, size_y_, bool_map_);
   dyn_voro_->update(); // update distance map and Voronoi diagram
   // dyn_voro_->visualize("/home/john/gestelt_ws/src/gestelt/voronoi_planner/maps/final.ppm");
+
+  tm_voronoi_map_init_.stop(verbose_planning_);
 
   // if (doPrune){
   //   dyn_voro.prune();  // prune the Voronoi
@@ -28,20 +46,9 @@ void VoronoiPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   // }
 
   // Set start and goal
-  DblPoint start_pos(0.5, 0.5);
-  DblPoint goal_pos(6.0, 6.0);
+  DblPoint start_pos(7.0, 8.0);
+  DblPoint goal_pos(7.0, 9.0);
 
-  // INTPOINT start_node, goal_node;
-  // if (!dyn_voro_->posToIdx(start_pos, start_node) || !dyn_voro_->posToIdx(goal_pos, goal_node))
-  // {   
-  //   std::cerr << "[VoronoiPlanner] Start or goal position is not within map bounds!" << std::endl;
-  //   return ;
-  // }
-
-  // dyn_voro_->setObstacle(start_node.x, start_node.y);
-  // dyn_voro_->setObstacle(goal_node.x, goal_node.y);
-
-  // dyn_voro_->update(); // update distance map and Voronoi diagram
 
   AStarPlanner::AStarParams astar_params_; 
   astar_params_.max_iterations = 99999;
@@ -50,17 +57,8 @@ void VoronoiPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   astar_params_.cost_function_type  = 2;
 
   front_end_planner_ = std::make_unique<AStarPlanner>(dyn_voro_, astar_params_);
-  front_end_planner_->addPublishers(front_end_publisher_map_);
-  if (!front_end_planner_->generatePlanVoronoi(start_pos, goal_pos)){
-    std::cout << "FRONT END FAILED!!!! front_end_planner_->generatePlan() from ("<< \
-      start_pos.x << ", " <<  start_pos.y << ") to (" << goal_pos.x << ", " <<  goal_pos.y << ")" << std::endl;
 
-    // viz_helper::publishClosedList(front_end_planner_->getClosedList(), "world", closed_list_viz_pub_);
-  }
-  else{
-    std::vector<Eigen::Vector3d> front_end_path = front_end_planner_->getPathPosRaw();
-    publishFrontEndPath(front_end_path, "map", front_end_plan_viz_pub_) ;
-  }
+  front_end_planner_->addPublishers(front_end_publisher_map_);
 
   occmapToOccGrid(*dyn_voro_, size_x_, size_y_,  occ_grid_); // Occupancy map
   voronoimapToOccGrid(*dyn_voro_, size_x_, size_y_,  voro_occ_grid_); // Voronoi map
@@ -79,6 +77,22 @@ void VoronoiPlanner::initParams(ros::NodeHandle &pnh)
   pnh.param("origin_x", origin_x_, 0.0);
   pnh.param("origin_y", origin_y_, 0.0);
   pnh.param("yaw", yaw_, 0.0);
+}
+
+void VoronoiPlanner::realignBoolMap(bool ***map, bool ***map_og, int& size_x, int& size_y)
+{
+  for (int x=0; x<size_x; x++) {
+    (*map)[x] = new bool[size_y];
+  }
+
+  for(int j = 0; j < size_y; j++)
+  {
+    for (int i = 0; i < size_x; i++)
+    {
+      (*map)[i][j] = (*map_og)[i][size_y-j-1];
+    }
+  }
+  
 }
 
 void VoronoiPlanner::pgmFileToBoolMap(bool ***map,
