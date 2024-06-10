@@ -26,10 +26,8 @@ namespace Decomp {
       return std::abs(signed_dist(pt));
     }
 
-    /// Point on the plane
-    Vecf<Dim> p_;
-    /// Normal of the plane, directional
-    Vecf<Dim> n_;
+    Vecf<Dim> p_; // Point on the plane
+    Vecf<Dim> n_; // Normal of the plane, directional
   };
 
 } // namespace Decomp
@@ -47,7 +45,6 @@ struct Polyhedron {
   Polyhedron() {}
   ///Construct from Hyperplane array
   Polyhedron(const vec_E<Decomp::Hyperplane<Dim>>& vs) : vs_(vs) {}
-
 
   ///Append Hyperplane
   void add(const Decomp::Hyperplane<Dim>& v) {

@@ -166,7 +166,7 @@ namespace viz_helper{
    * 
    * @param path 
    */
-  inline void publishFrontEndPath(const std::vector<Eigen::Vector3d>& path, const std::string& frame_id, ros::Publisher& publisher) {
+  inline void publishFrontEndPath(const std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d>>& path, const std::string& frame_id, ros::Publisher& publisher) {
     visualization_msgs::Marker wp_sphere_list, path_line_strip;
     visualization_msgs::Marker start_sphere, goal_sphere;
     double radius = 0.15;

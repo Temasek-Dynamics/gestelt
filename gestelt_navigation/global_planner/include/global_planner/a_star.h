@@ -67,14 +67,14 @@ public:
    * 
    * @return std::vector<Eigen::Vector3d> 
    */
-  std::vector<Eigen::Vector3d> getPathPos();
+  std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d>> getPathPos();
 
   /**
    * @brief Get successful plan in terms of path positions
    * 
    * @return std::vector<Eigen::Vector3d> 
    */
-  std::vector<Eigen::Vector3d> getPathPosRaw();
+  std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d>> getPathPosRaw();
 
   /**
    * @brief Get successful plan in terms of path positions
@@ -134,7 +134,7 @@ private:
 
 private: 
   std::vector<PosIdx> path_idx_; // Path in terms of indices
-  std::vector<Eigen::Vector3d> path_pos_; // Path in terms of 3d position
+  std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d>> path_pos_; // Path in terms of 3d position
 
   ros::Publisher closed_list_viz_pub_;
 

@@ -334,12 +334,14 @@ void GridMap::updateLocalMap(){
     return;
   }
 
-  // std::unique_lock<std::mutex> lck(occ_map_pts_mutex_, std::try_to_lock);
+  // std::unique_lock<std::mutex> lck(occ_map_pcd_mutex_, std::try_to_lock);
   // if (!lck.owns_lock()){
   //   return;
   // }
 
-  occ_map_pts_.clear();
+  occ_map_pcd_.clear(); // For local map
+  
+  std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d>> obs_pts_vec;
 
   for (auto& coord : occ_coords) // For each occupied coordinate
   {
@@ -349,11 +351,14 @@ void GridMap::updateLocalMap(){
     // Eigen::Vector3d obs_gbl_pos = Eigen::Vector3d(obs_gbl_pos_pt3d.x, obs_gbl_pos_pt3d.y, obs_gbl_pos_pt3d.z)
     //                               - md_.body2origin_.block<3,1>(0,3);
     Eigen::Vector3d obs_gbl_pos(obs_gbl_pos_pt3d.x, obs_gbl_pos_pt3d.y, obs_gbl_pos_pt3d.z);
+
+    obs_pts_vec.push_back(obs_gbl_pos); 
+
     if (!isInLocalMap(obs_gbl_pos)){ // Point is outside the local map
       continue;
     }
 
-    occ_map_pts_.push_back(pcl::PointXYZ(obs_gbl_pos_pt3d.x, obs_gbl_pos_pt3d.y, obs_gbl_pos_pt3d.z));
+    occ_map_pcd_.push_back(pcl::PointXYZ(obs_gbl_pos_pt3d.x, obs_gbl_pos_pt3d.y, obs_gbl_pos_pt3d.z));
 
     // Convert to voxel index. This is relative to mp_.local_map_origin_
     Eigen::Vector3i vox_idx_3d = ((obs_gbl_pos - getLocalOrigin()) / getRes() - Eigen::Vector3d::Constant(0.5) ).cast<int>() ; 
@@ -380,13 +385,15 @@ void GridMap::updateLocalMap(){
     }
   }
 
+  obs_pts_vec_ = obs_pts_vec;
+
   // tm_kdtree_build_.start();
-  kdtree_->Build(occ_map_pts_.points);
+  kdtree_->Build(occ_map_pcd_.points);
   // tm_kdtree_build_.stop(false);
 
   publishLocalMapBounds();
 
-  publishOccMap(occ_map_pts_);
+  publishOccMap(occ_map_pcd_);
 }
 
 void GridMap::getCamToGlobalPose(const geometry_msgs::Pose &pose)
@@ -494,10 +501,10 @@ void GridMap::publishOccMap(const pcl::PointCloud<pcl::PointXYZ>& occ_map_pts)
     cloud_msg.header.frame_id = mp_.uav_origin_frame_;
     cloud_msg.header.stamp = ros::Time::now();
     occ_map_pub_.publish(cloud_msg);
-    // ROS_INFO("Published occupancy grid with %ld voxels", occ_map_pts_.points.size());
+    // ROS_INFO("Published occupancy grid with %ld voxels", occ_map_pcd_.points.size());
   }
 
-  // std::unique_lock<std::mutex> lck(occ_map_pts_mutex_, std::try_to_lock);
+  // std::unique_lock<std::mutex> lck(occ_map_pcd_mutex_, std::try_to_lock);
   // if (!lck.owns_lock()){
   //   return;
   // }

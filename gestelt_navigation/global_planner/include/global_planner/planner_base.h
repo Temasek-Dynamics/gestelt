@@ -11,10 +11,10 @@ public:
   virtual bool generatePlan(const Eigen::Vector3d &start_pos, const Eigen::Vector3d &goal_pos) = 0;
 
   // Get refined planned path
-  virtual std::vector<Eigen::Vector3d> getPathPos() = 0;
+  virtual std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d>> getPathPos() = 0;
 
   // Get raw planned path
-  virtual std::vector<Eigen::Vector3d> getPathPosRaw() = 0;
+  virtual std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d>> getPathPosRaw() = 0;
 
   /**
    * @brief Add ROS Publishers 

@@ -97,9 +97,9 @@ bool JPSWrapper::generatePlan(const Eigen::Vector3d &start_pos, const Eigen::Vec
 }
 
 
-std::vector<Eigen::Vector3d> JPSWrapper::interpolatePath(const std::vector<Eigen::Vector3d>& path)
+std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d>> JPSWrapper::interpolatePath(const std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d>>& path)
 {
-    std::vector<Eigen::Vector3d> path_intp; // Interpolated path
+    std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d>> path_intp; // Interpolated path
 
     double unit_diag_dist = sqrt(2 * map_->getRes()* map_->getRes()) + 0.00001;
 

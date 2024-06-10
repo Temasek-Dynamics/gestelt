@@ -3,7 +3,7 @@
 # Navigator params
 #####
 # debug_planning: false     # Set in launch file. Used to allow certain topics for debugging planning algorithms
-verbose_planning: false     # Print out planning times
+verbose_planning: true     # Print out planning times
 
 goal_tolerance: 0.2                     # [m] Tolerance for goal to be considered reached
 time_to_col_threshold: 0.2              # [s] Threshold for seconds to collision.
@@ -30,7 +30,7 @@ front_end:
 
   jps:
     planner_verbose: false      # If true, print debug from planner
-    interpolate: true           # Interpolate JPS (necessary for spherical safe flight generation)
+    interpolate: false           # Interpolate JPS (necessary for spherical safe flight generation)
     use_dmp: false               # 
     dmp_search_radius: 0.4      # DMP Search radius
     dmp_potential_radius: 0.4   # DMP radius of distance field (Value has significant effect on runtime)
@@ -80,8 +80,15 @@ sfc:
   poly:
     debug_viz: true
     poly_max: 5             # Maximum number of polytopes to generate
-    cvx_decomp_type: 2      # Convex decomposition type. 1: Liu, 2: Toumieh_old, 3: Toumieh_new
+    cvx_decomp_type: 0      # Convex decomposition type. 0: Liu, 1: Toumieh_old, 2: Toumieh_new
     num_expansion_itr: 100   
+    # bbox_x: 0.75
+    # bbox_y: 1.5
+    # bbox_z: 0.75
+    bbox_x: 1.0
+    bbox_y: 2.0
+    bbox_z: 1.0
+
 
 ##### Back-end 
 back_end: 

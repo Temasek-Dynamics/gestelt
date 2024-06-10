@@ -13,6 +13,7 @@
 #include "optimizer/lbfgs.hpp"
 #include "poly_traj_utils.hpp"
 
+#include <logger/timer.h>
 namespace back_end
 {
 

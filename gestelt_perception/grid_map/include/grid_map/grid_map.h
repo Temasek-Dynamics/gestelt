@@ -197,6 +197,10 @@ public:
   // Get inflation value
   double getInflation() const{ return mp_.inflation_; }
 
+  std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d>> getObsPtsVec() const {
+    return obs_pts_vec_;
+  }
+
   /* Checks */
 
   // Checks if time elapsed has exceeded a given threshold
@@ -321,11 +325,12 @@ private:
   pcl::PointCloud<pcl::PointXYZ>::Ptr global_map_in_origin_;  // Point cloud global map in UAV Origin frame
 
   std::unique_ptr<BonxaiT> bonxai_map_; // Bonxai data structure 
-  pcl::PointCloud<pcl::PointXYZ> occ_map_pts_; // Occupancy map points formed by Bonxai probabilistic mapping
+  pcl::PointCloud<pcl::PointXYZ> occ_map_pcd_; // Occupancy map points formed by Bonxai probabilistic mapping
   
   std::shared_ptr<KD_TREE<pcl::PointXYZ>> kdtree_; // KD-Tree 
 
   std::vector<int8_t> local_map_data_; // 1D array used by path planners for collision checking
+  std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d>> obs_pts_vec_; // Vector of obstacle points used for sfc generation
 
   // pcl::VoxelGrid<pcl::PointXYZ> vox_grid_filter_; // Voxel filter
 
@@ -334,7 +339,7 @@ private:
   bool check_collisions_{true}; // Flag for checking collisions
 
   /* Mutexes */
-  std::mutex occ_map_pts_mutex_;
+  std::mutex occ_map_pcd_mutex_;
 
   /* Stopwatch for profiling performance */
   Timer tm_bonxai_insert_{"bonxai->insertPointCloud"};

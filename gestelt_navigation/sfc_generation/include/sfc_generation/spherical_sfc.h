@@ -165,7 +165,7 @@ public:
    * @return true 
    * @return false 
    */
-  bool generateSFC(const std::vector<Eigen::Vector3d> &path, 
+  bool generateSFC(const std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d>> &path, 
                     const bool& enable_rhc_plan = false,
                     const double& rhc_dist = 0.0,
                     const Eigen::Vector3d& start_pos = Eigen::Vector3d{0.0, 0.0, 0.0},
@@ -229,7 +229,7 @@ private: // Private methods
    * @return false 
    */
   bool getForwardPointOnPath(
-    const std::vector<Eigen::Vector3d> &path, size_t& start_idx, const SSFC::Sphere& B_prev);
+    const std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d>> &path, size_t& start_idx, const SSFC::Sphere& B_prev);
 
   /**
    * @brief Sample a batch of spheres
@@ -369,7 +369,7 @@ private: // Private members
   std::shared_ptr<GridMap> grid_map_; 
   std::vector<SSFC::Sphere> sfc_spheres_; // Waypoints of the spherical flight corridor
 
-  std::unique_ptr<KDTreeVectorOfVectorsAdaptor<std::vector<Eigen::Vector3d>, double>>   
+  std::unique_ptr<KDTreeVectorOfVectorsAdaptor<std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d>>, double>>   
     guide_path_kdtree_; // KD Tree for guide path
 
   /* Data for Visualization */
@@ -381,7 +381,7 @@ private: // Private members
   std::vector<Eigen::Vector3d> samp_dir_vec_; // vector of sampling vectors
   std::vector<Eigen::Vector3d> guide_points_vec_; // vector of sampling guide points
 
-  std::vector<Eigen::Vector3d> front_end_path_; // front_end path
+  std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d>> front_end_path_; // front_end path
 
 }; // class SphericalSFC
 

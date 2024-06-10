@@ -29,7 +29,7 @@ int main(int argc, char ** argv){
   vec_Vec3f obs = DecompROS::cloud_to_vec(cloud);
 
   //Read path from txt
-  vec_Vec3f path;
+  vec_Vec3f path; // std::vector<Vec3f, Eigen::aligned_allocator<Vec3f>>
   if(!read_path<3>(path_file, path))
     ROS_ERROR("Fail to read a path!");
 

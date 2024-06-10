@@ -116,7 +116,6 @@ namespace back_end
       const int& num_decis_var_t, const int& num_decis_var_bary,
       double &final_cost)
   {
-    std::cout << "PolyhedronSFCOptimizer::optimizeTrajectory" << std::endl;
     // IF size of inner points and segment durations are not the same, there is a bug
     if (P.cols() != (init_seg_dur.size() - 1))
     {
@@ -142,7 +141,7 @@ namespace back_end
 
     P_ = P;             // assign initial inner control points
     T_ = init_seg_dur;  // assign initial segment time durations
-    grad_P_.resize(3, num_decis_var_t - 1); // resize gradient of inner control points
+    grad_P_.resize(3, num_decis_var_t_ - 1); // resize gradient of inner control points
 
     /* Initialize decision variables*/
     double x_init[num_decis_var]; // Initial decision variables: Array of [ P, init_seg_dur ]
@@ -157,14 +156,13 @@ namespace back_end
     // // Convert from constrained coordinates q to barycentric coordinates xi
     backwardP(P_, vPolyIdx_, vPolytopes_, xi);
 
-
-    Eigen::VectorXd T_test = init_seg_dur;     
-    Eigen::MatrixXd P_test = P;     
-    /* Testing */
-    // Convert from virtual to real time
-    VirtualT2RealT(tau, T_test);
-    // Convert from xi into q (P_)
-    forwardP(xi, vPolyIdx_, vPolytopes_, P_test);
+    // Eigen::VectorXd T_test = init_seg_dur;     
+    // Eigen::MatrixXd P_test = P;     
+    // /* Testing */
+    // // Convert from virtual to real time
+    // VirtualT2RealT(tau, T_test);
+    // // Convert from xi into q (P_)
+    // forwardP(xi, vPolyIdx_, vPolytopes_, P_test);
 
     // std::cout << "---------INITIAL---------" << std::endl;
 
@@ -192,8 +190,8 @@ namespace back_end
     lbfgs::lbfgs_load_default_parameters(&lbfgs_params);
     lbfgs_params.mem_size = 256; // 16
     lbfgs_params.max_iterations = 200;
-    lbfgs_params.g_epsilon = 0.0;
-    // lbfgs_params.g_epsilon = 0.1;
+    // lbfgs_params.g_epsilon = 0.0;
+    lbfgs_params.g_epsilon = 0.1;
     // lbfgs_params.abs_curv_cond = 0;
     lbfgs_params.past = 3;
     // lbfgs_params.delta = 1.0e-3;
@@ -273,10 +271,10 @@ namespace back_end
     // Convert from xi into q (P_)
     opt->forwardP(xi, opt->vPolyIdx_, opt->vPolytopes_, opt->P_);
 
-    std::cout << "  ---------A---------" << std::endl;
-    std::cout << "  opt->T_: " << opt->T_.transpose() << std::endl;
-    std::cout << "  opt->P_: " << opt->P_.transpose() << std::endl;
-    std::cout << "  ---------A---------" << std::endl;
+    // std::cout << "  ---------A---------" << std::endl;
+    // std::cout << "  opt->T_: " << opt->T_.transpose() << std::endl;
+    // std::cout << "  opt->P_: " << opt->P_.transpose() << std::endl;
+    // std::cout << "  ---------A---------" << std::endl;
 
     // Gradients 
     Eigen::Map<Eigen::VectorXd> grad_tau(grad, dimTau);         // gradient of virtual time
@@ -298,10 +296,10 @@ namespace back_end
     // Get gradient of real time and jerk cost
     opt->mjo_q_.initGradCost(grad_T, jerk_cost); // In initGradCost(...), do addGradJbyT(gdT) and addGradJbyC(gdC);
 
-    std::cout << "  ---------B---------" << std::endl;
-    std::cout << "  grad_T: " << grad_T.transpose() << std::endl;
-    std::cout << "  jerk_cost: " << jerk_cost<< std::endl;
-    std::cout << "  ---------B---------" << std::endl;
+    // std::cout << "  ---------B---------" << std::endl;
+    // std::cout << "  grad_T: " << grad_T.transpose() << std::endl;
+    // std::cout << "  jerk_cost: " << jerk_cost<< std::endl;
+    // std::cout << "  ---------B---------" << std::endl;
 
     /** 2. Time integral cost 
       *   2a. Static obstacle cost
@@ -314,18 +312,18 @@ namespace back_end
                             opt->cps_num_perPiece_, opt->mjo_q_,
                             opt->hPolyIdx_, opt->hPolytopes_ ); 
 
-    std::cout << "  ---------C---------" << std::endl;
-    std::cout << "  grad_T: " << grad_T.transpose() << std::endl;
-    std::cout << "  ---------C---------" << std::endl;
+    // std::cout << "  ---------C---------" << std::endl;
+    // std::cout << "  grad_T: " << grad_T.transpose() << std::endl;
+    // std::cout << "  ---------C---------" << std::endl;
 
     /** 3. Update the gradient costs p.d.(H / T_i) and p.d.(H / xi)
     */
     opt->mjo_q_.getGrad2TP(grad_T, opt->grad_P_); // Update the p.d.(H/T_i) and p.d.(H/q) 
 
-    std::cout << "  ---------D---------" << std::endl;
-    std::cout << "  grad_T: " << grad_T.transpose() << std::endl;
-    std::cout << "  opt->grad_P_: " << opt->grad_P_.transpose() << std::endl;
-    std::cout << "  ---------D---------" << std::endl;
+    // std::cout << "  ---------D---------" << std::endl;
+    // std::cout << "  grad_T: " << grad_T.transpose() << std::endl;
+    // std::cout << "  opt->grad_P_: " << opt->grad_P_.transpose() << std::endl;
+    // std::cout << "  ---------D---------" << std::endl;
 
     /** 3. Get gradients 
     */
@@ -334,14 +332,14 @@ namespace back_end
 
     // Get gradient w.r.t xi (grad_xi)
     backwardGradP(xi, opt->vPolyIdx_, opt->vPolytopes_, opt->grad_P_, grad_xi);
-    // normRetrictionLayer(xi, opt->vPolyIdx_, opt->vPolytopes_, jerk_cost, grad_xi);
+    normRetrictionLayer(xi, opt->vPolyIdx_, opt->vPolytopes_, jerk_cost, grad_xi);
 
-    std::cout << "  ---------F---------" << std::endl;
-    std::cout << "  grad_tau: " << grad_tau.transpose() << std::endl;
-    std::cout << "  time_cost: " << time_cost << std::endl;
-    std::cout << "  grad_xi: " << grad_xi.transpose() << std::endl;
-    std::cout << "  spatial_cost: " << jerk_cost + obs_swarm_feas_qvar_costs.sum() << std::endl;
-    std::cout << "  ---------F---------" << std::endl;
+    // std::cout << "  ---------F---------" << std::endl;
+    // std::cout << "  grad_tau: " << grad_tau.transpose() << std::endl;
+    // std::cout << "  time_cost: " << time_cost << std::endl;
+    // std::cout << "  grad_xi: " << grad_xi.transpose() << std::endl;
+    // std::cout << "  spatial_cost: " << jerk_cost + obs_swarm_feas_qvar_costs.sum() << std::endl;
+    // std::cout << "  ---------F---------" << std::endl;
 
     opt->iter_num_++;
 

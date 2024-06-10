@@ -71,7 +71,7 @@ void SphericalSFC::clearVisualizations()
     samp_dir_vec_pub_.publish(markerarray); 
 }
 
-bool SphericalSFC::generateSFC( const std::vector<Eigen::Vector3d> &path,
+bool SphericalSFC::generateSFC( const std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d>> &path,
                                 const bool& enable_rhc_plan,
                                 const double& rhc_dist,
                                 const Eigen::Vector3d& start_pos,
@@ -99,7 +99,7 @@ bool SphericalSFC::generateSFC( const std::vector<Eigen::Vector3d> &path,
 
     front_end_path_ = path; // front_end path
     guide_path_kdtree_ = 
-        std::make_unique<KDTreeVectorOfVectorsAdaptor<std::vector<Eigen::Vector3d>, double>>(
+        std::make_unique<KDTreeVectorOfVectorsAdaptor<std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d>>, double>>(
             3, path, 10); //kd tree used to query nearest point on the front-end path
 
     SSFC::Sphere B_cur; // current sphere being considered
@@ -251,7 +251,7 @@ bool SphericalSFC::generateFreeSphere(const Eigen::Vector3d& center, SSFC::Spher
 }
 
 bool SphericalSFC::getForwardPointOnPath(
-    const std::vector<Eigen::Vector3d> &path, size_t& start_idx, const SSFC::Sphere& B_prev)
+    const std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d>> &path, size_t& start_idx, const SSFC::Sphere& B_prev)
 {
     for (size_t i = start_idx; i < path.size(); i++){
         // Iterate forward through the guide path to find a point outside the sphere 

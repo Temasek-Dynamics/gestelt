@@ -273,7 +273,7 @@ public:
    * @return true 
    * @return false 
    */
-  virtual bool generateSFC( const std::vector<Eigen::Vector3d> &path,
+  virtual bool generateSFC( const std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d>> &path,
                             const bool& enable_rhc_plan,
                             const double& rhc_dist,
                             const Eigen::Vector3d& start_pos,

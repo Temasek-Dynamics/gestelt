@@ -161,11 +161,17 @@ void Navigator::initParams(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   if (sfc_type_ == SFCType::POLYTOPE){
     pnh.param("sfc/poly/debug_viz",      ply_sfc_params_.debug_viz, false);
 
-    pnh.param("sfc/poly/poly_max", ply_sfc_params_.poly_hor, 10);
     int cvx_decomp_type;
     pnh.param("sfc/poly/cvx_decomp_type", cvx_decomp_type, 2);
     ply_sfc_params_.cvx_decomp_type = static_cast<PolytopeSFC::CVXDecompType>(cvx_decomp_type);
 
+    // Liu SFC Params
+    pnh.param("sfc/poly/bbox_x", ply_sfc_params_.bbox_x, 1.0);
+    pnh.param("sfc/poly/bbox_y", ply_sfc_params_.bbox_y, 2.0);
+    pnh.param("sfc/poly/bbox_z", ply_sfc_params_.bbox_z, 1.0);
+
+    // Toumieh SFC Params
+    pnh.param("sfc/poly/poly_max", ply_sfc_params_.poly_hor, 10);
     pnh.param("sfc/poly/num_expansion_itr", ply_sfc_params_.n_it_decomp, 60);
 
     rhp_buffer_ = 0.05;
@@ -242,6 +248,7 @@ void Navigator::initPublishers(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   /* SFC */
   if (sfc_type_ == SFCType::POLYTOPE){
     sfc_publisher_map_["sfc/poly"] =  nh.advertise<decomp_ros_msgs::PolyhedronArray>("sfc/poly", 10);
+    sfc_publisher_map_["sfc/ellipsoid"] =  nh.advertise<decomp_ros_msgs::EllipsoidArray>("sfc/ellipsoid", 10);
   }
   else if (sfc_type_ == SFCType::SPHERICAL) {
     sfc_publisher_map_["sfc_cand_points"] = nh.advertise<visualization_msgs::Marker>("sfc_cand_points", 10);
@@ -332,6 +339,7 @@ void Navigator::planFrontEndTimerCB(const ros::TimerEvent &e)
 
   if (!requestBackEndPlan()){
     logError("Request back-end plan failed!");
+    return;
   }
 
   enable_rhc_plan_ = false;
@@ -403,7 +411,7 @@ bool Navigator::generateFrontEndPlan(
 
   tm_front_end_plan_.stop(verbose_planning_);
 
-  std::vector<Eigen::Vector3d> front_end_path = front_end_planner_->getPathPosRaw();
+  std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d>> front_end_path = front_end_planner_->getPathPosRaw();
   // std::vector<Eigen::Vector3d> dmp_search_region = front_end_planner_->getDMPSearchRegion();
   // std::vector<Eigen::Vector3d> closed_list = front_end_planner_->getClosedList();
 
@@ -524,7 +532,8 @@ bool Navigator::requestBackEndPlan()
       plan_success = SSFCOptimize(startPVA, endPVA, req_plan_t, ssfc_, mjo_opt);
     }
     else if (back_end_type_ == BackEndType::POLY){
-      plan_success = PolySFCOptimize(startPVA, endPVA, req_plan_t, v_poly_, h_poly_, mjo_opt, valid_mjo);
+      plan_success = PolySFCOptimize(startPVA, endPVA, req_plan_t, 
+                                    v_poly_, h_poly_, mjo_opt, valid_mjo);
     }
 
     if (plan_success)
@@ -674,7 +683,6 @@ bool Navigator::PolySFCOptimize(const Eigen::Matrix3d& startPVA, const Eigen::Ma
     initial_mjo_viz.push_back(init_cstr_pts.col(i));
   }
   visualization_->displayInitialMJO(initial_mjo_viz, 0.075, 0);
-
 
   // /***************************/
   // /*5:  Optimize plan

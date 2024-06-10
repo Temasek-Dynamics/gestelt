@@ -214,7 +214,7 @@ bool AStarPlanner::generatePlan(const Eigen::Vector3d &start_pos, const Eigen::V
  *
  * @return std::vector<Eigen::Vector3d>
  */
-std::vector<Eigen::Vector3d> AStarPlanner::getPathPos()
+std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d>> AStarPlanner::getPathPos()
 {
     return path_pos_;
 }
@@ -224,7 +224,7 @@ std::vector<Eigen::Vector3d> AStarPlanner::getPathPos()
  *
  * @return std::vector<Eigen::Vector3d>
  */
-std::vector<Eigen::Vector3d> AStarPlanner::getPathPosRaw()
+std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d>> AStarPlanner::getPathPosRaw()
 {
     return path_pos_;
 }

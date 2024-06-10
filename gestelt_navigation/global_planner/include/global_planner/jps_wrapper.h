@@ -55,14 +55,15 @@ public:
    */
   bool generatePlan(const Eigen::Vector3d& start_pos, const Eigen::Vector3d& goal_pos);
 
-  std::vector<Eigen::Vector3d> interpolatePath(const std::vector<Eigen::Vector3d>& path);
+  std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d>> interpolatePath(
+    const std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d>>& path);
 
   /**
    * @brief Get successful JPS+DMP plan in terms of path positions (x,y,z)
    *
    * @return std::vector<Eigen::Vector3d>
    */
-  std::vector<Eigen::Vector3d> getPathPos()
+  std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d>> getPathPos()
   {
     if (params_.use_dmp){
       return path_dmp_;
@@ -80,7 +81,7 @@ public:
    *
    * @return std::vector<Eigen::Vector3d>
    */
-  std::vector<Eigen::Vector3d> getPathPosRaw()
+  std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d>> getPathPosRaw()
   {
     if (params_.use_dmp){
       return path_dmp_raw_;
@@ -98,7 +99,7 @@ public:
    *
    * @return std::vector<Eigen::Vector3d>
    */
-  std::vector<Eigen::Vector3d> getDMPSearchRegion()
+  std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d>> getDMPSearchRegion()
   {
     return dmp_search_region_;
   }
@@ -213,12 +214,12 @@ public:
   // }
 
 private:
-  std::vector<Eigen::Vector3d> path_jps_;               // JPS Path in (x,y,z)
-  std::vector<Eigen::Vector3d> path_jps_raw_;           // JPS Path raw
-  std::vector<Eigen::Vector3d> path_jps_intp_;   // JPS Path interpolated
-  std::vector<Eigen::Vector3d> path_dmp_;               // DMP Path in (x,y,z)
-  std::vector<Eigen::Vector3d> path_dmp_raw_;           // DMP Path in (x,y,z)
-  std::vector<Eigen::Vector3d> dmp_search_region_;      // Search region of DMP
+  std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d>> path_jps_;               // JPS Path in (x,y,z)
+  std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d>> path_jps_raw_;           // JPS Path raw
+  std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d>> path_jps_intp_;   // JPS Path interpolated
+  std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d>> path_dmp_;               // DMP Path in (x,y,z)
+  std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d>> path_dmp_raw_;           // DMP Path in (x,y,z)
+  std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d>> dmp_search_region_;      // Search region of DMP
 
   /* Params */
   JPSParams params_;
