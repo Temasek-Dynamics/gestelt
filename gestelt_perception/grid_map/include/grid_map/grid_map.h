@@ -559,7 +559,7 @@ public:
       bool_map_msg.map[idx] = true;
     }
 
-    // local_bool_map_pub_.publish(bool_map_msg);
+    local_bool_map_pub_.publish(bool_map_msg);
 
     std::cout << "Published local_bool_map"  << std::endl;
   }
@@ -621,7 +621,7 @@ private:
 
   /* Logic flags*/
 
-  bool check_collisions_{true}; // Flag for checking collisions
+  bool check_collisions_{false}; // Flag for checking collisions
 
   /* Mutexes */
   // std::mutex occ_map_pts_mutex_;

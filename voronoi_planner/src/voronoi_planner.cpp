@@ -49,7 +49,6 @@ void VoronoiPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   front_end_planner_ = std::make_unique<AStarPlanner>(dyn_voro_, astar_params_);
 
   front_end_planner_->addPublishers(front_end_publisher_map_);
-
 }
 
 void VoronoiPlanner::initParams(ros::NodeHandle &pnh)
@@ -294,103 +293,4 @@ void VoronoiPlanner::loadMapFromFile(nav_msgs::OccupancyGrid& map,
   }
 
   SDL_FreeSurface(img);
-}
-
-// void VoronoiPlanner::computeDistanceMap()
-// {
-//   dist_map_.resize(occ_grid_.info.width * occ_grid_.info.height, -1);
-//   obst_map_.resize(occ_grid_.info.width * occ_grid_.info.height, -1); 
-
-//   open_queue_.clear();
-
-//   for(int j = 0; j < occ_grid_.info.height; j++)
-//   {
-//     for (int i = 0; i < occ_grid_.info.width; i++)
-//     {
-//       const size_t idx = map2Dto1DIdx(occ_grid_.info.width, i, occ_grid_.info.height - j - 1);
-//       const int8_t s = occ_grid_.data[idx];
-
-//       if (s == cost_val::OCC){ // Occupied
-//         obst_map_[idx] = idx; 
-//         dist_map_[idx] = 0; 
-
-//         open_queue_.put(idx, 0); // add to open queue
-//       }
-//       else if (s == cost_val::UNKNOWN){ // Unknown
-//          dist_map_[idx] = 0; 
-//       }
-//       else if (s == cost_val::FREE){ // Free
-//          dist_map_[idx] = INF; 
-//       }
-//       else{
-//          dist_map_[idx] = INF; 
-//       }
-//     }
-//   }
-
-//   while (!open_queue_.empty()){
-//     const size_t idx = open_queue_.get();
-//     lowerStatic(idx);
-//   }
-// }
-
-
-void VoronoiPlanner::lowerStatic(const size_t& idx)
-{
-  for (const size_t& nb_idx: get8ConNeighbours(idx))
-  { 
-    const double d = getL2Norm(obst_map_[idx], nb_idx); //d: distance from nearest obstacle on idx to neighbor
-    if (d < dist_map_[nb_idx]) {
-      dist_map_[nb_idx] = d;
-      obst_map_[nb_idx] = obst_map_[idx];
-      open_queue_.put(nb_idx, d); // add to open queue
-    }
-  }
-}
-
-void VoronoiPlanner::computeDistanceMap()
-{
-  dist_map_.resize(occ_grid_.info.width * occ_grid_.info.height, -1);
-  obst_map_.resize(occ_grid_.info.width * occ_grid_.info.height, -1); 
-  voro_map_.resize(occ_grid_.info.width * occ_grid_.info.height, false); 
-  to_raise_.resize(occ_grid_.info.width * occ_grid_.info.height, false); 
-
-  open_queue_.clear();
-
-  for(int j = 0; j < occ_grid_.info.height; j++)
-  {
-    for (int i = 0; i < occ_grid_.info.width; i++)
-    {
-      const size_t idx = map2Dto1DIdx(occ_grid_.info.width, i, occ_grid_.info.height - j - 1);
-      const int8_t val = occ_grid_.data[idx];
-
-      if (val == cost_val::OCC){ // Occupied
-        obst_map_[idx] = idx; 
-        dist_map_[idx] = 0; 
-
-        open_queue_.put(idx, 0); // add to open queue
-      }
-      else if (val == cost_val::UNKNOWN){ // Unknown
-         dist_map_[idx] = 0; 
-      }
-      else if (val == cost_val::FREE){ // Free
-         dist_map_[idx] = INF; 
-      }
-      else{
-         dist_map_[idx] = INF; 
-      }
-    }
-  }
-
-  while (!open_queue_.empty()){
-    const size_t idx = open_queue_.get();
-    if (to_raise_[idx]){
-      raise(idx);
-    }
-    else if (isOcc(obst_map_[idx])){
-      voro_map_[idx] = false;
-      lower(idx);
-    }
-  }
-  
 }
