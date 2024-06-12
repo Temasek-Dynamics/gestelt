@@ -614,8 +614,7 @@ private:
 
   /* Data structs */
   bool **bool_map_{NULL};
-  bool **bool_map_og_{NULL};
-  int size_x_, size_y_;
+  int size_x_{-1}, size_y_{-1};
 
   std::unique_ptr<AStarPlanner> front_end_planner_; // Front-end planner
   std::shared_ptr<DynamicVoronoi>  dyn_voro_; // dynamic voronoi object

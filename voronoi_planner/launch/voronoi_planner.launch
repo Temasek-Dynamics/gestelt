@@ -18,6 +18,29 @@
     <!-- <param name="map_filename" value="$(find voronoi_planner)/maps/empty_room.pgm"/> -->
     <!-- <param name="map_filename" value="$(find voronoi_planner)/maps/map_circular.pgm"/> -->
     <param name="map_filename" value="$(find voronoi_planner)/maps/map.pgm"/>
+
+    <rosparam command="load" file="$(arg navigator_cfg_filepath)" />
+
+    <param name="drone_id" value="$(arg drone_id)"/>
+
+    <param name="front_end/debug_planning" value="false"/>
+
+    <remap from="odom" to="$(arg odometry_topic)"/>
+
+    <remap from="grid_map/odom" to="$(arg odometry_topic)"/>
+    <remap from="grid_map/cloud" to="$(arg cloud_topic)"/>
+
+    <param name="grid_map/global_frame" value="$(arg global_frame)"/>
+    <param name="grid_map/uav_origin_frame" value="$(arg uav_origin_frame)"/>
+    <param name="grid_map/cam_frame" value="$(arg drone_id_ns)_$(arg cam_frame)"/>
+
+    <param name="grid_map/pose_type" value="2"/>
+    <param name="grid_map/sensor_type" value="1"/>
+
+    <!-- For debugging use -->
+    <param name="grid_map/debug_input_entire_map" value="true"/>
+    <param name="grid_map/entire_pcd_map_topic" value="/fake_map"/>
+
   </node>
 
   <!-- Fake map publisher -->
@@ -28,6 +51,7 @@
       <param name="map/publish_freq" value="1.0"/>
       <param name="map/frame_id" value="world"/>
   </node>
+
 
   <node name="rviz" pkg="rviz" type="rviz" required="true" 
         args="-d $(find gestelt_bringup)/launch/rviz/testing.rviz"/>

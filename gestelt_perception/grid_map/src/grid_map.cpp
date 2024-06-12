@@ -42,7 +42,7 @@ void GridMap::initMapROS(ros::NodeHandle &nh, ros::NodeHandle &pnh)
     // update_local_map_timer_ = nh.createTimer(ros::Duration(1.0/update_local_map_freq_), &GridMap::updateLocalMapTimerCB, this);
     updateLocalMap();
 
-    return;
+    // return;
   }
   else {
     initROSPubSubTimers(nh, pnh);
@@ -111,6 +111,7 @@ void GridMap::initROSPubSubTimers(ros::NodeHandle &nh, ros::NodeHandle &pnh)
 void GridMap::readROSParams(ros::NodeHandle &nh, ros::NodeHandle &pnh)
 {
   /* Map parameters */
+  pnh.param("grid_map/debug_origin_pose", dbg_origin_pose_, false);
   pnh.param("grid_map/debug_input_entire_map", dbg_input_entire_map_, false);
   pnh.param("grid_map/entire_pcd_map_topic", entire_pcd_map_topic_, std::string("/fake_map"));
 
@@ -387,6 +388,8 @@ void GridMap::updateLocalMap(){
   publishLocalMapBounds();
 
   publishOccMap(local_occ_map_pts_);
+
+  std::cout << "updated local map!" << std::endl;
 }
 
 void GridMap::getCamToGlobalPose(const geometry_msgs::Pose &pose)

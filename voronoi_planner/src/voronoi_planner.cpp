@@ -27,32 +27,18 @@ void VoronoiPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
 
   // pgmFileToBoolMap(&bool_map_, size_x_, size_y_, map_fname_);
 
+  dyn_voro_ = std::make_shared<DynamicVoronoi>();
+
   // DynamicVoronoi::DynamicVoronoiParams dyn_voro_params;
   // dyn_voro_params.height = 0.0;
   // dyn_voro_params.resolution = res_;
   // dyn_voro_params.origin_x = 0.0;
   // dyn_voro_params.origin_y = 0.0;
 
-  tm_voronoi_map_init_.start();
 
-  dyn_voro_ = std::make_shared<DynamicVoronoi>();
-
-  dyn_voro_->initializeMap(size_x_, size_y_, bool_map_);
-  dyn_voro_->update(); // update distance map and Voronoi diagram
-  // dyn_voro_->visualize("/home/john/gestelt_ws/src/gestelt/voronoi_planner/maps/final.ppm");
-
-  tm_voronoi_map_init_.stop(verbose_planning_);
-
-  // if (doPrune){
-  //   dyn_voro.prune();  // prune the Voronoi
-  // }
-  // else if (doPruneAlternative) { // prune the Voronoi
-  //   dyn_voro.updateAlternativePrunedDiagram();  
-  // }
-
-  // Set start and goal
-  DblPoint start_pos(0.5, 0.5);
-  DblPoint goal_pos(6.0, 6.0);
+  // // Set start and goal
+  // DblPoint start_pos(0.5, 0.5);
+  // DblPoint goal_pos(6.0, 6.0);
 
   AStarPlanner::AStarParams astar_params_; 
   astar_params_.max_iterations = 99999;
@@ -64,11 +50,6 @@ void VoronoiPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
 
   front_end_planner_->addPublishers(front_end_publisher_map_);
 
-  occmapToOccGrid(*dyn_voro_, size_x_, size_y_,  occ_grid_); // Occupancy map
-  voronoimapToOccGrid(*dyn_voro_, size_x_, size_y_,  voro_occ_grid_); // Voronoi map
-
-  voro_occ_grid_pub_.publish(voro_occ_grid_);
-  occ_map_pub_.publish( occ_grid_);
 }
 
 void VoronoiPlanner::initParams(ros::NodeHandle &pnh)
@@ -100,16 +81,46 @@ void VoronoiPlanner::realignBoolMap(bool ***map, bool ***map_og, int& size_x, in
 
 void VoronoiPlanner::boolMapCB(const gestelt_msgs::BoolMapConstPtr& msg)
 {
-  std::cout << "Received boolMap with height "<< msg->origin.z << std::endl;
+  std::cout << "Received boolMap with z origin "<< msg->origin.z << std::endl;
+  std::cout << "Received boolMap with height, width: ("<< msg->height << ", " << msg->width << ")" << std::endl;
 
   size_x_ = msg->width;
   size_y_ = msg->height;
 
+  // origin_x_ = msg->origin.x;
+  // origin_y_ = msg->origin.y;
+
   bool_map_ = new bool*[size_x_];
-  for (int x=0; x<size_x_; x++) {
+  for (int x=0; x < size_x_; x++) {
     (bool_map_)[x] = new bool[size_y_];
   }
 
+  for(int j = 0; j < size_y_; j++)
+  {
+    for (int i = 0; i < size_x_; i++)
+    {
+      (bool_map_)[i][j] = msg->map[size_x_ * j + i];
+    }
+  }
+
+  tm_voronoi_map_init_.start();
+
+  dyn_voro_->initializeMap(size_x_, size_y_, bool_map_);
+  dyn_voro_->update(); // update distance map and Voronoi diagram
+
+  tm_voronoi_map_init_.stop(verbose_planning_);
+
+  // if (doPrune){
+  //   dyn_voro.prune();  // prune the Voronoi
+  // }
+  // else if (doPruneAlternative) { // prune the Voronoi
+  //   dyn_voro.updateAlternativePrunedDiagram();  
+  // }
+  occmapToOccGrid(*dyn_voro_, size_x_, size_y_,  occ_grid_); // Occupancy map
+  voronoimapToOccGrid(*dyn_voro_, size_x_, size_y_,  voro_occ_grid_); // Voronoi map
+
+  voro_occ_grid_pub_.publish(voro_occ_grid_);
+  occ_map_pub_.publish( occ_grid_);
 }
 
 void VoronoiPlanner::pgmFileToBoolMap(bool ***map,

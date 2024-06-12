@@ -90,7 +90,6 @@ struct MappingParameters
   std::string uav_origin_frame_; // frame id of UAV origin
 
   // bool keep_global_map_{false}; // If true, Bonxai will not discard any nodes outside of the local map bounds. We will map the entire area but at the cost of additional memory.
-
 };
 
 // intermediate mapping data for fusion
@@ -539,7 +538,7 @@ public:
 
     bool_map_msg.origin.x = mp_.local_map_origin_(0);
     bool_map_msg.origin.y = mp_.local_map_origin_(1);
-    bool_map_msg.origin.z = mp_.local_map_origin_(2);
+    bool_map_msg.origin.z = slice_z;
 
     bool_map_msg.width = mp_.local_map_size_(0);
     bool_map_msg.height = mp_.local_map_size_(1);
@@ -561,6 +560,8 @@ public:
     }
 
     local_bool_map_pub_.publish(bool_map_msg);
+
+    std::cout << "Published local_bool_map"  << std::endl;
   }
 
 private: 
@@ -597,6 +598,7 @@ private:
   std::shared_ptr<tf2_ros::TransformListener> tfListener_;
 
   /* Params */
+  bool dbg_origin_pose_{false}; // flag to run grid_map with pose set at origin (with no quadrotor)
   bool dbg_input_entire_map_; // flag to indicate that map will be constructed at the start from the entire pcd map (instead of through incremental sensor data)
   std::string entire_pcd_map_topic_; // Topic to listen for an entire PCD for debugging
 
