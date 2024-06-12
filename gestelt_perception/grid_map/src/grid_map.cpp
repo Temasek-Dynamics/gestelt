@@ -40,7 +40,7 @@ void GridMap::initMapROS(ros::NodeHandle &nh, ros::NodeHandle &pnh)
     occ_map_pub_ = nh.advertise<sensor_msgs::PointCloud2>("grid_map/occupancy", 10);
     local_map_poly_pub_ = nh.advertise<geometry_msgs::PolygonStamped>("local_map/bounds", 5);
     // update_local_map_timer_ = nh.createTimer(ros::Duration(1.0/update_local_map_freq_), &GridMap::updateLocalMapTimerCB, this);
-    updateLocalMap();
+    // updateLocalMap();
 
     // return;
   }
@@ -215,9 +215,12 @@ void GridMap::visTimerCB(const ros::TimerEvent & /*event*/)
 
 void GridMap::updateLocalMapTimerCB(const ros::TimerEvent & /*event*/)
 {
+  std::cout << "before updateLocalMapTimerCB" << std::endl;
+  
   updateLocalMap();
-
   sliceMap(1.0);
+
+  std::cout << "after updateLocalMapTimerCB" << std::endl;
 }
 
 void GridMap::checkCollisionsTimerCB(const ros::TimerEvent & /*event*/)
@@ -264,7 +267,6 @@ void GridMap::cloudPoseCB( const sensor_msgs::PointCloud2ConstPtr &msg_pc,
 
 void GridMap::cloudTFCB( const sensor_msgs::PointCloud2ConstPtr &msg_pc) 
 {
-
   geometry_msgs::TransformStamped cam_to_origin_tf;
 
   sensor_msgs::PointCloud2 pc_out;
@@ -388,8 +390,6 @@ void GridMap::updateLocalMap(){
   publishLocalMapBounds();
 
   publishOccMap(local_occ_map_pts_);
-
-  std::cout << "updated local map!" << std::endl;
 }
 
 void GridMap::getCamToGlobalPose(const geometry_msgs::Pose &pose)

@@ -80,7 +80,8 @@ void VoronoiPlanner::realignBoolMap(bool ***map, bool ***map_og, int& size_x, in
 }
 
 void VoronoiPlanner::boolMapCB(const gestelt_msgs::BoolMapConstPtr& msg)
-{
+{ 
+  std::cout << "boolMapCB" << std::endl;
   std::cout << "Received boolMap with z origin "<< msg->origin.z << std::endl;
   std::cout << "Received boolMap with height, width: ("<< msg->height << ", " << msg->width << ")" << std::endl;
 

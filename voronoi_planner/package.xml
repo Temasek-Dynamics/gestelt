@@ -19,7 +19,6 @@
   <depend>gestelt_msgs</depend>
 
   <depend>grid_map</depend>
-  
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>
