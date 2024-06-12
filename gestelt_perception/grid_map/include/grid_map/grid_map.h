@@ -7,7 +7,7 @@
 #include <pcl/common/transforms.h>
 #include <pcl_conversions/pcl_conversions.h>
 // #include <pcl/filters/voxel_grid.h>
-// #include <pcl/filters/passthrough.h>
+#include <pcl/filters/passthrough.h>
 
 #include <ikd_tree/ikd_tree.h>
 
@@ -19,8 +19,9 @@
 
 #include <geometry_msgs/PoseStamped.h>
 #include <nav_msgs/Odometry.h>
-#include <sensor_msgs/CameraInfo.h>
+// #include <sensor_msgs/CameraInfo.h>
 #include <visualization_msgs/Marker.h>
+#include <gestelt_msgs/BoolMap.h>
 
 #include <tf2_ros/transform_listener.h>
 #include <tf2_ros/message_filter.h>
@@ -213,7 +214,7 @@ public:
    * @brief Publish map for visualization
    * 
    */
-  void publishOccMap(const pcl::PointCloud<pcl::PointXYZ>& occ_map_pts);
+  void publishOccMap(const pcl::PointCloud<pcl::PointXYZ>::Ptr& occ_map_pts);
 
   // Publish sphere to indicate collision with interpolated colors between fatal and warning radius
   void publishCollisionSphere(
@@ -262,83 +263,11 @@ private:
   */
   void updateLocalMapTimerCB(const ros::TimerEvent & /*event*/);
 
-  // /**
-  //  * @brief Timer for building KDTree
-  // */
-  // void buildKDTreeTimerCB(const ros::TimerEvent & /*event*/);
-
   /**
    * @brief Timer for checking collision of drone with obstacles
    * 
    */
   void checkCollisionsTimerCB(const ros::TimerEvent & /*event*/);
-
-
-private: 
-  /* ROS Publishers, subscribers and Timers */
-
-  // Message filters for point cloud/depth camera and pose/odom
-  SynchronizerCloudPose sync_cloud_pose_;
-  SynchronizerCloudOdom sync_cloud_odom_;
-  
-  std::shared_ptr<message_filters::Subscriber<sensor_msgs::PointCloud2>> cloud_sub_;
-  std::shared_ptr<message_filters::Subscriber<geometry_msgs::PoseStamped>> pose_sub_;
-  std::shared_ptr<message_filters::Subscriber<nav_msgs::Odometry>> odom_sub_;
-
-  ros::Subscriber odom_col_check_sub_; // Subscriber to odom for collision checking
-
-  // Message filters for point cloud and tf
-  std::shared_ptr<tf2_ros::MessageFilter<sensor_msgs::PointCloud2>> tf_cloud_filter_;
-
-  ros::Subscriber camera_info_sub_;
-  ros::Subscriber cloud_only_sub_;
-
-  ros::Publisher occ_map_pub_; // Publisher for occupancy map
-  ros::Publisher collision_viz_pub_; // Publisher for collision visualization spheres
-  ros::Publisher local_map_poly_pub_;
-
-  ros::Timer vis_occ_timer_; // Timer for visualization
-  ros::Timer check_collisions_timer_; // Timer for checking collisions
-  ros::Timer update_local_map_timer_; // Timer for updating local map
-  // ros::Timer build_kd_tree_timer_; // Timer for updating local map
-
-  // TF transformation 
-  tf2_ros::Buffer tfBuffer_;
-  std::shared_ptr<tf2_ros::TransformListener> tfListener_;
-
-  /* Params */
-  bool dbg_input_entire_map_; // flag to indicate that map will be constructed at the start from the entire pcd map (instead of through incremental sensor data)
-  std::string entire_pcd_map_topic_; // Topic to listen for an entire PCD for debugging
-
-  double col_warn_radius_, col_fatal_radius_; // collision check radius
-
-  double viz_occ_map_freq_{-1.0}; // Frequency to publish occupancy map visualization
-  double update_local_map_freq_{-1.0};  // Frequency to update local map
-  // double build_kd_tree_freq_{-1.0};  // Frequency to build kdtree
-
-  /* Data structures for point clouds */
-  pcl::PointCloud<pcl::PointXYZ>::Ptr local_map_in_origin_;  // Point cloud local map in UAV origin frame
-  pcl::PointCloud<pcl::PointXYZ>::Ptr global_map_in_origin_;  // Point cloud global map in UAV Origin frame
-
-  std::unique_ptr<BonxaiT> bonxai_map_; // Bonxai data structure 
-  pcl::PointCloud<pcl::PointXYZ> occ_map_pts_; // Occupancy map points formed by Bonxai probabilistic mapping
-  
-  std::shared_ptr<KD_TREE<pcl::PointXYZ>> kdtree_; // KD-Tree 
-
-  std::vector<int8_t> local_map_data_; // 1D array used by path planners for collision checking
-
-  // pcl::VoxelGrid<pcl::PointXYZ> vox_grid_filter_; // Voxel filter
-
-  /* Logic flags*/
-
-  bool check_collisions_{true}; // Flag for checking collisions
-
-  /* Mutexes */
-  std::mutex occ_map_pts_mutex_;
-
-  /* Stopwatch for profiling performance */
-  Timer tm_bonxai_insert_{"bonxai->insertPointCloud"};
-  Timer tm_kdtree_build_{"kdtree_->Build"};
 
 // Frequently used methods
 public:
@@ -557,10 +486,8 @@ public:
   //   if (!isInGlobalVoxelMap(idx)){
   //     return 1.0;
   //   }
-
   //   Eigen::Vector3d pos = intToFloat(idx);
   //   Bonxai::CoordT coord = bonxai_map_->grid().posToCoord(pos(0), pos(1), pos(2));
-
   //   return bonxai_map_->getOccVal(coord);
   // }
 
@@ -603,8 +530,104 @@ public:
     return pns;
   }
 
+  void sliceMap(const double& slice_z) {
+    std::cout << "Sliced map at " << slice_z << std::endl;
+
+    gestelt_msgs::BoolMap bool_map_msg;
+
+    bool_map_msg.header.stamp = ros::Time::now();
+
+    bool_map_msg.origin.x = mp_.local_map_origin_(0);
+    bool_map_msg.origin.y = mp_.local_map_origin_(1);
+    bool_map_msg.origin.z = mp_.local_map_origin_(2);
+
+    bool_map_msg.width = mp_.local_map_size_(0);
+    bool_map_msg.height = mp_.local_map_size_(1);
+
+    bool_map_msg.map.resize(mp_.local_map_size_(0) * mp_.local_map_size_(1), false);
+    
+    pcl::PointCloud<pcl::PointXYZ>::Ptr pcd_layer(new pcl::PointCloud<pcl::PointXYZ>);
+    // Apply passthrough filter
+    pcl::PassThrough<pcl::PointXYZ> z_filter;
+    z_filter.setInputCloud(local_occ_map_pts_);
+    z_filter.setFilterFieldName("z");
+    z_filter.setFilterLimits(slice_z - (mp_.resolution_/2) , slice_z + (mp_.resolution_/2));
+    z_filter.filter(*pcd_layer);
+
+    // Iterate through each occupied point
+    for (const auto& pt : pcd_layer->points){
+      size_t idx = pt.x + pt.y * mp_.local_map_num_voxels_(0);
+      bool_map_msg.map[idx] = true;
+    }
+
+    local_bool_map_pub_.publish(bool_map_msg);
+  }
+
+private: 
+  /* ROS Publishers, subscribers and Timers */
+
+  // Message filters for point cloud/depth camera and pose/odom
+  SynchronizerCloudPose sync_cloud_pose_;
+  SynchronizerCloudOdom sync_cloud_odom_;
+  
+  std::shared_ptr<message_filters::Subscriber<sensor_msgs::PointCloud2>> cloud_sub_;
+  std::shared_ptr<message_filters::Subscriber<geometry_msgs::PoseStamped>> pose_sub_;
+  std::shared_ptr<message_filters::Subscriber<nav_msgs::Odometry>> odom_sub_;
+
+  ros::Subscriber odom_col_check_sub_; // Subscriber to odom for collision checking
+
+  // Message filters for point cloud and tf
+  std::shared_ptr<tf2_ros::MessageFilter<sensor_msgs::PointCloud2>> tf_cloud_filter_;
+
+  ros::Subscriber camera_info_sub_;
+  ros::Subscriber cloud_only_sub_;
+
+  ros::Publisher occ_map_pub_; // Publisher for occupancy map
+  ros::Publisher collision_viz_pub_; // Publisher for collision visualization spheres
+  ros::Publisher local_map_poly_pub_; // Publisher to show local map bounds
+
+  ros::Publisher local_bool_map_pub_; // Publisher of local boolean map
+
+  ros::Timer vis_occ_timer_; // Timer for visualization
+  ros::Timer check_collisions_timer_; // Timer for checking collisions
+  ros::Timer update_local_map_timer_; // Timer for updating local map
+
+  // TF transformation 
+  tf2_ros::Buffer tfBuffer_;
+  std::shared_ptr<tf2_ros::TransformListener> tfListener_;
+
+  /* Params */
+  bool dbg_input_entire_map_; // flag to indicate that map will be constructed at the start from the entire pcd map (instead of through incremental sensor data)
+  std::string entire_pcd_map_topic_; // Topic to listen for an entire PCD for debugging
+
+  double col_warn_radius_, col_fatal_radius_; // collision check radius
+
+  double viz_occ_map_freq_{-1.0}; // Frequency to publish occupancy map visualization
+  double update_local_map_freq_{-1.0};  // Frequency to update local map
+
+  /* Data structures for point clouds */
+  pcl::PointCloud<pcl::PointXYZ>::Ptr local_occ_map_pts_; // Occupancy map points formed by Bonxai probabilistic mapping
+  pcl::PointCloud<pcl::PointXYZ>::Ptr global_map_in_origin_;  // Point cloud global map in UAV Origin frame
+
+  std::unique_ptr<BonxaiT> bonxai_map_; // Bonxai data structure 
+  
+  std::shared_ptr<KD_TREE<pcl::PointXYZ>> kdtree_; // KD-Tree 
+
+  std::vector<int8_t> local_map_data_; // 1D array used by path planners for collision checking
+
+  // pcl::VoxelGrid<pcl::PointXYZ> vox_grid_filter_; // Voxel filter
+
+  /* Logic flags*/
+
+  bool check_collisions_{true}; // Flag for checking collisions
+
+  /* Mutexes */
+  // std::mutex occ_map_pts_mutex_;
+
+  /* Stopwatch for profiling performance */
+  Timer tm_bonxai_insert_{"bonxai->insertPointCloud"};
+  Timer tm_kdtree_build_{"kdtree_->Build"};
+
 }; // class GridMap
-
-
 
 #endif //_GRID_MAP_H

@@ -1,10 +1,32 @@
 <launch>
+  <arg name="drone_id" default="0"/>
+  <arg name="drone_id_ns" value="drone$(arg drone_id)"/>
+  <arg name="navigator_cfg_filepath" default="$(find gestelt_bringup)/config/navigator.yaml"/>
+
+  <arg name="cloud_topic" default="camera/depth/points"/>
+  <arg name="odometry_topic" default="mavros/local_position/odom" />
+
+  <arg name="global_frame" default="world"/>
+  <arg name="uav_origin_frame" default="world"/>
+  <arg name="cam_frame" default="cam_link"/>
+
+  <arg name="map_filepath" default="$(find gestelt_bringup)/simulation/fake_maps/forest_single.pcd" />
+
   <node pkg="voronoi_planner" type="voronoi_planner_node" 
       name="voronoi_planner_node" output="screen">
     <rosparam command="load" file="$(find voronoi_planner)/config/voronoi_planner.yaml" />
     <!-- <param name="map_filename" value="$(find voronoi_planner)/maps/empty_room.pgm"/> -->
     <!-- <param name="map_filename" value="$(find voronoi_planner)/maps/map_circular.pgm"/> -->
     <param name="map_filename" value="$(find voronoi_planner)/maps/map.pgm"/>
+  </node>
+
+  <!-- Fake map publisher -->
+  <node pkg="fake_map" type="fake_map_publisher" name="fake_map_publisher" output="screen">
+      <remap from="/fake_map" to="/fake_map"/>
+
+      <param name="map/file_path" value="$(arg map_filepath)"/>
+      <param name="map/publish_freq" value="1.0"/>
+      <param name="map/frame_id" value="world"/>
   </node>
 
   <node name="rviz" pkg="rviz" type="rviz" required="true" 

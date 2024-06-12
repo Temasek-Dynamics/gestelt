@@ -26,6 +26,7 @@
   <depend>bonxai</depend>
   <depend>ikd_tree</depend>
   <depend>logger</depend>
+  <depend>gestelt_msgs</depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>

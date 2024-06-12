@@ -51,11 +51,11 @@ void GridMap::initMapROS(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   // Initialize publisher for occupancy map
   occ_map_pub_ = nh.advertise<sensor_msgs::PointCloud2>("grid_map/occupancy", 10);
   local_map_poly_pub_ = nh.advertise<geometry_msgs::PolygonStamped>("local_map/bounds", 5);
+  local_bool_map_pub_ = nh.advertise<gestelt_msgs::BoolMap>("bool_map", 5);
 
   /* Initialize ROS Timers */
   // vis_occ_timer_ = nh.createTimer(ros::Duration(1.0/viz_occ_map_freq_), &GridMap::visTimerCB, this);
   update_local_map_timer_ = nh.createTimer(ros::Duration(1.0/update_local_map_freq_), &GridMap::updateLocalMapTimerCB, this);
-  // build_kd_tree_timer_ = nh.createTimer(ros::Duration(1.0/build_kd_tree_freq_), &GridMap::buildKDTreeTimerCB, this);
 
   // ROS_INFO("[%s] Map origin (%f, %f, %f)", node_name_.c_str(), 
   //   mp_.global_map_origin_(0), mp_.global_map_origin_(1), mp_.global_map_origin_(2));
@@ -167,6 +167,7 @@ void GridMap::reset(const double& resolution){
   // KD_TREE(float delete_param = 0.5, float balance_param = 0.6 , float box_length = 0.2);
   kdtree_ = std::make_shared<KD_TREE<pcl::PointXYZ>>(0.5, 0.6, 0.1);
 
+  local_occ_map_pts_.reset(new pcl::PointCloud<pcl::PointXYZ>());
   global_map_in_origin_.reset(new pcl::PointCloud<pcl::PointXYZ>());
 
   md_.last_sensor_msg_time = ros::Time::now().toSec();
@@ -210,14 +211,12 @@ void GridMap::visTimerCB(const ros::TimerEvent & /*event*/)
   // ROS_INFO_STREAM_THROTTLE(1.0, "Octree Bounding Box: " << octree_->getBBXMin() << ", " << octree_->getBBXMax());
 }
 
-// void GridMap::buildKDTreeTimerCB(const ros::TimerEvent & /*event*/)
-// {
-
-// }
 
 void GridMap::updateLocalMapTimerCB(const ros::TimerEvent & /*event*/)
 {
   updateLocalMap();
+
+  sliceMap(1.0);
 }
 
 void GridMap::checkCollisionsTimerCB(const ros::TimerEvent & /*event*/)
@@ -334,26 +333,27 @@ void GridMap::updateLocalMap(){
     return;
   }
 
-  // std::unique_lock<std::mutex> lck(occ_map_pts_mutex_, std::try_to_lock);
+  // std::unique_lock<std::mutex> lck(local_occ_map_pts_mutex_, std::try_to_lock);
   // if (!lck.owns_lock()){
   //   return;
   // }
 
-  occ_map_pts_.clear();
-
+  // Clear existing local map
+  local_occ_map_pts_->clear(); 
+  
   for (auto& coord : occ_coords) // For each occupied coordinate
   {
     // obs_gbl_pos: global obstacle pos
     // Check if the obstacle within local map bounds
     Bonxai::Point3D obs_gbl_pos_pt3d = bonxai_map_->grid().coordToPos(coord);
-    // Eigen::Vector3d obs_gbl_pos = Eigen::Vector3d(obs_gbl_pos_pt3d.x, obs_gbl_pos_pt3d.y, obs_gbl_pos_pt3d.z)
-    //                               - md_.body2origin_.block<3,1>(0,3);
+
+
     Eigen::Vector3d obs_gbl_pos(obs_gbl_pos_pt3d.x, obs_gbl_pos_pt3d.y, obs_gbl_pos_pt3d.z);
     if (!isInLocalMap(obs_gbl_pos)){ // Point is outside the local map
       continue;
     }
 
-    occ_map_pts_.push_back(pcl::PointXYZ(obs_gbl_pos_pt3d.x, obs_gbl_pos_pt3d.y, obs_gbl_pos_pt3d.z));
+    local_occ_map_pts_->push_back(pcl::PointXYZ(obs_gbl_pos_pt3d.x, obs_gbl_pos_pt3d.y, obs_gbl_pos_pt3d.z));
 
     // Convert to voxel index. This is relative to mp_.local_map_origin_
     Eigen::Vector3i vox_idx_3d = ((obs_gbl_pos - getLocalOrigin()) / getRes() - Eigen::Vector3d::Constant(0.5) ).cast<int>() ; 
@@ -381,12 +381,12 @@ void GridMap::updateLocalMap(){
   }
 
   // tm_kdtree_build_.start();
-  kdtree_->Build(occ_map_pts_.points);
+  kdtree_->Build(local_occ_map_pts_->points);
   // tm_kdtree_build_.stop(false);
 
   publishLocalMapBounds();
 
-  publishOccMap(occ_map_pts_);
+  publishOccMap(local_occ_map_pts_);
 }
 
 void GridMap::getCamToGlobalPose(const geometry_msgs::Pose &pose)
@@ -428,8 +428,6 @@ void GridMap::pcdMsgToMap(const sensor_msgs::PointCloud2 &msg)
   pcl::fromROSMsg(msg, *pcd);
 
   pcdToMap(pcd);
-
-
 }
 
 void GridMap::pcdToMap(pcl::PointCloud<pcl::PointXYZ>::Ptr pcd)
@@ -485,19 +483,19 @@ bool GridMap::isPoseValid() {
 
 /** Publishers */
 
-void GridMap::publishOccMap(const pcl::PointCloud<pcl::PointXYZ>& occ_map_pts)
+void GridMap::publishOccMap(const pcl::PointCloud<pcl::PointXYZ>::Ptr& occ_map_pts)
 {
   if (occ_map_pub_.getNumSubscribers() > 0){
     sensor_msgs::PointCloud2 cloud_msg;
-    pcl::toROSMsg(occ_map_pts, cloud_msg);
+    pcl::toROSMsg(*occ_map_pts, cloud_msg);
 
     cloud_msg.header.frame_id = mp_.uav_origin_frame_;
     cloud_msg.header.stamp = ros::Time::now();
     occ_map_pub_.publish(cloud_msg);
-    // ROS_INFO("Published occupancy grid with %ld voxels", occ_map_pts_.points.size());
+    // ROS_INFO("Published occupancy grid with %ld voxels", local_occ_map_pts_.points.size());
   }
 
-  // std::unique_lock<std::mutex> lck(occ_map_pts_mutex_, std::try_to_lock);
+  // std::unique_lock<std::mutex> lck(local_occ_map_pts_mutex_, std::try_to_lock);
   // if (!lck.owns_lock()){
   //   return;
   // }

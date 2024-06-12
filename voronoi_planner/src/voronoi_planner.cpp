@@ -17,10 +17,15 @@ void VoronoiPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   /* Subscribers */
   start_sub_ = nh.subscribe("/start_pt", 5, &VoronoiPlanner::startPointCB, this);
   goal_sub_ = nh.subscribe("/goal_pt", 5, &VoronoiPlanner::goalPointCB, this);
+  bool_map_sub_ = nh.subscribe<gestelt_msgs::BoolMap>("bool_map", 1, &VoronoiPlanner::boolMapCB, this);
+
+  // Initialize map
+  map_.reset(new GridMap);
+  map_->initMapROS(nh, pnh);
 
   initParams(pnh);
 
-  pgmFileToBoolMap(&bool_map_, size_x_, size_y_, map_fname_);
+  // pgmFileToBoolMap(&bool_map_, size_x_, size_y_, map_fname_);
 
   // DynamicVoronoi::DynamicVoronoiParams dyn_voro_params;
   // dyn_voro_params.height = 0.0;
@@ -46,9 +51,8 @@ void VoronoiPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   // }
 
   // Set start and goal
-  DblPoint start_pos(7.0, 8.0);
-  DblPoint goal_pos(7.0, 9.0);
-
+  DblPoint start_pos(0.5, 0.5);
+  DblPoint goal_pos(6.0, 6.0);
 
   AStarPlanner::AStarParams astar_params_; 
   astar_params_.max_iterations = 99999;
@@ -92,7 +96,20 @@ void VoronoiPlanner::realignBoolMap(bool ***map, bool ***map_og, int& size_x, in
       (*map)[i][j] = (*map_og)[i][size_y-j-1];
     }
   }
-  
+}
+
+void VoronoiPlanner::boolMapCB(const gestelt_msgs::BoolMapConstPtr& msg)
+{
+  std::cout << "Received boolMap with height "<< msg->origin.z << std::endl;
+
+  size_x_ = msg->width;
+  size_y_ = msg->height;
+
+  bool_map_ = new bool*[size_x_];
+  for (int x=0; x<size_x_; x++) {
+    (bool_map_)[x] = new bool[size_y_];
+  }
+
 }
 
 void VoronoiPlanner::pgmFileToBoolMap(bool ***map,

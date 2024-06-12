@@ -10,6 +10,8 @@ set(ROS_LIBRARIES
   nav_msgs
   global_planner
   dynamic_voronoi
+  gestelt_msgs
+  grid_map
 )
 
 ## Find catkin macros and libraries

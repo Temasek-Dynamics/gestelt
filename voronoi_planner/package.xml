@@ -16,6 +16,10 @@
   <depend>nav_msgs</depend>
   <depend>global_planner</depend>
   <depend>dynamic_voronoi</depend>
+  <depend>gestelt_msgs</depend>
+
+  <depend>grid_map</depend>
+  
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>

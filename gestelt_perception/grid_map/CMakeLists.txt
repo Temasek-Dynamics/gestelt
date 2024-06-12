@@ -15,6 +15,7 @@ set(ROS_LIBRARIES
     bonxai
     ikd_tree
     logger
+    gestelt_msgs
 )
 
 find_package(octomap REQUIRED)
@@ -27,7 +28,7 @@ find_package(Eigen3 REQUIRED)
 catkin_package(
  INCLUDE_DIRS include
  LIBRARIES ${PROJECT_NAME}
- CATKIN_DEPENDS tf2_ros bonxai ikd_tree logger
+ CATKIN_DEPENDS tf2_ros bonxai ikd_tree logger gestelt_msgs
  DEPENDS PCL 
 )
 

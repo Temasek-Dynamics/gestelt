@@ -11,6 +11,7 @@
 #include <ros/ros.h>
 #include <nav_msgs/OccupancyGrid.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <gestelt_msgs/BoolMap.h>
 
 #include <geometry_msgs/PointStamped.h>
 #include <geometry_msgs/PoseStamped.h>
@@ -18,8 +19,9 @@
 #include <limits>
 #include <queue>
 
-#include "dynamic_voronoi/dynamicvoronoi.h"
+#include <grid_map/grid_map.h> // Map representation
 
+#include "dynamic_voronoi/dynamicvoronoi.h"
 #include "global_planner/a_star.h"
 
 #include <logger/timer.h>
@@ -86,6 +88,8 @@ public:
   void pgmFileToBoolMap(bool ***map,
                         int& size_x, int& size_y,
                         const std::string& fname);
+
+  void boolMapCB(const gestelt_msgs::BoolMapConstPtr& msg);
 
   // Compute distance map
   void computeDistanceMap();
@@ -590,7 +594,7 @@ private:
   ros::Publisher dist_occ_map_pub_; // Publishes distance map occupancy grid
   ros::Publisher voro_occ_grid_pub_; // Publishes voronoi map occupancy grid
 
-  ros::Publisher front_end_plan_viz_pub_;
+  ros::Publisher front_end_plan_viz_pub_; // Publish front-end plan (A*) visualization
   ros::Publisher start_pt_pub_;
   ros::Publisher goal_pt_pub_;
 
@@ -602,6 +606,11 @@ private:
   /* Planning */
   DblPoint start_pos_{0.0, 0.0};
   DblPoint goal_pos_{0.0, 0.0};
+
+  ros::Subscriber bool_map_sub_; // Subscription to boolean map
+
+  /* Mapping */
+  std::shared_ptr<GridMap> map_;
 
   /* Data structs */
   bool **bool_map_{NULL};
