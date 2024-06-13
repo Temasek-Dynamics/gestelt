@@ -18,7 +18,7 @@ heartbeat_frequency: 20.0               # [Hz] Frequency to indicate if planner 
 ##### Set planner types
 front_end/planner_type: 1         # 0: ASTAR, 1: JPS_AND_DMP
 sfc/planner_type: 1               # 0: SPHERICAL, 1: POLYTOPE
-back_end/planner_type: 1          # 0: SSFC, 1: EGO, 2: POLY
+back_end/planner_type: 2          # 0: SSFC, 1: EGO, 2: POLY
 
 ##### Front-end params
 front_end:

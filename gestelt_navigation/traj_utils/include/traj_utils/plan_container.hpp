@@ -56,9 +56,9 @@ namespace ego_planner
       global_traj.glb_t_of_lc_tgt = world_time;
       global_traj.last_glb_t_of_lc_tgt = -1.0;
 
-      local_traj.drone_id = -1; //set to negative to indicate no received trajectories from other drones yet
-      local_traj.duration = 0.0;
-      local_traj.traj_id = 0;
+      // local_traj.drone_id = -1; //set to negative to indicate no received trajectories from other drones yet
+      // local_traj.duration = 0.0;
+      // local_traj.traj_id = 0;
     }
 
     void setLocalTraj(const poly_traj::Trajectory &trajectory, const PtsChk_t &pts_to_chk, const double &world_time, const int drone_id = -1)

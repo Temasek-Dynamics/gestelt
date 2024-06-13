@@ -45,7 +45,8 @@ namespace back_end
     lbfgs_params.max_iterations = 200;
     lbfgs_params.past = 3;
     lbfgs_params.delta = 1.0e-3;
-    lbfgs_params.g_epsilon = 1.0e-5;
+    // lbfgs_params.g_epsilon = 1.0e-5;
+    lbfgs_params.g_epsilon = 1.0e-2;
     // lbfgs_params.max_linesearch = 200;
     // lbfgs_params.min_step = 1e-32;
     // lbfgs_params.max_step = 1e+20;
@@ -167,7 +168,8 @@ namespace back_end
     lbfgs_params.mem_size = 256; // 16
     // lbfgs_params.max_iterations = 200;
     // lbfgs_params.g_epsilon = 0.0;
-    lbfgs_params.g_epsilon = 0.1;
+    // lbfgs_params.g_epsilon = 0.1;
+    lbfgs_params.g_epsilon = 1.0e-2;
     // lbfgs_params.abs_curv_cond = 0;
     lbfgs_params.past = 3;
     // lbfgs_params.delta = 1.0e-3;

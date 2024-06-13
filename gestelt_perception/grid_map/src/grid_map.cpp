@@ -340,8 +340,7 @@ void GridMap::updateLocalMap(){
   // }
 
   occ_map_pcd_.clear(); // For local map
-  
-  std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d>> obs_pts_vec;
+  std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d>> obs_pts_vec; // Fpr polyhedral SFC generation
 
   for (auto& coord : occ_coords) // For each occupied coordinate
   {
@@ -352,7 +351,15 @@ void GridMap::updateLocalMap(){
     //                               - md_.body2origin_.block<3,1>(0,3);
     Eigen::Vector3d obs_gbl_pos(obs_gbl_pos_pt3d.x, obs_gbl_pos_pt3d.y, obs_gbl_pos_pt3d.z);
 
-    obs_pts_vec.push_back(obs_gbl_pos); 
+    // Add inflated obstacles
+    // obs_pts_vec.push_back(obs_gbl_pos); 
+    obs_pts_vec.push_back(obs_gbl_pos + Eigen::Vector3d{mp_.inflation_, 0.0, 0.0}); 
+    obs_pts_vec.push_back(obs_gbl_pos + Eigen::Vector3d{-mp_.inflation_, 0.0, 0.0}); 
+    obs_pts_vec.push_back(obs_gbl_pos + Eigen::Vector3d{0.0, mp_.inflation_, 0.0}); 
+    obs_pts_vec.push_back(obs_gbl_pos + Eigen::Vector3d{0.0, -mp_.inflation_, 0.0}); 
+    obs_pts_vec.push_back(obs_gbl_pos + Eigen::Vector3d{0.0, 0.0, mp_.inflation_}); 
+    obs_pts_vec.push_back(obs_gbl_pos + Eigen::Vector3d{0.0, 0.0, -mp_.inflation_}); 
+
 
     if (!isInLocalMap(obs_gbl_pos)){ // Point is outside the local map
       continue;
