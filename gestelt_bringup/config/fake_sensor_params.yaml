@@ -1,4 +1,5 @@
-# fake sensor parameters
+# Simulated sensor parameters
+
 uav: 
   tf_listen_freq: 30.0
 

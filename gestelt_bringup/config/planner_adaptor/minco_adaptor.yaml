@@ -1,0 +1,10 @@
+# Configuration for Planner adaptor to MINCO trajectory representation
+
+# planner_hb_timeout: Timeout from planner heartbeat before emergency procedures activated
+planner_hb_timeout: 0.5 
+# ignore_hb_checks: If true, disable timeout check for planner heartbeat
+ignore_hb_checks: true
+# checks_freq: Frequency at which to perform safety checks 
+checks_freq: 10.0
+# sample_plan_freq: Frequency at which to sample the trajectory plan
+sample_plan_freq: 75.0

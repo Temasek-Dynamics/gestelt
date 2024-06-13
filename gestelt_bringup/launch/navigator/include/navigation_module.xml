@@ -13,9 +13,9 @@
   <arg name="navigator_cfg_filepath" 
     default="$(find gestelt_bringup)/config/navigator.yaml"/>
   <arg name="traj_server_cfg_filepath" 
-    default="$(find gestelt_bringup)/config/bubble_planner/traj_server_default.yaml"/>
+    default="$(find gestelt_bringup)/config/traj_server_default.yaml"/>
   <arg name="adaptor_cfg_filepath" 
-    default="$(find gestelt_bringup)/config/bubble_planner/ego_adaptor.yaml"/>
+    default="$(find gestelt_bringup)/config/planner_adaptor/minco_adaptor.yaml"/>
 
   <!--  Navigator -->
   <include file="$(find navigator)/launch/include/navigator.xml">

@@ -1,5 +1,5 @@
-# Common configuration for PX4 autopilot
-#
+# Common configuration for MAVROS
+
 # node:
 startup_px4_usb_quirk: false
 

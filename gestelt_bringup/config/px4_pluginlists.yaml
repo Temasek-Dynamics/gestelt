@@ -1,3 +1,5 @@
+# Plugins for MAVROS
+
 plugin_blacklist:
 # common
 - safety_area

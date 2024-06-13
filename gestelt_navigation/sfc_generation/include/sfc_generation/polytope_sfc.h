@@ -190,7 +190,6 @@ private: // Private members
   // to size poly_hor_ and if ith idx is true, it means we are using the ith poly
   std::vector<bool> poly_used_idx_;    
 
-  EllipsoidDecomp3D ellip_decomp_util_; // Decomposition util for Liu's method
 
   /* Data structs */
   std::vector<Eigen::MatrixX4d> poly_vec_hyp_; // Matrix of size (N, 4) polyhedrons represented as vertices

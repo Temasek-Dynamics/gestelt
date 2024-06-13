@@ -80,4 +80,3 @@ There are a few methods of calculting the Mass MOI.
 
 ### References 
 1. [How to Find Mass Moment of Inertia | Mechanics Statics | (Solved Examples)](https://www.youtube.com/watch?v=Bls5KnQOWkY)
-2.  

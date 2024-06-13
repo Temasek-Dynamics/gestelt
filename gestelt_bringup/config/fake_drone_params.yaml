@@ -1,4 +1,4 @@
-# Simulated drone parameters
+# Simulated drone (w/o dynamics) parameters
 
 # Hz, frequency at which to update simulation
 sim_update_frequency: 100

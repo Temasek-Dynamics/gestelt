@@ -1,7 +1,9 @@
+#####
+# Navigator module parameters
+# Contains parameters for front-end, safe flight corridor and back-end planning
+# Also contain parameters for mapping module.
+#####
 
-#####
-# Navigator params
-#####
 # debug_planning: false     # Set in launch file. Used to allow certain topics for debugging planning algorithms
 verbose_planning: true     # Print out planning times
 

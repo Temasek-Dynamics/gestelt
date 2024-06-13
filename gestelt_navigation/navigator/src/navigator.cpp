@@ -684,6 +684,12 @@ bool Navigator::PolySFCOptimize(const Eigen::Matrix3d& startPVA, const Eigen::Ma
   }
   visualization_->displayInitialMJO(initial_mjo_viz, 0.075, 0);
 
+
+  std::cout << "Number of polyhedrons: " << h_poly.size() << std::endl;
+  std::cout << "Number of polyhedrons: " << h_poly.size() << std::endl;
+  std::cout << "Number of polyhedrons: " << h_poly.size() << std::endl;
+  std::cout << "Number of polyhedrons: " << h_poly.size() << std::endl;
+
   // /***************************/
   // /*5:  Optimize plan
   // /***************************/

@@ -24,7 +24,6 @@ Panels:
         - /d10/planner(brightgreen)1/odom1/Shape1
         - /d11/planner(blue)1/odom1/Shape1
         - /drone13/planner(Red)1/odom1/Shape1
-        - //grid_map/occupancy1
       Splitter Ratio: 0.6205882430076599
     Tree Height: 627
   - Class: rviz/Selection
@@ -275,7 +274,7 @@ Visualization Manager:
           Marker Topic: /drone0/grid_map/collision_viz
           Name: drone0/collision_viz
           Namespaces:
-            {}
+            collision_viz: true
           Queue Size: 100
           Value: true
         - Class: rviz/Marker
@@ -450,7 +449,7 @@ Visualization Manager:
           Marker Topic: /drone0/back_end/optimal_mjo
           Name: optimal_mjo
           Namespaces:
-            {}
+            "": true
           Queue Size: 100
           Value: true
         - Class: rviz/Group
@@ -481,7 +480,7 @@ Visualization Manager:
               Marker Topic: /drone0/back_end/dbg/initial_mjo
               Name: initial_mjo
               Namespaces:
-                {}
+                "": true
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
@@ -5703,7 +5702,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/XYOrbit
-      Distance: 17.02701759338379
+      Distance: 9.092321395874023
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -5711,17 +5710,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 2.6488423347473145
-        Y: -1.5661052465438843
+        X: 2.6332502365112305
+        Y: 0.8802958726882935
         Z: 0
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.5697963237762451
+      Pitch: 1.4547969102859497
       Target Frame: my_view
-      Yaw: 4.673589706420898
+      Yaw: 4.8086066246032715
     Saved:
       - Class: rviz/FPS
         Enable Stereo Rendering:

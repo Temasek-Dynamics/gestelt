@@ -382,6 +382,7 @@ bool PolytopeSFC::generateSFCLiu(   std::vector<Polyhedron3D, Eigen::aligned_all
                                     const std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d>> &path_3d, 
                                     std::shared_ptr<GridMap> map)
 {
+    EllipsoidDecomp3D ellip_decomp_util_; // Decomposition util for Liu's method
     //Using ellipsoid decomposition
     ellip_decomp_util_.set_obs(map->getObsPtsVec());
     ellip_decomp_util_.set_local_bbox(Vec3f(params_.bbox_x, params_.bbox_y, params_.bbox_z)); 
