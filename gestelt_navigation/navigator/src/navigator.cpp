@@ -317,13 +317,13 @@ void Navigator::planFrontEndTimerCB(const ros::TimerEvent &e)
 
   double req_plan_t = ros::Time::now().toSec(); // time at which back end plan was requested
   
-  // // Sample the starting position from the back end trajectory
-  // if (!sampleBackEndTrajectory((*swarm_local_trajs_)[drone_id_], req_plan_t, start_pos, start_vel, start_acc)){
-  //   // If we are unable to sample the back end trajectory, we set the starting 
-  //   // position as the quadrotor's current position
-  //   start_pos = cur_pos_;
-  // }
-  start_pos = cur_pos_;
+  // Sample the starting position from the back end trajectory
+  if (!sampleBackEndTrajectory((*swarm_local_trajs_)[drone_id_], req_plan_t, start_pos, start_vel, start_acc)){
+    // If we are unable to sample the back end trajectory, we set the starting 
+    // position as the quadrotor's current position
+    start_pos = cur_pos_;
+  }
+  // start_pos = cur_pos_;
 
 
   // Get Receding Horizon Planning goal 
@@ -476,55 +476,68 @@ bool Navigator::generateFrontEndPlan(
   return true;
 }
 
+bool usePreviousTrajectory((*swarm_local_trajs_)[drone_id_], req_plan_t, start_pos, start_vel, start_acc )
+{
+
+}
+
 bool Navigator::requestBackEndPlan()
 {
-  // Check if waypoint queue is empty
+  // Check 1: if waypoint queue is empty
   if (waypoints_.empty()){
     return false;
   }
 
-  // Check if safe flight corridor trajectory exists
+  // Check 2: if safe flight corridor trajectory exists
   if (sfc_type_ == SFCType::SPHERICAL && ssfc_ == nullptr)
   {
     return false;
   }
 
-  /* Generate a back-end plan */
-  poly_traj::MinJerkOpt mjo_opt;  // MINCO trajectory 
-  double req_plan_t = ros::Time::now().toSec(); // time at which back end plan was requested
-
-  Eigen::Vector3d start_pos, start_vel, start_acc;
-  Eigen::Vector3d goal_pos, goal_vel, goal_acc;
-
-  goal_pos = rhp_goal_pos_;
-
   logInfo(str_fmt("generateBackEndPlan() from (%f, %f, %f) to (%f, %f, %f)", 
     start_pos(0), start_pos(1), start_pos(2), 
     goal_pos(0), goal_pos(1), goal_pos(2)));
 
-  if (!sampleBackEndTrajectory((*swarm_local_trajs_)[drone_id_], req_plan_t, start_pos, start_vel, start_acc))
-  {
-    start_pos = cur_pos_;
-    start_vel = cur_vel_;
-    // start_acc.setZero();
-  }
-  // start_pos = cur_pos_;
-  // start_vel = cur_vel_;
-  // start_acc.setZero();
-  
-  goal_vel.setZero();
-  goal_acc.setZero();
-
-  Eigen::Matrix3d startPVA, endPVA;   // Boundary start and end condition: Matrix consisting of 3d (position, velocity acceleration) 
-  startPVA << start_pos, start_vel, start_acc;            // Start (position, velocity, acceleration)
-  endPVA << goal_pos, goal_vel, goal_acc;  // Goal (P)
-
-  bool plan_success = false;
-  bool valid_mjo = false;
 
   tm_back_end_plan_.start();
-  for (int itr = 0; itr < optimizer_num_retries_; itr++)
+  for (int itr = 0; itr < optimizer_num_retries_; itr++) // For each back-end optimization retry
   {
+    /* Generate a back-end plan */
+    poly_traj::MinJerkOpt mjo_opt;  // MINCO trajectory 
+
+    Eigen::Vector3d start_pos, start_vel, start_acc;
+    Eigen::Vector3d goal_pos, goal_vel, goal_acc;
+
+    goal_pos = rhp_goal_pos_;
+
+    double req_plan_t = ros::Time::now().toSec(); // time at which back end plan was requested
+
+    bool use_previous_traj{false};
+
+    if (!sampleBackEndTrajectory((*swarm_local_trajs_)[drone_id_], req_plan_t, start_pos, start_vel, start_acc))
+    {
+      start_pos = cur_pos_;
+      start_vel = cur_vel_;
+      // start_acc.setZero();
+    }
+    else{
+      use_previous_traj = true;
+    }
+
+    // start_pos = cur_pos_;
+    // start_vel = cur_vel_;
+    // start_acc.setZero();
+    
+    goal_vel.setZero();
+    goal_acc.setZero();
+
+    Eigen::Matrix3d startPVA, endPVA;   // Boundary start and end condition: Matrix consisting of 3d (position, velocity acceleration) 
+    startPVA << start_pos, start_vel, start_acc;            // Start (position, velocity, acceleration)
+    endPVA << goal_pos, goal_vel, goal_acc;  // Goal (P)
+
+    bool plan_success = false;
+    bool valid_mjo = false;
+
     if (back_end_type_ == BackEndType::EGO){
       plan_success = EGOOptimize(startPVA, endPVA, mjo_opt);
     }
@@ -533,7 +546,8 @@ bool Navigator::requestBackEndPlan()
     }
     else if (back_end_type_ == BackEndType::POLY){
       plan_success = PolySFCOptimize(startPVA, endPVA, req_plan_t, 
-                                    v_poly_, h_poly_, mjo_opt, valid_mjo);
+                                    v_poly_, h_poly_, mjo_opt, valid_mjo, 
+                                    use_previous_traj);
     }
 
     if (plan_success)
@@ -582,23 +596,91 @@ bool Navigator::PolySFCOptimize(const Eigen::Matrix3d& startPVA, const Eigen::Ma
                     const std::vector<Eigen::Matrix3Xd>& v_poly,
                     const std::vector<Eigen::MatrixX4d>& h_poly,
                     poly_traj::MinJerkOpt& mjo_opt,
-                    bool& valid_mjo)
+                    bool& valid_mjo,
+                    const bool& use_previous_traj)
 {
   bool plan_success{false};
 
   // /***************************/
   /* 1. Generate initial path */
   // /***************************/
-  Eigen::Matrix3Xd initial_path;
-  if (!polyhedron_sfc_optimizer_->genInitialSFCTrajectory(startPVA.col(0), endPVA.col(0),
-                                                     v_poly, 0.01, initial_path))
+  if (use_previous_traj)
   {
-    logInfo("PolySFCOptimize: Failed to generate initial SFC trajectory");
-    valid_mjo = false;
-    return false;
+    // et_local_traj_start: Time elapsed since local trajectory has started
+    double et_local_traj_start = ros::Time::now().toSec() - traj_.local_traj.start_time;
+    // t_to_local_traj_end: Time left to complete trajectory
+    double t_to_local_traj_end = traj_.local_traj.duration - et_local_traj_start;
+    
+    if (t_to_local_traj_end < 0 )
+    { 
+      logError(str_fmt("Drone %d: [EGOPlannerManager::computeInitState] Time elapsed since start of \
+                local trajectory (%f) exceeds it's duration (%f). Terminating this planning instance", 
+                drone_id_, et_local_traj_start, lc_traj.local_traj.duration));
+
+      return false;
+    }
+    // t_to_local_tgt: Time to reach local target
+    double t_to_local_tgt = t_to_local_traj_end + 
+                          (traj_.global_traj.glb_t_of_lc_tgt - traj_.global_traj.last_glb_t_of_lc_tgt);
+
+    // Number of pieces = remaining distance / piece length 
+    int piece_nums = ceil((start_pos - local_target_pos).norm() / params_.seg_length);
+    piece_nums = piece_nums < 2 ? 2: piece_nums; // ensure piece_nums is always minimally 2
+
+    Eigen::Matrix3d headState;
+    Eigen::Matrix3d tailState;
+    headState << start_pos, start_vel, start_acc;
+    tailState << local_target_pos, local_target_vel, Eigen::Vector3d::Zero();
+    Eigen::MatrixXd innerPs(3, piece_nums - 1);
+    // piece_dur_vec: Vector of time duration of each piece. 
+    // Each duration assumed to be equal, value = time to local target / piece_num 
+    Eigen::VectorXd piece_dur_vec = Eigen::VectorXd::Constant(piece_nums, t_to_local_tgt / piece_nums);
+
+    /* Generate inner waypoints based on time per piece */
+    double t = piece_dur_vec(0); // Set start time t to first piece  
+    for (int i = 0; i < piece_nums - 1; ++i) // For each piece
+    {
+      // t ----> t_to_local_traj_end ----> t_to_local_tgt
+
+      // if not yet end of local trajectory
+      if (t < t_to_local_traj_end) 
+      {
+        innerPs.col(i) = traj_.local_traj.traj.getPos(t + et_local_traj_start);
+      }
+      // if not yet reached local target but exceed local trajectory
+      // we need to use global trajectory 
+      else if (t <= t_to_local_tgt) 
+      {
+        // glb_t: t - time to local trajectory end + time last local target was set - start time of global trajectory
+        double glb_t = t - t_to_local_traj_end + traj_.global_traj.last_glb_t_of_lc_tgt - traj_.global_traj.global_start_time;
+        innerPs.col(i) = traj_.global_traj.traj.getPos(glb_t);
+      }
+      else
+      {
+        // time t should not exceed t_to_local_Tgt
+        ROS_ERROR("Drone %d: [EGOPlannerManager::computeInitState] t=%.2f, t_to_local_traj_end=%.2f, t_to_local_tgt=%.2f", params_.drone_id, t, t_to_local_traj_end, t_to_local_tgt);
+      }
+
+      t += piece_dur_vec(i + 1);
+    }
+
+    initMJO.reset(headState, tailState, piece_nums);
+    initMJO.generate(innerPs, piece_dur_vec);
+
+  }
+  else {
+    Eigen::Matrix3Xd initial_path;
+    if (!polyhedron_sfc_optimizer_->genInitialSFCTrajectory(startPVA.col(0), endPVA.col(0),
+                                                      v_poly, 0.01, initial_path))
+    {
+      logInfo("PolySFCOptimize: Failed to generate initial SFC trajectory");
+      valid_mjo = false;
+      return false;
+    }
+
+    visualization_->displayInitialPolyPath(initial_path, 0);
   }
 
-  visualization_->displayInitialPolyPath(initial_path, 0);
 
   // /***************************/
   /* 2. Pre-processing for optimization */
@@ -684,10 +766,6 @@ bool Navigator::PolySFCOptimize(const Eigen::Matrix3d& startPVA, const Eigen::Ma
   }
   visualization_->displayInitialMJO(initial_mjo_viz, 0.075, 0);
 
-
-  std::cout << "Number of polyhedrons: " << h_poly.size() << std::endl;
-  std::cout << "Number of polyhedrons: " << h_poly.size() << std::endl;
-  std::cout << "Number of polyhedrons: " << h_poly.size() << std::endl;
   std::cout << "Number of polyhedrons: " << h_poly.size() << std::endl;
 
   // /***************************/
@@ -935,6 +1013,7 @@ void Navigator::swarmMincoTrajCB(const traj_utils::MINCOTrajConstPtr &msg)
   (*swarm_local_trajs_)[msg->drone_id] = traj;
 }
 
+
 /* Checking methods */
 
 bool Navigator::isTrajectorySafe(
@@ -1089,6 +1168,9 @@ bool Navigator::getRHPGoal(
       return false;
     }
   }
+
+  // Set the last global traj local target timestamp to be that of the current global plan
+  traj_.global_traj.last_glb_t_of_lc_tgt = traj_.global_traj.glb_t_of_lc_tgt;
 
   // Publish RHP goal
   geometry_msgs::PoseStamped rhp_goal_msg;

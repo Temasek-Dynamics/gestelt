@@ -125,8 +125,9 @@ inline decomp_ros_msgs::Polyhedron polyhedron_to_ros(const Polyhedron3D& poly){
 template <int Dim>
 decomp_ros_msgs::PolyhedronArray polyhedron_array_to_ros(const vec_E<Polyhedron<Dim>>& vs){
   decomp_ros_msgs::PolyhedronArray msg;
-  for (const auto &v : vs)
+  for (const auto &v : vs){
     msg.polyhedrons.push_back(polyhedron_to_ros(v));
+  }
   return msg;
 }
 

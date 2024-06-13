@@ -81,8 +81,10 @@ private: /* Initialization methods */
   void initPublishers(ros::NodeHandle &nh, ros::NodeHandle &pnh);
 
 private:  
-  /* Timer callbacks */
 
+  ////////////////////
+  /* Timer callbacks */
+  ////////////////////
   /**
    * @brief Timer callback to generate plan
    * @param e 
@@ -119,7 +121,9 @@ private:
    */
   void heartbeatTimerCB(const ros::TimerEvent &e);
 
+  ////////////////////
   /* Planner methods */
+  ////////////////////
 
   /**
    * @brief Stop all planning loops 
@@ -163,9 +167,12 @@ private:
                     const std::vector<Eigen::Matrix3Xd>& v_poly,
                     const std::vector<Eigen::MatrixX4d>& h_poly,
                     poly_traj::MinJerkOpt& mjo_opt,
-                    bool& valid_mjo);
+                    bool& valid_mjo,
+                    const bool& use_previous_traj);
 
+  ////////////////////
   /* Subscriber callbacks */
+  ////////////////////
 
   /**
    * @brief Callback for odometry message
@@ -195,7 +202,6 @@ private:
     waypoints_.reset();
     waypoints_.addWP(goal_pos);
   }
-
 
   /**
    * @brief callback to multiple user-defined goal waypoints 
@@ -283,7 +289,9 @@ private:
     generateFrontEndPlan(cur_pos_, waypoints_.nextWP(), ssfc_);
   }
 
+  ////////////////////
   /* Checks */
+  ////////////////////
 
   /**
    * @brief Check if current position is within goal tolerance
@@ -314,7 +322,9 @@ private:
 
   bool isTrajectoryDynFeasible(ego_planner::LocalTrajData* traj, bool& is_feasible);
 
+  ////////////////////
   /* Helper methods */
+  ////////////////////
 
   /**
    * @brief Sample the back end trajectory 
@@ -377,6 +387,8 @@ private:
    * @param cmd 
    */
   void pubTrajServerCmd(const int& cmd);
+
+
 
 private: /* ROS subs, pubs and timers*/
   ros::NodeHandle node_;
@@ -450,11 +462,15 @@ private: /* Planner members */
   Eigen::Vector3d rhp_goal_pos_; // Receding horizon planning goal
   std::shared_ptr<std::vector<ego_planner::LocalTrajData>> swarm_local_trajs_; // Swarm MINCO trajectories, maps drone_id to local trajectory data
 
+  ego_planner::TrajContainer traj_; // local/global trajectory data
+
   std::shared_ptr<SSFC::SFCTrajectory> ssfc_{nullptr};   // Safe flight corridor trajectory
 
   // Polyhedron sfc data 
   std::vector<Eigen::MatrixX4d> h_poly_;
   std::vector<Eigen::Matrix3Xd> v_poly_;
+
+
 
   /* Timestamps for detecting timeouts*/
   ros::Time last_state_output_t_; // Last time stamp at which UAV odom is received

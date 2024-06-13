@@ -4,11 +4,11 @@ circle_obs: 0 # Number of hoops
 seed: 1
 
 map:
-  inter_obstacle_clearance: 0.3 # Minimum separation distance between center of obstacle primitives
+  inter_obstacle_clearance: 0.8 # Minimum separation distance between center of obstacle primitives
   resolution: 0.1
-  x_size: 5.9
-  y_size: 5.9
-  z_size: 3.0
+  x_size: 30
+  y_size: 30
+  z_size: 5.0
 
 obstacle:
   lower_rad: 0.1 # Cylinder: Smallest radius

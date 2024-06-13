@@ -18,9 +18,9 @@ namespace ego_planner
   {
     poly_traj::Trajectory traj;
     double duration; // Total duration of trajectory
-    double global_start_time; // Actual time at which global trajectory is set
+    double global_start_time; // Actual time at which global trajectory is assigned
     double glb_t_of_lc_tgt; // Actual time at which local target has been set
-    double last_glb_t_of_lc_tgt; // Actual time at which previous local target is set 
+    double last_glb_t_of_lc_tgt; // Actual time at which previous local target is assigned 
   };
 
   struct LocalTrajData
@@ -31,7 +31,7 @@ namespace ego_planner
     int traj_id{-1}; // Trajectory id
     double duration; // Total duration of trajectory
     double start_time{-1.0}; // world time in seconds
-    double end_time;   // world time in seconds
+    // double end_time;   // world time in seconds
     Eigen::Vector3d start_pos; // starting position
   };
 
