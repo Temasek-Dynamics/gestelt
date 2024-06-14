@@ -97,6 +97,12 @@ front_end/planner_type: 1  # Choose between A* (0) or JPS (1)
 sfc/planner_type: 0        # Spherical SFC
 back_end/planner_type: 0   # Spherical SFC Back-end
 ...
+# IMPORTANT NOTE: IF USING JPS for front-end, "interpolate" must be set to TRUE
+# No special configuration required if using A*
+ jps:
+    ...
+    interpolate: true           # Interpolate JPS (necessary for spherical safe flight generation)
+...
 ```
 
 - Polyhedral Safe Flight Corridor
