@@ -2,7 +2,8 @@
 A swarm framework with a focus on simulating multi-UAV navigation in cluttered environments. 
 For simulation and deployment on a physical drone, PX4 is the firmware of choice, although it is possible to remap the topics for use with Ardupilot or any other Mavlink-compatible system.
 
-<img src="docs/pictures/fake_drones_10_antipodal.gif" alt="10 simulated drones antipodal" style="width: 300px;"/>
+<img src="docs/pictures/fake_drones_10_antipodal.gif" alt="10 simulated drones antipodal (Spherical)" style="width: 300px;"/>
+<img src="docs/pictures/poly_sfc_multi.gif" alt="8 simulated drones antipodal (Polyhedral)" style="width: 300px;"/>
 <img src="docs/pictures/virtual_physical_6drones_antipodal.gif" alt="virtual physical environment" style="width: 400px;"/>
 
 # Architecture
@@ -78,7 +79,7 @@ catkin build -DCMAKE_BUILD_TYPE=Release
 ## 0. Configurations
 1. The primary planner configuration file is [navigator.yaml](/home/john/gestelt_ws/src/gestelt/gestelt_bringup/config/navigator.yaml). We can choose between 3 different planner configurations, the EGO-planner, Spherical Safe Flight Corridor or Polyhedral Safe Flight Corridor:
 
-- EGO-Planner
+- EGO-Planner [[4]](#4) with modifications.
 ```bash
 ...
 ##### Set planner types
@@ -88,7 +89,7 @@ back_end/planner_type: 1   # EGO-Planner
 ...
 ```
 
-- Spherical Safe Flight Corridor
+- Spherical Safe Flight Corridor based on [[5]](#5) with modifications and improvements.
 
 ```bash
 ...
@@ -97,22 +98,27 @@ front_end/planner_type: 1  # Choose between A* (0) or JPS (1)
 sfc/planner_type: 0        # Spherical SFC
 back_end/planner_type: 0   # Spherical SFC Back-end
 ...
-# IMPORTANT NOTE: IF USING JPS for front-end, "interpolate" must be set to TRUE
-# No special configuration required if using A*
+ # IMPORTANT NOTE: IF USING JPS for front-end, "interpolate" must be set to TRUE
+ # No special configuration required if using A*
  jps:
     ...
     interpolate: true           # Interpolate JPS (necessary for spherical safe flight generation)
 ...
 ```
 
-- Polyhedral Safe Flight Corridor
+- Polyhedral Safe Flight Corridor based on [[1]](#1), [[2]](#2) and [[3]](#3).
 
 ```bash
 ...
 ##### Set planner types
-front_end/planner_type: 1  # Choose between A* (0) or JPS (1)
+front_end/planner_type: 1  # Only use JPS (1)
 sfc/planner_type: 1        # Polyhedral SFC
 back_end/planner_type: 2   # Polyhedral SFC Back-end
+...
+ s# IMPORTANT NOTE: This is mainly made use with JPS without interpolation
+ jps:
+    ...
+    interpolate: false           # Do not interpolate JPS
 ...
 ```
 2. Another crucial configuration file is the planner adaptor configuration [minco_adaptor.yaml](gestelt_bringup/config/planner_adaptor/minco_adaptor.yaml) which determines how the executable command is sampled and fed to the trajectory server. The trajectory server which handles take-off, landing, mission-mode etc. has it's parameters at [traj_server_default.yaml](gestelt_bringup/config/traj_server_default.yaml).
@@ -239,3 +245,9 @@ Toumieh, C. and Lambert, A., 2022. Shape-aware Safe Corridors Generation using V
 
 <a id="3">[3]</a>
 Liu, S., Watterson, M., Mohta, K., Sun, K., Bhattacharya, S., Taylor, C.J. and Kumar, V., 2017. Planning dynamically feasible trajectories for quadrotors using safe flight corridors in 3-d complex environments. IEEE Robotics and Automation Letters, 2(3), pp.1688-1695.
+
+<a id="4">[4]</a>
+Xin Zhou et al. ,Swarm of micro flying robots in the wild.Sci. Robot.7,eabm5954(2022).DOI:10.1126/scirobotics.abm5954
+
+<a id="5">[5]</a>
+Ren, Yunfan, et al. “Bubble Planner: Planning High-Speed Smooth Quadrotor Trajectories Using Receding Corridors.” 2022 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS), IEEE, 2022. Crossref, https://doi.org/10.1109/iros47612.2022.9981518.
