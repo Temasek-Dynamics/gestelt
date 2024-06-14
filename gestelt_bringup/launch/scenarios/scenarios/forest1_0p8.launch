@@ -8,8 +8,8 @@
 
       <arg name="drone_id" value="0"/>
 
-      <arg name="init_x" value="-6.0"/>
-      <arg name="init_y" value="-6.0"/>
+      <arg name="init_x" value="0.0"/>
+      <arg name="init_y" value="0.0"/>
       <arg name="init_z" value="0.5"/>
   </include>
 

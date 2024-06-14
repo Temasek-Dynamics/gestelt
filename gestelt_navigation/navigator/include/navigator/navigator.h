@@ -81,8 +81,10 @@ private: /* Initialization methods */
   void initPublishers(ros::NodeHandle &nh, ros::NodeHandle &pnh);
 
 private:  
-  /* Timer callbacks */
 
+  ////////////////////
+  /* Timer callbacks */
+  ////////////////////
   /**
    * @brief Timer callback to generate plan
    * @param e 
@@ -99,9 +101,12 @@ private:
    * @return true 
    * @return false 
    */
-  bool getRHPGoal(
+  // bool getRHPGoal(
+  //   const Eigen::Vector3d& global_goal, const Eigen::Vector3d& start_pos, 
+  //   const double& rhp_dist, Eigen::Vector3d& rhp_goal) const;
+  void getRHPGoal(
     const Eigen::Vector3d& global_goal, const Eigen::Vector3d& start_pos, 
-    const double& rhp_dist, Eigen::Vector3d& rhp_goal) const;
+    const double& rhp_dist, Eigen::Vector3d& rhp_goal, Eigen::Vector3d& rhp_vel);
 
   /**
    * @brief Timer for checking if
@@ -119,7 +124,9 @@ private:
    */
   void heartbeatTimerCB(const ros::TimerEvent &e);
 
+  ////////////////////
   /* Planner methods */
+  ////////////////////
 
   /**
    * @brief Stop all planning loops 
@@ -133,7 +140,23 @@ private:
    * @return true 
    * @return false 
    */
-  bool requestBackEndPlan();
+  bool requestBackEndPlan(const Eigen::Vector3d &goal_pos, const Eigen::Vector3d &goal_vel, const Eigen::Vector3d &goal_acc);
+
+  /**
+   * @brief Plan a minimum jerk trajectory through given waypoints to act as the global trajectory
+   * 
+   * @param start_pos 
+   * @param start_vel 
+   * @param start_acc 
+   * @param inner_waypoints 
+   * @param end_pos 
+   * @param end_vel 
+   * @param end_acc 
+   */
+  void planGlobalTrajWaypoints(
+      const Eigen::Vector3d &start_pos, const Eigen::Vector3d &start_vel, const Eigen::Vector3d &start_acc, 
+      const std::vector<Eigen::Vector3d> &waypoints,
+      const Eigen::Vector3d &end_vel, const Eigen::Vector3d &end_acc);
 
   /**
    * @brief Generate a front-end plan with safe flight corridor
@@ -165,7 +188,9 @@ private:
                     poly_traj::MinJerkOpt& mjo_opt,
                     bool& valid_mjo);
 
+  ////////////////////
   /* Subscriber callbacks */
+  ////////////////////
 
   /**
    * @brief Callback for odometry message
@@ -195,7 +220,6 @@ private:
     waypoints_.reset();
     waypoints_.addWP(goal_pos);
   }
-
 
   /**
    * @brief callback to multiple user-defined goal waypoints 
@@ -283,7 +307,9 @@ private:
     generateFrontEndPlan(cur_pos_, waypoints_.nextWP(), ssfc_);
   }
 
+  ////////////////////
   /* Checks */
+  ////////////////////
 
   /**
    * @brief Check if current position is within goal tolerance
@@ -314,7 +340,9 @@ private:
 
   bool isTrajectoryDynFeasible(ego_planner::LocalTrajData* traj, bool& is_feasible);
 
+  ////////////////////
   /* Helper methods */
+  ////////////////////
 
   /**
    * @brief Sample the back end trajectory 
@@ -377,6 +405,8 @@ private:
    * @param cmd 
    */
   void pubTrajServerCmd(const int& cmd);
+
+
 
 private: /* ROS subs, pubs and timers*/
   ros::NodeHandle node_;
@@ -447,8 +477,12 @@ private: /* Planner members */
   /* Data structs */
   Waypoint waypoints_; // Goal waypoint handler object
   Eigen::Vector3d cur_pos_, cur_vel_;   // current state
-  Eigen::Vector3d rhp_goal_pos_; // Receding horizon planning goal
+  Eigen::Vector3d rhp_goal_pos_, rhp_goal_vel_; // Receding horizon planning goal
   std::shared_ptr<std::vector<ego_planner::LocalTrajData>> swarm_local_trajs_; // Swarm MINCO trajectories, maps drone_id to local trajectory data
+
+  std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d>> front_end_path_; // Front-end plan
+
+  ego_planner::TrajContainer traj_; // local/global trajectory data
 
   std::shared_ptr<SSFC::SFCTrajectory> ssfc_{nullptr};   // Safe flight corridor trajectory
 
@@ -493,6 +527,9 @@ private: /* Params */
 
   double rhc_dist_{0.0}; // Receding horizon corridor: Keep safe flight corridors up to this distance
 
+  double max_vel_{1.5}; 
+  double max_acc_{10.0};
+
   SFCType sfc_type_{SFCType::SPHERICAL}; // Indicates the SFC generation (e.g. polytope or spherical)
   FrontEndType front_end_type_{FrontEndType::JPS_AND_DMP}; // Indicates the Front end planner (e.g. a* or JPS)
   BackEndType back_end_type_{BackEndType::SSFC}; // Indicates the Front end planner (e.g. a* or JPS)
@@ -500,7 +537,8 @@ private: /* Params */
   /* Back-end params */
   int optimizer_num_retries_{-1}; // Number of retries for back-end optimizer
   int num_cstr_pts_per_seg_{-1}; // Number of constraint points per segment
-
+  double segment_length_{1.5}; // length of polynomial segment
+  
   /* Collision checking params*/
   double swarm_clearance_{-1.0}; // Required clearance between swarm agents
   double time_to_col_threshold_{-1.0}; // Threshold for time to collision before emergency measures are activated
@@ -514,8 +552,9 @@ private: /* Params */
   bool init_new_poly_traj_{true};   // (EGO PLANNER ONLY) If true: initialize new polynomial. Else: start from previous polynomial
   bool touch_goal_{false};   // (EGO PLANNER ONLY) If true:  Local target is global target
 
-  /* Logic Flags */
-  bool enable_rhc_plan_{false}; // True if RHC plan is enabled
+  /* Logic Flags (POLYHEDRON SFC) */
+  bool global_traj_exists_{false};
+  bool local_traj_exists_{false};
 
 private: /* Logging functions */
   

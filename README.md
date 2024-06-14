@@ -9,15 +9,13 @@ For simulation and deployment on a physical drone, PX4 is the firmware of choice
 <img src="docs/pictures/gestelt_architecture.png" alt="Gestelt Architecture" style="width: 600px;"/>
 
 ## Navigation module
-The navigation module (Fig. \ref{fig:gestelt_high_level_arch}) comprises the front-end planner, safe flight corridor generation and back-end planner. The front-end planner utilises either a search-based or sampling-based algorithm to plan an initial collision-free path from a given starting point to the goal position. Then, the front-end path acts as a reference for safe flight corridor generation, similar to what has been done in \cite{liu2017sfc}. Finally, the front-end path and the safe flight corridor are given as an initial guess and constraint respectively to the back-end optimizer. 
+The navigation module comprises the front-end planner, safe flight corridor generation and back-end planner. The front-end planner utilises either a search-based or sampling-based algorithm to plan an initial collision-free path from a given starting point to the goal position. Then, the front-end path acts as a reference for safe flight corridor generation, similar to what has been done in \cite{liu2017sfc}. Finally, the front-end path and the safe flight corridor are given as an initial guess and constraint respectively to the back-end optimizer. 
 
 ## Perception module
-The perception module provides a three-dimensional voxel grid map that is queried by the navigation module for collision checking. Map construction is performed using the probabilistic mapping method with point cloud input from either a simulated or actual sensor. 
-% The use of voxels lends itself to efficient nearest neighbour queries using KD-Trees, which is crucial for collision checking in path planning algorithms. Voxel representation utilises the Bonxai library \cite{faconti2024bonxai}, a lightweight and performant hierarchical data structure influenced by OpenVDB.  
+The perception module provides a three-dimensional voxel grid map that is queried by the navigation module for collision checking. Map construction is performed using the probabilistic mapping method with point cloud input from either a simulated or actual sensor. The use of voxels lends itself to efficient nearest neighbour queries using KD-Trees, which is crucial for collision checking in path planning algorithms. Voxel representation utilises the Bonxai library , a lightweight and performant hierarchical data structure influenced by OpenVDB.  
 
 ## Controller module
-The controller module is a state machine controlling the flow between different low-level flight states such as taking off, landing, emergency stop and mission mode. 
-% Additionally, it converts trajectories from the navigation module and converts it to positional/velocity/acceleration command inputs for execution
+The controller module is a state machine controlling the flow between different low-level flight states such as taking off, landing, emergency stop and mission mode. Additionally, it converts trajectories from the navigation module and converts it to positional/velocity/acceleration command inputs for execution
 
 ## Planner adaptor
 The last module, planner adaptor, acts as an abstraction layer between the controller and navigation module. This is useful because existing available planners can be integrated without any heavy modification. The only requirement is to establish a set of ROS message interfaces between the planner and planner adaptor, thereby treating the planner module as a black box. 
@@ -35,6 +33,8 @@ sudo apt install ros-noetic-desktop-full
 # Install other dependencies
 sudo apt install git build-essential tmux python3-catkin-tools python3-vcstool xmlstarlet -y
 sudo apt install ros-${ROS_DISTRO}-mavlink ros-${ROS_DISTRO}-mavros ros-${ROS_DISTRO}-mavros-msgs ros-${ROS_DISTRO}-mavros-extras -y
+# For vicon package
+sudo apt-get install ros-noetic-vrpn-client-ros
 ```
 
 2. Clone third party repositories
@@ -97,6 +97,12 @@ front_end/planner_type: 1  # Choose between A* (0) or JPS (1)
 sfc/planner_type: 0        # Spherical SFC
 back_end/planner_type: 0   # Spherical SFC Back-end
 ...
+# IMPORTANT NOTE: IF USING JPS for front-end, "interpolate" must be set to TRUE
+# No special configuration required if using A*
+ jps:
+    ...
+    interpolate: true           # Interpolate JPS (necessary for spherical safe flight generation)
+...
 ```
 
 - Polyhedral Safe Flight Corridor
@@ -150,6 +156,7 @@ Inside the [/home/john/gestelt_ws/src/gestelt/gestelt_bringup/scripts](/home/joh
 ./scenario.sh -s empty_map
 # cluttered forest for 1 drone
 ./scenario.sh -s forest_single
+./scenario.sh -s forest1_0p8
 # antipodal_swap for 8-10 drones
 ./scenario.sh -s antipodal_swap8_empty
 ./scenario.sh -s antipodal_swap10_empty
@@ -164,9 +171,8 @@ Inside the [/home/john/gestelt_ws/src/gestelt/gestelt_bringup/scripts](/home/joh
 ## Creating new scenarios
 Each scenario is a pre-set configuration of drones and an environment, which is ideal for reproducibility of results during testing 
 
-1. Generate a new point cloud file (as the map environment) and name it `SCENARIO_NAME.pcd` IN [gestelt_bringup/simulation/fake_maps](gestelt_bringup/simulation/fake_maps)
+1. Generate a new point cloud file (as the map environment) and name it `SCENARIO_NAME.pcd` in [gestelt_bringup/simulation/fake_maps](gestelt_bringup/simulation/fake_maps). The density of the obstacles can be configured in [forest_generate.yaml](gestelt_swarm/fake_map/config/forest_generate.yaml). Further modifications will need to be done via the source code [fake_map_generator.cpp](/home/john/gestelt_ws/src/gestelt/gestelt_swarm/fake_map/src/fake_map_generator.cpp).
 ```bash
-# Edit gestelt_swarm/fake_map/config/forest_generate.yaml
 # Generate a new PCD file using fake_map_generator node
 roslaunch fake_map fake_map_generator.launch
 ```
@@ -215,6 +221,14 @@ catkin_make -DCMAKE_BUILD_TYPE=Debug
 # Acknowledgements
 1. [EGO-Planner-V2 repo](https://github.com/ZJU-FAST-Lab/EGO-Planner-v2)
 2. [ETHZ-ASL/mav_trajectory_generation](https://github.com/ethz-asl/mav_trajectory_generation)
+
+# Third party libraries
+1. [Bonxai](https://github.com/facontidavide/Bonxai)
+2. [DecompROS](https://github.com/sikang/DecompROS)
+3. [convex_decomp_util](https://github.com/lis-epfl/multi_agent_pkgs)
+4. [ikd_tree](https://github.com/hku-mars/ikd-Tree)
+5. [jps3d](https://github.com/KumarRobotics/jps3d)
+6. [catkin_simple](https://github.com/catkin/catkin_simple)
 
 # References
 <a id="1">[1]</a>

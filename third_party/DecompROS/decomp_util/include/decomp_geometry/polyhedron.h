@@ -86,7 +86,7 @@ struct Polyhedron {
   }
 
   /// Hyperplane array
-  vec_E<Decomp::Hyperplane<Dim>> vs_; // normal must go outside
+  vec_E<Decomp::Hyperplane<Dim>> vs_; // Hyperplanes. normal must go outside
 
 };
 

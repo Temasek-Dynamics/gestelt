@@ -17,12 +17,12 @@ heartbeat_frequency: 20.0               # [Hz] Frequency to indicate if planner 
 
 ##### Set planner types
 front_end/planner_type: 1         # 0: ASTAR, 1: JPS_AND_DMP
-sfc/planner_type: 1               # 0: SPHERICAL, 1: POLYTOPE
-back_end/planner_type: 2          # 0: SSFC, 1: EGO, 2: POLY
+sfc/planner_type: 0               # 0: SPHERICAL, 1: POLYTOPE
+back_end/planner_type: 0          # 0: SSFC, 1: EGO, 2: POLY
 
 ##### Front-end params
 front_end:
-  planner_frequency: 1.0        # [Hz] Front-end planning frequency
+  planner_frequency: 5.0        # [Hz] Front-end planning frequency
 
   a_star:
     max_iterations: 9999  
@@ -32,7 +32,7 @@ front_end:
 
   jps:
     planner_verbose: false      # If true, print debug from planner
-    interpolate: false           # Interpolate JPS (necessary for spherical safe flight generation)
+    interpolate: true           # Interpolate JPS (necessary for spherical safe flight generation)
     use_dmp: false               # 
     dmp_search_radius: 0.4      # DMP Search radius
     dmp_potential_radius: 0.4   # DMP radius of distance field (Value has significant effect on runtime)
@@ -50,15 +50,15 @@ sfc:
     max_iterations: 100     # Corresponds to maximum number of spheres
     debug_viz: true         # If true, publish visualization for debugging
     # Sampling
-    max_sample_points: 100  # Maximum sample points for candidate sphere
+    max_sample_points: 150  # Maximum sample points for candidate sphere
     # standard deviation: remember 68–95–99.7 rule
     # mult_stddev_x: 0.1      # if mult_stddev_x is too high, the spheres cannot round corners and generate loads of spheres around the same area around corners
     # mult_stddev_y: 0.3      # 
     # mult_stddev_z: 0.3      # 
 
     mult_stddev_x: 0.3      # 
-    mult_stddev_y: 0.4      # 
-    mult_stddev_z: 0.4      # 
+    mult_stddev_y: 0.6      # 
+    mult_stddev_z: 0.6      # 
 
     # mult_stddev_x: 0.3      # 
     # mult_stddev_y: 0.5      # 
@@ -81,16 +81,15 @@ sfc:
 
   poly:
     debug_viz: true
-    poly_max: 5             # Maximum number of polytopes to generate
-    cvx_decomp_type: 0      # Convex decomposition type. 0: Liu, 1: Toumieh_old, 2: Toumieh_new
-    num_expansion_itr: 100   
-    # bbox_x: 0.75
-    # bbox_y: 1.5
-    # bbox_z: 0.75
-    bbox_x: 1.0
-    bbox_y: 2.0
-    bbox_z: 1.0
-
+    poly_max: 5               # Maximum number of polytopes to generate
+    cvx_decomp_type: 0        # Convex decomposition type. 0: Liu, 1: Toumieh_old, 2: Toumieh_new
+    num_expansion_itr: 100    
+    bbox_x: 0.75
+    bbox_y: 1.5
+    bbox_z: 0.75
+    # bbox_x: 0.25
+    # bbox_y: 0.5
+    # bbox_z: 0.25
 
 ##### Back-end 
 back_end: 

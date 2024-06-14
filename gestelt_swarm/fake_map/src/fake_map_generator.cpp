@@ -111,12 +111,12 @@ class DeterministicForest
 			generateHorizontalPlane(10.0, 10.0, 0.0);
 
 			// B) Generate a random forest map for benchmarking
-			// unsigned int seed = rd();
-			// eng.seed(_seed);
-			// RandomMapGenerate();
-			// // Add floor and ceiling
-			// generateHorizontalPlane(_x_size, _y_size, 0.0);
-			// // generateHorizontalPlane(_x_size, _y_size, _z_size);
+			unsigned int seed = rd();
+			eng.seed(_seed);
+			RandomMapGenerate();
+			// Add floor and ceiling
+			generateHorizontalPlane(_x_size, _y_size, 0.0);
+			// generateHorizontalPlane(_x_size, _y_size, _z_size);
 
 			// C) Generate a tunnel for benchmarking
 			// generateRectangularTunnel(Eigen::Vector3d{0.0, 0.0, 0.0}, 10.0, 2.0, 2.0);

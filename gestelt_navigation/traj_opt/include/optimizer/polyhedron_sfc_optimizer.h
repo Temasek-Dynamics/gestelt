@@ -332,11 +332,12 @@ namespace back_end
         lbfgs::lbfgs_parameter_t lbfgs_params; // least squares
         lbfgs_params.past = 0;
         lbfgs_params.delta = 1.0e-5;
-        lbfgs_params.g_epsilon = FLT_EPSILON;
+        // lbfgs_params.g_epsilon = FLT_EPSILON;
+        lbfgs_params.g_epsilon = 0.001;
         lbfgs_params.max_iterations = 128;
 
         Eigen::Matrix3Xd ovPoly;
-        for (int i = 0, j = 0, k, l; i < P.cols(); i++, j += k) // For each inner point
+        for (int i = 0, j = 0, k, l; i < P.cols(); i++, j += k) // For each inner point index i
         {
             l = vIdx(i);
             k = vPolys[l].cols();
@@ -360,8 +361,6 @@ namespace back_end
                                   &lbfgs_params);
 
             xi.segment(j, k) = Eigen::Map<Eigen::VectorXd>(x, k);
-            // xi.block<k, 1>(j, 0) = 
-            // xi.segment(j, k) = x;
         }
 
         return;

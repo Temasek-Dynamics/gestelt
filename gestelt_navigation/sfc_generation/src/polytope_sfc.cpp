@@ -472,7 +472,6 @@ bool PolytopeSFC::generateSFC(  const std::vector<Eigen::Vector3d, Eigen::aligne
     return true;
 }   
 
-
 void PolytopeSFC::publishPolyhedra(
     const std::vector<Polyhedron3D, Eigen::aligned_allocator<Polyhedron3D>>& poly_vec) {
     // create polyhedra message

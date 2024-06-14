@@ -5,21 +5,18 @@ from gestelt_msgs.msg import Command, CommanderState, Goals
 from geometry_msgs.msg import Transform, PoseStamped
 from std_msgs.msg import Int8
 
-num_drones = 1
+num_drones = 8
 
 # Publisher of server events to trigger change of states for trajectory server 
 goal_publishers = []
 for i in range(0, num_drones):
     goal_publishers.append(rospy.Publisher(f'/drone{i}/planner_adaptor/goals', Goals, queue_size=2))
 
-# single_goal_pub = rospy.Publisher('/drone0/planner/single_goal', PoseStamped, queue_size=2)
-
 # Dictionary of UAV states
 server_states = {}
 
 # Check if UAV has achived desired traj_server_state
 def check_traj_server_states(des_traj_server_state):
-    get_server_state_callback()
     if len(server_states.items()) == 0:
         print("No Server states received!")
         return False
@@ -85,18 +82,18 @@ def pub_goals(goals):
         goal_publishers[i].publish(goals_msg)
 
     return True
-    
 
 def main():
     rospy.init_node('mission_startup', anonymous=True)
     rate = rospy.Rate(5) # 20hz
-    
+
     if check_traj_server_states("MISSION"):
         print("Already in mission mode")
     else:
         print("Setting to HOVER mode!")
         # Take off 
         while not rospy.is_shutdown():
+            get_server_state_callback()
             if check_traj_server_states("HOVER"):
                 break
             publish_server_cmd(0)
@@ -106,6 +103,7 @@ def main():
         print("Setting to MISSION mode!")
         # Switch to mission mode
         while not rospy.is_shutdown():
+            get_server_state_callback()
             if check_traj_server_states("MISSION"):
                 break
             publish_server_cmd(2)
@@ -114,31 +112,31 @@ def main():
 
     # Send waypoints to UAVs
     print(f"Sending waypoints to UAVs")
-    # goals_0 = []
-    # goals_1 = []
-    # goals_2 = []
 
-    # goals_0.append(create_transform(5.5, 5.5, 1.0))
-    # goals_0.append(create_transform(0.0, 0.0, 1.0))
-
-    # goals_1.append(create_transform(6.0, 6.0, 1.0))
-    # goals_1.append(create_transform(0.5, 0.5, 1.0))
-
-    # goals_2.append(create_transform(5.0, 5.0, 1.0))
-    # goals_2.append(create_transform(-0.5, -0.5, 1.0))
-
-    # pub_goals([goals_0, goals_1, goals_2])
-
-    # goals_0 = []
-    # goals_0.append(create_transform(5.5, 5.5, 1.0))
-    # goals_0.append(create_transform(0.0, 0.0, 1.0))
-    # pub_goals([goals_0])
+    a = 2.0
+    b = 1.0
+    z = 1.0 # Height
 
     goals_0 = []
-    # goals_0.append(create_transform(-0.621, 5.135, 1.0))
-    # goals_0.append(create_transform(-5.189, -0.0734, 1.0))
-    goals_0.append(create_transform(6.5, 6.5, 1.0))
-    pub_goals([goals_0])
+    goals_1 = []
+    goals_2 = []
+    goals_3 = []
+    goals_4 = []
+    goals_5 = []
+    goals_6 = []
+    goals_7 = []
+
+    goals_0.append(create_transform(-a-b, -a, z))
+    goals_1.append(create_transform(-a-b, a, z))
+    goals_2.append(create_transform(-a, a+b, z))
+    goals_3.append(create_transform(a, a+b, z))
+
+    goals_4.append(create_transform(a+b, a, z))
+    goals_5.append(create_transform(a+b, -a, z))
+    goals_6.append(create_transform(a, -a-b, z))
+    goals_7.append(create_transform(-a, -a-b, z))
+
+    pub_goals([goals_0, goals_1, goals_2, goals_3, goals_4, goals_5, goals_6, goals_7])
 
 if __name__ == '__main__':
     main()
