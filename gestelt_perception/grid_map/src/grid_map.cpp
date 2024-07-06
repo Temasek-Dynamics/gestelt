@@ -50,6 +50,7 @@ void GridMap::initMapROS(ros::NodeHandle &nh, ros::NodeHandle &pnh)
 
   // Initialize publisher for occupancy map
   occ_map_pub_ = nh.advertise<sensor_msgs::PointCloud2>("grid_map/occupancy", 10);
+  slice_map_pub_ = nh.advertise<sensor_msgs::PointCloud2>("grid_map/slice", 10);
   local_map_poly_pub_ = nh.advertise<geometry_msgs::PolygonStamped>("local_map/bounds", 5);
   local_bool_map_pub_ = nh.advertise<gestelt_msgs::BoolMap>("bool_map", 5);
 
@@ -215,12 +216,12 @@ void GridMap::visTimerCB(const ros::TimerEvent & /*event*/)
 
 void GridMap::updateLocalMapTimerCB(const ros::TimerEvent & /*event*/)
 {
-  std::cout << "before updateLocalMapTimerCB" << std::endl;
+  // std::cout << "before updateLocalMapTimerCB" << std::endl;
   
   updateLocalMap();
-  sliceMap(1.0);
-
-  std::cout << "after updateLocalMapTimerCB" << std::endl;
+  sliceMap(0.5);
+  
+  // std::cout << "after updateLocalMapTimerCB" << std::endl;
 }
 
 void GridMap::checkCollisionsTimerCB(const ros::TimerEvent & /*event*/)
@@ -342,20 +343,24 @@ void GridMap::updateLocalMap(){
   // }
 
   // Clear existing local map
-  local_occ_map_pts_->clear(); 
-  
+  local_occ_map_pts_.reset(new pcl::PointCloud<pcl::PointXYZ>());
+
+
+  // local_occ_map_pts_->points.resize(occ_coords.size());
+  // size_t idx = 0;
+
   for (auto& coord : occ_coords) // For each occupied coordinate
   {
     // obs_gbl_pos: global obstacle pos
     // Check if the obstacle within local map bounds
     Bonxai::Point3D obs_gbl_pos_pt3d = bonxai_map_->grid().coordToPos(coord);
 
-
     Eigen::Vector3d obs_gbl_pos(obs_gbl_pos_pt3d.x, obs_gbl_pos_pt3d.y, obs_gbl_pos_pt3d.z);
     if (!isInLocalMap(obs_gbl_pos)){ // Point is outside the local map
       continue;
     }
 
+    // local_occ_map_pts_->points[idx] = pcl::PointXYZ(obs_gbl_pos_pt3d.x, obs_gbl_pos_pt3d.y, obs_gbl_pos_pt3d.z);
     local_occ_map_pts_->push_back(pcl::PointXYZ(obs_gbl_pos_pt3d.x, obs_gbl_pos_pt3d.y, obs_gbl_pos_pt3d.z));
 
     // Convert to voxel index. This is relative to mp_.local_map_origin_
@@ -381,13 +386,19 @@ void GridMap::updateLocalMap(){
         }
       }
     }
+
+    // idx++;
   }
 
   // tm_kdtree_build_.start();
-  kdtree_->Build(local_occ_map_pts_->points);
+  // kdtree_->Build(local_occ_map_pts_->points);
   // tm_kdtree_build_.stop(false);
 
   publishLocalMapBounds();
+
+  local_occ_map_pts_->width = local_occ_map_pts_->points.size();
+  local_occ_map_pts_->height = 1;
+  local_occ_map_pts_->is_dense = true; 
 
   publishOccMap(local_occ_map_pts_);
 }
@@ -502,6 +513,19 @@ void GridMap::publishOccMap(const pcl::PointCloud<pcl::PointXYZ>::Ptr& occ_map_p
   // if (!lck.owns_lock()){
   //   return;
   // }
+}
+
+void GridMap::publishSliceMap(const pcl::PointCloud<pcl::PointXYZ>::Ptr& slice_map)
+{
+  if (slice_map_pub_.getNumSubscribers() > 0){
+    sensor_msgs::PointCloud2 cloud_msg;
+    pcl::toROSMsg(*slice_map, cloud_msg);
+
+    cloud_msg.header.frame_id = mp_.uav_origin_frame_;
+    cloud_msg.header.stamp = ros::Time::now();
+    slice_map_pub_.publish(cloud_msg);
+    // ROS_INFO("Published occupancy grid with %ld voxels", local_occ_map_pts_.points.size());
+  }
 }
 
 void GridMap::publishCollisionSphere(

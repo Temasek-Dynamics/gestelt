@@ -35,7 +35,6 @@ void VoronoiPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   // dyn_voro_params.origin_x = 0.0;
   // dyn_voro_params.origin_y = 0.0;
 
-
   // // Set start and goal
   // DblPoint start_pos(0.5, 0.5);
   // DblPoint goal_pos(6.0, 6.0);
@@ -47,7 +46,6 @@ void VoronoiPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   astar_params_.cost_function_type  = 2;
 
   front_end_planner_ = std::make_unique<AStarPlanner>(dyn_voro_, astar_params_);
-
   front_end_planner_->addPublishers(front_end_publisher_map_);
 }
 
@@ -87,9 +85,10 @@ void VoronoiPlanner::boolMapCB(const gestelt_msgs::BoolMapConstPtr& msg)
   size_x_ = msg->width;
   size_y_ = msg->height;
 
-  // origin_x_ = msg->origin.x;
-  // origin_y_ = msg->origin.y;
+  origin_x_ = msg->origin.x;
+  origin_y_ = msg->origin.y;
 
+  // Create bool map
   bool_map_ = new bool*[size_x_];
   for (int x=0; x < size_x_; x++) {
     (bool_map_)[x] = new bool[size_y_];
@@ -99,7 +98,7 @@ void VoronoiPlanner::boolMapCB(const gestelt_msgs::BoolMapConstPtr& msg)
   {
     for (int i = 0; i < size_x_; i++)
     {
-      (bool_map_)[i][j] = msg->map[size_x_ * j + i];
+      (bool_map_)[i][j] = msg->map[i + j * size_x_];
     }
   }
 

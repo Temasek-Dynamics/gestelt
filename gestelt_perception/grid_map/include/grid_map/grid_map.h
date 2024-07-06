@@ -215,6 +215,13 @@ public:
    */
   void publishOccMap(const pcl::PointCloud<pcl::PointXYZ>::Ptr& occ_map_pts);
 
+  /**
+   * @brief Publish a z slice of the map for visualization
+   * 
+   */
+  void publishSliceMap(const pcl::PointCloud<pcl::PointXYZ>::Ptr& slice_map);
+
+
   // Publish sphere to indicate collision with interpolated colors between fatal and warning radius
   void publishCollisionSphere(
     const Eigen::Vector3d &pos, const double& dist_to_obs, 
@@ -530,7 +537,6 @@ public:
   }
 
   void sliceMap(const double& slice_z) {
-    std::cout << "Sliced map at " << slice_z << std::endl;
 
     gestelt_msgs::BoolMap bool_map_msg;
 
@@ -540,28 +546,38 @@ public:
     bool_map_msg.origin.y = mp_.local_map_origin_(1);
     bool_map_msg.origin.z = slice_z;
 
-    bool_map_msg.width = mp_.local_map_size_(0);
-    bool_map_msg.height = mp_.local_map_size_(1);
+    bool_map_msg.width = mp_.local_map_num_voxels_(0);
+    bool_map_msg.height = mp_.local_map_num_voxels_(1);
 
-    bool_map_msg.map.resize(mp_.local_map_size_(0) * mp_.local_map_size_(1), false);
+    bool_map_msg.map.resize(mp_.local_map_num_voxels_(0) * mp_.local_map_num_voxels_(1), false);
     
     pcl::PointCloud<pcl::PointXYZ>::Ptr pcd_layer(new pcl::PointCloud<pcl::PointXYZ>);
     // Apply passthrough filter
     pcl::PassThrough<pcl::PointXYZ> z_filter;
     z_filter.setInputCloud(local_occ_map_pts_);
     z_filter.setFilterFieldName("z");
-    z_filter.setFilterLimits(slice_z - (mp_.resolution_/2) , slice_z + (mp_.resolution_/2));
+    z_filter.setFilterLimits(slice_z - (getRes()/2) , slice_z + (getRes()/2));
+    // z_filter.setFilterLimits(0.0, 0.1);
     z_filter.filter(*pcd_layer);
 
     // Iterate through each occupied point
-    for (const auto& pt : pcd_layer->points){
-      size_t idx = pt.x + pt.y * mp_.local_map_num_voxels_(0);
+    for (const auto& pt : *pcd_layer){
+      // Convert from map coordinates to index
+      int idx = ((pt.x - mp_.local_map_origin_(0))/getRes())  + ((pt.y - mp_.local_map_origin_(1))/getRes()) * mp_.local_map_num_voxels_(0);
+      // std::cout << "======= idx: " << idx << ", pt: (" << pt.x << ", " << pt.y << ")" << std::endl;
+      // if (idx >= mp_.local_map_num_voxels_(0) * mp_.local_map_num_voxels_(1) || idx < 0){
+      //   std::cout << "idx " << idx << " exceeded size "<< mp_.local_map_num_voxels_(0) * mp_.local_map_num_voxels_(1) << std::endl;
+      //   std::cout << "    Before origin offset: (" << pt.x << ", "<< pt.y << ")" << std::endl;
+      //   std::cout << "    After origin offset: (" << pt.x - mp_.local_map_origin_(0) << ", "<< pt.y - mp_.local_map_origin_(1) << ")" << std::endl;
+      //   std::cout << "    local_map_size: " << mp_.local_map_num_voxels_(0) << ", " << mp_.local_map_num_voxels_(1) << ")" << std::endl;
+      // }
       bool_map_msg.map[idx] = true;
     }
 
     local_bool_map_pub_.publish(bool_map_msg);
 
-    std::cout << "Published local_bool_map"  << std::endl;
+    publishSliceMap(pcd_layer);
+
   }
 
 private: 
@@ -584,6 +600,7 @@ private:
   ros::Subscriber cloud_only_sub_;
 
   ros::Publisher occ_map_pub_; // Publisher for occupancy map
+  ros::Publisher slice_map_pub_; // Publisher for z slice of map
   ros::Publisher collision_viz_pub_; // Publisher for collision visualization spheres
   ros::Publisher local_map_poly_pub_; // Publisher to show local map bounds
 
