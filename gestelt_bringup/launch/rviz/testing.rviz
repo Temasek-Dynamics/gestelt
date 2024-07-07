@@ -10,7 +10,7 @@ Panels:
         - /map1
         - /front-end1/closed_list_viz1
         - /front-end1/plan_viz1/Namespaces1
-        - /occ_map1
+        - /slice1
       Splitter Ratio: 0.6117647290229797
     Tree Height: 356
   - Class: rviz/Selection
@@ -30,7 +30,7 @@ Panels:
   - Class: rviz/Time
     Name: Time
     SyncMode: 0
-    SyncSource: occ_map
+    SyncSource: slice
 Preferences:
   PromptSaveOnExit: true
 Toolbars:
@@ -655,7 +655,7 @@ Visualization Manager:
       Invert Rainbow: false
       Max Color: 255; 255; 255
       Min Color: 0; 0; 0
-      Name: PointCloud2
+      Name: slice
       Position Transformer: XYZ
       Queue Size: 10
       Selectable: true
@@ -694,7 +694,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 45.663230895996094
+      Distance: 34.85240173339844
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -710,9 +710,9 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.4847966432571411
+      Pitch: 1.4797966480255127
       Target Frame: my_view
-      Yaw: 4.748585224151611
+      Yaw: 4.773585796356201
     Saved:
       - Class: rviz/FPS
         Enable Stereo Rendering:

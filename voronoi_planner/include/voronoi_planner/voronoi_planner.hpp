@@ -216,7 +216,10 @@ public:
     {
       for (int i = 0; i < size_x; i++)
       {
-        size_t idx = map2Dto1DIdx(occ_grid.info.width, i, occ_grid.info.height - j - 1);
+        size_t idx = map2Dto1DIdx(occ_grid.info.width, i, j);
+
+        // Flip the coordinates vertically (Occ grid uses top left as origin but original map data uses bottom left as origin)
+        // size_t idx = map2Dto1DIdx(occ_grid.info.width, i, occ_grid.info.height - j - 1);
         occ_grid.data[idx] = dyn_voro.isOccupied(i, j) ? 255: 0;
       }
     }

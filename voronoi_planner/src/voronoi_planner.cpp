@@ -208,7 +208,7 @@ void VoronoiPlanner::loadMapFromFile(nav_msgs::OccupancyGrid& map,
                                       const std::string& fname)
 {
   SDL_Surface* img;
-
+  
   unsigned char* pixels;
   unsigned char* p;
   int rowstride, n_channels;

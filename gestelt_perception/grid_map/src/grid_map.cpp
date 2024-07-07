@@ -526,6 +526,7 @@ void GridMap::publishSliceMap(const pcl::PointCloud<pcl::PointXYZ>::Ptr& slice_m
     slice_map_pub_.publish(cloud_msg);
     // ROS_INFO("Published occupancy grid with %ld voxels", local_occ_map_pts_.points.size());
   }
+  
 }
 
 void GridMap::publishCollisionSphere(

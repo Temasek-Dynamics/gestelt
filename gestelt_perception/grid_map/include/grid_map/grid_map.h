@@ -562,8 +562,10 @@ public:
 
     // Iterate through each occupied point
     for (const auto& pt : *pcd_layer){
-      // Convert from map coordinates to index
-      int idx = ((pt.x - mp_.local_map_origin_(0))/getRes())  + ((pt.y - mp_.local_map_origin_(1))/getRes()) * mp_.local_map_num_voxels_(0);
+      double map_x = (pt.x - mp_.local_map_origin_(0))/getRes();
+      double map_y = (pt.y - mp_.local_map_origin_(1))/getRes();
+      // Convert from map coordinates to 1-D index
+      int idx = map_x  + map_y * mp_.local_map_num_voxels_(0);
       // std::cout << "======= idx: " << idx << ", pt: (" << pt.x << ", " << pt.y << ")" << std::endl;
       // if (idx >= mp_.local_map_num_voxels_(0) * mp_.local_map_num_voxels_(1) || idx < 0){
       //   std::cout << "idx " << idx << " exceeded size "<< mp_.local_map_num_voxels_(0) * mp_.local_map_num_voxels_(1) << std::endl;
@@ -573,6 +575,26 @@ public:
       // }
       bool_map_msg.map[idx] = true;
     }
+
+    // for (int i = 0; i < 25; i++){
+    //   int idx = i + (mp_.local_map_num_voxels_(1)/2.0)*mp_.local_map_num_voxels_(0);
+    //   bool_map_msg.map[idx] = true;
+    // }
+
+    // for (int i = 100; i < 200; i++){
+    //   int idx = i + (mp_.local_map_num_voxels_(1)/2.0)*mp_.local_map_num_voxels_(0);
+    //   bool_map_msg.map[idx] = true;
+    // }
+
+    // for (int j = 0; j < 25; j++){
+    //   int idx = 25 + (j)*mp_.local_map_num_voxels_(0);
+    //   bool_map_msg.map[idx] = true;
+    // }
+
+    // for (int j = 150; j < 200; j++){
+    //   int idx = 175 + (j)*mp_.local_map_num_voxels_(0);
+    //   bool_map_msg.map[idx] = true;
+    // }
 
     local_bool_map_pub_.publish(bool_map_msg);
 
