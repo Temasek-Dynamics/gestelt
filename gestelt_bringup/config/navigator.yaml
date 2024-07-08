@@ -32,7 +32,7 @@ front_end:
 
   jps:
     planner_verbose: false      # If true, print debug from planner
-    interpolate: false           # Interpolate JPS (necessary for spherical safe flight generation)
+    interpolate: true           # Interpolate JPS (necessary for spherical safe flight generation)
     use_dmp: false               # 
     dmp_search_radius: 0.4      # DMP Search radius
     dmp_potential_radius: 0.4   # DMP radius of distance field (Value has significant effect on runtime)
@@ -50,15 +50,15 @@ sfc:
     max_iterations: 100     # Corresponds to maximum number of spheres
     debug_viz: true         # If true, publish visualization for debugging
     # Sampling
-    max_sample_points: 100  # Maximum sample points for candidate sphere
+    max_sample_points: 150  # Maximum sample points for candidate sphere
     # standard deviation: remember 68–95–99.7 rule
     # mult_stddev_x: 0.1      # if mult_stddev_x is too high, the spheres cannot round corners and generate loads of spheres around the same area around corners
     # mult_stddev_y: 0.3      # 
     # mult_stddev_z: 0.3      # 
 
     mult_stddev_x: 0.3      # 
-    mult_stddev_y: 0.4      # 
-    mult_stddev_z: 0.4      # 
+    mult_stddev_y: 0.6      # 
+    mult_stddev_z: 0.6      # 
 
     # mult_stddev_x: 0.3      # 
     # mult_stddev_y: 0.5      # 

@@ -982,10 +982,11 @@ bool Navigator::EGOOptimize(const Eigen::Matrix3d& startPVA,
 
   bool plan_success = false;
 
-  std::vector<Eigen::Vector3d> waypoints;
-  waypoints.push_back(endPVA.col(0));
-
   if (init_new_poly_traj_){
+
+    std::vector<Eigen::Vector3d> waypoints;
+    waypoints.push_back(endPVA.col(0));
+
     // Generate initial minimum jerk trajectory starting from agent's current position with 0 starting/ending acceleration and velocity.
     plan_success = ego_optimizer_->planGlobalTrajWaypoints(
         mjo_opt,
@@ -1026,7 +1027,6 @@ bool Navigator::EGOOptimize(const Eigen::Matrix3d& startPVA,
       touch_goal_);
 
   init_new_poly_traj_ = !plan_success;
-
   mjo_opt = ego_optimizer_->ploy_traj_opt_->getOptimizedMJO_EGO();
 
   // init_new_poly_traj_ = false;
