@@ -370,7 +370,7 @@ Visualization Manager:
             {}
           Queue Size: 100
           Value: true
-      Enabled: false
+      Enabled: true
       Name: collision_viz
     - Class: rviz/Group
       Displays:
@@ -904,7 +904,7 @@ Visualization Manager:
               Marker Topic: /drone1/back_end/dbg/initial_mjo
               Name: initial_mjo
               Namespaces:
-                {}
+                "": true
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
@@ -912,7 +912,7 @@ Visualization Manager:
               Marker Topic: /drone1/back_end/dbg/initial_poly_path
               Name: initial_poly_path
               Namespaces:
-                {}
+                "": true
               Queue Size: 100
               Value: true
             - Alpha: 0.15000000596046448
@@ -1282,7 +1282,7 @@ Visualization Manager:
               Marker Topic: /drone2/back_end/dbg/initial_mjo
               Name: initial_mjo
               Namespaces:
-                {}
+                "": true
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
@@ -1290,7 +1290,7 @@ Visualization Manager:
               Marker Topic: /drone2/back_end/dbg/initial_poly_path
               Name: initial_poly_path
               Namespaces:
-                {}
+                "": true
               Queue Size: 100
               Value: true
             - Alpha: 0.15000000596046448

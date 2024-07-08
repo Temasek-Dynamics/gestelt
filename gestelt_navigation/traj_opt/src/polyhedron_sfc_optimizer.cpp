@@ -46,7 +46,7 @@ namespace back_end
     lbfgs_params.past = 3;
     lbfgs_params.delta = 1.0e-3;
     // lbfgs_params.g_epsilon = 1.0e-5;
-    lbfgs_params.g_epsilon = 1.0e-2;
+    lbfgs_params.g_epsilon = init_traj_opt_eps_;
     // lbfgs_params.max_linesearch = 200;
     // lbfgs_params.min_step = 1e-32;
     // lbfgs_params.max_step = 1e+20;
@@ -169,7 +169,7 @@ namespace back_end
     // lbfgs_params.max_iterations = 200;
     // lbfgs_params.g_epsilon = 0.0;
     // lbfgs_params.g_epsilon = 0.1;
-    lbfgs_params.g_epsilon = 1.0e-2;
+    lbfgs_params.g_epsilon = final_traj_opt_eps_;
     // lbfgs_params.abs_curv_cond = 0;
     lbfgs_params.past = 3;
     // lbfgs_params.delta = 1.0e-3;
@@ -316,6 +316,9 @@ namespace back_end
     pnh.param("optimization/max_vel", max_vel_, -1.0);
     pnh.param("optimization/max_acc", max_acc_, -1.0);
 
+    pnh.param("optimization/init_traj_opt_epsilon", init_traj_opt_eps_, 0.01);
+    pnh.param("optimization/final_traj_opt_epsilon", final_traj_opt_eps_, 0.01);
+    pnh.param("optimization/backward_proj_opt_epsilon", backward_proj_opt_eps_, 0.001);
   }
 
   int PolyhedronSFCOptimizer::earlyExitCallback(void *func_data, const double *x, const double *g, const double fx, const double xnorm, const double gnorm, const double step, int n, int k, int ls)
