@@ -322,7 +322,7 @@ namespace back_end
      * @param xi 
      */
     template <typename EIGENVEC>
-    static inline void backwardP(const Eigen::MatrixXd &P,
+    inline void backwardP(const Eigen::MatrixXd &P,
                                   const Eigen::VectorXi &vIdx,
                                   const std::vector<Eigen::Matrix3Xd> &vPolys,
                                   EIGENVEC &xi)
@@ -333,7 +333,7 @@ namespace back_end
         lbfgs_params.past = 0;
         lbfgs_params.delta = 1.0e-5;
         // lbfgs_params.g_epsilon = FLT_EPSILON;
-        lbfgs_params.g_epsilon = 0.001;
+        lbfgs_params.g_epsilon = backward_proj_opt_eps_;
         lbfgs_params.max_iterations = 128;
 
         Eigen::Matrix3Xd ovPoly;
@@ -570,6 +570,10 @@ namespace back_end
     double wei_time_;                                             // time weight
     double obs_clearance_, swarm_clearance_;                      // safe distance
     double max_vel_, max_acc_;                                    // dynamic limits
+
+    double init_traj_opt_eps_;                                    // (Initial trajectory generation) Tolerance for convergence of solution
+    double final_traj_opt_eps_;                                    // (Final trajectory generation) Tolerance for convergence of solution
+    double backward_proj_opt_eps_;                                    // (Backward projection) Tolerance for convergence of solution
 
     double t_now_;        // Time at the start of optimization
 

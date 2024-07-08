@@ -18,7 +18,7 @@ heartbeat_frequency: 20.0               # [Hz] Frequency to indicate if planner 
 ##### Set planner types
 front_end/planner_type: 1         # 0: ASTAR, 1: JPS_AND_DMP
 sfc/planner_type: 1               # 0: SPHERICAL, 1: POLYTOPE
-back_end/planner_type: 2          # 0: SSFC, 1: EGO, 2: POLY
+back_end/planner_type: 1          # 0: SSFC, 1: EGO, 2: POLY
 
 ##### Front-end params
 front_end:
@@ -81,8 +81,8 @@ sfc:
 
   poly:
     debug_viz: true
-    poly_max: 5               # Maximum number of polytopes to generate
     cvx_decomp_type: 0        # Convex decomposition type. 0: Liu, 1: Toumieh_old, 2: Toumieh_new
+    poly_max: 5               # [For Toumieh cvx_decomp_type] Maximum number of polytopes to generate
     num_expansion_itr: 100    
     bbox_x: 0.75
     bbox_y: 1.5
@@ -124,6 +124,9 @@ optimization:
   
   # Polyhedron SFC
   weight_poly_bounds: 0.0
+  init_traj_opt_epsilon: 0.1 # (Initial trajectory generation) Tolerance for convergence during optimization
+  final_traj_opt_epsilon: 0.01 # (Final trajectory generation) Tolerance for convergence during optimization
+  backward_proj_opt_epsilon: 0.01 # (Backward projection) Tolerance for convergence during optimization
 
 ##### Mapping params
 grid_map:

@@ -1025,9 +1025,11 @@ bool Navigator::EGOOptimize(const Eigen::Matrix3d& startPVA,
       init_new_poly_traj_, flag_randomPolyTraj, 
       touch_goal_);
 
+  init_new_poly_traj_ = !plan_success;
+
   mjo_opt = ego_optimizer_->ploy_traj_opt_->getOptimizedMJO_EGO();
 
-  init_new_poly_traj_ = false;
+  // init_new_poly_traj_ = false;
 
   return plan_success;
 }
@@ -1209,57 +1211,6 @@ bool Navigator::isTrajectoryDynFeasible(ego_planner::LocalTrajData* traj, bool& 
 }
 
 /* Helper methods */
-
-void Navigator::getRHPGoal(
-  const Eigen::Vector3d& global_goal, const Eigen::Vector3d& start_pos, 
-  const double& rhp_dist, 
-  Eigen::Vector3d& rhp_goal, Eigen::Vector3d& rhp_vel)
-{
-  double t; // t: time variable
-
-  // Set the last global traj local target timestamp to be that of the current global plan
-  traj_.global_traj.last_glb_t_of_lc_tgt = traj_.global_traj.glb_t_of_lc_tgt;
-
-  double t_step = rhp_dist / (20 * max_vel_); // timestep
-
-  for (t = traj_.global_traj.glb_t_of_lc_tgt;
-        t < (traj_.global_traj.global_start_time + traj_.global_traj.duration);
-        t += t_step)
-  {
-    Eigen::Vector3d pos_t = traj_.global_traj.traj.getPos(t - traj_.global_traj.global_start_time);
-    double dist = (pos_t - start_pos).norm();
-
-    if (dist >= rhp_dist)
-    {
-      rhp_goal = pos_t;
-      traj_.global_traj.glb_t_of_lc_tgt = t;
-      break;
-    }
-  }
-
-  if ((t - traj_.global_traj.global_start_time) >= traj_.global_traj.duration - 1e-5) // Last global point
-  {
-    rhp_goal = global_goal;
-    traj_.global_traj.glb_t_of_lc_tgt = traj_.global_traj.global_start_time + traj_.global_traj.duration;
-  }
-
-  if ((global_goal - rhp_goal).norm() < (max_vel_ * max_vel_) / (2 * max_acc_)){
-    rhp_vel = Eigen::Vector3d::Zero();
-  }
-  else{
-    rhp_vel = traj_.global_traj.traj.getVel(t - traj_.global_traj.global_start_time);
-  }
-
-  // Publish RHP goal
-  geometry_msgs::PoseStamped rhp_goal_msg;
-  rhp_goal_msg.header.stamp = ros::Time::now();
-  rhp_goal_msg.header.frame_id = "world";
-  rhp_goal_msg.pose.position.x = rhp_goal(0);
-  rhp_goal_msg.pose.position.y = rhp_goal(1);
-  rhp_goal_msg.pose.position.z = rhp_goal(2);
-  rhp_goal_pub_.publish(rhp_goal_msg);
-}
-
 
 bool Navigator::sampleBackEndTrajectory(
   const ego_planner::LocalTrajData& local_traj,

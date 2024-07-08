@@ -101,12 +101,94 @@ private:
    * @return true 
    * @return false 
    */
-  // bool getRHPGoal(
-  //   const Eigen::Vector3d& global_goal, const Eigen::Vector3d& start_pos, 
-  //   const double& rhp_dist, Eigen::Vector3d& rhp_goal) const;
+  bool getRHPGoal(
+    const Eigen::Vector3d& global_goal, const Eigen::Vector3d& start_pos, 
+    const double& rhp_dist, Eigen::Vector3d& rhp_goal) const
+  {
+
+    if (rhp_dist < 0 || (global_goal - start_pos).norm() <= rhp_dist){
+      // If within distance of goal
+      rhp_goal = global_goal;
+      return true;
+    }
+
+    // Form straight line to goal
+    Eigen::Vector3d vec_to_goal = (global_goal - start_pos).normalized();
+    rhp_goal = start_pos + (rhp_dist * vec_to_goal);
+    
+    // While RHP goal is in obstacle, backtrack.
+    double dec = 0.15; //decrement
+    double backtrack_dist = 0.0;
+    while (map_->getInflateOccupancy(rhp_goal, rhp_buffer_ + map_->getInflation()))
+    {
+      rhp_goal -= dec * vec_to_goal;
+      backtrack_dist += dec;
+      if (backtrack_dist >= rhp_dist){
+        return false;
+      }
+    }
+
+    // Publish RHP goal
+    geometry_msgs::PoseStamped rhp_goal_msg;
+    rhp_goal_msg.header.stamp = ros::Time::now();
+    rhp_goal_msg.header.frame_id = "world";
+    rhp_goal_msg.pose.position.x = rhp_goal(0);
+    rhp_goal_msg.pose.position.y = rhp_goal(1);
+    rhp_goal_msg.pose.position.z = rhp_goal(2);
+    rhp_goal_pub_.publish(rhp_goal_msg);
+
+    return true;
+  }
+  
   void getRHPGoal(
     const Eigen::Vector3d& global_goal, const Eigen::Vector3d& start_pos, 
-    const double& rhp_dist, Eigen::Vector3d& rhp_goal, Eigen::Vector3d& rhp_vel);
+    const double& rhp_dist, 
+    Eigen::Vector3d& rhp_goal, Eigen::Vector3d& rhp_vel)
+  {
+    double t; // t: time variable
+
+    // Set the last global traj local target timestamp to be that of the current global plan
+    traj_.global_traj.last_glb_t_of_lc_tgt = traj_.global_traj.glb_t_of_lc_tgt;
+
+    double t_step = rhp_dist / (20 * max_vel_); // timestep
+
+    for (t = traj_.global_traj.glb_t_of_lc_tgt;
+          t < (traj_.global_traj.global_start_time + traj_.global_traj.duration);
+          t += t_step)
+    {
+      Eigen::Vector3d pos_t = traj_.global_traj.traj.getPos(t - traj_.global_traj.global_start_time);
+      double dist = (pos_t - start_pos).norm();
+
+      if (dist >= rhp_dist)
+      {
+        rhp_goal = pos_t;
+        traj_.global_traj.glb_t_of_lc_tgt = t;
+        break;
+      }
+    }
+
+    if ((t - traj_.global_traj.global_start_time) >= traj_.global_traj.duration - 1e-5) // Last global point
+    {
+      rhp_goal = global_goal;
+      traj_.global_traj.glb_t_of_lc_tgt = traj_.global_traj.global_start_time + traj_.global_traj.duration;
+    }
+
+    if ((global_goal - rhp_goal).norm() < (max_vel_ * max_vel_) / (2 * max_acc_)){
+      rhp_vel = Eigen::Vector3d::Zero();
+    }
+    else{
+      rhp_vel = traj_.global_traj.traj.getVel(t - traj_.global_traj.global_start_time);
+    }
+
+    // Publish RHP goal
+    geometry_msgs::PoseStamped rhp_goal_msg;
+    rhp_goal_msg.header.stamp = ros::Time::now();
+    rhp_goal_msg.header.frame_id = "world";
+    rhp_goal_msg.pose.position.x = rhp_goal(0);
+    rhp_goal_msg.pose.position.y = rhp_goal(1);
+    rhp_goal_msg.pose.position.z = rhp_goal(2);
+    rhp_goal_pub_.publish(rhp_goal_msg);
+  }
 
   /**
    * @brief Timer for checking if
