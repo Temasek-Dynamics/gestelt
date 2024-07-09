@@ -1,7 +1,19 @@
 #!/bin/bash
 
-SESSION="sitl_drone_bringup"
+SESSION="sitl_single_drone"
 SESSIONEXISTS=$(tmux list-sessions | grep $SESSION)
+
+#####
+# Get arguments
+#####
+# getopts: function to read flags in input
+# OPTARG: refers to corresponding values
+while getopts s: flag
+do
+    case "${flag}" in
+        s) SCENARIO=${OPTARG};; 
+    esac
+done
 
 #####
 # Directories
@@ -37,14 +49,18 @@ roslaunch gestelt_bringup sitl_drone.launch
 
 # Start up planning module
 CMD_1="
-roslaunch gestelt_bringup sitl_planner.launch
+roslaunch --wait gestelt_bringup sitl_planner.launch
 "
 
 # Start up minimum snap trajectory planner and sampler 
-CMD_2=""
+CMD_2="
+roslaunch --wait gestelt_bringup fake_map_central.launch scenario:=$SCENARIO
+"
 
 # Start up script to send commands
-CMD_3=""
+CMD_3="
+roslaunch --wait gestelt_bringup scenario_mission.launch scenario:=$SCENARIO
+"
 
 # disarm drone
 # CMD_4="rosservice call /drone_commander/disarm"

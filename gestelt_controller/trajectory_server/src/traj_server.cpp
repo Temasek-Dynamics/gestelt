@@ -426,8 +426,7 @@ void TrajectoryServer::execHover()
 
   // ensure that hover z position does not fall below 0.2m
   pos(2) = pos(2) < min_hover_height_ ? min_hover_height_ : pos(2);
-
-  publishCmd( pos, Vector3d::Zero(), Vector3d::Zero(), Vector3d::Zero(), 
+  publishCmd( last_mission_pos_, Vector3d::Zero(), Vector3d::Zero(), Vector3d::Zero(), 
               last_mission_yaw_, 0, 
               type_mask);
 }
@@ -435,7 +434,6 @@ void TrajectoryServer::execHover()
 void TrajectoryServer::execMission()
 {
   std::lock_guard<std::mutex> cmd_guard(cmd_mutex_);
-  // ROS_INFO("execMission() mission_vel: %f, %f, %f", last_mission_vel_(0), last_mission_vel_(1), last_mission_vel_(2));
   publishCmd( last_mission_pos_, last_mission_vel_, last_mission_acc_, last_mission_jerk_, 
               last_mission_yaw_, last_mission_yaw_dot_, 
               mission_type_mask_);

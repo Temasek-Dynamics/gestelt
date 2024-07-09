@@ -18,11 +18,11 @@ heartbeat_frequency: 20.0               # [Hz] Frequency to indicate if planner 
 ##### Set planner types
 front_end/planner_type: 1         # 0: ASTAR, 1: JPS_AND_DMP
 sfc/planner_type: 1               # 0: SPHERICAL, 1: POLYTOPE
-back_end/planner_type: 1          # 0: SSFC, 1: EGO, 2: POLY
+back_end/planner_type: 2          # 0: SSFC, 1: EGO, 2: POLY
 
 ##### Front-end params
 front_end:
-  planner_frequency: 5.0        # [Hz] Front-end planning frequency
+  planner_frequency: 1.0        # [Hz] Front-end planning frequency
 
   a_star:
     max_iterations: 9999  
@@ -32,7 +32,7 @@ front_end:
 
   jps:
     planner_verbose: false      # If true, print debug from planner
-    interpolate: true           # Interpolate JPS (necessary for spherical safe flight generation)
+    interpolate: false           # Interpolate JPS (necessary for spherical safe flight generation)
     use_dmp: false               # 
     dmp_search_radius: 0.4      # DMP Search radius
     dmp_potential_radius: 0.4   # DMP radius of distance field (Value has significant effect on runtime)

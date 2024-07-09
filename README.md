@@ -166,6 +166,7 @@ Inside the [/home/john/gestelt_ws/src/gestelt/gestelt_bringup/scripts](/home/joh
 # antipodal_swap for 8-10 drones
 ./scenario.sh -s antipodal_swap8_empty
 ./scenario.sh -s antipodal_swap10_empty
+./scenario.sh -s antipodal_swap8
 ./scenario.sh -s antipodal_swap10
 ./scenario.sh -s antipodal_swap12
 # Forest scene for 8 to 16 drones with obstacles
