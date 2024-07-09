@@ -562,6 +562,11 @@ bool Navigator::requestBackEndPlan(
       start_acc.setZero();
     }
 
+    // start_pos = cur_pos_;
+    // start_vel = cur_vel_;
+    // start_acc.setZero();
+
+
     Eigen::Matrix3d startPVA, endPVA;   // Boundary start and end condition: Matrix consisting of 3d (position, velocity acceleration) 
     startPVA << start_pos, start_vel, start_acc;            // Start (position, velocity, acceleration)
     endPVA << goal_pos, goal_vel, goal_acc;  // Goal (P)

@@ -6,6 +6,7 @@ Panels:
       Expanded:
         - /Global Options1
         - /TF1/Frames1
+        - /map1
         - /collision_viz1
         - /d0/planner(Red)1/back_end1/ego_planner1
         - /d0/planner(Red)1/perception1/occ_map_inf_200mm1
@@ -190,7 +191,7 @@ Visualization Manager:
           Color: 114; 159; 207
           Color Transformer: FlatColor
           Decay Time: 0
-          Enabled: false
+          Enabled: true
           Invert Rainbow: false
           Max Color: 255; 255; 255
           Min Color: 0; 0; 0
@@ -205,7 +206,7 @@ Visualization Manager:
           Unreliable: false
           Use Fixed Frame: true
           Use rainbow: true
-          Value: false
+          Value: true
         - Alpha: 0.10000000149011612
           Autocompute Intensity Bounds: true
           Autocompute Value Bounds:
@@ -271,7 +272,7 @@ Visualization Manager:
           Marker Topic: /drone0/grid_map/collision_viz
           Name: drone0/collision_viz
           Namespaces:
-            {}
+            collision_viz: true
           Queue Size: 100
           Value: true
         - Class: rviz/Marker
@@ -446,7 +447,7 @@ Visualization Manager:
           Marker Topic: /drone0/back_end/optimal_mjo
           Name: optimal_mjo
           Namespaces:
-            "": true
+            {}
           Queue Size: 100
           Value: true
         - Class: rviz/Group
@@ -464,8 +465,7 @@ Visualization Manager:
               Marker Topic: /drone0/plan_viz
               Name: plan_viz
               Namespaces:
-                front_end_path_lines: true
-                start_end_points: true
+                {}
               Queue Size: 100
               Value: true
           Enabled: true
@@ -477,7 +477,7 @@ Visualization Manager:
               Marker Topic: /drone0/back_end/dbg/initial_mjo
               Name: initial_mjo
               Namespaces:
-                "": true
+                {}
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
@@ -485,7 +485,7 @@ Visualization Manager:
               Marker Topic: /drone0/back_end/dbg/initial_poly_path
               Name: initial_poly_path
               Namespaces:
-                "": true
+                {}
               Queue Size: 100
               Value: true
             - Alpha: 0.15000000596046448
@@ -822,7 +822,7 @@ Visualization Manager:
           Marker Topic: /drone1/back_end/optimal_mjo
           Name: optimal_mjo
           Namespaces:
-            "": true
+            {}
           Queue Size: 100
           Value: true
         - Class: rviz/Group
@@ -904,7 +904,7 @@ Visualization Manager:
               Marker Topic: /drone1/back_end/dbg/initial_mjo
               Name: initial_mjo
               Namespaces:
-                "": true
+                {}
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
@@ -912,7 +912,7 @@ Visualization Manager:
               Marker Topic: /drone1/back_end/dbg/initial_poly_path
               Name: initial_poly_path
               Namespaces:
-                "": true
+                {}
               Queue Size: 100
               Value: true
             - Alpha: 0.15000000596046448
@@ -1108,7 +1108,7 @@ Visualization Manager:
           Marker Topic: /drone2/back_end/optimal_mjo
           Name: optimal_mjo
           Namespaces:
-            "": true
+            {}
           Queue Size: 100
           Value: true
         - Class: rviz/Group
@@ -1282,7 +1282,7 @@ Visualization Manager:
               Marker Topic: /drone2/back_end/dbg/initial_mjo
               Name: initial_mjo
               Namespaces:
-                "": true
+                {}
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
@@ -1290,7 +1290,7 @@ Visualization Manager:
               Marker Topic: /drone2/back_end/dbg/initial_poly_path
               Name: initial_poly_path
               Namespaces:
-                "": true
+                {}
               Queue Size: 100
               Value: true
             - Alpha: 0.15000000596046448
@@ -1394,7 +1394,7 @@ Visualization Manager:
           Marker Topic: /drone3/back_end/optimal_mjo
           Name: optimal_mjo
           Namespaces:
-            "": true
+            {}
           Queue Size: 100
           Value: true
         - Class: rviz/Group
@@ -1637,7 +1637,7 @@ Visualization Manager:
           Marker Topic: /drone4/back_end/optimal_mjo
           Name: optimal_mjo
           Namespaces:
-            "": true
+            {}
           Queue Size: 100
           Value: true
         - Class: rviz/Group
@@ -1655,8 +1655,7 @@ Visualization Manager:
               Marker Topic: /drone4/plan_viz
               Name: plan_viz
               Namespaces:
-                front_end_path_lines: true
-                start_end_points: true
+                {}
               Queue Size: 100
               Value: true
           Enabled: true
@@ -1881,7 +1880,7 @@ Visualization Manager:
           Marker Topic: /drone5/back_end/optimal_mjo
           Name: optimal_mjo
           Namespaces:
-            "": true
+            {}
           Queue Size: 100
           Value: true
         - Class: rviz/Group
@@ -2124,7 +2123,7 @@ Visualization Manager:
           Marker Topic: /drone6/back_end/optimal_mjo
           Name: optimal_mjo
           Namespaces:
-            "": true
+            {}
           Queue Size: 100
           Value: true
         - Class: rviz/Group
@@ -2367,7 +2366,7 @@ Visualization Manager:
           Marker Topic: /drone7/back_end/optimal_mjo
           Name: optimal_mjo
           Namespaces:
-            "": true
+            {}
           Queue Size: 100
           Value: true
         - Class: rviz/Group
@@ -5785,20 +5784,26 @@ Visualization Manager:
   Value: true
   Views:
     Current:
-      Angle: -0.005000048317015171
-      Class: rviz/TopDownOrtho
+      Class: rviz/XYOrbit
+      Distance: 10.723093032836914
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
+      Field of View: 0.7853981852531433
+      Focal Point:
+        X: 4.391880989074707
+        Y: 1.9183411598205566
+        Z: -1.9073486328125e-06
+      Focal Shape Fixed Size: true
+      Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Scale: 75.5872802734375
+      Pitch: 0.8603981137275696
       Target Frame: my_view
-      X: 2.128458261489868
-      Y: 0.09852268546819687
+      Yaw: 5.078588008880615
     Saved:
       - Class: rviz/FPS
         Enable Stereo Rendering:

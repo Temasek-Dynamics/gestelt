@@ -5,7 +5,7 @@
       <pose>0 0 0 0 0 0</pose>
       <inertial>
         <pose>0 0 0 0 0 0</pose>
-        <mass>0.29</mass>
+        <mass>0.205</mass>
         <inertia>
           <!-- <ixx>0.0029125</ixx>
           <iyy>0.0029125</iyy>
@@ -457,14 +457,14 @@
       <!-- timeConstantDown is time taken for motor to decelerate and reach 63-70% of desired vel, is fed to the first order filter -->
       <timeConstantDown>0.025</timeConstantDown>
       <!-- maxRotVelocity (units of [rad/s]) -->
-      <maxRotVelocity>2700</maxRotVelocity>
+      <maxRotVelocity>3000</maxRotVelocity>
       <!-- motorConstant (units of [rad/s]) -->
       <!-- Thrust of each motor = rotor_speed^2 * motorConstant -->
-      <motorConstant>3.383e-07</motorConstant>
+      <motorConstant>2.9265e-07</motorConstant>
       <!-- momentConstant (units of [m]) is used to calculate rotor torque magnitude -->
       <momentConstant>8.8e-3</momentConstant>
       <!-- rotorDragCoefficient accounts for the H-force due to the perpendicular air velocity, resulting in drag -->
-      <rotorDragCoefficient>8.06428e-05</rotorDragCoefficient>
+      <rotorDragCoefficient>2.419284e-05</rotorDragCoefficient><!--8.06428e-05-->
       <!-- rollingMomentCoefficient accounts for torque from the motors themselves -->
       <rollingMomentCoefficient>1e-06</rollingMomentCoefficient>
       <rotorVelocitySlowdownSim>10</rotorVelocitySlowdownSim>
@@ -479,10 +479,10 @@
       <turningDirection>ccw</turningDirection>
       <timeConstantUp>0.0125</timeConstantUp>
       <timeConstantDown>0.025</timeConstantDown>
-      <maxRotVelocity>2700</maxRotVelocity>
-      <motorConstant>3.383e-07</motorConstant>
+      <maxRotVelocity>3000</maxRotVelocity>
+      <motorConstant>2.9265e-07</motorConstant>
       <momentConstant>8.8e-3</momentConstant>
-      <rotorDragCoefficient>8.06428e-05</rotorDragCoefficient>
+      <rotorDragCoefficient>2.419284e-05</rotorDragCoefficient>
       <rollingMomentCoefficient>1e-06</rollingMomentCoefficient>
       <rotorVelocitySlowdownSim>10</rotorVelocitySlowdownSim>
       <commandSubTopic>/gazebo/command/motor_speed</commandSubTopic>
@@ -496,10 +496,10 @@
       <turningDirection>cw</turningDirection>
       <timeConstantUp>0.0125</timeConstantUp>
       <timeConstantDown>0.025</timeConstantDown>
-      <maxRotVelocity>2700</maxRotVelocity>
-      <motorConstant>3.383e-07</motorConstant>
+      <maxRotVelocity>3000</maxRotVelocity>
+      <motorConstant>2.9265e-07</motorConstant>
       <momentConstant>8.8e-3</momentConstant>
-      <rotorDragCoefficient>8.06428e-05</rotorDragCoefficient>
+      <rotorDragCoefficient>2.419284e-05</rotorDragCoefficient>
       <rollingMomentCoefficient>1e-06</rollingMomentCoefficient>
       <rotorVelocitySlowdownSim>10</rotorVelocitySlowdownSim>
       <commandSubTopic>/gazebo/command/motor_speed</commandSubTopic>
@@ -513,10 +513,10 @@
       <turningDirection>cw</turningDirection>
       <timeConstantUp>0.0125</timeConstantUp>
       <timeConstantDown>0.025</timeConstantDown>
-      <maxRotVelocity>2700</maxRotVelocity>
-      <motorConstant>3.383e-07</motorConstant>
+      <maxRotVelocity>3000</maxRotVelocity>
+      <motorConstant>2.9265e-07</motorConstant>
       <momentConstant>8.8e-3</momentConstant>
-      <rotorDragCoefficient>8.06428e-05</rotorDragCoefficient>
+      <rotorDragCoefficient>2.419284e-05</rotorDragCoefficient>
       <rollingMomentCoefficient>1e-06</rollingMomentCoefficient>
       <rotorVelocitySlowdownSim>10</rotorVelocitySlowdownSim>
       <commandSubTopic>/gazebo/command/motor_speed</commandSubTopic>
