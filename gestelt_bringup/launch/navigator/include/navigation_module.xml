@@ -16,13 +16,13 @@
     default="$(find gestelt_bringup)/config/traj_server_default.yaml"/>
   <arg name="adaptor_cfg_filepath" 
     default="$(find gestelt_bringup)/config/planner_adaptor/minco_adaptor.yaml"/>
-
+  
   <!--  Navigator -->
   <include file="$(find navigator)/launch/include/navigator.xml">
     <arg name="cfg_filepath"    value="$(arg navigator_cfg_filepath)"/>
 
     <arg name="drone_id"        value="$(arg drone_id)"/>
-    
+
     <arg name="cloud_topic" value="$(arg cloud_topic)" />
     <arg name="odometry_topic"  value="$(arg odometry_topic)" />
     <arg name="debug_planning"  value="false"/>

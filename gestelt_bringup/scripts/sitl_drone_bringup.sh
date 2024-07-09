@@ -17,16 +17,16 @@ SOURCE_WS="
 source $SCRIPT_DIR/../../../devel/setup.bash &&
 "
 # PX4 v1.14.0
-# SOURCE_PX4_AUTOPILOT="
-# source $PX4_AUTOPILOT_REPO_DIR/Tools/simulation/gazebo-classic/setup_gazebo.bash $PX4_AUTOPILOT_REPO_DIR $PX4_AUTOPILOT_REPO_DIR/build/px4_sitl_default &&
-# export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:$gestelt_bringup_DIR:$PX4_AUTOPILOT_REPO_DIR:$PX4_AUTOPILOT_REPO_DIR/Tools/simulation/gazebo-classic/sitl_gazebo-classic &&
-# "
+SOURCE_PX4_AUTOPILOT="
+source $PX4_AUTOPILOT_REPO_DIR/Tools/simulation/gazebo-classic/setup_gazebo.bash $PX4_AUTOPILOT_REPO_DIR $PX4_AUTOPILOT_REPO_DIR/build/px4_sitl_default &&
+export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:$gestelt_bringup_DIR:$PX4_AUTOPILOT_REPO_DIR:$PX4_AUTOPILOT_REPO_DIR/Tools/simulation/gazebo-classic/sitl_gazebo-classic &&
+"
 
 # PX4 v1.13.0
-SOURCE_PX4_AUTOPILOT="
-source $PX4_AUTOPILOT_REPO_DIR/Tools/setup_gazebo.bash $PX4_AUTOPILOT_REPO_DIR $PX4_AUTOPILOT_REPO_DIR/build/px4_sitl_default &&
-export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:$gestelt_bringup_DIR:$PX4_AUTOPILOT_REPO_DIR:$PX4_AUTOPILOT_REPO_DIR/Tools/sitl_gazebo &&
-"
+# SOURCE_PX4_AUTOPILOT="
+# source $PX4_AUTOPILOT_REPO_DIR/Tools/setup_gazebo.bash $PX4_AUTOPILOT_REPO_DIR $PX4_AUTOPILOT_REPO_DIR/build/px4_sitl_default &&
+# export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:$gestelt_bringup_DIR:$PX4_AUTOPILOT_REPO_DIR:$PX4_AUTOPILOT_REPO_DIR/Tools/sitl_gazebo &&
+# "
 #####
 # Commands
 #####
@@ -35,18 +35,16 @@ CMD_0="
 roslaunch gestelt_bringup sitl_drone.launch 
 "
 
-# Start up drone commander (Handles taking off, execution of mission and landing etc.)
+# Start up planning module
 CMD_1="
-roslaunch trajectory_server trajectory_server_node.launch rviz_config:=gz_sim
+roslaunch gestelt_bringup sitl_planner.launch
 "
 
 # Start up minimum snap trajectory planner and sampler 
-CMD_2="
-roslaunch trajectory_planner trajectory_planner_node.launch
-"
+CMD_2=""
 
 # Start up script to send commands
-CMD_3="roslaunch --wait gestelt_bringup scenario_mission.launch scenario:=$SCENARIO"
+CMD_3=""
 
 # disarm drone
 # CMD_4="rosservice call /drone_commander/disarm"
@@ -62,7 +60,7 @@ then
 
     tmux send-keys -t $SESSION:0.0 "$SOURCE_PX4_AUTOPILOT $CMD_0" C-m 
     sleep 2
-    tmux send-keys -t $SESSION:0.1 "$SOURCE_WS $CMD_1 &" C-m 
+    tmux send-keys -t $SESSION:0.1 "$SOURCE_WS $CMD_1" C-m 
     sleep 1
     tmux send-keys -t $SESSION:0.2 "$SOURCE_WS $CMD_2" C-m 
     sleep 1

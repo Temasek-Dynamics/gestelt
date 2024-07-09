@@ -10,6 +10,8 @@
   <!-- world_filename_abs is absolute filepath -->
   <arg name="world_filename_abs" default="$(find gestelt_bringup)/simulation/worlds/$(arg world_filename_rel)" />
 
+  <arg name="cloud_topic" default="camera/depth/points"/>
+
   <!-- Gazebo simulation -->
   <include file="$(find gazebo_ros)/launch/empty_world.launch">
     <arg name="world_name" value="$(arg world_filename_abs)"/>
@@ -30,6 +32,12 @@
     <arg name="init_x"  value="$(arg init_x)"/>
     <arg name="init_y"  value="$(arg init_y)"/>
     <arg name="init_z"  value="0.0"/>
+  </include>
+
+  <!-- Planning module -->
+  <include file="$(find gestelt_bringup)/launch/navigator/include/navigation_module.xml">
+      <arg name="drone_id" value="$(arg drone_id)"/>
+      <arg name="cloud_topic" value="$(arg cloud_topic)"/>
   </include>
 
 </launch>
