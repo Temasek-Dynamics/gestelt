@@ -10,7 +10,6 @@ set(ROS_LIBRARIES
   roscpp
   grid_map
   decomp_ros_msgs
-  decomp_ros_utils
   convex_decomp_util
   jps3d
 )
@@ -31,7 +30,7 @@ find_package(Eigen3 REQUIRED)
 catkin_package(
  INCLUDE_DIRS include
  LIBRARIES ${PROJECT_NAME} # Exported libraries
- CATKIN_DEPENDS decomp_ros_msgs decomp_ros_utils convex_decomp_util # Export grid_map as part of this package
+ CATKIN_DEPENDS decomp_ros_msgs  convex_decomp_util # Export grid_map as part of this package
 #  DEPENDS decomp_util 
 )
 

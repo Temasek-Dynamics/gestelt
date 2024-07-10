@@ -10,7 +10,6 @@
 #include <decomp_geometry/polyhedron.h>
 #include <convex_decomp.hpp>              // Toumieh's polyhedron SFC generation method
 #include <decomp_ros_msgs/PolyhedronArray.h>
-#include <decomp_ros_utils/data_ros_utils.h>
 #include <decomp_util/ellipsoid_decomp.h> // Liu's polyhedron SFC generation method
 
 #include <queue>
@@ -167,10 +166,37 @@ private:
   }
 
 
-private: // Private methods
+private: // Helper methods
   /* Visualization methods */
   void publishPolyhedra(
       const std::vector<Polyhedron3D, Eigen::aligned_allocator<Polyhedron3D>>& poly_vec);
+
+  inline decomp_ros_msgs::Polyhedron polyhedron_to_ros(const Polyhedron3D& poly){
+    decomp_ros_msgs::Polyhedron msg;
+    for (const auto &p : poly.hyperplanes()) {
+      geometry_msgs::Point pt, n;
+      pt.x = p.p_(0);
+      pt.y = p.p_(1);
+      pt.z = p.p_(2);
+      n.x = p.n_(0);
+      n.y = p.n_(1);
+      n.z = p.n_(2);
+      msg.points.push_back(pt);
+      msg.normals.push_back(n);
+    }
+
+    return msg;
+  }
+
+
+  template <int Dim>
+  decomp_ros_msgs::PolyhedronArray polyhedron_array_to_ros(const vec_E<Polyhedron<Dim>>& vs){
+    decomp_ros_msgs::PolyhedronArray msg;
+    for (const auto &v : vs){
+      msg.polyhedrons.push_back(polyhedron_to_ros(v));
+    }
+    return msg;
+  }
 
 private: // Private members
   std::shared_ptr<GridMap> map_; // Pointer to occupancy voxel map

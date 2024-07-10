@@ -42,7 +42,7 @@ SHELL ["/bin/bash", "-c"]
 # Make directory and clone repository
 RUN mkdir -p ~/gestelt_ws/src/ \
     && cd ~/gestelt_ws/src \
-    && git clone https://github.com/JohnTGZ/gestelt.git -b master \
+    && git clone https://github.com/JohnTGZ/gestelt.git -b dockerization \
     && cd ~/gestelt_ws/ \
     && source /opt/ros/noetic/setup.bash \
     && catkin build
