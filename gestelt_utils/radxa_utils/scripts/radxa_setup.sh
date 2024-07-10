@@ -13,7 +13,7 @@ sudo apt install ros-noetic-desktop-full -y
 # Install dependency packages
 sudo apt install git build-essential tmux python3-vcstool python3-catkin-tools xmlstarlet cron ntp -y
 sudo apt install ros-${ROS_DISTRO}-mavlink ros-${ROS_DISTRO}-mavros ros-${ROS_DISTRO}-mavros-msgs ros-${ROS_DISTRO}-mavros-extras -y
-sudo apt install ros-${ROS_DISTRO}-roslint ros-${ROS_DISTRO}-gazebo-msgs ros-${ROS_DISTRO}-tf2-geometry-msgs ros-noetic-octomap -y
+sudo apt install ros-${ROS_DISTRO}-roslint ros-${ROS_DISTRO}-gazebo-msgs ros-${ROS_DISTRO}-tf2-geometry-msgs -y
 sudo apt install ros-${ROS_DISTRO}-pcl-ros libeigen3-dev -y
 wget https://raw.githubusercontent.com/mavlink/mavros/master/mavros/scripts/install_geographiclib_datasets.sh
 sudo bash ./install_geographiclib_datasets.sh

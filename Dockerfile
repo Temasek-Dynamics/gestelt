@@ -40,9 +40,17 @@ RUN wget https://raw.githubusercontent.com/mavlink/mavros/master/mavros/scripts/
 SHELL ["/bin/bash", "-c"] 
 
 # Make directory and clone repository
-RUN mkdir -p ~/gestelt_ws/src/ \
-    && cd ~/gestelt_ws/src \
-    && git clone https://github.com/JohnTGZ/gestelt.git -b dockerization \
-    && cd ~/gestelt_ws/ \
-    && source /opt/ros/noetic/setup.bash \
-    && catkin build
+WORKDIR /gestelt_ws/src/
+RUN git clone https://github.com/JohnTGZ/gestelt.git -b dockerization 
+WORKDIR /gestelt_ws/
+RUN source /opt/ros/noetic/setup.bash \
+    && catkin config --skiplist decomp_ros_utils decomp_test_node radxa_utils gestelt_test trajectory_inspector \
+    && catkin build 
+RUN echo "source /gestelt_ws/devel/setup.bash" >> /root/.bashrc \
+
+ENTRYPOINT ["/ros_entrypoint.sh"]
+
+CMD ["bash"]
+
+
+

@@ -17,7 +17,6 @@ set(ROS_LIBRARIES
     logger
 )
 
-find_package(octomap REQUIRED)
 find_package(PCL 1.7 REQUIRED)
 find_package(catkin REQUIRED COMPONENTS
     ${ROS_LIBRARIES}
@@ -36,7 +35,6 @@ include_directories(
     ${catkin_INCLUDE_DIRS}
     ${EIGEN3_INCLUDE_DIRS} 
     ${PCL_INCLUDE_DIRS}
-    ${OCTOMAP_INCLUDE_DIRS}
 )
 
 add_definitions(${PCL_DEFINITIONS})
@@ -50,5 +48,4 @@ target_link_libraries(${PROJECT_NAME}
     ${catkin_LIBRARIES} 
     ${PCL_LIBRARIES}
     ${EIGEN3_LIBRARIES}
-    ${OCTOMAP_LIBRARIES}
 )  
