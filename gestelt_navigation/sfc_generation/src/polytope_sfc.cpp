@@ -389,7 +389,7 @@ bool PolytopeSFC::generateSFCLiu(   std::vector<Polyhedron3D, Eigen::aligned_all
     ellip_decomp_util_.dilate(path_3d); //Set max iteration number of 10, do fix the path
 
     //Publish visualization msgs
-    decomp_ros_msgs::EllipsoidArray es_msg = DecompROS::ellipsoid_array_to_ros(ellip_decomp_util_.get_ellipsoids());
+    decomp_ros_msgs::EllipsoidArray es_msg = ellipsoid_array_to_ros(ellip_decomp_util_.get_ellipsoids());
     es_msg.header.frame_id = params_.world_frame;
     ellipsoid_arr_pub_.publish(es_msg);
 
@@ -476,7 +476,7 @@ void PolytopeSFC::publishPolyhedra(
     const std::vector<Polyhedron3D, Eigen::aligned_allocator<Polyhedron3D>>& poly_vec) {
     // create polyhedra message
     decomp_ros_msgs::PolyhedronArray poly_msg = 
-        DecompROS::polyhedron_array_to_ros(poly_vec);
+        polyhedron_array_to_ros(poly_vec);
     poly_msg.header.frame_id = params_.world_frame;
 
     poly_sfc_pub_.publish(poly_msg);
