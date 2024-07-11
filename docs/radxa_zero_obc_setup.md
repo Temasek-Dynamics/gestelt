@@ -13,7 +13,7 @@ Instructions for setting up of Radxa Zero on-board computer
     - Press down boot button on Radxa before powering it on and connecting it to the PC.
     - Download `radxa-zero-erase-emmc.bin` AND `rz-udisk-loader.bin`
     - Run `sudo boot-g12.py radxa-zero-erase-emmc.bin`
-        - This will automatically erase eMMC, then present eMMC as a USB storage device.
+        - This will automatically erase eMMC, then present eMMC as a USB storage device. No need to run `rz-udisk-loader.bin` afterwards
     - [Reference](https://wiki.radxa.com/Zero/install/eMMC_erase)
 
 3. Remove autoboot on radxa
@@ -60,12 +60,13 @@ Instructions for setting up of Radxa Zero on-board computer
     - Hold the boot button on Radxa before connecting to the PC, then run `sudo boot-g12.py rz-udisk-loader.bin`, the radxa eMMC should appear as a flashable device.
     - Use BalenaEtcher to mount the image.
 
-6. Disable debug port on OBC. This is so that the Flight controller unit can communicate with the radxa
+6. Enable serial port connection with FCU
 ```bash
 vim /etc/ssh/sshd_config
 # change ChallengeResponseAuthentication to no
 sudo systemcyl reload sshd
 
+# Edit /boot/uEnv.txt to open serial port with FCUs 
 vim /boot/uEnv.txt
 # change the overlays line to "overlays=meson-g12a-uart-ao-b-on-gpioao-2-gpioao-3"
 ```
@@ -169,7 +170,7 @@ scp path/to/radxa_setup.sh rock@IP_ADDR:/home/rock/radxa_setup.sh
     - In the mavros launch file, set the FCU url to the address of the serial port connecting to the flight controller. 
         - [DEPRECATED] For pins (6, 8, 10) or (GND, UART_AO_A_TXD, UART_AO_A_RXD), use `/dev/ttyAML0:230400`
         - For pins (7, 9, 11) or (UART_AO_B_RX, GND, UART_AO_B_TX), use `/dev/ttyAML1:230400`
-    - Set the GCS URL to the ip address of the computer runnig QGroundControl.
+    - Set the GCS URL to the ip address of the computer running QGroundControl.
 
 ## Useful info
 

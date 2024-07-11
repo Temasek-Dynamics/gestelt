@@ -2,6 +2,8 @@
 
 # # install bootstrap tools
 # RUN apt-get update && apt-get install --no-install-recommends -y \
+#     vim \
+#     iproute2 \
 #     build-essential \
 #     python3-rosdep \
 #     python3-rosinstall \
@@ -35,22 +37,40 @@
 #     && bash ./install_geographiclib_datasets.sh
 
 # # Enable the use of `source` keyword
+
+####################################
+# FROM johntgz95/radxa-base:latest
+
 # SHELL ["/bin/bash", "-c"] 
 
-FROM johntgz95/radxa-base:latest
+# # Make directory and clone repository
+# WORKDIR /gestelt_ws/src/
+# RUN git clone https://github.com/JohnTGZ/gestelt.git -b dockerization 
+# WORKDIR /gestelt_ws/
+# RUN source /opt/ros/noetic/setup.bash \
+#     && catkin config --skiplist decomp_ros_utils decomp_test_node radxa_utils gestelt_test trajectory_inspector \
+#     && catkin build 
+# RUN echo "source /gestelt_ws/devel/setup.bash" >> /root/.bashrc 
+
+# # WORKDIR /gestelt_ws/src/gestelt/gestelt_bringup/scripts/
+# # cd /gestelt_ws/src/gestelt/gestelt_bringup/scripts/ && ./offboard.sh -i 0
+
+# ENTRYPOINT ["/ros_entrypoint.sh"]
+
+# CMD ["bash"]
+
+####################################
+FROM johntgz95/radxa-gestelt:latest
+
+SHELL ["/bin/bash", "-c"] 
 
 # Make directory and clone repository
-WORKDIR /gestelt_ws/src/
-RUN git clone https://github.com/JohnTGZ/gestelt.git -b dockerization 
+WORKDIR /gestelt_ws/src/gestelt
+RUN git pull
 WORKDIR /gestelt_ws/
 RUN source /opt/ros/noetic/setup.bash \
     && catkin config --skiplist decomp_ros_utils decomp_test_node radxa_utils gestelt_test trajectory_inspector \
     && catkin build 
-RUN echo "source /gestelt_ws/devel/setup.bash" >> /root/.bashrc \
 
 ENTRYPOINT ["/ros_entrypoint.sh"]
-
 CMD ["bash"]
-
-
-

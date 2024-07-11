@@ -121,10 +121,10 @@ export ROS_DISTRO="noetic"
 source /opt/ros/noetic/setup.bash
 alias sros="source /opt/ros/noetic/setup.bash"
 alias sws="source devel/setup.bash"
-alias sbash="source /home/rock/.bashrc"
+alias sbash="source /root/.bashrc"
 
-# Set UAV-ID here
-export UAV_ID=0
+# Set DRONE_ID here
+export DRONE_ID=0
 
 # Multi-machine ROS communication
 export MASTER_IP=192.168.31.22
@@ -138,14 +138,9 @@ export ROS_HOSTNAME=$SELF_IP
 export ROS_IP=$SELF_IP
 
 # Startup for demo
-alias uav_startup="cd_scripts && cd vicon && ./offboard.sh $UAV_ID"
-alias test_uav_startup="cd_scripts && cd vicon && ./offboard_local_test.sh $UAV_ID"
+alias uav_startup="cd /gestelt_ws/src/gestelt/gestelt_bringup/scripts/ && ./offboard.sh $DRONE_ID"
 
 # Convenience function
-alias ez_pull="git -C ~/gestelt_ws/src/gestelt/ pull"
-alias ez_config="cd ~/gestelt_ws && catkin config --blacklist global_planner trajectory_planner rviz_plugins trajectory_publisher mav_comm mavros_controllers mav_trajectory_generation_ros mav_trajectory_generation mav_trajectory_generation_example radxa_utils mavros_trajectory_tracking controller_msgs mav_visualization eigen_catkin catkin_simple mav_msgs  mav_state_machine_msgs mav_system_msgs nlopt"
-alias ez_build="cd ~/gestelt_ws && catkin build"
-alias cd_scripts="cd /home/rock/gestelt_ws/src/gestelt/gestelt_bringup/scripts/"
 alias killbill="killall -9 rosmaster; tmux kill-server;"
 
 # Time
@@ -157,3 +152,6 @@ alias check_network_priority="nmcli -f NAME,UUID,AUTOCONNECT,AUTOCONNECT-PRIORIT
 alias connect_xiaomi="sudo nmcli dev wifi connect \"Xiaomi_84CE_5G\""
 alias connect_oppenheimer="sudo nmcli dev wifi connect \"oppenheimer\""
 
+# gestelt container operations 
+alias update_gestelt_container="docker pull johntgz95/radxa-gestelt:latest"
+alias start_gestelt_container="docker run -it --rm --network host --privileged johntgz95/radxa-gestelt:latest"
