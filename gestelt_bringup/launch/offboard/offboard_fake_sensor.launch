@@ -1,0 +1,51 @@
+<launch>
+  <arg name="drone_id"/>
+  <arg name="drone_id_ns" value="drone$(arg drone_id)"/>
+  
+  <!-- Input/output topics -->
+  <arg name="pose_topic" value="mavros/local_position/pose" />
+  <arg name="cloud_topic_raw" value="camera/depth/points_raw" />
+  <arg name="cloud_topic" value="camera/depth/points" />
+  <!-- drone_origin_frame: For PX4 SITL, leave it as default. 
+  For actual deployment, put as world -->
+  <arg name="drone_origin_frame" default="world" />
+
+  <!-- Reference frames -->
+  <arg name="global_frame" default="world"/>
+  <arg name="uav_origin_frame" default="map"/>
+  <arg name="base_link_frame" default="$(arg drone_id_ns)_base_link"/>
+  <arg name="cam_link_frame" default="$(arg drone_id_ns)_cam_link"/>
+
+  <!-- Add static transform from base_link to camera_link -->
+  <node pkg="tf" type="static_transform_publisher" 
+    name="$(arg drone_id_ns)_base_link_to_cam_link_tf" 
+    args="0.08 0 0.02 0 0 0 1 $(arg drone_id_ns)_base_link $(arg drone_id_ns)_cam_link 100" />
+
+  <group ns="$(arg drone_id_ns)">
+    <!-- Fake sensor  -->
+    <node pkg="fake_map" type="fake_sensor_node" name="fake_sensor_$(arg drone_id_ns)" required="true" output="screen">
+        <rosparam command="load" file="$(find gestelt_bringup)/config/fake_sensor_params.yaml" />
+        <param name="drone_id" value="$(arg drone_id)"/>
+
+        <param name="fake_map/use_pcd_file" value="false"/>
+        <param name="fake_map/input_topic" value="/fake_map"/>
+
+        <param name="global_frame" value="$(arg global_frame)"/>
+        <param name="uav/origin_frame" value="$(arg uav_origin_frame)"/>
+        <param name="uav/sensor_frame" value="$(arg cam_link_frame)"/>
+
+        <remap from="/uav/sensor_cloud" to="/$(arg drone_id_ns)/$(arg cloud_topic_raw)"/>
+    </node>
+  </group>
+
+  <!-- Downsamples the input cloud -->
+  <node pkg="perception_tools" type="cloud_downsampler" 
+    name="cloud_downsampler_$(arg drone_id_ns)" output="screen" required="true">
+    <param name="~queue_size" value="3" />
+    <param name="~voxel_size" value="0.1" />
+
+    <remap from="~cloud_in" to="/$(arg drone_id_ns)/$(arg cloud_topic_raw)" />
+    <remap from="~cloud_out" to="/$(arg drone_id_ns)/$(arg cloud_topic)" />
+  </node>
+
+</launch>

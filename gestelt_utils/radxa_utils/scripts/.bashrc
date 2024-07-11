@@ -143,7 +143,7 @@ alias test_uav_startup="cd_scripts && cd vicon && ./offboard_local_test.sh $UAV_
 
 # Convenience function
 alias ez_pull="git -C ~/gestelt_ws/src/gestelt/ pull"
-alias ez_config="cd ~/gestelt_ws && catkin config --blacklist global_planner swarm_bridge trajectory_planner rviz_plugins swarm_benchmark geometric_controller trajectory_publisher mav_comm mav_planning_msgs mavros_controllers mav_trajectory_generation_ros mav_trajectory_generation mav_trajectory_generation_example radxa_utils mavros_trajectory_tracking controller_msgs mav_visualization eigen_checks glog_catkin eigen_catkin catkin_simple mav_msgs  mav_state_machine_msgs mav_system_msgs nlopt"
+alias ez_config="cd ~/gestelt_ws && catkin config --blacklist global_planner trajectory_planner rviz_plugins trajectory_publisher mav_comm mavros_controllers mav_trajectory_generation_ros mav_trajectory_generation mav_trajectory_generation_example radxa_utils mavros_trajectory_tracking controller_msgs mav_visualization eigen_catkin catkin_simple mav_msgs  mav_state_machine_msgs mav_system_msgs nlopt"
 alias ez_build="cd ~/gestelt_ws && catkin build"
 alias cd_scripts="cd /home/rock/gestelt_ws/src/gestelt/gestelt_bringup/scripts/"
 alias killbill="killall -9 rosmaster; tmux kill-server;"

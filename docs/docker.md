@@ -7,9 +7,9 @@ They can be found on the [docker hub registry](https://registry.hub.docker.com/_
 
 ## Building images
 ```bash
-docker build -t gestelt/ros:noetic .
+docker build -t johntgz95/radxa-gestelt:latest .
 # --rm flag tells tdocker to clean up the container after exiting
-docker run -it --rm gestelt/ros:noetic .
+docker run -it --rm johntgz95/radxa-gestelt:latest .
 ```
 
 ## Pushing images to Docker Hub repository
@@ -19,13 +19,12 @@ docker push johntgz95/gestelt
 
 # All-in-one build and push
 docker build --platform linux/arm64 -t johntgz95/radxa-base:latest --push .
-
 docker build --platform linux/arm64 -t johntgz95/radxa-gestelt:latest --push .
 ```
 
 ## Running containers
 ```bash
-docker run -it gestelt/noetic:latest
+docker run -it --rm johntgz95/radxa-gestelt:latest
 
 # Find name of new machine 
 docker ps -l
@@ -51,9 +50,14 @@ docker run hello-world
 sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 9B98116C9AA302C7
 ```
 
-## Pulling containers 
+## Commands
 ```bash
+# Pull Images
 docker pull johntgz95/radxa-base
+# Stop all containers
+docker stop $(docker ps -a -q)
+# Remove all containers
+docker rm $(docker ps -a -q)
 ```
 
 # Repositories

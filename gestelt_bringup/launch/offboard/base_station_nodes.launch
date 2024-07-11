@@ -1,0 +1,38 @@
+<launch>
+  <arg name="num_drones" default="5"/>
+  <arg name="rviz_config" default="default"/>
+  <param name="/use_sim_time" value="false" />
+
+  <arg name="scenario" default="forest_single"/>
+  <arg name="map_filepath" default="$(find gestelt_bringup)/simulation/fake_maps/$(arg scenario).pcd" />
+
+  <!-- Add static transform from world to map -->
+  <node pkg="tf" type="static_transform_publisher" 
+    name="world_to_map_tf" 
+    args="0 0 0 0 0 0 1 world map 100">
+  </node>
+
+  <!-- Collision checker -->
+  <node pkg="swarm_collision_checker" name="swarm_collision_checker" 
+        type="swarm_collision_checker_node" output="screen">
+    <param name="num_drones" value="$(arg num_drones)" />
+    <param name="pose_topic" value="mavros/local_position/pose"/>
+    <param name="check_collision_freq" value="20.0"/>
+    <param name="collision_check/warn_radius" value="0.225"/>
+    <param name="collision_check/fatal_radius" value="0.14"/>
+  </node>
+
+  <!-- RVIZ -->
+  <node name="rviz" pkg="rviz" type="rviz" required="true" 
+    args="-d $(find gestelt_bringup)/launch/rviz/$(arg rviz_config).rviz"/>
+
+  <!-- Fake map publisher -->
+  <node pkg="fake_map" type="fake_map_publisher" name="fake_map_publisher" output="screen">
+      <remap from="/fake_map" to="/fake_map"/>
+
+      <param name="map/file_path" value="$(arg map_filepath)"/>
+      <param name="map/publish_freq" value="1.0"/>
+      <param name="map/frame_id" value="world"/>
+  </node>
+
+</launch>
