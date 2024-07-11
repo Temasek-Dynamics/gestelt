@@ -91,88 +91,19 @@ public:
 
   void boolMapCB(const gestelt_msgs::BoolMapConstPtr& msg);
 
-  // Compute distance map
-  void computeDistanceMap();
-
-  // Update distance map of a cell
-  void lowerStatic(const size_t& idx);
-
-  // Get 8-connected neighbors of an cell by index
-  std::vector<size_t> get8ConNeighbours(const size_t& idx){
-    std::vector<size_t> neighbours;
-    int x, y;
-    map1Dto2DIdx(idx, occ_grid_.info.width, x, y);
-    
-    // Explore all 8 neighbours
-    for (int dx = -1; dx <= 1; dx++)
-    {
-      for (int dy = -1; dy <= 1; dy++)
-      {
-        // Skip it's own position
-        if (dx == 0 && dy == 0){
-          continue;
-        }
-        const int idx = map2Dto1DIdx(occ_grid_.info.width, x+dx, y+dy);
-
-        // Skip if current index is outside the map
-        if (outsideMap(idx)) {
-          continue;
-        }
-
-        // Skip if current index is occupied
-        if (isOcc(idx)){
-          continue;
-        }
-
-        neighbours.push_back(idx);
-      }
-    }
-
-    return neighbours;
-  } 
-
-  // Get 4-connected neighbors of an cell by index
-  std::vector<size_t> get4ConNeighbours(const size_t& idx);
-  
   // Convert from map to occupancy grid type
-  void mapToOccGrid(const std::vector<double>& map, const size_t& width, const size_t& height, nav_msgs::OccupancyGrid& occ_grid)
-  {
-    occ_grid.info.width = width;
-    occ_grid.info.height = height;
-    occ_grid.info.resolution = res_;
-    occ_grid.info.origin.position.x = origin_x_;
-    occ_grid.info.origin.position.y = origin_y_;
-    occ_grid.info.origin.position.z = 0.0;
-    tf2::Quaternion q;
-    q.setRPY(0, 0, yaw_);
-    occ_grid.info.origin.orientation.x = q.x();
-    occ_grid.info.origin.orientation.y = q.y();
-    occ_grid.info.origin.orientation.z = q.z();
-    occ_grid.info.origin.orientation.w = q.w();
-
-    occ_grid.data.resize(occ_grid.info.width * occ_grid.info.height);
-
-    const double max_val = *std::max_element(map.begin(), map.end());
-    // const double min_vel = *std::min_element(map.begin(), map.end());
-
-    for (size_t idx = 0; idx < map.size(); idx++)
-    {
-      double val = 255.0 - (map[idx] / max_val) * 255.0;
-      occ_grid.data[idx] = val;
-    }
-  }
-
-  // Convert from map to occupancy grid type
-  void voronoimapToOccGrid(const DynamicVoronoi& dyn_voro, const size_t& size_x, const size_t& size_y, nav_msgs::OccupancyGrid& occ_grid)
+  void voronoimapToOccGrid( const DynamicVoronoi& dyn_voro, 
+                            const double& origin_x, const double& origin_y, 
+                            nav_msgs::OccupancyGrid& occ_grid)
   {
     occ_grid.header.stamp = ros::Time::now();
     occ_grid.header.frame_id = "map";
-    occ_grid.info.width = size_x;
-    occ_grid.info.height = size_y;
+    occ_grid.info.width = dyn_voro.getSizeX();
+    occ_grid.info.height = dyn_voro.getSizeY();
     occ_grid.info.resolution = res_;
-    occ_grid.info.origin.position.x = origin_x_;
-    occ_grid.info.origin.position.y = origin_y_;
-    occ_grid.info.origin.position.z = 0.0;
+    occ_grid.info.origin.position.x = origin_x;
+    occ_grid.info.origin.position.y = origin_y;
+    occ_grid.info.origin.position.z = dyn_voro.getOriginZ();
     tf2::Quaternion q;
     q.setRPY(0, 0, yaw_);
     occ_grid.info.origin.orientation.x = q.x();
@@ -182,27 +113,29 @@ public:
 
     occ_grid.data.resize(occ_grid.info.width * occ_grid.info.height);
 
-    for(int j = 0; j < size_y; j++)
+    for(int j = 0; j < dyn_voro.getSizeY(); j++)
     {
-      for (int i = 0; i < size_x; i++)
+      for (int i = 0; i < dyn_voro.getSizeX(); i++)
       {
-        size_t idx = map2Dto1DIdx(occ_grid.info.width, i, occ_grid.info.height - j - 1);
+        size_t idx = map2Dto1DIdx(occ_grid.info.width, i, j);
         occ_grid.data[idx] = dyn_voro.isVoronoi(i, j) ? 255: 0;
       }
     }
   }
 
   // Convert from map to occupancy grid type
-  void occmapToOccGrid(const DynamicVoronoi& dyn_voro, const size_t& size_x, const size_t& size_y, nav_msgs::OccupancyGrid& occ_grid)
+  void occmapToOccGrid(const DynamicVoronoi& dyn_voro, 
+                      const double& origin_x, const double& origin_y,
+                      nav_msgs::OccupancyGrid& occ_grid)
   {
     occ_grid.header.stamp = ros::Time::now();
     occ_grid.header.frame_id = "map";
-    occ_grid.info.width = size_x;
-    occ_grid.info.height = size_y;
+    occ_grid.info.width = dyn_voro.getSizeX();
+    occ_grid.info.height = dyn_voro.getSizeY();
     occ_grid.info.resolution = res_;
-    occ_grid.info.origin.position.x = origin_x_;
-    occ_grid.info.origin.position.y = origin_y_;
-    occ_grid.info.origin.position.z = 0.0;
+    occ_grid.info.origin.position.x = origin_x;
+    occ_grid.info.origin.position.y = origin_y;
+    occ_grid.info.origin.position.z = dyn_voro.getOriginZ();
     tf2::Quaternion q;
     q.setRPY(0, 0, yaw_);
     occ_grid.info.origin.orientation.x = q.x();
@@ -212,9 +145,9 @@ public:
 
     occ_grid.data.resize(occ_grid.info.width * occ_grid.info.height);
 
-    for(int j = 0; j < size_y; j++)
+    for(int j = 0; j < dyn_voro.getSizeY(); j++)
     {
-      for (int i = 0; i < size_x; i++)
+      for (int i = 0; i < dyn_voro.getSizeX(); i++)
       {
         size_t idx = map2Dto1DIdx(occ_grid.info.width, i, j);
 
@@ -225,28 +158,6 @@ public:
     }
 
   }
-
-  // // Convert from map to occupancy grid type
-  // void voronoimapToOccGrid(const std::vector<bool>& map, const size_t& width, const size_t& height, nav_msgs::OccupancyGrid& occ_grid)
-  // {
-  //   occ_grid.info.width = width;
-  //   occ_grid.info.height = height;
-  //   occ_grid.info.resolution = res_;
-  //   occ_grid.info.origin.position.x = origin_x_;
-  //   occ_grid.info.origin.position.y = origin_y_;
-  //   occ_grid.info.origin.position.z = 0.0;
-  //   tf2::Quaternion q;
-  //   q.setRPY(0, 0, yaw_);
-  //   occ_grid.info.origin.orientation.x = q.x();
-  //   occ_grid.info.origin.orientation.y = q.y();
-  //   occ_grid.info.origin.orientation.z = q.z();
-  //   occ_grid.info.origin.orientation.w = q.w();
-  //   occ_grid.data.resize(occ_grid.info.width * occ_grid.info.height);
-  //   for (size_t idx = 0; idx < map.size(); idx++)
-  //   {
-  //     occ_grid.data[idx] = map[idx] ? 255: 0;
-  //   }
-  // }
 
   size_t map2Dto1DIdx(const int& width, const int& x, const int& y)
   {
@@ -259,147 +170,17 @@ public:
     x = idx - (y * width);
   }
 
-  inline bool isOcc(const int& idx){
-    return occ_grid_.data[idx] == cost_val::OCC;
-  }
+  // inline bool outsideMap(const int& idx){
+  //   return idx > (occ_grid_.data.size() - 1);
+  // }
 
-  inline bool outsideMap(const int& idx){
-    return idx > (occ_grid_.data.size() - 1);
-  }
-
-  // Get euclidean distance between node_1 and node_2
-  // NOTE: This is in units of indices
-  inline double getL1Norm(const size_t& a, const size_t& b) {
-    int a_x, a_y, b_x, b_y;
-    map1Dto2DIdx(a, occ_grid_.info.width, a_x, a_y);
-    map1Dto2DIdx(b, occ_grid_.info.width, b_x, b_y);
-    return abs(a_x - b_x) + abs(a_y - b_y);
-  }
-
-  // Get euclidean distance between node_1 and node_2
-  // NOTE: This is in units of indices
-  inline double getL2Norm(const size_t& a, const size_t& b) {
-    int a_x, a_y, b_x, b_y;
-    map1Dto2DIdx(a, occ_grid_.info.width, a_x, a_y);
-    map1Dto2DIdx(b, occ_grid_.info.width, b_x, b_y);
-
-    double dx = abs(a_x - b_x);
-    double dy = abs(a_y - b_y);
-
-    return sqrt(dx*dx + dy*dy);
-  }
-
-  // // Get octile distance
-  inline double getChebyshevDist(const size_t& a, const size_t& b)  {
-    int a_x, a_y, b_x, b_y;
-    map1Dto2DIdx(a, occ_grid_.info.width, a_x, a_y);
-    map1Dto2DIdx(b, occ_grid_.info.width, b_x, b_y);
-
-    double dx = abs(a_x - b_x);
-    double dy = abs(a_y - b_y);
-
-    return (dx + dy) - std::min(dx, dy); 
-  }
-
-  // // Get chebyshev distance
-  inline double getOctileDist(const size_t& a, const size_t& b)  {
-    int a_x, a_y, b_x, b_y;
-    map1Dto2DIdx(a, occ_grid_.info.width, a_x, a_y);
-    map1Dto2DIdx(b, occ_grid_.info.width, b_x, b_y);
-
-    double dx = abs(a_x - b_x);
-    double dy = abs(a_y - b_y);
-
-    return (dx + dy) + (SQRT2 - 2) * std::min(dx, dy); 
-  }
-
-  void setObstacle(const size_t& s) {
-    obst_map_[s] = s;
-    dist_map_[s] = 0; 
-
-    open_queue_.put(s, 0); // add to open queue
-  }
-
-  void removeObstacle(const size_t& s) {
-    clearCell(s);  
-    to_raise_[s] = true; 
-
-    open_queue_.put(s, 0); // add to open queue
-  }
-
-  void clearCell(const size_t& s){
-    dist_map_[s] = INF; 
-    obst_map_[s] = -1; 
-  }
-
-  void updateDistanceMap() {
-    while (!open_queue_.empty())
-    {
-      const size_t s = open_queue_.get();
-      if (to_raise_[s]){
-        raise(s);
-      }
-      else if (isOcc(obst_map_[s])){
-        voro_map_[s] = false;
-        lower(s);
-      }
-    }
-  }
-
-  void raise(const size_t& s) {
-    for (const size_t& n: get8ConNeighbours(s))
-    { 
-      if (obst_map_[n] != -1 && to_raise_[n])
-      {
-        open_queue_.put(n, dist_map_[n]); // add to open queue
-
-        if (!isOcc(obst_map_[n]))
-        {
-          clearCell(n);
-          to_raise_[n] = true;
-        }
-      }
-    }
-    to_raise_[s] = false;
-  }
-
-  void lower(const size_t& s) {
-    for (const size_t& n: get8ConNeighbours(s))
-    { 
-      if (!to_raise_[n])
-      {
-        double d = getL2Norm(obst_map_[s], n);
-        if (d < dist_map_[n]) {
-          dist_map_[n] = d;
-          obst_map_[n] = obst_map_[s];
-          open_queue_.put(n, d); // add to open queue
-        }
-        else {
-          checkVoro(s, n);
-        }
-      }
-    }
-  }
-
-  void checkVoro(const int& s, const int& n){
-    std::vector<size_t> nb = get8ConNeighbours(obst_map_[n]);
-
-    if ( (dist_map_[s] > 1 || dist_map_[n] > 1 ) 
-          && obst_map_[n] != -1
-          && obst_map_[n] != obst_map_[s]
-          && std::find(nb.begin(), nb.end(), obst_map_[s]) == nb.end() )
-    {
-      if (getL2Norm(s, obst_map_[n]) < getL2Norm(n, obst_map_[s])){
-        voro_map_[s] = true;
-      }
-
-      if (getL2Norm(n, obst_map_[s]) < getL2Norm(s, obst_map_[n])){
-        voro_map_[n] = true;
-      }
-    }
-  }
-
-  void publishStartAndGoal(const DblPoint& start, const DblPoint& goal, const std::string& frame_id, ros::Publisher& publisher1, ros::Publisher& publisher2){
+  void publishStartAndGoal(
+    const DblPoint& start, 
+    const DblPoint& goal, 
+    const int& z,
+    const std::string& frame_id, 
+    ros::Publisher& publisher1, ros::Publisher& publisher2)
+  {
     visualization_msgs::Marker start_sphere, goal_sphere;
     double radius = 0.5;
     double alpha = 0.8; 
@@ -430,18 +211,19 @@ public:
     /* Set Start */
     start_sphere.pose.position.x = start.x;
     start_sphere.pose.position.y = start.y;
-    start_sphere.pose.position.z = dyn_voro_->getHeight();
+    start_sphere.pose.position.z = z;
 
     /* Set Goal */
     goal_sphere.pose.position.x = goal.x;
     goal_sphere.pose.position.y = goal.y;
-    goal_sphere.pose.position.z = dyn_voro_->getHeight();
+    goal_sphere.pose.position.z = z;
 
     publisher1.publish(start_sphere);
     publisher2.publish(goal_sphere);
   }
 
-  inline void publishFrontEndPath(const std::vector<Eigen::Vector3d>& path, const std::string& frame_id, ros::Publisher& publisher) {
+  inline void publishFrontEndPath(const std::vector<Eigen::Vector3d>& path, 
+                                  const std::string& frame_id, ros::Publisher& publisher) {
     visualization_msgs::Marker wp_sphere_list, path_line_strip;
     visualization_msgs::Marker start_sphere, goal_sphere;
     double radius = 0.15;
@@ -539,14 +321,23 @@ public:
     publisher.publish(path_line_strip);
   }
 
-  void plan(const DblPoint& start, const DblPoint& goal){
-    publishStartAndGoal(start, goal, "map", start_pt_pub_, goal_pt_pub_) ;
+  bool plan(const DblPoint& start, const DblPoint& goal, const int& z){
+    publishStartAndGoal(start, goal, z, "map", start_pt_pub_, goal_pt_pub_) ;
 
     tm_front_end_plan_.start();
+
+    if (dyn_voro_arr_.find(z) == dyn_voro_arr_.end()){
+      std::cout << "Map slice at height "<< z << " does not exist" << std::endl;
+      return false;
+    }
+
+    front_end_planner_ = std::make_unique<AStarPlanner>(dyn_voro_arr_[z], astar_params_);
+    front_end_planner_->addPublishers(front_end_publisher_map_);
 
     if (!front_end_planner_->generatePlanVoronoi(start, goal)){
       std::cout << "FRONT END FAILED!!!! front_end_planner_->generatePlan() from ("<< \
         start.x << ", " <<  start.y << ") to (" << goal.x << ", " <<  goal.y << ")" << std::endl;
+      return false;
 
       // viz_helper::publishClosedList(front_end_planner_->getClosedList(), "world", closed_list_viz_pub_);
     }
@@ -557,12 +348,15 @@ public:
 
     tm_front_end_plan_.stop(verbose_planning_);
 
-    occmapToOccGrid(*dyn_voro_, size_x_, size_y_,  occ_grid_); // Occupancy map
-    voronoimapToOccGrid(*dyn_voro_, size_x_, size_y_,  voro_occ_grid_); // Voronoi map
+    // nav_msgs::OccupancyGrid occ_grid, voro_occ_grid;
 
-    voro_occ_grid_pub_.publish(voro_occ_grid_);
-    occ_map_pub_.publish( occ_grid_);
+    // occmapToOccGrid(*(dyn_voro_arr_[z]), size_x_, size_y_, 0.0, occ_grid); // Occupancy map
+    // voronoimapToOccGrid(*(dyn_voro_arr_[z]), size_x_, size_y_, 0.0, voro_occ_grid); // Voronoi map
 
+    // voro_occ_grid_pub_.publish(voro_occ_grid);
+    // occ_map_pub_.publish( occ_grid);
+
+    return true;
   }
 
 /* Subscriber callbacks */
@@ -576,33 +370,32 @@ private:
     goal_pos_.x = msg->pose.position.x;
     goal_pos_.y = msg->pose.position.y;
 
-
-
-    plan(start_pos_, goal_pos_);
-
+    plan(start_pos_, goal_pos_, 100);
   }
-
 
 private:
   /* Params */
   std::string map_fname_;
-  bool verbose_planning_{true};  // enables printing of planning time
+  bool verbose_planning_{false};  // enables printing of planning time
   bool negate_{false};
   double res_;
   double occ_th_, free_th_;
-  double origin_x_, origin_y_, yaw_;
+  double yaw_;
+
+  double max_z_, min_z_; // Maximum and minimum z
+  double res_z_; // z resolution
+
+  AStarPlanner::AStarParams astar_params_; 
 
   /* Pubs, subs */
   ros::Publisher occ_map_pub_;      // Publishes original occupancy grid
-  ros::Publisher dist_occ_map_pub_; // Publishes distance map occupancy grid
+  // ros::Publisher dist_occ_map_pub_; // Publishes distance map occupancy grid
   ros::Publisher voro_occ_grid_pub_; // Publishes voronoi map occupancy grid
 
   ros::Publisher front_end_plan_viz_pub_; // Publish front-end plan (A*) visualization
-  ros::Publisher start_pt_pub_;
-  ros::Publisher goal_pt_pub_;
+  ros::Publisher start_pt_pub_, goal_pt_pub_;
 
-  ros::Subscriber start_sub_;
-  ros::Subscriber goal_sub_;
+  ros::Subscriber start_sub_, goal_sub_;
 
   std::unordered_map<std::string, ros::Publisher> front_end_publisher_map_;   // Publishes front-end map
 
@@ -620,9 +413,8 @@ private:
   int size_x_{-1}, size_y_{-1};
 
   std::unique_ptr<AStarPlanner> front_end_planner_; // Front-end planner
-  std::shared_ptr<DynamicVoronoi>  dyn_voro_; // dynamic voronoi object
+  std::map<int, std::shared_ptr<DynamicVoronoi>> dyn_voro_arr_; // array of voronoi objects mapped by height in units of cm
 
-  nav_msgs::OccupancyGrid occ_grid_;
   std::vector<size_t> occ_idx_; // Indices of all occupied cells
   std::vector<size_t> free_idx_; // Indices of all free cells
   std::vector<size_t> unknown_idx_; // Indices of all unknown cells
@@ -637,7 +429,6 @@ private:
   std::vector<bool> voro_map_; // Voronoi map
 
   nav_msgs::OccupancyGrid dist_occ_grid_; // Visualization of distance map in occupancy grid form
-  nav_msgs::OccupancyGrid voro_occ_grid_; // Visualization of voronoi map in occupancy grid form
 
 
   /* Debugging */

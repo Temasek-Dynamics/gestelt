@@ -13,10 +13,10 @@ class DynamicVoronoi {
 
 public:
   struct DynamicVoronoiParams{
-    double height{0.0};
     double resolution{0.1};
     double origin_x{0.0};
     double origin_y{0.0};
+    double origin_z{0.0};
   }; // struct DynamicVoronoiParams
 
 public:
@@ -26,10 +26,10 @@ public:
 
   DynamicVoronoi(const DynamicVoronoiParams& params)
   {
-    height_ = params.height;
     res_ = params.resolution;
     origin_x_ = params.origin_x;
     origin_y_ = params.origin_y;
+    origin_z_ = params.origin_z;
   }
 
   //! Initialization with an empty map
@@ -137,9 +137,17 @@ public:
   // Convert from position to index
   void idxToPos(const INTPOINT& grid_pos, DblPoint& map_pos);
 
-  // Get height of the map plane with respect to global origin
-  double getHeight() const {
-    return height_;
+
+  double getOriginX() const {
+    return origin_z_;
+  }
+
+  double getOriginY() const {
+    return origin_z_;
+  }
+
+  double getOriginZ() const {
+    return origin_z_;
   }
 
   double getSizeX() const {
@@ -162,7 +170,7 @@ private:
   std::vector<INTPOINT> lastObstacles;
 
   // maps
-  bool flip_y_{true};
+  bool flip_y_{false};
   int sizeY;
   int sizeX;
   dataCell** data;
@@ -178,11 +186,11 @@ private:
   //  dataCell** getData(){ return data; }
   int** alternativeDiagram;
 
-  double height_{0.0}; // Height offset of the voronoi map plane
   double res_{0.1}; // Resolution of the voronoi map 
 
   double origin_x_{0.0};
   double origin_y_{0.0};
+  double origin_z_{0.0};
 };
 
 

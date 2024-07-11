@@ -453,7 +453,7 @@ std::vector<Eigen::Vector3d> AStarPlanner::getClosedListVoronoi()
         Eigen::Vector3d map_3d_pos;
         map_3d_pos(0) = map_pos.x;
         map_3d_pos(1) = map_pos.y;
-        map_3d_pos(2) = dyn_voro_->getHeight();
+        map_3d_pos(2) = dyn_voro_->getOriginZ();
 
         closed_list_pos.push_back(map_3d_pos);
     }
@@ -521,7 +521,7 @@ void AStarPlanner::tracePathVoronoi(IntPoint final_node)
 
         map_3d_pos(0) = map_pos.x;
         map_3d_pos(1) = map_pos.y;
-        map_3d_pos(2) = dyn_voro_->getHeight();
+        map_3d_pos(2) = dyn_voro_->getOriginZ();
 
         path_pos_.push_back(map_3d_pos);
     }

@@ -767,6 +767,8 @@ void DynamicVoronoi::getVoroNeighbors(const INTPOINT& grid_pos, std::vector<INTP
 
 // Convert from index to position
 bool DynamicVoronoi::posToIdx(const DblPoint& map_pos, INTPOINT& grid_pos) {
+  std::cout << "Map pos: (" << map_pos.x << ", " << map_pos.y << ")" << std::endl;
+  
   grid_pos.x = (map_pos.x - origin_x_) / res_;
 
   if (flip_y_){
@@ -775,6 +777,8 @@ bool DynamicVoronoi::posToIdx(const DblPoint& map_pos, INTPOINT& grid_pos) {
   else {
     grid_pos.y = (map_pos.y - origin_y_) / res_;
   }
+
+  std::cout << "INTPOINT: (" << grid_pos.x << ", " << grid_pos.y << ")" << std::endl;
 
   if (!isInMap(grid_pos.x, grid_pos.y)){
     std::cout << "[DynamicVoronoi::posToIdx] (" << grid_pos.x << "," << grid_pos.y << ") not in map" << std::endl;

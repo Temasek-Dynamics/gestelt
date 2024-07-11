@@ -562,39 +562,31 @@ public:
 
     // Iterate through each occupied point
     for (const auto& pt : *pcd_layer){
-      double map_x = (pt.x - mp_.local_map_origin_(0))/getRes();
-      double map_y = (pt.y - mp_.local_map_origin_(1))/getRes();
-      // Convert from map coordinates to 1-D index
-      int idx = map_x  + map_y * mp_.local_map_num_voxels_(0);
-      // std::cout << "======= idx: " << idx << ", pt: (" << pt.x << ", " << pt.y << ")" << std::endl;
-      // if (idx >= mp_.local_map_num_voxels_(0) * mp_.local_map_num_voxels_(1) || idx < 0){
-      //   std::cout << "idx " << idx << " exceeded size "<< mp_.local_map_num_voxels_(0) * mp_.local_map_num_voxels_(1) << std::endl;
-      //   std::cout << "    Before origin offset: (" << pt.x << ", "<< pt.y << ")" << std::endl;
-      //   std::cout << "    After origin offset: (" << pt.x - mp_.local_map_origin_(0) << ", "<< pt.y - mp_.local_map_origin_(1) << ")" << std::endl;
-      //   std::cout << "    local_map_size: " << mp_.local_map_num_voxels_(0) << ", " << mp_.local_map_num_voxels_(1) << ")" << std::endl;
-      // }
-      bool_map_msg.map[idx] = true;
+      double map_x = (pt.x )/getRes();
+      double map_y = (pt.y)/getRes();
+
+      for(int x = map_x - mp_.inf_num_voxels_; x <= map_x + mp_.inf_num_voxels_; x++)
+      {
+        for(int y = map_y - mp_.inf_num_voxels_; y <= map_y + mp_.inf_num_voxels_; y++)
+        {
+          // Convert from map coordinates to 1-D index
+          int idx = x  + y * mp_.local_map_num_voxels_(0);
+
+          if (idx < 0 || idx >= bool_map_msg.map.size()){
+            continue;
+          }
+
+          // std::cout << "======= idx: " << idx << ", pt: (" << pt.x << ", " << pt.y << ")" << std::endl;
+          // if (idx >= mp_.local_map_num_voxels_(0) * mp_.local_map_num_voxels_(1) || idx < 0){
+          //   std::cout << "idx " << idx << " exceeded size "<< mp_.local_map_num_voxels_(0) * mp_.local_map_num_voxels_(1) << std::endl;
+          //   std::cout << "    Before origin offset: (" << pt.x << ", "<< pt.y << ")" << std::endl;
+          //   std::cout << "    After origin offset: (" << pt.x - mp_.local_map_origin_(0) << ", "<< pt.y - mp_.local_map_origin_(1) << ")" << std::endl;
+          //   std::cout << "    local_map_size: " << mp_.local_map_num_voxels_(0) << ", " << mp_.local_map_num_voxels_(1) << ")" << std::endl;
+          // }
+          bool_map_msg.map[idx] = true;
+        }
+      }
     }
-
-    // for (int i = 0; i < 25; i++){
-    //   int idx = i + (mp_.local_map_num_voxels_(1)/2.0)*mp_.local_map_num_voxels_(0);
-    //   bool_map_msg.map[idx] = true;
-    // }
-
-    // for (int i = 100; i < 200; i++){
-    //   int idx = i + (mp_.local_map_num_voxels_(1)/2.0)*mp_.local_map_num_voxels_(0);
-    //   bool_map_msg.map[idx] = true;
-    // }
-
-    // for (int j = 0; j < 25; j++){
-    //   int idx = 25 + (j)*mp_.local_map_num_voxels_(0);
-    //   bool_map_msg.map[idx] = true;
-    // }
-
-    // for (int j = 150; j < 200; j++){
-    //   int idx = 175 + (j)*mp_.local_map_num_voxels_(0);
-    //   bool_map_msg.map[idx] = true;
-    // }
 
     local_bool_map_pub_.publish(bool_map_msg);
 
@@ -647,7 +639,7 @@ private:
   double update_local_map_freq_{-1.0};  // Frequency to update local map
 
   /* Data structures for point clouds */
-  pcl::PointCloud<pcl::PointXYZ>::Ptr local_occ_map_pts_; // Occupancy map points formed by Bonxai probabilistic mapping
+  pcl::PointCloud<pcl::PointXYZ>::Ptr local_occ_map_pts_; // Occupancy map points formed by Bonxai probabilistic mapping (w.r.t local map origin)
   pcl::PointCloud<pcl::PointXYZ>::Ptr global_map_in_origin_;  // Point cloud global map in UAV Origin frame
 
   std::unique_ptr<BonxaiT> bonxai_map_; // Bonxai data structure 

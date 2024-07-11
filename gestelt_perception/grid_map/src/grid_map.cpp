@@ -219,7 +219,7 @@ void GridMap::updateLocalMapTimerCB(const ros::TimerEvent & /*event*/)
   // std::cout << "before updateLocalMapTimerCB" << std::endl;
   
   updateLocalMap();
-  sliceMap(0.5);
+  sliceMap(1.0);
   
   // std::cout << "after updateLocalMapTimerCB" << std::endl;
 }
@@ -345,23 +345,26 @@ void GridMap::updateLocalMap(){
   // Clear existing local map
   local_occ_map_pts_.reset(new pcl::PointCloud<pcl::PointXYZ>());
 
-
-  // local_occ_map_pts_->points.resize(occ_coords.size());
-  // size_t idx = 0;
-
   for (auto& coord : occ_coords) // For each occupied coordinate
   {
     // obs_gbl_pos: global obstacle pos
     // Check if the obstacle within local map bounds
     Bonxai::Point3D obs_gbl_pos_pt3d = bonxai_map_->grid().coordToPos(coord);
 
+    // obs_gbl_pos: With respect to (0,0,0) of world frame
     Eigen::Vector3d obs_gbl_pos(obs_gbl_pos_pt3d.x, obs_gbl_pos_pt3d.y, obs_gbl_pos_pt3d.z);
     if (!isInLocalMap(obs_gbl_pos)){ // Point is outside the local map
       continue;
     }
 
-    // local_occ_map_pts_->points[idx] = pcl::PointXYZ(obs_gbl_pos_pt3d.x, obs_gbl_pos_pt3d.y, obs_gbl_pos_pt3d.z);
-    local_occ_map_pts_->push_back(pcl::PointXYZ(obs_gbl_pos_pt3d.x, obs_gbl_pos_pt3d.y, obs_gbl_pos_pt3d.z));
+    // obs_lcl_pos: With respect to local origin
+    Eigen::Vector3d obs_lcl_pos(obs_gbl_pos_pt3d.x - mp_.local_map_origin_(0), 
+                                obs_gbl_pos_pt3d.y - mp_.local_map_origin_(1), 
+                                obs_gbl_pos_pt3d.z - mp_.local_map_origin_(2));
+    
+    local_occ_map_pts_->push_back(pcl::PointXYZ(obs_lcl_pos(0), obs_lcl_pos(1), obs_lcl_pos(2)));
+
+    // local_occ_map_pts_->push_back(pcl::PointXYZ(obs_gbl_pos(0), obs_gbl_pos(1), obs_gbl_pos(2)));
 
     // Convert to voxel index. This is relative to mp_.local_map_origin_
     Eigen::Vector3i vox_idx_3d = ((obs_gbl_pos - getLocalOrigin()) / getRes() - Eigen::Vector3d::Constant(0.5) ).cast<int>() ; 
@@ -387,7 +390,6 @@ void GridMap::updateLocalMap(){
       }
     }
 
-    // idx++;
   }
 
   // tm_kdtree_build_.start();
