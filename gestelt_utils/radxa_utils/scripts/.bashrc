@@ -154,4 +154,4 @@ alias connect_oppenheimer="sudo nmcli dev wifi connect \"oppenheimer\""
 
 # gestelt container operations 
 alias update_gestelt_container="docker pull johntgz95/radxa-gestelt:latest"
-alias start_gestelt_container="docker run -it --rm --network host --privileged johntgz95/radxa-gestelt:latest"
+alias start_gestelt_container="docker run -it --network host --privileged johntgz95/radxa-gestelt:latest"
