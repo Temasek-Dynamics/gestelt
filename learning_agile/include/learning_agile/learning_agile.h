@@ -58,8 +58,9 @@ class LearningAgile{
         void solver_request();
 
         double* getcontrolOpt() { return control_opt_; };
-        bool Update();
-
+        void Update();
+        typedef std::shared_ptr<LearningAgile> Ptr;
+        bool NO_SOLUTION_FLAG_=false;
     private:
     ros::Subscriber drone_pose_sub_;
     ros::Subscriber drone_twist_sub_;
@@ -109,7 +110,7 @@ class LearningAgile{
     // Eigen::VectorXd control_i_opt_;
     double control_opt_[4] = {0,0,0,0};
     Eigen::MatrixXd control_traj_opt_;
-    bool NO_SOLUTION_FLAG_=false;
+    
     bool start_soft_RT_mpc_timer_=false;
 
     // acados param

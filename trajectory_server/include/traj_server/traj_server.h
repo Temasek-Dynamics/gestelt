@@ -393,6 +393,8 @@ private: // Class Methods
   {
     return server_state_;
   }
+  
+  LearningAgile::Ptr learning_agile_;
 
 private: // Member variables
   int drone_id_{0}; // ID of drone being commanded by trajectory server instance
@@ -446,10 +448,6 @@ private: // Member variables
   // Last received mission PVAJ (position, velocity, acceleration, Jerk)
   Eigen::Vector3d last_mission_pos_{0.0, 0.0, 0.0}, last_mission_vel_{0.0, 0.0, 0.0};
   Eigen::Vector3d last_mission_acc_{0.0, 0.0, 0.0}, last_mission_jerk_{0.0, 0.0, 0.0};
-
-  // last MPC control input
-  std::shared_ptr<LearningAgile> mpc_controller_;
-  bool MPC_NO_SOLUTION_FLAG_=true;
   Eigen::Vector3d last_mission_bodyrates_{0.0, 0.0, 0.0}; // Last received mission body rates
   double last_mission_thrust_{0.0}; // Last received mission thrust
 

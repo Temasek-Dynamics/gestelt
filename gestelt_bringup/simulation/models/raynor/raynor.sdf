@@ -464,7 +464,7 @@
       <!-- momentConstant (units of [m]) is used to calculate rotor torque magnitude -->
       <momentConstant>8.8e-3</momentConstant>
       <!-- rotorDragCoefficient accounts for the H-force due to the perpendicular air velocity, resulting in drag -->
-      <rotorDragCoefficient>8.06428e-05</rotorDragCoefficient>
+      <rotorDragCoefficient>2.419284e-05</rotorDragCoefficient><!--8.06428e-05-->
       <!-- rollingMomentCoefficient accounts for torque from the motors themselves -->
       <rollingMomentCoefficient>1e-06</rollingMomentCoefficient>
       <rotorVelocitySlowdownSim>10</rotorVelocitySlowdownSim>
@@ -482,7 +482,7 @@
       <maxRotVelocity>3000</maxRotVelocity>
       <motorConstant>2.9265e-07</motorConstant>
       <momentConstant>8.8e-3</momentConstant>
-      <rotorDragCoefficient>8.06428e-05</rotorDragCoefficient>
+      <rotorDragCoefficient>2.419284e-05</rotorDragCoefficient>
       <rollingMomentCoefficient>1e-06</rollingMomentCoefficient>
       <rotorVelocitySlowdownSim>10</rotorVelocitySlowdownSim>
       <commandSubTopic>/gazebo/command/motor_speed</commandSubTopic>
@@ -499,7 +499,7 @@
       <maxRotVelocity>3000</maxRotVelocity>
       <motorConstant>2.9265e-07</motorConstant>
       <momentConstant>8.8e-3</momentConstant>
-      <rotorDragCoefficient>8.06428e-05</rotorDragCoefficient>
+      <rotorDragCoefficient>2.419284e-05</rotorDragCoefficient>
       <rollingMomentCoefficient>1e-06</rollingMomentCoefficient>
       <rotorVelocitySlowdownSim>10</rotorVelocitySlowdownSim>
       <commandSubTopic>/gazebo/command/motor_speed</commandSubTopic>
@@ -516,7 +516,7 @@
       <maxRotVelocity>3000</maxRotVelocity>
       <motorConstant>2.9265e-07</motorConstant>
       <momentConstant>8.8e-3</momentConstant>
-      <rotorDragCoefficient>8.06428e-05</rotorDragCoefficient>
+      <rotorDragCoefficient>2.419284e-05</rotorDragCoefficient>
       <rollingMomentCoefficient>1e-06</rollingMomentCoefficient>
       <rotorVelocitySlowdownSim>10</rotorVelocitySlowdownSim>
       <commandSubTopic>/gazebo/command/motor_speed</commandSubTopic>

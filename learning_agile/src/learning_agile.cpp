@@ -13,7 +13,8 @@ void LearningAgile::init(ros::NodeHandle& nh)
     /////////////////
     /* Publishers */
     /////////////////
-    next_attitude_setpoint_pub_ = nh.advertise<mavros_msgs::AttitudeTarget>("/learning_agile_agent/soft_RT_mpc_attitude", 1);
+    next_attitude_setpoint_pub_ = nh.advertise<mavros_msgs::AttitudeTarget>("/mavros/setpoint_raw/attitude", 1);
+
     // gate_centroid_pub_ = nh.advertise<geometry_msgs::PoseStamped>("/learning_agile_agent/gate_centroid", 1);
 
     // traverse_time_pub_ = nh.advertise<std_msgs::Float32>>("/learning_agile_agent/traverse_time", 10);
@@ -157,7 +158,7 @@ void LearningAgile::setpoint_timer_cb(const ros::TimerEvent &e)
     {
         if (NO_SOLUTION_FLAG_)
         {
-            // ROS_WARN("No solution found for the current MPC problem");
+            // ROS_WARN("No solution found for the current MPC problem,will send the current position as the setpoint");
             return;
         }
         else
@@ -229,14 +230,38 @@ void LearningAgile::mission_start_cb(const gestelt_msgs::GoalsPtr &msg)
 // inside the traj_server, there will be no individual learning_agile node
 // input: current state, desired goal state, desired traverse point, desired traverse quaternion
 // output: control input
-bool LearningAgile::Update()
+void LearningAgile::Update()
 {   
+    std::lock_guard<std::mutex> cmd_guard(cmd_mutex_);
+    auto start = std::chrono::high_resolution_clock::now();
 
-    
     if (start_soft_RT_mpc_timer_==true)
-    {   
+    {
+        if (NO_SOLUTION_FLAG_)
+        {
+            ROS_WARN("No solution found for the current MPC problem,will send the current position as the setpoint");
+            return;
+        }
+        else
+        {
         solver_request();
+        mavros_msgs::AttitudeTarget mpc_cmd;
+        mpc_cmd.header.stamp = ros::Time::now();
+        mpc_cmd.header.frame_id = origin_frame_;
+        mpc_cmd.type_mask = mavros_msgs::AttitudeTarget::IGNORE_ATTITUDE; // Ignore orientation
+        mpc_cmd.thrust = control_opt_[0]/(2.1334185*4);
+        mpc_cmd.body_rate.x = control_opt_[1];
+        mpc_cmd.body_rate.y = control_opt_[2];
+        mpc_cmd.body_rate.z = control_opt_[3];
+        next_attitude_setpoint_pub_.publish(mpc_cmd);
+
+        auto end = std::chrono::high_resolution_clock::now();
+
+        double preloop_dur = std::chrono::duration_cast<std::chrono::duration<double>>(end - start).count();
         
+        std_msgs::Float64 mpc_runtime;
+        mpc_runtime.data = preloop_dur;
+        mpc_runtime_pub_.publish(mpc_runtime);
+        }  
     }  
-    return NO_SOLUTION_FLAG_;
 }

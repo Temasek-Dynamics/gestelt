@@ -48,10 +48,6 @@ void TrajServer::init(ros::NodeHandle& nh)
   // Subscription to planner
   planner_hb_sub_ = nh.subscribe("/planner/heartbeat", 10, &TrajServer::plannerHeartbeatCb, this);
  
-
-  //MPC control soft real time cmd subscriber
-  mpc_soft_RT_cmd_sub_ = nh.subscribe("/learning_agile_agent/soft_RT_mpc_attitude", 1, &TrajServer::MPCControlCb, this);
-  
   
   // Subscription to UAV (via MavROS)
   uav_state_sub_ = nh.subscribe<mavros_msgs::State>("/mavros/state", 10, &TrajServer::UAVStateCb, this);
@@ -60,10 +56,7 @@ void TrajServer::init(ros::NodeHandle& nh)
 
   /////////////////
   /* Publishers */
-  /////////////////
-  //MPC control hard real time cmd publisher
-  mpc_hard_RT_cmd_pub_ = nh.advertise<mavros_msgs::AttitudeTarget>("/mavros/setpoint_raw/attitude", 1);
-  
+  /////////////////  
   pos_cmd_raw_pub_ = nh.advertise<mavros_msgs::PositionTarget>("/mavros/setpoint_raw/local", 50);
   uav_path_pub_ = nh.advertise<nav_msgs::Path>("/uav_path_trajectory", 50);
   server_state_pub_ = nh.advertise<gestelt_msgs::CommanderState>("/traj_server/state", 50);
@@ -92,7 +85,9 @@ void TrajServer::init(ros::NodeHandle& nh)
 
   logInfo("Initialized");
 
-  mpc_controller_=std::make_shared<LearningAgile>();
+  // load the mpc class
+  learning_agile_.reset(new LearningAgile());
+  learning_agile_->init(nh);
 }
 
 /* Subscriber Callbacks */
@@ -237,9 +232,9 @@ void TrajServer::execTrajTimerCb(const ros::TimerEvent &e)
       break;
     
     case ServerState::MISSION:
-      // UpdateMPC();
-      if (!isExecutingMission()){
-      // if (MPC_NO_SOLUTION_FLAG_){
+      
+      if (!isExecutingMission() || learning_agile_->NO_SOLUTION_FLAG_){
+      
         logInfoThrottled("Waiting for mission", 5.0);
 
         // this is critical for the HOVER->MISSION transition, keep it!
@@ -256,7 +251,8 @@ void TrajServer::execTrajTimerCb(const ros::TimerEvent &e)
         }
         // ROS_INFO("final ServerState::MISSION,mission_vel: %f, %f, %f", last_mission_vel_(0), last_mission_vel_(1), last_mission_vel_(2));
         
-        execMPCControl();
+        //update MPC and publish the collective thrust and bodyrates
+        learning_agile_->Update();
         
       }
       break;
@@ -267,22 +263,6 @@ void TrajServer::execTrajTimerCb(const ros::TimerEvent &e)
       break;
   }
 }
-
-
-void TrajServer::MPCControlCb(const mavros_msgs::AttitudeTarget::ConstPtr &msg)
-{ 
- 
-
-  // std::lock_guard<std::mutex> cmd_guard(cmd_mutex_);
-  last_traj_msg_time_ = ros::Time::now();
-  last_mission_thrust_ = msg->thrust;
-  last_mission_bodyrates_(0) = msg->body_rate.x;
-  last_mission_bodyrates_(1) = msg->body_rate.y;
-  last_mission_bodyrates_(2) = msg->body_rate.z;
-
-  
-}
-
 
 
 void TrajServer::tickServerStateTimerCb(const ros::TimerEvent &e)
@@ -589,36 +569,6 @@ void TrajServer::execMission()
 
 
 
-}
-
-// try to merge the learning_agile.cpp to here
-void TrajServer::UpdateMPC()
-{
-    MPC_NO_SOLUTION_FLAG_=mpc_controller_->Update();
-    
-}
-void TrajServer::execMPCControl()
-{
-  // std::lock_guard<std::mutex> cmd_guard(cmd_mutex_);
-  mavros_msgs::AttitudeTarget mpc_cmd;
-  mpc_cmd.header.stamp = ros::Time::now();
-  mpc_cmd.header.frame_id = origin_frame_;
-  mpc_cmd.type_mask = IGNORE_ATTITUDE; // Ignore orientation
-  
-  // double* control_opt;
-  // control_opt=mpc_controller_->getcontrolOpt();
-
-  // last_mission_thrust_=control_opt[0]/(2.1334185*4);
-  // last_mission_bodyrates_(0)=control_opt[1];
-  // last_mission_bodyrates_(1)=control_opt[2];
-  // last_mission_bodyrates_(2)=control_opt[3];
-
-  mpc_cmd.thrust = last_mission_thrust_;
-  mpc_cmd.body_rate.x = last_mission_bodyrates_(0);
-  mpc_cmd.body_rate.y = last_mission_bodyrates_(1);
-  mpc_cmd.body_rate.z = last_mission_bodyrates_(2);
-  mpc_hard_RT_cmd_pub_.publish(mpc_cmd);
-  
 }
 
 

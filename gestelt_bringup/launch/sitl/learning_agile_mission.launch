@@ -12,8 +12,8 @@
   </node>
    -->
   <!--cpp node-->
-  <node pkg="learning_agile" name="learning_agile_node" type="learning_agile_node" output="screen">  
-  </node>
+  <!-- <node pkg="learning_agile" name="learning_agile_node" type="learning_agile_node" output="screen">  
+  </node> -->
 
   
   <!--for running on the Radxa, This record does not start, 
