@@ -25,7 +25,7 @@ void LearningAgile::init(ros::NodeHandle& nh)
     /* Timers */
     /////////////////
     double pub_freq=100;
-    soft_RT_mpc_timer_ = nh.createTimer(ros::Duration(1/pub_freq), &LearningAgile::setpoint_timer_cb, this);
+    // soft_RT_mpc_timer_ = nh.createTimer(ros::Duration(1/pub_freq), &LearningAgile::setpoint_timer_cb, this);
     
     solver_loading();
     
@@ -240,7 +240,6 @@ void LearningAgile::Update()
         if (NO_SOLUTION_FLAG_)
         {
             ROS_WARN("No solution found for the current MPC problem,will send the current position as the setpoint");
-            return;
         }
         else
         {
