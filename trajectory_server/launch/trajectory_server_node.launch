@@ -11,16 +11,23 @@
     <arg name="pose_topic" default="/mavros/local_position/pose" />
     <arg name="drone_origin_frame" default="world" />
     
+    <!--load from the param config-->
+    <rosparam file="$(find gestelt_bringup)/config/learning_agile_mission.yaml" command="load"/>
+    
     <!-- rosBag file path -->
     <arg name="bag_file_prefix" default="~/gestelt/data/flight_data" />
     
     <!-- Trajectory server -->
+
     <node pkg="trajectory_server" name="trajectory_server" type="traj_server_node" output="screen">
+        
+       
+
         <param name="drone_id" value="$(arg drone_id)"/>
         <param name="origin_frame" value="$(arg drone_origin_frame)"/>
-
+        
         <!-- Operational params -->
-        <param name="traj_server/takeoff_height" value="1.2" type="double"/>
+        <param name="traj_server/takeoff_height" value="$(arg trajectory_server/takeoff_height)" type="double"/>
         <param name="traj_server/drone_yaw" value="0.0" type="double"/>
         <!-- Debug display params -->
         <param name="traj_server/uav_pose_history_size" value="5000" type="int"/>
@@ -60,7 +67,7 @@
         <!-- <param name="traj_server/pub_cmd_freq" value="25.0" type="double"/>
         <param name="traj_server/state_machine_tick_freq" value="50.0" type="double"/>
         <param name="traj_server/debug_freq" value="10.0" type="double"/> -->
-
+        
     </node>
     
     <!-- <node name="record_bag" pkg="rosbag" type="record" args="-a -d 60" output="screen">

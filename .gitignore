@@ -57,3 +57,4 @@ CATKIN_IGNORE
 *.bag.active
 *prof
 *.png
+.history

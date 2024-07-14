@@ -1,8 +1,0 @@
-<launch>
-  
-
-  <node pkg="learning_agile" name="learning_agile_node" type="learning_agile_node">  
-  </node>
-    
-
-</launch>

@@ -8,13 +8,19 @@ from std_msgs.msg import Int8, Bool
 import math
 import time
 import tf
-
+from tf.transformations import quaternion_from_euler
 
 # running time statistics
 import cProfile
 
 # get ros params from rosparam server
 is_simulation=rospy.get_param('mission/is_simulation', False)
+gate_position=rospy.get_param('mission/gate_position', [0.0,0.0,1.2])
+gate_ori_euler=rospy.get_param('mission/gate_ori_euler', [0.0,0.0,0])
+
+goal_position=rospy.get_param('mission/goal_position', [0.0,0.0,1.2])
+goal_ori_euler=rospy.get_param('mission/goal_ori_euler', [0,0,0])
+
 
 # Publisher of server events to trigger change of states for trajectory server 
 server_event_pub = rospy.Publisher('/traj_server/command', CommanderCommand, queue_size=10)
@@ -85,19 +91,20 @@ def transform_map_to_world():
     else:
         return (0.0,0.0,0.0),(0.0,0.0,0.0,1.0)
 
-def create_pose(x, y, z):
+def create_pose(position,euler_angles):
     pose = Pose()
 
     # transform waypoints from map to world
     trans,rot=transform_map_to_world()
-    pose.position.x = x+trans[0]
-    pose.position.y = y+trans[1]
-    pose.position.z = z+trans[2]
-
-    pose.orientation.x = 0
-    pose.orientation.y = 0
-    pose.orientation.z = 0
-    pose.orientation.w = 1
+    pose.position.x = position[0]+trans[0]
+    pose.position.y = position[1]+trans[1]
+    pose.position.z = position[2]+trans[2]
+    
+    quat=quaternion_from_euler(euler_angles[0],euler_angles[1],euler_angles[2])
+    pose.orientation.x = quat[0]
+    pose.orientation.y = quat[1]
+    pose.orientation.z = quat[2]
+    pose.orientation.w = quat[3]
 
     return pose
 def create_accel(acc_x,acc_y,acc_z):
@@ -199,7 +206,7 @@ def main():
     # world frame is the initial position of the drone
     # map frame is the origin of the map
     # waypoints are under the map frame, will be transformed to world frame
-    
+    #------------------------------------ for any trajectory:-------------------------------------------#
     # gate position
     # waypoints.append(create_pose(1.2,-0.0,1.5)) # 3.0,2.0,3   2.0,-0.0,1.5
     
@@ -207,11 +214,11 @@ def main():
     # waypoints.append(create_pose(-0.0,-1.8,1.4))# 5.0,2.0,3  -2.0,-1.8,1.4
 
     #------------------------------------ for hovering test:-------------------------------------------#
-    # gate position
-    waypoints.append(create_pose(-0.0,0.0,1.2)) # 3.0,2.0,3   2.0,-0.0,1.5
+    # # gate position
+    waypoints.append(create_pose(gate_position,gate_ori_euler)) # 3.0,2.0,3   2.0,-0.0,1.5
 
-    # end position
-    waypoints.append(create_pose(-0.0,0.0,1.2)) # 3.0,2.0,3   2.0,-0.0,1.5
+    # # end position
+    waypoints.append(create_pose(goal_position,goal_ori_euler)) # 3.0,2.0,3   2.0,-0.0,1.5
 
     #--------------------------------------------------------------------------------------------------#
     # the number of accelerations must be equal to the number of waypoints

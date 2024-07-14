@@ -1,0 +1,16 @@
+# mission poses
+mission:
+  gate_position: [1.0, 1.0, 1.2]
+  gate_ori_euler: [0.0, 0.0, 0.0]
+
+  goal_position: [2.0, 0.0, 1.2]
+  mission/goal_ori_euler: [0.0, 0.0, 0.0]
+
+
+# flight mission
+trajectory_server:
+  takeoff_height: 3.2
+
+# mpc cost weights
+learning_agile:
+  max_traverse_weight: 70

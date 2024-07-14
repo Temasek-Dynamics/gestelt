@@ -3,6 +3,11 @@
 void LearningAgile::init(ros::NodeHandle& nh)
 {   
     /////////////////
+    /*parameters*/
+    /////////////////
+    nh.param("learning_agile/max_traverse_weight", max_tra_w_, 0.0);
+
+    /////////////////
     /* Subscribers */
     /////////////////
     drone_pose_sub_= nh.subscribe("/mavros/local_position/pose", 1, &LearningAgile::drone_state_pose_cb, this);
