@@ -13,4 +13,7 @@ traj_server:
 
 # mpc cost weights
 learning_agile:
-  max_traverse_weight: 70
+  max_traverse_weight: 0
+  traverse_time: 1
+  no_solution_flag_t_thresh_: 0.02
+  single_motor_max_thrust: 2.1334185 #N

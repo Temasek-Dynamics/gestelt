@@ -61,6 +61,7 @@ class LearningAgile{
         void Update();
         typedef std::shared_ptr<LearningAgile> Ptr;
         bool NO_SOLUTION_FLAG_=false;
+        bool MISSION_LOADED_FLAG_=false;
     private:
     ros::Subscriber drone_pose_sub_;
     ros::Subscriber drone_twist_sub_;
@@ -81,8 +82,14 @@ class LearningAgile{
     // desired traverse state
     Eigen::Vector3d des_trav_point_={0,0,0};
     Eigen::Vector4d des_trav_quat_={1,0,0,0};
-    double t_tra_=0.1;
 
+    // time setting
+    double t_tra_abs_=10;
+    std::chrono::high_resolution_clock::time_point mission_start_time_;
+    std::chrono::high_resolution_clock::time_point last_request_time_;
+    double pub_freq=100;
+    double no_solution_flag_t_thresh_=0.02;
+    // start point
     Eigen::Vector3d start_point_={0,0,0};
     
     // desired goal state
@@ -102,7 +109,8 @@ class LearningAgile{
     double max_tra_w_=0;
     Eigen::Vector4d current_input_={0,0,0,0};
     Eigen::Vector4d last_input_={0,0,0,0};
-
+    double single_motor_max_thrust_=2.1334185;
+    
     //MPC output
     Eigen::VectorXd state_i_opt_;
     Eigen::MatrixXd state_traj_opt_;
@@ -111,8 +119,6 @@ class LearningAgile{
     double control_opt_[4] = {0,0,0,0};
     Eigen::MatrixXd control_traj_opt_;
     
-    bool start_soft_RT_mpc_timer_=false;
-
     // acados param
     int status; // acados operation state
     

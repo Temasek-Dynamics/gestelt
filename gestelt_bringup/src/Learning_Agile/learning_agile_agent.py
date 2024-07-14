@@ -129,7 +129,7 @@ class LearningAgileAgent():
                                 start,
                                 end,
                                 gate_center=np.array([0,0,1.5]),
-                                gate_pose=np.array([0,0,0]),
+                                gate_ori_euler=np.array([0,0,0]),
                                 t_tra_abs=1,
                                 max_tra_w=0,
                                 ):
@@ -144,7 +144,7 @@ class LearningAgileAgent():
         self.final_point = end
 
         self.gate_center = gate_center
-        self.gate_pose = gate_pose
+        self.gate_ori_euler = gate_ori_euler
         self.t_tra_abs =t_tra_abs
         self.max_tra_w=max_tra_w
 
@@ -241,7 +241,7 @@ class LearningAgileAgent():
 
         angle=-0.785# rad 0.707
         rod_ang=np.tan(angle/2)
-        out[3:6]=self.gate_pose  
+        out[3:6]=self.gate_ori_euler  
         out[6]=self.t_tra_abs-self.i*0.01
         # end FIXME
 
@@ -314,7 +314,7 @@ class LearningAgileAgent():
                 # FIXME, manually set the traversal time and pose
                 out=np.zeros(7)
                 out[0:3]=self.gate_center
-                out[3:6]=np.array([0,-0.7,0])
+                out[3:6]=self.gate_ori_euler
                 out[6]=self.t_tra_abs-self.i*self.dyn_step
                 # end FIXME
 
@@ -384,17 +384,17 @@ def main():
     # learing_agile_agent.receive_mission_states(start=np.array([0,1.8,1.4]),
     #                                             end=np.array([0,-1.8,1.4]),
     #                                             gate_center=np.array([1.2,0,1.4]),
-    #                                             gate_pose=np.array([0,-0.707/2,0]),
+    #                                             gate_ori_euler=np.array([0,-0.707/2,0]),
     #                                             t_tra_abs=1,
     #                                             max_tra_w=60)
 
     #------------------------------python hover test--------------------------------------#
     learing_agile_agent.receive_mission_states(start=np.array([0,1.8,1.4]),
-                                                end=np.array([0,1.8,1.4]),
-                                                gate_center=np.array([0,1.8,1.4]),
-                                                gate_pose=np.array([0,0,0]),
+                                                end=np.array([3,1.8,1.4]),
+                                                gate_center=np.array([1,3.8,1.4]),
+                                                gate_ori_euler=np.array([0,0,0]),
                                                 t_tra_abs=1,
-                                                max_tra_w=0)
+                                                max_tra_w=70)
 
     # #------------------------------------------------------------------------------#
     # problem definition

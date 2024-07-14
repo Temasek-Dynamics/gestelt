@@ -233,7 +233,7 @@ void TrajServer::execTrajTimerCb(const ros::TimerEvent &e)
     
     case ServerState::MISSION:
       
-      if (learning_agile_->NO_SOLUTION_FLAG_){
+      if (learning_agile_->NO_SOLUTION_FLAG_ || !learning_agile_->MISSION_LOADED_FLAG_){
       
         logInfoThrottled("Waiting for mission", 5.0);
 
@@ -251,7 +251,7 @@ void TrajServer::execTrajTimerCb(const ros::TimerEvent &e)
         }
         // ROS_INFO("final ServerState::MISSION,mission_vel: %f, %f, %f", last_mission_vel_(0), last_mission_vel_(1), last_mission_vel_(2));
         
-        //update MPC and publish the collective thrust and bodyrates
+        //update MPC and publish the collective thrust and body rates
         learning_agile_->Update();
       }
       break;

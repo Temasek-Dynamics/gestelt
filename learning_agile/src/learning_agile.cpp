@@ -6,7 +6,10 @@ void LearningAgile::init(ros::NodeHandle& nh)
     /*parameters*/
     /////////////////
     nh.param("learning_agile/max_traverse_weight", max_tra_w_, 0.0);
-
+    nh.param("learning_agile/traverse_time", t_tra_abs_, 10.0);
+    nh.param("learning_agile/no_solution_flag_t_thresh", no_solution_flag_t_thresh_, 0.02);
+    nh.param("single_motor_max_thrust", single_motor_max_thrust_, 2.1334185);
+    
     /////////////////
     /* Subscribers */
     /////////////////
@@ -26,12 +29,7 @@ void LearningAgile::init(ros::NodeHandle& nh)
     mpc_runtime_pub_ = nh.advertise<std_msgs::Float64>("/learning_agile_agent/callback_runtime", 10);
     current_pred_traj_pub_ = nh.advertise<geometry_msgs::PoseArray>("/learning_agile_agent/current_pred_traj", 10);
 
-    /////////////////
-    /* Timers */
-    /////////////////
-    double pub_freq=100;
-    // soft_RT_mpc_timer_ = nh.createTimer(ros::Duration(1/pub_freq), &LearningAgile::setpoint_timer_cb, this);
-    
+
     solver_loading();
     
 }   
@@ -68,11 +66,29 @@ void LearningAgile::solver_loading()
 void LearningAgile::solver_request(){
     
     ocp_nlp_out_set(nlp_config, nlp_dims, nlp_out, n_nodes_,"x", des_goal_state_.data());
-
+    
+    
+    auto current_time = std::chrono::high_resolution_clock::now();
+    double request_gap = std::chrono::duration_cast<std::chrono::duration<double>>(current_time - last_request_time_).count();
+    // ROS_INFO("request gap is %f", request_gap);
+    
+    // if two requests gap is too long, emergency stop
+    if (MISSION_LOADED_FLAG_ && request_gap > no_solution_flag_t_thresh_)
+    {
+        NO_SOLUTION_FLAG_=true;
+        ROS_INFO("the request period is too long, emergency stop");
+    }
+    
+    //t_tra: time to the traverse point relative to the current time
+    //t_tra_abs_: absolute time to the traverse point, w.r.t the mission start time
+    double mission_t_progress= std::chrono::duration_cast<std::chrono::duration<double>>(current_time - mission_start_time_).count();
+    double t_tra=t_tra_abs_-mission_t_progress;   
+    // ROS_INFO("t_tra is %f", t_tra);
+    
     for (int i = 0; i < n_nodes_; i++)
     {
         current_input_=last_input_;
-        double varying_trav_weight = max_tra_w_ * std::exp(-10 * std::pow(dt_ * i - t_tra_, 2));
+        double varying_trav_weight = max_tra_w_ * std::exp(-10 * std::pow(dt_ * i - t_tra, 2));
 
         // set the external parameters for the solver
         // desired goal state, current input, desired traverse pose, varying traverse weight
@@ -151,44 +167,9 @@ void LearningAgile::solver_request(){
         // ROS_INFO("HAVE THE SOLUTION");
 
     }
+    last_request_time_=current_time;
 }
 
-void LearningAgile::setpoint_timer_cb(const ros::TimerEvent &e)
-{   
-
-    std::lock_guard<std::mutex> cmd_guard(cmd_mutex_);
-    auto start = std::chrono::high_resolution_clock::now();
-
-    if (start_soft_RT_mpc_timer_==true)
-    {
-        if (NO_SOLUTION_FLAG_)
-        {
-            // ROS_WARN("No solution found for the current MPC problem,will send the current position as the setpoint");
-            return;
-        }
-        else
-        {
-        solver_request();
-        mavros_msgs::AttitudeTarget mpc_cmd;
-        mpc_cmd.header.stamp = ros::Time::now();
-        mpc_cmd.header.frame_id = origin_frame_;
-        mpc_cmd.type_mask = mavros_msgs::AttitudeTarget::IGNORE_ATTITUDE; // Ignore orientation
-        mpc_cmd.thrust = control_opt_[0]/(2.1334185*4);
-        mpc_cmd.body_rate.x = control_opt_[1];
-        mpc_cmd.body_rate.y = control_opt_[2];
-        mpc_cmd.body_rate.z = control_opt_[3];
-        next_attitude_setpoint_pub_.publish(mpc_cmd);
-
-        auto end = std::chrono::high_resolution_clock::now();
-
-        double preloop_dur = std::chrono::duration_cast<std::chrono::duration<double>>(end - start).count();
-        
-        std_msgs::Float64 mpc_runtime;
-        mpc_runtime.data = preloop_dur;
-        mpc_runtime_pub_.publish(mpc_runtime);
-        }  
-    }  
-}
 
 void LearningAgile::drone_state_pose_cb(const geometry_msgs::PoseStamped::ConstPtr& msg)
 {
@@ -226,8 +207,9 @@ void LearningAgile::mission_start_cb(const gestelt_msgs::GoalsPtr &msg)
     des_goal_state_.segment(3,3) = des_goal_vel_;
     des_goal_state_.segment(6,4) = des_goal_quat_;
 
-    start_soft_RT_mpc_timer_=true;
-    
+    MISSION_LOADED_FLAG_=true;
+    mission_start_time_= std::chrono::high_resolution_clock::now();
+    last_request_time_=mission_start_time_;
 }
 
 
@@ -239,11 +221,13 @@ void LearningAgile::Update()
 {   
     std::lock_guard<std::mutex> cmd_guard(cmd_mutex_);
     auto start = std::chrono::high_resolution_clock::now();
+    
 
-    if (start_soft_RT_mpc_timer_==true)
+    if (MISSION_LOADED_FLAG_==true)
     {
         if (NO_SOLUTION_FLAG_)
-        {
+        {   
+            // traj server will send the current position as the setpoint
             ROS_WARN("No solution found for the current MPC problem,will send the current position as the setpoint");
         }
         else
@@ -253,7 +237,7 @@ void LearningAgile::Update()
         mpc_cmd.header.stamp = ros::Time::now();
         mpc_cmd.header.frame_id = origin_frame_;
         mpc_cmd.type_mask = mavros_msgs::AttitudeTarget::IGNORE_ATTITUDE; // Ignore orientation
-        mpc_cmd.thrust = control_opt_[0]/(2.1334185*4);
+        mpc_cmd.thrust = control_opt_[0]/(single_motor_max_thrust_*4);
         mpc_cmd.body_rate.x = control_opt_[1];
         mpc_cmd.body_rate.y = control_opt_[2];
         mpc_cmd.body_rate.z = control_opt_[3];
@@ -268,4 +252,9 @@ void LearningAgile::Update()
         mpc_runtime_pub_.publish(mpc_runtime);
         }  
     }  
+    else
+    {
+        // ROS_WARN("No mission loaded, will send the hover setpoint");
+        NO_SOLUTION_FLAG_=true;
+    }
 }
