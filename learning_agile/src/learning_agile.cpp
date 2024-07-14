@@ -8,7 +8,8 @@ void LearningAgile::init(ros::NodeHandle& nh)
     nh.param("learning_agile/max_traverse_weight", max_tra_w_, 0.0);
     nh.param("learning_agile/traverse_time", t_tra_abs_, 10.0);
     nh.param("learning_agile/no_solution_flag_t_thresh", no_solution_flag_t_thresh_, 0.02);
-    nh.param("single_motor_max_thrust", single_motor_max_thrust_, 2.1334185);
+    nh.param("learning_agile/single_motor_max_thrust", single_motor_max_thrust_, 2.1334185);
+    nh.param("learning_agile/pred_traj_vis", pred_traj_vis_, false);
     
     /////////////////
     /* Subscribers */
@@ -31,7 +32,6 @@ void LearningAgile::init(ros::NodeHandle& nh)
 
 
     solver_loading();
-    
 }   
 
 void LearningAgile::solver_loading()
@@ -58,8 +58,7 @@ void LearningAgile::solver_loading()
     n_x_ = *nlp_dims->nx;
     n_u_ = *nlp_dims->nu;
     ROS_INFO("time horizion is %d, with state %d and input %d \n", n_nodes_, n_x_, n_u_);
-    state_traj_opt_=Eigen::MatrixXd::Zero(n_nodes_,4);
-    control_traj_opt_=Eigen::MatrixXd::Zero(n_nodes_,4);
+    
 
 }
 
@@ -135,33 +134,34 @@ void LearningAgile::solver_request(){
         ROS_INFO("acados no solution");
     }
     else{
-        // get the solution
-        // for (int i = 0; i < n_nodes_; ++i)
-        // {   
+        // get the state solution for visualization
+
+        // if (pred_traj_vis_){
+        //     std::vector<std::vector<double>> state_traj_opt_[n_nodes_][n_x_];
         //     double state_i_opt[n_x_];
-        //     double control_i_opt[n_u_];
+
+        //     for (int i = 0; i < n_nodes_; ++i)
+        //     {   
+                
+        //         ocp_nlp_out_get(nlp_config, nlp_dims, nlp_out, i, "x", &state_i_opt);
+                    
+        //         for (int j = 0; j < n_x_; ++j) {
+        //             state_traj_opt_[i][j] = state_i_opt[j];
+        //         }
+    
+        //     }
+
+
+        //     // // get the last state
+        //     // ocp_nlp_out_get(nlp_config, nlp_dims, nlp_out, n_nodes_, "x", &state_i_opt);
             
-        //     ROS_INFO("getting the solution");
-        //     ocp_nlp_out_get(nlp_config, nlp_dims, nlp_out, i, "x", &state_i_opt);
-        //     ocp_nlp_out_get(nlp_config, nlp_dims, nlp_out, i, "u", &control_i_opt);
 
 
-        //     // ROS_INFO("control %d is %f, %f, %f", i, control_i_opt_(0), control_i_opt_(1), control_i_opt_(2));
-        //     // state_traj_opt_.row(i) = state_i_opt_;
-        //     // control_traj_opt_.row(i) = control_i_opt_;
+            
         // }
-
-
-        // get the last state
-        // ocp_nlp_out_get(nlp_config, nlp_dims, nlp_out, n_nodes_, "x", &state_i_opt_);
-        // state_traj_opt_.row(n_nodes_) = state_i_opt_;
-
-
-        // double state_i_opt[n_x_];
-        
         
        
-        // ocp_nlp_out_get(nlp_config, nlp_dims, nlp_out, 0, "x", &state_i_opt);
+        // get the control input
         ocp_nlp_out_get(nlp_config, nlp_dims, nlp_out, 0, "u", &control_opt_);
        
         // ROS_INFO("HAVE THE SOLUTION");
@@ -258,3 +258,23 @@ void LearningAgile::Update()
         NO_SOLUTION_FLAG_=true;
     }
 }
+
+// void LearningAgile::pred_traj_vis()
+// {
+//     geometry_msgs::PoseArray pred_traj;
+//     pred_traj.header.stamp = ros::Time::now();
+//     pred_traj.header.frame_id = origin_frame_;
+//     for (int i = 0; i < n_nodes_; i++)
+//     {
+//         geometry_msgs::Pose pose;
+//         pose.position.x = state_traj_opt_[i][0];
+//         pose.position.y = state_traj_opt_[i][1];
+//         pose.position.z = state_traj_opt_[i][2];
+//         pose.orientation.w = state_traj_opt_[i][6];
+//         pose.orientation.x = state_traj_opt_[i][7];
+//         pose.orientation.y = state_traj_opt_[i][8];
+//         pose.orientation.z = state_traj_opt_[i][9];
+//         pred_traj.poses.push_back(pose);
+//     }
+//     current_pred_traj_pub_.publish(pred_traj);
+// }

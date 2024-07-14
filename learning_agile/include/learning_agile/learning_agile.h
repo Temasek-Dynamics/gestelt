@@ -59,6 +59,10 @@ class LearningAgile{
 
         double* getcontrolOpt() { return control_opt_; };
         void Update();
+
+        //------------------misc-------------------
+        void pred_traj_vis();
+
         typedef std::shared_ptr<LearningAgile> Ptr;
         bool NO_SOLUTION_FLAG_=false;
         bool MISSION_LOADED_FLAG_=false;
@@ -110,14 +114,12 @@ class LearningAgile{
     Eigen::Vector4d current_input_={0,0,0,0};
     Eigen::Vector4d last_input_={0,0,0,0};
     double single_motor_max_thrust_=2.1334185;
-    
+
     //MPC output
-    Eigen::VectorXd state_i_opt_;
-    Eigen::MatrixXd state_traj_opt_;
     
-    // Eigen::VectorXd control_i_opt_;
+
     double control_opt_[4] = {0,0,0,0};
-    Eigen::MatrixXd control_traj_opt_;
+  
     
     // acados param
     int status; // acados operation state
@@ -127,7 +129,7 @@ class LearningAgile{
     int n_x_;
     int n_u_;
     int dt_=0.1;
-
+    
     ACADOS_model_solver_capsule_ptr acados_ocp_capsule;
     nlp_config_ptr nlp_config;
     nlp_dims_ptr nlp_dims;
@@ -137,5 +139,8 @@ class LearningAgile{
 
     //threading
     std::mutex cmd_mutex_; 
+
+    // misc
+    bool pred_traj_vis_=false;
 
 };
