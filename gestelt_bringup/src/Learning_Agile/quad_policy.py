@@ -57,7 +57,7 @@ class run_quad:
         # wwf: final angular velocity cost
 
         # initialize the cost function with symbolic variables
-        self.uav1.initCost(wrt=5,wqt=8,wthrust=0.1,wwt=0,wrf=1,wvf=1,wqf=1,goal_pos=self.goal_pos) # wthrust = 0.1
+        self.uav1.initCost(wrt=5,wqt=8,wthrust=0.1,wwt=0,wrf=5,wvf=1,wqf=1,goal_pos=self.goal_pos) # wthrust = 0.1
         self.uav1.init_TraCost()
 
         # --------------------------- create PDP object1 ----------------------------------------
