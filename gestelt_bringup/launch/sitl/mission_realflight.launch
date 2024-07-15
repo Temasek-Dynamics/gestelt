@@ -1,5 +1,6 @@
 <launch>
   <!-- Launches a test mission -->
+  <rosparam file="$(find gestelt_bringup)/config/learning_agile_mission.yaml" command="load"/>
   <node pkg="gestelt_bringup" name="mission" type="learning_agile_mission.py" >
         <param name="is_simulation" value="False"/>
   </node>
