@@ -9,7 +9,7 @@ void LearningAgile::init(ros::NodeHandle& nh)
     nh.param("learning_agile/traverse_time", t_tra_abs_, 10.0);
     nh.param("learning_agile/no_solution_flag_t_thresh", no_solution_flag_t_thresh_, 0.02);
     nh.param("learning_agile/single_motor_max_thrust", single_motor_max_thrust_, 2.1334185);
-    nh.param("learning_agile/pred_traj_vis", pred_traj_vis_, false);
+    nh.param("learning_agile/pred_traj_vis", PRED_TRAJ_VIS_FLAG_, false);
     
     /////////////////
     /* Subscribers */
@@ -31,11 +31,7 @@ void LearningAgile::init(ros::NodeHandle& nh)
     current_pred_traj_pub_ = nh.advertise<geometry_msgs::PoseArray>("/learning_agile_agent/current_pred_traj", 10);
 
 
-    solver_loading();
-}   
-
-void LearningAgile::solver_loading()
-{
+    // solver loading 
     // Load the solver from the python interface generated code
     acados_ocp_capsule = ACADOS_model_acados_create_capsule();
 
@@ -59,6 +55,12 @@ void LearningAgile::solver_loading()
     n_u_ = *nlp_dims->nu;
     ROS_INFO("time horizion is %d, with state %d and input %d \n", n_nodes_, n_x_, n_u_);
     
+    // state_i_opt_=new double[n_x_];
+    // // set the size of the predicted state trajectory
+    // state_traj_opt_.resize(n_nodes_);
+    // for (int i = 0; i < n_nodes_; ++i) {
+    //     state_traj_opt_[i].resize(n_x_);
+    // }
 
 }
 
@@ -133,29 +135,32 @@ void LearningAgile::solver_request(){
         NO_SOLUTION_FLAG_=true;
         ROS_INFO("acados no solution");
     }
-    else{
+    else
+    {
         // get the state solution for visualization
 
-        // if (pred_traj_vis_){
-        //     std::vector<std::vector<double>> state_traj_opt_[n_nodes_][n_x_];
-        //     double state_i_opt[n_x_];
-
+        // if (PRED_TRAJ_VIS_FLAG_){
+            
+            
+            
         //     for (int i = 0; i < n_nodes_; ++i)
         //     {   
                 
-        //         ocp_nlp_out_get(nlp_config, nlp_dims, nlp_out, i, "x", &state_i_opt);
-                    
-        //         for (int j = 0; j < n_x_; ++j) {
-        //             state_traj_opt_[i][j] = state_i_opt[j];
-        //         }
+        //         ocp_nlp_get_at_stage(nlp_config, nlp_dims, nlp_out, i, "x", &state_i_opt_);
+                
+        //         ROS_INFO("state_i_opt_ is %f, %f, %f", state_i_opt_[0], state_i_opt_[1], state_i_opt_[2]);
+        //         // for (int j = 0; j < n_x_; ++j)
+        //         // {
+        //         //     state_traj_opt_.push_back(state_i_opt_);
+        //         // }
     
         //     }
 
 
-        //     // // get the last state
-        //     // ocp_nlp_out_get(nlp_config, nlp_dims, nlp_out, n_nodes_, "x", &state_i_opt);
+        // //     // // get the last state
+        // //     // ocp_nlp_out_get(nlp_config, nlp_dims, nlp_out, n_nodes_, "x", &state_i_opt_);
             
-
+        // // pred_traj_vis();
 
             
         // }
@@ -259,22 +264,22 @@ void LearningAgile::Update()
     }
 }
 
-// void LearningAgile::pred_traj_vis()
-// {
-//     geometry_msgs::PoseArray pred_traj;
-//     pred_traj.header.stamp = ros::Time::now();
-//     pred_traj.header.frame_id = origin_frame_;
-//     for (int i = 0; i < n_nodes_; i++)
-//     {
-//         geometry_msgs::Pose pose;
-//         pose.position.x = state_traj_opt_[i][0];
-//         pose.position.y = state_traj_opt_[i][1];
-//         pose.position.z = state_traj_opt_[i][2];
-//         pose.orientation.w = state_traj_opt_[i][6];
-//         pose.orientation.x = state_traj_opt_[i][7];
-//         pose.orientation.y = state_traj_opt_[i][8];
-//         pose.orientation.z = state_traj_opt_[i][9];
-//         pred_traj.poses.push_back(pose);
-//     }
-//     current_pred_traj_pub_.publish(pred_traj);
-// }
+void LearningAgile::pred_traj_vis()
+{
+    geometry_msgs::PoseArray pred_traj;
+    pred_traj.header.stamp = ros::Time::now();
+    pred_traj.header.frame_id = origin_frame_;
+    for (int i = 0; i < n_nodes_; i++)
+    {
+        geometry_msgs::Pose pose;
+        pose.position.x = state_traj_opt_[i][0];
+        pose.position.y = state_traj_opt_[i][1];
+        pose.position.z = state_traj_opt_[i][2];
+        pose.orientation.w = state_traj_opt_[i][6];
+        pose.orientation.x = state_traj_opt_[i][7];
+        pose.orientation.y = state_traj_opt_[i][8];
+        pose.orientation.z = state_traj_opt_[i][9];
+        pred_traj.poses.push_back(pose);
+    }
+    current_pred_traj_pub_.publish(pred_traj);
+}

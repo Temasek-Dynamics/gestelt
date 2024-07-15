@@ -5,7 +5,7 @@
 #include <deque>
 
 #include <Eigen/Geometry> 
-
+#include <vector>
 #include <ros/ros.h>
 
 #include <geometry_msgs/PoseArray.h>
@@ -54,7 +54,6 @@ class LearningAgile{
 
 
         //------------------acados solver-------------------
-        void solver_loading();
         void solver_request();
 
         double* getcontrolOpt() { return control_opt_; };
@@ -64,8 +63,12 @@ class LearningAgile{
         void pred_traj_vis();
 
         typedef std::shared_ptr<LearningAgile> Ptr;
+        
+        // solver state 
         bool NO_SOLUTION_FLAG_=false;
         bool MISSION_LOADED_FLAG_=false;
+    
+    
     private:
     ros::Subscriber drone_pose_sub_;
     ros::Subscriber drone_twist_sub_;
@@ -116,8 +119,8 @@ class LearningAgile{
     double single_motor_max_thrust_=2.1334185;
 
     //MPC output
-    
-
+    std::vector<std::vector<double>> state_traj_opt_;
+    double* state_i_opt_;
     double control_opt_[4] = {0,0,0,0};
   
     
@@ -141,6 +144,6 @@ class LearningAgile{
     std::mutex cmd_mutex_; 
 
     // misc
-    bool pred_traj_vis_=false;
+    bool PRED_TRAJ_VIS_FLAG_=false;
 
 };
