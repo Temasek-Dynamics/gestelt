@@ -294,6 +294,7 @@ void Navigator::planFrontEndTimerCB(const ros::TimerEvent &e)
   }
 
   if (isGoalReached(cur_pos_, waypoints_.nextWP())){
+    std::cout << " Goal reached at " << waypoints_.nextWP() << std::endl;
     // If goals is within a given tolerance, then pop this goal and plan next goal (if available)
     waypoints_.popWP();
     // Invalidate current sfc_traj
@@ -435,11 +436,12 @@ void Navigator::planGlobalTrajWaypoints(
 
     if (j == 2)
     {
-      ROS_WARN("[Navigator::planGlobalTrajWaypoints] Global traj MaxVel = %f > set_max_vel", globalMJO.getTraj().getMaxVelRate());
+      ROS_WARN("[Navigator::planGlobalTrajWaypoints] Global traj MaxVel = %f > set_max_vel", 
+                globalMJO.getTraj().getMaxVelRate());
       std::cout << "headState=" << endl
-            << headState << endl;
+                << headState << endl;
       std::cout << "tailState=" << endl
-            << tailState << endl;
+                << tailState << endl;
     }
 
     des_vel /= 1.5;
@@ -739,9 +741,6 @@ bool Navigator::PolySFCOptimize(const Eigen::Matrix3d& startPVA, const Eigen::Ma
   //   visualization_->displayInitialPolyPath(initial_path, 0);
   // }
 
-
-
-
   if (!polyhedron_sfc_optimizer_->genInitialSFCTrajectory(startPVA.col(0), endPVA.col(0),
                                                     v_poly, 0.01, initial_path))
   {
@@ -836,8 +835,6 @@ bool Navigator::PolySFCOptimize(const Eigen::Matrix3d& startPVA, const Eigen::Ma
     initial_mjo_viz.push_back(init_cstr_pts.col(i));
   }
   visualization_->displayInitialMJO(initial_mjo_viz, 0.075, 0);
-
-  std::cout << "Number of polyhedrons: " << h_poly.size() << std::endl;
 
   // /***************************/
   // /*5:  Optimize plan

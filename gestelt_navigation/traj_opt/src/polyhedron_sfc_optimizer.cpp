@@ -8,6 +8,14 @@ namespace back_end
     const double &smoothD,
     Eigen::Matrix3Xd &path)
   {
+    std::cout << "vPolys.size() = " << vPolys.size() << std::endl;
+    if (vPolys.size() == 1){
+      path.resize(3, 2);
+      path.leftCols<1>() = start_pos;
+      path.rightCols<1>() = end_pos;
+      return true;
+    }
+
     // overlaps: division by 2 is arbitrary value
     const int overlaps = vPolys.size() / 2; 
 
@@ -61,26 +69,26 @@ namespace back_end
         dataPtrs,                        // User data for the client program. The callback functions will receive the value of this argument.
         &lbfgs_params);                  // param
 
-      // IF converged, maxmimum_iteration, already minimized or stop
-      if (result == lbfgs::LBFGS_CONVERGENCE ||
-          result == lbfgs::LBFGSERR_MAXIMUMITERATION ||
-          result == lbfgs::LBFGS_ALREADY_MINIMIZED ||
-          result == lbfgs::LBFGS_STOP)
-      {
-        // continue onwards to construct path
-      }
-      // ELSE IF Cancelled
-      else if (result == lbfgs::LBFGSERR_CANCELED)
-      {
-        std::cout << "[PolyhedronSFCOptimizer::genInitialSFCTrajectory] Optimization Cancelled!" << std::endl;
-        return false;
-      }
-      // ELSE ERROR
-      else
-      {
-        ROS_WARN("[PolyhedronSFCOptimizer::genInitialSFCTrajectory] UAV %d: Solver error. Return = %d, %s. Skip this planning.", drone_id_, result, lbfgs::lbfgs_strerror(result));
-        return false;
-      }
+    // IF converged, maxmimum_iteration, already minimized or stop
+    if (result == lbfgs::LBFGS_CONVERGENCE ||
+        result == lbfgs::LBFGSERR_MAXIMUMITERATION ||
+        result == lbfgs::LBFGS_ALREADY_MINIMIZED ||
+        result == lbfgs::LBFGS_STOP)
+    {
+      // continue onwards to construct path
+    }
+    // ELSE IF Cancelled
+    else if (result == lbfgs::LBFGSERR_CANCELED)
+    {
+      std::cout << "[PolyhedronSFCOptimizer::genInitialSFCTrajectory] Optimization Cancelled!" << std::endl;
+      return false;
+    }
+    // ELSE ERROR
+    else
+    {
+      ROS_WARN("[PolyhedronSFCOptimizer::genInitialSFCTrajectory] UAV %d: Solver error. Return = %d, %s. Skip this planning.", drone_id_, result, lbfgs::lbfgs_strerror(result));
+      return false;
+    }
 
     path.resize(3, overlaps + 2);
     path.leftCols<1>() = start_pos;
@@ -156,9 +164,7 @@ namespace back_end
     // Convert from real to virtual time tau
     RealT2VirtualT(init_seg_dur, tau);
     // // Convert from constrained coordinates q to barycentric coordinates xi
-    std::cout << "before backwardP" << std::endl;
     backwardP(P_, vPolyIdx_, vPolytopes_, xi);
-    std::cout << "after backwardP" << std::endl;
 
     /* Initialize minimum jerk trajectory */
     mjo_q_.reset(startPVA, endPVA, num_segs_);

@@ -1,21 +1,21 @@
 # Trajectory Server parameters
 
 # takeoff_height: take off height in meters
-takeoff_height: 1.0
+takeoff_height: 1.25
 # Minimum height at which the quadrotor will HOVER
-minimum_hover_height: 0.25
+minimum_hover_height: 0.5
 
 # Safety bounding box, any command outside this bounding box will immediately
 # switch the drone state to HOVER
 enable_safety_box: false
-safety_box/min_x: -5.5
-safety_box/min_y: -5.5
+safety_box/min_x: -5.75
+safety_box/min_y: -5.75
 safety_box/min_z: -0.5
-safety_box/max_x: 5.5
-safety_box/max_y: 5.5
-safety_box/max_z: 3.0
+safety_box/max_x: 5.75
+safety_box/max_y: 5.75
+safety_box/max_z: 2.7
 
 # pub_cmd_freq: Frequency at which commands are published
-pub_cmd_freq: 30.0
+pub_cmd_freq: 50.0
 # state_machine_tick_freq: Frequency at state machine is being refreshed
 state_machine_tick_freq: 50.0

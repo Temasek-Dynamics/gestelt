@@ -65,34 +65,38 @@ class DeterministicForest
 
 			nh_.param<double>("map/resolution", _resolution, 0.05);
 			nh_.param<double>("map/inter_obstacle_clearance", inter_obs_clearance_, 1.0);
-			nh_.param<double>("map/x_size", _x_size, 5.0);
-			nh_.param<double>("map/y_size", _y_size, 5.0);
-			nh_.param<double>("map/z_size", _z_size, 5.0);
+			nh_.param<double>("map/x_size", x_size_, 5.0);
+			nh_.param<double>("map/y_size", y_size_, 5.0);
+			nh_.param<double>("map/z_size", z_size_, 5.0);
 
-			max_x_ = _x_size/2;
-			max_y_ = _y_size/2;
-			min_x_ = -_x_size/2;
-			min_y_ = -_y_size/2;
+			nh_.param<bool>("map/enable_floor", enable_floor_, false);
+			nh_.param<bool>("map/enable_ceiling", enable_ceiling_, false);
+			nh_.param<bool>("map/enable_walls", enable_walls_, false);
+
+			max_x_ = x_size_/2;
+			max_y_ = y_size_/2;
+			min_x_ = -x_size_/2;
+			min_y_ = -y_size_/2;
 		
 			// Params for cylinders
-			nh_.param<double>("obstacle/lower_rad", _w_l, 0.3);
-			nh_.param<double>("obstacle/upper_rad", _w_h, 0.8);
-			nh_.param<double>("obstacle/lower_hei", _h_l, 3.0);
-			nh_.param<double>("obstacle/upper_hei", _h_h, 7.0);
+			nh_.param<double>("obstacle/cylinder/lower_rad", _w_l, 0.3);
+			nh_.param<double>("obstacle/cylinder/upper_rad", _w_h, 0.8);
+			nh_.param<double>("obstacle/cylinder/lower_hei", _h_l, 3.0);
+			nh_.param<double>("obstacle/cylinder/upper_hei", _h_h, 7.0);
 			// Params for circles
-			nh_.param<double>("obstacle/radius_l", radius_l_, 7.0);
-			nh_.param<double>("obstacle/radius_h", radius_h_, 7.0);
-			nh_.param<double>("obstacle/z_l", z_l_, 7.0);
-			nh_.param<double>("obstacle/z_h", z_h_, 7.0);
-			nh_.param<double>("obstacle/theta", theta_, 7.0);
+			nh_.param<double>("obstacle/circle/radius_l", radius_l_, 7.0);
+			nh_.param<double>("obstacle/circle/radius_h", radius_h_, 7.0);
+			nh_.param<double>("obstacle/circle/z_l", z_l_, 7.0);
+			nh_.param<double>("obstacle/circle/z_h", z_h_, 7.0);
+			nh_.param<double>("obstacle/circle/theta", theta_, 7.0);
 
-			_x_l = -_x_size / 2.0;
-			_x_h = +_x_size / 2.0;
+			_x_l = -x_size_ / 2.0;
+			_x_h = +x_size_ / 2.0;
 
-			_y_l = -_y_size / 2.0;
-			_y_h = +_y_size / 2.0;
+			_y_l = -y_size_ / 2.0;
+			_y_h = +y_size_ / 2.0;
 
-			_polar_obs_num = std::min(_polar_obs_num, (int)_x_size * 10);
+			_polar_obs_num = std::min(_polar_obs_num, (int)x_size_ * 10);
 
 			// // Create regions where obstacles cannot be created.
 			// obs_free_radial_.push_back(ObsFreeRadial(0.0, 0.0, 0.1));
@@ -100,23 +104,25 @@ class DeterministicForest
 			// We can either:
 			// A1) Generate a test map for the vicon room
 			// generateViconTest();
-			// generateRoomBoundaries(5.6, 5.6, 3.0, 
-			// 	-2.8, 2.8, -2.8, 2.8);
 
 			// A2) Generate a antipodal map for the vicon room
 			// generateViconTestAntipodal();
-			// generateRoomBoundaries(	 5.9, 5.9, 3.0, 
-			// 						-2.95, 2.95, -2.95, 2.95);
-
-			generateHorizontalPlane(10.0, 10.0, 0.0);
 
 			// B) Generate a random forest map for benchmarking
-			unsigned int seed = rd();
+			// unsigned int seed = rd();
 			eng.seed(_seed);
 			RandomMapGenerate();
-			// Add floor and ceiling
-			generateHorizontalPlane(_x_size, _y_size, 0.0);
-			// generateHorizontalPlane(_x_size, _y_size, _z_size);
+
+			// Add floor, ceiling and walls if enabled
+			if (enable_floor_){
+				generateHorizontalPlane(x_size_, y_size_, 0.0);
+			}
+			if (enable_ceiling_){
+				generateHorizontalPlane(x_size_, y_size_, z_size_);
+			}
+			if (enable_walls_){
+				genWalls(x_size_, y_size_, z_size_);
+			}
 
 			// C) Generate a tunnel for benchmarking
 			// generateRectangularTunnel(Eigen::Vector3d{0.0, 0.0, 0.0}, 10.0, 2.0, 2.0);
@@ -155,14 +161,14 @@ class DeterministicForest
 
 			// eng.seed(_seed);
 			// RandomMapGenerate();
-			// generateHorizontalPlane(_x_size, _y_size, 0.0); // Add floor
-			// // generateHorizontalPlane(_x_size, _y_size, _z_size); // Add ceiling
+			// generateHorizontalPlane(x_size_, y_size_, 0.0); // Add floor
+			// // generateHorizontalPlane(x_size_, y_size_, z_size_); // Add ceiling
 
 			// F) Generate forest map
 			// eng.seed(_seed);
 			// RandomMapGenerate();
-			// generateHorizontalPlane(_x_size, _y_size, 0.0); // Add floor
-			// generateHorizontalPlane(_x_size, _y_size, _z_size); // Add ceiling
+			// generateHorizontalPlane(x_size_, y_size_, 0.0); // Add floor
+			// generateHorizontalPlane(x_size_, y_size_, z_size_); // Add ceiling
 
 			cloud_map.width = cloud_map.points.size();
 			cloud_map.height = 1;
@@ -253,21 +259,28 @@ class DeterministicForest
 
 		}
 
+		void genWalls(const double& x_size, const double& y_size, const double& z_size)
+		{
+			generateYWall(x_size/2, 	-y_size/2,  	y_size/2, 	z_size);
+			generateYWall(-x_size/2, 	-y_size/2,  	y_size/2, 	z_size);
 
-		void generateRoomBoundaries(const double& x_size, 
-			const double& y_size, const double& z_size, 
-			const double& min_x_, const double& max_x_,
-			const double& min_y_, const double& max_y_)
+			generateXWall(y_size/2,  	-x_size/2,  	x_size/2,  	z_size);
+			generateXWall(-y_size/2,  	-x_size/2,  	x_size/2, 	z_size);
+		}
+
+		void genCeilingFloorWalls(	const double& x_size, const double& y_size, const double& z_size, 
+									const double& min_x_, const double& max_x_,
+									const double& min_y_, const double& max_y_)
 		{
 			// Generate floor, ceiling and walls
 			generateHorizontalPlane(x_size, y_size, 0.0);
 			generateHorizontalPlane(x_size, y_size, z_size);
 
-			generateYWall(max_x_, min_y_,  max_y_, 3.0);
-			generateYWall(min_x_, min_y_,  max_y_, 3.0);
+			generateYWall(max_x_, min_y_,  max_y_, z_size);
+			generateYWall(min_x_, min_y_,  max_y_, z_size);
 
-			generateXWall(max_y_,  min_x_,  max_x_,  3.0);
-			generateXWall(min_y_,  min_x_,  max_x_, 3.0);
+			generateXWall(max_y_,  min_x_,  max_x_,  z_size);
+			generateXWall(min_y_,  min_x_,  max_x_, z_size);
 		}
 
 		pcl::PointCloud<pcl::PointXYZ> get_pcl() 
@@ -721,10 +734,12 @@ class DeterministicForest
 		double min_y_;
 
 		int _polar_obs_num;
-		double _x_size, _y_size, _z_size;
+		double x_size_, y_size_, z_size_;
 		double _x_l, _x_h, _y_l, _y_h, _w_l, _w_h, _h_l, _h_h;
 		double _sensing_range, _resolution, _pub_rate;
 		double inter_obs_clearance_; // Clearance between obstacles
+
+		bool enable_floor_, enable_ceiling_, enable_walls_;
 
 		int _circle_obs_num;
 		double radius_l_, radius_h_, z_l_, z_h_;

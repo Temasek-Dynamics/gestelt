@@ -4,7 +4,6 @@
   
   <!-- Input/output topics -->
   <arg name="pose_topic" value="mavros/local_position/pose" />
-  <arg name="cloud_topic_raw" value="camera/depth/points_raw" />
   <arg name="cloud_topic" value="camera/depth/points" />
   <!-- drone_origin_frame: For PX4 SITL, leave it as default. 
   For actual deployment, put as world -->
@@ -34,18 +33,8 @@
         <param name="uav/origin_frame" value="$(arg uav_origin_frame)"/>
         <param name="uav/sensor_frame" value="$(arg cam_link_frame)"/>
 
-        <remap from="/uav/sensor_cloud" to="/$(arg drone_id_ns)/$(arg cloud_topic_raw)"/>
+        <remap from="/uav/sensor_cloud" to="/$(arg drone_id_ns)/$(arg cloud_topic)"/>
     </node>
   </group>
-
-  <!-- Downsamples the input cloud -->
-  <node pkg="perception_tools" type="cloud_downsampler" 
-    name="cloud_downsampler_$(arg drone_id_ns)" output="screen" required="true">
-    <param name="~queue_size" value="3" />
-    <param name="~voxel_size" value="0.1" />
-
-    <remap from="~cloud_in" to="/$(arg drone_id_ns)/$(arg cloud_topic_raw)" />
-    <remap from="~cloud_out" to="/$(arg drone_id_ns)/$(arg cloud_topic)" />
-  </node>
 
 </launch>

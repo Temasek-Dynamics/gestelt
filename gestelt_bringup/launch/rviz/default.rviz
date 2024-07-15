@@ -6,8 +6,7 @@ Panels:
       Expanded:
         - /Global Options1
         - /TF1/Frames1
-        - /map1
-        - /collision_viz1
+        - /d0/planner(Red)1
         - /d0/planner(Red)1/back_end1/ego_planner1
         - /d0/planner(Red)1/perception1/occ_map_inf_200mm1
         - /d1/planner(orange)1/odom1/Shape1
@@ -453,13 +452,13 @@ Visualization Manager:
         - Class: rviz/Group
           Displays:
             - Class: rviz/Marker
-              Enabled: false
+              Enabled: true
               Marker Topic: /drone0/closed_list_viz
               Name: closed_list_viz
               Namespaces:
                 {}
               Queue Size: 100
-              Value: false
+              Value: true
             - Class: rviz/Marker
               Enabled: true
               Marker Topic: /drone0/plan_viz
@@ -5793,17 +5792,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 4.391880989074707
-        Y: 1.9183411598205566
-        Z: -1.9073486328125e-06
+        X: 0.3701590895652771
+        Y: -0.3957390785217285
+        Z: -7.859105153329438e-07
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.8603981137275696
+      Pitch: 0.33539798855781555
       Target Frame: my_view
-      Yaw: 5.078588008880615
+      Yaw: 2.9635744094848633
     Saved:
       - Class: rviz/FPS
         Enable Stereo Rendering:
