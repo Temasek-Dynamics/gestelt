@@ -36,19 +36,12 @@ CMD_0="
 roslaunch gestelt_bringup sitl_drone.launch 
 "
 
-# Start up drone commander (Handles taking off, execution of mission and landing etc.)
-CMD_1="
-roslaunch trajectory_server trajectory_server_node.launch rviz_config:=gz_sim
-"
 
 CMD_2="
 roslaunch gestelt_bringup record.launch
 "
 
-# Start up script to send commands
-CMD_3="
-roslaunch gestelt_bringup learning_agile_mission.launch platform:='drone'
-"
+
 
 # disarm drone
 # CMD_4="rosservice call /drone_commander/disarm"

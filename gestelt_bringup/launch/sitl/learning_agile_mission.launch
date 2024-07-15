@@ -8,15 +8,7 @@
         
   </node>
 
-  <!-- <node pkg="gestelt_bringup" name="learning_agile_agent" type="learning_agile_node.py" output="screen" >  
-      <param name="hardware_platform" value="$(arg platform)"/>
-  </node>
-   -->
-  <!--cpp node-->
-  <!-- <node pkg="learning_agile" name="learning_agile_node" type="learning_agile_node" output="screen">  
-  </node> -->
 
-  
   <!--for running on the Radxa, This record does not start, 
   instead rosbag record will run on the laptop, in a seperate launch-->
   <arg name="record_topics" default="
@@ -25,9 +17,6 @@
   (.*)learning_agile_agent(.*)
   "
   />
-
-
-
 
   <node if="$(arg record)" pkg="rosbag" type="record" name="record" output="screen" args="-o $(find gestelt_bringup)/data/
   -e $(arg record_topics)"/>
