@@ -241,6 +241,10 @@ void TrajServer::execTrajTimerCb(const ros::TimerEvent &e)
         execHover();
 
       }
+      else if (uav_current_state_.mode != "OFFBOARD"){
+        logInfoThrottled("Drone is not in OFFBOARD mode, hover", 5.0);
+        execHover();
+      }
       else {
         // ROS_INFO("ServerState received velocity: %f, %f, %f", last_mission_vel_(0), last_mission_vel_(1), last_mission_vel_(2));
 
