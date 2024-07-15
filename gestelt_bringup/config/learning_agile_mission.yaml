@@ -15,6 +15,6 @@ traj_server:
 learning_agile:
   max_traverse_weight: 0
   traverse_time: 1
-  no_solution_flag_t_thresh_: 0.02
+  no_solution_flag_t_thresh: 0.02
   single_motor_max_thrust: 2.1334185 #N
   pred_traj_vis: true
