@@ -116,9 +116,6 @@ if ! shopt -oq posix; then
   fi
 fi
 
-# Convenience function
-alias killbill="killall -9 rosmaster; tmux kill-server;"
-
 # Time
 alias restart_ntp="sudo service ntp stop && sudo ntpd -gq && sudo service ntp start"
 
@@ -129,5 +126,6 @@ alias connect_xiaomi="sudo nmcli dev wifi connect \"Xiaomi_84CE_5G\""
 alias connect_oppenheimer="sudo nmcli dev wifi connect \"oppenheimer\""
 
 # gestelt container operations 
-alias update_gestelt_image="docker pull johntgz95/radxa-gestelt:latest"
-alias start_gestelt_image="docker run -it --network host --privileged johntgz95/radxa-gestelt:latest"
+alias DRONE_ID=0 
+alias gestelt_update="docker pull johntgz95/radxa-gestelt:latest"
+alias gestelt_startup="docker run -it --rm --network host --privileged -e \"DRONE_ID=$DRONE_ID\" johntgz95/radxa-gestelt:latest"

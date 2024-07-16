@@ -5,14 +5,16 @@ They can be found on the [docker hub registry](https://registry.hub.docker.com/_
 
 # Installing docker
 ```bash
+sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 9B98116C9AA302C7
+sudo apt-get update
+sudo apt-get install curl
+
 curl -fsSL test.docker.com -o get-docker.sh && sh get-docker.sh
 sudo usermod -aG docker $USER 
 
 # Test the installation
 docker run hello-world 
 
-# [TROUBLESHOOTING] If there is an error with the repository not being signed, add this:
-sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 9B98116C9AA302C7
 ```
 
 # Host
@@ -22,7 +24,7 @@ sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 9B98116C9AA302C7
 docker build -t johntgz95/radxa-gestelt:latest .
 
 # Tag image
-docker tag gestelt/ros:noetic johntgz95/gestelt
+docker tag ORIGINAL_TAG NEW_TAG
 docker push johntgz95/radxa-gestelt:latest
 
 # All-in-one build and push
@@ -33,7 +35,8 @@ docker build --platform linux/arm64 -t johntgz95/radxa-gestelt:latest --push .
 ## Running containers
 ```bash
 # To use host USB devices, add "--privileged" flag or "--device=/dev/ttyAML1"
-docker run -it --rm --network host --privileged johntgz95/radxa-gestelt:latest
+docker run -it --rm --network host --privileged -e "DRONE_ID=1" johntgz95/radxa-gestelt:latest
+
 docker run -it --network host --privileged johntgz95/radxa-gestelt:latest
 
 # Find name of new machine 
@@ -56,9 +59,11 @@ docker rm $(docker ps -a -q)
 # List all docker containers
 docker ps -a
 # Commit changes
-docker commit <CONTAINER_ID> johntgz95/radxa-gestelt:latest
+docker commit CONTAINER_NAME johntgz95/radxa-gestelt:latest
 # push 
 docker push johntgz95/radxa-gestelt:latest
+# Inspect the container
+docker container inspect CONTAINER_NAME
 ```
 
 # Radxa
@@ -67,7 +72,7 @@ docker push johntgz95/radxa-gestelt:latest
 ```bash
 # Pull Images
 docker pull johntgz95/radxa-gestelt:latest
-docker run -it --rm --privileged johntgz95/radxa-gestelt:latest
+docker run -it --rm --network host --privileged -e "DRONE_ID=$DRONE_ID" johntgz95/radxa-gestelt:latest
 ```
 
 # Repositories

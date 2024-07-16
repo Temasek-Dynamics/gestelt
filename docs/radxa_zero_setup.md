@@ -1,5 +1,5 @@
-# Radxa Zero OBC Setup
-Instructions for setting up of Radxa Zero on-board computer 
+# Radxa Zero Setup
+Instructions for setting up of Radxa Zero computer 
 
 ## A: Flashing Ubuntu OS onto Radxa
 1. Install the following tools on your main computer:
@@ -93,7 +93,7 @@ scp path/to/radxa_setup.sh rock@IP_ADDR:/home/rock/radxa_setup.sh
 
 9. Synchronize time between ubuntu machines (radxas and central computer)
     - Make sure ntp daemon is installed on both host and client computer: `sudo apt-get install ntp`
-    - (Optional) Add network alias to /etc/hosts/: `192.168.31.22 master0`
+    - (Optional) Add network alias to /etc/hosts: `192.168.31.22 master0`
 
     - Host computer
         1. modify the ntp config: `sudo vim /etc/ntp.conf` and add the following lines
@@ -111,6 +111,10 @@ scp path/to/radxa_setup.sh rock@IP_ADDR:/home/rock/radxa_setup.sh
     - Client computer
         1. modify the ntp config: `sudo vim /etc/ntp.conf` and add the following lines
             ```bash
+                # uncomment the following lines
+                disable auth
+                broadcastclient
+                
                 # Add the local ntp server as a master, please DO NOT ever add 'prefer' keyword, it will not work
                 server master0 iburst
             ```

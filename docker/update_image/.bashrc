@@ -104,7 +104,7 @@ source /opt/ros/noetic/setup.bash
 source /gestelt_ws/devel/setup.bash 
 
 # Set DRONE_ID here
-export DRONE_ID=0
+# export DRONE_ID=0
 
 # Multi-machine ROS communication. Used for actual drone deployment
 export MASTER_IP=192.168.31.22
@@ -116,10 +116,10 @@ then
     export SELF_IP=192.168.31.195
 elif [[ "$DRONE_ID" == "1" ]]
     then
-    export SELF_IP=192.168.31.195
+    export SELF_IP=192.168.31.196
 elif [[ "$DRONE_ID" == "2" ]]
     then
-    export SELF_IP=192.168.31.195
+    export SELF_IP=192.168.31.197
 else
     export MASTER_IP=localhost
     export SELF_IP=localhost

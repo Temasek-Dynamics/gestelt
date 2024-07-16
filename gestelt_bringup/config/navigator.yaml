@@ -108,7 +108,7 @@ optimization:
   weight_sqrvariance: 10000.0 
   weight_time: 10.0 
   swarm_clearance: 0.4 
-  max_vel: 1.5 # Maximum velocity (m/s)
+  max_vel: 4.0 # Maximum velocity (m/s)
   max_acc: 20.0 # Maximum acceleration (m/s^2)
 
   # EGO params
@@ -126,7 +126,7 @@ optimization:
   weight_poly_bounds: 0.0
   init_traj_opt_epsilon: 0.1 # (Initial trajectory generation) Tolerance for convergence during optimization
   final_traj_opt_epsilon: 0.01 # (Final trajectory generation) Tolerance for convergence during optimization
-  backward_proj_opt_epsilon: 0.01 # (Backward projection) Tolerance for convergence during optimization
+  backward_proj_opt_epsilon: 0.1 # (Backward projection) Tolerance for convergence during optimization
 
 ##### Mapping params
 grid_map:
