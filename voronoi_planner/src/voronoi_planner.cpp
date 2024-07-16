@@ -25,7 +25,7 @@ void VoronoiPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
 
   initParams(pnh);
 
-  // pgmFileToBoolMap(&bool_map_, size_x_, size_y_, map_fname_);
+  // pgmFileToBoolMap(&bool_map_, msg->width, msg->height, map_fname_);
 
   // // Set start and goal
   // DblPoint start_pos(0.5, 0.5);
@@ -69,38 +69,39 @@ void VoronoiPlanner::realignBoolMap(bool ***map, bool ***map_og, int& size_x, in
 
 void VoronoiPlanner::boolMapCB(const gestelt_msgs::BoolMapConstPtr& msg)
 { 
-  std::cout << "before boolMapCB" << std::endl;
-
-  size_x_ = msg->width;
-  size_y_ = msg->height;
-
   int z_origin_cm = (int) (msg->origin.z * 100); // Convert z origin to cm
+  local_origin_x_ = msg->origin.x;
+  local_origin_y_ = msg->origin.y;
 
-  // Create bool map
-  bool_map_ = new bool*[size_x_];
-  for (int x=0; x < size_x_; x++) {
-    (bool_map_)[x] = new bool[size_y_];
+  if (bool_map_arr_.find(z_origin_cm) == bool_map_arr_.end()){
+    // Initialize bool map 2d vector
+    bool_map_arr_[z_origin_cm] = std::make_shared<std::vector<std::vector<bool>>>(msg->height, std::vector<bool>(msg->width, false));
   }
 
-  for(int j = 0; j < size_y_; j++)
+  // set values of boolean map
+  for(int j = 0; j < msg->height; j++)
   {
-    for (int i = 0; i < size_x_; i++)
+    for (int i = 0; i < msg->width; i++)
     {
-      (bool_map_)[i][j] = msg->map[i + j * size_x_];
+      (*bool_map_arr_[z_origin_cm])[i][j] = msg->map[i + j * msg->width];
     }
   }
 
   tm_voronoi_map_init_.start();
 
-  DynamicVoronoi::DynamicVoronoiParams dyn_voro_params;
-  dyn_voro_params.resolution = res_;
-  dyn_voro_params.origin_x = 0.0;
-  dyn_voro_params.origin_y = 0.0;
-  dyn_voro_params.origin_z = msg->origin.z;
+  if (dyn_voro_arr_.find(z_origin_cm) == dyn_voro_arr_.end()){
 
-  dyn_voro_arr_[z_origin_cm] = std::make_shared<DynamicVoronoi>(dyn_voro_params);
+    DynamicVoronoi::DynamicVoronoiParams dyn_voro_params;
+    dyn_voro_params.resolution = res_;
+    dyn_voro_params.origin_x = 0.0;
+    dyn_voro_params.origin_y = 0.0;
+    dyn_voro_params.origin_z = msg->origin.z;
 
-  dyn_voro_arr_[z_origin_cm]->initializeMap(size_x_, size_y_, bool_map_);
+    // Initialize dynamic voronoi 
+    dyn_voro_arr_[z_origin_cm] = std::make_shared<DynamicVoronoi>(dyn_voro_params);
+    dyn_voro_arr_[z_origin_cm]->initializeMap(msg->width, msg->height, bool_map_arr_[z_origin_cm]);
+  }
+
   dyn_voro_arr_[z_origin_cm]->update(); // update distance map and Voronoi diagram
 
   tm_voronoi_map_init_.stop(verbose_planning_);
@@ -125,7 +126,6 @@ void VoronoiPlanner::boolMapCB(const gestelt_msgs::BoolMapConstPtr& msg)
   voro_occ_grid_pub_.publish(voro_occ_grid);
   occ_map_pub_.publish(occ_grid);
 
-  std::cout << "after boolMapCB" << std::endl;
 }
 
 // void VoronoiPlanner::pgmFileToBoolMap(bool ***map,

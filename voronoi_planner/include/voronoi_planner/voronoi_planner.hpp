@@ -4,20 +4,19 @@
 #define _VORONOI_PLANNER_HPP
 
 // #include <Eigen/Eigen>
+#include <limits>
+#include <queue>
 
 // We use SDL_image to load the image from disk
 #include <SDL/SDL_image.h>
 
 #include <ros/ros.h>
+
 #include <nav_msgs/OccupancyGrid.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-#include <gestelt_msgs/BoolMap.h>
-
 #include <geometry_msgs/PointStamped.h>
 #include <geometry_msgs/PoseStamped.h>
-
-#include <limits>
-#include <queue>
+#include <gestelt_msgs/BoolMap.h>
 
 #include <grid_map/grid_map.h> // Map representation
 
@@ -343,7 +342,7 @@ public:
     }
     else{
       std::vector<Eigen::Vector3d> front_end_path = front_end_planner_->getPathPosRaw();
-      publishFrontEndPath(front_end_path, "map", front_end_plan_viz_pub_) ;
+      publishFrontEndPath(front_end_path, "local_map_origin", front_end_plan_viz_pub_) ;
     }
 
     tm_front_end_plan_.stop(verbose_planning_);
@@ -362,13 +361,13 @@ public:
 /* Subscriber callbacks */
 private:
   void startPointCB(const geometry_msgs::PointStampedConstPtr &msg){
-    start_pos_.x = msg->point.x;
-    start_pos_.y = msg->point.y;
+    start_pos_.x = msg->point.x - local_origin_x_;
+    start_pos_.y = msg->point.y - local_origin_y_;
   }
 
   void goalPointCB(const geometry_msgs::PoseStampedConstPtr &msg){
-    goal_pos_.x = msg->pose.position.x;
-    goal_pos_.y = msg->pose.position.y;
+    goal_pos_.x = msg->pose.position.x - local_origin_x_;
+    goal_pos_.y = msg->pose.position.y - local_origin_y_;
 
     plan(start_pos_, goal_pos_, 100);
   }
@@ -393,9 +392,10 @@ private:
   ros::Publisher voro_occ_grid_pub_; // Publishes voronoi map occupancy grid
 
   ros::Publisher front_end_plan_viz_pub_; // Publish front-end plan (A*) visualization
-  ros::Publisher start_pt_pub_, goal_pt_pub_;
+  ros::Publisher start_pt_pub_, goal_pt_pub_; // start and goal visualization publisher
 
-  ros::Subscriber start_sub_, goal_sub_;
+  ros::Subscriber start_sub_, goal_sub_;  // start and goal subscriber
+  ros::Subscriber bool_map_sub_; // Subscription to boolean map
 
   std::unordered_map<std::string, ros::Publisher> front_end_publisher_map_;   // Publishes front-end map
 
@@ -403,30 +403,27 @@ private:
   DblPoint start_pos_{0.0, 0.0};
   DblPoint goal_pos_{0.0, 0.0};
 
-  ros::Subscriber bool_map_sub_; // Subscription to boolean map
-
   /* Mapping */
   std::shared_ptr<GridMap> map_;
+  double local_origin_x_{0.0}, local_origin_y_{0.0};
 
   /* Data structs */
-  bool **bool_map_{NULL};
-  int size_x_{-1}, size_y_{-1};
 
   std::unique_ptr<AStarPlanner> front_end_planner_; // Front-end planner
-  std::map<int, std::shared_ptr<DynamicVoronoi>> dyn_voro_arr_; // array of voronoi objects mapped by height in units of cm
+  std::map<int, std::shared_ptr<DynamicVoronoi>> dyn_voro_arr_; // array of voronoi objects with key of height (cm)
 
-  std::vector<size_t> occ_idx_; // Indices of all occupied cells
-  std::vector<size_t> free_idx_; // Indices of all free cells
-  std::vector<size_t> unknown_idx_; // Indices of all unknown cells
+  std::map<int, std::shared_ptr<std::vector<std::vector<bool>>>> bool_map_arr_; //  array of voronoi objects with key of height (cm)
 
-  PriorityQueueV<int, double> open_queue_; // Min priority queue of (cell idx, priority value)
+  // std::vector<size_t> occ_idx_;       // Indices of all occupied cells
+  // std::vector<size_t> free_idx_;      // Indices of all free cells
+  // std::vector<size_t> unknown_idx_;   // Indices of all unknown cells
 
-  std::vector<double> dist_map_; // index representing map position and values representing distance to nearest obstacle
-  std::vector<double> obst_map_; // obstacle reference map, stores the location of the closest obstacle of each visited cell. Value of -1 indicates cleared
+  // PriorityQueueV<int, double> open_queue_; // Min priority queue of (cell idx, priority value)
+  // std::vector<double> dist_map_; // index representing map position and values representing distance to nearest obstacle
+  // std::vector<double> obst_map_; // obstacle reference map, stores the location of the closest obstacle of each visited cell. Value of -1 indicates cleared
+  // std::vector<bool> to_raise_;
 
-  std::vector<bool> to_raise_;
-
-  std::vector<bool> voro_map_; // Voronoi map
+  // std::vector<bool> voro_map_; // Voronoi map
 
   nav_msgs::OccupancyGrid dist_occ_grid_; // Visualization of distance map in occupancy grid form
 
@@ -434,7 +431,6 @@ private:
   /* Debugging */
   Timer tm_front_end_plan_{"front_end_plan"};
   Timer tm_voronoi_map_init_{"voronoi_map_init"};
-
 };
 
 #endif // _VORONOI_PLANNER_HPP

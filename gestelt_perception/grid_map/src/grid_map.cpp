@@ -216,12 +216,84 @@ void GridMap::visTimerCB(const ros::TimerEvent & /*event*/)
 
 void GridMap::updateLocalMapTimerCB(const ros::TimerEvent & /*event*/)
 {
-  // std::cout << "before updateLocalMapTimerCB" << std::endl;
   
   updateLocalMap();
   sliceMap(1.0);
   
-  // std::cout << "after updateLocalMapTimerCB" << std::endl;
+  // Send transform from map to local map origin
+  geometry_msgs::TransformStamped map_to_local_origin_tf;
+
+  map_to_local_origin_tf.header.stamp = ros::Time::now();
+  map_to_local_origin_tf.header.frame_id = "map";
+  map_to_local_origin_tf.child_frame_id = "local_map_origin";
+  
+  map_to_local_origin_tf.transform.translation.x = mp_.local_map_origin_(0);
+  map_to_local_origin_tf.transform.translation.y = mp_.local_map_origin_(1);
+  map_to_local_origin_tf.transform.translation.z = mp_.local_map_origin_(2);
+
+  map_to_local_origin_tf.transform.rotation.x = 0.0;
+  map_to_local_origin_tf.transform.rotation.y = 0.0;
+  map_to_local_origin_tf.transform.rotation.z = 0.0;
+  map_to_local_origin_tf.transform.rotation.w = 1.0;
+  
+  tf_broadcaster_.sendTransform(map_to_local_origin_tf);
+}
+
+void GridMap::sliceMap(const double& slice_z) {
+
+  gestelt_msgs::BoolMap bool_map_msg;
+
+  bool_map_msg.header.stamp = ros::Time::now();
+
+  bool_map_msg.origin.x = mp_.local_map_origin_(0);
+  bool_map_msg.origin.y = mp_.local_map_origin_(1);
+  bool_map_msg.origin.z = slice_z;
+
+  bool_map_msg.width = mp_.local_map_num_voxels_(0);
+  bool_map_msg.height = mp_.local_map_num_voxels_(1);
+
+  bool_map_msg.map.resize(mp_.local_map_num_voxels_(0) * mp_.local_map_num_voxels_(1), false);
+  
+  pcl::PointCloud<pcl::PointXYZ>::Ptr pcd_layer(new pcl::PointCloud<pcl::PointXYZ>);
+  // Apply passthrough filter
+  pcl::PassThrough<pcl::PointXYZ> z_filter;
+  z_filter.setInputCloud(local_occ_map_pts_);
+  z_filter.setFilterFieldName("z");
+  z_filter.setFilterLimits(slice_z - (getRes()/2) , slice_z + (getRes()/2));
+  // z_filter.setFilterLimits(0.0, 0.1);
+  z_filter.filter(*pcd_layer);
+
+  // Iterate through each occupied point
+  for (const auto& pt : *pcd_layer){
+    double map_x = (pt.x )/getRes();
+    double map_y = (pt.y)/getRes();
+
+    for(int x = map_x - mp_.inf_num_voxels_; x <= map_x + mp_.inf_num_voxels_; x++)
+    {
+      for(int y = map_y - mp_.inf_num_voxels_; y <= map_y + mp_.inf_num_voxels_; y++)
+      {
+        // Convert from map coordinates to 1-D index
+        int idx = x  + y * mp_.local_map_num_voxels_(0);
+
+        if (idx < 0 || idx >= bool_map_msg.map.size()){
+          continue;
+        }
+
+        // std::cout << "======= idx: " << idx << ", pt: (" << pt.x << ", " << pt.y << ")" << std::endl;
+        // if (idx >= mp_.local_map_num_voxels_(0) * mp_.local_map_num_voxels_(1) || idx < 0){
+        //   std::cout << "idx " << idx << " exceeded size "<< mp_.local_map_num_voxels_(0) * mp_.local_map_num_voxels_(1) << std::endl;
+        //   std::cout << "    Before origin offset: (" << pt.x << ", "<< pt.y << ")" << std::endl;
+        //   std::cout << "    After origin offset: (" << pt.x - mp_.local_map_origin_(0) << ", "<< pt.y - mp_.local_map_origin_(1) << ")" << std::endl;
+        //   std::cout << "    local_map_size: " << mp_.local_map_num_voxels_(0) << ", " << mp_.local_map_num_voxels_(1) << ")" << std::endl;
+        // }
+        bool_map_msg.map[idx] = true;
+      }
+    }
+  }
+
+  local_bool_map_pub_.publish(bool_map_msg);
+
+  publishSliceMap(pcd_layer);
 }
 
 void GridMap::checkCollisionsTimerCB(const ros::TimerEvent & /*event*/)
@@ -523,7 +595,7 @@ void GridMap::publishSliceMap(const pcl::PointCloud<pcl::PointXYZ>::Ptr& slice_m
     sensor_msgs::PointCloud2 cloud_msg;
     pcl::toROSMsg(*slice_map, cloud_msg);
 
-    cloud_msg.header.frame_id = mp_.uav_origin_frame_;
+    cloud_msg.header.frame_id = "local_map_origin";
     cloud_msg.header.stamp = ros::Time::now();
     slice_map_pub_.publish(cloud_msg);
     // ROS_INFO("Published occupancy grid with %ld voxels", local_occ_map_pts_.points.size());

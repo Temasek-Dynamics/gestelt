@@ -25,6 +25,7 @@
 
 #include <tf2_ros/transform_listener.h>
 #include <tf2_ros/message_filter.h>
+#include <tf2_ros/transform_broadcaster.h>
 
 #include <bonxai/bonxai.hpp>
 #include <bonxai/pcl_utils.hpp>
@@ -536,63 +537,7 @@ public:
     return pns;
   }
 
-  void sliceMap(const double& slice_z) {
-
-    gestelt_msgs::BoolMap bool_map_msg;
-
-    bool_map_msg.header.stamp = ros::Time::now();
-
-    bool_map_msg.origin.x = mp_.local_map_origin_(0);
-    bool_map_msg.origin.y = mp_.local_map_origin_(1);
-    bool_map_msg.origin.z = slice_z;
-
-    bool_map_msg.width = mp_.local_map_num_voxels_(0);
-    bool_map_msg.height = mp_.local_map_num_voxels_(1);
-
-    bool_map_msg.map.resize(mp_.local_map_num_voxels_(0) * mp_.local_map_num_voxels_(1), false);
-    
-    pcl::PointCloud<pcl::PointXYZ>::Ptr pcd_layer(new pcl::PointCloud<pcl::PointXYZ>);
-    // Apply passthrough filter
-    pcl::PassThrough<pcl::PointXYZ> z_filter;
-    z_filter.setInputCloud(local_occ_map_pts_);
-    z_filter.setFilterFieldName("z");
-    z_filter.setFilterLimits(slice_z - (getRes()/2) , slice_z + (getRes()/2));
-    // z_filter.setFilterLimits(0.0, 0.1);
-    z_filter.filter(*pcd_layer);
-
-    // Iterate through each occupied point
-    for (const auto& pt : *pcd_layer){
-      double map_x = (pt.x )/getRes();
-      double map_y = (pt.y)/getRes();
-
-      for(int x = map_x - mp_.inf_num_voxels_; x <= map_x + mp_.inf_num_voxels_; x++)
-      {
-        for(int y = map_y - mp_.inf_num_voxels_; y <= map_y + mp_.inf_num_voxels_; y++)
-        {
-          // Convert from map coordinates to 1-D index
-          int idx = x  + y * mp_.local_map_num_voxels_(0);
-
-          if (idx < 0 || idx >= bool_map_msg.map.size()){
-            continue;
-          }
-
-          // std::cout << "======= idx: " << idx << ", pt: (" << pt.x << ", " << pt.y << ")" << std::endl;
-          // if (idx >= mp_.local_map_num_voxels_(0) * mp_.local_map_num_voxels_(1) || idx < 0){
-          //   std::cout << "idx " << idx << " exceeded size "<< mp_.local_map_num_voxels_(0) * mp_.local_map_num_voxels_(1) << std::endl;
-          //   std::cout << "    Before origin offset: (" << pt.x << ", "<< pt.y << ")" << std::endl;
-          //   std::cout << "    After origin offset: (" << pt.x - mp_.local_map_origin_(0) << ", "<< pt.y - mp_.local_map_origin_(1) << ")" << std::endl;
-          //   std::cout << "    local_map_size: " << mp_.local_map_num_voxels_(0) << ", " << mp_.local_map_num_voxels_(1) << ")" << std::endl;
-          // }
-          bool_map_msg.map[idx] = true;
-        }
-      }
-    }
-
-    local_bool_map_pub_.publish(bool_map_msg);
-
-    publishSliceMap(pcd_layer);
-
-  }
+  void sliceMap(const double& slice_z);
 
 private: 
   /* ROS Publishers, subscribers and Timers */
@@ -627,6 +572,8 @@ private:
   // TF transformation 
   tf2_ros::Buffer tfBuffer_;
   std::shared_ptr<tf2_ros::TransformListener> tfListener_;
+
+  tf2_ros::TransformBroadcaster tf_broadcaster_; // broadcast tf link
 
   /* Params */
   bool dbg_origin_pose_{false}; // flag to run grid_map with pose set at origin (with no quadrotor)

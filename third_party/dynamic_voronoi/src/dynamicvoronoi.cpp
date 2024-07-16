@@ -6,7 +6,7 @@
 DynamicVoronoi::DynamicVoronoi() {
   sqrt2 = sqrt(2.0);
   data = NULL;
-  gridMap = NULL;
+  gridMap = nullptr;
   alternativeDiagram = NULL;
   allocatedGridMap = false;
 }
@@ -17,8 +17,11 @@ DynamicVoronoi::~DynamicVoronoi() {
     delete[] data;
   }
   if (allocatedGridMap && gridMap) {
-    for (int x=0; x<sizeX; x++) delete[] gridMap[x];
-    delete[] gridMap;
+    gridMap = nullptr;
+    // for (int x=0; x<sizeX; x++) {
+    //   delete[] gridMap[x];
+    // }
+    // delete[] gridMap;
   }
 }
 
@@ -35,9 +38,12 @@ void DynamicVoronoi::initializeEmpty(int _sizeX, int _sizeY, bool initGridMap) {
   }
   if (initGridMap) {
     if (allocatedGridMap && gridMap) {
-      for (int x=0; x<sizeX; x++) delete[] gridMap[x];
-      delete[] gridMap;
-      gridMap = NULL;
+      // for (int x=0; x<sizeX; x++)
+      // {
+      //   delete[] gridMap[x];
+      // }
+      // delete[] gridMap;
+      gridMap = nullptr;
       allocatedGridMap = false;
     }
   }
@@ -49,8 +55,12 @@ void DynamicVoronoi::initializeEmpty(int _sizeX, int _sizeY, bool initGridMap) {
   for (int x=0; x<sizeX; x++) data[x] = new dataCell[sizeY];
 
   if (initGridMap) {
-    gridMap = new bool*[sizeX];
-    for (int x=0; x<sizeX; x++) gridMap[x] = new bool[sizeY];
+    // gridMap = new bool*[sizeX];
+    // for (int x=0; x<sizeX; x++) 
+    // {
+    //   gridMap[x] = new bool[sizeY];
+    // }
+    gridMap = std::make_shared<std::vector<std::vector<bool>>>(sizeY, std::vector<bool>(sizeX, false));
     allocatedGridMap = true;
   }
   
@@ -68,17 +78,21 @@ void DynamicVoronoi::initializeEmpty(int _sizeX, int _sizeY, bool initGridMap) {
 
   if (initGridMap) {
     for (int x=0; x<sizeX; x++) 
-      for (int y=0; y<sizeY; y++) gridMap[x][y] = 0;
+    {
+      for (int y=0; y<sizeY; y++) {
+        (*gridMap)[x][y] = 0;
+      }
+    }
   }
 }
 
-void DynamicVoronoi::initializeMap(int _sizeX, int _sizeY, bool** _gridMap) {
+void DynamicVoronoi::initializeMap(int _sizeX, int _sizeY, std::shared_ptr<std::vector<std::vector<bool>>> _gridMap) {
   gridMap = _gridMap;
   initializeEmpty(_sizeX, _sizeY, false);
 
   for (int x=0; x<sizeX; x++) {
     for (int y=0; y<sizeY; y++) {
-      if (gridMap[x][y]) {
+      if ((*gridMap)[x][y]) {
         dataCell c = data[x][y];
         if (!isOccupied(x,y,c)) {
           
@@ -91,7 +105,7 @@ void DynamicVoronoi::initializeMap(int _sizeX, int _sizeY, bool** _gridMap) {
               int ny = y+dy;
               if (ny<=0 || ny>=sizeY-1) continue;
 
-              if (!gridMap[nx][ny]) {
+              if (!(*gridMap)[nx][ny]) {
                 isSurrounded = false;
                 break;
               }
@@ -113,12 +127,12 @@ void DynamicVoronoi::initializeMap(int _sizeX, int _sizeY, bool** _gridMap) {
 }
 
 void DynamicVoronoi::occupyCell(int x, int y) {
-  gridMap[x][y] = 1;
+  (*gridMap)[x][y] = 1;
   setObstacle(x,y);
 }
 
 void DynamicVoronoi::clearCell(int x, int y) {
-  gridMap[x][y] = 0;
+  (*gridMap)[x][y] = 0;
   removeObstacle(x,y);
 }
 
@@ -149,7 +163,7 @@ void DynamicVoronoi::exchangeObstacles(std::vector<INTPOINT>& points) {
     int x = lastObstacles[i].x;
     int y = lastObstacles[i].y;
 
-    bool v = gridMap[x][y];
+    bool v = (*gridMap)[x][y];
     if (v) continue;
     removeObstacle(x,y);
   }  
@@ -159,7 +173,7 @@ void DynamicVoronoi::exchangeObstacles(std::vector<INTPOINT>& points) {
   for (unsigned int i=0; i<points.size(); i++) {
     int x = points[i].x;
     int y = points[i].y;
-    bool v = gridMap[x][y];
+    bool v = (*gridMap)[x][y];
     if (v) continue;
     setObstacle(x,y);
     lastObstacles.push_back(points[i]);
