@@ -49,15 +49,15 @@ trajectory_server/
 3. I provide two kind of simulations.   
     1. **All in PC.** 
         This simulation will run both `PX4_SITL` and `MPC`in the PC.
-        run `sitl_bringup_learning_agile.sh`
+        run `./sitl_bringup_learning_agile.sh`
     2. **HITL simulation**
         One critical issue is to verify whether the drone onboard computer could run the MPC in the desired frequency or not, so here I provided the **HITL** simulation:
-        ![Alt text](MPC_HITL.png)
+        ![Alt text](pictures/MPC_HITL.png)
         1. Your PC will run the `PX4_SITL` and `Gazebo` by running:
-        `sitl_bringup_learning_agile_laptop_distributed.sh` 
+        `./sitl_bringup_learning_agile_laptop_distributed.sh` 
         2. Connect the drone with the PC by wifi, run:
-        `sitl_bringup_learning_agile_drone_distributed.sh`
-4. Real flight:
-    1. On your PC, run: `realflight_bringup_learning_agile_record_remote.sh`  
-    2. ssh on the drone, run:
-    `realflight_bringup_learning_agile_drone.sh`
+        `./sitl_bringup_learning_agile_drone_distributed.sh`
+## 4.2 Real flight:
+1. On your PC, run: `./realflight_bringup_learning_agile_record_remote.sh`  
+2. ssh on the drone, run:
+`./realflight_bringup_learning_agile_drone.sh`
