@@ -6,6 +6,13 @@ For simulation and deployment on a physical drone, PX4 is the firmware of choice
 # Architecture
 <img src="docs/pictures/gestelt_architecture_24_10.png" alt="Gestelt Architecture" style="width: 1200px;"/>
 
+
+# MPC to do
+- [x] MPC hover test
+- [ ] MPC solver construction code clean
+- [ ] MPC setpoint test
+- [ ] NeuroMHE deployment
+- [ ] MPC RL joint training
 # Installation and Setup for Simulation
 1. Install dependencies
 ```bash
@@ -132,6 +139,8 @@ The second one is a fake drone with no physics and be used to test the architect
 2. Trajectory Server.
 3. Minimum Snap Trajectory Planner and Sampler.
 4. Mission commands.
+
+## 3. For MPC start, please refer to `/docs/MPC explain`
 
 
 
