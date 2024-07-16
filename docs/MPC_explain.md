@@ -24,13 +24,13 @@ learning_agile/
 │   ├── learning_agile.cpp
 
 ```
-1. The MPC ROS wrapper is in the file `learning_agile.cpp`, it is not a single ROS node, instead, this class will be called by the node `traj_server`. 
+1. The MPC ROS wrapper is in the file `learning_agile.cpp`, it is not a single ROS node, instead, this class will be called by the node `traj_server` by using the shared pointer.
 
 ## 3. The FSM for safety protection
 ```plaintext
 trajectory_server/
 ├── src/
-│   ├── traj_server_node.cpp (useless now)
+│   ├── traj_server_node.cpp 
 │   ├── traj_server.cpp
 
 ```
@@ -61,3 +61,12 @@ trajectory_server/
 1. On your PC, run: `./realflight_bringup_learning_agile_record_remote.sh`  
 2. ssh on the drone, run:
 `./realflight_bringup_learning_agile_drone.sh`
+
+## 4.3 Log
+Both simulation and real flight logs are in folder  
+ ```plaintext
+    gestelt_bringup/
+    ├── data/
+    │   ├── ...
+
+```
