@@ -16,5 +16,5 @@ learning_agile:
   max_traverse_weight: 0
   traverse_time: 1
   no_solution_flag_t_thresh: 0.1
-  single_motor_max_thrust: 2.1334185 #N
+  single_motor_max_thrust: 3.1839 #2.1334185 #N
   pred_traj_vis: true

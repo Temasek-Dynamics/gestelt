@@ -41,21 +41,29 @@ vcs import < thirdparty.repos --recursive
 # cd to PX4-Autopilot repo
 cd ~/gestelt_ws/PX4-Autopilot
 
+# switch to PX4 version v1.13.0
+git checkout v1.13.0
 
 # Copy the custom controller over
 cp -r ~/gestelt_ws/src/gestelt/gestelt_bringup/customized_controller/PositionControl ~/gestelt_ws/PX4-Autopilot/src/modules/mc_pos_control/
 
 bash ./Tools/setup/ubuntu.sh 
+
+
+# for PX4 V1.13.0 (we are using)
+DONT_RUN=1 make px4_sitl gazebo
+
 # Make SITL target for Gazebo simulation
 DONT_RUN=1 make px4_sitl gazebo-classic
-# for PX4 V1.13.0
-DONT_RUN=1 make px4_sitl gazebo
+
 
 
 # Copy the custom drone model over
-cp -r ~/gestelt_ws/src/gestelt/gestelt_bringup/simulation/models/raynor ~/gestelt_ws/PX4-Autopilot/Tools/simulation/gazebo-classic/sitl_gazebo-classic/models/
 # for PX4 V1.13.0
 cp -r ~/gestelt_ws/src/gestelt/gestelt_bringup/simulation/models/raynor ~/gestelt_ws/PX4-Autopilot/Tools/sitl_gazebo/models/
+
+
+cp -r ~/gestelt_ws/src/gestelt/gestelt_bringup/simulation/models/raynor ~/gestelt_ws/PX4-Autopilot/Tools/simulation/gazebo-classic/sitl_gazebo-classic/models/
 
 
 # [EMERGENCY USE] IF you screw up the PX4 Autopilot build at any point, clean up the build files via the following command:
