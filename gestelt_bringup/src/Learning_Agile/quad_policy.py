@@ -74,9 +74,13 @@ class run_quad:
                                      state_ub=[sc,sc,sc,sc,sc,sc,sc,sc,sc,sc]) #,wc,wc,wc
         # self.uavoc1.setControlVariable(self.uav1.U,control_lb=[0,0,0,0],control_ub= [t2w*tw,t2w*tw,t2w*tw,t2w*tw]) # thrust-to-weight = 4:1
         # 2.1334185=2700x2700x2.9265e-07
-        # 3.1839
-        thrust_ub = 3.1839*4*0.6
-        thrust_lb = 3.1839*4*0.2
+        # drone mass: 0.248kg, g: 9.81m/s^2 weight: 0.248*9.81 = 2.43368N
+        # hover throttle: 0.29, thrust: 0.29*max_thrust =2.43368N
+        # max_thrust = 2.43368/0.29 = 8.4N
+        # single_motor_max_thrust = 8.4/4 = 2.1N
+
+        thrust_ub = 2.0*4*0.6
+        thrust_lb = 2.0*4*0.2
         ang_rate_b=1.57
 
         self.uavoc1.setControlVariable(self.uav1.U,control_lb=[thrust_lb ,-ang_rate_b,-ang_rate_b,-ang_rate_b],control_ub= [thrust_ub,ang_rate_b,ang_rate_b,ang_rate_b]) # thrust-to-weight = 4:1

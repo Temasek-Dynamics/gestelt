@@ -16,5 +16,11 @@ learning_agile:
   max_traverse_weight: 0
   traverse_time: 1
   no_solution_flag_t_thresh: 0.1
-  single_motor_max_thrust: 3.1839 #2.1334185 #N
+  # 1.7268 N is based on the hover throttle: 0.29
+  # drone mass: 0.248kg, g: 9.81m/s^2 weight: 0.248*9.81 = 2.43368N
+  # hover throttle: 0.29, thrust: 0.29*max_thrust =2.43368N
+  # max_thrust = 2.43368/0.29 = 8.4N
+  # single_motor_max_thrust = 8.4/4 = 2.1N
+  
+  single_motor_max_thrust: 2.0 #2.1334185 #N
   pred_traj_vis: true
