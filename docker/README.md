@@ -15,7 +15,6 @@ docker run hello-world
 sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 9B98116C9AA302C7
 ```
 
-
 # Host
 
 ## Building and Pushing images to Docker Hub repository
@@ -40,13 +39,11 @@ docker run -it --network host --privileged johntgz95/radxa-gestelt:latest
 # Find name of new machine 
 docker ps -l
 
-# Start additional bash sessions in same container
-docker exec -it <container_id> bash
-
 # List all docker containers
 docker ps -a
 # Start stopped container
 docker start <container_id>
+# Start additional bash sessions in same container
 docker exec -it <container_id> bash
 # Stop all containers
 docker stop $(docker ps -a -q)

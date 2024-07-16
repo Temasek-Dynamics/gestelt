@@ -3,14 +3,11 @@
 # for examples
 
 # If not running interactively, don't do anything
-case $- in
-    *i*) ;;
-      *) return;;
-esac
+[ -z "$PS1" ] && return
 
-# don't put duplicate lines or lines starting with space in the history.
-# See bash(1) for more options
-HISTCONTROL=ignoreboth
+# don't put duplicate lines in the history. See bash(1) for more options
+# ... or force ignoredups and ignorespace
+HISTCONTROL=ignoredups:ignorespace
 
 # append to the history file, don't overwrite it
 shopt -s histappend
@@ -23,21 +20,17 @@ HISTFILESIZE=2000
 # update the values of LINES and COLUMNS.
 shopt -s checkwinsize
 
-# If set, the pattern "**" used in a pathname expansion context will
-# match all files and zero or more directories and subdirectories.
-#shopt -s globstar
-
 # make less more friendly for non-text input files, see lesspipe(1)
 [ -x /usr/bin/lesspipe ] && eval "$(SHELL=/bin/sh lesspipe)"
 
 # set variable identifying the chroot you work in (used in the prompt below)
-if [ -z "${debian_chroot:-}" ] && [ -r /etc/debian_chroot ]; then
+if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then
     debian_chroot=$(cat /etc/debian_chroot)
 fi
 
 # set a fancy prompt (non-color, unless we know we "want" color)
 case "$TERM" in
-    xterm-color|*-256color) color_prompt=yes;;
+    xterm-color) color_prompt=yes;;
 esac
 
 # uncomment for a colored prompt, if the terminal has the capability; turned
@@ -84,17 +77,10 @@ if [ -x /usr/bin/dircolors ]; then
     alias egrep='egrep --color=auto'
 fi
 
-# colored GCC warnings and errors
-#export GCC_COLORS='error=01;31:warning=01;35:note=01;36:caret=01;32:locus=01:quote=01'
-
 # some more ls aliases
 alias ll='ls -alF'
 alias la='ls -A'
 alias l='ls -CF'
-
-# Add an "alert" alias for long running commands.  Use like so:
-#   sleep 10; alert
-alias alert='notify-send --urgency=low -i "$([ $? = 0 ] && echo terminal || echo error)" "$(history|tail -n1|sed -e '\''s/^\s*[0-9]\+\s*//;s/[;&|]\s*alert$//'\'')"'
 
 # Alias definitions.
 # You may want to put all your additions into a separate file like
@@ -108,30 +94,36 @@ fi
 # enable programmable completion features (you don't need to enable
 # this, if it's already enabled in /etc/bash.bashrc and /etc/profile
 # sources /etc/bash.bashrc).
-if ! shopt -oq posix; then
-  if [ -f /usr/share/bash-completion/bash_completion ]; then
-    . /usr/share/bash-completion/bash_completion
-  elif [ -f /etc/bash_completion ]; then
-    . /etc/bash_completion
-  fi
-fi
+#if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
+#    . /etc/bash_completion
+#fi
 
 # ROS-related
 export ROS_DISTRO="noetic"
 source /opt/ros/noetic/setup.bash
-alias sros="source /opt/ros/noetic/setup.bash"
-alias sws="source devel/setup.bash"
-alias sbash="source /root/.bashrc"
+source /gestelt_ws/devel/setup.bash 
 
 # Set DRONE_ID here
 export DRONE_ID=0
 
-# Multi-machine ROS communication
+# Multi-machine ROS communication. Used for actual drone deployment
 export MASTER_IP=192.168.31.22
-export SELF_IP=192.168.31.166
-# Enable below for testing FCU connection. Comment when running actual flight.
-#export MASTER_IP=localhost
-#export SELF_IP=localhost
+export SELF_IP=localhost
+
+# The code below maps a drone_id to an ip address.
+if [[ "$DRONE_ID" == "0" ]]
+then
+    export SELF_IP=192.168.31.195
+elif [[ "$DRONE_ID" == "1" ]]
+    then
+    export SELF_IP=192.168.31.195
+elif [[ "$DRONE_ID" == "2" ]]
+    then
+    export SELF_IP=192.168.31.195
+else
+    export MASTER_IP=localhost
+    export SELF_IP=localhost
+fi
 
 export ROS_MASTER_URI=http://$MASTER_IP:11311
 export ROS_HOSTNAME=$SELF_IP
@@ -142,16 +134,3 @@ alias uav_startup="cd /gestelt_ws/src/gestelt/gestelt_bringup/scripts/ && ./offb
 
 # Convenience function
 alias killbill="killall -9 rosmaster; tmux kill-server;"
-
-# Time
-alias restart_ntp="sudo service ntp stop && sudo ntpd -gq && sudo service ntp start"
-
-# Network connection
-alias set_network_priority="nmcli connection modify WIFINAME connection.autoconnect-priority N"
-alias check_network_priority="nmcli -f NAME,UUID,AUTOCONNECT,AUTOCONNECT-PRIORITY c"
-alias connect_xiaomi="sudo nmcli dev wifi connect \"Xiaomi_84CE_5G\""
-alias connect_oppenheimer="sudo nmcli dev wifi connect \"oppenheimer\""
-
-# gestelt container operations 
-alias update_gestelt_container="docker pull johntgz95/radxa-gestelt:latest"
-alias start_gestelt_container="docker run -it --network host --privileged johntgz95/radxa-gestelt:latest"
