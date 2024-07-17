@@ -409,9 +409,10 @@ void TrajectoryServer::execTakeOff()
   int type_mask = IGNORE_VEL | IGNORE_ACC | IGNORE_YAW_RATE ; // Ignore Velocity, Acceleration and yaw rate
   
   Eigen::Vector3d pos = last_mission_pos_;
+  last_mission_pos_(2) = takeoff_height_;
   pos(2) = takeoff_height_;
 
-  logInfoThrottled(str_fmt("[TAKEOFF] Taking off to position (%f, %f, %f)", pos(0), pos(1), pos(2)), 1.5);
+  logInfoThrottled(str_fmt("[TAKEOFF] Taking off to position (%f, %f, %f)", pos(0), pos(1), pos(2)), takeoff_height_);
 
   publishCmd( pos, Vector3d::Zero(), Vector3d::Zero(), Vector3d::Zero(), 
               last_mission_yaw_, 0, 

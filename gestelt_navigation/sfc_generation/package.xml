@@ -18,7 +18,6 @@
   <depend>jps3d</depend>
 
   <!-- <depend>decomp_util</depend> -->
-  <depend>decomp_ros_utils</depend> 
 
   <depend>decomp_ros_msgs</depend>
   <depend>convex_decomp_util</depend>

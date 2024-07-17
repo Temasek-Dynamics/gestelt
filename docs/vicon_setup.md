@@ -2,7 +2,9 @@
 This document highlights some important pointers for using Vicon together with a PX4 drone. 
 
 ## Vicon room dimensions
-3.5 (width) * 4.64m (Length) 
+<!-- Outdated dimensions: 3.5 (width) * 4.64m (Length) -->
+Maximum: 6m * 6m * 2.5
+Recommended: 5.5m * 5.5m * 2.5
 
 ## Set up
 1. Creating the vicon object. 

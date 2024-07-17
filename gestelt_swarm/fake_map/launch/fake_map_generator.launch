@@ -1,7 +1,11 @@
 <?xml version="1.0"?>
 <launch>
+    <arg name="param_dir" default="$(find fake_map)/config"/>
+    <arg name="param_file" default="forest_generate"/>
+    <arg name="param_filepath" default="$(arg param_dir)/$(arg param_file).yaml"/>
+
     <node pkg="fake_map" type="fake_map_generator" name="fake_map_generator" output="screen">
-        <rosparam command="load" file="$(find fake_map)/config/forest_generate.yaml" />
+        <rosparam command="load" file="$(arg param_filepath)" />
         <param name="path" value="$(find gestelt_bringup)/simulation/fake_maps/"/>
     </node>
 </launch>

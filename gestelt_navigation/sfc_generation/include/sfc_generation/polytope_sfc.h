@@ -9,8 +9,8 @@
 
 #include <decomp_geometry/polyhedron.h>
 #include <convex_decomp.hpp>              // Toumieh's polyhedron SFC generation method
+#include <decomp_ros_msgs/EllipsoidArray.h>
 #include <decomp_ros_msgs/PolyhedronArray.h>
-#include <decomp_ros_utils/data_ros_utils.h>
 #include <decomp_util/ellipsoid_decomp.h> // Liu's polyhedron SFC generation method
 
 #include <queue>
@@ -167,10 +167,62 @@ private:
   }
 
 
-private: // Private methods
+private: // Helper methods
   /* Visualization methods */
   void publishPolyhedra(
       const std::vector<Polyhedron3D, Eigen::aligned_allocator<Polyhedron3D>>& poly_vec);
+
+  inline decomp_ros_msgs::Polyhedron polyhedron_to_ros(const Polyhedron3D& poly){
+    decomp_ros_msgs::Polyhedron msg;
+    for (const auto &p : poly.hyperplanes()) {
+      geometry_msgs::Point pt, n;
+      pt.x = p.p_(0);
+      pt.y = p.p_(1);
+      pt.z = p.p_(2);
+      n.x = p.n_(0);
+      n.y = p.n_(1);
+      n.z = p.n_(2);
+      msg.points.push_back(pt);
+      msg.normals.push_back(n);
+    }
+
+    return msg;
+  }
+
+
+  template <int Dim>
+  decomp_ros_msgs::PolyhedronArray polyhedron_array_to_ros(const vec_E<Polyhedron<Dim>>& vs){
+    decomp_ros_msgs::PolyhedronArray msg;
+    for (const auto &v : vs){
+      msg.polyhedrons.push_back(polyhedron_to_ros(v));
+    }
+    return msg;
+  }
+
+  template <int Dim>
+  decomp_ros_msgs::EllipsoidArray ellipsoid_array_to_ros(const vec_E<Ellipsoid<Dim>>& Es) {
+    decomp_ros_msgs::EllipsoidArray ellipsoids;
+    for (unsigned int i = 0; i < Es.size(); i++) {
+      decomp_ros_msgs::Ellipsoid ellipsoid;
+      auto d = Es[i].d();
+      ellipsoid.d[0] = d(0);
+      ellipsoid.d[1] = d(1);
+      ellipsoid.d[2] = Dim == 2 ? 0:d(2);
+
+      auto C = Es[i].C();
+      for (int x = 0; x < 3; x++) {
+        for (int y = 0; y < 3; y++) {
+          if(x < Dim && y < Dim)
+            ellipsoid.E[3 * x + y] = C(x, y);
+          else
+            ellipsoid.E[3 * x + y] = 0;
+        }
+      }
+      ellipsoids.ellipsoids.push_back(ellipsoid);
+    }
+
+    return ellipsoids;
+  }
 
 private: // Private members
   std::shared_ptr<GridMap> map_; // Pointer to occupancy voxel map

@@ -160,6 +160,8 @@ Inside the [/home/john/gestelt_ws/src/gestelt/gestelt_bringup/scripts](/home/joh
 ```bash
 # empty_map scenario for 1 drone
 ./scenario.sh -s empty_map
+# Vicon environment
+./scenario.sh -s vicon_empty
 # cluttered forest for 1 drone
 ./scenario.sh -s forest_single
 ./scenario.sh -s forest1_0p8
