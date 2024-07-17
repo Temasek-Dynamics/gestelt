@@ -49,9 +49,9 @@ void Navigator::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
 
   // Initialize back-end planner
   if (back_end_type_ == BackEndType::EGO){
-    ego_optimizer_ = std::make_unique<ego_planner::EGOPlannerManager>(ego_params_);
-    ego_optimizer_->initPlanModules(nh, pnh, map_, visualization_);
-    ego_optimizer_->setSwarmTrajectories(swarm_local_trajs_);
+    // ego_optimizer_ = std::make_unique<ego_planner::EGOPlannerManager>(ego_params_);
+    // ego_optimizer_->initPlanModules(nh, pnh, map_, visualization_);
+    // ego_optimizer_->setSwarmTrajectories(swarm_local_trajs_);
   }
   else if (back_end_type_ == BackEndType::SSFC) {
     ssfc_optimizer_ = std::make_unique<back_end::SphericalSFCOptimizer>();
@@ -520,13 +520,13 @@ bool Navigator::requestBackEndPlan()
   for (int itr = 0; itr < optimizer_num_retries_; itr++)
   {
     if (back_end_type_ == BackEndType::EGO){
-      plan_success = EGOOptimize(startPVA, endPVA, mjo_opt);
+      // plan_success = EGOOptimize(startPVA, endPVA, mjo_opt);
     }
     else if (back_end_type_ == BackEndType::SSFC){
       plan_success = SSFCOptimize(startPVA, endPVA, req_plan_t, ssfc_, mjo_opt);
     }
     else if (back_end_type_ == BackEndType::POLY){
-      plan_success = PolySFCOptimize(startPVA, endPVA, req_plan_t, poly_sfc_vtx_, mjo_opt);
+      // plan_success = PolySFCOptimize(startPVA, endPVA, req_plan_t, poly_sfc_vtx_, mjo_opt);
     }
 
     // Eigen::MatrixXd cstr_pts_mjo_opt = mjo_opt.getInitConstraintPoints(num_cstr_pts_per_seg_);
@@ -570,127 +570,6 @@ bool Navigator::requestBackEndPlan()
   return true;
 }
 
-bool Navigator::PolySFCOptimize(const Eigen::Matrix3d& startPVA, const Eigen::Matrix3d& endPVA, 
-                    const double& req_plan_time,
-                    const std::vector<Eigen::Matrix3Xd>& poly_sfc,
-                    poly_traj::MinJerkOpt& mjo_opt)
-{
-  bool plan_success{false};
-
-  // /***************************/
-  /* 1. Generate initial path */
-  // /***************************/
-  Eigen::Matrix3Xd initial_path;
-  polyhedron_sfc_optimizer_->genInitialSFCTrajectory(startPVA.col(0), endPVA.col(0),
-                                                     poly_sfc, 0.01, initial_path);
-
-  visualization_->displayInitialPolyPath(initial_path, 0);
-
-  // /***************************/
-  /* 2. Pre-processing for optimization */
-  // /***************************/
-
-  // DEFINITION: super-segment: The segments between control points (their length can vary and depends on the initial path generation)
-  // DEFINITION: segment: The segments between control points (Length is fixed by user-defined parameter)
-
-  int num_polyhedrons = poly_sfc_hyp_.size();
-  // cp_deltas: change in control points position
-  Eigen::Matrix3Xd cp_deltas = initial_path.rightCols(num_polyhedrons) - initial_path.leftCols(num_polyhedrons);
-  // segs_in_super_seg: Elements are indexed by super-segment index and the value is number of segments belonging to that super-segment 
-  //                    = (diff between waypoints / length per piece)
-  Eigen::VectorXi segs_in_super_seg = (cp_deltas.colwise().norm() / INFINITY).cast<int>().transpose();
-  segs_in_super_seg.array() += 1;
-
-  int num_segs = segs_in_super_seg.sum(); // Total number of segments
-  int num_cstr_pts = polyhedron_sfc_optimizer_->getNumCstrPtsPerSeg();
-  int num_decis_var_t = num_segs; // num_decis_var_t: Number of decision variables for Time duration 
-  int num_decis_var_bary = 0; // num_decis_var_bary: Number of decision variables for barycentric coordinates
-
-  Eigen::VectorXi vPolyIdx, hPolyIdx; // Elements are indexed by segment index and the value is the polyhedron index the segment belongs to 
-  vPolyIdx.resize(num_segs - 1); 
-  hPolyIdx.resize(num_segs);
-  for (int i = 0, j = 0, k; i < num_polyhedrons; i++) // For each polygon i
-  {
-      // k: Number of segments per super-segment
-      k = segs_in_super_seg(i); 
-      for (int l = 0; l < k; l++, j++)  // For each segment l on the super-segment
-      {
-          if (l < k - 1) // If not the last segment of the piece
-          {
-              vPolyIdx(j) = 2 * i; // segment j belongs to the (2*i)-th polyhedron (CURRENT) 
-              num_decis_var_bary += poly_sfc_vtx_[2 * i].cols(); // Add Number of vertices 
-          }
-          else if (i < num_polyhedrons - 1) // Last segment of the super-segment
-          {
-              vPolyIdx(j) = 2 * i + 1; // segment j belongs to the (2*i+1)-th polyhedron (NEXT)
-              num_decis_var_bary += poly_sfc_vtx_[2 * i + 1].cols(); // Add Number of vertices
-          }
-          hPolyIdx(j) = i;
-      }
-  }
-
-  // /***************************/
-  /* 3. Generate inner control points and time allocation vector */
-  // /***************************/
-
-  Eigen::Matrix3Xd inner_ctrl_pts(3, num_segs - 1);
-  Eigen::VectorXd init_seg_dur(num_segs);
-
-  Eigen::Vector3d a, b, c;
-  for (int i = 0, j = 0, k = 0, l; i < segs_in_super_seg.size(); i++) // For each super-segment
-  {
-    l = segs_in_super_seg(i);
-    a = initial_path.col(i);
-    b = initial_path.col(i + 1);
-    c = (b - a) / l; // Length of each segment in current super-segment
-    init_seg_dur.segment(j, l).setConstant(c.norm() / polyhedron_sfc_optimizer_->getMaxVel());
-    j += l;
-    for (int m = 0; m < l; m++) // for each segment
-    {
-      if (i > 0 || m > 0)
-      {
-        inner_ctrl_pts.col(k++) = a + c * m;
-      }
-    }
-  }
-
-  // /***************************/
-  /* 4. Create initial MJO for visualization*/
-  // /***************************/
-  std::cout << "===== Create initial MJO for visualization =====" << std::endl;
-
-  poly_traj::MinJerkOpt initial_mjo; // Initial minimum jerk trajectory
-  initial_mjo.reset(startPVA, endPVA, num_segs);
-  initial_mjo.generate(inner_ctrl_pts, init_seg_dur);
-
-  Eigen::MatrixXd init_cstr_pts = initial_mjo.getInitConstraintPoints(num_cstr_pts);
-
-  std::vector<Eigen::Vector3d> initial_mjo_viz; // Visualization of the initial minimum jerk trajectory
-  for (int i = 0; i < init_cstr_pts.cols(); ++i){
-    initial_mjo_viz.push_back(init_cstr_pts.col(i));
-  }
-  visualization_->displayInitialMJO(initial_mjo_viz, 0.075, 0);
-
-
-  // /***************************/
-  // /*5:  Optimize plan
-  // /***************************/
-  std::cout << "===== Optimize plan =====" << std::endl;
-
-  double final_cost = 0; 
-
-  plan_success = polyhedron_sfc_optimizer_->optimizeTrajectory( 
-        startPVA, endPVA,                   // Start and end (pos, vel, acc)
-        inner_ctrl_pts, init_seg_dur,
-        vPolyIdx, poly_sfc,
-        num_decis_var_t, num_decis_var_bary,
-        final_cost);                      
-
-  // // Optimized minimum jerk trajectory
-  // mjo_opt = polyhedron_sfc_optimizer_->getOptimizedMJO();
-
-  return plan_success;
-}
 
 bool Navigator::SSFCOptimize(const Eigen::Matrix3d& startPVA, const Eigen::Matrix3d& endPVA, 
                   const double& req_plan_time,
@@ -812,61 +691,61 @@ bool Navigator::SSFCOptimize(const Eigen::Matrix3d& startPVA, const Eigen::Matri
 }
 
 // ESDF-free Gradient optimization
-bool Navigator::EGOOptimize(const Eigen::Matrix3d& startPVA,  
-                            const Eigen::Matrix3d& endPVA, 
-                            poly_traj::MinJerkOpt& mjo_opt){
+// bool Navigator::EGOOptimize(const Eigen::Matrix3d& startPVA,  
+//                             const Eigen::Matrix3d& endPVA, 
+//                             poly_traj::MinJerkOpt& mjo_opt){
 
-  bool plan_success = false;
+//   bool plan_success = false;
 
-  std::vector<Eigen::Vector3d> waypoints;
-  waypoints.push_back(endPVA.col(0));
+//   std::vector<Eigen::Vector3d> waypoints;
+//   waypoints.push_back(endPVA.col(0));
 
-  if (init_new_poly_traj_){
-    // Generate initial minimum jerk trajectory starting from agent's current position with 0 starting/ending acceleration and velocity.
-    plan_success = ego_optimizer_->planGlobalTrajWaypoints(
-        mjo_opt,
-        startPVA.col(0), startPVA.col(1), startPVA.col(2),
-        waypoints, endPVA.col(1), endPVA.col(2));
+//   if (init_new_poly_traj_){
+//     // Generate initial minimum jerk trajectory starting from agent's current position with 0 starting/ending acceleration and velocity.
+//     plan_success = ego_optimizer_->planGlobalTrajWaypoints(
+//         mjo_opt,
+//         startPVA.col(0), startPVA.col(1), startPVA.col(2),
+//         waypoints, endPVA.col(1), endPVA.col(2));
 
-    if (!plan_success)
-    {
-      logError("Unable to generate initial global minimum jerk trajectory!");
-      return false;
-    }
-  }
+//     if (!plan_success)
+//     {
+//       logError("Unable to generate initial global minimum jerk trajectory!");
+//       return false;
+//     }
+//   }
 
-  // Publishes to "goal_point"
-  visualization_->displayGoalPoint(endPVA.col(0), Eigen::Vector4d(0, 0.5, 0.5, 1), 0.3, 0);
+//   // Publishes to "goal_point"
+//   visualization_->displayGoalPoint(endPVA.col(0), Eigen::Vector4d(0, 0.5, 0.5, 1), 0.3, 0);
 
-  std::vector<Eigen::Vector3d> global_traj = ego_optimizer_->traj_.getGlobalTrajViz(0.1); // visualize with time step of 0.1s
+//   std::vector<Eigen::Vector3d> global_traj = ego_optimizer_->traj_.getGlobalTrajViz(0.1); // visualize with time step of 0.1s
 
-  // Publishes to "global_list"
-  visualization_->displayGlobalPathList(global_traj, 0.1, 0);
+//   // Publishes to "global_list"
+//   visualization_->displayGlobalPathList(global_traj, 0.1, 0);
 
-  /*2:  Plan global trajectory */
-  bool flag_randomPolyTraj = false; // Random polynomial coefficients
+//   /*2:  Plan global trajectory */
+//   bool flag_randomPolyTraj = false; // Random polynomial coefficients
 
-  Eigen::Vector3d local_target_pos, local_target_vel;
+//   Eigen::Vector3d local_target_pos, local_target_vel;
 
-  // Get local target based on planning horizon
-  ego_optimizer_->getLocalTarget(
-      rhp_dist_, startPVA.col(0), endPVA.col(0),
-      local_target_pos, local_target_vel,
-      touch_goal_);
+//   // Get local target based on planning horizon
+//   ego_optimizer_->getLocalTarget(
+//       rhp_dist_, startPVA.col(0), endPVA.col(0),
+//       local_target_pos, local_target_vel,
+//       touch_goal_);
 
-  // Optimizer plans to local target and goal
-  plan_success = ego_optimizer_->reboundReplan(
-      startPVA.col(0), startPVA.col(1), startPVA.col(2), 
-      local_target_pos, local_target_vel, 
-      init_new_poly_traj_, flag_randomPolyTraj, 
-      touch_goal_);
+//   // Optimizer plans to local target and goal
+//   plan_success = ego_optimizer_->reboundReplan(
+//       startPVA.col(0), startPVA.col(1), startPVA.col(2), 
+//       local_target_pos, local_target_vel, 
+//       init_new_poly_traj_, flag_randomPolyTraj, 
+//       touch_goal_);
 
-  mjo_opt = ego_optimizer_->ploy_traj_opt_->getOptimizedMJO_EGO();
+//   mjo_opt = ego_optimizer_->ploy_traj_opt_->getOptimizedMJO_EGO();
 
-  init_new_poly_traj_ = false;
+//   init_new_poly_traj_ = false;
 
-  return plan_success;
-}
+//   return plan_success;
+// }
 
 void Navigator::stopAllPlanning()
 {

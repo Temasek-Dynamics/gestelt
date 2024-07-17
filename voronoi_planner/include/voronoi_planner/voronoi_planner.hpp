@@ -104,7 +104,7 @@ public:
     occ_grid.info.origin.position.y = origin_y;
     occ_grid.info.origin.position.z = dyn_voro.getOriginZ();
     tf2::Quaternion q;
-    q.setRPY(0, 0, yaw_);
+    q.setRPY(0, 0, 0.0);
     occ_grid.info.origin.orientation.x = q.x();
     occ_grid.info.origin.orientation.y = q.y();
     occ_grid.info.origin.orientation.z = q.z();
@@ -136,7 +136,7 @@ public:
     occ_grid.info.origin.position.y = origin_y;
     occ_grid.info.origin.position.z = dyn_voro.getOriginZ();
     tf2::Quaternion q;
-    q.setRPY(0, 0, yaw_);
+    q.setRPY(0, 0, 0.0);
     occ_grid.info.origin.orientation.x = q.x();
     occ_grid.info.origin.orientation.y = q.y();
     occ_grid.info.origin.orientation.z = q.z();
@@ -320,25 +320,28 @@ public:
     publisher.publish(path_line_strip);
   }
 
-  bool plan(const DblPoint& start, const DblPoint& goal, const int& z){
-    publishStartAndGoal(start, goal, z, "map", start_pt_pub_, goal_pt_pub_) ;
+
+  bool plan(const DblPoint& start, const int& start_z, const DblPoint& goal, const int& goal_z){
+    // publishStartAndGoal(start, goal, z, "map", start_pt_pub_, goal_pt_pub_) ;
 
     tm_front_end_plan_.start();
 
-    if (dyn_voro_arr_.find(z) == dyn_voro_arr_.end()){
-      std::cout << "Map slice at height "<< z << " does not exist" << std::endl;
+    if (dyn_voro_arr_.find(goal_z) == dyn_voro_arr_.end()){
+      std::cout << "Map slice at height "<< goal_z << " does not exist" << std::endl;
       return false;
     }
 
-    front_end_planner_ = std::make_unique<AStarPlanner>(dyn_voro_arr_[z], astar_params_);
+    front_end_planner_ = std::make_unique<AStarPlanner>(dyn_voro_arr_[goal_z], astar_params_);
     front_end_planner_->addPublishers(front_end_publisher_map_);
 
     if (!front_end_planner_->generatePlanVoronoi(start, goal)){
       std::cout << "FRONT END FAILED!!!! front_end_planner_->generatePlan() from ("<< \
-        start.x << ", " <<  start.y << ") to (" << goal.x << ", " <<  goal.y << ")" << std::endl;
-      return false;
+        start.x << ", " <<  start.y << "," << start_z << ") to (" << goal.x << ", " <<  goal.y << "," << goal_z << ")" << std::endl;
 
-      // viz_helper::publishClosedList(front_end_planner_->getClosedList(), "world", closed_list_viz_pub_);
+      tm_front_end_plan_.stop(verbose_planning_);
+
+      front_end_planner_->publishClosedList(front_end_planner_->getClosedListVoronoi(), front_end_publisher_map_["front_end/closed_list"], "local_map_origin");
+      return false;
     }
     else{
       std::vector<Eigen::Vector3d> front_end_path = front_end_planner_->getPathPosRaw();
@@ -360,29 +363,56 @@ public:
 
 /* Subscriber callbacks */
 private:
-  void startPointCB(const geometry_msgs::PointStampedConstPtr &msg){
-    start_pos_.x = msg->point.x - local_origin_x_;
-    start_pos_.y = msg->point.y - local_origin_y_;
+  // void startPointCB(const geometry_msgs::PointStampedConstPtr &msg){
+  //   start_pos_.x = msg->point.x - local_origin_x_;
+  //   start_pos_.y = msg->point.y - local_origin_y_;
+  // }
+
+  void startDebugCB(const geometry_msgs::PoseStampedConstPtr &msg){
+    start_pos_.x = msg->pose.position.x - local_origin_x_;
+    start_pos_.y = msg->pose.position.y - local_origin_y_;
+
+    start_z_ = (int) (msg->pose.position.z * 100);
   }
 
-  void goalPointCB(const geometry_msgs::PoseStampedConstPtr &msg){
+  void goalDebugCB(const geometry_msgs::PoseStampedConstPtr &msg){
     goal_pos_.x = msg->pose.position.x - local_origin_x_;
     goal_pos_.y = msg->pose.position.y - local_origin_y_;
 
-    plan(start_pos_, goal_pos_, 100);
+    goal_z_ = (int) (msg->pose.position.z * 100);
+
+    int start_z_rounded = roundUpMult(start_z_, z_multiple_);
+    int goal_z_rounded = roundUpMult(goal_z_, z_multiple_);
+
+    std::cout << "start_z: " <<  start_z_ << "rounded to " << start_z_rounded << std::endl;
+    std::cout << "goal_z: " <<  goal_z_ << "rounded to " << goal_z_rounded << std::endl;
+
+    plan(start_pos_, start_z_rounded, goal_pos_, goal_z_rounded);
+  }
+
+  // Round up to multiples
+  int roundUpMult(const double& num, const int& mult)
+  {
+    if (mult == 0){
+      return num;
+    }
+    int rem = (int)num % mult;
+    if (rem == 0){
+      return num;
+    }
+
+    return (num-rem) + mult;
   }
 
 private:
   /* Params */
   std::string map_fname_;
   bool verbose_planning_{false};  // enables printing of planning time
-  bool negate_{false};
   double res_;
-  double occ_th_, free_th_;
-  double yaw_;
-
-  double max_z_, min_z_; // Maximum and minimum z
-  double res_z_; // z resolution
+  // bool negate_{false};
+  // double occ_th_, free_th_;
+  // double yaw_;
+  int z_multiple_; 
 
   AStarPlanner::AStarParams astar_params_; 
 
@@ -390,6 +420,7 @@ private:
   ros::Publisher occ_map_pub_;      // Publishes original occupancy grid
   // ros::Publisher dist_occ_map_pub_; // Publishes distance map occupancy grid
   ros::Publisher voro_occ_grid_pub_; // Publishes voronoi map occupancy grid
+  ros::Publisher voro_occ_grid_pruned_pub_; // Publishes voronoi map occupancy grid
 
   ros::Publisher front_end_plan_viz_pub_; // Publish front-end plan (A*) visualization
   ros::Publisher start_pt_pub_, goal_pt_pub_; // start and goal visualization publisher
@@ -402,6 +433,8 @@ private:
   /* Planning */
   DblPoint start_pos_{0.0, 0.0};
   DblPoint goal_pos_{0.0, 0.0};
+
+  double start_z_{0.0}, goal_z_{0.0}; // start and goal z (height) value in cm
 
   /* Mapping */
   std::shared_ptr<GridMap> map_;

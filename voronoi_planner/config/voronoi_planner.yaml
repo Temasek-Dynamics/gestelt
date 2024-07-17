@@ -1,4 +1,6 @@
 resolution: 0.1
-negate: false
-occ_threshold: 0.65
-free_threshold: 0.196
+verbose_planning: true
+z_multiple: 25 # Height multiple for map slicing [cm]
+# negate: false
+# occ_threshold: 0.65
+# free_threshold: 0.196

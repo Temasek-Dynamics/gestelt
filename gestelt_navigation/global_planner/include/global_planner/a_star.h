@@ -105,19 +105,8 @@ public:
       closed_list_viz_pub_ = closed_list_viz_pub;
   }
 
-private:
 
-  void expandVoronoiBubble(
-    const INTPOINT& grid_pos, const bool& makeGoalBubble);
-
-
-  void tracePath(PosIdx final_node);
-
-  void tracePathVoronoi(IntPoint final_node);
-
-  void clearVisualizations();
-
-  void publishVizPoints(const std::vector<Eigen::Vector3d>& pts, ros::Publisher& publisher, Eigen::Vector3d color = Eigen::Vector3d{0.0, 0.0, 0.0}, double radius = 0.1, const std::string& frame_id = "map")
+  void publishClosedList(const std::vector<Eigen::Vector3d>& pts, ros::Publisher& publisher, const std::string& frame_id = "map", Eigen::Vector3d color = Eigen::Vector3d{0.0, 0.0, 0.0}, double radius = 0.1)
   {
     if (!astar_params_.debug_viz || pts.empty()){
       return;
@@ -154,6 +143,19 @@ private:
 
     publisher.publish(sphere_list);
   }
+
+
+private:
+
+  void expandVoronoiBubble(
+    const INTPOINT& grid_pos, const bool& makeGoalBubble);
+
+
+  void tracePath(PosIdx final_node);
+
+  void tracePathVoronoi(IntPoint final_node);
+
+  void clearVisualizations();
 
 private: 
   std::vector<PosIdx> path_idx_; // Path in terms of indices

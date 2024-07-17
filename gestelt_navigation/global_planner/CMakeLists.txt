@@ -30,7 +30,7 @@ find_package(Eigen3 REQUIRED)
 catkin_package(
  INCLUDE_DIRS include
  LIBRARIES global_planner # Exported libraries
- CATKIN_DEPENDS grid_map jps3d logger # Export grid_map as part of this package
+ CATKIN_DEPENDS grid_map jps3d logger dynamic_voronoi # Export packages as part of this package
 #  DEPENDS system_lib
 )
 

@@ -47,9 +47,7 @@
 
 /* Back-end optimization */
 #include <optimizer/poly_traj_optimizer.h>
-#include <optimizer/polyhedron_sfc_optimizer.h>
 #include <optimizer/spherical_sfc_optimizer.h>
-#include <ego_planner_manager/ego_planner_manager.h>
 
 class Navigator
 {
@@ -148,9 +146,6 @@ private:
     const Eigen::Vector3d& start_pos, const Eigen::Vector3d& goal_pos,
     std::shared_ptr<SSFC::SFCTrajectory> sfc_traj);
 
-  // EDSF Free optimization
-  bool EGOOptimize(const Eigen::Matrix3d& startPVA, const Eigen::Matrix3d& endPVA, 
-                  poly_traj::MinJerkOpt& mjo_opt);
 
   // Spherical safe flight corridor optimization
   bool SSFCOptimize(const Eigen::Matrix3d& startPVA, const Eigen::Matrix3d& endPVA, 
@@ -438,9 +433,7 @@ private: /* Planner members */
   std::unique_ptr<SFCBase> sfc_generation_; // Spherical safe flight corridor generator
   std::unique_ptr<PolytopeSFC> poly_sfc_gen_; // Polytope safe flight corridor generator
 
-  std::unique_ptr<back_end::PolyhedronSFCOptimizer> polyhedron_sfc_optimizer_; // Polynomial trajectory optimizer
   std::unique_ptr<back_end::SphericalSFCOptimizer> ssfc_optimizer_; // Spherical SFC optimizer
-  std::unique_ptr<ego_planner::EGOPlannerManager> ego_optimizer_; // Back-end planner
 
   /* Data structs */
   Waypoint waypoints_; // Goal waypoint handler object

@@ -108,117 +108,117 @@ namespace back_end
     intermediate_cstr_pts_q_.clear();
   }
 
-  bool PolyhedronSFCOptimizer::optimizeTrajectory(
-      const Eigen::Matrix3d &startPVA, const Eigen::Matrix3d &endPVA,
-      const Eigen::MatrixXd &inner_ctrl_pts, const Eigen::VectorXd &init_seg_dur,
-      const Eigen::VectorXi& vPolyIdx, const std::vector<Eigen::Matrix3Xd>& vPolytopes,
-      const int& num_decis_var_t, const int& num_decis_var_bary,
-      double &final_cost)
-  {
-    // IF size of inner points and segment durations are not the same, there is a bug
-    if (inner_ctrl_pts.cols() != (init_seg_dur.size() - 1))
-    {
-      ROS_ERROR("[PolyhedronSFCOptimizer::optimizeTrajectory] inner_ctrl_pts.cols() != (init_seg_dur.size()-1)");
-      return false;
-    }
+  // bool PolyhedronSFCOptimizer::optimizeTrajectory(
+  //     const Eigen::Matrix3d &startPVA, const Eigen::Matrix3d &endPVA,
+  //     const Eigen::MatrixXd &inner_ctrl_pts, const Eigen::VectorXd &init_seg_dur,
+  //     const Eigen::VectorXi& vPolyIdx, const std::vector<Eigen::Matrix3Xd>& vPolytopes,
+  //     const int& num_decis_var_t, const int& num_decis_var_bary,
+  //     double &final_cost)
+  // {
+  //   // IF size of inner points and segment durations are not the same, there is a bug
+  //   if (inner_ctrl_pts.cols() != (init_seg_dur.size() - 1))
+  //   {
+  //     ROS_ERROR("[PolyhedronSFCOptimizer::optimizeTrajectory] inner_ctrl_pts.cols() != (init_seg_dur.size()-1)");
+  //     return false;
+  //   }
 
-    reset();
+  //   reset();
     
-    int restart_nums = 0, num_retries = 0;
-    bool flag_force_return{false}, flag_success{false};
+  //   int restart_nums = 0, num_retries = 0;
+  //   bool flag_force_return{false}, flag_success{false};
 
-    num_segs_ = init_seg_dur.size(); // Number of segments
-    int num_decis_var = num_decis_var_t + num_decis_var_bary; //  Number of decision variables. Position (size 3 x (M-1)) + Time ( size 1 x (M-1) + 1) 
+  //   num_segs_ = init_seg_dur.size(); // Number of segments
+  //   int num_decis_var = num_decis_var_t + num_decis_var_bary; //  Number of decision variables. Position (size 3 x (M-1)) + Time ( size 1 x (M-1) + 1) 
     
-    num_decis_var_t_ = num_decis_var_t;
-    num_decis_var_bary_ = num_decis_var_bary;
-    vPolyIdx_ = vPolyIdx;
-    vPolytopes_ = vPolytopes;
-    inner_ctrl_pts_ = inner_ctrl_pts;
+  //   num_decis_var_t_ = num_decis_var_t;
+  //   num_decis_var_bary_ = num_decis_var_bary;
+  //   vPolyIdx_ = vPolyIdx;
+  //   vPolytopes_ = vPolytopes;
+  //   inner_ctrl_pts_ = inner_ctrl_pts;
 
-    /* Initialize decision variables*/
-    double x_init[num_decis_var]; // Initial decision variables: Array of [ inner_ctrl_pts, init_seg_dur ]
+  //   /* Initialize decision variables*/
+  //   double x_init[num_decis_var]; // Initial decision variables: Array of [ inner_ctrl_pts, init_seg_dur ]
 
-    Eigen::Map<Eigen::VectorXd> Vt(x_init, num_decis_var_t); 
-    Eigen::Map<Eigen::VectorXd> xi(x_init + num_decis_var_t, num_decis_var_bary); 
+  //   Eigen::Map<Eigen::VectorXd> Vt(x_init, num_decis_var_t); 
+  //   Eigen::Map<Eigen::VectorXd> xi(x_init + num_decis_var_t, num_decis_var_bary); 
 
-    // Eigen::Map<const Eigen::VectorXd> t(x + (3 * (opt->num_segs_ - 1)), opt->num_segs_);
+  //   // Eigen::Map<const Eigen::VectorXd> t(x + (3 * (opt->num_segs_ - 1)), opt->num_segs_);
 
-    // Convert from real to virtual time Vt
-    RealT2VirtualT(init_seg_dur, Vt);
-    // // Convert from constrained coordinates q to barycentric coordinates xi
-    backwardP(inner_ctrl_pts, vPolyIdx, vPolytopes, xi);
+  //   // Convert from real to virtual time Vt
+  //   RealT2VirtualT(init_seg_dur, Vt);
+  //   // // Convert from constrained coordinates q to barycentric coordinates xi
+  //   backwardP(inner_ctrl_pts, vPolyIdx, vPolytopes, xi);
 
-    /* Initialize minimum jerk trajectory */
-    mjo_xi_.reset(startPVA, endPVA, num_segs_);
-    mjo_q_.reset(startPVA, endPVA, num_segs_);
+  //   /* Initialize minimum jerk trajectory */
+  //   mjo_xi_.reset(startPVA, endPVA, num_segs_);
+  //   mjo_q_.reset(startPVA, endPVA, num_segs_);
 
-    lbfgs::lbfgs_parameter_t lbfgs_params;
-    lbfgs::lbfgs_load_default_parameters(&lbfgs_params);
-    lbfgs_params.mem_size = 256; // 16
-    lbfgs_params.max_iterations = 200;
-    lbfgs_params.g_epsilon = 0.0;
-    // lbfgs_params.g_epsilon = 0.1;
-    // lbfgs_params.abs_curv_cond = 0;
-    lbfgs_params.past = 3;
-    // lbfgs_params.delta = 1.0e-3;
-    lbfgs_params.delta = 1.0e-3;
-    lbfgs_params.max_linesearch = 200;
-    lbfgs_params.min_step = 1e-32;
-    lbfgs_params.max_step = 1e+20;
+  //   lbfgs::lbfgs_parameter_t lbfgs_params;
+  //   lbfgs::lbfgs_load_default_parameters(&lbfgs_params);
+  //   lbfgs_params.mem_size = 256; // 16
+  //   lbfgs_params.max_iterations = 200;
+  //   lbfgs_params.g_epsilon = 0.0;
+  //   // lbfgs_params.g_epsilon = 0.1;
+  //   // lbfgs_params.abs_curv_cond = 0;
+  //   lbfgs_params.past = 3;
+  //   // lbfgs_params.delta = 1.0e-3;
+  //   lbfgs_params.delta = 1.0e-3;
+  //   lbfgs_params.max_linesearch = 200;
+  //   lbfgs_params.min_step = 1e-32;
+  //   lbfgs_params.max_step = 1e+20;
 
-    do
-    {
-      /* ---------- prepare ---------- */
-      iter_num_ = 0;
-      flag_force_return = false;
-      force_stop_type_ = DONT_STOP;
-      flag_success = false;
-      t_now_ = ros::Time::now().toSec();
+  //   do
+  //   {
+  //     /* ---------- prepare ---------- */
+  //     iter_num_ = 0;
+  //     flag_force_return = false;
+  //     force_stop_type_ = DONT_STOP;
+  //     flag_success = false;
+  //     t_now_ = ros::Time::now().toSec();
 
-      /* ---------- optimize ---------- */
-      t1 = ros::Time::now();
-      int result = lbfgs::lbfgs_optimize(
-          num_decis_var,                  // The number of variables 
-          x_init,                         // The array of variables.
-          &final_cost,                    // The pointer to the variable that receives the final value of the objective function for the variables
-          PolyhedronSFCOptimizer::costFunctionCallback, // The callback function to provide function and gradient evaluations given a current values of variables
-          NULL,                           //  The callback function to provide values of the upperbound of the stepsize to search in, provided with the beginning values of variables before the linear search, and the current step vector (can be negative gradient).
-          PolyhedronSFCOptimizer::earlyExitCallback,    // The callback function to receive the progress (the number of iterations, the current value of the objective function) of the minimization process.
-          this,                           // A user data for the client program. The callback functions will receive the value of this argument.
-          &lbfgs_params);                 // The pointer to a structure representing parameters for L-BFGS optimization. A client program can set this parameter to NULL to use the default parameters
-      double opt_time_ms = (ros::Time::now() - t1).toSec() * 1000;
+  //     /* ---------- optimize ---------- */
+  //     t1 = ros::Time::now();
+  //     int result = lbfgs::lbfgs_optimize(
+  //         num_decis_var,                  // The number of variables 
+  //         x_init,                         // The array of variables.
+  //         &final_cost,                    // The pointer to the variable that receives the final value of the objective function for the variables
+  //         PolyhedronSFCOptimizer::costFunctionCallback, // The callback function to provide function and gradient evaluations given a current values of variables
+  //         NULL,                           //  The callback function to provide values of the upperbound of the stepsize to search in, provided with the beginning values of variables before the linear search, and the current step vector (can be negative gradient).
+  //         PolyhedronSFCOptimizer::earlyExitCallback,    // The callback function to receive the progress (the number of iterations, the current value of the objective function) of the minimization process.
+  //         this,                           // A user data for the client program. The callback functions will receive the value of this argument.
+  //         &lbfgs_params);                 // The pointer to a structure representing parameters for L-BFGS optimization. A client program can set this parameter to NULL to use the default parameters
+  //     double opt_time_ms = (ros::Time::now() - t1).toSec() * 1000;
 
-      // IF converged, maxmimum_iteration, already minimized or stop
-      if (result == lbfgs::LBFGS_CONVERGENCE ||
-          result == lbfgs::LBFGSERR_MAXIMUMITERATION ||
-          result == lbfgs::LBFGS_ALREADY_MINIMIZED ||
-          result == lbfgs::LBFGS_STOP)
-      {
-        flag_force_return = false;
-        // TODO: Add collision-checking in the path
-        // printf("\033[32m [PolyhedronSFCOptimizer]: UAV %d: Optimization Succeeded! iter=%d, time(ms)=%5.3f, total_t(ms)=%5.3f, cost=%5.3f\n \033[0m", drone_id_, iter_num_, opt_time_ms, total_opt_time_ms, final_cost);
-        flag_success = true;
-      }
-      // ELSE IF Cancelled
-      else if (result == lbfgs::LBFGSERR_CANCELED)
-      {
-        flag_force_return = true;
-        num_retries++; 
-        std::cout << "[PolyhedronSFCOptimizer] Optimization Cancelled!" << std::endl;
-        // std::cout << "iter=" << iter_num_ << ",time(ms)=" << opt_time_ms << ",rebound." <<std::endl;
-      }
-      // ELSE ERROR
-      else
-      {
-        std::cout << "iter=" << iter_num_ << ",time(ms)=" << opt_time_ms << ",error." <<std::endl;
-        ROS_WARN("[PolyhedronSFCOptimizer] UAV %d: Solver error. Return = %d, %s. Skip this planning.", drone_id_, result, lbfgs::lbfgs_strerror(result));
-      }
+  //     // IF converged, maxmimum_iteration, already minimized or stop
+  //     if (result == lbfgs::LBFGS_CONVERGENCE ||
+  //         result == lbfgs::LBFGSERR_MAXIMUMITERATION ||
+  //         result == lbfgs::LBFGS_ALREADY_MINIMIZED ||
+  //         result == lbfgs::LBFGS_STOP)
+  //     {
+  //       flag_force_return = false;
+  //       // TODO: Add collision-checking in the path
+  //       // printf("\033[32m [PolyhedronSFCOptimizer]: UAV %d: Optimization Succeeded! iter=%d, time(ms)=%5.3f, total_t(ms)=%5.3f, cost=%5.3f\n \033[0m", drone_id_, iter_num_, opt_time_ms, total_opt_time_ms, final_cost);
+  //       flag_success = true;
+  //     }
+  //     // ELSE IF Cancelled
+  //     else if (result == lbfgs::LBFGSERR_CANCELED)
+  //     {
+  //       flag_force_return = true;
+  //       num_retries++; 
+  //       std::cout << "[PolyhedronSFCOptimizer] Optimization Cancelled!" << std::endl;
+  //       // std::cout << "iter=" << iter_num_ << ",time(ms)=" << opt_time_ms << ",rebound." <<std::endl;
+  //     }
+  //     // ELSE ERROR
+  //     else
+  //     {
+  //       std::cout << "iter=" << iter_num_ << ",time(ms)=" << opt_time_ms << ",error." <<std::endl;
+  //       ROS_WARN("[PolyhedronSFCOptimizer] UAV %d: Solver error. Return = %d, %s. Skip this planning.", drone_id_, result, lbfgs::lbfgs_strerror(result));
+  //     }
 
-    } while ((flag_force_return && force_stop_type_ == STOP_FOR_REBOUND && num_retries <= 20));
+  //   } while ((flag_force_return && force_stop_type_ == STOP_FOR_REBOUND && num_retries <= 20));
 
-    return flag_success;
-  }
+  //   return flag_success;
+  // }
 
 
 

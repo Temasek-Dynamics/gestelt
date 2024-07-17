@@ -3,7 +3,7 @@
 # Navigator params
 #####
 # debug_planning: false     # Set in launch file. Used to allow certain topics for debugging planning algorithms
-verbose_planning: false     # Print out planning times
+# verbose_planning: true     # Print out planning times
 
 goal_tolerance: 0.2                     # [m] Tolerance for goal to be considered reached
 time_to_col_threshold: 0.2              # [s] Threshold for seconds to collision.

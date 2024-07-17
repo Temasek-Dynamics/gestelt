@@ -9,6 +9,9 @@
 #include "bucketedqueue.h"
 #include <memory>
 
+#include <math.h>
+#include <iostream>
+
 //! A DynamicVoronoi object computes and updates a distance map and Voronoi diagram.
 class DynamicVoronoi {
 
@@ -27,6 +30,12 @@ public:
 
   DynamicVoronoi(const DynamicVoronoiParams& params)
   {
+    sqrt2 = sqrt(2.0);
+    data = NULL;
+    gridMap = nullptr;
+    alternativeDiagram = NULL;
+    allocatedGridMap = false;
+
     res_ = params.resolution;
     origin_x_ = params.origin_x;
     origin_y_ = params.origin_y;
@@ -119,9 +128,9 @@ public:
   // void expandVoronoiBubble(const INTPOINT& grid_pos);
 
   // Gets 8-connected neighbours
-  void getNeighbors(const INTPOINT& grid_pos, std::vector<INTPOINT>& neighbours);
+  // void getNeighbors(const INTPOINT& grid_pos, std::vector<INTPOINT>& neighbours);
 
-  // Gets 8-connected neighbours
+  // Gets 8-connected neighbours in voronoi diagram
   void getVoroNeighbors(const INTPOINT& grid_pos, std::vector<INTPOINT>& neighbours,
                         const INTPOINT& goal_grid_pos);
 
