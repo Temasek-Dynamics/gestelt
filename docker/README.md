@@ -14,7 +14,6 @@ sudo usermod -aG docker $USER
 
 # Test the installation
 docker run hello-world 
-
 ```
 
 # Host

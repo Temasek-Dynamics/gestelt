@@ -62,22 +62,22 @@ bool JPSWrapper::generatePlan(const Eigen::Vector3d &start_pos, const Eigen::Vec
     if (params_.use_dmp){
         tm_dmp_plan_.start();
 
-            // Set up DMP planner
-            IterativeDMPlanner3D dmp(params_.planner_verbose);
-            dmp.setPotentialRadius(Vec3f(params_.dmp_pot_rad, params_.dmp_pot_rad, params_.dmp_pot_rad));        // Set 3D potential field radius
-            dmp.setSearchRadius(Vec3f(params_.dmp_search_rad, params_.dmp_search_rad, params_.dmp_search_rad)); // Set the valid search region around given path
-            dmp.setEps(params_.dmp_heuristic_weight); // Set weight on heuristic
-            dmp.setCweight(params_.dmp_col_weight); // Set collision cost weight
-            dmp.setPow(params_.dmp_pow); // Set collision cost weight
+        // Set up DMP planner
+        IterativeDMPlanner3D dmp(params_.planner_verbose);
+        dmp.setPotentialRadius(Vec3f(params_.dmp_pot_rad, params_.dmp_pot_rad, params_.dmp_pot_rad));        // Set 3D potential field radius
+        dmp.setSearchRadius(Vec3f(params_.dmp_search_rad, params_.dmp_search_rad, params_.dmp_search_rad)); // Set the valid search region around given path
+        dmp.setEps(params_.dmp_heuristic_weight); // Set weight on heuristic
+        dmp.setCweight(params_.dmp_col_weight); // Set collision cost weight
+        dmp.setPow(params_.dmp_pow); // Set collision cost weight
 
-            // Set map util for collision checking, must be called before planning
-            dmp.setMap(map_util, start_pos); 
+        // Set map util for collision checking, must be called before planning
+        dmp.setMap(map_util, start_pos); 
 
-            // Plan DMP path
-            if (!dmp.iterativeComputePath( start_pos, goal_pos, jps_planner_->getRawPath(), 1)){ // Compute the path given the jps path
-                std::cout << "[Front-End] DMP Planner failed!" << std::endl;
-                return false;
-            }
+        // Plan DMP path
+        if (!dmp.iterativeComputePath( start_pos, goal_pos, jps_planner_->getRawPath(), 1)){ // Compute the path given the jps path
+            std::cout << "[Front-End] DMP Planner failed!" << std::endl;
+            return false;
+        }
         tm_dmp_plan_.stop(params_.print_timers);
 
         // TODO: Figure out way to assign vectors without iteration

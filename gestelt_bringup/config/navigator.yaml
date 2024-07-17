@@ -7,10 +7,10 @@
 # debug_planning: false     # Set in launch file. Used to allow certain topics for debugging planning algorithms
 verbose_planning: true     # Print out planning times
 
-goal_tolerance: 0.2                     # [m] Tolerance for goal to be considered reached
+goal_tolerance: 0.5                     # [m] Tolerance for goal to be considered reached
 time_to_col_threshold: 0.2              # [s] Threshold for seconds to collision.
 receding_horizon_planning_dist: 7.5     # [m] Receding horizon planning
-receding_horizon_corridor_dist: 3.0     # [m] Receding horizon corridor
+# receding_horizon_corridor_dist: 3.0     # [m] Receding horizon corridor
 
 safety_check_frequency: 20.0            # [Hz] Timer thread for checking safety of trajectory
 heartbeat_frequency: 20.0               # [Hz] Frequency to indicate if planner is still alive
@@ -31,6 +31,7 @@ front_end:
     cost_function_type: 0     # [AStar] Type of cost function to use 
 
   jps:
+    print_timers: true      # If true, print debug from planner
     planner_verbose: false      # If true, print debug from planner
     interpolate: false           # Interpolate JPS (necessary for spherical safe flight generation)
     use_dmp: false               # 
@@ -38,10 +39,6 @@ front_end:
     dmp_potential_radius: 0.4   # DMP radius of distance field (Value has significant effect on runtime)
     dmp_collision_weight: 0.1   # DMP Collision weight 
     dmp_heuristic_weight: 0.0   # DMP Heuristic weight
-    # dmp_search_radius: 0.75      # DMP Search radius
-    # dmp_potential_radius: 0.4   # DMP radius of distance field (Value has significant effect on runtime)
-    # dmp_collision_weight: 0.25   # DMP Collision weight 
-    # dmp_heuristic_weight: 0.0   # DMP Heuristic weight
     dmp_pow: 1                  # DMP power index 
 
 ##### Safe flight corridor
@@ -52,17 +49,9 @@ sfc:
     # Sampling
     max_sample_points: 150  # Maximum sample points for candidate sphere
     # standard deviation: remember 68–95–99.7 rule
-    # mult_stddev_x: 0.1      # if mult_stddev_x is too high, the spheres cannot round corners and generate loads of spheres around the same area around corners
-    # mult_stddev_y: 0.3      # 
-    # mult_stddev_z: 0.3      # 
-
     mult_stddev_x: 0.3      # 
     mult_stddev_y: 0.6      # 
     mult_stddev_z: 0.6      # 
-
-    # mult_stddev_x: 0.3      # 
-    # mult_stddev_y: 0.5      # 
-    # mult_stddev_z: 0.5      # 
 
     W_cand_vol: 5           # Weight for candidate sphere volume
     W_intersect_vol: 10     # Weight for volume of intersection between spheres
@@ -73,8 +62,8 @@ sfc:
     max_sphere_vol: 99999.9 # (m^3) Maximum allowed sphere volume
 
     time_allocation_type: 1 #  0: Max vel assignment(DANGEROUS), 1: Trapezoidal assignment
-    max_vel: 5.0 # Maximum velocity (m/s)
-    max_acc: 20.0 # Maximum acceleration (m/s^2)
+    max_vel: 3.0 # Maximum velocity (m/s)
+    max_acc: 25.0 # Maximum acceleration (m/s^2)
 
     # SFC Buffer 
     spherical_buffer: 0.175 # (m) Reduce spherical SFCs by this fixed amount to increase buffer from obstacles
@@ -93,8 +82,6 @@ sfc:
 
 ##### Back-end 
 back_end: 
-  # planner_frequency: 1.0       # [Hz]
-
   num_replan_retries: 2 # Number of times for back-end to retry
   ego:
     segment_length: 1.5 # Length of one segment i.e. distance between adjacent spline control points
@@ -102,13 +89,14 @@ back_end:
 ##### Optimization params
 optimization:
   num_cstr_pts_per_seg: 5 # Number of constraint points per trajectory segment i.e. discretization.
+  segment_length: 1.5 # Length of one segment i.e. distance between adjacent spline control points
   # Weights
   weight_swarm: 50000.0 
   weight_feasibility: 10000.0
   weight_sqrvariance: 10000.0 
   weight_time: 10.0 
   swarm_clearance: 0.4 
-  max_vel: 4.0 # Maximum velocity (m/s)
+  max_vel: 3.0 # Maximum velocity (m/s)
   max_acc: 20.0 # Maximum acceleration (m/s^2)
 
   # EGO params
@@ -125,7 +113,7 @@ optimization:
   # Polyhedron SFC
   weight_poly_bounds: 0.0
   init_traj_opt_epsilon: 0.1 # (Initial trajectory generation) Tolerance for convergence during optimization
-  final_traj_opt_epsilon: 0.01 # (Final trajectory generation) Tolerance for convergence during optimization
+  final_traj_opt_epsilon: 0.1 # (Final trajectory generation) Tolerance for convergence during optimization
   backward_proj_opt_epsilon: 0.1 # (Backward projection) Tolerance for convergence during optimization
 
 ##### Mapping params
@@ -135,15 +123,11 @@ grid_map:
     size_y: 50.0
     size_z: 20.0
   local_map:      #local_map parameters must consider the "receding_horizon_planning_dist"!
-    # size_x: 15.5
-    # size_y: 15.5 
-    # size_z: 5.0
-    size_x: 20.0
-    size_y: 20.0
+    size_x: 12
+    size_y: 12
     size_z: 5.0
     update_frequency: 30.0
-    viz_frequency: 10.0
-    # build_kdtree_frequency: 30.0
+    viz_frequency:    10.0
 
   occ_map:
     resolution: 0.1

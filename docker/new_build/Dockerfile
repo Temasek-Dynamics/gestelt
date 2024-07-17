@@ -49,6 +49,11 @@ RUN source /opt/ros/noetic/setup.bash \
     && catkin build 
 RUN echo "source /gestelt_ws/devel/setup.bash" >> /root/.bashrc 
 
-ENTRYPOINT ["/ros_entrypoint.sh"]
+# Copy .bashrc file
+COPY .bashrc /root/
 
+# DRONE_ID environment variable can be overriden on docker image startup
+ENV DRONE_ID=0
+
+ENTRYPOINT ["/ros_entrypoint.sh"]
 CMD ["bash"]

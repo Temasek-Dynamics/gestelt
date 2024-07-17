@@ -619,7 +619,7 @@ private: /* Params */
   /* Back-end params */
   int optimizer_num_retries_{-1}; // Number of retries for back-end optimizer
   int num_cstr_pts_per_seg_{-1}; // Number of constraint points per segment
-  double segment_length_{1.5}; // length of polynomial segment
+  double segment_length_{-1.0}; // length of polynomial segment
   
   /* Collision checking params*/
   double swarm_clearance_{-1.0}; // Required clearance between swarm agents

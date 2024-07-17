@@ -8,7 +8,7 @@ namespace back_end
     const double &smoothD,
     Eigen::Matrix3Xd &path)
   {
-    std::cout << "vPolys.size() = " << vPolys.size() << std::endl;
+    
     if (vPolys.size() == 1){
       path.resize(3, 2);
       path.leftCols<1>() = start_pos;
@@ -134,7 +134,7 @@ namespace back_end
     }
 
     reset();
-    
+
     int restart_nums = 0, num_retries = 0;
     bool flag_force_return{false}, flag_success{false};
 
@@ -171,15 +171,12 @@ namespace back_end
 
     lbfgs::lbfgs_parameter_t lbfgs_params;
     lbfgs::lbfgs_load_default_parameters(&lbfgs_params);
-    lbfgs_params.mem_size = 256; // 16
+    lbfgs_params.mem_size = 56; // 16
     // lbfgs_params.max_iterations = 200;
-    // lbfgs_params.g_epsilon = 0.0;
-    // lbfgs_params.g_epsilon = 0.1;
     lbfgs_params.g_epsilon = final_traj_opt_eps_;
     // lbfgs_params.abs_curv_cond = 0;
     lbfgs_params.past = 3;
-    // lbfgs_params.delta = 1.0e-3;
-    lbfgs_params.delta = 1.0e-3;
+    lbfgs_params.delta = 1.0e-2;
     // lbfgs_params.max_linesearch = 200;
     lbfgs_params.min_step = 1e-32;
     // lbfgs_params.max_step = 1e+20;
@@ -540,7 +537,6 @@ namespace back_end
     Eigen::MatrixXd gdp;
     double var;
     distanceSqrVarianceWithGradCost2p(cstr_pts_q_, gdp, var);
-    // std::cout << "var=" << var <<std::endl;
 
     // What cost is this?
     idx_cp = 0;

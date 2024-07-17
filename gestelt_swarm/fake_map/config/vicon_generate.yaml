@@ -6,8 +6,8 @@ seed: 1
 map:
   inter_obstacle_clearance: 0.8 # Minimum separation distance between center of obstacle primitives
   resolution: 0.1
-  x_size: 5.5            # size of map, obstacles will only be populated within the map size bounds
-  y_size: 5.5            # size of map, obstacles will only be populated within the map size bounds
+  x_size: 5.6            # size of map, obstacles will only be populated within the map size bounds
+  y_size: 5.6            # size of map, obstacles will only be populated within the map size bounds
   z_size: 2.5             # size of map, obstacles will only be populated within the map size bounds
   enable_floor: true      # Add point cloud floor plane (Set at z = 0.0)
   enable_ceiling: true    # Add point cloud ceiling plane (Set at z = 2.5)

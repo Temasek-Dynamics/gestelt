@@ -140,6 +140,7 @@ void Navigator::initParams(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   pnh.param("front_end/planner_frequency", fe_planner_freq_, -1.0);
   if (front_end_type_ == FrontEndType::JPS_AND_DMP){
     pnh.param("front_end/jps/planner_verbose",      jps_params_.planner_verbose, false);
+    pnh.param("front_end/jps/print_timers",         jps_params_.print_timers, false);
     pnh.param("front_end/jps/interpolate",          jps_params_.interpolate, false);
     pnh.param("front_end/jps/use_dmp",              jps_params_.use_dmp, false);
     
@@ -147,7 +148,7 @@ void Navigator::initParams(ros::NodeHandle &nh, ros::NodeHandle &pnh)
     pnh.param("front_end/jps/dmp_potential_radius", jps_params_.dmp_pot_rad, 1.0);
     pnh.param("front_end/jps/dmp_collision_weight", jps_params_.dmp_col_weight, 0.1);
     pnh.param("front_end/jps/dmp_heuristic_weight", jps_params_.dmp_heuristic_weight, 0.0);
-    pnh.param("front_end/jps/dmp_pow", jps_params_.dmp_pow, 1);
+    pnh.param("front_end/jps/dmp_pow",              jps_params_.dmp_pow, 1);
   }
   else if (front_end_type_ == FrontEndType::ASTAR){
     pnh.param("front_end/a_star/max_iterations", astar_params_.max_iterations, -1);
@@ -206,6 +207,10 @@ void Navigator::initParams(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   // pnh.param("back_end/planner_frequency", be_planner_freq_, -1.0);
   pnh.param("back_end/num_replan_retries", optimizer_num_retries_, -1);
   pnh.param("optimization/num_cstr_pts_per_seg", num_cstr_pts_per_seg_, -1);
+  pnh.param("optimization/segment_length", segment_length_, -1.0);
+
+  pnh.param("optimization/max_vel", max_vel_, -1.0);
+  pnh.param("optimization/max_acc", max_acc_, -1.0);
 
   /* Back end params */
   if (back_end_type_ == BackEndType::EGO) {
@@ -294,7 +299,6 @@ void Navigator::planFrontEndTimerCB(const ros::TimerEvent &e)
   }
 
   if (isGoalReached(cur_pos_, waypoints_.nextWP())){
-    std::cout << " Goal reached at " << waypoints_.nextWP() << std::endl;
     // If goals is within a given tolerance, then pop this goal and plan next goal (if available)
     waypoints_.popWP();
     // Invalidate current sfc_traj
@@ -444,7 +448,7 @@ void Navigator::planGlobalTrajWaypoints(
                 << tailState << endl;
     }
 
-    des_vel /= 1.5;
+    des_vel /= 1.25;
   }
 
   traj_.setGlobalTraj(globalMJO.getTraj(), ros::Time::now().toSec());
@@ -760,11 +764,12 @@ bool Navigator::PolySFCOptimize(const Eigen::Matrix3d& startPVA, const Eigen::Ma
   // DEFINITION: segment: The segments between control points (Length is fixed by user-defined parameter)
 
   int num_polyhedrons = h_poly.size();
+
   // cp_deltas: change in control points position
   Eigen::Matrix3Xd cp_deltas = initial_path.rightCols(num_polyhedrons) - initial_path.leftCols(num_polyhedrons);
   // segs_in_super_seg: Elements are indexed by super-segment index and the value is number of segments belonging to that super-segment 
   //                    = (diff between waypoints / length per piece)
-  Eigen::VectorXi segs_in_super_seg = (cp_deltas.colwise().norm() / INFINITY).cast<int>().transpose();
+  Eigen::VectorXi segs_in_super_seg = (cp_deltas.colwise().norm() / segment_length_).cast<int>().transpose();
   segs_in_super_seg.array() += 1;
 
   int num_segs = segs_in_super_seg.sum(); // Total number of segments
@@ -839,6 +844,7 @@ bool Navigator::PolySFCOptimize(const Eigen::Matrix3d& startPVA, const Eigen::Ma
   // /***************************/
   // /*5:  Optimize plan
   // /***************************/
+
   double final_cost = 0; 
 
   plan_success = polyhedron_sfc_optimizer_->optimizeTrajectory( 
@@ -852,7 +858,6 @@ bool Navigator::PolySFCOptimize(const Eigen::Matrix3d& startPVA, const Eigen::Ma
   // Optimized minimum jerk trajectory
   mjo_opt = polyhedron_sfc_optimizer_->getMJO();
   valid_mjo = true;
-
 
   return plan_success;
 }
