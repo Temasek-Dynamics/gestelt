@@ -122,6 +122,7 @@ class Quadrotor:
         # Newton's law
         dr_I = self.v_I
         dv_I = 1 / self.m * mtimes(C_I_B, self.thrust_B) + self.g_I
+        
         # Euler's law
         dq = 1 / 2 * mtimes(self.omega(self.w_B), self.q)
         
@@ -188,14 +189,11 @@ class Quadrotor:
 
         ## goal cost
         # goal position in the world frame
-        # self.goal_r_I = goal_pos
-
-        
+        # self.goal_r_I is the external variable of the acados
         self.cost_r_I_g = dot(self.r_I - self.goal_r_I, self.r_I - self.goal_r_I)
 
         # goal velocity
-        # goal_velo = goal_velo
-        # self.goal_v_I = goal_velo 
+        # self.goal_v_I is the external variable of the acados
         self.cost_v_I_g = dot(self.v_I - self.goal_v_I, self.v_I - self.goal_v_I)
 
         # final attitude error
@@ -352,11 +350,11 @@ class Quadrotor:
         ax.tick_params(axis='y',which='major',pad=-5)
         ax.tick_params(axis='z',which='major',pad=-5)
         ax.set_zlim(-5, 5)
-        ax.set_ylim(-9, 9)
-        ax.set_xlim(-6, 6)
+        ax.set_ylim(-29, 29)#9
+        ax.set_xlim(-29, 29)#6
         # ax.set_title(title, pad=20, fontsize=15)
         # for t in ax.xaxis.get_major_ticks(): 
-        #     t.label.set_font('末那次哦') 
+        #     t.label.set_font('Times New Roman') 
         #     t.label.set_fontsize(7)
         # for t in ax.yaxis.get_major_ticks(): 
         #     t.label.set_font('Times New Roman') 
@@ -561,9 +559,8 @@ class Quadrotor:
                 line_traj_ref, time_text #, line_arm1_ref, line_arm2_ref, line_arm3_ref, line_arm4_ref, time_text
      
 
-        # interval: draw new frame every 'interval' ms
-        # here the simulation freq is 500hz, so interval=2ms=0.002s sim_horizon,
-        ani = animation.FuncAnimation(fig, update_traj, interval=1, blit=True)
+        frames=np.arange(0,500)
+        ani = animation.FuncAnimation(fig,update_traj,frames, interval=1, blit=True)
 
         if save_option != 0:
             Writer = animation.writers['ffmpeg']

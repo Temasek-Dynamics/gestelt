@@ -44,7 +44,7 @@ class run_quad:
         # self.uav1.initDyn(Jx=0.0023,Jy=0.0023,Jz=0.004,mass=0.5,l=0.35,c=0.0245) # hb quadrotor
 
         # c is the force constant, l is the arm length
-        self.uav1.initDyn(Jx=0.000392,Jy=0.000405,Jz=0.000639,mass=0.205,l=0.1650,c=3.383e-07 ) # NUSWARM quadrotor
+        self.uav1.initDyn(Jx=0.000392,Jy=0.000405,Jz=0.000639,mass=0.248,l=0.1650,c=3.383e-07 ) # NUSWARM quadrotor
 
 
         # wrt: ,gate traverse position cost
@@ -57,7 +57,7 @@ class run_quad:
         # wwf: final angular velocity cost
 
         # initialize the cost function with symbolic variables
-        self.uav1.initCost(wrt=5,wqt=8,wthrust=0.1,wwt=0,wrf=5,wvf=1,wqf=1,goal_pos=self.goal_pos) # wthrust = 0.1
+        self.uav1.initCost(wrt=5,wqt=8,wthrust=1,wwt=0,wrf=1,wvf=1,wqf=1,goal_pos=self.goal_pos) # wthrust = 0.1
         self.uav1.init_TraCost()
 
         # --------------------------- create PDP object1 ----------------------------------------
@@ -65,25 +65,33 @@ class run_quad:
         self.dt = dt
         self.uavoc1 = OCSys()
         self.uavoc1.setAuxvarVariable()
-        sc   = 5 #1e20
+        sc= 5 #1e20
+        pos_b   = 5 # in each axis
+        vel_b   = 0.5 # in each axis
         wc   = pi/2 #pi
         tw   = 1.22
         t2w  = 2
         # set symbolic functions for the MPC solver
-        self.uavoc1.setStateVariable(self.uav1.X,state_lb=[-sc,-sc,-sc,-sc,-sc,-sc,-sc,-sc,-sc,-sc],\
-                                     state_ub=[sc,sc,sc,sc,sc,sc,sc,sc,sc,sc]) #,wc,wc,wc
-        # self.uavoc1.setControlVariable(self.uav1.U,control_lb=[0,0,0,0],control_ub= [t2w*tw,t2w*tw,t2w*tw,t2w*tw]) # thrust-to-weight = 4:1
+        self.uavoc1.setStateVariable(self.uav1.X,state_lb=[-pos_b,-pos_b,0.3,
+                                                           -vel_b,-vel_b,-vel_b,
+                                                           -sc,-sc,-sc,-sc],\
+                                     state_ub=[pos_b,pos_b,2,
+                                               vel_b,vel_b,vel_b,
+                                               sc,sc,sc,sc]) 
+       
         # 2.1334185=2700x2700x2.9265e-07
         # drone mass: 0.248kg, g: 9.81m/s^2 weight: 0.248*9.81 = 2.43368N
         # hover throttle: 0.29, thrust: 0.29*max_thrust =2.43368N
         # max_thrust = 2.43368/0.29 = 8.4N
         # single_motor_max_thrust = 8.4/4 = 2.1N
 
-        thrust_ub = 2.0*4*0.6
+        thrust_ub = 2.0*4*0.5
         thrust_lb = 2.0*4*0.2
         ang_rate_b=1.57
 
-        self.uavoc1.setControlVariable(self.uav1.U,control_lb=[thrust_lb ,-ang_rate_b,-ang_rate_b,-ang_rate_b],control_ub= [thrust_ub,ang_rate_b,ang_rate_b,ang_rate_b]) # thrust-to-weight = 4:1
+        self.uavoc1.setControlVariable(self.uav1.U,
+                                       control_lb=[thrust_lb ,-ang_rate_b,-ang_rate_b,-ang_rate_b],\
+                                       control_ub= [thrust_ub,ang_rate_b,ang_rate_b,ang_rate_b]) # thrust-to-weight = 4:1
 
         self.uavoc1.setDyn(self.uav1.f,self.dt)
         self.uavoc1.setInputCost(self.uav1.input_cost)

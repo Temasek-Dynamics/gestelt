@@ -3,6 +3,7 @@
 ## this file is for traversing moving narrow window
 import sys
 import os
+import subprocess
 # acquire the current directory
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -72,8 +73,9 @@ class MovingGate():
         # return self.w
     
 class LearningAgileAgent():
-    def __init__(self) -> None:
+    def __init__(self,python_sim_time) -> None:
 
+        self.sim_time=python_sim_time
         # inputs [start, end]
         self.env_inputs = nn_sample()
         # self.env_inputs[8]=pi/2 # gate pitch angle
@@ -158,7 +160,7 @@ class LearningAgileAgent():
             ini_q=drone_init_quat.tolist()
           
 
-        self.quad1 = run_quad(goal_pos=self.env_inputs[3:6],
+        self.quad1 = run_quad(goal_pos=self.env_inputs[3:6].tolist(),
                               ini_r=self.env_inputs[0:3].tolist(),
                               ini_q=ini_q,
                               horizon=self.horizon,
@@ -273,7 +275,7 @@ class LearningAgileAgent():
         
         self.state = self.quad1.ini_state # state= feedback from pybullet, 13-by-1, 3 position, 3 velocity (world frame), 4 quaternion, 3 angular rate
         self.state_n = [self.state]
-        for self.i in range(2500): # 5s, 500 Hz
+        for self.i in range(self.sim_time*(int(1/self.dyn_step))): # 5s, 500 Hz
             # decision variable is updated in 100 hz
             self.gate_n = gate(self.gate_move[0])
            
@@ -353,16 +355,16 @@ class LearningAgileAgent():
         np.save('Pitch',self.Pitch)
         np.save('HL_Variable',self.hl_variable)
         np.save('solving_time',self.solving_time)
-        self.quad1.uav1.play_animation(wing_len=1.5,
-                                    #    gate_traj1=self.gate_move[::5,:,:],
-                                       state_traj=self.state_n[::5,:],
-                                       goal_pos=self.final_point.tolist(),
-                                       dt=self.dyn_step)
+        # self.quad1.uav1.play_animation(wing_len=1.5,
+        #                             #    gate_traj1=self.gate_move[::5,:,:],
+        #                                state_traj=self.state_n[::5,:],
+        #                                goal_pos=self.final_point.tolist(),
+        #                                dt=self.dyn_step)
 
-        # self.quad1.uav1.plot_thrust(self.control_n)
-        # self.quad1.uav1.plot_angularrate(self.control_n)
-        # self.quad1.uav1.plot_position(self.pos_vel_att_cmd_n)
-        # self.quad1.uav1.plot_velocity(self.pos_vel_att_cmd_n)
+        self.quad1.uav1.plot_thrust(self.control_n)
+        self.quad1.uav1.plot_angularrate(self.control_n)
+        self.quad1.uav1.plot_position(self.state_n)
+        self.quad1.uav1.plot_velocity(self.state_n)
         plt.plot(self.solving_time)
         plt.title('mpc solving time at the main loop')
         plt.show()
@@ -377,7 +379,7 @@ class LearningAgileAgent():
 def main():
     ## --------------for single planning part test-------------------------------##.
     # create the learning agile agent
-    learing_agile_agent=LearningAgileAgent()
+    learing_agile_agent=LearningAgileAgent(python_sim_time=10)
     
     # receive the start and end point, and the initial gate point, from ROS side
     # rewrite the inputs
@@ -389,19 +391,30 @@ def main():
     #                                             max_tra_w=60)
 
     #------------------------------python hover test--------------------------------------#
-    learing_agile_agent.receive_mission_states(start=np.array([0,1.8,1.4]),
-                                                end=np.array([3,1.8,1.4]),
-                                                gate_center=np.array([1,3.8,1.4]),
+    learing_agile_agent.receive_mission_states(start=np.array([0,1.8,1.0]),
+                                                end=np.array([10,1.8,1.4]),
+                                                gate_center=np.array([1,1.8,1.4]),
                                                 gate_ori_euler=np.array([0,0,0]),
                                                 t_tra_abs=1,
-                                                max_tra_w=70)
+                                                max_tra_w=00)
 
     # #------------------------------------------------------------------------------#
     # problem definition
+    # the dyn_step is the simulation step in the simulation environment
+    # for the acados ERK integrator, the step is (integral step)/4 =0.025s
     learing_agile_agent.problem_definition(dyn_step=0.002)
 
     # solve the problem
     learing_agile_agent.solve_problem_comparison()
+
+    # every time after reconstruct the solver, need to catkin build the MPC wrapper to 
+    # relink the shared library
+    shell_script="""
+    catkin build learning_agile
+    """
+
+    # run the shell script
+    subprocess.run(shell_script,shell=True)
 
 if __name__ == '__main__':
     main()

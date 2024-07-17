@@ -52,9 +52,9 @@ class OCSys:
         if not hasattr(self, 'auxvar'):
             self.setAuxvarVariable()
 
-        self.dyn = casadi.Function('f',[self.state, self.control],[f])
-        self.dyn = self.state + dt * f
-        self.dyn_fn = casadi.Function('dynamics', [self.state, self.control, self.auxvar], [self.dyn],['x','u','p'],['x_next'])
+        # self.dyn = casadi.Function('f',[self.state, self.control],[f])
+        # self.dyn = self.state + dt * f
+        # self.dyn_fn = casadi.Function('dynamics', [self.state, self.control, self.auxvar], [self.dyn],['x','u','p'],['x_next'])
         self.dyn_fn_acados = casadi.Function('dynamics', [self.state, self.control, self.auxvar], [f],['x','u','p'],['rhs'])
         #M = 4
         #DT = dt/4
@@ -481,6 +481,7 @@ class OCSys:
         ocp.solver_options.hessian_approx = 'GAUSS_NEWTON' # GAUSS_NEWTON, EXACT
         ocp.solver_options.regularize_method = 'CONVEXIFY'#'CONVEXIFY', PROJECT_REDUC_HESS
         ocp.solver_options.integrator_type = 'ERK' # ERK (explicit Runge-Kutta integrator) or IRK (Implicit Runge-Kutta integrator)
+        ocp.solver_options.sim_method_num_stages = 4 # default 4
         ocp.solver_options.print_level = 0
         ocp.solver_options.levenberg_marquardt = 1e-5 # small value for gauss newton method, large value for gradient descent method
         ocp.solver_options.nlp_solver_type = 'SQP_RTI' # SQP_RTI or SQP

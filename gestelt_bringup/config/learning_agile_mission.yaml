@@ -1,9 +1,9 @@
 # mission poses
 mission:
-  gate_position: [0.0, 0.0, 1.2]
+  gate_position: [0.0, 0.0, 0.2]
   gate_ori_euler: [0.0, 0.0, 0.0]
 
-  goal_position: [0.0, 0.0, 1.2]
+  goal_position: [1.0, 0.0, 1.2]
   mission/goal_ori_euler: [0.0, 0.0, 0.0]
 
 
@@ -13,8 +13,8 @@ traj_server:
 
 # mpc cost weights
 learning_agile:
-  max_traverse_weight: 0
-  traverse_time: 1
+  max_traverse_weight: 00 #70
+  traverse_time: 2
   no_solution_flag_t_thresh: 0.1
   # 1.7268 N is based on the hover throttle: 0.29
   # drone mass: 0.248kg, g: 9.81m/s^2 weight: 0.248*9.81 = 2.43368N
