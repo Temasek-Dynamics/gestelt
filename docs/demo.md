@@ -10,3 +10,24 @@
     docker pull johntgz95/radxa-gestelt:latest
     ```
 
+## Launching demos
+```bash
+# On the base station 
+./base_station -s vicon_empty3
+# ./base_station -s vicon_obs3
+
+# On the drones
+uav_startup
+
+# Taking off, landing
+rosrun gestelt_bringup takeoff.py
+rosrun gestelt_bringup land.py
+```
+
+## Test checklist
+1. Test take off and landing
+2. Test 0.5m/s vicon_empty3
+3. Test 0.5m/s vicon_obs3
+4. Test 2.5m/s vicon_empty3
+5. Test 2.5m/s vicon_obs3
+

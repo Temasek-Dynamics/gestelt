@@ -40,5 +40,4 @@
 
 # On the drones
 ./offboard.sh -i <DRONE_ID>
-
 ```
