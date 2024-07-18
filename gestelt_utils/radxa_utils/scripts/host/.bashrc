@@ -126,6 +126,6 @@ alias connect_xiaomi="sudo nmcli dev wifi connect \"Xiaomi_84CE_5G\""
 alias connect_oppenheimer="sudo nmcli dev wifi connect \"oppenheimer\""
 
 # gestelt container operations 
-alias DRONE_ID=0 
+export DRONE_ID=0 
 alias gestelt_update="docker pull johntgz95/radxa-gestelt:latest"
 alias gestelt_startup="docker run -it --rm --network host --privileged -e \"DRONE_ID=$DRONE_ID\" johntgz95/radxa-gestelt:latest"

@@ -89,6 +89,7 @@ def pub_goals(goals):
 def main():
     rospy.init_node('mission_startup', anonymous=True)
     rate = rospy.Rate(5) # 20hz
+    rate_wait_15s = rospy.Rate(1.0/15.0) 
 
     if check_traj_server_states("MISSION"):
         print("Already in mission mode")
