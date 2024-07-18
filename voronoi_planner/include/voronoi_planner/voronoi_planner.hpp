@@ -158,6 +158,39 @@ public:
 
   }
 
+  bool plan(const DblPoint& start, const int& start_z, const DblPoint& goal, const int& goal_z){
+    publishStartAndGoal(start, start_z, goal, goal_z, "local_map_origin", start_pt_pub_, goal_pt_pub_);
+
+    if (dyn_voro_arr_.find(goal_z) == dyn_voro_arr_.end()){
+      std::cout << "Map slice at height "<< goal_z << " does not exist" << std::endl;
+      return false;
+    }
+
+    tm_front_end_plan_.start();
+
+    front_end_planner_ = std::make_unique<AStarPlanner>(dyn_voro_arr_[goal_z], astar_params_);
+    front_end_planner_->addPublishers(front_end_publisher_map_);
+
+    if (!front_end_planner_->generatePlanVoronoi(start, goal)){
+      std::cout << "FRONT END FAILED!!!! front_end_planner_->generatePlan() from ("<< \
+        start.x << ", " <<  start.y << "," << start_z << ") to (" << goal.x << ", " <<  goal.y << "," << goal_z << ")" << std::endl;
+
+      tm_front_end_plan_.stop(verbose_planning_);
+
+      front_end_planner_->publishClosedList(front_end_planner_->getClosedListVoronoi(), front_end_publisher_map_["front_end/closed_list"], "local_map_origin");
+      return false;
+    }
+    else{
+      std::vector<Eigen::Vector3d> front_end_path = front_end_planner_->getPathPosRaw();
+      publishFrontEndPath(front_end_path, "local_map_origin", front_end_plan_viz_pub_) ;
+    }
+
+    tm_front_end_plan_.stop(verbose_planning_);
+
+    return true;
+  }
+
+
   size_t map2Dto1DIdx(const int& width, const int& x, const int& y)
   {
     return width * y + x;
@@ -169,20 +202,59 @@ public:
     x = idx - (y * width);
   }
 
-  // inline bool outsideMap(const int& idx){
-  //   return idx > (occ_grid_.data.size() - 1);
-  // }
+/* Subscriber callbacks */
+private:
+
+  void startDebugCB(const geometry_msgs::PoseStampedConstPtr &msg){
+    start_pos_.x = msg->pose.position.x - local_origin_x_;
+    start_pos_.y = msg->pose.position.y - local_origin_y_;
+
+    start_z_ = (int) (msg->pose.position.z * 100);
+  }
+
+  void goalDebugCB(const geometry_msgs::PoseStampedConstPtr &msg){
+    goal_pos_.x = msg->pose.position.x - local_origin_x_;
+    goal_pos_.y = msg->pose.position.y - local_origin_y_;
+
+    goal_z_ = (int) (msg->pose.position.z * 100);
+
+    int start_z_rounded = roundUpMult(start_z_, z_multiple_);
+    int goal_z_rounded = roundUpMult(goal_z_, z_multiple_);
+
+    std::cout << "start_z: " <<  start_z_ << "rounded to " << start_z_rounded << std::endl;
+    std::cout << "goal_z: " <<  goal_z_ << "rounded to " << goal_z_rounded << std::endl;
+
+    plan(start_pos_, start_z_rounded, goal_pos_, goal_z_rounded);
+  }
+
+  // Round up to multiples
+  int roundUpMult(const double& num, const int& mult)
+  {
+    if (mult == 0){
+      return num;
+    }
+    int rem = (int)num % mult;
+    if (rem == 0){
+      return num;
+    }
+
+    return (num-rem) + mult;
+  }
+
+/* Visualization methods*/
+private:
 
   void publishStartAndGoal(
     const DblPoint& start, 
+    const int& start_z,
     const DblPoint& goal, 
-    const int& z,
+    const int& goal_z,
     const std::string& frame_id, 
     ros::Publisher& publisher1, ros::Publisher& publisher2)
   {
     visualization_msgs::Marker start_sphere, goal_sphere;
-    double radius = 0.5;
-    double alpha = 0.8; 
+    double radius = 0.6;
+    double alpha = 0.5; 
 
     /* Start/goal sphere*/
     start_sphere.header.frame_id = goal_sphere.header.frame_id = frame_id;
@@ -210,12 +282,12 @@ public:
     /* Set Start */
     start_sphere.pose.position.x = start.x;
     start_sphere.pose.position.y = start.y;
-    start_sphere.pose.position.z = z;
+    start_sphere.pose.position.z = start_z;
 
     /* Set Goal */
     goal_sphere.pose.position.x = goal.x;
     goal_sphere.pose.position.y = goal.y;
-    goal_sphere.pose.position.z = z;
+    goal_sphere.pose.position.z = goal_z;
 
     publisher1.publish(start_sphere);
     publisher2.publish(goal_sphere);
@@ -320,88 +392,40 @@ public:
     publisher.publish(path_line_strip);
   }
 
-
-  bool plan(const DblPoint& start, const int& start_z, const DblPoint& goal, const int& goal_z){
-    // publishStartAndGoal(start, goal, z, "map", start_pt_pub_, goal_pt_pub_) ;
-
-    tm_front_end_plan_.start();
-
-    if (dyn_voro_arr_.find(goal_z) == dyn_voro_arr_.end()){
-      std::cout << "Map slice at height "<< goal_z << " does not exist" << std::endl;
-      return false;
-    }
-
-    front_end_planner_ = std::make_unique<AStarPlanner>(dyn_voro_arr_[goal_z], astar_params_);
-    front_end_planner_->addPublishers(front_end_publisher_map_);
-
-    if (!front_end_planner_->generatePlanVoronoi(start, goal)){
-      std::cout << "FRONT END FAILED!!!! front_end_planner_->generatePlan() from ("<< \
-        start.x << ", " <<  start.y << "," << start_z << ") to (" << goal.x << ", " <<  goal.y << "," << goal_z << ")" << std::endl;
-
-      tm_front_end_plan_.stop(verbose_planning_);
-
-      front_end_planner_->publishClosedList(front_end_planner_->getClosedListVoronoi(), front_end_publisher_map_["front_end/closed_list"], "local_map_origin");
-      return false;
-    }
-    else{
-      std::vector<Eigen::Vector3d> front_end_path = front_end_planner_->getPathPosRaw();
-      publishFrontEndPath(front_end_path, "local_map_origin", front_end_plan_viz_pub_) ;
-    }
-
-    tm_front_end_plan_.stop(verbose_planning_);
-
-    // nav_msgs::OccupancyGrid occ_grid, voro_occ_grid;
-
-    // occmapToOccGrid(*(dyn_voro_arr_[z]), size_x_, size_y_, 0.0, occ_grid); // Occupancy map
-    // voronoimapToOccGrid(*(dyn_voro_arr_[z]), size_x_, size_y_, 0.0, voro_occ_grid); // Voronoi map
-
-    // voro_occ_grid_pub_.publish(voro_occ_grid);
-    // occ_map_pub_.publish( occ_grid);
-
-    return true;
-  }
-
-/* Subscriber callbacks */
-private:
-  // void startPointCB(const geometry_msgs::PointStampedConstPtr &msg){
-  //   start_pos_.x = msg->point.x - local_origin_x_;
-  //   start_pos_.y = msg->point.y - local_origin_y_;
-  // }
-
-  void startDebugCB(const geometry_msgs::PoseStampedConstPtr &msg){
-    start_pos_.x = msg->pose.position.x - local_origin_x_;
-    start_pos_.y = msg->pose.position.y - local_origin_y_;
-
-    start_z_ = (int) (msg->pose.position.z * 100);
-  }
-
-  void goalDebugCB(const geometry_msgs::PoseStampedConstPtr &msg){
-    goal_pos_.x = msg->pose.position.x - local_origin_x_;
-    goal_pos_.y = msg->pose.position.y - local_origin_y_;
-
-    goal_z_ = (int) (msg->pose.position.z * 100);
-
-    int start_z_rounded = roundUpMult(start_z_, z_multiple_);
-    int goal_z_rounded = roundUpMult(goal_z_, z_multiple_);
-
-    std::cout << "start_z: " <<  start_z_ << "rounded to " << start_z_rounded << std::endl;
-    std::cout << "goal_z: " <<  goal_z_ << "rounded to " << goal_z_rounded << std::endl;
-
-    plan(start_pos_, start_z_rounded, goal_pos_, goal_z_rounded);
-  }
-
-  // Round up to multiples
-  int roundUpMult(const double& num, const int& mult)
+  inline void publishVertices(const std::vector<Eigen::Vector3d>& vor_vertices, const int& z, const std::string& frame_id, ros::Publisher& publisher)
   {
-    if (mult == 0){
-      return num;
-    }
-    int rem = (int)num % mult;
-    if (rem == 0){
-      return num;
+    visualization_msgs::Marker vertices;
+    double radius = 0.2;
+    double alpha = 0.8; 
+
+    /* vertices: Sphere list (voronoi graph vertices) */
+    vertices.header.frame_id = frame_id;
+    vertices.header.stamp = ros::Time::now();
+    vertices.ns = "voronoi_vertices_" + std::to_string(z); 
+    vertices.type = visualization_msgs::Marker::SPHERE_LIST;
+    vertices.action = visualization_msgs::Marker::ADD;
+    vertices.id = 1; 
+    vertices.pose.orientation.w = 1.0;
+
+    vertices.color.r = 0.0;
+    vertices.color.g = 0.5;
+    vertices.color.b = 1.0;
+    vertices.color.a = alpha;
+
+    vertices.scale.x = radius;
+    vertices.scale.y = radius;
+    vertices.scale.z = radius;
+
+    geometry_msgs::Point pt;
+    for (size_t i = 0; i < vor_vertices.size(); i++){
+      pt.x = vor_vertices[i](0);
+      pt.y = vor_vertices[i](1);
+      pt.z = vor_vertices[i](2);
+
+      vertices.points.push_back(pt);
     }
 
-    return (num-rem) + mult;
+    publisher.publish(vertices);
   }
 
 private:
@@ -418,15 +442,16 @@ private:
 
   /* Pubs, subs */
   ros::Publisher occ_map_pub_;      // Publishes original occupancy grid
-  // ros::Publisher dist_occ_map_pub_; // Publishes distance map occupancy grid
   ros::Publisher voro_occ_grid_pub_; // Publishes voronoi map occupancy grid
-  ros::Publisher voro_occ_grid_pruned_pub_; // Publishes voronoi map occupancy grid
 
   ros::Publisher front_end_plan_viz_pub_; // Publish front-end plan (A*) visualization
   ros::Publisher start_pt_pub_, goal_pt_pub_; // start and goal visualization publisher
 
+  ros::Publisher voronoi_graph_pub_; // Voronoi graph publisher
+
   ros::Subscriber start_sub_, goal_sub_;  // start and goal subscriber
   ros::Subscriber bool_map_sub_; // Subscription to boolean map
+
 
   std::unordered_map<std::string, ros::Publisher> front_end_publisher_map_;   // Publishes front-end map
 

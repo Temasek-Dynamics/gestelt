@@ -127,7 +127,6 @@ void GridMap::readROSParams(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   pnh.param("grid_map/local_map/update_frequency", update_local_map_freq_, -1.0);
   pnh.param("grid_map/local_map/viz_frequency", viz_occ_map_freq_, -1.0);
   // pnh.param("grid_map/local_map/build_kdtree_frequency", build_kd_tree_freq_, -1.0);
-
   // pnh.param("grid_map/keep_global_map", mp_.keep_global_map_, false);
 
   pnh.param("grid_map/occ_map/resolution", mp_.resolution_, -1.0);
@@ -212,7 +211,6 @@ void GridMap::visTimerCB(const ros::TimerEvent & /*event*/)
   // ROS_INFO_THROTTLE(1.0, "Octree memory usage: %ld kilobytes", octree_->memoryUsage()/1000);
   // ROS_INFO_STREAM_THROTTLE(1.0, "Octree Bounding Box: " << octree_->getBBXMin() << ", " << octree_->getBBXMax());
 }
-
 
 void GridMap::updateLocalMapTimerCB(const ros::TimerEvent & /*event*/)
 {

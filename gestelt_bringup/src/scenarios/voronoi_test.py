@@ -28,9 +28,9 @@ def main():
 
     rate_wait.sleep()
 
-    start_dbg_pub.publish(create_pose(-7.0, -7.0, 1.1))
+    start_dbg_pub.publish(create_pose(-7.0, -7.0, 2.2))
     rate_pub_pause.sleep()
-    goal_dbg_pub.publish(create_pose(7.0, 7.0, 2.2))
+    goal_dbg_pub.publish(create_pose(7.0, 7.0, 1.0))
 
 if __name__ == '__main__':
     main()

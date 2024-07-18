@@ -2,18 +2,19 @@
 
 void VoronoiPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
 { 
-  occ_map_pub_ = nh.advertise<nav_msgs::OccupancyGrid>("voronoi_planner/occ_map", 10, true);
-  // dist_occ_map_pub_ = nh.advertise<nav_msgs::OccupancyGrid>("voronoi_planner/dist_map", 10, true);
-  voro_occ_grid_pub_ = nh.advertise<nav_msgs::OccupancyGrid>("voronoi_planner/voro_map", 10, true);
-  voro_occ_grid_pruned_pub_ = nh.advertise<nav_msgs::OccupancyGrid>("voronoi_planner/voro_map_pruned", 10, true);
-  
   /* Publishers */
+
+  // Occupancy map publishers
+  occ_map_pub_ = nh.advertise<nav_msgs::OccupancyGrid>("voronoi_planner/occ_map", 10, true);
+  voro_occ_grid_pub_ = nh.advertise<nav_msgs::OccupancyGrid>("voronoi_planner/voro_map", 10, true);
 
   front_end_publisher_map_["front_end/closed_list"] = nh.advertise<visualization_msgs::Marker>("closed_list_viz", 10, true);
 
   front_end_plan_viz_pub_ = nh.advertise<visualization_msgs::Marker>("plan_viz", 5, true);
   start_pt_pub_ = nh.advertise<visualization_msgs::Marker>("start_point", 5, true);
   goal_pt_pub_ = nh.advertise<visualization_msgs::Marker>("goal_point", 5, true);
+
+  voronoi_graph_pub_ = nh.advertise<visualization_msgs::Marker>("voronoi_graph", 5, true);
 
   /* Subscribers */
   start_sub_ = nh.subscribe("/start_dbg", 5, &VoronoiPlanner::startDebugCB, this);
@@ -117,7 +118,6 @@ void VoronoiPlanner::boolMapCB(const gestelt_msgs::BoolMapConstPtr& msg)
   }
   dyn_voro_arr_[z_origin_cm]->update(); // update distance map and Voronoi diagram
 
-  // tm_voronoi_map_init_.stop(verbose_planning_);
 
   // if (doPrune){
   dyn_voro_arr_[z_origin_cm]->prune();  // prune the Voronoi
@@ -126,6 +126,13 @@ void VoronoiPlanner::boolMapCB(const gestelt_msgs::BoolMapConstPtr& msg)
     // dyn_voro_arr_[z_origin_cm]->updateAlternativePrunedDiagram();  
   // }
 
+  // Publish voronoi graph
+  std::vector<Eigen::Vector3d> voronoi_vertices;
+  dyn_voro_arr_[z_origin_cm]->getVoronoiVertices(voronoi_vertices);
+
+  // tm_voronoi_map_init_.stop(verbose_planning_);
+
+  publishVertices(voronoi_vertices, z_origin_cm, "local_map_origin", voronoi_graph_pub_);
 
   nav_msgs::OccupancyGrid occ_grid, voro_occ_grid;
 
@@ -139,7 +146,6 @@ void VoronoiPlanner::boolMapCB(const gestelt_msgs::BoolMapConstPtr& msg)
 
   voro_occ_grid_pub_.publish(voro_occ_grid);
   occ_map_pub_.publish(occ_grid);
-
 }
 
 // void VoronoiPlanner::pgmFileToBoolMap(bool ***map,
