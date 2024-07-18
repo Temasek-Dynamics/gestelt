@@ -38,6 +38,7 @@ void TrajectoryServer::init(ros::NodeHandle& nh, ros::NodeHandle& pnh)
   /////////////////
   // Subscription to commands
   command_server_sub_ = nh.subscribe<gestelt_msgs::Command>("traj_server/command", 5, &TrajectoryServer::serverCommandCb, this);
+  swarm_command_server_sub_ = nh.subscribe<std_msgs::Int8>("/traj_server/swarm_command", 5, &TrajectoryServer::swarmServerCommandCb, this);
 
   // Subscription to planner adaptor
   exec_traj_sub_ = nh.subscribe<gestelt_msgs::ExecTrajectory>("planner_adaptor/exec_trajectory", 5, &TrajectoryServer::execTrajCb, this);
@@ -52,6 +53,7 @@ void TrajectoryServer::init(ros::NodeHandle& nh, ros::NodeHandle& pnh)
   /////////////////
   pos_cmd_raw_pub_ = nh.advertise<mavros_msgs::PositionTarget>("mavros/setpoint_raw/local", 50);
   server_state_pub_ = nh.advertise<gestelt_msgs::CommanderState>("traj_server/state", 50);
+  vel_magnitude_pub_ = nh.advertise<std_msgs::Float32>("vel_magnitude", 50);
 
   ////////////////////
   /* Service clients */
@@ -130,7 +132,28 @@ void TrajectoryServer::UAVPoseCB(const geometry_msgs::PoseStamped::ConstPtr &msg
 void TrajectoryServer::UAVOdomCB(const nav_msgs::Odometry::ConstPtr &msg)
 {
   uav_odom_ = *msg;
+
+  Eigen::Vector3d vel_vect = Eigen::Vector3d{
+                                msg->twist.twist.linear.x, 
+                                msg->twist.twist.linear.y, 
+                                msg->twist.twist.linear.z};
+  
+
+  std_msgs::Float32 vel_mag_msg;
+  vel_mag_msg.data = vel_vect.norm();
+
+  vel_magnitude_pub_.publish(vel_mag_msg);
 }
+
+void TrajectoryServer::swarmServerCommandCb(const std_msgs::Int8::ConstPtr & msg)
+{
+  if (msg->data < 0 || msg->data > ServerEvent::EMPTY_E){
+    logError("Invalid server command, ignoring...");
+  }
+
+  setServerEvent(ServerEvent(msg->data));
+}
+
 
 void TrajectoryServer::serverCommandCb(const gestelt_msgs::Command::ConstPtr & msg)
 {

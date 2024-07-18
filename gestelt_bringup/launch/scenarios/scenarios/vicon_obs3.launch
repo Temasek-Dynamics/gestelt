@@ -43,4 +43,36 @@
       <arg name="init_z" value="$(arg height)"/>
   </include>
 
+  <!-- <include file="$(find gestelt_bringup)/launch/fake_drone/include/fake_drone_complete.xml">
+      <arg name="fake_drone_cfg_filepath" value="$(arg fake_drone_cfg_filepath)"/>
+
+      <arg name="drone_id" value="0"/>
+
+      <arg name="init_x" value="0.0"/>
+      <arg name="init_y" value="2.25"/>
+      <arg name="init_z" value="$(arg height)"/>
+  </include>
+
+  <include file="$(find gestelt_bringup)/launch/fake_drone/include/fake_drone_complete.xml">
+      <arg name="fake_drone_cfg_filepath" value="$(arg fake_drone_cfg_filepath)"/>
+
+      <arg name="drone_id" value="1"/>
+
+      <arg name="init_x" value="1.95"/>
+      <arg name="init_y" value="-1.12"/>
+      <arg name="init_z" value="$(arg height)"/>
+  </include>
+
+  <include file="$(find gestelt_bringup)/launch/fake_drone/include/fake_drone_complete.xml">
+      <arg name="fake_drone_cfg_filepath" value="$(arg fake_drone_cfg_filepath)"/>
+
+      <arg name="drone_id" value="2"/>
+
+      <arg name="init_x" value="-1.95"/>
+      <arg name="init_y" value="-1.13"/>
+      <arg name="init_z" value="$(arg height)"/>
+  </include> -->
+
+
+
 </launch>

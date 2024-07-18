@@ -1,5 +1,5 @@
-filename: vicon_empty
-polar_obs: 0 # Number of cylinder obstacles
+filename: vicon_obs
+polar_obs: 6 # Number of cylinder obstacles
 circle_obs: 0 # Number of hoops
 seed: 1
 
@@ -15,10 +15,10 @@ map:
 
 obstacle:
   cylinder: 
-    lower_rad: 0.1  # Cylinder: Smallest radius
-    upper_rad: 0.5  # Cylinder: Largest radius
-    lower_hei: 5.0  # Cylinder: Lowest height
-    upper_hei: 5.0  # Cylinder: Tallest height
+    lower_rad: 0.3  # Cylinder: Smallest radius
+    upper_rad: 0.3  # Cylinder: Largest radius
+    lower_hei: 3.0  # Cylinder: Lowest height
+    upper_hei: 3.0  # Cylinder: Tallest height
   circle:
     radius_l: 7.0   # Circle: Smallest radius
     radius_h: 7.0   # Circle: Biggest radius

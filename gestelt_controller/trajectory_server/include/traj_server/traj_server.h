@@ -18,6 +18,7 @@
 #include <mavros_msgs/SetMode.h>
 #include <std_msgs/Empty.h>
 #include <std_msgs/Int8.h>
+#include <std_msgs/Float32.h>
 #include <std_msgs/String.h>
 #include <trajectory_msgs/MultiDOFJointTrajectory.h>
 
@@ -108,6 +109,11 @@ private: // Class Methods
    * @brief Callback for externally triggered server events
    */
   void serverCommandCb(const gestelt_msgs::Command::ConstPtr & msg);
+
+  /**
+   * @brief Callback for externally triggered server events
+   */
+  void swarmServerCommandCb(const std_msgs::Int8::ConstPtr & msg);
 
   /**
    * Timer callback to extract PVA commands from subscribed plan for executing trajectory.
@@ -328,6 +334,7 @@ private: // Member variables
   /* Publisher  */
   ros::Publisher pos_cmd_raw_pub_; // Publisher of commands for PX4 
   ros::Publisher server_state_pub_; // Publisher of current uav and server state
+  ros::Publisher vel_magnitude_pub_; // Publish velocity vector magnitude 
   
   /* Subscriber */
   ros::Subscriber exec_traj_sub_; // Subscriber for planner trajectory
@@ -338,6 +345,7 @@ private: // Member variables
   ros::Subscriber odom_sub_; // Subscriber to UAV State (MavROS)
   // TODO: make this a service server
   ros::Subscriber command_server_sub_; // Subscriber to trajectory server commands
+  ros::Subscriber swarm_command_server_sub_; // Subscriber to swarm server commands
 
   /* Timer */
   ros::Timer exec_traj_timer_; // Timer to generate PVA commands for trajectory execution

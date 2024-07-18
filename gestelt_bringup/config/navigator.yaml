@@ -18,11 +18,11 @@ heartbeat_frequency: 20.0               # [Hz] Frequency to indicate if planner 
 ##### Set planner types
 front_end/planner_type: 1         # 0: ASTAR, 1: JPS_AND_DMP
 sfc/planner_type: 1               # 0: SPHERICAL, 1: POLYTOPE
-back_end/planner_type: 2          # 0: SSFC, 1: EGO, 2: POLY
+back_end/planner_type: 1          # 0: Spherical SFC, 1: EGO, 2: POLYTOPE SFC
 
 ##### Front-end params
 front_end:
-  planner_frequency: 1.0        # [Hz] Front-end planning frequency
+  planner_frequency: 15.0        # [Hz] Front-end planning frequency
 
   a_star:
     max_iterations: 9999  
@@ -63,7 +63,7 @@ sfc:
 
     time_allocation_type: 1 #  0: Max vel assignment(DANGEROUS), 1: Trapezoidal assignment
     max_vel: 3.0 # Maximum velocity (m/s)
-    max_acc: 25.0 # Maximum acceleration (m/s^2)
+    max_acc: 20.0 # Maximum acceleration (m/s^2)
 
     # SFC Buffer 
     spherical_buffer: 0.175 # (m) Reduce spherical SFCs by this fixed amount to increase buffer from obstacles
@@ -82,14 +82,14 @@ sfc:
 
 ##### Back-end 
 back_end: 
-  num_replan_retries: 2 # Number of times for back-end to retry
+  num_replan_retries: 1 # Number of times for back-end to retry
   ego:
-    segment_length: 1.5 # Length of one segment i.e. distance between adjacent spline control points
+    segment_length: 1.0 # Length of one segment i.e. distance between adjacent spline control points
 
 ##### Optimization params
 optimization:
   num_cstr_pts_per_seg: 5 # Number of constraint points per trajectory segment i.e. discretization.
-  segment_length: 1.5 # Length of one segment i.e. distance between adjacent spline control points
+  segment_length: 1.0 # Length of one segment i.e. distance between adjacent spline control points
   # Weights
   weight_swarm: 50000.0 
   weight_feasibility: 10000.0
@@ -123,9 +123,9 @@ grid_map:
     size_y: 50.0
     size_z: 20.0
   local_map:      #local_map parameters must consider the "receding_horizon_planning_dist"!
-    size_x: 12
-    size_y: 12
-    size_z: 5.0
+    size_x: 10.0
+    size_y: 10.0
+    size_z: 4.0
     update_frequency: 30.0
     viz_frequency:    10.0
 

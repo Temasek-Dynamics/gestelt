@@ -62,7 +62,7 @@ then
     tmux send-keys -t $SESSION:0.0 "$SOURCE_WS $CMD_0" C-m 
     tmux send-keys -t $SESSION:0.1 "$SOURCE_WS $CMD_1" C-m 
     # tmux send-keys -t $SESSION:0.2 "$SOURCE_WS $CMD_2" C-m 
-    tmux send-keys -t $SESSION:0.3 "$SOURCE_WS $CMD_3" C-m
+    # tmux send-keys -t $SESSION:0.3 "$SOURCE_WS $CMD_3" C-m
 fi
 
 # Attach session on the first window

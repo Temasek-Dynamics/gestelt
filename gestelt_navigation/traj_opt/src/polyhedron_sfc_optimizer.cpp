@@ -172,12 +172,12 @@ namespace back_end
     lbfgs::lbfgs_parameter_t lbfgs_params;
     lbfgs::lbfgs_load_default_parameters(&lbfgs_params);
     lbfgs_params.mem_size = 56; // 16
-    // lbfgs_params.max_iterations = 200;
+    lbfgs_params.max_iterations = 200;
     lbfgs_params.g_epsilon = final_traj_opt_eps_;
     // lbfgs_params.abs_curv_cond = 0;
     lbfgs_params.past = 3;
     lbfgs_params.delta = 1.0e-2;
-    // lbfgs_params.max_linesearch = 200;
+    lbfgs_params.max_linesearch = 200;
     lbfgs_params.min_step = 1e-32;
     // lbfgs_params.max_step = 1e+20;
 
