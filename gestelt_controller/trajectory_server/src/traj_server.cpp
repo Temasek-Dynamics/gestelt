@@ -154,7 +154,6 @@ void TrajectoryServer::swarmServerCommandCb(const std_msgs::Int8::ConstPtr & msg
   setServerEvent(ServerEvent(msg->data));
 }
 
-
 void TrajectoryServer::serverCommandCb(const gestelt_msgs::Command::ConstPtr & msg)
 {
   if (msg->command < 0 || msg->command > ServerEvent::EMPTY_E){
