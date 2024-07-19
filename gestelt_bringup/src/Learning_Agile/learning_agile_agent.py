@@ -218,54 +218,6 @@ class LearningAgileAgent():
         self.i += 1
         # return self.t_tra_abs,self.gate_n.centroid
 
-    def solve_problem_gazebo(self,drone_state=None):
-        """ 
-        gazebo simulation
-        
-        """
-        
-        t_comp = time.time()  
-        self.state=drone_state
-
-        # FIXME, the drone state sould under the gate frame
-        nn_mpc_inputs = np.zeros(18)
-        # nn_mpc_inputs[16] = magni(self.gate_n.gate_point[0,:]-self.gate_n.gate_point[1,:]) # gate width
-        # nn_mpc_inputs[17] = atan((self.gate_n.gate_point[0,2]-self.gate_n.gate_point[1,2])/(self.gate_n.gate_point[0,0]-self.gate_n.gate_point[1,0])) # compute the actual gate pitch ange in real-time
-        nn_mpc_inputs[0:10] = self.state #self.gate_n.transform(self.state)
-        nn_mpc_inputs[10:13] = self.final_point#self.gate_n.t_final(self.final_point)
-
-        # NN2 OUTPUT the traversal time and pose
-        # out = self.model(nn_mpc_inputs).data.numpy()
-
-        # FIXME, manually set the traversal time and pose
-        out=np.zeros(7)
-        out[0:3]=self.gate_center
-
-        angle=-0.785# rad 0.707
-        rod_ang=np.tan(angle/2)
-        out[3:6]=self.gate_ori_euler  
-        out[6]=self.t_tra_abs-self.i*0.01
-        # end FIXME
-
-        ## solve the mpc problem and get the control command
-        cmd_solution,weight_vis,NO_SOLUTION_FLAG = self.quad1.get_input(nn_mpc_inputs[0:10],
-                                                        self.u,out[0:3],
-                                                        out[3:6],
-                                                        out[6],
-                                                        max_tra_w=self.max_tra_w) # control input 4-by-1 thrusts to pybullet
-                    
-
-        self.u=cmd_solution['control_traj_opt'][0,:]
-        current_pred_traj=cmd_solution['state_traj_opt']
-
-        callback_runtime=time.time()-t_comp
-
-        # IF the solving time is too long, stop the mission
-        if callback_runtime>0.025:
-            print("too long to solve")
-            NO_SOLUTION_FLAG=True
-        return self.u, callback_runtime,current_pred_traj,NO_SOLUTION_FLAG
-
 
     def solve_problem_comparison(self):
         """
@@ -380,17 +332,9 @@ def main():
     ## --------------for single planning part test-------------------------------##.
     # create the learning agile agent
     learing_agile_agent=LearningAgileAgent(python_sim_time=10)
-    
-    # receive the start and end point, and the initial gate point, from ROS side
-    # rewrite the inputs
-    # learing_agile_agent.receive_mission_states(start=np.array([0,1.8,1.4]),
-    #                                             end=np.array([0,-1.8,1.4]),
-    #                                             gate_center=np.array([1.2,0,1.4]),
-    #                                             gate_ori_euler=np.array([0,-0.707/2,0]),
-    #                                             t_tra_abs=1,
-    #                                             max_tra_w=60)
 
-    #------------------------------python hover test--------------------------------------#
+
+    #------------------------------set the mission--------------------------------------#
     learing_agile_agent.receive_mission_states(start=np.array([0,1.8,1.0]),
                                                 end=np.array([10,1.8,1.4]),
                                                 gate_center=np.array([1,1.8,1.4]),
