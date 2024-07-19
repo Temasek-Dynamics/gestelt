@@ -355,11 +355,11 @@ class LearningAgileAgent():
         np.save('Pitch',self.Pitch)
         np.save('HL_Variable',self.hl_variable)
         np.save('solving_time',self.solving_time)
-        # self.quad1.uav1.play_animation(wing_len=1.5,
-        #                             #    gate_traj1=self.gate_move[::5,:,:],
-        #                                state_traj=self.state_n[::5,:],
-        #                                goal_pos=self.final_point.tolist(),
-        #                                dt=self.dyn_step)
+        self.quad1.uav1.play_animation(wing_len=1.5,
+                                    #    gate_traj1=self.gate_move[::5,:,:],
+                                       state_traj=self.state_n[::5,:],
+                                       goal_pos=self.final_point.tolist(),
+                                       dt=self.dyn_step)
 
         self.quad1.uav1.plot_thrust(self.control_n)
         self.quad1.uav1.plot_angularrate(self.control_n)

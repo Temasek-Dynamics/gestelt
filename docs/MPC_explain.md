@@ -1,6 +1,14 @@
 # MPC Explanation
 
+## Two kinds of simulations
+1. **python simulation:**\
+![Alt text](pictures/python_simulation.jpeg)
 
+2. **Gazebo PX4_SITL simulation:**
+![Alt text](pictures/gazebo_sim.jpeg)
+
+## Installation of the ACADOS
+The `acados_template` is the required by the `acados` framework, also you need to install `acados` and setup the environment, please refer to [acados installation](https://docs.acados.org/installation/index.html)
 ## 1. The MPC problem definition is modified from the work [LearningAgileFlight_SE3](https://github.com/BinghengNUS/LearningAgileFlight_SE3), in the folder :
 
 ```plaintext
@@ -9,20 +17,34 @@ gestelt_bringup/
 │   ├── learning_agile_agent.py
 │   ├── c_generated_code
 │   ├── acados_template
+│   ├── quad_OC.py
+│   ├── quad_policy.py
+│   ├── quad_model.py
 │   ├── ...
 ```
 where:
-1. `learning_agile_agent.py` is the main file for constructing the MPC solver and running the python simulation.
-2. The `acados_template` is the required by the `acados` framework, also you need to install `acados` and setup the environment, please refer to [acados installation](https://docs.acados.org/installation/index.html)
-3. The generated C code of the solver works as a shared library, saved in the folder `c_generated_code`. This shared library will be linked with the MPC ROS wrapper (The package `/learning_agile`). This C++ ROS node will request the solver during both the **Gazebo SITL simulation** and the **real flight**.
-4. **Each time after modifying the MPC problem definition, like the weight and the model parameters, you need to run the `learning_agile_agent.py` to regenerate the solver.** (I will refine the procedure)
+1. `learning_agile_agent.py` is the main file for constructing the MPC solver and running the **python simulation**.
+
+2. In the `quad_OC.py`
+    1. The function `acadosOcpSolverInit` constructs the solver and generated the C code. 
+        The generated C code of the solver works as a shared library, saved in the folder `c_generated_code`. This shared library will be linked with the MPC ROS wrapper (The package `/learning_agile`). This C++ ROS node will request the solver during both the **Gazebo SITL simulation** and the **real flight**.
+    3. The function `acadosOcpSolver` calls the generated solver to solve the problem, for the **python simulation**
+3. In the `quad_model.py`
+    1. MPC cost function and the Drone Dynamic in `CasADi` symbolic function format is defined.
+4. In the `quad_policy.py`
+    1. the initialization of the class `run_quad` will define: 
+        1. the initial state of the drone for the python simulation.  
+        2. the drone dynamics values.
+        3. the weight of each cost term.
+        4. initialize the the solver.
+
+5. **Each time after modifying the MPC problem definition, like the weight and the model parameters, you need to run the `learning_agile_agent.py` to regenerate the solver.** (I will refine the procedure)
 ## 2. The MPC ROS node is in the package:
 ```plaintext
 learning_agile/
 ├── src/
 │   ├── learning_agile_node.cpp (useless now)
 │   ├── learning_agile.cpp
-
 ```
 1. The MPC ROS wrapper is in the file `learning_agile.cpp`, it is not a single ROS node, instead, this class will be called by the node `traj_server` by using the shared pointer.
 
@@ -46,7 +68,7 @@ trajectory_server/
     │   ├── ...
 
     ```
-3. I provide two kind of simulations.   
+3. I provide two kind of Gazebo PX4_SITL simulations.   
     1. **All in PC.** 
         This simulation will run both `PX4_SITL` and `MPC`in the PC.
         run `./sitl_bringup_learning_agile.sh`
