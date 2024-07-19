@@ -11,7 +11,10 @@ https://nusu-my.sharepoint.com/:p:/g/personal/e1101704_u_nus_edu/ETM5ynQhbRdOqy5
 ![Alt text](pictures/gazebo_sim.jpeg)
 
 ## Installation of the ACADOS
-The `acados_template` is the required by the `acados` framework, also you need to install `acados` and setup the environment, please refer to [acados installation](https://docs.acados.org/installation/index.html)
+1. Please refer to the [LearningAgileFlight_SE3](https://github.com/BinghengNUS/LearningAgileFlight_SE3) to install the python dependency. for the **python simulation**.
+2. Please refer to the main `README.md` to install dependence, for the **Gazebo PX4_SITL simulation**. (optional, there are resources on the Internet about how to configure the PX4 sitl)
+
+2. The `acados_template` is the required by the `acados` framework, also you need to install `acados` and setup the environment, please refer to [acados installation](https://docs.acados.org/installation/index.html)
 ## 1. The MPC problem definition is modified from the work [LearningAgileFlight_SE3](https://github.com/BinghengNUS/LearningAgileFlight_SE3), in the folder :
 
 ```plaintext
@@ -65,15 +68,14 @@ trajectory_server/
 2. if the `MPC` has no solution, or the period is too long, the `traj_server` will switch the drone back to `Hover` and the `MPC` will never be called.
 ## 4. Running the Gazebo SITL simulation and the real flight.
 ## 4.1. The simulation
-1. Please firstly refer to the main `README.md` to install dependence. 
-2. All scripts are in the folder:
+1. All scripts are in the folder:
     ```plaintext
     gestelt_bringup/
     ├── script/
     │   ├── ...
 
     ```
-3. I provide two kind of Gazebo PX4_SITL simulations.   
+2. I provide two kind of Gazebo PX4_SITL simulations.   
     1. **All in PC.** 
         This simulation will run both `PX4_SITL` and `MPC`in the PC.
         run `./sitl_bringup_learning_agile.sh`
@@ -85,9 +87,10 @@ trajectory_server/
         2. Connect the drone with the PC by wifi, run:
         `./sitl_bringup_learning_agile_drone_distributed.sh`
 ## 4.2 Real flight:
-1. On your PC, run: `./realflight_bringup_learning_agile_record_remote.sh`  
-2. ssh on the drone, run:
+1. ssh on the drone, run:
 `./realflight_bringup_learning_agile_drone.sh`
+2. On your PC, run: `./realflight_bringup_learning_agile_record_remote.sh`  
+
 
 ## 4.3 Log
 Both simulation and real flight logs are in folder, please `mkdir` of it.
