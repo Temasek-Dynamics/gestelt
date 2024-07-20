@@ -63,7 +63,7 @@ class run_quad:
         # --------------------------- create PDP object1 ----------------------------------------
         # create a pdp object
         self.dt = dt
-        self.uavoc1 = OCSys()
+        self.uavoc1 = OCSys(config_dict)
         self.uavoc1.setAuxvarVariable()
         sc= 5 #1e20
         pos_b   = 5 # in each axis
@@ -78,10 +78,10 @@ class run_quad:
                                      state_ub=[pos_b,pos_b,2,
                                                vel_b,vel_b,vel_b,
                                                sc,sc,sc,sc]) 
-        thrust_ub = config_dict['learning_agile']['single_motor_max_thrust']*4*0.5
-        thrust_lb = config_dict['learning_agile']['single_motor_max_thrust']*4*0.2
+        thrust_ub = config_dict['learning_agile']['single_motor_max_thrust']*4*config_dict['learning_agile']['throttle_upper_bound']
+        thrust_lb = config_dict['learning_agile']['single_motor_max_thrust']*4*config_dict['learning_agile']['throttle_lower_bound']
 
-        
+
         ang_rate_b = config_dict['learning_agile']['angular_vel_bound']
 
         self.uavoc1.setControlVariable(self.uav1.U,

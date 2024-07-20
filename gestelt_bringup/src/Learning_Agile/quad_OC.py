@@ -11,9 +11,9 @@ import scipy
 from os import system
 class OCSys:
 
-    def __init__(self, project_name="my optimal control system"):
+    def __init__(self,config_dict, project_name="my optimal control system"):
         self.project_name = project_name
-        
+        self.config_dict=config_dict
     def setAuxvarVariable(self, auxvar=None):
         if auxvar is None or auxvar.numel() == 0:
             self.auxvar = SX.sym('auxvar')
@@ -527,8 +527,8 @@ class OCSys:
             
             # set the current input
             current_input = np.array(current_state_control[self.n_state:])
-     
-            weight = max_tra_w*casadi.exp(-10*(dt*i-t_tra)**2) #gamma should increase as the flight duration decreases
+            gamma=self.config_dict['learning_agile']['traverse_weight_span']
+            weight = max_tra_w*casadi.exp(-gamma*(dt*i-t_tra)**2) #gamma should increase as the flight duration decreases
             
             self.acados_solver.set(i, 'p',np.concatenate((goal_state,
                                                           current_input,

@@ -5,49 +5,63 @@ traj_server:
 
 mission:
   ##------ MPC initial pose ----##
-  initial_position: [0.0, 0.0, 1.2]
+  initial_position: [0.0, 1.8, 1.2]
   initial_ori_euler: [0.0, 0.0, 0.0]
 
   ##------ gate pose ----##
-  gate_position: [1.0, 0.0, 0.8]
-  gate_ori_euler: [0.0, 0.0, 0.0]
+  gate_position: [1.5, 0.0, 1.5]
+  gate_ori_euler: [0.0, -0.0, 0.0]
 
   ##------ goal pose ----##
-  goal_position: [2.0, 0.0, 1.2]
+  goal_position: [0.0, -1.8, 1.2]
   mission/goal_ori_euler: [0.0, 0.0, 0.0]
 
 
 # MPC parameters
 learning_agile:
   ##------ MPC problem parameters---## 
-  horizon: 10
+  ## ---- hard coded in the solver ----##
+  ## modify this required recompilation of the solver
+  horizon: 20
   dt: 0.1
 
   ##------ traversing parameters ---##
   max_traverse_weight: 70 #70
-  traverse_time: 2
+  traverse_weight_span: 10
+  traverse_time: 2.5  
 
   ##------ safety parameters  ------##
   no_solution_flag_t_thresh: 0.1
   
   
   ##------ model parameters --------##
+  ## ---- hard coded in the solver ----##
+  ## modify this required recompilation of the solver
+  single_motor_max_thrust: 2.0 #2.1334185 #N
   # 1.7268 N is based on the hover throttle: 0.29
   # drone mass: 0.248kg, g: 9.81m/s^2 weight: 0.248*9.81 = 2.43368N
   # hover throttle: 0.29, thrust: 0.29*max_thrust =2.43368N
   # max_thrust = 2.43368/0.29 = 8.4N
   # single_motor_max_thrust = 8.4/4 = 2.1N
-  single_motor_max_thrust: 2.0 #2.1334185 #N
+
   
   ##------ constraints parameters --##
+  ## ---- hard coded in the solver ----##
+  ## modify this required recompilation of the solver
+
+  # throttle constraints
+  throttle_upper_bound: 0.6
+  throttle_lower_bound: 0.2
+
+
   # position constraints
-  pos_bound: 5 #m
+  pos_bound: 5 #m (-b,b)
 
   # velocity constraints
-  linear_vel_bound: 3.0 #m/s
+  linear_vel_bound: 1 #m/s
 
   # angular velocity constraints
-  angular_vel_bound: 1.57 #rad/s
+  angular_vel_bound: 10.57 #rad/s
 
 
   # miscellaneous parameters 

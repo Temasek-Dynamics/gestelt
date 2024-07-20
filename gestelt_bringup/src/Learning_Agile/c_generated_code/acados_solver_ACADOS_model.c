@@ -508,13 +508,13 @@ void ACADOS_model_acados_create_5_set_nlp_in(ACADOS_model_solver_capsule* capsul
     double* ubu = lubu + NBU;
     
     lbu[0] = 1.6;
-    ubu[0] = 4;
-    lbu[1] = -1.57;
-    ubu[1] = 1.57;
-    lbu[2] = -1.57;
-    ubu[2] = 1.57;
-    lbu[3] = -1.57;
-    ubu[3] = 1.57;
+    ubu[0] = 4.8;
+    lbu[1] = -10.57;
+    ubu[1] = 10.57;
+    lbu[2] = -10.57;
+    ubu[2] = 10.57;
+    lbu[3] = -10.57;
+    ubu[3] = 10.57;
 
     for (int i = 0; i < N; i++)
     {
@@ -555,12 +555,12 @@ void ACADOS_model_acados_create_5_set_nlp_in(ACADOS_model_solver_capsule* capsul
     ubx[1] = 5;
     lbx[2] = 0.3;
     ubx[2] = 2;
-    lbx[3] = -3;
-    ubx[3] = 3;
-    lbx[4] = -3;
-    ubx[4] = 3;
-    lbx[5] = -3;
-    ubx[5] = 3;
+    lbx[3] = -1;
+    ubx[3] = 1;
+    lbx[4] = -1;
+    ubx[4] = 1;
+    lbx[5] = -1;
+    ubx[5] = 1;
     lbx[6] = -5;
     ubx[6] = 5;
     lbx[7] = -5;

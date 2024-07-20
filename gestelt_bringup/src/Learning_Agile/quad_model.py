@@ -349,9 +349,9 @@ class Quadrotor:
         ax.tick_params(axis='x',which='major',pad=-5)
         ax.tick_params(axis='y',which='major',pad=-5)
         ax.tick_params(axis='z',which='major',pad=-5)
-        ax.set_zlim(-5, 5)
-        ax.set_ylim(-29, 29)#9
-        ax.set_xlim(-29, 29)#6
+        ax.set_zlim(-0.1, 3)
+        ax.set_ylim(-3, 3)#9
+        ax.set_xlim(-3, 3)#6
         # ax.set_title(title, pad=20, fontsize=15)
         # for t in ax.xaxis.get_major_ticks(): 
         #     t.label.set_font('Times New Roman') 
@@ -578,6 +578,7 @@ class Quadrotor:
         axs[0].plot(x,state_traj[:,0])
         axs[1].plot(x,state_traj[:,1])
         axs[2].plot(x,state_traj[:,2])
+        plt.savefig('./python_sim_result/position.png')
         plt.show()
         
     def plot_velocity(self,state_traj,dt = 0.1):
@@ -588,6 +589,7 @@ class Quadrotor:
         axs[0].plot(x,state_traj[:,3])
         axs[1].plot(x,state_traj[:,4])
         axs[2].plot(x,state_traj[:,5])
+        plt.savefig('./python_sim_result/velocity.png')
         plt.show()
 
     def plot_quaternions(self,state_traj,dt = 0.1):
@@ -612,7 +614,7 @@ class Quadrotor:
         plt.ylabel('w')
         plt.grid(True,color='0.6',dashes=(2,2,1,1))
         plt.legend()
-        plt.savefig('./angularrate.png')
+        plt.savefig('./python_sim_result/angularrate.png')
         plt.show()
         
 
@@ -629,9 +631,18 @@ class Quadrotor:
         plt.ylabel('u')
         plt.grid(True,color='0.6',dashes=(2,2,1,1))
         plt.legend()
-        plt.savefig('./input.png')
+        plt.savefig('./python_sim_result/input.png')
         plt.show()
         
+    def plot_trav_weight(self,trav_weight):
+        plt.plot(trav_weight)
+        plt.title('trav_weight vs time')
+        plt.xlabel('t')
+        plt.ylabel('trav_weight')
+        plt.grid(True,color='0.6',dashes=(2,2,1,1))
+        plt.legend()
+        plt.savefig('./python_sim_result/trav_weight.png')
+        plt.show()
 
     def plot_T(self,control_traj,dt = 0.1):
         N = int(len(control_traj[:,0]))
@@ -643,7 +654,7 @@ class Quadrotor:
         plt.ylabel('T')
         plt.grid(True,color='0.6',dashes=(2,2,1,1))
         plt.legend()
-        plt.savefig('./input_T.png')
+        plt.savefig('./python_sim_result/input_T.png')
         plt.show()
         
     

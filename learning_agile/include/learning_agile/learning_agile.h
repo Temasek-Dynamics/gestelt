@@ -114,12 +114,13 @@ class LearningAgile{
 
     //MPC parameters
     double max_tra_w_=0;
+    double tra_w_span_=0;
     Eigen::Vector4d current_input_={0,0,0,0};
     Eigen::Vector4d last_input_={0,0,0,0};
     double single_motor_max_thrust_=2.1334185;
 
     //MPC output
-    std::vector<std::vector<double>> state_traj_opt_;
+    double* state_traj_opt_;
     double* state_i_opt_;
     double control_opt_[4] = {0,0,0,0};
   

@@ -275,6 +275,8 @@ class LearningAgileAgent():
                 out=np.zeros(7)
                 out[0:3]=self.gate_center
                 out[3:6]=self.gate_ori_euler
+
+                # relative traversal time
                 out[6]=self.t_tra_abs-self.i*self.dyn_step
                 # end FIXME
 
@@ -323,13 +325,11 @@ class LearningAgileAgent():
         self.quad1.uav1.plot_angularrate(self.control_n)
         self.quad1.uav1.plot_position(self.state_n)
         self.quad1.uav1.plot_velocity(self.state_n)
+        self.quad1.uav1.plot_trav_weight(self.tra_weight_list)
         plt.plot(self.solving_time)
         plt.title('mpc solving time at the main loop')
         plt.show()
 
-        # plt.plot(self.tra_weight_list)
-        # plt.title('traverse weight')
-        # plt.show()
         # self.quad1.uav1.plot_T(control_tm)
         # self.quad1.uav1.plot_M(control_tm)
     
@@ -341,7 +341,7 @@ def main():
 
     ## --------------for single planning part test-------------------------------##.
     # create the learning agile agent
-    learing_agile_agent=LearningAgileAgent(python_sim_time=10,yaml_file=yaml_file)
+    learing_agile_agent=LearningAgileAgent(python_sim_time=5,yaml_file=yaml_file)
 
 
     #------------------------------set the mission--------------------------------------#

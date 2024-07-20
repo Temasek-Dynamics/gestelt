@@ -6,6 +6,7 @@ void LearningAgile::init(ros::NodeHandle& nh)
     /*parameters*/
     /////////////////
     nh.param("learning_agile/max_traverse_weight", max_tra_w_, 0.0);
+    nh.param("learning_agile/traverse_weight_span", tra_w_span_, 0.0);
     nh.param("learning_agile/traverse_time", t_tra_abs_, 10.0);
     nh.param("learning_agile/no_solution_flag_t_thresh", no_solution_flag_t_thresh_, 0.02);
     nh.param("learning_agile/single_motor_max_thrust", single_motor_max_thrust_, 2.1334185);
@@ -56,6 +57,7 @@ void LearningAgile::init(ros::NodeHandle& nh)
     ROS_INFO("time horizion is %d, with state %d and input %d \n", n_nodes_, n_x_, n_u_);
     
     // state_i_opt_=new double[n_x_];
+    state_traj_opt_=new double[n_nodes_*n_x_];
     // // set the size of the predicted state trajectory
     // state_traj_opt_.resize(n_nodes_);
     // for (int i = 0; i < n_nodes_; ++i) {
@@ -86,11 +88,11 @@ void LearningAgile::solver_request(){
         double mission_t_progress= std::chrono::duration_cast<std::chrono::duration<double>>(current_time - mission_start_time_).count();
         double t_tra=t_tra_abs_-mission_t_progress;   
         // ROS_INFO("t_tra is %f", t_tra);
-        
+  
         for (int i = 0; i < n_nodes_; i++)
         {
             current_input_=last_input_;
-            double varying_trav_weight = max_tra_w_ * std::exp(-10 * std::pow(dt_ * i - t_tra, 2));
+            double varying_trav_weight = max_tra_w_ * std::exp(-tra_w_span_ * std::pow(dt_ * i - t_tra, 2));
 
             // set the external parameters for the solver
             // desired goal state, current input, desired traverse pose, varying traverse weight
@@ -101,10 +103,9 @@ void LearningAgile::solver_request(){
             solver_extern_param.segment(17,4) = des_trav_quat_;
             solver_extern_param(21) = varying_trav_weight;
 
-            
+            int NP=22;
             double *solver_extern_param_ptr = solver_extern_param.data();
         
-            int NP=22;
             ACADOS_model_acados_update_params(acados_ocp_capsule, i,solver_extern_param_ptr,NP);
         }
         //TODO
@@ -138,33 +139,33 @@ void LearningAgile::solver_request(){
         }
         else
         {
-            // get the state solution for visualization
+            // // get the state solution for visualization
 
-            // if (PRED_TRAJ_VIS_FLAG_){
+            if (PRED_TRAJ_VIS_FLAG_){
                 
                 
                 
-            //     for (int i = 0; i < n_nodes_; ++i)
-            //     {   
+                for (int i = 0; i < n_nodes_; i++)
+                {   
                     
-            //         ocp_nlp_get_at_stage(nlp_config, nlp_dims, nlp_out, i, "x", &state_i_opt_);
+                ocp_nlp_out_get(nlp_config, nlp_dims, nlp_out, i, "x", &state_traj_opt_[i*n_x_]);
                     
-            //         ROS_INFO("state_i_opt_ is %f, %f, %f", state_i_opt_[0], state_i_opt_[1], state_i_opt_[2]);
-            //         // for (int j = 0; j < n_x_; ++j)
-            //         // {
-            //         //     state_traj_opt_.push_back(state_i_opt_);
-            //         // }
+                    // ROS_INFO("state_i_opt_ is %f, %f, %f", state_i_opt_[0], state_i_opt_[1], state_i_opt_[2]);
+                    // for (int j = 0; j < n_x_; ++j)
+                    // {
+                    //     state_traj_opt_.push_back(state_i_opt_);
+                    // }
         
-            //     }
+                }
 
 
-            // //     // // get the last state
-            // //     // ocp_nlp_out_get(nlp_config, nlp_dims, nlp_out, n_nodes_, "x", &state_i_opt_);
+                // get the last state
+                ocp_nlp_out_get(nlp_config, nlp_dims, nlp_out, n_nodes_, "x",  &state_traj_opt_[n_nodes_*n_x_]);
                 
-            // // pred_traj_vis();
+            pred_traj_vis();
 
                 
-            // }
+            }
             
         
             // get the control input
@@ -274,13 +275,13 @@ void LearningAgile::pred_traj_vis()
     for (int i = 0; i < n_nodes_; i++)
     {
         geometry_msgs::Pose pose;
-        pose.position.x = state_traj_opt_[i][0];
-        pose.position.y = state_traj_opt_[i][1];
-        pose.position.z = state_traj_opt_[i][2];
-        pose.orientation.w = state_traj_opt_[i][6];
-        pose.orientation.x = state_traj_opt_[i][7];
-        pose.orientation.y = state_traj_opt_[i][8];
-        pose.orientation.z = state_traj_opt_[i][9];
+        pose.position.x = state_traj_opt_[i*n_x_];
+        pose.position.y = state_traj_opt_[i*n_x_+1];
+        pose.position.z = state_traj_opt_[i*n_x_+2];
+        pose.orientation.w = state_traj_opt_[i*n_x_+6];
+        pose.orientation.x = state_traj_opt_[i*n_x_+7];
+        pose.orientation.y = state_traj_opt_[i*n_x_+8];
+        pose.orientation.z = state_traj_opt_[i*n_x_+9];
         pred_traj.poses.push_back(pose);
     }
     current_pred_traj_pub_.publish(pred_traj);
