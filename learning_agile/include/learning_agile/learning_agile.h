@@ -121,7 +121,6 @@ class LearningAgile{
 
     //MPC output
     double* state_traj_opt_;
-    double* state_i_opt_;
     double control_opt_[4] = {0,0,0,0};
   
     

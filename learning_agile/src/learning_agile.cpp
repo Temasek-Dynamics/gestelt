@@ -56,13 +56,9 @@ void LearningAgile::init(ros::NodeHandle& nh)
     n_u_ = *nlp_dims->nu;
     ROS_INFO("time horizion is %d, with state %d and input %d \n", n_nodes_, n_x_, n_u_);
     
-    // state_i_opt_=new double[n_x_];
+
     state_traj_opt_=new double[n_nodes_*n_x_];
-    // // set the size of the predicted state trajectory
-    // state_traj_opt_.resize(n_nodes_);
-    // for (int i = 0; i < n_nodes_; ++i) {
-    //     state_traj_opt_[i].resize(n_x_);
-    // }
+    
 
 }
 
