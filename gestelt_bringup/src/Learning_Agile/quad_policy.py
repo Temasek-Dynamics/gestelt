@@ -14,7 +14,7 @@ def Rd2Rp(tra_ang):
     return [theta,vector]
 
 class run_quad:
-    def __init__(self, goal_pos = [0, 8, 0], 
+    def __init__(self,config_dict, goal_pos = [0, 8, 0], 
                  goal_atti = [0,[1,0,0]], ini_r=[0,-8,0],
                 ini_v_I = [0.0, 0.0, 0.0], 
                 ini_q = toQuaternion(0.0,[3,3,5]),
@@ -36,7 +36,7 @@ class run_quad:
         self.ini_w =  [0.0, 0.0, 0.0]
         self.ini_state = self.ini_r + self.ini_v_I + self.ini_q# + self.ini_w
         # set horizon
-        self.horizon = horizon
+        self.horizon = config_dict['learning_agile']['horizon']
 
         # --------------------------- create model1 ----------------------------------------
         self.uav1 = Quadrotor()
@@ -67,7 +67,7 @@ class run_quad:
         self.uavoc1.setAuxvarVariable()
         sc= 5 #1e20
         pos_b   = 5 # in each axis
-        vel_b   = 0.5 # in each axis
+        vel_b   = config_dict['learning_agile']['linear_vel_bound'] #0.5 # in each axis
         wc   = pi/2 #pi
         tw   = 1.22
         t2w  = 2
@@ -78,16 +78,11 @@ class run_quad:
                                      state_ub=[pos_b,pos_b,2,
                                                vel_b,vel_b,vel_b,
                                                sc,sc,sc,sc]) 
-       
-        # 2.1334185=2700x2700x2.9265e-07
-        # drone mass: 0.248kg, g: 9.81m/s^2 weight: 0.248*9.81 = 2.43368N
-        # hover throttle: 0.29, thrust: 0.29*max_thrust =2.43368N
-        # max_thrust = 2.43368/0.29 = 8.4N
-        # single_motor_max_thrust = 8.4/4 = 2.1N
+        thrust_ub = config_dict['learning_agile']['single_motor_max_thrust']*4*0.5
+        thrust_lb = config_dict['learning_agile']['single_motor_max_thrust']*4*0.2
 
-        thrust_ub = 2.0*4*0.5
-        thrust_lb = 2.0*4*0.2
-        ang_rate_b=1.57
+        
+        ang_rate_b = config_dict['learning_agile']['angular_vel_bound']
 
         self.uavoc1.setControlVariable(self.uav1.U,
                                        control_lb=[thrust_lb ,-ang_rate_b,-ang_rate_b,-ang_rate_b],\

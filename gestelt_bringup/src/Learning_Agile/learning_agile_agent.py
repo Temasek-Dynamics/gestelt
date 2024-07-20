@@ -4,6 +4,7 @@
 import sys
 import os
 import subprocess
+import yaml
 # acquire the current directory
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -73,7 +74,7 @@ class MovingGate():
         # return self.w
     
 class LearningAgileAgent():
-    def __init__(self,python_sim_time) -> None:
+    def __init__(self,python_sim_time,yaml_file) -> None:
 
         self.sim_time=python_sim_time
         # inputs [start, end]
@@ -86,14 +87,18 @@ class LearningAgileAgent():
         self.moving_gate = MovingGate(self.env_inputs)
         self.gate_point = self.moving_gate.gate_point
 
+        # load the configuration file
+        with open(yaml_file, 'r', encoding='utf-8') as file:
+            self.config_dict = yaml.safe_load(file)
+
         # load trained DNN2 model
         self.model = torch.load(FILE)
     
 
         ##-------------------- planning variables --------------------------##
         # MPC prediction step, and prediction horizon
-        self.dt=0.1
-        self.horizon=10 #(T/dt)
+        self.dt=self.config_dict['learning_agile']['dt']
+        self.horizon=self.config_dict['learning_agile']['horizon'] #(T/dt)
 
         self.u = np.array([2,0.0,0.0,0.0])
         self.tm = [0,0,0,0]
@@ -160,7 +165,8 @@ class LearningAgileAgent():
             ini_q=drone_init_quat.tolist()
           
 
-        self.quad1 = run_quad(goal_pos=self.env_inputs[3:6].tolist(),
+        self.quad1 = run_quad(self.config_dict,
+                              goal_pos=self.env_inputs[3:6].tolist(),
                               ini_r=self.env_inputs[0:3].tolist(),
                               ini_q=ini_q,
                               horizon=self.horizon,
@@ -329,18 +335,23 @@ class LearningAgileAgent():
     
         
 def main():
+    # yaml file dir#
+    conf_folder=os.path.abspath(os.path.join(current_dir, '..', '..','config'))
+    yaml_file = os.path.join(conf_folder, 'learning_agile_mission.yaml')
+
     ## --------------for single planning part test-------------------------------##.
     # create the learning agile agent
-    learing_agile_agent=LearningAgileAgent(python_sim_time=10)
+    learing_agile_agent=LearningAgileAgent(python_sim_time=10,yaml_file=yaml_file)
 
 
     #------------------------------set the mission--------------------------------------#
-    learing_agile_agent.receive_mission_states(start=np.array([0,1.8,1.0]),
-                                                end=np.array([10,1.8,1.4]),
-                                                gate_center=np.array([1,1.8,1.4]),
-                                                gate_ori_euler=np.array([0,0,0]),
-                                                t_tra_abs=1,
-                                                max_tra_w=00)
+    config_dict = learing_agile_agent.config_dict
+    learing_agile_agent.receive_mission_states(start=np.array(config_dict['mission']['initial_position']),
+                                                end=np.array(config_dict['mission']['goal_position']),
+                                                gate_center=np.array(config_dict['mission']['gate_position']),
+                                                gate_ori_euler=np.array(config_dict['mission']['gate_ori_euler']),
+                                                t_tra_abs=config_dict['learning_agile']['traverse_time'],
+                                                max_tra_w=config_dict['learning_agile']['max_traverse_weight'])
 
     # #------------------------------------------------------------------------------#
     # problem definition

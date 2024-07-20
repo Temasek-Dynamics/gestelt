@@ -6,15 +6,19 @@ https://nusu-my.sharepoint.com/:p:/g/personal/e1101704_u_nus_edu/ETM5ynQhbRdOqy5
 ## Two kinds of simulations
 1. **python simulation:**\
 ![Alt text](pictures/python_simulation.jpeg)
-
-2. **Gazebo PX4_SITL simulation:**
+    1. running steps:
+        1. config your desired params in the file `gestelt_bringup/config/learning_agile_mission.yaml`
+        2. running the `gestelt_bringup/src/Learning_Agile/learning_agile_agent.py`, it will <u>construct the solver based on your current config</u>, and running the **python simulation**.
+1. **Gazebo PX4_SITL simulation:**
 ![Alt text](pictures/gazebo_sim.jpeg)
-
+    1. running steps:
+        1. running the above python simulation to generated MPC solver
+        2. see [section](#4-running-the-gazebo-sitl-simulation-and-the-real-flight) 
 ## Installation of the ACADOS
 1. Please refer to the [LearningAgileFlight_SE3](https://github.com/BinghengNUS/LearningAgileFlight_SE3) to install the python dependency. for the **python simulation**.
 2. Please refer to the main `README.md` to install dependence, for the **Gazebo PX4_SITL simulation**. (optional, there are resources on the Internet about how to configure the PX4 sitl)
 
-2. The `acados_template` is the required by the `acados` framework, also you need to install `acados` and setup the environment, please refer to [acados installation](https://docs.acados.org/installation/index.html)
+3. The `acados_template` is the required by the `acados` framework, also you need to install `acados` and setup the environment, please refer to [acados installation](https://docs.acados.org/installation/index.html)
 ## 1. The MPC problem definition is modified from the work [LearningAgileFlight_SE3](https://github.com/BinghengNUS/LearningAgileFlight_SE3), in the folder :
 
 ```plaintext
