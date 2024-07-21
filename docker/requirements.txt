@@ -1,0 +1,5 @@
+pyyaml
+numpy==1.23.0
+matplotlib==3.3.0
+# pytorch==1.12
+casadi==3.5.5
