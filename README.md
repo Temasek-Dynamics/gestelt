@@ -51,6 +51,7 @@ bash ./Tools/setup/ubuntu.sh
 
 
 # for PX4 V1.13.0 (we are using)
+conda deactivate # if you have conda environment
 DONT_RUN=1 make px4_sitl gazebo
 
 # Make SITL target for Gazebo simulation
@@ -59,10 +60,11 @@ DONT_RUN=1 make px4_sitl gazebo-classic
 
 
 # Copy the custom drone model over
-# for PX4 V1.13.0
+# for PX4 V1.13.0 (we are using)
 cp -r ~/gestelt_ws/src/gestelt/gestelt_bringup/simulation/models/raynor ~/gestelt_ws/PX4-Autopilot/Tools/sitl_gazebo/models/
 
 
+# for latest PX4 version
 cp -r ~/gestelt_ws/src/gestelt/gestelt_bringup/simulation/models/raynor ~/gestelt_ws/PX4-Autopilot/Tools/simulation/gazebo-classic/sitl_gazebo-classic/models/
 
 
@@ -102,7 +104,7 @@ make distclean
 cd ~/gestelt_ws/
 
 # Building for debugging/development
-catkin config --merge-devel
+catkin config --merge-devel # for the mavros_controller package
 catkin clean
 catkin build
 # Building for release mode (For use on Radxa)

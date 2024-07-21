@@ -579,7 +579,7 @@ class Quadrotor:
         axs[1].plot(x,state_traj[:,1])
         axs[2].plot(x,state_traj[:,2])
         plt.savefig('./python_sim_result/position.png')
-        plt.show()
+        # plt.show()
         
     def plot_velocity(self,state_traj,dt = 0.1):
         fig, axs = plt.subplots(3)
@@ -590,7 +590,7 @@ class Quadrotor:
         axs[1].plot(x,state_traj[:,4])
         axs[2].plot(x,state_traj[:,5])
         plt.savefig('./python_sim_result/velocity.png')
-        plt.show()
+        # plt.show()
 
     def plot_quaternions(self,state_traj,dt = 0.1):
         fig, axs = plt.subplots(4)
@@ -601,9 +601,10 @@ class Quadrotor:
         axs[1].plot(x,state_traj[:,7])
         axs[2].plot(x,state_traj[:,8])
         axs[3].plot(x,state_traj[:,9])
-        plt.show()
+        # plt.show()
     
     def plot_angularrate(self,state_traj,dt = 0.01):
+        plt.figure() 
         plt.title('angularrate vs time')
         N = len(state_traj[:,0])
         x = np.arange(0,N*dt,dt)
@@ -615,26 +616,28 @@ class Quadrotor:
         plt.grid(True,color='0.6',dashes=(2,2,1,1))
         plt.legend()
         plt.savefig('./python_sim_result/angularrate.png')
-        plt.show()
+        # plt.show()
         
 
     def plot_thrust(self,control_traj,dt = 0.1):
+        plt.figure() 
         N = int(len(control_traj[:,0]))
         x = np.arange(0,round(N*dt,1),dt)
         plt.plot(x,control_traj[:,0],color = 'b', label = 'u1')
         # plt.plot(x,control_traj[:,1],color = 'r', label = 'u2')
         # plt.plot(x,control_traj[:,2],color = 'y', label = 'u3')
         # plt.plot(x,control_traj[:,3],color = 'g', label = 'u4')
-        plt.title('input vs time')
+        plt.title('collective thrust vs time (N)')
         plt.ylim([0,5])
         plt.xlabel('t')
         plt.ylabel('u')
         plt.grid(True,color='0.6',dashes=(2,2,1,1))
         plt.legend()
-        plt.savefig('./python_sim_result/input.png')
-        plt.show()
+        plt.savefig('./python_sim_result/thrust.png')
+        # plt.show()
         
     def plot_trav_weight(self,trav_weight):
+        plt.figure() 
         plt.plot(trav_weight)
         plt.title('trav_weight vs time')
         plt.xlabel('t')
@@ -642,7 +645,14 @@ class Quadrotor:
         plt.grid(True,color='0.6',dashes=(2,2,1,1))
         plt.legend()
         plt.savefig('./python_sim_result/trav_weight.png')
-        plt.show()
+        # plt.show()
+
+    def plot_solving_time(self,solving_time):
+        plt.figure()    
+        plt.plot(solving_time)
+        plt.title('mpc solving time at the main loop')
+        plt.savefig('./python_sim_result/solving_time.png') 
+        # plt.show()
 
     def plot_T(self,control_traj,dt = 0.1):
         N = int(len(control_traj[:,0]))
@@ -655,7 +665,7 @@ class Quadrotor:
         plt.grid(True,color='0.6',dashes=(2,2,1,1))
         plt.legend()
         plt.savefig('./python_sim_result/input_T.png')
-        plt.show()
+        # plt.show()
         
     
     def plot_M(self,control_traj,dt = 0.1):

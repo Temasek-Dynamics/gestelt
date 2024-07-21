@@ -106,15 +106,16 @@ void LearningAgile::solver_request(){
         }
         //TODO
         // set the initial GUESS
+        // ocp_nlp_out_set(nlp_config, nlp_dims, nlp_out, n_nodes_ , "x", &state_traj_opt_[n_nodes_*n_x_]);
 
         // set the end desired state
         Eigen::VectorXd solver_extern_param(22);
-        double end_weight=0;
+        double end_tra_weight=0;
         solver_extern_param.segment(0,10) = des_goal_state_;
         solver_extern_param.segment(10,4) = current_input_;
         solver_extern_param.segment(14,3) = des_trav_point_;
         solver_extern_param.segment(17,4) = des_trav_quat_;
-        solver_extern_param(21) = end_weight;
+        solver_extern_param(21) = end_tra_weight;
 
         
         double *solver_extern_param_ptr = solver_extern_param.data();

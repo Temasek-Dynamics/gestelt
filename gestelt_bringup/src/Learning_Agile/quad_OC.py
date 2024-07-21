@@ -528,8 +528,8 @@ class OCSys:
             # set the current input
             current_input = np.array(current_state_control[self.n_state:])
             gamma=self.config_dict['learning_agile']['traverse_weight_span']
-            weight = max_tra_w*casadi.exp(-gamma*(dt*i-t_tra)**2) #gamma should increase as the flight duration decreases
-            
+            # weight = max_tra_w*casadi.exp(-gamma*(dt*i-t_tra)**2) #gamma should increase as the flight duration decreases
+            weight=max_tra_w*np.exp(-gamma*(dt*i-t_tra)**2) #gamma should increase as the flight duration decreases
             self.acados_solver.set(i, 'p',np.concatenate((goal_state,
                                                           current_input,
                                                           np.concatenate((tra_pos,tra_q)),

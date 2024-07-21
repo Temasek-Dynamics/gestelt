@@ -247,7 +247,7 @@ class LearningAgileAgent():
             # print('step',self.i,'tranversal time=',t,'gap_pitch=',gap_pitch*180/pi)
             # print('step',i,'abs_tranversal time=',t_tra)
             
-            self.Ttra = np.concatenate((self.Ttra,[self.t_tra_abs]),axis = 0)
+            self.Ttra= np.concatenate((self.Ttra,[self.t_tra_abs]),axis = 0)
             self.T = np.concatenate((self.T,[t]),axis = 0)
             self.Time = np.concatenate((self.Time,[self.i*self.dyn_step]),axis = 0)
             self.Pitch = np.concatenate((self.Pitch,[gap_pitch]),axis = 0)
@@ -320,15 +320,15 @@ class LearningAgileAgent():
                                        state_traj=self.state_n[::5,:],
                                        goal_pos=self.final_point.tolist(),
                                        dt=self.dyn_step)
-
+        
+        # save the data, not show it
         self.quad1.uav1.plot_thrust(self.control_n)
         self.quad1.uav1.plot_angularrate(self.control_n)
         self.quad1.uav1.plot_position(self.state_n)
         self.quad1.uav1.plot_velocity(self.state_n)
-        self.quad1.uav1.plot_trav_weight(self.tra_weight_list)
-        plt.plot(self.solving_time)
-        plt.title('mpc solving time at the main loop')
-        plt.show()
+        # self.quad1.uav1.plot_trav_weight(self.tra_weight_list)
+       
+        self.quad1.uav1.plot_solving_time(self.solving_time)
 
         # self.quad1.uav1.plot_T(control_tm)
         # self.quad1.uav1.plot_M(control_tm)
