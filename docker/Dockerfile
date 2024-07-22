@@ -43,7 +43,7 @@ RUN echo "export ACADOS_SOURCE_DIR=/root/acados" >> /root/.bashrc
 
 # Make directory and clone repository
 WORKDIR /gestelt_ws/src/
-RUN git clone https://github.com/JohnTGZ/gestelt.git -b tianchensun_learning_agile 
+RUN git clone https://github.com/JohnTGZ/gestelt.git -b learning_agile_docker 
 WORKDIR /gestelt_ws/
 RUN export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/root/acados/lib \
     && export ACADOS_SOURCE_DIR=/root/acados \
@@ -53,7 +53,6 @@ RUN export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/root/acados/lib \
 RUN echo "source /gestelt_ws/devel/setup.bash" >> /root/.bashrc 
 
 # Compile solver
-
 
 ENTRYPOINT ["/ros_entrypoint.sh"]
 CMD ["bash"]

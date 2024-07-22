@@ -11,16 +11,10 @@ find_package(catkin REQUIRED COMPONENTS
   mavros_msgs
   roscpp
   std_msgs
-  gestelt_msgs
-)
-
-## System dependencies are found with CMake's conventions
-find_package(catkin REQUIRED COMPONENTS
-  ${ROS_PKGS}
+  gestelt_bringup
 )
 
 find_package(Eigen3 REQUIRED)
-
 
 ###################################
 ## catkin specific configuration ##

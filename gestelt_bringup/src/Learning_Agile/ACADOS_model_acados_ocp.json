@@ -1,7 +1,7 @@
 {
-    "acados_include_path": "/home/tianchensun/acados/include",
-    "acados_lib_path": "/home/tianchensun/acados/lib",
-    "code_export_directory": "/home/tianchensun/gestelt_ws/src/gestelt/gestelt_bringup/src/Learning_Agile/c_generated_code",
+    "acados_include_path": "~/acados/include",
+    "acados_lib_path": "~/acados/lib",
+    "code_export_directory": "/home/john/mpc_ws/src/gestelt/gestelt_bringup/src/Learning_Agile/c_generated_code",
     "constraints": {
         "C": [],
         "C_e": [],
@@ -199,7 +199,7 @@
         "zu_e": []
     },
     "cython_include_dirs": [
-        "/home/tianchensun/.local/lib/python3.8/site-packages/numpy/core/include",
+        "/home/john/.local/lib/python3.8/site-packages/numpy/core/include",
         "/usr/include/python3.8"
     ],
     "dims": {
@@ -290,8 +290,12 @@
         "nu_original": null,
         "p": "jhpnnagiieahaaaadaaaaaaaaaaaaaaaaaegkbaaaaaaaaaaaaaagbaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaagbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaacaaaaaaaaaaaaaaadaaaaaaaaaaaaaaaeaaaaaaaaaaaaaaafaaaaaaaaaaaaaaagaaaaaaaaaaaaaaahaaaaaaaaaaaaaaaiaaaaaaaaaaaaaaajaaaaaaaaaaaaaaakaaaaaaaaaaaaaaalaaaaaaaaaaaaaaamaaaaaaaaaaaaaaanaaaaaaaaaaaaaaaoaaaaaaaaaaaaaaapaaaaaaaaaaaaaaaabaaaaaaaaaaaaaabbaaaaaaaaaaaaaacbaaaaaaaaaaaaaadbaaaaaaaaaaaaaaebaaaaaaaaaaaaaafbaaaaaaaaaaaaaagbaaaaaaaaaaaaaaegpcaaaaaaaaaaaaaadaaaaaaaahpfadegpcaaaaaaaaaaaaaadaaaaaaaahpfbdegpcaaaaaaaaaaaaaadaaaaaaaahpfcdegpcaaaaaaaaaaaaaadaaaaaaaahpfddegpcaaaaaaaaaaaaaadaaaaaaaahpfedegpcaaaaaaaaaaaaaadaaaaaaaahpffdegpcaaaaaaaaaaaaaadaaaaaaaahpfgdegpcaaaaaaaaaaaaaadaaaaaaaahpfhdegpcaaaaaaaaaaaaaadaaaaaaaahpfidegpcaaaaaaaaaaaaaadaaaaaaaahpfjdegpcaaaaaaaaaaaaaaeaaaaaaaahpfbdadegpcaaaaaaaaaaaaaaeaaaaaaaahpfbdbdegpcaaaaaaaaaaaaaaeaaaaaaaahpfbdcdegpcaaaaaaaaaaaaaaeaaaaaaaahpfbdddegpcaaaaaaaaaaaaaaeaaaaaaaahpfbdedegpcaaaaaaaaaaaaaaeaaaaaaaahpfbdfdegpcaaaaaaaaaaaaaaeaaaaaaaahpfbdgdegpcaaaaaaaaaaaaaaeaaaaaaaahpfbdhdegpcaaaaaaaaaaaaaaeaaaaaaaahpfbdidegpcaaaaaaaaaaaaaaeaaaaaaaahpfbdjdegpcaaaaaaaaaaaaaaeaaaaaaaahpfcdadegpcaaaaaaaaaaaaaaeaaaaaaaahpfcdbd",
         "t": [],
+        "t0": null,
+        "t_label": "t",
         "u": "jhpnnagiieahaaaadaaaaaaaaaaaaaaaaaegiaaaaaaaaaaaaaaaeaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaeaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaacaaaaaaaaaaaaaaadaaaaaaaaaaaaaaaeaaaaaaaaaaaaaaaegpcaaaaaaaaaaaaaagaaaaaaaehigchfhdhehegpcaaaaaaaaaaaaaacaaaaaaahhihegpcaaaaaaaaaaaaaacaaaaaaahhjhegpcaaaaaaaaaaaaaacaaaaaaahhkh",
+        "u_labels": null,
         "x": "jhpnnagiieahaaaadaaaaaaaaaaaaaaaaaegoaaaaaaaaaaaaaaakaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaakaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaacaaaaaaaaaaaaaaadaaaaaaaaaaaaaaaeaaaaaaaaaaaaaaafaaaaaaaaaaaaaaagaaaaaaaaaaaaaaahaaaaaaaaaaaaaaaiaaaaaaaaaaaaaaajaaaaaaaaaaaaaaakaaaaaaaaaaaaaaaegpcaaaaaaaaaaaaaacaaaaaaachihegpcaaaaaaaaaaaaaacaaaaaaachjhegpcaaaaaaaaaaaaaacaaaaaaachkhegpcaaaaaaaaaaaaaacaaaaaaaghihegpcaaaaaaaaaaaaaacaaaaaaaghjhegpcaaaaaaaaaaaaaacaaaaaaaghkhegpcaaaaaaaaaaaaaacaaaaaaabhadegpcaaaaaaaaaaaaaacaaaaaaabhbdegpcaaaaaaaaaaaaaacaaaaaaabhcdegpcaaaaaaaaaaaaaacaaaaaaabhdd",
+        "x_labels": null,
         "xdot": "jhpnnagiieahaaaadaaaaaaaaaaaaaaaaaegoaaaaaaaaaaaaaaakaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaakaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaacaaaaaaaaaaaaaaadaaaaaaaaaaaaaaaeaaaaaaaaaaaaaaafaaaaaaaaaaaaaaagaaaaaaaaaaaaaaahaaaaaaaaaaaaaaaiaaaaaaaaaaaaaaajaaaaaaaaaaaaaaakaaaaaaaaaaaaaaaegpcaaaaaaaaaaaaaahaaaaaaaihpfegpgehpfadegpcaaaaaaaaaaaaaahaaaaaaaihpfegpgehpfbdegpcaaaaaaaaaaaaaahaaaaaaaihpfegpgehpfcdegpcaaaaaaaaaaaaaahaaaaaaaihpfegpgehpfddegpcaaaaaaaaaaaaaahaaaaaaaihpfegpgehpfedegpcaaaaaaaaaaaaaahaaaaaaaihpfegpgehpffdegpcaaaaaaaaaaaaaahaaaaaaaihpfegpgehpfgdegpcaaaaaaaaaaaaaahaaaaaaaihpfegpgehpfhdegpcaaaaaaaaaaaaaahaaaaaaaihpfegpgehpfidegpcaaaaaaaaaaaaaahaaaaaaaihpfegpgehpfjd",
         "z": "jhpnnagiieahaaaadaaaaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
     },
@@ -322,10 +326,16 @@
     ],
     "problem_class": "OCP",
     "shared_lib_ext": ".so",
+    "simulink_opts": null,
     "solver_options": {
         "Tsim": 0.1,
+        "adaptive_levenberg_marquardt_lam": 5.0,
+        "adaptive_levenberg_marquardt_mu0": 0.001,
+        "adaptive_levenberg_marquardt_mu_min": 1e-16,
         "alpha_min": 0.05,
         "alpha_reduction": 0.7,
+        "as_rti_iter": 1,
+        "as_rti_level": 4,
         "collocation_type": "GAUSS_LEGENDRE",
         "cost_discretization": "EULER",
         "custom_templates": [],
@@ -348,6 +358,7 @@
         "integrator_type": "ERK",
         "levenberg_marquardt": 1e-05,
         "line_search_use_sufficient_descent": 0,
+        "log_primal_step_norm": false,
         "model_external_shared_lib_dir": null,
         "model_external_shared_lib_name": null,
         "nlp_solver_ext_qp_res": 0,
@@ -358,9 +369,10 @@
         "nlp_solver_tol_ineq": 1e-06,
         "nlp_solver_tol_stat": 1e-06,
         "nlp_solver_type": "SQP_RTI",
+        "num_threads_in_batch_solve": 1,
         "print_level": 0,
         "qp_solver": "FULL_CONDENSING_QPOASES",
-        "qp_solver_cond_N": null,
+        "qp_solver_cond_N": 50,
         "qp_solver_cond_ric_alg": 1,
         "qp_solver_iter_max": 50,
         "qp_solver_ric_alg": 1,
@@ -371,6 +383,7 @@
         "qp_solver_warm_start": 0,
         "reg_epsilon": 0.0001,
         "regularize_method": "CONVEXIFY",
+        "rti_log_residuals": 0,
         "shooting_nodes": [
             0.0,
             0.1,
@@ -634,7 +647,10 @@
             0.1,
             0.1,
             0.1
-        ]
+        ],
+        "with_adaptive_levenberg_marquardt": false,
+        "with_solution_sens_wrt_params": false,
+        "with_value_sens_wrt_params": false
     },
     "zoro_description": null
 }

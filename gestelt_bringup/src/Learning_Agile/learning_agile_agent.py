@@ -362,14 +362,16 @@ def main():
     # solve the problem
     learing_agile_agent.solve_problem_comparison()
 
-    # every time after reconstruct the solver, need to catkin build the MPC wrapper to 
-    # relink the shared library
-    shell_script="""
-    catkin build learning_agile
-    """
+    # TODO: remove shell command below since cmakelists already settles the re-building step
 
-    # run the shell script
-    subprocess.run(shell_script,shell=True)
+    # # every time after reconstruct the solver, need to catkin build the MPC wrapper to 
+    # # relink the shared library
+    # shell_script="""
+    # catkin build learning_agile
+    # """
+
+    # # run the shell script
+    # subprocess.run(shell_script,shell=True)
 
 if __name__ == '__main__':
     main()
