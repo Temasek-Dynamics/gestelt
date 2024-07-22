@@ -333,6 +333,26 @@ PARAM_DEFINE_FLOAT(MPC_RPT_XY_EPS, 0.4f);
  */
 PARAM_DEFINE_FLOAT(MPC_RPT_XY_MAX_I,0.5f);
 
+
+/**
+ * RPT controller rotor drag X default value is 0.0
+ * @decimal 2
+ */
+
+PARAM_DEFINE_FLOAT(MPC_RPT_R_DRAG_X,0.0f);
+/**
+ * RPT controller rotor drag Y default value is 0.0
+ * @decimal 2
+ */
+
+PARAM_DEFINE_FLOAT(MPC_RPT_R_DRAG_Y,0.0f);
+/**
+ * RPT controller rotor drag Z default value is 0.0
+ * @decimal 2
+ */
+PARAM_DEFINE_FLOAT(MPC_RPT_R_DRAG_Z,0.0f);
+
+
 /**
  * Proportional gain for horizontal velocity error
  *

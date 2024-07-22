@@ -55,3 +55,4 @@ CATKIN_IGNORE
 *.pth
 gestelt_bringup/src/Learning_Agile/*
 *.bag
+*.history

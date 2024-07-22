@@ -160,6 +160,9 @@ private:
 
 		(ParamFloat<px4::params::MPC_RPT_XY_MAX_I>)    _param_mpc_rpt_max_xy_integration,
 
+		(ParamFloat<px4::params::MPC_RPT_R_DRAG_X>)     _param_mpc_rpt_rotor_drag_x,
+		(ParamFloat<px4::params::MPC_RPT_R_DRAG_Y>)     _param_mpc_rpt_rotor_drag_y,
+		(ParamFloat<px4::params::MPC_RPT_R_DRAG_Z>)     _param_mpc_rpt_rotor_drag_z,
 
 		// Takeoff / Land
 		(ParamFloat<px4::params::MPC_SPOOLUP_TIME>) _param_mpc_spoolup_time, /**< time to let motors spool up after arming */
