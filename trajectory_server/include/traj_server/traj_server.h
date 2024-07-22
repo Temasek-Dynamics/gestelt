@@ -28,7 +28,7 @@
 #include <visualization_msgs/Marker.h>
 
 
-#include "controller_msgs/FlatTarget.h"
+// #include "controller_msgs/FlatTarget.h"
 #include <geometry_msgs/TwistStamped.h>
 #include <std_srvs/SetBool.h> // for service client
 
@@ -106,7 +106,7 @@ private: // Class Methods
   /*
   * @brief Callback for circular trajectory
   */
-  void circularTrajCb(const controller_msgs::FlatTarget::ConstPtr &msg);
+  // void circularTrajCb(const controller_msgs::FlatTarget::ConstPtr &msg);
 
   /**
    * @brief Request for circular trajectory

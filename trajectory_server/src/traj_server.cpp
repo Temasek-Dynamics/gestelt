@@ -479,22 +479,22 @@ void TrajServer::debugTimerCb(const ros::TimerEvent &e){
 }
 
 /*circular traj callback*/
-void TrajServer::circularTrajCb(const controller_msgs::FlatTarget::ConstPtr &msg)
-{
-  int type_mask = IGNORE_YAW | IGNORE_YAW_RATE ;
+// void TrajServer::circularTrajCb(const controller_msgs::FlatTarget::ConstPtr &msg)
+// {
+//   int type_mask = IGNORE_YAW | IGNORE_YAW_RATE ;
  
-  last_mission_pos_(0) = msg->position.x;
-  last_mission_pos_(1) = msg->position.y;
-  last_mission_pos_(2) = msg->position.z;
-  last_mission_vel_(0) = msg->velocity.x;
-  last_mission_vel_(1) = msg->velocity.y;
-  last_mission_vel_(2) = msg->velocity.z;
-  last_mission_acc_(0) = msg->acceleration.x;
-  last_mission_acc_(1) = msg->acceleration.y;
-  last_mission_acc_(2) = msg->acceleration.z;
+//   last_mission_pos_(0) = msg->position.x;
+//   last_mission_pos_(1) = msg->position.y;
+//   last_mission_pos_(2) = msg->position.z;
+//   last_mission_vel_(0) = msg->velocity.x;
+//   last_mission_vel_(1) = msg->velocity.y;
+//   last_mission_vel_(2) = msg->velocity.z;
+//   last_mission_acc_(0) = msg->acceleration.x;
+//   last_mission_acc_(1) = msg->acceleration.y;
+//   last_mission_acc_(2) = msg->acceleration.z;
 
 
-}
+// }
 /* Trajectory execution methods */
 
 void TrajServer::execLand()
@@ -565,10 +565,10 @@ void TrajServer::execMission()
               last_mission_yaw_, last_mission_yaw_dot_, 
               mission_type_mask_);
   
-  pubflatrefState( last_mission_pos_, last_mission_vel_, 
-              last_mission_acc_, last_mission_jerk_, 
-              last_mission_yaw_, last_mission_yaw_dot_, 
-              mission_type_mask_);
+  // pubflatrefState( last_mission_pos_, last_mission_vel_, 
+  //             last_mission_acc_, last_mission_jerk_, 
+  //             last_mission_yaw_, last_mission_yaw_dot_, 
+  //             mission_type_mask_);
 
 
 
@@ -612,24 +612,24 @@ void TrajServer::publishCmd(
   // ROS_INFO("Acceleration for final command: %f, %f, %f", a(0), a(1), a(2));
   pos_cmd_raw_pub_.publish(pos_cmd);
 }
-void TrajServer::pubflatrefState( Vector3d p, Vector3d v, Vector3d a, Vector3d j, double yaw, double yaw_rate, uint16_t type_mask)
-{
-  controller_msgs::FlatTarget msg;
+// void TrajServer::pubflatrefState( Vector3d p, Vector3d v, Vector3d a, Vector3d j, double yaw, double yaw_rate, uint16_t type_mask)
+// {
+//   controller_msgs::FlatTarget msg;
 
-  msg.header.stamp = ros::Time::now();
-  msg.header.frame_id = origin_frame_;
-  msg.type_mask = 2;  //PVA
-  msg.position.x = p.x();
-  msg.position.y = p.y();
-  msg.position.z = p.z();
-  msg.velocity.x = v.x();
-  msg.velocity.y = v.y();
-  msg.velocity.z = v.z();
-  msg.acceleration.x = a.x();
-  msg.acceleration.y = a.y();
-  msg.acceleration.z = a.z();
-  flat_reference_pub_.publish(msg);
-}
+//   msg.header.stamp = ros::Time::now();
+//   msg.header.frame_id = origin_frame_;
+//   msg.type_mask = 2;  //PVA
+//   msg.position.x = p.x();
+//   msg.position.y = p.y();
+//   msg.position.z = p.z();
+//   msg.velocity.x = v.x();
+//   msg.velocity.y = v.y();
+//   msg.velocity.z = v.z();
+//   msg.acceleration.x = a.x();
+//   msg.acceleration.y = a.y();
+//   msg.acceleration.z = a.z();
+//   flat_reference_pub_.publish(msg);
+// }
 
 
 // void TrajServer::pubrefState(Vector3d p, Vector3d v) {
