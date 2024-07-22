@@ -75,6 +75,7 @@ class LearningAgile{
     ros::Subscriber waypoint_sub_;
 
     ros::Publisher next_attitude_setpoint_pub_;
+    ros::Publisher raw_solver_output_pub_;
     ros::Publisher gate_centroid_pub_;
     ros::Publisher traverse_time_pub_;
 

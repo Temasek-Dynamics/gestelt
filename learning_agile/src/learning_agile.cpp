@@ -16,7 +16,7 @@ void LearningAgile::init(ros::NodeHandle& nh)
     /* Subscribers */
     /////////////////
     drone_pose_sub_= nh.subscribe("/mavros/local_position/pose", 1, &LearningAgile::drone_state_pose_cb, this);
-    drone_twist_sub_= nh.subscribe("/mavros/local_position/velocity_local", 1, &LearningAgile::drone_state_twist_cb, this);
+    drone_twist_sub_= nh.subscribe("/mavros/local_position/velocity_body", 1, &LearningAgile::drone_state_twist_cb, this);
     waypoint_sub_ = nh.subscribe("/planner/goals_learning_agile", 1, &LearningAgile::mission_start_cb, this);
 
 
@@ -24,13 +24,14 @@ void LearningAgile::init(ros::NodeHandle& nh)
     /* Publishers */
     /////////////////
     next_attitude_setpoint_pub_ = nh.advertise<mavros_msgs::AttitudeTarget>("/mavros/setpoint_raw/attitude", 1);
-
+    raw_solver_output_pub_ = nh.advertise<mavros_msgs::AttitudeTarget>("/learning_agile_agent/raw_solver_output", 1);
+    
     // gate_centroid_pub_ = nh.advertise<geometry_msgs::PoseStamped>("/learning_agile_agent/gate_centroid", 1);
 
     // traverse_time_pub_ = nh.advertise<std_msgs::Float32>>("/learning_agile_agent/traverse_time", 10);
     mpc_runtime_pub_ = nh.advertise<std_msgs::Float64>("/learning_agile_agent/callback_runtime", 10);
     current_pred_traj_pub_ = nh.advertise<geometry_msgs::PoseArray>("/learning_agile_agent/current_pred_traj", 10);
-
+    
 
     // solver loading 
     // Load the solver from the python interface generated code
@@ -255,6 +256,9 @@ void LearningAgile::Update()
             std_msgs::Float64 mpc_runtime;
             mpc_runtime.data = preloop_dur;
             mpc_runtime_pub_.publish(mpc_runtime);
+
+            // raw solver output
+            raw_solver_output_pub_.publish(mpc_cmd);
         }  
     }  
     else
