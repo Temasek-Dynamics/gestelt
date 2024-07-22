@@ -44,9 +44,11 @@ RUN git clone --recursive https://github.com/acados/acados.git \
 
 # Install tera_renderer (dependency of ACADOS) 
 WORKDIR /root/
-RUN wget https://github.com/acados/tera_renderer/releases/download/v0.0.34/t_renderer-v0.0.34-linux \
-    && chmod +x t_renderer-v0.0.34-linux \
-    && mv t_renderer-v0.0.34-linux /root/acados/bin/t_renderer
+RUN git clone https://github.com/acados/tera_renderer.git \
+    && cd tera_renderer \
+    && cargo build --verbose --release \
+    && mv target/release/t_renderer /root/acados/bin/t_renderer \
+    && chmod +x /root/acados/bin/t_renderer 
 
 # Make directory and clone repository
 WORKDIR /gestelt_ws/src/

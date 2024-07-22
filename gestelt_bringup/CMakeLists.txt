@@ -28,5 +28,4 @@ catkin_package(
 ###########
 ## Build ##
 ###########
-execute_process(COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/src/Learning_Agile/learning_agile_agent.py)
 

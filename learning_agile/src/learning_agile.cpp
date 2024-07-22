@@ -145,7 +145,7 @@ void LearningAgile::solver_request(){
                 for (int i = 0; i < n_nodes_; i++)
                 {   
                     
-                ocp_nlp_out_get(nlp_config, nlp_dims, nlp_out, i, "x", &state_traj_opt_[i*n_x_]);
+                    ocp_nlp_out_get(nlp_config, nlp_dims, nlp_out, i, "x", &state_traj_opt_[i*n_x_]);
                     
                     // ROS_INFO("state_i_opt_ is %f, %f, %f", state_i_opt_[0], state_i_opt_[1], state_i_opt_[2]);
                     // for (int j = 0; j < n_x_; ++j)

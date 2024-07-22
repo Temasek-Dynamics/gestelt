@@ -31,6 +31,9 @@ docker push gestelt/learning-agile:latest
 
 # All-in-one build and push
 docker build --platform linux/arm64 -t gestelt/learning-agile:latest --push .
+
+# [Optional] Remove dockerfile build cache
+docker buildx prune
 ```
 
 ## Running containers
