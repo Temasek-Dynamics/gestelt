@@ -25,18 +25,18 @@ docker run --privileged --rm tonistiigi/binfmt --install all
 ## Building and Pushing images to Docker Hub repository
 ```bash
 # Build image
-docker build --platform linux/arm64 -t johntgz95/learning-agile:latest .
+docker build --platform linux/arm64 -t gestelt/learning-agile:latest .
 # Push image to docker hub repository
-docker push johntgz95/learning-agile:latest
+docker push gestelt/learning-agile:latest
 
 # All-in-one build and push
-docker build --platform linux/arm64 -t johntgz95/learning-agile:latest --push .
+docker build --platform linux/arm64 -t gestelt/learning-agile:latest --push .
 ```
 
 ## Running containers
 ```bash
 # To use host USB devices, add "--privileged" flag or "--device=/dev/ttyAML1"
-docker run -it --rm --network host --privileged johntgz95/learning-agile:latest
+docker run -it --rm --network host --privileged -e "MASTER_IP=$MASTER_IP" -e "SELF_IP=$SELF_IP" gestelt/learning-agile:latest
 
 # Find name of new machine 
 docker ps -l
@@ -58,9 +58,9 @@ docker rm $(docker ps -a -q)
 # List all docker containers
 docker ps -a
 # Commit changes
-docker commit CONTAINER_NAME johntgz95/learning-agile:latest
+docker commit CONTAINER_NAME gestelt/learning-agile:latest
 # push 
-docker push johntgz95/learning-agile:latest
+docker push gestelt/learning-agile:latest
 # Inspect the container
 docker container inspect CONTAINER_NAME
 ```
@@ -70,12 +70,12 @@ docker container inspect CONTAINER_NAME
 ## Commands
 ```bash
 # Pull Images
-docker pull johntgz95/learning-agile:latest
-docker run -it --rm --network host --privileged -e "DRONE_ID=$DRONE_ID" johntgz95/learning-agile:latest
+docker pull gestelt/learning-agile:latest
+docker run -it --rm --network host --privileged -e "DRONE_ID=$DRONE_ID" gestelt/learning-agile:latest
 ```
 
 # Repositories
-[Radxa-base](https://hub.docker.com/repository/docker/johntgz95/radxa-base/general)
+[Radxa-base](https://hub.docker.com/repository/docker/gestelt/radxa-base/general)
 
 # Resources
 [Uploading an image to a Docker Hub repo](https://docs.docker.com/guides/workshop/04_sharing_app/).

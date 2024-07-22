@@ -5,12 +5,12 @@
 https://nusu-my.sharepoint.com/:p:/g/personal/e1101704_u_nus_edu/ETM5ynQhbRdOqy55M0uoRwkBECQjI_HhbMvuEyHjkYPTJw?e=TvpCtM
 ## Two kinds of simulations
 1. **python simulation:**\
-![Alt text](pictures/python_simulation.jpeg)
+<img src="pictures/python_simulation.jpeg" alt="Python Simulation" style="width: 300px;"/>
     1. running steps:
         1. config your desired params in the file `gestelt_bringup/config/learning_agile_mission.yaml`
         2. running the `gestelt_bringup/src/Learning_Agile/learning_agile_agent.py`, it will <u>construct the solver based on your current config</u>, and running the **python simulation**.
-1. **Gazebo PX4_SITL simulation:**
-![Alt text](pictures/gazebo_sim.jpeg)
+1. **Gazebo PX4_SITL simulation:**\
+<img src="pictures/gazebo_sim.jpeg" alt="Gazebo Simulation" style="width: 300px;"/>
     1. running steps:
         1. running the above python simulation to generated MPC solver
         2. see [section](#4-running-the-gazebo-sitl-simulation-and-the-real-flight) 
@@ -85,7 +85,7 @@ trajectory_server/
         run `./sitl_bringup_learning_agile.sh`
     2. **HITL simulation**
         One critical issue is to verify whether the drone onboard computer could run the MPC in the desired frequency or not, so here I provided the **HITL** simulation:
-        ![Alt text](pictures/MPC_HITL.png)
+        <img src="pictures/MPC_HITL.png" alt="HITL diagram"/>
         1. Your PC will run the `PX4_SITL` and `Gazebo` by running:
         `./sitl_bringup_learning_agile_laptop_distributed.sh` 
         2. Connect the drone with the PC by wifi, run:

@@ -25,6 +25,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libeigen3-dev\
     && rm -rf /var/lib/apt/lists/*
 
+# Copy .bashrc file
+COPY .bashrc /root/
+
 # Install ACADOS prerequisites
 COPY requirements.txt /root/
 RUN pip install -r /root/requirements.txt
@@ -38,8 +41,12 @@ RUN git clone --recursive https://github.com/acados/acados.git \
     && cmake -DACADOS_WITH_QPOASES=ON -DACADOS_WITH_OSQP=ON -DACADOS_WITH_OPENMP=ON -DACADOS_NUM_THREADS=3 .. \
     && make install -j4 \
     && pip install -e /root/acados/interfaces/acados_template
-RUN echo "export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/root/acados/lib" >> /root/.bashrc 
-RUN echo "export ACADOS_SOURCE_DIR=/root/acados" >> /root/.bashrc 
+
+# Install tera_renderer (dependency of ACADOS) 
+WORKDIR /root/
+RUN wget https://github.com/acados/tera_renderer/releases/download/v0.0.34/t_renderer-v0.0.34-linux \
+    && chmod +x t_renderer-v0.0.34-linux \
+    && mv t_renderer-v0.0.34-linux /root/acados/bin/t_renderer
 
 # Make directory and clone repository
 WORKDIR /gestelt_ws/src/
@@ -50,9 +57,10 @@ RUN export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/root/acados/lib \
     && source /opt/ros/noetic/setup.bash \
     && catkin config --skiplist trajectory_planner se3_controller\
     && catkin build 
-RUN echo "source /gestelt_ws/devel/setup.bash" >> /root/.bashrc 
 
-# Compile solver
+# DRONE_ID environment variable can be overriden on docker image startup
+ENV MASTER_IP=localhost
+ENV SELF_IP=localhost
 
 ENTRYPOINT ["/ros_entrypoint.sh"]
 CMD ["bash"]
