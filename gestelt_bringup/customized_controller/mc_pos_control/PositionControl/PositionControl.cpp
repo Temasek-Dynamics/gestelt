@@ -51,6 +51,22 @@ void PositionControl::setVelocityGains(const Vector3f &P, const Vector3f &I, con
 	_gain_vel_d = D;
 }
 
+void PositionControl::setRPTGains(const Vector3f &WN,
+				const Vector3f &SIGMA,
+				const Vector3f &KI,
+				const Vector3f &EPS,
+				const float MAX_XY_INTEGRATION,
+				const Vector3f &rotor_drag)
+{
+	_gain_RPT_wn = WN;
+	_gain_RPT_sigma = SIGMA;
+	_gain_RPT_ki = KI;
+	_gain_RPT_eps = EPS;
+	_max_xy_integration = MAX_XY_INTEGRATION;
+	_rotor_drag = rotor_drag;
+}
+
+
 void PositionControl::setVelocityLimits(const float vel_horizontal, const float vel_up, const float vel_down)
 {
 	_lim_vel_horizontal = vel_horizontal;
@@ -208,10 +224,10 @@ void PositionControl::_RPTControl(const float dt)
 {
 	// desired system responds parameters
 	// xy outer-loop controller
-	float wn_xy = 0.4f; 		// natural frequency
-	float sigma_xy = 1.1f * 1.5f ; 	// settling time
-	float ki_xy = 0.8f * 1.5f; 	// pole placement
-	float eps_xy = 1.0f * 0.4f; 	// damping ratio
+	float wn_xy =_gain_RPT_wn(0);      //0.4f; 		// natural frequency
+	float sigma_xy = _gain_RPT_sigma(0);  //1.1f * 1.5f; // damping ratio
+	float ki_xy = _gain_RPT_ki(0);      //0.8f * 1.5f; 	// pole placement
+	float eps_xy = _gain_RPT_eps(0);   //1.0f * 0.4f; 	 // settling time
 	float F_xy[5];
 
 	// xy outer-loop controller
@@ -221,17 +237,13 @@ void PositionControl::_RPTControl(const float dt)
 	F_xy[3] = -(wn_xy * wn_xy + 2 * sigma_xy * wn_xy * ki_xy) / (eps_xy * eps_xy);
 	F_xy[4] = -(2 * sigma_xy * wn_xy + ki_xy) / eps_xy;
 
-	// F_xy[0]=10.9f;
-	// F_xy[1]=6.3f;
-	// F_xy[2]=3.0f;
-	// F_xy[3]=-10.9f;
-	// F_xy[4]=-6.3f;
+
 
 	// z outer-loop controller
-	float wn_z = 0.5f;		// natural frequency
-	float sigma_z = 1.1f * 1.5f;	// settling time
-	float ki_z = 0.8f * 1.5f;	// pole placement
-	float eps_z = 1.0f * 0.3f;	// damping ratio
+	float wn_z = _gain_RPT_wn(2);      //0.5f;			// natural frequency
+	float sigma_z = _gain_RPT_sigma(2); //1.1f * 1.5f;	// damping ratio
+	float ki_z = _gain_RPT_ki(2);      //0.8f * 1.5f;		// pole placement
+	float eps_z = _gain_RPT_eps(2);   //1.0f * 0.3f;		// settling time
 
 	float F_z[5];
 
@@ -241,11 +253,7 @@ void PositionControl::_RPTControl(const float dt)
 	F_z[2] = ki_z * wn_z * wn_z / (eps_z * eps_z * eps_z);
 	F_z[3] = -(wn_z * wn_z + 2 * sigma_z * wn_z * ki_z) / (eps_z * eps_z);
 	F_z[4] = -(2 * sigma_z * wn_z + ki_z) / eps_z;
-	// F_z[0]=24.78f;
-	// F_z[1]=9.5f;
-	// F_z[2]=11.11f;
-	// F_z[3]=-24.78f;
-	// F_z[4]=-9.5f;
+
 
 	// Constrain velocity in z-direction.
 	ControlMath::setZeroIfNanVector3f(_vel_sp);
@@ -273,6 +281,26 @@ void PositionControl::_RPTControl(const float dt)
 	//i
 	Vector3f inte_pos_gain = Vector3f(F_xy[2], F_xy[2], F_z[2]);
 	Vector3f u_pos_int = _pos_int;
+	// PX4_WARN("u_pos_int: %8.4f %8.4f %8.4f", (double)u_pos_int(0), (double)u_pos_int(1), (double)u_pos_int(2));
+
+
+	// _rpt_integrator_msg.timestamp = hrt_absolute_time();
+	// _rpt_integrator_msg.x = u_pos_int(0);
+	// _rpt_integrator_msg.y = u_pos_int(1);
+	// _rpt_integrator_msg.z = u_pos_int(2);
+
+	// _rpt_integrator_pub.publish(_rpt_integrator_msg);
+
+	// anti-windup for xy axes
+	float MAX_INT = _max_xy_integration;
+	_pos_int(0)=math::min(fabsf(_pos_int(0)),MAX_INT) * sign(_pos_int(0));
+	_pos_int(1)=math::min(fabsf(_pos_int(1)),MAX_INT) * sign(_pos_int(1));
+
+	// rotor drag compensation, the current _acc_sp is only the feedforward acceleration
+	_accel2RotationMatrix(_acc_sp);
+
+	matrix::Matrix3f Drag_matrix=matrix::diag(_rotor_drag);
+	Vector3f u_drag = _R_ref*Drag_matrix*_R_ref.transpose()*_vel_sp;
 
 	// No control input from setpoints or corresponding states which are NAN
 	// desired feed-forward acceleration: _acc_sp
@@ -281,8 +309,10 @@ void PositionControl::_RPTControl(const float dt)
 	ControlMath::addIfNotNanVector3f(_acc_sp, u_pos_error);
 	ControlMath::addIfNotNanVector3f(_acc_sp, u_vel_error);
 	ControlMath::addIfNotNanVector3f(_acc_sp, u_pos_int);
+	ControlMath::addIfNotNanVector3f(_acc_sp, u_drag);
 
-	// PX4_WARN("output acc_sp: %8.4f %8.4f %8.4f", (double)_acc_sp(0), (double)_acc_sp(1), (double)_acc_sp(2));
+
+
 
 	//anti-windup
 	_accelerationControl();
@@ -333,6 +363,36 @@ void PositionControl::_RPTControl(const float dt)
 	_pos_int(2) = math::min(fabsf(_pos_int(2)), CONSTANTS_ONE_G) * sign(_pos_int(2));
 
 }
+
+
+
+void PositionControl::_accel2RotationMatrix(matrix::Vector3f acc_ref)
+
+{
+	// zero vector, no direction, set safe level value
+	if (acc_ref.norm_squared() < FLT_EPSILON) {
+		acc_ref(2) = 1.f;
+	}
+	Vector3f body_z_ref = Vector3f(-acc_ref(0), -acc_ref(1), -acc_ref(2)+CONSTANTS_ONE_G).normalized();
+
+	const Vector3f x_C{cosf(_yaw_sp), sinf(_yaw_sp), 0.f};
+
+	// desired body_y axis, orthogonal to body_z_ref
+	Vector3f body_y_ref = body_z_ref % x_C;
+	body_y_ref.normalize();
+
+	// calculate the body_x
+	Vector3f body_x_ref = body_y_ref % body_z_ref;
+
+
+	// fill rotation matrix
+	for (int i = 0; i < 3; i++) {
+		_R_ref(i, 0) = body_x_ref(i);
+		_R_ref(i, 1) = body_y_ref(i);
+		_R_ref(i, 2) = body_z_ref(i);
+	}
+}
+
 void PositionControl::_accelerationControl()
 {
 	// Assume standard acceleration due to gravity in vertical direction for attitude generation
@@ -357,7 +417,7 @@ void PositionControl::_accelerationControl()
 		_acc_sp(2) = CONSTANTS_ONE_G;
 
 	}
-	ControlMath::limitTilt(body_z, Vector3f(0, 0, 1), _lim_tilt);
+	// ControlMath::limitTilt(body_z, Vector3f(0, 0, 1), _lim_tilt);
 	// Scale thrust assuming hover thrust produces standard gravity
 	// float collective_thrust = _acc_sp(2) * (_hover_thrust / CONSTANTS_ONE_G) - _hover_thrust;
 
