@@ -100,7 +100,13 @@ private:
     bool needsRaise;
   };
 
-  typedef enum {voronoiKeep=-4, freeQueued = -3, voronoiRetry=-2, voronoiPrune=-1, free=0, occupied=1} State;
+  typedef enum {
+    voronoiKeep=-4, 
+    freeQueued = -3, 
+    voronoiRetry=-2, 
+    voronoiPrune=-1, 
+    free=0, 
+    occupied=1} State;
   typedef enum {fwNotQueued=1, fwQueued=2, fwProcessed=3, bwQueued=4, bwProcessed=1} QueueingState;
   typedef enum {invalidObstData = SHRT_MAX/2} ObstDataState;
   typedef enum {pruned, keep, retry} markerMatchResult;
@@ -131,8 +137,10 @@ public:
   // void getNeighbors(const INTPOINT& grid_pos, std::vector<INTPOINT>& neighbours);
 
   // Gets 8-connected neighbours in voronoi diagram
-  void getVoroNeighbors(const INTPOINT& grid_pos, std::vector<INTPOINT>& neighbours,
-                        const INTPOINT& goal_grid_pos);
+  void getVoroNeighbors(const INTPOINT& grid_pos, std::vector<INTPOINT>& neighbours);
+
+  // Get number of 8-con neighbors in voronoi diagram
+  int getNumVoroNeighbors(const INTPOINT& grid_pos);
 
   /* Checking methods */
   // If cell is in map
@@ -146,7 +154,6 @@ public:
   bool posToIdx(const DblPoint& map_pos, INTPOINT& grid_pos);
   // Convert from position to index
   void idxToPos(const INTPOINT& grid_pos, DblPoint& map_pos);
-
 
   double getOriginX() const {
     return origin_z_;

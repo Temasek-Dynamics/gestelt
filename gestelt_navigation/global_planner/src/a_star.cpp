@@ -362,7 +362,7 @@ bool AStarPlanner::generatePlanVoronoi(const DblPoint& start_pos, const DblPoint
         }
 
         // Get neighbours that are within the map
-        dyn_voro_->getVoroNeighbors(cur_node, neighbours, goal_node);
+        dyn_voro_->getVoroNeighbors(cur_node, neighbours);
 
         // Explore neighbors of current node
         for (const INTPOINT& nb_node : neighbours)
