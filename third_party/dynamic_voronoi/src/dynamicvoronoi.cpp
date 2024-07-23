@@ -837,13 +837,8 @@ int DynamicVoronoi::getNumVoroNeighbors(const INTPOINT& grid_pos)
 }
 
 // 8 Connected search for valid neighbours used in voronoi search
-<<<<<<< HEAD
-void DynamicVoronoi::getVoroNeighbors(
-  const INTPOINT& grid_pos, std::vector<INTPOINT>& neighbours) 
-=======
 void DynamicVoronoi::getVoroNeighbors(const INTPOINT& grid_pos, std::vector<Eigen::Vector3d>& neighbours,
                                       const std::unordered_set<IntPoint>& marked_bubble_cells) 
->>>>>>> fb6c5fabda1e1cdfdfcbc50023a6307211b8be67
 {
   neighbours.clear();
 
@@ -872,12 +867,16 @@ void DynamicVoronoi::getVoroNeighbors(const INTPOINT& grid_pos, std::vector<Eige
   // Check if current cell is voronoi vertex. IF so, then add neighbors that go up and down
   if (isVoronoiVertex(grid_pos.x, grid_pos.y)){
       // If top is free:
-      if (!top_voro_.isOccupied()){
-        neighbours.push_back(Eigen::Vector3d{grid_pos.x, grid_pos.y, origin_z_cm_});
+      if (top_voro_ != nullptr){
+        if (!top_voro_->isOccupied(grid_pos.x, grid_pos.y)){
+          neighbours.push_back(Eigen::Vector3d{grid_pos.x, grid_pos.y, origin_z_cm_});
+        }
       }
-      // If bottom is free:
-      if (!bottom_voro_.isOccupied()){
-        neighbours.push_back(Eigen::Vector3d{grid_pos.x, grid_pos.y, origin_z_cm_});
+      if (bottom_voro_ != nullptr){
+        // If bottom is free:
+        if (!bottom_voro_->isOccupied(grid_pos.x, grid_pos.y)){
+          neighbours.push_back(Eigen::Vector3d{grid_pos.x, grid_pos.y, origin_z_cm_});
+        }
       }
   }
 }

@@ -17,6 +17,7 @@
 #include <geometry_msgs/PointStamped.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <gestelt_msgs/BoolMap.h>
+#include <gestelt_msgs/PlanRequestDebug.h>
 
 #include <grid_map/grid_map.h> // Map representation
 
@@ -158,22 +159,21 @@ public:
 
   }
 
-  bool plan(const DblPoint& start, const int& start_z, const DblPoint& goal, const int& goal_z){
-    publishStartAndGoal(start, start_z, goal, goal_z, "local_map_origin", start_pt_pub_, goal_pt_pub_);
+  bool plan(const Eigen::Vector3d& start, const Eigen::Vector3d& goal){
+    // publishStartAndGoal(start, start_z, goal, goal_z, "local_map_origin", start_pt_pub_, goal_pt_pub_);
 
-    if (dyn_voro_arr_.find(goal_z) == dyn_voro_arr_.end()){
-      std::cout << "Map slice at height "<< goal_z << " does not exist" << std::endl;
-      return false;
-    }
+    // if (dyn_voro_arr_.find(goal_z_cm) == dyn_voro_arr_.end()){
+    //   std::cout << "Map slice at height "<<   << " does not exist" << std::endl;
+    //   return false;
+    // }
 
     tm_front_end_plan_.start();
 
-    front_end_planner_ = std::make_unique<AStarPlanner>(dyn_voro_arr_[goal_z], astar_params_);
+    front_end_planner_ = std::make_unique<AStarPlanner>(dyn_voro_arr_[goal_z_cm], astar_params_);
     front_end_planner_->addPublishers(front_end_publisher_map_);
 
     if (!front_end_planner_->generatePlanVoronoi(start, goal)){
-      std::cout << "FRONT END FAILED!!!! front_end_planner_->generatePlan() from ("<< \
-        start.x << ", " <<  start.y << "," << start_z << ") to (" << goal.x << ", " <<  goal.y << "," << goal_z << ")" << std::endl;
+      std::cout << "FRONT END FAILED!!!! front_end_planner_->generatePlan() from ("<< start.transpose() ") to (" << goal.transpose() << ")" << std::endl;
 
       tm_front_end_plan_.stop(verbose_planning_);
 
@@ -205,26 +205,18 @@ public:
 /* Subscriber callbacks */
 private:
 
-  void startDebugCB(const geometry_msgs::PoseStampedConstPtr &msg){
-    start_pos_.x = msg->pose.position.x - local_origin_x_;
-    start_pos_.y = msg->pose.position.y - local_origin_y_;
+  void startDebugCB(const gestelt_msgs::PlanRequestDebugConstPtr &msg){
+    Eigen::vector3d plan_start{ 
+                    msg->start.position.x - local_origin_x_,
+                    msg->start.position.y - local_origin_y_,
+                    msg->start.position.z};
 
-    start_z_ = (int) (msg->pose.position.z * 100);
-  }
+    Eigen::vector3d plan_end{ 
+                    msg->goal.position.x - local_origin_x_,
+                    msg->goal.position.y - local_origin_y_,
+                    msg->goal.position.z};
 
-  void goalDebugCB(const geometry_msgs::PoseStampedConstPtr &msg){
-    goal_pos_.x = msg->pose.position.x - local_origin_x_;
-    goal_pos_.y = msg->pose.position.y - local_origin_y_;
-
-    goal_z_ = (int) (msg->pose.position.z * 100);
-
-    int start_z_rounded = roundUpMult(start_z_, z_multiple_);
-    int goal_z_rounded = roundUpMult(goal_z_, z_multiple_);
-
-    std::cout << "start_z: " <<  start_z_ << "rounded to " << start_z_rounded << std::endl;
-    std::cout << "goal_z: " <<  goal_z_ << "rounded to " << goal_z_rounded << std::endl;
-
-    plan(start_pos_, start_z_rounded, goal_pos_, goal_z_rounded);
+    plan(plan_start, plan_end);
   }
 
   // Round up to multiples
@@ -449,17 +441,13 @@ private:
 
   ros::Publisher voronoi_graph_pub_; // Voronoi graph publisher
 
-  ros::Subscriber start_sub_, goal_sub_;  // start and goal subscriber
+  ros::Subscriber plan_req_dbg_sub_;  // plan request (start and goal) debug subscriber
   ros::Subscriber bool_map_sub_; // Subscription to boolean map
 
 
   std::unordered_map<std::string, ros::Publisher> front_end_publisher_map_;   // Publishes front-end map
 
   /* Planning */
-  DblPoint start_pos_{0.0, 0.0};
-  DblPoint goal_pos_{0.0, 0.0};
-
-  double start_z_{0.0}, goal_z_{0.0}; // start and goal z (height) value in cm
 
   /* Mapping */
   std::shared_ptr<GridMap> map_;

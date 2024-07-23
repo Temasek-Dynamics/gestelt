@@ -150,15 +150,10 @@ public:
   // Gets 8-connected neighbours
   // void getNeighbors(const INTPOINT& grid_pos, std::vector<INTPOINT>& neighbours);
 
-  // Gets 8-connected neighbours in voronoi diagram
-<<<<<<< HEAD
-  void getVoroNeighbors(const INTPOINT& grid_pos, std::vector<INTPOINT>& neighbours);
-
   // Get number of 8-con neighbors in voronoi diagram
   int getNumVoroNeighbors(const INTPOINT& grid_pos);
-=======
-  void getVoroNeighbors(const INTPOINT& grid_pos, std::vector<INTPOINT>& neighbours, const std::unordered_set<IntPoint>& marked_bubble_cells) ;
->>>>>>> fb6c5fabda1e1cdfdfcbc50023a6307211b8be67
+  void getVoroNeighbors(const INTPOINT& grid_pos, std::vector<Eigen::Vector3d>& neighbours, 
+                        const std::unordered_set<IntPoint>& marked_bubble_cells) ;
 
   /* Checking methods */
   // If cell is in map
@@ -230,8 +225,8 @@ private:
   int origin_z_cm_;  // in units of cm
 
   // Top and bottom voronoi planes
-  std::shared_ptr<DynamicVoronoi> top_voro_;
-  std::shared_ptr<DynamicVoronoi> bottom_voro_;
+  std::shared_ptr<DynamicVoronoi> top_voro_{nullptr};
+  std::shared_ptr<DynamicVoronoi> bottom_voro_{nullptr};
 
 };
 

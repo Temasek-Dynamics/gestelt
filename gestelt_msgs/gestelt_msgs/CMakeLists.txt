@@ -24,6 +24,7 @@ add_message_files(
   Command.msg
   Goals.msg
   CommanderState.msg
+  PlanRequestDebug.msg
   ExecTrajectory.msg
   Sphere.msg
   SphericalSFCTrajectory.msg

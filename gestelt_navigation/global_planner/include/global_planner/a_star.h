@@ -34,7 +34,8 @@ public:
 
   AStarPlanner(std::shared_ptr<GridMap> grid_map, const AStarParams& astar_params);
 
-  AStarPlanner(std::shared_ptr<DynamicVoronoi> dyn_voro, const AStarParams& astar_params);
+  AStarPlanner( const std::map<int, std::shared_ptr<DynamicVoronoi>>& dyn_voro_arr, 
+                const AStarParams& astar_params);
 
   /**
    * @brief Clear closed, open list and reset planning_successful flag for 
@@ -67,9 +68,9 @@ public:
   bool generatePlan(const Eigen::Vector3d& start_pos, const Eigen::Vector3d& goal_pos, 
     std::function<double(const PosIdx&, const PosIdx&)> cost_function);
 
-  bool generatePlanVoronoi(const DblPoint& start_pos, const DblPoint& goal_pos);
+  bool generatePlanVoronoi(const Eigen::Vector3d& start_pos_3d, const Eigen::Vector3d& goal_pos_3d);
 
-  bool generatePlanVoronoi(const DblPoint& start_pos, const DblPoint& goal_pos, 
+  bool generatePlanVoronoi(const Eigen::Vector3d& start_pos_3d, const Eigen::Vector3d& goal_pos_3d, 
                           std::function<double(const INTPOINT&, const INTPOINT&)> cost_function);
 
   /**
@@ -183,16 +184,16 @@ private:
   std::unordered_set<PosIdx> closed_list_; // All closed nodes
 
   std::unique_ptr<OccMap> occ_map_;            // 3D occupancy grid map object
-  std::shared_ptr<DynamicVoronoi>  dyn_voro_; // dynamic voronoi map object
+  std::map<int, std::shared_ptr<DynamicVoronoi>> dyn_voro_arr_; // array of voronoi objects with key of height (cm)
 
-  std::unordered_map<IntPoint, double> g_cost_v_; 
-  std::unordered_map<IntPoint, IntPoint> came_from_v_;
-  PriorityQueue<IntPoint, double> open_list_v_; // Min priority queue 
-  std::unordered_set<IntPoint> closed_list_v_; // All closed nodes
+  std::unordered_map<PosIdx, double> g_cost_v_; 
+  std::unordered_map<PosIdx, PosIdx> came_from_v_;
+  PriorityQueue<PosIdx, double> open_list_v_; // Min priority queue 
+  std::unordered_set<PosIdx> closed_list_v_; // All closed nodes
 
   std::unordered_set<IntPoint> marked_bubble_cells_; // Cells that are marked as part of the voronoi bubble
 
-  std::vector<IntPoint> path_idx_v_; // Path in terms of indices
+  std::vector<PosIdx> path_idx_v_; // Final planned Path in terms of indices
 };
 
 #endif // _A_STAR_PLANNER_H_

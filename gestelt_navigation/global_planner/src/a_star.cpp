@@ -8,10 +8,11 @@ AStarPlanner::AStarPlanner(std::shared_ptr<GridMap> grid_map, const AStarParams&
     common_.reset(new PlannerCommon(grid_map));
 }
 
-AStarPlanner::AStarPlanner(std::shared_ptr<DynamicVoronoi> dyn_voro, const AStarParams& astar_params):
+AStarPlanner::AStarPlanner( const std::map<int, std::shared_ptr<DynamicVoronoi>>& dyn_voro_arr, 
+                            const AStarParams& astar_params):
     astar_params_(astar_params)
 {
-    dyn_voro_ = dyn_voro;
+    dyn_voro_arr_ = dyn_voro_arr;
 }
 
 void AStarPlanner::reset()
@@ -216,7 +217,7 @@ bool AStarPlanner::generatePlan(const Eigen::Vector3d &start_pos, const Eigen::V
     return false;
 }
 
-bool AStarPlanner::generatePlanVoronoi(const DblPoint& start_pos, const DblPoint& goal_pos)
+bool AStarPlanner::generatePlanVoronoi(const Eigen::Vector3d& start_pos_3d, const Eigen::Vector3d& goal_pos_3d)
 {
     std::function<double(const INTPOINT&, const INTPOINT&)> cost_function;
 
@@ -243,13 +244,13 @@ bool AStarPlanner::generatePlanVoronoi(const DblPoint& start_pos, const DblPoint
             break;
     }
 
-    
-    return generatePlanVoronoi(start_pos, goal_pos, cost_function);
+    return generatePlanVoronoi(start_pos_3d, goal_pos_3d, cost_function);
 }
 
 void AStarPlanner::expandVoronoiBubble(
-    const INTPOINT& grid_pos, const bool& makeGoalBubble)
-    // IntPoint goal)
+    const INTPOINT& grid_pos, 
+    std::shared_ptr<DynamicVoronoi> dyn_voro,
+    const bool& makeGoalBubble)
 {
     std::queue<IntPoint> q;
     q.push(grid_pos);
@@ -264,7 +265,7 @@ void AStarPlanner::expandVoronoiBubble(
 
         for (int dx=-1; dx<=1; dx++) {
             int nx = x+dx;
-            if (nx<0 || nx >= dyn_voro_->getSizeX()) {
+            if (nx<0 || nx >= dyn_voro->getSizeX()) {
                 continue; // Skip if outside map
             }
             for (int dy=-1; dy<=1; dy++) {
@@ -272,7 +273,7 @@ void AStarPlanner::expandVoronoiBubble(
                 if (dx && dy) {
                     continue; // skip if not 4 connected cell connection
                 }
-                if (ny<0 || ny >= dyn_voro_->getSizeY()){
+                if (ny<0 || ny >= dyn_voro->getSizeY()){
                     continue; // Skip if outside map
                 } 
 
@@ -281,7 +282,7 @@ void AStarPlanner::expandVoronoiBubble(
                 if (marked_bubble_cells_.find(n_grid_pos) != marked_bubble_cells_.end()) 
                     continue; // If already added to marked bubble list, then skip
 
-                if (dyn_voro_->getSqrDistance(nx,ny)<1) 
+                if (dyn_voro->getSqrDistance(nx,ny)<1) 
                     continue;   // Skip if occupied or near obstacle
 
                 // Node *nd = MemoryManager<Node>::getNew();
@@ -292,7 +293,7 @@ void AStarPlanner::expandVoronoiBubble(
                 // mark as closed
                 marked_bubble_cells_.insert(n_grid_pos);
 
-                if (!dyn_voro_->isVoronoi(nx,ny)){
+                if (!dyn_voro->isVoronoi(nx,ny)){
                     q.push(n_grid_pos); // If not voronoi then push to list
                 }
             }
@@ -301,40 +302,49 @@ void AStarPlanner::expandVoronoiBubble(
     }
 }
 
-bool AStarPlanner::generatePlanVoronoi(const DblPoint& start_pos, const DblPoint& goal_pos, 
+bool AStarPlanner::generatePlanVoronoi(const Eigen::Vector3d& start_pos_3d, const Eigen::Vector3d& goal_pos_3d, 
                                 std::function<double(const INTPOINT&, const INTPOINT&)> cost_function)
 {
     reset();
 
+    int start_z_cm = roundUpMult((int) (start_pos_3d(2) * 100), z_multiple_);
+    int goal_z_cm = roundUpMult((int) (goal_pos_3d(2) * 100), z_multiple_);
+    std::cout << "start_z: " <<  start(2) << "rounded to " << start_z_cm << "cm" << std::endl;
+    std::cout << "goal_z: " <<  goal(2) << "rounded to " << goal_z_cm << "cm" << std::endl;
+
+    DblPoint start_pos(start_pos_3d(0), start_pos_3d(1));
+    DblPoint goal_pos(goal_pos_3d(0), goal_pos_3d(1));
+
     INTPOINT start_node, goal_node;
     // Search takes place in index space. So we first convert 3d real world positions into indices
-    if (!dyn_voro_->posToIdx(start_pos, start_node) || !dyn_voro_->posToIdx(goal_pos, goal_node))
+    if (!dyn_voro_arr_[start_z_cm]->posToIdx(start_pos, start_node) || !dyn_voro_arr_[goal_z_cm]->posToIdx(goal_pos, goal_node))
     {   
         std::cerr << "[a_star] Start or goal position is not within map bounds!" << std::endl;
         return false;
     }
 
-    if (dyn_voro_->isOccupied(start_node)){
+    if (dyn_voro_arr_[start_z_cm]->isOccupied(start_node)){
         std::cerr << "[a_star] Start position in obstacle!" << std::endl;
         return false;
     }
-    if (dyn_voro_->isOccupied(goal_node)){
+    if (dyn_voro_arr_[goal_z_cm]->isOccupied(goal_node)){
         std::cerr << "[a_star] Goal position in obstacle!" << std::endl;
         return false;
     }
 
     // set start and goal cell as obstacle
-    dyn_voro_->setObstacle(start_node.x, start_node.y);
-    dyn_voro_->setObstacle(goal_node.x, goal_node.y);
+    dyn_voro_arr_[start_z_cm]->setObstacle(start_node.x, start_node.y);
+    dyn_voro_arr_[goal_z_cm]->setObstacle(goal_node.x, goal_node.y);
 
-    dyn_voro_->update(); // update distance map and Voronoi diagram
+    dyn_voro_arr_[start_z_cm]->update(); // update distance map and Voronoi diagram
+    dyn_voro_arr_[goal_z_cm]->update(); // update distance map and Voronoi diagram
 
     // Create voronoi bubble around start and goal
-    expandVoronoiBubble(start_node, false );
-    expandVoronoiBubble(goal_node, true );
+    expandVoronoiBubble(start_node, dyn_voro_arr_[start_z_cm], false );
+    expandVoronoiBubble(goal_node, dyn_voro_arr_[goal_z_cm], true );
 
-    dyn_voro_->removeObstacle(start_node.x, start_node.y);
-    dyn_voro_->removeObstacle(goal_node.x, goal_node.y  );
+    dyn_voro_arr_[start_z_cm]->removeObstacle(start_node.x, start_node.y);
+    dyn_voro_arr_[goal_z_cm]->removeObstacle(goal_node.x, goal_node.y  );
 
     came_from_v_[start_node] = start_node;
     g_cost_v_[start_node] = 0;
@@ -343,7 +353,9 @@ bool AStarPlanner::generatePlanVoronoi(const DblPoint& start_pos, const DblPoint
 
     int num_iter = 0;
 
-    std::vector<INTPOINT> neighbours; // 3d indices of neighbors
+    std::vector<Eigen::Vector3d> neighbours; // 3d indices of neighbors
+    
+    int current_z = start_z_cm;
 
     while (!open_list_v_.empty() && num_iter < astar_params_.max_iterations)
     {
@@ -365,11 +377,12 @@ bool AStarPlanner::generatePlanVoronoi(const DblPoint& start_pos, const DblPoint
         }
 
         // Get neighbours that are within the map
-        dyn_voro_->getVoroNeighbors(cur_node, neighbours, marked_bubble_cells_);
+        dyn_voro_arr_[current_z]->getVoroNeighbors(cur_node, neighbours, marked_bubble_cells_);
 
         // Explore neighbors of current node
-        for (const INTPOINT& nb_node : neighbours)
+        for (const Eigen::Vector3d& nb_node_3d : neighbours)
         {
+            INTPOINT nb_node = INTPOINT(nb_node_3d(0), nb_node_3d(1));
             // std::cout << "[a_star] Exploring neighbor " << common_->getPosStr(nb_node).c_str() << std::endl;
             double tent_g_cost = g_cost_v_[cur_node] + cost_function(cur_node, nb_node);
 
