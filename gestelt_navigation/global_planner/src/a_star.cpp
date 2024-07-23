@@ -264,14 +264,17 @@ void AStarPlanner::expandVoronoiBubble(
 
         for (int dx=-1; dx<=1; dx++) {
             int nx = x+dx;
-            if (nx<0 || nx >= dyn_voro_->getSizeX()) 
+            if (nx<0 || nx >= dyn_voro_->getSizeX()) {
                 continue; // Skip if outside map
+            }
             for (int dy=-1; dy<=1; dy++) {
                 int ny = y+dy;
-                if (dx && dy) 
+                if (dx && dy) {
                     continue; // skip if not 4 connected cell connection
-                if (ny<0 || ny >= dyn_voro_->getSizeY()) 
+                }
+                if (ny<0 || ny >= dyn_voro_->getSizeY()){
                     continue; // Skip if outside map
+                } 
 
                 IntPoint n_grid_pos = IntPoint(nx,ny);
 
@@ -327,8 +330,8 @@ bool AStarPlanner::generatePlanVoronoi(const DblPoint& start_pos, const DblPoint
     dyn_voro_->update(); // update distance map and Voronoi diagram
 
     // Create voronoi bubble around start and goal
-    expandVoronoiBubble(start_node, false   );
-    expandVoronoiBubble(goal_node, true     );
+    expandVoronoiBubble(start_node, false );
+    expandVoronoiBubble(goal_node, true );
 
     dyn_voro_->removeObstacle(start_node.x, start_node.y);
     dyn_voro_->removeObstacle(goal_node.x, goal_node.y  );
@@ -362,17 +365,11 @@ bool AStarPlanner::generatePlanVoronoi(const DblPoint& start_pos, const DblPoint
         }
 
         // Get neighbours that are within the map
-        dyn_voro_->getVoroNeighbors(cur_node, neighbours);
+        dyn_voro_->getVoroNeighbors(cur_node, neighbours, marked_bubble_cells_);
 
         // Explore neighbors of current node
         for (const INTPOINT& nb_node : neighbours)
         {
-            // Only allow voronoi and bubbled cells 
-            if (!(dyn_voro_->isVoronoi(nb_node.x, nb_node.y) 
-                || marked_bubble_cells_.find(nb_node) != marked_bubble_cells_.end())){
-                continue;
-            }
-
             // std::cout << "[a_star] Exploring neighbor " << common_->getPosStr(nb_node).c_str() << std::endl;
             double tent_g_cost = g_cost_v_[cur_node] + cost_function(cur_node, nb_node);
 

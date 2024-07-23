@@ -134,8 +134,6 @@ void DynamicVoronoi::initializeMap(int _sizeX, int _sizeY, std::shared_ptr<std::
     }
   }
 
-
-
 }
 
 void DynamicVoronoi::occupyCell(int x, int y) {
@@ -284,6 +282,31 @@ void DynamicVoronoi::update(bool updateRealDist) {
 float DynamicVoronoi::getDistance( int x, int y ) {
   if( (x>0) && (x<sizeX) && (y>0) && (y<sizeY)) return data[x][y].dist; 
   else return -INFINITY;
+}
+
+bool DynamicVoronoi::getVoronoiVertices(std::vector<Eigen::Vector3d>& voronoi_vertices)
+{
+  voronoi_vertices.clear();
+  if (data){  
+    for (int x=0; x<sizeX; x++) {
+      for (int y=0; y<sizeY; y++) {
+        if (isVoronoiVertex(x, y)){
+          voronoi_vertices.push_back(Eigen::Vector3d{x*res_, y*res_, origin_z_});
+        }
+      }
+    }
+  }
+
+  return false;
+}
+
+bool DynamicVoronoi::isVoronoiVertex(int x, int y) {
+  if (isVoronoi(x,y)){
+    if (getNumVoronoiNeighbors(x, y) >= 3){
+      return true;
+    }
+  }
+  return false;
 }
 
 bool DynamicVoronoi::isVoronoi(const int& x, const int& y ) const {
@@ -437,7 +460,6 @@ void DynamicVoronoi::visualize(const char *filename) {
   }
   fclose(F);
 }
-
 
 void DynamicVoronoi::prune() {
   // filler
@@ -672,6 +694,28 @@ bool DynamicVoronoi::markerMatchAlternative(int x, int y) {
   return true;
 }
 
+
+int DynamicVoronoi::getNumVoronoiNeighbors(int x, int y) {
+  int count = 0;
+  for (int dx = -1; dx <= 1; dx++) {
+    for (int dy = -1; dy <= 1; dy++) {
+      if ((dx == 0 && dy == 0) || (dx != 0 && dy != 0)) { // 4 Connected
+        continue;
+      }
+
+      int nx = x + dx;
+      int ny = y + dy;
+      if (nx < 0 || nx >= sizeX || ny < 0 || ny >= sizeY) {
+        continue;
+      }
+      if (data[nx][ny].voronoi==free || data[nx][ny].voronoi==voronoiKeep) {
+        count++;
+      }
+    }
+  }
+  return count;
+}
+
 int DynamicVoronoi::getNumVoronoiNeighborsAlternative(int x, int y) {
   int count = 0;
   for (int dx = -1; dx <= 1; dx++) {
@@ -793,8 +837,13 @@ int DynamicVoronoi::getNumVoroNeighbors(const INTPOINT& grid_pos)
 }
 
 // 8 Connected search for valid neighbours used in voronoi search
+<<<<<<< HEAD
 void DynamicVoronoi::getVoroNeighbors(
   const INTPOINT& grid_pos, std::vector<INTPOINT>& neighbours) 
+=======
+void DynamicVoronoi::getVoroNeighbors(const INTPOINT& grid_pos, std::vector<Eigen::Vector3d>& neighbours,
+                                      const std::unordered_set<IntPoint>& marked_bubble_cells) 
+>>>>>>> fb6c5fabda1e1cdfdfcbc50023a6307211b8be67
 {
   neighbours.clear();
 
@@ -811,8 +860,25 @@ void DynamicVoronoi::getVoroNeighbors(
         continue;
       }
 
-      neighbours.push_back(IntPoint(nx, ny));
+      if (!(isVoronoi(nx, ny) 
+            || marked_bubble_cells.find(INTPOINT(nx, ny)) != marked_bubble_cells.end())){
+        continue;
+      }
+
+      neighbours.push_back(Eigen::Vector3d{nx, ny, origin_z_cm_});
     }
+  }
+
+  // Check if current cell is voronoi vertex. IF so, then add neighbors that go up and down
+  if (isVoronoiVertex(grid_pos.x, grid_pos.y)){
+      // If top is free:
+      if (!top_voro_.isOccupied()){
+        neighbours.push_back(Eigen::Vector3d{grid_pos.x, grid_pos.y, origin_z_cm_});
+      }
+      // If bottom is free:
+      if (!bottom_voro_.isOccupied()){
+        neighbours.push_back(Eigen::Vector3d{grid_pos.x, grid_pos.y, origin_z_cm_});
+      }
   }
 }
 

@@ -12,6 +12,8 @@
 #include <math.h>
 #include <iostream>
 
+#include <Eigen/Eigen>
+
 //! A DynamicVoronoi object computes and updates a distance map and Voronoi diagram.
 class DynamicVoronoi {
 
@@ -40,6 +42,8 @@ public:
     origin_x_ = params.origin_x;
     origin_y_ = params.origin_y;
     origin_z_ = params.origin_z;
+
+    origin_z_cm_ = (int) (params.origin_z * 100);
   }
 
   //! Initialization with an empty map
@@ -64,7 +68,14 @@ public:
   int** alternativePrunedDiagram() {
     return alternativeDiagram;
   };
-  //! retrieve the number of neighbors that are Voronoi nodes (4-connected)
+
+  // Get all voronoi vertices (voronoi cells that have at least 3 voronoi neighbours)
+  bool getVoronoiVertices(std::vector<Eigen::Vector3d>& voronoi_vertices);
+
+  //! retrieve the number of neighbors that are Voronoi cells (4-connected)
+  int getNumVoronoiNeighbors(int x, int y);
+
+  //! retrieve the number of neighbors that are Voronoi cells (4-connected)
   int getNumVoronoiNeighborsAlternative(int x, int y);
   //! returns whether the specified cell is part of the alternatively pruned diagram. See updateAlternativePrunedDiagram.
   bool isVoronoiAlternative( const int& x, const int& y ) const;
@@ -77,6 +88,9 @@ public:
   }
   //! returns the obstacle distance at the specified location
   float getDistance( int x, int y );
+
+  //! check if cell is a voronoi vertex (has at least 3 voronoi neighbours)
+  bool isVoronoiVertex(int x, int y);
   //! returns whether the specified cell is part of the (pruned) Voronoi graph
   bool isVoronoi(const int& x, const int& y ) const;
   //! checks whether the specficied location is occupied
@@ -95,8 +109,8 @@ private:
     int sqdist;
     char voronoi;
     char queueing;
-    int obstX;
-    int obstY;
+    int obstX;  // Position to nearest obstacle
+    int obstY;  // Position to nearest obstacle
     bool needsRaise;
   };
 
@@ -137,10 +151,14 @@ public:
   // void getNeighbors(const INTPOINT& grid_pos, std::vector<INTPOINT>& neighbours);
 
   // Gets 8-connected neighbours in voronoi diagram
+<<<<<<< HEAD
   void getVoroNeighbors(const INTPOINT& grid_pos, std::vector<INTPOINT>& neighbours);
 
   // Get number of 8-con neighbors in voronoi diagram
   int getNumVoroNeighbors(const INTPOINT& grid_pos);
+=======
+  void getVoroNeighbors(const INTPOINT& grid_pos, std::vector<INTPOINT>& neighbours, const std::unordered_set<IntPoint>& marked_bubble_cells) ;
+>>>>>>> fb6c5fabda1e1cdfdfcbc50023a6307211b8be67
 
   /* Checking methods */
   // If cell is in map
@@ -156,11 +174,11 @@ public:
   void idxToPos(const INTPOINT& grid_pos, DblPoint& map_pos);
 
   double getOriginX() const {
-    return origin_z_;
+    return origin_x_;
   }
 
   double getOriginY() const {
-    return origin_z_;
+    return origin_y_;
   }
 
   double getOriginZ() const {
@@ -205,9 +223,16 @@ private:
 
   double res_{0.1}; // Resolution of the voronoi map 
 
-  double origin_x_{0.0};
-  double origin_y_{0.0};
-  double origin_z_{0.0};
+  double origin_x_{0.0};  // in units of m
+  double origin_y_{0.0};  // in units of m
+  double origin_z_{0.0};  // in units of m
+
+  int origin_z_cm_;  // in units of cm
+
+  // Top and bottom voronoi planes
+  std::shared_ptr<DynamicVoronoi> top_voro_;
+  std::shared_ptr<DynamicVoronoi> bottom_voro_;
+
 };
 
 

@@ -7,6 +7,8 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g")
 
 find_package(catkin REQUIRED)
 
+find_package(Eigen3 REQUIRED)
+
 catkin_package(
  INCLUDE_DIRS include
  LIBRARIES ${PROJECT_NAME}
@@ -16,6 +18,7 @@ catkin_package(
 
 include_directories( 
     include 
+    ${EIGEN3_INCLUDE_DIRS} 
 )
 add_definitions(${PCL_DEFINITIONS})
 link_directories(${PCL_LIBRARY_DIRS})
