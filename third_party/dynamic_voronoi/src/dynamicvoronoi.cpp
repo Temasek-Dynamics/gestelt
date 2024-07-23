@@ -808,7 +808,7 @@ DynamicVoronoi::markerMatchResult DynamicVoronoi::markerMatch(int x, int y) {
 // }
 
 // 8 Connected search for valid neighbours used in voronoi search
-void DynamicVoronoi::getVoroNeighbors(const INTPOINT& grid_pos, std::vector<INTPOINT>& neighbours,
+void DynamicVoronoi::getVoroNeighbors(const INTPOINT& grid_pos, std::vector<Eigen::Vector3d>& neighbours,
                                       const std::unordered_set<IntPoint>& marked_bubble_cells) 
 {
   neighbours.clear();
@@ -831,8 +831,20 @@ void DynamicVoronoi::getVoroNeighbors(const INTPOINT& grid_pos, std::vector<INTP
         continue;
       }
 
-      neighbours.push_back(IntPoint(nx, ny));
+      neighbours.push_back(Eigen::Vector3d{nx, ny, origin_z_cm_});
     }
+  }
+
+  // Check if current cell is voronoi vertex. IF so, then add neighbors that go up and down
+  if (isVoronoiVertex(grid_pos.x, grid_pos.y)){
+      // If top is free:
+      if (!top_voro_.isOccupied()){
+        neighbours.push_back(Eigen::Vector3d{grid_pos.x, grid_pos.y, origin_z_cm_});
+      }
+      // If bottom is free:
+      if (!bottom_voro_.isOccupied()){
+        neighbours.push_back(Eigen::Vector3d{grid_pos.x, grid_pos.y, origin_z_cm_});
+      }
   }
 }
 

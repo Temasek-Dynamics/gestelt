@@ -42,6 +42,8 @@ public:
     origin_x_ = params.origin_x;
     origin_y_ = params.origin_y;
     origin_z_ = params.origin_z;
+
+    origin_z_cm_ = (int) (params.origin_z * 100);
   }
 
   //! Initialization with an empty map
@@ -107,8 +109,8 @@ private:
     int sqdist;
     char voronoi;
     char queueing;
-    int obstX;
-    int obstY;
+    int obstX;  // Position to nearest obstacle
+    int obstY;  // Position to nearest obstacle
     bool needsRaise;
   };
 
@@ -159,11 +161,11 @@ public:
   void idxToPos(const INTPOINT& grid_pos, DblPoint& map_pos);
 
   double getOriginX() const {
-    return origin_z_;
+    return origin_x_;
   }
 
   double getOriginY() const {
-    return origin_z_;
+    return origin_y_;
   }
 
   double getOriginZ() const {
@@ -211,6 +213,13 @@ private:
   double origin_x_{0.0};  // in units of m
   double origin_y_{0.0};  // in units of m
   double origin_z_{0.0};  // in units of m
+
+  int origin_z_cm_;  // in units of cm
+
+  // Top and bottom voronoi planes
+  std::shared_ptr<DynamicVoronoi> top_voro_;
+  std::shared_ptr<DynamicVoronoi> bottom_voro_;
+
 };
 
 
