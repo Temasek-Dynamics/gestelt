@@ -52,7 +52,8 @@ void GridMap::initMapROS(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   occ_map_pub_ = nh.advertise<sensor_msgs::PointCloud2>("grid_map/occupancy", 10);
   slice_map_pub_ = nh.advertise<sensor_msgs::PointCloud2>("grid_map/slice", 10);
   local_map_poly_pub_ = nh.advertise<geometry_msgs::PolygonStamped>("local_map/bounds", 5);
-  local_bool_map_pub_ = nh.advertise<gestelt_msgs::BoolMap>("bool_map", 5);
+
+  bool_map_arr_pub_ = nh.advertise<gestelt_msgs::BoolMapArray>("bool_map_arr", 5);
 
   /* Initialize ROS Timers */
   // vis_occ_timer_ = nh.createTimer(ros::Duration(1.0/viz_occ_map_freq_), &GridMap::visTimerCB, this);
@@ -216,12 +217,33 @@ void GridMap::updateLocalMapTimerCB(const ros::TimerEvent & /*event*/)
 {
   updateLocalMap();
 
-  int z_separation_cm = 25;
-  double max_height = 3.0;
+  double z_separation_m = 0.25; // z separation of horizontal planes in meters
+  int z_separation_cm = 25;     // z separation of horizontal planes in centi-meters
+  double max_height = 3.0;    
+  double min_height = 0.0;    
 
-  for (int i = 1; i*(((double)z_separation_cm)/100.0) < max_height; i++ ){
-    sliceMap(i*(((double)z_separation_cm)/100.0));
+  gestelt_msgs::BoolMapArray bool_map_arr_msg;
+  bool_map_arr_msg.z_separation_m = z_separation_m;
+  bool_map_arr_msg.z_separation_cm = z_separation_cm;
+
+  bool_map_arr_msg.max_height_m = max_height;
+  bool_map_arr_msg.min_height_m = min_height;
+
+  bool_map_arr_msg.max_height_cm = (int) max_height * 100;
+  bool_map_arr_msg.min_height_cm = (int) min_height * 100;
+
+  bool_map_arr_msg.origin.x = mp_.local_map_origin_(0);
+  bool_map_arr_msg.origin.y = mp_.local_map_origin_(1);
+  bool_map_arr_msg.origin.z = mp_.local_map_origin_(2);
+
+  bool_map_arr_msg.width = mp_.local_map_num_voxels_(0);
+  bool_map_arr_msg.height = mp_.local_map_num_voxels_(1);
+
+  for (int i = 0; i * z_separation_m < max_height; i++ ){
+    bool_map_arr_msg.bool_maps.push_back( sliceMap(i * z_separation_m) );
   }
+
+  bool_map_arr_pub_.publish(bool_map_arr_msg);
   
   // Send transform from map to local map origin
   geometry_msgs::TransformStamped map_to_local_origin_tf;
@@ -242,18 +264,14 @@ void GridMap::updateLocalMapTimerCB(const ros::TimerEvent & /*event*/)
   tf_broadcaster_.sendTransform(map_to_local_origin_tf);
 }
 
-void GridMap::sliceMap(const double& slice_z) {
+gestelt_msgs::BoolMap GridMap::sliceMap(const double& slice_z) {
 
   gestelt_msgs::BoolMap bool_map_msg;
 
   bool_map_msg.header.stamp = ros::Time::now();
 
-  bool_map_msg.origin.x = mp_.local_map_origin_(0);
-  bool_map_msg.origin.y = mp_.local_map_origin_(1);
-  bool_map_msg.origin.z = slice_z;
-
-  bool_map_msg.width = mp_.local_map_num_voxels_(0);
-  bool_map_msg.height = mp_.local_map_num_voxels_(1);
+  bool_map_msg.z_m = slice_z;
+  bool_map_msg.z_cm = (int) slice_z * 100;
 
   bool_map_msg.map.resize(mp_.local_map_num_voxels_(0) * mp_.local_map_num_voxels_(1), false);
   
@@ -294,9 +312,9 @@ void GridMap::sliceMap(const double& slice_z) {
     }
   }
 
-  local_bool_map_pub_.publish(bool_map_msg);
+  return bool_map_msg;
 
-  publishSliceMap(pcd_layer);
+  // publishSliceMap(pcd_layer);
 }
 
 void GridMap::checkCollisionsTimerCB(const ros::TimerEvent & /*event*/)

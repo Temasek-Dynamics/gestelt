@@ -3,9 +3,7 @@
 
 std_msgs/Header header
 
-geometry_msgs/Point origin # Map origin
-
-float32 width # Width of map
-float32 height # Height of map
+float32 z_m   # Height of map in meters
+int32 z_cm  # Height of map in centimeters
 
 bool[] map # 1D flattened boolean array, use width and height to access as 2D Map

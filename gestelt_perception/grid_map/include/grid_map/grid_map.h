@@ -6,7 +6,6 @@
 #include <pcl/point_cloud.h>
 #include <pcl/common/transforms.h>
 #include <pcl_conversions/pcl_conversions.h>
-// #include <pcl/filters/voxel_grid.h>
 #include <pcl/filters/passthrough.h>
 
 #include <ikd_tree/ikd_tree.h>
@@ -19,9 +18,9 @@
 
 #include <geometry_msgs/PoseStamped.h>
 #include <nav_msgs/Odometry.h>
-// #include <sensor_msgs/CameraInfo.h>
 #include <visualization_msgs/Marker.h>
 #include <gestelt_msgs/BoolMap.h>
+#include <gestelt_msgs/BoolMapArray.h>
 
 #include <tf2_ros/transform_listener.h>
 #include <tf2_ros/message_filter.h>
@@ -563,7 +562,7 @@ private:
   ros::Publisher collision_viz_pub_; // Publisher for collision visualization spheres
   ros::Publisher local_map_poly_pub_; // Publisher to show local map bounds
 
-  ros::Publisher local_bool_map_pub_; // Publisher of local boolean map
+  ros::Publisher bool_map_arr_pub_; // Publisher of array of boolean map
 
   ros::Timer vis_occ_timer_; // Timer for visualization
   ros::Timer check_collisions_timer_; // Timer for checking collisions

@@ -310,8 +310,8 @@ bool AStarPlanner::generatePlanVoronoi(const Eigen::Vector3d& start_pos_3d, cons
 
     int start_z_cm = roundUpMult((int) (start_pos_3d(2) * 100), z_separation_cm_);
     int goal_z_cm = roundUpMult((int) (goal_pos_3d(2) * 100), z_separation_cm_);
-    std::cout << "start_z: " <<  start_pos_3d(2) << "rounded to " << start_z_cm << "cm" << std::endl;
-    std::cout << "goal_z: " <<  goal_pos_3d(2) << "rounded to " << goal_z_cm << "cm" << std::endl;
+    std::cout << "start_z: " <<  start_pos_3d(2) << " m rounded to " << start_z_cm << " cm" << std::endl;
+    std::cout << "goal_z: " <<  goal_pos_3d(2) << " m rounded to " << goal_z_cm << " cm" << std::endl;
 
     INTPOINT start_node_2d, goal_node_2d;
     // Search takes place in index space. So we first convert 3d real world positions into indices
@@ -359,13 +359,15 @@ bool AStarPlanner::generatePlanVoronoi(const Eigen::Vector3d& start_pos_3d, cons
 
     std::unordered_set<IntPoint> marked_bbl_cells_; // Cells that are marked as part of the voronoi bubble
 
+    std::cout << "Before start of loop " << std::endl;
+
     while (!open_list_v_.empty() && num_iter < astar_params_.max_iterations)
     {
-        // if (num_iter%10 == 1){
-        //     // std::cout << "[a_star] Iteration " << num_iter << std::endl;
+        if (num_iter%10 == 1){
+            // std::cout << "[a_star] Iteration " << num_iter << std::endl;
 
-        //     publishClosedList(getClosedListVoronoi(), closed_list_viz_pub_);
-        // }
+            // publishClosedList(getClosedListVoronoi(), closed_list_viz_pub_);
+        }
 
         VCell cur_node = open_list_v_.get();
         closed_list_v_.insert(cur_node);

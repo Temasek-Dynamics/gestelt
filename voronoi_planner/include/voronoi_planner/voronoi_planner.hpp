@@ -16,7 +16,7 @@
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <geometry_msgs/PointStamped.h>
 #include <geometry_msgs/PoseStamped.h>
-#include <gestelt_msgs/BoolMap.h>
+#include <gestelt_msgs/BoolMapArray.h>
 #include <gestelt_msgs/PlanRequestDebug.h>
 
 #include <grid_map/grid_map.h> // Map representation
@@ -173,7 +173,7 @@ public:
     front_end_planner_->addPublishers(front_end_publisher_map_);
 
     if (!front_end_planner_->generatePlanVoronoi(start, goal)){
-      std::cout << "FRONT END FAILED!!!! front_end_planner_->generatePlan() from ("<< start.transpose() ") to (" << goal.transpose() << ")" << std::endl;
+      std::cout << "FRONT END FAILED!!!! front_end_planner_->generatePlan() from ("<< start.transpose() << ") to (" << goal.transpose() << ")" << std::endl;
 
       tm_front_end_plan_.stop(verbose_planning_);
 

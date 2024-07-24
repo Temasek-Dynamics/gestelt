@@ -21,7 +21,7 @@ void VoronoiPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
 
   // start_sub_ = nh.subscribe("/start_dbg", 5, &VoronoiPlanner::startDebugCB, this);
   // goal_sub_ = nh.subscribe("/goal_dbg", 5, &VoronoiPlanner::goalDebugCB, this);
-  bool_map_sub_ = nh.subscribe<gestelt_msgs::BoolMap>("bool_map", 50, &VoronoiPlanner::boolMapCB, this);
+  bool_map_sub_ = nh.subscribe<gestelt_msgs::BoolMapArray>("bool_map_arr", 50, &VoronoiPlanner::boolMapCB, this);
 
   // Initialize map
   map_.reset(new GridMap);
@@ -72,82 +72,102 @@ void VoronoiPlanner::realignBoolMap(bool ***map, bool ***map_og, int& size_x, in
   }
 }
 
-void VoronoiPlanner::boolMapCB(const gestelt_msgs::BoolMapConstPtr& msg)
+void VoronoiPlanner::boolMapCB(const gestelt_msgs::BoolMapArrayConstPtr& msg)
 { 
-  int z_origin_cm = (int) (msg->origin.z * 100); // Convert z origin to cm
+  z_separation_cm_ = msg-> z_separation_cm;
+
   local_origin_x_ = msg->origin.x;
   local_origin_y_ = msg->origin.y;
 
-  if (bool_map_arr_.find(z_origin_cm) == bool_map_arr_.end()){
-    // Initialize bool map 2d vector
-    bool_map_arr_[z_origin_cm] = std::make_shared<std::vector<std::vector<bool>>>(msg->height, std::vector<bool>(msg->width, false));
-  }
+  for (int i = 0; i * msg->z_separation_m < msg->max_height_m; i++ ){
 
-  // set values of boolean map
-  for(int j = 0; j < msg->height; j++)
-  {
+    int z_cm = i * msg->z_separation_cm;
+
+    gestelt_msgs::BoolMap bool_map = msg->bool_maps[i];
+
+    if (bool_map_arr_.find(z_cm) == bool_map_arr_.end()){
+      // Initialize bool map 2d vector
+      bool_map_arr_[z_cm] = std::make_shared<std::vector<std::vector<bool>>>(msg->height, std::vector<bool>(msg->width, false));
+    }
+
+    // set values of boolean map
+    for(int j = 0; j < msg->height; j++)
+    {
+      for (int i = 0; i < msg->width; i++)
+      {
+        (*bool_map_arr_[z_cm])[i][j] = bool_map.map[i + j * msg->width];
+      }
+    }
+
+    // set map boundaries as occupied
+    for(int j = 0; j < msg->height; j++)
+    {
+      (*bool_map_arr_[z_cm])[0][j] = true;
+      (*bool_map_arr_[z_cm])[msg->width-1][j] = true;
+    }
     for (int i = 0; i < msg->width; i++)
     {
-      (*bool_map_arr_[z_origin_cm])[i][j] = msg->map[i + j * msg->width];
+      (*bool_map_arr_[z_cm])[i][0] = true;
+      (*bool_map_arr_[z_cm])[i][msg->height-1] = true;
     }
+
+    // tm_voronoi_map_init_.start();
+
+    // Create DynamicVoronoi object if it does not exist
+    if (dyn_voro_arr_.find(z_cm) == dyn_voro_arr_.end()){
+
+      DynamicVoronoi::DynamicVoronoiParams dyn_voro_params;
+      dyn_voro_params.resolution = res_;
+      dyn_voro_params.origin_x = 0.0;
+      dyn_voro_params.origin_y = 0.0;
+      dyn_voro_params.origin_z = msg->origin.z;
+
+      // Initialize dynamic voronoi 
+      dyn_voro_arr_[z_cm] = std::make_shared<DynamicVoronoi>(dyn_voro_params);
+      dyn_voro_arr_[z_cm]->initializeMap(msg->width, msg->height, bool_map_arr_[z_cm]);
+    }
+    dyn_voro_arr_[z_cm]->update(); // update distance map and Voronoi diagram
+
+
+    // if (doPrune){
+    dyn_voro_arr_[z_origiz_cmn_cm]->prune();  // prune the Voronoi
+    // }
+    // else if (doPruneAlternative) { // prune the Voronoi
+      // dyn_voro_arr_[z_cm]->updateAlternativePrunedDiagram();  
+    // }
+
+    // Publish voronoi graph
+    std::vector<Eigen::Vector3d> voronoi_vertices;
+    dyn_voro_arr_[z_cm]->getVoronoiVertices(voronoi_vertices);
+
+    // tm_voronoi_map_init_.stop(verbose_planning_);
+    publishVertices(voronoi_vertices, z_cm, "local_map_origin", voronoi_graph_pub_);
+
+    nav_msgs::OccupancyGrid occ_grid, voro_occ_grid;
+
+    occmapToOccGrid(*dyn_voro_arr_[z_cm], 
+                    msg->origin.x, msg->origin.y, 
+                    occ_grid); // Occupancy map
+
+    voronoimapToOccGrid(*dyn_voro_arr_[z_cm], 
+                        msg->origin.x, msg->origin.y, 
+                        voro_occ_grid); // Voronoi map
+
+    voro_occ_grid_pub_.publish(voro_occ_grid);
+    occ_map_pub_.publish(occ_grid);
+
   }
 
-  // set map boundaries as occupied
-  for(int j = 0; j < msg->height; j++)
-  {
-    (*bool_map_arr_[z_origin_cm])[0][j] = true;
-    (*bool_map_arr_[z_origin_cm])[msg->width-1][j] = true;
+  *dyn_voro_arr_[0].top_voro_ = dyn_voro_arr_[1];
+
+  for (int i = 1; i * msg->z_separation_m < msg->max_height_m - msg->z_separation_m; i++ ){
+
+    int z_cm = i * msg->z_separation_cm;
+    *dyn_voro_arr_[z_cm].bottom_voro_ = dyn_voro_arr_[z_cm - msg->z_separation_cm];
+    *dyn_voro_arr_[z_cm].top_voro_ = dyn_voro_arr_[z_cm + msg->z_separation_cm];
   }
-  for (int i = 0; i < msg->width; i++)
-  {
-    (*bool_map_arr_[z_origin_cm])[i][0] = true;
-    (*bool_map_arr_[z_origin_cm])[i][msg->height-1] = true;
-  }
+  dyn_voro_arr_[max_height_cm].bottom_voro_ = dyn_voro_arr_[max_height_cm - msg->z_separation_cm];
 
-  // tm_voronoi_map_init_.start();
-
-  if (dyn_voro_arr_.find(z_origin_cm) == dyn_voro_arr_.end()){
-
-    DynamicVoronoi::DynamicVoronoiParams dyn_voro_params;
-    dyn_voro_params.resolution = res_;
-    dyn_voro_params.origin_x = 0.0;
-    dyn_voro_params.origin_y = 0.0;
-    dyn_voro_params.origin_z = msg->origin.z;
-
-    // Initialize dynamic voronoi 
-    dyn_voro_arr_[z_origin_cm] = std::make_shared<DynamicVoronoi>(dyn_voro_params);
-    dyn_voro_arr_[z_origin_cm]->initializeMap(msg->width, msg->height, bool_map_arr_[z_origin_cm]);
-  }
-  dyn_voro_arr_[z_origin_cm]->update(); // update distance map and Voronoi diagram
-
-
-  // if (doPrune){
-  dyn_voro_arr_[z_origin_cm]->prune();  // prune the Voronoi
-  // }
-  // else if (doPruneAlternative) { // prune the Voronoi
-    // dyn_voro_arr_[z_origin_cm]->updateAlternativePrunedDiagram();  
-  // }
-
-  // Publish voronoi graph
-  std::vector<Eigen::Vector3d> voronoi_vertices;
-  dyn_voro_arr_[z_origin_cm]->getVoronoiVertices(voronoi_vertices);
-
-  // tm_voronoi_map_init_.stop(verbose_planning_);
-
-  publishVertices(voronoi_vertices, z_origin_cm, "local_map_origin", voronoi_graph_pub_);
-
-  nav_msgs::OccupancyGrid occ_grid, voro_occ_grid;
-
-  occmapToOccGrid(*dyn_voro_arr_[z_origin_cm], 
-                  msg->origin.x, msg->origin.y, 
-                  occ_grid); // Occupancy map
-
-  voronoimapToOccGrid(*dyn_voro_arr_[z_origin_cm], 
-                      msg->origin.x, msg->origin.y, 
-                      voro_occ_grid); // Voronoi map
-
-  voro_occ_grid_pub_.publish(voro_occ_grid);
-  occ_map_pub_.publish(occ_grid);
 }
 
 // void VoronoiPlanner::pgmFileToBoolMap(bool ***map,
