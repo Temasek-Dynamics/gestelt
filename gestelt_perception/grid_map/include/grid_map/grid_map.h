@@ -536,7 +536,8 @@ public:
     return pns;
   }
 
-  void sliceMap(const double& slice_z);
+  /* Slice the voronoi map */
+  gestelt_msgs::BoolMap sliceMap(const double& slice_z);
 
 private: 
   /* ROS Publishers, subscribers and Timers */
