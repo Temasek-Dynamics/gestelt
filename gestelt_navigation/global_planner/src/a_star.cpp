@@ -9,9 +9,10 @@ AStarPlanner::AStarPlanner(std::shared_ptr<GridMap> grid_map, const AStarParams&
 }
 
 AStarPlanner::AStarPlanner( const std::map<int, std::shared_ptr<DynamicVoronoi>>& dyn_voro_arr, 
-                            const AStarParams& astar_params):
-    astar_params_(astar_params)
+                            const int& z_separation_cm,
+                            const AStarParams& astar_params): astar_params_(astar_params)
 {
+    z_separation_cm_ = z_separation_cm;
     dyn_voro_arr_ = dyn_voro_arr;
 }
 
@@ -28,6 +29,7 @@ void AStarPlanner::reset()
     open_list_v_.clear();
     g_cost_v_.clear();
     came_from_v_.clear();
+
     marked_bubble_cells_.clear();
 
     // Clear visualizations
@@ -219,28 +221,28 @@ bool AStarPlanner::generatePlan(const Eigen::Vector3d &start_pos, const Eigen::V
 
 bool AStarPlanner::generatePlanVoronoi(const Eigen::Vector3d& start_pos_3d, const Eigen::Vector3d& goal_pos_3d)
 {
-    std::function<double(const INTPOINT&, const INTPOINT&)> cost_function;
+    std::function<double(const VCell&, const VCell&)> cost_function;
 
     switch ( astar_params_.cost_function_type ) {
         case 0:
             // std::cout << "[AStar]: Using octile distance cost " << std::endl; 
-            cost_function = getOctileDist2D;
+            cost_function = getOctileDistV;
             break;
         case 1:
             // std::cout << "[AStar]: Using L1 Norm" << std::endl; 
-            cost_function = getL1Norm2D; 
+            cost_function = getL1NormV; 
             break;
         case 2:
             // std::cout << "[AStar]: Using L2 Norm " << std::endl; 
-            cost_function = getL2Norm2D;
+            cost_function = getL2NormV;
             break;
         case 3:
             // std::cout << "[AStar]: Using Chebyshev Distance" << std::endl;
-            cost_function = getChebyshevDist2D;
+            cost_function = getChebyshevDistV;
             break;
         default: 
             // std::cout << "[AStar]: Using Octile Distance" << std::endl;
-            cost_function = getOctileDist2D;
+            cost_function = getOctileDistV;
             break;
     }
 
@@ -248,53 +250,52 @@ bool AStarPlanner::generatePlanVoronoi(const Eigen::Vector3d& start_pos_3d, cons
 }
 
 void AStarPlanner::expandVoronoiBubble(
-    const INTPOINT& grid_pos, 
-    std::shared_ptr<DynamicVoronoi> dyn_voro,
+    const VCell& cell, 
     const bool& makeGoalBubble)
 {
-    std::queue<IntPoint> q;
-    q.push(grid_pos);
+    std::queue<VCell> q;
+    q.push(cell);
 
-    marked_bubble_cells_.insert(grid_pos);
+    IntPoint grid(cell.x, cell.y);
+    marked_bubble_cells_[cell.z_cm].insert(grid);
 
     while(!q.empty()) {
-        IntPoint p = q.front();
+        VCell p = q.front();
         q.pop();
-        int x = p.x;
-        int y = p.y;
 
         for (int dx=-1; dx<=1; dx++) {
-            int nx = x+dx;
-            if (nx<0 || nx >= dyn_voro->getSizeX()) {
+            int nx = p.x + dx;
+            if (nx<0 || nx >= dyn_voro_arr_[cell.z_cm]->getSizeX()) {
                 continue; // Skip if outside map
             }
             for (int dy=-1; dy<=1; dy++) {
-                int ny = y+dy;
+                int ny = p.y + dy;
                 if (dx && dy) {
                     continue; // skip if not 4 connected cell connection
                 }
-                if (ny<0 || ny >= dyn_voro->getSizeY()){
+                if (ny<0 || ny >= dyn_voro_arr_[cell.z_cm]->getSizeY()){
                     continue; // Skip if outside map
                 } 
 
-                IntPoint n_grid_pos = IntPoint(nx,ny);
+                IntPoint nb_grid(nx, ny);
 
-                if (marked_bubble_cells_.find(n_grid_pos) != marked_bubble_cells_.end()) 
+                if (marked_bubble_cells_[cell.z_cm].find(nb_grid) != marked_bubble_cells_[cell.z_cm].end()) 
                     continue; // If already added to marked bubble list, then skip
 
-                if (dyn_voro->getSqrDistance(nx,ny)<1) 
+                if (dyn_voro_arr_[cell.z_cm]->getSqrDistance(nx,ny)<1) 
                     continue;   // Skip if occupied or near obstacle
 
                 // Node *nd = MemoryManager<Node>::getNew();
-                // g_cost_v_[n_grid_pos] = std::numeric_limits<double>::max();
-                // double h_cost = getL2Norm(n_grid_pos, goal);
-                // open_list_v_.put(n_grid_pos, std::numeric_limits<double>::max());
+                // g_cost_v_[nb_grid] = std::numeric_limits<double>::max();
+                // double h_cost = getL2Norm(nb_grid, goal);
+                // open_list_v_.put(nb_grid, std::numeric_limits<double>::max());
                 
                 // mark as closed
-                marked_bubble_cells_.insert(n_grid_pos);
+                marked_bubble_cells_[cell.z_cm].insert(nb_grid);
 
-                if (!dyn_voro->isVoronoi(nx,ny)){
-                    q.push(n_grid_pos); // If not voronoi then push to list
+                if (!dyn_voro_arr_[cell.z_cm]->isVoronoi(nx,ny)){
+                    VCell nb_grid_3d(nx, ny, cell.z_cm);
+                    q.push(nb_grid_3d); // If not voronoi then push to list
                 }
             }
 
@@ -303,48 +304,49 @@ void AStarPlanner::expandVoronoiBubble(
 }
 
 bool AStarPlanner::generatePlanVoronoi(const Eigen::Vector3d& start_pos_3d, const Eigen::Vector3d& goal_pos_3d, 
-                                std::function<double(const INTPOINT&, const INTPOINT&)> cost_function)
+                                std::function<double(const VCell&, const VCell&)> cost_function)
 {
     reset();
 
-    int start_z_cm = roundUpMult((int) (start_pos_3d(2) * 100), z_multiple_);
-    int goal_z_cm = roundUpMult((int) (goal_pos_3d(2) * 100), z_multiple_);
-    std::cout << "start_z: " <<  start(2) << "rounded to " << start_z_cm << "cm" << std::endl;
-    std::cout << "goal_z: " <<  goal(2) << "rounded to " << goal_z_cm << "cm" << std::endl;
+    int start_z_cm = roundUpMult((int) (start_pos_3d(2) * 100), z_separation_cm_);
+    int goal_z_cm = roundUpMult((int) (goal_pos_3d(2) * 100), z_separation_cm_);
+    std::cout << "start_z: " <<  start_pos_3d(2) << "rounded to " << start_z_cm << "cm" << std::endl;
+    std::cout << "goal_z: " <<  goal_pos_3d(2) << "rounded to " << goal_z_cm << "cm" << std::endl;
 
-    DblPoint start_pos(start_pos_3d(0), start_pos_3d(1));
-    DblPoint goal_pos(goal_pos_3d(0), goal_pos_3d(1));
-
-    INTPOINT start_node, goal_node;
+    INTPOINT start_node_2d, goal_node_2d;
     // Search takes place in index space. So we first convert 3d real world positions into indices
-    if (!dyn_voro_arr_[start_z_cm]->posToIdx(start_pos, start_node) || !dyn_voro_arr_[goal_z_cm]->posToIdx(goal_pos, goal_node))
+    if (!dyn_voro_arr_[start_z_cm]->posToIdx(DblPoint(start_pos_3d(0), start_pos_3d(1)), start_node_2d) 
+        || !dyn_voro_arr_[goal_z_cm]->posToIdx(DblPoint(goal_pos_3d(0), goal_pos_3d(1)), goal_node_2d))
     {   
         std::cerr << "[a_star] Start or goal position is not within map bounds!" << std::endl;
         return false;
     }
 
-    if (dyn_voro_arr_[start_z_cm]->isOccupied(start_node)){
+    if (dyn_voro_arr_[start_z_cm]->isOccupied(start_node_2d)){
         std::cerr << "[a_star] Start position in obstacle!" << std::endl;
         return false;
     }
-    if (dyn_voro_arr_[goal_z_cm]->isOccupied(goal_node)){
+    if (dyn_voro_arr_[goal_z_cm]->isOccupied(goal_node_2d)){
         std::cerr << "[a_star] Goal position in obstacle!" << std::endl;
         return false;
     }
 
-    // set start and goal cell as obstacle
-    dyn_voro_arr_[start_z_cm]->setObstacle(start_node.x, start_node.y);
-    dyn_voro_arr_[goal_z_cm]->setObstacle(goal_node.x, goal_node.y);
+    VCell start_node(start_node_2d.x, start_node_2d.y, start_z_cm);
+    VCell goal_node(goal_node_2d.x, goal_node_2d.y, goal_z_cm);
 
-    dyn_voro_arr_[start_z_cm]->update(); // update distance map and Voronoi diagram
-    dyn_voro_arr_[goal_z_cm]->update(); // update distance map and Voronoi diagram
+    // set start and goal cell as obstacle
+    dyn_voro_arr_[start_node.z_cm]->setObstacle(start_node.x, start_node.y);
+    dyn_voro_arr_[goal_node.z_cm]->setObstacle(goal_node.x, goal_node.y);
+
+    dyn_voro_arr_[start_node.z_cm]->update(); // update distance map and Voronoi diagram
+    dyn_voro_arr_[goal_node.z_cm]->update(); // update distance map and Voronoi diagram
 
     // Create voronoi bubble around start and goal
-    expandVoronoiBubble(start_node, dyn_voro_arr_[start_z_cm], false );
-    expandVoronoiBubble(goal_node, dyn_voro_arr_[goal_z_cm], true );
+    expandVoronoiBubble(start_node,  false );
+    expandVoronoiBubble(goal_node, true );
 
-    dyn_voro_arr_[start_z_cm]->removeObstacle(start_node.x, start_node.y);
-    dyn_voro_arr_[goal_z_cm]->removeObstacle(goal_node.x, goal_node.y  );
+    dyn_voro_arr_[start_node.z_cm]->removeObstacle(start_node.x, start_node.y);
+    dyn_voro_arr_[goal_node.z_cm]->removeObstacle(goal_node.x, goal_node.y  );
 
     came_from_v_[start_node] = start_node;
     g_cost_v_[start_node] = 0;
@@ -353,9 +355,9 @@ bool AStarPlanner::generatePlanVoronoi(const Eigen::Vector3d& start_pos_3d, cons
 
     int num_iter = 0;
 
-    std::vector<Eigen::Vector3d> neighbours; // 3d indices of neighbors
-    
-    int current_z = start_z_cm;
+    std::vector<Eigen::Vector3i> neighbours; // 3d indices of neighbors
+
+    std::unordered_set<IntPoint> marked_bbl_cells_; // Cells that are marked as part of the voronoi bubble
 
     while (!open_list_v_.empty() && num_iter < astar_params_.max_iterations)
     {
@@ -365,7 +367,7 @@ bool AStarPlanner::generatePlanVoronoi(const Eigen::Vector3d& start_pos_3d, cons
         //     publishClosedList(getClosedListVoronoi(), closed_list_viz_pub_);
         // }
 
-        INTPOINT cur_node = open_list_v_.get();
+        VCell cur_node = open_list_v_.get();
         closed_list_v_.insert(cur_node);
 
         if (cur_node == goal_node)
@@ -376,13 +378,15 @@ bool AStarPlanner::generatePlanVoronoi(const Eigen::Vector3d& start_pos_3d, cons
             return true;
         }
 
+        IntPoint cur_node_2d(cur_node.x, cur_node.y);
+
         // Get neighbours that are within the map
-        dyn_voro_arr_[current_z]->getVoroNeighbors(cur_node, neighbours, marked_bubble_cells_);
+        dyn_voro_arr_[cur_node.z_cm]->getVoroNeighbors(cur_node_2d, neighbours, marked_bubble_cells_[cur_node.z_cm]);
 
         // Explore neighbors of current node
-        for (const Eigen::Vector3d& nb_node_3d : neighbours)
+        for (const Eigen::Vector3i& nb_node_eig : neighbours)
         {
-            INTPOINT nb_node = INTPOINT(nb_node_3d(0), nb_node_3d(1));
+            VCell nb_node(nb_node_eig(0), nb_node_eig(1), nb_node_eig(2));
             // std::cout << "[a_star] Exploring neighbor " << common_->getPosStr(nb_node).c_str() << std::endl;
             double tent_g_cost = g_cost_v_[cur_node] + cost_function(cur_node, nb_node);
 
@@ -391,7 +395,7 @@ bool AStarPlanner::generatePlanVoronoi(const Eigen::Vector3d& start_pos_3d, cons
             {
                 g_cost_v_[nb_node] = tent_g_cost;
                 // The tie_breaker is used to assign a larger weight to the h_cost and favour expanding nodes closer towards the goal
-                double f_cost = g_cost_v_[nb_node] + astar_params_.tie_breaker *cost_function(nb_node, goal_node);
+                double f_cost = g_cost_v_[nb_node] + astar_params_.tie_breaker * cost_function(nb_node, goal_node);
 
                 // If not in closed list: set parent and add to open list
                 if (closed_list_v_.find(nb_node) == closed_list_v_.end()) 
@@ -458,14 +462,11 @@ std::vector<Eigen::Vector3d> AStarPlanner::getClosedListVoronoi()
     std::vector<Eigen::Vector3d> closed_list_pos;
     for (auto itr = closed_list_v_.begin(); itr != closed_list_v_.end(); ++itr) {
         DblPoint map_pos;
-        dyn_voro_->idxToPos(*itr, map_pos);
+        IntPoint grid_pos((*itr).x, (*itr).y);
 
-        Eigen::Vector3d map_3d_pos;
-        map_3d_pos(0) = map_pos.x;
-        map_3d_pos(1) = map_pos.y;
-        map_3d_pos(2) = dyn_voro_->getOriginZ();
+        dyn_voro_arr_[(*itr).z_cm]->idxToPos(grid_pos, map_pos);
 
-        closed_list_pos.push_back(map_3d_pos);
+        closed_list_pos.push_back(Eigen::Vector3d{map_pos.x, map_pos.y, (*itr).z});
     }
 
     return closed_list_pos;
@@ -501,14 +502,14 @@ void AStarPlanner::tracePath(PosIdx final_node)
     }
 }
 
-void AStarPlanner::tracePathVoronoi(IntPoint final_node)
+void AStarPlanner::tracePathVoronoi(VCell final_node)
 {
     // Clear existing data structures
     path_idx_v_.clear();
     path_pos_.clear();
 
     // Trace back the nodes through the pointer to their parent
-    IntPoint cur_node = final_node;
+    VCell cur_node = final_node;
     while (!(cur_node == came_from_v_[cur_node]))
     {
         path_idx_v_.push_back(cur_node);
@@ -522,17 +523,13 @@ void AStarPlanner::tracePathVoronoi(IntPoint final_node)
 
     // For each gridnode, get the position and index,
     // So we can obtain a path in terms of indices and positions
-    for (const IntPoint& idx : path_idx_v_)
+    for (const VCell& cell : path_idx_v_)
     {
         DblPoint map_pos;
-        Eigen::Vector3d map_3d_pos;
 
-        dyn_voro_->idxToPos(idx, map_pos);
+        IntPoint grid_pos(cell.x, cell.y);
+        dyn_voro_arr_[cell.z_cm]->idxToPos(grid_pos, map_pos);
 
-        map_3d_pos(0) = map_pos.x;
-        map_3d_pos(1) = map_pos.y;
-        map_3d_pos(2) = dyn_voro_->getOriginZ();
-
-        path_pos_.push_back(map_3d_pos);
+        path_pos_.push_back(Eigen::Vector3d{map_pos.x, map_pos.y, cell.z});
     }
 }

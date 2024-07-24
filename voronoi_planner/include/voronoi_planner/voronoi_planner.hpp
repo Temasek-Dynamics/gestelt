@@ -169,7 +169,7 @@ public:
 
     tm_front_end_plan_.start();
 
-    front_end_planner_ = std::make_unique<AStarPlanner>(dyn_voro_arr_[goal_z_cm], astar_params_);
+    front_end_planner_ = std::make_unique<AStarPlanner>(dyn_voro_arr_, z_separation_cm_, astar_params_);
     front_end_planner_->addPublishers(front_end_publisher_map_);
 
     if (!front_end_planner_->generatePlanVoronoi(start, goal)){
@@ -206,31 +206,17 @@ public:
 private:
 
   void startDebugCB(const gestelt_msgs::PlanRequestDebugConstPtr &msg){
-    Eigen::vector3d plan_start{ 
+    Eigen::Vector3d plan_start{ 
                     msg->start.position.x - local_origin_x_,
                     msg->start.position.y - local_origin_y_,
                     msg->start.position.z};
 
-    Eigen::vector3d plan_end{ 
+    Eigen::Vector3d plan_end{ 
                     msg->goal.position.x - local_origin_x_,
                     msg->goal.position.y - local_origin_y_,
                     msg->goal.position.z};
 
     plan(plan_start, plan_end);
-  }
-
-  // Round up to multiples
-  int roundUpMult(const double& num, const int& mult)
-  {
-    if (mult == 0){
-      return num;
-    }
-    int rem = (int)num % mult;
-    if (rem == 0){
-      return num;
-    }
-
-    return (num-rem) + mult;
   }
 
 /* Visualization methods*/
@@ -452,6 +438,7 @@ private:
   /* Mapping */
   std::shared_ptr<GridMap> map_;
   double local_origin_x_{0.0}, local_origin_y_{0.0};
+  int z_separation_cm_{25};
 
   /* Data structs */
 

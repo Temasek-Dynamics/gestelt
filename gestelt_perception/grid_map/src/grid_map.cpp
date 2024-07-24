@@ -216,18 +216,12 @@ void GridMap::updateLocalMapTimerCB(const ros::TimerEvent & /*event*/)
 {
   updateLocalMap();
 
-  sliceMap(0.25);
-  sliceMap(0.5);
-  sliceMap(0.75);
-  sliceMap(1.0);
-  sliceMap(1.25);
-  sliceMap(1.5);
-  sliceMap(1.75);
-  sliceMap(2.0);
-  sliceMap(2.25);
-  sliceMap(2.5);
-  sliceMap(2.75);
-  sliceMap(3.0);
+  int z_separation_cm = 25;
+  double max_height = 3.0;
+
+  for (int i = 1; i*(((double)z_separation_cm)/100.0) < max_height; i++ ){
+    sliceMap(i*(((double)z_separation_cm)/100.0));
+  }
   
   // Send transform from map to local map origin
   geometry_msgs::TransformStamped map_to_local_origin_tf;

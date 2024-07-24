@@ -152,7 +152,7 @@ public:
 
   // Get number of 8-con neighbors in voronoi diagram
   int getNumVoroNeighbors(const INTPOINT& grid_pos);
-  void getVoroNeighbors(const INTPOINT& grid_pos, std::vector<Eigen::Vector3d>& neighbours, 
+  void getVoroNeighbors(const INTPOINT& grid_pos, std::vector<Eigen::Vector3i>& neighbours, 
                         const std::unordered_set<IntPoint>& marked_bubble_cells) ;
 
   /* Checking methods */

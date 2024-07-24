@@ -180,6 +180,10 @@ struct PriorityQueue {
   }
 };
 
+/**
+ * PosIdx: Used for index-based 3d grid operations
+ */
+
 struct PosIdx {
   PosIdx() {}
 
@@ -208,7 +212,6 @@ struct PosIdx {
   int x, y, z;
 }; // struct PosIdx
 
-
 template <> 
 struct std::hash<PosIdx> {
   /* implement hash function so we can put PosIdx into an unordered_set */
@@ -218,6 +221,44 @@ struct std::hash<PosIdx> {
     return 0.5 * (H_x_y + pos.z)*(H_x_y + pos.z + 1) + pos.z;
   }
 };
+
+/**
+ * VCell: A cell used by voronoi graph search 
+ * It has 3 elements: (x, y, z_cm). Where z is the height but in unit of centimeters.
+ */
+
+
+struct VCell {
+  VCell() {}
+
+  VCell(const int& x, const int& y, const int& z_cm)
+    : x(x), y(y), z_cm(z_cm)
+  {
+    z = z_cm/100;
+  }
+
+  // Equality
+  bool operator == (const VCell& pos) const
+  {
+    return (this->x == pos.x && this->y == pos.y && this->z_cm == pos.z_cm);
+  }
+
+  int x, y;
+  int z; // [THIS IS NOT THE INDEX] z in meters
+  int z_cm; // [THIS IS NOT THE INDEX] z in centimeters
+}; // struct VCell
+
+
+template <> 
+struct std::hash<VCell> {
+  /* implement hash function so we can put VCell into an unordered_set */
+  std::size_t operator()(const VCell& pos) const noexcept {
+    // NOTE: better to use something like boost hash_combine
+    size_t H_x_y = 0.5 * (pos.x + pos.y)*(pos.x + pos.y + 1) + pos.y;
+    return 0.5 * (H_x_y + pos.z_cm)*(H_x_y + pos.z_cm + 1) + pos.z_cm;
+  }
+};
+
 
 class PlannerCommon {
 /**
@@ -478,64 +519,76 @@ inline double getOctileDist(const PosIdx& a, const PosIdx& b)  {
 
 
 
+// // Get euclidean distance between node_1 and node_2
+// // NOTE: This is in units of indices
+// inline double getL1Norm2D(const INTPOINT& a, const INTPOINT& b) {
+//   return abs(a.x - b.x) + abs(a.y - b.y);
+// }
+
+// // Get euclidean distance between node_1 and node_2
+// // NOTE: This is in units of indices
+// inline double getL2Norm2D(const INTPOINT& a, const INTPOINT& b) {
+//   double dx = abs(a.x - b.x);
+//   double dy = abs(a.y - b.y);
+
+//   return sqrt(dx*dx + dy*dy);
+// }
+
+// // // Get octile distance
+// inline double getChebyshevDist2D(const INTPOINT& a, const INTPOINT& b)  {
+//   double dx = abs(a.x - b.x);
+//   double dy = abs(a.y - b.y);
+
+//   return (dx + dy) - std::min(dx, dy); 
+// }
+
+// // // Get chebyshev distance
+// inline double getOctileDist2D(const INTPOINT& a, const INTPOINT& b)  {
+//   double dx = abs(a.x - b.x);
+//   double dy = abs(a.y - b.y);
+
+//   return (dx + dy) + (SQRT2 - 2) * std::min(dx, dy); 
+// }
+
+
+
+
+
+
 // Get euclidean distance between node_1 and node_2
 // NOTE: This is in units of indices
-inline double getL1Norm2D(const INTPOINT& a, const INTPOINT& b) {
-  return abs(a.x - b.x) + abs(a.y - b.y);
+inline double getL1NormV(const VCell& a, const VCell& b) {
+  return abs(a.x - b.x) + abs(a.y - b.y) + abs(a.z - b.z);
 }
 
 // Get euclidean distance between node_1 and node_2
 // NOTE: This is in units of indices
-inline double getL2Norm2D(const INTPOINT& a, const INTPOINT& b) {
+inline double getL2NormV(const VCell& a, const VCell& b) {
   double dx = abs(a.x - b.x);
   double dy = abs(a.y - b.y);
+  double dz = abs(a.z - b.z);
 
-  return sqrt(dx*dx + dy*dy);
+  return sqrt(dx*dx + dy*dy + dz*dz);
 }
 
 // // Get octile distance
-inline double getChebyshevDist2D(const INTPOINT& a, const INTPOINT& b)  {
+inline double getChebyshevDistV(const VCell& a, const VCell& b)  {
   double dx = abs(a.x - b.x);
   double dy = abs(a.y - b.y);
+  double dz = abs(a.z - b.z);
 
-  return (dx + dy) - std::min(dx, dy); 
+  return (dx + dy + dz) - std::min(dx, std::min(dy, dz)); 
 }
 
 // // Get chebyshev distance
-inline double getOctileDist2D(const INTPOINT& a, const INTPOINT& b)  {
+inline double getOctileDistV(const VCell& a, const VCell& b)  {
   double dx = abs(a.x - b.x);
   double dy = abs(a.y - b.y);
+  double dz = abs(a.z - b.z);
 
-  return (dx + dy) + (SQRT2 - 2) * std::min(dx, dy); 
+  return (dx + dy + dz) + (SQRT2 - 2) * std::min(dx, std::min(dy, dz)); 
 }
 
 
-
-// ??? Taken from original EGOswarm code
-// double getDiagCost(OccNodePtr node_1, OccNodePtr node_2) {
-//   double dx = abs(node_1->idx(0) - node_2->idx(0));
-//   double dy = abs(node_1->idx(1) - node_2->idx(1));
-//   double dz = abs(node_1->idx(2) - node_2->idx(2));
-
-//   double h = 0.0;
-//   int diag = std::min(std::min(dx, dy), dz);
-//   dx -= diag;
-//   dy -= diag;
-//   dz -= diag;
-
-//   if (dx == 0)
-//   {
-//     h = 1.0 * sqrt(3.0) * diag + sqrt(2.0) * std::min(dy, dz) + 1.0 * abs(dy - dz);
-//   }
-//   if (dy == 0)
-//   {
-//     h = 1.0 * sqrt(3.0) * diag + sqrt(2.0) * std::min(dx, dz) + 1.0 * abs(dx - dz);
-//   }
-//   if (dz == 0)
-//   {
-//     h = 1.0 * sqrt(3.0) * diag + sqrt(2.0) * std::min(dx, dy) + 1.0 * abs(dx - dy);
-//   }
-//   return h;
-// }
 
 #endif // _PLANNER_COMMON_H_

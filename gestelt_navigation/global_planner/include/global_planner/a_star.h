@@ -35,6 +35,7 @@ public:
   AStarPlanner(std::shared_ptr<GridMap> grid_map, const AStarParams& astar_params);
 
   AStarPlanner( const std::map<int, std::shared_ptr<DynamicVoronoi>>& dyn_voro_arr, 
+                const int& z_separation_cm,
                 const AStarParams& astar_params);
 
   /**
@@ -71,7 +72,7 @@ public:
   bool generatePlanVoronoi(const Eigen::Vector3d& start_pos_3d, const Eigen::Vector3d& goal_pos_3d);
 
   bool generatePlanVoronoi(const Eigen::Vector3d& start_pos_3d, const Eigen::Vector3d& goal_pos_3d, 
-                          std::function<double(const INTPOINT&, const INTPOINT&)> cost_function);
+                          std::function<double(const VCell&, const VCell&)> cost_function);
 
   /**
    * @brief Get successful plan in terms of path positions
@@ -148,15 +149,27 @@ public:
 
 private:
 
-  void expandVoronoiBubble(
-    const INTPOINT& grid_pos, const bool& makeGoalBubble);
-
+  void expandVoronoiBubble(const VCell& cell, const bool& makeGoalBubble);
 
   void tracePath(PosIdx final_node);
 
-  void tracePathVoronoi(IntPoint final_node);
+  void tracePathVoronoi(VCell final_node);
 
   void clearVisualizations();
+
+  // Round up to multiples of mult
+  int roundUpMult(const double& num, const int& mult)
+  {
+    if (mult == 0){
+      return num;
+    }
+    int rem = (int)num % mult;
+    if (rem == 0){
+      return num;
+    }
+
+    return (num-rem) + mult;
+  }
 
 private: 
   std::vector<PosIdx> path_idx_; // Path in terms of indices
@@ -186,14 +199,18 @@ private:
   std::unique_ptr<OccMap> occ_map_;            // 3D occupancy grid map object
   std::map<int, std::shared_ptr<DynamicVoronoi>> dyn_voro_arr_; // array of voronoi objects with key of height (cm)
 
-  std::unordered_map<PosIdx, double> g_cost_v_; 
-  std::unordered_map<PosIdx, PosIdx> came_from_v_;
-  PriorityQueue<PosIdx, double> open_list_v_; // Min priority queue 
-  std::unordered_set<PosIdx> closed_list_v_; // All closed nodes
+  // Voronoi search data structures
 
-  std::unordered_set<IntPoint> marked_bubble_cells_; // Cells that are marked as part of the voronoi bubble
+  std::unordered_map<VCell, double> g_cost_v_;  
+  std::unordered_map<VCell, VCell> came_from_v_;
+  PriorityQueue<VCell, double> open_list_v_; // Min priority queue 
+  std::unordered_set<VCell> closed_list_v_; // All closed nodes
 
-  std::vector<PosIdx> path_idx_v_; // Final planned Path in terms of indices
+  std::map<int, std::unordered_set<IntPoint>> marked_bubble_cells_; // Cells that are marked as part of the voronoi bubble with key of height(cm)
+
+  std::vector<VCell> path_idx_v_; // Final planned Path in terms of indices
+
+  int z_separation_cm_; // separation between the voronoi planes in units of centimeters
 };
 
 #endif // _A_STAR_PLANNER_H_
