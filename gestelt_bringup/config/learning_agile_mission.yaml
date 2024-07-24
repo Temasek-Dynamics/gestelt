@@ -9,8 +9,8 @@ mission:
   initial_ori_euler: [0.0, 0.0, 0] # only yaw is active
 
   ##------ gate pose ----##
-  gate_position: [0.0, -0.0, 0.5]
-  gate_ori_euler: [-0.0, -0.0, 0]
+  gate_position: [1.0, -0.0, 1.8]
+  gate_ori_euler: [-0.0, -0.35, 0]
 
   ##------ goal pose ----##
   goal_position: [0.0, -1.8, 1.2]
@@ -22,8 +22,8 @@ learning_agile:
 
   ##------ traversing parameters ---##
   max_traverse_weight: 70 #70
-  traverse_weight_span: 40
-  traverse_time: 1.0  
+  traverse_weight_span: 10
+  traverse_time: 1.5  
 
   ##------ safety parameters  ------##
   no_solution_flag_t_thresh: 0.1
@@ -58,7 +58,7 @@ learning_agile:
   pos_bound: 5 #m (-b,b)
 
   # velocity constraints
-  linear_vel_bound: 3 #m/s
+  linear_vel_bound: 4 #m/s
 
   # angular velocity constraints
   angular_vel_bound: 10.57 #rad/s

@@ -145,15 +145,7 @@ void mpcRosWrapper::solver_request(){
                 
                 for (int i = 0; i < n_nodes_; i++)
                 {   
-                    
-                ocp_nlp_out_get(nlp_config, nlp_dims, nlp_out, i, "x", &state_traj_opt_[i*n_x_]);
-                    
-                    // ROS_INFO("state_i_opt_ is %f, %f, %f", state_i_opt_[0], state_i_opt_[1], state_i_opt_[2]);
-                    // for (int j = 0; j < n_x_; ++j)
-                    // {
-                    //     state_traj_opt_.push_back(state_i_opt_);
-                    // }
-        
+                    ocp_nlp_out_get(nlp_config, nlp_dims, nlp_out, i, "x", &state_traj_opt_[i*n_x_]);
                 }
 
 
@@ -169,7 +161,6 @@ void mpcRosWrapper::solver_request(){
             // get the control input
             ocp_nlp_out_get(nlp_config, nlp_dims, nlp_out, 0, "u", &control_opt_);
         
-            // ROS_INFO("HAVE THE SOLUTION");
 
         }
     }
@@ -199,16 +190,10 @@ void mpcRosWrapper::mission_start_cb(const gestelt_msgs::GoalsPtr &msg)
 {
     des_trav_point_ << msg->waypoints[0].position.x, msg->waypoints[0].position.y, msg->waypoints[0].position.z;
     des_trav_quat_ << msg->waypoints[0].orientation.w, msg->waypoints[0].orientation.x, msg->waypoints[0].orientation.y, msg->waypoints[0].orientation.z;
-    ROS_INFO("des_trav_quat_ is %f, %f, %f, %f", des_trav_quat_(0), des_trav_quat_(1), des_trav_quat_(2), des_trav_quat_(3));
-    // des_trav_quat_=drone_quat_;
+    
     des_goal_point_ << msg->waypoints[1].position.x, msg->waypoints[1].position.y, msg->waypoints[1].position.z;
     des_goal_quat_ << msg->waypoints[1].orientation.w, msg->waypoints[1].orientation.x, msg->waypoints[1].orientation.y, msg->waypoints[1].orientation.z;
-    // des_goal_quat_=drone_quat_;
-    // ROS_INFO("des_trav_point_ is %f, %f, %f", des_trav_point_(0), des_trav_point_(1), des_trav_point_(2));
-    // ROS_INFO("des_trav_quat_ is %f, %f, %f, %f", des_trav_quat_(0), des_trav_quat_(1), des_trav_quat_(2), des_trav_quat_(3));
-
-    // ROS_INFO("des_goal_point_ is %f, %f, %f", des_goal_point_(0), des_goal_point_(1), des_goal_point_(2));
-    // ROS_INFO("des_goal_quat_ is %f, %f, %f, %f", des_goal_quat_(0), des_goal_quat_(1), des_goal_quat_(2), des_goal_quat_(3));
+    
     //set the goal state
     des_goal_state_.segment(0,3) = des_goal_point_;
     des_goal_state_.segment(3,3) = des_goal_vel_;
