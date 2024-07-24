@@ -42,7 +42,7 @@ typedef ocp_nlp_config* nlp_config_ptr;
 typedef ocp_nlp_dims* nlp_dims_ptr;
 typedef ocp_nlp_in* nlp_in_ptr;
 typedef ocp_nlp_out* nlp_out_ptr;
-class LearningAgile{
+class mpcRosWrapper{
     public:
         void init(ros::NodeHandle& nh);
         
@@ -62,7 +62,7 @@ class LearningAgile{
         //------------------misc-------------------
         void pred_traj_vis();
 
-        typedef std::shared_ptr<LearningAgile> Ptr;
+        typedef std::shared_ptr<mpcRosWrapper> Ptr;
         
         // solver state 
         bool NO_SOLUTION_FLAG_=false;

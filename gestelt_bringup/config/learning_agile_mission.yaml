@@ -6,15 +6,15 @@ traj_server:
 mission:
   ##------ MPC initial pose ----##
   initial_position: [0.0, 1.8, 1.2]
-  initial_ori_euler: [0.0, 0.0, 0.0]
+  initial_ori_euler: [0.0, 0.0, 0] # only yaw is active
 
   ##------ gate pose ----##
-  gate_position: [1.5, -0.5, 1.5]
-  gate_ori_euler: [0.0, -0.7, 0.0]
+  gate_position: [0.0, -0.0, 0.5]
+  gate_ori_euler: [-0.0, -0.0, 0]
 
   ##------ goal pose ----##
   goal_position: [0.0, -1.8, 1.2]
-  mission/goal_ori_euler: [0.0, 0.0, 0.0]
+  goal_ori_euler: [0.0, 0.0, 0] # only yaw is active
 
 
 # MPC parameters
@@ -22,7 +22,7 @@ learning_agile:
 
   ##------ traversing parameters ---##
   max_traverse_weight: 70 #70
-  traverse_weight_span: 10
+  traverse_weight_span: 40
   traverse_time: 1.0  
 
   ##------ safety parameters  ------##
@@ -61,7 +61,7 @@ learning_agile:
   linear_vel_bound: 3 #m/s
 
   # angular velocity constraints
-  angular_vel_bound: 1.57 #rad/s
+  angular_vel_bound: 10.57 #rad/s
 
 
   ## ----- miscellaneous parameters  ----##

@@ -5,6 +5,7 @@ import sys
 import os
 import subprocess
 import yaml
+from scipy.spatial.transform import Rotation as R
 # acquire the current directory
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -133,43 +134,57 @@ class LearningAgileAgent():
         
     
     def receive_mission_states(self,
-                                start,
+                                ini_pos,
                                 end,
+                                
+                                ini_yaw,  
+                                goal_yaw,
+                                
                                 gate_center=np.array([0,0,1.5]),
                                 gate_ori_euler=np.array([0,0,0]),
+                                
                                 t_tra_abs=1,
                                 max_tra_w=0,
                                 ):
         """
-        receive the start and end point defined in the mission file
+        receive the ini_pos and end point defined in the mission file
 
         """
         
-        self.env_inputs[0:3]=start
+        self.env_inputs[0:3]=ini_pos
         self.env_inputs[3:6]=end
-        self.start_point = start
+        self.env_inputs[6]=ini_yaw # drone_init_yaw
+    
+        
         self.final_point = end
-
+        self.goal_yaw = goal_yaw
+        
         self.gate_center = gate_center
         self.gate_ori_euler = gate_ori_euler
         self.t_tra_abs =t_tra_abs
         self.max_tra_w=max_tra_w
 
-    def problem_definition(self,drone_init_quat=None,gazebo_sim=False,dyn_step=0.002):
+    def problem_definition(self,gazebo_sim=False,dyn_step=0.002):
         """
         initial traversal problem
 
         """
-        ini_q=toQuaternion(self.env_inputs[6],[0,0,1]) # drone_init_yaw
-        if drone_init_quat is not None:
-            ini_q=drone_init_quat.tolist()
+        ini_q=R.from_euler('xyz',[0,0,self.env_inputs[6]]).as_quat()
+        ini_q=np.roll(ini_q,1)
+        
+        final_q=R.from_euler('xyz',[0,0,self.goal_yaw]).as_quat()
+        final_q=np.roll(final_q,1)
+        
           
 
         self.quad1 = run_quad(self.config_dict,
                               goal_pos=self.env_inputs[3:6].tolist(),
+                              goal_ori=final_q.tolist(),
+                              
                               ini_r=self.env_inputs[0:3].tolist(),
-                              ini_q=ini_q,
-                              horizon=self.horizon,
+                              ini_v_I = [0.0, 0.0, 0.0], # initial velocity
+                              ini_q=ini_q.tolist(),
+                              
                               gazebo_sim=gazebo_sim,
                               dt=self.dt)
         
@@ -288,7 +303,7 @@ class LearningAgileAgent():
                                                     out[6],
                                                     max_tra_w=self.max_tra_w) # control input 4-by-1 thrusts to pybullet
                 
-                print('solving time at main=',time.time()-t_comp)
+                # print('solving time at main=',time.time()-t_comp)
                 self.solving_time.append(time.time()- t_comp)
                 self.u=cmd_solution['control_traj_opt'][0,:].tolist()
                 self.pos_vel_att_cmd=cmd_solution['state_traj_opt'][0,:]
@@ -326,6 +341,7 @@ class LearningAgileAgent():
         self.quad1.uav1.plot_angularrate(self.control_n)
         self.quad1.uav1.plot_position(self.state_n)
         self.quad1.uav1.plot_velocity(self.state_n)
+        self.quad1.uav1.plot_quaternions(self.state_n)
         # self.quad1.uav1.plot_trav_weight(self.tra_weight_list)
        
         self.quad1.uav1.plot_solving_time(self.solving_time)
@@ -346,10 +362,15 @@ def main():
 
     #------------------------------set the mission--------------------------------------#
     config_dict = learing_agile_agent.config_dict
-    learing_agile_agent.receive_mission_states(start=np.array(config_dict['mission']['initial_position']),
+    learing_agile_agent.receive_mission_states(ini_pos=np.array(config_dict['mission']['initial_position']),
                                                 end=np.array(config_dict['mission']['goal_position']),
+                                                
+                                                ini_yaw=np.array(config_dict['mission']['initial_ori_euler'])[2],
+                                                goal_yaw=np.array(config_dict['mission']['goal_ori_euler'])[2],
+                                                
                                                 gate_center=np.array(config_dict['mission']['gate_position']),
                                                 gate_ori_euler=np.array(config_dict['mission']['gate_ori_euler']),
+                                                
                                                 t_tra_abs=config_dict['learning_agile']['traverse_time'],
                                                 max_tra_w=config_dict['learning_agile']['max_traverse_weight'])
 
@@ -365,7 +386,7 @@ def main():
     # every time after reconstruct the solver, need to catkin build the MPC wrapper to 
     # relink the shared library
     shell_script="""
-    catkin build learning_agile
+    catkin build mpc_ros_wrapper
     """
 
     # run the shell script

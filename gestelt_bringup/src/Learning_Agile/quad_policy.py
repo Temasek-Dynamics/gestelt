@@ -1,6 +1,7 @@
 ## this file is a package for policy search for quadrotor
 
 from quad_OC import OCSys
+from scipy.spatial.transform import Rotation as R
 from math import cos, pi, sin, sqrt, tan
 from quad_model import *
 from casadi import *
@@ -14,11 +15,14 @@ def Rd2Rp(tra_ang):
     return [theta,vector]
 
 class run_quad:
-    def __init__(self,config_dict, goal_pos = [0, 8, 0], 
-                 goal_atti = [0,[1,0,0]], ini_r=[0,-8,0],
+    def __init__(self,config_dict, 
+                goal_pos = [0, 8, 0],
+                goal_ori= toQuaternion(0.0,[3,3,5]),
+                
+                ini_r=[0,-8,0],
                 ini_v_I = [0.0, 0.0, 0.0], 
                 ini_q = toQuaternion(0.0,[3,3,5]),
-                horizon = 20,
+                
                 gazebo_sim = False,
                 dt=0.1):
         
@@ -26,7 +30,7 @@ class run_quad:
         self.winglen = 1.5
         # goal
         self.goal_pos = goal_pos
-        self.goal_atti = goal_atti 
+        self.goal_ori = goal_ori
         # initial
         if type(ini_r) is not list:
             ini_r = ini_r.tolist()
@@ -256,20 +260,27 @@ class run_quad:
     
     ## given initial state, control command, high-level parameters, obtain the first control command of the quadrotor
     def get_input(self, ini_state, Ulast ,tra_pos, tra_ang, t_tra,max_tra_w):
-        tra_atti = Rd2Rp(tra_ang)
-        # initialize the NLP problem
-        # self.uav1.init_TraCost(tra_pos,tra_atti)
-        # self.uavoc1.setTraCost(self.uav1.tra_cost,
-        #                        tra_pos,
-        #                        tra_atti,
-        #                        t_tra)
-        tra_q=toQuaternion(tra_atti[0],tra_atti[1])
     
+        # # initialize the NLP problem
+        # # self.uav1.init_TraCost(tra_pos,tra_atti)
+        # # self.uavoc1.setTraCost(self.uav1.tra_cost,
+        # #                        tra_pos,
+        # #                        tra_atti,
+        # #                        t_tra)
+
+    
+        ##----- cause the different bewteen the python and the gazebo--###
+        tra_atti = Rd2Rp(tra_ang)
+    
+        tra_q=toQuaternion(tra_atti[0],tra_atti[1])
+        print('travel position:',tra_pos)
+        print('travel attitude:',tra_q)
         current_state_control = np.concatenate((ini_state,Ulast))
        
         # self.sol1 = self.uavoc1.ocSolver(current_state_control=current_state_control,t_tra=t)
         self.sol1,weight_vis,NO_SOLUTION_FLAG = self.uavoc1.AcadosOcSolver(current_state_control=current_state_control,
                                                 goal_pos=self.goal_pos,
+                                                goal_ori=self.goal_ori,
                                                 tra_pos=tra_pos,
                                                 tra_q=tra_q,
                                                 t_tra=t_tra,

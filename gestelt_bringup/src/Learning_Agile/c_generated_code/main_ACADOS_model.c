@@ -43,6 +43,7 @@
 #include "blasfeo/include/blasfeo_d_aux_ext_dep.h"
 
 #define NX     ACADOS_MODEL_NX
+#define NP     ACADOS_MODEL_NP
 #define NU     ACADOS_MODEL_NU
 #define NBX0   ACADOS_MODEL_NBX0
 

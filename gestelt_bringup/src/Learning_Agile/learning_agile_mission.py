@@ -9,6 +9,8 @@ import math
 import time
 import tf
 from tf.transformations import quaternion_from_euler
+from quad_policy import Rd2Rp
+from quad_model import toQuaternion
 
 # running time statistics
 import cProfile
@@ -105,8 +107,27 @@ def create_pose(position,euler_angles):
     pose.orientation.y = quat[1]
     pose.orientation.z = quat[2]
     pose.orientation.w = quat[3]
-
+    
     return pose
+
+def create_trav_pose(position,euler_angles):
+    pose = Pose()
+
+    # transform waypoints from map to world
+    trans,rot=transform_map_to_world()
+    pose.position.x = position[0]+trans[0]
+    pose.position.y = position[1]+trans[1]
+    pose.position.z = position[2]+trans[2]
+
+    atti = Rd2Rp(euler_angles)
+    quat=toQuaternion(atti[0],atti[1])
+    pose.orientation.w = quat[0]
+    pose.orientation.x = quat[1]
+    pose.orientation.y = quat[2]
+    pose.orientation.z = quat[3]
+    print(f"trav pose: {pose}")
+    return pose
+
 def create_accel(acc_x,acc_y,acc_z):
     acc = Accel()
     acc_mask = Bool()
@@ -192,7 +213,7 @@ def main():
 
         print("tick!")
         rate.sleep()
-    ##--------------------- min snap trajectory---------------------##
+    
         
     # Send waypoints to UAVs
     # frame is ENU
@@ -206,19 +227,12 @@ def main():
     # world frame is the initial position of the drone
     # map frame is the origin of the map
     # waypoints are under the map frame, will be transformed to world frame
-    #------------------------------------ for any trajectory:-------------------------------------------#
-    # gate position
-    # waypoints.append(create_pose(1.2,-0.0,1.5)) # 3.0,2.0,3   2.0,-0.0,1.5
-    
-    # end position
-    # waypoints.append(create_pose(-0.0,-1.8,1.4))# 5.0,2.0,3  -2.0,-1.8,1.4
 
-    #------------------------------------ for hovering test:-------------------------------------------#
     # # gate position
-    waypoints.append(create_pose(gate_position,gate_ori_euler)) # 3.0,2.0,3   2.0,-0.0,1.5
+    waypoints.append(create_trav_pose(gate_position,gate_ori_euler)) 
 
     # # end position
-    waypoints.append(create_pose(goal_position,goal_ori_euler)) # 3.0,2.0,3   2.0,-0.0,1.5
+    waypoints.append(create_pose(goal_position,goal_ori_euler)) 
 
     #--------------------------------------------------------------------------------------------------#
     # the number of accelerations must be equal to the number of waypoints
@@ -232,18 +246,14 @@ def main():
     vel_list.append(create_vel(None,None,None))
    
     pub_waypoints(waypoints,accel_list,vel_list)
-    ##--------------------- end of min snap trajectory--------------##
+   
 
     # sending initial state to the learning agile node    
     rospy.spin()
     # rospy.signal_shutdown("transfer to the MPC")
 if __name__ == '__main__':
     main()
-    # cProfile.run('main()',filename='running_time_statistics.prof')
+    
 
-
-
-
-##--------------------- min snap trajectory---------------------##
     
    

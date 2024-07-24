@@ -1,14 +1,14 @@
 #include <ros/ros.h>
-#include <learning_agile/learning_agile.h>
+#include <mpc_ros_wrapper/mpc_ros_wrapper.h>
 
 int main(int argc, char **argv)
 {
-  ros::init(argc, argv, "learning_agile_node");
+  ros::init(argc, argv, "mpc_ros_wrapper_node");
   ros::NodeHandle nh("~");
 
-  LearningAgile learning_agile;
+  mpcRosWrapper mpc_ros_wrapper;
 
-  learning_agile.init(nh);
+  mpc_ros_wrapper.init(nh);
 
   ros::MultiThreadedSpinner spinner(4);
   spinner.spin();

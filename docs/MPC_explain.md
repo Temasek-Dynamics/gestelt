@@ -53,12 +53,12 @@ where:
 5. **Each time after modifying the MPC problem definition, like the weight and the model parameters, you need to run the `learning_agile_agent.py` to regenerate the solver. The script will also compile the MPC ROS wrapper to relink the solver shared library.** (I will refine the procedure)
 ## 2. The MPC ROS node/wrapper is in the package:
 ```plaintext
-learning_agile/
+mpc_ros_wrapper/
 ├── src/
-│   ├── learning_agile_node.cpp (useless now)
-│   ├── learning_agile.cpp
+│   ├── mpc_ros_wrapper_node.cpp (useless now)
+│   ├── mpc_ros_wrapper.cpp
 ```
-1. The MPC ROS wrapper is in the file `learning_agile.cpp`, it is not a single ROS node, instead, this class will be called by the node `traj_server` by using the shared pointer.
+1. The MPC ROS wrapper is in the file `mpc_ros_wrapper.cpp`, it is not a single ROS node, instead, this class will be called by the node `traj_server` by using the shared pointer.
 
 ## 3. The FSM for safety protection
 ```plaintext

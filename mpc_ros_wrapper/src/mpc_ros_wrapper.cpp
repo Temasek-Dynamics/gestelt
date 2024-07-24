@@ -1,6 +1,6 @@
-#include <learning_agile/learning_agile.h>
+#include <mpc_ros_wrapper/mpc_ros_wrapper.h>
 
-void LearningAgile::init(ros::NodeHandle& nh)
+void mpcRosWrapper::init(ros::NodeHandle& nh)
 {   
     /////////////////
     /*parameters*/
@@ -15,9 +15,9 @@ void LearningAgile::init(ros::NodeHandle& nh)
     /////////////////
     /* Subscribers */
     /////////////////
-    drone_pose_sub_= nh.subscribe("/mavros/local_position/pose", 1, &LearningAgile::drone_state_pose_cb, this);
-    drone_twist_sub_= nh.subscribe("/mavros/local_position/velocity_body", 1, &LearningAgile::drone_state_twist_cb, this);
-    waypoint_sub_ = nh.subscribe("/planner/goals_learning_agile", 1, &LearningAgile::mission_start_cb, this);
+    drone_pose_sub_= nh.subscribe("/mavros/local_position/pose", 1, &mpcRosWrapper::drone_state_pose_cb, this);
+    drone_twist_sub_= nh.subscribe("/mavros/local_position/velocity_body", 1, &mpcRosWrapper::drone_state_twist_cb, this);
+    waypoint_sub_ = nh.subscribe("/planner/goals_learning_agile", 1, &mpcRosWrapper::mission_start_cb, this);
 
 
     /////////////////
@@ -63,7 +63,7 @@ void LearningAgile::init(ros::NodeHandle& nh)
 
 }
 
-void LearningAgile::solver_request(){
+void mpcRosWrapper::solver_request(){
     
     ocp_nlp_out_set(nlp_config, nlp_dims, nlp_out, n_nodes_,"x", des_goal_state_.data());
     
@@ -177,7 +177,7 @@ void LearningAgile::solver_request(){
 }
 
 
-void LearningAgile::drone_state_pose_cb(const geometry_msgs::PoseStamped::ConstPtr& msg)
+void mpcRosWrapper::drone_state_pose_cb(const geometry_msgs::PoseStamped::ConstPtr& msg)
 {
     drone_pos_ << msg->pose.position.x, msg->pose.position.y, msg->pose.position.z;
     drone_quat_ << msg->pose.orientation.w, msg->pose.orientation.x, msg->pose.orientation.y, msg->pose.orientation.z;
@@ -187,7 +187,7 @@ void LearningAgile::drone_state_pose_cb(const geometry_msgs::PoseStamped::ConstP
     drone_state_.segment(6,4) = drone_quat_;
 }
 
-void LearningAgile::drone_state_twist_cb(const geometry_msgs::TwistStamped::ConstPtr& msg)
+void mpcRosWrapper::drone_state_twist_cb(const geometry_msgs::TwistStamped::ConstPtr& msg)
 {
     drone_vel_ << msg->twist.linear.x, msg->twist.linear.y, msg->twist.linear.z;
     drone_ang_vel_ << msg->twist.angular.x, msg->twist.angular.y, msg->twist.angular.z;
@@ -195,10 +195,11 @@ void LearningAgile::drone_state_twist_cb(const geometry_msgs::TwistStamped::Cons
     // drone_state_.tail(3) = drone_ang_vel_;
 }
 
-void LearningAgile::mission_start_cb(const gestelt_msgs::GoalsPtr &msg)
+void mpcRosWrapper::mission_start_cb(const gestelt_msgs::GoalsPtr &msg)
 {
     des_trav_point_ << msg->waypoints[0].position.x, msg->waypoints[0].position.y, msg->waypoints[0].position.z;
     des_trav_quat_ << msg->waypoints[0].orientation.w, msg->waypoints[0].orientation.x, msg->waypoints[0].orientation.y, msg->waypoints[0].orientation.z;
+    ROS_INFO("des_trav_quat_ is %f, %f, %f, %f", des_trav_quat_(0), des_trav_quat_(1), des_trav_quat_(2), des_trav_quat_(3));
     // des_trav_quat_=drone_quat_;
     des_goal_point_ << msg->waypoints[1].position.x, msg->waypoints[1].position.y, msg->waypoints[1].position.z;
     des_goal_quat_ << msg->waypoints[1].orientation.w, msg->waypoints[1].orientation.x, msg->waypoints[1].orientation.y, msg->waypoints[1].orientation.z;
@@ -223,7 +224,7 @@ void LearningAgile::mission_start_cb(const gestelt_msgs::GoalsPtr &msg)
 // inside the traj_server, there will be no individual learning_agile node
 // input: current state, desired goal state, desired traverse point, desired traverse quaternion
 // output: control input
-void LearningAgile::Update()
+void mpcRosWrapper::Update()
 {   
     std::lock_guard<std::mutex> cmd_guard(cmd_mutex_);
     auto start = std::chrono::high_resolution_clock::now();
@@ -268,7 +269,7 @@ void LearningAgile::Update()
     }
 }
 
-void LearningAgile::pred_traj_vis()
+void mpcRosWrapper::pred_traj_vis()
 {
     geometry_msgs::PoseArray pred_traj;
     pred_traj.header.stamp = ros::Time::now();

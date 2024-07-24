@@ -86,8 +86,8 @@ void TrajServer::init(ros::NodeHandle& nh)
   logInfo("Initialized");
 
   // load the mpc class
-  learning_agile_.reset(new LearningAgile());
-  learning_agile_->init(nh);
+  mpc_ros_wrapper_.reset(new mpcRosWrapper());
+  mpc_ros_wrapper_->init(nh);
 }
 
 /* Subscriber Callbacks */
@@ -233,7 +233,7 @@ void TrajServer::execTrajTimerCb(const ros::TimerEvent &e)
     
     case ServerState::MISSION:
       
-      if (learning_agile_->NO_SOLUTION_FLAG_ || !learning_agile_->MISSION_LOADED_FLAG_){
+      if (mpc_ros_wrapper_->NO_SOLUTION_FLAG_ || !mpc_ros_wrapper_->MISSION_LOADED_FLAG_){
       
         logInfoThrottled("Waiting for mission", 5.0);
 
@@ -256,7 +256,7 @@ void TrajServer::execTrajTimerCb(const ros::TimerEvent &e)
         // ROS_INFO("final ServerState::MISSION,mission_vel: %f, %f, %f", last_mission_vel_(0), last_mission_vel_(1), last_mission_vel_(2));
         
         //update MPC and publish the collective thrust and body rates
-        learning_agile_->Update();
+        mpc_ros_wrapper_->Update();
       }
       break;
 

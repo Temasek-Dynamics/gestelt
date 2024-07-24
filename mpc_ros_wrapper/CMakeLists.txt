@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(learning_agile)
+project(mpc_ros_wrapper)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 add_compile_options(-std=c++11 -DACADOS_WITH_QPOASES -DACADOS_WITH_HPIPM )
@@ -47,7 +47,7 @@ catkin_package(
     ${acados_include}/../
     ${solver_code}
     ${catkin_INCLUDE_DIRS}
-    LIBRARIES learning_agile
+    LIBRARIES mpc_ros_wrapper
 #  CATKIN_DEPENDS gestelt_msgs mavros_msgs roscpp std_msgs
 #  DEPENDS system_lib
 )
@@ -94,8 +94,8 @@ add_library(ocp_shared_lib SHARED ${ocp_solver} ${casadi_fun} )
 target_link_libraries(ocp_shared_lib acados qpOASES_e hpipm blasfeo)
 
 add_library(${PROJECT_NAME} SHARED
-            src/learning_agile_node.cpp
-            src/learning_agile.cpp
+            src/mpc_ros_wrapper_node.cpp
+            src/mpc_ros_wrapper.cpp
             )
 target_link_libraries(${PROJECT_NAME} 
                       ${catkin_LIBRARIES}
@@ -112,8 +112,8 @@ target_include_directories(${PROJECT_NAME} PUBLIC include)
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-add_executable(learning_agile_node src/learning_agile_node.cpp
-                                    src/learning_agile.cpp
+add_executable(mpc_ros_wrapper_node src/mpc_ros_wrapper_node.cpp
+                                    src/mpc_ros_wrapper.cpp
                                     )
 
 ## Rename C++ executable without prefix
@@ -130,7 +130,7 @@ add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catk
 target_link_libraries(${PROJECT_NAME}_node
   ${catkin_LIBRARIES}
 )
-target_link_libraries(learning_agile_node
+target_link_libraries(mpc_ros_wrapper_node
   ocp_shared_lib 
 )
 #############
@@ -180,7 +180,7 @@ target_link_libraries(learning_agile_node
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_learning_agile.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_mpc_ros_wrapper.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()
