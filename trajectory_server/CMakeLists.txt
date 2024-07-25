@@ -11,8 +11,8 @@ set(ROS_LIBRARIES
   geometry_msgs
   mavros_msgs
   gestelt_msgs
-  controller_msgs
-  learning_agile
+  # controller_msgs
+  mpc_ros_wrapper
 )
 
 # set(ROS_DEPENDS
@@ -21,13 +21,13 @@ set(ROS_LIBRARIES
 find_package(Eigen3 REQUIRED)
 find_package(catkin REQUIRED COMPONENTS
   ${ROS_LIBRARIES}
-  learning_agile
+  mpc_ros_wrapper
 )
 
 catkin_package(
  INCLUDE_DIRS include
  LIBRARIES trajectory_server
- CATKIN_DEPENDS learning_agile
+ CATKIN_DEPENDS mpc_ros_wrapper
  CATKIN_DEPENDS ${ROS_DEPENDS}
 )
 
@@ -37,7 +37,7 @@ include_directories(
   ${catkin_INCLUDE_DIRS} 
   ${PROJECT_SOURCE_DIR}/include
   ${EIGEN3_INCLUDE_DIR}
-  # ${learning_agile_INCLUDE_DIRS}
+  # ${mpc_ros_wrapper_INCLUDE_DIRS}
 )
 
 add_executable(traj_server_node 

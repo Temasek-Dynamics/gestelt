@@ -601,6 +601,7 @@ class Quadrotor:
         axs[1].plot(x,state_traj[:,7])
         axs[2].plot(x,state_traj[:,8])
         axs[3].plot(x,state_traj[:,9])
+        plt.savefig('./python_sim_result/quaternions.png')
         # plt.show()
     
     def plot_angularrate(self,state_traj,dt = 0.01):
@@ -653,7 +654,7 @@ class Quadrotor:
         plt.title('mpc solving time at the main loop')
         plt.savefig('./python_sim_result/solving_time.png') 
         # plt.show()
-
+               
     def plot_T(self,control_traj,dt = 0.1):
         N = int(len(control_traj[:,0]))
         x = np.arange(0,round(N*dt,1),dt)

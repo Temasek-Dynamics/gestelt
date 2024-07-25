@@ -10,9 +10,21 @@ For simulation and deployment on a physical drone, PX4 is the firmware of choice
 # MPC to do
 - [x] MPC hover test
 - [ ] MPC solver construction code clean
-- [ ] MPC setpoint test
+- [x] MPC setpoint test
 - [ ] NeuroMHE deployment
 - [ ] MPC RL joint training
+# MPC dependencies
+- Before the installation, the cmake should be updated to the latest version. please refer to this [cmake update](https://zhuanlan.zhihu.com/p/513871916).
+- Requirements
+
+  - CasADi: version 3.5.5 Info: https://web.casadi.org/
+  - Numpy: version 1.23.0 Info: https://numpy.org/
+  - Pytorch: version 1.12.0+cu116 Info: https://pytorch.org/
+  - Matplotlib: version 3.3.0 Info:   https://matplotlib.org/
+  - Python: version 3.8.10 Info: https://www.python.org/
+  - ACADOS: version LATEST Info: https://docs.acados.org/
+      Please refer to this [acados doc](https://docs.acados.org/installation/index.html#linux-mac) for detail.
+
 # Installation and Setup for Simulation
 1. Install dependencies
 ```bash
@@ -45,7 +57,8 @@ cd ~/gestelt_ws/PX4-Autopilot
 git checkout v1.13.0
 
 # Copy the custom controller over
-cp -r ~/gestelt_ws/src/gestelt/gestelt_bringup/customized_controller/PositionControl ~/gestelt_ws/PX4-Autopilot/src/modules/mc_pos_control/
+cp -r ~/gestelt_ws/src/gestelt/gestelt_bringup/customized_controller/mc_pos_control ~/gestelt_ws/PX4-Autopilot/src/modules/
+
 
 bash ./Tools/setup/ubuntu.sh 
 
@@ -69,34 +82,8 @@ cp -r ~/gestelt_ws/src/gestelt/gestelt_bringup/simulation/models/raynor ~/gestel
 # [EMERGENCY USE] IF you screw up the PX4 Autopilot build at any point, clean up the build files via the following command:
 make distclean
 ```
-4. ACADOS solver installation on the Radxa
-- Before the installation, the cmake should be updated to the latest version. please refer to this [cmake update](https://zhuanlan.zhihu.com/p/513871916).
-- Requirements
-
-  CasADi: version 3.5.5 Info: https://web.casadi.org/
-  Numpy: version 1.23.0 Info: https://numpy.org/
-  Pytorch: version 1.12.0+cu116 Info: https://pytorch.org/
-  Matplotlib: version 3.3.0 Info:   https://matplotlib.org/
-  Python: version 3.8.10 Info: https://www.python.org/
-  ACADOS: version LATEST Info: https://docs.acados.org/
-    Please refer to this [acados doc](https://docs.acados.org/installation/index.html#linux-mac) for detail.
-
-- Modification to the installation process for the Radxa:
-  - After the MAKE installation
-     - In the `acados/CMakeLists.txt`,the `BLASFEO_TARGET`and the `HPIPM_TARGET` should be set to `ARMV8A_ARM_CORTEX_A53`.
-     - In the `acados/Makefile.rule`, the `BLASFEO_TARGET` should be set to `ARMV8A_ARM_CORTEX_A53` .
-     - In the `acados/Makefile.rule`, the `HPIPM_TARGET` should be set to `GENERIC` .
-     - 
-  - Before `make run_examples_c`
-    -  add `export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:~/acados/lib` to the `~/.bashrc` file.
-    -  add `export ACADOS_SOURCE_DIR=~/acados` to the `~/.bashrc` file. for acados python interface.
-    -  `source ~/.bashrc`
-  -  Install ACADOS [python interface](https://docs.acados.org/python_interface/index.html)
-     -  `tera_renderer` should be installed from source. refer to this [tera_renderer solution](https://discourse.acados.org/t/problems-with-t-renderer/438)
-
-
   
-1. Building the workspace
+4. Building the workspace
 ```bash
 # Assuming your workspace is named as follows
 cd ~/gestelt_ws/
@@ -110,7 +97,13 @@ catkin build -DCMAKE_BUILD_TYPE=Release
 ```
 
 # Quick start
+
 There are 2 scripts you can use to run an example simulation. 
+
+## 0. Config PX4 parameters
+1. download QGroundControl from [here](https://docs.qgroundcontrol.com/master/en/getting_started/download_and_install.html)
+2. load our drone parameters from `~/gestelt_ws/src/gestelt/gestelt_bringup/customized_controller/sim_from_Nuswarm_drone1_final_demo_16April2024.params` to the PX4 firmware.
+3. if the **drone cannot take off**, in the QGroundControl, set `COM_RCL_EXCEPT`=4, choose `OFFBOARD` mode.
 
 ## 1. Run PX4 SITL with Gazebo. 
 The first script runs a simulated PX4 SITL instance with Gazebo, with physics. This should be tested before deployment on an actual drone. It runs the following:
@@ -149,7 +142,20 @@ The second one is a fake drone with no physics and be used to test the architect
 4. Mission commands.
 
 ## 3. For MPC start, please refer to `/docs/MPC explain`
-
+## 4. MPC hardware deployment
+1. ACADOS solver installation on the Radxa
+Modification to the installation process for the **Radxa**:
+  - After the MAKE installation
+     - In the `acados/CMakeLists.txt`,the `BLASFEO_TARGET`and the `HPIPM_TARGET` should be set to `ARMV8A_ARM_CORTEX_A53`.
+     - In the `acados/Makefile.rule`, the `BLASFEO_TARGET` should be set to `ARMV8A_ARM_CORTEX_A53` .
+     - In the `acados/Makefile.rule`, the `HPIPM_TARGET` should be set to `GENERIC` .
+     
+  - Before `make run_examples_c`
+    -  add `export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:~/acados/lib` to the `~/.bashrc` file.
+    -  add `export ACADOS_SOURCE_DIR=~/acados` to the `~/.bashrc` file. for acados python interface.
+    -  `source ~/.bashrc`
+  -  Install ACADOS [python interface](https://docs.acados.org/python_interface/index.html)
+     -  `tera_renderer` should be installed from source. refer to this [tera_renderer solution](https://discourse.acados.org/t/problems-with-t-renderer/438)
 
 
 

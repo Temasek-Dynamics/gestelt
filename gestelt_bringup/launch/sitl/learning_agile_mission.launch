@@ -3,7 +3,7 @@
   <arg name="record" default="false"/>
 
   <rosparam file="$(find gestelt_bringup)/config/learning_agile_mission.yaml" command="load"/>
-  <node pkg="gestelt_bringup" name="mission" type="learning_agile_mission.py" >
+  <node pkg="gestelt_bringup" name="mission" type="learning_agile_mission.py" output="screen">
         <param name="is_simulation" value="True"/>
         
   </node>

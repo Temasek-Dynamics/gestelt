@@ -28,11 +28,11 @@
 #include <visualization_msgs/Marker.h>
 
 
-#include "controller_msgs/FlatTarget.h"
+// #include "controller_msgs/FlatTarget.h"
 #include <geometry_msgs/TwistStamped.h>
 #include <std_srvs/SetBool.h> // for service client
 
-#include <learning_agile/learning_agile.h>
+#include <mpc_ros_wrapper/mpc_ros_wrapper.h>
 
 using namespace Eigen;
 
@@ -106,7 +106,7 @@ private: // Class Methods
   /*
   * @brief Callback for circular trajectory
   */
-  void circularTrajCb(const controller_msgs::FlatTarget::ConstPtr &msg);
+  // void circularTrajCb(const controller_msgs::FlatTarget::ConstPtr &msg);
 
   /**
    * @brief Request for circular trajectory
@@ -394,7 +394,7 @@ private: // Class Methods
     return server_state_;
   }
   
-  LearningAgile::Ptr learning_agile_;
+  mpcRosWrapper::Ptr mpc_ros_wrapper_;
 
 private: // Member variables
   int drone_id_{0}; // ID of drone being commanded by trajectory server instance

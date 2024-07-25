@@ -502,7 +502,9 @@ class OCSys:
 
     def AcadosOcSolver(self, 
                     current_state_control, 
-                    goal_pos,auxvar_value=1, 
+                    goal_pos,
+                    goal_ori,
+                    auxvar_value=1, 
                     costate_option=0,
                     dt=0.1,
                     tra_pos=np.array([0,0,1.5]),
@@ -516,7 +518,7 @@ class OCSys:
         # #---------------------for linear cost---------------------##
         # # #set desired ref state
         desired_goal_vel=np.array([0, 0, 0])
-        desired_goal_ori = np.array([1, 0, 0, 0])
+        desired_goal_ori = np.array(goal_ori)
         # desired_goal_w=np.array([0, 0, 0])
 
         goal_state=np.concatenate((np.array(goal_pos),desired_goal_vel,desired_goal_ori))#,desired_goal_w))

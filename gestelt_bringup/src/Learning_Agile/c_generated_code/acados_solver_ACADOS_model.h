@@ -63,7 +63,7 @@
 #define ACADOS_MODEL_NY0    0
 #define ACADOS_MODEL_NY     0
 #define ACADOS_MODEL_NYN    0
-#define ACADOS_MODEL_N      50
+#define ACADOS_MODEL_N      10
 #define ACADOS_MODEL_NH     0
 #define ACADOS_MODEL_NHN    0
 #define ACADOS_MODEL_NH0    0
