@@ -50,7 +50,7 @@ docker ps -a
 docker start <container_id>
 # Start additional bash sessions in same container
 docker exec -it <container_id> bash
-# Stop all containers
+# Stop all containersa
 docker stop $(docker ps -a -q)
 # Remove all containers
 docker rm $(docker ps -a -q)
@@ -74,7 +74,7 @@ docker container inspect CONTAINER_NAME
 ```bash
 # Pull Images
 docker pull gestelt/learning-agile:latest
-docker run -it --rm --network host --privileged -e "DRONE_ID=$DRONE_ID" gestelt/learning-agile:latest
+docker run -it --rm --network host --privileged -e "MASTER_IP=$MASTER_IP" -e "SELF_IP=$SELF_IP" gestelt/learning-agile:latest
 ```
 
 # Repositories

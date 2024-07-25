@@ -9,7 +9,12 @@ Ubuntu 20.04 images from release [20230301-0102](https://github.com/radxa-build/
 ### Flashing images
 1. Hold maskrom button and plug in USB-C cable to OTG USB-C Port of radxa
 2. Download `radxa-zero2-2pro-erase-emmc.bin` from this [link](https://docs.radxa.com/en/zero/zero2pro/getting-started/download) 
-3. 
+3. Install boot-g12
+```bash
+    sudo apt update
+    sudo apt install python3-pip
+    sudo pip3 install pyamlboot
+```
 4. Run `sudo boot-g12.py radxa-zero2-2pro-erase-emmc.bin` to erase existing image and load radxa v2 pro as a storage device
 5. Follow instructions for balena-etcher from this [link](https://docs.radxa.com/en/zero/zero2pro/getting-started/install-os?Platform=Linux) to load the [latest radxa 2 ubuntu image release e.g. radxa-zero-2pro_ubuntu_jammy_cli_b32.img.xz ](https://github.com/radxa-build/radxa-zero-2pro).
 
@@ -20,8 +25,11 @@ username and password is `radxa`.
 ```bash
 # rsetup is used to activate GPIO pins
 rsetup
-# Restart to update GPIO settings
-sudo nano /etc/kernel/cmdline && sudo u-boot-update 
+# IMPORTANT NOTE: USE SPACE BAR to set the pin as activated
+
+# Reboot to update the GPIO pins
+reboot
+
 ```
 [Radxa Zero2 GPIO](https://wiki.radxa.com/Zero2/Hardware/GPIO)
 

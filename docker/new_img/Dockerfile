@@ -44,6 +44,9 @@ RUN git clone --recursive https://github.com/acados/acados.git \
 
 # Install tera_renderer (dependency of ACADOS) 
 WORKDIR /root/
+RUN apt-get update && apt-get install --no-install-recommends -y \
+    cargo \
+    && rm -rf /var/lib/apt/lists/*
 RUN git clone https://github.com/acados/tera_renderer.git \
     && cd tera_renderer \
     && cargo build --verbose --release \
