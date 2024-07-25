@@ -354,20 +354,16 @@ bool AStarPlanner::generatePlanVoronoi(const Eigen::Vector3d& start_pos_3d, cons
     open_list_v_.put(start_node, 0); // start_node has 0 f cost
 
     int num_iter = 0;
-
     std::vector<Eigen::Vector3i> neighbours; // 3d indices of neighbors
-
     std::unordered_set<IntPoint> marked_bbl_cells_; // Cells that are marked as part of the voronoi bubble
-
-    std::cout << "Before start of loop " << std::endl;
 
     while (!open_list_v_.empty() && num_iter < astar_params_.max_iterations)
     {
-        if (num_iter%10 == 1){
-            // std::cout << "[a_star] Iteration " << num_iter << std::endl;
-
-            // publishClosedList(getClosedListVoronoi(), closed_list_viz_pub_);
-        }
+        // if (num_iter%100 == 1){
+        //     std::cout << "[a_star] Iteration " << num_iter << std::endl;
+        //     publishClosedList(getClosedListVoronoi(), closed_list_viz_pub_, "local_map_origin");
+        //     // ros::Duration(0.1).sleep();
+        // }
 
         VCell cur_node = open_list_v_.get();
         closed_list_v_.insert(cur_node);
@@ -468,7 +464,7 @@ std::vector<Eigen::Vector3d> AStarPlanner::getClosedListVoronoi()
 
         dyn_voro_arr_[(*itr).z_cm]->idxToPos(grid_pos, map_pos);
 
-        closed_list_pos.push_back(Eigen::Vector3d{map_pos.x, map_pos.y, (*itr).z});
+        closed_list_pos.push_back(Eigen::Vector3d{map_pos.x, map_pos.y, (*itr).z_m});
     }
 
     return closed_list_pos;
@@ -532,6 +528,6 @@ void AStarPlanner::tracePathVoronoi(VCell final_node)
         IntPoint grid_pos(cell.x, cell.y);
         dyn_voro_arr_[cell.z_cm]->idxToPos(grid_pos, map_pos);
 
-        path_pos_.push_back(Eigen::Vector3d{map_pos.x, map_pos.y, cell.z});
+        path_pos_.push_back(Eigen::Vector3d{map_pos.x, map_pos.y, cell.z_m});
     }
 }

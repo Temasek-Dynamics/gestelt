@@ -12,9 +12,6 @@ using namespace Eigen;
 constexpr double infinity = std::numeric_limits<float>::infinity();
 constexpr double epsilon = std::numeric_limits<double>::epsilon();
 
-struct OccNode; //forward declration
-typedef std::shared_ptr<OccNode> OccNodePtr;
-
 #define SQRT2 1.4142135623
 
 enum CellState
@@ -22,127 +19,6 @@ enum CellState
   OPEN = 1,
   CLOSED = 2,
   UNDEFINED = 3
-};
-
-struct OccNode
-{
-  OccNode(const size_t& x, const size_t& y, const size_t& z)
-  {
-    this->idx = Eigen::Vector3i{x, y, z};
-  }
-
-  OccNode(const Eigen::Vector3i& idx)
-  {
-    this->idx = idx;
-  }
-
-	Eigen::Vector3i idx;
-	double g_cost{infinity}, f_cost{infinity};
-	std::shared_ptr<OccNode> parent{nullptr};
-  CellState state{CellState::UNDEFINED};
-
-  // Equality
-  bool operator==(const OccNode& node) const
-  {
-    if (this->idx(0) == node.idx(0) 
-      && this->idx(1) == node.idx(1)
-      && this->idx(2) == node.idx(2)){
-      return true;
-    } 
-    return false;
-  }
-
-  // Hash generation
-  struct ObjHash
-  {
-    size_t operator()(OccNode& node) const
-    {
-      // return (node.idx(0) * 7927 + node.idx(1)) * 7993 + node.idx(2);
-      // Cantor pairing function
-      size_t H_a_b = 0.5 * (node.idx(0) + node.idx(1))*(node.idx(0) + node.idx(1) + 1) + node.idx(1);
-      return 0.5 * (H_a_b + node.idx(2))*(H_a_b + node.idx(2) + 1) + node.idx(2);
-    }
-  };
-
-  // Equality between pointers
-  struct PointedObjEq {
-    bool operator () ( OccNodePtr l_node, OccNodePtr r_node) const {
-      return *l_node == *r_node;
-    }
-  };
-
-  // Hash generation for pointers
-  struct PointedObjHash
-  {
-    size_t operator()(const OccNodePtr& node) const
-    {
-      // https://stackoverflow.com/questions/1358468/how-to-create-unique-integer-number-from-3-different-integers-numbers1-oracle-l
-      // https://stackoverflow.com/questions/38965931/hash-function-for-3-integers
-      // return (node->idx(0) * 7927 + node->idx(1)) * 7993 + node->idx(2);
-
-      // Cantor pairing function
-      size_t H_a_b = 0.5 * (node->idx(0) + node->idx(1))*(node->idx(0) + node->idx(1) + 1) + node->idx(1);
-      return 0.5 * (H_a_b + node->idx(2))*(H_a_b + node->idx(2) + 1) + node->idx(2);
-    }
-  };
-
-  // Comparison operator between pointers
-  struct CompareCostPtr
-  {
-    bool operator()(const OccNodePtr& l_node, const OccNodePtr& r_node)
-    {
-      return l_node->f_cost > r_node->f_cost;
-    }
-  };
-
-};
-
-class OccMap {
-public:
-  OccMap(size_t sz_x, size_t sz_y, size_t sz_z)
-    : sz_x_(sz_x), sz_y_(sz_y_), sz_z_(sz_z_)
-  {
-    data_.resize(sz_x * sz_y * sz_z);
-
-    // for (size_t x = 0; x < sz_x; x++){
-    //   for (size_t y = 0; y < sz_y; y++){
-    //     for (size_t z = 0; z < sz_z; z++){
-
-    //       data_.at((z * sz_y * sz_x) + (y * sz_x) + x) = std::make_shared<OccNode>(x, y, z);
-    //       // data_.at(x * sz_y_ * sz_z_ + y * sz_z_ + z)->setIdx(x,y,z);
-    //     }
-    //   }
-    // }
-
-  }
-
-  // Access node of occupancy map at (x,y,z)
-  std::shared_ptr<OccNode>& operator()(const Eigen::Vector3i& idx) {
-    return data_.at( (idx(2) * sz_y_ * sz_x_) + (idx(1) * sz_x_) + idx(0));
-  }
-
-  // Access node of occupancy map at (x,y,z)
-  std::shared_ptr<OccNode>& operator()(size_t x, size_t y, size_t z) {
-    return data_.at( (z * sz_y_ * sz_x_) + (y * sz_x_) + x);
-  }
-
-  // Access const node of occupancy map at (x,y,z)
-  std::shared_ptr<OccNode> const& operator()(const Eigen::Vector3i& idx) const {
-    return data_.at( (idx(2) * sz_y_ * sz_x_) + (idx(1) * sz_x_) + idx(0));
-  }
-
-  // Access const node of occupancy map at (x,y,z)
-  std::shared_ptr<OccNode> const& operator()(size_t x, size_t y, size_t z) const {
-    return data_.at( (z * sz_y_ * sz_x_) + (y * sz_x_) + x);
-  }
-
-  size_t getSize() const {
-    return data_.size();
-  }
-
-private:
-  size_t sz_x_, sz_y_, sz_z_; // Size of Occupancy Map
-  std::vector<std::shared_ptr<OccNode>> data_; // Contiguous vector of occupancy nodes
 };
 
 template<typename T, typename priority_t>
@@ -234,7 +110,8 @@ struct VCell {
   VCell(const int& x, const int& y, const int& z_cm)
     : x(x), y(y), z_cm(z_cm)
   {
-    z = z_cm/100;
+    z_m = ((double)z_cm)/100.0;
+    z = (int)(z_m/0.05); // 0.05 is the resolution
   }
 
   // Equality
@@ -243,8 +120,8 @@ struct VCell {
     return (this->x == pos.x && this->y == pos.y && this->z_cm == pos.z_cm);
   }
 
-  int x, y;
-  int z; // [THIS IS NOT THE INDEX] z in meters
+  int x, y, z;
+  double z_m; // [THIS IS NOT THE INDEX] z in meters
   int z_cm; // [THIS IS NOT THE INDEX] z in centimeters
 }; // struct VCell
 
@@ -255,7 +132,7 @@ struct std::hash<VCell> {
   std::size_t operator()(const VCell& pos) const noexcept {
     // NOTE: better to use something like boost hash_combine
     size_t H_x_y = 0.5 * (pos.x + pos.y)*(pos.x + pos.y + 1) + pos.y;
-    return 0.5 * (H_x_y + pos.z_cm)*(H_x_y + pos.z_cm + 1) + pos.z_cm;
+    return 0.5 * (H_x_y + pos.z)*(H_x_y + pos.z + 1) + pos.z;
   }
 };
 
@@ -305,31 +182,6 @@ public:
 
   }
 
-  // /**
-  //  * @brief Get the Neighbors Idx object
-  //  * 
-  //  * @param cur_node 
-  //  * @param neighbors 
-  //  * @param nb_8con_idxs Index of 8 con neighbor lookup
-  //  */
-  // void getNeighbors(OccNodePtr cur_node, std::vector<OccNodePtr>& neighbors, std::vector<int>& nb_8con_idxs){
-  //   neighbors.clear();
-  //   nb_8con_idxs.clear();
-
-  //   for (int i = 0; i < nb_idx_8con_.rows(); i++){
-  //     Eigen::Vector3i nb_3d_idx = cur_node->idx + nb_idx_8con_.row(i).transpose();
-  //                                 // + Eigen::Vector3i{nb_idx_8con_.row(i)(0), nb_idx_8con_.row(i)(1), nb_idx_8con_.row(i)(2)};
-
-  //     if (getOccupancy(nb_3d_idx)){
-  //       // Skip if current index is occupied
-  //       continue;
-  //     }
-
-  //     neighbors.push_back(std::make_shared<OccNode>(nb_3d_idx));
-  //     nb_8con_idxs.push_back(i);
-  //   }
-
-  // }
 
   void getNeighbours(const PosIdx& cur_node, std::vector<PosIdx>& neighbours) {
 

@@ -284,9 +284,9 @@ float DynamicVoronoi::getDistance( int x, int y ) {
   else return -INFINITY;
 }
 
-bool DynamicVoronoi::getVoronoiVertices(std::vector<Eigen::Vector3d>& voronoi_vertices)
+std::vector<Eigen::Vector3d> DynamicVoronoi::getVoronoiVertices()
 {
-  voronoi_vertices.clear();
+  std::vector<Eigen::Vector3d> voronoi_vertices;
   if (data){  
     for (int x=0; x<sizeX; x++) {
       for (int y=0; y<sizeY; y++) {
@@ -297,7 +297,7 @@ bool DynamicVoronoi::getVoronoiVertices(std::vector<Eigen::Vector3d>& voronoi_ve
     }
   }
 
-  return false;
+  return voronoi_vertices;
 }
 
 bool DynamicVoronoi::isVoronoiVertex(int x, int y) {

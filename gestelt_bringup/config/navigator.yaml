@@ -127,7 +127,7 @@ grid_map:
     size_x: 15.0
     size_y: 15.0
     size_z: 5.0
-    update_frequency: 30.0
+    update_frequency: 15.0
     viz_frequency: 10.0
     # build_kdtree_frequency: 30.0
 

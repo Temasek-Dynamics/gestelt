@@ -160,6 +160,4 @@ typedef IterativeDMPlanner<2> IterativeDMPlanner2D;
 /// Iterative Planner for 3D VoxelMap
 typedef IterativeDMPlanner<3> IterativeDMPlanner3D;
 
-
-
 #endif

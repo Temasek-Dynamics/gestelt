@@ -186,17 +186,11 @@ private:
   // class for commonly used helper functions 
   std::unique_ptr<PlannerCommon> common_; 
 
-  // Priority queue: open list stores nodes yet to be visited
-  // std::priority_queue<OccNodePtr, std::vector<OccNodePtr>, OccNode::CompareCostPtr> open_list_; 
-  // Hashmap: closed list stores nodes that have been visited
-  // std::unordered_set<OccNodePtr, OccNode::PointedObjHash, OccNode::PointedObjEq> closed_list_;
-
   std::unordered_map<PosIdx, double> g_cost_; 
   std::unordered_map<PosIdx, PosIdx> came_from_;
   PriorityQueue<PosIdx, double> open_list_; // Min priority queue 
   std::unordered_set<PosIdx> closed_list_; // All closed nodes
 
-  std::unique_ptr<OccMap> occ_map_;            // 3D occupancy grid map object
   std::map<int, std::shared_ptr<DynamicVoronoi>> dyn_voro_arr_; // array of voronoi objects with key of height (cm)
 
   // Voronoi search data structures

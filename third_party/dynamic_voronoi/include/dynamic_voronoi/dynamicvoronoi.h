@@ -52,11 +52,11 @@ public:
   void initializeMap(int _sizeX, int _sizeY, std::shared_ptr<std::vector<std::vector<bool>>> _gridMap) ;
 
   //! add an obstacle at the specified cell coordinate
-  void occupyCell(int x, int y) ;
+  void occupyCell(int x, int y);
   //! remove an obstacle at the specified cell coordinate
-  void clearCell(int x, int y) ;
+  void clearCell(int x, int y);
   //! remove old dynamic obstacles and add the new ones
-  void exchangeObstacles(std::vector<INTPOINT>& newObstacles) ;
+  void exchangeObstacles(std::vector<INTPOINT>& newObstacles);
 
   //! update distance map and Voronoi diagram to reflect the changes
   void update(bool updateRealDist=true) ;
@@ -70,7 +70,7 @@ public:
   };
 
   // Get all voronoi vertices (voronoi cells that have at least 3 voronoi neighbours)
-  bool getVoronoiVertices(std::vector<Eigen::Vector3d>& voronoi_vertices);
+  std::vector<Eigen::Vector3d> getVoronoiVertices();
 
   //! retrieve the number of neighbors that are Voronoi cells (4-connected)
   int getNumVoronoiNeighbors(int x, int y);
@@ -228,9 +228,7 @@ private:
 
   int origin_z_cm_;  // in units of cm
 
-
-
-};
+}; // end class DynamicVoronoi
 
 
 #endif

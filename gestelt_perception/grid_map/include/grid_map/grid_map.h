@@ -405,6 +405,54 @@ public:
     return !nb_points.empty();
   }
 
+
+
+  /**
+   * @brief Get the Nearest Occupied Cell  
+   * 
+   * @param pos (x,y,z) position to be queried
+   * @param occ_nearest position of nearest occupied cell
+   * @param dist_to_nearest_nb distance to nearest obstacle
+   * @return true 
+   * @return false 
+   */
+  bool getNearestOccupiedCellLocal(const Eigen::Vector3d &pos, 
+                                  Eigen::Vector3d& occ_nearest, double& dist_to_nearest_nb){
+    int nearest_num_nb = 1;
+    pcl::PointXYZ search_point(pos(0), pos(1), pos(2));
+    std::vector<pcl::PointXYZ, Eigen::aligned_allocator<pcl::PointXYZ>> nb_points;
+    std::vector<float> nb_radius_vec;
+
+    lcl_map_kdtree_->Nearest_Search(search_point, nearest_num_nb, nb_points, nb_radius_vec);
+
+    if (nb_points.empty()){
+      return false;
+    }
+
+    dist_to_nearest_nb = sqrt(nb_radius_vec[0]);
+
+    occ_nearest = Eigen::Vector3d{nb_points[0].x, nb_points[0].y, nb_points[0].z};
+
+    return true;
+  }
+
+  /**
+   * @brief Check if position is within a radius of an obstacle
+   * 
+   * @param pos 
+   * @param radius 
+   * @return true 
+   * @return false 
+   */
+  bool withinObsRadiusLocal(const Eigen::Vector3d &pos, const double& radius){
+    pcl::PointXYZ search_point(pos(0), pos(1), pos(2));
+    std::vector<pcl::PointXYZ, Eigen::aligned_allocator<pcl::PointXYZ>> nb_points;
+    lcl_map_kdtree_->Radius_Search(search_point, radius, nb_points);
+
+    return !nb_points.empty();
+  }
+
+
   // Check if current index is free
   bool isFree(const Eigen::Vector3i& idx) {
     return !isOccupied(idx);
@@ -592,6 +640,7 @@ private:
   std::unique_ptr<BonxaiT> bonxai_map_; // Bonxai data structure 
   
   std::shared_ptr<KD_TREE<pcl::PointXYZ>> kdtree_; // KD-Tree 
+  std::shared_ptr<KD_TREE<pcl::PointXYZ>> lcl_map_kdtree_; // Local map KD-Tree 
 
   std::vector<int8_t> local_map_data_; // 1D array used by path planners for collision checking
 
@@ -607,6 +656,10 @@ private:
   /* Stopwatch for profiling performance */
   Timer tm_bonxai_insert_{"bonxai->insertPointCloud"};
   Timer tm_kdtree_build_{"kdtree_->Build"};
+
+  Timer tm_lcl_map_kdtree_build_{"local_map_kdtree_->Build"};
+
+  Timer tm_slice_map_{"grid_map.sliceMap"};
 
 }; // class GridMap
 

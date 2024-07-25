@@ -168,6 +168,7 @@ void GridMap::reset(const double& resolution){
   // Set up kdtree for generating safe flight corridors
   // KD_TREE(float delete_param = 0.5, float balance_param = 0.6 , float box_length = 0.2);
   kdtree_ = std::make_shared<KD_TREE<pcl::PointXYZ>>(0.5, 0.6, 0.1);
+  lcl_map_kdtree_ = std::make_shared<KD_TREE<pcl::PointXYZ>>(0.5, 0.6, 0.1);
 
   local_occ_map_pts_.reset(new pcl::PointCloud<pcl::PointXYZ>());
   global_map_in_origin_.reset(new pcl::PointCloud<pcl::PointXYZ>());
@@ -217,20 +218,19 @@ void GridMap::updateLocalMapTimerCB(const ros::TimerEvent & /*event*/)
 {
   updateLocalMap();
 
+  // Create horizontal map slices
+  tm_slice_map_.start();
+
   double z_separation_m = 0.25; // z separation of horizontal planes in meters
   int z_separation_cm = 25;     // z separation of horizontal planes in centi-meters
   double max_height = 3.0;    
-  double min_height = 0.0;    
 
   gestelt_msgs::BoolMapArray bool_map_arr_msg;
   bool_map_arr_msg.z_separation_m = z_separation_m;
   bool_map_arr_msg.z_separation_cm = z_separation_cm;
 
   bool_map_arr_msg.max_height_m = max_height;
-  bool_map_arr_msg.min_height_m = min_height;
-
-  bool_map_arr_msg.max_height_cm = (int) max_height * 100;
-  bool_map_arr_msg.min_height_cm = (int) min_height * 100;
+  bool_map_arr_msg.max_height_cm = (int) (max_height * 100);
 
   bool_map_arr_msg.origin.x = mp_.local_map_origin_(0);
   bool_map_arr_msg.origin.y = mp_.local_map_origin_(1);
@@ -239,12 +239,14 @@ void GridMap::updateLocalMapTimerCB(const ros::TimerEvent & /*event*/)
   bool_map_arr_msg.width = mp_.local_map_num_voxels_(0);
   bool_map_arr_msg.height = mp_.local_map_num_voxels_(1);
 
-  for (int i = 0; i * z_separation_m < max_height; i++ ){
-    bool_map_arr_msg.bool_maps.push_back( sliceMap(i * z_separation_m) );
+  for (double z_m = 0; z_m < max_height; z_m += z_separation_m){
+    bool_map_arr_msg.bool_maps.push_back( sliceMap(z_m) );
   }
 
   bool_map_arr_pub_.publish(bool_map_arr_msg);
   
+  tm_slice_map_.stop(false);
+
   // Send transform from map to local map origin
   geometry_msgs::TransformStamped map_to_local_origin_tf;
 
@@ -270,8 +272,8 @@ gestelt_msgs::BoolMap GridMap::sliceMap(const double& slice_z) {
 
   bool_map_msg.header.stamp = ros::Time::now();
 
-  bool_map_msg.z_m = slice_z;
-  bool_map_msg.z_cm = (int) slice_z * 100;
+  bool_map_msg.z = slice_z;
+  bool_map_msg.z_cm = (int)(slice_z * 100);
 
   bool_map_msg.map.resize(mp_.local_map_num_voxels_(0) * mp_.local_map_num_voxels_(1), false);
   
@@ -286,15 +288,16 @@ gestelt_msgs::BoolMap GridMap::sliceMap(const double& slice_z) {
 
   // Iterate through each occupied point
   for (const auto& pt : *pcd_layer){
-    double map_x = (pt.x )/getRes();
+    double map_x = (pt.x)/getRes();
     double map_y = (pt.y)/getRes();
 
+    // inflate map
     for(int x = map_x - mp_.inf_num_voxels_; x <= map_x + mp_.inf_num_voxels_; x++)
     {
       for(int y = map_y - mp_.inf_num_voxels_; y <= map_y + mp_.inf_num_voxels_; y++)
       {
-        // Convert from map coordinates to 1-D index
-        int idx = x  + y * mp_.local_map_num_voxels_(0);
+        // Convert from local map coordinates to 1-D index
+        int idx = x + y * mp_.local_map_num_voxels_(0);
 
         if (idx < 0 || idx >= bool_map_msg.map.size()){
           continue;
@@ -414,12 +417,12 @@ void GridMap::updateLocalMap(){
     md_.body2origin_.block<3,1>(0,3)(1) + (mp_.local_map_size_(1) / 2.0), 
     mp_.ground_height_ + mp_.local_map_size_(2) );
 
-  // In voxel space, everything is relative to the mp_.local_map_origin_
-  // local_map_data_: relative to local_map_origin_
-  local_map_data_.clear();
-  local_map_data_.resize( mp_.local_map_num_voxels_(0) 
-                          * mp_.local_map_num_voxels_(1) 
-                          * mp_.local_map_num_voxels_(2), 0);
+  // // In voxel space, everything is relative to the mp_.local_map_origin_
+  // // local_map_data_: relative to local_map_origin_
+  // local_map_data_.clear();
+  // local_map_data_.resize( mp_.local_map_num_voxels_(0) 
+  //                         * mp_.local_map_num_voxels_(1) 
+  //                         * mp_.local_map_num_voxels_(2), 0);
   
   // Get all occupied coordinates 
   std::vector<Bonxai::CoordT> occ_coords;
@@ -457,45 +460,40 @@ void GridMap::updateLocalMap(){
     
     local_occ_map_pts_->push_back(pcl::PointXYZ(obs_lcl_pos(0), obs_lcl_pos(1), obs_lcl_pos(2)));
 
-    // local_occ_map_pts_->push_back(pcl::PointXYZ(obs_gbl_pos(0), obs_gbl_pos(1), obs_gbl_pos(2)));
-
     // Convert to voxel index. This is relative to mp_.local_map_origin_
-    Eigen::Vector3i vox_idx_3d = ((obs_gbl_pos - getLocalOrigin()) / getRes() - Eigen::Vector3d::Constant(0.5) ).cast<int>() ; 
-
-    // Inflate voxel by inflation distance
-    for(int x = vox_idx_3d(0) - mp_.inf_num_voxels_; x <= vox_idx_3d(0) + mp_.inf_num_voxels_; x++)
-    {
-      for(int y = vox_idx_3d(1) - mp_.inf_num_voxels_; y <= vox_idx_3d(1) + mp_.inf_num_voxels_; y++)
-      {
-        for(int z = vox_idx_3d(2) - mp_.inf_num_voxels_; z <= vox_idx_3d(2) + mp_.inf_num_voxels_; z++)
-        {
-          size_t vox_idx_1d =   x
-                              + y * mp_.local_map_num_voxels_(0) 
-                              + z * mp_.local_map_num_voxels_(0) * mp_.local_map_num_voxels_(1);
-
-          if (vox_idx_1d >= local_map_data_.size() || vox_idx_1d < 0) {
-            continue; // Exceeded map size
-          }
-
-          // Assign as occupied voxel
-          local_map_data_[vox_idx_1d] = 100;
-        }
-      }
-    }
+    // Eigen::Vector3i vox_idx_3d = ((obs_gbl_pos - getLocalOrigin()) / getRes() - Eigen::Vector3d::Constant(0.5) ).cast<int>() ; 
+    // // Inflate voxel by inflation distance
+    // for(int x = vox_idx_3d(0) - mp_.inf_num_voxels_; x <= vox_idx_3d(0) + mp_.inf_num_voxels_; x++)
+    // {
+    //   for(int y = vox_idx_3d(1) - mp_.inf_num_voxels_; y <= vox_idx_3d(1) + mp_.inf_num_voxels_; y++)
+    //   {
+    //     for(int z = vox_idx_3d(2) - mp_.inf_num_voxels_; z <= vox_idx_3d(2) + mp_.inf_num_voxels_; z++)
+    //     {
+    //       size_t vox_idx_1d =   x
+    //                           + y * mp_.local_map_num_voxels_(0) 
+    //                           + z * mp_.local_map_num_voxels_(0) * mp_.local_map_num_voxels_(1);
+    //       if (vox_idx_1d >= local_map_data_.size() || vox_idx_1d < 0) {
+    //         continue; // Exceeded map size
+    //       }
+    //       // Assign as occupied voxel
+    //       local_map_data_[vox_idx_1d] = 100;
+    //     }
+    //   }
+    // }
 
   }
 
-  // tm_kdtree_build_.start();
-  // kdtree_->Build(local_occ_map_pts_->points);
-  // tm_kdtree_build_.stop(false);
-
-  publishLocalMapBounds();
+  // build kdtree for local map
+  tm_lcl_map_kdtree_build_.start();
+  lcl_map_kdtree_->Build(local_occ_map_pts_->points);
+  tm_lcl_map_kdtree_build_.stop(false);
 
   local_occ_map_pts_->width = local_occ_map_pts_->points.size();
   local_occ_map_pts_->height = 1;
   local_occ_map_pts_->is_dense = true; 
 
-  publishOccMap(local_occ_map_pts_);
+  publishOccMap(local_occ_map_pts_); // publish point cloud within local map
+  publishLocalMapBounds(); // publish boundaries of local map volume
 }
 
 void GridMap::getCamToGlobalPose(const geometry_msgs::Pose &pose)
@@ -552,9 +550,9 @@ void GridMap::pcdToMap(pcl::PointCloud<pcl::PointXYZ>::Ptr pcd)
   bonxai_map_->insertPointCloud(global_map_in_origin_->points, sensor_origin, mp_.max_range);
   // tm_bonxai_insert_.stop(false);
 
-  if (dbg_input_entire_map_){
-    kdtree_->Build((*global_map_in_origin_).points);
-  }
+  // if (dbg_input_entire_map_){
+  //   kdtree_->Build((*global_map_in_origin_).points);
+  // }
 
 }
 
