@@ -24,6 +24,8 @@ public:
     bool print_timers{false};
     bool planner_verbose{false};
 
+    double eps{1.0}; // Weight on heuristic
+
     bool use_dmp{false}; // True if using DMP
     bool interpolate{true}; // True if interpolating JPS
 

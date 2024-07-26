@@ -143,6 +143,7 @@ void Navigator::initParams(ros::NodeHandle &nh, ros::NodeHandle &pnh)
     pnh.param("front_end/jps/print_timers",         jps_params_.print_timers, false);
     pnh.param("front_end/jps/interpolate",          jps_params_.interpolate, false);
     pnh.param("front_end/jps/use_dmp",              jps_params_.use_dmp, false);
+    pnh.param("front_end/jps/eps",              jps_params_.eps, 1.0);
     
     pnh.param("front_end/jps/dmp_search_radius",    jps_params_.dmp_search_rad, 0.5);
     pnh.param("front_end/jps/dmp_potential_radius", jps_params_.dmp_pot_rad, 1.0);
@@ -313,6 +314,7 @@ void Navigator::planFrontEndTimerCB(const ros::TimerEvent &e)
 
   if (back_end_type_ == BackEndType::EGO){
     rhp_goal_pos_ = waypoints_.nextWP();
+
     requestBackEndPlan(rhp_goal_pos_, Eigen::Vector3d::Zero(), Eigen::Vector3d::Zero());
     return;
   }
@@ -329,20 +331,23 @@ void Navigator::planFrontEndTimerCB(const ros::TimerEvent &e)
     start_acc.setZero();
   }
 
-  // // Get Receding Horizon Planning goal 
-  // if (!getRHPGoal(waypoints_.nextWP(), start_pos, rhp_dist_, rhp_goal_pos_)){
-  //   logError("Failed to get RHP goal");
-  //   return;
-  // }
+  if (back_end_type_ == BackEndType::POLY){
+    // Plan global naive trajectory using front-end path
+    std::vector<Eigen::Vector3d> one_pt_wps;
+    one_pt_wps.push_back(waypoints_.nextWP()); 
+    planGlobalTrajWaypoints(start_pos, start_vel, start_acc,
+                            one_pt_wps, Eigen::Vector3d::Zero(), Eigen::Vector3d::Zero());
 
-  // Plan global naive trajectory using front-end path
-  std::vector<Eigen::Vector3d> one_pt_wps;
-  one_pt_wps.push_back(waypoints_.nextWP()); 
-  planGlobalTrajWaypoints(start_pos, start_vel, start_acc,
-                          one_pt_wps, Eigen::Vector3d::Zero(), Eigen::Vector3d::Zero());
-
-  // Get RHP goal using global naive trajectory
-  getRHPGoal(waypoints_.nextWP(), start_pos, rhp_dist_, rhp_goal_pos_, rhp_goal_vel_);
+    // Get RHP goal using global naive trajectory
+    getRHPGoal(waypoints_.nextWP(), start_pos, rhp_dist_, rhp_goal_pos_, rhp_goal_vel_);
+  }
+  else {
+    // Get Receding Horizon Planning goal 
+    if (!getRHPGoal(waypoints_.nextWP(), start_pos, rhp_dist_, rhp_goal_pos_)){
+      logError("Failed to get RHP goal");
+      return;
+    }
+  }
 
   // Display receding horizion goal point
   visualization_->displayGoalPoint(rhp_goal_pos_, Eigen::Vector4d(0, 0.5, 0.5, 1), 0.3, 0);
@@ -481,7 +486,8 @@ bool Navigator::generateFrontEndPlan(
 
   tm_front_end_plan_.stop(verbose_planning_);
 
-  front_end_path_ = front_end_planner_->getPathPosRaw();
+  front_end_path_ = front_end_planner_->getPathPos();
+  // front_end_path_ = front_end_planner_->getPathPosRaw();
   // std::vector<Eigen::Vector3d> dmp_search_region = front_end_planner_->getDMPSearchRegion();
   // std::vector<Eigen::Vector3d> closed_list = front_end_planner_->getClosedList();
 
@@ -543,12 +549,13 @@ bool Navigator::requestBackEndPlan(
     return false;
   }
 
-  // Check 2: if safe flight corridor trajectory exists
-  if (sfc_type_ == SFCType::SPHERICAL && ssfc_ == nullptr)
+  // Check 2 (FOR spherical SFC only): if safe flight corridor trajectory exists
+  if (back_end_type_ == BackEndType::POLY 
+      && sfc_type_ == SFCType::SPHERICAL 
+      && ssfc_ == nullptr)
   {
     return false;
   }
-
 
   bool plan_success = false;      // Indicates if back-end optimization is successful
   bool valid_mjo = false;         // Indicates if there is a valid MJO returned from the back-ends
@@ -1032,6 +1039,7 @@ bool Navigator::EGOOptimize(const Eigen::Matrix3d& startPVA,
       local_target_pos, local_target_vel, 
       init_new_poly_traj_, flag_randomPolyTraj, 
       touch_goal_);
+
 
   init_new_poly_traj_ = !plan_success;
   mjo_opt = ego_optimizer_->ploy_traj_opt_->getOptimizedMJO_EGO();

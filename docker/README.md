@@ -20,23 +20,22 @@ docker run hello-world
 
 ## Building and Pushing images to Docker Hub repository
 ```bash
-docker build -t johntgz95/radxa-gestelt:latest .
+docker build -t gestelt/sfc:latest .
 
 # Tag image
 docker tag ORIGINAL_TAG NEW_TAG
-docker push johntgz95/radxa-gestelt:latest
+docker push gestelt/sfc:latest
 
 # All-in-one build and push
-docker build --platform linux/arm64 -t johntgz95/radxa-base:latest --push .
-docker build --platform linux/arm64 -t johntgz95/radxa-gestelt:latest --push .
+docker build --platform linux/arm64 -t gestelt/sfc:latest --push .
 ```
 
 ## Running containers
 ```bash
 # To use host USB devices, add "--privileged" flag or "--device=/dev/ttyAML1"
-docker run -it --rm --network host --privileged -e "DRONE_ID=1" johntgz95/radxa-gestelt:latest
+docker run -it --rm --network host --privileged -e "DRONE_ID=0" gestelt/sfc:latest
 
-docker run -it --network host --privileged johntgz95/radxa-gestelt:latest
+docker run -it --network host --privileged gestelt/sfc:latest
 
 # Find name of new machine 
 docker ps -l
@@ -58,9 +57,9 @@ docker rm $(docker ps -a -q)
 # List all docker containers
 docker ps -a
 # Commit changes
-docker commit CONTAINER_NAME johntgz95/radxa-gestelt:latest
+docker commit CONTAINER_NAME gestelt/sfc:latest
 # push 
-docker push johntgz95/radxa-gestelt:latest
+docker push gestelt/sfc:latest
 # Inspect the container
 docker container inspect CONTAINER_NAME
 ```
@@ -70,12 +69,12 @@ docker container inspect CONTAINER_NAME
 ## Commands
 ```bash
 # Pull Images
-docker pull johntgz95/radxa-gestelt:latest
-docker run -it --rm --network host --privileged -e "DRONE_ID=$DRONE_ID" johntgz95/radxa-gestelt:latest
+docker pull gestelt/sfc:latest
+docker run -it --rm --network host --privileged -e "DRONE_ID=$DRONE_ID" gestelt/sfc:latest
 ```
 
 # Repositories
-[Radxa-base](https://hub.docker.com/repository/docker/johntgz95/radxa-base/general)
+[gestelt/sfc](https://hub.docker.com/r/gestelt/sfc)
 
 # Resources
 [Uploading an image to a Docker Hub repo](https://docs.docker.com/guides/workshop/04_sharing_app/).

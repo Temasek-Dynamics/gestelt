@@ -8,8 +8,8 @@ Panels:
         - /Axes1
         - /TF1/Frames1
         - /d0/planner(Red)1
+        - /d0/planner(Red)1/front-end1
         - /d0/planner(Red)1/back_end1/ego_planner1
-        - /d0/planner(Red)1/perception1
         - /d1/planner(orange)1
         - /d1/planner(orange)1/odom1/Shape1
         - /d2/planner(yellow)1
@@ -282,7 +282,7 @@ Visualization Manager:
           Marker Topic: /drone1/grid_map/collision_viz
           Name: drone1/collision_viz
           Namespaces:
-            collision_viz: true
+            {}
           Queue Size: 100
           Value: true
         - Class: rviz/Marker
@@ -290,7 +290,7 @@ Visualization Manager:
           Marker Topic: /drone2/grid_map/collision_viz
           Name: drone2/collision_viz
           Namespaces:
-            collision_viz: true
+            {}
           Queue Size: 100
           Value: true
         - Class: rviz/Marker
@@ -370,7 +370,7 @@ Visualization Manager:
           Marker Topic: /swarm_collision_checker/collision
           Name: swarm_collision_checker
           Namespaces:
-            swarm_collision: true
+            {}
           Queue Size: 100
           Value: true
       Enabled: true
@@ -449,19 +449,19 @@ Visualization Manager:
           Marker Topic: /drone0/back_end/optimal_mjo
           Name: optimal_mjo
           Namespaces:
-            "": true
+            {}
           Queue Size: 100
           Value: true
         - Class: rviz/Group
           Displays:
             - Class: rviz/Marker
-              Enabled: true
+              Enabled: false
               Marker Topic: /drone0/closed_list_viz
               Name: closed_list_viz
               Namespaces:
                 {}
               Queue Size: 100
-              Value: true
+              Value: false
             - Class: rviz/Marker
               Enabled: true
               Marker Topic: /drone0/plan_viz
@@ -645,7 +645,7 @@ Visualization Manager:
                   Marker Topic: /drone0/back_end/goal_point
                   Name: goal_point(cyan)
                   Namespaces:
-                    {}
+                    "": true
                   Queue Size: 100
                   Value: true
                 - Class: rviz/Marker
@@ -653,7 +653,7 @@ Visualization Manager:
                   Marker Topic: /drone0/back_end/dbg/failed_list
                   Name: FailedList(brown)
                   Namespaces:
-                    {}
+                    "": true
                   Queue Size: 100
                   Value: true
               Enabled: true
@@ -678,7 +678,7 @@ Visualization Manager:
                   Value: true
               Enabled: false
               Name: gradients
-          Enabled: false
+          Enabled: true
           Name: back_end
         - Class: rviz/Group
           Displays:
@@ -825,7 +825,7 @@ Visualization Manager:
           Marker Topic: /drone1/back_end/optimal_mjo
           Name: optimal_mjo
           Namespaces:
-            "": true
+            {}
           Queue Size: 100
           Value: true
         - Class: rviz/Group
@@ -855,7 +855,7 @@ Visualization Manager:
               Marker Topic: /drone1/back_end/dbg/initial_mjo
               Name: initial_mjo
               Namespaces:
-                "": true
+                {}
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
@@ -863,7 +863,7 @@ Visualization Manager:
               Marker Topic: /drone1/back_end/dbg/initial_poly_path
               Name: initial_poly_path
               Namespaces:
-                "": true
+                {}
               Queue Size: 100
               Value: true
             - Alpha: 0.15000000596046448
@@ -1141,7 +1141,7 @@ Visualization Manager:
               Marker Topic: /drone2/back_end/dbg/initial_mjo
               Name: initial_mjo
               Namespaces:
-                "": true
+                {}
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
@@ -1149,7 +1149,7 @@ Visualization Manager:
               Marker Topic: /drone2/back_end/dbg/initial_poly_path
               Name: initial_poly_path
               Namespaces:
-                "": true
+                {}
               Queue Size: 100
               Value: true
             - Alpha: 0.15000000596046448
@@ -5788,7 +5788,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/XYOrbit
-      Distance: 13.221491813659668
+      Distance: 20.100234985351562
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -5796,17 +5796,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 0.2897886633872986
-        Y: -1.8402371406555176
+        X: 0.14263105392456055
+        Y: -3.8251585960388184
         Z: 9.5367431640625e-07
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.5647963285446167
+      Pitch: 1.5697963237762451
       Target Frame: my_view
-      Yaw: 4.723577499389648
+      Yaw: 4.713576316833496
     Saved:
       - Class: rviz/FPS
         Enable Stereo Rendering:

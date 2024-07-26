@@ -4,7 +4,7 @@ JPSWrapper::JPSWrapper(std::shared_ptr<GridMap> map, const JPSParams& params):
     params_(params)
 {
     map_ = map;
-    jps_planner_ = std::make_shared<JPSPlanner3D>(params_.planner_verbose);
+    jps_planner_ = std::make_shared<JPSPlanner3D>(params.planner_verbose);
 }
 
 void JPSWrapper::reset()
@@ -28,7 +28,7 @@ bool JPSWrapper::generatePlan(const Eigen::Vector3d &start_pos, const Eigen::Vec
     std::shared_ptr<JPS::VoxelMapUtil> map_util = ::std::make_shared<JPS::VoxelMapUtil>();
 
     tm_jps_map_.start();
-        map_->updateLocalMap();
+        // map_->updateLocalMap();
         // Origin of local map should be set relative to UAV current position (i.e. doesn't change unless we change the local map size)
         map_util->setMap(map_->getLocalOrigin(), 
                         map_->getLocalMapNumVoxels(), 
@@ -40,7 +40,7 @@ bool JPSWrapper::generatePlan(const Eigen::Vector3d &start_pos, const Eigen::Vec
     tm_jps_map_.stop(params_.print_timers);
 
     tm_jps_plan_.start();
-        if( !jps_planner_->plan(start_pos, goal_pos, 1, true)){
+        if( !jps_planner_->plan(start_pos, goal_pos, params_.eps, true)){
             std::cout << "[Front-End] JPS Planner failed!" << std::endl;
             return false;
         }
@@ -95,7 +95,6 @@ bool JPSWrapper::generatePlan(const Eigen::Vector3d &start_pos, const Eigen::Vec
 
     return true;
 }
-
 
 std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d>> JPSWrapper::interpolatePath(const std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d>>& path)
 {

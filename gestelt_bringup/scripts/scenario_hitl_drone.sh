@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SESSION="offboard"
+SESSION="scenario_hitl_drone"
 SESSIONEXISTS=$(tmux list-sessions | grep $SESSION)
 
 #####
@@ -8,10 +8,10 @@ SESSIONEXISTS=$(tmux list-sessions | grep $SESSION)
 #####
 # getopts: function to read flags in input
 # OPTARG: refers to corresponding values
-while getopts i: flag
+while getopts s: flag
 do
     case "${flag}" in
-        i) DRONE_ID=${OPTARG};; 
+        s) SCENARIO=${OPTARG};; 
     esac
 done
 
@@ -20,6 +20,7 @@ done
 #####
 SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )/.."
 gestelt_bringup_DIR="$SCRIPT_DIR/.."
+PX4_AUTOPILOT_REPO_DIR="$SCRIPT_DIR/../../../PX4-Autopilot"
 
 #####
 # Sourcing
@@ -31,23 +32,23 @@ source $SCRIPT_DIR/../../../devel/setup.bash &&
 #####
 # Commands
 #####
-# Start bridge with FCU
+# Start drones with planner modules
 CMD_0="
-roslaunch --wait gestelt_bringup offboard_px4.launch drone_id:=${DRONE_ID}
+roslaunch --wait gestelt_bringup $SCENARIO.launch 
 "
 
 # Start up rviz
-CMD_1="
-roslaunch --wait gestelt_bringup offboard_fake_sensor.launch drone_id:=${DRONE_ID}
-"
+# CMD_1="
+# roslaunch --wait gestelt_bringup fake_map_central.launch scenario:=$SCENARIO
+# "
 
 # Start up central bridge and nodes
-CMD_2="
-roslaunch --wait gestelt_bringup offboard_planner.launch drone_id:=${DRONE_ID}
-"
+# CMD_2="
+# roslaunch --wait gestelt_bringup record_single.launch drone_id:=0
+# "
 
 # Start up script to send commands
-CMD_3=""
+# CMD_3="roslaunch --wait gestelt_bringup scenario_mission.launch scenario:=$SCENARIO"
 
 if [ "$SESSIONEXISTS" = "" ]
 then 
@@ -59,9 +60,9 @@ then
     tmux split-window -t $SESSION:0.0 -h
 
     tmux send-keys -t $SESSION:0.0 "$SOURCE_WS $CMD_0" C-m 
-    tmux send-keys -t $SESSION:0.1 "$SOURCE_WS $CMD_1" C-m 
-    tmux send-keys -t $SESSION:0.2 "$SOURCE_WS $CMD_2" C-m 
-    # tmux send-keys -t $SESSION:0.3 "$SOURCE_WS $CMD_3" C-m
+    # tmux send-keys -t $SESSION:0.1 "$SOURCE_WS $CMD_1" 
+    # tmux send-keys -t $SESSION:0.2 "$SOURCE_WS $CMD_2" C-m 
+    # tmux send-keys -t $SESSION:0.3 "$SOURCE_WS $CMD_3"
 fi
 
 # Attach session on the first window

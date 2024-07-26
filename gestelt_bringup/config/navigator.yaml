@@ -18,7 +18,7 @@ heartbeat_frequency: 20.0               # [Hz] Frequency to indicate if planner 
 ##### Set planner types
 front_end/planner_type: 1         # 0: ASTAR, 1: JPS_AND_DMP
 sfc/planner_type: 1               # 0: SPHERICAL, 1: POLYTOPE
-back_end/planner_type: 1          # 0: Spherical SFC, 1: EGO, 2: POLYTOPE SFC
+back_end/planner_type: 2          # 0: Spherical SFC, 1: EGO, 2: POLYTOPE SFC
 
 ##### Front-end params
 front_end:
@@ -34,6 +34,7 @@ front_end:
     print_timers: true      # If true, print debug from planner
     planner_verbose: false      # If true, print debug from planner
     interpolate: false           # Interpolate JPS (necessary for spherical safe flight generation)
+    eps: 1.01                   # Weight on heuristic
     use_dmp: false               # 
     dmp_search_radius: 0.4      # DMP Search radius
     dmp_potential_radius: 0.4   # DMP radius of distance field (Value has significant effect on runtime)
@@ -49,9 +50,12 @@ sfc:
     # Sampling
     max_sample_points: 150  # Maximum sample points for candidate sphere
     # standard deviation: remember 68–95–99.7 rule
-    mult_stddev_x: 0.3      # 
-    mult_stddev_y: 0.6      # 
-    mult_stddev_z: 0.6      # 
+    # mult_stddev_x: 0.3      # 
+    # mult_stddev_y: 0.6      # 
+    # mult_stddev_z: 0.6      # 
+    mult_stddev_x: 0.6      # 
+    mult_stddev_y: 1.2      # 
+    mult_stddev_z: 1.2      # 
 
     W_cand_vol: 5           # Weight for candidate sphere volume
     W_intersect_vol: 10     # Weight for volume of intersection between spheres
@@ -63,7 +67,7 @@ sfc:
 
     time_allocation_type: 1 #  0: Max vel assignment(DANGEROUS), 1: Trapezoidal assignment
     max_vel: 3.0 # Maximum velocity (m/s)
-    max_acc: 20.0 # Maximum acceleration (m/s^2)
+    max_acc: 25.0 # Maximum acceleration (m/s^2)
 
     # SFC Buffer 
     spherical_buffer: 0.175 # (m) Reduce spherical SFCs by this fixed amount to increase buffer from obstacles
@@ -72,9 +76,12 @@ sfc:
     debug_viz: true
     cvx_decomp_type: 0        # Convex decomposition type. 0: Liu, 1: Toumieh_old, 2: Toumieh_new
     poly_max: 5               # [For Toumieh cvx_decomp_type] Maximum number of polytopes to generate
-    num_expansion_itr: 100    
+    num_expansion_itr: 100    # [For Toumieh cvx_decomp_type] 
+    # bbox_x: 1.0
+    # bbox_y: 2.0
+    # bbox_z: 1.0
     bbox_x: 0.75
-    bbox_y: 1.5
+    bbox_y: 1.25
     bbox_z: 0.75
     # bbox_x: 0.25
     # bbox_y: 0.5
@@ -96,19 +103,19 @@ optimization:
   weight_sqrvariance: 10000.0 
   weight_time: 10.0 
   swarm_clearance: 0.4 
-  max_vel: 0.5 # Maximum velocity (m/s)
+  max_vel: 3.0 # Maximum velocity (m/s)
   max_acc: 25.0 # Maximum acceleration (m/s^2)
 
   # EGO params
   weight_obstacle: 10000.0 
-  obstacle_clearance: 0.35 
+  obstacle_clearance: 0.4 
 
   # Spherical SFC
   weight_sph_bounds: 1000.0
   barrier:
     alpha: 2.0
     buffer: 0.4
-    opt_weight: 0.0
+    opt_weight: 0.0 # Weight of barrier term
   
   # Polyhedron SFC
   weight_poly_bounds: 0.0
@@ -123,8 +130,8 @@ grid_map:
     size_y: 50.0
     size_z: 20.0
   local_map:      #local_map parameters must consider the "receding_horizon_planning_dist"!
-    size_x: 10.0
-    size_y: 10.0
+    size_x: 13.0
+    size_y: 13.0
     size_z: 4.0
     update_frequency: 30.0
     viz_frequency:    10.0

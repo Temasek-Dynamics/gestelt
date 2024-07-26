@@ -106,24 +106,27 @@ source /gestelt_ws/devel/setup.bash
 # Set DRONE_ID here
 # export DRONE_ID=0
 
-# Multi-machine ROS communication. Used for actual drone deployment
-export MASTER_IP=192.168.31.22
-export SELF_IP=localhost
+# # Multi-machine ROS communication. Used for actual drone deployment
+# export MASTER_IP=192.168.31.22
+# export SELF_IP=localhost
 
-# The code below maps a drone_id to an ip address.
-if [[ "$DRONE_ID" == "0" ]]
-then
-    export SELF_IP=192.168.31.195
-elif [[ "$DRONE_ID" == "1" ]]
-    then
-    export SELF_IP=192.168.31.196
-elif [[ "$DRONE_ID" == "2" ]]
-    then
-    export SELF_IP=192.168.31.197
-else
-    export MASTER_IP=localhost
-    export SELF_IP=localhost
-fi
+# # The code below maps a drone_id to an ip address.
+# if [[ "$DRONE_ID" == "0" ]]
+# then
+#     export SELF_IP=192.168.31.195
+# elif [[ "$DRONE_ID" == "1" ]]
+#     then
+#     export SELF_IP=192.168.31.196
+# elif [[ "$DRONE_ID" == "2" ]]
+#     then
+#     export SELF_IP=192.168.31.197
+# else
+#     export MASTER_IP=localhost
+#     export SELF_IP=localhost
+# fi
+
+export MASTER_IP=10.42.0.1
+export SELF_IP=10.42.0.41
 
 export ROS_MASTER_URI=http://$MASTER_IP:11311
 export ROS_HOSTNAME=$SELF_IP
@@ -131,6 +134,7 @@ export ROS_IP=$SELF_IP
 
 # Startup for demo
 alias uav_startup="cd /gestelt_ws/src/gestelt/gestelt_bringup/scripts/ && ./offboard.sh $DRONE_ID"
+alias hitl_startup="cd /gestelt_ws/src/gestelt/gestelt_bringup/scripts/ && ./scenario_hitl_drone.sh -s forest_single"
 
 # Convenience function
 alias killbill="killall -9 rosmaster; tmux kill-server;"
