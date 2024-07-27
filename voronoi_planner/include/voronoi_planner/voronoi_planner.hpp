@@ -79,6 +79,26 @@ public:
 
   void initParams(ros::NodeHandle &pnh);
 
+  /**
+   * @brief Plan a path from start to goal
+   * 
+   * @param start 
+   * @param goal 
+   * @return true 
+   * @return false 
+   */
+  bool plan(const Eigen::Vector3d& start, const Eigen::Vector3d& goal);
+
+/* Subscriber callbacks */
+private:
+
+  void boolMapCB(const gestelt_msgs::BoolMapArrayConstPtr& msg);
+
+  void startDebugCB(const gestelt_msgs::PlanRequestDebugConstPtr &msg);
+
+/* Helper methods */
+private:
+
   void loadMapFromFile(nav_msgs::OccupancyGrid& map,
                        const std::string& fname);
 
@@ -89,7 +109,16 @@ public:
                         int& size_x, int& size_y,
                         const std::string& fname);
 
-  void boolMapCB(const gestelt_msgs::BoolMapArrayConstPtr& msg);
+  inline size_t map2Dto1DIdx(const int& width, const int& x, const int& y)
+  {
+    return width * y + x;
+  }
+
+  inline void map1Dto2DIdx(const int& idx, const int& width, int& x, int& y)
+  {
+    y = idx/width;
+    x = idx - (y * width);
+  }
 
   // Convert from map to occupancy grid type
   void voronoimapToOccGrid( const DynamicVoronoi& dyn_voro, 
@@ -157,88 +186,6 @@ public:
       }
     }
 
-  }
-
-  bool plan(const Eigen::Vector3d& start, const Eigen::Vector3d& goal){
-    if (!init_voro_maps_){
-      std::cout << "Voronoi maps not initialized! Request a plan after initialization!" << std::endl;
-      return false;
-    }
-
-    // publishStartAndGoal(start, start_z, goal, goal_z, "local_map_origin", start_pt_pub_, goal_pt_pub_);
-
-    // if (dyn_voro_arr_.find(goal_z_cm) == dyn_voro_arr_.end()){
-    //   std::cout << "Map slice at height "<<   << " does not exist" << std::endl;
-    //   return false;
-    // }
-
-    tm_front_end_plan_.start();
-
-    front_end_planner_ = std::make_unique<AStarPlanner>(dyn_voro_arr_, z_separation_cm_, astar_params_);
-    front_end_planner_->addPublishers(front_end_publisher_map_);
-
-    if (!front_end_planner_->generatePlanVoronoi(start, goal)){
-      std::cout << "FRONT END FAILED!!!! front_end_planner_->generatePlanVoronoi() from ("<< start.transpose() << ") to (" << goal.transpose() << ")" << std::endl;
-
-      tm_front_end_plan_.stop(verbose_planning_);
-
-      front_end_planner_->publishClosedList(front_end_planner_->getClosedListVoronoi(), front_end_publisher_map_["front_end/closed_list"], "local_map_origin");
-      return false;
-    }
-    else{
-      front_end_path_lcl_ = front_end_planner_->getPathPosRaw();
-      publishFrontEndPath(front_end_path_lcl_, "local_map_origin", front_end_plan_viz_pub_) ;
-      front_end_planner_->publishClosedList(front_end_planner_->getClosedListVoronoi(), front_end_publisher_map_["front_end/closed_list"], "local_map_origin");
-    }
-
-    double min_clr = DBL_MAX; // minimum path clearance 
-    double max_clr = 0.0;     // maximum path clearance 
-
-    for (const Eigen::Vector3d& pos : front_end_path_lcl_ )
-    {
-      Eigen::Vector3d occ_nearest; 
-      double dist_to_nearest_nb;
-      if (map_->getNearestOccupiedCellLocal(pos, occ_nearest, dist_to_nearest_nb)){
-        min_clr = (min_clr > dist_to_nearest_nb) ? dist_to_nearest_nb : min_clr;
-        max_clr = (max_clr < dist_to_nearest_nb) ? dist_to_nearest_nb : max_clr;
-      }
-    }
-
-    std::cout << "Maximum clearance of path: " << max_clr << std::endl;
-    std::cout << "Minimum clearance of path: " << min_clr << std::endl;
-
-    tm_front_end_plan_.stop(verbose_planning_);
-
-    return true;
-  }
-
-  inline size_t map2Dto1DIdx(const int& width, const int& x, const int& y)
-  {
-    return width * y + x;
-  }
-
-  inline void map1Dto2DIdx(const int& idx, const int& width, int& x, int& y)
-  {
-    y = idx/width;
-    x = idx - (y * width);
-  }
-
-/* Subscriber callbacks */
-private:
-
-  void startDebugCB(const gestelt_msgs::PlanRequestDebugConstPtr &msg)
-  {
-    Eigen::Vector3d plan_start{ 
-                    msg->start.position.x - local_origin_x_,
-                    msg->start.position.y - local_origin_y_,
-                    msg->start.position.z};
-
-    Eigen::Vector3d plan_end{ 
-                    msg->goal.position.x - local_origin_x_,
-                    msg->goal.position.y - local_origin_y_,
-                    msg->goal.position.z};
-
-    plan(plan_start, plan_end);
   }
 
 /* Visualization methods*/
@@ -428,6 +375,10 @@ private:
     publisher.publish(vertices);
   }
 
+/* Test functions */
+private:
+  void generateTestMap1();
+
 private:
   /* Params */
   std::string map_fname_;
@@ -438,6 +389,8 @@ private:
   // double yaw_;
   double critical_clr_{0.25}; // minimum clearance of drone from obstacle
   double fixed_pt_thresh_{0.3}; // points (on trajectory) below this threshold are defined as fixed points (not decision variables in optimization problem)
+
+  bool use_test_map_{false};
 
   AStarPlanner::AStarParams astar_params_; 
 
@@ -460,7 +413,7 @@ private:
 
   /* Mapping */
   std::shared_ptr<GridMap> map_;
-  double local_origin_x_{0.0}, local_origin_y_{0.0};
+  double local_origin_x_{0.0}, local_origin_y_{0.0}; // Origin of local map 
   int z_separation_cm_{25};
 
   /* Data structs */
@@ -477,7 +430,7 @@ private:
 
   /* Debugging */
   Timer tm_front_end_plan_{"front_end_plan"};
-  Timer tm_voro_map_init_{"voronoi_map_init"};
+  Timer tm_voro_map_init_{"voro_map_init"};
 };
 
 #endif // _VORONOI_PLANNER_HPP

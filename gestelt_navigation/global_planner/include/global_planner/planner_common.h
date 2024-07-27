@@ -7,6 +7,7 @@
 #include <Eigen/Eigen>
 #include <queue>
 #include <global_planner/point.h>
+#include <boost/functional/hash_fwd.hpp>
 
 using namespace Eigen;
 constexpr double infinity = std::numeric_limits<float>::infinity();
@@ -14,13 +15,12 @@ constexpr double epsilon = std::numeric_limits<double>::epsilon();
 
 #define SQRT2 1.4142135623
 
-enum CellState
-{
-  OPEN = 1,
-  CLOSED = 2,
-  UNDEFINED = 3
-};
-
+/**
+ * @brief Priority queue used for open list in A* search
+ * 
+ * @tparam T 
+ * @tparam priority_t 
+ */
 template<typename T, typename priority_t>
 struct PriorityQueue {
   typedef std::pair<priority_t, T> PQElement;
@@ -59,7 +59,6 @@ struct PriorityQueue {
 /**
  * PosIdx: Used for index-based 3d grid operations
  */
-
 struct PosIdx {
   PosIdx() {}
 
@@ -99,44 +98,9 @@ struct std::hash<PosIdx> {
 };
 
 /**
- * VCell: A cell used by voronoi graph search 
- * It has 3 elements: (x, y, z_cm). Where z is the height but in unit of centimeters.
+ * @brief Class used by 3D A* search
+ * 
  */
-
-
-struct VCell {
-  VCell() {}
-
-  VCell(const int& x, const int& y, const int& z_cm)
-    : x(x), y(y), z_cm(z_cm)
-  {
-    z_m = ((double)z_cm)/100.0;
-    z = (int)(z_m/0.05); // 0.05 is the resolution
-  }
-
-  // Equality
-  bool operator == (const VCell& pos) const
-  {
-    return (this->x == pos.x && this->y == pos.y && this->z_cm == pos.z_cm);
-  }
-
-  int x, y, z;
-  double z_m; // [THIS IS NOT THE INDEX] z in meters
-  int z_cm; // [THIS IS NOT THE INDEX] z in centimeters
-}; // struct VCell
-
-
-template <> 
-struct std::hash<VCell> {
-  /* implement hash function so we can put VCell into an unordered_set */
-  std::size_t operator()(const VCell& pos) const noexcept {
-    // NOTE: better to use something like boost hash_combine
-    size_t H_x_y = 0.5 * (pos.x + pos.y)*(pos.x + pos.y + 1) + pos.y;
-    return 0.5 * (H_x_y + pos.z)*(H_x_y + pos.z + 1) + pos.z;
-  }
-};
-
-
 class PlannerCommon {
 /**
  * PlannerCommon acts a wrapper to the underlying obstacle map and provides commonly
@@ -334,6 +298,10 @@ public:
 };
 
 
+/**
+ * Cost operations for 3D A* search
+ */
+
 // Get euclidean distance between node_1 and node_2
 // NOTE: This is in units of indices
 inline double getL1Norm(const PosIdx& a, const PosIdx& b) {
@@ -370,42 +338,47 @@ inline double getOctileDist(const PosIdx& a, const PosIdx& b)  {
 
 
 
+/**
+ * VCell: A cell used by voronoi graph search 
+ * It has 3 elements: (x, y, z_cm). Where z is the height but in unit of centimeters.
+ */
+struct VCell {
+  VCell() {}
 
-// // Get euclidean distance between node_1 and node_2
-// // NOTE: This is in units of indices
-// inline double getL1Norm2D(const INTPOINT& a, const INTPOINT& b) {
-//   return abs(a.x - b.x) + abs(a.y - b.y);
-// }
+  VCell(const int& x, const int& y, const int& z_cm)
+    : x(x), y(y), z_cm(z_cm)
+  {
+    z_m = ((double)z_cm)/100.0;
+    z = (int)(z_m/0.05); // 0.05 is the resolution
+  }
 
-// // Get euclidean distance between node_1 and node_2
-// // NOTE: This is in units of indices
-// inline double getL2Norm2D(const INTPOINT& a, const INTPOINT& b) {
-//   double dx = abs(a.x - b.x);
-//   double dy = abs(a.y - b.y);
+  // Equality
+  bool operator == (const VCell& pos) const
+  {
+    return (this->x == pos.x && this->y == pos.y && this->z_cm == pos.z_cm);
+  }
 
-//   return sqrt(dx*dx + dy*dy);
-// }
+  int x, y, z;  // Index of cell
+  double z_m; // [THIS IS NOT THE INDEX] z in meters
+  int z_cm; // [THIS IS NOT THE INDEX] z in centimeters
+}; // struct VCell
 
-// // // Get octile distance
-// inline double getChebyshevDist2D(const INTPOINT& a, const INTPOINT& b)  {
-//   double dx = abs(a.x - b.x);
-//   double dy = abs(a.y - b.y);
-
-//   return (dx + dy) - std::min(dx, dy); 
-// }
-
-// // // Get chebyshev distance
-// inline double getOctileDist2D(const INTPOINT& a, const INTPOINT& b)  {
-//   double dx = abs(a.x - b.x);
-//   double dy = abs(a.y - b.y);
-
-//   return (dx + dy) + (SQRT2 - 2) * std::min(dx, dy); 
-// }
-
+template <> 
+struct std::hash<VCell> {
+  /* implement hash function so we can put VCell into an unordered_set */
+  std::size_t operator()(const VCell& pos) const noexcept {
+    std::size_t seed = 0;
+    boost::hash_combine(seed, pos.x);
+    boost::hash_combine(seed, pos.y);
+    boost::hash_combine(seed, pos.z);
+    return seed;
+  }
+};
 
 
-
-
+/**
+ * Cost operations for voronoi A* search
+ */
 
 // Get euclidean distance between node_1 and node_2
 // NOTE: This is in units of indices
@@ -441,6 +414,92 @@ inline double getOctileDistV(const VCell& a, const VCell& b)  {
   return (dx + dy + dz) + (SQRT2 - 2) * std::min(dx, std::min(dy, dz)); 
 }
 
+/**
+ * VCell_T: A space-time voronoi graph cell
+ * It has 4 elements: (x, y, z, t). Where x,y,z are the index and t is the time at which the cell is occupied
+ */
+struct VCell_T {
+  VCell_T() {}
+
+  /**
+   * @brief Construct a new VCell_T object
+   * 
+   * @param x index x coordinate
+   * @param y index y coordinate
+   * @param z_cm Height of voronoi map in centimeters 
+   * @param t Time at which cell is occupied
+   */
+  VCell_T(const int& x, const int& y, const int& z_cm, const int& t)
+    : x(x), y(y), z_cm(z_cm), t(t)
+  {
+    z_m = ((double)z_cm)/100.0;
+    z = (int)(z_m/0.05); // 0.05 is the resolution
+  }
+
+  // Equality
+  bool operator == (const VCell_T& cell) const
+  {
+    return (this->x == cell.x && this->y == cell.y && this->z_cm == cell.z_cm && this->t == cell.t);
+  }
+
+  int x, y, z;  // Index of cell
+  double z_m; // [THIS IS NOT THE INDEX] z in meters
+  int z_cm; // [THIS IS NOT THE INDEX] z in centimeters
+
+  int t;  // Time at which cell is occupied
+}; // struct VCell_T
+
+template <> 
+struct std::hash<VCell_T> {
+  /* implement hash function so we can put VCell_T into an unordered_set */
+  std::size_t operator()(const VCell_T& pos) const noexcept {
+    std::size_t seed = 0;
+    boost::hash_combine(seed, pos.x);
+    boost::hash_combine(seed, pos.y);
+    boost::hash_combine(seed, pos.z);
+    boost::hash_combine(seed, pos.t);
+    return seed;
+  }
+};
+
+
+/**
+ * Cost operations for space-time Voronoi A* search
+ */
+
+// Get euclidean distance between node_1 and node_2
+// NOTE: This is in units of indices
+inline double getL1NormVT(const VCell_T& a, const VCell_T& b) {
+  return abs(a.x - b.x) + abs(a.y - b.y) + abs(a.z - b.z);
+}
+
+// Get euclidean distance between node_1 and node_2
+// NOTE: This is in units of indices
+inline double getL2NormVT(const VCell_T& a, const VCell_T& b) {
+  double dx = abs(a.x - b.x);
+  double dy = abs(a.y - b.y);
+  double dz = abs(a.z - b.z);
+
+  return sqrt(dx*dx + dy*dy + dz*dz);
+}
+
+// // Get octile distance
+inline double getChebyshevDistVT(const VCell_T& a, const VCell_T& b)  {
+  double dx = abs(a.x - b.x);
+  double dy = abs(a.y - b.y);
+  double dz = abs(a.z - b.z);
+
+  return (dx + dy + dz) - std::min(dx, std::min(dy, dz)); 
+}
+
+// // Get chebyshev distance
+inline double getOctileDistVT(const VCell_T& a, const VCell_T& b)  {
+  double dx = abs(a.x - b.x);
+  double dy = abs(a.y - b.y);
+  double dz = abs(a.z - b.z);
+
+  return (dx + dy + dz) + (SQRT2 - 2) * std::min(dx, std::min(dy, dz)); 
+}
 
 
 #endif // _PLANNER_COMMON_H_

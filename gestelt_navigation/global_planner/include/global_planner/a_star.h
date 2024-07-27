@@ -36,7 +36,9 @@ public:
 
   AStarPlanner( const std::map<int, std::shared_ptr<DynamicVoronoi>>& dyn_voro_arr, 
                 const int& z_separation_cm,
-                const AStarParams& astar_params);
+                const AStarParams& astar_params,
+                std::shared_ptr<std::unordered_set<VCell_T>> resrv_tbl
+                );
 
   /**
    * @brief Clear closed, open list and reset planning_successful flag for 
@@ -69,44 +71,149 @@ public:
   bool generatePlan(const Eigen::Vector3d& start_pos, const Eigen::Vector3d& goal_pos, 
     std::function<double(const PosIdx&, const PosIdx&)> cost_function);
 
+  /* Generate plan on voronoi graph  */
   bool generatePlanVoronoi(const Eigen::Vector3d& start_pos_3d, const Eigen::Vector3d& goal_pos_3d);
 
+  /* Generate plan on voronoi graph  */
   bool generatePlanVoronoi(const Eigen::Vector3d& start_pos_3d, const Eigen::Vector3d& goal_pos_3d, 
                           std::function<double(const VCell&, const VCell&)> cost_function);
 
-  /**
-   * @brief Get successful plan in terms of path positions
-   * 
-   * @return std::vector<Eigen::Vector3d> 
-   */
-  std::vector<Eigen::Vector3d> getPathPos();
+  void expandVoronoiBubble(const VCell& cell, const bool& makeGoalBubble);
+
+  /* Generate space-time plan on voronoi graph  */
+  bool generatePlanVoroT( const Eigen::Vector3d& start_pos_3d, 
+                          const Eigen::Vector3d& goal_pos_3d);
+
+  // /* Generate space-time plan on voronoi graph  */
+  // bool generatePlanVoroT( const Eigen::Vector3d& start_pos_3d, 
+  //                         const Eigen::Vector3d& goal_pos_3d, 
+  //                         std::function<double(const VCellT&, const VCellT&)> cost_function)
 
   /**
    * @brief Get successful plan in terms of path positions
-   * 
-   * @return std::vector<Eigen::Vector3d> 
+   *
+   * @return std::vector<Eigen::Vector3d>
    */
-  std::vector<Eigen::Vector3d> getPathPosRaw();
+  std::vector<Eigen::Vector3d> getPathPos()
+  {
+      return path_pos_;
+  }
 
   /**
-   * @brief Get visited cells
-   * 
-   * @return std::vector<Eigen::Vector3d> 
+   * @brief Get successful plan in terms of path positions
+   *
+   * @return std::vector<Eigen::Vector3d>
    */
-  std::vector<Eigen::Vector3d> getClosedList();
+  std::vector<Eigen::Vector3d> getPathPosRaw()
+  {
+      return path_pos_;
+  }
 
   /**
-   * @brief Get visited cells
-   * 
-   * @return std::vector<Eigen::Vector3d> 
+   * @brief Get successful plan in terms of path positions
+   *
+   * @return std::vector<Eigen::Vector3d>
    */
-  std::vector<Eigen::Vector3d> getClosedListVoronoi();
+  std::vector<Eigen::Vector3d> getClosedList()
+  {
+      std::vector<Eigen::Vector3d> closed_list_pos;
+      for (auto itr = closed_list_.begin(); itr != closed_list_.end(); ++itr) {
+        Eigen::Vector3d node_pos;
+        common_->idxToPos(*itr, node_pos);
+        closed_list_pos.push_back(node_pos);
+      }
+
+      return closed_list_pos;
+  }
+
+  /**
+   * @brief Get successful plan in terms of path positions
+   *
+   * @return std::vector<Eigen::Vector3d>
+   */
+  std::vector<Eigen::Vector3d> getClosedListVoronoi()
+  {
+      std::vector<Eigen::Vector3d> closed_list_pos;
+      for (auto itr = closed_list_v_.begin(); itr != closed_list_v_.end(); ++itr) {
+          DblPoint map_pos;
+          IntPoint grid_pos((*itr).x, (*itr).y);
+
+          dyn_voro_arr_[(*itr).z_cm]->idxToPos(grid_pos, map_pos);
+
+          closed_list_pos.push_back(Eigen::Vector3d{map_pos.x, map_pos.y, (*itr).z_m});
+      }
+
+      return closed_list_pos;
+  }
+
+  void tracePath(PosIdx final_node)
+  {
+      // Clear existing data structures
+      path_idx_.clear();
+      path_pos_.clear();
+
+      // Trace back the nodes through the pointer to their parent
+      PosIdx cur_node = final_node;
+      while (!(cur_node == came_from_[cur_node]))
+      {
+          path_idx_.push_back(cur_node);
+          cur_node = came_from_[cur_node];
+      }
+      // Push back the start node
+      path_idx_.push_back(cur_node);
+
+      // Reverse the order of the path so that it goes from start to goal
+      std::reverse(path_idx_.begin(), path_idx_.end());
+
+      // For each gridnode, get the position and index,
+      // So we can obtain a path in terms of indices and positions
+      for (auto idx : path_idx_)
+      {
+          Eigen::Vector3d gridnode_pos;
+          common_->idxToPos(idx, gridnode_pos);
+
+          path_pos_.push_back(gridnode_pos);
+      }
+  }
+
+  void tracePathVoronoi(VCell final_node)
+{
+    // Clear existing data structures
+    path_idx_v_.clear();
+    path_pos_.clear();
+
+    // Trace back the nodes through the pointer to their parent
+    VCell cur_node = final_node;
+    while (!(cur_node == came_from_v_[cur_node]))
+    {
+        path_idx_v_.push_back(cur_node);
+        cur_node = came_from_v_[cur_node];
+    }
+    // Push back the start node
+    path_idx_v_.push_back(cur_node);
+
+    // Reverse the order of the path so that it goes from start to goal
+    std::reverse(path_idx_v_.begin(), path_idx_v_.end());
+
+    // For each gridnode, get the position and index,
+    // So we can obtain a path in terms of indices and positions
+    for (const VCell& cell : path_idx_v_)
+    {
+        DblPoint map_pos;
+
+        IntPoint grid_pos(cell.x, cell.y);
+        dyn_voro_arr_[cell.z_cm]->idxToPos(grid_pos, map_pos);
+
+        path_pos_.push_back(Eigen::Vector3d{map_pos.x, map_pos.y, cell.z_m});
+    }
+}
+
+public:
 
   void addPublishers(ros::Publisher& closed_list_viz_pub)
   {
       closed_list_viz_pub_ = closed_list_viz_pub;
   }
-
 
   void publishClosedList(const std::vector<Eigen::Vector3d>& pts, ros::Publisher& publisher, const std::string& frame_id = "map", Eigen::Vector3d color = Eigen::Vector3d{0.0, 0.0, 0.0}, double radius = 0.1)
   {
@@ -145,15 +252,6 @@ public:
 
     publisher.publish(sphere_list);
   }
-
-
-private:
-
-  void expandVoronoiBubble(const VCell& cell, const bool& makeGoalBubble);
-
-  void tracePath(PosIdx final_node);
-
-  void tracePathVoronoi(VCell final_node);
 
   void clearVisualizations();
 
@@ -205,6 +303,10 @@ private:
   std::vector<VCell> path_idx_v_; // Final planned Path in terms of indices
 
   int z_separation_cm_; // separation between the voronoi planes in units of centimeters
+
+  // Space time voronoi Voronoi search data structures
+  
+  std::shared_ptr<std::unordered_set<VCell_T>> resrv_tbl_; // Reservation table 
 };
 
 #endif // _A_STAR_PLANNER_H_
