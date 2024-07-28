@@ -417,7 +417,7 @@ private:
   } 
 
   bool isTrajectorySafe(
-    const std::vector<ego_planner::LocalTrajData>& swarm_local_trajs, 
+    const std::unordered_map<int, ego_planner::LocalTrajData>& swarm_local_trajs, 
     bool& e_stop, bool& must_replan);
 
   bool isTrajectoryDynFeasible(ego_planner::LocalTrajData* traj, bool& is_feasible);
@@ -560,7 +560,7 @@ private: /* Planner members */
   Waypoint waypoints_; // Goal waypoint handler object
   Eigen::Vector3d cur_pos_, cur_vel_;   // current state
   Eigen::Vector3d rhp_goal_pos_, rhp_goal_vel_; // Receding horizon planning goal
-  std::shared_ptr<std::vector<ego_planner::LocalTrajData>> swarm_local_trajs_; // Swarm MINCO trajectories, maps drone_id to local trajectory data
+  std::shared_ptr<std::unordered_map<int, ego_planner::LocalTrajData>> swarm_local_trajs_; // Swarm MINCO trajectories, maps drone_id to local trajectory data
 
   std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d>> front_end_path_; // Front-end plan
 

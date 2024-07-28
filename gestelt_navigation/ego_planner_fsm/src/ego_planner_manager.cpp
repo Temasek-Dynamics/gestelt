@@ -509,7 +509,7 @@ namespace ego_planner
 
   /* Utility methods */
 
-  void EGOPlannerManager::setSwarmTrajectories(std::shared_ptr<std::vector<ego_planner::LocalTrajData>>& swarm_minco_trajs)
+  void EGOPlannerManager::setSwarmTrajectories(std::shared_ptr<std::unordered_map<int, ego_planner::LocalTrajData>>& swarm_minco_trajs)
   {
     ploy_traj_opt_->assignSwarmTrajs(swarm_minco_trajs);
   }

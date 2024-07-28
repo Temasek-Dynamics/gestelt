@@ -42,10 +42,7 @@ void Navigator::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   }
 
   // Initialize own trajectory
-  swarm_local_trajs_ = std::make_shared<std::vector<ego_planner::LocalTrajData>>();
-  for (int i = 0; i < max_drones_; i++){
-    (*swarm_local_trajs_).push_back(ego_planner::LocalTrajData());
-  }
+  swarm_local_trajs_ = std::make_shared<std::unordered_map<int, ego_planner::LocalTrajData>>();
 
   // Initialize back-end planner
   if (back_end_type_ == BackEndType::EGO){
@@ -369,7 +366,7 @@ void Navigator::safetyChecksTimerCB(const ros::TimerEvent &e)
   bool e_stop{true}, must_replan{true};
   // bool is_feasible{true};
 
-  std::vector<ego_planner::LocalTrajData> swarm_local_trajs = *swarm_local_trajs_;
+  std::unordered_map<int, ego_planner::LocalTrajData> swarm_local_trajs = *swarm_local_trajs_;
 
   if (!isTrajectorySafe(swarm_local_trajs, e_stop, must_replan)){
     if (e_stop){
@@ -1102,13 +1099,13 @@ void Navigator::swarmMincoTrajCB(const traj_utils::MINCOTrajConstPtr &msg)
 /* Checking methods */
 
 bool Navigator::isTrajectorySafe(
-  const std::vector<ego_planner::LocalTrajData>& swarm_local_trajs, 
+  const std::unordered_map<int, ego_planner::LocalTrajData>& swarm_local_trajs, 
   bool& e_stop, bool& must_replan)
 {
   e_stop = false;
   must_replan = false;
 
-  ego_planner::LocalTrajData traj = (swarm_local_trajs)[drone_id_];
+  ego_planner::LocalTrajData traj = (*swarm_local_trajs)[drone_id_];
   
   if (traj.traj_id < 0){ // Return if no local trajectory yet
     return true;
@@ -1155,7 +1152,7 @@ bool Navigator::isTrajectorySafe(
 
         if (!in_collision){ // If current position not in collision
           
-          for (auto agent_traj : swarm_local_trajs) // Iterate through trajectories of other agents
+          for (const auto& agent_traj : swarm_local_trajs) // Iterate through trajectories of other agents
           {
             // Check that it's not a null pointer
             // if (!(*swarm_local_trajs)[k]){

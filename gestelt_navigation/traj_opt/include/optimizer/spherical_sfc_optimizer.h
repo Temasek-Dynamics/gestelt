@@ -108,7 +108,7 @@ namespace back_end
     poly_traj::MinJerkOpt mjo_q_;   // Minimum jerk trajectory in q space
     poly_traj::MinJerkOpt mjo_xi_;  // Minimum jerk trajectory in xi space
 
-    std::shared_ptr<std::vector<ego_planner::LocalTrajData>> swarm_local_trajs_; // Swarm MINCO trajectories
+    std::shared_ptr<std::unordered_map<int, ego_planner::LocalTrajData>> swarm_local_trajs_; // Swarm MINCO trajectories
 
     int drone_id_;            // ID of drone
     int variable_num_;       // optimization variables
@@ -164,7 +164,7 @@ namespace back_end
     void setEnvironment(const std::shared_ptr<GridMap> &map);
     void setVisualizer(ego_planner::PlanningVisualization::Ptr vis);
 
-    void assignSwarmTrajs(std::shared_ptr<std::vector<ego_planner::LocalTrajData>> swarm_local_trajs);
+    void assignSwarmTrajs(std::shared_ptr<std::unordered_map<int, ego_planner::LocalTrajData>> swarm_local_trajs);
 
     /**
      * Returns the minimum jerk optimizer object

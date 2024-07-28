@@ -181,7 +181,7 @@ namespace ego_planner
     double getTrajectoryDuration(poly_traj::MinJerkOpt& mjo);
 
     
-    void setSwarmTrajectories(std::shared_ptr<std::vector<ego_planner::LocalTrajData>>& swarm_minco_trajs);
+    void setSwarmTrajectories(std::shared_ptr<std::unordered_map<int, ego_planner::LocalTrajData>>& swarm_minco_trajs);
 
     std::shared_ptr<GridMap> grid_map_;
     TrajContainer traj_;

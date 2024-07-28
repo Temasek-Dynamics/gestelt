@@ -242,7 +242,7 @@ namespace back_end
 
     // Set the pointer to the swarm trajectories
     void assignSwarmTrajs(
-      std::shared_ptr<std::vector<ego_planner::LocalTrajData>> swarm_local_trajs) {
+      std::shared_ptr<std::unordered_map<int, ego_planner::LocalTrajData>> swarm_local_trajs) {
       swarm_local_trajs_ = swarm_local_trajs;
     }
 
@@ -539,14 +539,10 @@ namespace back_end
   public:
     typedef std::unique_ptr<PolyhedronSFCOptimizer> Ptr;
 
-    /* Data structures */
-    std::vector<Eigen::MatrixXd> intermediate_cstr_pts_xi_; // Intermediate constraint points unconstrained xi coordinates
-    std::vector<Eigen::MatrixXd> intermediate_cstr_pts_q_; // Intermediate constraint points constrained q coordinates
-      
   private:
     std::shared_ptr<GridMap> grid_map_;         // Occupancy map 
     ego_planner::PlanningVisualization::Ptr visualization_; // visualizer
-    std::shared_ptr<std::vector<ego_planner::LocalTrajData>> swarm_local_trajs_; // Swarm MINCO trajectories
+    std::shared_ptr<std::unordered_map<int, ego_planner::LocalTrajData>> swarm_local_trajs_; // Swarm MINCO trajectories
 
     enum FORCE_STOP_OPTIMIZE_TYPE
     {
@@ -580,7 +576,6 @@ namespace back_end
     /* Data structures */
     poly_traj::MinJerkOpt mjo_q_;   // Minimum jerk trajectory in q space
 
-    Eigen::MatrixXd cstr_pts_xi_; // inner CONSTRAINT points of trajectory (excludes boundary points), this is finer than the inner CONTROL points
     Eigen::MatrixXd cstr_pts_q_; // inner CONSTRAINT points of trajectory (excludes boundary points), this is finer than the inner CONTROL points
 
     int num_decis_var_bary_, num_decis_var_t_; // Number of decision variables for barycentric weights and segment time durations

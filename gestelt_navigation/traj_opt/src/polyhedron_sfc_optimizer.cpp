@@ -113,8 +113,6 @@ namespace back_end
 
   void PolyhedronSFCOptimizer::reset(){
     // reset all existing variables
-    intermediate_cstr_pts_xi_.clear();
-    intermediate_cstr_pts_q_.clear();
   }
 
   bool PolyhedronSFCOptimizer::optimizeTrajectory(
@@ -575,7 +573,7 @@ namespace back_end
 
     /* Publish visualization of gradients*/
     // visualization_->displayIntermediateGrad("smoothness", ctrl_pts_q_, mjo.get_gdC());
-    visualization_->displayIntermediateGrad("dist_variance", cstr_pts_q_, gdp);
+    // visualization_->displayIntermediateGrad("dist_variance", cstr_pts_q_, gdp);
 
   } // end func addPVAGradCost2CT
 
@@ -586,7 +584,6 @@ namespace back_end
                                          double &grad_prev_t,
                                          double &costp)
   {
-
     bool ret = false;
 
     gradp.setZero();
@@ -605,11 +602,13 @@ namespace back_end
 
     // std::shared_ptr<std::vector<ego_planner::LocalTrajData>> swarm_local_trajs_;
 
-    for (const auto& agent_traj : *swarm_local_trajs_){ // Iterate through trajectories
+    for (const auto& id_traj_pair : *swarm_local_trajs_){ // Iterate through trajectories
 
+      auto agent_traj = id_traj_pair.second;
+      
       if ((agent_traj.drone_id < 0) || agent_traj.drone_id == drone_id_)
       {
-        // Ignore 
+        // Ignore if trajectory belongs to self
         continue;
       }
 

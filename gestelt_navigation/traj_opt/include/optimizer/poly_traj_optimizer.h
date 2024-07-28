@@ -88,7 +88,7 @@ namespace ego_planner
     poly_traj::MinJerkOpt mjo_q_;   // Minimum jerk trajectory in q space
     poly_traj::MinJerkOpt mjo_xi_;  // Minimum jerk trajectory in xi space
 
-    std::shared_ptr<std::vector<ego_planner::LocalTrajData>> swarm_local_trajs_; // Swarm MINCO trajectories
+    std::shared_ptr<std::unordered_map<int, ego_planner::LocalTrajData>> swarm_local_trajs_; // Swarm MINCO trajectories
 
     ConstraintPoints cps_;
     // PtsChk_t pts_check_;
@@ -200,7 +200,7 @@ namespace ego_planner
       touch_goal_ = touch_goal; 
     }
 
-    void assignSwarmTrajs(std::shared_ptr<std::vector<ego_planner::LocalTrajData>> swarm_local_trajs) {
+    void assignSwarmTrajs(std::shared_ptr<std::unordered_map<int, ego_planner::LocalTrajData>> swarm_local_trajs) {
       swarm_local_trajs_ = swarm_local_trajs;
     }
 
