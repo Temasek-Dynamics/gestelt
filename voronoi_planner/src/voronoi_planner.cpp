@@ -41,8 +41,11 @@ void VoronoiPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   // 0: getOctileDist, 1: getL1Norm, 2: getL2Norm, 3: getChebyshevDist
   astar_params_.cost_function_type  = 1;
 
+
+  resrv_tbl_ = std::make_shared<std::unordered_set<VCell_T>>();
+
   if (use_test_map_){
-    generateTestMap1();
+    generateTestMap2();
   }
 
 }
@@ -116,7 +119,7 @@ void VoronoiPlanner::boolMapCB(const gestelt_msgs::BoolMapArrayConstPtr& msg)
     // set values of boolean map
     for(int j = 0; j < msg->height; j++)
     {
-      for (int i = 0; i < msg->width; i++)
+      for (int i = 0; i < msg->width; i++) 
       {
         (*bool_map_arr_[z_cm])[i][j] = bool_map_msg.map[i + j * msg->width];
       }
@@ -156,7 +159,6 @@ void VoronoiPlanner::boolMapCB(const gestelt_msgs::BoolMapArrayConstPtr& msg)
     // Get voronoi graph for current layer and append to voro_verts
     std::vector<Eigen::Vector3d> voro_verts_cur_layer = dyn_voro_arr_[z_cm]->getVoronoiVertices();
     voro_verts.insert(voro_verts.end(), voro_verts_cur_layer.begin(), voro_verts_cur_layer.end());
-
 
     nav_msgs::OccupancyGrid occ_grid, voro_occ_grid;
 
@@ -227,7 +229,8 @@ bool VoronoiPlanner::plan(const Eigen::Vector3d& start, const Eigen::Vector3d& g
 
   tm_front_end_plan_.start();
 
-  front_end_planner_ = std::make_unique<AStarPlanner>(dyn_voro_arr_, z_separation_cm_, astar_params_);
+  front_end_planner_ = std::make_unique<AStarPlanner>(
+    dyn_voro_arr_, z_separation_cm_, astar_params_, resrv_tbl_);
   front_end_planner_->addPublishers(front_end_publisher_map_);
 
   if (!front_end_planner_->generatePlanVoronoi(start, goal)){
@@ -268,76 +271,115 @@ bool VoronoiPlanner::plan(const Eigen::Vector3d& start, const Eigen::Vector3d& g
 /* Test functions */
 
 // Single layer map test
-void VoronoiPlanner::generateTestMap1()
+void VoronoiPlanner::generateTestMap2()
 {
   // Create test boolean map
-  z_separation_cm_ = 0.25;
+  z_separation_cm_ = 0.5;
   local_origin_x_ = 0.0;
   local_origin_y_ = 0.0;
-  int height = 4;
-  int width = 7;
+  int num_rows = 7;
+  int num_cols = 9;
 
   int z_cm = 0;
+  int z_m = 0;
+  double resolution = 0.1;
 
   std::vector<Eigen::Vector3d> voro_verts;
-  std::vector<bool> bool_test_map(height * width, false); // all cells free by default
+  std::vector<bool> bool_test_map(num_rows * num_cols, true); // all cells occupied by default
 
   /** [0,0] starts at bottom left
-   *    0 xxxxxxx
-   *    1 xxx0xxx
-   *    2 x00000x
-   *    3 xxxxxxx
-   *      0123456
+   *    0 xxxxxxxxx
+   *    1 xxx000xxx
+   *    2 xxx000xxx
+   *    3 xxx000xxx
+   *    4 x0000000x
+   *    5 x0000000x
+   *    6 x0000000x
+   *    7 xxxxxxxxx
+   *      012345678
    */
 
-  std::vector<std::pair<int, int>> occ_coords;
-  occ_coords.push_back(std::make_pair(1, 1));
-  occ_coords.push_back(std::make_pair(1, 2));
-  occ_coords.push_back(std::make_pair(1, 4));
-  occ_coords.push_back(std::make_pair(1, 5));
+  // coordinates are (row, column)
+  std::vector<std::pair<int, int>> occ_coords = {
+    std::make_pair(1, 3),
+    std::make_pair(1, 4),
+    std::make_pair(1, 5),
+
+    std::make_pair(2, 3),
+    std::make_pair(2, 4),
+    std::make_pair(2, 5),
+
+    std::make_pair(3, 1),
+    std::make_pair(3, 2),
+    std::make_pair(3, 3),
+    std::make_pair(3, 4),
+    std::make_pair(3, 5),
+    std::make_pair(3, 6),
+    std::make_pair(3, 7),
+
+    std::make_pair(4, 1),
+    std::make_pair(4, 2),
+    std::make_pair(4, 3),
+    std::make_pair(4, 4),
+    std::make_pair(4, 5),
+    std::make_pair(4, 6),
+    std::make_pair(4, 7),
+
+    std::make_pair(5, 1),
+    std::make_pair(5, 2),
+    std::make_pair(5, 3),
+    std::make_pair(5, 4),
+    std::make_pair(5, 5),
+    std::make_pair(5, 6),
+    std::make_pair(5, 7)
+  };
 
   for (const std::pair<int, int>& coord : occ_coords){
-    bool_test_map[coord.first + coord.second * width] = true;
+    // (col + row * num_cols)
+    bool_test_map[coord.second + coord.first * num_cols] = false;
   }
 
   // Initialize bool map 2d vector if it does not exist
   if (bool_map_arr_.find(z_cm) == bool_map_arr_.end()){
-    bool_map_arr_[z_cm] = std::make_shared<std::vector<std::vector<bool>>>(height, std::vector<bool>(width, false));
+    bool_map_arr_[z_cm] = std::make_shared<std::vector<std::vector<bool>>>(num_rows, std::vector<bool>(num_cols, false));
   }
 
+  std::cout << "(*bool_map_arr_[z_cm]) rows = " << (*bool_map_arr_[z_cm]).size() << std::endl;
+  std::cout << "(*bool_map_arr_[z_cm]) cols  = " << (*bool_map_arr_[z_cm])[0].size() << std::endl; 
+
   // set values of boolean map
-  for(int j = 0; j < height; j++)
+  for(int i = 0; i < num_rows; i++)
   {
-    for (int i = 0; i < width; i++)
+    for (int j = 0; j < num_cols; j++)
     {
-      (*bool_map_arr_[z_cm])[i][j] = bool_test_map[i + j * width];
+      (*bool_map_arr_[z_cm])[i][j] = bool_test_map[j + i * num_cols];
     }
   }
 
   // set map boundaries as occupied
-  for(int j = 0; j < height; j++)
-  {
-    (*bool_map_arr_[z_cm])[0][j] = true;
-    (*bool_map_arr_[z_cm])[width-1][j] = true;
-  }
-  for (int i = 0; i < width; i++)
-  {
-    (*bool_map_arr_[z_cm])[i][0] = true;
-    (*bool_map_arr_[z_cm])[i][height-1] = true;
-  }
+  // for(int j = 0; j < num_cols; j++)
+  // {
+  //   (*bool_map_arr_[z_cm])[0][j] = true;
+  //   (*bool_map_arr_[z_cm])[num_rows-1][j] = true;
+  // }
+  // for (int i = 0; i < num_rows; i++)
+  // {
+  //   (*bool_map_arr_[z_cm])[i][0] = true;
+  //   (*bool_map_arr_[z_cm])[i][num_cols-1] = true;
+  // }
 
   // Create DynamicVoronoi object if it does not exist
   if (dyn_voro_arr_.find(z_cm) == dyn_voro_arr_.end()){
 
     DynamicVoronoi::DynamicVoronoiParams dyn_voro_params;
-    dyn_voro_params.resolution = res_;
+    dyn_voro_params.resolution = resolution;
     dyn_voro_params.origin_x = 0.0;
     dyn_voro_params.origin_y = 0.0;
-    dyn_voro_params.origin_z = bool_map_msg.z;
+    dyn_voro_params.origin_z = z_m;
 
     // Initialize dynamic voronoi 
     dyn_voro_arr_[z_cm] = std::make_shared<DynamicVoronoi>(dyn_voro_params);
-    dyn_voro_arr_[z_cm]->initializeMap(width, height, bool_map_arr_[z_cm]);
+    dyn_voro_arr_[z_cm]->initializeMap(num_rows, num_cols, bool_map_arr_[z_cm]);
   }
   
   dyn_voro_arr_[z_cm]->update(); // update distance map and Voronoi diagram
@@ -352,15 +394,38 @@ void VoronoiPlanner::generateTestMap1()
   nav_msgs::OccupancyGrid occ_grid, voro_occ_grid;
 
   occmapToOccGrid(*dyn_voro_arr_[z_cm], 
-                  msg->origin.x, msg->origin.y, 
+                  0.0, 0.0, 
                   occ_grid); // Occupancy map
 
   voronoimapToOccGrid(*dyn_voro_arr_[z_cm], 
-                      msg->origin.x, msg->origin.y, 
+                      0.0, 0.0, 
                       voro_occ_grid); // Voronoi map
 
   voro_occ_grid_pub_.publish(voro_occ_grid);
   occ_map_pub_.publish(occ_grid);
+
+
+  // Plan a path
+  Eigen::Vector3i start{1, 3, 0};
+  Eigen::Vector3i goal{7, 3, 0};
+  
+  front_end_planner_0_ = std::make_unique<AStarPlanner>(
+    dyn_voro_arr_, z_separation_cm_, astar_params_, resrv_tbl_);
+  front_end_planner_0_->addPublishers(front_end_publisher_map_);
+
+  if (!front_end_planner_0_->generatePlanVoroT(start, goal)){
+    std::cout << "FRONT END FAILED!!!! front_end_planner_->generatePlanVoronoi() from ("<< start.transpose() << ") to (" << goal.transpose() << ")" << std::endl;
+
+    tm_front_end_plan_.stop(verbose_planning_);
+
+    front_end_planner_0_->publishClosedList(front_end_planner_0_->getClosedListVoronoi(), front_end_publisher_map_["front_end/closed_list"], "local_map_origin");
+    return false;
+  }
+
+  front_end_path_lcl_ = front_end_planner_0_->getPathPosRaw();
+  publishFrontEndPath(front_end_path_lcl_, "local_map_origin", front_end_plan_viz_pub_) ;
+  front_end_planner_0_->publishClosedList(front_end_planner_0_->getClosedListVoronoi(), front_end_publisher_map_["front_end/closed_list"], "local_map_origin");
+
 
 
 }

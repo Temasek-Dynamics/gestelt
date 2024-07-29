@@ -148,6 +148,9 @@ private:
       {
         size_t idx = map2Dto1DIdx(occ_grid.info.width, i, j);
         occ_grid.data[idx] = dyn_voro.isVoronoi(i, j) ? 255: 0;
+        if (dyn_voro.isVoronoi(i, j)) {
+          std::cout << "IS VORONOI!" << std::endl;
+        }
       }
     }
   }
@@ -377,7 +380,7 @@ private:
 
 /* Test functions */
 private:
-  void generateTestMap1();
+  void generateTestMap2();
 
 private:
   /* Params */
@@ -416,9 +419,13 @@ private:
   double local_origin_x_{0.0}, local_origin_y_{0.0}; // Origin of local map 
   int z_separation_cm_{25};
 
+  std::shared_ptr<std::unordered_set<VCell_T>> resrv_tbl_;
+
   /* Data structs */
 
   std::unique_ptr<AStarPlanner> front_end_planner_; // Front-end planner
+  std::unique_ptr<AStarPlanner> front_end_planner_0_; // Agent 0 Front-end planner
+  std::unique_ptr<AStarPlanner> front_end_planner_1_; // Agent 1 Front-end planner
 
   std::map<int, std::shared_ptr<DynamicVoronoi>> dyn_voro_arr_; // array of voronoi objects with key of height (cm)
   std::map<int, std::shared_ptr<std::vector<std::vector<bool>>>> bool_map_arr_; //  array of voronoi objects with key of height (cm)

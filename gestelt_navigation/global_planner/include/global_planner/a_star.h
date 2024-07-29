@@ -85,9 +85,19 @@ public:
                           const Eigen::Vector3d& goal_pos_3d);
 
   // /* Generate space-time plan on voronoi graph  */
-  // bool generatePlanVoroT( const Eigen::Vector3d& start_pos_3d, 
-  //                         const Eigen::Vector3d& goal_pos_3d, 
-  //                         std::function<double(const VCellT&, const VCellT&)> cost_function)
+  bool generatePlanVoroT( const Eigen::Vector3d& start_pos_3d, 
+                          const Eigen::Vector3d& goal_pos_3d, 
+                          std::function<double(const VCell_T&, const VCell_T&)> cost_function);
+
+
+  /* Generate space-time plan on voronoi graph  */
+  bool generatePlanVoroT( const Eigen::Vector3i& start_idx_3d, 
+                          const Eigen::Vector3i& goal_idx_3d);
+
+  // /* Generate space-time plan on voronoi graph  */
+  bool generatePlanVoroT( const Eigen::Vector3i& start_idx_3d, 
+                          const Eigen::Vector3i& goal_idx_3d, 
+                          std::function<double(const VCell_T&, const VCell_T&)> cost_function);
 
   /**
    * @brief Get successful plan in terms of path positions
@@ -291,6 +301,11 @@ private:
 
   std::map<int, std::shared_ptr<DynamicVoronoi>> dyn_voro_arr_; // array of voronoi objects with key of height (cm)
 
+
+  // General voronoi params
+  int z_separation_cm_; // separation between the voronoi planes in units of centimeters
+  std::map<int, std::unordered_set<IntPoint>> marked_bubble_cells_; // Cells that are marked as part of the voronoi bubble with key of height(cm)
+
   // Voronoi search data structures
 
   std::unordered_map<VCell, double> g_cost_v_;  
@@ -298,14 +313,17 @@ private:
   PriorityQueue<VCell, double> open_list_v_; // Min priority queue 
   std::unordered_set<VCell> closed_list_v_; // All closed nodes
 
-  std::map<int, std::unordered_set<IntPoint>> marked_bubble_cells_; // Cells that are marked as part of the voronoi bubble with key of height(cm)
-
   std::vector<VCell> path_idx_v_; // Final planned Path in terms of indices
-
-  int z_separation_cm_; // separation between the voronoi planes in units of centimeters
 
   // Space time voronoi Voronoi search data structures
   
+  std::unordered_map<VCell_T, double> g_cost_vt_;  
+  std::unordered_map<VCell_T, VCell_T> came_from_vt_;
+  PriorityQueue<VCell_T, double> open_list_vt_; // Min priority queue 
+  std::unordered_set<VCell_T> closed_list_vt_; // All closed nodes
+
+  std::vector<VCell_T> path_idx_vt_; // Final planned Path in terms of indices
+
   std::shared_ptr<std::unordered_set<VCell_T>> resrv_tbl_; // Reservation table 
 };
 

@@ -221,8 +221,8 @@ void GridMap::updateLocalMapTimerCB(const ros::TimerEvent & /*event*/)
   // Create horizontal map slices
   tm_slice_map_.start();
 
-  double z_separation_m = 0.25; // z separation of horizontal planes in meters
-  int z_separation_cm = 25;     // z separation of horizontal planes in centi-meters
+  double z_separation_m = 0.5; // z separation of horizontal planes in meters
+  int z_separation_cm = 50;     // z separation of horizontal planes in centi-meters
   double max_height = 3.0;    
 
   gestelt_msgs::BoolMapArray bool_map_arr_msg;
@@ -236,8 +236,8 @@ void GridMap::updateLocalMapTimerCB(const ros::TimerEvent & /*event*/)
   bool_map_arr_msg.origin.y = mp_.local_map_origin_(1);
   bool_map_arr_msg.origin.z = mp_.local_map_origin_(2);
 
-  bool_map_arr_msg.width = mp_.local_map_num_voxels_(0);
-  bool_map_arr_msg.height = mp_.local_map_num_voxels_(1);
+  bool_map_arr_msg.width = mp_.local_map_num_voxels_(0); // x size
+  bool_map_arr_msg.height = mp_.local_map_num_voxels_(1); // y size
 
   for (double z_m = 0; z_m < max_height; z_m += z_separation_m){
     bool_map_arr_msg.bool_maps.push_back( sliceMap(z_m) );
