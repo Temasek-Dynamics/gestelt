@@ -277,7 +277,7 @@ void VoronoiPlanner::generateTestMap2()
   z_separation_cm_ = 0.5;
   local_origin_x_ = 0.0;
   local_origin_y_ = 0.0;
-  int num_rows = 7;
+  int num_rows = 8;
   int num_cols = 9;
 
   int z_cm = 0;
@@ -287,7 +287,7 @@ void VoronoiPlanner::generateTestMap2()
   std::vector<Eigen::Vector3d> voro_verts;
   std::vector<bool> bool_test_map(num_rows * num_cols, true); // all cells occupied by default
 
-  /** [0,0] starts at bottom left
+  /** [0,0] starts at top left
    *    0 xxxxxxxxx
    *    1 xxx000xxx
    *    2 xxx000xxx
@@ -331,7 +331,15 @@ void VoronoiPlanner::generateTestMap2()
     std::make_pair(5, 4),
     std::make_pair(5, 5),
     std::make_pair(5, 6),
-    std::make_pair(5, 7)
+    std::make_pair(5, 7),
+
+    std::make_pair(6, 1),
+    std::make_pair(6, 2),
+    std::make_pair(6, 3),
+    std::make_pair(6, 4),
+    std::make_pair(6, 5),
+    std::make_pair(6, 6),
+    std::make_pair(6, 7)
   };
 
   for (const std::pair<int, int>& coord : occ_coords){
@@ -394,37 +402,56 @@ void VoronoiPlanner::generateTestMap2()
   nav_msgs::OccupancyGrid occ_grid, voro_occ_grid;
 
   occmapToOccGrid(*dyn_voro_arr_[z_cm], 
-                  0.0, 0.0, 
+                  -resolution/2, -resolution/2, 
                   occ_grid); // Occupancy map
 
   voronoimapToOccGrid(*dyn_voro_arr_[z_cm], 
-                      0.0, 0.0, 
+                      -resolution/2, -resolution/2, 
                       voro_occ_grid); // Voronoi map
 
   voro_occ_grid_pub_.publish(voro_occ_grid);
   occ_map_pub_.publish(occ_grid);
 
-
   // Plan a path
-  Eigen::Vector3i start{1, 3, 0};
-  Eigen::Vector3i goal{7, 3, 0};
+  Eigen::Vector3i start{5, 2, 0};
+  Eigen::Vector3i goal{5, 6, 0};
+
+  DblPoint start_2d_map_pos, goal_2d_map_pos;
+  dyn_voro_arr_[z_cm]->idxToPos(IntPoint(start(0), start(1)), start_2d_map_pos);
+  dyn_voro_arr_[z_cm]->idxToPos(IntPoint(goal(0), goal(1)), goal_2d_map_pos);
+
+  Eigen::Vector3d start_3d_map_pos{start_2d_map_pos.x, start_2d_map_pos.y, z_cm};
+  Eigen::Vector3d goal_3d_map_pos{goal_2d_map_pos.x, goal_2d_map_pos.y, z_cm};
+
+  // Eigen::Vector3d start_3d_map_pos{0.2, 0.0, z_cm};
+  // Eigen::Vector3d goal_3d_map_pos{0, 0.2, z_cm};
+
+  std::cout << "From " << start_3d_map_pos.transpose()
+            << " to "  << goal_3d_map_pos.transpose() << std::endl;
+
+  publishStartAndGoal(start_3d_map_pos, goal_3d_map_pos, 
+                      "world", start_pt_pub_, goal_pt_pub_);
+
+  std::cout << "Planning from " << start.transpose() << " to " <<  goal.transpose() << std::endl;
   
-  // front_end_planner_0_ = std::make_unique<AStarPlanner>(
-  //   dyn_voro_arr_, z_separation_cm_, astar_params_, resrv_tbl_);
-  // front_end_planner_0_->addPublishers(front_end_publisher_map_);
+  front_end_planner_0_ = std::make_unique<AStarPlanner>(
+    dyn_voro_arr_, z_separation_cm_, astar_params_, resrv_tbl_);
+  front_end_planner_0_->addPublishers(front_end_publisher_map_);
 
-  // if (!front_end_planner_0_->generatePlanVoroT(start, goal)){
-  //   std::cout << "FRONT END FAILED!!!! front_end_planner_->generatePlanVoronoi() from ("<< start.transpose() << ") to (" << goal.transpose() << ")" << std::endl;
+  std::cout << "Before generatePlanVoroT" << std::endl;
+  if (!front_end_planner_0_->generatePlanVoroT(start, goal)){
+    std::cout << "FRONT END FAILED!!!! front_end_planner_->generatePlanVoronoi() from ("<< start.transpose() << ") to (" << goal.transpose() << ")" << std::endl;
 
-  //   tm_front_end_plan_.stop(verbose_planning_);
+    tm_front_end_plan_.stop(verbose_planning_);
 
-  //   front_end_planner_0_->publishClosedList(front_end_planner_0_->getClosedListVoronoi(), front_end_publisher_map_["front_end/closed_list"], "local_map_origin");
-  //   return ;
-  // }
+    front_end_planner_0_->publishClosedList(front_end_planner_0_->getClosedListVoroT(), front_end_publisher_map_["front_end/closed_list"], "local_map_origin");
+    return ;
+  }
+  std::cout << "after generatePlanVoroT" << std::endl;
 
-  // front_end_path_lcl_ = front_end_planner_0_->getPathPosRaw();
-  // publishFrontEndPath(front_end_path_lcl_, "local_map_origin", front_end_plan_viz_pub_) ;
-  // front_end_planner_0_->publishClosedList(front_end_planner_0_->getClosedListVoronoi(), front_end_publisher_map_["front_end/closed_list"], "local_map_origin");
+  space_time_path_lcl_ = front_end_planner_0_->getSpaceTimePath();
+  publishSpaceTimePath(space_time_path_lcl_, "world", front_end_plan_viz_pub_) ;
+  front_end_planner_0_->publishClosedList(front_end_planner_0_->getClosedListVoroT(), front_end_publisher_map_["front_end/closed_list"], "local_map_origin");
 
   return ;
 }

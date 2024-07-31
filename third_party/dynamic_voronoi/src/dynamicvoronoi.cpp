@@ -918,12 +918,14 @@ bool DynamicVoronoi::isInMap(int x, int y) {
 }
 
 bool DynamicVoronoi::isOccupied(const INTPOINT& grid_pos) const {
+  // std::cout << "DynamicVoronoi::isOccupied(" << grid_pos.x << ", " << grid_pos.y << ")" << std::endl;
   dataCell c = data[grid_pos.x][grid_pos.y];
   return (c.obstX==grid_pos.x && c.obstY==grid_pos.y);
 }
 
 
 bool DynamicVoronoi::isOccupied(const size_t& x, const size_t& y) const {
+  // std::cout << "DynamicVoronoi::isOccupied(" << x << ", " << y << ")" << std::endl;
   dataCell c = data[x][y];
   return (c.obstX == x && c.obstY == y);
 }

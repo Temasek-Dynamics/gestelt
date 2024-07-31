@@ -485,7 +485,7 @@ public:
 
   // Check if current index is occupied
   bool isOccupied(const Eigen::Vector3i& idx) {
-
+    std::cout << "dynvoro->isOccupied(" << idx.transpose() << ")" << std::endl;
     if (!isInGlobalVoxelMap(idx)){
       return true; 
     }

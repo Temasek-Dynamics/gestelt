@@ -436,6 +436,11 @@ struct VCell_T {
     z = (int)(z_m/0.05); // 0.05 is the resolution
   }
 
+  // Check if position is the same
+  bool isSamePositionAs(const VCell_T& cell){
+    return (this->x == cell.x && this->y == cell.y && this->z_cm == cell.z_cm );
+  } 
+
   // Equality
   bool operator == (const VCell_T& cell) const
   {

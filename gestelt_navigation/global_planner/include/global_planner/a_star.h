@@ -78,7 +78,11 @@ public:
   bool generatePlanVoronoi(const Eigen::Vector3d& start_pos_3d, const Eigen::Vector3d& goal_pos_3d, 
                           std::function<double(const VCell&, const VCell&)> cost_function);
 
+  // Expand voronio bubble around given cell
   void expandVoronoiBubble(const VCell& cell, const bool& makeGoalBubble);
+
+  // Expand voronio bubble around given cell
+  void expandVoronoiBubbleT(const VCell_T& cell, const bool& makeGoalBubble);
 
   // /* Generate space-time plan on voronoi graph  */
   // bool generatePlanVoroT( const Eigen::Vector3d& start_pos_3d, 
@@ -118,6 +122,17 @@ public:
   {
       return path_pos_;
   }
+
+  /**
+   * @brief Get successful plan in terms of path positions
+   *
+   * @return std::vector<Eigen::Vector3d>
+   */
+  std::vector<Eigen::Vector4d> getSpaceTimePath()
+  {
+      return path_pos_t_;
+  }
+
 
   /**
    * @brief Get successful plan in terms of path positions
@@ -187,36 +202,89 @@ public:
   }
 
   void tracePathVoronoi(VCell final_node)
-{
-    // Clear existing data structures
-    path_idx_v_.clear();
-    path_pos_.clear();
+  {
+      // Clear existing data structures
+      path_idx_v_.clear();
+      path_pos_.clear();
 
-    // Trace back the nodes through the pointer to their parent
-    VCell cur_node = final_node;
-    while (!(cur_node == came_from_v_[cur_node]))
-    {
-        path_idx_v_.push_back(cur_node);
-        cur_node = came_from_v_[cur_node];
+      // Trace back the nodes through the pointer to their parent
+      VCell cur_node = final_node;
+      while (!(cur_node == came_from_v_[cur_node]))
+      {
+          path_idx_v_.push_back(cur_node);
+          cur_node = came_from_v_[cur_node];
+      }
+      // Push back the start node
+      path_idx_v_.push_back(cur_node);
+
+      // Reverse the order of the path so that it goes from start to goal
+      std::reverse(path_idx_v_.begin(), path_idx_v_.end());
+
+      // For each gridnode, get the position and index,
+      // So we can obtain a path in terms of indices and positions
+      for (const VCell& cell : path_idx_v_)
+      {
+          DblPoint map_pos;
+
+          IntPoint grid_pos(cell.x, cell.y);
+          dyn_voro_arr_[cell.z_cm]->idxToPos(grid_pos, map_pos);
+
+          path_pos_.push_back(Eigen::Vector3d{map_pos.x, map_pos.y, cell.z_m});
+      }
+  }
+
+
+  /**
+   * @brief Get successful plan in terms of path positions
+   *
+   * @return std::vector<Eigen::Vector3d>
+   */
+  std::vector<Eigen::Vector3d> getClosedListVoroT()
+  {
+    std::vector<Eigen::Vector3d> closed_list_pos;
+    for (auto itr = closed_list_vt_.begin(); itr != closed_list_vt_.end(); ++itr) {
+      DblPoint map_pos;
+      IntPoint grid_pos((*itr).x, (*itr).y);
+
+      dyn_voro_arr_[(*itr).z_cm]->idxToPos(grid_pos, map_pos);
+
+      closed_list_pos.push_back(Eigen::Vector3d{map_pos.x, map_pos.y, (*itr).z_m});
     }
-    // Push back the start node
-    path_idx_v_.push_back(cur_node);
 
-    // Reverse the order of the path so that it goes from start to goal
-    std::reverse(path_idx_v_.begin(), path_idx_v_.end());
+    return closed_list_pos; 
+  }
 
-    // For each gridnode, get the position and index,
-    // So we can obtain a path in terms of indices and positions
-    for (const VCell& cell : path_idx_v_)
-    {
-        DblPoint map_pos;
+  void tracePathVoroT(const VCell_T& final_node)
+  {
+      // Clear existing data structures
+      path_idx_vt_.clear();
+      path_pos_t_.clear();
 
-        IntPoint grid_pos(cell.x, cell.y);
-        dyn_voro_arr_[cell.z_cm]->idxToPos(grid_pos, map_pos);
+      // Trace back the nodes through the pointer to their parent
+      VCell_T cur_node = final_node;
+      while (!(cur_node == came_from_vt_[cur_node])) // Start node's parents was initially set as itself, hence this indicates the end of the path
+      {
+          path_idx_vt_.push_back(cur_node);
+          cur_node = came_from_vt_[cur_node];
+      }
+      // Push back the start node
+      path_idx_vt_.push_back(cur_node);
 
-        path_pos_.push_back(Eigen::Vector3d{map_pos.x, map_pos.y, cell.z_m});
-    }
-}
+      // Reverse the order of the path so that it goes from start to goal
+      std::reverse(path_idx_vt_.begin(), path_idx_vt_.end());
+
+      // For each gridnode, get the position and index,
+      // So we can obtain a path in terms of indices and positions
+      for (const VCell_T& cell : path_idx_vt_)
+      {
+          DblPoint map_pos;
+          dyn_voro_arr_[cell.z_cm]->idxToPos(IntPoint(cell.x, cell.y), map_pos);
+
+          path_pos_t_.push_back(Eigen::Vector4d{map_pos.x, map_pos.y, cell.z_m, cell.t});
+      }
+  }
+
+
 
 public:
 
@@ -317,6 +385,8 @@ private:
 
   // Space time voronoi Voronoi search data structures
   
+  std::vector<Eigen::Vector4d> path_pos_t_; // Spatial-temporal path 
+
   std::unordered_map<VCell_T, double> g_cost_vt_;  
   std::unordered_map<VCell_T, VCell_T> came_from_vt_;
   PriorityQueue<VCell_T, double> open_list_vt_; // Min priority queue 

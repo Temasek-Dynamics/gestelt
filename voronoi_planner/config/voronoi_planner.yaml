@@ -4,4 +4,4 @@ verbose_planning: true
 # occ_threshold: 0.65
 # free_threshold: 0.196
 
-use_test_map: false
+use_test_map: true
