@@ -660,6 +660,7 @@ bool Navigator::requestBackEndPlan(
   be_traj_pub_.publish(poly_msg); // (In drone origin frame) Publish to other nodes on the current drone for trajectory execution
 
   if (prev_req_be_req_t_ - prev_swarm_broadcast_pub_t_ >= 0.04){
+    MINCO_msg.header.stamp = ros::Time::now(); 
     swarm_minco_traj_pub_.publish(MINCO_msg); // (In world frame) Broadcast to all other drones for replanning to optimize in avoiding swarm collision
     prev_swarm_broadcast_pub_t_ = ros::Time::now().toSec();
   }

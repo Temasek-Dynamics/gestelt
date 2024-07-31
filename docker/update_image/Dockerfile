@@ -1,10 +1,11 @@
-FROM johntgz95/radxa-gestelt:latest
+FROM gestelt/sfc:base
 LABEL maintainer="johntgz@nus.edu.sg"
 
 SHELL ["/bin/bash", "-c"] 
 
 # Make directory and clone repository
 WORKDIR /gestelt_ws/src/gestelt
+RUN git checkout master
 RUN git pull
 WORKDIR /gestelt_ws/
 RUN source /opt/ros/noetic/setup.bash \

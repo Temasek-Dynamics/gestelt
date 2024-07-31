@@ -7,12 +7,12 @@
 ## Code
 1. Check that latest code is pulled from docker
     ```bash
-    docker pull johntgz95/radxa-gestelt:latest
+    docker pull gestelt/sfc:latest
     ```
 
 ## Updating the configuration
-1. `docker commit CONTAINER_ID johntgz95/radxa-gestelt:latest`
-2. ` docker push johntgz95/radxa-gestelt:latest`
+1. `docker commit CONTAINER_ID gestelt/sfc:latest`
+2. ` docker push gestelt/sfc:latest`
 
 ## Launching demos
 ```bash

@@ -20,7 +20,7 @@ docker run hello-world
 
 ## Building and Pushing images to Docker Hub repository
 ```bash
-docker build -t gestelt/sfc:latest .
+docker build --platform linux/arm64 -t gestelt/sfc:latest .
 
 # Tag image
 docker tag ORIGINAL_TAG NEW_TAG

@@ -40,5 +40,5 @@ curl -fsSL test.docker.com -o get-docker.sh && sh get-docker.sh
 sudo usermod -aG docker $USER 
 
 # Pull gestelt docker image
-docker pull johntgz95/radxa-gestelt:offboard
+docker pull gestelt/sfc:latest
 

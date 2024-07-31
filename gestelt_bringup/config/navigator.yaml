@@ -18,11 +18,11 @@ heartbeat_frequency: 20.0               # [Hz] Frequency to indicate if planner 
 ##### Set planner types
 front_end/planner_type: 0         # 0: ASTAR, 1: JPS_AND_DMP
 sfc/planner_type: 0               # 0: SPHERICAL, 1: POLYTOPE
-back_end/planner_type: 0         # 0: Spherical SFC, 1: EGO, 2: POLYTOPE SFC
+back_end/planner_type: 1         # 0: Spherical SFC, 1: EGO, 2: POLYTOPE SFC
 
 ##### Front-end params
 front_end:
-  planner_frequency: 10.0        # [Hz] Front-end planning frequency
+  planner_frequency: 25.0        # [Hz] Front-end planning frequency
 
   a_star:
     max_iterations: 9999  
@@ -95,7 +95,7 @@ back_end:
 
 ##### Optimization params
 optimization:
-  num_cstr_pts_per_seg: 5 # Number of constraint points per trajectory segment i.e. discretization.
+  num_cstr_pts_per_seg: 10 # Number of constraint points per trajectory segment i.e. discretization.
   segment_length: 1.0 # Length of one segment i.e. distance between adjacent spline control points
   # Weights
   weight_swarm: 50000.0 
@@ -132,7 +132,7 @@ optimization:
 
 ##### Mapping params
 grid_map:
-  print_timers: true
+  print_timers: false
 
   global_map:
     size_x: 50.0
