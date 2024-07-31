@@ -314,6 +314,8 @@ private:
   bool dbg_input_entire_map_; // flag to indicate that map will be constructed at the start from the entire pcd map (instead of through incremental sensor data)
   std::string entire_pcd_map_topic_; // Topic to listen for an entire PCD for debugging
 
+  bool print_timers_{false};
+
   double col_warn_radius_, col_fatal_radius_; // collision check radius
 
   double viz_occ_map_freq_{-1.0}; // Frequency to publish occupancy map visualization
@@ -344,6 +346,8 @@ private:
   /* Stopwatch for profiling performance */
   Timer tm_bonxai_insert_{"bonxai->insertPointCloud"};
   Timer tm_kdtree_build_{"kdtree_->Build"};
+  
+  Timer tm_update_local_map_{"updateLocalMap"};
 
 // Frequently used methods
 public:

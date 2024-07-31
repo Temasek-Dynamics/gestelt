@@ -125,24 +125,6 @@ def main():
     goals_1 = [] # OG (2.25, -2.25)
     goals_2 = [] # OG (-2.25, -2.25)
 
-    # goals_0.append(create_transform(0.0, -2.25, z))
-    # goals_0.append(create_transform(0.0, 2.25, z))
-    # goals_0.append(create_transform(0.0, -2.25, z))
-    # goals_0.append(create_transform(0.0, 2.25, z))
-    # goals_0.append(create_transform(0.0, -2.25, z))
-
-    # goals_1.append(create_transform(-2.25, 2.25, z))
-    # goals_1.append(create_transform(2.25, -2.25, z))
-    # goals_1.append(create_transform(-2.25, 2.25, z))
-    # goals_1.append(create_transform(2.25, -2.25, z))
-    # goals_1.append(create_transform(-2.25, 2.25, z))
-
-    # goals_2.append(create_transform(2.25, 2.25, 1.0))
-    # goals_2.append(create_transform(-2.25, -2.25, 1.0))
-    # goals_2.append(create_transform(2.25, 2.25, 1.0))
-    # goals_2.append(create_transform(-2.25, -2.25, 1.0))
-    # goals_2.append(create_transform(2.25, 2.25, 1.0))
-
     goals_0.append(create_transform(0.0, 2.25, z))
     goals_1.append(create_transform(-2.25, 2.25, z+0.25))
     goals_2.append(create_transform(2.25, 2.25, z-0.25))

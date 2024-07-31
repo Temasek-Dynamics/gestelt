@@ -113,7 +113,7 @@ public:
   }
 
 private:
-  std::string name_; // name of timer
+  std::string name_{"NO_NAME"}; // name of timer
   bool timer_running_{false}; // Indicates if timer is running
 
   std::chrono::time_point<std::chrono::high_resolution_clock> t_start_cpu_; // cpu time 
@@ -128,7 +128,7 @@ private:
   std::string indent_str_{""}; // String to represent indentation
   
   /* Memory */
-  long iterations_{0};  // Number of start/stop cycles, used to generate average time
+  long iterations_{1};  // Number of start/stop cycles, used to generate average time
 
 }; // class Timer
 

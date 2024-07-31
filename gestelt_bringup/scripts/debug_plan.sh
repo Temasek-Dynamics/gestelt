@@ -34,12 +34,12 @@ source $SCRIPT_DIR/../../../devel/setup.bash &&
 #####
 # Start drones with planner modules
 CMD_0="
-roslaunch gestelt_bringup $SCENARIO.launch 
+roslaunch gestelt_bringup debug_plan.launch 
 "
 
 # Start up rviz
 CMD_1="
-roslaunch --wait gestelt_bringup fake_map_central.launch scenario:=$SCENARIO
+roslaunch --wait gestelt_bringup fake_map_central.launch scenario:=forest_single
 "
 
 # Start up central bridge and nodes
@@ -48,7 +48,7 @@ roslaunch --wait gestelt_bringup fake_map_central.launch scenario:=$SCENARIO
 # "
 
 # Start up script to send commands
-CMD_3="roslaunch --wait gestelt_bringup scenario_mission.launch scenario:=$SCENARIO"
+CMD_3="roslaunch --wait gestelt_bringup scenario_mission.launch scenario:=debug_plan"
 
 if [ "$SESSIONEXISTS" = "" ]
 then 
@@ -62,7 +62,7 @@ then
     tmux send-keys -t $SESSION:0.0 "$SOURCE_WS $CMD_0" C-m 
     tmux send-keys -t $SESSION:0.1 "$SOURCE_WS $CMD_1" C-m 
     # tmux send-keys -t $SESSION:0.2 "$SOURCE_WS $CMD_2" C-m 
-    tmux send-keys -t $SESSION:0.3 "$SOURCE_WS $CMD_3" 
+    tmux send-keys -t $SESSION:0.3 "$SOURCE_WS $CMD_3" C-m
 fi
 
 # Attach session on the first window

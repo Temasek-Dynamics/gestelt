@@ -182,7 +182,7 @@ bool GraphSearch::plan(StatePtr& currNode_ptr, int maxExpand, int start_id, int 
         // if currently in CLOSED
         else if( child_ptr->opened && child_ptr->closed)
         {
-          printf("ASTAR ERROR!\n");
+          printf("GraphSearch::plan: ASTAR ERROR!\n");
         }
         else // new node, add to heap
         {

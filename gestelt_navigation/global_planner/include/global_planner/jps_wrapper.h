@@ -234,6 +234,10 @@ private:
   Timer tm_jps_plan_{"jps_plan", 3};
   Timer tm_dmp_plan_{"dmp_plan", 3};
 
+  /* Data structs */
+  
+  std::shared_ptr<JPS::VoxelMapUtil> map_util_;
+
 }; // class JPSWrapper
 
 #endif // _JPS_WRAPPER_H_

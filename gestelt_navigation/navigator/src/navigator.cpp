@@ -48,7 +48,6 @@ void Navigator::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   if (back_end_type_ == BackEndType::EGO){
     ego_optimizer_ = std::make_unique<ego_planner::EGOPlannerManager>(ego_params_);
     ego_optimizer_->initPlanModules(nh, pnh, map_, visualization_);
-    ego_optimizer_->setSwarmTrajectories(swarm_local_trajs_);
   }
   else if (back_end_type_ == BackEndType::SSFC) {
     ssfc_optimizer_ = std::make_unique<back_end::SphericalSFCOptimizer>();
@@ -56,7 +55,6 @@ void Navigator::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
     ssfc_optimizer_->setEnvironment(map_);
 
     ssfc_optimizer_->setVisualizer(visualization_);
-    ssfc_optimizer_->assignSwarmTrajs(swarm_local_trajs_);
   }
   else if (back_end_type_ == BackEndType::POLY) {
     polyhedron_sfc_optimizer_ = std::make_unique<back_end::PolyhedronSFCOptimizer>();
@@ -64,7 +62,6 @@ void Navigator::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
     polyhedron_sfc_optimizer_->setEnvironment(map_);
 
     polyhedron_sfc_optimizer_->setVisualizer(visualization_);
-    polyhedron_sfc_optimizer_->assignSwarmTrajs(swarm_local_trajs_);
   }
 
   /* Initialize Timer */
@@ -87,7 +84,7 @@ void Navigator::initParams(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   pnh.param("time_to_col_threshold", time_to_col_threshold_, 0.8);
   pnh.param("receding_horizon_planning_dist", rhp_dist_, -1.0);
   pnh.param("receding_horizon_corridor_dist", rhc_dist_, -1.0);
-  pnh.param("verbose_planning", verbose_planning_, false);
+  pnh.param("print_timers", print_timers_, false);
   
   pnh.param("heartbeat_frequency", hb_freq_, 20.0);
 
@@ -194,7 +191,7 @@ void Navigator::initParams(ros::NodeHandle &nh, ros::NodeHandle &pnh)
     pnh.param("sfc/spherical/spherical_buffer", sph_sfc_params_.spherical_buffer, 0.0);
 
     pnh.param("sfc/spherical/max_vel", sph_sfc_params_.max_vel, 3.0);
-    pnh.param("sfc/spherical/max_acc", sph_sfc_params_.max_acc, 10.0);
+    pnh.param("sfc/spherical/max_acc", sph_sfc_params_.max_acc, 20.0);
 
     pnh.param("sfc/spherical/time_allocation_type", sph_sfc_params_.time_allocation_type, 0);
 
@@ -265,6 +262,7 @@ void Navigator::initPublishers(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   }
 
   if (debug_planning_){
+    logInfo("DEBUG PLANNING ACTIVATED!");
     debug_start_sub_ = pnh.subscribe("debug/plan_start", 5, &Navigator::debugStartCB, this);
     debug_goal_sub_ = pnh.subscribe("debug/plan_goal", 5, &Navigator::debugGoalCB, this);
     plan_on_demand_sub_ = pnh.subscribe("plan_on_demand", 5, &Navigator::planOnDemandCB, this);
@@ -349,15 +347,21 @@ void Navigator::planFrontEndTimerCB(const ros::TimerEvent &e)
   // Display receding horizion goal point
   visualization_->displayGoalPoint(rhp_goal_pos_, Eigen::Vector4d(0, 0.5, 0.5, 1), 0.3, 0);
 
+  tm_entire_plan_.start();
+
   if (!generateFrontEndPlan(start_pos, rhp_goal_pos_, ssfc_)){
     logError("Failed to generate front end plan!");
+    tm_entire_plan_.stop(false);
     return;
   }
 
   if (!requestBackEndPlan(rhp_goal_pos_, rhp_goal_vel_, Eigen::Vector3d::Zero())){
     logError("Request back-end plan failed!");
+    tm_entire_plan_.stop(false);
     return;
   }
+
+  tm_entire_plan_.stop(print_timers_);
 
 }
 
@@ -420,15 +424,45 @@ void Navigator::planGlobalTrajWaypoints(
 
   globalMJO.reset(headState, tailState, waypoints.size());
 
-  double des_vel = max_vel_;
+  double des_max_vel = max_vel_ ;
   Eigen::VectorXd time_dur(waypoints.size()); // time duration vector
+
+  // d_triangle: distance travelled when reaching maximum velocity from rest with maximum acceleration.
+  double d_triangle = 0.5* (des_max_vel * des_max_vel) / max_acc_;
 
   for (int j = 0; j < 2; ++j) // re-try twice
   {
-    for (size_t i = 0; i < waypoints.size(); ++i)
+    for (size_t i = 0; i < waypoints.size(); ++i) // For each waypoint
     {
-      time_dur(i) = (i == 0) ? (waypoints[0] - start_pos).norm() / des_vel
-                              : (waypoints[i] - waypoints[i - 1]).norm() / des_vel;
+      double traj_dist = 0.0;
+
+      if (i == 0){
+        traj_dist = (waypoints[0] - start_pos).norm();
+      }
+      else {
+        traj_dist = (waypoints[i] - waypoints[i - 1]).norm();
+      }
+
+      // For trapezoidal time profile: t_s, t_c and t_d is the time taken to 
+      //  accelerate, travel at maximum velocity, and decelerate respectively.
+      double t_s, t_c, t_d;
+
+      if (2*d_triangle >= traj_dist){ // Follow triangle profile, because distance is too short to reach maximum velocity
+        t_s = sqrt(traj_dist/(max_acc_));  //Acceleration phase
+        t_c = 0.0;       // Constant maximum velocity phase
+        t_d = t_s;      //Deceleration phase
+      }
+      else{ // Follow trapezoidal profile
+        t_s = des_max_vel / max_acc_; //Acceleration phase
+        t_c = (traj_dist - 2*d_triangle)/des_max_vel;  // Constant maximum velocity phase
+        t_d = t_s; //Deceleration phase
+      }
+
+
+      time_dur(i) = t_s + t_c + t_d;
+
+      // time_dur(i) = (i == 0) ? (waypoints[0] - start_pos).norm() / des_vel
+      //                         : (waypoints[i] - waypoints[i - 1]).norm() / des_vel;
     }
 
     globalMJO.generate(innerPts, time_dur);
@@ -440,7 +474,7 @@ void Navigator::planGlobalTrajWaypoints(
       break;
     }
 
-    if (j == 2)
+    if (j == 2)  // on final try
     {
       ROS_WARN("[Navigator::planGlobalTrajWaypoints] Global traj MaxVel = %f > set_max_vel", 
                 globalMJO.getTraj().getMaxVelRate());
@@ -450,7 +484,7 @@ void Navigator::planGlobalTrajWaypoints(
                 << tailState << endl;
     }
 
-    des_vel /= 1.25;
+    des_max_vel /= 1.5;
   }
 
   traj_.setGlobalTraj(globalMJO.getTraj(), ros::Time::now().toSec());
@@ -464,10 +498,10 @@ bool Navigator::generateFrontEndPlan(
   const Eigen::Vector3d& start_pos, const Eigen::Vector3d& goal_pos,
   std::shared_ptr<SSFC::SFCTrajectory> sfc_traj)
 {
-  logInfo(str_fmt("generateFrontEndPlan() from (%f, %f, %f) to (%f, %f, %f)",
-    start_pos(0), start_pos(1), start_pos(2),
-    goal_pos(0), goal_pos(1), goal_pos(2))
-  );
+  // logInfo(str_fmt("generateFrontEndPlan() from (%f, %f, %f) to (%f, %f, %f)",
+  //   start_pos(0), start_pos(1), start_pos(2),
+  //   goal_pos(0), goal_pos(1), goal_pos(2))
+  // );
 
   tm_front_end_plan_.start();
 
@@ -478,10 +512,11 @@ bool Navigator::generateFrontEndPlan(
     );
 
     // viz_helper::publishClosedList(front_end_planner_->getClosedList(), "world", closed_list_viz_pub_);
+    tm_front_end_plan_.stop(false);
     return false;
   }
 
-  tm_front_end_plan_.stop(verbose_planning_);
+  tm_front_end_plan_.stop(print_timers_);
 
   front_end_path_ = front_end_planner_->getPathPos();
   // front_end_path_ = front_end_planner_->getPathPosRaw();
@@ -519,7 +554,7 @@ bool Navigator::generateFrontEndPlan(
 
   }
 
-  tm_sfc_plan_.stop(verbose_planning_);
+  tm_sfc_plan_.stop(print_timers_);
 
   if (sfc_type_ == SFCType::POLYTOPE){
     h_poly_ = poly_sfc_gen_->getPolySFCHyperplanes();
@@ -610,7 +645,7 @@ bool Navigator::requestBackEndPlan(
       visualization_->displayFailedList(cstr_pts_mjo_opt, 0);
     }
   }
-  tm_back_end_plan_.stop(verbose_planning_);
+  tm_back_end_plan_.stop(print_timers_);
 
   if (!plan_success){
     return false;
@@ -623,7 +658,11 @@ bool Navigator::requestBackEndPlan(
 
   mjoToMsg(mjo_opt, ros::Time::now().toSec(), poly_msg, MINCO_msg);
   be_traj_pub_.publish(poly_msg); // (In drone origin frame) Publish to other nodes on the current drone for trajectory execution
-  swarm_minco_traj_pub_.publish(MINCO_msg); // (In world frame) Broadcast to all other drones for replanning to optimize in avoiding swarm collision
+
+  if (prev_req_be_req_t_ - prev_swarm_broadcast_pub_t_ >= 0.04){
+    swarm_minco_traj_pub_.publish(MINCO_msg); // (In world frame) Broadcast to all other drones for replanning to optimize in avoiding swarm collision
+    prev_swarm_broadcast_pub_t_ = ros::Time::now().toSec();
+  }
 
   // Update optimized trajectory 
   (*swarm_local_trajs_)[drone_id_] = getLocalTraj(
@@ -635,6 +674,8 @@ bool Navigator::requestBackEndPlan(
   traj_.local_traj = (*swarm_local_trajs_)[drone_id_];
   local_traj_exists_ = true;
   traj_id_++; // Increment trajectory id
+
+  prev_req_be_req_t_ = ros::Time::now().toSec();
 
   return true;
 }
@@ -786,22 +827,22 @@ bool Navigator::PolySFCOptimize(const Eigen::Matrix3d& startPVA, const Eigen::Ma
   hPolyIdx.resize(num_segs);
   for (int i = 0, j = 0, k; i < num_polyhedrons; i++) // For each polygon i
   {
-      // k: Number of segments per super-segment
-      k = segs_in_super_seg(i); 
-      for (int l = 0; l < k; l++, j++)  // For each segment l on the super-segment
+    // k: Number of segments per super-segment
+    k = segs_in_super_seg(i); 
+    for (int l = 0; l < k; l++, j++)  // For each segment l on the super-segment
+    {
+      if (l < k - 1) // If not the last segment of the piece
       {
-          if (l < k - 1) // If not the last segment of the piece
-          {
-              vPolyIdx(j) = 2 * i; // segment j belongs to the (2*i)-th polyhedron (CURRENT) 
-              num_decis_var_bary += v_poly[2 * i].cols(); // Add Number of vertices 
-          }
-          else if (i < num_polyhedrons - 1) // Last segment of the super-segment
-          {
-              vPolyIdx(j) = 2 * i + 1; // segment j belongs to the (2*i+1)-th polyhedron (NEXT)
-              num_decis_var_bary += v_poly[2 * i + 1].cols(); // Add Number of vertices
-          }
-          hPolyIdx(j) = i;
+        vPolyIdx(j) = 2 * i; // segment j belongs to the (2*i)-th polyhedron (CURRENT) 
+        num_decis_var_bary += v_poly[2 * i].cols(); // Add Number of vertices 
       }
+      else if (i < num_polyhedrons - 1) // Last segment of the super-segment
+      {
+        vPolyIdx(j) = 2 * i + 1; // segment j belongs to the (2*i+1)-th polyhedron (NEXT)
+        num_decis_var_bary += v_poly[2 * i + 1].cols(); // Add Number of vertices
+      }
+      hPolyIdx(j) = i;
+    }
   }
 
   // /***************************/
@@ -841,6 +882,14 @@ bool Navigator::PolySFCOptimize(const Eigen::Matrix3d& startPVA, const Eigen::Ma
 
   std::vector<Eigen::Vector3d> initial_mjo_viz; // Visualization of the initial minimum jerk trajectory
   for (int i = 0; i < init_cstr_pts.cols(); ++i){
+    if (fabs(init_cstr_pts.col(i)(0)) > 999 
+        || fabs(init_cstr_pts.col(i)(1)) > 999
+        || fabs(init_cstr_pts.col(i)(2)) > 999){
+      logError("INVALID INITIAL TRAJECTORY");
+      logError("INVALID INITIAL TRAJECTORY");
+      logError("INVALID INITIAL TRAJECTORY");
+      logError("INVALID INITIAL TRAJECTORY");
+    }
     initial_mjo_viz.push_back(init_cstr_pts.col(i));
   }
   visualization_->displayInitialMJO(initial_mjo_viz, 0.075, 0);
@@ -1093,19 +1142,33 @@ void Navigator::swarmMincoTrajCB(const traj_utils::MINCOTrajConstPtr &msg)
   mincoMsgToTraj(*msg, traj);
   
   (*swarm_local_trajs_)[msg->drone_id] = traj;
-}
 
+  if (back_end_type_ == BackEndType::EGO){
+    ego_optimizer_->setSwarmTrajectories(swarm_local_trajs_);
+  }
+  else if (back_end_type_ == BackEndType::SSFC) {
+    ssfc_optimizer_->assignSwarmTrajs(swarm_local_trajs_);
+  }
+  else if (back_end_type_ == BackEndType::POLY) {
+    polyhedron_sfc_optimizer_->assignSwarmTrajs(swarm_local_trajs_);
+  }
+
+}
 
 /* Checking methods */
 
 bool Navigator::isTrajectorySafe(
-  const std::unordered_map<int, ego_planner::LocalTrajData>& swarm_local_trajs, 
+  std::unordered_map<int, ego_planner::LocalTrajData>& swarm_local_trajs, 
   bool& e_stop, bool& must_replan)
 {
   e_stop = false;
   must_replan = false;
 
-  ego_planner::LocalTrajData traj = (*swarm_local_trajs)[drone_id_];
+  if (swarm_local_trajs.find(drone_id_) == swarm_local_trajs.end()){
+    return true;
+  }
+
+  ego_planner::LocalTrajData traj = swarm_local_trajs[drone_id_];
   
   if (traj.traj_id < 0){ // Return if no local trajectory yet
     return true;
@@ -1152,8 +1215,10 @@ bool Navigator::isTrajectorySafe(
 
         if (!in_collision){ // If current position not in collision
           
-          for (const auto& agent_traj : swarm_local_trajs) // Iterate through trajectories of other agents
+          for (const auto& id_traj_pair : swarm_local_trajs) // Iterate through trajectories of other agents
           {
+            auto agent_traj = id_traj_pair.second;
+
             // Check that it's not a null pointer
             // if (!(*swarm_local_trajs)[k]){
             //   logError(str_fmt("Swarm agent %d has empty trajectory", k))

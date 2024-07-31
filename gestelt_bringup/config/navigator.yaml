@@ -5,7 +5,7 @@
 #####
 
 # debug_planning: false     # Set in launch file. Used to allow certain topics for debugging planning algorithms
-verbose_planning: true     # Print out planning times
+print_timers: true     # Print out planning times
 
 goal_tolerance: 0.5                     # [m] Tolerance for goal to be considered reached
 time_to_col_threshold: 0.2              # [s] Threshold for seconds to collision.
@@ -16,13 +16,13 @@ safety_check_frequency: 20.0            # [Hz] Timer thread for checking safety 
 heartbeat_frequency: 20.0               # [Hz] Frequency to indicate if planner is still alive
 
 ##### Set planner types
-front_end/planner_type: 1         # 0: ASTAR, 1: JPS_AND_DMP
-sfc/planner_type: 1               # 0: SPHERICAL, 1: POLYTOPE
-back_end/planner_type: 2          # 0: Spherical SFC, 1: EGO, 2: POLYTOPE SFC
+front_end/planner_type: 0         # 0: ASTAR, 1: JPS_AND_DMP
+sfc/planner_type: 0               # 0: SPHERICAL, 1: POLYTOPE
+back_end/planner_type: 0         # 0: Spherical SFC, 1: EGO, 2: POLYTOPE SFC
 
 ##### Front-end params
 front_end:
-  planner_frequency: 15.0        # [Hz] Front-end planning frequency
+  planner_frequency: 10.0        # [Hz] Front-end planning frequency
 
   a_star:
     max_iterations: 9999  
@@ -31,10 +31,10 @@ front_end:
     cost_function_type: 0     # [AStar] Type of cost function to use 
 
   jps:
-    print_timers: true      # If true, print debug from planner
-    planner_verbose: false      # If true, print debug from planner
+    print_timers: false      # If true, print timer from planner
+    planner_verbose: true      # If true, print debug info from planner
     interpolate: false           # Interpolate JPS (necessary for spherical safe flight generation)
-    eps: 1.01                   # Weight on heuristic
+    eps: 1.001                   # Weight on heuristic
     use_dmp: false               # 
     dmp_search_radius: 0.4      # DMP Search radius
     dmp_potential_radius: 0.4   # DMP radius of distance field (Value has significant effect on runtime)
@@ -66,8 +66,8 @@ sfc:
     max_sphere_vol: 99999.9 # (m^3) Maximum allowed sphere volume
 
     time_allocation_type: 1 #  0: Max vel assignment(DANGEROUS), 1: Trapezoidal assignment
-    max_vel: 3.0 # Maximum velocity (m/s)
-    max_acc: 25.0 # Maximum acceleration (m/s^2)
+    max_vel: 3.25 # Maximum velocity (m/s)
+    max_acc: 27.5 # Maximum acceleration (m/s^2)
 
     # SFC Buffer 
     spherical_buffer: 0.175 # (m) Reduce spherical SFCs by this fixed amount to increase buffer from obstacles
@@ -77,12 +77,12 @@ sfc:
     cvx_decomp_type: 0        # Convex decomposition type. 0: Liu, 1: Toumieh_old, 2: Toumieh_new
     poly_max: 5               # [For Toumieh cvx_decomp_type] Maximum number of polytopes to generate
     num_expansion_itr: 100    # [For Toumieh cvx_decomp_type] 
-    # bbox_x: 1.0
-    # bbox_y: 2.0
-    # bbox_z: 1.0
-    bbox_x: 0.75
-    bbox_y: 1.25
-    bbox_z: 0.75
+    bbox_x: 1.0
+    bbox_y: 2.0
+    bbox_z: 1.0
+    # bbox_x: 0.75
+    # bbox_y: 1.5
+    # bbox_z: 0.75
     # bbox_x: 0.25
     # bbox_y: 0.5
     # bbox_z: 0.25
@@ -104,48 +104,57 @@ optimization:
   weight_time: 10.0 
   swarm_clearance: 0.4 
   max_vel: 3.0 # Maximum velocity (m/s)
-  max_acc: 25.0 # Maximum acceleration (m/s^2)
+  max_acc: 20.0 # Maximum acceleration (m/s^2)
 
   # EGO params
   weight_obstacle: 10000.0 
   obstacle_clearance: 0.4 
 
   # Spherical SFC
-  weight_sph_bounds: 1000.0
+  weight_sph_bounds: 100.0
   barrier:
     alpha: 2.0
     buffer: 0.4
     opt_weight: 0.0 # Weight of barrier term
   
   # Polyhedron SFC
-  weight_poly_bounds: 0.0
-  init_traj_opt_epsilon: 0.1 # (Initial trajectory generation) Tolerance for convergence during optimization
-  final_traj_opt_epsilon: 0.1 # (Final trajectory generation) Tolerance for convergence during optimization
-  backward_proj_opt_epsilon: 0.1 # (Backward projection) Tolerance for convergence during optimization
+  poly_sfc: 
+    weight_poly_bounds: 100.0
+    # Polyhedron SFC Initial Trajectory
+    init_traj_g_eps: 0.00001 #  Epsilon for grad norm convergence test. Determines the accuracy of the solution
+    init_traj_delta: 0.001 # Delta for convergence test. determines the minimum rate of decrease of the objective function
+    # Backward Projection
+    # backward_proj_g_eps: 0.001 # Epsilon for grad norm convergence test. Determines the accuracy of the solution
+    backward_proj_delta: 0.00001 # Delta for convergence test. determines the minimum rate of decrease of the objective function
+    # Final Trajectory
+    final_traj_g_eps: 0.0001 # Epsilon for grad norm convergence test. Determines the accuracy of the solution
+    final_traj_delta: 0.00001 # Delta for convergence test. determines the minimum rate of decrease of the objective function
 
 ##### Mapping params
 grid_map:
+  print_timers: true
+
   global_map:
     size_x: 50.0
     size_y: 50.0
     size_z: 20.0
   local_map:      #local_map parameters must consider the "receding_horizon_planning_dist"!
-    size_x: 13.0
-    size_y: 13.0
+    size_x: 17.5
+    size_y: 17.5
     size_z: 4.0
-    update_frequency: 30.0
-    viz_frequency:    10.0
+    update_frequency: 20.0    # Frequency to update local map
+    viz_frequency:    10.0    # Frequency to visualize local map
 
   occ_map:
     resolution: 0.1
     inflation: 0.2
-    ground_height: 0.0
-    max_range: 30.0
+    ground_height: 0.0  
+    max_range: 30.0     # Max range of sensor
 
   # For visualizing collision with static obstacles
   collision_check:
-    warn_radius: 0.225
-    fatal_radius: 0.14
+    warn_radius: 0.225  # Publish warning spheres when collision is possible
+    fatal_radius: 0.14  # Publish fatal spheres when collision is definite
 
   # camera extrinsic parameters 
   camera_to_body: 

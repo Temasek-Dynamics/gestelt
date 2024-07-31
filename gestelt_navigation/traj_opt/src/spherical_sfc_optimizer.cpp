@@ -559,13 +559,13 @@ namespace back_end
 
     double pt_time = t_now_ + t;
 
-    if (swarm_local_trajs_ == nullptr){
-      return false;
-    }
+    // if (swarm_local_trajs_ == nullptr){
+    //   return false;
+    // }
 
-    // std::shared_ptr<std::vector<ego_planner::LocalTrajData>> swarm_local_trajs_;
+    swarm_traj_mutex_.lock();  
 
-    for (const auto& id_traj_pair : *swarm_local_trajs_){ // Iterate through trajectories
+    for (const auto& id_traj_pair : swarm_local_trajs_){ // Iterate through trajectories
 
       auto agent_traj = id_traj_pair.second;
 
@@ -613,6 +613,7 @@ namespace back_end
         min_ellip_dist2_ = ellip_dist2;
       }
     }
+    swarm_traj_mutex_.unlock();  
 
     return ret;
   }
@@ -692,10 +693,6 @@ namespace back_end
     visualization_ = vis;
   }
 
-  void SphericalSFCOptimizer::assignSwarmTrajs(
-    std::shared_ptr<std::unordered_map<int, ego_planner::LocalTrajData>> swarm_local_trajs) {
-    swarm_local_trajs_ = swarm_local_trajs;
-  }
 
   int SphericalSFCOptimizer::earlyExitCallback(void *func_data, const double *x, const double *g, const double fx, const double xnorm, const double gnorm, const double step, int n, int k, int ls)
   {

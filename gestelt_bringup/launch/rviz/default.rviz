@@ -7,12 +7,8 @@ Panels:
         - /Global Options1
         - /Axes1
         - /TF1/Frames1
-        - /d0/planner(Red)1
-        - /d0/planner(Red)1/front-end1
         - /d0/planner(Red)1/back_end1/ego_planner1
-        - /d1/planner(orange)1
         - /d1/planner(orange)1/odom1/Shape1
-        - /d2/planner(yellow)1
         - /d2/planner(yellow)1/odom1/Shape1
         - /d3/planner(green)1/odom1/Shape1
         - /d4/planner(lightblue)1/odom1/Shape1
@@ -23,9 +19,10 @@ Panels:
         - /d8/planner(silver)1/odom1/Shape1
         - /d10/planner(brightgreen)1/odom1/Shape1
         - /d11/planner(blue)1/odom1/Shape1
+        - /d11/planner(blue)1/back_end1
         - /drone13/planner(Red)1/odom1/Shape1
-      Splitter Ratio: 0.6235294342041016
-    Tree Height: 627
+      Splitter Ratio: 0.529411792755127
+    Tree Height: 380
   - Class: rviz/Selection
     Name: Selection
   - Class: rviz/Tool Properties
@@ -193,7 +190,7 @@ Visualization Manager:
           Color: 114; 159; 207
           Color Transformer: FlatColor
           Decay Time: 0
-          Enabled: true
+          Enabled: false
           Invert Rainbow: false
           Max Color: 255; 255; 255
           Min Color: 0; 0; 0
@@ -208,7 +205,7 @@ Visualization Manager:
           Unreliable: false
           Use Fixed Frame: true
           Use rainbow: true
-          Value: true
+          Value: false
         - Alpha: 0.10000000149011612
           Autocompute Intensity Bounds: true
           Autocompute Value Bounds:
@@ -274,7 +271,7 @@ Visualization Manager:
           Marker Topic: /drone0/grid_map/collision_viz
           Name: drone0/collision_viz
           Namespaces:
-            collision_viz: true
+            {}
           Queue Size: 100
           Value: true
         - Class: rviz/Marker
@@ -446,10 +443,18 @@ Visualization Manager:
           Value: true
         - Class: rviz/Marker
           Enabled: true
+          Marker Topic: /drone0/back_end/dbg/initial_poly_path
+          Name: initial_mjo
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: true
+        - Class: rviz/Marker
+          Enabled: true
           Marker Topic: /drone0/back_end/optimal_mjo
           Name: optimal_mjo
           Namespaces:
-            {}
+            "": true
           Queue Size: 100
           Value: true
         - Class: rviz/Group
@@ -467,11 +472,10 @@ Visualization Manager:
               Marker Topic: /drone0/plan_viz
               Name: plan_viz
               Namespaces:
-                front_end_path_lines: true
-                start_end_points: true
+                {}
               Queue Size: 100
               Value: true
-          Enabled: true
+          Enabled: false
           Name: front-end
         - Class: rviz/Group
           Displays:
@@ -488,7 +492,7 @@ Visualization Manager:
               Marker Topic: /drone0/back_end/dbg/initial_poly_path
               Name: initial_poly_path
               Namespaces:
-                "": true
+                {}
               Queue Size: 100
               Value: true
             - Alpha: 0.15000000596046448
@@ -523,7 +527,7 @@ Visualization Manager:
               Marker Topic: /drone0/sfc_spherical
               Name: sfc_spherical
               Namespaces:
-                {}
+                sfc_spheres: true
               Queue Size: 100
               Value: true
             - Class: rviz/MarkerArray
@@ -547,7 +551,8 @@ Visualization Manager:
               Marker Topic: /drone0/sfc_waypoints
               Name: sfc_waypoints
               Namespaces:
-                {}
+                sfc_trajectory_line: true
+                sfc_trajectory_waypoints: true
               Queue Size: 100
               Value: true
             - Class: rviz/MarkerArray
@@ -566,7 +571,7 @@ Visualization Manager:
                 {}
               Queue Size: 100
               Value: false
-          Enabled: false
+          Enabled: true
           Name: ssfc
         - Class: rviz/Group
           Displays:
@@ -645,7 +650,7 @@ Visualization Manager:
                   Marker Topic: /drone0/back_end/goal_point
                   Name: goal_point(cyan)
                   Namespaces:
-                    "": true
+                    {}
                   Queue Size: 100
                   Value: true
                 - Class: rviz/Marker
@@ -653,7 +658,7 @@ Visualization Manager:
                   Marker Topic: /drone0/back_end/dbg/failed_list
                   Name: FailedList(brown)
                   Namespaces:
-                    "": true
+                    {}
                   Queue Size: 100
                   Value: true
               Enabled: true
@@ -678,7 +683,7 @@ Visualization Manager:
                   Value: true
               Enabled: false
               Name: gradients
-          Enabled: true
+          Enabled: false
           Name: back_end
         - Class: rviz/Group
           Displays:
@@ -822,10 +827,18 @@ Visualization Manager:
           Value: false
         - Class: rviz/Marker
           Enabled: true
+          Marker Topic: /drone1/back_end/dbg/initial_poly_path
+          Name: initial_mjo
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: true
+        - Class: rviz/Marker
+          Enabled: true
           Marker Topic: /drone1/back_end/optimal_mjo
           Name: optimal_mjo
           Namespaces:
-            {}
+            "": true
           Queue Size: 100
           Value: true
         - Class: rviz/Group
@@ -889,7 +902,7 @@ Visualization Manager:
               Topic: /drone1/sfc/ellipsoid
               Unreliable: false
               Value: false
-          Enabled: true
+          Enabled: false
           Name: poly_sfc
         - Class: rviz/Group
           Displays:
@@ -1033,7 +1046,7 @@ Visualization Manager:
                   Value: false
               Enabled: false
               Name: gradients
-          Enabled: true
+          Enabled: false
           Name: back_end
       Enabled: true
       Name: d1/planner(orange)
@@ -1108,12 +1121,29 @@ Visualization Manager:
           Value: false
         - Class: rviz/Marker
           Enabled: true
-          Marker Topic: /drone2/back_end/optimal_mjo
-          Name: optimal_mjo
+          Marker Topic: /drone2/back_end/dbg/initial_poly_path
+          Name: initial_mjo
           Namespaces:
             {}
           Queue Size: 100
           Value: true
+        - Class: rviz/Marker
+          Enabled: true
+          Marker Topic: /drone2/back_end/optimal_mjo
+          Name: optimal_mjo
+          Namespaces:
+            "": true
+          Queue Size: 100
+          Value: true
+        - Alpha: 1
+          Class: rviz/Polygon
+          Color: 25; 255; 0
+          Enabled: false
+          Name: local_map/bounds
+          Queue Size: 10
+          Topic: /drone2/local_map/bounds
+          Unreliable: false
+          Value: false
         - Class: rviz/Group
           Displays:
             - Class: rviz/Marker
@@ -1175,7 +1205,7 @@ Visualization Manager:
               Topic: /drone0/sfc/ellipsoid
               Unreliable: false
               Value: false
-          Enabled: true
+          Enabled: false
           Name: poly_sfc
         - Class: rviz/Group
           Displays:
@@ -1319,7 +1349,7 @@ Visualization Manager:
                   Value: false
               Enabled: false
               Name: gradients
-          Enabled: true
+          Enabled: false
           Name: back_end
       Enabled: true
       Name: d2/planner(yellow)
@@ -1381,7 +1411,7 @@ Visualization Manager:
           Axes Radius: 0.029999999329447746
           Class: rviz/Pose
           Color: 255; 25; 0
-          Enabled: true
+          Enabled: false
           Head Length: 0.30000001192092896
           Head Radius: 0.10000000149011612
           Name: rhp_goal
@@ -1391,13 +1421,13 @@ Visualization Manager:
           Shape: Axes
           Topic: /drone3/navigator/rhp_goal
           Unreliable: false
-          Value: true
+          Value: false
         - Class: rviz/Marker
           Enabled: true
           Marker Topic: /drone3/back_end/optimal_mjo
           Name: optimal_mjo
           Namespaces:
-            {}
+            "": true
           Queue Size: 100
           Value: true
         - Class: rviz/Group
@@ -1562,7 +1592,7 @@ Visualization Manager:
                   Value: false
               Enabled: false
               Name: gradients
-          Enabled: true
+          Enabled: false
           Name: back_end
       Enabled: true
       Name: d3/planner(green)
@@ -1661,7 +1691,7 @@ Visualization Manager:
                 {}
               Queue Size: 100
               Value: true
-          Enabled: true
+          Enabled: false
           Name: front-end
         - Class: rviz/Group
           Displays:
@@ -1805,7 +1835,7 @@ Visualization Manager:
                   Value: false
               Enabled: false
               Name: gradients
-          Enabled: true
+          Enabled: false
           Name: back_end
       Enabled: true
       Name: d4/planner(lightblue)
@@ -1867,7 +1897,7 @@ Visualization Manager:
           Axes Radius: 0.029999999329447746
           Class: rviz/Pose
           Color: 255; 25; 0
-          Enabled: true
+          Enabled: false
           Head Length: 0.30000001192092896
           Head Radius: 0.10000000149011612
           Name: rhp_goal
@@ -1877,13 +1907,13 @@ Visualization Manager:
           Shape: Axes
           Topic: /drone5/navigator/rhp_goal
           Unreliable: false
-          Value: true
+          Value: false
         - Class: rviz/Marker
           Enabled: true
           Marker Topic: /drone5/back_end/optimal_mjo
           Name: optimal_mjo
           Namespaces:
-            {}
+            "": true
           Queue Size: 100
           Value: true
         - Class: rviz/Group
@@ -2048,7 +2078,7 @@ Visualization Manager:
                   Value: false
               Enabled: false
               Name: gradients
-          Enabled: true
+          Enabled: false
           Name: back_end
       Enabled: true
       Name: d5/planner(purple)
@@ -2126,7 +2156,7 @@ Visualization Manager:
           Marker Topic: /drone6/back_end/optimal_mjo
           Name: optimal_mjo
           Namespaces:
-            {}
+            "": true
           Queue Size: 100
           Value: true
         - Class: rviz/Group
@@ -2291,7 +2321,7 @@ Visualization Manager:
                   Value: false
               Enabled: false
               Name: gradients
-          Enabled: true
+          Enabled: false
           Name: back_end
       Enabled: true
       Name: d6/planner(tan)
@@ -2353,7 +2383,7 @@ Visualization Manager:
           Axes Radius: 0.029999999329447746
           Class: rviz/Pose
           Color: 255; 25; 0
-          Enabled: true
+          Enabled: false
           Head Length: 0.30000001192092896
           Head Radius: 0.10000000149011612
           Name: rhp_goal
@@ -2363,13 +2393,13 @@ Visualization Manager:
           Shape: Axes
           Topic: /drone7/navigator/rhp_goal
           Unreliable: false
-          Value: true
+          Value: false
         - Class: rviz/Marker
           Enabled: true
           Marker Topic: /drone7/back_end/optimal_mjo
           Name: optimal_mjo
           Namespaces:
-            {}
+            "": true
           Queue Size: 100
           Value: true
         - Class: rviz/Group
@@ -2442,7 +2472,7 @@ Visualization Manager:
                 {}
               Queue Size: 100
               Value: false
-          Enabled: true
+          Enabled: false
           Name: ssfc
         - Class: rviz/Group
           Displays:
@@ -2534,7 +2564,7 @@ Visualization Manager:
                   Value: false
               Enabled: false
               Name: gradients
-          Enabled: true
+          Enabled: false
           Name: back_end
       Enabled: true
       Name: d7/planner(gray)
@@ -2612,7 +2642,7 @@ Visualization Manager:
           Marker Topic: /drone8/back_end/optimal_mjo
           Name: optimal_mjo
           Namespaces:
-            {}
+            "": true
           Queue Size: 100
           Value: true
         - Class: rviz/Group
@@ -2777,7 +2807,7 @@ Visualization Manager:
                   Value: false
               Enabled: false
               Name: gradients
-          Enabled: true
+          Enabled: false
           Name: back_end
       Enabled: true
       Name: d8/planner(silver)
@@ -2855,7 +2885,7 @@ Visualization Manager:
           Marker Topic: /drone9/back_end/optimal_mjo
           Name: optimal_mjo
           Namespaces:
-            {}
+            "": true
           Queue Size: 100
           Value: true
         - Class: rviz/Group
@@ -3020,7 +3050,7 @@ Visualization Manager:
                   Value: false
               Enabled: false
               Name: gradients
-          Enabled: true
+          Enabled: false
           Name: back_end
       Enabled: true
       Name: d9/planner(cyan)
@@ -3098,7 +3128,7 @@ Visualization Manager:
           Marker Topic: /drone10/back_end/optimal_mjo
           Name: optimal_mjo
           Namespaces:
-            {}
+            "": true
           Queue Size: 100
           Value: true
         - Class: rviz/Group
@@ -3265,7 +3295,7 @@ Visualization Manager:
               Name: gradients
           Enabled: true
           Name: back_end
-      Enabled: false
+      Enabled: true
       Name: d10/planner(brightgreen)
     - Class: rviz/Group
       Displays:
@@ -3341,7 +3371,7 @@ Visualization Manager:
           Marker Topic: /drone11/back_end/optimal_mjo
           Name: optimal_mjo
           Namespaces:
-            {}
+            "": true
           Queue Size: 100
           Value: true
         - Class: rviz/Group
@@ -3508,7 +3538,7 @@ Visualization Manager:
               Name: gradients
           Enabled: true
           Name: back_end
-      Enabled: false
+      Enabled: true
       Name: d11/planner(blue)
     - Class: rviz/Group
       Displays:
@@ -5709,7 +5739,7 @@ Visualization Manager:
       Color: 239; 41; 41
       Color Transformer: FlatColor
       Decay Time: 0
-      Enabled: true
+      Enabled: false
       Invert Rainbow: false
       Max Color: 255; 255; 255
       Min Color: 0; 0; 0
@@ -5724,15 +5754,15 @@ Visualization Manager:
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
-      Value: true
+      Value: false
     - Class: rviz/Marker
-      Enabled: true
+      Enabled: false
       Marker Topic: /plan_viz
       Name: /plan_viz
       Namespaces:
         {}
       Queue Size: 100
-      Value: true
+      Value: false
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
@@ -5787,26 +5817,20 @@ Visualization Manager:
   Value: true
   Views:
     Current:
-      Class: rviz/XYOrbit
-      Distance: 20.100234985351562
+      Angle: -0.004999999888241291
+      Class: rviz/TopDownOrtho
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
-      Field of View: 0.7853981852531433
-      Focal Point:
-        X: 0.14263105392456055
-        Y: -3.8251585960388184
-        Z: 9.5367431640625e-07
-      Focal Shape Fixed Size: true
-      Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.5697963237762451
+      Scale: -60.9290657043457
       Target Frame: my_view
-      Yaw: 4.713576316833496
+      X: -2.067492723464966
+      Y: 0.16143953800201416
     Saved:
       - Class: rviz/FPS
         Enable Stereo Rendering:
@@ -5942,10 +5966,10 @@ Visualization Manager:
 Window Geometry:
   Displays:
     collapsed: false
-  Height: 948
+  Height: 701
   Hide Left Dock: false
   Hide Right Dock: false
-  QMainWindow State: 000000ff00000000fd0000000400000000000001560000035afc020000003afb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073010000003d000002b0000000c900fffffffc000002f3000000a4000000a400fffffffa000000010100000002fb0000000a0049006d0061006700650000000000ffffffff0000000000000000fb0000000a005600690065007700730100000000000001d70000010000fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb0000000c00430061006d00650072006100000001d1000000b50000000000000000fb0000000a006400650070007400680000000265000000c00000000000000000fb0000000a0049006d00610067006500000002590000013e0000000000000000fb0000000a0049006d00610067006501000003f4000001190000000000000000fb0000000a0064006500700074006800000004a2000000ac0000000000000000fb0000000a0064006500700074006800000001ef000001b60000000000000000fb0000000a0064006500700074006800000004b9000000950000000000000000fb0000000a006400650070007400680000000481000000cd0000000000000000fb0000000a006400650070007400680000000429000001250000000000000000fb0000000a0064006500700074006800000003b7000000af0000000000000000fb0000000a0064006500700074006800000003d5000000b50000000000000000fb0000000a006400650070007400680000000444000001260000000000000000fb0000000a00640065007000740068000000041f0000014b0000000000000000fb0000000a0064006500700074006800000001b8000000160000000000000000fb0000000a0064006500700074006800000001c1000000160000000000000000fb0000000a0064006500700074006800000004b1000000550000000000000000fb0000000a006400650070007400680000000505000000650000000000000000fb0000000a006400650070007400680000000502000000680000000000000000fb0000000a0064006500700074006800000004f9000000710000000000000000fb0000000a0064006500700074006800000003dd0000018d0000000000000000fb0000000a0064006500700074006800000004de0000008c0000000000000000fb0000000a0064006500700074006800000004cc0000009e0000000000000000fb0000000a00640065007000740068000000048a000000c40000000000000000fb0000000a0064006500700074006800000004aa000000c00000000000000000fb0000000a0049006d00610067006500000003fa000001540000000000000000fb0000000a0049006d00610067006501000002e1000002890000000000000000fb0000000a006400650070007400680000000495000000d50000000000000000fb0000000a0064006500700074006800000001b60000001b0000000000000000fb0000000a0064006500700074006800000001c10000002f0000000000000000fb0000000a0064006500700074006800000001d3000000300000000000000000fb0000000a0064006500700074006800000001e6000000320000000000000000fb0000000a0064006500700074006800000004dc0000008e0000000000000000fb0000000a0064006500700074006800000004f4000000760000000000000000fb0000000a0064006500700074006800000004f2000000780000000000000000fb0000000a006400650070007400680000000503000000670000000000000000fb0000000a006400650070007400680000000509000000610000000000000000fb0000000a006400650070007400680000000511000000590000000000000000fb0000000a006400650070007400680000000517000000530000000000000000fb0000000a00640065007000740068000000051d0000004d0000000000000000fb0000000a00640065007000740068000000051d0000004d0000000000000000fb0000000a006400650070007400680000000526000000440000000000000000fb0000000a00640065007000740068000000052b0000003f0000000000000000fb0000000a00640065007000740068000000052b0000003f0000000000000000fb0000000a00640065007000740068000000052f0000003b0000000000000000fb0000000a006400650070007400680000000532000000380000000000000000fb0000000a006400650070007400680000000536000000340000000000000000fb0000001800640065007000740068005f00630061006d00650072006100000002f8000000af0000000000000000fb0000000a0049006d00610067006501000002d0000000c70000000000000000fb0000000a0049006d00610067006501000002880000010f0000000000000000000000010000010f00000385fc0200000002fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000007800000003bfc0100000002fb0000000800540069006d00650000000000000007800000041800fffffffb0000000800540069006d00650100000000000004500000000000000000000002640000035a00000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd00000004000000000000015600000263fc020000003afb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073010000003d000001b9000000c900fffffffc000001fc000000a4000000a400fffffffa000000010100000002fb0000000a0049006d0061006700650000000000ffffffff0000000000000000fb0000000a005600690065007700730100000000000001d70000010000fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb0000000c00430061006d00650072006100000001d1000000b50000000000000000fb0000000a006400650070007400680000000265000000c00000000000000000fb0000000a0049006d00610067006500000002590000013e0000000000000000fb0000000a0049006d00610067006501000003f4000001190000000000000000fb0000000a0064006500700074006800000004a2000000ac0000000000000000fb0000000a0064006500700074006800000001ef000001b60000000000000000fb0000000a0064006500700074006800000004b9000000950000000000000000fb0000000a006400650070007400680000000481000000cd0000000000000000fb0000000a006400650070007400680000000429000001250000000000000000fb0000000a0064006500700074006800000003b7000000af0000000000000000fb0000000a0064006500700074006800000003d5000000b50000000000000000fb0000000a006400650070007400680000000444000001260000000000000000fb0000000a00640065007000740068000000041f0000014b0000000000000000fb0000000a0064006500700074006800000001b8000000160000000000000000fb0000000a0064006500700074006800000001c1000000160000000000000000fb0000000a0064006500700074006800000004b1000000550000000000000000fb0000000a006400650070007400680000000505000000650000000000000000fb0000000a006400650070007400680000000502000000680000000000000000fb0000000a0064006500700074006800000004f9000000710000000000000000fb0000000a0064006500700074006800000003dd0000018d0000000000000000fb0000000a0064006500700074006800000004de0000008c0000000000000000fb0000000a0064006500700074006800000004cc0000009e0000000000000000fb0000000a00640065007000740068000000048a000000c40000000000000000fb0000000a0064006500700074006800000004aa000000c00000000000000000fb0000000a0049006d00610067006500000003fa000001540000000000000000fb0000000a0049006d00610067006501000002e1000002890000000000000000fb0000000a006400650070007400680000000495000000d50000000000000000fb0000000a0064006500700074006800000001b60000001b0000000000000000fb0000000a0064006500700074006800000001c10000002f0000000000000000fb0000000a0064006500700074006800000001d3000000300000000000000000fb0000000a0064006500700074006800000001e6000000320000000000000000fb0000000a0064006500700074006800000004dc0000008e0000000000000000fb0000000a0064006500700074006800000004f4000000760000000000000000fb0000000a0064006500700074006800000004f2000000780000000000000000fb0000000a006400650070007400680000000503000000670000000000000000fb0000000a006400650070007400680000000509000000610000000000000000fb0000000a006400650070007400680000000511000000590000000000000000fb0000000a006400650070007400680000000517000000530000000000000000fb0000000a00640065007000740068000000051d0000004d0000000000000000fb0000000a00640065007000740068000000051d0000004d0000000000000000fb0000000a006400650070007400680000000526000000440000000000000000fb0000000a00640065007000740068000000052b0000003f0000000000000000fb0000000a00640065007000740068000000052b0000003f0000000000000000fb0000000a00640065007000740068000000052f0000003b0000000000000000fb0000000a006400650070007400680000000532000000380000000000000000fb0000000a006400650070007400680000000536000000340000000000000000fb0000001800640065007000740068005f00630061006d00650072006100000002f8000000af0000000000000000fb0000000a0049006d00610067006501000002d0000000c70000000000000000fb0000000a0049006d00610067006501000002880000010f0000000000000000000000010000010f00000385fc0200000002fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000007800000003bfc0100000002fb0000000800540069006d00650000000000000007800000041800fffffffb0000000800540069006d00650100000000000004500000000000000000000004440000026300000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Selection:
     collapsed: false
   Time:
@@ -5954,6 +5978,6 @@ Window Geometry:
     collapsed: false
   Views:
     collapsed: false
-  Width: 960
-  X: 0
-  Y: 27
+  Width: 1440
+  X: 307
+  Y: 187

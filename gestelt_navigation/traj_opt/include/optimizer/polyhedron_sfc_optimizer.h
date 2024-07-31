@@ -73,25 +73,6 @@ namespace back_end
     static double costFunctionCallback(void *func_data, const double *x, double *grad, const int n);
 
     /**
-     * @brief The LBFGS callback function to receive the progress (the number of iterations, the current value of the objective function) of the minimization process.
-     * 
-     * @param func_data 
-     * @param x 
-     * @param g 
-     * @param fx 
-     * @param xnorm 
-     * @param gnorm 
-     * @param step 
-     * @param n 
-     * @param k 
-     * @param ls 
-     * @return int 
-     */
-    static int earlyExitCallback(void *func_data, const double *x, const double *g,
-                                 const double fx, const double xnorm, const double gnorm,
-                                 const double step, int n, int k, int ls);
-
-    /**
      * @brief Get cost for constraints on PVA
      * 
      * @tparam EIGENVEC 
@@ -242,8 +223,11 @@ namespace back_end
 
     // Set the pointer to the swarm trajectories
     void assignSwarmTrajs(
-      std::shared_ptr<std::unordered_map<int, ego_planner::LocalTrajData>> swarm_local_trajs) {
-      swarm_local_trajs_ = swarm_local_trajs;
+      std::shared_ptr<std::unordered_map<int, ego_planner::LocalTrajData>> swarm_local_trajs) 
+    {
+      swarm_traj_mutex_.lock();  
+      swarm_local_trajs_ = *swarm_local_trajs;
+      swarm_traj_mutex_.unlock();  
     }
 
   /* Constraint elimination methods */
@@ -316,7 +300,7 @@ namespace back_end
      * This is done by minimizing the squared distance between f_H(xi) and P.
      *  
      * @tparam EIGENVEC 
-     * @param P 
+     * @param P Inner control point
      * @param vIdx 
      * @param vPolys 
      * @param xi 
@@ -330,14 +314,16 @@ namespace back_end
         double final_cost; // final cost in minimum squared distance
 
         lbfgs::lbfgs_parameter_t lbfgs_params; // least squares
+        lbfgs::lbfgs_load_default_parameters(&lbfgs_params);
         lbfgs_params.past = 0;
-        lbfgs_params.delta = 1.0e-5;
-        // lbfgs_params.g_epsilon = FLT_EPSILON;
-        lbfgs_params.g_epsilon = backward_proj_opt_eps_;
+        lbfgs_params.g_epsilon = FLT_EPSILON;
+        lbfgs_params.delta = backward_proj_delta_;
         lbfgs_params.max_iterations = 128;
 
         Eigen::Matrix3Xd ovPoly;
-        for (int i = 0, j = 0, k, l; i < P.cols(); i++, j += k) // For each inner point index i
+        for (int i = 0, j = 0, k, l; i < P.cols(); i++, j += k) 
+          // For each inner control point index i 
+          //  and starting from the j-th control point 
         {
             l = vIdx(i);
             k = vPolys[l].cols();
@@ -542,14 +528,8 @@ namespace back_end
   private:
     std::shared_ptr<GridMap> grid_map_;         // Occupancy map 
     ego_planner::PlanningVisualization::Ptr visualization_; // visualizer
-    std::shared_ptr<std::unordered_map<int, ego_planner::LocalTrajData>> swarm_local_trajs_; // Swarm MINCO trajectories
-
-    enum FORCE_STOP_OPTIMIZE_TYPE
-    {
-      DONT_STOP,
-      STOP_FOR_REBOUND,
-      STOP_FOR_ERROR
-    } force_stop_type_;
+    // std::shared_ptr<std::unordered_map<int, ego_planner::LocalTrajData>> swarm_local_trajs_; // Swarm MINCO trajectories
+    std::unordered_map<int, ego_planner::LocalTrajData> swarm_local_trajs_; // Swarm MINCO trajectories
 
     int drone_id_;            // ID of drone
     int num_segs_;          // poly traj piece numbers
@@ -567,9 +547,9 @@ namespace back_end
     double obs_clearance_, swarm_clearance_;                      // safe distance
     double max_vel_, max_acc_;                                    // dynamic limits
 
-    double init_traj_opt_eps_;                                    // (Initial trajectory generation) Tolerance for convergence of solution
-    double final_traj_opt_eps_;                                    // (Final trajectory generation) Tolerance for convergence of solution
-    double backward_proj_opt_eps_;                                    // (Backward projection) Tolerance for convergence of solution
+    double init_traj_g_eps_, init_traj_delta_;                    // Initial Trajectory
+    double backward_proj_g_eps_, backward_proj_delta_;            // Backward projection 
+    double final_traj_g_eps_, final_traj_delta_;              // Final trajectory
 
     double t_now_;        // Time at the start of optimization
 
@@ -591,6 +571,9 @@ namespace back_end
 
     Eigen::VectorXd T_;     // Real time i.e. time duration of each segment 
     // Eigen::VectorXd grad_T_;  // Gradient of real time i.e. time duration of each segment 
+
+    /* Mutex*/
+    std::mutex swarm_traj_mutex_;
 
   }; // class PolyhedronSFCOptimizer
 

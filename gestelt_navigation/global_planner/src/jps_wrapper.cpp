@@ -5,6 +5,10 @@ JPSWrapper::JPSWrapper(std::shared_ptr<GridMap> map, const JPSParams& params):
 {
     map_ = map;
     jps_planner_ = std::make_shared<JPSPlanner3D>(params.planner_verbose);
+
+    map_->updateLocalMap();
+    
+    map_util_ = std::make_shared<JPS::VoxelMapUtil>();
 }
 
 void JPSWrapper::reset()
@@ -25,17 +29,16 @@ void JPSWrapper::addPublishers(
 bool JPSWrapper::generatePlan(const Eigen::Vector3d &start_pos, const Eigen::Vector3d &goal_pos)
 {
     reset();
-    std::shared_ptr<JPS::VoxelMapUtil> map_util = ::std::make_shared<JPS::VoxelMapUtil>();
 
     tm_jps_map_.start();
         // map_->updateLocalMap();
         // Origin of local map should be set relative to UAV current position (i.e. doesn't change unless we change the local map size)
-        map_util->setMap(map_->getLocalOrigin(), 
-                        map_->getLocalMapNumVoxels(), 
-                        map_->getData(),
-                        map_->getRes());
+        map_util_->setMap(map_->getLocalOrigin(), 
+                            map_->getLocalMapNumVoxels(), 
+                            map_->getData(),
+                            map_->getRes());
 
-        jps_planner_->setMapUtil(map_util);
+        jps_planner_->setMapUtil(map_util_);
         jps_planner_->updateMap();
     tm_jps_map_.stop(params_.print_timers);
 
@@ -71,7 +74,7 @@ bool JPSWrapper::generatePlan(const Eigen::Vector3d &start_pos, const Eigen::Vec
         dmp.setPow(params_.dmp_pow); // Set collision cost weight
 
         // Set map util for collision checking, must be called before planning
-        dmp.setMap(map_util, start_pos); 
+        dmp.setMap(map_util_, start_pos); 
 
         // Plan DMP path
         if (!dmp.iterativeComputePath( start_pos, goal_pos, jps_planner_->getRawPath(), 1)){ // Compute the path given the jps path

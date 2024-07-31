@@ -198,13 +198,9 @@ namespace ego_planner
 
     double pt_time = t_now_ + t;
 
-    if (swarm_local_trajs_ == nullptr){
-      return false;
-    }
+    swarm_traj_mutex_.lock();  
 
-    // std::shared_ptr<std::vector<ego_planner::LocalTrajData>> swarm_local_trajs_;
-
-    for (const auto& id_traj_pair : *swarm_local_trajs_){ // Iterate through trajectories
+    for (const auto& id_traj_pair : swarm_local_trajs_){ // Iterate through trajectories
 
       auto agent_traj = id_traj_pair.second;
       
@@ -252,6 +248,8 @@ namespace ego_planner
         min_ellip_dist2_ = ellip_dist2;
       }
     }
+    
+    swarm_traj_mutex_.unlock();  
 
     return ret;
   }

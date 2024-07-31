@@ -124,6 +124,19 @@ class DeterministicForest
 				genWalls(x_size_, y_size_, z_size_);
 			}
 
+			// Generate pre-determined cylinders
+			std::vector<Cylinder> cylinders;
+
+			double a = 1.75;
+
+			cylinders.push_back(Cylinder(a, 0.0, 0.15, 3.0));
+			cylinders.push_back(Cylinder(0.0, -a, 0.15, 3.0));
+			cylinders.push_back(Cylinder(-a, 0.0, 0.15, 3.0));
+			cylinders.push_back(Cylinder(0.0, a, 0.15, 3.0));
+			cylinders.push_back(Cylinder(0.3, 0.0, 0.15, 3.0));
+
+			generatePredeterminedCyclinders(cylinders);
+
 			// C) Generate a tunnel for benchmarking
 			// generateRectangularTunnel(Eigen::Vector3d{0.0, 0.0, 0.0}, 10.0, 2.0, 2.0);
 

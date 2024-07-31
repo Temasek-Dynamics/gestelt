@@ -1,0 +1,14 @@
+<!-- Spawns Gazebo model and PX4 SITL instances -->
+
+<launch>
+  <arg name="drone_id" default="0"/>
+  <arg name="cloud_topic" default="camera/depth/points"/>
+
+  <!-- Planning module -->
+  <include file="$(find gestelt_bringup)/launch/navigator/include/navigation_module.xml">
+      <arg name="drone_id" value="$(arg drone_id)"/>
+      <arg name="cloud_topic" value="$(arg cloud_topic)"/>
+      <arg name="debug_planning" value="true"/>
+  </include>
+
+</launch>
