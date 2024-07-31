@@ -80,14 +80,14 @@ public:
 
   void expandVoronoiBubble(const VCell& cell, const bool& makeGoalBubble);
 
-  /* Generate space-time plan on voronoi graph  */
-  bool generatePlanVoroT( const Eigen::Vector3d& start_pos_3d, 
-                          const Eigen::Vector3d& goal_pos_3d);
-
   // /* Generate space-time plan on voronoi graph  */
-  bool generatePlanVoroT( const Eigen::Vector3d& start_pos_3d, 
-                          const Eigen::Vector3d& goal_pos_3d, 
-                          std::function<double(const VCell_T&, const VCell_T&)> cost_function);
+  // bool generatePlanVoroT( const Eigen::Vector3d& start_pos_3d, 
+  //                         const Eigen::Vector3d& goal_pos_3d);
+
+  // // /* Generate space-time plan on voronoi graph  */
+  // bool generatePlanVoroT( const Eigen::Vector3d& start_pos_3d, 
+  //                         const Eigen::Vector3d& goal_pos_3d, 
+  //                         std::function<double(const VCell_T&, const VCell_T&)> cost_function);
 
 
   /* Generate space-time plan on voronoi graph  */

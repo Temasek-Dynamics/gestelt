@@ -8,8 +8,6 @@
 class PlannerBase
 {
 public:
-  virtual bool generatePlan(const Eigen::Vector3d &start_pos, const Eigen::Vector3d &goal_pos) = 0;
-
   // Get refined planned path
   virtual std::vector<Eigen::Vector3d> getPathPos() = 0;
 

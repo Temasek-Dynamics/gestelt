@@ -245,7 +245,7 @@ void GridMap::updateLocalMapTimerCB(const ros::TimerEvent & /*event*/)
 
   bool_map_arr_pub_.publish(bool_map_arr_msg);
   
-  tm_slice_map_.stop(false);
+  tm_slice_map_.stop(true);
 
   // Send transform from map to local map origin
   geometry_msgs::TransformStamped map_to_local_origin_tf;

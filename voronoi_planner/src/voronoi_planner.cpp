@@ -409,23 +409,22 @@ void VoronoiPlanner::generateTestMap2()
   Eigen::Vector3i start{1, 3, 0};
   Eigen::Vector3i goal{7, 3, 0};
   
-  front_end_planner_0_ = std::make_unique<AStarPlanner>(
-    dyn_voro_arr_, z_separation_cm_, astar_params_, resrv_tbl_);
-  front_end_planner_0_->addPublishers(front_end_publisher_map_);
+  // front_end_planner_0_ = std::make_unique<AStarPlanner>(
+  //   dyn_voro_arr_, z_separation_cm_, astar_params_, resrv_tbl_);
+  // front_end_planner_0_->addPublishers(front_end_publisher_map_);
 
-  if (!front_end_planner_0_->generatePlanVoroT(start, goal)){
-    std::cout << "FRONT END FAILED!!!! front_end_planner_->generatePlanVoronoi() from ("<< start.transpose() << ") to (" << goal.transpose() << ")" << std::endl;
+  // if (!front_end_planner_0_->generatePlanVoroT(start, goal)){
+  //   std::cout << "FRONT END FAILED!!!! front_end_planner_->generatePlanVoronoi() from ("<< start.transpose() << ") to (" << goal.transpose() << ")" << std::endl;
 
-    tm_front_end_plan_.stop(verbose_planning_);
+  //   tm_front_end_plan_.stop(verbose_planning_);
 
-    front_end_planner_0_->publishClosedList(front_end_planner_0_->getClosedListVoronoi(), front_end_publisher_map_["front_end/closed_list"], "local_map_origin");
-    return false;
-  }
+  //   front_end_planner_0_->publishClosedList(front_end_planner_0_->getClosedListVoronoi(), front_end_publisher_map_["front_end/closed_list"], "local_map_origin");
+  //   return ;
+  // }
 
-  front_end_path_lcl_ = front_end_planner_0_->getPathPosRaw();
-  publishFrontEndPath(front_end_path_lcl_, "local_map_origin", front_end_plan_viz_pub_) ;
-  front_end_planner_0_->publishClosedList(front_end_planner_0_->getClosedListVoronoi(), front_end_publisher_map_["front_end/closed_list"], "local_map_origin");
+  // front_end_path_lcl_ = front_end_planner_0_->getPathPosRaw();
+  // publishFrontEndPath(front_end_path_lcl_, "local_map_origin", front_end_plan_viz_pub_) ;
+  // front_end_planner_0_->publishClosedList(front_end_planner_0_->getClosedListVoronoi(), front_end_publisher_map_["front_end/closed_list"], "local_map_origin");
 
-
-
+  return ;
 }

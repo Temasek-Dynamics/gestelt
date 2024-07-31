@@ -148,9 +148,6 @@ private:
       {
         size_t idx = map2Dto1DIdx(occ_grid.info.width, i, j);
         occ_grid.data[idx] = dyn_voro.isVoronoi(i, j) ? 255: 0;
-        if (dyn_voro.isVoronoi(i, j)) {
-          std::cout << "IS VORONOI!" << std::endl;
-        }
       }
     }
   }
@@ -247,7 +244,7 @@ private:
                                   const std::string& frame_id, ros::Publisher& publisher) {
     visualization_msgs::Marker wp_sphere_list, path_line_strip;
     visualization_msgs::Marker start_sphere, goal_sphere;
-    double radius = 0.15;
+    double radius = 0.3;
     double alpha = 0.8; 
 
     geometry_msgs::Point pt;
