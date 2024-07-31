@@ -25,10 +25,12 @@ public:
    * @return true 
    * @return false 
    */
-  virtual void forwardGoals(const std::vector<Eigen::Vector3d> &goal_waypoints){
+  virtual void forwardGoals(const std::vector<Eigen::Vector3d> &goal_waypoints, const int& task_id){
 
     gestelt_msgs::Goals goals_msg;
+    goals_msg.task_id = task_id;
     goals_msg.header.frame_id="world";
+    goals_msg.header.stamp = ros::Time::now();
 
     for (auto& pos : goal_waypoints){
       geometry_msgs::Transform tf_msg;

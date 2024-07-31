@@ -63,7 +63,7 @@ public:
       goal_waypoints.push_back(Eigen::Vector3d{pos.translation.x, pos.translation.y, pos.translation.z});
     }
 
-    forwardGoals(goal_waypoints);
+    forwardGoals(goal_waypoints, msg->task_id);
   }
 
   /**
@@ -167,7 +167,7 @@ public:
    * @return true 
    * @return false 
    */
-  virtual void forwardGoals(const std::vector<Eigen::Vector3d> &goal_waypoints) = 0;
+  virtual void forwardGoals(const std::vector<Eigen::Vector3d> &goal_waypoints, const int& task_id) = 0;
   // {
   //   planner_goals_pub_.publish(goals);
   // }

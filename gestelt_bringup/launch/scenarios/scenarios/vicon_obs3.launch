@@ -18,8 +18,8 @@
 
       <arg name="drone_id" value="0"/>
 
-      <arg name="init_x" value="0.0"/>
-      <arg name="init_y" value="-2.25"/>
+      <arg name="init_x" value="1.6"/>
+      <arg name="init_y" value="-1.6"/>
       <arg name="init_z" value="$(arg height)"/>
   </include>
 
@@ -29,7 +29,7 @@
       <arg name="drone_id" value="1"/>
 
       <arg name="init_x" value="2.25"/>
-      <arg name="init_y" value="-2.25"/>
+      <arg name="init_y" value="0.0"/>
       <arg name="init_z" value="$(arg height)"/>
   </include>
 
@@ -38,8 +38,8 @@
 
       <arg name="drone_id" value="2"/>
 
-      <arg name="init_x" value="-2.25"/>
-      <arg name="init_y" value="-2.25"/>
+      <arg name="init_x" value="1.6"/>
+      <arg name="init_y" value="1.6"/>
       <arg name="init_z" value="$(arg height)"/>
   </include>
 

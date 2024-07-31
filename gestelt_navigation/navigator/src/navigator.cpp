@@ -83,9 +83,11 @@ void Navigator::initParams(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   pnh.param("debug_planning", debug_planning_, false);
   pnh.param("time_to_col_threshold", time_to_col_threshold_, 0.8);
   pnh.param("receding_horizon_planning_dist", rhp_dist_, -1.0);
-  pnh.param("receding_horizon_corridor_dist", rhc_dist_, -1.0);
+  // pnh.param("receding_horizon_corridor_dist", rhc_dist_, -1.0);
   pnh.param("print_timers", print_timers_, false);
   
+  pnh.param("enable_synchronized_task_completion", en_sync_task_, false);
+
   pnh.param("heartbeat_frequency", hb_freq_, 20.0);
 
   /* Planner type*/
@@ -276,6 +278,9 @@ void Navigator::initPublishers(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   /* Back-end */
   be_traj_pub_ = nh.advertise<traj_utils::PolyTraj>("back_end/trajectory", 2); 
   swarm_minco_traj_pub_ = nh.advertise<traj_utils::MINCOTraj>("/swarm/global/minco", 10);
+
+  /* High level task */
+  cur_task_id_pub_ = nh.advertise<std_msgs::Int32>("current_task_id", 10);
 }
 
 /* Timer callbacks */
@@ -285,10 +290,60 @@ void Navigator::heartbeatTimerCB(const ros::TimerEvent &e)
   // Publish heartbeat
   std_msgs::Empty empty_msg;
   heartbeat_pub_.publish(empty_msg);
+
+  std_msgs::Int32 task_id_msg;
+  task_id_msg.data = cur_task_id_;
+  cur_task_id_pub_.publish(task_id_msg);
 }
 
 void Navigator::planFrontEndTimerCB(const ros::TimerEvent &e)
 {
+  planner_mutex_.lock();
+  triggerPlan();
+  planner_mutex_.unlock();
+}
+
+void Navigator::safetyChecksTimerCB(const ros::TimerEvent &e)
+{
+  bool e_stop{true}, must_replan{true};
+  // bool is_feasible{true};
+
+  std::unordered_map<int, ego_planner::LocalTrajData> swarm_local_trajs = *swarm_local_trajs_;
+
+  if (!isTrajectorySafe(swarm_local_trajs, e_stop, must_replan)){
+    if (e_stop){
+      // logError("Activating emergency stop!");
+      // pubTrajServerCmd(gestelt_msgs::Command::HOVER);
+      // stopAllPlanning();
+    }
+    if (must_replan){
+      planner_mutex_.lock();
+      init_new_poly_traj_ = true;
+      triggerPlan();
+      planner_mutex_.unlock();
+    }
+  }
+
+  // if (!isTrajectoryDynFeasible(&((*swarm_local_trajs_)[drone_id_]), is_feasible)){
+  //   logError("Trajectory is infeasible!");
+  //   if (!is_feasible){
+  //   }
+  // }
+
+  // if (isTimeout(last_state_output_t_.toSec(), 0.5)) 
+  // {
+  //   logError("Time between UAV odom callback exceeded timeout of 0.5s, switching to HOVER!");
+  //   pubTrajServerCmd(gestelt_msgs::Command::HOVER);
+  //   stopAllPlanning();
+  // }
+
+}
+
+/**
+ * Planner methods
+*/
+
+void Navigator::triggerPlan() {
   // Check if waypoint queue is empty
   if (waypoints_.empty()){
     return;
@@ -297,9 +352,16 @@ void Navigator::planFrontEndTimerCB(const ros::TimerEvent &e)
   if (isGoalReached(cur_pos_, waypoints_.nextWP())){
     // If goals is within a given tolerance, then pop this goal and plan next goal (if available)
     waypoints_.popWP();
+
+    if (waypoints_.empty()){
+      // IF completed task then increment the current task_id
+      cur_task_id_++;
+    }
+
     // Invalidate current sfc_traj
     // ssfc_ = nullptr;
     init_new_poly_traj_ = true; // Used in EGO Planner 
+    flag_randomPolyTraj_ = false;
 
     global_traj_exists_ = false;
     local_traj_exists_ = false;
@@ -309,6 +371,15 @@ void Navigator::planFrontEndTimerCB(const ros::TimerEvent &e)
 
   if (back_end_type_ == BackEndType::EGO){
     rhp_goal_pos_ = waypoints_.nextWP();
+
+    // Publish RHP goal
+    geometry_msgs::PoseStamped rhp_goal_msg;
+    rhp_goal_msg.header.stamp = ros::Time::now();
+    rhp_goal_msg.header.frame_id = "world";
+    rhp_goal_msg.pose.position.x = rhp_goal_pos_(0);
+    rhp_goal_msg.pose.position.y = rhp_goal_pos_(1);
+    rhp_goal_msg.pose.position.z = rhp_goal_pos_(2);
+    rhp_goal_pub_.publish(rhp_goal_msg);
 
     requestBackEndPlan(rhp_goal_pos_, Eigen::Vector3d::Zero(), Eigen::Vector3d::Zero());
     return;
@@ -362,44 +433,8 @@ void Navigator::planFrontEndTimerCB(const ros::TimerEvent &e)
   }
 
   tm_entire_plan_.stop(print_timers_);
-
 }
 
-void Navigator::safetyChecksTimerCB(const ros::TimerEvent &e)
-{
-  bool e_stop{true}, must_replan{true};
-  // bool is_feasible{true};
-
-  std::unordered_map<int, ego_planner::LocalTrajData> swarm_local_trajs = *swarm_local_trajs_;
-
-  if (!isTrajectorySafe(swarm_local_trajs, e_stop, must_replan)){
-    if (e_stop){
-      // logError("Activating emergency stop!");
-      // pubTrajServerCmd(gestelt_msgs::Command::HOVER);
-      // stopAllPlanning();
-    }
-    if (must_replan){
-    }
-  }
-
-  // if (!isTrajectoryDynFeasible(&((*swarm_local_trajs_)[drone_id_]), is_feasible)){
-  //   logError("Trajectory is infeasible!");
-  //   if (!is_feasible){
-  //   }
-  // }
-
-  // if (isTimeout(last_state_output_t_.toSec(), 0.5)) 
-  // {
-  //   logError("Time between UAV odom callback exceeded timeout of 0.5s, switching to HOVER!");
-  //   pubTrajServerCmd(gestelt_msgs::Command::HOVER);
-  //   stopAllPlanning();
-  // }
-
-}
-
-/**
- * Planner methods
-*/
 void Navigator::planGlobalTrajWaypoints(
     const Eigen::Vector3d &start_pos, const Eigen::Vector3d &start_vel, const Eigen::Vector3d &start_acc, 
       const std::vector<Eigen::Vector3d> &waypoints,
@@ -610,7 +645,6 @@ bool Navigator::requestBackEndPlan(
     // start_pos = cur_pos_;
     // start_vel = cur_vel_;
     // start_acc.setZero();
-
 
     Eigen::Matrix3d startPVA, endPVA;   // Boundary start and end condition: Matrix consisting of 3d (position, velocity acceleration) 
     startPVA << start_pos, start_vel, start_acc;            // Start (position, velocity, acceleration)
@@ -1070,8 +1104,6 @@ bool Navigator::EGOOptimize(const Eigen::Matrix3d& startPVA,
   visualization_->displayGlobalPathList(global_traj, 0.1, 0);
 
   /*2:  Plan global trajectory */
-  bool flag_randomPolyTraj = false; // Random polynomial coefficients
-
   Eigen::Vector3d local_target_pos, local_target_vel;
 
   // Get local target based on planning horizon
@@ -1084,14 +1116,14 @@ bool Navigator::EGOOptimize(const Eigen::Matrix3d& startPVA,
   plan_success = ego_optimizer_->reboundReplan(
       startPVA.col(0), startPVA.col(1), startPVA.col(2), 
       local_target_pos, local_target_vel, 
-      init_new_poly_traj_, flag_randomPolyTraj, 
+      init_new_poly_traj_, flag_randomPolyTraj_, 
       touch_goal_);
 
-
+  // If plan is not successful, initialize new trajectory and randomize path
   init_new_poly_traj_ = !plan_success;
-  mjo_opt = ego_optimizer_->ploy_traj_opt_->getOptimizedMJO_EGO();
+  flag_randomPolyTraj_ = !plan_success;
 
-  // init_new_poly_traj_ = false;
+  mjo_opt = ego_optimizer_->ploy_traj_opt_->getOptimizedMJO_EGO();
 
   return plan_success;
 }
@@ -1123,21 +1155,20 @@ void Navigator::swarmMincoTrajCB(const traj_utils::MINCOTrajConstPtr &msg)
   }
 
   ros::Time t_now = ros::Time::now();
-  // TODO: Enable again
-  // if (abs((t_now - msg->start_time).toSec()) > 0.25)
-  // {
-  //   if (abs((t_now - msg->start_time).toSec()) < 10.0) // 10 seconds offset, more likely to be caused by unsynced system time.
-  //   {
-  //     logWarn(str_fmt("Time-stamp diff. with Agent %d = %fs",
-  //               msg->drone_id, (t_now - msg->start_time).toSec()));
-  //   }
-  //   else
-  //   {
-  //     logError(str_fmt("Time-stamp diff. with Agent %d = %fs, swarm time seems not synchronized. Trajectory will not be saved!",
-  //               msg->drone_id, (t_now - msg->start_time).toSec()));
-  //     return;
-  //   }
-  // }
+  if (abs((t_now - msg->start_time).toSec()) > 0.25)
+  {
+    if (abs((t_now - msg->start_time).toSec()) < 10.0) // 10 seconds offset, more likely to be caused by unsynced system time.
+    {
+      logWarn(str_fmt("Time-stamp diff. with Agent %d = %fs",
+                msg->drone_id, (t_now - msg->start_time).toSec()));
+    }
+    else
+    {
+      logError(str_fmt("Time-stamp diff. with Agent %d = %fs, swarm time seems not synchronized. Trajectory will not be saved!",
+                msg->drone_id, (t_now - msg->start_time).toSec()));
+      return;
+    }
+  }
 
   ego_planner::LocalTrajData traj;
   mincoMsgToTraj(*msg, traj);

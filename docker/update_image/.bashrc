@@ -107,26 +107,26 @@ source /gestelt_ws/devel/setup.bash
 # export DRONE_ID=0
 
 # # Multi-machine ROS communication. Used for actual drone deployment
-# export MASTER_IP=192.168.31.22
-# export SELF_IP=localhost
+export MASTER_IP=192.168.31.22
+export SELF_IP=localhost
 
-# # The code below maps a drone_id to an ip address.
-# if [[ "$DRONE_ID" == "0" ]]
-# then
-#     export SELF_IP=192.168.31.195
-# elif [[ "$DRONE_ID" == "1" ]]
-#     then
-#     export SELF_IP=192.168.31.196
-# elif [[ "$DRONE_ID" == "2" ]]
-#     then
-#     export SELF_IP=192.168.31.197
-# else
-#     export MASTER_IP=localhost
-#     export SELF_IP=localhost
-# fi
+# The code below maps a drone_id to an ip address.
+if [[ "$DRONE_ID" == "0" ]]
+then
+    export SELF_IP=192.168.31.195
+elif [[ "$DRONE_ID" == "1" ]]
+    then
+    export SELF_IP=192.168.31.196
+elif [[ "$DRONE_ID" == "2" ]]
+    then
+    export SELF_IP=192.168.31.197
+else
+    export MASTER_IP=localhost
+    export SELF_IP=localhost
+fi
 
-export MASTER_IP=10.42.0.1
-export SELF_IP=10.42.0.41
+# export MASTER_IP=10.42.0.1
+# export SELF_IP=10.42.0.41
 
 export ROS_MASTER_URI=http://$MASTER_IP:11311
 export ROS_HOSTNAME=$SELF_IP

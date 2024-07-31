@@ -3,7 +3,7 @@
 import rospy
 from gestelt_msgs.msg import Command, CommanderState, Goals
 from geometry_msgs.msg import Transform, PoseStamped
-from std_msgs.msg import Int8
+from std_msgs.msg import Int32
 
 num_drones = 3
 
@@ -16,6 +16,7 @@ for i in range(0, num_drones):
 
 # Dictionary of UAV states
 server_states = {}
+current_task_ids = {} # Dict with keys representing drone_id and values representing the current task_id being executed
 
 # Check if UAV has achived desired traj_server_state
 def check_traj_server_states(des_traj_server_state):
@@ -41,9 +42,26 @@ def get_server_state_callback():
     for drone_id in range(0, num_drones):
         msg = rospy.wait_for_message(f"/drone{drone_id}/traj_server/state", CommanderState, timeout=5.0)
         server_states[str(msg.drone_id)] = msg
-        # print("==================")
-        # print(msg)
-        # print("==================")
+
+def get_current_task_id():
+    """Get current task ID among all agents
+    """
+    for drone_id in range(0, num_drones):
+        msg = rospy.wait_for_message(f"/drone{drone_id}/current_task_id", Int32, timeout=5.0)
+        current_task_ids[str(drone_id)] = msg.data
+
+# Check if UAV has completed task execution
+def check_task_ids(des_task_id):
+    if len(current_task_ids.items()) == 0:
+        print("No task ids received!")
+        return False
+    
+    for cur_task_id in current_task_ids.items():
+        # print(f"{cur_task_id[0]}: {cur_task_id[1]}")
+        if cur_task_id[1] != des_task_id:
+            return False
+    return True
+
 
 def create_transform(x, y, z):
     pos = Transform()
@@ -71,13 +89,14 @@ def create_pose(x, y, z):
 
     return pos
 
-def pub_goals(goals):
+def pub_goals(goals, task_id=0):
     if (len(goals) > num_drones):
         print(f"Failed to publish goals. No. of goals ({len(goals)}) > num_drones ({num_drones})")
         return False 
 
-    for i in range(0, len(goals)):
+    for i in range(0, len(goals)):  # For each goal
         goals_msg = Goals()
+        goals_msg.task_id = task_id
         goals_msg.header.frame_id = "world"
         goals_msg.transforms = goals[i]
 
@@ -121,43 +140,85 @@ def main():
 
     print("Publishing 1st set of goals ")
 
-    goals_0 = [] # OG (0.0, 2.25)
-    goals_1 = [] # OG (2.25, -2.25)
-    goals_2 = [] # OG (-2.25, -2.25)
+    goals_0 = [] # OG (1.6, -1.6) -> (-1.6, 1.6)  
+    goals_1 = [] # OG (2.25, 0.0) -> (-2.25, 0.0) 
+    goals_2 = [] # OG (1.6, 1.6) -> (-1.6, -1.6)  
 
-    # goals_0.append(create_transform(0.0, -2.25, z))
-    # goals_0.append(create_transform(0.0, 2.25, z))
-    # goals_0.append(create_transform(0.0, -2.25, z))
-    # goals_0.append(create_transform(0.0, 2.25, z))
-    # goals_0.append(create_transform(0.0, -2.25, z))
+    goals_0.append(create_transform(-1.6, 1.6, z))
+    goals_1.append(create_transform(-2.25, 0.0, z+0.25))
+    goals_2.append(create_transform(-1.6, -1.6, z-0.25))
 
-    # goals_1.append(create_transform(-2.25, 2.25, z))
-    # goals_1.append(create_transform(2.25, -2.25, z))
-    # goals_1.append(create_transform(-2.25, 2.25, z))
-    # goals_1.append(create_transform(2.25, -2.25, z))
-    # goals_1.append(create_transform(-2.25, 2.25, z))
-
-    # goals_2.append(create_transform(2.25, 2.25, 1.0))
-    # goals_2.append(create_transform(-2.25, -2.25, 1.0))
-    # goals_2.append(create_transform(2.25, 2.25, 1.0))
-    # goals_2.append(create_transform(-2.25, -2.25, 1.0))
-    # goals_2.append(create_transform(2.25, 2.25, 1.0))
-
-    goals_0.append(create_transform(0.0, 2.25, z))
-    goals_1.append(create_transform(-2.25, 2.25, z+0.25))
-    goals_2.append(create_transform(2.25, 2.25, z-0.25))
-
-    goals_0.append(create_transform(0.0, -2.25, z))
-    goals_1.append(create_transform(2.25, -2.25, z+0.25))
-    goals_2.append(create_transform(-2.25, -2.25, z-0.25))
+    goals_0.append(create_transform(1.6, -1.6, z))
+    goals_1.append(create_transform(2.25, 0.0, z+0.25))
+    goals_2.append(create_transform(1.6, 1.6, z-0.25))
 
     pub_goals([goals_0, goals_1, goals_2])
 
-    rate_wait_15s.sleep()
+    while not rospy.is_shutdown():
+        get_current_task_id()
+        if check_task_ids(1):
+            break
 
-    print("Publishing 2nd set of goals")
+    # print("Publishing 2nd set of goals")
+    # pub_goals([goals_0, goals_1, goals_2])
 
-    pub_goals([goals_0, goals_1, goals_2])
+    # while not rospy.is_shutdown():
+    #     get_current_task_id()
+    #     if check_task_ids(2):
+    #         break
+
+    # print("Publishing 3rd set of goals")
+    # pub_goals([goals_0, goals_1, goals_2])
+
+    # while not rospy.is_shutdown():
+    #     get_current_task_id()
+    #     if check_task_ids(3):
+    #         break
+
+    # print("Publishing 4th set of goals")
+    # pub_goals([goals_0, goals_1, goals_2])
+
+    # while not rospy.is_shutdown():
+    #     get_current_task_id()
+    #     if check_task_ids(4):
+    #         break
+
+    #################
+    # ANTIPODAL SWAP
+    #################
+
+    print("Going to antipodal swap start positions")
+    
+    ap_start_0 = [] 
+    ap_start_1 = []
+    ap_start_2 = []
+
+    ap_start_0.append(create_transform(2.25, -2.25, z))
+    ap_start_1.append(create_transform(-2.25, -1.8, z+0.25))
+    ap_start_2.append(create_transform(1.8, 2.25, z-0.25))
+
+    pub_goals([ap_start_0, ap_start_1, ap_start_2])
+
+    while not rospy.is_shutdown():
+        get_current_task_id()
+        if check_task_ids(2):
+            break
+
+    print("Executing antipodal swap")
+
+    ap_swap_0 = [] 
+    ap_swap_1 = []
+    ap_swap_2 = []
+
+    ap_swap_0.append(create_transform(-2.25, 2.25, z))
+    ap_swap_1.append(create_transform(2.25, 1.8, z+0.25))
+    ap_swap_2.append(create_transform(-1.8, -2.25, z-0.25))
+
+    ap_swap_0.append(create_transform(2.25, -2.25, z))
+    ap_swap_1.append(create_transform(-2.25, -2.0, z+0.25))
+    ap_swap_2.append(create_transform(2.0, 2.25, z-0.25))
+
+    pub_goals([ap_swap_0, ap_swap_1, ap_swap_2])
 
     print("End of mission script")
 

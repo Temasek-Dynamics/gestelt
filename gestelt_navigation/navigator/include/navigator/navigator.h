@@ -13,6 +13,7 @@
 #include <geometry_msgs/PoseStamped.h>
 #include <nav_msgs/Odometry.h>
 #include <std_msgs/Empty.h>
+#include <std_msgs/Int32.h>
 
 /* Planning messages */
 #include <gestelt_msgs/Command.h>
@@ -90,6 +91,27 @@ private:
    * @param e 
    */
   void planFrontEndTimerCB(const ros::TimerEvent &e);
+
+
+  /**
+   * @brief Timer for checking if
+   * 1. Trajectory is safe (w.r.t inter-agent and static obstacle collision)
+   * 2. Timeout for odom
+   * 
+   * @param e 
+   */
+  void safetyChecksTimerCB(const ros::TimerEvent &e);
+
+  /**
+   * @brief Timer for publishing heartbeat to indicate that planner is active
+   * 
+   * @param e 
+   */
+  void heartbeatTimerCB(const ros::TimerEvent &e);
+
+  ////////////////////
+  /* Planner methods */
+  ////////////////////
 
   /**
    * @brief Get receding horizon planning goal
@@ -191,24 +213,10 @@ private:
   }
 
   /**
-   * @brief Timer for checking if
-   * 1. Trajectory is safe (w.r.t inter-agent and static obstacle collision)
-   * 2. Timeout for odom
+   * @brief Trigger planning pipeline
    * 
-   * @param e 
    */
-  void safetyChecksTimerCB(const ros::TimerEvent &e);
-
-  /**
-   * @brief Timer for publishing heartbeat to indicate that planner is active
-   * 
-   * @param e 
-   */
-  void heartbeatTimerCB(const ros::TimerEvent &e);
-
-  ////////////////////
-  /* Planner methods */
-  ////////////////////
+  void triggerPlan();
 
   /**
    * @brief Stop all planning loops 
@@ -509,12 +517,14 @@ private: /* ROS subs, pubs and timers*/
   /* SFC Publishers */
   // ros::Publisher spherical_ssfc_pub_; // Publish safe flight corridor spherical trajectory
 
+  /* High level task topics */
+  ros::Publisher cur_task_id_pub_; // Publishes the current task ID being executed
+
   /* Back-end */
   ros::Publisher debug_traj_pub_; // back-end trajectory for debugging
   ros::Publisher be_traj_pub_; // Publish back end trajectory 
   ros::Publisher swarm_minco_traj_pub_; // publisher for MINCO Trajectory
   ros::Subscriber swarm_minco_traj_sub_; // Subscriber to MINCO trajectory for inter-agent collision avoidance
-
 
   /* Visualization for Front End Planner*/
   ros::Publisher front_end_plan_pub_; // Publish front end plan to back-end optimizer
@@ -579,6 +589,7 @@ private: /* Planner members */
 
 private: /* Params */
   int traj_id_{0}; // Trajectory id that increments with every planning cycle
+  int cur_task_id_{0}; // current task ID used to synchronize task execution among the agents
 
   /* Front end planner parameters */
   JPSWrapper::JPSParams jps_params_; 
@@ -594,12 +605,12 @@ private: /* Params */
   /* Coordinator params */
   std::string node_name_{"Navigator"};
   int drone_id_{-1};
-  int max_drones_{100};        // Maximum number of drones. Used to preallocate swarm trajectory data structure
   
-  double hb_freq_{20.0};       // Default at 20 Hz
+  double hb_freq_{20.0};          // Default at 20 Hz
+  bool en_sync_task_{false};      // Enable synchronized task completion. All drones only move on to the next task after all drones have completed executing the current task id
   
-  bool debug_planning_{false};       // IF true, then debug mode is activated
-  bool print_timers_{false};     // Print debug info during planning
+  bool debug_planning_{false};    // IF true, then debug mode is activated
+  bool print_timers_{false};      // Print debug info during planning
   
   double squared_goal_tol_{-1.0};   // Squared goal tolerance, if within this tolerance, goal is considered to have been reached
 
@@ -636,11 +647,16 @@ private: /* Params */
 
   /* Logic Flags (EGO PLANNER ONLY) */
   bool init_new_poly_traj_{true};   // (EGO PLANNER ONLY) If true: initialize new polynomial. Else: start from previous polynomial
+  bool flag_randomPolyTraj_{false};   // (EGO PLANNER ONLY) If true: initialize new polynomial. Else: start from previous polynomial
   bool touch_goal_{false};   // (EGO PLANNER ONLY) If true:  Local target is global target
 
   /* Logic Flags (POLYHEDRON SFC) */
   bool global_traj_exists_{false};
   bool local_traj_exists_{false};
+
+  /* Mutex*/
+  std::mutex planner_mutex_; // Planner mutex
+
 
 private: /* Logging functions */
   

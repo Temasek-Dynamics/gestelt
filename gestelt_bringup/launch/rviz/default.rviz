@@ -7,8 +7,11 @@ Panels:
         - /Global Options1
         - /Axes1
         - /TF1/Frames1
+        - /d0/planner(Red)1/rhp_goal1
         - /d0/planner(Red)1/back_end1/ego_planner1
+        - /d1/planner(orange)1
         - /d1/planner(orange)1/odom1/Shape1
+        - /d1/planner(orange)1/rhp_goal1
         - /d2/planner(yellow)1/odom1/Shape1
         - /d3/planner(green)1/odom1/Shape1
         - /d4/planner(lightblue)1/odom1/Shape1
@@ -271,7 +274,7 @@ Visualization Manager:
           Marker Topic: /drone0/grid_map/collision_viz
           Name: drone0/collision_viz
           Namespaces:
-            {}
+            collision_viz: true
           Queue Size: 100
           Value: true
         - Class: rviz/Marker
@@ -279,7 +282,7 @@ Visualization Manager:
           Marker Topic: /drone1/grid_map/collision_viz
           Name: drone1/collision_viz
           Namespaces:
-            {}
+            collision_viz: true
           Queue Size: 100
           Value: true
         - Class: rviz/Marker
@@ -287,7 +290,7 @@ Visualization Manager:
           Marker Topic: /drone2/grid_map/collision_viz
           Name: drone2/collision_viz
           Namespaces:
-            {}
+            collision_viz: true
           Queue Size: 100
           Value: true
         - Class: rviz/Marker
@@ -367,7 +370,7 @@ Visualization Manager:
           Marker Topic: /swarm_collision_checker/collision
           Name: swarm_collision_checker
           Namespaces:
-            {}
+            swarm_collision: true
           Queue Size: 100
           Value: true
       Enabled: true
@@ -407,7 +410,7 @@ Visualization Manager:
               Scale: 1
               Value: true
             Value: true
-          Enabled: true
+          Enabled: false
           Keep: 1000
           Name: odom
           Position Tolerance: 0.10000000149011612
@@ -424,7 +427,7 @@ Visualization Manager:
             Value: Arrow
           Topic: /drone0/mavros/local_position/odom
           Unreliable: false
-          Value: true
+          Value: false
         - Alpha: 1
           Axes Length: 0.20000000298023224
           Axes Radius: 0.029999999329447746
@@ -454,7 +457,7 @@ Visualization Manager:
           Marker Topic: /drone0/back_end/optimal_mjo
           Name: optimal_mjo
           Namespaces:
-            {}
+            "": true
           Queue Size: 100
           Value: true
         - Class: rviz/Group
@@ -484,7 +487,7 @@ Visualization Manager:
               Marker Topic: /drone0/back_end/dbg/initial_mjo
               Name: initial_mjo
               Namespaces:
-                {}
+                "": true
               Queue Size: 100
               Value: true
             - Class: rviz/Marker
@@ -813,7 +816,7 @@ Visualization Manager:
           Axes Radius: 0.029999999329447746
           Class: rviz/Pose
           Color: 255; 25; 0
-          Enabled: false
+          Enabled: true
           Head Length: 0.30000001192092896
           Head Radius: 0.10000000149011612
           Name: rhp_goal
@@ -823,7 +826,7 @@ Visualization Manager:
           Shape: Axes
           Topic: /drone1/navigator/rhp_goal
           Unreliable: false
-          Value: false
+          Value: true
         - Class: rviz/Marker
           Enabled: true
           Marker Topic: /drone1/back_end/dbg/initial_poly_path
@@ -837,7 +840,7 @@ Visualization Manager:
           Marker Topic: /drone1/back_end/optimal_mjo
           Name: optimal_mjo
           Namespaces:
-            {}
+            "": true
           Queue Size: 100
           Value: true
         - Class: rviz/Group
@@ -1131,7 +1134,7 @@ Visualization Manager:
           Marker Topic: /drone2/back_end/optimal_mjo
           Name: optimal_mjo
           Namespaces:
-            {}
+            "": true
           Queue Size: 100
           Value: true
         - Alpha: 1
@@ -5826,7 +5829,7 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Scale: -60.9290657043457
+      Scale: -91.79071044921875
       Target Frame: my_view
       X: -0.0001963460526894778
       Y: 0.019801238551735878
@@ -5978,5 +5981,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 966
-  X: 259
-  Y: 136
+  X: 2172
+  Y: 108
