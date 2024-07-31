@@ -147,9 +147,9 @@ namespace ego_planner
       // last_glb_t_of_lc_tgt: The corresponding global trajectory time of the last local target
       if (traj_.global_traj.last_glb_t_of_lc_tgt < 0.0)
       {
-        ROS_ERROR("Drone %d: [EGOPlannerManager::computeInitState] You are initializing a \\
-                  trajectory from a previous optimal trajectory, but no \\
-                  previous trajectories up to now.", params_.drone_id);
+        ROS_ERROR("Drone %d: [EGOPlannerManager::computeInitState] You are initializing a "
+                  "trajectory from a previous optimal trajectory, but no "
+                  "previous trajectories up to now.", params_.drone_id);
         return false;
       }
 
@@ -443,7 +443,8 @@ namespace ego_planner
   bool EGOPlannerManager::planGlobalTrajWaypoints(
       poly_traj::MinJerkOpt& globalMJO,
       const Eigen::Vector3d &start_pos, const Eigen::Vector3d &start_vel, const Eigen::Vector3d &start_acc, 
-      const std::vector<Eigen::Vector3d> &waypoints, const Eigen::Vector3d &end_vel, const Eigen::Vector3d &end_acc)
+      const std::vector<Eigen::Vector3d> &waypoints, 
+      const Eigen::Vector3d &end_vel, const Eigen::Vector3d &end_acc)
   {
     Eigen::Matrix<double, 3, 3> headState, tailState;
     headState << start_pos, start_vel, start_acc;
@@ -461,21 +462,43 @@ namespace ego_planner
 
     globalMJO.reset(headState, tailState, waypoints.size());
 
-    // TODO Why is max_vel divided by 1.5?
-    // double des_vel = params_.max_vel / 1.5;
-    double des_vel = params_.max_vel / 1.5;
+    double des_max_vel = params_.max_vel ;
     Eigen::VectorXd time_vec(waypoints.size());
+
+    // d_triangle: distance travelled when reaching maximum velocity from rest with maximum acceleration.
+    double d_triangle = 0.5* (des_max_vel * des_max_vel) / params_.max_acc;
 
     // Try replanning up to 2 times if the velocity constraints are not fulfilled
     int num_retries = 2;
     for (int j = 0; j < num_retries; ++j)
     {
-      // TODO: Refactor
-      // for each plan segment, calculate time using desired velocity
-      for (size_t i = 0; i < waypoints.size(); ++i)
+      for (size_t i = 0; i < waypoints.size(); ++i) // For each waypoint
       {
-        time_vec(i) = (i == 0) ? (waypoints[0] - start_pos).norm() / des_vel
-                               : (waypoints[i] - waypoints[i - 1]).norm() / des_vel;
+        double traj_dist = 0.0;
+
+        if (i == 0){
+          traj_dist = (waypoints[0] - start_pos).norm();
+        }
+        else {
+          traj_dist = (waypoints[i] - waypoints[i - 1]).norm();
+        }
+
+        // For trapezoidal time profile: t_s, t_c and t_d is the time taken to 
+        //  accelerate, travel at maximum velocity, and decelerate respectively.
+        double t_s, t_c, t_d;
+
+        if (2*d_triangle >= traj_dist){ // Follow triangle profile, because distance is too short to reach maximum velocity
+          t_s = sqrt(traj_dist/(params_.max_acc));  //Acceleration phase
+          t_c = 0.0;       // Constant maximum velocity phase
+          t_d = t_s;      //Deceleration phase
+        }
+        else{ // Follow trapezoidal profile
+          t_s = des_max_vel / params_.max_acc; //Acceleration phase
+          t_c = (traj_dist - 2*d_triangle)/des_max_vel;  // Constant maximum velocity phase
+          t_d = t_s; //Deceleration phase
+        }
+
+        time_vec(i) = t_s + t_c + t_d;
       }
 
       // Generate a minimum snap trajectory
@@ -493,13 +516,13 @@ namespace ego_planner
       {
         ROS_WARN("Global traj MaxVel = %f > set_max_vel", globalMJO.getTraj().getMaxVelRate());
         std::cout << "headState=" << std::endl
-             << headState << std::endl;
+            << headState << std::endl;
         std::cout << "tailState=" << std::endl
-             << tailState <<std::endl;
+            << tailState <<std::endl;
       }
 
       // Reduce desired velocity by a factor of 1.5 and try again
-      des_vel /= 1.5;
+      des_max_vel /= 1.25;
     }
 
     traj_.setGlobalTraj(globalMJO.getTraj(), ros::Time::now().toSec());
@@ -509,7 +532,7 @@ namespace ego_planner
 
   /* Utility methods */
 
-  void EGOPlannerManager::setSwarmTrajectories(std::shared_ptr<std::vector<ego_planner::LocalTrajData>>& swarm_minco_trajs)
+  void EGOPlannerManager::setSwarmTrajectories(std::shared_ptr<std::unordered_map<int, ego_planner::LocalTrajData>>& swarm_minco_trajs)
   {
     ploy_traj_opt_->assignSwarmTrajs(swarm_minco_trajs);
   }

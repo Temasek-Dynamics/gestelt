@@ -417,7 +417,7 @@ private:
   } 
 
   bool isTrajectorySafe(
-    const std::vector<ego_planner::LocalTrajData>& swarm_local_trajs, 
+    std::unordered_map<int, ego_planner::LocalTrajData>& swarm_local_trajs, 
     bool& e_stop, bool& must_replan);
 
   bool isTrajectoryDynFeasible(ego_planner::LocalTrajData* traj, bool& is_feasible);
@@ -560,7 +560,9 @@ private: /* Planner members */
   Waypoint waypoints_; // Goal waypoint handler object
   Eigen::Vector3d cur_pos_, cur_vel_;   // current state
   Eigen::Vector3d rhp_goal_pos_, rhp_goal_vel_; // Receding horizon planning goal
-  std::shared_ptr<std::vector<ego_planner::LocalTrajData>> swarm_local_trajs_; // Swarm MINCO trajectories, maps drone_id to local trajectory data
+  std::shared_ptr<std::unordered_map<int, ego_planner::LocalTrajData>> swarm_local_trajs_; // Swarm MINCO trajectories, maps drone_id to local trajectory data
+
+  double prev_swarm_broadcast_pub_t_{0.0}, prev_req_be_req_t_{0.0}; // Timestamp used to broadcast swarm trajectories at a fixed frequency
 
   std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d>> front_end_path_; // Front-end plan
 
@@ -597,7 +599,7 @@ private: /* Params */
   double hb_freq_{20.0};       // Default at 20 Hz
   
   bool debug_planning_{false};       // IF true, then debug mode is activated
-  bool verbose_planning_{false};     // Print debug info during planning
+  bool print_timers_{false};     // Print debug info during planning
   
   double squared_goal_tol_{-1.0};   // Squared goal tolerance, if within this tolerance, goal is considered to have been reached
 
@@ -629,6 +631,8 @@ private: /* Params */
   Timer tm_front_end_plan_{"front_end_plan"};
   Timer tm_sfc_plan_{"sfc_plan"};
   Timer tm_back_end_plan_{"back_end_plan"};
+
+  Timer tm_entire_plan_{"==entire_plan=="};
 
   /* Logic Flags (EGO PLANNER ONLY) */
   bool init_new_poly_traj_{true};   // (EGO PLANNER ONLY) If true: initialize new polynomial. Else: start from previous polynomial

@@ -6,6 +6,7 @@
 #include <limits>
 #include <Eigen/Eigen>
 #include <queue>
+#include <boost/functional/hash_fwd.hpp>
 
 using namespace Eigen;
 constexpr double infinity = std::numeric_limits<float>::infinity();
@@ -211,9 +212,11 @@ template <>
 struct std::hash<PosIdx> {
   /* implement hash function so we can put PosIdx into an unordered_set */
   std::size_t operator()(const PosIdx& pos) const noexcept {
-    // NOTE: better to use something like boost hash_combine
-    size_t H_x_y = 0.5 * (pos.x + pos.y)*(pos.x + pos.y + 1) + pos.y;
-    return 0.5 * (H_x_y + pos.z)*(H_x_y + pos.z + 1) + pos.z;
+    std::size_t seed = 0;
+    boost::hash_combine(seed, pos.x);
+    boost::hash_combine(seed, pos.y);
+    boost::hash_combine(seed, pos.z);
+    return seed;
   }
 };
 

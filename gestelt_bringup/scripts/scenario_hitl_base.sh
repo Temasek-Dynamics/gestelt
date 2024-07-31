@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SESSION="scenario"
+SESSION="scenario_hitl_base"
 SESSIONEXISTS=$(tmux list-sessions | grep $SESSION)
 
 #####
@@ -33,13 +33,13 @@ source $SCRIPT_DIR/../../../devel/setup.bash &&
 # Commands
 #####
 # Start drones with planner modules
-CMD_0="
-roslaunch gestelt_bringup $SCENARIO.launch 
-"
+# CMD_0="
+# roslaunch gestelt_bringup $SCENARIO.launch 
+# "
 
 # Start up rviz
 CMD_1="
-roslaunch --wait gestelt_bringup fake_map_central.launch scenario:=$SCENARIO
+roslaunch gestelt_bringup fake_map_central.launch scenario:=$SCENARIO
 "
 
 # Start up central bridge and nodes
@@ -59,10 +59,10 @@ then
     tmux split-window -t $SESSION:0.1 -h
     tmux split-window -t $SESSION:0.0 -h
 
-    tmux send-keys -t $SESSION:0.0 "$SOURCE_WS $CMD_0" C-m 
+    # tmux send-keys -t $SESSION:0.0 "$SOURCE_WS $CMD_0" C-m 
     tmux send-keys -t $SESSION:0.1 "$SOURCE_WS $CMD_1" C-m 
     # tmux send-keys -t $SESSION:0.2 "$SOURCE_WS $CMD_2" C-m 
-    tmux send-keys -t $SESSION:0.3 "$SOURCE_WS $CMD_3" 
+    tmux send-keys -t $SESSION:0.3 "$SOURCE_WS $CMD_3" C-m
 fi
 
 # Attach session on the first window

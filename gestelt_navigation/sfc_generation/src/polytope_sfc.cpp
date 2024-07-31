@@ -410,7 +410,6 @@ bool PolytopeSFC::generateSFCLiu(   std::vector<Polyhedron3D, Eigen::aligned_all
             b_poly(i) = poly.vs_[i].p_.dot(poly.vs_[i].n_);  // point.dot(normal)
         }
         poly_constr_vec_new.push_back(LinearConstraint3D(A_poly, b_poly));
-
     }
 
     poly_constr_vec = poly_constr_vec_new;

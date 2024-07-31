@@ -52,9 +52,8 @@ namespace back_end
     lbfgs_params.mem_size = 16;
     lbfgs_params.max_iterations = 200;
     lbfgs_params.past = 3;
-    lbfgs_params.delta = 1.0e-3;
-    // lbfgs_params.g_epsilon = 1.0e-5;
-    lbfgs_params.g_epsilon = init_traj_opt_eps_;
+    lbfgs_params.delta = init_traj_delta_;
+    lbfgs_params.g_epsilon = init_traj_g_eps_;
     // lbfgs_params.max_linesearch = 200;
     // lbfgs_params.min_step = 1e-32;
     // lbfgs_params.max_step = 1e+20;
@@ -113,8 +112,6 @@ namespace back_end
 
   void PolyhedronSFCOptimizer::reset(){
     // reset all existing variables
-    intermediate_cstr_pts_xi_.clear();
-    intermediate_cstr_pts_q_.clear();
   }
 
   bool PolyhedronSFCOptimizer::optimizeTrajectory(
@@ -155,11 +152,10 @@ namespace back_end
 
     /* Initialize decision variables*/
     double x_init[num_decis_var]; // Initial decision variables: Array of [ P, init_seg_dur ]
+    std::fill(x_init, x_init + num_decis_var, 0.0); 
 
     Eigen::Map<Eigen::VectorXd> tau(x_init, num_decis_var_t_); 
     Eigen::Map<Eigen::VectorXd> xi(x_init + num_decis_var_t_, num_decis_var_bary_); 
-
-    // Eigen::Map<const Eigen::VectorXd> t(x + (3 * (opt->num_segs_ - 1)), opt->num_segs_);
 
     // Convert from real to virtual time tau
     RealT2VirtualT(init_seg_dur, tau);
@@ -171,13 +167,12 @@ namespace back_end
 
     lbfgs::lbfgs_parameter_t lbfgs_params;
     lbfgs::lbfgs_load_default_parameters(&lbfgs_params);
-    lbfgs_params.mem_size = 56; // 16
+    lbfgs_params.mem_size = 256; 
     lbfgs_params.max_iterations = 200;
-    lbfgs_params.g_epsilon = final_traj_opt_eps_;
-    // lbfgs_params.abs_curv_cond = 0;
+    lbfgs_params.g_epsilon = final_traj_g_eps_;
+    lbfgs_params.delta = final_traj_delta_;
     lbfgs_params.past = 3;
-    lbfgs_params.delta = 1.0e-2;
-    lbfgs_params.max_linesearch = 200;
+    // lbfgs_params.max_linesearch = 200;
     lbfgs_params.min_step = 1e-32;
     // lbfgs_params.max_step = 1e+20;
 
@@ -186,7 +181,6 @@ namespace back_end
       /* ---------- prepare ---------- */
       iter_num_ = 0;
       flag_force_return = false;
-      force_stop_type_ = DONT_STOP;
       flag_success = false;
       t_now_ = ros::Time::now().toSec();
 
@@ -198,7 +192,7 @@ namespace back_end
           &final_cost,                    // The pointer to the variable that receives the final value of the objective function for the variables
           PolyhedronSFCOptimizer::costFunctionCallback, // The callback function to provide function and gradient evaluations given a current values of variables
           NULL,                           //  The callback function to provide values of the upperbound of the stepsize to search in, provided with the beginning values of variables before the linear search, and the current step vector (can be negative gradient).
-          PolyhedronSFCOptimizer::earlyExitCallback,    // The callback function to receive the progress (the number of iterations, the current value of the objective function) of the minimization process.
+          NULL,                           // The callback function to receive the progress (the number of iterations, the current value of the objective function) of the minimization process.
           this,                           // A user data for the client program. The callback functions will receive the value of this argument.
           &lbfgs_params);                 // The pointer to a structure representing parameters for L-BFGS optimization. A client program can set this parameter to NULL to use the default parameters
       double opt_time_ms = (ros::Time::now().toSec() - t1)* 1000;
@@ -211,7 +205,7 @@ namespace back_end
       {
         flag_force_return = false;
         // TODO: Add collision-checking in the path
-        printf("\033[32m [PolyhedronSFCOptimizer::optimizeTrajectory]: UAV %d: Optimization Succeeded! iter=%d, time(ms)=%5.3f, cost=%5.3f\n \033[0m", drone_id_, iter_num_, opt_time_ms, final_cost);
+        // printf("\033[32m [PolyhedronSFCOptimizer::optimizeTrajectory]: UAV %d: Optimization Succeeded! iter=%d, time(ms)=%5.3f, cost=%5.3f\n \033[0m", drone_id_, iter_num_, opt_time_ms, final_cost);
         flag_success = true;
       }
       // ELSE IF Cancelled
@@ -229,7 +223,7 @@ namespace back_end
         ROS_WARN("[PolyhedronSFCOptimizer::optimizeTrajectory] UAV %d: Solver error. Return = %d, %s. Skip this planning.", drone_id_, result, lbfgs::lbfgs_strerror(result));
       }
 
-    } while ((flag_force_return && force_stop_type_ == STOP_FOR_REBOUND && num_retries <= 20));
+    } while ((flag_force_return && num_retries <= 20));
 
     return flag_success;
   }
@@ -271,7 +265,6 @@ namespace back_end
      */
     // Get gradient of real time and jerk cost
     opt->mjo_q_.initGradCost(grad_T, jerk_cost); // In initGradCost(...), do addGradJbyT(gdT) and addGradJbyC(gdC);
-
 
     /** 2. Time integral cost 
       *   2a. Static obstacle cost
@@ -319,17 +312,15 @@ namespace back_end
     pnh.param("optimization/max_vel", max_vel_, -1.0);
     pnh.param("optimization/max_acc", max_acc_, -1.0);
 
-    pnh.param("optimization/init_traj_opt_epsilon", init_traj_opt_eps_, 0.01);
-    pnh.param("optimization/final_traj_opt_epsilon", final_traj_opt_eps_, 0.01);
-    pnh.param("optimization/backward_proj_opt_epsilon", backward_proj_opt_eps_, 0.001);
+    pnh.param("optimization/poly/init_traj_g_eps", init_traj_g_eps_, 0.01);
+    pnh.param("optimization/poly/init_traj_delta", init_traj_delta_, 0.01);
+    pnh.param("optimization/poly/backward_proj_g_eps", backward_proj_g_eps_, 0.01);
+    pnh.param("optimization/poly/backward_proj_delta", backward_proj_delta_, 0.01);
+    pnh.param("optimization/poly/final_traj_g_eps", final_traj_g_eps_, 0.01);
+    pnh.param("optimization/poly/final_traj_delta", final_traj_delta_, 0.01);
+
   }
 
-  int PolyhedronSFCOptimizer::earlyExitCallback(void *func_data, const double *x, const double *g, const double fx, const double xnorm, const double gnorm, const double step, int n, int k, int ls)
-  {
-    PolyhedronSFCOptimizer *opt = reinterpret_cast<PolyhedronSFCOptimizer *>(func_data);
-
-    return (opt->force_stop_type_ == STOP_FOR_ERROR || opt->force_stop_type_ == STOP_FOR_REBOUND);
-  }
 
 
   template <typename EIGENVEC, typename EIGENVECGD>
@@ -419,7 +410,6 @@ namespace back_end
             double poly_pen = outerNormal.dot(pos) + hPolytopes[L](k, 3); // polyhedron penalty
 
             if (poly_pen > 0){
-              // TODO: Partial derivatives of Constraint
               Eigen::Matrix<double, 6, 3> pd_constr_c_i = beta0 * outerNormal.transpose();     // Partial derivative of constraint w.r.t c_i // (2s, m) = (2s, 1) * (1, m)
               double pd_constr_t = (outerNormal).dot(vel);// P.D. of constraint w.r.t t        // (1,1) = (1, 2s) * (2s, m) * (m, 1)
 
@@ -575,7 +565,7 @@ namespace back_end
 
     /* Publish visualization of gradients*/
     // visualization_->displayIntermediateGrad("smoothness", ctrl_pts_q_, mjo.get_gdC());
-    visualization_->displayIntermediateGrad("dist_variance", cstr_pts_q_, gdp);
+    // visualization_->displayIntermediateGrad("dist_variance", cstr_pts_q_, gdp);
 
   } // end func addPVAGradCost2CT
 
@@ -586,7 +576,6 @@ namespace back_end
                                          double &grad_prev_t,
                                          double &costp)
   {
-
     bool ret = false;
 
     gradp.setZero();
@@ -599,17 +588,19 @@ namespace back_end
 
     double pt_time = t_now_ + t;
 
-    if (swarm_local_trajs_ == nullptr){
-      return false;
-    }
+    // if (swarm_local_trajs_ == nullptr){
+    //   return false;
+    // }
 
-    // std::shared_ptr<std::vector<ego_planner::LocalTrajData>> swarm_local_trajs_;
+    swarm_traj_mutex_.lock();  
 
-    for (const auto& agent_traj : *swarm_local_trajs_){ // Iterate through trajectories
+    for (const auto& id_traj_pair : swarm_local_trajs_){ // Iterate through trajectories
 
+      auto agent_traj = id_traj_pair.second;
+      
       if ((agent_traj.drone_id < 0) || agent_traj.drone_id == drone_id_)
       {
-        // Ignore 
+        // Ignore if trajectory belongs to self
         continue;
       }
 
@@ -651,6 +642,8 @@ namespace back_end
         min_ellip_dist2_ = ellip_dist2;
       }
     }
+
+    swarm_traj_mutex_.unlock();  
 
     return ret;
   }

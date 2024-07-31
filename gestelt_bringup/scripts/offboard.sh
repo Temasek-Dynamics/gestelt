@@ -33,7 +33,7 @@ source $SCRIPT_DIR/../../../devel/setup.bash &&
 #####
 # Start bridge with FCU
 CMD_0="
-roslaunch gestelt_bringup offboard_px4.launch drone_id:=${DRONE_ID}
+roslaunch --wait gestelt_bringup offboard_px4.launch drone_id:=${DRONE_ID}
 "
 
 # Start up rviz

@@ -54,12 +54,6 @@ namespace back_end
     // Convert from real time initT to virtual time Vt
     RealT2VirtualT(initT, Vt);
 
-
-    std::cout << "initT: " << initT.transpose() << std::endl;
-    std::cout << "--------------------" << std::endl;
-    std::cout << "Vt: " << Vt.transpose() << std::endl;
-    std::cout << "--------------------" << std::endl;
-
     lbfgs::lbfgs_parameter_t lbfgs_params;
     lbfgs::lbfgs_load_default_parameters(&lbfgs_params);
     lbfgs_params.mem_size = 16;
@@ -565,13 +559,15 @@ namespace back_end
 
     double pt_time = t_now_ + t;
 
-    if (swarm_local_trajs_ == nullptr){
-      return false;
-    }
+    // if (swarm_local_trajs_ == nullptr){
+    //   return false;
+    // }
 
-    // std::shared_ptr<std::vector<ego_planner::LocalTrajData>> swarm_local_trajs_;
+    swarm_traj_mutex_.lock();  
 
-    for (const auto& agent_traj : *swarm_local_trajs_){ // Iterate through trajectories
+    for (const auto& id_traj_pair : swarm_local_trajs_){ // Iterate through trajectories
+
+      auto agent_traj = id_traj_pair.second;
 
       if ((agent_traj.drone_id < 0) || agent_traj.drone_id == drone_id_)
       {
@@ -617,6 +613,7 @@ namespace back_end
         min_ellip_dist2_ = ellip_dist2;
       }
     }
+    swarm_traj_mutex_.unlock();  
 
     return ret;
   }
@@ -696,10 +693,6 @@ namespace back_end
     visualization_ = vis;
   }
 
-  void SphericalSFCOptimizer::assignSwarmTrajs(
-    std::shared_ptr<std::vector<ego_planner::LocalTrajData>> swarm_local_trajs) {
-    swarm_local_trajs_ = swarm_local_trajs;
-  }
 
   int SphericalSFCOptimizer::earlyExitCallback(void *func_data, const double *x, const double *g, const double fx, const double xnorm, const double gnorm, const double step, int n, int k, int ls)
   {

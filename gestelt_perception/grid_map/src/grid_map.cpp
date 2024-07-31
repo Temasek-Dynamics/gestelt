@@ -21,8 +21,6 @@ void GridMap::initMapROS(ros::NodeHandle &nh, ros::NodeHandle &pnh)
 
   if (dbg_input_entire_map_){
     ROS_INFO("[%s] DEBUG: INPUT ENTIRE MAP", node_name_.c_str());
-
-    md_.has_pose_ = true;
     
     // Wait for entire point cloud map
 		sensor_msgs::PointCloud2 pc_msg;
@@ -39,8 +37,7 @@ void GridMap::initMapROS(ros::NodeHandle &nh, ros::NodeHandle &pnh)
 
     occ_map_pub_ = nh.advertise<sensor_msgs::PointCloud2>("grid_map/occupancy", 10);
     local_map_poly_pub_ = nh.advertise<geometry_msgs::PolygonStamped>("local_map/bounds", 5);
-    // update_local_map_timer_ = nh.createTimer(ros::Duration(1.0/update_local_map_freq_), &GridMap::updateLocalMapTimerCB, this);
-    updateLocalMap();
+    update_local_map_timer_ = nh.createTimer(ros::Duration(1.0/update_local_map_freq_), &GridMap::updateLocalMapTimerCB, this);
 
     return;
   }
@@ -113,6 +110,8 @@ void GridMap::readROSParams(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   /* Map parameters */
   pnh.param("grid_map/debug_input_entire_map", dbg_input_entire_map_, false);
   pnh.param("grid_map/entire_pcd_map_topic", entire_pcd_map_topic_, std::string("/fake_map"));
+
+  pnh.param("grid_map/print_timers", print_timers_, false);
 
   pnh.param("grid_map/global_map/size_x", mp_.global_map_size_(0), -1.0);
   pnh.param("grid_map/global_map/size_y", mp_.global_map_size_(1), -1.0);
@@ -217,12 +216,14 @@ void GridMap::visTimerCB(const ros::TimerEvent & /*event*/)
 
 void GridMap::updateLocalMapTimerCB(const ros::TimerEvent & /*event*/)
 {
+  tm_update_local_map_.start();
   updateLocalMap();
+  tm_update_local_map_.stop(print_timers_);
 }
 
 void GridMap::checkCollisionsTimerCB(const ros::TimerEvent & /*event*/)
 {
-  if (!isPoseValid()){
+  if (!md_.has_pose_){
     return;
   }
 
@@ -340,6 +341,7 @@ void GridMap::updateLocalMap(){
   // }
 
   occ_map_pcd_.clear(); // For local map
+
   std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d>> obs_pts_vec; // Fpr polyhedral SFC generation
 
   for (auto& coord : occ_coords) // For each occupied coordinate

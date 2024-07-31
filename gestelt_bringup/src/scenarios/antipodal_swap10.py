@@ -115,7 +115,7 @@ def main():
 
     a = 2.0
     b = 2.0
-    z = 1.0 # Height
+    z = 1.25 # Height
 
     goals_0 = []
     goals_1 = []
@@ -138,8 +138,8 @@ def main():
     goals_6.append(create_transform(a, -a-b, z))
     goals_7.append(create_transform(-a, -a-b, z))
 
-    goals_8.append(create_transform(-a-b, a+b, z))
-    goals_9.append(create_transform(a+b, a+b, z))
+    goals_8.append(create_transform(-a-b, a+b, z+0.25))
+    goals_9.append(create_transform(a+b, a+b, z+0.25))
 
     pub_goals([ goals_0, goals_1, goals_2, goals_3, 
                 goals_4, goals_5, goals_6, goals_7,

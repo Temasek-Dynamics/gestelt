@@ -24,6 +24,8 @@ public:
     bool print_timers{false};
     bool planner_verbose{false};
 
+    double eps{1.0}; // Weight on heuristic
+
     bool use_dmp{false}; // True if using DMP
     bool interpolate{true}; // True if interpolating JPS
 
@@ -231,6 +233,10 @@ private:
   Timer tm_jps_map_{"jps_map", 3};
   Timer tm_jps_plan_{"jps_plan", 3};
   Timer tm_dmp_plan_{"dmp_plan", 3};
+
+  /* Data structs */
+  
+  std::shared_ptr<JPS::VoxelMapUtil> map_util_;
 
 }; // class JPSWrapper
 

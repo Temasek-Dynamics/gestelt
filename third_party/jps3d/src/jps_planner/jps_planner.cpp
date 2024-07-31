@@ -194,7 +194,8 @@ bool JPSPlanner<Dim>::plan(const Vecf<Dim> &start, const Vecf<Dim> &goal, decima
   if (!map_util_->isFree(goal_int)) {
     if(planner_verbose_){
       printf(ANSI_COLOR_RED "goal is not free!\n" ANSI_COLOR_RESET);
-      std::cout << "goalI: " << goal_int.transpose() << std::endl;
+      std::cout << "goal (map): " << goal.transpose() << std::endl;
+      std::cout << "goal (idx): " << goal_int.transpose() << std::endl;
       std::cout <<"Map dim: " << map_util_->getDim().transpose() << std::endl;
     }
     status_ = 2;

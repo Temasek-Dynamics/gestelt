@@ -61,7 +61,7 @@
 
         <param name="drone_id" value="$(arg drone_id)"/>
 
-        <param name="front_end/debug_planning" value="$(arg debug_planning)"/>
+        <param name="debug_planning" value="$(arg debug_planning)"/>
 
         <remap from="odom" to="$(arg odometry_topic)"/>
 

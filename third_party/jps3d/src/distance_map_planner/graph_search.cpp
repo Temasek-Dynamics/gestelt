@@ -176,7 +176,7 @@ double GraphSearch::plan(StatePtr &currNode_ptr, int start_id, int goal_id) {
           pq_.increase(child_ptr->heapkey); // update heap
         // if currently in CLOSED
         else if (child_ptr->opened && child_ptr->closed) {
-          printf("ASTAR ERROR!\n");
+          printf("GraphSearch::plan: ASTAR ERROR!\n");
         } else // new node, add to heap
         {
           // printf("add to open set: %d, %d\n", child_ptr->x, child_ptr->y);

@@ -1,0 +1,35 @@
+<!-- Spawns a fake drone for testing architecture and algorithms-->
+
+<launch>
+  <arg name="drone_id" default="0"/>
+  <arg name="drone_id_ns" value="drone$(arg drone_id)"/>
+  <arg name="fake_drone_cfg_filepath" default="$(find gestelt_bringup)/config/fake_drone_params.yaml"/>
+  <arg name="init_x" default="0.0"/>
+  <arg name="init_y" default="0.0"/>
+  <arg name="init_z" default="0.0"/>
+
+  <arg name="cloud_topic" default="camera/depth/points"/>
+
+  <!-- Planning module -->
+  <include file="$(find gestelt_bringup)/launch/navigator/include/navigation_module.xml">
+      <arg name="drone_id" value="$(arg drone_id)"/>
+      <arg name="cloud_topic" value="$(arg cloud_topic)"/>
+  </include>
+
+  <!-- Fake drone -->
+  <include file="$(find fake_drone)/launch/include/fake_drone.xml">
+      <arg name="cfg_filepath" value="$(arg fake_drone_cfg_filepath)"/>
+
+      <arg name="drone_id" value="$(arg drone_id)"/>
+      <arg name="uav_origin_frame" value="map"/>
+      <arg name="base_link_frame" value="$(arg drone_id_ns)_base_link"/>
+      <arg name="cam_link_frame" value="$(arg drone_id_ns)_cam_link"/>
+
+      <arg name="cloud_topic" value="$(arg cloud_topic)"/>
+
+      <arg name="init_x" value="$(arg init_x)"/>
+      <arg name="init_y" value="$(arg init_y)"/>
+      <arg name="init_z" value="$(arg init_z)"/>
+  </include>
+
+</launch>

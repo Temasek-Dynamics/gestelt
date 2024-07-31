@@ -42,7 +42,7 @@ SHELL ["/bin/bash", "-c"]
 
 # Make directory and clone repository
 WORKDIR /gestelt_ws/src/
-RUN git clone https://github.com/JohnTGZ/gestelt.git -b dockerization 
+RUN git clone https://github.com/JohnTGZ/gestelt.git -b master 
 WORKDIR /gestelt_ws/
 RUN source /opt/ros/noetic/setup.bash \
     && catkin config --skiplist decomp_ros_utils decomp_test_node radxa_utils gestelt_test trajectory_inspector \

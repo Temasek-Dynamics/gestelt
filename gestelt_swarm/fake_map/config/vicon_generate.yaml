@@ -1,5 +1,5 @@
 filename: vicon_obs
-polar_obs: 6 # Number of cylinder obstacles
+polar_obs: 0 # Number of cylinder obstacles
 circle_obs: 0 # Number of hoops
 seed: 1
 

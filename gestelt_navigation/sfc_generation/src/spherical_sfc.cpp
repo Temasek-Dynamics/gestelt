@@ -514,7 +514,7 @@ void SphericalSFC::constructSFCTrajectory(
     sfc_traj.segs_t_dur.clear();
     sfc_traj.segs_t_dur.resize(num_segs); // Vector of time durations for each segment {t_1, t_2, ..., t_M}
 
-    if (sfc_params_.time_allocation_type == 0) // Average speed time allocation
+    if (sfc_params_.time_allocation_type == 0) // Max velocity speed time allocation
     {
         // We either use either triangle or trapezoidal time profile.
         for (size_t i = 0 ; i < num_segs; i++){
@@ -523,8 +523,8 @@ void SphericalSFC::constructSFCTrajectory(
         }
     }
     else if (sfc_params_.time_allocation_type == 1){ // Trapezoidal time allocation
-        // d_triangle: distance travelled with maximum acceleration to maximum velocity before instantly decelerating to rest.
-        double d_triangle = sfc_params_.max_vel * sfc_params_.max_vel / sfc_params_.max_acc;
+        // d_triangle: distance travelled when reaching maximum velocity from rest with maximum acceleration.
+        double d_triangle = 0.5*(sfc_params_.max_vel * sfc_params_.max_vel) / sfc_params_.max_acc;
 
         // We either use either triangle or trapezoidal time profile.
         for (size_t i = 0 ; i < num_segs; i++){
@@ -534,15 +534,15 @@ void SphericalSFC::constructSFCTrajectory(
             //  accelerate, travel at maximum velocity, and decelerate respectively.
             double t_s, t_c, t_d;
 
-            if (d_triangle >= traj_dist){ // Follow triangle profile
-                t_s = 2*sqrt(traj_dist/(sfc_params_.max_acc));  //Acceleration phase
-                t_d = t_s;      //Deceleration phase
+            if (2*d_triangle >= traj_dist){ // Follow triangle profile, because distance is too short to reach maximum velocity
+                t_s = sqrt(traj_dist/(sfc_params_.max_acc));  //Acceleration phase
                 t_c = 0.0;       // Constant maximum velocity phase
+                t_d = t_s;      //Deceleration phase
             }
             else{ // Follow trapezoidal profile
                 t_s = sfc_params_.max_vel / sfc_params_.max_acc; //Acceleration phase
+                t_c = (traj_dist - 2*d_triangle)/sfc_params_.max_vel;  // Constant maximum velocity phase
                 t_d = t_s; //Deceleration phase
-                t_c = (traj_dist - d_triangle)/sfc_params_.max_vel;  // Constant maximum velocity phase
             }
             sfc_traj.segs_t_dur[i] = t_s + t_c + t_d;
         }
