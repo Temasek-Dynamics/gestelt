@@ -26,7 +26,7 @@ docker build --platform linux/arm64 -t gestelt/sfc:latest .
 docker tag ORIGINAL_TAG NEW_TAG
 docker push gestelt/sfc:latest
 
-# All-in-one build and push
+# All-in-one build and push (add --no-cache for a clean rebuild)
 docker build --platform linux/arm64 -t gestelt/sfc:latest --push .
 ```
 
