@@ -3,9 +3,12 @@
 import rospy
 from gestelt_msgs.msg import Command, CommanderState, Goals
 from geometry_msgs.msg import Transform, PoseStamped
-from std_msgs.msg import Int32
+from std_msgs.msg import Int32, Int8
 
 num_drones = 3
+
+# Publisher of swarm command
+swarm_cmd_pub = rospy.Publisher(f'/traj_server/swarm_command', Int8, queue_size=5)
 
 # Publisher of server events to trigger change of states for trajectory server 
 goal_publishers = []
@@ -37,6 +40,12 @@ def publish_server_cmd(event_enum):
         # Publisher of server events to trigger change of states for trajectory server 
         traj_server_cmd_pub = rospy.Publisher(f'/drone{drone_id}/traj_server/command', Command, queue_size=5)
         traj_server_cmd_pub.publish(traj_server_cmd_msg)
+
+def publish_swarm_cmd(event_enum):
+    msg = Int8()
+    msg.data = event_enum
+    # Publisher of server events to trigger change of states for trajectory server 
+    swarm_cmd_pub.publish(msg)
 
 def get_server_state_callback():
     for drone_id in range(0, num_drones):
@@ -145,12 +154,12 @@ def main():
     goals_2 = [] # OG (1.6, 1.6) -> (-1.6, -1.6)  
 
     goals_0.append(create_transform(-1.6, 1.6, z))
-    goals_1.append(create_transform(-2.25, 0.0, z+0.25))
-    goals_2.append(create_transform(-1.6, -1.6, z-0.25))
+    goals_1.append(create_transform(-2.25, 0.0, z+0.1))
+    goals_2.append(create_transform(-1.6, -1.6, z-0.1))
 
     goals_0.append(create_transform(1.6, -1.6, z))
-    goals_1.append(create_transform(2.25, 0.0, z+0.25))
-    goals_2.append(create_transform(1.6, 1.6, z-0.25))
+    goals_1.append(create_transform(2.25, 0.0, z+0.1))
+    goals_2.append(create_transform(1.6, 1.6, z-0.1))
 
     pub_goals([goals_0, goals_1, goals_2])
 
@@ -159,29 +168,21 @@ def main():
         if check_task_ids(1):
             break
 
-    # print("Publishing 2nd set of goals")
-    # pub_goals([goals_0, goals_1, goals_2])
+    print("Publishing 2nd set of goals")
+    pub_goals([goals_0, goals_1, goals_2])
 
-    # while not rospy.is_shutdown():
-    #     get_current_task_id()
-    #     if check_task_ids(2):
-    #         break
+    while not rospy.is_shutdown():
+        get_current_task_id()
+        if check_task_ids(2):
+            break
 
-    # print("Publishing 3rd set of goals")
-    # pub_goals([goals_0, goals_1, goals_2])
+    print("Publishing 3rd set of goals")
+    pub_goals([goals_0, goals_1, goals_2])
 
-    # while not rospy.is_shutdown():
-    #     get_current_task_id()
-    #     if check_task_ids(3):
-    #         break
-
-    # print("Publishing 4th set of goals")
-    # pub_goals([goals_0, goals_1, goals_2])
-
-    # while not rospy.is_shutdown():
-    #     get_current_task_id()
-    #     if check_task_ids(4):
-    #         break
+    while not rospy.is_shutdown():
+        get_current_task_id()
+        if check_task_ids(3):
+            break
 
     #################
     # ANTIPODAL SWAP
@@ -194,31 +195,54 @@ def main():
     ap_start_2 = []
 
     ap_start_0.append(create_transform(2.25, -2.25, z))
-    ap_start_1.append(create_transform(-2.25, -1.8, z+0.25))
-    ap_start_2.append(create_transform(1.8, 2.25, z-0.25))
+    ap_start_1.append(create_transform(-2.25, -1.8, z+0.1))
+    ap_start_2.append(create_transform(1.8, 2.25, z-0.1))
 
     pub_goals([ap_start_0, ap_start_1, ap_start_2])
 
     while not rospy.is_shutdown():
         get_current_task_id()
-        if check_task_ids(2):
+        if check_task_ids(4):
             break
-
-    print("Executing antipodal swap")
 
     ap_swap_0 = [] 
     ap_swap_1 = []
     ap_swap_2 = []
 
     ap_swap_0.append(create_transform(-2.25, 2.25, z))
-    ap_swap_1.append(create_transform(2.25, 1.8, z+0.25))
-    ap_swap_2.append(create_transform(-1.8, -2.25, z-0.25))
+    ap_swap_1.append(create_transform(2.25, 1.8, z+0.1))
+    ap_swap_2.append(create_transform(-1.8, -2.25, z-0.1))
 
     ap_swap_0.append(create_transform(2.25, -2.25, z))
-    ap_swap_1.append(create_transform(-2.25, -2.0, z+0.25))
-    ap_swap_2.append(create_transform(2.0, 2.25, z-0.25))
+    ap_swap_1.append(create_transform(-2.25, -2.0, z+0.1))
+    ap_swap_2.append(create_transform(2.0, 2.25, z-0.1))
+
+    print("Executing 1st antipodal swap")
 
     pub_goals([ap_swap_0, ap_swap_1, ap_swap_2])
+
+    while not rospy.is_shutdown():
+        get_current_task_id()
+        if check_task_ids(5):
+            break
+
+    print("Executing 2nd antipodal swap")
+
+    pub_goals([ap_swap_0, ap_swap_1, ap_swap_2])
+
+    while not rospy.is_shutdown():
+        get_current_task_id()
+        if check_task_ids(6):
+            break
+
+    # print("Executing 3rd antipodal swap")
+
+    # pub_goals([ap_swap_0, ap_swap_1, ap_swap_2])
+
+    while not rospy.is_shutdown():
+        publish_swarm_cmd(1) # Land 
+        print("PUBLISHING COMMAND TO LAND DRONES")
+        rospy.sleep(1)
 
     print("End of mission script")
 

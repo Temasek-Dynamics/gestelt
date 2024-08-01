@@ -16,6 +16,6 @@ safety_box/max_y: 5.75
 safety_box/max_z: 2.6
 
 # pub_cmd_freq: Frequency at which commands are published
-pub_cmd_freq: 50.0
+pub_cmd_freq: 30.0
 # state_machine_tick_freq: Frequency at state machine is being refreshed
 state_machine_tick_freq: 50.0

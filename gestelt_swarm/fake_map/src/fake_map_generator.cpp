@@ -129,11 +129,11 @@ class DeterministicForest
 
 			double a = 1.75;
 
-			cylinders.push_back(Cylinder(a, 0.0, 0.15, 3.0));
-			cylinders.push_back(Cylinder(0.0, -a, 0.15, 3.0));
-			cylinders.push_back(Cylinder(-a, 0.0, 0.15, 3.0));
-			cylinders.push_back(Cylinder(0.0, a, 0.15, 3.0));
-			cylinders.push_back(Cylinder(0.3, 0.0, 0.15, 3.0));
+			cylinders.push_back(Cylinder(a-0.3, 0.0, 0.175, 3.0));
+			cylinders.push_back(Cylinder(0.0, -a, 0.175, 3.0));
+			cylinders.push_back(Cylinder(-a+0.3, 0.0, 0.175, 3.0));
+			cylinders.push_back(Cylinder(0.0, a, 0.175, 3.0));
+			cylinders.push_back(Cylinder(-0.3, 0.0, 0.175, 3.0));
 
 			generatePredeterminedCyclinders(cylinders);
 
