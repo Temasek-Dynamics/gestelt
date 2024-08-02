@@ -128,6 +128,13 @@ class DeterministicForest
 			std::vector<Cylinder> cylinders;
 
 			double a = 1.75;
+			//(1.35, 0)
+			//(-1.35, 0)
+			//(0.2, 0)
+
+			//(0, 1.75)
+			//(1.75, 0)
+
 
 			cylinders.push_back(Cylinder(a-0.4, 0.0, 0.175, 3.0)); // Left obstacle
 			cylinders.push_back(Cylinder(0.0, -a, 0.175, 3.0));		// Top obstacle

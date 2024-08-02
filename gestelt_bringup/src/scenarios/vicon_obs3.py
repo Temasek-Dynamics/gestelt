@@ -235,9 +235,25 @@ def main():
         if check_task_ids(6):
             break
 
-    # print("Executing 3rd antipodal swap")
+    #################
+    # GO HOME AND LAND
+    #################
 
-    # pub_goals([ap_swap_0, ap_swap_1, ap_swap_2])
+    home0 = [] # OG (1.6, -1.6) -> (-1.6, 1.6)  
+    home1 = [] # OG (2.25, 0.0) -> (-2.25, 0.0) 
+    home2 = [] # OG (1.6, 1.6) -> (-1.6, -1.6)  
+
+    home0.append(create_transform(1.6, -1.45, z))
+    home1.append(create_transform(2.25, 0.0, z+0.125))
+    home2.append(create_transform(1.6, 1.45, z-0.125))
+
+    pub_goals([home0, home1, home2])
+
+
+    while not rospy.is_shutdown():
+        get_current_task_id()
+        if check_task_ids(7):
+            break
 
     while not rospy.is_shutdown():
         publish_swarm_cmd(1) # Land 

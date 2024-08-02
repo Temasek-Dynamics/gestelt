@@ -104,8 +104,8 @@ optimization:
   weight_sqrvariance: 10000.0 
   weight_time: 25.0 
   swarm_clearance: 0.375 
-  max_vel: 1.25 # Maximum velocity (m/s)
-  max_acc: 25.0 # Maximum acceleration (m/s^2)
+  max_vel: 2.25 # Maximum velocity (m/s)
+  max_acc: 12.0 # Maximum acceleration (m/s^2)
 
   # EGO params
   weight_obstacle: 10000.0 
