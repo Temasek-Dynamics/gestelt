@@ -254,7 +254,10 @@ nmcli connection modify WIFINAME connection.autoconnect-priority 10
 ### Enable performance mode
 ```bash
 sudo apt-get install cpufrequtils
-sudo cpufreq-set -g performance
+echo 'GOVERNOR="performance"' | sudo tee /etc/default/cpufrequtils
+sudo systemctl disable ondemand
+# Reboot system and check using the following command
+cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
 ```
 
 # Troubleshooting

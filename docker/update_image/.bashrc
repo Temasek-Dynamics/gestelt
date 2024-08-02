@@ -116,7 +116,7 @@ then
     export SELF_IP=192.168.31.195
 elif [[ "$DRONE_ID" == "1" ]]
     then
-    export SELF_IP=192.168.31.196
+    export SELF_IP=192.168.31.202
 elif [[ "$DRONE_ID" == "2" ]]
     then
     export SELF_IP=192.168.31.197
