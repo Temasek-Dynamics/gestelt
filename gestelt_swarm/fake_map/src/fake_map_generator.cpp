@@ -115,7 +115,7 @@ class DeterministicForest
 
 			// Add floor, ceiling and walls if enabled
 			if (enable_floor_){
-				generateHorizontalPlane(x_size_, y_size_, 0.0);
+				generateHorizontalPlane(x_size_, y_size_, 0.35);
 			}
 			if (enable_ceiling_){
 				generateHorizontalPlane(x_size_, y_size_, z_size_);
@@ -129,11 +129,11 @@ class DeterministicForest
 
 			double a = 1.75;
 
-			cylinders.push_back(Cylinder(a-0.3, 0.0, 0.175, 3.0));
-			cylinders.push_back(Cylinder(0.0, -a, 0.175, 3.0));
-			cylinders.push_back(Cylinder(-a+0.3, 0.0, 0.175, 3.0));
-			cylinders.push_back(Cylinder(0.0, a, 0.175, 3.0));
-			cylinders.push_back(Cylinder(-0.3, 0.0, 0.175, 3.0));
+			cylinders.push_back(Cylinder(a-0.4, 0.0, 0.175, 3.0)); // Left obstacle
+			cylinders.push_back(Cylinder(0.0, -a, 0.175, 3.0));		// Top obstacle
+			cylinders.push_back(Cylinder(-a+0.4, 0.0, 0.175, 3.0)); // Right obstacle
+			cylinders.push_back(Cylinder(0.0, a, 0.175, 3.0));		// Bottom obstacle
+			cylinders.push_back(Cylinder(0.2, 0.0, 0.175, 3.0));	// Center obstacle
 
 			generatePredeterminedCyclinders(cylinders);
 

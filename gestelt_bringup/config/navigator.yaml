@@ -11,7 +11,7 @@ goal_tolerance: 0.5                       # [m] Tolerance for goal to be conside
 time_to_col_threshold: 0.2                # [s] Threshold for seconds to collision.
 receding_horizon_planning_dist: 7.5       # [m] Receding horizon planning
 # receding_horizon_corridor_dist: 3.0     # [m] Receding horizon corridor
-enable_synchronized_task_completion: true # Enable synchronized task completion. All drones only move on to the next task after all drones have completed executing the current task id
+# enable_synchronized_task_completion: true # Enable synchronized task completion. All drones only move on to the next task after all drones have completed executing the current task id
 
 safety_check_frequency: 20.0            # [Hz] Timer thread for checking safety of trajectory
 heartbeat_frequency: 10.0               # [Hz] Frequency to indicate if planner is still alive
@@ -23,7 +23,7 @@ back_end/planner_type: 1         # 0: Spherical SFC, 1: EGO, 2: POLYTOPE SFC
 
 ##### Front-end params
 front_end:
-  planner_frequency: 30.0        # [Hz] Front-end planning frequency
+  planner_frequency: 20.0        # [Hz] Front-end planning frequency
 
   a_star:
     max_iterations: 9999  
@@ -104,7 +104,7 @@ optimization:
   weight_sqrvariance: 10000.0 
   weight_time: 25.0 
   swarm_clearance: 0.375 
-  max_vel: 1.25 # Maximum velocity (m/s)
+  max_vel: 3.25 # Maximum velocity (m/s)
   max_acc: 25.0 # Maximum acceleration (m/s^2)
 
   # EGO params

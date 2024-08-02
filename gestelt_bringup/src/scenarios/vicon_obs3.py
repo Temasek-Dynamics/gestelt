@@ -145,7 +145,7 @@ def main():
     # Send waypoints to UAVs
     print(f"Sending waypoints to UAVs")
 
-    z = 1.5
+    z = 1.25
 
     print("Publishing 1st set of goals ")
 
@@ -153,13 +153,13 @@ def main():
     goals_1 = [] # OG (2.25, 0.0) -> (-2.25, 0.0) 
     goals_2 = [] # OG (1.6, 1.6) -> (-1.6, -1.6)  
 
-    goals_0.append(create_transform(-1.6, 1.6, z))
-    goals_1.append(create_transform(-2.25, 0.0, z+0.1))
-    goals_2.append(create_transform(-1.6, -1.6, z-0.1))
+    goals_0.append(create_transform(-1.6, 1.45, z))
+    goals_1.append(create_transform(-2.25, 0.0, z+0.125))
+    goals_2.append(create_transform(-1.6, -1.45, z-0.125))
 
-    goals_0.append(create_transform(1.6, -1.6, z))
-    goals_1.append(create_transform(2.25, 0.0, z+0.1))
-    goals_2.append(create_transform(1.6, 1.6, z-0.1))
+    goals_0.append(create_transform(1.6, -1.45, z))
+    goals_1.append(create_transform(2.25, 0.0, z+0.125))
+    goals_2.append(create_transform(1.6, 1.45, z-0.125))
 
     pub_goals([goals_0, goals_1, goals_2])
 
@@ -194,9 +194,9 @@ def main():
     ap_start_1 = []
     ap_start_2 = []
 
-    ap_start_0.append(create_transform(2.25, -2.25, z))
-    ap_start_1.append(create_transform(-2.25, -1.8, z+0.1))
-    ap_start_2.append(create_transform(1.8, 2.25, z-0.1))
+    ap_start_0.append(create_transform(2.0, -2.0, z))
+    ap_start_1.append(create_transform(-2.15, -1.6, z+0.125))
+    ap_start_2.append(create_transform(1.6, 2.15, z-0.125))
 
     pub_goals([ap_start_0, ap_start_1, ap_start_2])
 
@@ -209,13 +209,13 @@ def main():
     ap_swap_1 = []
     ap_swap_2 = []
 
-    ap_swap_0.append(create_transform(-2.25, 2.25, z))
-    ap_swap_1.append(create_transform(2.25, 1.8, z+0.1))
-    ap_swap_2.append(create_transform(-1.8, -2.25, z-0.1))
+    ap_swap_0.append(create_transform(-2.0, 2.0, z))
+    ap_swap_1.append(create_transform(2.15, 1.6, z+0.125))
+    ap_swap_2.append(create_transform(-1.6, -2.15, z-0.125))
 
-    ap_swap_0.append(create_transform(2.25, -2.25, z))
-    ap_swap_1.append(create_transform(-2.25, -2.0, z+0.1))
-    ap_swap_2.append(create_transform(2.0, 2.25, z-0.1))
+    ap_swap_0.append(create_transform(2.0, -2.0, z))
+    ap_swap_1.append(create_transform(-2.15, -1.6, z+0.125))
+    ap_swap_2.append(create_transform(1.6, 2.15, z-0.125))
 
     print("Executing 1st antipodal swap")
 

@@ -251,6 +251,12 @@ nmcli -f NAME,UUID,AUTOCONNECT,AUTOCONNECT-PRIORITY c
 nmcli connection modify WIFINAME connection.autoconnect-priority 10
 ```
 
+### Enable performance mode
+```bash
+sudo apt-get install cpufrequtils
+sudo cpufreq-set -g performance
+```
+
 # Troubleshooting
 1. Permission denied when accessing serial port of FCU from MAVROS on Radxa
     - Make sure Baud rate when launching MAVROS matches what is set as PX4 params

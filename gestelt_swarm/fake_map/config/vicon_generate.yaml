@@ -1,4 +1,4 @@
-filename: vicon_obs
+filename: vicon_obs3
 polar_obs: 0 # Number of cylinder obstacles
 circle_obs: 0 # Number of hoops
 seed: 1
@@ -8,7 +8,7 @@ map:
   resolution: 0.1
   x_size: 5.6            # size of map, obstacles will only be populated within the map size bounds
   y_size: 5.6            # size of map, obstacles will only be populated within the map size bounds
-  z_size: 2.5             # size of map, obstacles will only be populated within the map size bounds
+  z_size: 2.6             # size of map, obstacles will only be populated within the map size bounds
   enable_floor: true      # Add point cloud floor plane (Set at z = 0.0)
   enable_ceiling: true    # Add point cloud ceiling plane (Set at z = 2.5)
   enable_walls: true      # Add boundary walls defined by "x_size" and "y_size"

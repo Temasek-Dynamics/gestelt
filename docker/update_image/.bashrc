@@ -134,7 +134,7 @@ export ROS_IP=$SELF_IP
 
 # Startup for demo
 alias uav_startup="cd /gestelt_ws/src/gestelt/gestelt_bringup/scripts/ && ./offboard.sh $DRONE_ID"
-alias hitl_startup="cd /gestelt_ws/src/gestelt/gestelt_bringup/scripts/ && ./scenario_hitl_drone.sh -s forest_single"
+# alias hitl_startup="cd /gestelt_ws/src/gestelt/gestelt_bringup/scripts/ && ./scenario_hitl_drone.sh -s forest_single"
 
 # Convenience function
 alias killbill="killall -9 rosmaster; tmux kill-server;"
