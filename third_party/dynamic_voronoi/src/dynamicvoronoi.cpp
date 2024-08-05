@@ -280,8 +280,10 @@ void DynamicVoronoi::update(bool updateRealDist) {
 }
 
 float DynamicVoronoi::getDistance( int x, int y ) {
-  if( (x>0) && (x<sizeX) && (y>0) && (y<sizeY)) return data[x][y].dist; 
-  else return -INFINITY;
+  if( (x>0) && (x<sizeX) && (y>0) && (y<sizeY)) {
+    return data[x][y].dist;
+  } 
+  else return -1;
 }
 
 std::vector<Eigen::Vector3d> DynamicVoronoi::getVoronoiVertices()
@@ -694,6 +696,42 @@ bool DynamicVoronoi::markerMatchAlternative(int x, int y) {
   return true;
 }
 
+void DynamicVoronoi::updateKDTree()
+{
+  voro_cells_.clear();
+
+  for (int x=0; x<sizeX; x++) {
+    for (int y=0; y<sizeY; y++) {
+      if (isVoronoi(x, y)){
+        voro_cells_.push_back(Eigen::Vector2i(x, y));
+      }
+    }
+  }
+
+  voro_kd_tree_ = 
+    std::make_unique<KDTreeVectorOfVectorsAdaptor<std::vector<Eigen::Vector2i>, double>>(
+        3, voro_cells_, 10); //kd tree used to query nearest point on the front-end path
+  
+  init_kd_tree_ = true;
+}
+
+bool DynamicVoronoi::getNearestVoroCell(const INTPOINT& grid_pos, INTPOINT& nearest_voro_cell)
+{
+  if (!init_kd_tree_){
+    return false;
+  }
+
+  std::vector<double> query_pt = {(double) grid_pos.x, 
+                                  (double) grid_pos.y};
+  std::vector<size_t> out_indices(1);
+  std::vector<double> out_distances_sq(1);
+
+  voro_kd_tree_->query(&query_pt[0], 1, &out_indices[0], &out_distances_sq[0]);
+
+  nearest_voro_cell = INTPOINT(voro_cells_[out_indices[0]](0), voro_cells_[out_indices[0]](1));
+
+  return true;
+}
 
 int DynamicVoronoi::getNumVoronoiNeighbors(int x, int y) {
   int count = 0;
@@ -790,73 +828,32 @@ DynamicVoronoi::markerMatchResult DynamicVoronoi::markerMatch(int x, int y) {
 
 /* Planning methods */
 
-// 8 Connected search for valid neighbours
-// void DynamicVoronoi::getNeighbors(const INTPOINT& grid_pos, std::vector<INTPOINT>& neighbours) 
-// {
-//   neighbours.clear();
-
-//   for (int dx = -1; dx <= 1; dx++) {
-//     for (int dy = -1; dy <= 1; dy++) {
-//       if ((dx == 0 && dy == 0)) { // 8 Connected
-//         continue;
-//       }
-
-//       int nx = grid_pos.x + dx;
-//       int ny = grid_pos.y + dy;
-//       if (!isInMap(nx, ny) || isOccupied(nx, ny)){
-//         continue;
-//       }
-
-//       neighbours.push_back(IntPoint(nx, ny));
-//     }
-//   }
-// }
-
-
-int DynamicVoronoi::getNumVoroNeighbors(const INTPOINT& grid_pos)
-{
-  int num_nb = 0;
-  for (int dx = -1; dx <= 1; dx++) {
-    for (int dy = -1; dy <= 1; dy++) {
-      if ((dx == 0 && dy == 0)) { 
-        continue;
-      }
-
-      int nx = grid_pos.x + dx;
-      int ny = grid_pos.y + dy;
-
-      if (!isInMap(nx, ny) || isOccupied(nx, ny)){
-        continue;
-      }
-
-      num_nb++;
-    }
-  }
-
-  return num_nb;
-}
-
-// 8 Connected search for valid neighbours used in voronoi search
+// 8 Connected search for valid neighbours used in voronoi search. Returns vector of (grid_x, grid_y, map_z_cm)
 void DynamicVoronoi::getVoroNeighbors(const INTPOINT& grid_pos, std::vector<Eigen::Vector3i>& neighbours,
-                                      const std::unordered_set<IntPoint>& marked_bubble_cells) 
+                                      const std::unordered_set<IntPoint>& marked_bubble_cells, const bool& allow_wait) 
 {
   neighbours.clear();
 
   for (int dx = -1; dx <= 1; dx++) {
     for (int dy = -1; dy <= 1; dy++) {
-      if ((dx == 0 && dy == 0)) { 
-        continue;
+
+      if (!allow_wait){ // If waiting is not allowed, then skip current cell
+        if ((dx == 0 && dy == 0)) { 
+          continue;
+        }
       }
 
       int nx = grid_pos.x + dx;
       int ny = grid_pos.y + dy;
 
       if (!isInMap(nx, ny) || isOccupied(nx, ny)){
+        std::cout << "(" << nx << ", " << ny << ") is not in map or occupied!" << std::endl; 
         continue;
       }
 
       if (!(isVoronoi(nx, ny) 
             || marked_bubble_cells.find(INTPOINT(nx, ny)) != marked_bubble_cells.end())){
+        // if not (voronoi or marked as bubble cell)
         continue;
       }
 
@@ -872,8 +869,8 @@ void DynamicVoronoi::getVoroNeighbors(const INTPOINT& grid_pos, std::vector<Eige
           neighbours.push_back(Eigen::Vector3i{grid_pos.x, grid_pos.y, top_voro_->origin_z_cm_});
         }
       }
+      // If bottom is free:
       if (bottom_voro_ != nullptr){
-        // If bottom is free:
         if (!bottom_voro_->isOccupied(grid_pos.x, grid_pos.y)){
           neighbours.push_back(Eigen::Vector3i{grid_pos.x, grid_pos.y, bottom_voro_->origin_z_cm_});
         }

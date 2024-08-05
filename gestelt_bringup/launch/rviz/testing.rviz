@@ -5,15 +5,14 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /Global Options1
-        - /Axes1
         - /TF1/Frames1
-        - /drone0_mavros1/Localization1//mavros/local_position/pose1
-        - /front-end1
-        - /front-end1/plan_viz1/Namespaces1
-        - /front-end1/goal_pt1
+        - /front-end_01
+        - /front-end_01/plan_viz1/Namespaces1
+        - /front-end_11
+        - /front-end_11/plan_viz1
         - /voronoi_graph1/Namespaces1
       Splitter Ratio: 0.43759629130363464
-    Tree Height: 431
+    Tree Height: 422
   - Class: rviz/Selection
     Name: Selection
   - Class: rviz/Tool Properties
@@ -83,157 +82,6 @@ Visualization Manager:
         {}
       Update Interval: 0
       Value: false
-    - Class: rviz/Marker
-      Enabled: false
-      Marker Topic: /drone0/model
-      Name: /drone0/model
-      Namespaces:
-        {}
-      Queue Size: 100
-      Value: false
-    - Class: rviz/Group
-      Displays:
-        - Class: rviz/Group
-          Displays:
-            - Alpha: 1
-              Autocompute Intensity Bounds: true
-              Autocompute Value Bounds:
-                Max Value: 10
-                Min Value: -10
-                Value: true
-              Axis: Z
-              Channel Name: intensity
-              Class: rviz/PointCloud2
-              Color: 32; 74; 135
-              Color Transformer: FlatColor
-              Decay Time: 0
-              Enabled: true
-              Invert Rainbow: false
-              Max Color: 255; 255; 255
-              Min Color: 0; 0; 0
-              Name: drone cloud
-              Position Transformer: XYZ
-              Queue Size: 10
-              Selectable: true
-              Size (Pixels): 3
-              Size (m): 0.004999999888241291
-              Style: Squares
-              Topic: /drone0/camera/depth/points
-              Unreliable: false
-              Use Fixed Frame: true
-              Use rainbow: true
-              Value: true
-          Enabled: false
-          Name: Perception
-        - Class: rviz/Group
-          Displays:
-            - Alpha: 1
-              Axes Length: 1
-              Axes Radius: 0.10000000149011612
-              Class: rviz/Pose
-              Color: 115; 210; 22
-              Enabled: true
-              Head Length: 0.20000000298023224
-              Head Radius: 0.5
-              Name: /mavros/local_position/pose
-              Queue Size: 10
-              Shaft Length: 1
-              Shaft Radius: 0.20000000298023224
-              Shape: Arrow
-              Topic: /drone0/mavros/local_position/pose
-              Unreliable: false
-              Value: true
-            - Angle Tolerance: 0.10000000149011612
-              Class: rviz/Odometry
-              Covariance:
-                Orientation:
-                  Alpha: 0.5
-                  Color: 255; 255; 127
-                  Color Style: Unique
-                  Frame: Local
-                  Offset: 1
-                  Scale: 1
-                  Value: true
-                Position:
-                  Alpha: 0.30000001192092896
-                  Color: 204; 51; 204
-                  Scale: 1
-                  Value: true
-                Value: true
-              Enabled: false
-              Keep: 50
-              Name: /mavros/local_position/odom
-              Position Tolerance: 0.10000000149011612
-              Queue Size: 10
-              Shape:
-                Alpha: 1
-                Axes Length: 1
-                Axes Radius: 0.10000000149011612
-                Color: 255; 25; 0
-                Head Length: 0.30000001192092896
-                Head Radius: 0.10000000149011612
-                Shaft Length: 1
-                Shaft Radius: 0.05000000074505806
-                Value: Arrow
-              Topic: /drone0/mavros/local_position/odom
-              Unreliable: false
-              Value: false
-          Enabled: false
-          Name: Localization
-        - Class: rviz/Group
-          Displays:
-            - Class: rviz/Marker
-              Enabled: true
-              Marker Topic: /drone0/track_markers
-              Name: Marker
-              Namespaces:
-                {}
-              Queue Size: 100
-              Value: true
-            - Class: rviz/MarkerArray
-              Enabled: true
-              Marker Topic: /drone0/vehicle_marker
-              Name: MarkerArray
-              Namespaces:
-                {}
-              Queue Size: 100
-              Value: true
-            - Class: rviz/Marker
-              Enabled: true
-              Marker Topic: /drone0/wp_markers
-              Name: Marker
-              Namespaces:
-                {}
-              Queue Size: 100
-              Value: true
-          Enabled: true
-          Name: mavros_viz
-        - Alpha: 1
-          Buffer Length: 1
-          Class: rviz/Path
-          Color: 25; 255; 0
-          Enabled: true
-          Head Diameter: 0.30000001192092896
-          Head Length: 0.20000000298023224
-          Length: 0.30000001192092896
-          Line Style: Lines
-          Line Width: 0.029999999329447746
-          Name: setpoint_trajectory/desired
-          Offset:
-            X: 0
-            Y: 0
-            Z: 0
-          Pose Color: 255; 85; 255
-          Pose Style: None
-          Queue Size: 10
-          Radius: 0.029999999329447746
-          Shaft Diameter: 0.10000000149011612
-          Shaft Length: 0.10000000149011612
-          Topic: /drone0/mavros/setpoint_trajectory/desired
-          Unreliable: false
-          Value: true
-      Enabled: false
-      Name: drone0_mavros
     - Class: rviz/Group
       Displays:
         - Alpha: 0.5
@@ -413,7 +261,7 @@ Visualization Manager:
           Marker Topic: /closed_list_viz
           Name: closed_list_viz
           Namespaces:
-            {}
+            closed_list: true
           Queue Size: 100
           Value: true
         - Class: rviz/Marker
@@ -421,7 +269,7 @@ Visualization Manager:
           Marker Topic: /plan_viz
           Name: plan_viz
           Namespaces:
-            front_end_path_lines: true
+            front_end_path: true
           Queue Size: 100
           Value: true
         - Class: rviz/Marker
@@ -441,175 +289,43 @@ Visualization Manager:
           Queue Size: 100
           Value: true
       Enabled: true
-      Name: front-end
+      Name: front-end_0
     - Class: rviz/Group
       Displays:
         - Class: rviz/Marker
           Enabled: true
-          Marker Topic: /drone0/sfc_spherical
-          Name: sfc_spherical
+          Marker Topic: /closed_list_viz_1
+          Name: closed_list_viz
           Namespaces:
-            {}
+            closed_list: true
+          Queue Size: 100
+          Value: true
+        - Class: rviz/Marker
+          Enabled: true
+          Marker Topic: /plan_viz_1
+          Name: plan_viz
+          Namespaces:
+            front_end_path: true
           Queue Size: 100
           Value: true
         - Class: rviz/Marker
           Enabled: false
-          Marker Topic: /drone0/sfc_dist
-          Name: sfc_dist
+          Marker Topic: /start_point
+          Name: goal_pt
           Namespaces:
             {}
           Queue Size: 100
           Value: false
         - Class: rviz/Marker
-          Enabled: true
-          Marker Topic: /drone0/sfc_cand_points
-          Name: sfc_cand_points
-          Namespaces:
-            {}
-          Queue Size: 100
-          Value: true
-        - Class: rviz/Marker
-          Enabled: true
-          Marker Topic: /drone0/sfc_waypoints
-          Name: sfc_waypoints
-          Namespaces:
-            {}
-          Queue Size: 100
-          Value: true
-      Enabled: false
-      Name: sfc
-    - Class: rviz/Group
-      Displays:
-        - Class: rviz/Group
-          Displays:
-            - Class: rviz/Marker
-              Enabled: true
-              Marker Topic: /drone0/back_end_planner/goal_point
-              Name: goal_point(cyan)
-              Namespaces:
-                {}
-              Queue Size: 100
-              Value: true
-            - Class: rviz/Marker
-              Enabled: true
-              Marker Topic: /drone0/back_end_planner/global_list
-              Name: global_list(cyan)
-              Namespaces:
-                {}
-              Queue Size: 100
-              Value: true
-            - Class: rviz/Marker
-              Enabled: true
-              Marker Topic: /drone0/back_end_planner/optimal_list
-              Name: optimal_list(red)
-              Namespaces:
-                {}
-              Queue Size: 100
-              Value: true
-            - Class: rviz/Marker
-              Enabled: true
-              Marker Topic: /drone0/back_end_planner/failed_list
-              Name: FailedList(brown)
-              Namespaces:
-                {}
-              Queue Size: 100
-              Value: true
-            - Class: rviz/Marker
-              Enabled: true
-              Marker Topic: /drone0/back_end_planner/a_star_list
-              Name: AStar(Yellow)
-              Namespaces:
-                {}
-              Queue Size: 100
-              Value: true
-            - Class: rviz/Marker
-              Enabled: true
-              Marker Topic: /drone0/back_end_planner/init_list
-              Name: Init_list(Blue)
-              Namespaces:
-                {}
-              Queue Size: 100
-              Value: true
-            - Class: rviz/Marker
-              Enabled: true
-              Marker Topic: /drone0/back_end_planner/initial_min_jerk_traj
-              Name: init_min_jerk_traj
-              Namespaces:
-                {}
-              Queue Size: 100
-              Value: true
-          Enabled: true
-          Name: Planning_back_end
-        - Class: rviz/Group
-          Displays:
-            - Class: rviz/Marker
-              Enabled: true
-              Marker Topic: /drone0_ego_planner_node/goal_point
-              Name: goal_point(cyan)
-              Namespaces:
-                {}
-              Queue Size: 100
-              Value: true
-            - Class: rviz/Marker
-              Enabled: true
-              Marker Topic: /drone0_ego_planner_node/global_list
-              Name: global_list(cyan)
-              Namespaces:
-                {}
-              Queue Size: 100
-              Value: true
-            - Class: rviz/Marker
-              Enabled: true
-              Marker Topic: /drone0_ego_planner_node/optimal_list
-              Name: optimal_list(red)
-              Namespaces:
-                {}
-              Queue Size: 100
-              Value: true
-            - Class: rviz/Marker
-              Enabled: true
-              Marker Topic: /drone0_ego_planner_node/failed_list
-              Name: FailedList(brown)
-              Namespaces:
-                {}
-              Queue Size: 100
-              Value: true
-            - Class: rviz/Marker
-              Enabled: true
-              Marker Topic: /drone0_ego_planner_node/a_star_list
-              Name: AStar(Yellow)
-              Namespaces:
-                {}
-              Queue Size: 100
-              Value: true
-            - Class: rviz/Marker
-              Enabled: true
-              Marker Topic: /drone0_ego_planner_node/init_list
-              Name: Init_list(Blue)
-              Namespaces:
-                {}
-              Queue Size: 100
-              Value: true
           Enabled: false
-          Name: Planning_ego
-        - Class: rviz/MarkerArray
-          Enabled: true
-          Marker Topic: /drone0/back_end_planner/planner_sv_pairs
-          Name: planner_sv_pairs
+          Marker Topic: /goal_point
+          Name: start_pt
           Namespaces:
             {}
           Queue Size: 100
-          Value: true
-      Enabled: false
-      Name: back_end
-    - Class: rviz/Marker
-      Enabled: false
-      Marker Topic: /optimal_list
-      Name: Marker
-      Namespaces:
-        {}
-      Queue Size: 100
-      Value: false
+          Value: false
+      Enabled: true
+      Name: front-end_1
     - Alpha: 0.4000000059604645
       Class: rviz/Map
       Color Scheme: raw
@@ -620,16 +336,6 @@ Visualization Manager:
       Unreliable: false
       Use Timestamp: false
       Value: true
-    - Alpha: 0.4000000059604645
-      Class: rviz/Map
-      Color Scheme: costmap
-      Draw Behind: false
-      Enabled: false
-      Name: dist_map
-      Topic: /voronoi_planner/dist_map
-      Unreliable: false
-      Use Timestamp: false
-      Value: false
     - Alpha: 0.5
       Class: rviz/Map
       Color Scheme: raw
@@ -640,52 +346,14 @@ Visualization Manager:
       Unreliable: false
       Use Timestamp: false
       Value: true
-    - Alpha: 0.5
-      Class: rviz/Map
-      Color Scheme: raw
-      Draw Behind: false
-      Enabled: false
-      Name: voro_map_pruned
-      Topic: /voronoi_planner/voro_map_pruned
-      Unreliable: false
-      Use Timestamp: false
-      Value: false
-    - Alpha: 1
-      Autocompute Intensity Bounds: true
-      Autocompute Value Bounds:
-        Max Value: 10
-        Min Value: -10
-        Value: true
-      Axis: Z
-      Channel Name: intensity
-      Class: rviz/PointCloud2
-      Color: 138; 226; 52
-      Color Transformer: FlatColor
-      Decay Time: 0
-      Enabled: false
-      Invert Rainbow: false
-      Max Color: 255; 255; 255
-      Min Color: 0; 0; 0
-      Name: cloud_slice
-      Position Transformer: XYZ
-      Queue Size: 10
-      Selectable: true
-      Size (Pixels): 3
-      Size (m): 0.10000000149011612
-      Style: Flat Squares
-      Topic: /grid_map/slice
-      Unreliable: false
-      Use Fixed Frame: true
-      Use rainbow: true
-      Value: false
     - Class: rviz/Marker
-      Enabled: true
+      Enabled: false
       Marker Topic: /voronoi_graph
       Name: voronoi_graph
       Namespaces:
         {}
       Queue Size: 100
-      Value: true
+      Value: false
   Enabled: true
   Global Options:
     Background Color: 255; 255; 255
@@ -712,20 +380,26 @@ Visualization Manager:
   Value: true
   Views:
     Current:
-      Angle: 1.4650005102157593
-      Class: rviz/TopDownOrtho
+      Class: rviz/XYOrbit
+      Distance: 0.8131016492843628
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
+      Field of View: 0.7853981852531433
+      Focal Point:
+        X: 0.5747663378715515
+        Y: 0.6455678343772888
+        Z: -3.5762786865234375e-07
+      Focal Shape Fixed Size: true
+      Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Scale: 892.7914428710938
+      Pitch: 1.3447965383529663
       Target Frame: my_view
-      X: 0.4000682234764099
-      Y: 0.44682541489601135
+      Yaw: 0.030395779758691788
     Saved:
       - Class: rviz/FPS
         Enable Stereo Rendering:
@@ -861,10 +535,10 @@ Visualization Manager:
 Window Geometry:
   Displays:
     collapsed: false
-  Height: 964
+  Height: 948
   Hide Left Dock: false
   Hide Right Dock: false
-  QMainWindow State: 000000ff00000000fd00000004000000000000028b0000036afc020000003afb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005c00fffffffb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073010000003d000001ec000000c900fffffffb0000001e0054006f006f006c002000500072006f0070006500720074006900650073010000022f000000860000005c00fffffffc000002bb000000ec000000a400fffffffa000000010100000002fb0000000a0049006d0061006700650000000000ffffffff0000000000000000fb0000000a005600690065007700730100000000000001d70000010000fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb0000000c00430061006d00650072006100000001d1000000b50000000000000000fb0000000a006400650070007400680000000265000000c00000000000000000fb0000000a0049006d00610067006500000002590000013e0000000000000000fb0000000a0049006d00610067006501000003f4000001190000000000000000fb0000000a0064006500700074006800000004a2000000ac0000000000000000fb0000000a0064006500700074006800000001ef000001b60000000000000000fb0000000a0064006500700074006800000004b9000000950000000000000000fb0000000a006400650070007400680000000481000000cd0000000000000000fb0000000a006400650070007400680000000429000001250000000000000000fb0000000a0064006500700074006800000003b7000000af0000000000000000fb0000000a0064006500700074006800000003d5000000b50000000000000000fb0000000a006400650070007400680000000444000001260000000000000000fb0000000a00640065007000740068000000041f0000014b0000000000000000fb0000000a0064006500700074006800000001b8000000160000000000000000fb0000000a0064006500700074006800000001c1000000160000000000000000fb0000000a0064006500700074006800000004b1000000550000000000000000fb0000000a006400650070007400680000000505000000650000000000000000fb0000000a006400650070007400680000000502000000680000000000000000fb0000000a0064006500700074006800000004f9000000710000000000000000fb0000000a0064006500700074006800000003dd0000018d0000000000000000fb0000000a0064006500700074006800000004de0000008c0000000000000000fb0000000a0064006500700074006800000004cc0000009e0000000000000000fb0000000a00640065007000740068000000048a000000c40000000000000000fb0000000a0064006500700074006800000004aa000000c00000000000000000fb0000000a0049006d00610067006500000003fa000001540000000000000000fb0000000a0049006d00610067006501000002e1000002890000000000000000fb0000000a006400650070007400680000000495000000d50000000000000000fb0000000a0064006500700074006800000001b60000001b0000000000000000fb0000000a0064006500700074006800000001c10000002f0000000000000000fb0000000a0064006500700074006800000001d3000000300000000000000000fb0000000a0064006500700074006800000001e6000000320000000000000000fb0000000a0064006500700074006800000004dc0000008e0000000000000000fb0000000a0064006500700074006800000004f4000000760000000000000000fb0000000a0064006500700074006800000004f2000000780000000000000000fb0000000a006400650070007400680000000503000000670000000000000000fb0000000a006400650070007400680000000509000000610000000000000000fb0000000a006400650070007400680000000511000000590000000000000000fb0000000a006400650070007400680000000517000000530000000000000000fb0000000a00640065007000740068000000051d0000004d0000000000000000fb0000000a00640065007000740068000000051d0000004d0000000000000000fb0000000a006400650070007400680000000526000000440000000000000000fb0000000a00640065007000740068000000052b0000003f0000000000000000fb0000000a00640065007000740068000000052b0000003f0000000000000000fb0000000a00640065007000740068000000052f0000003b0000000000000000fb0000000a006400650070007400680000000532000000380000000000000000fb0000000a006400650070007400680000000536000000340000000000000000fb0000001800640065007000740068005f00630061006d00650072006100000002f8000000af0000000000000000fb0000000a0049006d00610067006501000002d0000000c70000000000000000fb0000000a0049006d00610067006501000002880000010f0000000000000000000000010000010f00000385fc0200000002fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000006100000003bfc0100000002fb0000000800540069006d00650000000000000006100000041800fffffffb0000000800540069006d00650100000000000004500000000000000000000004ef0000036a00000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd00000004000000000000028b0000035afc020000003afb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005c00fffffffb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073010000003d000001e3000000c900fffffffb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000226000000830000005c00fffffffc000002af000000e8000000a400fffffffa000000010100000002fb0000000a0049006d0061006700650000000000ffffffff0000000000000000fb0000000a005600690065007700730100000000000001d70000010000fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb0000000c00430061006d00650072006100000001d1000000b50000000000000000fb0000000a006400650070007400680000000265000000c00000000000000000fb0000000a0049006d00610067006500000002590000013e0000000000000000fb0000000a0049006d00610067006501000003f4000001190000000000000000fb0000000a0064006500700074006800000004a2000000ac0000000000000000fb0000000a0064006500700074006800000001ef000001b60000000000000000fb0000000a0064006500700074006800000004b9000000950000000000000000fb0000000a006400650070007400680000000481000000cd0000000000000000fb0000000a006400650070007400680000000429000001250000000000000000fb0000000a0064006500700074006800000003b7000000af0000000000000000fb0000000a0064006500700074006800000003d5000000b50000000000000000fb0000000a006400650070007400680000000444000001260000000000000000fb0000000a00640065007000740068000000041f0000014b0000000000000000fb0000000a0064006500700074006800000001b8000000160000000000000000fb0000000a0064006500700074006800000001c1000000160000000000000000fb0000000a0064006500700074006800000004b1000000550000000000000000fb0000000a006400650070007400680000000505000000650000000000000000fb0000000a006400650070007400680000000502000000680000000000000000fb0000000a0064006500700074006800000004f9000000710000000000000000fb0000000a0064006500700074006800000003dd0000018d0000000000000000fb0000000a0064006500700074006800000004de0000008c0000000000000000fb0000000a0064006500700074006800000004cc0000009e0000000000000000fb0000000a00640065007000740068000000048a000000c40000000000000000fb0000000a0064006500700074006800000004aa000000c00000000000000000fb0000000a0049006d00610067006500000003fa000001540000000000000000fb0000000a0049006d00610067006501000002e1000002890000000000000000fb0000000a006400650070007400680000000495000000d50000000000000000fb0000000a0064006500700074006800000001b60000001b0000000000000000fb0000000a0064006500700074006800000001c10000002f0000000000000000fb0000000a0064006500700074006800000001d3000000300000000000000000fb0000000a0064006500700074006800000001e6000000320000000000000000fb0000000a0064006500700074006800000004dc0000008e0000000000000000fb0000000a0064006500700074006800000004f4000000760000000000000000fb0000000a0064006500700074006800000004f2000000780000000000000000fb0000000a006400650070007400680000000503000000670000000000000000fb0000000a006400650070007400680000000509000000610000000000000000fb0000000a006400650070007400680000000511000000590000000000000000fb0000000a006400650070007400680000000517000000530000000000000000fb0000000a00640065007000740068000000051d0000004d0000000000000000fb0000000a00640065007000740068000000051d0000004d0000000000000000fb0000000a006400650070007400680000000526000000440000000000000000fb0000000a00640065007000740068000000052b0000003f0000000000000000fb0000000a00640065007000740068000000052b0000003f0000000000000000fb0000000a00640065007000740068000000052f0000003b0000000000000000fb0000000a006400650070007400680000000532000000380000000000000000fb0000000a006400650070007400680000000536000000340000000000000000fb0000001800640065007000740068005f00630061006d00650072006100000002f8000000af0000000000000000fb0000000a0049006d00610067006501000002d0000000c70000000000000000fb0000000a0049006d00610067006501000002880000010f0000000000000000000000010000010f00000385fc0200000002fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000006100000003bfc0100000002fb0000000800540069006d00650000000000000006100000041800fffffffb0000000800540069006d00650100000000000004500000000000000000000004ef0000035a00000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Selection:
     collapsed: false
   Time:

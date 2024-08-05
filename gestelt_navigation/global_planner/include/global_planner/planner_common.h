@@ -110,42 +110,7 @@ public:
   PlannerCommon(std::shared_ptr<GridMap> grid_map)
   : map_(grid_map)
   {
-
-    nb_idx_8con_ <<
-      0, 0,    1,  // Top 
-      1, 1,    1,  // Top Fwd Left
-      1, 0,    1,  // Top Fwd 
-      1, -1,   1,  // Top Fwd Right
-      0, 1,    1,  // Top Left
-      0, -1,   1,  // Top Right
-      -1, 1,   1,  // Top Bck Left
-      -1, 0,   1,  // Top Bck 
-      -1, -1,  1,  // Top Bck Right 
-
-      // Mid Layer
-      // {0, 0,    0}, // Mid 
-      1, 1,    0, // Mid Fwd Left
-      1, 0,    0, // Mid Fwd
-      1, -1,   0, // Mid Fwd Right
-      0, 1,    0, // Mid Left
-      0, -1,   0, // Mid Right
-      -1, 1,   0, // Mid Bck Left
-      -1, 0,   0, // Mid Bck
-      -1, -1,  0, // Mid Bck Right 
-
-      // Btm Layer
-      0, 0,    -1, // Btm 
-      1, 1,    -1, // Btm Fwd Left
-      1, 0,    -1, // Btm Fwd
-      1, -1,   -1, // Btm Fwd Right
-      0, 1,    -1, // Btm Left
-      0, -1,   -1, // Btm Right
-      -1, 1,   -1, // Btm Bck Left
-      -1, 0,   -1, // Btm Bck
-      -1, -1,  -1;// Btm Bck Right 
-
   }
-
 
   void getNeighbours(const PosIdx& cur_node, std::vector<PosIdx>& neighbours) {
 
@@ -222,78 +187,6 @@ public:
 
 public: 
 
-  Eigen::Matrix<int, 26, 3> nb_idx_8con_; 
-
-  const double nb_8con_dist_l2_[26] = {
-    // Top Layer
-    1.0,  // Top 
-    1.73205,    // Top Fwd Left
-    1.414214,   // Top Fwd 
-    1.73205,    // Top Fwd Right
-    1.414214,   // Top Left
-    1.414214,   // Top Right
-    1.73205,    // Top Bck Left
-    1.414214,   // Top Bck 
-    1.73205,    // Top Bck Right 
-
-    // Mid Layer
-    // 0, // Mid 
-    1.414214, // Mid Fwd Left
-    1.0, // Mid Fwd
-    1.414214, // Mid Fwd Right
-    1.0, // Mid Left
-    1.0, // Mid Right
-    1.414214, // Mid Bck Left
-    1.0, // Mid Bck
-    1.414214, // Mid Bck Right 
-
-    // Btm Layer
-    1.0,  // Top 
-    1.73205, // Btm Fwd Left
-    1.414214, // Btm Fwd
-    1.73205, // Btm Fwd Right
-    1.414214, // Btm Left
-    1.414214, // Btm Right
-    1.73205, // Btm Bck Left
-    1.414214, // Btm Bck
-    1.73205 // Btm Bck Right 
-  };
-
-  const int nb_8con_dist_l1_[26] = {
-    // Top Layer
-    1,  // Top 
-    3,    // Top Fwd Left
-    2,   // Top Fwd 
-    3,    // Top Fwd Right
-    2,   // Top Left
-    2,   // Top Right
-    3,    // Top Bck Left
-    2,   // Top Bck 
-    3,    // Top Bck Right 
-
-    // Mid Layer
-    // 0, // Mid 
-    2, // Mid Fwd Left
-    1, // Mid Fwd
-    2, // Mid Fwd Right
-    1, // Mid Left
-    1, // Mid Right
-    2, // Mid Bck Left
-    1, // Mid Bck
-    2, // Mid Bck Right 
-
-    // Btm Layer
-    1,  // Top 
-    3, // Btm Fwd Left
-    2, // Btm Fwd
-    3, // Btm Fwd Right
-    2, // Btm Left
-    2, // Btm Right
-    3, // Btm Bck Left
-    2, // Btm Bck
-    3 // Btm Bck Right 
-  };
-
   std::shared_ptr<GridMap> map_; 
 };
 
@@ -335,7 +228,6 @@ inline double getOctileDist(const PosIdx& a, const PosIdx& b)  {
 
   return (dx + dy + dz) + (SQRT2 - 2) * std::min(dx, std::min(dy, dz)); 
 }
-
 
 
 /**
@@ -467,7 +359,6 @@ struct std::hash<VCell_T> {
   }
 };
 
-
 /**
  * Cost operations for space-time Voronoi A* search
  */
@@ -506,5 +397,18 @@ inline double getOctileDistVT(const VCell_T& a, const VCell_T& b)  {
   return (dx + dy + dz) + (SQRT2 - 2) * std::min(dx, std::min(dy, dz)); 
 }
 
+
+template <> 
+struct std::hash<Eigen::Vector4d> {
+  /* implement hash function so we can put VCell_T into an unordered_set */
+  std::size_t operator()(const Eigen::Vector4d& pos) const noexcept {
+    std::size_t seed = 0;
+    boost::hash_combine(seed, pos(0));
+    boost::hash_combine(seed, pos(1));
+    boost::hash_combine(seed, pos(2));
+    boost::hash_combine(seed, pos(3));
+    return seed;
+  }
+};
 
 #endif // _PLANNER_COMMON_H_

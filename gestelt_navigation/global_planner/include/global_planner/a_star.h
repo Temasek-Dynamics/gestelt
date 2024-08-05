@@ -1,7 +1,9 @@
 #ifndef _A_STAR_PLANNER_H_
 #define _A_STAR_PLANNER_H_
 
-#include <global_planner/planner_base.h>
+#include <global_planner/planner_common.h>
+
+#include <Eigen/Eigen>
 
 #include <unordered_set>
 #include <queue>
@@ -13,7 +15,7 @@
 
 #include "dynamic_voronoi/dynamicvoronoi.h"
 
-class AStarPlanner : public PlannerBase
+class AStarPlanner 
 {
 public:
 
@@ -37,7 +39,7 @@ public:
   AStarPlanner( const std::map<int, std::shared_ptr<DynamicVoronoi>>& dyn_voro_arr, 
                 const int& z_separation_cm,
                 const AStarParams& astar_params,
-                std::shared_ptr<std::unordered_set<VCell_T>> resrv_tbl
+                std::shared_ptr<std::unordered_set<Eigen::Vector4d>> resrv_tbl
                 );
 
   /**
@@ -82,7 +84,7 @@ public:
   void expandVoronoiBubble(const VCell& cell, const bool& makeGoalBubble);
 
   // Expand voronio bubble around given cell
-  void expandVoronoiBubbleT(const VCell_T& cell, const bool& makeGoalBubble);
+  void expandVoronoiBubbleT(const VCell_T& origin_cell, const bool& makeGoalBubble);
 
   // /* Generate space-time plan on voronoi graph  */
   // bool generatePlanVoroT( const Eigen::Vector3d& start_pos_3d, 
@@ -277,61 +279,23 @@ public:
       // So we can obtain a path in terms of indices and positions
       for (const VCell_T& cell : path_idx_vt_)
       {
-          DblPoint map_pos;
-          dyn_voro_arr_[cell.z_cm]->idxToPos(IntPoint(cell.x, cell.y), map_pos);
+        DblPoint map_2d_pos;
+        dyn_voro_arr_[cell.z_cm]->idxToPos(IntPoint(cell.x, cell.y), map_2d_pos);
 
-          path_pos_t_.push_back(Eigen::Vector4d{map_pos.x, map_pos.y, cell.z_m, cell.t});
+        Eigen::Vector4d map_spacetime_pos{map_2d_pos.x, map_2d_pos.y, cell.z_m, cell.t};
+        // Block out the same cell at (t-1) to prevent swapping conflicts
+        Eigen::Vector4d map_spacetime_pos_prev{map_2d_pos.x, map_2d_pos.y, cell.z_m, cell.t-1};
+
+        // Add space time map position to path
+        path_pos_t_.push_back(map_spacetime_pos);
+        // Add map position to reservation table
+        resrv_tbl_->insert(map_spacetime_pos);
+        resrv_tbl_->insert(map_spacetime_pos_prev);
       }
+
   }
-
-
 
 public:
-
-  void addPublishers(ros::Publisher& closed_list_viz_pub)
-  {
-      closed_list_viz_pub_ = closed_list_viz_pub;
-  }
-
-  void publishClosedList(const std::vector<Eigen::Vector3d>& pts, ros::Publisher& publisher, const std::string& frame_id = "map", Eigen::Vector3d color = Eigen::Vector3d{0.0, 0.0, 0.0}, double radius = 0.1)
-  {
-    if (!astar_params_.debug_viz || pts.empty()){
-      return;
-    }
-
-    visualization_msgs::Marker sphere_list;
-    double alpha = 0.7;
-
-    sphere_list.header.frame_id = frame_id;
-    sphere_list.header.stamp = ros::Time::now();
-    sphere_list.type = visualization_msgs::Marker::SPHERE_LIST;
-    sphere_list.action = visualization_msgs::Marker::ADD;
-    sphere_list.ns = "closed_list"; 
-    sphere_list.id = 0; 
-    sphere_list.pose.orientation.w = 1.0;
-
-    sphere_list.color.r = color(0);
-    sphere_list.color.g = color(1);
-    sphere_list.color.b = color(2);
-    sphere_list.color.a = alpha;
-
-    sphere_list.scale.x = radius;
-    sphere_list.scale.y = radius;
-    sphere_list.scale.z = radius;
-
-    geometry_msgs::Point pt;
-    for (size_t i = 0; i < pts.size(); i++){
-      pt.x = pts[i](0);
-      pt.y = pts[i](1);
-      pt.z = pts[i](2);
-
-      sphere_list.points.push_back(pt);
-    }
-
-    publisher.publish(sphere_list);
-  }
-
-  void clearVisualizations();
 
   // Round up to multiples of mult
   int roundUpMult(const double& num, const int& mult)
@@ -350,8 +314,6 @@ public:
 private: 
   std::vector<PosIdx> path_idx_; // Path in terms of indices
   std::vector<Eigen::Vector3d> path_pos_; // Path in terms of 3d position
-
-  ros::Publisher closed_list_viz_pub_;
 
   /* Params */
   // const double tie_breaker_ = 1.0 + 1.0 / 10000; 
@@ -394,7 +356,7 @@ private:
 
   std::vector<VCell_T> path_idx_vt_; // Final planned Path in terms of indices
 
-  std::shared_ptr<std::unordered_set<VCell_T>> resrv_tbl_; // Reservation table 
+  std::shared_ptr<std::unordered_set<Eigen::Vector4d>> resrv_tbl_; // Reservation table 
 };
 
 #endif // _A_STAR_PLANNER_H_

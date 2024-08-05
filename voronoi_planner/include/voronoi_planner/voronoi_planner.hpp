@@ -87,7 +87,7 @@ public:
    * @return true 
    * @return false 
    */
-  bool plan(const Eigen::Vector3d& start, const Eigen::Vector3d& goal);
+  bool plan(const int& agent_id, const Eigen::Vector3d& start, const Eigen::Vector3d& goal);
 
 /* Subscriber callbacks */
 private:
@@ -98,16 +98,6 @@ private:
 
 /* Helper methods */
 private:
-
-  void loadMapFromFile(nav_msgs::OccupancyGrid& map,
-                       const std::string& fname);
-
-  void realignBoolMap(bool ***map, bool ***map_og, 
-                      int& size_x, int& size_y);
-
-  void pgmFileToBoolMap(bool ***map,
-                        int& size_x, int& size_y,
-                        const std::string& fname);
 
   inline size_t map2Dto1DIdx(const int& width, const int& x, const int& y)
   {
@@ -191,55 +181,6 @@ private:
 /* Visualization methods*/
 private:
 
-  // void publishStartAndGoal(
-  //   const DblPoint& start, 
-  //   const int& start_z,
-  //   const DblPoint& goal, 
-  //   const int& goal_z,
-  //   const std::string& frame_id, 
-  //   ros::Publisher& publisher1, ros::Publisher& publisher2)
-  // {
-  //   visualization_msgs::Marker start_sphere, goal_sphere;
-  //   double radius = 0.6;
-  //   double alpha = 0.5; 
-
-  //   /* Start/goal sphere*/
-  //   start_sphere.header.frame_id = goal_sphere.header.frame_id = frame_id;
-  //   start_sphere.header.stamp = goal_sphere.header.stamp = ros::Time::now();
-  //   start_sphere.ns = goal_sphere.ns = "start_goal_points";
-  //   start_sphere.type = goal_sphere.type = visualization_msgs::Marker::SPHERE;
-  //   start_sphere.action = goal_sphere.action = visualization_msgs::Marker::ADD;
-  //   start_sphere.id = 1;
-  //   goal_sphere.id = 2; 
-  //   start_sphere.pose.orientation.w = goal_sphere.pose.orientation.w = 1.0;
-
-  //   start_sphere.color.r = 1.0; 
-  //   start_sphere.color.g = 1.0; 
-  //   start_sphere.color.b = 0.0; 
-  //   start_sphere.color.a = goal_sphere.color.a = alpha;
-
-  //   goal_sphere.color.r = 0.0;
-  //   goal_sphere.color.g = 1.0;
-  //   goal_sphere.color.b = 0.0;
-
-  //   start_sphere.scale.x = goal_sphere.scale.x = radius;
-  //   start_sphere.scale.y = goal_sphere.scale.y = radius;
-  //   start_sphere.scale.z = goal_sphere.scale.z = radius;
-
-  //   /* Set Start */
-  //   start_sphere.pose.position.x = start.x;
-  //   start_sphere.pose.position.y = start.y;
-  //   start_sphere.pose.position.z = start_z;
-
-  //   /* Set Goal */
-  //   goal_sphere.pose.position.x = goal.x;
-  //   goal_sphere.pose.position.y = goal.y;
-  //   goal_sphere.pose.position.z = goal_z;
-
-  //   publisher1.publish(start_sphere);
-  //   publisher2.publish(goal_sphere);
-  // }
-
   void publishStartAndGoal(
     const Eigen::Vector3d& map_start, 
     const Eigen::Vector3d& map_goal, 
@@ -287,131 +228,49 @@ private:
     publisher2.publish(goal_sphere);
   }
 
+
   inline void publishSpaceTimePath(const std::vector<Eigen::Vector4d>& path, 
                                   const std::string& frame_id, ros::Publisher& publisher) {
-    visualization_msgs::Marker wp_sphere_list, path_line_strip;
-    visualization_msgs::Marker start_sphere, goal_sphere;
+    visualization_msgs::Marker cube;
     double radius = 0.1;
     double alpha = 0.8; 
 
-    geometry_msgs::Point pt;
+    double max_time = 10.0; // Maximum time used for determining color gradient of path
 
-    /* Start/goal sphere*/
-    start_sphere.header.frame_id = goal_sphere.header.frame_id = frame_id;
-    start_sphere.header.stamp = goal_sphere.header.stamp = ros::Time::now();
-    start_sphere.ns = goal_sphere.ns = "start_end_points";
-    start_sphere.type = goal_sphere.type = visualization_msgs::Marker::CUBE;
-    start_sphere.action = goal_sphere.action = visualization_msgs::Marker::ADD;
-    start_sphere.id = 0;
-    goal_sphere.id = 1; 
-    start_sphere.pose.orientation.w = goal_sphere.pose.orientation.w = 1.0;
+    /* Fixed parameters */
+    cube.header.frame_id = frame_id;
+    cube.header.stamp = ros::Time::now();
+    cube.ns = "front_end_path";
+    cube.type = visualization_msgs::Marker::CUBE;
+    cube.action = visualization_msgs::Marker::ADD;
+    cube.pose.orientation.w = 1.0;
+    cube.color.a = alpha;
 
-    start_sphere.color.r = 1.0; 
-    start_sphere.color.g = 1.0; 
-    start_sphere.color.b = 0.0; 
-    start_sphere.color.a = goal_sphere.color.a = alpha;
+    // size
+    cube.scale.x = radius;
+    cube.scale.y = radius;
+    cube.scale.z = radius;
 
-    goal_sphere.color.r = 0.0;
-    goal_sphere.color.g = 1.0;
-    goal_sphere.color.b = 0.0;
+    for (int i = 0; i < path.size(); i++)
+    {
+      cube.id = i; 
 
-    start_sphere.scale.x = goal_sphere.scale.x = radius;
-    start_sphere.scale.y = goal_sphere.scale.y = radius;
-    start_sphere.scale.z = goal_sphere.scale.z = radius;
+      cube.pose.position.x = path[i](0);
+      cube.pose.position.y = path[i](1);
+      cube.pose.position.z = path[i](2);
 
-    /* wp_sphere_list: Sphere list (Waypoints) */
-    wp_sphere_list.header.frame_id = frame_id;
-    wp_sphere_list.header.stamp = ros::Time::now();
-    wp_sphere_list.ns = "front_end_sphere_list"; 
-    wp_sphere_list.type = visualization_msgs::Marker::SPHERE_LIST;
-    wp_sphere_list.action = visualization_msgs::Marker::ADD;
-    wp_sphere_list.id = 1; 
-    wp_sphere_list.pose.orientation.w = 1.0;
+      // Make the color value scale from 0.0 to 1.0 depending on the distance to the obstacle. 
+      // With the upper limit being the warn_radius, and the lower limit being the fatal_radius
+      double time_ratio = std::clamp((path[i](3))/max_time, 0.0, 1.0);
 
-    wp_sphere_list.color.r = 1.0;
-    wp_sphere_list.color.g = 0.5;
-    wp_sphere_list.color.b = 0.0;
-    wp_sphere_list.color.a = alpha;
+      cube.color.r = time_ratio ;
+      cube.color.g = 0.0; 
+      cube.color.b = 1.0 - time_ratio; 
 
-    wp_sphere_list.scale.x = radius;
-    wp_sphere_list.scale.y = radius;
-    wp_sphere_list.scale.z = radius;
+      publisher.publish(cube);
 
-    /* path_line_strip: Line strips (Connecting waypoints) */
-    path_line_strip.header.frame_id = frame_id;
-    path_line_strip.header.stamp = ros::Time::now();
-    path_line_strip.ns = "front_end_path_lines"; 
-    path_line_strip.type = visualization_msgs::Marker::LINE_STRIP;
-    path_line_strip.action = visualization_msgs::Marker::ADD;
-    path_line_strip.id = 1;
-    path_line_strip.pose.orientation.w = 1.0;
-
-    path_line_strip.color.r = 1.0;
-    path_line_strip.color.g = 0.5;
-    path_line_strip.color.b = 0.0;
-    path_line_strip.color.a = alpha * 0.75;
-
-    path_line_strip.scale.x = radius * 0.5;
-
-    // start_sphere.pose.position.x = path[0](0);
-    // start_sphere.pose.position.y = path[0](1);
-    // start_sphere.pose.position.z = path[0](2);
-
-    // pt.x = path[0](0);
-    // pt.y = path[0](1);
-    // pt.z = path[0](2);
-    // path_line_strip.points.push_back(pt);
-
-    // for (size_t i = 1; i < path.size()-1; i++){
-    //   pt.x = path[i](0);
-    //   pt.y = path[i](1);
-    //   pt.z = path[i](2);
-
-    //   wp_sphere_list.points.push_back(pt);
-    //   path_line_strip.points.push_back(pt);
-    // }
-
-    // pt.x = path.back()(0);
-    // pt.y = path.back()(1);
-    // pt.z = path.back()(2);
-    // path_line_strip.points.push_back(pt);
-
-    // goal_sphere.pose.position.x = path.back()(0);
-    // goal_sphere.pose.position.y = path.back()(1);
-    // goal_sphere.pose.position.z = path.back()(2);
-
-    start_sphere.pose.position.x = path[0](0);
-    start_sphere.pose.position.y = path[0](1);
-    start_sphere.pose.position.z = path[0](2);
-
-    pt.x = path[0](0);
-    pt.y = path[0](1);
-    pt.z = path[0](2);
-    path_line_strip.points.push_back(pt);
-
-    for (size_t i = 1; i < path.size()-1; i++){
-      pt.x = path[i](0);
-      pt.y = path[i](1);
-      pt.z = path[i](2);
-
-      wp_sphere_list.points.push_back(pt);
-      path_line_strip.points.push_back(pt);
+      ros::Duration(0.05).sleep();
     }
-
-    pt.x = path.back()(0);
-    pt.y = path.back()(1);
-    pt.z = path.back()(2);
-    path_line_strip.points.push_back(pt);
-
-    goal_sphere.pose.position.x = path.back()(0);
-    goal_sphere.pose.position.y = path.back()(1);
-    goal_sphere.pose.position.z = path.back()(2);
-
-
-    publisher.publish(start_sphere);
-    publisher.publish(goal_sphere);
-    publisher.publish(wp_sphere_list);
-    publisher.publish(path_line_strip);
   }
 
   inline void publishFrontEndPath(const std::vector<Eigen::Vector3d>& path, 
@@ -549,6 +408,48 @@ private:
     publisher.publish(vertices);
   }
 
+  void publishClosedList(const std::vector<Eigen::Vector3d>& pts, 
+                        ros::Publisher& publisher, const std::string& frame_id = "map")
+  {
+    if (pts.empty()){
+      return;
+    }
+
+    Eigen::Vector3d color = Eigen::Vector3d{0.0, 0.0, 0.0};
+    double radius = 0.1;
+    double alpha = 0.7;
+
+    visualization_msgs::Marker sphere_list;
+
+    sphere_list.header.frame_id = frame_id;
+    sphere_list.header.stamp = ros::Time::now();
+    sphere_list.type = visualization_msgs::Marker::SPHERE_LIST;
+    sphere_list.action = visualization_msgs::Marker::ADD;
+    sphere_list.ns = "closed_list"; 
+    sphere_list.id = 0; 
+    sphere_list.pose.orientation.w = 1.0;
+
+    sphere_list.color.r = color(0);
+    sphere_list.color.g = color(1);
+    sphere_list.color.b = color(2);
+    sphere_list.color.a = alpha;
+
+    sphere_list.scale.x = radius;
+    sphere_list.scale.y = radius;
+    sphere_list.scale.z = radius;
+
+    geometry_msgs::Point pt;
+    for (size_t i = 0; i < pts.size(); i++){
+      pt.x = pts[i](0);
+      pt.y = pts[i](1);
+      pt.z = pts[i](2);
+
+      sphere_list.points.push_back(pt);
+    }
+
+    publisher.publish(sphere_list);
+  }
+
 /* Test functions */
 private:
   void generateTestMap2();
@@ -572,16 +473,14 @@ private:
   ros::Publisher occ_map_pub_;      // Publishes original occupancy grid
   ros::Publisher voro_occ_grid_pub_; // Publishes voronoi map occupancy grid
 
-  ros::Publisher front_end_plan_viz_pub_; // Publish front-end plan (A*) visualization
+  std::vector<ros::Publisher> closed_list_pubs_; // Closed list publishers
+  std::vector<ros::Publisher> front_end_plan_pubs_; // Publish front-end plan (A*) visualization
   ros::Publisher start_pt_pub_, goal_pt_pub_; // start and goal visualization publisher
 
   ros::Publisher voronoi_graph_pub_; // Voronoi graph publisher
 
   ros::Subscriber plan_req_dbg_sub_;  // plan request (start and goal) debug subscriber
   ros::Subscriber bool_map_sub_; // Subscription to boolean map
-
-
-  std::unordered_map<std::string, ros::Publisher> front_end_publisher_map_;   // Publishes front-end map
 
   /* Planning */
 
@@ -590,20 +489,17 @@ private:
   double local_origin_x_{0.0}, local_origin_y_{0.0}; // Origin of local map 
   int z_separation_cm_{25};
 
-  std::shared_ptr<std::unordered_set<VCell_T>> resrv_tbl_;
+  std::shared_ptr<std::unordered_set<Eigen::Vector4d>> resrv_tbl_;
+
+  int num_agents_; // Number of agents
 
   /* Data structs */
-
-  std::unique_ptr<AStarPlanner> front_end_planner_; // Front-end planner
-  std::unique_ptr<AStarPlanner> front_end_planner_0_; // Agent 0 Front-end planner
-  std::unique_ptr<AStarPlanner> front_end_planner_1_; // Agent 1 Front-end planner
+  std::vector<std::unique_ptr<AStarPlanner>>front_end_planners_; // Vector of planners
 
   std::map<int, std::shared_ptr<DynamicVoronoi>> dyn_voro_arr_; // array of voronoi objects with key of height (cm)
   std::map<int, std::shared_ptr<std::vector<std::vector<bool>>>> bool_map_arr_; //  array of voronoi objects with key of height (cm)
 
-  std::vector<Eigen::Vector3d> front_end_path_lcl_; // Front end path in local map origin frame
-  std::vector<Eigen::Vector4d> space_time_path_lcl_; // Space time front end path in local map origin frame
-  std::vector<Eigen::Vector3d> front_end_path_; // Front end path in world frame
+  std::unordered_map<int, std::vector<Eigen::Vector4d>> space_time_path_; // Space time front end path in local map origin frame
 
   bool init_voro_maps_{false}; // flag to indicate if voronoi map is initialized
 
@@ -612,4 +508,23 @@ private:
   Timer tm_voro_map_init_{"voro_map_init"};
 };
 
+
+
+  // void realignBoolMap(bool ***map, bool ***map_og, int& size_x, int& size_y)
+  // {
+  //   for (int x=0; x<size_x; x++) {
+  //     (*map)[x] = new bool[size_y];
+  //   }
+
+  //   for(int j = 0; j < size_y; j++)
+  //   {
+  //     for (int i = 0; i < size_x; i++)
+  //     {
+  //       (*map)[i][j] = (*map_og)[i][size_y-j-1];
+  //     }
+  //   }
+  // }
+
 #endif // _VORONOI_PLANNER_HPP
+
+

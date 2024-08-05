@@ -1,8 +1,6 @@
 #ifndef _JPS_WRAPPER_H_
 #define _JPS_WRAPPER_H_
 
-#include <global_planner/planner_base.h>
-
 #include <ros/ros.h>
 
 #include <grid_map/grid_map.h>
@@ -12,7 +10,7 @@
 
 #include <logger/timer.h>
 
-class JPSWrapper : public PlannerBase
+class JPSWrapper 
 {
 public:
 

@@ -14,6 +14,9 @@
 
 #include <Eigen/Eigen>
 
+#include "nanoflann.hpp" // For nearest neighbors queries
+#include "KDTreeVectorOfVectorsAdaptor.h" // For nearest neighbors queries
+
 //! A DynamicVoronoi object computes and updates a distance map and Voronoi diagram.
 class DynamicVoronoi {
 
@@ -69,25 +72,8 @@ public:
     return alternativeDiagram;
   };
 
-  // Get all voronoi vertices (voronoi cells that have at least 3 voronoi neighbours)
-  std::vector<Eigen::Vector3d> getVoronoiVertices();
-
-  //! retrieve the number of neighbors that are Voronoi cells (4-connected)
-  int getNumVoronoiNeighbors(int x, int y);
-
-  //! retrieve the number of neighbors that are Voronoi cells (4-connected)
-  int getNumVoronoiNeighborsAlternative(int x, int y);
   //! returns whether the specified cell is part of the alternatively pruned diagram. See updateAlternativePrunedDiagram.
   bool isVoronoiAlternative( const int& x, const int& y ) const;
-
-
-  int getSqrDistance( int x, int y ) {
-    //  if( (x>0) && (x<sizeX) && (y>0) && (y<sizeY)) 
-    return data[x][y].sqdist; 
-    //  else return -1;
-  }
-  //! returns the obstacle distance at the specified location
-  float getDistance( int x, int y );
 
   //! check if cell is a voronoi vertex (has at least 3 voronoi neighbours)
   bool isVoronoiVertex(int x, int y);
@@ -98,6 +84,29 @@ public:
   //! write the current distance map and voronoi diagram as ppm file
   void visualize(const char* filename="result.ppm");
 
+  /* Getter methods */
+
+  // Get all voronoi vertices (voronoi cells that have at least 3 voronoi neighbours)
+  std::vector<Eigen::Vector3d> getVoronoiVertices();
+
+  //! retrieve the number of neighbors that are Voronoi cells (4-connected)
+  int getNumVoronoiNeighbors(int x, int y);
+
+  //! retrieve the number of neighbors that are Voronoi cells (4-connected)
+  int getNumVoronoiNeighborsAlternative(int x, int y);
+
+  //! returns the squared obstacle distance at the specified location
+  int getSqrDistance( int x, int y ) {
+    if( (x>0) && (x<sizeX) && (y>0) && (y<sizeY)){
+      return data[x][y].sqdist; 
+
+    } 
+     else return -1;
+  }
+  //! returns the obstacle distance at the specified location
+  float getDistance( int x, int y );
+
+
   //! returns the horizontal size of the workspace/map
   unsigned int getSizeX() {return sizeX;}
   //! returns the vertical size of the workspace/map
@@ -107,7 +116,7 @@ private:
   struct dataCell {
     float dist;
     int sqdist;
-    char voronoi;
+    char voronoi;   // voronoi status
     char queueing;
     int obstX;  // Position to nearest obstacle
     int obstY;  // Position to nearest obstacle
@@ -144,16 +153,16 @@ public:
   void removeObstacle(int x, int y);
 
   /* Planning methods */
-  // Expand a voronoi bubble with all cells within the bubble filled as free space
-  // void expandVoronoiBubble(const INTPOINT& grid_pos);
 
-  // Gets 8-connected neighbours
-  // void getNeighbors(const INTPOINT& grid_pos, std::vector<INTPOINT>& neighbours);
+  // Update KD Tree with all voronoi cells for query of nearest voronoi cell 
+  void updateKDTree();
 
-  // Get number of 8-con neighbors in voronoi diagram
-  int getNumVoroNeighbors(const INTPOINT& grid_pos);
+  // Get nearest vornoi cell given a position
+  bool getNearestVoroCell(const INTPOINT& grid_pos, INTPOINT& nearest_voro_cell);
+
+  // Get voronoi or voronoi bubble expansion neighbors
   void getVoroNeighbors(const INTPOINT& grid_pos, std::vector<Eigen::Vector3i>& neighbours, 
-                        const std::unordered_set<IntPoint>& marked_bubble_cells) ;
+                        const std::unordered_set<IntPoint>& marked_bubble_cells, const bool& allow_wait=false) ;
 
   /* Checking methods */
   // If cell is in map
@@ -165,6 +174,7 @@ public:
 
   // Convert from position to index
   bool posToIdx(const DblPoint& map_pos, INTPOINT& grid_pos);
+
   // Convert from position to index
   void idxToPos(const INTPOINT& grid_pos, DblPoint& map_pos);
 
@@ -208,7 +218,7 @@ private:
   int sizeY;
   int sizeX;
   dataCell** data;
-  std::shared_ptr<std::vector<std::vector<bool>>> gridMap;
+  std::shared_ptr<std::vector<std::vector<bool>>> gridMap; // 2d vector of booleans assigned upon initialization
   bool allocatedGridMap;
 
   // parameters
@@ -227,6 +237,14 @@ private:
   double origin_z_{0.0};  // in units of m
 
   int origin_z_cm_;  // in units of cm
+
+  // Data structure
+  bool init_kd_tree_{false};
+
+  std::unique_ptr<KDTreeVectorOfVectorsAdaptor<std::vector<Eigen::Vector2i>, double>>   
+    voro_kd_tree_; // KD Tree for guide path
+
+  std::vector<Eigen::Vector2i> voro_cells_;
 
 }; // end class DynamicVoronoi
 
