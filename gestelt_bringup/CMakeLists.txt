@@ -15,6 +15,8 @@ find_package(catkin REQUIRED COMPONENTS
   ${ROS_LIBRARIES}
 )
 
+find_package(Python3 REQUIRED COMPONENTS Interpreter)
+
 catkin_package(
 #  INCLUDE_DIRS 
   # include
@@ -26,3 +28,4 @@ catkin_package(
 ###########
 ## Build ##
 ###########
+
