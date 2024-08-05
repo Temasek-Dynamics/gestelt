@@ -70,8 +70,6 @@ DONT_RUN=1 make px4_sitl gazebo
 # Make SITL target for Gazebo simulation
 DONT_RUN=1 make px4_sitl gazebo-classic
 
-
-
 # Copy the custom drone model over
 # for PX4 V1.13.0 (we are using)
 cp -r ~/gestelt_ws/src/gestelt/gestelt_bringup/simulation/models/raynor ~/gestelt_ws/PX4-Autopilot/Tools/sitl_gazebo/models/
