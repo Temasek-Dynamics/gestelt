@@ -82,12 +82,13 @@ public:
   /**
    * @brief Plan a path from start to goal
    * 
+   * @param id 
    * @param start 
    * @param goal 
    * @return true 
    * @return false 
    */
-  bool plan(const int& agent_id, const Eigen::Vector3d& start, const Eigen::Vector3d& goal);
+  bool plan(const int& id, const Eigen::Vector3d& start, const Eigen::Vector3d& goal);
 
 /* Subscriber callbacks */
 private:
@@ -235,8 +236,6 @@ private:
     double radius = 0.1;
     double alpha = 0.8; 
 
-    double max_time = 10.0; // Maximum time used for determining color gradient of path
-
     /* Fixed parameters */
     cube.header.frame_id = frame_id;
     cube.header.stamp = ros::Time::now();
@@ -259,9 +258,8 @@ private:
       cube.pose.position.y = path[i](1);
       cube.pose.position.z = path[i](2);
 
-      // Make the color value scale from 0.0 to 1.0 depending on the distance to the obstacle. 
-      // With the upper limit being the warn_radius, and the lower limit being the fatal_radius
-      double time_ratio = std::clamp((path[i](3))/max_time, 0.0, 1.0);
+      // Make the color value scale from 0.0 to 1.0 depending on the distance to the goal. 
+      double time_ratio = std::clamp((path[i](3))/path.size(), 0.0, 1.0);
 
       cube.color.r = time_ratio ;
       cube.color.g = 0.0; 
@@ -269,7 +267,7 @@ private:
 
       publisher.publish(cube);
 
-      ros::Duration(0.05).sleep();
+      ros::Duration(0.025).sleep();
     }
   }
 
@@ -487,7 +485,7 @@ private:
   /* Mapping */
   std::shared_ptr<GridMap> map_;
   double local_origin_x_{0.0}, local_origin_y_{0.0}; // Origin of local map 
-  int z_separation_cm_{25};
+  int z_separation_cm_{50};
 
   std::shared_ptr<std::unordered_set<Eigen::Vector4d>> resrv_tbl_;
 
@@ -502,6 +500,8 @@ private:
   std::unordered_map<int, std::vector<Eigen::Vector4d>> space_time_path_; // Space time front end path in local map origin frame
 
   bool init_voro_maps_{false}; // flag to indicate if voronoi map is initialized
+
+  bool plan_once_{true}; // for testing
 
   /* Debugging */
   Timer tm_front_end_plan_{"front_end_plan"};

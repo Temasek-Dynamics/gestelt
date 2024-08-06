@@ -36,11 +36,16 @@ public:
 
   AStarPlanner(std::shared_ptr<GridMap> grid_map, const AStarParams& astar_params);
 
-  AStarPlanner( const std::map<int, std::shared_ptr<DynamicVoronoi>>& dyn_voro_arr, 
-                const int& z_separation_cm,
-                const AStarParams& astar_params,
+  AStarPlanner( const AStarParams& astar_params,
                 std::shared_ptr<std::unordered_set<Eigen::Vector4d>> resrv_tbl
                 );
+
+  /**
+   * @brief 
+   * 
+   */
+  void assignVoroMap(const std::map<int, std::shared_ptr<DynamicVoronoi>>& dyn_voro_arr,
+                    const int& z_separation_cm);
 
   /**
    * @brief Clear closed, open list and reset planning_successful flag for 
@@ -81,29 +86,29 @@ public:
                           std::function<double(const VCell&, const VCell&)> cost_function);
 
   // Expand voronio bubble around given cell
-  void expandVoronoiBubble(const VCell& cell, const bool& makeGoalBubble);
+  void expandVoronoiBubble(const VCell& cell);
 
   // Expand voronio bubble around given cell
-  void expandVoronoiBubbleT(const VCell_T& origin_cell, const bool& makeGoalBubble);
-
-  // /* Generate space-time plan on voronoi graph  */
-  // bool generatePlanVoroT( const Eigen::Vector3d& start_pos_3d, 
-  //                         const Eigen::Vector3d& goal_pos_3d);
-
-  // // /* Generate space-time plan on voronoi graph  */
-  // bool generatePlanVoroT( const Eigen::Vector3d& start_pos_3d, 
-  //                         const Eigen::Vector3d& goal_pos_3d, 
-  //                         std::function<double(const VCell_T&, const VCell_T&)> cost_function);
-
+  void expandVoronoiBubbleT(const VCell_T& origin_cell);
 
   /* Generate space-time plan on voronoi graph  */
-  bool generatePlanVoroT( const Eigen::Vector3i& start_idx_3d, 
-                          const Eigen::Vector3i& goal_idx_3d);
+  bool generatePlanVoroT( const Eigen::Vector3d& start_pos_3d, 
+                          const Eigen::Vector3d& goal_pos_3d);
 
   // /* Generate space-time plan on voronoi graph  */
-  bool generatePlanVoroT( const Eigen::Vector3i& start_idx_3d, 
-                          const Eigen::Vector3i& goal_idx_3d, 
+  bool generatePlanVoroT( const Eigen::Vector3d& start_pos_3d, 
+                          const Eigen::Vector3d& goal_pos_3d, 
                           std::function<double(const VCell_T&, const VCell_T&)> cost_function);
+
+
+  // /* Generate space-time plan on voronoi graph  */
+  // bool generatePlanVoroT( const Eigen::Vector3i& start_idx_3d, 
+  //                         const Eigen::Vector3i& goal_idx_3d);
+
+  // // /* Generate space-time plan on voronoi graph  */
+  // bool generatePlanVoroT( const Eigen::Vector3i& start_idx_3d, 
+  //                         const Eigen::Vector3i& goal_idx_3d, 
+  //                         std::function<double(const VCell_T&, const VCell_T&)> cost_function);
 
   /**
    * @brief Get successful plan in terms of path positions
@@ -235,7 +240,6 @@ public:
       }
   }
 
-
   /**
    * @brief Get successful plan in terms of path positions
    *
@@ -282,9 +286,9 @@ public:
         DblPoint map_2d_pos;
         dyn_voro_arr_[cell.z_cm]->idxToPos(IntPoint(cell.x, cell.y), map_2d_pos);
 
-        Eigen::Vector4d map_spacetime_pos{map_2d_pos.x, map_2d_pos.y, cell.z_m, cell.t};
+        Eigen::Vector4d map_spacetime_pos{map_2d_pos.x, map_2d_pos.y, cell.z_m, double(cell.t)};
         // Block out the same cell at (t-1) to prevent swapping conflicts
-        Eigen::Vector4d map_spacetime_pos_prev{map_2d_pos.x, map_2d_pos.y, cell.z_m, cell.t-1};
+        Eigen::Vector4d map_spacetime_pos_prev{map_2d_pos.x, map_2d_pos.y, cell.z_m, (double)(cell.t-1)};
 
         // Add space time map position to path
         path_pos_t_.push_back(map_spacetime_pos);
@@ -338,7 +342,6 @@ private:
 
   // Voronoi search data structures
 
-  std::unordered_map<VCell, double> g_cost_v_;  
   std::unordered_map<VCell, VCell> came_from_v_;
   PriorityQueue<VCell, double> open_list_v_; // Min priority queue 
   std::unordered_set<VCell> closed_list_v_; // All closed nodes
@@ -349,7 +352,11 @@ private:
   
   std::vector<Eigen::Vector4d> path_pos_t_; // Spatial-temporal path 
 
-  std::unordered_map<VCell_T, double> g_cost_vt_;  
+
+
+  std::unordered_map<VCell, double> g_cost_v_;  
+  // std::unordered_map<VCell, double> g_cost_vt_;  
+
   std::unordered_map<VCell_T, VCell_T> came_from_vt_;
   PriorityQueue<VCell_T, double> open_list_vt_; // Min priority queue 
   std::unordered_set<VCell_T> closed_list_vt_; // All closed nodes

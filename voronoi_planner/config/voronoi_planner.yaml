@@ -1,7 +1,7 @@
-resolution: 0.1
+# resolution: 0.1
 verbose_planning: true
 # negate: false
 # occ_threshold: 0.65
 # free_threshold: 0.196
 
-use_test_map: true
+use_test_map: false

@@ -238,6 +238,7 @@ void GridMap::updateLocalMapTimerCB(const ros::TimerEvent & /*event*/)
 
   bool_map_arr_msg.width = mp_.local_map_num_voxels_(0); // x size
   bool_map_arr_msg.height = mp_.local_map_num_voxels_(1); // y size
+  bool_map_arr_msg.resolution = mp_.resolution_;      // Map resolution
 
   for (double z_m = 0; z_m < max_height; z_m += z_separation_m){
     bool_map_arr_msg.bool_maps.push_back( sliceMap(z_m) );
