@@ -303,7 +303,7 @@ class LearningAgileAgent():
                                                     out[6],
                                                     max_tra_w=self.max_tra_w) # control input 4-by-1 thrusts to pybullet
                 
-                # print('solving time at main=',time.time()-t_comp)
+                print('solving time at main=',time.time()-t_comp)
                 self.solving_time.append(time.time()- t_comp)
                 self.u=cmd_solution['control_traj_opt'][0,:].tolist()
                 self.pos_vel_att_cmd=cmd_solution['state_traj_opt'][0,:]

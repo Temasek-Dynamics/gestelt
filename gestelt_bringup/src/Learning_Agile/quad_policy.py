@@ -273,8 +273,6 @@ class run_quad:
         tra_atti = Rd2Rp(tra_ang)
     
         tra_q=toQuaternion(tra_atti[0],tra_atti[1])
-        print('travel position:',tra_pos)
-        print('travel attitude:',tra_q)
         current_state_control = np.concatenate((ini_state,Ulast))
        
         # self.sol1 = self.uavoc1.ocSolver(current_state_control=current_state_control,t_tra=t)
