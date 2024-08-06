@@ -13,6 +13,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
     python3-catkin-tools \
     python3-rosdep \
     python3-rosinstall \
+    cpufrequtils \
     && rm -rf /var/lib/apt/lists/*
 
 # Install mavROS dependencies

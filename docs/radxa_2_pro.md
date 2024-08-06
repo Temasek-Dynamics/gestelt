@@ -45,6 +45,17 @@ sudo cpufreq-set -g performance
 ip addr
 ```
 
+### clone the current system as an ubuntu image
+1. download the tool `rz-2pro-udisk-loader.bin` from this [link](https://docs.radxa.com/en/zero/zero2pro/getting-started/)
+3. at the tool folder: `sudo boot-g12.py rz-2pro-udisk-loader.bin`
+4. Copy device image
+```
+export SD_CARD_DEVICE_NAME=/dev/sdX
+export IMAGE_FILE_NAME=~/Downloads/gestelt_os_15_8_23.img
+
+sudo dd bs=4M if=$SD_CARD_DEVICE_NAME of=$IMAGE_FILE_NAME conv=fsync status=progress
+sudo chown $USER: $IMAGE_FILE_NAME
+```
 ## References
 1. [Pre-built radxa 2 pro linux images](https://github.com/radxa-build/radxa-zero-2pro)
 2. [Zero 2 Pro vs Zero](https://wiki.radxa.com/Zero2/Hardware/compare)

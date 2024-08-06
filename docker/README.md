@@ -53,7 +53,7 @@ docker ps -a
 docker start <container_id>
 # Start additional bash sessions in same container
 docker exec -it <container_id> bash
-# Stop all containersa
+# Stop all containers
 docker stop $(docker ps -a -q)
 # Remove all containers
 docker rm $(docker ps -a -q)

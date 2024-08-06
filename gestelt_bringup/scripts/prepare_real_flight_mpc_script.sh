@@ -80,7 +80,7 @@ echo "mavros ready."
 
 #################################################################################################################################
 # -2 trajectory server
-screen -d -m -S trajectory_server bash -c "$EXPORT_SELF_IP source devel/setup.bash; taskset -c 0 roslaunch trajectory_server trajectory_server_node.launch; exec bash -i"
+screen -d -m -S trajectory_server bash -c "$EXPORT_SELF_IP source devel/setup.bash; taskset -c 2 roslaunch trajectory_server trajectory_server_node.launch; exec bash -i"
 sleep ${module_delay}
 echo "trajectory_server ready."
 

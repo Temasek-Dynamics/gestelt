@@ -19,7 +19,7 @@ source $SCRIPT_DIR/../../../devel/setup.bash &&
 # export ROS_MASTER_URI (for distributed simulation)
 # drone's side ROS_MASTER_URI should be the laptop
 EXPORT_ROS_MASTER_URI="
-export ROS_HOSTNAME=172.20.10.3 &&
+export ROS_HOSTNAME=172.20.10.2 &&
 export ROS_MASTER_URI=http://172.20.10.4:11311
 "
 
@@ -41,7 +41,7 @@ export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:$gestelt_bringup_DIR:$PX4_AUTOPILOT_RE
 
 # Start up drone commander (Handles taking off, execution of mission and landing etc.)
 CMD_1="
-taskset -c 0 roslaunch trajectory_server trajectory_server_node.launch rviz_config:=gz_sim
+taskset -c 2 roslaunch trajectory_server trajectory_server_node.launch rviz_config:=gz_sim
 "
 
 # Start up script to send commands
