@@ -1,4 +1,4 @@
-FROM gestelt/learning-agile:base
+FROM gestelt/learning-agile:latest
 LABEL maintainer="johntgz@nus.edu.sg"
 
 # Enable the use of `source` keyword
@@ -10,6 +10,7 @@ COPY .bashrc /root/
 # Make directory and clone repository
 WORKDIR /gestelt_ws/src/gestelt
 RUN git pull
+RUN git checkout tianchensun_learning_agile
 WORKDIR /gestelt_ws/
 RUN export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/root/acados/lib \
     && export ACADOS_SOURCE_DIR=/root/acados \

@@ -55,7 +55,7 @@ RUN git clone https://github.com/acados/tera_renderer.git \
 
 # Make directory and clone repository
 WORKDIR /gestelt_ws/src/
-RUN git clone https://github.com/JohnTGZ/gestelt.git -b learning_agile_docker 
+RUN git clone https://github.com/JohnTGZ/gestelt.git -b tianchensun_learning_agile
 WORKDIR /gestelt_ws/
 RUN export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/root/acados/lib \
     && export ACADOS_SOURCE_DIR=/root/acados \

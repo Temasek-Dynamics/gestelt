@@ -10,7 +10,10 @@ sudo apt-get update
 sudo apt-get install curl
 
 curl -fsSL test.docker.com -o get-docker.sh && sh get-docker.sh
+
+# non-root user setup
 sudo usermod -aG docker $USER 
+sudo reboot now
 
 # Test the installation
 docker run hello-world 

@@ -15,7 +15,7 @@ Ubuntu 20.04 images from release [20230301-0102](https://github.com/radxa-build/
     sudo apt install python3-pip
     sudo pip3 install pyamlboot
 ```
-4. Run `sudo boot-g12.py radxa-zero2-2pro-erase-emmc.bin` to erase existing image and load radxa v2 pro as a storage device
+4. Run `sudo boot-g12.py radxa-zero-2pro-erase-emmc.bin` to erase existing image and load radxa v2 pro as a storage device
 5. Follow instructions for balena-etcher from this [link](https://docs.radxa.com/en/zero/zero2pro/getting-started/install-os?Platform=Linux) to load the [latest radxa 2 ubuntu image release e.g. radxa-zero-2pro_ubuntu_jammy_cli_b32.img.xz ](https://github.com/radxa-build/radxa-zero-2pro).
 
 ### Login
