@@ -20,15 +20,17 @@ find_package(catkin REQUIRED COMPONENTS
 ## Generate messages in the 'msg' folder
 add_message_files(
   FILES
-  BoolMapArray.msg
-  BoolMap.msg
-  Command.msg
+  Sphere.msg
+  SphericalSFCTrajectory.msg
+
   Goals.msg
+  Command.msg
+  BoolMap.msg
+  BoolMapArray.msg
   CommanderState.msg
   PlanRequestDebug.msg
   ExecTrajectory.msg
-  Sphere.msg
-  SphericalSFCTrajectory.msg
+  FrontEndPlan.msg
 )
 
 ## Generate services in the 'srv' folder

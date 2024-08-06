@@ -1,5 +1,4 @@
-# 2-D Horizontal Map of Booleans
-# Used for constructing generalized voronoi diagrams
+# Message used for requesting plans from planners. Primarily for debugging purposes
 
 std_msgs/Header header
 

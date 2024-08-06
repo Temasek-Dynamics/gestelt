@@ -6,6 +6,7 @@ set(CMAKE_CXX_FLAGS "-std=c++17")
 
 set (ROS_LIBRARIES
   geometry_msgs
+  gestelt_msgs
   roscpp
   tf2_ros
 )
@@ -38,5 +39,13 @@ add_executable (fake_drone_node
   src/fake_drone.cpp
 )
 target_link_libraries(fake_drone_node
+  ${catkin_LIBRARIES}
+)
+
+add_executable (grid_agent_node
+  src/grid_agent_node.cpp
+  src/grid_agent.cpp
+)
+target_link_libraries(grid_agent_node
   ${catkin_LIBRARIES}
 )

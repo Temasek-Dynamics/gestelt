@@ -10,7 +10,7 @@ int main(int argc, char **argv)
 
   voronoi_planner.init(nh, pnh);
 
-  ros::MultiThreadedSpinner spinner(4);
+  ros::MultiThreadedSpinner spinner(8);
   spinner.spin();
 
   return 0;

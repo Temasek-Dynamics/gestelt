@@ -12,6 +12,8 @@
 
   <arg name="map_filepath" default="$(find gestelt_bringup)/simulation/fake_maps/forest_single.pcd" />
 
+  <arg name="grid_agent_cfg_filepath" default="$(find gestelt_bringup)/config/fake_drone_params.yaml"/>
+
   <!-- <arg name="scenario" default="voronoi_test1"/> -->
   <arg name="scenario" default="voronoi_test1"/>
 
@@ -65,5 +67,97 @@
 
   <node name="rviz" pkg="rviz" type="rviz" required="true" 
         args="-d $(find gestelt_bringup)/launch/rviz/testing.rviz"/>
+
+
+  <!-- Fake drone 0 -->
+  <group ns="drone0">
+    <node pkg="fake_drone" type="grid_agent_node" name="grid_agent_0" required="true" output="screen">
+        <rosparam command="load" file="$(arg grid_agent_cfg_filepath)" />
+
+        <!-- <remap from="mavros/local_position/odom" to="$(arg odometry_topic)"/>
+        <remap from="mavros/local_position/pose" to="$(arg pose_topic)"/> -->
+
+        <param name="drone_id" value="0"/>
+        <param name="init_x" value="0.0"/>
+        <param name="init_y" value="0.0"/>
+        <param name="init_z" value="0.0"/>
+
+        <param name="origin_frame" value="local_map_origin"/>
+        <param name="base_link_frame" value="drone0_base_link"/>
+    </node>
+  </group>
+
+  <!-- Fake drone 1 -->
+  <group ns="drone1">
+    <node pkg="fake_drone" type="grid_agent_node" name="grid_agent_1" required="true" output="screen">
+        <rosparam command="load" file="$(arg grid_agent_cfg_filepath)" />
+
+        <!-- <remap from="mavros/local_position/odom" to="$(arg odometry_topic)"/>
+        <remap from="mavros/local_position/pose" to="$(arg pose_topic)"/> -->
+
+        <param name="drone_id" value="1"/>
+        <param name="init_x" value="0.0"/>
+        <param name="init_y" value="0.0"/>
+        <param name="init_z" value="0.0"/>
+
+        <param name="origin_frame" value="local_map_origin"/>
+        <param name="base_link_frame" value="drone1_base_link"/>
+    </node>
+  </group>
+
+  <!-- Fake drone 2 -->
+  <group ns="drone2">
+    <node pkg="fake_drone" type="grid_agent_node" name="grid_agent_2" required="true" output="screen">
+        <rosparam command="load" file="$(arg grid_agent_cfg_filepath)" />
+
+        <!-- <remap from="mavros/local_position/odom" to="$(arg odometry_topic)"/>
+        <remap from="mavros/local_position/pose" to="$(arg pose_topic)"/> -->
+
+        <param name="drone_id" value="2"/>
+        <param name="init_x" value="0.0"/>
+        <param name="init_y" value="0.0"/>
+        <param name="init_z" value="0.0"/>
+
+        <param name="origin_frame" value="local_map_origin"/>
+        <param name="base_link_frame" value="drone2_base_link"/>
+    </node>
+  </group>
+
+  <!-- Fake drone 3 -->
+  <group ns="drone3">
+    <node pkg="fake_drone" type="grid_agent_node" name="grid_agent_3" required="true" output="screen">
+        <rosparam command="load" file="$(arg grid_agent_cfg_filepath)" />
+
+        <!-- <remap from="mavros/local_position/odom" to="$(arg odometry_topic)"/>
+        <remap from="mavros/local_position/pose" to="$(arg pose_topic)"/> -->
+
+        <param name="drone_id" value="3"/>
+        <param name="init_x" value="0.0"/>
+        <param name="init_y" value="0.0"/>
+        <param name="init_z" value="0.0"/>
+
+        <param name="origin_frame" value="local_map_origin"/>
+        <param name="base_link_frame" value="drone3_base_link"/>
+    </node>
+  </group>
+
+  <!-- Fake drone 4 -->
+  <group ns="drone4">
+    <node pkg="fake_drone" type="grid_agent_node" name="grid_agent_4" required="true" output="screen">
+        <rosparam command="load" file="$(arg grid_agent_cfg_filepath)" />
+
+        <!-- <remap from="mavros/local_position/odom" to="$(arg odometry_topic)"/>
+        <remap from="mavros/local_position/pose" to="$(arg pose_topic)"/> -->
+
+        <param name="drone_id" value="4"/>
+        <param name="init_x" value="0.0"/>
+        <param name="init_y" value="0.0"/>
+        <param name="init_z" value="0.0"/>
+
+        <param name="origin_frame" value="local_map_origin"/>
+        <param name="base_link_frame" value="drone4_base_link"/>
+    </node>
+  </group>
+
 
 </launch>

@@ -18,6 +18,7 @@
 #include <geometry_msgs/PoseStamped.h>
 #include <gestelt_msgs/BoolMapArray.h>
 #include <gestelt_msgs/PlanRequestDebug.h>
+#include <gestelt_msgs/FrontEndPlan.h>
 
 #include <grid_map/grid_map.h> // Map representation
 
@@ -472,10 +473,11 @@ private:
   ros::Publisher voro_occ_grid_pub_; // Publishes voronoi map occupancy grid
 
   std::vector<ros::Publisher> closed_list_pubs_; // Closed list publishers
-  std::vector<ros::Publisher> front_end_plan_pubs_; // Publish front-end plan (A*) visualization
+  std::vector<ros::Publisher> fe_plan_viz_pubs_; // Publish front-end plan visualization
+  std::vector<ros::Publisher> fe_plan_pubs_; // Publish front-end plans
   ros::Publisher start_pt_pub_, goal_pt_pub_; // start and goal visualization publisher
 
-  ros::Publisher voronoi_graph_pub_; // Voronoi graph publisher
+  ros::Publisher voronoi_graph_pub_; // publisher of voronoi graph vertices
 
   ros::Subscriber plan_req_dbg_sub_;  // plan request (start and goal) debug subscriber
   ros::Subscriber bool_map_sub_; // Subscription to boolean map

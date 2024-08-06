@@ -21,7 +21,7 @@ def create_pose(x, y, z):
 
 def main():
     rospy.init_node('mission_startup', anonymous=True)
-    pause_4s = rospy.Rate(0.25) # 2 seconds
+    pause_4s = rospy.Rate(0.25) # 4 seconds
     pause_short = rospy.Rate(2) # 0.5 seconds
 
     pause_4s.sleep()
@@ -29,20 +29,37 @@ def main():
     print(f"Sending waypoints to UAVs")
 
     plan_req_msg = PlanRequestDebug()
-    plan_req_msg.start = create_pose(-7.0, -7.0, 2.2)
+    plan_req_msg.start = create_pose(-7.0, -7.0, 2.0)
     plan_req_msg.goal = create_pose(7.0, 7.0, 1.0)
     plan_req_msg.agent_id = 0
 
     start_dbg_pub.publish(plan_req_msg)
 
-    pause_short.sleep()
+    # pause_short.sleep()
 
-    plan_req_msg.start = create_pose(-6.5, -6.5, 2.2)
-    plan_req_msg.goal = create_pose(7.0, 7.0, 1.0)
+    plan_req_msg.start = create_pose(-6.5, -6.5, 2.0)
+    plan_req_msg.goal = create_pose(7.5, 7.5, 1.0)
     plan_req_msg.agent_id = 1
 
     start_dbg_pub.publish(plan_req_msg)
 
+    plan_req_msg.start = create_pose(-6.5, -7.5, 2.0)
+    plan_req_msg.goal = create_pose(7.5, 6.5, 1.0)
+    plan_req_msg.agent_id = 2
+
+    start_dbg_pub.publish(plan_req_msg)
+
+    plan_req_msg.start = create_pose(-7.5, -6.5, 2.0)
+    plan_req_msg.goal = create_pose(6.5, 7.5, 1.0)
+    plan_req_msg.agent_id = 3
+
+    start_dbg_pub.publish(plan_req_msg)
+
+    plan_req_msg.start = create_pose(-7.5, -7.5, 2.0)
+    plan_req_msg.goal = create_pose(6.5, 6.5, 1.0)
+    plan_req_msg.agent_id = 4
+
+    start_dbg_pub.publish(plan_req_msg)
 
 if __name__ == '__main__':
     main()

@@ -17,6 +17,8 @@ void VoronoiPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   start_pt_pub_ = nh.advertise<visualization_msgs::Marker>("start_point", 5, true);
   goal_pt_pub_ = nh.advertise<visualization_msgs::Marker>("goal_point", 5, true);
 
+  // Plan publisher
+
   // Occupancy map publishers
   occ_map_pub_ = nh.advertise<nav_msgs::OccupancyGrid>("voronoi_planner/occ_map", 10, true);
   voro_occ_grid_pub_ = nh.advertise<nav_msgs::OccupancyGrid>("voronoi_planner/voro_map", 10, true);
@@ -26,7 +28,8 @@ void VoronoiPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
                                     astar_params_, resrv_tbl_));
 
     closed_list_pubs_.push_back(nh.advertise<visualization_msgs::Marker>("closed_list_"+std::to_string(i), 500 , true));
-    front_end_plan_pubs_.push_back(nh.advertise<visualization_msgs::Marker>("fe_plan_"+std::to_string(i), 500 , true));
+    fe_plan_viz_pubs_.push_back(nh.advertise<visualization_msgs::Marker>("fe_plan_viz_"+std::to_string(i), 500 , true));
+    fe_plan_pubs_.push_back(nh.advertise<gestelt_msgs::FrontEndPlan>("drone" +std::to_string(i) + "/fe_plan", 50, true));
   }
 
   voronoi_graph_pub_ = nh.advertise<visualization_msgs::Marker>("voronoi_graph", 500, true);
@@ -181,25 +184,6 @@ void VoronoiPlanner::boolMapCB(const gestelt_msgs::BoolMapArrayConstPtr& msg)
   }
 
   init_voro_maps_ = true; // Flag to indicate that all voronoi maps have been initialized
-
-  // if (plan_once_){
-  //   Eigen::Vector3d plan_start{ 
-  //                   -7.0 - local_origin_x_,
-  //                   -7.0 - local_origin_y_,
-  //                   2.2};
-
-  //   Eigen::Vector3d plan_end{ 
-  //                   7.0 - local_origin_x_,
-  //                   7.0 - local_origin_y_,
-  //                   1.0};
-
-  //   std::cout << "Agent " << 0 << ": plan request from ("<< 
-  //                 plan_start.transpose() << ") to (" << plan_end.transpose() << ")" << std::endl;
-
-  //   plan(0, plan_start, plan_end);
-  //   plan_once_ = false;
-  // }
-
 }
 
 void VoronoiPlanner::startDebugCB(const gestelt_msgs::PlanRequestDebugConstPtr &msg)
@@ -226,61 +210,22 @@ void VoronoiPlanner::startDebugCB(const gestelt_msgs::PlanRequestDebugConstPtr &
 
 /* Planning functions */
 
-// bool VoronoiPlanner::plan(const Eigen::Vector3d& start, const Eigen::Vector3d& goal){
-//   if (!init_voro_maps_){
-//     std::cout << "Voronoi maps not initialized! Request a plan after initialization!" << std::endl;
-//     return false;
-//   }
-
-//   // publishStartAndGoal(start, start_z, goal, goal_z, "local_map_origin", start_pt_pub_, goal_pt_pub_);
-
-//   // if (dyn_voro_arr_.find(goal_z_cm) == dyn_voro_arr_.end()){
-//   //   std::cout << "Map slice at height "<<   << " does not exist" << std::endl;
-//   //   return false;
-//   // }
-
-//   tm_front_end_plan_.start();
-
-//   front_end_planner_ = std::make_unique<AStarPlanner>(
-//     dyn_voro_arr_, z_separation_cm_, astar_params_, resrv_tbl_);
-//   front_end_planner_->addPublishers(front_end_publisher_map_);
-
-//   if (!front_end_planner_->generatePlanVoronoi(start, goal)){
-//     std::cout << "FRONT END FAILED!!!! front_end_planner_->generatePlanVoronoi() from ("<< start.transpose() << ") to (" << goal.transpose() << ")" << std::endl;
-
-//     tm_front_end_plan_.stop(verbose_planning_);
-
-//     front_end_planner_->publishClosedList(front_end_planner_->getClosedListVoronoi(), front_end_publisher_map_["front_end/closed_list"], "local_map_origin");
-//     return false;
-//   }
-//   else{
-//     front_end_path_lcl_ = front_end_planner_->getPathPosRaw();
-//     publishFrontEndPath(front_end_path_lcl_, "local_map_origin", front_end_plan_viz_pub_) ;
-//     front_end_planner_->publishClosedList(front_end_planner_->getClosedListVoronoi(), front_end_publisher_map_["front_end/closed_list"], "local_map_origin");
-//   }
-
-
-
-//   tm_front_end_plan_.stop(verbose_planning_);
-
-//   return true;
-// }
-
 
 bool VoronoiPlanner::plan(const int& id, const Eigen::Vector3d& start, const Eigen::Vector3d& goal){
   if (!init_voro_maps_){
     std::cout << "Voronoi maps not initialized! Request a plan after initialization!" << std::endl;
     return false;
   }
+  
   publishStartAndGoal(start, goal,"local_map_origin", start_pt_pub_, goal_pt_pub_);
 
-  tm_front_end_plan_.start();
+  // tm_front_end_plan_.start();
 
   // Generate plan 
   if (!front_end_planners_[id]->generatePlanVoroT(start, goal)){
     std::cout << "Agent " << id << " FRONT END FAILED!!!! front_end_planner_->generatePlanVoroT() from ("
               << start.transpose() << ") to (" << goal.transpose() << ")" << std::endl;
-    tm_front_end_plan_.stop(verbose_planning_);
+    // tm_front_end_plan_.stop(verbose_planning_);
 
     publishClosedList(front_end_planners_[id]->getClosedListVoroT(), 
                       closed_list_pubs_[id], "local_map_origin");
@@ -290,13 +235,33 @@ bool VoronoiPlanner::plan(const int& id, const Eigen::Vector3d& start, const Eig
     return false;
   }
 
-  tm_front_end_plan_.stop(verbose_planning_);
+  // tm_front_end_plan_.stop(verbose_planning_);
 
   // Retrieve space time path and publish it
   space_time_path_[id] = front_end_planners_[id]->getSpaceTimePath();
   publishClosedList(front_end_planners_[id]->getClosedListVoroT(), closed_list_pubs_[id], "local_map_origin");
 
-  // publishSpaceTimePath(space_time_path_[id], "local_map_origin", front_end_plan_pubs_[id]) ;
+  // Convert from space time path to gestelt_msgs::FrontEndPlan
+  gestelt_msgs::FrontEndPlan fe_plan_msg;
+
+  fe_plan_msg.agent_id = id;
+  fe_plan_msg.header.stamp = ros::Time::now();
+
+  fe_plan_msg.plan_start_time = ros::Time::now().toSec();
+  for (int i = 0; i < space_time_path_[id].size(); i++){
+    geometry_msgs::Pose pose;
+    pose.position.x = space_time_path_[id][i](0);
+    pose.position.y = space_time_path_[id][i](1);
+    pose.position.z = space_time_path_[id][i](2);
+    pose.orientation.w = 1.0; 
+
+    fe_plan_msg.plan.push_back(pose);
+    fe_plan_msg.plan_time.push_back(space_time_path_[id][i](3));
+  }
+
+  fe_plan_pubs_[id].publish(fe_plan_msg);
+
+  // publishSpaceTimePath(space_time_path_[id], "local_map_origin", fe_plan_viz_pubs_[id]) ;
 
   // double min_clr = DBL_MAX; // minimum path clearance 
   // double max_clr = 0.0;     // maximum path clearance 
@@ -563,8 +528,8 @@ void VoronoiPlanner::generateTestMap2()
   // space_time_path_[1] = front_end_planners_[1]->getSpaceTimePath();
   // publishClosedList(front_end_planners_[1]->getClosedListVoroT(), closed_list_pubs_[1], "world");
 
-  // publishSpaceTimePath(space_time_path_[0], "world", front_end_plan_pubs_[0]) ;
-  // publishSpaceTimePath(space_time_path_[1], "world", front_end_plan_pubs_[1]) ;
+  // publishSpaceTimePath(space_time_path_[0], "world", fe_plan_viz_pubs_[0]) ;
+  // publishSpaceTimePath(space_time_path_[1], "world", fe_plan_viz_pubs_[1]) ;
 
   // // Print paths
   // std::cout << "Agent 0 path: " << std::endl;

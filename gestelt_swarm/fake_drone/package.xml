@@ -19,6 +19,7 @@
   <exec_depend>roscpp</exec_depend>
   <exec_depend>tf2_ros</exec_depend>
 
+  <build_depend>gestelt_msgs</build_depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>
