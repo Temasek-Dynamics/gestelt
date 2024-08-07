@@ -247,9 +247,9 @@ void mpcRosWrapper::Update()
             mpc_runtime.data = preloop_dur;
             mpc_runtime_pub_.publish(mpc_runtime);
 
-            std_msgs::Float64 weight_vis_msg;
-            weight_vis_msg.data = weight_vis_;
-            weight_vis_pub_.publish(weight_vis_msg);
+            // std_msgs::Float64 weight_vis_msg;
+            // weight_vis_msg.data = weight_vis_;
+            // weight_vis_pub_.publish(weight_vis_msg);
 
         }  
     }  

@@ -21,7 +21,7 @@ mission:
 learning_agile:
 
   ##------ traversing parameters ---##
-  max_traverse_weight: 70 #70
+  max_traverse_weight: 20 #70
   traverse_weight_span: 10
   traverse_time: 1.5  
 
