@@ -536,7 +536,7 @@ class OCSys:
                                                           current_input,
                                                           np.concatenate((tra_pos,tra_q)),
                                                           np.array([weight]))))
-            if i==0:
+            if i==10:
                 weight_vis=weight
             
 

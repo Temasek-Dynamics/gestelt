@@ -289,7 +289,7 @@ class LearningAgileAgent():
                 # FIXME, manually set the traversal time and pose
                 out=np.zeros(7)
                 out[0:3]=self.gate_center
-                out[3:6]=self.gate_ori_euler
+                out[3:6]=self.gate_ori_euler # Rodrigues parameters
 
                 # relative traversal time
                 out[6]=self.t_tra_abs-self.i*self.dyn_step
@@ -342,7 +342,7 @@ class LearningAgileAgent():
         self.quad1.uav1.plot_position(self.state_n)
         self.quad1.uav1.plot_velocity(self.state_n)
         self.quad1.uav1.plot_quaternions(self.state_n)
-        # self.quad1.uav1.plot_trav_weight(self.tra_weight_list)
+        self.quad1.uav1.plot_trav_weight(self.tra_weight_list)
        
         self.quad1.uav1.plot_solving_time(self.solving_time)
 

@@ -10,7 +10,7 @@ mission:
 
   ##------ gate pose ----##
   gate_position: [1.0, -0.0, 1.5]
-  gate_ori_euler: [-0.0, -0.7, 0]
+  gate_ori_euler: [-0.0, -0.3535, 0]
 
   ##------ goal pose ----##
   goal_position: [0.0, -1.8, 1.2]
@@ -31,7 +31,7 @@ learning_agile:
   ##------ MPC problem parameters---## 
   ## ---- hard coded in the solver ----##
   ## modify this required recompilation of the solver
-  horizon: 10
+  horizon: 20
   dt: 0.1
     
   ##------ model parameters --------##

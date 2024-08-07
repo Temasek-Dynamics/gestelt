@@ -75,7 +75,7 @@ class mpcRosWrapper{
     ros::Subscriber waypoint_sub_;
 
     ros::Publisher next_attitude_setpoint_pub_;
-    ros::Publisher raw_solver_output_pub_;
+    ros::Publisher weight_vis_pub_;
     ros::Publisher gate_centroid_pub_;
     ros::Publisher traverse_time_pub_;
 
@@ -119,7 +119,7 @@ class mpcRosWrapper{
     Eigen::Vector4d current_input_={0,0,0,0};
     Eigen::Vector4d last_input_={0,0,0,0};
     double single_motor_max_thrust_=2.1334185;
-
+    double weight_vis_=0;
     //MPC output
     double* state_traj_opt_;
     double control_opt_[4] = {0,0,0,0};
@@ -132,7 +132,7 @@ class mpcRosWrapper{
     int n_nodes_;
     int n_x_;
     int n_u_;
-    int dt_=0.1;
+    double dt_=0.1;
     
     ACADOS_model_solver_capsule_ptr acados_ocp_capsule;
     nlp_config_ptr nlp_config;

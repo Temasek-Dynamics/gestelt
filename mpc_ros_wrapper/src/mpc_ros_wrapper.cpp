@@ -24,8 +24,7 @@ void mpcRosWrapper::init(ros::NodeHandle& nh)
     /* Publishers */
     /////////////////
     next_attitude_setpoint_pub_ = nh.advertise<mavros_msgs::AttitudeTarget>("/mavros/setpoint_raw/attitude", 1);
-    raw_solver_output_pub_ = nh.advertise<mavros_msgs::AttitudeTarget>("/learning_agile_agent/raw_solver_output", 1);
-    
+    weight_vis_pub_ = nh.advertise<std_msgs::Float64>("/learning_agile_agent/weight_vis", 1);
     // gate_centroid_pub_ = nh.advertise<geometry_msgs::PoseStamped>("/learning_agile_agent/gate_centroid", 1);
 
     // traverse_time_pub_ = nh.advertise<std_msgs::Float32>>("/learning_agile_agent/traverse_time", 10);
@@ -55,6 +54,7 @@ void mpcRosWrapper::init(ros::NodeHandle& nh)
     n_nodes_ = nlp_dims->N;
     n_x_ = *nlp_dims->nx;
     n_u_ = *nlp_dims->nu;
+    dt_ = *nlp_in->Ts;
     ROS_INFO("time horizion is %d, with state %d and input %d \n", n_nodes_, n_x_, n_u_);
     
 
@@ -85,12 +85,11 @@ void mpcRosWrapper::solver_request(){
         double mission_t_progress= std::chrono::duration_cast<std::chrono::duration<double>>(current_time - mission_start_time_).count();
         double t_tra=t_tra_abs_-mission_t_progress;   
         // ROS_INFO("t_tra is %f", t_tra);
-  
         for (int i = 0; i < n_nodes_; i++)
         {
             current_input_=last_input_;
             double varying_trav_weight = max_tra_w_ * std::exp(-tra_w_span_ * std::pow(dt_ * i - t_tra, 2));
-
+            // ROS_INFO("dt_ is %f, i is %d, t_tra is %f, varying_trav_weight is %f", dt_, i, t_tra, varying_trav_weight);
             // set the external parameters for the solver
             // desired goal state, current input, desired traverse pose, varying traverse weight
             Eigen::VectorXd solver_extern_param(22);
@@ -104,6 +103,11 @@ void mpcRosWrapper::solver_request(){
             double *solver_extern_param_ptr = solver_extern_param.data();
         
             ACADOS_model_acados_update_params(acados_ocp_capsule, i,solver_extern_param_ptr,NP);
+            
+            if (i==10)
+            {
+                weight_vis_ = varying_trav_weight;
+            }
         }
         //TODO
         // set the initial GUESS
@@ -243,8 +247,10 @@ void mpcRosWrapper::Update()
             mpc_runtime.data = preloop_dur;
             mpc_runtime_pub_.publish(mpc_runtime);
 
-            // raw solver output
-            raw_solver_output_pub_.publish(mpc_cmd);
+            std_msgs::Float64 weight_vis_msg;
+            weight_vis_msg.data = weight_vis_;
+            weight_vis_pub_.publish(weight_vis_msg);
+
         }  
     }  
     else
