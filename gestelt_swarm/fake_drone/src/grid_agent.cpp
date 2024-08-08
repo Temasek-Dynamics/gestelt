@@ -13,7 +13,6 @@ GridAgent::GridAgent(ros::NodeHandle& nh, ros::NodeHandle& pnh) {
 	pnh.param<std::string>("origin_frame", uav_origin_frame_, "world");
 	pnh.param<std::string>("base_link_frame", base_link_frame_, "base_link");
 
-	pnh.param<double>("offboard_timeout", offboard_timeout_, -1.0);
 	pnh.param<double>("init_x", init_pos_(0), 0.0);
 	pnh.param<double>("init_y", init_pos_(1), 0.0);
 	pnh.param<double>("init_z", init_pos_(2), 0.0);
@@ -77,6 +76,20 @@ void GridAgent::frontEndPlanCB(const gestelt_msgs::FrontEndPlan::ConstPtr &msg)
 {	
 	fe_plan_msg_ = *msg;
 	plan_start_exec_t_ = ros::Time::now().toSec();
+
+	// Generate spline from plan 
+	std::vector<tinyspline::real> points;
+
+	for (int i = 0; i < fe_plan_msg_.plan.size(); i+= 10)
+	{	
+		// Add control point
+		points.push_back(fe_plan_msg_.plan[i].position.x);
+		points.push_back(fe_plan_msg_.plan[i].position.y);
+		points.push_back(fe_plan_msg_.plan[i].position.z);
+	}
+
+	spline_ = std::make_shared<tinyspline::BSpline>(tinyspline::BSpline::interpolateCubicNatural(points, 3));
+
 	plan_received_ = true;
 }
 
@@ -128,6 +141,7 @@ void GridAgent::simUpdateTimer(const ros::TimerEvent &)
 void GridAgent::setStateFromPlan(	const gestelt_msgs::FrontEndPlan &fe_plan_msg, 
 																	const double& exec_start_t)
 {
+
 	double t_now = ros::Time::now().toSec();
 
 	if (t_now >= exec_start_t + fe_plan_msg.plan_time.back()){
@@ -136,22 +150,23 @@ void GridAgent::setStateFromPlan(	const gestelt_msgs::FrontEndPlan &fe_plan_msg,
 		return;
 	}
 
-	// if (t_now < fe_plan_msg.plan_time[0])
-	// {
-	// 	// Plan is in the future
-	// 	std::cout << "t_now (" << t_now << ") is before traj time start (" << fe_plan_msg.plan_time[0] << ")" << std::endl;
-	// 	return;
+	// // Iterate through plan and choose state at current time
+	// size_t cur_plan_idx = 0;
+
+	// for (size_t i = 0; i < fe_plan_msg.plan_time.size(); i++){
+	// 	if (t_now < exec_start_t + fe_plan_msg.plan_time[i]){ // Future point found
+	// 		cur_plan_idx = i; 
+	// 		break;
+	// 	}
 	// }
 
-	// Iterate through plan and choose state at current time
-	size_t cur_plan_idx = 0;
+	// alpha: Arc length parameterization of spline. Formed by time ratio
+	double alpha = (t_now - exec_start_t) / fe_plan_msg.plan_time.back();
 
-	for (size_t i = 0; i < fe_plan_msg.plan_time.size(); i++){
-		if (t_now < exec_start_t + fe_plan_msg.plan_time[i]){ // Future point found
-			cur_plan_idx = i; 
-			break;
-		}
-	}
+	std::vector<tinyspline::real> result = spline_->eval(alpha).result();
+	double x = result[0];
+	double y = result[1];
+	double z = result[2];
 
 	state_mutex_.lock();
 
@@ -159,24 +174,20 @@ void GridAgent::setStateFromPlan(	const gestelt_msgs::FrontEndPlan &fe_plan_msg,
 	odom_msg_.header.stamp = ros::Time::now();
 	odom_msg_.header.frame_id = uav_origin_frame_;
 
-	odom_msg_.pose.pose = fe_plan_msg.plan[cur_plan_idx];
-	// odom.twist.twist.linear = cmd.pos_targ.velocity;
-
-	// state.odom.pose.pose.orientation.w = cmd.q.w();
-	// state.odom.pose.pose.orientation.x = cmd.q.x();
-	// state.odom.pose.pose.orientation.y = cmd.q.y();
-	// state.odom.pose.pose.orientation.z = cmd.q.z();
+	// odom_msg_.pose.pose = fe_plan_msg.plan[cur_plan_idx];
+	odom_msg_.pose.pose.position.x = x;
+	odom_msg_.pose.pose.position.y = y;
+	odom_msg_.pose.pose.position.z = z;
 
 	// Set Pose
 	pose_msg_.header.stamp = ros::Time::now();
 	pose_msg_.header.frame_id = uav_origin_frame_;
 
-	pose_msg_.pose = fe_plan_msg.plan[cur_plan_idx];
+	// pose_msg_.pose = fe_plan_msg.plan[cur_plan_idx];
+	pose_msg_.pose.position.x = x;
+	pose_msg_.pose.position.y = y;
+	pose_msg_.pose.position.z = z;
 
-	// pose.pose.orientation.w = cmd.q.w();
-	// pose.pose.orientation.x = cmd.q.x();
-	// pose.pose.orientation.y = cmd.q.y();
-	// pose.pose.orientation.z = cmd.q.z();
 
 	state_mutex_.unlock();
 }

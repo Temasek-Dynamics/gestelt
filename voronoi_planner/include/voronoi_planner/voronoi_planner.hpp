@@ -464,6 +464,8 @@ private:
   double critical_clr_{0.25}; // minimum clearance of drone from obstacle
   double fixed_pt_thresh_{0.3}; // points (on trajectory) below this threshold are defined as fixed points (not decision variables in optimization problem)
 
+  double t_unit_{0.1}; // [s] Time unit used for determining how long each Space Time A* unit takes
+
   bool use_test_map_{false};
 
   AStarPlanner::AStarParams astar_params_; 

@@ -18,6 +18,8 @@
 
 #include <gestelt_msgs/FrontEndPlan.h>
 
+#include "tinysplinecxx.h"  // For spline interpolation
+
 #define KNRM  "\033[0m"
 #define KRED  "\033[31m"
 #define KGRN  "\033[32m"
@@ -47,7 +49,6 @@ class GridAgent
 
         double tf_broadcast_freq_; // frequency that tf is broadcasted 
         double pose_pub_freq_; // frequency that pose was published
-        double offboard_timeout_; // Timeout for PX4 offboard to continuously receive commands
         Eigen::Vector3d init_pos_;
 
         /* Data */
@@ -68,6 +69,8 @@ class GridAgent
 
         double plan_start_exec_t_; // Time that plan started execution
 
+        std::shared_ptr<tinyspline::BSpline> spline_; // Spline formed from interpolating control points of front end path
+
     public:
 
         GridAgent(ros::NodeHandle &nh, ros::NodeHandle &pnh);
@@ -87,9 +90,9 @@ class GridAgent
         /* Checks */
 
         /** Helper methods */
-
         void setStateFromPlan(   const gestelt_msgs::FrontEndPlan &msg, 
                                             const double& exec_start_t);
+
 };
 
 #endif // GRID_AGENT_H

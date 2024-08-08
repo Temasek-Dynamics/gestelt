@@ -14,6 +14,8 @@ set (ROS_LIBRARIES
 # set (ROS_DEPENDS
 # )
 
+find_package(tinyspline REQUIRED)
+
 find_package(catkin REQUIRED COMPONENTS
   ${ROS_LIBRARIES}
 )
@@ -47,5 +49,5 @@ add_executable (grid_agent_node
   src/grid_agent.cpp
 )
 target_link_libraries(grid_agent_node
-  ${catkin_LIBRARIES}
+  ${catkin_LIBRARIES} tinysplinecxx
 )

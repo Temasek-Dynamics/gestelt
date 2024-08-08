@@ -416,7 +416,7 @@ bool AStarPlanner::generatePlanVoroT(   const Eigen::Vector3d& start_pos_3d,
         // Explore neighbors of current node. Each neighbor is (grid_x, grid_y, map_z_cm)
         for (const Eigen::Vector3i& nb_node_eig : neighbours) 
         {   
-            double nb_t = cur_node.t + astar_params_.dt_;
+            int nb_t = cur_node.t + astar_params_.dt;
             
             VCell_T nb_node(nb_node_eig(0), nb_node_eig(1), nb_node_eig(2), nb_t);
             VCell nb_node_3d(nb_node_eig(0), nb_node_eig(1), nb_node_eig(2));

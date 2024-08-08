@@ -33,7 +33,12 @@ public:
      */
     int cost_function_type; // Type of cost function to use
 
-    double dt_{0.05}; // Time to move betwen cells
+    int dt{1};
+    // int dt_space_diag{3};   // Time to move from (0,0,0) to (1,1,1) in 26-connected 3D grid
+    // int dt_face_diag{2};    // Time to move from (0,0,0) to (0,1,1) in 26-connected 3D grid
+    // int dt_straight{1};     // Time to move  from (0,0,0) to (0,1,0) in 26-connected 3D grid
+    // int dt_wait{1};         // Time to wait in the same cell
+
   }; // struct AStarParams
 
   AStarPlanner(std::shared_ptr<GridMap> grid_map, const AStarParams& astar_params);
@@ -140,22 +145,40 @@ public:
 
       // For each gridnode, get the position and index,
       // So we can obtain a path in terms of indices and positions
+
+      int prev_t = 0;
       for (const VCell_T& cell : path_idx_vt_)
       {
         DblPoint map_2d_pos;
-        dyn_voro_arr_[cell.z_cm]->idxToPos(IntPoint(cell.x, cell.y), map_2d_pos);
 
-        Eigen::Vector4d map_spacetime_pos{map_2d_pos.x, map_2d_pos.y, cell.z_m, double(cell.t)};
-        // Block out the same cell at (t-1) to prevent swapping conflicts
-        Eigen::Vector4d map_spacetime_pos_prev{map_2d_pos.x, map_2d_pos.y, cell.z_m, (double)(cell.t-1)};
+        int time_intv = cell.t - prev_t; // Time interval
+
+        // Inflate reservation tables cells 
+        for(int x = cell.x - 2; x <= cell.x + 2; x++)
+        {
+          for(int y = cell.y - 2; y <= cell.y + 2; y++)
+          {
+            // Convert to map position
+            dyn_voro_arr_[cell.z_cm]->idxToPos(IntPoint(x, y), map_2d_pos);
+
+            // Add map position to reservation table
+            for (int i = 0; i < time_intv; i++) {
+              resrv_tbl_->insert(Eigen::Vector4d{map_2d_pos.x, map_2d_pos.y, cell.z_m, prev_t+i});
+            }
+          }
+        }
+
+        prev_t = cell.t; 
 
         // Add space time map position to path
-        path_pos_t_.push_back(map_spacetime_pos);
-        // Add map position to reservation table
-        resrv_tbl_->insert(map_spacetime_pos);
-        resrv_tbl_->insert(map_spacetime_pos_prev);
-      }
-
+        path_pos_t_.push_back(Eigen::Vector4d{map_2d_pos.x, map_2d_pos.y, cell.z_m, cell.t});
+      } 
+      
+      // Block out the last cell 
+      VCell_T last_cell = path_idx_vt_.back();
+      DblPoint map_2d_pos;
+      dyn_voro_arr_[last_cell.z_cm]->idxToPos(IntPoint(last_cell.x, last_cell.y), map_2d_pos);
+      resrv_tbl_->insert(Eigen::Vector4d{map_2d_pos.x, map_2d_pos.y, last_cell.z_m, last_cell.t });
   }
 
 public:

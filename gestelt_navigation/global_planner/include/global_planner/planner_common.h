@@ -321,7 +321,7 @@ struct VCell_T {
    * @param z_cm Height of voronoi map in centimeters 
    * @param t Time at which cell is occupied
    */
-  VCell_T(const int& x, const int& y, const int& z_cm, const double& t)
+  VCell_T(const int& x, const int& y, const int& z_cm, const int& t)
     : x(x), y(y), z_cm(z_cm), t(t)
   {
     z_m = ((double)z_cm)/100.0;
@@ -343,7 +343,7 @@ struct VCell_T {
   double z_m; // [THIS IS NOT THE INDEX] z in meters
   int z_cm; // [THIS IS NOT THE INDEX] z in centimeters
 
-  double t;  // Time at which cell is occupied
+  int t;  // Time at which cell is occupied
 }; // struct VCell_T
 
 template <> 

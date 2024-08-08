@@ -248,6 +248,7 @@ bool VoronoiPlanner::plan(const int& id, const Eigen::Vector3d& start, const Eig
   fe_plan_msg.header.stamp = ros::Time::now();
 
   fe_plan_msg.plan_start_time = ros::Time::now().toSec();
+
   for (int i = 0; i < space_time_path_[id].size(); i++){
     geometry_msgs::Pose pose;
     pose.position.x = space_time_path_[id][i](0);
@@ -256,7 +257,7 @@ bool VoronoiPlanner::plan(const int& id, const Eigen::Vector3d& start, const Eig
     pose.orientation.w = 1.0; 
 
     fe_plan_msg.plan.push_back(pose);
-    fe_plan_msg.plan_time.push_back(space_time_path_[id][i](3));
+    fe_plan_msg.plan_time.push_back(space_time_path_[id][i](3) * t_unit_);
   }
 
   fe_plan_pubs_[id].publish(fe_plan_msg);
