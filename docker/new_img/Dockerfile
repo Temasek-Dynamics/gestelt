@@ -14,6 +14,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
     python3-rosdep \
     python3-rosinstall \
     cpufrequtils \
+    screen \
     && rm -rf /var/lib/apt/lists/*
 
 # Install mavROS dependencies
@@ -53,6 +54,9 @@ RUN git clone https://github.com/acados/tera_renderer.git \
     && cargo build --verbose --release \
     && mv target/release/t_renderer /root/acados/bin/t_renderer \
     && chmod +x /root/acados/bin/t_renderer 
+
+WORKDIR /gestelt_ws/src/
+RUN git clone https://github.com/ethz-asl/vicon_bridge.git
 
 # Make directory and clone repository
 WORKDIR /gestelt_ws/src/

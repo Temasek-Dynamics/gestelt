@@ -19,9 +19,9 @@ source $SCRIPT_DIR/../../../devel/setup.bash &&
 # export ROS_MASTER_URI (for distributed simulation)
 # drone's side ROS_MASTER_URI should be the laptop
 EXPORT_ROS_MASTER_URI="
-export ROS_IP=172.20.10.4 
-export ROS_HOSTNAME=172.20.10.4 &&
-export ROS_MASTER_URI=http://172.20.10.4:11311
+export ROS_IP=192.168.2.102
+export ROS_HOSTNAME=192.168.2.102&&
+export ROS_MASTER_URI=http://192.168.2.102:11311
 "
 # PX4 v1.13.0
 SOURCE_PX4_AUTOPILOT="

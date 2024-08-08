@@ -6,10 +6,12 @@ SHELL ["/bin/bash", "-c"]
 
 # Copy .bashrc file
 COPY .bashrc /root/
-RUN apt-get update && apt-get install --no-install-recommends -y \
-    cpufrequtils \  
-    && rm -rf /var/lib/apt/lists/*
-    
+# RUN apt-get update && apt-get install --no-install-recommends -y \
+#     screen \
+#     && rm -rf /var/lib/apt/lists/*
+WORKDIR /gestelt_ws/src/
+RUN git clone https://github.com/ethz-asl/vicon_bridge.git
+
 # Make directory and clone repository
 WORKDIR /gestelt_ws/src/gestelt
 RUN git pull

@@ -10,10 +10,10 @@ init_path=~/gestelt_ws
 module_delay=2.0
 
 # check whether is running as sudo
-if [ "$EUID" -eq 0 ]
-    then echo "Please DO NOT run as root."
-    exit
-fi
+# if [ "$EUID" -eq 0 ]
+#     then echo "Please DO NOT run as root."
+#     exit
+# fi
 
 if [ "${STY}" != "" ]
     then echo "You are running the script in a screen environment. Please quit the screen."
