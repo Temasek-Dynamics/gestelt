@@ -21,7 +21,7 @@ source $SCRIPT_DIR/../../../devel/setup.bash &&
 EXPORT_ROS_MASTER_URI="
 export ROS_IP=192.168.31.204 && 
 export ROS_HOSTNAME=192.168.31.204 &&
-export ROS_MASTER_URI=http://192.168.31.38:11311
+export ROS_MASTER_URI=http://192.168.31.205:11311
 "
 # PX4 v1.13.0
 SOURCE_PX4_AUTOPILOT="

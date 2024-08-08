@@ -7,7 +7,7 @@ init_path=/gestelt_ws
 
 
 # delay between launching various modules
-module_delay=2.0
+module_delay=1.0
 
 # check whether is running as sudo
 # if [ "$EUID" -eq 0 ]
@@ -37,7 +37,7 @@ sudo cpufreq-set -g performance
 
 # export ip for remote rosbag rocord
 
-SELF_IP="192.168.31.38"
+# SELF_IP="192.168.31.38" # should inside ~/.bashrc
 
 EXPORT_SELF_IP="export ROS_IP=$SELF_IP&&
                 export ROS_HOSTNAME=$SELF_IP&&
