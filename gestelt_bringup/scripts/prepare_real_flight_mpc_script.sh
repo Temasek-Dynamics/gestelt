@@ -3,7 +3,7 @@
 # 0. px4 (mavros & gcs_bridge) 
 
 
-init_path=~/gestelt_ws
+init_path=/gestelt_ws
 
 
 # delay between launching various modules

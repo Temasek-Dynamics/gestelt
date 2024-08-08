@@ -9,8 +9,8 @@ COPY .bashrc /root/
 # RUN apt-get update && apt-get install --no-install-recommends -y \
 #     screen \
 #     && rm -rf /var/lib/apt/lists/*
-WORKDIR /gestelt_ws/src/
-RUN git clone https://github.com/ethz-asl/vicon_bridge.git
+# WORKDIR /gestelt_ws/src/
+# RUN git clone https://github.com/ethz-asl/vicon_bridge.git
 
 # Make directory and clone repository
 WORKDIR /gestelt_ws/src/gestelt
