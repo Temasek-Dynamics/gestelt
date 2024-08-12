@@ -1,65 +1,68 @@
 #!/usr/bin/env python3
 
 import rospy
-from geometry_msgs.msg import Pose
-from gestelt_msgs.msg import PlanRequestDebug
+from gestelt_msgs.msg import Goals
+from geometry_msgs.msg import Transform
 
-start_dbg_pub = rospy.Publisher('/plan_request_dbg', PlanRequestDebug, queue_size=10, latch=True)
+NUM_DRONES = 5
 
-def create_pose(x, y, z):
-    pos = Pose()
-    pos.position.x = x
-    pos.position.y = y
-    pos.position.z = z
+# Publisher of server events to trigger change of states for trajectory server 
+goal_publishers = []
+for i in range(0, NUM_DRONES):
+    goal_publishers.append(rospy.Publisher(f'/drone{i}/goals', Goals, queue_size=5))
 
-    pos.orientation.x = 0
-    pos.orientation.y = 0
-    pos.orientation.z = 0
-    pos.orientation.w = 0
+def create_transform(x, y, z):
+    pos = Transform()
+    pos.translation.x = x
+    pos.translation.y = y
+    pos.translation.z = z
+
+    pos.rotation.x = 0
+    pos.rotation.y = 0
+    pos.rotation.z = 0
+    pos.rotation.w = 1
 
     return pos
+
+
+def pub_goals(goals):
+    if (len(goals) > NUM_DRONES):
+        print(f"Failed to publish goals. No. of goals ({len(goals)}) > NUM_DRONES ({NUM_DRONES})")
+        return False 
+
+    for i in range(0, len(goals)):
+        goals_msg = Goals()
+        goals_msg.header.frame_id = "world"
+        goals_msg.transforms = goals[i]
+
+        goal_publishers[i].publish(goals_msg)
+
+    return True
 
 def main():
     rospy.init_node('mission_startup', anonymous=True)
     pause_4s = rospy.Rate(0.25) # 4 seconds
-    pause_short = rospy.Rate(2) # 0.5 seconds
 
     pause_4s.sleep()
 
+    # Send waypoints to UAVs
     print(f"Sending waypoints to UAVs")
 
-    plan_req_msg = PlanRequestDebug()
-    plan_req_msg.start = create_pose(-7.0, -7.0, 2.0)
-    plan_req_msg.goal = create_pose(7.0, 7.0, 1.0)
-    plan_req_msg.agent_id = 0
+    goals_0 = []
+    goals_1 = []
+    goals_2 = []
+    goals_3 = []
+    goals_4 = []
 
-    start_dbg_pub.publish(plan_req_msg)
+    goals_0.append(create_transform(7.0, 7.0, 1.0))
+    goals_1.append(create_transform(7.5, 7.5, 1.0))
+    goals_2.append(create_transform(7.5, 6.5, 1.0))
+    goals_3.append(create_transform(6.5, 7.5, 1.0))
+    goals_4.append(create_transform(6.5, 6.5, 1.0))
 
-    # pause_short.sleep()
+    pub_goals([ goals_0, goals_1, goals_2, goals_3, 
+                goals_4])
 
-    plan_req_msg.start = create_pose(-6.5, -6.5, 2.0)
-    plan_req_msg.goal = create_pose(7.5, 7.5, 1.0)
-    plan_req_msg.agent_id = 1
-
-    start_dbg_pub.publish(plan_req_msg)
-
-    plan_req_msg.start = create_pose(-6.5, -7.5, 2.0)
-    plan_req_msg.goal = create_pose(7.5, 6.5, 1.0)
-    plan_req_msg.agent_id = 2
-
-    start_dbg_pub.publish(plan_req_msg)
-
-    plan_req_msg.start = create_pose(-7.5, -6.5, 2.0)
-    plan_req_msg.goal = create_pose(6.5, 7.5, 1.0)
-    plan_req_msg.agent_id = 3
-
-    start_dbg_pub.publish(plan_req_msg)
-
-    plan_req_msg.start = create_pose(-7.5, -7.5, 2.0)
-    plan_req_msg.goal = create_pose(6.5, 6.5, 1.0)
-    plan_req_msg.agent_id = 4
-
-    start_dbg_pub.publish(plan_req_msg)
 
 if __name__ == '__main__':
     main()

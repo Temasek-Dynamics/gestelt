@@ -2,7 +2,7 @@
   <arg name="scenario" default="forest_single"/>
 
   <arg name="map_filepath" default="$(find gestelt_bringup)/simulation/fake_maps/$(arg scenario).pcd" />
-  <arg name="rviz_config" default="default"/>
+  <arg name="rviz_config" default="voronoi"/>
 
   <!-- <arg name="cloud_topic_downsample_in" default="camera/depth/points" />
   <arg name="cloud_topic_downsample_out" default="camera/depth/points_downsampled" /> -->

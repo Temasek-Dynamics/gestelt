@@ -1,14 +1,11 @@
-// Code inspired by benchmark_utils.cpp from Bonxai
-
 #ifndef _VORONOI_PLANNER_HPP
 #define _VORONOI_PLANNER_HPP
 
-// #include <Eigen/Eigen>
+#include "viz_helper.hpp"
+
+#include <Eigen/Eigen>
 #include <limits>
 #include <queue>
-
-// We use SDL_image to load the image from disk
-#include <SDL/SDL_image.h>
 
 #include <ros/ros.h>
 
@@ -16,9 +13,11 @@
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <geometry_msgs/PointStamped.h>
 #include <geometry_msgs/PoseStamped.h>
+
 #include <gestelt_msgs/BoolMapArray.h>
 #include <gestelt_msgs/PlanRequestDebug.h>
 #include <gestelt_msgs/FrontEndPlan.h>
+#include <gestelt_msgs/Goals.h>
 
 #include <grid_map/grid_map.h> // Map representation
 
@@ -26,6 +25,9 @@
 #include "global_planner/a_star.h"
 
 #include <logger/timer.h>
+
+// We use SDL_image to load the image from disk
+// #include <SDL/SDL_image.h>
 
 namespace cost_val
 {
@@ -37,38 +39,151 @@ static const int8_t UNKNOWN = -1;
 #define INF std::numeric_limits<double>::max()
 #define SQRT2 1.41421
 
-template<typename T, typename priority_t>
-struct PriorityQueueV {
-  typedef std::pair<priority_t, T> PQElement;
-  struct PQComp {
-    constexpr bool operator()(
-      PQElement const& a,
-      PQElement const& b)
-      const noexcept
-    {
-      return a.first > b.first;
+// template<typename T, typename priority_t>
+// struct PriorityQueueV {
+//   typedef std::pair<priority_t, T> PQElement;
+//   struct PQComp {
+//     constexpr bool operator()(
+//       PQElement const& a,
+//       PQElement const& b)
+//       const noexcept
+//     {
+//       return a.first > b.first;
+//     }
+//   };
+
+//   std::priority_queue<PQElement, std::vector<PQElement>, PQComp > elements;
+
+//   inline bool empty() const {
+//      return elements.empty();
+//   }
+
+//   inline void put(T item, priority_t priority) {
+//     elements.emplace(priority, item);
+//   }
+
+//   T get() {
+//     T best_item = elements.top().second;
+//     elements.pop();
+//     return best_item;
+//   }
+
+//   void clear() {
+//     elements = std::priority_queue<PQElement, std::vector<PQElement>, PQComp>();
+//   }
+// };
+
+template<typename ... Args>
+std::string str_fmt( const std::string& format, Args ... args )
+{
+  int size_s = std::snprintf( nullptr, 0, format.c_str(), args ... ) + 1; // Extra space for '\0'
+  if( size_s <= 0 ){ throw std::runtime_error( "Error during formatting." ); }
+  auto size = static_cast<size_t>( size_s );
+  std::unique_ptr<char[]> buf( new char[ size ] );
+  std::snprintf( buf.get(), size, format.c_str(), args ... );
+  return std::string( buf.get(), buf.get() + size - 1 ); // We don't want the '\0' inside
+}
+
+class Waypoint
+{
+// Waypoint class is a LIFO queue 
+
+public:
+  // Default constructor
+  Waypoint(){
+  }
+
+  // Reset
+  void reset(){
+    wp_queue.clear();
+  }
+  
+  /**
+   * @brief Add multiple waypoints
+   * 
+   * @param wp 
+   * @return true 
+   * @return false 
+   */
+  bool addMultipleWP(const std::vector<Eigen::Vector3d>& wp_vec){
+    // Reverse the waypoints and add on top of the stack
+    std::vector<Eigen::Vector3d> wp_vec_reversed = wp_vec;
+    std::reverse(wp_vec_reversed.begin(), wp_vec_reversed.end());
+
+    for (auto wp : wp_vec_reversed){
+      wp_queue.push_back(wp);
     }
-  };
 
-  std::priority_queue<PQElement, std::vector<PQElement>, PQComp > elements;
-
-  inline bool empty() const {
-     return elements.empty();
+    return true;
   }
 
-  inline void put(T item, priority_t priority) {
-    elements.emplace(priority, item);
+  /**
+   * @brief Add a single waypoint
+   * 
+   * @param wp 
+   * @return true 
+   * @return false 
+   */
+  bool addWP(const Eigen::Vector3d& wp){
+    wp_queue.push_back(wp);
+    return true;
   }
 
-  T get() {
-    T best_item = elements.top().second;
-    elements.pop();
-    return best_item;
+  /* Getter methods */
+
+  /**
+   * @brief Get the next waypoint
+   * 
+   * @return Eigen::Vector3d 
+   */
+  const Eigen::Vector3d& nextWP(){
+    return wp_queue.back();
   }
 
-  void clear() {
-    elements = std::priority_queue<PQElement, std::vector<PQElement>, PQComp>();
+  /**
+   * @brief Get all waypoints as a vector
+   * 
+   * @return const Eigen::Vector3d& 
+   */
+  const std::vector<Eigen::Vector3d>& getQueue(){
+    return wp_queue;
   }
+
+  /**
+   * @brief Get the size of the queue
+   * 
+   * @return Eigen::Vector3d 
+   */
+  size_t size() const {
+    return wp_queue.size();
+  }
+
+  /**
+   * @brief Get the size of the queue
+   * 
+   * @return Eigen::Vector3d 
+   */
+  bool empty() const {
+    return wp_queue.empty();
+  }
+
+  /* Setter methods */
+
+  /**
+   * @brief Pop the last waypoint
+   * 
+   */
+  void popWP() {
+    if (wp_queue.empty()){
+        return;
+    }
+    else {
+      wp_queue.pop_back();
+    }
+  }
+
+private:
+  std::vector<Eigen::Vector3d> wp_queue;
 };
 
 class VoronoiPlanner
@@ -83,23 +198,38 @@ public:
   /**
    * @brief Plan a path from start to goal
    * 
-   * @param id 
    * @param start 
    * @param goal 
    * @return true 
    * @return false 
    */
-  bool plan(const int& id, const Eigen::Vector3d& start, const Eigen::Vector3d& goal);
+  bool plan(const Eigen::Vector3d& start, const Eigen::Vector3d& goal);
 
 /* Subscriber callbacks */
 private:
 
+  /* Timer for front-end planner*/
+  void planFETimerCB(const ros::TimerEvent &e);
+
+  /* Front end plan subscription */
+  void FEPlanSubCB(const gestelt_msgs::FrontEndPlanConstPtr& msg);
+
+  /*Subscription to occupancy map in the form of many 2D boolean map slices at different heights*/
   void boolMapCB(const gestelt_msgs::BoolMapArrayConstPtr& msg);
 
-  void startDebugCB(const gestelt_msgs::PlanRequestDebugConstPtr &msg);
+  /* Plan request (for debug use)*/
+  void planReqDbgCB(const gestelt_msgs::PlanRequestDebugConstPtr &msg);
+
+  /* Subscription callback to goals */
+  void goalsCB(const gestelt_msgs::GoalsConstPtr &msg);
+
+  /* Subscription callback to odometry */
+  void odometryCB(const nav_msgs::OdometryConstPtr &msg);
 
 /* Helper methods */
 private:
+
+  bool isGoalReached(const Eigen::Vector3d& pos, const Eigen::Vector3d& goal);
 
   inline size_t map2Dto1DIdx(const int& width, const int& x, const int& y)
   {
@@ -180,311 +310,50 @@ private:
 
   }
 
-/* Visualization methods*/
-private:
-
-  void publishStartAndGoal(
-    const Eigen::Vector3d& map_start, 
-    const Eigen::Vector3d& map_goal, 
-    const std::string& frame_id, 
-    ros::Publisher& publisher1, ros::Publisher& publisher2)
-  {
-    visualization_msgs::Marker start_sphere, goal_sphere;
-    double radius = 0.1;
-    double alpha = 0.5; 
-
-    /* Start/goal sphere*/
-    start_sphere.header.frame_id = goal_sphere.header.frame_id = frame_id;
-    start_sphere.header.stamp = goal_sphere.header.stamp = ros::Time::now();
-    start_sphere.ns = goal_sphere.ns = "start_goal_points";
-    start_sphere.type = goal_sphere.type = visualization_msgs::Marker::CUBE;
-    start_sphere.action = goal_sphere.action = visualization_msgs::Marker::ADD;
-    start_sphere.id = 1;
-    goal_sphere.id = 2; 
-    start_sphere.pose.orientation.w = goal_sphere.pose.orientation.w = 1.0;
-
-    start_sphere.color.r = 1.0; 
-    start_sphere.color.g = 1.0; 
-    start_sphere.color.b = 0.0; 
-    start_sphere.color.a = goal_sphere.color.a = alpha;
-
-    goal_sphere.color.r = 0.0;
-    goal_sphere.color.g = 1.0;
-    goal_sphere.color.b = 0.0;
-
-    start_sphere.scale.x = goal_sphere.scale.x = radius;
-    start_sphere.scale.y = goal_sphere.scale.y = radius;
-    start_sphere.scale.z = goal_sphere.scale.z = radius;
-
-    /* Set Start */
-    start_sphere.pose.position.x = map_start(0);
-    start_sphere.pose.position.y = map_start(1);
-    start_sphere.pose.position.z = map_start(2);
-
-    /* Set Goal */
-    goal_sphere.pose.position.x = map_goal(0);
-    goal_sphere.pose.position.y = map_goal(1);
-    goal_sphere.pose.position.z = map_goal(2);
-
-    publisher1.publish(start_sphere);
-    publisher2.publish(goal_sphere);
-  }
-
-
-  inline void publishSpaceTimePath(const std::vector<Eigen::Vector4d>& path, 
-                                  const std::string& frame_id, ros::Publisher& publisher) {
-    visualization_msgs::Marker cube;
-    double radius = 0.1;
-    double alpha = 0.8; 
-
-    /* Fixed parameters */
-    cube.header.frame_id = frame_id;
-    cube.header.stamp = ros::Time::now();
-    cube.ns = "front_end_path";
-    cube.type = visualization_msgs::Marker::CUBE;
-    cube.action = visualization_msgs::Marker::ADD;
-    cube.pose.orientation.w = 1.0;
-    cube.color.a = alpha;
-
-    // size
-    cube.scale.x = radius;
-    cube.scale.y = radius;
-    cube.scale.z = radius;
-
-    for (int i = 0; i < path.size(); i++)
-    {
-      cube.id = i; 
-
-      cube.pose.position.x = path[i](0);
-      cube.pose.position.y = path[i](1);
-      cube.pose.position.z = path[i](2);
-
-      // Make the color value scale from 0.0 to 1.0 depending on the distance to the goal. 
-      double time_ratio = std::clamp((path[i](3))/path.size(), 0.0, 1.0);
-
-      cube.color.r = time_ratio ;
-      cube.color.g = 0.0; 
-      cube.color.b = 1.0 - time_ratio; 
-
-      publisher.publish(cube);
-
-      ros::Duration(0.025).sleep();
-    }
-  }
-
-  inline void publishFrontEndPath(const std::vector<Eigen::Vector3d>& path, 
-                                  const std::string& frame_id, ros::Publisher& publisher) {
-    visualization_msgs::Marker wp_sphere_list, path_line_strip;
-    visualization_msgs::Marker start_sphere, goal_sphere;
-    double radius = 0.3;
-    double alpha = 0.8; 
-
-    geometry_msgs::Point pt;
-
-    /* Start/goal sphere*/
-    start_sphere.header.frame_id = goal_sphere.header.frame_id = frame_id;
-    start_sphere.header.stamp = goal_sphere.header.stamp = ros::Time::now();
-    start_sphere.ns = goal_sphere.ns = "start_end_points";
-    start_sphere.type = goal_sphere.type = visualization_msgs::Marker::SPHERE;
-    start_sphere.action = goal_sphere.action = visualization_msgs::Marker::ADD;
-    start_sphere.id = 0;
-    goal_sphere.id = 1; 
-    start_sphere.pose.orientation.w = goal_sphere.pose.orientation.w = 1.0;
-
-    start_sphere.color.r = 1.0; 
-    start_sphere.color.g = 1.0; 
-    start_sphere.color.b = 0.0; 
-    start_sphere.color.a = goal_sphere.color.a = alpha;
-
-    goal_sphere.color.r = 0.0;
-    goal_sphere.color.g = 1.0;
-    goal_sphere.color.b = 0.0;
-
-    start_sphere.scale.x = goal_sphere.scale.x = radius;
-    start_sphere.scale.y = goal_sphere.scale.y = radius;
-    start_sphere.scale.z = goal_sphere.scale.z = radius;
-
-    /* wp_sphere_list: Sphere list (Waypoints) */
-    wp_sphere_list.header.frame_id = frame_id;
-    wp_sphere_list.header.stamp = ros::Time::now();
-    wp_sphere_list.ns = "front_end_sphere_list"; 
-    wp_sphere_list.type = visualization_msgs::Marker::SPHERE_LIST;
-    wp_sphere_list.action = visualization_msgs::Marker::ADD;
-    wp_sphere_list.id = 1; 
-    wp_sphere_list.pose.orientation.w = 1.0;
-
-    wp_sphere_list.color.r = 1.0;
-    wp_sphere_list.color.g = 0.5;
-    wp_sphere_list.color.b = 0.0;
-    wp_sphere_list.color.a = alpha;
-
-    wp_sphere_list.scale.x = radius;
-    wp_sphere_list.scale.y = radius;
-    wp_sphere_list.scale.z = radius;
-
-    /* path_line_strip: Line strips (Connecting waypoints) */
-    path_line_strip.header.frame_id = frame_id;
-    path_line_strip.header.stamp = ros::Time::now();
-    path_line_strip.ns = "front_end_path_lines"; 
-    path_line_strip.type = visualization_msgs::Marker::LINE_STRIP;
-    path_line_strip.action = visualization_msgs::Marker::ADD;
-    path_line_strip.id = 1;
-    path_line_strip.pose.orientation.w = 1.0;
-
-    path_line_strip.color.r = 1.0;
-    path_line_strip.color.g = 0.5;
-    path_line_strip.color.b = 0.0;
-    path_line_strip.color.a = alpha * 0.75;
-
-    path_line_strip.scale.x = radius * 0.5;
-
-    start_sphere.pose.position.x = path[0](0);
-    start_sphere.pose.position.y = path[0](1);
-    start_sphere.pose.position.z = path[0](2);
-
-    pt.x = path[0](0);
-    pt.y = path[0](1);
-    pt.z = path[0](2);
-    path_line_strip.points.push_back(pt);
-
-    for (size_t i = 1; i < path.size()-1; i++){
-      pt.x = path[i](0);
-      pt.y = path[i](1);
-      pt.z = path[i](2);
-
-      wp_sphere_list.points.push_back(pt);
-      path_line_strip.points.push_back(pt);
-    }
-
-    pt.x = path.back()(0);
-    pt.y = path.back()(1);
-    pt.z = path.back()(2);
-    path_line_strip.points.push_back(pt);
-
-    goal_sphere.pose.position.x = path.back()(0);
-    goal_sphere.pose.position.y = path.back()(1);
-    goal_sphere.pose.position.z = path.back()(2);
-
-    publisher.publish(start_sphere);
-    publisher.publish(goal_sphere);
-    publisher.publish(wp_sphere_list);
-    publisher.publish(path_line_strip);
-  }
-
-  inline void publishVertices(const std::vector<Eigen::Vector3d>& vor_verts, const std::string& frame_id, ros::Publisher& publisher)
-  {
-    visualization_msgs::Marker vertices;
-    double radius = 0.2;
-    double alpha = 0.8; 
-
-    /* vertices: Sphere list (voronoi graph vertices) */
-    vertices.header.frame_id = frame_id;
-    vertices.header.stamp = ros::Time::now();
-    vertices.ns = "voronoi_vertices"; 
-    vertices.type = visualization_msgs::Marker::SPHERE_LIST;
-    vertices.action = visualization_msgs::Marker::ADD;
-    vertices.id = 1; 
-    vertices.pose.orientation.w = 1.0;
-
-    vertices.color.r = 0.0;
-    vertices.color.g = 0.5;
-    vertices.color.b = 1.0;
-    vertices.color.a = alpha;
-
-    vertices.scale.x = radius;
-    vertices.scale.y = radius;
-    vertices.scale.z = radius;
-
-    geometry_msgs::Point pt;
-    for (size_t i = 0; i < vor_verts.size(); i++){
-      pt.x = vor_verts[i](0);
-      pt.y = vor_verts[i](1);
-      pt.z = vor_verts[i](2);
-
-      vertices.points.push_back(pt);
-    }
-
-    publisher.publish(vertices);
-  }
-
-  void publishClosedList(const std::vector<Eigen::Vector3d>& pts, 
-                        ros::Publisher& publisher, const std::string& frame_id = "map")
-  {
-    if (pts.empty()){
-      return;
-    }
-
-    Eigen::Vector3d color = Eigen::Vector3d{0.0, 0.0, 0.0};
-    double radius = 0.1;
-    double alpha = 0.7;
-
-    visualization_msgs::Marker sphere_list;
-
-    sphere_list.header.frame_id = frame_id;
-    sphere_list.header.stamp = ros::Time::now();
-    sphere_list.type = visualization_msgs::Marker::SPHERE_LIST;
-    sphere_list.action = visualization_msgs::Marker::ADD;
-    sphere_list.ns = "closed_list"; 
-    sphere_list.id = 0; 
-    sphere_list.pose.orientation.w = 1.0;
-
-    sphere_list.color.r = color(0);
-    sphere_list.color.g = color(1);
-    sphere_list.color.b = color(2);
-    sphere_list.color.a = alpha;
-
-    sphere_list.scale.x = radius;
-    sphere_list.scale.y = radius;
-    sphere_list.scale.z = radius;
-
-    geometry_msgs::Point pt;
-    for (size_t i = 0; i < pts.size(); i++){
-      pt.x = pts[i](0);
-      pt.y = pts[i](1);
-      pt.z = pts[i](2);
-
-      sphere_list.points.push_back(pt);
-    }
-
-    publisher.publish(sphere_list);
-  }
-
-/* Test functions */
-private:
-  void generateTestMap2();
-
 private:
   /* Params */
-  std::string map_fname_;
+  std::string node_name_{"VoronoiPlanner"};
+  int drone_id_{-1};
+  std::string local_map_origin_;
+  std::string global_origin_;
+  int num_agents_; // Number of agents
+
+  bool plan_once_{false}; // Used for testing, only runs the planner once
+
   bool verbose_planning_{false};  // enables printing of planning time
-  double res_;
-  // bool negate_{false};
-  // double occ_th_, free_th_;
-  // double yaw_;
-  double critical_clr_{0.25}; // minimum clearance of drone from obstacle
-  double fixed_pt_thresh_{0.3}; // points (on trajectory) below this threshold are defined as fixed points (not decision variables in optimization problem)
+  double res_;                    // Resolution of map
+  double critical_clr_{-0.1};     // minimum clearance of drone from obstacle
+  double fixed_pt_thresh_{-0.1};   // points (on trajectory) below this threshold are defined as fixed points (not decision variables in optimization problem)
 
-  double t_unit_{0.1}; // [s] Time unit used for determining how long each Space Time A* unit takes
 
-  bool use_test_map_{false};
+  // Planning params
+  double fe_planner_freq_{10}; // Frequency for front-end planning
+  double squared_goal_tol_{0.1}; // Distance to goal before it is considered fulfilled.
+  double t_unit_{0.1}; // [s] Time for each Space Time A* unit 
 
   AStarPlanner::AStarParams astar_params_; 
 
-  /* Pubs, subs */
+  /* Timers */
+  ros::Timer plan_fe_timer_;
+
+  /* Publishers */
   ros::Publisher occ_map_pub_;      // Publishes original occupancy grid
   ros::Publisher voro_occ_grid_pub_; // Publishes voronoi map occupancy grid
-
-  std::vector<ros::Publisher> closed_list_pubs_; // Closed list publishers
-  std::vector<ros::Publisher> fe_plan_viz_pubs_; // Publish front-end plan visualization
-  std::vector<ros::Publisher> fe_plan_pubs_; // Publish front-end plans
-  ros::Publisher start_pt_pub_, goal_pt_pub_; // start and goal visualization publisher
-
   ros::Publisher voronoi_graph_pub_; // publisher of voronoi graph vertices
 
-  ros::Subscriber plan_req_dbg_sub_;  // plan request (start and goal) debug subscriber
-  ros::Subscriber bool_map_sub_; // Subscription to boolean map
+  // Planning publishers
+  ros::Publisher fe_closed_list_pub_; // Closed list publishers
+  ros::Publisher fe_plan_viz_pub_; // Publish front-end plan visualization
+  ros::Publisher fe_plan_pub_; // Publish front-end plans
+  ros::Publisher start_pt_pub_, goal_pt_pub_; // start and goal visualization publisher
 
-  /* Planning */
+  /* Subscribers */
+  ros::Subscriber plan_req_dbg_sub_;  // plan request (start and goal) debug subscriber
+  ros::Subscriber goals_sub_;  // goal subscriber
+  ros::Subscriber bool_map_sub_; // Subscription to boolean map
+  ros::Subscriber fe_plan_sub_; // Subscription to front end plan
+
+  ros::Subscriber odom_sub_; // Subscriber to odometry
 
   /* Mapping */
   std::shared_ptr<GridMap> map_;
@@ -493,24 +362,68 @@ private:
 
   std::shared_ptr<std::unordered_set<Eigen::Vector4d>> resrv_tbl_;
 
-  int num_agents_; // Number of agents
-
   /* Data structs */
-  std::vector<std::unique_ptr<AStarPlanner>>front_end_planners_; // Vector of planners
+  std::unique_ptr<AStarPlanner> fe_planner_; // Front end planner
+
+  Waypoint waypoints_; // Goal waypoint handler object
 
   std::map<int, std::shared_ptr<DynamicVoronoi>> dyn_voro_arr_; // array of voronoi objects with key of height (cm)
   std::map<int, std::shared_ptr<std::vector<std::vector<bool>>>> bool_map_arr_; //  array of voronoi objects with key of height (cm)
 
-  std::unordered_map<int, std::vector<Eigen::Vector4d>> space_time_path_; // Space time front end path in local map origin frame
+  std::vector<Eigen::Vector4d> space_time_path_; // Space time front end path in local map origin frame
 
   bool init_voro_maps_{false}; // flag to indicate if voronoi map is initialized
 
-  bool plan_once_{true}; // for testing
+  Eigen::Vector3d cur_pos_, cur_vel_;   // current state
 
   /* Debugging */
   Timer tm_front_end_plan_{"front_end_plan"};
   Timer tm_voro_map_init_{"voro_map_init"};
-};
+
+
+private: /* Logging functions */
+  
+  void logInfo(const std::string& str){
+    ROS_INFO_NAMED(node_name_, "UAV_%i: %s", 
+      drone_id_, str.c_str());
+  }
+
+  void logWarn(const std::string& str){
+    ROS_WARN_NAMED(node_name_, "UAV_%i: %s", 
+      drone_id_, str.c_str());
+  }
+
+  void logError(const std::string& str){
+    ROS_ERROR_NAMED(node_name_, "UAV_%i: %s", 
+      drone_id_, str.c_str());
+  }
+
+  void logFatal(const std::string& str){
+    ROS_FATAL_NAMED(node_name_, "UAV_%i: %s", 
+      drone_id_, str.c_str());
+  }
+
+  void logInfoThrottled(const std::string& str, double period){
+    ROS_INFO_THROTTLE_NAMED(period, node_name_, "UAV_%i: %s", 
+      drone_id_, str.c_str());
+  }
+
+  void logWarnThrottled(const std::string& str, double period){
+    ROS_WARN_THROTTLE_NAMED(period, node_name_, "UAV_%i: %s", 
+      drone_id_, str.c_str());
+  }
+
+  void logErrorThrottled(const std::string& str, double period){
+    ROS_ERROR_THROTTLE_NAMED(period, node_name_, "UAV_%i: %s", 
+      drone_id_, str.c_str());
+  }
+
+  void logFatalThrottled(const std::string& str, double period){
+    ROS_FATAL_THROTTLE_NAMED(period, node_name_, "UAV_%i: %s", 
+      drone_id_, str.c_str());
+  }
+
+}; // class VoronoiPlanner
 
 
 

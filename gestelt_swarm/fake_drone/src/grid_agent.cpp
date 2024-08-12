@@ -49,6 +49,9 @@ GridAgent::GridAgent(ros::NodeHandle& nh, ros::NodeHandle& pnh) {
 	odom_msg_.pose.pose.position.y = init_pos_(1);
 	odom_msg_.pose.pose.position.z = init_pos_(2);
 
+	odom_msg_.header.frame_id = uav_origin_frame_;
+	pose_msg_.header.frame_id = uav_origin_frame_;
+
 	// // Choose a color for the trajectory using random values
 	// std::random_device dev;
 	// std::mt19937 generator(dev());
@@ -97,10 +100,12 @@ void GridAgent::frontEndPlanCB(const gestelt_msgs::FrontEndPlan::ConstPtr &msg)
 
 void GridAgent::simUpdateTimer(const ros::TimerEvent &)
 {
-	if (!plan_received_){
-		return;
+	odom_msg_.header.stamp = ros::Time::now();
+	pose_msg_.header.stamp = ros::Time::now();
+
+	if (plan_received_){
+		setStateFromPlan(fe_plan_msg_, plan_start_exec_t_);
 	}
-	setStateFromPlan(fe_plan_msg_, plan_start_exec_t_);
 
 	if ((ros::Time::now() - last_pose_pub_time_).toSec() > (1/pose_pub_freq_))
 	{
@@ -147,6 +152,8 @@ void GridAgent::setStateFromPlan(	const gestelt_msgs::FrontEndPlan &fe_plan_msg,
 	if (t_now >= exec_start_t + fe_plan_msg.plan_time.back()){
 		// std::cout << "t_now (" << t_now << ") exceeds end of traj time (" << fe_plan_msg.plan_time.back()<< ")" << std::endl;
 		// Time exceeded end of trajectory. Trajectory published in the past
+
+		plan_received_ = false;
 		return;
 	}
 
@@ -172,7 +179,6 @@ void GridAgent::setStateFromPlan(	const gestelt_msgs::FrontEndPlan &fe_plan_msg,
 
 	// Set odom
 	odom_msg_.header.stamp = ros::Time::now();
-	odom_msg_.header.frame_id = uav_origin_frame_;
 
 	// odom_msg_.pose.pose = fe_plan_msg.plan[cur_plan_idx];
 	odom_msg_.pose.pose.position.x = x;
@@ -181,7 +187,6 @@ void GridAgent::setStateFromPlan(	const gestelt_msgs::FrontEndPlan &fe_plan_msg,
 
 	// Set Pose
 	pose_msg_.header.stamp = ros::Time::now();
-	pose_msg_.header.frame_id = uav_origin_frame_;
 
 	// pose_msg_.pose = fe_plan_msg.plan[cur_plan_idx];
 	pose_msg_.pose.position.x = x;

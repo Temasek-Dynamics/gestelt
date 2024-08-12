@@ -1,0 +1,96 @@
+<!-- Spawns a fake drone for testing architecture and algorithms-->
+
+<launch>
+  <arg name="drone_id" default="0"/>
+  <arg name="drone_id_ns" value="drone$(arg drone_id)"/>
+
+  <arg name="init_x" default="0.0"/>
+  <arg name="init_y" default="0.0"/>
+  <arg name="init_z" default="0.0"/>
+
+  <!-- Config filepath -->
+  <arg name="grid_agent_cfg_filepath" default="$(find gestelt_bringup)/config/fake_drone_params.yaml"/>
+  <arg name="navigator_cfg_filepath" default="$(find gestelt_bringup)/config/navigator.yaml"/>
+
+  <!-- Mavros topics -->
+  <arg name="command_topic" default="mavros/setpoint_raw/local" />
+  <arg name="odometry_topic" default="mavros/local_position/odom" />
+  <arg name="pose_topic" default="mavros/local_position/pose" />
+  <arg name="cloud_topic" default="camera/depth/points" />
+
+  <!-- TF Frames -->
+  <arg name="global_frame" default="world"/>
+  <arg name="uav_origin_frame" default="local_map_origin"/>
+  <arg name="base_link_frame" default="$(arg drone_id_ns)_base_link"/>
+  <arg name="cam_link_frame" default="$(arg drone_id_ns)_cam_link"/>
+
+  <group ns="$(arg drone_id_ns)">
+    <!-- Planning Module -->
+    <node pkg="voronoi_planner" type="voronoi_planner_node" name="voronoi_planner_node"  required="true" output="screen">
+      <rosparam command="load" file="$(find voronoi_planner)/config/voronoi_planner.yaml" />
+      <rosparam command="load" file="$(arg navigator_cfg_filepath)" />
+
+      <param name="drone_id" value="$(arg drone_id)"/>
+
+      <param name="front_end/debug_planning" value="false"/>
+
+      <remap from="odom" to="$(arg odometry_topic)"/>
+
+      <remap from="grid_map/odom" to="$(arg odometry_topic)"/>
+      <remap from="grid_map/cloud" to="$(arg cloud_topic)"/>
+
+      <param name="grid_map/global_frame" value="$(arg global_frame)"/>
+      <param name="grid_map/uav_origin_frame" value="$(arg uav_origin_frame)"/>
+      <param name="grid_map/cam_frame" value="$(arg cam_link_frame)"/>
+
+      <param name="grid_map/pose_type" value="2"/>
+      <param name="grid_map/sensor_type" value="1"/>
+
+      <!-- For debugging use -->
+      <param name="grid_map/debug_input_entire_map" value="true"/>
+      <param name="grid_map/entire_pcd_map_topic" value="/fake_map"/>
+
+    </node>
+
+    <!-- Fake drone -->
+    <node pkg="fake_drone" type="grid_agent_node" name="grid_agent" required="true" output="screen">
+        <rosparam command="load" file="$(arg grid_agent_cfg_filepath)" />
+
+        <!-- <remap from="mavros/setpoint_raw/local" to="$(arg command_topic)"/>
+        <remap from="mavros/local_position/odom" to="$(arg odometry_topic)"/>
+        <remap from="mavros/local_position/pose" to="$(arg pose_topic)"/> -->
+
+        <param name="drone_id" value="$(arg drone_id)"/>
+        <param name="init_x" value="$(arg init_x)"/>
+        <param name="init_y" value="$(arg init_y)"/>
+        <param name="init_z" value="$(arg init_z)"/>
+
+        <param name="origin_frame" value="$(arg global_frame)"/>
+        <param name="base_link_frame" value="$(arg base_link_frame)"/>
+    </node>
+
+    <!-- Drone Visualization -->
+    <node pkg="mavros_extras" type="visualization" name="mavros_visualization" required="false" output="screen">
+
+      <remap from="local_position" to="$(arg pose_topic)"/>
+      <remap from="local_setpoint" to="mavros/setpoint_position/local"/>
+      
+      <param name="fixed_frame_id" value="$(arg global_frame)"/>
+      <param name="child_frame_id" value="$(arg base_link_frame)"/>
+
+      <param name="marker_scale" value="1.0"/>
+      <param name="num_rotors" value="4"/>
+      <param name="arm_len" value="0.085"/>
+      <param name="body_width" value="0.1"/>
+      <param name="body_height" value="0.11"/>
+      <param name="max_track_size" value="1000"/>
+    </node>
+
+  </group>
+
+  <!-- Static TF from base_link to camera_link -->
+  <node pkg="tf" type="static_transform_publisher" 
+    name="$(arg drone_id_ns)_base_link_to_cam_link_tf" 
+    args="0.08 0 0.02 0 0 0 1 $(arg base_link_frame) $(arg cam_link_frame) 100" />
+
+</launch>
