@@ -32,11 +32,11 @@ mission:
   initial_ori_euler: [0.0, 0.0, 0] # only yaw is active
 
   ##------ gate pose ----##
-  gate_position: [0.0, -0.0, 1.2]
+  gate_position: [0.5, -0.0, 0.6]
   gate_ori_euler: [-0.0, -0.0, 0]
 
   ##------ goal pose ----##
-  goal_position: [0.0, -0.0, 1.2]
+  goal_position: [1.0, 0.0, 1.2]
   goal_ori_euler: [0.0, 0.0, 0] # only yaw is active
 
   #################################################

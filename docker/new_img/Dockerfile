@@ -15,6 +15,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
     python3-rosinstall \
     cpufrequtils \
     screen \
+    ros-noetic-tf2-geometry-msgs  \
     && rm -rf /var/lib/apt/lists/*
 
 # Install mavROS dependencies
@@ -28,7 +29,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy .bashrc file
-COPY .bashrc /root/
+# COPY .bashrc /root/ # need further verify
 
 # Install ACADOS prerequisites
 COPY requirements.txt /root/

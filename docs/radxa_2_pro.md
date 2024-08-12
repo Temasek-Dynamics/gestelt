@@ -38,7 +38,10 @@ reboot
 sudo apt-get install cpufrequtils
 sudo cpufreq-set -g performance
 ```
-
+### check the current cpu mode
+```
+cpufreq-info
+```
 ### Network setup
 ```bash
 # Get current address 
