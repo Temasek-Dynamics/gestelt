@@ -110,20 +110,14 @@ typedef struct ACADOS_model_solver_capsule
 
 
 
-
-
     external_function_param_casadi ext_cost_0_fun;
     external_function_param_casadi ext_cost_0_fun_jac;
     external_function_param_casadi ext_cost_0_fun_jac_hess;
 
 
-
-
     external_function_param_casadi ext_cost_e_fun;
     external_function_param_casadi ext_cost_e_fun_jac;
     external_function_param_casadi ext_cost_e_fun_jac_hess;
-
-
 
     // constraints
 
@@ -161,7 +155,6 @@ ACADOS_SYMBOL_EXPORT int ACADOS_model_acados_update_params(ACADOS_model_solver_c
 ACADOS_SYMBOL_EXPORT int ACADOS_model_acados_update_params_sparse(ACADOS_model_solver_capsule * capsule, int stage, int *idx, double *p, int n_update);
 
 ACADOS_SYMBOL_EXPORT int ACADOS_model_acados_solve(ACADOS_model_solver_capsule * capsule);
-ACADOS_SYMBOL_EXPORT void ACADOS_model_acados_batch_solve(ACADOS_model_solver_capsule ** capsules, int N_batch);
 ACADOS_SYMBOL_EXPORT int ACADOS_model_acados_free(ACADOS_model_solver_capsule * capsule);
 ACADOS_SYMBOL_EXPORT void ACADOS_model_acados_print_stats(ACADOS_model_solver_capsule * capsule);
 ACADOS_SYMBOL_EXPORT int ACADOS_model_acados_custom_update(ACADOS_model_solver_capsule* capsule, double* data, int data_len);

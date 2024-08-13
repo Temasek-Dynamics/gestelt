@@ -62,10 +62,6 @@ int ACADOS_model_cost_ext_cost_0_fun_jac_n_out(void);
 
 
 
-
-
-
-
 // Cost at path shooting node
 
 int ACADOS_model_cost_ext_cost_fun(const real_t** arg, real_t** res, int* iw, real_t* w, void *mem);
@@ -90,10 +86,6 @@ int ACADOS_model_cost_ext_cost_fun_jac_n_in(void);
 int ACADOS_model_cost_ext_cost_fun_jac_n_out(void);
 
 
-
-
-
-
 // Cost at terminal shooting node
 
 int ACADOS_model_cost_ext_cost_e_fun(const real_t** arg, real_t** res, int* iw, real_t* w, void *mem);
@@ -116,10 +108,6 @@ const int *ACADOS_model_cost_ext_cost_e_fun_jac_sparsity_in(int);
 const int *ACADOS_model_cost_ext_cost_e_fun_jac_sparsity_out(int);
 int ACADOS_model_cost_ext_cost_e_fun_jac_n_in(void);
 int ACADOS_model_cost_ext_cost_e_fun_jac_n_out(void);
-
-
-
-
 
 
 

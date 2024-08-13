@@ -186,7 +186,7 @@ ocp_nlp_dims* ACADOS_model_acados_create_2_create_and_set_dimensions(ACADOS_mode
     /************************************************
     *  dimensions
     ************************************************/
-    #define NINTNP1MEMS 18
+    #define NINTNP1MEMS 17
     int* intNp1mem = (int*)malloc( (N+1)*sizeof(int)*NINTNP1MEMS );
 
     int* nx    = intNp1mem + (N+1)*0;
@@ -206,7 +206,6 @@ ocp_nlp_dims* ACADOS_model_acados_create_2_create_and_set_dimensions(ACADOS_mode
     int* ny    = intNp1mem + (N+1)*14;
     int* nr    = intNp1mem + (N+1)*15;
     int* nbxe  = intNp1mem + (N+1)*16;
-    int* np  = intNp1mem + (N+1)*17;
 
     for (int i = 0; i < N+1; i++)
     {
@@ -230,7 +229,6 @@ ocp_nlp_dims* ACADOS_model_acados_create_2_create_and_set_dimensions(ACADOS_mode
         nphi[i]   = NPHI;
         nr[i]     = NR;
         nbxe[i]   = 0;
-        np[i]     = NP;
     }
 
     // for initial state
@@ -272,7 +270,6 @@ ocp_nlp_dims* ACADOS_model_acados_create_2_create_and_set_dimensions(ACADOS_mode
     ocp_nlp_dims_set_opt_vars(nlp_config, nlp_dims, "nu", nu);
     ocp_nlp_dims_set_opt_vars(nlp_config, nlp_dims, "nz", nz);
     ocp_nlp_dims_set_opt_vars(nlp_config, nlp_dims, "ns", ns);
-    ocp_nlp_dims_set_opt_vars(nlp_config, nlp_dims, "np", np);
 
     for (int i = 0; i <= N; i++)
     {
@@ -338,12 +335,12 @@ void ACADOS_model_acados_create_3_create_and_set_functions(ACADOS_model_solver_c
 
     // external cost
     MAP_CASADI_FNC(ext_cost_0_fun, ACADOS_model_cost_ext_cost_0_fun);
+
+    // external cost
     MAP_CASADI_FNC(ext_cost_0_fun_jac, ACADOS_model_cost_ext_cost_0_fun_jac);
+
+    // external cost
     MAP_CASADI_FNC(ext_cost_0_fun_jac_hess, ACADOS_model_cost_ext_cost_0_fun_jac_hess);
-
-    
-
-    
     // external cost
     capsule->ext_cost_fun = (external_function_param_casadi *) malloc(sizeof(external_function_param_casadi)*(N-1));
     for (int i = 0; i < N-1; i++)
@@ -362,10 +359,6 @@ void ACADOS_model_acados_create_3_create_and_set_functions(ACADOS_model_solver_c
     {
         MAP_CASADI_FNC(ext_cost_fun_jac_hess[i], ACADOS_model_cost_ext_cost_fun_jac_hess);
     }
-
-    
-
-    
     // external cost - function
     MAP_CASADI_FNC(ext_cost_e_fun, ACADOS_model_cost_ext_cost_e_fun);
 
@@ -374,11 +367,6 @@ void ACADOS_model_acados_create_3_create_and_set_functions(ACADOS_model_solver_c
 
     // external cost - hessian
     MAP_CASADI_FNC(ext_cost_e_fun_jac_hess, ACADOS_model_cost_ext_cost_e_fun_jac_hess);
-
-    // external cost - jacobian wrt params
-    
-
-    
 
 #undef MAP_CASADI_FNC
 }
@@ -407,8 +395,6 @@ void ACADOS_model_acados_create_5_set_nlp_in(ACADOS_model_solver_capsule* capsul
     assert(N == capsule->nlp_solver_plan->N);
     ocp_nlp_config* nlp_config = capsule->nlp_config;
     ocp_nlp_dims* nlp_dims = capsule->nlp_dims;
-
-    int tmp_int = 0;
 
     /************************************************
     *  nlp_in
@@ -443,21 +429,15 @@ void ACADOS_model_acados_create_5_set_nlp_in(ACADOS_model_solver_capsule* capsul
     ocp_nlp_cost_model_set(nlp_config, nlp_dims, nlp_in, 0, "ext_cost_fun", &capsule->ext_cost_0_fun);
     ocp_nlp_cost_model_set(nlp_config, nlp_dims, nlp_in, 0, "ext_cost_fun_jac", &capsule->ext_cost_0_fun_jac);
     ocp_nlp_cost_model_set(nlp_config, nlp_dims, nlp_in, 0, "ext_cost_fun_jac_hess", &capsule->ext_cost_0_fun_jac_hess);
-    
-    
     for (int i = 1; i < N; i++)
     {
         ocp_nlp_cost_model_set(nlp_config, nlp_dims, nlp_in, i, "ext_cost_fun", &capsule->ext_cost_fun[i-1]);
         ocp_nlp_cost_model_set(nlp_config, nlp_dims, nlp_in, i, "ext_cost_fun_jac", &capsule->ext_cost_fun_jac[i-1]);
         ocp_nlp_cost_model_set(nlp_config, nlp_dims, nlp_in, i, "ext_cost_fun_jac_hess", &capsule->ext_cost_fun_jac_hess[i-1]);
-        
-        
     }
     ocp_nlp_cost_model_set(nlp_config, nlp_dims, nlp_in, N, "ext_cost_fun", &capsule->ext_cost_e_fun);
     ocp_nlp_cost_model_set(nlp_config, nlp_dims, nlp_in, N, "ext_cost_fun_jac", &capsule->ext_cost_e_fun_jac);
     ocp_nlp_cost_model_set(nlp_config, nlp_dims, nlp_in, N, "ext_cost_fun_jac_hess", &capsule->ext_cost_e_fun_jac_hess);
-    
-    
 
 
 
@@ -528,7 +508,7 @@ void ACADOS_model_acados_create_5_set_nlp_in(ACADOS_model_solver_capsule* capsul
     double* ubu = lubu + NBU;
     
     lbu[0] = 1.6;
-    ubu[0] = 4.8;
+    ubu[0] = 6.4;
     lbu[1] = -10.57;
     ubu[1] = 10.57;
     lbu[2] = -10.57;
@@ -637,13 +617,7 @@ void ACADOS_model_acados_create_6_set_opts(ACADOS_model_solver_capsule* capsule)
 
 int fixed_hess = 0;
     ocp_nlp_solver_opts_set(nlp_config, nlp_opts, "fixed_hess", &fixed_hess);
-    ocp_nlp_solver_opts_set(nlp_config, nlp_opts, "globalization", "fixed_step");int with_solution_sens_wrt_params = false;
-    ocp_nlp_solver_opts_set(nlp_config, capsule->nlp_opts, "with_solution_sens_wrt_params", &with_solution_sens_wrt_params);
-
-    int with_value_sens_wrt_params = false;
-    ocp_nlp_solver_opts_set(nlp_config, capsule->nlp_opts, "with_value_sens_wrt_params", &with_value_sens_wrt_params);
-
-    int full_step_dual = 0;
+    ocp_nlp_solver_opts_set(nlp_config, nlp_opts, "globalization", "fixed_step");int full_step_dual = 0;
     ocp_nlp_solver_opts_set(nlp_config, capsule->nlp_opts, "full_step_dual", &full_step_dual);
 
     // set collocation type (relevant for implicit integrators)
@@ -686,14 +660,6 @@ int fixed_hess = 0;
     ocp_nlp_solver_opts_set(nlp_config, nlp_opts, "ext_qp_res", &nlp_solver_ext_qp_res);
 
 
-    int as_rti_iter = 1;
-    ocp_nlp_solver_opts_set(nlp_config, nlp_opts, "as_rti_iter", &as_rti_iter);
-
-    int as_rti_level = 4;
-    ocp_nlp_solver_opts_set(nlp_config, nlp_opts, "as_rti_level", &as_rti_level);
-
-    int rti_log_residuals = 0;
-    ocp_nlp_solver_opts_set(nlp_config, nlp_opts, "rti_log_residuals", &rti_log_residuals);
 
     int qp_solver_iter_max = 50;
     ocp_nlp_solver_opts_set(nlp_config, nlp_opts, "qp_iter_max", &qp_solver_iter_max);
@@ -851,6 +817,7 @@ int ACADOS_model_acados_reset(ACADOS_model_solver_capsule* capsule, int reset_qp
         ocp_nlp_out_set(nlp_config, nlp_dims, nlp_out, i, "sl", buffer);
         ocp_nlp_out_set(nlp_config, nlp_dims, nlp_out, i, "su", buffer);
         ocp_nlp_out_set(nlp_config, nlp_dims, nlp_out, i, "lam", buffer);
+        ocp_nlp_out_set(nlp_config, nlp_dims, nlp_out, i, "t", buffer);
         ocp_nlp_out_set(nlp_config, nlp_dims, nlp_out, i, "z", buffer);
         if (i<N)
         {
@@ -896,16 +863,12 @@ int ACADOS_model_acados_update_params(ACADOS_model_solver_capsule* capsule, int 
             capsule->ext_cost_0_fun.set_param(&capsule->ext_cost_0_fun, p);
             capsule->ext_cost_0_fun_jac.set_param(&capsule->ext_cost_0_fun_jac, p);
             capsule->ext_cost_0_fun_jac_hess.set_param(&capsule->ext_cost_0_fun_jac_hess, p);
-            
-            
         }
         else // 0 < stage < N
         {
             capsule->ext_cost_fun[stage-1].set_param(capsule->ext_cost_fun+stage-1, p);
             capsule->ext_cost_fun_jac[stage-1].set_param(capsule->ext_cost_fun_jac+stage-1, p);
             capsule->ext_cost_fun_jac_hess[stage-1].set_param(capsule->ext_cost_fun_jac_hess+stage-1, p);
-            
-            
         }
     }
 
@@ -916,8 +879,6 @@ int ACADOS_model_acados_update_params(ACADOS_model_solver_capsule* capsule, int 
         capsule->ext_cost_e_fun.set_param(&capsule->ext_cost_e_fun, p);
         capsule->ext_cost_e_fun_jac.set_param(&capsule->ext_cost_e_fun_jac, p);
         capsule->ext_cost_e_fun_jac_hess.set_param(&capsule->ext_cost_e_fun_jac_hess, p);
-        
-        
         // constraints
     }
 
@@ -949,31 +910,26 @@ int ACADOS_model_acados_update_params_sparse(ACADOS_model_solver_capsule * capsu
     {
         capsule->forw_vde_casadi[stage].set_param_sparse(capsule->forw_vde_casadi+stage, n_update, idx, p);
         capsule->expl_ode_fun[stage].set_param_sparse(capsule->expl_ode_fun+stage, n_update, idx, p);
+    
 
-        // constraints
+        // cost & constraints
         if (stage == 0)
         {
-        }
-        else
-        {
-        }
-
-        // cost
-        if (stage == 0)
-        {
+            // cost
             capsule->ext_cost_0_fun.set_param_sparse(&capsule->ext_cost_0_fun, n_update, idx, p);
             capsule->ext_cost_0_fun_jac.set_param_sparse(&capsule->ext_cost_0_fun_jac, n_update, idx, p);
             capsule->ext_cost_0_fun_jac_hess.set_param_sparse(&capsule->ext_cost_0_fun_jac_hess, n_update, idx, p);
-            
-            
+        
+            // constraints
+        
         }
         else // 0 < stage < N
         {
             capsule->ext_cost_fun[stage-1].set_param_sparse(capsule->ext_cost_fun+stage-1, n_update, idx, p);
             capsule->ext_cost_fun_jac[stage-1].set_param_sparse(capsule->ext_cost_fun_jac+stage-1, n_update, idx, p);
             capsule->ext_cost_fun_jac_hess[stage-1].set_param_sparse(capsule->ext_cost_fun_jac_hess+stage-1, n_update, idx, p);
-            
-            
+
+        
         }
     }
 
@@ -984,9 +940,9 @@ int ACADOS_model_acados_update_params_sparse(ACADOS_model_solver_capsule * capsu
         capsule->ext_cost_e_fun.set_param_sparse(&capsule->ext_cost_e_fun, n_update, idx, p);
         capsule->ext_cost_e_fun_jac.set_param_sparse(&capsule->ext_cost_e_fun_jac, n_update, idx, p);
         capsule->ext_cost_e_fun_jac_hess.set_param_sparse(&capsule->ext_cost_e_fun_jac_hess, n_update, idx, p);
-        
-        
+    
         // constraints
+    
     }
 
 
@@ -999,19 +955,6 @@ int ACADOS_model_acados_solve(ACADOS_model_solver_capsule* capsule)
     int solver_status = ocp_nlp_solve(capsule->nlp_solver, capsule->nlp_in, capsule->nlp_out);
 
     return solver_status;
-}
-
-
-void ACADOS_model_acados_batch_solve(ACADOS_model_solver_capsule ** capsules, int N_batch)
-{
-
-    for (int i = 0; i < N_batch; i++)
-    {
-        ocp_nlp_solve(capsules[i]->nlp_solver, capsules[i]->nlp_in, capsules[i]->nlp_out);
-    }
-
-
-    return;
 }
 
 
@@ -1043,15 +986,11 @@ int ACADOS_model_acados_free(ACADOS_model_solver_capsule* capsule)
     external_function_param_casadi_free(&capsule->ext_cost_0_fun);
     external_function_param_casadi_free(&capsule->ext_cost_0_fun_jac);
     external_function_param_casadi_free(&capsule->ext_cost_0_fun_jac_hess);
-    
-    
     for (int i = 0; i < N - 1; i++)
     {
         external_function_param_casadi_free(&capsule->ext_cost_fun[i]);
         external_function_param_casadi_free(&capsule->ext_cost_fun_jac[i]);
         external_function_param_casadi_free(&capsule->ext_cost_fun_jac_hess[i]);
-        
-        
     }
     free(capsule->ext_cost_fun);
     free(capsule->ext_cost_fun_jac);
@@ -1059,8 +998,6 @@ int ACADOS_model_acados_free(ACADOS_model_solver_capsule* capsule)
     external_function_param_casadi_free(&capsule->ext_cost_e_fun);
     external_function_param_casadi_free(&capsule->ext_cost_e_fun_jac);
     external_function_param_casadi_free(&capsule->ext_cost_e_fun_jac_hess);
-    
-    
 
     // constraints
 
@@ -1070,8 +1007,8 @@ int ACADOS_model_acados_free(ACADOS_model_solver_capsule* capsule)
 
 void ACADOS_model_acados_print_stats(ACADOS_model_solver_capsule* capsule)
 {
-    int nlp_iter, stat_m, stat_n, tmp_int;
-    ocp_nlp_get(capsule->nlp_config, capsule->nlp_solver, "nlp_iter", &nlp_iter);
+    int sqp_iter, stat_m, stat_n, tmp_int;
+    ocp_nlp_get(capsule->nlp_config, capsule->nlp_solver, "sqp_iter", &sqp_iter);
     ocp_nlp_get(capsule->nlp_config, capsule->nlp_solver, "stat_n", &stat_n);
     ocp_nlp_get(capsule->nlp_config, capsule->nlp_solver, "stat_m", &stat_m);
 
@@ -1079,9 +1016,12 @@ void ACADOS_model_acados_print_stats(ACADOS_model_solver_capsule* capsule)
     double stat[1200];
     ocp_nlp_get(capsule->nlp_config, capsule->nlp_solver, "statistics", stat);
 
-    int nrow = nlp_iter+1 < stat_m ? nlp_iter+1 : stat_m;
+    int nrow = sqp_iter+1 < stat_m ? sqp_iter+1 : stat_m;
 
-
+    printf("iter\tres_stat\tres_eq\t\tres_ineq\tres_comp\tqp_stat\tqp_iter\talpha");
+    if (stat_n > 8)
+        printf("\t\tqp_res_stat\tqp_res_eq\tqp_res_ineq\tqp_res_comp");
+    printf("\n");
     printf("iter\tqp_stat\tqp_iter\n");
     for (int i = 0; i < nrow; i++)
     {

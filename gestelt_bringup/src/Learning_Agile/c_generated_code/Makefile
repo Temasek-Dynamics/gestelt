@@ -46,18 +46,12 @@ OCP_SRC=
 OCP_SRC+= ACADOS_model_cost/ACADOS_model_cost_ext_cost_0_fun.c
 OCP_SRC+= ACADOS_model_cost/ACADOS_model_cost_ext_cost_0_fun_jac.c
 OCP_SRC+= ACADOS_model_cost/ACADOS_model_cost_ext_cost_0_fun_jac_hess.c
-
-
 OCP_SRC+= ACADOS_model_cost/ACADOS_model_cost_ext_cost_fun.c
 OCP_SRC+= ACADOS_model_cost/ACADOS_model_cost_ext_cost_fun_jac.c
 OCP_SRC+= ACADOS_model_cost/ACADOS_model_cost_ext_cost_fun_jac_hess.c
-
-
 OCP_SRC+= ACADOS_model_cost/ACADOS_model_cost_ext_cost_e_fun.c
 OCP_SRC+= ACADOS_model_cost/ACADOS_model_cost_ext_cost_e_fun_jac.c
 OCP_SRC+= ACADOS_model_cost/ACADOS_model_cost_ext_cost_e_fun_jac_hess.c
-
-
 
 OCP_SRC+= acados_solver_ACADOS_model.c
 OCP_OBJ := $(OCP_SRC:.c=.o)
@@ -85,8 +79,8 @@ OBJ+= $(OCP_OBJ)
 EXTERNAL_DIR=
 EXTERNAL_LIB=
 
-INCLUDE_PATH = /home/tlab-uav/acados/include
-LIB_PATH = /home/tlab-uav/acados/lib
+INCLUDE_PATH = /home/tianchensun/acados/include
+LIB_PATH = /home/tianchensun/acados/lib
 
 # preprocessor flags for make's implicit rules
 CPPFLAGS += -DACADOS_WITH_QPOASES
@@ -99,13 +93,11 @@ CPPFLAGS+= -I $(INCLUDE_PATH)/qpOASES_e/
 
 # define the c-compiler flags for make's implicit rules
 CFLAGS = -fPIC -std=c99   -O2#-fno-diagnostics-show-line-numbers -g
-
 # # Debugging
 # CFLAGS += -g3
 
 # linker flags
 LDFLAGS+= -L$(LIB_PATH)
-
 
 # link to libraries
 LDLIBS+= -lacados
@@ -151,7 +143,7 @@ ocp_cython_c: ocp_shared_lib
 	-o acados_ocp_solver_pyx.c \
 	-I $(INCLUDE_PATH)/../interfaces/acados_template/acados_template \
 	$(INCLUDE_PATH)/../interfaces/acados_template/acados_template/acados_ocp_solver_pyx.pyx \
-	-I /home/tlab-uav/gestelt_ws/src/gestelt/gestelt_bringup/src/Learning_Agile/c_generated_code \
+	-I /home/tianchensun/gestelt_ws/src/gestelt/gestelt_bringup/src/Learning_Agile/c_generated_code \
 
 ocp_cython_o: ocp_cython_c
 	$(CC) $(ACADOS_FLAGS) -c -O2 \
@@ -160,7 +152,7 @@ ocp_cython_o: ocp_cython_c
 	-I $(INCLUDE_PATH)/blasfeo/include/ \
 	-I $(INCLUDE_PATH)/hpipm/include/ \
 	-I $(INCLUDE_PATH) \
-	-I /home/tlab-uav/.local/lib/python3.8/site-packages/numpy/core/include \
+	-I /home/tianchensun/.local/lib/python3.8/site-packages/numpy/core/include \
 	-I /usr/include/python3.8 \
 	acados_ocp_solver_pyx.c \
 
@@ -178,7 +170,7 @@ sim_cython_c: sim_shared_lib
 	-o acados_sim_solver_pyx.c \
 	-I $(INCLUDE_PATH)/../interfaces/acados_template/acados_template \
 	$(INCLUDE_PATH)/../interfaces/acados_template/acados_template/acados_sim_solver_pyx.pyx \
-	-I /home/tlab-uav/gestelt_ws/src/gestelt/gestelt_bringup/src/Learning_Agile/c_generated_code \
+	-I /home/tianchensun/gestelt_ws/src/gestelt/gestelt_bringup/src/Learning_Agile/c_generated_code \
 
 sim_cython_o: sim_cython_c
 	$(CC) $(ACADOS_FLAGS) -c -O2 \
@@ -187,7 +179,7 @@ sim_cython_o: sim_cython_c
 	-I $(INCLUDE_PATH)/blasfeo/include/ \
 	-I $(INCLUDE_PATH)/hpipm/include/ \
 	-I $(INCLUDE_PATH) \
-	-I /home/tlab-uav/.local/lib/python3.8/site-packages/numpy/core/include \
+	-I /home/tianchensun/.local/lib/python3.8/site-packages/numpy/core/include \
 	-I /usr/include/python3.8 \
 	acados_sim_solver_pyx.c \
 

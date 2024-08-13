@@ -221,19 +221,6 @@ int ACADOS_model_acados_sim_solve(ACADOS_model_sim_solver_capsule *capsule)
 }
 
 
-void ACADOS_model_acados_sim_batch_solve(ACADOS_model_sim_solver_capsule ** capsules, int N_batch)
-{
-
-    for (int i = 0; i < N_batch; i++)
-    {
-        sim_solve(capsules[i]->acados_sim_solver, capsules[i]->acados_sim_in, capsules[i]->acados_sim_out);
-    }
-
-
-    return;
-}
-
-
 int ACADOS_model_acados_sim_free(ACADOS_model_sim_solver_capsule *capsule)
 {
     // free memory

@@ -5,7 +5,7 @@ LABEL maintainer="johntgz@nus.edu.sg"
 SHELL ["/bin/bash", "-c"] 
 
 # Copy .bashrc file
-COPY .bashrc /root/
+# COPY .bashrc /root/
 # RUN apt-get update && apt-get install --no-install-recommends -y \
 #     ros-noetic-tf2-geometry-msgs    \
 #     && rm -rf /var/lib/apt/lists/*
@@ -16,6 +16,12 @@ COPY .bashrc /root/
 WORKDIR /gestelt_ws/src/gestelt
 RUN git pull
 RUN git checkout tianchensun_learning_agile
+
+# update solver
+WORKDIR /gestelt_ws/src/gestelt/gestelt_bringup/src/Learning_Agile
+RUN python3 ./learning_agile_agent.py
+
+# compile the workspace
 WORKDIR /gestelt_ws/
 RUN export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/root/acados/lib \
     && export ACADOS_SOURCE_DIR=/root/acados \
