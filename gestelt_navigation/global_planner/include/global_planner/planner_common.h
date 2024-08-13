@@ -400,7 +400,7 @@ inline double getOctileDistVT(const VCell_T& a, const VCell_T& b)  {
 
 template <> 
 struct std::hash<Eigen::Vector4d> {
-  /* implement hash function so we can put VCell_T into an unordered_set */
+  /* implement hash function so we can put Eigen::Vector4d into an unordered_set */
   std::size_t operator()(const Eigen::Vector4d& pos) const noexcept {
     std::size_t seed = 0;
     boost::hash_combine(seed, pos(0));
@@ -410,5 +410,20 @@ struct std::hash<Eigen::Vector4d> {
     return seed;
   }
 };
+
+
+template <> 
+struct std::hash<Eigen::Vector4i> {
+  /* implement hash function so we can put Eigen::Vector4i into an unordered_set */
+  std::size_t operator()(const Eigen::Vector4i& pos) const noexcept {
+    std::size_t seed = 0;
+    boost::hash_combine(seed, pos(0));
+    boost::hash_combine(seed, pos(1));
+    boost::hash_combine(seed, pos(2));
+    boost::hash_combine(seed, pos(3));
+    return seed;
+  }
+};
+
 
 #endif // _PLANNER_COMMON_H_

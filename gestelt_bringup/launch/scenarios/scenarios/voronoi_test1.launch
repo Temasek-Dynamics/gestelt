@@ -1,7 +1,7 @@
 <!-- Spawn fake drones for testing algorithms-->
 
 <launch>
-  <arg name="num_drones" default="1"/>
+  <arg name="num_drones" default="5"/>
   <arg name="pose_topic" default="mavros/local_position/pose"/>
 
   <include file="$(find gestelt_bringup)/launch/fake_drone/include/grid_agent_complete.xml">
@@ -12,7 +12,7 @@
       <arg name="init_z" value="2.0"/>
   </include>
 
-  <!-- <include file="$(find gestelt_bringup)/launch/fake_drone/include/grid_agent_complete.xml">
+  <include file="$(find gestelt_bringup)/launch/fake_drone/include/grid_agent_complete.xml">
       <arg name="drone_id" value="1"/>
 
       <arg name="init_x" value="-6.5"/>
@@ -42,15 +42,15 @@
       <arg name="init_x" value="-7.5"/>
       <arg name="init_y" value="-7.5"/>
       <arg name="init_z" value="2.0"/>
-  </include> -->
+  </include>
 
-  <!-- <node pkg="swarm_collision_checker" name="swarm_collision_checker" 
+  <node pkg="swarm_collision_checker" name="swarm_collision_checker" 
         type="swarm_collision_checker_node" output="screen">
     <param name="num_drones" value="$(arg num_drones)"/>
     <param name="pose_topic" value="$(arg pose_topic)"/>
     <param name="check_collision_freq" value="10.0"/>
-    <param name="collision_check/warn_radius" value="0.2"/>
+    <param name="collision_check/warn_radius" value="0.22"/>
     <param name="collision_check/fatal_radius" value="0.14"/>
-  </node> -->
+  </node>
 
 </launch>

@@ -20,6 +20,7 @@ class AStarPlanner
 public:
 
   struct AStarParams{
+    int drone_id{-1};
     int max_iterations; // Maximum iterations for Astar to run
     double tie_breaker;
     bool debug_viz; // Publish visualization messages for debugging 
@@ -33,18 +34,19 @@ public:
      */
     int cost_function_type; // Type of cost function to use
 
-    int dt{1};
-    // int dt_space_diag{3};   // Time to move from (0,0,0) to (1,1,1) in 26-connected 3D grid
-    // int dt_face_diag{2};    // Time to move from (0,0,0) to (0,1,1) in 26-connected 3D grid
-    // int dt_straight{1};     // Time to move  from (0,0,0) to (0,1,0) in 26-connected 3D grid
-    // int dt_wait{1};         // Time to wait in the same cell
+    double t_unit{0.1};          // [s] Time duration of each space-time A* unit
+
+    // int st_space_diag{3};   // Number of space-time A* units to move from (0,0,0) to (1,1,1) in 26-connected 3D grid
+    // int st_face_diag{2};    // Number of space-time A* units to move from (0,0,0) to (0,1,1) in 26-connected 3D grid
+    int st_straight{1};     // Number of space-time A* units to move from (0,0,0) to (0,1,0) in 26-connected 3D grid
+    // int st_wait{1};         // Number of space-time A* units to wait in the same cell
 
   }; // struct AStarParams
 
   AStarPlanner(std::shared_ptr<GridMap> grid_map, const AStarParams& astar_params);
 
   AStarPlanner( const AStarParams& astar_params,
-                std::shared_ptr<std::unordered_set<Eigen::Vector4d>> resrv_tbl
+                std::shared_ptr<std::unordered_set<Eigen::Vector4i>> resrv_tbl
                 );
 
   /**
@@ -76,8 +78,19 @@ public:
                           const Eigen::Vector3d& goal_pos_3d, 
                           std::function<double(const VCell_T&, const VCell_T&)> cost_function);
 
+
   /**
-   * @brief Get successful plan in terms of path positions
+   * @brief Get successful plan in terms of space i,e. (x,y,z)
+   *
+   * @return std::vector<Eigen::Vector3d>
+   */
+  std::vector<Eigen::Vector3d> getPath()
+  {
+      return path_pos_;
+  }
+
+  /**
+   * @brief Get successful plan in terms of space and time i.e. (x,y,z,t)
    *
    * @return std::vector<Eigen::Vector3d>
    */
@@ -111,6 +124,7 @@ public:
     // Clear existing data structures
     path_idx_vt_.clear();
     path_pos_t_.clear();
+    path_pos_.clear();
 
     // Trace back the nodes through the pointer to their parent
     VCell_T cur_node = final_node;
@@ -136,14 +150,26 @@ public:
       // Add space time map position to path and transform it from local map to world frame
       path_pos_t_.push_back(Eigen::Vector4d{map_2d_pos.x + local_origin_x_, 
                                             map_2d_pos.y + local_origin_y_, cell.z_m, (double) cell.t});
+      path_pos_.push_back(Eigen::Vector3d{map_2d_pos.x + local_origin_x_, 
+                                            map_2d_pos.y + local_origin_y_, cell.z_m});
     } 
   }
 
 public:
 
-  // Round up to multiples of mult
-  int roundUpMult(const double& num, const int& mult)
+  /**
+   * @brief Round to nearest multiple 
+   * 
+   * @param num Number to be rounded
+   * @param mult Multiple
+   * @return int 
+   */
+  int roundToMultInt(const int& num, const int& mult)
   {
+    if (mult == 0){
+      return num;
+    }
+
     if (num >= max_height_){
       return max_height_;
     }
@@ -152,15 +178,12 @@ public:
       return min_height_;
     }
 
-    if (mult == 0){
-      return num;
-    }
     int rem = (int)num % mult;
     if (rem == 0){
       return num;
     }
 
-    return (num-rem) + mult;
+    return rem < (mult/2) ? (num-rem) : (num-rem) + mult;
   }
 
 private: 
@@ -181,6 +204,7 @@ private:
 
   // Space time voronoi Voronoi search data structures
   
+  std::vector<Eigen::Vector3d> path_pos_; // (WORLD FRAME) Spatial-temporal path 
   std::vector<Eigen::Vector4d> path_pos_t_; // (WORLD FRAME) Spatial-temporal path 
   std::vector<VCell_T> path_idx_vt_; // (LOCAL FRAME) Final planned Path in terms of indices
 
@@ -189,7 +213,7 @@ private:
   PriorityQueue<VCell_T, double> open_list_vt_; // Min priority queue 
   std::unordered_set<VCell_T> closed_list_vt_; // All closed nodes
 
-  std::shared_ptr<std::unordered_set<Eigen::Vector4d>> resrv_tbl_; // Reservation table 
+  std::shared_ptr<std::unordered_set<Eigen::Vector4i>> resrv_tbl_; // Reservation table 
 };
 
 #endif // _A_STAR_PLANNER_H_

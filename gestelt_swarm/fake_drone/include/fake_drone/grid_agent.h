@@ -44,6 +44,7 @@ class GridAgent
         
         /* Params */
         int drone_id_{-1};
+        double t_unit_{0.1};     // [s] Time duration of each space-time A* unit
 
         std::string uav_origin_frame_, base_link_frame_;
 
@@ -74,7 +75,6 @@ class GridAgent
     public:
 
         GridAgent(ros::NodeHandle &nh, ros::NodeHandle &pnh);
-
         ~GridAgent();
 
         /* Timer callbacks */
@@ -85,7 +85,6 @@ class GridAgent
         /* Subscription callbacks */
 
         void frontEndPlanCB(const gestelt_msgs::FrontEndPlan::ConstPtr &msg);
-
 
         /* Checks */
 

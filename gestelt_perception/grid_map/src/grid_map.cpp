@@ -127,8 +127,6 @@ void GridMap::readROSParams(ros::NodeHandle &nh, ros::NodeHandle &pnh)
 
   pnh.param("grid_map/local_map/update_frequency", update_local_map_freq_, -1.0);
   pnh.param("grid_map/local_map/viz_frequency", viz_occ_map_freq_, -1.0);
-  // pnh.param("grid_map/local_map/build_kdtree_frequency", build_kd_tree_freq_, -1.0);
-  // pnh.param("grid_map/keep_global_map", mp_.keep_global_map_, false);
 
   pnh.param("grid_map/occ_map/resolution", mp_.resolution_, -1.0);
   pnh.param("grid_map/occ_map/inflation", mp_.inflation_, -1.0);
@@ -166,11 +164,11 @@ void GridMap::reset(const double& resolution){
   bonxai_map_ = std::make_unique<BonxaiT>(resolution);
 
   // Set up kdtree for generating safe flight corridors
-  // KD_TREE(float delete_param = 0.5, float balance_param = 0.6 , float box_length = 0.2);
-  kdtree_ = std::make_shared<KD_TREE<pcl::PointXYZ>>(0.5, 0.6, 0.1);
+  //    KD_TREE(float delete_param = 0.5, float balance_param = 0.6 , float box_length = 0.2);
   lcl_map_kdtree_ = std::make_shared<KD_TREE<pcl::PointXYZ>>(0.5, 0.6, 0.1);
 
   local_occ_map_pts_.reset(new pcl::PointCloud<pcl::PointXYZ>());
+  local_global_occ_map_pts_.reset(new pcl::PointCloud<pcl::PointXYZ>());
   global_map_in_origin_.reset(new pcl::PointCloud<pcl::PointXYZ>());
 
   md_.last_sensor_msg_time = ros::Time::now().toSec();
@@ -300,7 +298,7 @@ gestelt_msgs::BoolMap GridMap::sliceMap(const double& slice_z) {
         // Convert from local map coordinates to 1-D index
         int idx = x + y * mp_.local_map_num_voxels_(0);
 
-        if (idx < 0 || idx >= bool_map_msg.map.size()){
+        if (idx < 0 || idx >= (int) bool_map_msg.map.size()){
           continue;
         }
 
@@ -327,10 +325,14 @@ void GridMap::checkCollisionsTimerCB(const ros::TimerEvent & /*event*/)
     return;
   }
 
+  Eigen::Vector3d query_pos( 	odom_msg_.pose.pose.position.x,
+                              odom_msg_.pose.pose.position.y,
+                              odom_msg_.pose.pose.position.z);
+
   // Get nearest obstacle position
   Eigen::Vector3d occ_nearest;
   double dist_to_obs;
-  if (!getNearestOccupiedCell(md_.body2origin_.block<3,1>(0,3), occ_nearest, dist_to_obs)){
+  if (!getNearestOccupiedCell(query_pos, occ_nearest, dist_to_obs)){
     return;
   }
 
@@ -344,7 +346,8 @@ void GridMap::checkCollisionsTimerCB(const ros::TimerEvent & /*event*/)
 
 void GridMap::odomColCheckCB(const nav_msgs::OdometryConstPtr &msg_odom) 
 {
-  getCamToGlobalPose(msg_odom->pose.pose);
+  odom_msg_ = *msg_odom;
+  // getCamToGlobalPose(msg_odom->pose.pose);
 }
 
 void GridMap::cloudOdomCB( const sensor_msgs::PointCloud2ConstPtr &msg_pc, 
@@ -442,6 +445,8 @@ void GridMap::updateLocalMap(){
   // Clear existing local map
   local_occ_map_pts_.reset(new pcl::PointCloud<pcl::PointXYZ>());
 
+  local_global_occ_map_pts_.reset(new pcl::PointCloud<pcl::PointXYZ>());
+
   for (auto& coord : occ_coords) // For each occupied coordinate
   {
     // obs_gbl_pos: global obstacle pos
@@ -450,7 +455,8 @@ void GridMap::updateLocalMap(){
 
     // obs_gbl_pos: With respect to (0,0,0) of world frame
     Eigen::Vector3d obs_gbl_pos(obs_gbl_pos_pt3d.x, obs_gbl_pos_pt3d.y, obs_gbl_pos_pt3d.z);
-    if (!isInLocalMap(obs_gbl_pos)){ // Point is outside the local map
+    if (!isInLocalMap(obs_gbl_pos)){ 
+      // Point is outside the local map
       continue;
     }
 
@@ -461,37 +467,22 @@ void GridMap::updateLocalMap(){
     
     local_occ_map_pts_->push_back(pcl::PointXYZ(obs_lcl_pos(0), obs_lcl_pos(1), obs_lcl_pos(2)));
 
-    // Convert to voxel index. This is relative to mp_.local_map_origin_
-    // Eigen::Vector3i vox_idx_3d = ((obs_gbl_pos - getLocalOrigin()) / getRes() - Eigen::Vector3d::Constant(0.5) ).cast<int>() ; 
-    // // Inflate voxel by inflation distance
-    // for(int x = vox_idx_3d(0) - mp_.inf_num_voxels_; x <= vox_idx_3d(0) + mp_.inf_num_voxels_; x++)
-    // {
-    //   for(int y = vox_idx_3d(1) - mp_.inf_num_voxels_; y <= vox_idx_3d(1) + mp_.inf_num_voxels_; y++)
-    //   {
-    //     for(int z = vox_idx_3d(2) - mp_.inf_num_voxels_; z <= vox_idx_3d(2) + mp_.inf_num_voxels_; z++)
-    //     {
-    //       size_t vox_idx_1d =   x
-    //                           + y * mp_.local_map_num_voxels_(0) 
-    //                           + z * mp_.local_map_num_voxels_(0) * mp_.local_map_num_voxels_(1);
-    //       if (vox_idx_1d >= local_map_data_.size() || vox_idx_1d < 0) {
-    //         continue; // Exceeded map size
-    //       }
-    //       // Assign as occupied voxel
-    //       local_map_data_[vox_idx_1d] = 100;
-    //     }
-    //   }
-    // }
+    local_global_occ_map_pts_->push_back(pcl::PointXYZ(obs_gbl_pos_pt3d.x, obs_gbl_pos_pt3d.y, obs_gbl_pos_pt3d.z));
 
   }
 
   // build kdtree for local map
   tm_lcl_map_kdtree_build_.start();
-  lcl_map_kdtree_->Build(local_occ_map_pts_->points);
+  lcl_map_kdtree_->Build(local_global_occ_map_pts_->points);
   tm_lcl_map_kdtree_build_.stop(false);
 
   local_occ_map_pts_->width = local_occ_map_pts_->points.size();
   local_occ_map_pts_->height = 1;
   local_occ_map_pts_->is_dense = true; 
+
+  local_global_occ_map_pts_->width = local_global_occ_map_pts_->points.size();
+  local_global_occ_map_pts_->height = 1;
+  local_global_occ_map_pts_->is_dense = true; 
 
   publishOccMap(local_occ_map_pts_); // publish point cloud within local map
   publishLocalMapBounds(); // publish boundaries of local map volume
@@ -513,7 +504,6 @@ void GridMap::getCamToGlobalPose(const geometry_msgs::Pose &pose)
   md_.cam2origin_ = md_.body2origin_ * md_.cam2body_;
 
   md_.has_pose_ = true;
-
 }
 
 void GridMap::pcdMsgToMap(const sensor_msgs::PointCloud2 &msg)
@@ -550,10 +540,6 @@ void GridMap::pcdToMap(pcl::PointCloud<pcl::PointXYZ>::Ptr pcd)
   // tm_bonxai_insert_.start();
   bonxai_map_->insertPointCloud(global_map_in_origin_->points, sensor_origin, mp_.max_range);
   // tm_bonxai_insert_.stop(false);
-
-  // if (dbg_input_entire_map_){
-  //   kdtree_->Build((*global_map_in_origin_).points);
-  // }
 
 }
 

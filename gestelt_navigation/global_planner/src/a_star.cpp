@@ -3,7 +3,7 @@
 #define L2_cost
 
 AStarPlanner::AStarPlanner( const AStarParams& astar_params,
-                            std::shared_ptr<std::unordered_set<Eigen::Vector4d>> resrv_tbl
+                            std::shared_ptr<std::unordered_set<Eigen::Vector4i>> resrv_tbl
                             ): astar_params_(astar_params)
 {
     resrv_tbl_ = resrv_tbl;
@@ -41,14 +41,16 @@ void AStarPlanner::reset()
 void AStarPlanner::expandVoronoiBubbleT(
     const VCell_T& origin_cell)
 {
-    std::queue<VCell_T> q;
-    q.push(origin_cell);
+    std::queue<IntPoint> q;
+    q.push(IntPoint(origin_cell.x, origin_cell.y));
 
     IntPoint grid(origin_cell.x, origin_cell.y);
+    marked_bubble_cells_[origin_cell.z_cm] = std::unordered_set<IntPoint>();
+
     marked_bubble_cells_[origin_cell.z_cm].insert(grid);
 
     while(!q.empty()) {
-        VCell_T cur_cell = q.front();
+        IntPoint cur_cell = q.front();
         q.pop();
 
         for (int dx=-1; dx<=1; dx++) {
@@ -72,23 +74,17 @@ void AStarPlanner::expandVoronoiBubbleT(
                     continue; // If already added to marked bubble list, then skip
                 }
 
-                if (dyn_voro_arr_[origin_cell.z_cm]->getSqrDistance(nx,ny)<1) 
+                if (dyn_voro_arr_[origin_cell.z_cm]->getSqrDistance(nx,ny) < 1) 
                 {
                     continue;   // Skip if occupied or near obstacle
                 }
 
-                // Node *nd = MemoryManager<Node>::getNew();
-                // g_cost_v_[nb_grid] = std::numeric_limits<double>::max();
-                // double h_cost = getL2Norm(nb_grid, goal);
-                // open_list_v_.put(nb_grid, std::numeric_limits<double>::max());
-                
                 // mark as closed bubble cells
                 marked_bubble_cells_[origin_cell.z_cm].insert(nb_grid);
 
                 if (!dyn_voro_arr_[origin_cell.z_cm]->isVoronoi(nx,ny)){ 
-                    // if 4-con neighbor is not voronoi
-                    VCell_T nb_grid_3d(nx, ny, origin_cell.z_cm, -1);
-                    q.push(nb_grid_3d); // If not voronoi then push to list
+                    // if 4-con neighbor is not voronoi then push to list
+                    q.push(nb_grid); 
                 }
             }
 
@@ -135,10 +131,10 @@ bool AStarPlanner::generatePlanVoroT(   const Eigen::Vector3d& start_pos_3d,
 {
     reset();
     
-    int start_z_cm = roundUpMult((int) (start_pos_3d(2) * 100), z_separation_cm_);
-    int goal_z_cm = roundUpMult((int) (goal_pos_3d(2) * 100), z_separation_cm_);
-    std::cout << "start_z: " <<  start_pos_3d(2) << " m rounded to " << start_z_cm << " cm" << std::endl;
-    std::cout << "goal_z: " <<  goal_pos_3d(2) << " m rounded to " << goal_z_cm << " cm" << std::endl;
+    int start_z_cm = roundToMultInt((int) (start_pos_3d(2) * 100), z_separation_cm_);
+    int goal_z_cm = roundToMultInt((int) (goal_pos_3d(2) * 100), z_separation_cm_);
+    // std::cout << astar_params_.drone_id << ": start_z: " <<  start_pos_3d(2) << " m rounded to " << start_z_cm << " cm" << std::endl;
+    // std::cout << astar_params_.drone_id << ": goal_z: " <<  goal_pos_3d(2) << " m rounded to " << goal_z_cm << " cm" << std::endl;
     
     INTPOINT start_node_2d, goal_node_2d;
 
@@ -174,9 +170,13 @@ bool AStarPlanner::generatePlanVoroT(   const Eigen::Vector3d& start_pos_3d,
     dyn_voro_arr_[start_node.z_cm]->update(); // update distance map and Voronoi diagram
     dyn_voro_arr_[goal_node.z_cm]->update(); // update distance map and Voronoi diagram
 
+    std::cout << astar_params_.drone_id << ": before expandVoronoiBubbleT" << std::endl;
+
     // Create voronoi bubble around start and goal
     expandVoronoiBubbleT(start_node);
     expandVoronoiBubbleT(goal_node);
+
+    std::cout << astar_params_.drone_id << ": before removeObstacle" << std::endl;
 
     dyn_voro_arr_[start_node.z_cm]->removeObstacle(start_node.x, start_node.y);
     dyn_voro_arr_[goal_node.z_cm]->removeObstacle(goal_node.x, goal_node.y);
@@ -212,11 +212,9 @@ bool AStarPlanner::generatePlanVoroT(   const Eigen::Vector3d& start_pos_3d,
 
         if (cur_node.isSamePositionAs(goal_node))
         {
-            std::cout << "  Found goal after " << num_iter << " iterations" << std::endl;
+            std::cout << astar_params_.drone_id << ":  Found goal after " << num_iter << " iterations" << std::endl;
             // Goal reached, terminate search and obtain path
-            std::cout << "before trace" << std::endl;
             tracePathVoroT(cur_node);
-            std::cout << "after trace" << std::endl;
 
             return true;
         }
@@ -230,21 +228,19 @@ bool AStarPlanner::generatePlanVoroT(   const Eigen::Vector3d& start_pos_3d,
         // Explore neighbors of current node. Each neighbor is (grid_x, grid_y, map_z_cm)
         for (const Eigen::Vector3i& nb_node_eig : neighbours) 
         {   
-            int nb_t = cur_node.t + astar_params_.dt;
+            int nb_t = cur_node.t + astar_params_.st_straight;
             
             VCell_T nb_node(nb_node_eig(0), nb_node_eig(1), nb_node_eig(2), nb_t);
             VCell nb_node_3d(nb_node_eig(0), nb_node_eig(1), nb_node_eig(2));
 
             // Convert to map coordinates so as to check reservation table
-            DblPoint nb_2d_pos;
-            dyn_voro_arr_[nb_node_eig(2)]->idxToPos(IntPoint(nb_node_eig(0), nb_node_eig(1)), nb_2d_pos);
-            Eigen::Vector4d nb_map_4d_pos{nb_2d_pos.x, nb_2d_pos.y, cur_node.z_m, nb_t};
+            Eigen::Vector4i nb_grid_4d{ nb_node_eig(0), 
+                                        nb_node_eig(1), 
+                                        nb_node_eig(2), nb_t};
 
-            // std::cout << "neighbour (" <<  nb_map_4d_pos.transpose() << ")" << std::endl;  
-
-            if (resrv_tbl_->find(nb_map_4d_pos) != resrv_tbl_->end() ){
+            if (resrv_tbl_->find(nb_grid_4d) != resrv_tbl_->end() ){
                 // Position has been reserved by another agent
-                std::cout << "  Map Pos (" << nb_map_4d_pos.transpose() << ") has been reserved" << std::endl;
+                std::cout << "Drone " << astar_params_.drone_id <<  ": Grid Pos (" << nb_grid_4d.transpose() << ") has been reserved" << std::endl;
                 continue;
             }
 
@@ -270,7 +266,7 @@ bool AStarPlanner::generatePlanVoroT(   const Eigen::Vector3d& start_pos_3d,
         num_iter++;
     }
 
-    std::cerr   << "[space-time A*] Unable to find goal node ("
+    std::cerr   << "Drone " << astar_params_.drone_id << " :Unable to find goal node ("
                 << goal_node.x << ", " << goal_node.y 
                 << ") with maximum iteration " << num_iter << std::endl;
 

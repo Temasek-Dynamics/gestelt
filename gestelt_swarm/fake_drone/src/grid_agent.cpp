@@ -17,6 +17,8 @@ GridAgent::GridAgent(ros::NodeHandle& nh, ros::NodeHandle& pnh) {
 	pnh.param<double>("init_y", init_pos_(1), 0.0);
 	pnh.param<double>("init_z", init_pos_(2), 0.0);
 
+	pnh.param<double>("t_unit", t_unit_, 0.1);
+
 	node_name_ = "fake_drone" + std::to_string(drone_id_);
 	
 	/* Subscribers and publishers*/
@@ -44,10 +46,19 @@ GridAgent::GridAgent(ros::NodeHandle& nh, ros::NodeHandle& pnh) {
 	pose_msg_.pose.position.x = init_pos_(0);
 	pose_msg_.pose.position.y = init_pos_(1);
 	pose_msg_.pose.position.z = init_pos_(2);
+	pose_msg_.pose.orientation.x = 0.0;
+	pose_msg_.pose.orientation.y = 0.0;
+	pose_msg_.pose.orientation.z = 0.0;
+	pose_msg_.pose.orientation.w = 1.0;
 
 	odom_msg_.pose.pose.position.x = init_pos_(0);
 	odom_msg_.pose.pose.position.y = init_pos_(1);
 	odom_msg_.pose.pose.position.z = init_pos_(2);
+	odom_msg_.pose.pose.orientation.x = 0.0;
+	odom_msg_.pose.pose.orientation.y = 0.0;
+	odom_msg_.pose.pose.orientation.z = 0.0;
+	odom_msg_.pose.pose.orientation.w = 1.0;
+
 
 	odom_msg_.header.frame_id = uav_origin_frame_;
 	pose_msg_.header.frame_id = uav_origin_frame_;
@@ -78,7 +89,6 @@ GridAgent::~GridAgent()
 void GridAgent::frontEndPlanCB(const gestelt_msgs::FrontEndPlan::ConstPtr &msg)
 {	
 	fe_plan_msg_ = *msg;
-	plan_start_exec_t_ = ros::Time::now().toSec();
 
 	// Generate spline from plan 
 	std::vector<tinyspline::real> points;
@@ -92,6 +102,8 @@ void GridAgent::frontEndPlanCB(const gestelt_msgs::FrontEndPlan::ConstPtr &msg)
 	}
 
 	spline_ = std::make_shared<tinyspline::BSpline>(tinyspline::BSpline::interpolateCubicNatural(points, 3));
+
+	plan_start_exec_t_ = ros::Time::now().toSec();
 
 	plan_received_ = true;
 }
@@ -117,25 +129,25 @@ void GridAgent::simUpdateTimer(const ros::TimerEvent &)
 		last_pose_pub_time_ = ros::Time::now();
 	}
 
-	// if ((ros::Time::now() - last_tf_broadcast_time_).toSec() > (1/tf_broadcast_freq_))
-	// {
-	// 	// origin to base link tf
-	// 	geometry_msgs::TransformStamped o_to_bl_tf;
+	if ((ros::Time::now() - last_tf_broadcast_time_).toSec() > (1/tf_broadcast_freq_))
+	{
+		// origin to base link tf
+		geometry_msgs::TransformStamped o_to_bl_tf;
 
-	// 	o_to_bl_tf.header.stamp = ros::Time::now();
-	// 	o_to_bl_tf.header.frame_id = uav_origin_frame_;
-	// 	o_to_bl_tf.child_frame_id = base_link_frame_;
+		o_to_bl_tf.header.stamp = ros::Time::now();
+		o_to_bl_tf.header.frame_id = uav_origin_frame_;
+		o_to_bl_tf.child_frame_id = base_link_frame_;
 		
-	// 	o_to_bl_tf.transform.translation.x = pose_msg_.pose.position.x;
-	// 	o_to_bl_tf.transform.translation.y = pose_msg_.pose.position.y;
-	// 	o_to_bl_tf.transform.translation.z = pose_msg_.pose.position.z;
+		o_to_bl_tf.transform.translation.x = pose_msg_.pose.position.x;
+		o_to_bl_tf.transform.translation.y = pose_msg_.pose.position.y;
+		o_to_bl_tf.transform.translation.z = pose_msg_.pose.position.z;
 
-	// 	o_to_bl_tf.transform.rotation = pose_msg_.pose.orientation;
+		o_to_bl_tf.transform.rotation = pose_msg_.pose.orientation;
 		
-	// 	tf_broadcaster_.sendTransform(o_to_bl_tf);
+		tf_broadcaster_.sendTransform(o_to_bl_tf);
 
-	// 	last_tf_broadcast_time_ = ros::Time::now();
-	// }
+		last_tf_broadcast_time_ = ros::Time::now();
+	}
 
 }
 
@@ -144,15 +156,17 @@ void GridAgent::simUpdateTimer(const ros::TimerEvent &)
 /* Helper Methods */
 
 void GridAgent::setStateFromPlan(	const gestelt_msgs::FrontEndPlan &fe_plan_msg, 
-																	const double& exec_start_t)
+									const double& exec_start_t)
 {
 
 	double t_now = ros::Time::now().toSec();
 
-	if (t_now >= exec_start_t + fe_plan_msg.plan_time.back()){
-		// std::cout << "t_now (" << t_now << ") exceeds end of traj time (" << fe_plan_msg.plan_time.back()<< ")" << std::endl;
-		// Time exceeded end of trajectory. Trajectory published in the past
-
+	// if (t_now >= fe_plan_msg.plan_start_time + fe_plan_msg.plan_time.back()){
+	// Time exceeded end of trajectory. Trajectory published in the past
+	if (t_now >= exec_start_t + fe_plan_msg.plan_time.back() * t_unit_){
+		// std::cout << std::fixed << std::setprecision(11) << "t_now (" << t_now << ") exceeds end of traj time (" << exec_start_t + fe_plan_msg.plan_time.back() * t_unit_ << ")" << std::endl;
+		// std::cout << std::fixed << std::setprecision(11) << "fe_plan_msg.plan_time.back() = (" << fe_plan_msg.plan_time.back() << std::endl;
+		// std::cout << std::fixed << std::setprecision(11) << "fe_plan_msg.plan_time.back()* t_unit_ = (" << fe_plan_msg.plan_time.back()* t_unit_ << std::endl;
 		plan_received_ = false;
 		return;
 	}
@@ -168,7 +182,7 @@ void GridAgent::setStateFromPlan(	const gestelt_msgs::FrontEndPlan &fe_plan_msg,
 	// }
 
 	// alpha: Arc length parameterization of spline. Formed by time ratio
-	double alpha = (t_now - exec_start_t) / fe_plan_msg.plan_time.back();
+	double alpha = (t_now - exec_start_t) / (fe_plan_msg.plan_time.back()  * t_unit_);
 
 	std::vector<tinyspline::real> result = spline_->eval(alpha).result();
 	double x = result[0];
@@ -185,6 +199,11 @@ void GridAgent::setStateFromPlan(	const gestelt_msgs::FrontEndPlan &fe_plan_msg,
 	odom_msg_.pose.pose.position.y = y;
 	odom_msg_.pose.pose.position.z = z;
 
+	odom_msg_.pose.pose.orientation.x = 0.0;
+	odom_msg_.pose.pose.orientation.y = 0.0;
+	odom_msg_.pose.pose.orientation.z = 0.0;
+	odom_msg_.pose.pose.orientation.w = 1.0;
+
 	// Set Pose
 	pose_msg_.header.stamp = ros::Time::now();
 
@@ -193,6 +212,10 @@ void GridAgent::setStateFromPlan(	const gestelt_msgs::FrontEndPlan &fe_plan_msg,
 	pose_msg_.pose.position.y = y;
 	pose_msg_.pose.position.z = z;
 
+	pose_msg_.pose.orientation.x = 0.0;
+	pose_msg_.pose.orientation.y = 0.0;
+	pose_msg_.pose.orientation.z = 0.0;
+	pose_msg_.pose.orientation.w = 1.0;
 
 	state_mutex_.unlock();
 }

@@ -8,6 +8,8 @@
   <arg name="init_y" default="0.0"/>
   <arg name="init_z" default="0.0"/>
 
+  <arg name="t_unit" default="0.05"/>
+
   <!-- Config filepath -->
   <arg name="grid_agent_cfg_filepath" default="$(find gestelt_bringup)/config/fake_drone_params.yaml"/>
   <arg name="navigator_cfg_filepath" default="$(find gestelt_bringup)/config/navigator.yaml"/>
@@ -32,7 +34,7 @@
 
       <param name="drone_id" value="$(arg drone_id)"/>
 
-      <param name="front_end/debug_planning" value="false"/>
+      <param name="t_unit" value="$(arg t_unit)"/>
 
       <remap from="odom" to="$(arg odometry_topic)"/>
 
@@ -59,6 +61,7 @@
         <!-- <remap from="mavros/setpoint_raw/local" to="$(arg command_topic)"/>
         <remap from="mavros/local_position/odom" to="$(arg odometry_topic)"/>
         <remap from="mavros/local_position/pose" to="$(arg pose_topic)"/> -->
+      <param name="t_unit" value="$(arg t_unit)"/>
 
         <param name="drone_id" value="$(arg drone_id)"/>
         <param name="init_x" value="$(arg init_x)"/>
@@ -80,10 +83,10 @@
 
       <param name="marker_scale" value="1.0"/>
       <param name="num_rotors" value="4"/>
-      <param name="arm_len" value="0.085"/>
-      <param name="body_width" value="0.1"/>
-      <param name="body_height" value="0.11"/>
-      <param name="max_track_size" value="1000"/>
+      <param name="arm_len" value="0.09"/>
+      <param name="body_width" value="0.08"/>
+      <param name="body_height" value="0.12"/>
+      <param name="max_track_size" value="500"/>
     </node>
 
   </group>

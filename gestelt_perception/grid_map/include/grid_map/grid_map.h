@@ -89,7 +89,6 @@ struct MappingParameters
   std::string global_frame_; // frame id of global reference 
   std::string uav_origin_frame_; // frame id of UAV origin
 
-  // bool keep_global_map_{false}; // If true, Bonxai will not discard any nodes outside of the local map bounds. We will map the entire area but at the cost of additional memory.
 };
 
 // intermediate mapping data for fusion
@@ -376,7 +375,7 @@ public:
     std::vector<pcl::PointXYZ, Eigen::aligned_allocator<pcl::PointXYZ>> nb_points;
     std::vector<float> nb_radius_vec;
 
-    kdtree_->Nearest_Search(search_point, nearest_num_nb, nb_points, nb_radius_vec);
+    lcl_map_kdtree_->Nearest_Search(search_point, nearest_num_nb, nb_points, nb_radius_vec);
 
     if (nb_points.empty()){
       return false;
@@ -400,7 +399,7 @@ public:
   bool withinObsRadius(const Eigen::Vector3d &pos, const double& radius){
     pcl::PointXYZ search_point(pos(0), pos(1), pos(2));
     std::vector<pcl::PointXYZ, Eigen::aligned_allocator<pcl::PointXYZ>> nb_points;
-    kdtree_->Radius_Search(search_point, radius, nb_points);
+    lcl_map_kdtree_->Radius_Search(search_point, radius, nb_points);
 
     return !nb_points.empty();
   }
@@ -634,28 +633,27 @@ private:
   double update_local_map_freq_{-1.0};  // Frequency to update local map
 
   /* Data structures for point clouds */
-  pcl::PointCloud<pcl::PointXYZ>::Ptr local_occ_map_pts_; // Occupancy map points formed by Bonxai probabilistic mapping (w.r.t local map origin)
+  pcl::PointCloud<pcl::PointXYZ>::Ptr local_occ_map_pts_; // (In local frame) Occupancy map points formed by Bonxai probabilistic mapping (w.r.t local map origin)
+  pcl::PointCloud<pcl::PointXYZ>::Ptr local_global_occ_map_pts_; // (In global frame) Occupancy map points formed by Bonxai probabilistic mapping (w.r.t local map origin)
   pcl::PointCloud<pcl::PointXYZ>::Ptr global_map_in_origin_;  // Point cloud global map in UAV Origin frame
 
   std::unique_ptr<BonxaiT> bonxai_map_; // Bonxai data structure 
   
-  std::shared_ptr<KD_TREE<pcl::PointXYZ>> kdtree_; // KD-Tree 
   std::shared_ptr<KD_TREE<pcl::PointXYZ>> lcl_map_kdtree_; // Local map KD-Tree 
 
   std::vector<int8_t> local_map_data_; // 1D array used by path planners for collision checking
 
-  // pcl::VoxelGrid<pcl::PointXYZ> vox_grid_filter_; // Voxel filter
+  nav_msgs::Odometry odom_msg_; // Odom message
 
   /* Logic flags*/
 
-  bool check_collisions_{false}; // Flag for checking collisions
+  bool check_collisions_{true}; // Flag for checking collisions
 
   /* Mutexes */
   // std::mutex occ_map_pts_mutex_;
 
   /* Stopwatch for profiling performance */
   Timer tm_bonxai_insert_{"bonxai->insertPointCloud"};
-  Timer tm_kdtree_build_{"kdtree_->Build"};
 
   Timer tm_lcl_map_kdtree_build_{"local_map_kdtree_->Build"};
 

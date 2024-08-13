@@ -37,7 +37,6 @@ static const int8_t UNKNOWN = -1;
 }
 
 #define INF std::numeric_limits<double>::max()
-#define SQRT2 1.41421
 
 // template<typename T, typename priority_t>
 // struct PriorityQueueV {
@@ -307,8 +306,43 @@ private:
         occ_grid.data[idx] = dyn_voro.isOccupied(i, j) ? 255: 0;
       }
     }
-
   }
+
+  /* Convert from time [s] to space-time units */
+  int tToSpaceTimeUnits(const double& t){
+    return round(t / t_unit_);
+  }
+
+  /**
+   * @brief Round to nearest multiple 
+   * 
+   * @param num Number to be rounded
+   * @param mult Multiple
+   * @return int 
+   */
+  int roundToMultInt(const int& num, const int& mult)
+  {
+    if (mult == 0){
+      return num;
+    }
+
+    if (num >= max_height_){
+      return max_height_;
+    }
+
+    if (num <= min_height_){
+      return min_height_;
+    }
+
+    int rem = (int)num % mult;
+    if (rem == 0){
+      return num;
+    }
+
+    return rem < (mult/2) ? (num-rem) : (num-rem) + mult;
+  }
+
+
 
 private:
   /* Params */
@@ -321,15 +355,14 @@ private:
   bool plan_once_{false}; // Used for testing, only runs the planner once
 
   bool verbose_planning_{false};  // enables printing of planning time
-  double res_;                    // Resolution of map
-  double critical_clr_{-0.1};     // minimum clearance of drone from obstacle
-  double fixed_pt_thresh_{-0.1};   // points (on trajectory) below this threshold are defined as fixed points (not decision variables in optimization problem)
-
+  double res_;                    // [m] Resolution of map
+  double critical_clr_{-0.1};     // [m] minimum clearance of drone from obstacle
+  double fixed_pt_thresh_{-0.1};   // [m] points (on trajectory) below this threshold are defined as fixed points (not decision variables in optimization problem)
 
   // Planning params
-  double fe_planner_freq_{10}; // Frequency for front-end planning
+  double fe_planner_freq_{10}; // [Hz] Frequency for front-end planning
   double squared_goal_tol_{0.1}; // Distance to goal before it is considered fulfilled.
-  double t_unit_{0.1}; // [s] Time for each Space Time A* unit 
+  double t_unit_{0.1}; // [s] Time duration of each space-time A* unit
 
   AStarPlanner::AStarParams astar_params_; 
 
@@ -346,21 +379,23 @@ private:
   ros::Publisher fe_plan_viz_pub_; // Publish front-end plan visualization
   ros::Publisher fe_plan_pub_; // Publish front-end plans
   ros::Publisher start_pt_pub_, goal_pt_pub_; // start and goal visualization publisher
+  ros::Publisher fe_plan_broadcast_pub_; // Publish front-end plans broadcasted to other agents
 
   /* Subscribers */
   ros::Subscriber plan_req_dbg_sub_;  // plan request (start and goal) debug subscriber
   ros::Subscriber goals_sub_;  // goal subscriber
   ros::Subscriber bool_map_sub_; // Subscription to boolean map
-  ros::Subscriber fe_plan_sub_; // Subscription to front end plan
+  ros::Subscriber fe_plan_broadcast_sub_; // Subscription to broadcasted front end plan from other agents
 
   ros::Subscriber odom_sub_; // Subscriber to odometry
 
   /* Mapping */
   std::shared_ptr<GridMap> map_;
   double local_origin_x_{0.0}, local_origin_y_{0.0}; // Origin of local map 
-  int z_separation_cm_{50};
+  int z_separation_cm_{50}; // [cm] separation between map slices
+  int max_height_{300}, min_height_{50}; // [cm] max and minimum height of map
 
-  std::shared_ptr<std::unordered_set<Eigen::Vector4d>> resrv_tbl_;
+  std::shared_ptr<std::unordered_set<Eigen::Vector4i>> resrv_tbl_; // Reservation table of (x,y,z_cm, t) where x,y are grid positions, z_cm is height in centimeters and t is space time units
 
   /* Data structs */
   std::unique_ptr<AStarPlanner> fe_planner_; // Front end planner
@@ -370,7 +405,8 @@ private:
   std::map<int, std::shared_ptr<DynamicVoronoi>> dyn_voro_arr_; // array of voronoi objects with key of height (cm)
   std::map<int, std::shared_ptr<std::vector<std::vector<bool>>>> bool_map_arr_; //  array of voronoi objects with key of height (cm)
 
-  std::vector<Eigen::Vector4d> space_time_path_; // Space time front end path in local map origin frame
+  std::vector<Eigen::Vector4d> space_time_path_; // front end path in space-time coordinates (x,y,z,t) in local map origin frame
+  std::vector<Eigen::Vector3d> front_end_path_; // Front end path in space coordinates (x,y,z) in local map origin frame
 
   bool init_voro_maps_{false}; // flag to indicate if voronoi map is initialized
 

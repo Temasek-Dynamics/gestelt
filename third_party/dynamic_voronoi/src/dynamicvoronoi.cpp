@@ -847,7 +847,6 @@ void DynamicVoronoi::getVoroNeighbors(const INTPOINT& grid_pos, std::vector<Eige
       int ny = grid_pos.y + dy;
 
       if (!isInMap(nx, ny) || isOccupied(nx, ny)){
-        std::cout << "(" << nx << ", " << ny << ") is not in map or occupied!" << std::endl; 
         continue;
       }
 

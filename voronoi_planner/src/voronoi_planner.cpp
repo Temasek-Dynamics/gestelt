@@ -18,9 +18,10 @@ void VoronoiPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   fe_closed_list_pub_ = nh.advertise<visualization_msgs::Marker>("fe_plan/closed_list", 50, true);
   fe_plan_viz_pub_ = nh.advertise<visualization_msgs::Marker>("fe_plan/viz", 50 , true);
   fe_plan_pub_ = nh.advertise<gestelt_msgs::FrontEndPlan>("fe_plan", 5, true);
+  fe_plan_broadcast_pub_ = nh.advertise<gestelt_msgs::FrontEndPlan>("/fe_plan/broadcast", 5, true);
 
   /* Subscribers */
-  fe_plan_sub_ = nh.subscribe<gestelt_msgs::FrontEndPlan>("fe_plan", 50, &VoronoiPlanner::FEPlanSubCB, this);
+  fe_plan_broadcast_sub_ = nh.subscribe<gestelt_msgs::FrontEndPlan>("/fe_plan/broadcast", 50, &VoronoiPlanner::FEPlanSubCB, this);
 
   plan_req_dbg_sub_ = nh.subscribe("plan_request_dbg", 50, 
                                   &VoronoiPlanner::planReqDbgCB, this);
@@ -37,12 +38,14 @@ void VoronoiPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   /* Initialization */
 
   // Initialize planner
-  resrv_tbl_ = std::make_shared<std::unordered_set<Eigen::Vector4d>>();
+  resrv_tbl_ = std::make_shared<std::unordered_set<Eigen::Vector4i>>();
 
+  astar_params_.drone_id = drone_id_;
   astar_params_.max_iterations = 9999;
   astar_params_.debug_viz = true;
   astar_params_.tie_breaker = 1.001;
   astar_params_.cost_function_type  = 1; // 0: getOctileDist, 1: getL1Norm, 2: getL2Norm, 3: getChebyshevDist
+  astar_params_.t_unit = t_unit_;
   fe_planner_ = std::make_unique<AStarPlanner>(astar_params_, resrv_tbl_);
 
   // Initialize map
@@ -54,16 +57,16 @@ void VoronoiPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
 void VoronoiPlanner::initParams(ros::NodeHandle &pnh)
 {
   pnh.param("drone_id", drone_id_, -1);
+  pnh.param("num_agents", num_agents_, 1);
 
   pnh.param("verbose_planning", verbose_planning_, false);
   pnh.param("plan_once", plan_once_, false);
+  pnh.param("front_end_planner_frequency", fe_planner_freq_, 10.0);
 
-  pnh.param("num_agents", num_agents_, 1);
   pnh.param("local_map_origin", local_map_origin_, std::string("local_map_origin"));
   pnh.param("global_origin", global_origin_, std::string("world"));
 
   pnh.param("critical_clearance", critical_clr_, 0.25);
-
   pnh.param("t_unit", t_unit_, 0.1);
 }
 
@@ -90,6 +93,10 @@ void VoronoiPlanner::planFETimerCB(const ros::TimerEvent &e)
 
 void VoronoiPlanner::FEPlanSubCB(const gestelt_msgs::FrontEndPlanConstPtr& msg)
 {
+  if (!init_voro_maps_){
+    return;
+  }
+
   // PRIORITY-BASED PLANNING: Only consider trajectories of drones with higher agent_id
   if (msg->agent_id <= drone_id_){
     return;
@@ -97,36 +104,50 @@ void VoronoiPlanner::FEPlanSubCB(const gestelt_msgs::FrontEndPlanConstPtr& msg)
 
   // Add all points on path (with inflation) to reservation table
   double inflation = 0.3; // [m]
-  // int num_cells_inf = inflation/res_; // Number of cells used for inflation
+  int num_cells_inf = inflation/res_; // Number of cells used for inflation
 
+  double t_now = ros::Time::now().toSec();
+
+  // Round to nearest units of 0.1
+  // st_units_elapsed_plan_start: space time units since plan started 
+  int st_units_elapsed_plan_start =  tToSpaceTimeUnits(t_now) - tToSpaceTimeUnits(msg->plan_start_time);
+  logInfo(str_fmt("st_units_elapsed_plan_start(%d)", st_units_elapsed_plan_start));
+  // prev_t: Relative time of last points
   int prev_t = 0;
   for (size_t i = 0; i < msg->plan.size(); i++){
-    int time_intv = msg->plan_time[i] - prev_t; // Time interval
-
-    double map_x = msg->plan[i].position.x;
-    double map_y = msg->plan[i].position.y;
-    double map_z = msg->plan[i].position.z; // height of map in [m]
+    IntPoint grid_pos;
+    // get map position relative to local origin
+    DblPoint map_2d_pos(msg->plan[i].position.x - local_origin_x_, 
+                        msg->plan[i].position.y - local_origin_y_);
+    int map_z_cm =roundToMultInt((int) (msg->plan[i].position.z * 100), z_separation_cm_);
+    
+    dyn_voro_arr_[map_z_cm]->posToIdx(map_2d_pos, grid_pos);
 
     // Inflate the cells by the given inflation radius
-    for(double x = map_x - inflation; x <= map_x + inflation; x+= res_)
+    for(int x = grid_pos.x - num_cells_inf; x <= grid_pos.x + num_cells_inf; x++)
     {
-      for(double y = map_y - inflation; y <= map_y + inflation; y+= res_)
+      for(int y = grid_pos.y - num_cells_inf; y <= grid_pos.y + num_cells_inf; y++)
       {
-        // Add position for the entire time interval
-        for (int j = 0; j < time_intv; j++) { 
-          resrv_tbl_->insert(Eigen::Vector4d{x, y, map_z, (double) (prev_t+j)});
+        // Add position for the entire time interval from previous t to current t
+        for (int j = 0; j < msg->plan_time[i] - prev_t; j++) { 
+          if (st_units_elapsed_plan_start + prev_t + j < 0){
+            continue;
+          }
+          resrv_tbl_->insert(Eigen::Vector4i{x, y, map_z_cm, st_units_elapsed_plan_start + prev_t + j});
         }
       }
     }
 
     prev_t = msg->plan_time[i]; 
   } 
-    
-  // Add the last cell to the reservation table 
-  double map_x = msg->plan.back().position.x;
-  double map_y = msg->plan.back().position.y;
-  double map_z = msg->plan.back().position.z; // height of map in [m]
-  resrv_tbl_->insert(Eigen::Vector4d{map_x, map_y, map_z, msg->plan_time.back() });
+
+  IntPoint grid_pos;
+  // get map position relative to local origin
+  DblPoint map_2d_pos(msg->plan.back().position.x - local_origin_x_, 
+                      msg->plan.back().position.y - local_origin_y_);
+  int map_z_cm =roundToMultInt((int) (msg->plan.back().position.z * 100), z_separation_cm_);
+  dyn_voro_arr_[map_z_cm]->posToIdx(map_2d_pos, grid_pos);
+  resrv_tbl_->insert(Eigen::Vector4i{grid_pos.x, grid_pos.y, map_z_cm, st_units_elapsed_plan_start + msg->plan_time.back()});
 }
 
 void VoronoiPlanner::boolMapCB(const gestelt_msgs::BoolMapArrayConstPtr& msg)
@@ -135,13 +156,14 @@ void VoronoiPlanner::boolMapCB(const gestelt_msgs::BoolMapArrayConstPtr& msg)
 
   local_origin_x_ = msg->origin.x;
   local_origin_y_ = msg->origin.y;
+  max_height_ = msg->max_height_cm;
 
   res_ = msg->resolution;
   z_separation_cm_ = msg-> z_separation_cm;
 
   std::vector<Eigen::Vector3d> voro_verts;
 
-  for (int z_cm = 0; z_cm < msg->max_height_cm; z_cm += msg->z_separation_cm){
+  for (int z_cm = 0; z_cm <= msg->max_height_cm; z_cm += msg->z_separation_cm){
     
     gestelt_msgs::BoolMap bool_map_msg;
     for (const gestelt_msgs::BoolMap& bool_map_msg_sel : msg->bool_maps){
@@ -311,7 +333,6 @@ bool VoronoiPlanner::plan(const Eigen::Vector3d& start, const Eigen::Vector3d& g
   // tm_front_end_plan_.start();
 
   // Generate plan 
-  logInfo("Before generatePlanVoroT");
   if (!fe_planner_->generatePlanVoroT(start, goal)){
     logError(str_fmt("Front end failed to generate plan from (%f, %f, %f) to (%f, %f, %f)",
       start(0), start(1), start(2),
@@ -330,22 +351,16 @@ bool VoronoiPlanner::plan(const Eigen::Vector3d& start, const Eigen::Vector3d& g
 
   // tm_front_end_plan_.stop(verbose_planning_);
 
-  logInfo("Before getSpaceTimePath");
-
   // Retrieve space time path and publish it
+  front_end_path_ = fe_planner_->getPath();
   space_time_path_ = fe_planner_->getSpaceTimePath();
-  logInfo("after getSpaceTimePath");
   viz_helper::publishClosedList(fe_planner_->getClosedListVoroT(), fe_closed_list_pub_, local_map_origin_);
-
-  logInfo("after publishClosedList");
 
   // Convert from space time path to gestelt_msgs::FrontEndPlan
   gestelt_msgs::FrontEndPlan fe_plan_msg;
 
   fe_plan_msg.agent_id = drone_id_;
   fe_plan_msg.header.stamp = ros::Time::now();
-
-  fe_plan_msg.plan_start_time = ros::Time::now().toSec();
 
   for (size_t i = 0; i < space_time_path_.size(); i++){
     geometry_msgs::Pose pose;
@@ -355,16 +370,17 @@ bool VoronoiPlanner::plan(const Eigen::Vector3d& start, const Eigen::Vector3d& g
     pose.orientation.w = 1.0; 
 
     fe_plan_msg.plan.push_back(pose);
-    fe_plan_msg.plan_time.push_back(space_time_path_[i](3) * t_unit_);
+    fe_plan_msg.plan_time.push_back(int(space_time_path_[i](3)));
   }
 
+  fe_plan_msg.plan_start_time = ros::Time::now().toSec();
+
   fe_plan_pub_.publish(fe_plan_msg);
+  fe_plan_broadcast_pub_.publish(fe_plan_msg);
 
-  logInfo("before publishSpaceTimePath");
+  // viz_helper::publishSpaceTimePath(space_time_path_, global_origin_, fe_plan_viz_pub_) ;
 
-  viz_helper::publishSpaceTimePath(space_time_path_, global_origin_, fe_plan_viz_pub_) ;
-
-  logInfo("after publishSpaceTimePath");
+  viz_helper::publishFrontEndPath(front_end_path_, global_origin_, fe_plan_viz_pub_) ;
 
   // double min_clr = DBL_MAX; // minimum path clearance 
   // double max_clr = 0.0;     // maximum path clearance 
