@@ -76,7 +76,7 @@ learning_agile:
   ## modify this required recompilation of the solver
 
   # throttle constraints
-  throttle_upper_bound: 0.6
+  throttle_upper_bound: 0.8
   throttle_lower_bound: 0.2
 
 

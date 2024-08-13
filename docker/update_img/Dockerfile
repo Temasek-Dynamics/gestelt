@@ -17,10 +17,6 @@ WORKDIR /gestelt_ws/src/gestelt
 RUN git pull
 RUN git checkout tianchensun_learning_agile
 
-# update solver
-WORKDIR /gestelt_ws/src/gestelt/gestelt_bringup/src/Learning_Agile
-RUN python3 ./learning_agile_agent.py
-
 # compile the workspace
 WORKDIR /gestelt_ws/
 RUN export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/root/acados/lib \
