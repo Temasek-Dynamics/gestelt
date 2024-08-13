@@ -2,23 +2,24 @@
 # flight mission
 traj_server:
   takeoff_height: 1.2
-
+  drone_yaw: 0.0 # take-off yaw
 mission:
 
   #################################################
   ######--------- aggressive test --------#########
   #################################################
-  # ##------ MPC initial pose ----##
-  # initial_position: [0.0, 1.8, 1.2]
-  # initial_ori_euler: [0.0, 0.0, 0] # only yaw is active
+  ##------ MPC initial pose ----##
+  # initial pose only works for python sim
+  initial_position: [0.0, 1.0, 1.2]
+  initial_ori_euler: [0.0, 0.0, 0.0] # only yaw is active
 
-  # ##------ gate pose ----##
-  # gate_position: [1.0, -0.0, 1.5]
-  # gate_ori_euler: [-0.0, -0.3535, 0]
+  ##------ gate pose ----##
+  gate_position: [1.0, -0.0, 1.5]
+  gate_ori_euler: [-0.0, -0.0, 0.0]
 
-  # ##------ goal pose ----##
-  # goal_position: [0.0, -1.8, 1.2]
-  # goal_ori_euler: [0.0, 0.0, 0] # only yaw is active
+  ##------ goal pose ----##
+  goal_position: [0.0, -1.8, 1.2]
+  goal_ori_euler: [0.0, 0.0, 0.0] # only yaw is active
 
   #################################################
   ######-----end of aggressive test ----------#####
@@ -27,17 +28,17 @@ mission:
   #################################################
   ######--------- primary test -----------#########
   #################################################
-    ##------ MPC initial pose ----##
-  initial_position: [0.0, 0.0, 1.2]
-  initial_ori_euler: [0.0, 0.0, 0] # only yaw is active
+  #  ##------ MPC initial pose ----##
+  # initial_position: [0.0, 0.0, 1.2]
+  # initial_ori_euler: [0.0, 0.0, 0] # only yaw is active
 
-  ##------ gate pose ----##
-  gate_position: [0.5, -0.0, 0.6]
-  gate_ori_euler: [-0.0, -0.0, 0]
+  # ##------ gate pose ----##
+  # gate_position: [0.5, -0.0, 0.6]
+  # gate_ori_euler: [-0.0, -0.0, 0]
 
-  ##------ goal pose ----##
-  goal_position: [1.0, 0.0, 1.2]
-  goal_ori_euler: [0.0, 0.0, 0] # only yaw is active
+  # ##------ goal pose ----##
+  # goal_position: [1.0, 0.0, 1.2]
+  # goal_ori_euler: [0.0, 0.0, 0] # only yaw is active
 
   #################################################
   ######-----end of primary test ----------########

@@ -28,7 +28,7 @@
         <param name="origin_frame" value="$(arg drone_origin_frame)"/>
         
         <!-- Operational params -->
-        <param name="traj_server/drone_yaw" value="0.0" type="double"/>
+        <!-- <param name="traj_server/drone_yaw" value="0.0" type="double"/> -->
         <!-- Debug display params -->
         <param name="traj_server/uav_pose_history_size" value="5000" type="int"/>
 
