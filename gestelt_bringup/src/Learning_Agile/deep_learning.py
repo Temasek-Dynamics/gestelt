@@ -74,7 +74,7 @@ def calc_grad(config_dict,inputs, outputs, gra):
     # receive the decision variables from DNN1, do the MPC, then calculate d_reward/d_z
     gra[:] = quad1.sol_gradient(quad1.ini_state,outputs[0:3],outputs[3:6],outputs[6])
 
-    quad1.uavoc1.acados_solver.reset()
+    
 
 if __name__ == '__main__':
 
@@ -107,55 +107,72 @@ if __name__ == '__main__':
                 n_process = []
                     
                     
-               
-
-                for _ in range(num_cores):
-                    # sample
-                    inputs = nn_sample()
-                    # inputs[0:3]=np.array([0,1.8,1.4])
-                    # inputs[3:6]=np.array([0,-1.8,1.4])
+                MULTI_PROCESS=False
+                if MULTI_PROCESS:
+                    for _ in range(num_cores):
+                        # sample
+                        inputs = nn_sample()
+                        # inputs[0:3]=np.array([0,1.8,1.4])
+                        # inputs[3:6]=np.array([0,-1.8,1.4])
+                        
+                        # forward pass
+                        outputs = model(inputs)
+                        out = outputs.data.numpy()
+                        # print(out)
+                        
+                        # create shared variables (shared between processes)
+                        gra = Array('d',np.zeros(8))
                     
-                    # forward pass
-                    outputs = model(inputs)
-                    out = outputs.data.numpy()
-                    # print(out)
-                    
-                    # create shared variables (shared between processes)
-                    gra = Array('d',np.zeros(8))
-                
-                    # collection
-                    n_inputs.append(inputs)
-                    n_outputs.append(outputs)
-                    n_out.append(out)
+                        # collection
+                        n_inputs.append(inputs)
+                        n_outputs.append(outputs)
+                        n_out.append(out)
 
-                    # create a gradient array for assemble all process gradient result
-                    n_gra.append(gra)
+                        # create a gradient array for assemble all process gradient result
+                        n_gra.append(gra)
 
-                #calculate gradient and loss
-                for j in range(num_cores):
-                     # generate the solver
-                    
-                    p = Process(target=calc_grad,args=(config_dict,n_inputs[j],n_out[j],n_gra[j]))
-                    p.start()
-                    n_process.append(p)
-        
-                for process in n_process:
-                    process.join()
-  
-                # Backward and optimize
-                for j in range(num_cores):                
-                    outputs = model(n_inputs[j])
+                    #calculate gradient and loss
+                    for j in range(num_cores):
+                        # generate the solver
+                        
+                        p = Process(target=calc_grad,args=(config_dict,n_inputs[j],n_out[j],n_gra[j]))
+                        p.start()
+                        n_process.append(p)
+            
+                    for process in n_process:
+                        process.join()
+    
+                    # Backward and optimize
+                    for j in range(num_cores):                
+                        outputs = model(n_inputs[j])
 
-                    # d_reward/d_z * z
-                    loss = model.myloss(outputs,n_gra[j][0:7])        
+                        # d_reward/d_z * z
+                        loss = model.myloss(outputs,n_gra[j][0:7])        
 
-                    optimizer.zero_grad()
+                        optimizer.zero_grad()
 
-                    # d_reward/d_z * d_z/d_dnn1
-                    loss.backward()
-                    optimizer.step()
-                    evalue += n_gra[j][7]
-                    Every_reward[epoch,j+num_cores*i]=n_gra[j][7]
+                        # d_reward/d_z * d_z/d_dnn1
+                        loss.backward()
+                        optimizer.step()
+                        evalue += n_gra[j][7]
+                        Every_reward[epoch,j+num_cores*i]=n_gra[j][7]
+                else:
+                        # sample
+                        inputs = nn_sample()
+                        # inputs[0:3]=np.array([0,1.8,1.4])
+                        # inputs[3:6]=np.array([0,-1.8,1.4])
+                        
+                        # forward pass
+                        outputs = model(inputs)
+                        out = outputs.data.numpy()
+                        # print(out)
+                        
+                        grad=np.zeros(8)
+                        calc_grad(config_dict,inputs,outputs,grad)
+
+                        #backward
+                        
+
 
                 if (i+1)%1 == 0:
                     print (f'Iterate: {k}, Epoch [{epoch+1}/{num_epochs}], Step [{(i+1)*num_cores}/{batch_size}], Reward: {n_gra[0][7]:.4f}')

@@ -152,7 +152,7 @@ class run_quad:
                                     max_tra_w = self.max_tra_w)
         
         # state_traj [x,y,z,vx,vy,vz,qw,qx,qy,qz]
-        # print(sol1['state_traj_opt'])
+        print(sol1['state_traj_opt'])
         state_traj1 = sol1['state_traj_opt']
 
         self.traj = self.uav1.get_quadrotor_position(wing_len = self.winglen, state_traj = state_traj1)
@@ -179,17 +179,19 @@ class run_quad:
         j = self.R_from_MPC (ini_state,tra_pos,tra_ang,t_tra)
         ## fixed perturbation to calculate the gradient
         delta = 1e-3
-        drdx = np.clip(self.R_from_MPC(ini_state,tra_pos+[delta,0,0],tra_ang, t_tra,Ulast) - j,-0.5,0.5)*0.1
-        drdy = np.clip(self.R_from_MPC(ini_state,tra_pos+[0,delta,0],tra_ang, t_tra,Ulast) - j,-0.5,0.5)*0.1
-        drdz = np.clip(self.R_from_MPC(ini_state,tra_pos+[0,0,delta],tra_ang, t_tra,Ulast) - j,-0.5,0.5)*0.1
-        drda = np.clip(self.R_from_MPC(ini_state,tra_pos,tra_ang+[delta,0,0], t_tra,Ulast) - j,-0.5,0.5)*(1/(500*tra_ang[0]**2+5))
-        drdb = np.clip(self.R_from_MPC(ini_state,tra_pos,tra_ang+[0,delta,0], t_tra,Ulast) - j,-0.5,0.5)*(1/(500*tra_ang[1]**2+5))
-        drdc = np.clip(self.R_from_MPC(ini_state,tra_pos,tra_ang+[0,0,delta], t_tra,Ulast) - j,-0.5,0.5)*(1/(500*tra_ang[2]**2+5))
+
+        drdx,drdy,drdz,drda,drdb,drdc=0
+        # drdx = np.clip(self.R_from_MPC(ini_state,tra_pos+[delta,0,0],tra_ang, t_tra,Ulast) - j,-0.5,0.5)*0.1
+        # drdy = np.clip(self.R_from_MPC(ini_state,tra_pos+[0,delta,0],tra_ang, t_tra,Ulast) - j,-0.5,0.5)*0.1
+        # drdz = np.clip(self.R_from_MPC(ini_state,tra_pos+[0,0,delta],tra_ang, t_tra,Ulast) - j,-0.5,0.5)*0.1
+        # drda = np.clip(self.R_from_MPC(ini_state,tra_pos,tra_ang+[delta,0,0], t_tra,Ulast) - j,-0.5,0.5)*(1/(500*tra_ang[0]**2+5))
+        # drdb = np.clip(self.R_from_MPC(ini_state,tra_pos,tra_ang+[0,delta,0], t_tra,Ulast) - j,-0.5,0.5)*(1/(500*tra_ang[1]**2+5))
+        # drdc = np.clip(self.R_from_MPC(ini_state,tra_pos,tra_ang+[0,0,delta], t_tra,Ulast) - j,-0.5,0.5)*(1/(500*tra_ang[2]**2+5))
         drdt =0
-        if((self.R_from_MPC(ini_state,tra_pos,tra_ang,t_tra-0.1)-j)>2):
-            drdt = -0.05
-        if((self.R_from_MPC(ini_state,tra_pos,tra_ang,t_tra+0.1)-j)>2):
-            drdt = 0.05
+        # if((self.R_from_MPC(ini_state,tra_pos,tra_ang,t_tra-0.1)-j)>2):
+        #     drdt = -0.05
+        # if((self.R_from_MPC(ini_state,tra_pos,tra_ang,t_tra+0.1)-j)>2):
+        #     drdt = 0.05
         ## return gradient and reward (for deep learning)
         return np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,j])
 

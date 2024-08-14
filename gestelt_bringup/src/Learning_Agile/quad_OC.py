@@ -485,6 +485,7 @@ class OCSys:
         ocp.solver_options.print_level = 0
         ocp.solver_options.levenberg_marquardt = 1e-5 # small value for gauss newton method, large value for gradient descent method
         ocp.solver_options.nlp_solver_type = 'SQP_RTI' # SQP_RTI or SQP
+        ocp.solver_options.qp_solver_warm_start=1
         # ocp.solver_options.nlp_solver_max_iter = 100
         ##------------------ setting the code generation ------------------##
         # compile acados ocp
@@ -522,7 +523,6 @@ class OCSys:
         # desired_goal_w=np.array([0, 0, 0])
 
         goal_state=np.concatenate((np.array(goal_pos),desired_goal_vel,desired_goal_ori))#,desired_goal_w))
-       
         
         # set the desired state-control at 0->N-1 nodes
         for i in range(self.n_nodes):
