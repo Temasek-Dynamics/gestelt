@@ -7,19 +7,24 @@ from quad_nn import *
 from quad_model import *
 from quad_policy import *
 from multiprocessing import Process, Array
+import yaml
 # initialization
+# acquire the current directory
+current_dir = os.path.dirname(os.path.abspath(__file__))
 
+# build the path to the subdirectory
+subdirectory_path = os.path.join(current_dir, 'Learning_Agile')
 
 ## deep learning
 # Hyper-parameters 
 
-num_epochs = 50 #100
+num_epochs = 10 #100
 batch_size = 100 # 100
 learning_rate = 1e-4
-num_cores =10 #5
+num_cores =1 #5
 
-FILE = "nn_pre.pth"
-model = torch.load(FILE)
+# FILE = "nn_pre.pth"
+# model = torch.load(FILE)
 Every_reward = np.zeros((num_epochs,batch_size))
 
 
@@ -30,7 +35,7 @@ finite policy gradient,
 output is the decision variables z. [x,y,z,a,b,c,t_traverse]
 [a,b,c] is the theta*k, k is the rotation axis
 """
-def calc_grad(self,inputs, outputs, gra):
+def calc_grad(config_dict,inputs, outputs, gra):
     """ 
 
     Args:
@@ -44,8 +49,22 @@ def calc_grad(self,inputs, outputs, gra):
     gate_point = gate1.rotate_y_out(inputs[8])
 
     # quadrotor & MPC initialization
-    quad1 = run_quad(goal_pos=inputs[3:6],ini_r=inputs[0:3].tolist(),ini_q=toQuaternion(inputs[6],[0,0,1]),horizon=20)
+    # quad1 = run_quad(config_dict,goal_pos=inputs[3:6],ini_r=inputs[0:3].tolist(),ini_q=toQuaternion(inputs[6],[0,0,1]),horizon=20)
     
+    final_q=R.from_euler('xyz',[0,0,inputs[6]]).as_quat()
+    final_q=np.roll(final_q,1)
+    
+    
+    # print('inputs:',inputs)
+    quad1.init_cost(
+                goal_pos=inputs[3:6],
+                goal_ori=final_q.tolist(),
+                
+                ini_r=inputs[0:3].tolist(),
+                ini_v_I = [0.0, 0.0, 0.0], # initial velocity
+                ini_q=toQuaternion(inputs[6],[0,0,1]))
+   
+
     # initialize the narrow window
     quad1.init_obstacle(gate_point.reshape(12))
 
@@ -53,9 +72,24 @@ def calc_grad(self,inputs, outputs, gra):
     gra[:] = quad1.sol_gradient(quad1.ini_state,outputs[0:3],outputs[3:6],outputs[6])
 
 if __name__ == '__main__':
-    for k in range(5):
-        FILE = "nn_pre.pth"
-        model = torch.load(FILE)
+
+    # load the configuration file
+    # yaml file dir#
+    conf_folder=os.path.abspath(os.path.join(current_dir, '..', '..','config'))
+    print(current_dir)
+    yaml_file = os.path.join(conf_folder, 'learning_agile_mission.yaml')
+    with open(yaml_file, 'r', encoding='utf-8') as file:
+        config_dict = yaml.safe_load(file)
+    
+    # generate the solver
+    quad1 = run_quad(config_dict,  
+    USE_PREV_SOLVER=False)
+   
+
+    FILE = os.path.join(current_dir, "nn_pre.pth")
+    model = torch.load(FILE)
+    for k in range(1):
+
         optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
         Iteration = []
         Mean_r = []
@@ -70,16 +104,20 @@ if __name__ == '__main__':
                 n_gra = []
                 n_process = []
                 for _ in range(num_cores):
-                # sample
+                    # sample
                     inputs = nn_sample()
-                    # inputs[0:3]=np.array([0,1.8,1.4])
-                    # inputs[3:6]=np.array([0,-1.8,1.4])
-                # forward pass
+                    inputs[0:3]=np.array([0,1.8,1.4])
+                    inputs[3:6]=np.array([0,-1.8,1.4])
+                    
+                    # forward pass
                     outputs = model(inputs)
                     out = outputs.data.numpy()
-                # create shared variables (shared between processes)
+                    # print(out)
+                    
+                    # create shared variables (shared between processes)
                     gra = Array('d',np.zeros(8))
-                # collection
+                
+                    # collection
                     n_inputs.append(inputs)
                     n_outputs.append(outputs)
                     n_out.append(out)
@@ -89,13 +127,13 @@ if __name__ == '__main__':
 
                 #calculate gradient and loss
                 for j in range(num_cores):
-                    p = Process(target=calc_grad,args=(n_inputs[j],n_out[j],n_gra[j]))
+                    p = Process(target=calc_grad,args=(config_dict,n_inputs[j],n_out[j],n_gra[j]))
                     p.start()
                     n_process.append(p)
         
                 for process in n_process:
                     process.join()
-
+  
                 # Backward and optimize
                 for j in range(num_cores):                
                     outputs = model(n_inputs[j])

@@ -94,9 +94,6 @@ class LearningAgileAgent():
     
 
         ##-------------------- planning variables --------------------------##
-        # MPC prediction step, and prediction horizon
-        self.dt=self.config_dict['learning_agile']['dt']
-        self.horizon=self.config_dict['learning_agile']['horizon'] #(T/dt)
 
         self.u = np.array([2,0.0,0.0,0.0])
         self.tm = [0,0,0,0]
@@ -135,9 +132,7 @@ class LearningAgileAgent():
                                 gate_center=np.array([0,0,1.5]),
                                 gate_ori_euler=np.array([0,0,0]),
                                 
-                                t_tra_abs=1,
-                                max_tra_w=0,
-
+                                t_tra_abs=1
                                 ):
         """
         receive the ini_pos,end point defined in the mission file
@@ -167,12 +162,12 @@ class LearningAgileAgent():
         self.gate_center = gate_center
         self.gate_ori_euler = gate_ori_euler
         self.t_tra_abs =t_tra_abs
-        self.max_tra_w=max_tra_w
+        
 
         print('start_point=',self.env_init_set[0:3])
         print('final_point=',self.env_init_set[3:6])
 
-    def problem_definition(self,gazebo_sim=False,dyn_step=0.002):
+    def problem_definition(self,USE_PREV_SOLVER=False,dyn_step=0.002):
         """
         initial traversal problem
 
@@ -186,16 +181,14 @@ class LearningAgileAgent():
           
 
         self.quad1 = run_quad(self.config_dict,
-                              goal_pos=self.env_init_set[3:6].tolist(),
+                              USE_PREV_SOLVER=USE_PREV_SOLVER)
+        
+        self.quad1.init_cost(goal_pos=self.env_init_set[3:6].tolist(),
                               goal_ori=final_q.tolist(),
                               
                               ini_r=self.env_init_set[0:3].tolist(),
                               ini_v_I = [0.0, 0.0, 0.0], # initial velocity
-                              ini_q=ini_q.tolist(),
-                              
-                              gazebo_sim=gazebo_sim,
-                              dt=self.dt)
-        
+                              ini_q=ini_q.tolist(),)
 
         self.quad1.init_obstacle(self.gate_point.reshape(12))
 
@@ -308,8 +301,7 @@ class LearningAgileAgent():
                                                     self.u,
                                                     out[0:3],
                                                     out[3:6],
-                                                    out[6],
-                                                    max_tra_w=self.max_tra_w) # control input 4-by-1 thrusts to pybullet
+                                                    out[6]) # control input 4-by-1 thrusts to pybullet
                 
                 print('solving time at main=',time.time()-t_comp)
                 self.solving_time.append(time.time()- t_comp)
@@ -380,8 +372,7 @@ def main():
                                                 gate_center=np.array(config_dict['mission']['gate_position']),
                                                 gate_ori_euler=np.array(config_dict['mission']['gate_ori_euler']),
                                                 
-                                                t_tra_abs=config_dict['learning_agile']['traverse_time'],
-                                                max_tra_w=config_dict['learning_agile']['max_traverse_weight'])
+                                                t_tra_abs=config_dict['learning_agile']['traverse_time'])
 
     # #------------------------------------------------------------------------------#
     # problem definition

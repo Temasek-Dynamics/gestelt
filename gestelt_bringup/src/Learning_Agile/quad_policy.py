@@ -16,57 +16,37 @@ def Rd2Rp(tra_ang):
 
 class run_quad:
     def __init__(self,config_dict, 
-                goal_pos = [0, 8, 0],
-                goal_ori= toQuaternion(0.0,[3,3,5]),
-                
-                ini_r=[0,-8,0],
-                ini_v_I = [0.0, 0.0, 0.0], 
-                ini_q = toQuaternion(0.0,[3,3,5]),
-                
-                gazebo_sim = False,
-                dt=0.1):
+                USE_PREV_SOLVER = False):
         
+       
+
+        ######################################################
+        #######------------ UAV PARAM----------------#########
+        ######################################################
         ## definition 
         self.winglen = 1.5
-        # goal
-        self.goal_pos = goal_pos
-        self.goal_ori = goal_ori
-        # initial
-        if type(ini_r) is not list:
-            ini_r = ini_r.tolist()
-        self.ini_r = ini_r
-        self.ini_v_I = ini_v_I 
-        self.ini_q = ini_q
-        self.ini_w =  [0.0, 0.0, 0.0]
-        self.ini_state = self.ini_r + self.ini_v_I + self.ini_q# + self.ini_w
-        # set horizon
-        self.horizon = config_dict['learning_agile']['horizon']
 
         # --------------------------- create model1 ----------------------------------------
         self.uav1 = Quadrotor()
-        jx, jy, jz = 0.0023, 0.0023, 0.004
+        # jx, jy, jz = 0.0023, 0.0023, 0.004
         # self.uav1.initDyn(Jx=0.0023,Jy=0.0023,Jz=0.004,mass=0.5,l=0.35,c=0.0245) # hb quadrotor
 
         # c is the force constant, l is the arm length
         self.uav1.initDyn(Jx=0.000392,Jy=0.000405,Jz=0.000639,mass=0.248,l=0.1650,c=3.383e-07 ) # NUSWARM quadrotor
 
+        ######################################################
+        #######------------ MPC PARAM----------------#########
+        ######################################################
 
-        # wrt: ,gate traverse position cost
-        # wqt: gate traverse attitude cost
-        # wthrust: thrust cost
-        # wwt: input angular velocity cost
-        # wrf: final position cost
-        # wvf: final velocity cost
-        # wqf: final attitude cost
-        # wwf: final angular velocity cost
-
+        # MPC prediction step, and prediction horizon
+        self.horizon = config_dict['learning_agile']['horizon']
+        self.dt=config_dict['learning_agile']['dt']
         # initialize the cost function with symbolic variables
-        self.uav1.initCost(wrt=5,wqt=8,wthrust=1,wwt=0,wrf=1,wvf=1,wqf=1,goal_pos=self.goal_pos) # wthrust = 0.1
-        self.uav1.init_TraCost()
+        self.max_tra_w = config_dict['learning_agile']['max_traverse_weight']
 
+    
         # --------------------------- create PDP object1 ----------------------------------------
         # create a pdp object
-        self.dt = dt
         self.uavoc1 = OCSys(config_dict)
         self.uavoc1.setAuxvarVariable()
         sc= 5 #1e20
@@ -82,17 +62,29 @@ class run_quad:
                                      state_ub=[pos_b,pos_b,2,
                                                vel_b,vel_b,vel_b,
                                                sc,sc,sc,sc]) 
-        thrust_ub = config_dict['learning_agile']['single_motor_max_thrust']*4*config_dict['learning_agile']['throttle_upper_bound']
-        thrust_lb = config_dict['learning_agile']['single_motor_max_thrust']*4*config_dict['learning_agile']['throttle_lower_bound']
+        self.thrust_ub = config_dict['learning_agile']['single_motor_max_thrust']*4*config_dict['learning_agile']['throttle_upper_bound']
+        self.thrust_lb = config_dict['learning_agile']['single_motor_max_thrust']*4*config_dict['learning_agile']['throttle_lower_bound']
 
 
         ang_rate_b = config_dict['learning_agile']['angular_vel_bound']
 
         self.uavoc1.setControlVariable(self.uav1.U,
-                                       control_lb=[thrust_lb ,-ang_rate_b,-ang_rate_b,-ang_rate_b],\
-                                       control_ub= [thrust_ub,ang_rate_b,ang_rate_b,ang_rate_b]) # thrust-to-weight = 4:1
+                                       control_lb=[self.thrust_lb ,-ang_rate_b,-ang_rate_b,-ang_rate_b],\
+                                       control_ub= [self.thrust_ub,ang_rate_b,ang_rate_b,ang_rate_b]) # thrust-to-weight = 4:1
 
         self.uavoc1.setDyn(self.uav1.f,self.dt)
+      
+
+        # wrt: ,gate traverse position cost
+        # wqt: gate traverse attitude cost
+        # wthrust: thrust cost
+        # wwt: input angular velocity cost
+        # wrf: final position cost
+        # wvf: final velocity cost
+        # wqf: final attitude cost
+        # wwf: final angular velocity cost
+        self.uav1.initCost(wrt=5,wqt=8,wthrust=1,wwt=0,wrf=1,wvf=1,wqf=1) # wthrust = 0.1
+        self.uav1.init_TraCost()
         self.uavoc1.setInputCost(self.uav1.input_cost)
         self.uavoc1.setPathCost(self.uav1.goal_cost,goal_state_sym=self.uav1.goal_state_sym)
         self.uavoc1.setTraCost(self.uav1.tra_cost,
@@ -105,9 +97,29 @@ class run_quad:
         # self.uavoc1.ocSolverInit(horizon=self.horizon,dt=self.dt)
         self.uavoc1.AcadosOcSolverInit(horizon=self.horizon,
                                        dt=self.dt,
-                                       gazebo_sim=gazebo_sim)
+                                       USE_PREV_SOLVER=USE_PREV_SOLVER)
+    
+    def init_cost(self,
+                goal_pos = [0, 8, 0],
+                goal_ori= toQuaternion(0.0,[3,3,5]),
+                
+                ini_r=[0,-8,0],
+                ini_v_I = [0.0, 0.0, 0.0], 
+                ini_q = toQuaternion(0.0,[3,3,5])):  
+        # goal
+        self.goal_pos = goal_pos
+        self.goal_ori = goal_ori
+        # initial
+        if type(ini_r) is not list:
+            ini_r = ini_r.tolist()
+        self.ini_r = ini_r
+        self.ini_v_I = ini_v_I 
+        self.ini_q = ini_q
+        self.ini_w =  [0.0, 0.0, 0.0]
+        self.ini_state = self.ini_r + self.ini_v_I + self.ini_q# + self.ini_w
         
-    # define function
+    
+
     # initialize the narrow window
     def init_obstacle(self,gate_point):
         self.point1 = gate_point[0:3]
@@ -116,21 +128,31 @@ class run_quad:
         self.point4 = gate_point[9:12]        
         self.obstacle1 = obstacle(self.point1,self.point2,self.point3,self.point4)
     
-    def objective( self,ini_state = None,tra_pos=None,tra_ang=None,t = 3, Ulast = None):
+    def R_from_MPC( self,ini_state = None,tra_pos=None,tra_ang=None,t_tra = 3, Ulast = None):
         if ini_state is None:
             ini_state = self.ini_state
 
         # round the traversal time, keep to one decimal place
-        t = round(t,1)
+        # t_tra = round(t_tra,1)
         tra_atti = Rd2Rp(tra_ang)
-        ## transfer the high-level parameters to traversal cost
-        # define traverse cost
-        self.uav1.init_TraCost(tra_pos,tra_atti)
-        self.uavoc1.setTraCost(self.uav1.tra_cost, t)
-        # obtain solution of trajectory
-        sol1 = self.uavoc1.ocSolver(ini_state=ini_state ,horizon=self.horizon,dt=self.dt, Ulast=Ulast)
+        tra_q=toQuaternion(tra_atti[0],tra_atti[1])
 
-        # state_traj1 [x,y,z,vx,vy,vz,qw,qx,qy,qz...]
+        Ulast = np.zeros(4)
+        Ulast[0] = self.thrust_lb
+        current_state_control = np.concatenate((ini_state,Ulast))
+
+        # obtain solution of trajectory
+        # sol1 = self.uavoc1.ocSolver(ini_state=ini_state ,horizon=self.horizon,dt=self.dt, Ulast=Ulast)
+        sol1,weight_vis,NO_SOLUTION_FLAG  = self.uavoc1.AcadosOcSolver(current_state_control=current_state_control,
+                                    goal_pos=self.goal_pos,
+                                    goal_ori=self.goal_ori,
+                                    tra_pos=tra_pos,
+                                    tra_q=tra_q,
+                                    t_tra=t_tra,
+                                    max_tra_w = self.max_tra_w)
+        
+        # state_traj [x,y,z,vx,vy,vz,qw,qx,qy,qz]
+        # print(sol1['state_traj_opt'])
         state_traj1 = sol1['state_traj_opt']
 
         self.traj = self.uav1.get_quadrotor_position(wing_len = self.winglen, state_traj = state_traj1)
@@ -148,25 +170,25 @@ class run_quad:
         return reward
     # --------------------------- solution and learning----------------------------------------
     ##solution and demo
-    def sol_gradient(self,ini_state = None,tra_pos =None,tra_ang=None,t=None,Ulast=None):
+    def sol_gradient(self,ini_state = None,tra_pos =None,tra_ang=None,t_tra=None,Ulast=None):
         tra_ang = np.array(tra_ang)
         tra_pos = np.array(tra_pos)
 
         # run the MPC to execute plan and execute based on the high-level variables
         # j is the reward
-        j = self.objective (ini_state,tra_pos,tra_ang,t)
+        j = self.R_from_MPC (ini_state,tra_pos,tra_ang,t_tra)
         ## fixed perturbation to calculate the gradient
         delta = 1e-3
-        drdx = np.clip(self.objective(ini_state,tra_pos+[delta,0,0],tra_ang, t,Ulast) - j,-0.5,0.5)*0.1
-        drdy = np.clip(self.objective(ini_state,tra_pos+[0,delta,0],tra_ang, t,Ulast) - j,-0.5,0.5)*0.1
-        drdz = np.clip(self.objective(ini_state,tra_pos+[0,0,delta],tra_ang, t,Ulast) - j,-0.5,0.5)*0.1
-        drda = np.clip(self.objective(ini_state,tra_pos,tra_ang+[delta,0,0], t,Ulast) - j,-0.5,0.5)*(1/(500*tra_ang[0]**2+5))
-        drdb = np.clip(self.objective(ini_state,tra_pos,tra_ang+[0,delta,0], t,Ulast) - j,-0.5,0.5)*(1/(500*tra_ang[1]**2+5))
-        drdc = np.clip(self.objective(ini_state,tra_pos,tra_ang+[0,0,delta], t,Ulast) - j,-0.5,0.5)*(1/(500*tra_ang[2]**2+5))
+        drdx = np.clip(self.R_from_MPC(ini_state,tra_pos+[delta,0,0],tra_ang, t_tra,Ulast) - j,-0.5,0.5)*0.1
+        drdy = np.clip(self.R_from_MPC(ini_state,tra_pos+[0,delta,0],tra_ang, t_tra,Ulast) - j,-0.5,0.5)*0.1
+        drdz = np.clip(self.R_from_MPC(ini_state,tra_pos+[0,0,delta],tra_ang, t_tra,Ulast) - j,-0.5,0.5)*0.1
+        drda = np.clip(self.R_from_MPC(ini_state,tra_pos,tra_ang+[delta,0,0], t_tra,Ulast) - j,-0.5,0.5)*(1/(500*tra_ang[0]**2+5))
+        drdb = np.clip(self.R_from_MPC(ini_state,tra_pos,tra_ang+[0,delta,0], t_tra,Ulast) - j,-0.5,0.5)*(1/(500*tra_ang[1]**2+5))
+        drdc = np.clip(self.R_from_MPC(ini_state,tra_pos,tra_ang+[0,0,delta], t_tra,Ulast) - j,-0.5,0.5)*(1/(500*tra_ang[2]**2+5))
         drdt =0
-        if((self.objective(ini_state,tra_pos,tra_ang,t-0.1)-j)>2):
+        if((self.R_from_MPC(ini_state,tra_pos,tra_ang,t_tra-0.1)-j)>2):
             drdt = -0.05
-        if((self.objective(ini_state,tra_pos,tra_ang,t+0.1)-j)>2):
+        if((self.R_from_MPC(ini_state,tra_pos,tra_ang,t_tra+0.1)-j)>2):
             drdt = 0.05
         ## return gradient and reward (for deep learning)
         return np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,j])
@@ -183,14 +205,14 @@ class run_quad:
         tra_ang = np.array([tra_a,tra_b,tra_c])
         ## fixed perturbation to calculate the gradient
         for k in range(200):
-            j = self.objective (tra_pos,tra_ang,t)
-            drdx = np.clip(self.objective(tra_pos+[0.001,0,0],tra_ang=tra_ang, t=t) - j,-0.5,0.5)
-            drdy = np.clip(self.objective(tra_pos+[0,0.001,0],tra_ang=tra_ang, t=t) - j,-0.5,0.5)
-            drdz = np.clip(self.objective(tra_pos+[0,0,0.001],tra_ang=tra_ang, t=t) - j,-0.5,0.5)
-            drda = np.clip(self.objective(tra_pos,tra_ang=tra_ang+[0.001,0,0], t=t) - j,-0.5,0.5)
-            drdb = np.clip(self.objective(tra_pos,tra_ang=tra_ang+[0,0.001,0], t=t) - j,-0.5,0.5)
-            drdc = np.clip(self.objective(tra_pos,tra_ang=tra_ang+[0,0,0.001], t=t) - j,-0.5,0.5)
-            #drdt = np.clip(self.objective(tra_pos,tra_ang,t-0.1)-j,-10,10)
+            j = self.R_from_MPC (tra_pos,tra_ang,t)
+            drdx = np.clip(self.R_from_MPC(tra_pos+[0.001,0,0],tra_ang=tra_ang, t=t) - j,-0.5,0.5)
+            drdy = np.clip(self.R_from_MPC(tra_pos+[0,0.001,0],tra_ang=tra_ang, t=t) - j,-0.5,0.5)
+            drdz = np.clip(self.R_from_MPC(tra_pos+[0,0,0.001],tra_ang=tra_ang, t=t) - j,-0.5,0.5)
+            drda = np.clip(self.R_from_MPC(tra_pos,tra_ang=tra_ang+[0.001,0,0], t=t) - j,-0.5,0.5)
+            drdb = np.clip(self.R_from_MPC(tra_pos,tra_ang=tra_ang+[0,0.001,0], t=t) - j,-0.5,0.5)
+            drdc = np.clip(self.R_from_MPC(tra_pos,tra_ang=tra_ang+[0,0,0.001], t=t) - j,-0.5,0.5)
+            #drdt = np.clip(self.R_from_MPC(tra_pos,tra_ang,t-0.1)-j,-10,10)
             # update
             tra_posx += 0.1*drdx
             tra_posy += 0.1*drdy
@@ -198,9 +220,9 @@ class run_quad:
             tra_a += (1/(500*tra_a**2+5))*drda
             tra_b += (1/(500*tra_b**2+5))*drdb
             tra_c += (1/(500*tra_c**2+5))*drdc
-            if((self.objective(tra_pos,tra_ang,t-0.1)-j)>2):
+            if((self.R_from_MPC(tra_pos,tra_ang,t-0.1)-j)>2):
                 t = t-0.1
-            if((self.objective(tra_pos,tra_ang,t+0.1)-j)>2):
+            if((self.R_from_MPC(tra_pos,tra_ang,t+0.1)-j)>2):
                 t = t+0.1
             t = round(t,1)
             tra_pos = np.array([tra_posx,tra_posy,tra_posz])
@@ -220,13 +242,13 @@ class run_quad:
         current_para = np.array([tra_posx,tra_posy,tra_posz,tra_a,tra_b,tra_c])
         lr = np.array([2e-4,2e-4,2e-4,5e-5,5e-5,5e-5])
         for k in range(50):
-            j = self.objective(current_para[0:3],current_para[3:6],t)
+            j = self.R_from_MPC(current_para[0:3],current_para[3:6],t)
             # calculate derivatives
             c = []
             f = []
             for i in range(24):
                 dx = sample(0.001)
-                dr = self.objective (current_para[0:3]+dx[0:3],current_para[3:6]+dx[3:6],t)-j
+                dr = self.R_from_MPC (current_para[0:3]+dx[0:3],current_para[3:6]+dx[3:6],t)-j
                 c += [dx]
                 f += [dr]
             # update
@@ -235,11 +257,11 @@ class run_quad:
             a = np.matmul(np.linalg.inv(np.matmul(cm.T,cm)),cm.T)
             drdx = np.matmul(a,fm)
             current_para = current_para + lr * drdx
-            j = self.objective(current_para[0:3],current_para[3:6],t)
-            if((self.objective(current_para[0:3],current_para[3:6],t+0.1)-j)>20):
+            j = self.R_from_MPC(current_para[0:3],current_para[3:6],t)
+            if((self.R_from_MPC(current_para[0:3],current_para[3:6],t+0.1)-j)>20):
                 t = t + 0.1
             else:
-                if((self.objective(current_para[0:3],current_para[3:6],t-0.1)-j)>20):
+                if((self.R_from_MPC(current_para[0:3],current_para[3:6],t-0.1)-j)>20):
                     t = t - 0.1
             t = round(t,1) 
             print(str(t)+str('  ')+str(drdx)+str('  ')+str(k))
@@ -259,7 +281,7 @@ class run_quad:
             point2 = self.point2, point3 = self.point3, point4 = self.point4)
     
     ## given initial state, control command, high-level parameters, obtain the first control command of the quadrotor
-    def get_input(self, ini_state, Ulast ,tra_pos, tra_ang, t_tra,max_tra_w):
+    def get_input(self, ini_state, Ulast ,tra_pos, tra_ang, t_tra):
     
         # # initialize the NLP problem
         # # self.uav1.init_TraCost(tra_pos,tra_atti)
@@ -271,8 +293,9 @@ class run_quad:
     
         ##----- cause the different bewteen the python and the gazebo--###
         tra_atti = Rd2Rp(tra_ang)
-    
+
         tra_q=toQuaternion(tra_atti[0],tra_atti[1])
+
         current_state_control = np.concatenate((ini_state,Ulast))
        
         # self.sol1 = self.uavoc1.ocSolver(current_state_control=current_state_control,t_tra=t)
@@ -282,7 +305,7 @@ class run_quad:
                                                 tra_pos=tra_pos,
                                                 tra_q=tra_q,
                                                 t_tra=t_tra,
-                                                max_tra_w=max_tra_w)
+                                                max_tra_w = self.max_tra_w)
         
         # return control, pos_vel_cmd
         return self.sol1,weight_vis,NO_SOLUTION_FLAG

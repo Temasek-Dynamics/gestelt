@@ -139,7 +139,7 @@ class Quadrotor:
         self.f = vertcat(dr_I, dv_I, dq)#, dw)
 
     def initCost(self, wrt=None, wqt=None, wrf=None, wvf=None, wqf=None, wwt=None, \
-        wthrust=0.5,goal_pos=[0,9,5],goal_velo = [0,0,0],goal_atti=[0,[1,0,0]]):
+        wthrust=0.5):
         #traverse
         parameter = []
         if wrt is None:

@@ -293,7 +293,7 @@ class OCSys:
                             print_level=0, 
                             dt = 0.1,
                             costate_option=0,
-                            gazebo_sim=False
+                            USE_PREV_SOLVER=False
                             ):
         """
         This function is to define the optimal control problem using ACADOS
@@ -493,7 +493,7 @@ class OCSys:
         # load solver from json file
         build=True
         generate=True
-        if gazebo_sim:
+        if USE_PREV_SOLVER:
             build=False
             generate=False
         self.acados_solver = AcadosOcpSolver(ocp,generate=generate,build=build, json_file=json_file)
@@ -529,11 +529,12 @@ class OCSys:
             
             # set the current input
             current_input = np.array(current_state_control[self.n_state:])
+            # current_input = np.array([0,0,0,0])
             gamma=self.config_dict['learning_agile']['traverse_weight_span']
             # weight = max_tra_w*casadi.exp(-gamma*(dt*i-t_tra)**2) #gamma should increase as the flight duration decreases
             weight=max_tra_w*np.exp(-gamma*(dt*i-t_tra)**2) #gamma should increase as the flight duration decreases
             self.acados_solver.set(i, 'p',np.concatenate((goal_state,
-                                                          current_input,
+                                                          current_input,# current is dummy
                                                           np.concatenate((tra_pos,tra_q)),
                                                           np.array([weight]))))
             if i==10:
