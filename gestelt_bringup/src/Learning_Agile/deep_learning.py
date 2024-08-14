@@ -51,6 +51,9 @@ def calc_grad(config_dict,inputs, outputs, gra):
     # quadrotor & MPC initialization
     # quad1 = run_quad(config_dict,goal_pos=inputs[3:6],ini_r=inputs[0:3].tolist(),ini_q=toQuaternion(inputs[6],[0,0,1]),horizon=20)
     
+    print('traverseing pose:',inputs[3:6])
+    quad1 = run_quad(config_dict,  
+                    USE_PREV_SOLVER=True)
     final_q=R.from_euler('xyz',[0,0,inputs[6]]).as_quat()
     final_q=np.roll(final_q,1)
     
@@ -71,6 +74,8 @@ def calc_grad(config_dict,inputs, outputs, gra):
     # receive the decision variables from DNN1, do the MPC, then calculate d_reward/d_z
     gra[:] = quad1.sol_gradient(quad1.ini_state,outputs[0:3],outputs[3:6],outputs[6])
 
+    quad1.uavoc1.acados_solver.reset()
+
 if __name__ == '__main__':
 
     # load the configuration file
@@ -80,14 +85,11 @@ if __name__ == '__main__':
     yaml_file = os.path.join(conf_folder, 'learning_agile_mission.yaml')
     with open(yaml_file, 'r', encoding='utf-8') as file:
         config_dict = yaml.safe_load(file)
-    
-    # generate the solver
-    quad1 = run_quad(config_dict,  
-    USE_PREV_SOLVER=False)
-   
 
     FILE = os.path.join(current_dir, "nn_pre.pth")
     model = torch.load(FILE)
+    quad1 = run_quad(config_dict,  
+                    USE_PREV_SOLVER=False)
     for k in range(1):
 
         optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
@@ -103,11 +105,15 @@ if __name__ == '__main__':
                 n_out = []
                 n_gra = []
                 n_process = []
+                    
+                    
+               
+
                 for _ in range(num_cores):
                     # sample
                     inputs = nn_sample()
-                    inputs[0:3]=np.array([0,1.8,1.4])
-                    inputs[3:6]=np.array([0,-1.8,1.4])
+                    # inputs[0:3]=np.array([0,1.8,1.4])
+                    # inputs[3:6]=np.array([0,-1.8,1.4])
                     
                     # forward pass
                     outputs = model(inputs)
@@ -127,6 +133,8 @@ if __name__ == '__main__':
 
                 #calculate gradient and loss
                 for j in range(num_cores):
+                     # generate the solver
+                    
                     p = Process(target=calc_grad,args=(config_dict,n_inputs[j],n_out[j],n_gra[j]))
                     p.start()
                     n_process.append(p)

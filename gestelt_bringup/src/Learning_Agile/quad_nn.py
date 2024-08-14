@@ -18,12 +18,12 @@ from scipy.spatial.transform import Rotation as R
 def nn_sample(init_pos=None,final_pos=None,init_angle=None):
     inputs = np.zeros(9)
     if init_pos is None:
-        inputs[0:3] = np.random.uniform(-5,5,size=3) + np.array([0,-9,0]) #-5~5, -9
+        inputs[0:3] = np.random.uniform(-5,5,size=3) + np.array([0,1.8,0]) #-5~5, -9
     else:
         inputs[0:3] = init_pos
     ## random final postion 
     if final_pos is None:
-        inputs[3:6] = np.random.uniform(-2,2,size=3) + np.array([0,6,0]) #-2~2, 6
+        inputs[3:6] = np.random.uniform(-2,2,size=3) + np.array([0,-1.8,0]) #-2~2, 6
     else:
         inputs[3:6] = final_pos
     ## random initial yaw angle of the quadrotor
