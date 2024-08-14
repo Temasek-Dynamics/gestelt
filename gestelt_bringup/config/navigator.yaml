@@ -102,7 +102,7 @@ optimization:
   weight_swarm: 10000.0 
   weight_feasibility: 10000.0
   weight_sqrvariance: 10000.0 
-  weight_time: 17.5 
+  weight_time: 5.0
   swarm_clearance: 0.375 
   max_vel: 2.25 # Maximum velocity (m/s)
   max_acc: 12.0 # Maximum acceleration (m/s^2)

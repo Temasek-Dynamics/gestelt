@@ -135,12 +135,11 @@ class DeterministicForest
 			//(0, 1.75)
 			//(1.75, 0)
 
-
-			cylinders.push_back(Cylinder(a-0.4, 0.0, 0.175, 3.0)); // Left obstacle
-			cylinders.push_back(Cylinder(0.0, -a, 0.175, 3.0));		// Top obstacle
-			cylinders.push_back(Cylinder(-a+0.4, 0.0, 0.175, 3.0)); // Right obstacle
-			cylinders.push_back(Cylinder(0.0, a, 0.175, 3.0));		// Bottom obstacle
-			cylinders.push_back(Cylinder(0.2, 0.0, 0.175, 3.0));	// Center obstacle
+			cylinders.push_back(Cylinder(a-0.4, 0.0, 	0.24, 3.0)); // Left obstacle
+			cylinders.push_back(Cylinder(0.0, 	-a, 	0.24, 3.0));		// Top obstacle
+			cylinders.push_back(Cylinder(-a+0.4, 0.0, 	0.24, 3.0)); // Right obstacle
+			cylinders.push_back(Cylinder(0.0, 	 a, 	0.24, 3.0));		// Bottom obstacle
+			cylinders.push_back(Cylinder(0.2, 	0.0, 	0.24, 3.0));	// Center obstacle
 
 			generatePredeterminedCyclinders(cylinders);
 
