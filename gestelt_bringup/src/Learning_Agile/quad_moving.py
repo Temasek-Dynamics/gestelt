@@ -27,7 +27,7 @@ class kalman:
     def v_es(self, position):
         return position
 
-def solver(model, quad_state, final_point, gate1, velo, w ):
+def binary_search_solver(model, quad_state, final_point, gate1, velo, w ):
     velo = np.array(velo)
 
     t_guess = magni(gate1.centroid-quad_state[0:3])/3

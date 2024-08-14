@@ -232,10 +232,10 @@ class LearningAgileAgent():
         else:
 
             self.gate_n = gate(self.gate_move[self.i])
-            # self.state_n = [drone_state]
-
+        
             ## binary search for the traversal time
-            self.t_tra_rel = solver(self.model,self.state,self.final_point,self.gate_n,self.moving_gate.V[self.i],self.moving_gate.w)
+            ## to set the drone state under the gate frame, for the NN2 input
+            self.t_tra_rel = binary_search_solver(self.model,self.state,self.final_point,self.gate_n,self.moving_gate.V[self.i],self.moving_gate.w)
             self.t_tra_abs = self.t_tra_rel+self.i*0.01
 
     
@@ -277,12 +277,10 @@ class LearningAgileAgent():
                 self.gate_state_estimation()
                 
                 
-                
-        
                 nn_mpc_inputs = np.zeros(18)
                 if self.STATIC_GATE_TEST:
-                    nn_mpc_inputs[0:10] = self.state #self.gate_n.transform(self.state)
-                    nn_mpc_inputs[10:13] = self.final_point#self.gate_n.t_final(self.final_point)
+                    nn_mpc_inputs[0:10] = self.state 
+                    nn_mpc_inputs[10:13] = self.final_point
                     
 
                     # manually set the traversal time and pose
@@ -293,7 +291,7 @@ class LearningAgileAgent():
                     # relative traversal time
                     out[6]=self.t_tra_rel
                 else:
-                    # drone state under the predicted gate frame
+                    # drone state under the predicted gate frame(based on the binary search)
                     nn_mpc_inputs[0:10] = self.gate_n.transform(self.state)
                     nn_mpc_inputs[10:13] = self.gate_n.t_final(self.final_point)
                     nn_mpc_inputs[16] = magni(self.gate_n.gate_point[0,:]-self.gate_n.gate_point[1,:]) # gate width
@@ -307,7 +305,8 @@ class LearningAgileAgent():
                 t_comp = time.time()
                 
                 cmd_solution,weight_vis,NO_SOLUTION_FLAG  = self.quad1.get_input(nn_mpc_inputs[0:10],
-                                                    self.u,out[0:3],
+                                                    self.u,
+                                                    out[0:3],
                                                     out[3:6],
                                                     out[6],
                                                     max_tra_w=self.max_tra_w) # control input 4-by-1 thrusts to pybullet
