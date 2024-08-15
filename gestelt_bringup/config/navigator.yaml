@@ -92,24 +92,24 @@ sfc:
 back_end: 
   num_replan_retries: 1 # Number of times for back-end to retry
   ego:
-    segment_length: 1.5 # Length of one segment i.e. distance between adjacent spline control points
+    segment_length: 1.0 # Length of one segment i.e. distance between adjacent spline control points
 
 ##### Optimization params
 optimization:
-  num_cstr_pts_per_seg: 15 # Number of constraint points per trajectory segment i.e. discretization.
-  segment_length: 1.5 # Length of one segment i.e. distance between adjacent spline control points
+  num_cstr_pts_per_seg: 10 # Number of constraint points per trajectory segment i.e. discretization.
+  segment_length: 1.0 # Length of one segment i.e. distance between adjacent spline control points
   # Weights
   weight_swarm: 10000.0 
   weight_feasibility: 10000.0
   weight_sqrvariance: 10000.0 
-  weight_time: 10.0
-  swarm_clearance: 0.5 
-  max_vel: 1.5 # Maximum velocity (m/s)
+  weight_time: 25.0 
+  swarm_clearance: 0.375 
+  max_vel: 2.25 # Maximum velocity (m/s)
   max_acc: 12.0 # Maximum acceleration (m/s^2)
 
   # EGO params
   weight_obstacle: 10000.0 
-  obstacle_clearance: 0.1
+  obstacle_clearance: 0.375
 
   # Spherical SFC
   weight_sph_bounds: 100.0
@@ -148,13 +148,13 @@ grid_map:
 
   occ_map:
     resolution: 0.1
-    inflation: 0.25
+    inflation: 0.2
     ground_height: 0.0  
     max_range: 30.0     # Max range of sensor
 
   # For visualizing collision with static obstacles
   collision_check:
-    warn_radius: 0.25  # Publish warning spheres when collision is possible
+    warn_radius: 0.275  # Publish warning spheres when collision is possible
     fatal_radius: 0.18  # Publish fatal spheres when collision is definite
     # warn_radius: 0.225  # Publish warning spheres when collision is possible
     # fatal_radius: 0.14  # Publish fatal spheres when collision is definite
