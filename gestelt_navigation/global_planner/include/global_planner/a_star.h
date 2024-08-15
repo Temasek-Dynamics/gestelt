@@ -154,8 +154,6 @@ private:
       path_smoothed_.push_back(Eigen::Vector3d{map_2d_pos.x + local_origin_x_, 
                                             map_2d_pos.y + local_origin_y_, cell.z_m});
     }
-
-
   }
 
 /* Getter methods */

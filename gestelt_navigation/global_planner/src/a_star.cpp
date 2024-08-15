@@ -46,7 +46,6 @@ void AStarPlanner::expandVoronoiBubbleT(const VCell_T& origin_cell)
     q.push(IntPoint(origin_cell.x, origin_cell.y));
 
     IntPoint grid(origin_cell.x, origin_cell.y);
-    marked_bubble_cells_[origin_cell.z_cm] = std::unordered_set<IntPoint>();
 
     marked_bubble_cells_[origin_cell.z_cm].insert(grid);
 
@@ -171,6 +170,8 @@ bool AStarPlanner::generatePlanVoroT(   const Eigen::Vector3d& start_pos_3d,
 
     // std::cout << astar_params_.drone_id << ": before expandVoronoiBubbleT" << std::endl;
 
+    marked_bubble_cells_[start_node.z_cm] = std::unordered_set<IntPoint>();
+    marked_bubble_cells_[goal_node.z_cm] = std::unordered_set<IntPoint>();
     // Create voronoi bubble around start and goal
     expandVoronoiBubbleT(start_node);
     expandVoronoiBubbleT(goal_node);

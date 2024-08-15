@@ -310,7 +310,11 @@ private:
 
   /* Convert from time [s] to space-time units */
   int tToSpaceTimeUnits(const double& t){
-    return round(t / t_unit_);
+    double value = t / t_unit_;
+
+    value = value + 0.5 - (value<0); // x is now 55.499999...
+    return (int)value; // truncated to 55
+
   }
 
   /**

@@ -117,7 +117,12 @@ void VoronoiPlanner::FEPlanSubCB(const gestelt_msgs::FrontEndPlanConstPtr& msg)
   // Round to nearest units of 0.1
   // st_units_elapsed_plan_start: space time units since plan started 
   int st_units_elapsed_plan_start =  tToSpaceTimeUnits(t_now) - tToSpaceTimeUnits(msg->plan_start_time);
-  logInfo(str_fmt("st_units_elapsed_plan_start(%d)", st_units_elapsed_plan_start));
+
+  logInfo(str_fmt("t_now(%.*f), msg->plan_start_time(%.*f)",  t_now, msg->plan_start_time));
+
+  logInfo(str_fmt("st_units_elapsed_plan_start(%d) = %d - %d",  st_units_elapsed_plan_start, 
+                                                                tToSpaceTimeUnits(t_now), 
+                                                                tToSpaceTimeUnits(msg->plan_start_time)));
   // prev_t: Relative time of last points
   int prev_t = 0;
   for (size_t i = 0; i < msg->plan.size(); i++){
