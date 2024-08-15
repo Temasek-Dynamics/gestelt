@@ -293,6 +293,7 @@ class OCSys:
                             print_level=0, 
                             dt = 0.1,
                             costate_option=0,
+                            SQP_RTI_OPTION=False,
                             USE_PREV_SOLVER=False
                             ):
         """
@@ -484,8 +485,12 @@ class OCSys:
         ocp.solver_options.sim_method_num_stages = 4 # default 4
         ocp.solver_options.print_level = 0
         ocp.solver_options.levenberg_marquardt = 1e-5 # small value for gauss newton method, large value for gradient descent method
-        ocp.solver_options.nlp_solver_type = 'SQP_RTI' # SQP_RTI or SQP
-        ocp.solver_options.qp_solver_warm_start=2
+        
+        if SQP_RTI_OPTION:
+            ocp.solver_options.nlp_solver_type = 'SQP_RTI'
+        else:
+            ocp.solver_options.nlp_solver_type = 'SQP' # SQP_RTI or SQP
+        # ocp.solver_options.qp_solver_warm_start=2
         # ocp.solver_options.nlp_solver_max_iter = 100
         ##------------------ setting the code generation ------------------##
         # compile acados ocp

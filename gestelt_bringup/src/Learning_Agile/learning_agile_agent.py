@@ -181,6 +181,7 @@ class LearningAgileAgent():
           
 
         self.quad1 = run_quad(self.config_dict,
+                              SQP_RTI_OPTION=True,
                               USE_PREV_SOLVER=USE_PREV_SOLVER)
         
         self.quad1.init_state_and_mission(goal_pos=self.env_init_set[3:6].tolist(),

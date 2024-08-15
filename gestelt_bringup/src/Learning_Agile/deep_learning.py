@@ -95,6 +95,7 @@ if __name__ == '__main__':
 
     # generate the solver
     quad1 = run_quad(config_dict,  
+                    SQP_RTI_OPTION=False, 
                     USE_PREV_SOLVER=False)
     for k in range(1):
 

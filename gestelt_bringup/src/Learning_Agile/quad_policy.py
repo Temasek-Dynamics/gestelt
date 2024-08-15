@@ -15,7 +15,8 @@ def Rd2Rp(tra_ang):
     return [theta,vector]
 
 class run_quad:
-    def __init__(self,config_dict, 
+    def __init__(self,config_dict,
+                SQP_RTI_OPTION, 
                 USE_PREV_SOLVER = False):
         
        
@@ -96,6 +97,7 @@ class run_quad:
         # self.uavoc1.ocSolverInit(horizon=self.horizon,dt=self.dt)
         self.uavoc1.AcadosOcSolverInit(horizon=self.horizon,
                                        dt=self.dt,
+                                       SQP_RTI_OPTION=SQP_RTI_OPTION,
                                        USE_PREV_SOLVER=USE_PREV_SOLVER)
     
     def init_state_and_mission(self,
@@ -182,7 +184,7 @@ class run_quad:
         drda = np.clip(self.R_from_MPC(tra_pos,tra_ang+[delta,0,0], t_tra,Ulast) - j,-0.5,0.5)*(1/(500*tra_ang[0]**2+5))
         drdb = np.clip(self.R_from_MPC(tra_pos,tra_ang+[0,delta,0], t_tra,Ulast) - j,-0.5,0.5)*(1/(500*tra_ang[1]**2+5))
         drdc = np.clip(self.R_from_MPC(tra_pos,tra_ang+[0,0,delta], t_tra,Ulast) - j,-0.5,0.5)*(1/(500*tra_ang[2]**2+5))
-        # drdt =0
+        drdt =0
         if((self.R_from_MPC(tra_pos,tra_ang,t_tra-0.1)-j)>2):
             drdt = -0.05
         if((self.R_from_MPC(tra_pos,tra_ang,t_tra+0.1)-j)>2):
@@ -278,7 +280,12 @@ class run_quad:
             point2 = self.point2, point3 = self.point3, point4 = self.point4)
     
     ## given initial state, control command, high-level parameters, obtain the first control command of the quadrotor
-    def mpc_update(self, current_state, Ulast ,tra_pos, tra_ang, t_tra):
+    def mpc_update(self, 
+                   current_state, 
+                   Ulast ,
+                   tra_pos, 
+                   tra_ang, 
+                   t_tra):
     
         # # initialize the NLP problem
         # # self.uav1.init_TraCost(tra_pos,tra_atti)
