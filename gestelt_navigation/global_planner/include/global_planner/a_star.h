@@ -54,75 +54,42 @@ public:
    */
   void reset();
 
-  /**
-   * @brief Assign a dynamic voronoi object 
-   * 
-   */
+  /* Assign voronoi map. To be executed when map is updated*/
   void assignVoroMap(const std::map<int, std::shared_ptr<DynamicVoronoi>>& dyn_voro_arr,
                     const int& z_separation_cm, 
                     const double& local_origin_x,
                     const double& local_origin_y,
                     const double& max_height);
 
-  // Expand voronio bubble around given cell
-  void expandVoronoiBubbleT(const VCell_T& origin_cell);
+
+  /* Update the assignement of the reservation table. TO be executed when the reservation table is updated*/
+  void updateReservationTable(const std::map<int, std::unordered_set<Eigen::Vector4i>>& resrv_tbl);
 
   /* Generate space-time plan on voronoi graph  */
   bool generatePlanVoroT( const Eigen::Vector3d& start_pos_3d, 
                           const Eigen::Vector3d& goal_pos_3d);
 
-  // /* Generate space-time plan on voronoi graph  */
+private: 
+
+  // Expand voronio bubble around given cell
+  void expandVoronoiBubbleT(const VCell_T& origin_cell);
+
+  /* Generate space-time plan on voronoi graph  */
   bool generatePlanVoroT( const Eigen::Vector3d& start_pos_3d, 
                           const Eigen::Vector3d& goal_pos_3d, 
                           std::function<double(const VCell_T&, const VCell_T&)> cost_function);
-
-
-  /**
-   * @brief Get successful plan in terms of space i,e. (x,y,z)
-   *
-   * @return std::vector<Eigen::Vector3d>
-   */
-  std::vector<Eigen::Vector3d> getPath()
-  {
-      return path_pos_;
-  }
-
-  /**
-   * @brief Get successful plan in terms of space and time i.e. (x,y,z,t)
-   *
-   * @return std::vector<Eigen::Vector3d>
-   */
-  std::vector<Eigen::Vector4d> getSpaceTimePath()
-  {
-      return path_pos_t_;
-  }
-
-  /**
-   * @brief Get successful plan in terms of path positions
-   *
-   * @return std::vector<Eigen::Vector3d>
-   */
-  std::vector<Eigen::Vector3d> getClosedListVoroT()
-  {
-    std::vector<Eigen::Vector3d> closed_list_pos;
-    for (auto itr = closed_list_vt_.begin(); itr != closed_list_vt_.end(); ++itr) {
-      DblPoint map_pos;
-      IntPoint grid_pos((*itr).x, (*itr).y);
-
-      dyn_voro_arr_[(*itr).z_cm]->idxToPos(grid_pos, map_pos);
-
-      closed_list_pos.push_back(Eigen::Vector3d{map_pos.x, map_pos.y, (*itr).z_m});
-    }
-
-    return closed_list_pos; 
-  }
 
   void tracePathVoroT(const VCell_T& final_node)
   {
     // Clear existing data structures
     path_idx_vt_.clear();
+
     path_pos_t_.clear();
     path_pos_.clear();
+
+    path_idx_smoothed_t_.clear();
+    path_smoothed_.clear();
+    path_smoothed_t_.clear();
 
     // Trace back the nodes through the pointer to their parent
     VCell_T cur_node = final_node;
@@ -150,12 +117,103 @@ public:
                                             map_2d_pos.y + local_origin_y_, cell.z_m, (double) cell.t});
       path_pos_.push_back(Eigen::Vector3d{map_2d_pos.x + local_origin_x_, 
                                             map_2d_pos.y + local_origin_y_, cell.z_m});
-    } 
+    }
+
+    // For each gridnode, get the position and index,
+    // So we can obtain a path in terms of indices and positions
+    path_idx_smoothed_t_.push_back(path_idx_vt_[0]);
+    for (size_t i = 1; i < path_idx_vt_.size()-1; i++)
+    {
+      if (path_idx_smoothed_t_.back().z_cm != path_idx_vt_[i].z_cm){ // If different height
+        // Add current point to smoothed path
+        path_idx_smoothed_t_.push_back(path_idx_vt_[i]);
+      }
+      else {
+        IntPoint a(path_idx_smoothed_t_.back().x, path_idx_smoothed_t_.back().y);
+        IntPoint b(path_idx_vt_[i].x, path_idx_vt_[i].y);
+
+        if (!lineOfSight(a, b, path_idx_smoothed_t_.back().z_cm )){ // If no line of sight
+          // Add current point to smoothed path
+          path_idx_smoothed_t_.push_back(path_idx_vt_[i]);
+        }
+      }
+    }
+    path_idx_smoothed_t_.push_back(path_idx_vt_.back());
+
+    // For each gridnode, get the position and index,
+    // So we can obtain a path in terms of indices and positions
+    for (const VCell_T& cell : path_idx_smoothed_t_)
+    {
+      DblPoint map_2d_pos;
+
+      // Convert to map position
+      dyn_voro_arr_[cell.z_cm]->idxToPos(IntPoint(cell.x, cell.y), map_2d_pos);
+      // Add space time map position to path and transform it from local map to world frame
+      path_smoothed_t_.push_back(Eigen::Vector4d{map_2d_pos.x + local_origin_x_, 
+                                            map_2d_pos.y + local_origin_y_, cell.z_m, (double) cell.t});
+      path_smoothed_.push_back(Eigen::Vector3d{map_2d_pos.x + local_origin_x_, 
+                                            map_2d_pos.y + local_origin_y_, cell.z_m});
+    }
+
+
   }
 
+/* Getter methods */
 public:
+  /**
+   * @brief Get successful plan in terms of space i,e. (x,y,z)
+   *
+   * @return std::vector<Eigen::Vector3d>
+   */
+  std::vector<Eigen::Vector3d> getPath()
+  {
+    return path_pos_;
+  }
 
-  void updateReservationTable(const std::map<int, std::unordered_set<Eigen::Vector4i>>& resrv_tbl);
+  /**
+   * @brief Get successful plan in terms of space and time i.e. (x,y,z,t)
+   *
+   * @return std::vector<Eigen::Vector3d>
+   */
+  std::vector<Eigen::Vector4d> getPathWithTime()
+  {
+    return path_pos_t_;
+  }
+
+  /* Get post-smoothed path */
+  std::vector<Eigen::Vector4d> getSmoothedPathWithTime()
+  {
+    return path_smoothed_t_;
+  }
+
+  /* Get post-smoothed path */
+  std::vector<Eigen::Vector3d> getSmoothedPath()
+  {
+    return path_smoothed_;
+  }
+
+  /**
+   * @brief Get successful plan in terms of path positions
+   *
+   * @return std::vector<Eigen::Vector3d>
+   */
+  std::vector<Eigen::Vector3d> getClosedListVoroT()
+  {
+    std::vector<Eigen::Vector3d> closed_list_pos;
+    for (auto itr = closed_list_vt_.begin(); itr != closed_list_vt_.end(); ++itr) {
+      DblPoint map_pos;
+      IntPoint grid_pos((*itr).x, (*itr).y);
+
+      dyn_voro_arr_[(*itr).z_cm]->idxToPos(grid_pos, map_pos);
+
+      closed_list_pos.push_back(Eigen::Vector3d{map_pos.x, map_pos.y, (*itr).z_m});
+    }
+
+    return closed_list_pos; 
+  }
+
+/* Helper methods */
+public:
 
   /**
    * @brief Round to nearest multiple 
@@ -186,6 +244,9 @@ public:
     return rem < (mult/2) ? (num-rem) : (num-rem) + mult;
   }
 
+  /* Check line of sight between 2 points*/
+  bool lineOfSight(IntPoint s, IntPoint s_, int z_cm);
+
 private: 
 
   /* Params */
@@ -204,9 +265,12 @@ private:
 
   // Space time voronoi Voronoi search data structures
   
-  std::vector<Eigen::Vector3d> path_pos_; // (WORLD FRAME) Spatial-temporal path 
+  std::vector<Eigen::Vector3d> path_pos_; // (WORLD FRAME) Spatial path 
   std::vector<Eigen::Vector4d> path_pos_t_; // (WORLD FRAME) Spatial-temporal path 
+  std::vector<Eigen::Vector3d> path_smoothed_; // (WORLD FRAME) post smoothed spatial path 
+  std::vector<Eigen::Vector4d> path_smoothed_t_; // (WORLD FRAME) post smoothed spatial-temporal path 
   std::vector<VCell_T> path_idx_vt_; // (LOCAL FRAME) Final planned Path in terms of indices
+  std::vector<VCell_T> path_idx_smoothed_t_; // (LOCAL FRAME) Final planned Path in terms of indices
 
   std::unordered_map<VCell, double> g_cost_v_;  
   std::unordered_map<VCell_T, VCell_T> came_from_vt_;

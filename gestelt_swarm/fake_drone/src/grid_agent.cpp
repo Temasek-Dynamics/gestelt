@@ -93,7 +93,7 @@ void GridAgent::frontEndPlanCB(const gestelt_msgs::FrontEndPlan::ConstPtr &msg)
 	// Generate spline from plan 
 	std::vector<tinyspline::real> points;
 
-	for (int i = 0; i < fe_plan_msg_.plan.size(); i+= 10)
+	for (int i = 0; i < fe_plan_msg_.plan.size(); i+= 1)
 	{	
 		// Add control point
 		points.push_back(fe_plan_msg_.plan[i].position.x);

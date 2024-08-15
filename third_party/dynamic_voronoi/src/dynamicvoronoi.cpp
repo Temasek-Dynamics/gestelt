@@ -414,14 +414,6 @@ void DynamicVoronoi::reviveVoroNeighbors(int &x, int &y) {
   }
 }
 
-bool DynamicVoronoi::isOccupied(int x, int y) {
-  dataCell c = data[x][y];
-  return (c.obstX==x && c.obstY==y);
-}
-
-bool DynamicVoronoi::isOccupied(int &x, int &y, dataCell &c) { 
-  return (c.obstX==x && c.obstY==y);
-}
 
 void DynamicVoronoi::visualize(const char *filename) {
   // write ppm files
@@ -929,9 +921,23 @@ bool DynamicVoronoi::isOccupied(const INTPOINT& grid_pos) const {
   return (c.obstX==grid_pos.x && c.obstY==grid_pos.y);
 }
 
-
 bool DynamicVoronoi::isOccupied(const size_t& x, const size_t& y) const {
   // std::cout << "DynamicVoronoi::isOccupied(" << x << ", " << y << ")" << std::endl;
   dataCell c = data[x][y];
   return (c.obstX == x && c.obstY == y);
+}
+
+bool DynamicVoronoi::isOccupied(int x, int y) {
+  if (!isInMap(x, y)){
+    return true;
+  }
+  dataCell c = data[x][y];
+  return (c.obstX==x && c.obstY==y);
+}
+
+bool DynamicVoronoi::isOccupied(int &x, int &y, dataCell &c) { 
+  if (!isInMap(x, y)){
+    return true;
+  }
+  return (c.obstX==x && c.obstY==y);
 }

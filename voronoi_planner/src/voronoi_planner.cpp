@@ -362,7 +362,9 @@ bool VoronoiPlanner::plan(const Eigen::Vector3d& start, const Eigen::Vector3d& g
 
   // Retrieve space time path and publish it
   front_end_path_ = fe_planner_->getPath();
-  space_time_path_ = fe_planner_->getSpaceTimePath();
+  space_time_path_ = fe_planner_->getPathWithTime();
+  smoothed_path_ = fe_planner_->getSmoothedPath();
+  smoothed_path_t_ = fe_planner_->getSmoothedPathWithTime();
   viz_helper::publishClosedList(fe_planner_->getClosedListVoroT(), fe_closed_list_pub_, local_map_origin_);
 
   // Convert from space time path to gestelt_msgs::FrontEndPlan
@@ -389,7 +391,9 @@ bool VoronoiPlanner::plan(const Eigen::Vector3d& start, const Eigen::Vector3d& g
 
   // viz_helper::publishSpaceTimePath(space_time_path_, global_origin_, fe_plan_viz_pub_) ;
 
-  viz_helper::publishFrontEndPath(front_end_path_, global_origin_, fe_plan_viz_pub_) ;
+  // viz_helper::publishFrontEndPath(front_end_path_, global_origin_, fe_plan_viz_pub_);
+
+  viz_helper::publishFrontEndPath(smoothed_path_, global_origin_, fe_plan_viz_pub_);
 
   // double min_clr = DBL_MAX; // minimum path clearance 
   // double max_clr = 0.0;     // maximum path clearance 

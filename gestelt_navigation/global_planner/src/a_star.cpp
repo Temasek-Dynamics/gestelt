@@ -40,8 +40,7 @@ void AStarPlanner::reset()
 
 }
 
-void AStarPlanner::expandVoronoiBubbleT(
-    const VCell_T& origin_cell)
+void AStarPlanner::expandVoronoiBubbleT(const VCell_T& origin_cell)
 {
     std::queue<IntPoint> q;
     q.push(IntPoint(origin_cell.x, origin_cell.y));
@@ -94,7 +93,6 @@ void AStarPlanner::expandVoronoiBubbleT(
     }
 }
 
-
 bool AStarPlanner::generatePlanVoroT(  const Eigen::Vector3d& start_pos_3d, 
                                         const Eigen::Vector3d& goal_pos_3d)
 {
@@ -125,7 +123,6 @@ bool AStarPlanner::generatePlanVoroT(  const Eigen::Vector3d& start_pos_3d,
 
     return generatePlanVoroT(start_pos_3d, goal_pos_3d, cost_function);
 }
-
 
 bool AStarPlanner::generatePlanVoroT(   const Eigen::Vector3d& start_pos_3d, 
                                         const Eigen::Vector3d& goal_pos_3d, 
@@ -229,8 +226,8 @@ bool AStarPlanner::generatePlanVoroT(   const Eigen::Vector3d& start_pos_3d,
         dyn_voro_arr_[cur_node.z_cm]->getVoroNeighbors(
             cur_node_2d, neighbours, marked_bubble_cells_[cur_node.z_cm], true);
 
-        std::cout << "drone " << astar_params_.drone_id << " Itr " << num_iter << " " << 
-                " Number of nbs:" << neighbours.size() << std::endl;
+        // std::cout << "drone " << astar_params_.drone_id << " Itr " << num_iter << " " << 
+        //         " Number of nbs:" << neighbours.size() << std::endl;
 
         // Explore neighbors of current node. Each neighbor is (grid_x, grid_y, map_z_cm)
         for (const Eigen::Vector3i& nb_node_eig : neighbours) 
@@ -282,3 +279,85 @@ bool AStarPlanner::generatePlanVoroT(   const Eigen::Vector3d& start_pos_3d,
     return false;
 }
 
+bool AStarPlanner::lineOfSight(IntPoint s, IntPoint s_, int z_cm)
+{
+    int x0 = s.x;
+    int y0 = s.y;
+    int x1 = s_.x;
+    int y1 = s_.y;
+
+    int dy = y1 - y0;
+    int dx = x1 - x0;
+
+    int f = 0;
+
+    int sx = 1; // Direction taken by x
+    int sy = 1; // Direction taken by y
+
+    // Correct for y direction
+    if (dy < 0) {
+        dy = -dy;
+        sy = -1;
+    }
+    else {
+        sy = 1;
+    }
+    
+    // Correct for x direction
+    if (dx < 0) {
+        dx = -dx;
+        sx = -1;
+    }
+    else {
+        sx = 1;
+    }
+
+    if (dx >= dy) {
+        while (x0 != x1){
+            f += dy;
+            if (f >= dx){
+                if (dyn_voro_arr_[z_cm]->isOccupied(x0 + ((sx-1)/2), y0 + ((sy - 1)/2)))
+                {
+                    return false;
+                }
+                y0 = y0 + sy;
+                f -= dx;
+            }
+            if (f != 0 && dyn_voro_arr_[z_cm]->isOccupied(x0 + ((sx-1)/2), y0 + ((sy - 1)/2)))
+            {
+                return false;
+            }
+            if (dy == 0 && dyn_voro_arr_[z_cm]->isOccupied(x0 + ((sx-1)/2), y0)
+                        && dyn_voro_arr_[z_cm]->isOccupied(x0 + ((sx-1)/2), y0 -1))
+            {
+                return false;
+            }
+            x0 = x0 + sx;
+        }
+    }
+    else {
+        while (y0 != y1){
+            f += dx;
+            if (f >= dy){
+                if (dyn_voro_arr_[z_cm]->isOccupied(x0 + ((sx-1)/2), y0 + ((sy - 1)/2)))
+                {
+                    return false;
+                }
+                x0 += sx;
+                f -= dy;
+            }
+            if (f != 0 && dyn_voro_arr_[z_cm]->isOccupied(x0 + ((sx-1)/2), y0 + ((sy - 1)/2)))
+            {
+                return false;
+            }
+            if (dy == 0 && dyn_voro_arr_[z_cm]->isOccupied(x0, y0 + ((sy-1)/2))
+                        && dyn_voro_arr_[z_cm]->isOccupied(x0-1, y0+ ((sy-1)/2)))
+            {
+                return false;
+            }
+            y0 += sy;
+        }
+    }
+
+    return true;
+}

@@ -406,8 +406,10 @@ private:
   std::map<int, std::shared_ptr<DynamicVoronoi>> dyn_voro_arr_; // array of voronoi objects with key of height (cm)
   std::map<int, std::shared_ptr<std::vector<std::vector<bool>>>> bool_map_arr_; //  array of voronoi objects with key of height (cm)
 
-  std::vector<Eigen::Vector4d> space_time_path_; // front end path in space-time coordinates (x,y,z,t) in local map origin frame
-  std::vector<Eigen::Vector3d> front_end_path_; // Front end path in space coordinates (x,y,z) in local map origin frame
+  std::vector<Eigen::Vector3d> front_end_path_; // Front-end Space path in space coordinates (x,y,z) in world frame
+  std::vector<Eigen::Vector4d> space_time_path_; // Front-end Space time  path in space-time coordinates (x,y,z,t) in world frame
+  std::vector<Eigen::Vector3d> smoothed_path_; // Front end smoothed path in space coordinates (x,y,z) in world frame
+  std::vector<Eigen::Vector4d> smoothed_path_t_; // Front end smoothed space-time path in space coordinates (x,y,z) in world frame
 
   bool init_voro_maps_{false}; // flag to indicate if voronoi map is initialized
 
