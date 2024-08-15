@@ -336,6 +336,7 @@ private: // Private methods
 
   void publishVizSphericalSFC(const std::vector<SSFC::Sphere>& sfc_spheres, 
                               ros::Publisher& publisher, const std::string& frame_id = "world");
+
   void publishVizIntxnSpheres(const std::vector<SSFC::Sphere>& sfc_spheres, 
                               ros::Publisher& publisher, const std::string& frame_id = "world");
 
