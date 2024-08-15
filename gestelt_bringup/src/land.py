@@ -16,6 +16,7 @@ def main():
 
     while not rospy.is_shutdown():
         publish_server_cmd(1) # Land 
+        print("PUBLISHING LAND")
         rospy.sleep(1)
 
 if __name__ == '__main__':

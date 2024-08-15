@@ -168,20 +168,20 @@ def main():
         if check_task_ids(1):
             break
 
+    # print("Publishing 2nd set of goals")
+    # pub_goals([goals_0, goals_1, goals_2])
+
+    # while not rospy.is_shutdown():
+    #     get_current_task_id()
+    #     if check_task_ids(2):
+    #         break
+
     print("Publishing 2nd set of goals")
     pub_goals([goals_0, goals_1, goals_2])
 
     while not rospy.is_shutdown():
         get_current_task_id()
         if check_task_ids(2):
-            break
-
-    print("Publishing 3rd set of goals")
-    pub_goals([goals_0, goals_1, goals_2])
-
-    while not rospy.is_shutdown():
-        get_current_task_id()
-        if check_task_ids(3):
             break
 
     #################
@@ -202,7 +202,7 @@ def main():
 
     while not rospy.is_shutdown():
         get_current_task_id()
-        if check_task_ids(4):
+        if check_task_ids(3):
             break
 
     ap_swap_0 = [] 
@@ -223,17 +223,17 @@ def main():
 
     while not rospy.is_shutdown():
         get_current_task_id()
-        if check_task_ids(5):
+        if check_task_ids(4):
             break
 
-    print("Executing 2nd antipodal swap")
+    # print("Executing 2nd antipodal swap")
 
-    pub_goals([ap_swap_0, ap_swap_1, ap_swap_2])
+    # pub_goals([ap_swap_0, ap_swap_1, ap_swap_2])
 
-    while not rospy.is_shutdown():
-        get_current_task_id()
-        if check_task_ids(6):
-            break
+    # while not rospy.is_shutdown():
+    #     get_current_task_id()
+    #     if check_task_ids(6):
+    #         break
 
     #################
     # GO HOME AND LAND
@@ -252,7 +252,7 @@ def main():
 
     while not rospy.is_shutdown():
         get_current_task_id()
-        if check_task_ids(7):
+        if check_task_ids(5):
             break
 
     while not rospy.is_shutdown():
