@@ -18,7 +18,7 @@ subdirectory_path = os.path.join(current_dir, 'Learning_Agile')
 ## deep learning
 # Hyper-parameters 
 
-num_epochs = 10 #100
+num_epochs = 1 #100
 batch_size = 100 # 100
 learning_rate = 1e-4
 num_cores =1 #5
@@ -70,13 +70,12 @@ def calc_grad(config_dict,inputs, outputs, gra):
 
     # initialize the narrow window
     quad1.init_obstacle(gate_point.reshape(12))
-    quad1.uav1.setDyn(0.002)
 
-    # only allow pitch
-    outputs[3]=0
-    outputs[5]=0
+    print("gate pose: ",inputs[8])
+    print("NN1 output traversal pose pitch: ",outputs[4])
+    print("NN1 output traversal time: ",outputs[6])
     # receive the decision variables from DNN1, do the MPC, then calculate d_reward/d_z
-    gra[:] = quad1.sol_gradient(outputs[0:3],outputs[3:6],np.clip(outputs[6],1.5,3))
+    gra[:] = quad1.sol_gradient(outputs[0:3].astype(np.float64),outputs[3:6],np.clip(outputs[6],1.5,3))
 
     
 
@@ -85,12 +84,14 @@ if __name__ == '__main__':
     # load the configuration file
     # yaml file dir#
     conf_folder=os.path.abspath(os.path.join(current_dir, '..', '..','config'))
+    training_data_folder=os.path.abspath(os.path.join(current_dir, 'training_data'))
+    model_folder=os.path.abspath(os.path.join(training_data_folder, 'NN_model'))
     print(current_dir)
     yaml_file = os.path.join(conf_folder, 'learning_agile_mission.yaml')
     with open(yaml_file, 'r', encoding='utf-8') as file:
         config_dict = yaml.safe_load(file)
 
-    FILE = os.path.join(current_dir, "nn_pre.pth")
+    FILE = os.path.join(model_folder, "NN1_pretrain.pth")
     model = torch.load(FILE)
 
     # generate the solver
@@ -117,8 +118,8 @@ if __name__ == '__main__':
                 for _ in range(num_cores):
                     # sample
                     inputs = nn_sample()
-                    inputs[0:3]=np.array([0,1.8,1.4])
-                    inputs[3:6]=np.array([0,-1.8,1.4])
+                    # inputs[0:3]=np.array([0,1.8,1.4])
+                    # inputs[3:6]=np.array([0,-1.8,1.4])
                     
                     # forward pass
                     outputs = model(inputs)
@@ -170,7 +171,7 @@ if __name__ == '__main__':
             mean_reward = evalue/batch_size # evalue/int(batch_size/num_cores)
             Mean_r += [mean_reward]
             print('evaluation: ',mean_reward)
-            np.save('Iteration',Iteration)
-            np.save('Mean_Reward'+str(k),Mean_r)
-            np.save('Every_reward'+str(k),Every_reward)
-        torch.save(model, "nn_deep2_"+str(k))
+            np.save(training_data_folder+'/Iteration',Iteration)
+            np.save(training_data_folder+'/Mean_Reward'+str(k),Mean_r)
+            np.save(training_data_folder+'/Every_reward'+str(k),Every_reward)
+        torch.save(model, model_folder+"/NN1_deep2_"+str(k)+".pth")

@@ -308,7 +308,7 @@ class OCSys:
         assert hasattr(self, 'final_cost'), "Define the final cost function first!"
         # Start with an empty NLP
         self.horizon=horizon
-        
+        self.SQP_RTI_OPTION=SQP_RTI_OPTION
 
         # predict horizon in seconds
         T=horizon*dt
@@ -486,7 +486,8 @@ class OCSys:
         ocp.solver_options.print_level = 0
         ocp.solver_options.levenberg_marquardt = 1e-5 # small value for gauss newton method, large value for gradient descent method
         
-        if SQP_RTI_OPTION:
+        if SQP_RTI_OPTION: 
+            # for deployment
             ocp.solver_options.nlp_solver_type = 'SQP_RTI'
         else:
             ocp.solver_options.nlp_solver_type = 'SQP' # SQP_RTI or SQP
@@ -545,7 +546,7 @@ class OCSys:
             
 
         # set the last state-control as the initial guess for the last node
-        # self.acados_solver.set(self.n_nodes, "x", self.state_traj_opt[-1,:])
+        self.acados_solver.set(self.n_nodes, "x", self.state_traj_opt[-1,:])
 
         # set the end desired goal
         weight = 0.0*casadi.exp(-10*(dt*self.n_nodes-t_tra)**2) #gamma should increase as the flight duration decreases

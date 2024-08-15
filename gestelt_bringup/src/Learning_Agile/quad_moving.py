@@ -36,23 +36,23 @@ def binary_search_solver(model, quad_state, final_point, gate1, velo, w ):
     gate_x = gate(gate1.translate_out(velo*t1))
     gate_x.rotate_y(w*t1)
 
-    inputs = np.zeros(18)
-    inputs[16] = magni(gate_x.gate_point[0,:]-gate_x.gate_point[1,:])
-    inputs[17] = atan((gate_x.gate_point[0,2]-gate_x.gate_point[1,2])/(gate_x.gate_point[0,0]-gate_x.gate_point[1,0]))
-    inputs[0:13] = gate_x.transform(quad_state)
-    inputs[13:16] = gate_x.t_final(final_point)
+    inputs = np.zeros(15)
+    inputs[13] = magni(gate_x.gate_point[0,:]-gate_x.gate_point[1,:])
+    inputs[14] = atan((gate_x.gate_point[0,2]-gate_x.gate_point[1,2])/(gate_x.gate_point[0,0]-gate_x.gate_point[1,0]))
+    inputs[0:10] = gate_x.transform(quad_state)
+    inputs[10:13] = gate_x.t_final(final_point)
     t2 = model(inputs).data.numpy()[6]
 
-    while abs(t2-t1)>0.001:
+    while abs(t2-t1)>0.1:
         t1 += (t2-t1)/2
         gate_x = gate(gate1.translate_out(velo*t1)) # prediction of the gap future position
         gate_x.rotate_y(w*t1)
 
-        inputs = np.zeros(18)
-        inputs[16] = magni(gate_x.gate_point[0,:]-gate_x.gate_point[1,:])
-        inputs[17] = atan((gate_x.gate_point[0,2]-gate_x.gate_point[1,2])/(gate_x.gate_point[0,0]-gate_x.gate_point[1,0]))
-        inputs[0:13] = gate_x.transform(quad_state)
-        inputs[13:16] = gate_x.t_final(final_point)
+        inputs = np.zeros(15)
+        inputs[13] = magni(gate_x.gate_point[0,:]-gate_x.gate_point[1,:])
+        inputs[14] = atan((gate_x.gate_point[0,2]-gate_x.gate_point[1,2])/(gate_x.gate_point[0,0]-gate_x.gate_point[1,0]))
+        inputs[0:10] = gate_x.transform(quad_state)
+        inputs[10:13] = gate_x.t_final(final_point)
         t2 = model(inputs).data.numpy()[6]
     
     return t1

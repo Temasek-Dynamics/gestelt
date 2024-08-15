@@ -57,10 +57,10 @@ class run_quad:
         tw   = 1.22
         t2w  = 2
         # set symbolic functions for the MPC solver
-        self.uavoc1.setStateVariable(self.uav1.X,state_lb=[-pos_b,-pos_b,0.3,
+        self.uavoc1.setStateVariable(self.uav1.X,state_lb=[-pos_b,-pos_b,-pos_b,
                                                            -vel_b,-vel_b,-vel_b,
                                                            -sc,-sc,-sc,-sc],\
-                                     state_ub=[pos_b,pos_b,2,
+                                     state_ub=[pos_b,pos_b,pos_b,
                                                vel_b,vel_b,vel_b,
                                                sc,sc,sc,sc]) 
         

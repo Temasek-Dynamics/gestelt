@@ -1,5 +1,6 @@
 ## this file is for neural network training
 from quad_nn import *
+import os
 # Device configuration
 device = torch.device('cpu')#torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -10,8 +11,10 @@ output_size = 7
 num_epochs = 3
 batch_size = 10000
 learning_rate = 2e-5
-
-FILE = "nn_pre.pth"
+current_dir = os.path.dirname(os.path.abspath(__file__))
+training_data_folder=os.path.abspath(os.path.join(current_dir, 'training_data'))
+model_folder=os.path.abspath(os.path.join(training_data_folder, 'NN_model'))
+FILE = model_folder+"/NN1_pretrain.pth"
 model = network(input_size, hidden_size, hidden_size,output_size).to(device)
 # model = torch.load(FILE)
 # Loss and optimizer

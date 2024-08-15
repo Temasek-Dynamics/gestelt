@@ -844,13 +844,13 @@ class gate:
     
     ## transform the state in world frame to the state in window frame
     def transform(self, inertial_state):
-        outputs = np.zeros(13)
+        outputs = np.zeros(10)
         ## position
         outputs[0:3] = np.matmul(self.I_G, inertial_state[0:3] - self.centroid) # relative position, the future gap is viewed to be static
         ## velocity
         outputs[3:6] = np.matmul(self.I_G, inertial_state[3:6])
-        ## angular velocity
-        outputs[10:13] = inertial_state[10:13]
+        # ## angular velocity
+        # outputs[10:13] = inertial_state[10:13]
         ## attitude
         quat = np.zeros(4)
         quat[0:3] = inertial_state[7:10]
