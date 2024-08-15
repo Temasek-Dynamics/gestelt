@@ -224,7 +224,7 @@ class Quadrotor:
                          + self.wqf * self.cost_q_g
                      
 
-    def init_TraCost(self): # transforming Rodrigues to Quaternion is shown in get_input function
+    def init_TraCost(self): # transforming Rodrigues to Quaternion is shown in mpc_update function
         ## traverse cost
         # traverse position in the world frame
     

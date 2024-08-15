@@ -18,12 +18,12 @@ from scipy.spatial.transform import Rotation as R
 def nn_sample(init_pos=None,final_pos=None,init_angle=None):
     inputs = np.zeros(9)
     if init_pos is None:
-        inputs[0:3] = np.random.uniform(-5,5,size=3) + np.array([0,1.8,0]) #-5~5, -9
+        inputs[0:3] = np.random.uniform(-1,1,size=3) + np.array([0,1.8,0]) #-5~5, -9
     else:
         inputs[0:3] = init_pos
     ## random final postion 
     if final_pos is None:
-        inputs[3:6] = np.random.uniform(-2,2,size=3) + np.array([0,-1.8,0]) #-2~2, 6
+        inputs[3:6] = np.random.uniform(-1,1,size=3) + np.array([0,-1.8,0]) #-2~2, 6
     else:
         inputs[3:6] = final_pos
     ## random initial yaw angle of the quadrotor
@@ -53,7 +53,8 @@ def t_output(inputs):
     outputs = np.zeros(7)
     #outputs[5] = math.tan(inputs[6]/2)
     ## traversal time is propotional to the distance of the centroids
-    outputs[6] = np.clip(round(magni(inputs[0:3])/4,1),2,4)
+    raw_time=round(magni(inputs[0:3])/2,1)
+    outputs[6] = np.clip(raw_time,1.5,3)
     return outputs
 
 ## sample a random gate (not necessary in our method) (not important)

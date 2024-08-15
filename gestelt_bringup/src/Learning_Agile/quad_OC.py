@@ -485,7 +485,7 @@ class OCSys:
         ocp.solver_options.print_level = 0
         ocp.solver_options.levenberg_marquardt = 1e-5 # small value for gauss newton method, large value for gradient descent method
         ocp.solver_options.nlp_solver_type = 'SQP_RTI' # SQP_RTI or SQP
-        ocp.solver_options.qp_solver_warm_start=1
+        ocp.solver_options.qp_solver_warm_start=2
         # ocp.solver_options.nlp_solver_max_iter = 100
         ##------------------ setting the code generation ------------------##
         # compile acados ocp
@@ -515,12 +515,10 @@ class OCSys:
         """
         This function is to solve the optimal control problem using ACADOS
         """
- 
         # #---------------------for linear cost---------------------##
         # # #set desired ref state
         desired_goal_vel=np.array([0, 0, 0])
         desired_goal_ori = np.array(goal_ori)
-        # desired_goal_w=np.array([0, 0, 0])
 
         goal_state=np.concatenate((np.array(goal_pos),desired_goal_vel,desired_goal_ori))#,desired_goal_w))
         
@@ -542,7 +540,7 @@ class OCSys:
             
 
         # set the last state-control as the initial guess for the last node
-        self.acados_solver.set(self.n_nodes, "x", self.state_traj_opt[-1,:])
+        # self.acados_solver.set(self.n_nodes, "x", self.state_traj_opt[-1,:])
 
         # set the end desired goal
         weight = 0.0*casadi.exp(-10*(dt*self.n_nodes-t_tra)**2) #gamma should increase as the flight duration decreases

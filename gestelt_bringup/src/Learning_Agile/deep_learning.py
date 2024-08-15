@@ -44,6 +44,7 @@ def calc_grad(config_dict,inputs, outputs, gra):
         gra (_type_): DNN1 Reward/z gradient. [-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,j])
                         j: reward after MPC plan and execute
     """
+    ## gate initialization
     gate_point = np.array([[-inputs[7]/2,0,1],[inputs[7]/2,0,1],[inputs[7]/2,0,-1],[-inputs[7]/2,0,-1]])
     gate1 = gate(gate_point)
     gate_point = gate1.rotate_y_out(inputs[8])
@@ -51,15 +52,14 @@ def calc_grad(config_dict,inputs, outputs, gra):
     # quadrotor & MPC initialization
     # quad1 = run_quad(config_dict,goal_pos=inputs[3:6],ini_r=inputs[0:3].tolist(),ini_q=toQuaternion(inputs[6],[0,0,1]),horizon=20)
     
-    print('traverseing pose:',inputs[3:6])
-    quad1 = run_quad(config_dict,  
-                    USE_PREV_SOLVER=True)
+    # quad1 = run_quad(config_dict,  
+    #                 USE_PREV_SOLVER=True)
     final_q=R.from_euler('xyz',[0,0,inputs[6]]).as_quat()
     final_q=np.roll(final_q,1)
     
     
     # print('inputs:',inputs)
-    quad1.init_cost(
+    quad1.init_state_and_mission(
                 goal_pos=inputs[3:6],
                 goal_ori=final_q.tolist(),
                 
@@ -70,9 +70,13 @@ def calc_grad(config_dict,inputs, outputs, gra):
 
     # initialize the narrow window
     quad1.init_obstacle(gate_point.reshape(12))
+    quad1.uav1.setDyn(0.002)
 
+    # only allow pitch
+    outputs[3]=0
+    outputs[5]=0
     # receive the decision variables from DNN1, do the MPC, then calculate d_reward/d_z
-    gra[:] = quad1.sol_gradient(quad1.ini_state,outputs[0:3],outputs[3:6],outputs[6])
+    gra[:] = quad1.sol_gradient(outputs[0:3],outputs[3:6],np.clip(outputs[6],1.5,3))
 
     
 
@@ -88,6 +92,8 @@ if __name__ == '__main__':
 
     FILE = os.path.join(current_dir, "nn_pre.pth")
     model = torch.load(FILE)
+
+    # generate the solver
     quad1 = run_quad(config_dict,  
                     USE_PREV_SOLVER=False)
     for k in range(1):
@@ -106,72 +112,55 @@ if __name__ == '__main__':
                 n_gra = []
                 n_process = []
                     
+          
+                for _ in range(num_cores):
+                    # sample
+                    inputs = nn_sample()
+                    inputs[0:3]=np.array([0,1.8,1.4])
+                    inputs[3:6]=np.array([0,-1.8,1.4])
                     
-                MULTI_PROCESS=False
-                if MULTI_PROCESS:
-                    for _ in range(num_cores):
-                        # sample
-                        inputs = nn_sample()
-                        # inputs[0:3]=np.array([0,1.8,1.4])
-                        # inputs[3:6]=np.array([0,-1.8,1.4])
-                        
-                        # forward pass
-                        outputs = model(inputs)
-                        out = outputs.data.numpy()
-                        # print(out)
-                        
-                        # create shared variables (shared between processes)
-                        gra = Array('d',np.zeros(8))
+                    # forward pass
+                    outputs = model(inputs)
+                    out = outputs.data.numpy()
+                    # print(out)
                     
-                        # collection
-                        n_inputs.append(inputs)
-                        n_outputs.append(outputs)
-                        n_out.append(out)
+                    # create shared variables (shared between processes)
+                    gra = Array('d',np.zeros(8))
+                
+                    # collection
+                    n_inputs.append(inputs)
+                    n_outputs.append(outputs)
+                    n_out.append(out)
 
-                        # create a gradient array for assemble all process gradient result
-                        n_gra.append(gra)
+                    # create a gradient array for assemble all process gradient result
+                    n_gra.append(gra)
 
-                    #calculate gradient and loss
-                    for j in range(num_cores):
-                        # generate the solver
-                        
-                        p = Process(target=calc_grad,args=(config_dict,n_inputs[j],n_out[j],n_gra[j]))
-                        p.start()
-                        n_process.append(p)
-            
-                    for process in n_process:
-                        process.join()
+                #calculate gradient and loss
+                for j in range(num_cores):
+                    
+                    
+                    p = Process(target=calc_grad,args=(config_dict,n_inputs[j],n_out[j],n_gra[j]))
+                    p.start()
+                    n_process.append(p)
+        
+                for process in n_process:
+                    process.join()
+
+                # Backward and optimize
+                for j in range(num_cores):                
+                    outputs = model(n_inputs[j])
+
+                    # d_reward/d_z * z
+                    loss = model.myloss(outputs,n_gra[j][0:7])        
+
+                    optimizer.zero_grad()
+
+                    # d_reward/d_z * d_z/d_dnn1
+                    loss.backward()
+                    optimizer.step()
+                    evalue += n_gra[j][7]
+                    Every_reward[epoch,j+num_cores*i]=n_gra[j][7]
     
-                    # Backward and optimize
-                    for j in range(num_cores):                
-                        outputs = model(n_inputs[j])
-
-                        # d_reward/d_z * z
-                        loss = model.myloss(outputs,n_gra[j][0:7])        
-
-                        optimizer.zero_grad()
-
-                        # d_reward/d_z * d_z/d_dnn1
-                        loss.backward()
-                        optimizer.step()
-                        evalue += n_gra[j][7]
-                        Every_reward[epoch,j+num_cores*i]=n_gra[j][7]
-                else:
-                        # sample
-                        inputs = nn_sample()
-                        # inputs[0:3]=np.array([0,1.8,1.4])
-                        # inputs[3:6]=np.array([0,-1.8,1.4])
-                        
-                        # forward pass
-                        outputs = model(inputs)
-                        out = outputs.data.numpy()
-                        # print(out)
-                        
-                        grad=np.zeros(8)
-                        calc_grad(config_dict,inputs,outputs,grad)
-
-                        #backward
-                        
 
 
                 if (i+1)%1 == 0:

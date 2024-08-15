@@ -183,7 +183,7 @@ class LearningAgileAgent():
         self.quad1 = run_quad(self.config_dict,
                               USE_PREV_SOLVER=USE_PREV_SOLVER)
         
-        self.quad1.init_cost(goal_pos=self.env_init_set[3:6].tolist(),
+        self.quad1.init_state_and_mission(goal_pos=self.env_init_set[3:6].tolist(),
                               goal_ori=final_q.tolist(),
                               
                               ini_r=self.env_init_set[0:3].tolist(),
@@ -297,7 +297,7 @@ class LearningAgileAgent():
 
                 t_comp = time.time()
                 
-                cmd_solution,weight_vis,NO_SOLUTION_FLAG  = self.quad1.get_input(nn_mpc_inputs[0:10],
+                cmd_solution,weight_vis,NO_SOLUTION_FLAG  = self.quad1.mpc_update(nn_mpc_inputs[0:10],
                                                     self.u,
                                                     out[0:3],
                                                     out[3:6],

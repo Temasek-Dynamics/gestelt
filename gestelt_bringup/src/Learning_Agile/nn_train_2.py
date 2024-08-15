@@ -34,7 +34,7 @@ def traj(inputs, outputs, state_traj):
     quad1 = run_quad(goal_pos=inputs[3:6],ini_r=inputs[0:3].tolist(),ini_q=toQuaternion(inputs[6],[0,0,1]),horizon=20)
     quad1.init_obstacle(gate_point.reshape(12))
 
-    quad1.get_input(ini_state=quad1.ini_state,tra_pos=outputs[0:3],tra_ang=outputs[3:6],t=outputs[6],Ulast=[0,0,0,0])
+    quad1.mpc_update(ini_state=quad1.ini_state,tra_pos=outputs[0:3],tra_ang=outputs[3:6],t=outputs[6],Ulast=[0,0,0,0])
 
     state_t = np.reshape(quad1.sol1['state_traj_opt'],(batch_size+1)*13)
     state_traj[:] = state_t
