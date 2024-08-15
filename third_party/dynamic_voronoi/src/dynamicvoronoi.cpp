@@ -849,6 +849,16 @@ void DynamicVoronoi::getVoroNeighbors(const INTPOINT& grid_pos, std::vector<Eige
       if (!isInMap(nx, ny) || isOccupied(nx, ny)){
         continue;
       }
+      
+      // if (!isVoronoi(nx, ny)){
+      //   // if not voronoi
+      //   continue;
+      // }
+
+      // if (marked_bubble_cells.find(INTPOINT(nx, ny)) == marked_bubble_cells.end()){
+      //   // if not marked as bubble cell
+      //   continue;
+      // }
 
       if (!(isVoronoi(nx, ny) 
             || marked_bubble_cells.find(INTPOINT(nx, ny)) != marked_bubble_cells.end())){

@@ -45,9 +45,7 @@ public:
 
   AStarPlanner(std::shared_ptr<GridMap> grid_map, const AStarParams& astar_params);
 
-  AStarPlanner( const AStarParams& astar_params,
-                std::shared_ptr<std::unordered_set<Eigen::Vector4i>> resrv_tbl
-                );
+  AStarPlanner( const AStarParams& astar_params);
 
   /**
    * @brief Clear closed, open list and reset planning_successful flag for 
@@ -157,6 +155,8 @@ public:
 
 public:
 
+  void updateReservationTable(const std::map<int, std::unordered_set<Eigen::Vector4i>>& resrv_tbl);
+
   /**
    * @brief Round to nearest multiple 
    * 
@@ -213,7 +213,8 @@ private:
   PriorityQueue<VCell_T, double> open_list_vt_; // Min priority queue 
   std::unordered_set<VCell_T> closed_list_vt_; // All closed nodes
 
-  std::shared_ptr<std::unordered_set<Eigen::Vector4i>> resrv_tbl_; // Reservation table 
+  // map{drone_id : unordered_set{(x,y,z,t)}}
+  std::map<int, std::unordered_set<Eigen::Vector4i>> resrv_tbl_; // Reservation table of (x,y,z_cm, t) where x,y are grid positions, z_cm is height in centimeters and t is space time units
 };
 
 #endif // _A_STAR_PLANNER_H_

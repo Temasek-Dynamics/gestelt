@@ -5,6 +5,9 @@ void VoronoiPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   // Initialize Params
   initParams(pnh);
 
+  tm_front_end_plan_.updateID(drone_id_);
+  tm_voro_map_init_.updateID(drone_id_);
+
   /* Publishers */
   start_pt_pub_ = nh.advertise<visualization_msgs::Marker>("fe_start", 5, true);
   goal_pt_pub_ = nh.advertise<visualization_msgs::Marker>("fe_goal", 5, true);
@@ -38,7 +41,6 @@ void VoronoiPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   /* Initialization */
 
   // Initialize planner
-  resrv_tbl_ = std::make_shared<std::unordered_set<Eigen::Vector4i>>();
 
   astar_params_.drone_id = drone_id_;
   astar_params_.max_iterations = 9999;
@@ -46,7 +48,7 @@ void VoronoiPlanner::init(ros::NodeHandle &nh, ros::NodeHandle &pnh)
   astar_params_.tie_breaker = 1.001;
   astar_params_.cost_function_type  = 1; // 0: getOctileDist, 1: getL1Norm, 2: getL2Norm, 3: getChebyshevDist
   astar_params_.t_unit = t_unit_;
-  fe_planner_ = std::make_unique<AStarPlanner>(astar_params_, resrv_tbl_);
+  fe_planner_ = std::make_unique<AStarPlanner>(astar_params_);
 
   // Initialize map
   map_.reset(new GridMap);
@@ -102,6 +104,10 @@ void VoronoiPlanner::FEPlanSubCB(const gestelt_msgs::FrontEndPlanConstPtr& msg)
     return;
   }
 
+  // Clear reservation table
+  resrv_tbl_[msg->agent_id] = std::unordered_set<Eigen::Vector4i>();
+
+
   // Add all points on path (with inflation) to reservation table
   double inflation = 0.3; // [m]
   int num_cells_inf = inflation/res_; // Number of cells used for inflation
@@ -133,7 +139,7 @@ void VoronoiPlanner::FEPlanSubCB(const gestelt_msgs::FrontEndPlanConstPtr& msg)
           if (st_units_elapsed_plan_start + prev_t + j < 0){
             continue;
           }
-          resrv_tbl_->insert(Eigen::Vector4i{x, y, map_z_cm, st_units_elapsed_plan_start + prev_t + j});
+          resrv_tbl_[msg->agent_id].insert(Eigen::Vector4i{x, y, map_z_cm, st_units_elapsed_plan_start + prev_t + j});
         }
       }
     }
@@ -147,7 +153,10 @@ void VoronoiPlanner::FEPlanSubCB(const gestelt_msgs::FrontEndPlanConstPtr& msg)
                       msg->plan.back().position.y - local_origin_y_);
   int map_z_cm =roundToMultInt((int) (msg->plan.back().position.z * 100), z_separation_cm_);
   dyn_voro_arr_[map_z_cm]->posToIdx(map_2d_pos, grid_pos);
-  resrv_tbl_->insert(Eigen::Vector4i{grid_pos.x, grid_pos.y, map_z_cm, st_units_elapsed_plan_start + msg->plan_time.back()});
+  resrv_tbl_[msg->agent_id].insert(Eigen::Vector4i{grid_pos.x, grid_pos.y, map_z_cm, st_units_elapsed_plan_start + msg->plan_time.back()});
+
+  // Update reservation table on planner
+  fe_planner_->updateReservationTable(resrv_tbl_);
 }
 
 void VoronoiPlanner::boolMapCB(const gestelt_msgs::BoolMapArrayConstPtr& msg)
@@ -330,7 +339,7 @@ bool VoronoiPlanner::plan(const Eigen::Vector3d& start, const Eigen::Vector3d& g
   
   viz_helper::publishStartAndGoal(start, goal, local_map_origin_, start_pt_pub_, goal_pt_pub_);
 
-  // tm_front_end_plan_.start();
+  tm_front_end_plan_.start();
 
   // Generate plan 
   if (!fe_planner_->generatePlanVoroT(start, goal)){
@@ -338,7 +347,7 @@ bool VoronoiPlanner::plan(const Eigen::Vector3d& start, const Eigen::Vector3d& g
       start(0), start(1), start(2),
       goal(0), goal(1), goal(2)));
 
-    // tm_front_end_plan_.stop(verbose_planning_);
+    tm_front_end_plan_.stop(verbose_planning_);
 
     viz_helper::publishClosedList(fe_planner_->getClosedListVoroT(), 
                       fe_closed_list_pub_, local_map_origin_);
@@ -349,7 +358,7 @@ bool VoronoiPlanner::plan(const Eigen::Vector3d& start, const Eigen::Vector3d& g
     return false;
   }
 
-  // tm_front_end_plan_.stop(verbose_planning_);
+  tm_front_end_plan_.stop(verbose_planning_);
 
   // Retrieve space time path and publish it
   front_end_path_ = fe_planner_->getPath();

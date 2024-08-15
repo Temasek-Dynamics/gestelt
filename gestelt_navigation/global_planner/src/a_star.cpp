@@ -2,11 +2,8 @@
 
 #define L2_cost
 
-AStarPlanner::AStarPlanner( const AStarParams& astar_params,
-                            std::shared_ptr<std::unordered_set<Eigen::Vector4i>> resrv_tbl
-                            ): astar_params_(astar_params)
+AStarPlanner::AStarPlanner( const AStarParams& astar_params): astar_params_(astar_params)
 {
-    resrv_tbl_ = resrv_tbl;
 }
 
 void AStarPlanner::assignVoroMap(const std::map<int, std::shared_ptr<DynamicVoronoi>>& dyn_voro_arr,
@@ -20,6 +17,11 @@ void AStarPlanner::assignVoroMap(const std::map<int, std::shared_ptr<DynamicVoro
     local_origin_x_ = local_origin_x;
     local_origin_y_ = local_origin_y;
     max_height_ = max_height;
+}
+
+void AStarPlanner::updateReservationTable(const std::map<int, std::unordered_set<Eigen::Vector4i>>& resrv_tbl)
+{
+    resrv_tbl_ = resrv_tbl;
 }
 
 void AStarPlanner::reset()
@@ -133,8 +135,8 @@ bool AStarPlanner::generatePlanVoroT(   const Eigen::Vector3d& start_pos_3d,
     
     int start_z_cm = roundToMultInt((int) (start_pos_3d(2) * 100), z_separation_cm_);
     int goal_z_cm = roundToMultInt((int) (goal_pos_3d(2) * 100), z_separation_cm_);
-    // std::cout << astar_params_.drone_id << ": start_z: " <<  start_pos_3d(2) << " m rounded to " << start_z_cm << " cm" << std::endl;
-    // std::cout << astar_params_.drone_id << ": goal_z: " <<  goal_pos_3d(2) << " m rounded to " << goal_z_cm << " cm" << std::endl;
+    std::cout << astar_params_.drone_id << ": start_z: " <<  start_pos_3d(2) << " m rounded to " << start_z_cm << " cm" << std::endl;
+    std::cout << astar_params_.drone_id << ": goal_z: " <<  goal_pos_3d(2) << " m rounded to " << goal_z_cm << " cm" << std::endl;
     
     INTPOINT start_node_2d, goal_node_2d;
 
@@ -170,13 +172,13 @@ bool AStarPlanner::generatePlanVoroT(   const Eigen::Vector3d& start_pos_3d,
     dyn_voro_arr_[start_node.z_cm]->update(); // update distance map and Voronoi diagram
     dyn_voro_arr_[goal_node.z_cm]->update(); // update distance map and Voronoi diagram
 
-    std::cout << astar_params_.drone_id << ": before expandVoronoiBubbleT" << std::endl;
+    // std::cout << astar_params_.drone_id << ": before expandVoronoiBubbleT" << std::endl;
 
     // Create voronoi bubble around start and goal
     expandVoronoiBubbleT(start_node);
     expandVoronoiBubbleT(goal_node);
 
-    std::cout << astar_params_.drone_id << ": before removeObstacle" << std::endl;
+    // std::cout << astar_params_.drone_id << ": before removeObstacle" << std::endl;
 
     dyn_voro_arr_[start_node.z_cm]->removeObstacle(start_node.x, start_node.y);
     dyn_voro_arr_[goal_node.z_cm]->removeObstacle(goal_node.x, goal_node.y);
@@ -196,6 +198,8 @@ bool AStarPlanner::generatePlanVoroT(   const Eigen::Vector3d& start_pos_3d,
 
     int num_iter = 0;
     std::vector<Eigen::Vector3i> neighbours; // 3d indices of neighbors
+
+    std::cout << astar_params_.drone_id << ": before main loop" << std::endl;
 
     while (!open_list_vt_.empty() && num_iter < astar_params_.max_iterations)
     {
@@ -225,6 +229,9 @@ bool AStarPlanner::generatePlanVoroT(   const Eigen::Vector3d& start_pos_3d,
         dyn_voro_arr_[cur_node.z_cm]->getVoroNeighbors(
             cur_node_2d, neighbours, marked_bubble_cells_[cur_node.z_cm], true);
 
+        std::cout << "drone " << astar_params_.drone_id << " Itr " << num_iter << " " << 
+                " Number of nbs:" << neighbours.size() << std::endl;
+
         // Explore neighbors of current node. Each neighbor is (grid_x, grid_y, map_z_cm)
         for (const Eigen::Vector3i& nb_node_eig : neighbours) 
         {   
@@ -238,10 +245,12 @@ bool AStarPlanner::generatePlanVoroT(   const Eigen::Vector3d& start_pos_3d,
                                         nb_node_eig(1), 
                                         nb_node_eig(2), nb_t};
 
-            if (resrv_tbl_->find(nb_grid_4d) != resrv_tbl_->end() ){
-                // Position has been reserved by another agent
-                std::cout << "Drone " << astar_params_.drone_id <<  ": Grid Pos (" << nb_grid_4d.transpose() << ") has been reserved" << std::endl;
-                continue;
+            for (auto const& tbl : resrv_tbl_){
+                if (tbl.second.find(nb_grid_4d) != tbl.second.end() ){
+                    // Position has been reserved by another agent
+                    std::cout << "Drone " << astar_params_.drone_id <<  ": Grid Pos (" << nb_grid_4d.transpose() << ") has been reserved" << std::endl;
+                    continue;
+                }
             }
 
             double tent_g_cost = g_cost_v_[cur_node_3d] + cost_function(cur_node, nb_node);

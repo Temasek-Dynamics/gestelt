@@ -395,7 +395,8 @@ private:
   int z_separation_cm_{50}; // [cm] separation between map slices
   int max_height_{300}, min_height_{50}; // [cm] max and minimum height of map
 
-  std::shared_ptr<std::unordered_set<Eigen::Vector4i>> resrv_tbl_; // Reservation table of (x,y,z_cm, t) where x,y are grid positions, z_cm is height in centimeters and t is space time units
+  // map{drone_id : unordered_set{(x,y,z,t)}}
+  std::map<int, std::unordered_set<Eigen::Vector4i>> resrv_tbl_; // Reservation table of (x,y,z_cm, t) where x,y are grid positions, z_cm is height in centimeters and t is space time units
 
   /* Data structs */
   std::unique_ptr<AStarPlanner> fe_planner_; // Front end planner

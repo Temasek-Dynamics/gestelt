@@ -20,6 +20,12 @@ public:
     indent_str_ = std::string(num_indent, ' ');
   } 
 
+
+  void updateID(const int& id)
+  {
+    id_ = "drone_" + std::to_string(id) + ": ";
+  }
+
   // start timer
   bool start() {
     if (timer_running_){ // True if timer is not running
@@ -59,7 +65,7 @@ public:
 
     if (print_dur) {
       printf(ANSI_COLOR_MAGENTA "%sTimer[%s](wall): %f ms \n" ANSI_COLOR_RESET, 
-            indent_str_.c_str(), name_.c_str(), t_dur_wall);
+            indent_str_.c_str(), (id_ + name_).c_str(), t_dur_wall);
 
     }
 
@@ -72,7 +78,7 @@ public:
   double getWallCum(bool print_dur = false) const {
     if (print_dur) {
       printf(ANSI_COLOR_MAGENTA "%sTimer[%s](cum,wall): %f ms \n" ANSI_COLOR_RESET, 
-            indent_str_.c_str(), name_.c_str(), t_cum_dur_wall_);
+            indent_str_.c_str(), (id_ + name_).c_str(), t_cum_dur_wall_);
     }
 
     return t_cum_dur_wall_;
@@ -84,7 +90,7 @@ public:
 
     if (print_dur) {
       printf(ANSI_COLOR_MAGENTA "%sTimer[%s](avg,wall): %f ms \n" ANSI_COLOR_RESET, 
-            indent_str_.c_str(), name_.c_str(), t_avg_dur_wall);
+            indent_str_.c_str(), (id_ + name_).c_str(), t_avg_dur_wall);
     }
 
     return t_avg_dur_wall;
@@ -94,7 +100,7 @@ public:
   double getCPUCum(bool print_dur = false) const {
     if (print_dur) {
       printf(ANSI_COLOR_MAGENTA "%sTimer[%s](cum,cpu): %f ms \n" ANSI_COLOR_RESET, 
-            indent_str_.c_str(), name_.c_str(), t_cum_dur_cpu_);
+            indent_str_.c_str(), (id_ + name_).c_str(), t_cum_dur_cpu_);
     }
 
     return t_cum_dur_cpu_;
@@ -106,7 +112,7 @@ public:
 
     if (print_dur) {
       printf(ANSI_COLOR_MAGENTA "%sTimer[%s](avg,cpu): %f ms \n" ANSI_COLOR_RESET, 
-            indent_str_.c_str(), name_.c_str(), t_avg_dur_cpu);
+            indent_str_.c_str(), (id_ + name_).c_str(), t_avg_dur_cpu);
     }
 
     return t_avg_dur_cpu;
@@ -114,6 +120,7 @@ public:
 
 private:
   std::string name_; // name of timer
+  std::string id_{""};
   bool timer_running_{false}; // Indicates if timer is running
 
   std::chrono::time_point<std::chrono::high_resolution_clock> t_start_cpu_; // cpu time 
