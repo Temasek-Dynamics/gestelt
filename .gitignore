@@ -60,3 +60,4 @@ CATKIN_IGNORE
 .history
 *.zip
 **/*.pth
+**/*.png
