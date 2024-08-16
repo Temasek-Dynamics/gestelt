@@ -10,7 +10,7 @@ mission:
   #################################################
   ##------ MPC initial pose ----##
   # initial pose only works for python sim
-  initial_position: [0.0, -6, 0]
+  initial_position: [0.0, -3, 0]
   initial_ori_euler: [0.0, 0.0, 0.0] # only yaw is active
 
   ##------ gate pose ----##
