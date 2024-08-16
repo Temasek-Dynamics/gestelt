@@ -24,7 +24,7 @@ class Quadrotor:
         q0, q1, q2, q3 = SX.sym('q0'), SX.sym('q1'), SX.sym('q2'), SX.sym('q3')
         self.q = vertcat(q0, q1, q2, q3)
         wx, wy, wz = SX.sym('wx'), SX.sym('wy'), SX.sym('wz')
-        self.w_B = vertcat(wx, wy, wz)
+        self.ang_rate_B = vertcat(wx, wy, wz)
         # define the quadrotor input
         f1, f2, f3, f4 = SX.sym('f1'), SX.sym('f2'), SX.sym('f3'), SX.sym('f4')
         self.T_B = vertcat(f1, f2, f3, f4)
@@ -94,9 +94,9 @@ class Quadrotor:
         self.m = self.mass
 
         # total thrust in body frame
-        thrust=SX.sym('thrust')
+        self.thrust_mag=SX.sym('thrust')
         # thrust = self.T_B[0] + self.T_B[1] + self.T_B[2] + self.T_B[3]
-        self.thrust_B = vertcat(0, 0, thrust)
+        self.thrust_B_vec = vertcat(0, 0, self.thrust_mag)
         # total moment M in body frame
         Mx = -self.T_B[1] * self.l / 2 + self.T_B[3] * self.l / 2
         My = -self.T_B[0] * self.l / 2 + self.T_B[2] * self.l / 2
@@ -121,20 +121,21 @@ class Quadrotor:
 
         # Newton's law
         dr_I = self.v_I
-        dv_I = 1 / self.m * mtimes(C_I_B, self.thrust_B) + self.g_I
+        dv_I = 1 / self.m * mtimes(C_I_B, self.thrust_B_vec) + self.g_I
         
         # Euler's law
-        dq = 1 / 2 * mtimes(self.omega(self.w_B), self.q)
+        dq = 1 / 2 * mtimes(self.omega(self.ang_rate_B), self.q)
         
-        dw = mtimes(inv(self.J_B), self.M_B - mtimes(mtimes(self.skew(self.w_B), self.J_B), self.w_B))
+        dw = mtimes(inv(self.J_B), self.M_B - mtimes(mtimes(self.skew(self.ang_rate_B), self.J_B), self.ang_rate_B))
         
         # state
-        self.X = vertcat(self.r_I, self.v_I, self.q)#, self.w_B)
+        self.X = vertcat(self.r_I, self.v_I, self.q)#, self.ang_rate_B)
         
         # input
         # self.U = self.T_B
-        self.U=vertcat(thrust,self.w_B)
-        
+        self.U=vertcat(self.thrust_mag,self.ang_rate_B)
+        self.Ulast = vertcat(self.thrust_mag,self.ang_rate_B)
+
         # dynamics
         self.f = vertcat(dr_I, dv_I, dq)#, dw)
 
@@ -202,17 +203,16 @@ class Quadrotor:
         R_B_I = self.dir_cosine(self.q)
         self.cost_q_g = trace(np.identity(3) - mtimes(transpose(goal_R_B_I), R_B_I))
 
-        # auglar velocity cost
+        ## angular velocity cost
         self.goal_w_B = [0, 0, 0]
-        self.cost_w_B_g = dot(self.w_B - self.goal_w_B, self.w_B - self.goal_w_B)
+        self.cost_ang_rate_B = dot(self.ang_rate_B - self.goal_w_B, self.ang_rate_B - self.goal_w_B)
 
 
-        # the thrust cost
-        # 2 is the hover thrust
-        self.cost_torque = dot(self.T_B-2, self.T_B-2)
 
-        self.input_cost = self.wthrust * (self.cost_torque) +self.wwt* self.cost_w_B_g
-
+        self.input_cost = self.wthrust * self.thrust_mag \
+                         + self.wwt* self.cost_ang_rate_B
+        
+        
         ## the final (goal) cost
         self.goal_cost = self.wrf * self.cost_r_I_g \
                          + self.wvf * self.cost_v_I_g \

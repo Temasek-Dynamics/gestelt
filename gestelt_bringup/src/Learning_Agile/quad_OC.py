@@ -73,7 +73,7 @@ class OCSys:
         ## Fold
         #self.dyn_fn = casadi.Function('dyn', [X0, U], [X])
 
-    def setInputCost(self, input_cost):
+    def setInputCost(self, input_cost,wInputDiff):
         if not hasattr(self, 'auxvar'):
             self.setAuxvarVariable()
 
@@ -81,7 +81,7 @@ class OCSys:
 
         self.input_cost = input_cost
         self.input_cost_fn = casadi.Function('input_cost',[self.control, self.auxvar], [self.input_cost])
-
+        self.wInputDiff = wInputDiff
     def setPathCost(self, 
                     path_cost,
                     goal_state_sym):
@@ -445,7 +445,8 @@ class OCSys:
         ocp.model.cost_expr_ext_cost = self.path_cost_fn(ocp.model.x,goal_state,self.auxvar)\
             +self.final_cost_fn(ocp.model.x,goal_state,self.auxvar)\
             +ocp.model.p[-1]*self.tra_cost_fn(ocp.model.x, des_tra_pos,des_tra_q, self.auxvar)\
-            +1*dot(ocp.model.u-Ulast,ocp.model.u-Ulast)
+            +self.wInputDiff*dot(ocp.model.u-Ulast,ocp.model.u-Ulast) \
+            +self.input_cost_fn(ocp.model.u,self.auxvar)
         
         # end cost
         ocp.model.cost_expr_ext_cost_e = self.final_cost_fn(ocp.model.x,goal_state,self.auxvar)

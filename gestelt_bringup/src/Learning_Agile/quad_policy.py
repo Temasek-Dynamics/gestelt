@@ -50,7 +50,7 @@ class run_quad:
         # create a pdp object
         self.uavoc1 = OCSys(config_dict)
         self.uavoc1.setAuxvarVariable()
-        sc= 5 #1e20
+        sc= 1 #1e20
         pos_b   = config_dict['learning_agile']['pos_bound'] # in each axis
         vel_b   = config_dict['learning_agile']['linear_vel_bound'] #0.5 # in each axis
         wc   = pi/2 #pi
@@ -77,15 +77,25 @@ class run_quad:
 
         # wrt: ,gate traverse position cost
         # wqt: gate traverse attitude cost
-        # wthrust: thrust cost
+        # wthrust: input thrust cost
         # wwt: input angular velocity cost
         # wrf: final position cost
         # wvf: final velocity cost
         # wqf: final attitude cost
         # wwf: final angular velocity cost
-        self.uav1.initCost(wrt=5,wqt=80,wthrust=1,wwt=0,wrf=5,wvf=5,wqf=1) # wthrust = 0.1
+
+        ## initialize the cost function
+        self.uav1.initCost(wrt=config_dict['learning_agile']['wrt'],
+                           wqt=config_dict['learning_agile']['wqt'],
+                           wthrust=config_dict['learning_agile']['wthrust'],
+                           wwt=config_dict['learning_agile']['wwt'],
+                           wrf=config_dict['learning_agile']['wrf'],
+                           wvf=config_dict['learning_agile']['wvf'],
+                           wqf=config_dict['learning_agile']['wqf']) 
         self.uav1.init_TraCost()
-        self.uavoc1.setInputCost(self.uav1.input_cost)
+
+        ## set the symbolic cost function to the solver
+        self.uavoc1.setInputCost(self.uav1.input_cost,wInputDiff=config_dict['learning_agile']['wInputDiff'])
         self.uavoc1.setPathCost(self.uav1.goal_cost,goal_state_sym=self.uav1.goal_state_sym)
         self.uavoc1.setTraCost(self.uav1.tra_cost,
                                self.uav1.des_tra_r_I,
@@ -139,7 +149,8 @@ class run_quad:
         Ulast=np.array([2,0.0,0.0,0.0])
 
         # obtain solution of trajectory
-        self.mpc_update(self.ini_state, 
+        NO_SOLUTION_FLAG = False
+        self.sol1,weight_vis ,NO_SOLUTION_FLAG =self.mpc_update(self.ini_state, 
                        Ulast, 
                        tra_pos, 
                        tra_ang, 
@@ -166,7 +177,10 @@ class run_quad:
             self.path += np.dot(self.traj[self.horizon-1-p,0:3]-self.goal_pos, self.traj[self.horizon-1-p,0:3]-self.goal_pos)
         
         # the sign of the collision is already negative
-        reward = 1000 * self.collision - 0.5 * self.path + 100
+
+        # pitch angle reward
+        pitch_reward=abs(tra_ang[1])
+        reward = 1000 * self.collision - 0.5 * self.path + 100 + 10 * pitch_reward
         return reward
     # --------------------------- solution and learning----------------------------------------
     ##solution and demo

@@ -174,8 +174,9 @@ class obstacle():
                         m = min(self.line3.distance(intersect),self.line4.distance(intersect),self.line1.distance(intersect))
                         collision =   - 2*d_min*m - d_min**2
                 break
-
+        
         if not PASS_GATE_PLANE:
+            # means the solve failed, avoid this situation
             collision = 0   
                   
         return collision

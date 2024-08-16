@@ -5,7 +5,6 @@ import sys
 import os
 import subprocess
 import yaml
-from scipy.spatial.transform import Rotation as R
 # acquire the current directory
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -70,8 +69,8 @@ class MovingGate():
         self.v =np.array([-1,-0.3,0.4])
         
         # gate pitch angular velocity
-        # self.w = 0 
-        self.w = pi/2 
+        self.w = 0 
+        # self.w = pi/2 
         self.gate_move, self.V = self.gate1.move(v = self.v ,w = self.w,dt=dt)
 
         # self.gate_move=np.zeros([1,4,3])
@@ -176,12 +175,11 @@ class LearningAgileAgent():
         initial traversal problem
 
         """
-        ini_q=R.from_euler('xyz',[0,0,self.env_init_set[6]]).as_quat()
-        ini_q=np.roll(ini_q,1)
+        # ini_q=R.from_euler('xyz',[0,0,self.env_init_set[6]]).as_quat()
+        # ini_q=np.roll(ini_q,1)
         
-        final_q=R.from_euler('xyz',[0,0,self.goal_yaw]).as_quat()
-        final_q=np.roll(final_q,1)
-        
+        ini_q=toQuaternion(self.env_init_set[6],[0,0,1])
+        final_q=toQuaternion(self.goal_yaw,[0,0,1])
           
 
         self.quad1 = run_quad(self.config_dict,
@@ -189,11 +187,11 @@ class LearningAgileAgent():
                               USE_PREV_SOLVER=USE_PREV_SOLVER)
         
         self.quad1.init_state_and_mission(goal_pos=self.env_init_set[3:6].tolist(),
-                              goal_ori=final_q.tolist(),
+                              goal_ori=final_q,
                               
                               ini_r=self.env_init_set[0:3].tolist(),
                               ini_v_I = [0.0, 0.0, 0.0], # initial velocity
-                              ini_q=ini_q.tolist(),)
+                              ini_q=ini_q,)
 
         self.quad1.init_obstacle(self.gate_point.reshape(12))
 
@@ -230,7 +228,7 @@ class LearningAgileAgent():
         else:
 
             self.gate_n = gate(self.gate_move[self.i])
-            print('gate_n.centroid=',self.gate_n.centroid)
+            # print('gate_n.centroid=',self.gate_n.centroid)
             ## binary search for the traversal time
             ## to set the drone state under the gate frame, for the NN2 input
             self.t_tra_rel = binary_search_solver(self.model,self.state,self.final_point,self.gate_n,self.moving_gate.V[self.i],self.moving_gate.w)
@@ -300,7 +298,7 @@ class LearningAgileAgent():
                     # NN2 OUTPUT the traversal time and pose
                     out = self.model(nn_mpc_inputs).data.numpy()
                     self.NN_T_tra = np.concatenate((self.NN_T_tra,[out[6]]),axis = 0)
-                    print('tra_position=',out[0:3],'tra_time_dnn2=',out[6])
+                    # print('tra_position=',out[0:3],'tra_time_dnn2=',out[6])
                     
                     # transfer the gate position to the gate frame
                     self.quad1.update_goal_pos(nn_mpc_inputs[10:13])
@@ -313,7 +311,7 @@ class LearningAgileAgent():
                                                     out[3:6],
                                                     out[6]) # control input 4-by-1 thrusts to pybullet
                 
-                print("i",self.i,"weight_vis",weight_vis)
+                
                 print('solving time at main=',time.time()-t_comp)
                 self.solving_time.append(time.time()- t_comp)
                 self.u=cmd_solution['control_traj_opt'][0,:].tolist()
@@ -380,7 +378,7 @@ def main():
 
     #------------------------------set the mission--------------------------------------#
     config_dict = learing_agile_agent.config_dict
-    learing_agile_agent.receive_mission_states( STATIC_GATE_TEST=False,
+    learing_agile_agent.receive_mission_states( STATIC_GATE_TEST=True,
                                                 ini_pos=np.array(config_dict['mission']['initial_position']),
                                                 end_pos=np.array(config_dict['mission']['goal_position']),
                                                 

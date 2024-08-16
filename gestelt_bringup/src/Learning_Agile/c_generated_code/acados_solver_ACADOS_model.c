@@ -581,14 +581,14 @@ void ACADOS_model_acados_create_5_set_nlp_in(ACADOS_model_solver_capsule* capsul
     ubx[4] = 5;
     lbx[5] = -5;
     ubx[5] = 5;
-    lbx[6] = -5;
-    ubx[6] = 5;
-    lbx[7] = -5;
-    ubx[7] = 5;
-    lbx[8] = -5;
-    ubx[8] = 5;
-    lbx[9] = -5;
-    ubx[9] = 5;
+    lbx[6] = -1;
+    ubx[6] = 1;
+    lbx[7] = -1;
+    ubx[7] = 1;
+    lbx[8] = -1;
+    ubx[8] = 1;
+    lbx[9] = -1;
+    ubx[9] = 1;
 
     for (int i = 1; i < N; i++)
     {
