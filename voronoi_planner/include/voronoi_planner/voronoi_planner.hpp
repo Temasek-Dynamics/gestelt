@@ -310,11 +310,7 @@ private:
 
   /* Convert from time [s] to space-time units */
   int tToSpaceTimeUnits(const double& t){
-    double value = t / t_unit_;
-
-    value = value + 0.5 - (value<0); // x is now 55.499999...
-    return (int)value; // truncated to 55
-
+    return std::lround(t / t_unit_);
   }
 
   /**
@@ -330,8 +326,8 @@ private:
       return num;
     }
 
-    if (num >= max_height_){
-      return max_height_;
+    if (num >= max_height_cm_){
+      return max_height_cm_;
     }
 
     if (num <= min_height_){
@@ -397,7 +393,7 @@ private:
   std::shared_ptr<GridMap> map_;
   double local_origin_x_{0.0}, local_origin_y_{0.0}; // Origin of local map 
   int z_separation_cm_{50}; // [cm] separation between map slices
-  int max_height_{300}, min_height_{50}; // [cm] max and minimum height of map
+  int max_height_cm_{300}, min_height_{50}; // [cm] max and minimum height of map
 
   // map{drone_id : unordered_set{(x,y,z,t)}}
   std::map<int, std::unordered_set<Eigen::Vector4i>> resrv_tbl_; // Reservation table of (x,y,z_cm, t) where x,y are grid positions, z_cm is height in centimeters and t is space time units
@@ -417,7 +413,7 @@ private:
 
   bool init_voro_maps_{false}; // flag to indicate if voronoi map is initialized
 
-  Eigen::Vector3d cur_pos_, cur_vel_;   // current state
+  Eigen::Vector3d cur_pos_, cur_vel_;   // [LOCAL FRAME] current state
 
   /* Debugging */
   Timer tm_front_end_plan_{"front_end_plan"};

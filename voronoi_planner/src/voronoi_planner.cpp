@@ -75,6 +75,10 @@ void VoronoiPlanner::initParams(ros::NodeHandle &pnh)
 /* Timer callbacks*/
 void VoronoiPlanner::planFETimerCB(const ros::TimerEvent &e)
 {
+  if (!init_voro_maps_){
+    return;
+  }
+
   // Check if waypoint queue is empty
   if (waypoints_.empty()){
     return;
@@ -105,11 +109,10 @@ void VoronoiPlanner::FEPlanSubCB(const gestelt_msgs::FrontEndPlanConstPtr& msg)
   }
 
   // Clear reservation table
-  resrv_tbl_[msg->agent_id] = std::unordered_set<Eigen::Vector4i>();
-
+  resrv_tbl_[msg->agent_id].clear();
 
   // Add all points on path (with inflation) to reservation table
-  double inflation = 0.3; // [m]
+  double inflation = 0.1; // [m]
   int num_cells_inf = inflation/res_; // Number of cells used for inflation
 
   double t_now = ros::Time::now().toSec();
@@ -125,7 +128,7 @@ void VoronoiPlanner::FEPlanSubCB(const gestelt_msgs::FrontEndPlanConstPtr& msg)
                                                                 tToSpaceTimeUnits(msg->plan_start_time)));
   // prev_t: Relative time of last points
   int prev_t = 0;
-  for (size_t i = 0; i < msg->plan.size(); i++){
+  for (size_t i = 0; i < msg->plan.size(); i++){ // for every point on plan
     IntPoint grid_pos;
     // get map position relative to local origin
     DblPoint map_2d_pos(msg->plan[i].position.x - local_origin_x_, 
@@ -144,6 +147,8 @@ void VoronoiPlanner::FEPlanSubCB(const gestelt_msgs::FrontEndPlanConstPtr& msg)
           if (st_units_elapsed_plan_start + prev_t + j < 0){
             continue;
           }
+
+          // only reserve for voronoi cells
           resrv_tbl_[msg->agent_id].insert(Eigen::Vector4i{x, y, map_z_cm, st_units_elapsed_plan_start + prev_t + j});
         }
       }
@@ -160,8 +165,7 @@ void VoronoiPlanner::FEPlanSubCB(const gestelt_msgs::FrontEndPlanConstPtr& msg)
   dyn_voro_arr_[map_z_cm]->posToIdx(map_2d_pos, grid_pos);
   resrv_tbl_[msg->agent_id].insert(Eigen::Vector4i{grid_pos.x, grid_pos.y, map_z_cm, st_units_elapsed_plan_start + msg->plan_time.back()});
 
-  // Update reservation table on planner
-  fe_planner_->updateReservationTable(resrv_tbl_);
+
 }
 
 void VoronoiPlanner::boolMapCB(const gestelt_msgs::BoolMapArrayConstPtr& msg)
@@ -170,7 +174,7 @@ void VoronoiPlanner::boolMapCB(const gestelt_msgs::BoolMapArrayConstPtr& msg)
 
   local_origin_x_ = msg->origin.x;
   local_origin_y_ = msg->origin.y;
-  max_height_ = msg->max_height_cm;
+  max_height_cm_ = msg->max_height_cm;
 
   res_ = msg->resolution;
   z_separation_cm_ = msg-> z_separation_cm;
@@ -274,10 +278,7 @@ void VoronoiPlanner::boolMapCB(const gestelt_msgs::BoolMapArrayConstPtr& msg)
 
   viz_helper::publishVertices(voro_verts, local_map_origin_, voronoi_graph_pub_);
 
-  // Assign voronoi map
-  fe_planner_->assignVoroMap(dyn_voro_arr_, msg->z_separation_cm, 
-                              local_origin_x_, local_origin_y_,
-                              msg->max_height_cm);
+
 
   init_voro_maps_ = true; // Flag to indicate that all voronoi maps have been initialized
 }
@@ -342,6 +343,15 @@ bool VoronoiPlanner::plan(const Eigen::Vector3d& start, const Eigen::Vector3d& g
     return false;
   }
   
+  // Update reservation table on planner
+  fe_planner_->updateReservationTable(resrv_tbl_);
+
+  // Assign voronoi map
+  fe_planner_->assignVoroMap(dyn_voro_arr_, z_separation_cm_, 
+                              local_origin_x_, local_origin_y_,
+                              max_height_cm_,
+                              res_);
+
   viz_helper::publishStartAndGoal(start, goal, local_map_origin_, start_pt_pub_, goal_pt_pub_);
 
   tm_front_end_plan_.start();
@@ -366,8 +376,8 @@ bool VoronoiPlanner::plan(const Eigen::Vector3d& start, const Eigen::Vector3d& g
   tm_front_end_plan_.stop(verbose_planning_);
 
   // Retrieve space time path and publish it
-  front_end_path_ = fe_planner_->getPath();
-  space_time_path_ = fe_planner_->getPathWithTime();
+  front_end_path_ = fe_planner_->getPath(cur_pos_);
+  space_time_path_ = fe_planner_->getPathWithTime(cur_pos_);
   smoothed_path_ = fe_planner_->getSmoothedPath();
   smoothed_path_t_ = fe_planner_->getSmoothedPathWithTime();
   viz_helper::publishClosedList(fe_planner_->getClosedListVoroT(), fe_closed_list_pub_, local_map_origin_);
@@ -398,7 +408,7 @@ bool VoronoiPlanner::plan(const Eigen::Vector3d& start, const Eigen::Vector3d& g
 
   // viz_helper::publishFrontEndPath(front_end_path_, global_origin_, fe_plan_viz_pub_);
 
-  viz_helper::publishFrontEndPath(smoothed_path_, global_origin_, fe_plan_viz_pub_);
+  viz_helper::publishFrontEndPath(front_end_path_, global_origin_, fe_plan_viz_pub_);
 
   // double min_clr = DBL_MAX; // minimum path clearance 
   // double max_clr = 0.0;     // maximum path clearance 

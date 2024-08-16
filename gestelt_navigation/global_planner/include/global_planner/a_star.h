@@ -59,7 +59,8 @@ public:
                     const int& z_separation_cm, 
                     const double& local_origin_x,
                     const double& local_origin_y,
-                    const double& max_height);
+                    const double& max_height,
+                    const double& res);
 
 
   /* Update the assignement of the reservation table. TO be executed when the reservation table is updated*/
@@ -119,6 +120,8 @@ private:
                                             map_2d_pos.y + local_origin_y_, cell.z_m});
     }
 
+    /* Get smoothed path */
+
     // For each gridnode, get the position and index,
     // So we can obtain a path in terms of indices and positions
     path_idx_smoothed_t_.push_back(path_idx_vt_[0]);
@@ -176,6 +179,50 @@ public:
   std::vector<Eigen::Vector4d> getPathWithTime()
   {
     return path_pos_t_;
+  }
+
+
+  /**
+   * @brief Get successful plan in terms of space i,e. (x,y,z)
+   *
+   * @return std::vector<Eigen::Vector3d>
+   */
+  std::vector<Eigen::Vector3d> getPath(const Eigen::Vector3d& cur_pos)
+  {
+    std::vector<Eigen::Vector3d> path_pos = path_pos_;
+
+    // convert from local frame to world frame
+    Eigen::Vector3d start_pos(cur_pos(0)+local_origin_x_, 
+                              cur_pos(1)+local_origin_y_, 
+                              cur_pos(2));
+    path_pos.insert(path_pos.begin(), start_pos);
+
+    return path_pos;
+  }
+
+
+  /**
+   * @brief Get successful plan in terms of space and time i.e. (x,y,z,t)
+   *
+   * @return std::vector<Eigen::Vector4d>
+   */
+  std::vector<Eigen::Vector4d> getPathWithTime(const Eigen::Vector3d& cur_pos)
+  {
+    std::vector<Eigen::Vector4d> path_pos_t = path_pos_t_;
+
+    // Eigen::Vector4d start_t(cur_pos(0)+local_origin_x_, 
+    //                         cur_pos(1)+local_origin_y_, 
+    //                         cur_pos(2), 0);
+    // path_pos_t.insert(path_pos_t.begin(), start_t);
+
+    // // offset_t: time from current position to start of path
+    // double offset_t = (int)round((start_t.segment(0,3) - path_pos_t[0].segment(0,3)).norm()/res_) * astar_params_.st_straight; 
+
+    // for (size_t i = 1; i < path_pos_t.size(); i++){
+    //   path_pos_t[i](3) += offset_t;
+    // }
+
+    return path_pos_t;
   }
 
   /* Get post-smoothed path */
@@ -254,6 +301,7 @@ private:
   double local_origin_x_{0.0}, local_origin_y_{0.0};
   int max_height_{300}; // [cm]
   int min_height_{50}; // [cm]
+  double res_{0.05};  // [m]
 
   std::map<int, std::shared_ptr<DynamicVoronoi>> dyn_voro_arr_; // array of voronoi objects with key of height (cm)
 

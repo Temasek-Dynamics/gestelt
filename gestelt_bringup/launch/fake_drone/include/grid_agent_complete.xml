@@ -26,9 +26,11 @@
   <arg name="base_link_frame" default="$(arg drone_id_ns)_base_link"/>
   <arg name="cam_link_frame" default="$(arg drone_id_ns)_cam_link"/>
 
+          <!-- launch-prefix="valgrind" -->
   <group ns="$(arg drone_id_ns)">
     <!-- Planning Module -->
-    <node pkg="voronoi_planner" type="voronoi_planner_node" name="voronoi_planner_node"  required="true" output="screen">
+    <node pkg="voronoi_planner" type="voronoi_planner_node" 
+          name="voronoi_planner_node"  required="true" output="screen">
       <rosparam command="load" file="$(find voronoi_planner)/config/voronoi_planner.yaml" />
       <rosparam command="load" file="$(arg navigator_cfg_filepath)" />
 

@@ -10,17 +10,21 @@ void AStarPlanner::assignVoroMap(const std::map<int, std::shared_ptr<DynamicVoro
                                 const int& z_separation_cm,
                                 const double& local_origin_x,
                                 const double& local_origin_y,
-                                const double& max_height)
+                                const double& max_height,
+                                const double& res)
 {
+    dyn_voro_arr_.clear();
     dyn_voro_arr_ = dyn_voro_arr;
     z_separation_cm_ = z_separation_cm;
     local_origin_x_ = local_origin_x;
     local_origin_y_ = local_origin_y;
     max_height_ = max_height;
+    res_ = res;
 }
 
 void AStarPlanner::updateReservationTable(const std::map<int, std::unordered_set<Eigen::Vector4i>>& resrv_tbl)
 {
+    resrv_tbl_.clear();
     resrv_tbl_ = resrv_tbl;
 }
 
@@ -170,8 +174,8 @@ bool AStarPlanner::generatePlanVoroT(   const Eigen::Vector3d& start_pos_3d,
 
     // std::cout << astar_params_.drone_id << ": before expandVoronoiBubbleT" << std::endl;
 
-    marked_bubble_cells_[start_node.z_cm] = std::unordered_set<IntPoint>();
-    marked_bubble_cells_[goal_node.z_cm] = std::unordered_set<IntPoint>();
+    // marked_bubble_cells_[start_node.z_cm].clear();
+    // marked_bubble_cells_[goal_node.z_cm].clear();
     // Create voronoi bubble around start and goal
     expandVoronoiBubbleT(start_node);
     expandVoronoiBubbleT(goal_node);
