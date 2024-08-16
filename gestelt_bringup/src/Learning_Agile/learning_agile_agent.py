@@ -66,12 +66,12 @@ class MovingGate():
     
         ## define the kinematics of the narrow window
         # gate linear velocity
-        self.v =np.array([0,0.0,0.0]) 
-        # self.v =np.array([-1,-0.3,0.4])
+        # self.v =np.array([0,0.0,0.0]) 
+        self.v =np.array([-1,-0.3,0.4])
         
         # gate pitch angular velocity
-        self.w = 0 
-        # self.w = pi/2*(1/3)
+        # self.w = 0 
+        self.w = pi/2 
         self.gate_move, self.V = self.gate1.move(v = self.v ,w = self.w,dt=dt)
 
         # self.gate_move=np.zeros([1,4,3])
@@ -111,6 +111,7 @@ class LearningAgileAgent():
         
         self.Ttra    = []
         self.T       = []
+        self.NN_T_tra = []
         self.Time    = []
         self.Pitch   = []
         self.i       = 0
@@ -148,17 +149,18 @@ class LearningAgileAgent():
         # env_init_set[7]: gate width (randomly set)
         # env_init_set[8]: gate pitch angle (randomly set)
         self.env_init_set = nn_sample()
-        self.env_init_set[0:3]=ini_pos
-        self.env_init_set[3:6]=end_pos
+        if STATIC_GATE_TEST:
+            self.env_init_set[0:3]=ini_pos
+            self.env_init_set[3:6]=end_pos
         self.env_init_set[6]=ini_yaw # drone_init_yaw
-        # self.env_init_set[8]=pi/2 # gate pitch angle
+        # self.env_init_set[8]= pi/2 # gate pitch angle
 
         ##---------------------gate initialization ------------------------##
         self.moving_gate = MovingGate(self.env_init_set)
         self.gate_point = self.moving_gate.gate_point
         
 
-        self.final_point = end_pos
+        self.final_point = self.env_init_set[3:6]
         self.goal_yaw = goal_yaw
         
         self.gate_center = gate_center
@@ -228,7 +230,7 @@ class LearningAgileAgent():
         else:
 
             self.gate_n = gate(self.gate_move[self.i])
-        
+            print('gate_n.centroid=',self.gate_n.centroid)
             ## binary search for the traversal time
             ## to set the drone state under the gate frame, for the NN2 input
             self.t_tra_rel = binary_search_solver(self.model,self.state,self.final_point,self.gate_n,self.moving_gate.V[self.i],self.moving_gate.w)
@@ -297,10 +299,13 @@ class LearningAgileAgent():
 
                     # NN2 OUTPUT the traversal time and pose
                     out = self.model(nn_mpc_inputs).data.numpy()
-                   
+                    self.NN_T_tra = np.concatenate((self.NN_T_tra,[out[6]]),axis = 0)
                     print('tra_position=',out[0:3],'tra_time_dnn2=',out[6])
-
+                    
+                    # transfer the gate position to the gate frame
+                    self.quad1.update_goal_pos(nn_mpc_inputs[10:13])
                 t_comp = time.time()
+                
                 
                 cmd_solution,weight_vis,NO_SOLUTION_FLAG  = self.quad1.mpc_update(nn_mpc_inputs[0:10],
                                                     self.u,
@@ -352,7 +357,6 @@ class LearningAgileAgent():
         self.quad1.uav1.plot_trav_time(self.T)
         self.quad1.uav1.plot_solving_time(self.solving_time)
         self.quad1.uav1.plot_3D_traj(wing_len=1.5,
-                                    density_list=self.tra_weight_list[::1],
                                     state_traj=self.state_n[::50,:],
                                     gate_traj=self.gate_move[::50,:,:])
 

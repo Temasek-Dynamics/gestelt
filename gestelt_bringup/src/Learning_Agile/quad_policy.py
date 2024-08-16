@@ -83,7 +83,7 @@ class run_quad:
         # wvf: final velocity cost
         # wqf: final attitude cost
         # wwf: final angular velocity cost
-        self.uav1.initCost(wrt=5,wqt=8,wthrust=1,wwt=0,wrf=5,wvf=1,wqf=1) # wthrust = 0.1
+        self.uav1.initCost(wrt=5,wqt=80,wthrust=1,wwt=0,wrf=5,wvf=5,wqf=1) # wthrust = 0.1
         self.uav1.init_TraCost()
         self.uavoc1.setInputCost(self.uav1.input_cost)
         self.uavoc1.setPathCost(self.uav1.goal_cost,goal_state_sym=self.uav1.goal_state_sym)
@@ -119,6 +119,8 @@ class run_quad:
         self.ini_w =  [0.0, 0.0, 0.0]
         self.ini_state = self.ini_r + self.ini_v_I + self.ini_q# + self.ini_w
         
+    def update_goal_pos(self,goal_pos):
+        self.goal_pos = goal_pos
     
 
     # initialize the narrow window

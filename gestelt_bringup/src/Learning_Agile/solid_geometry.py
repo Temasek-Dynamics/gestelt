@@ -15,6 +15,8 @@ def norm(vector):
 ## define a class of a plane (using three points on the plane)
 class plane():
     def __init__(self, point1, point2, point3):
+
+        # point1 is the centroid of the gate
         self.point1 = np.array(point1)
         self.point2 = np.array(point2)
         self.point3 = np.array(point3)
@@ -109,21 +111,14 @@ class obstacle():
         collision = 0
         self.co = 0
 
-        ## judge if the trajectory traverse through the plane
         PASS_GATE_PLANE = False
-        for i in range(horizon):
-            if((np.dot(self.plane1.nor_vec(),vert_traj[i]-self.centroid)<0)):
-                PASS_GATE_PLANE = True
-                break
-        if not PASS_GATE_PLANE:
-            return 0
-
+   
         ## judge whether the first plane is the traversal plane
         # find two points of traverse
         d_min = 0.2
         for t in range(horizon):
             if(np.dot(self.plane1.nor_vec(),vert_traj[t]-self.centroid)<0):
-
+                PASS_GATE_PLANE = True
                 # intersect is s_iw
                 intersect = self.plane1.interpoint(vert_traj[t],vert_traj[t-1])
                 
@@ -179,5 +174,8 @@ class obstacle():
                         m = min(self.line3.distance(intersect),self.line4.distance(intersect),self.line1.distance(intersect))
                         collision =   - 2*d_min*m - d_min**2
                 break
-                        
+
+        if not PASS_GATE_PLANE:
+            collision = 0   
+                  
         return collision

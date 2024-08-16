@@ -18,7 +18,7 @@ subdirectory_path = os.path.join(current_dir, 'Learning_Agile')
 ## deep learning
 # Hyper-parameters 
 
-num_epochs = 100 #100
+num_epochs = 20 #100
 batch_size = 100 # 100
 learning_rate = 1e-4
 num_cores =20 #5
@@ -71,9 +71,9 @@ def calc_grad(config_dict,inputs, outputs, gra):
     # initialize the narrow window
     quad1.init_obstacle(gate_point.reshape(12))
 
-    print("gate pose: ",inputs[8])
-    print("NN1 output traversal pose pitch: ",outputs[4])
-    print("NN1 output traversal time: ",outputs[6])
+    # print("gate pose: ",inputs[8])
+    # print("NN1 output traversal pose pitch: ",outputs[4])
+    # print("NN1 output traversal time: ",outputs[6])
     # receive the decision variables from DNN1, do the MPC, then calculate d_reward/d_z
     gra[:] = quad1.sol_gradient(outputs[0:3].astype(np.float64),outputs[3:6],outputs[6])
 
@@ -119,8 +119,6 @@ if __name__ == '__main__':
                 for _ in range(num_cores):
                     # sample
                     inputs = nn_sample()
-                    # inputs[0:3]=np.array([0,1.8,1.4])
-                    # inputs[3:6]=np.array([0,-1.8,1.4])
                     
                     # forward pass
                     outputs = model(inputs)
@@ -176,5 +174,5 @@ if __name__ == '__main__':
             np.save(training_data_folder+'/mean_reward'+str(k),Mean_r)
             np.save(training_data_folder+'/every_reward'+str(k),Every_reward)
 
-            if (epoch+1)%10 == 0:
+            if (epoch)%10 == 0:
                 torch.save(model, model_folder+"/NN1_deep2_"+str(epoch)+".pth")

@@ -30,7 +30,7 @@ desired_average_vel=config_dict['training_param']['desired_average_vel']
 def nn_sample(init_pos=None,final_pos=None,init_angle=None):
     inputs = np.zeros(9)
     if init_pos is None:
-        inputs[0:3] = np.random.uniform(-5,5,size=3) + ini_pos #-5~5, -9
+        inputs[0:3] = np.random.uniform(-2,2,size=3) + ini_pos #-5~5, -9
     else:
         inputs[0:3] = init_pos
     ## random final postion 
@@ -66,7 +66,7 @@ def t_output(inputs):
     #outputs[5] = math.tan(inputs[6]/2)
     ## traversal time is propotional to the distance of the centroids
     raw_time=round(magni(inputs[0:3])/4,1)
-    outputs[6] = np.clip(raw_time,2,4)
+    outputs[6] = np.clip(raw_time,1.5,3)
     return outputs
 
 ## sample a random gate (not necessary in our method) (not important)
