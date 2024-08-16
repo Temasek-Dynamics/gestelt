@@ -58,3 +58,5 @@ CATKIN_IGNORE
 *prof
 
 .history
+*.zip
+**/*.pth

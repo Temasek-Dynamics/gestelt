@@ -51,7 +51,7 @@ class run_quad:
         self.uavoc1 = OCSys(config_dict)
         self.uavoc1.setAuxvarVariable()
         sc= 5 #1e20
-        pos_b   = 5 # in each axis
+        pos_b   = config_dict['learning_agile']['pos_bound'] # in each axis
         vel_b   = config_dict['learning_agile']['linear_vel_bound'] #0.5 # in each axis
         wc   = pi/2 #pi
         tw   = 1.22
@@ -83,7 +83,7 @@ class run_quad:
         # wvf: final velocity cost
         # wqf: final attitude cost
         # wwf: final angular velocity cost
-        self.uav1.initCost(wrt=5,wqt=8,wthrust=1,wwt=0,wrf=1,wvf=1,wqf=1) # wthrust = 0.1
+        self.uav1.initCost(wrt=5,wqt=8,wthrust=1,wwt=0,wrf=5,wvf=1,wqf=1) # wthrust = 0.1
         self.uav1.init_TraCost()
         self.uavoc1.setInputCost(self.uav1.input_cost)
         self.uavoc1.setPathCost(self.uav1.goal_cost,goal_state_sym=self.uav1.goal_state_sym)
@@ -146,6 +146,8 @@ class run_quad:
         # state_traj [x,y,z,vx,vy,vz,qw,qx,qy,qz]
         state_traj = self.sol1['state_traj_opt']
 
+
+        # get the quadrotor edges position trajectory
         self.traj = self.uav1.get_quadrotor_position(wing_len = self.winglen, state_traj = state_traj)
         # calculate trajectory reward
         self.collision = 0
@@ -155,8 +157,13 @@ class run_quad:
         for c in range(4):
             self.collision += self.obstacle1.collis_det(self.traj[:,3*(c+1):3*(c+2)],self.horizon)
             self.co += self.obstacle1.co 
+
+        ## calculate the path cost
+        # check the drone centroid position error with the goal position
         for p in range(4):
             self.path += np.dot(self.traj[self.horizon-1-p,0:3]-self.goal_pos, self.traj[self.horizon-1-p,0:3]-self.goal_pos)
+        
+        # the sign of the collision is already negative
         reward = 1000 * self.collision - 0.5 * self.path + 100
         return reward
     # --------------------------- solution and learning----------------------------------------

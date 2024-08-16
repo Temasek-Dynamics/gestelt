@@ -8,21 +8,24 @@ import yaml
 # Device configuration
 device = torch.device('cpu')
 #torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-# Hyper-parameters 
-input_size = 15 
-hidden_size = 128 
-output_size = 7
-num_epochs = 16*20 #16*100
-batch_size = 20
-num_cores = 1
-learning_rate = 1e-6
 
+conf_folder=os.path.abspath(os.path.join(current_dir, '..', '..','config'))
+yaml_file = os.path.join(conf_folder, 'learning_agile_mission.yaml')
+with open(yaml_file, 'r', encoding='utf-8') as file:
+    config_dict = yaml.safe_load(file)
 current_dir = os.path.dirname(os.path.abspath(__file__))
 training_data_folder=os.path.abspath(os.path.join(current_dir, 'training_data'))
 model_folder=os.path.abspath(os.path.join(training_data_folder, 'NN_model'))
 FILE_INPUT = model_folder+"/NN1_deep2_0.pth"
 model_nn1 = torch.load(FILE_INPUT)
-
+# Hyper-parameters 
+input_size = 15 
+hidden_size = 128 
+output_size = 7
+num_epochs = 16*100 #16*100
+batch_size = config_dict['learning_agile']['horizon']
+num_cores = 20
+learning_rate = 1e-6
 
 model_nn2 = network(input_size, hidden_size, hidden_size,output_size).to(device)
 
@@ -66,10 +69,7 @@ def traj(inputs, outputs, state_traj):
 if __name__ == '__main__':
      # load the configuration file
     # yaml file dir#
-    conf_folder=os.path.abspath(os.path.join(current_dir, '..', '..','config'))
-    yaml_file = os.path.join(conf_folder, 'learning_agile_mission.yaml')
-    with open(yaml_file, 'r', encoding='utf-8') as file:
-        config_dict = yaml.safe_load(file)
+    
     # generate the solver
     quad1 = run_quad(config_dict,  
                     SQP_RTI_OPTION=False, 

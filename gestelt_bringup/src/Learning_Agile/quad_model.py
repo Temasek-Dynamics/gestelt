@@ -685,8 +685,46 @@ class Quadrotor:
         plt.show()
         
 
+    def plot_trav_time(self,trav_time):
+        plt.figure() 
+        plt.plot(trav_time)
+        plt.title('trav_time vs time')
+        plt.xlabel('t')
+        plt.ylabel('trav_time')
+        plt.grid(True,color='0.6',dashes=(2,2,1,1))
+        plt.legend()
+        plt.savefig('./python_sim_result/trav_time.png')
+        # plt.show()
 
-
+    def plot_3D_traj(self,density_list,wing_len,state_traj,gate_traj):
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        position = self.get_quadrotor_position(wing_len, state_traj)
+        for i in range(np.size(gate_traj,0)):
+            p1_x, p1_y, p1_z = gate_traj[i, 0,:]
+            p2_x, p2_y, p2_z = gate_traj[i, 1,:]
+            p3_x, p3_y, p3_z = gate_traj[i, 2,:]
+            p4_x, p4_y, p4_z = gate_traj[i, 3,:]
+            gate_l1, = ax.plot([p1_x,p2_x],[p1_y,p2_y],[p1_z,p2_z],linewidth=1,color='red',linestyle='-',alpha=1/(density_list[i]))
+            gate_l2, = ax.plot([p2_x,p3_x],[p2_y,p3_y],[p2_z,p3_z],linewidth=1,color='red',linestyle='-',alpha=1/(density_list[i]))
+            gate_l3, = ax.plot([p3_x,p4_x],[p3_y,p4_y],[p3_z,p4_z],linewidth=1,color='red',linestyle='-',alpha=1/(density_list[i]))
+            gate_l4, = ax.plot([p4_x,p1_x],[p4_y,p1_y],[p4_z,p1_z],linewidth=1,color='red',linestyle='-',alpha=1/(density_list[i]))
+            c_x, c_y, c_z = position[i,0:3]
+            r1_x, r1_y, r1_z = position[i,3:6]
+            r2_x, r2_y, r2_z = position[i,6:9]
+            r3_x, r3_y, r3_z = position[i,9:12]
+            r4_x, r4_y, r4_z = position[i,12:15]
+            line_arm1, = ax.plot([c_x, r1_x], [c_y, r1_y], [c_z, r1_z], linewidth=1, color='red', marker='o', markersize=1,alpha=1/(density_list[i]))
+            line_arm2, = ax.plot([c_x, r2_x], [c_y, r2_y], [c_z, r2_z], linewidth=1, color='blue', marker='o', markersize=1,alpha=1/(density_list[i]))
+            line_arm3, = ax.plot([c_x, r3_x], [c_y, r3_y], [c_z, r3_z], linewidth=1, color='orange', marker='o', markersize=1,alpha=1/(density_list[i]))
+            line_arm4, = ax.plot([c_x, r4_x], [c_y, r4_y], [c_z, r4_z], linewidth=1, color='green', marker='o', markersize=1,alpha=1/(density_list[i]))
+            # line_arm1.set_data_3d([c_x, r1_x], [c_y, r1_y],[c_z, r1_z])
+            # line_arm2.set_data_3d([c_x, r2_x], [c_y, r2_y],[c_z, r2_z])
+            # line_arm3.set_data_3d([c_x, r3_x], [c_y, r3_y],[c_z, r3_z])
+            # line_arm4.set_data_3d([c_x, r4_x], [c_y, r4_y],[c_z, r4_z])
+        plt.show()    
+    
+    
     def dir_cosine(self, q): # world frame to body frame
         C_B_I = vertcat(
             horzcat(1 - 2 * (q[2] ** 2 + q[3] ** 2), 2 * (q[1] * q[2] + q[0] * q[3]), 2 * (q[1] * q[3] - q[0] * q[2])),

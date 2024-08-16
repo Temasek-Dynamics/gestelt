@@ -102,12 +102,20 @@ class obstacle():
         self.line4 = line(point4, point1)
 
     def collis_det(self, vert_traj, horizon):
+        """
+        detect collision for each corner of the quadrotor
+        """
         ## define the state whether find corresponding plane
         collision = 0
         self.co = 0
 
         ## judge if the trajectory traverse through the plane
-        if((np.dot(self.plane1.nor_vec(),vert_traj[0]-self.centroid)<0)):
+        PASS_GATE_PLANE = False
+        for i in range(horizon):
+            if((np.dot(self.plane1.nor_vec(),vert_traj[i]-self.centroid)<0)):
+                PASS_GATE_PLANE = True
+                break
+        if not PASS_GATE_PLANE:
             return 0
 
         ## judge whether the first plane is the traversal plane
@@ -115,10 +123,17 @@ class obstacle():
         d_min = 0.2
         for t in range(horizon):
             if(np.dot(self.plane1.nor_vec(),vert_traj[t]-self.centroid)<0):
+
+                # intersect is s_iw
                 intersect = self.plane1.interpoint(vert_traj[t],vert_traj[t-1])
+                
+                
                 # judge whether they belong to plane1 and calculate the distance
                 if(np.dot(self.plane1.n1(),intersect-self.centroid)>0 and np.dot(self.plane1.n2(),intersect-self.centroid)>0):
+                    
                     if(np.dot(self.point1-intersect,self.plane1.n3())>0):
+
+                        # m is the d_i
                         m = min(self.line1.vertical(intersect),self.line2.vertical(intersect),\
                             self.line3.vertical(intersect),self.line4.vertical(intersect))
                         collision = - max(0,d_min-m)**2

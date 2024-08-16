@@ -30,6 +30,7 @@ for epoch in range(num_epochs):
         
         # Forward pass
         pre_outputs = model(inputs)
+        print("desired_traversing_time",pre_outputs[6])
         #print(inputs,' ',pre_outputs)
         loss = criterion(pre_outputs, outputs)
         

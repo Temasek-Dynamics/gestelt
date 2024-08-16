@@ -10,7 +10,7 @@ mission:
   #################################################
   ##------ MPC initial pose ----##
   # initial pose only works for python sim
-  initial_position: [0.0, 1.0, 1.2]
+  initial_position: [0.0, -9, 0]
   initial_ori_euler: [0.0, 0.0, 0.0] # only yaw is active
 
   ##------ gate pose ----##
@@ -18,7 +18,7 @@ mission:
   gate_ori_euler: [-0.0, -0.3535, 0.0]
 
   ##------ goal pose ----##
-  goal_position: [0.0, -1.8, 1.2]
+  goal_position: [0.0, 6, 0]
   goal_ori_euler: [0.0, 0.0, 0.0] # only yaw is active
 
   #################################################
@@ -47,7 +47,7 @@ mission:
 learning_agile:
 
   ##------ traversing parameters ---##
-  max_traverse_weight: 20 #70
+  max_traverse_weight: 70 #70
   traverse_weight_span: 10
   traverse_time: 1.5  
 
@@ -57,7 +57,7 @@ learning_agile:
   ##------ MPC problem parameters---## 
   ## ---- hard coded in the solver ----##
   ## modify this required recompilation of the solver
-  horizon: 20
+  horizon: 50
   dt: 0.1
     
   ##------ model parameters --------##
@@ -81,10 +81,10 @@ learning_agile:
 
 
   # position constraints
-  pos_bound: 5 #m (-b,b)
+  pos_bound: 15 #m (-b,b)
 
   # velocity constraints
-  linear_vel_bound: 4 #m/s
+  linear_vel_bound: 10 #m/s
 
   # angular velocity constraints
   angular_vel_bound: 10.57 #rad/s
@@ -92,3 +92,8 @@ learning_agile:
 
   ## ----- miscellaneous parameters  ----##
   pred_traj_vis: true
+
+
+  ##------  training parameters  ------##
+training_param:
+  desired_average_vel: 1.0

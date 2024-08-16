@@ -13,17 +13,29 @@ from quad_model import toQuaternion
 from solid_geometry import norm,magni
 from solid_geometry import plane
 from scipy.spatial.transform import Rotation as R
+import os
+import yaml
+current_dir = os.path.dirname(os.path.abspath(__file__))
+conf_folder=os.path.abspath(os.path.join(current_dir, '..', '..','config'))
+yaml_file = os.path.join(conf_folder, 'learning_agile_mission.yaml')
+with open(yaml_file, 'r', encoding='utf-8') as file:
+    config_dict = yaml.safe_load(file) 
+ini_pos=np.array(config_dict['mission']['initial_position'])
+end_pos=np.array(config_dict['mission']['goal_position'])
+desired_average_vel=config_dict['training_param']['desired_average_vel']
+
+# load the configuration file
 
 ## sample an input for the neural network 1
 def nn_sample(init_pos=None,final_pos=None,init_angle=None):
     inputs = np.zeros(9)
     if init_pos is None:
-        inputs[0:3] = np.random.uniform(-1,1,size=3) + np.array([0,1.8,0]) #-5~5, -9
+        inputs[0:3] = np.random.uniform(-5,5,size=3) + ini_pos #-5~5, -9
     else:
         inputs[0:3] = init_pos
     ## random final postion 
     if final_pos is None:
-        inputs[3:6] = np.random.uniform(-1,1,size=3) + np.array([0,-1.8,0]) #-2~2, 6
+        inputs[3:6] = np.random.uniform(-2,2,size=3) + end_pos #-2~2, 6
     else:
         inputs[3:6] = final_pos
     ## random initial yaw angle of the quadrotor
@@ -53,8 +65,8 @@ def t_output(inputs):
     outputs = np.zeros(7)
     #outputs[5] = math.tan(inputs[6]/2)
     ## traversal time is propotional to the distance of the centroids
-    raw_time=round(magni(inputs[0:3])/2,1)
-    outputs[6] = np.clip(raw_time,1.5,3)
+    raw_time=round(magni(inputs[0:3])/4,1)
+    outputs[6] = np.clip(raw_time,2,4)
     return outputs
 
 ## sample a random gate (not necessary in our method) (not important)

@@ -18,10 +18,10 @@ subdirectory_path = os.path.join(current_dir, 'Learning_Agile')
 ## deep learning
 # Hyper-parameters 
 
-num_epochs = 1 #100
+num_epochs = 100 #100
 batch_size = 100 # 100
 learning_rate = 1e-4
-num_cores =1 #5
+num_cores =20 #5
 
 # FILE = "nn_pre.pth"
 # model = torch.load(FILE)
@@ -75,7 +75,7 @@ def calc_grad(config_dict,inputs, outputs, gra):
     print("NN1 output traversal pose pitch: ",outputs[4])
     print("NN1 output traversal time: ",outputs[6])
     # receive the decision variables from DNN1, do the MPC, then calculate d_reward/d_z
-    gra[:] = quad1.sol_gradient(outputs[0:3].astype(np.float64),outputs[3:6],np.clip(outputs[6],1.5,3))
+    gra[:] = quad1.sol_gradient(outputs[0:3].astype(np.float64),outputs[3:6],outputs[6])
 
     
 
@@ -103,6 +103,7 @@ if __name__ == '__main__':
         optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
         Iteration = []
         Mean_r = []
+        
         for epoch in range(num_epochs):
         #move = gate1.plane_move()
             evalue = 0
@@ -171,7 +172,9 @@ if __name__ == '__main__':
             mean_reward = evalue/batch_size # evalue/int(batch_size/num_cores)
             Mean_r += [mean_reward]
             print('evaluation: ',mean_reward)
-            np.save(training_data_folder+'/Iteration',Iteration)
-            np.save(training_data_folder+'/Mean_Reward'+str(k),Mean_r)
-            np.save(training_data_folder+'/Every_reward'+str(k),Every_reward)
-        torch.save(model, model_folder+"/NN1_deep2_"+str(k)+".pth")
+            np.save(training_data_folder+'/iteration',Iteration)
+            np.save(training_data_folder+'/mean_reward'+str(k),Mean_r)
+            np.save(training_data_folder+'/every_reward'+str(k),Every_reward)
+
+            if (epoch+1)%10 == 0:
+                torch.save(model, model_folder+"/NN1_deep2_"+str(epoch)+".pth")

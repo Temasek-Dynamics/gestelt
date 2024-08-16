@@ -66,12 +66,12 @@ class MovingGate():
     
         ## define the kinematics of the narrow window
         # gate linear velocity
-        # self.v =np.array([0,0.0,0.0]) 
-        self.v =np.array([1,0.3,0.4])
+        self.v =np.array([0,0.0,0.0]) 
+        # self.v =np.array([-1,-0.3,0.4])
         
         # gate pitch angular velocity
-        # self.w = 0 #
-        self.w = pi/2
+        self.w = 0 
+        # self.w = pi/2*(1/3)
         self.gate_move, self.V = self.gate1.move(v = self.v ,w = self.w,dt=dt)
 
         # self.gate_move=np.zeros([1,4,3])
@@ -205,7 +205,7 @@ class LearningAgileAgent():
         self.gate_n = gate(self.gate_move[0])
 
         ##-------------- initial guess of the traversal time---------------##
-        self.t_guess = magni(self.gate_n.centroid-self.state[0:3])/3
+        self.t_guess = magni(self.gate_n.centroid-self.state[0:3])/1
         
     
     def gate_state_estimation(self):
@@ -297,7 +297,7 @@ class LearningAgileAgent():
 
                     # NN2 OUTPUT the traversal time and pose
                     out = self.model(nn_mpc_inputs).data.numpy()
-                    out[6]=out[6]-self.i*self.dyn_step
+                   
                     print('tra_position=',out[0:3],'tra_time_dnn2=',out[6])
 
                 t_comp = time.time()
@@ -349,8 +349,13 @@ class LearningAgileAgent():
         self.quad1.uav1.plot_velocity(self.state_n)
         self.quad1.uav1.plot_quaternions(self.state_n)
         self.quad1.uav1.plot_trav_weight(self.tra_weight_list)
-       
+        self.quad1.uav1.plot_trav_time(self.T)
         self.quad1.uav1.plot_solving_time(self.solving_time)
+        self.quad1.uav1.plot_3D_traj(wing_len=1.5,
+                                    density_list=self.tra_weight_list[::1],
+                                    state_traj=self.state_n[::50,:],
+                                    gate_traj=self.gate_move[::50,:,:])
+
 
         # self.quad1.uav1.plot_T(control_tm)
         # self.quad1.uav1.plot_M(control_tm)
