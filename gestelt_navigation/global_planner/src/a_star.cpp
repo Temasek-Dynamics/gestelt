@@ -135,8 +135,8 @@ bool AStarPlanner::generatePlanVoroT(   const Eigen::Vector3d& start_pos_3d,
     
     int start_z_cm = roundToMultInt((int) (start_pos_3d(2) * 100), z_separation_cm_);
     int goal_z_cm = roundToMultInt((int) (goal_pos_3d(2) * 100), z_separation_cm_);
-    std::cout << astar_params_.drone_id << ": start_z: " <<  start_pos_3d(2) << " m rounded to " << start_z_cm << " cm" << std::endl;
-    std::cout << astar_params_.drone_id << ": goal_z: " <<  goal_pos_3d(2) << " m rounded to " << goal_z_cm << " cm" << std::endl;
+    // std::cout << astar_params_.drone_id << ": start_z: " <<  start_pos_3d(2) << " m rounded to " << start_z_cm << " cm" << std::endl;
+    // std::cout << astar_params_.drone_id << ": goal_z: " <<  goal_pos_3d(2) << " m rounded to " << goal_z_cm << " cm" << std::endl;
     
     INTPOINT start_node_2d, goal_node_2d;
 
@@ -201,8 +201,6 @@ bool AStarPlanner::generatePlanVoroT(   const Eigen::Vector3d& start_pos_3d,
     int num_iter = 0;
     std::vector<Eigen::Vector3i> neighbours; // 3d indices of neighbors
 
-    std::cout << astar_params_.drone_id << ": before main loop" << std::endl;
-
     while (!open_list_vt_.empty() && num_iter < astar_params_.max_iterations)
     {
         // if (num_iter%100 == 1){
@@ -218,7 +216,7 @@ bool AStarPlanner::generatePlanVoroT(   const Eigen::Vector3d& start_pos_3d,
 
         if (cur_node.isSamePositionAs(goal_node))
         {
-            std::cout << astar_params_.drone_id << ":  Found goal after " << num_iter << " iterations" << std::endl;
+            // std::cout << astar_params_.drone_id << ":  Found goal after " << num_iter << " iterations" << std::endl;
             // Goal reached, terminate search and obtain path
             tracePathVoroT(cur_node);
 
@@ -247,12 +245,17 @@ bool AStarPlanner::generatePlanVoroT(   const Eigen::Vector3d& start_pos_3d,
                                         nb_node_eig(1), 
                                         nb_node_eig(2), nb_t};
 
+            bool occ_resrv_tbl = false;
             for (auto const& tbl : resrv_tbl_){
                 if (tbl.second.find(nb_grid_4d) != tbl.second.end() ){
                     // Position has been reserved by another agent
-                    std::cout << "Drone " << astar_params_.drone_id <<  ": Grid Pos (" << nb_grid_4d.transpose() << ") has been reserved" << std::endl;
-                    continue;
+                    // std::cout << "Drone " << astar_params_.drone_id <<  ": Grid Pos (" << nb_grid_4d.transpose() << ") has been reserved" << std::endl;
+                    occ_resrv_tbl = true;
+                    break;
                 }
+            }
+            if (occ_resrv_tbl){
+                continue;
             }
 
             double tent_g_cost = g_cost_v_[cur_node_3d] + cost_function(cur_node, nb_node);

@@ -104,7 +104,7 @@ void VoronoiPlanner::FEPlanSubCB(const gestelt_msgs::FrontEndPlanConstPtr& msg)
   }
 
   // PRIORITY-BASED PLANNING: Only consider trajectories of drones with higher agent_id
-  if (msg->agent_id <= drone_id_){
+  if (msg->agent_id == drone_id_){
     return;
   }
 
@@ -112,19 +112,18 @@ void VoronoiPlanner::FEPlanSubCB(const gestelt_msgs::FrontEndPlanConstPtr& msg)
   resrv_tbl_[msg->agent_id].clear();
 
   // Add all points on path (with inflation) to reservation table
-  double inflation = 0.1; // [m]
+  double inflation = 0.5; // [m]
   int num_cells_inf = inflation/res_; // Number of cells used for inflation
 
   double t_now = ros::Time::now().toSec();
 
   // Round to nearest units of 0.1
   // st_units_elapsed_plan_start: space time units since plan started 
-  int st_units_elapsed_plan_start =  tToSpaceTimeUnits(t_now) - tToSpaceTimeUnits(msg->plan_start_time);
+  long st_units_elapsed_plan_start =  tToSpaceTimeUnits(t_now - msg->plan_start_time);
 
-  std::cout << std::fixed << std::setprecision(11) << "t_now(" << t_now << "), msg->plan_start_time(" << msg->plan_start_time << ")" << std::endl;
-
-  std::cout << "st_units_elapsed_plan_start(" << st_units_elapsed_plan_start
-            << ") = " << tToSpaceTimeUnits(t_now) << " - " << tToSpaceTimeUnits(msg->plan_start_time) << std::endl;
+  // std::cout << std::fixed << std::setprecision(11) << "t_now(" << t_now << "), msg->plan_start_time(" << msg->plan_start_time << ")" << std::endl;
+  // std::cout << "st_units_elapsed_plan_start(" << st_units_elapsed_plan_start
+  //           << ") = " << tToSpaceTimeUnits(t_now) << " - " << tToSpaceTimeUnits(msg->plan_start_time) << std::endl;
                                                                 
   // prev_t: Relative time of last points
   int prev_t = 0;
@@ -142,14 +141,15 @@ void VoronoiPlanner::FEPlanSubCB(const gestelt_msgs::FrontEndPlanConstPtr& msg)
     {
       for(int y = grid_pos.y - num_cells_inf; y <= grid_pos.y + num_cells_inf; y++)
       {
+        if (!dyn_voro_arr_[map_z_cm]->isVoronoi(x, y)){
+          // if cell is not voronoi
+          continue;
+        }
+
         // Add position for the entire time interval from previous t to current t
-        for (int j = 0; j < msg->plan_time[i] - prev_t; j++) { 
+        for (int j = -1; j < msg->plan_time[i] - prev_t + 1; j++) { 
           if (st_units_elapsed_plan_start + prev_t + j < 0){
             // if plan is in the past
-            continue;
-          }
-          if (!dyn_voro_arr_[map_z_cm]->isVoronoi(x, y)){
-            // if cell is not voronoi
             continue;
           }
           // only reserve for voronoi cells
@@ -168,7 +168,7 @@ void VoronoiPlanner::FEPlanSubCB(const gestelt_msgs::FrontEndPlanConstPtr& msg)
   int map_z_cm =roundToMultInt((int) (msg->plan.back().position.z * 100), z_separation_cm_);
   dyn_voro_arr_[map_z_cm]->posToIdx(map_2d_pos, grid_pos);
   if (dyn_voro_arr_[map_z_cm]->isVoronoi(grid_pos.x, grid_pos.y)){
-    // if cell is voronoi
+    // if cell is voronoi, then add to reservation table
     resrv_tbl_[msg->agent_id].insert(Eigen::Vector4i{grid_pos.x, grid_pos.y, map_z_cm, st_units_elapsed_plan_start + msg->plan_time.back()});
   }
 

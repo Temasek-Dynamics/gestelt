@@ -7,6 +7,7 @@ GridAgent::GridAgent(ros::NodeHandle& nh, ros::NodeHandle& pnh) {
 	/* ROS Params */
 	pnh.param<int>("drone_id", drone_id_, -1);
 	pnh.param<double>("sim_update_frequency", sim_update_freq, -1.0);
+	pnh.param<double>("pose_update_freq", pose_update_freq_, 50.0);
 	pnh.param<double>("pose_pub_frequency", pose_pub_freq_, -1.0);
 	pnh.param<double>("tf_broadcast_frequency", tf_broadcast_freq_, -1.0);
 
@@ -75,6 +76,7 @@ GridAgent::GridAgent(ros::NodeHandle& nh, ros::NodeHandle& pnh) {
 	
 	last_pose_pub_time_ = ros::Time::now();
 	last_tf_broadcast_time_ = ros::Time::now();
+	last_pose_update_time_ = ros::Time::now();
 
 	sim_update_timer_.start();
 }
@@ -93,17 +95,28 @@ void GridAgent::frontEndPlanCB(const gestelt_msgs::FrontEndPlan::ConstPtr &msg)
 	// Generate spline from plan 
 	std::vector<tinyspline::real> points;
 
+	fe_space_time_path_.clear();
+
 	for (int i = 0; i < fe_plan_msg_.plan.size(); i+= 1)
 	{	
 		// Add control point
 		points.push_back(fe_plan_msg_.plan[i].position.x);
 		points.push_back(fe_plan_msg_.plan[i].position.y);
 		points.push_back(fe_plan_msg_.plan[i].position.z);
+
+		fe_space_time_path_.push_back(Eigen::Vector4d{
+			msg->plan[i].position.x,
+			msg->plan[i].position.y, 
+			msg->plan[i].position.z,
+			msg->plan_time[i],
+		});
+
 	}
 
 	spline_ = std::make_shared<tinyspline::BSpline>(tinyspline::BSpline::interpolateCubicNatural(points, 3));
 
 	plan_start_exec_t_ = ros::Time::now().toSec();
+	plan_start_t_ = msg->plan_start_time;
 
 	plan_received_ = true;
 }
@@ -116,7 +129,11 @@ void GridAgent::simUpdateTimer(const ros::TimerEvent &)
 	pose_msg_.header.stamp = ros::Time::now();
 
 	if (plan_received_){
-		setStateFromPlan(fe_plan_msg_, plan_start_exec_t_);
+		if ((ros::Time::now() - last_pose_update_time_).toSec() > (1/pose_update_freq_))
+		{
+			setStateFromPlan(fe_plan_msg_, plan_start_t_);
+			last_pose_update_time_ = ros::Time::now();
+		}
 	}
 
 	if ((ros::Time::now() - last_pose_pub_time_).toSec() > (1/pose_pub_freq_))
@@ -156,33 +173,45 @@ void GridAgent::simUpdateTimer(const ros::TimerEvent &)
 /* Helper Methods */
 
 void GridAgent::setStateFromPlan(	const gestelt_msgs::FrontEndPlan &fe_plan_msg, 
-									const double& exec_start_t)
+																	const double& plan_start_t)
 {
 
 	double t_now = ros::Time::now().toSec();
+	double e_t_start = t_now - plan_start_t_;					// [s] Elapsed time since plan start
+	int e_t_start_st = tToSpaceTimeUnits(e_t_start); // [space-time units] Elapsed time since plan start
 
-	// if (t_now >= fe_plan_msg.plan_start_time + fe_plan_msg.plan_time.back()){
-	// Time exceeded end of trajectory. Trajectory published in the past
-	if (t_now >= exec_start_t + fe_plan_msg.plan_time.back() * t_unit_){
-		// std::cout << std::fixed << std::setprecision(11) << "t_now (" << t_now << ") exceeds end of traj time (" << exec_start_t + fe_plan_msg.plan_time.back() * t_unit_ << ")" << std::endl;
-		// std::cout << std::fixed << std::setprecision(11) << "fe_plan_msg.plan_time.back() = (" << fe_plan_msg.plan_time.back() << std::endl;
-		// std::cout << std::fixed << std::setprecision(11) << "fe_plan_msg.plan_time.back()* t_unit_ = (" << fe_plan_msg.plan_time.back()* t_unit_ << std::endl;
+	// std::cout << "e_t_start_st: " << e_t_start_st << std::endl;
+
+	if (e_t_start < 0){
+		std::cout << "trajectory starts in the future" << std::endl;
+		// trajectory starts in the future
+		return;
+	}
+
+	if (e_t_start_st >= fe_space_time_path_.back()(3)){
+		// Time exceeded end of trajectory. Trajectory has finished executing in the past
+		std::cout << "Trajectory has finished executing in the past" << std::endl;
 		plan_received_ = false;
 		return;
 	}
 
 	// // Iterate through plan and choose state at current time
-	// size_t cur_plan_idx = 0;
+	// int cur_idx = 0;
 
-	// for (size_t i = 0; i < fe_plan_msg.plan_time.size(); i++){
-	// 	if (t_now < exec_start_t + fe_plan_msg.plan_time[i]){ // Future point found
-	// 		cur_plan_idx = i; 
+	// for (size_t i = 0; i < fe_space_time_path_.size(); i++){
+	// 	if (e_t_start_st > fe_space_time_path_[i](3)){ // Future point found
+	// 		std::cout << "future point found at " << i << std::endl;
+	// 		cur_idx = i; 
 	// 		break;
 	// 	}
 	// }
 
+	// double x = fe_space_time_path_[cur_idx](0);
+	// double y = fe_space_time_path_[cur_idx](1);
+	// double z = fe_space_time_path_[cur_idx](2);
+
 	// alpha: Arc length parameterization of spline. Formed by time ratio
-	double alpha = (t_now - exec_start_t) / (fe_plan_msg.plan_time.back()  * t_unit_);
+	double alpha = ((double)e_t_start_st) / (fe_plan_msg.plan_time.back());
 
 	std::vector<tinyspline::real> result = spline_->eval(alpha).result();
 	double x = result[0];

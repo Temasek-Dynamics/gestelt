@@ -58,20 +58,20 @@
 
     <!-- Fake drone -->
     <node pkg="fake_drone" type="grid_agent_node" name="grid_agent" required="true" output="screen">
-        <rosparam command="load" file="$(arg grid_agent_cfg_filepath)" />
+      <rosparam command="load" file="$(arg grid_agent_cfg_filepath)" />
 
-        <!-- <remap from="mavros/setpoint_raw/local" to="$(arg command_topic)"/>
-        <remap from="mavros/local_position/odom" to="$(arg odometry_topic)"/>
-        <remap from="mavros/local_position/pose" to="$(arg pose_topic)"/> -->
+      <!-- <remap from="mavros/setpoint_raw/local" to="$(arg command_topic)"/>
+      <remap from="mavros/local_position/odom" to="$(arg odometry_topic)"/>
+      <remap from="mavros/local_position/pose" to="$(arg pose_topic)"/> -->
       <param name="t_unit" value="$(arg t_unit)"/>
 
-        <param name="drone_id" value="$(arg drone_id)"/>
-        <param name="init_x" value="$(arg init_x)"/>
-        <param name="init_y" value="$(arg init_y)"/>
-        <param name="init_z" value="$(arg init_z)"/>
+      <param name="drone_id" value="$(arg drone_id)"/>
+      <param name="init_x" value="$(arg init_x)"/>
+      <param name="init_y" value="$(arg init_y)"/>
+      <param name="init_z" value="$(arg init_z)"/>
 
-        <param name="origin_frame" value="$(arg global_frame)"/>
-        <param name="base_link_frame" value="$(arg base_link_frame)"/>
+      <param name="origin_frame" value="$(arg global_frame)"/>
+      <param name="base_link_frame" value="$(arg base_link_frame)"/>
     </node>
 
     <!-- Drone Visualization -->

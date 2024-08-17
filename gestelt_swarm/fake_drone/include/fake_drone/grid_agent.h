@@ -31,6 +31,33 @@
 
 class GridAgent
 {
+    public:
+        GridAgent(ros::NodeHandle &nh, ros::NodeHandle &pnh);
+        ~GridAgent();
+
+    private:
+
+
+        /* Timer callbacks */
+
+        // Main timer for updating UAV simulation 
+        void simUpdateTimer(const ros::TimerEvent &);
+
+        /* Subscription callbacks */
+
+        void frontEndPlanCB(const gestelt_msgs::FrontEndPlan::ConstPtr &msg);
+
+        /* Checks */
+
+        /** Helper methods */
+        void setStateFromPlan(   const gestelt_msgs::FrontEndPlan &msg, 
+                                            const double& exec_start_t);
+
+        /* Convert from time [s] to space-time units */
+        int tToSpaceTimeUnits(const double& t){
+            return std::lround(t / t_unit_);
+        }
+
     private:
         // Name given to node
         std::string node_name_; 
@@ -49,6 +76,7 @@ class GridAgent
         std::string uav_origin_frame_, base_link_frame_;
 
         double tf_broadcast_freq_; // frequency that tf is broadcasted 
+        double pose_update_freq_; // frequency that pose was updated
         double pose_pub_freq_; // frequency that pose was published
         Eigen::Vector3d init_pos_;
 
@@ -56,6 +84,7 @@ class GridAgent
 
         std::mutex state_mutex_;
 
+        ros::Time last_pose_update_time_; // Last timestamp that pose was updated
         ros::Time last_pose_pub_time_; // Last timestamp that pose was published
         ros::Time last_tf_broadcast_time_; // Last timestamp that tf was broadcasted
 
@@ -69,28 +98,12 @@ class GridAgent
         geometry_msgs::PoseStamped pose_msg_;
 
         double plan_start_exec_t_; // Time that plan started execution
+        double plan_start_t_; // Time that plan started
 
         std::shared_ptr<tinyspline::BSpline> spline_; // Spline formed from interpolating control points of front end path
 
-    public:
+        std::vector<Eigen::Vector4d> fe_space_time_path_; // Front end space time path
 
-        GridAgent(ros::NodeHandle &nh, ros::NodeHandle &pnh);
-        ~GridAgent();
-
-        /* Timer callbacks */
-
-        // Main timer for updating UAV simulation 
-        void simUpdateTimer(const ros::TimerEvent &);
-
-        /* Subscription callbacks */
-
-        void frontEndPlanCB(const gestelt_msgs::FrontEndPlan::ConstPtr &msg);
-
-        /* Checks */
-
-        /** Helper methods */
-        void setStateFromPlan(   const gestelt_msgs::FrontEndPlan &msg, 
-                                            const double& exec_start_t);
 
 };
 

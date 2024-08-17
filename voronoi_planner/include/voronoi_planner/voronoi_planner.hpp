@@ -309,7 +309,7 @@ private:
   }
 
   /* Convert from time [s] to space-time units */
-  int tToSpaceTimeUnits(const double& t){
+  long tToSpaceTimeUnits(const double& t){
     return std::lround(t / t_unit_);
   }
 
