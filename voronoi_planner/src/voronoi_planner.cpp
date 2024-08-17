@@ -121,11 +121,11 @@ void VoronoiPlanner::FEPlanSubCB(const gestelt_msgs::FrontEndPlanConstPtr& msg)
   // st_units_elapsed_plan_start: space time units since plan started 
   int st_units_elapsed_plan_start =  tToSpaceTimeUnits(t_now) - tToSpaceTimeUnits(msg->plan_start_time);
 
-  logInfo(str_fmt("t_now(%.*f), msg->plan_start_time(%.*f)",  t_now, msg->plan_start_time));
+  std::cout << std::fixed << std::setprecision(11) << "t_now(" << t_now << "), msg->plan_start_time(" << msg->plan_start_time << ")" << std::endl;
 
-  logInfo(str_fmt("st_units_elapsed_plan_start(%d) = %d - %d",  st_units_elapsed_plan_start, 
-                                                                tToSpaceTimeUnits(t_now), 
-                                                                tToSpaceTimeUnits(msg->plan_start_time)));
+  std::cout << "st_units_elapsed_plan_start(" << st_units_elapsed_plan_start
+            << ") = " << tToSpaceTimeUnits(t_now) << " - " << tToSpaceTimeUnits(msg->plan_start_time) << std::endl;
+                                                                
   // prev_t: Relative time of last points
   int prev_t = 0;
   for (size_t i = 0; i < msg->plan.size(); i++){ // for every point on plan
@@ -145,9 +145,13 @@ void VoronoiPlanner::FEPlanSubCB(const gestelt_msgs::FrontEndPlanConstPtr& msg)
         // Add position for the entire time interval from previous t to current t
         for (int j = 0; j < msg->plan_time[i] - prev_t; j++) { 
           if (st_units_elapsed_plan_start + prev_t + j < 0){
+            // if plan is in the past
             continue;
           }
-
+          if (!dyn_voro_arr_[map_z_cm]->isVoronoi(x, y)){
+            // if cell is not voronoi
+            continue;
+          }
           // only reserve for voronoi cells
           resrv_tbl_[msg->agent_id].insert(Eigen::Vector4i{x, y, map_z_cm, st_units_elapsed_plan_start + prev_t + j});
         }
@@ -163,8 +167,10 @@ void VoronoiPlanner::FEPlanSubCB(const gestelt_msgs::FrontEndPlanConstPtr& msg)
                       msg->plan.back().position.y - local_origin_y_);
   int map_z_cm =roundToMultInt((int) (msg->plan.back().position.z * 100), z_separation_cm_);
   dyn_voro_arr_[map_z_cm]->posToIdx(map_2d_pos, grid_pos);
-  resrv_tbl_[msg->agent_id].insert(Eigen::Vector4i{grid_pos.x, grid_pos.y, map_z_cm, st_units_elapsed_plan_start + msg->plan_time.back()});
-
+  if (dyn_voro_arr_[map_z_cm]->isVoronoi(grid_pos.x, grid_pos.y)){
+    // if cell is voronoi
+    resrv_tbl_[msg->agent_id].insert(Eigen::Vector4i{grid_pos.x, grid_pos.y, map_z_cm, st_units_elapsed_plan_start + msg->plan_time.back()});
+  }
 
 }
 
@@ -406,7 +412,6 @@ bool VoronoiPlanner::plan(const Eigen::Vector3d& start, const Eigen::Vector3d& g
 
   // viz_helper::publishSpaceTimePath(space_time_path_, global_origin_, fe_plan_viz_pub_) ;
 
-  // viz_helper::publishFrontEndPath(front_end_path_, global_origin_, fe_plan_viz_pub_);
 
   viz_helper::publishFrontEndPath(front_end_path_, global_origin_, fe_plan_viz_pub_);
 

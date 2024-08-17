@@ -210,17 +210,18 @@ public:
   {
     std::vector<Eigen::Vector4d> path_pos_t = path_pos_t_;
 
-    // Eigen::Vector4d start_t(cur_pos(0)+local_origin_x_, 
-    //                         cur_pos(1)+local_origin_y_, 
-    //                         cur_pos(2), 0);
-    // path_pos_t.insert(path_pos_t.begin(), start_t);
+    Eigen::Vector4d start_t(cur_pos(0)+local_origin_x_, 
+                            cur_pos(1)+local_origin_y_, 
+                            cur_pos(2), 
+                            0);
+    path_pos_t.insert(path_pos_t.begin(), start_t);
 
-    // // offset_t: time from current position to start of path
-    // double offset_t = (int)round((start_t.segment(0,3) - path_pos_t[0].segment(0,3)).norm()/res_) * astar_params_.st_straight; 
+    // offset_t: time from current position to start of path
+    double offset_t = (int)round((start_t.segment(0,3) - path_pos_t[0].segment(0,3)).norm()/res_) * astar_params_.st_straight; 
 
-    // for (size_t i = 1; i < path_pos_t.size(); i++){
-    //   path_pos_t[i](3) += offset_t;
-    // }
+    for (size_t i = 1; i < path_pos_t.size(); i++){
+      path_pos_t[i](3) += offset_t;
+    }
 
     return path_pos_t;
   }
