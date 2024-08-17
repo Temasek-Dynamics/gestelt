@@ -11,7 +11,7 @@ mission:
   ##------ MPC initial pose ----##
   # initial pose only works for python sim
   initial_position: [0.0, -6, 0]
-  initial_ori_euler: [0.0, 0.0, -1.57] # RPY, only yaw is active
+  initial_ori_euler: [0.0, 0.0, 0] # RPY, only yaw is active
 
   ##------ gate pose ----##
   # only feasible for STATIC_GATE_TEST
@@ -20,7 +20,7 @@ mission:
 
   ##------ goal pose ----##
   goal_position: [0.0, 3, 0]
-  goal_ori_euler: [0.0, 0.0,-1.57] # RPY, only yaw is active
+  goal_ori_euler: [0.0, 0.0,0] # RPY, only yaw is active
 
   #################################################
   ######-----end of aggressive test ----------#####
@@ -56,14 +56,27 @@ learning_agile:
   # wvf: final velocity cost
   # wqf: final attitude cost
   # wwf: final angular velocity cost
+  
+  ##-----parameters for testing ------##
   wrt: 5.0
   wqt: 80.0
   wthrust: 1.0
-  wwt: 100.0
+  wwt: 10.0
   wrf: 5.0
   wvf: 1.0
   wqf: 1.0
-  wInputDiff: 10
+  wInputDiff: 1 
+
+  ##-----parameters for training ------## 
+  #### for a stabler training,######## 
+  # wrt: 5.0
+  # wqt: 80.0
+  # wthrust: 1.0
+  # wwt: 100.0
+  # wrf: 5.0
+  # wvf: 1.0
+  # wqf: 1.0
+  # wInputDiff: 10
   ##------ traversing parameters ---##
   max_traverse_weight: 70 #70
   traverse_weight_span: 10

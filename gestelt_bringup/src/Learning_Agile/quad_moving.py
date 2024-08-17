@@ -43,7 +43,7 @@ def binary_search_solver(model, quad_state, final_point, gate1, velo, w ):
     inputs[10:13] = gate_x.t_final(final_point)
     t2 = model(inputs).data.numpy()[6]
 
-    while abs(t2-t1)>0.1:
+    while abs(t2-t1)>0.001:
         t1 += (t2-t1)/2
         gate_x = gate(gate1.translate_out(velo*t1)) # prediction of the gap future position
         gate_x.rotate_y(w*t1)

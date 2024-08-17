@@ -69,8 +69,8 @@ class MovingGate():
         self.v =np.array([-1,-0.3,0.4])
         
         # gate pitch angular velocity
-        self.w = 0 
-        # self.w = pi/2 
+        # self.w = 0 
+        self.w = pi/2 
         self.gate_move, self.V = self.gate1.move(v = self.v ,w = self.w,dt=dt)
 
         # self.gate_move=np.zeros([1,4,3])
@@ -378,7 +378,7 @@ def main():
 
     #------------------------------set the mission--------------------------------------#
     config_dict = learing_agile_agent.config_dict
-    learing_agile_agent.receive_mission_states( STATIC_GATE_TEST=True,
+    learing_agile_agent.receive_mission_states( STATIC_GATE_TEST=False,
                                                 ini_pos=np.array(config_dict['mission']['initial_position']),
                                                 end_pos=np.array(config_dict['mission']['goal_position']),
                                                 

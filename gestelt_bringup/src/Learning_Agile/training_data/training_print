@@ -1,0 +1,300 @@
+Epoch [1/50], Step [20/100], Reward: -67.8786
+Epoch [1/50], Step [40/100], Reward: -13.2516
+Epoch [1/50], Step [60/100], Reward: -193.5001
+Epoch [1/50], Step [80/100], Reward: -102.1928
+Epoch [1/50], Step [100/100], Reward: 68.0488
+evaluation:  -20.415584644411236
+Epoch [2/50], Step [20/100], Reward: -71.1636
+Epoch [2/50], Step [40/100], Reward: -101.6235
+Epoch [2/50], Step [60/100], Reward: -4.3959
+Epoch [2/50], Step [80/100], Reward: -30.8979
+Epoch [2/50], Step [100/100], Reward: -68.2274
+evaluation:  -15.934541414845487
+Epoch [3/50], Step [20/100], Reward: -103.7608
+Epoch [3/50], Step [40/100], Reward: 50.0822
+Epoch [3/50], Step [60/100], Reward: -227.0143
+Epoch [3/50], Step [80/100], Reward: -200.9708
+Epoch [3/50], Step [100/100], Reward: 51.2381
+evaluation:  -9.726211097169164
+Epoch [4/50], Step [20/100], Reward: -38.9059
+Epoch [4/50], Step [40/100], Reward: -90.6180
+Epoch [4/50], Step [60/100], Reward: -101.5706
+Epoch [4/50], Step [80/100], Reward: 36.8156
+Epoch [4/50], Step [100/100], Reward: -42.3781
+evaluation:  0.3010340614867093
+Epoch [5/50], Step [20/100], Reward: -184.8741
+Epoch [5/50], Step [40/100], Reward: -102.4221
+Epoch [5/50], Step [60/100], Reward: 100.7494
+Epoch [5/50], Step [80/100], Reward: 99.1545
+Epoch [5/50], Step [100/100], Reward: -58.1635
+evaluation:  10.970513464003727
+Epoch [6/50], Step [20/100], Reward: 36.3015
+Epoch [6/50], Step [40/100], Reward: -43.7596
+Epoch [6/50], Step [60/100], Reward: 50.3203
+Epoch [6/50], Step [80/100], Reward: -64.4424
+Epoch [6/50], Step [100/100], Reward: 97.5140
+evaluation:  15.395714603002594
+Epoch [7/50], Step [20/100], Reward: -132.5378
+Epoch [7/50], Step [40/100], Reward: -107.5516
+Epoch [7/50], Step [60/100], Reward: -19.6323
+Epoch [7/50], Step [80/100], Reward: 54.8443
+Epoch [7/50], Step [100/100], Reward: -24.3981
+evaluation:  0.1026905229714923
+Epoch [8/50], Step [20/100], Reward: -76.1807
+Epoch [8/50], Step [40/100], Reward: -220.7576
+Epoch [8/50], Step [60/100], Reward: 95.8868
+Epoch [8/50], Step [80/100], Reward: 27.7296
+Epoch [8/50], Step [100/100], Reward: 97.3956
+evaluation:  3.352654830660364
+Epoch [9/50], Step [20/100], Reward: -90.5119
+Epoch [9/50], Step [40/100], Reward: 82.4857
+Epoch [9/50], Step [60/100], Reward: -32.6354
+Epoch [9/50], Step [80/100], Reward: 95.7368
+Epoch [9/50], Step [100/100], Reward: 99.6162
+evaluation:  34.03899793919901
+Epoch [10/50], Step [20/100], Reward: -99.3476
+Epoch [10/50], Step [40/100], Reward: 25.7282
+Epoch [10/50], Step [60/100], Reward: -3.0172
+Epoch [10/50], Step [80/100], Reward: 81.6266
+Epoch [10/50], Step [100/100], Reward: 77.1650
+evaluation:  36.74940225397488
+Epoch [11/50], Step [20/100], Reward: 99.3518
+Epoch [11/50], Step [40/100], Reward: -44.2472
+Epoch [11/50], Step [60/100], Reward: -122.3027
+Epoch [11/50], Step [80/100], Reward: -72.8063
+Epoch [11/50], Step [100/100], Reward: -214.4968
+evaluation:  29.583727251945106
+Epoch [12/50], Step [20/100], Reward: 46.9985
+Epoch [12/50], Step [40/100], Reward: 91.3950
+Epoch [12/50], Step [60/100], Reward: 19.6401
+Epoch [12/50], Step [80/100], Reward: 90.3399
+Epoch [12/50], Step [100/100], Reward: 57.9092
+evaluation:  35.96555935008775
+Epoch [13/50], Step [20/100], Reward: -116.5695
+Epoch [13/50], Step [40/100], Reward: 48.9961
+Epoch [13/50], Step [60/100], Reward: 87.0517
+Epoch [13/50], Step [80/100], Reward: 39.6760
+Epoch [13/50], Step [100/100], Reward: 100.5698
+evaluation:  29.241969880869107
+Epoch [14/50], Step [20/100], Reward: 87.0983
+Epoch [14/50], Step [40/100], Reward: 98.6174
+Epoch [14/50], Step [60/100], Reward: 98.5120
+Epoch [14/50], Step [80/100], Reward: 86.5027
+Epoch [14/50], Step [100/100], Reward: 8.5784
+evaluation:  34.42705772251433
+Epoch [15/50], Step [20/100], Reward: 95.5067
+Epoch [15/50], Step [40/100], Reward: 97.4440
+Epoch [15/50], Step [60/100], Reward: 93.1982
+Epoch [15/50], Step [80/100], Reward: 20.0216
+Epoch [15/50], Step [100/100], Reward: 5.1511
+evaluation:  50.28585058070591
+Epoch [16/50], Step [20/100], Reward: 74.6004
+Epoch [16/50], Step [40/100], Reward: 28.3087
+Epoch [16/50], Step [60/100], Reward: 97.3648
+Epoch [16/50], Step [80/100], Reward: -9.0191
+Epoch [16/50], Step [100/100], Reward: -95.1940
+evaluation:  55.00410451136628
+Epoch [17/50], Step [20/100], Reward: 10.0554
+Epoch [17/50], Step [40/100], Reward: 38.1456
+Epoch [17/50], Step [60/100], Reward: 36.9804
+Epoch [17/50], Step [80/100], Reward: 91.6131
+Epoch [17/50], Step [100/100], Reward: 94.2669
+evaluation:  45.61431233711327
+Epoch [18/50], Step [20/100], Reward: 94.7509
+Epoch [18/50], Step [40/100], Reward: 4.1841
+Epoch [18/50], Step [60/100], Reward: -97.9941
+Epoch [18/50], Step [80/100], Reward: -47.7019
+Epoch [18/50], Step [100/100], Reward: 76.1227
+evaluation:  48.68996472750186
+Epoch [19/50], Step [20/100], Reward: 31.7675
+Epoch [19/50], Step [40/100], Reward: 19.9576
+Epoch [19/50], Step [60/100], Reward: -110.8560
+Epoch [19/50], Step [80/100], Reward: 1.5772
+Epoch [19/50], Step [100/100], Reward: 71.3447
+evaluation:  38.42157018303576
+Epoch [20/50], Step [20/100], Reward: 95.8075
+Epoch [20/50], Step [40/100], Reward: 28.6369
+Epoch [20/50], Step [60/100], Reward: -23.0617
+Epoch [20/50], Step [80/100], Reward: 96.6202
+Epoch [20/50], Step [100/100], Reward: 83.7112
+evaluation:  56.69552198692972
+Epoch [21/50], Step [20/100], Reward: 59.1290
+Epoch [21/50], Step [40/100], Reward: -75.2296
+Epoch [21/50], Step [60/100], Reward: 38.3566
+Epoch [21/50], Step [80/100], Reward: -136.3538
+Epoch [21/50], Step [100/100], Reward: 93.3358
+evaluation:  34.097499952346446
+Epoch [22/50], Step [20/100], Reward: 100.0112
+Epoch [22/50], Step [40/100], Reward: 74.3571
+Epoch [22/50], Step [60/100], Reward: 100.3878
+Epoch [22/50], Step [80/100], Reward: 82.2471
+Epoch [22/50], Step [100/100], Reward: 90.1726
+evaluation:  55.55207248951774
+Epoch [23/50], Step [20/100], Reward: -6.8780
+Epoch [23/50], Step [40/100], Reward: 71.8965
+Epoch [23/50], Step [60/100], Reward: -47.9372
+Epoch [23/50], Step [80/100], Reward: 99.0732
+Epoch [23/50], Step [100/100], Reward: 46.9762
+evaluation:  52.828323653672314
+Epoch [24/50], Step [20/100], Reward: -126.7759
+Epoch [24/50], Step [40/100], Reward: 100.1115
+Epoch [24/50], Step [60/100], Reward: -85.8963
+Epoch [24/50], Step [80/100], Reward: -128.1009
+Epoch [24/50], Step [100/100], Reward: 19.4291
+evaluation:  49.059701286205275
+Epoch [25/50], Step [20/100], Reward: 93.7859
+Epoch [25/50], Step [40/100], Reward: 96.1238
+Epoch [25/50], Step [60/100], Reward: 96.6713
+Epoch [25/50], Step [80/100], Reward: 19.9499
+Epoch [25/50], Step [100/100], Reward: -16.1055
+evaluation:  52.09126547358128
+Epoch [26/50], Step [20/100], Reward: 46.5786
+Epoch [26/50], Step [40/100], Reward: 99.9412
+Epoch [26/50], Step [60/100], Reward: 83.5770
+Epoch [26/50], Step [80/100], Reward: 94.4355
+Epoch [26/50], Step [100/100], Reward: 74.7868
+evaluation:  63.11436271812059
+Epoch [27/50], Step [20/100], Reward: 6.7094
+Epoch [27/50], Step [40/100], Reward: -20.1745
+Epoch [27/50], Step [60/100], Reward: 43.7849
+Epoch [27/50], Step [80/100], Reward: 75.4586
+Epoch [27/50], Step [100/100], Reward: 83.6675
+evaluation:  55.34004947549712
+Epoch [28/50], Step [20/100], Reward: 99.1816
+Epoch [28/50], Step [40/100], Reward: 98.0758
+Epoch [28/50], Step [60/100], Reward: -87.3448
+Epoch [28/50], Step [80/100], Reward: 78.2999
+Epoch [28/50], Step [100/100], Reward: -88.6072
+evaluation:  55.49526917559905
+Epoch [29/50], Step [20/100], Reward: 56.4165
+Epoch [29/50], Step [40/100], Reward: 14.4954
+Epoch [29/50], Step [60/100], Reward: 91.2800
+Epoch [29/50], Step [80/100], Reward: -47.8171
+Epoch [29/50], Step [100/100], Reward: 51.3287
+evaluation:  54.53898782618811
+Epoch [30/50], Step [20/100], Reward: 94.7472
+Epoch [30/50], Step [40/100], Reward: 84.8626
+Epoch [30/50], Step [60/100], Reward: 95.6365
+Epoch [30/50], Step [80/100], Reward: 30.3606
+Epoch [30/50], Step [100/100], Reward: 19.4829
+evaluation:  55.86488641193721
+Epoch [31/50], Step [20/100], Reward: 38.9301
+Epoch [31/50], Step [40/100], Reward: 100.5932
+Epoch [31/50], Step [60/100], Reward: 49.4636
+Epoch [31/50], Step [80/100], Reward: 13.7067
+Epoch [31/50], Step [100/100], Reward: 44.8140
+evaluation:  57.64524565464555
+Epoch [32/50], Step [20/100], Reward: 95.6939
+Epoch [32/50], Step [40/100], Reward: 8.1750
+Epoch [32/50], Step [60/100], Reward: 36.3946
+Epoch [32/50], Step [80/100], Reward: -64.2935
+Epoch [32/50], Step [100/100], Reward: 100.7667
+evaluation:  65.26897282303499
+Epoch [33/50], Step [20/100], Reward: 100.7985
+Epoch [33/50], Step [40/100], Reward: 20.0287
+Epoch [33/50], Step [60/100], Reward: -32.7853
+Epoch [33/50], Step [80/100], Reward: 88.2755
+Epoch [33/50], Step [100/100], Reward: 54.7829
+evaluation:  64.61098904813794
+Epoch [34/50], Step [20/100], Reward: 100.4527
+Epoch [34/50], Step [40/100], Reward: -26.2209
+Epoch [34/50], Step [60/100], Reward: 91.5327
+Epoch [34/50], Step [80/100], Reward: -89.5807
+Epoch [34/50], Step [100/100], Reward: 18.2900
+evaluation:  50.45176951118736
+Epoch [35/50], Step [20/100], Reward: 100.7680
+Epoch [35/50], Step [40/100], Reward: 97.8348
+Epoch [35/50], Step [60/100], Reward: 95.4563
+Epoch [35/50], Step [80/100], Reward: 96.7157
+Epoch [35/50], Step [100/100], Reward: 97.6291
+evaluation:  62.49615742330288
+Epoch [36/50], Step [20/100], Reward: 99.1458
+Epoch [36/50], Step [40/100], Reward: 101.9749
+Epoch [36/50], Step [60/100], Reward: 54.3817
+Epoch [36/50], Step [80/100], Reward: 100.2746
+Epoch [36/50], Step [100/100], Reward: 94.5188
+evaluation:  55.73985896256071
+Epoch [37/50], Step [20/100], Reward: -20.9585
+Epoch [37/50], Step [40/100], Reward: 30.7665
+Epoch [37/50], Step [60/100], Reward: 98.3595
+Epoch [37/50], Step [80/100], Reward: 100.1723
+Epoch [37/50], Step [100/100], Reward: 100.7947
+evaluation:  69.03830603391238
+Epoch [38/50], Step [20/100], Reward: 101.8947
+Epoch [38/50], Step [40/100], Reward: 89.4422
+Epoch [38/50], Step [60/100], Reward: 93.5380
+Epoch [38/50], Step [80/100], Reward: 93.9744
+Epoch [38/50], Step [100/100], Reward: 99.6999
+evaluation:  66.16689497286775
+Epoch [39/50], Step [20/100], Reward: -10.5102
+Epoch [39/50], Step [40/100], Reward: -22.0158
+Epoch [39/50], Step [60/100], Reward: 97.9842
+Epoch [39/50], Step [80/100], Reward: 15.6310
+Epoch [39/50], Step [100/100], Reward: 91.7369
+evaluation:  67.3499907921253
+Epoch [40/50], Step [20/100], Reward: 26.3335
+Epoch [40/50], Step [40/100], Reward: 93.8108
+Epoch [40/50], Step [60/100], Reward: 72.4391
+Epoch [40/50], Step [80/100], Reward: 96.1860
+Epoch [40/50], Step [100/100], Reward: 62.3051
+evaluation:  57.04632136537443
+Epoch [41/50], Step [20/100], Reward: -39.8640
+Epoch [41/50], Step [40/100], Reward: 97.2842
+Epoch [41/50], Step [60/100], Reward: 78.9450
+Epoch [41/50], Step [80/100], Reward: 35.4955
+Epoch [41/50], Step [100/100], Reward: 15.5825
+evaluation:  64.34134462213132
+Epoch [42/50], Step [20/100], Reward: 85.6292
+Epoch [42/50], Step [40/100], Reward: 100.3183
+Epoch [42/50], Step [60/100], Reward: 101.0876
+Epoch [42/50], Step [80/100], Reward: 98.4803
+Epoch [42/50], Step [100/100], Reward: 98.2755
+evaluation:  54.494634575507725
+Epoch [43/50], Step [20/100], Reward: 99.8874
+Epoch [43/50], Step [40/100], Reward: 24.1247
+Epoch [43/50], Step [60/100], Reward: 93.4797
+Epoch [43/50], Step [80/100], Reward: -78.0438
+Epoch [43/50], Step [100/100], Reward: 69.9816
+evaluation:  62.971565750681236
+Epoch [44/50], Step [20/100], Reward: 6.2411
+Epoch [44/50], Step [40/100], Reward: 3.6046
+Epoch [44/50], Step [60/100], Reward: 61.0158
+Epoch [44/50], Step [80/100], Reward: 100.0340
+Epoch [44/50], Step [100/100], Reward: 92.7405
+evaluation:  57.63432630680463
+Epoch [45/50], Step [20/100], Reward: 94.8316
+Epoch [45/50], Step [40/100], Reward: 99.8649
+Epoch [45/50], Step [60/100], Reward: 22.5182
+Epoch [45/50], Step [80/100], Reward: -12.8340
+Epoch [45/50], Step [100/100], Reward: 101.1528
+evaluation:  65.94477943464409
+Epoch [46/50], Step [20/100], Reward: 65.7466
+Epoch [46/50], Step [40/100], Reward: 88.4035
+Epoch [46/50], Step [60/100], Reward: 97.5093
+Epoch [46/50], Step [80/100], Reward: 16.4537
+Epoch [46/50], Step [100/100], Reward: 31.8758
+evaluation:  66.62878283162257
+Epoch [47/50], Step [20/100], Reward: -122.4883
+Epoch [47/50], Step [40/100], Reward: 64.7508
+Epoch [47/50], Step [60/100], Reward: 65.8904
+Epoch [47/50], Step [80/100], Reward: 99.2030
+Epoch [47/50], Step [100/100], Reward: 95.8954
+evaluation:  69.44027842730728
+Epoch [48/50], Step [20/100], Reward: 94.8532
+Epoch [48/50], Step [40/100], Reward: 71.7571
+Epoch [48/50], Step [60/100], Reward: 99.6239
+Epoch [48/50], Step [80/100], Reward: -12.7357
+Epoch [48/50], Step [100/100], Reward: 101.0724
+evaluation:  66.24022195287661
+Epoch [49/50], Step [20/100], Reward: 54.0705
+Epoch [49/50], Step [40/100], Reward: 58.9689
+Epoch [49/50], Step [60/100], Reward: 50.6085
+Epoch [49/50], Step [80/100], Reward: 41.8526
+Epoch [49/50], Step [100/100], Reward: 100.8156
+evaluation:  69.86250642815031
+Epoch [50/50], Step [20/100], Reward: 101.1533
+Epoch [50/50], Step [40/100], Reward: 91.4734
+Epoch [50/50], Step [60/100], Reward: 63.0126
+Epoch [50/50], Step [80/100], Reward: 99.2300
+Epoch [50/50], Step [100/100], Reward: 74.7402
+evaluation:  62.119188886825626
