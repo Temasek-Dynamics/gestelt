@@ -2,10 +2,13 @@
 # this file is to do some calculation of solid geometry to do the collision detection of quadrotor
 # this file consists of several classes
 import numpy as np
-
+import casadi
 ## return the maginitude of a vector
 def magni(vector):
     return np.sqrt(np.dot(np.array(vector),np.array(vector)))
+
+def magni_casadi(vector):
+    return casadi.norm_2(vector)
 
 ## return the unit vector of a vector
 def norm(vector):

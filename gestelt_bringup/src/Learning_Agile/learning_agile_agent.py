@@ -305,7 +305,7 @@ class LearningAgileAgent():
                 t_comp = time.time()
                 
                 
-                cmd_solution,weight_vis,NO_SOLUTION_FLAG  = self.quad1.mpc_update(nn_mpc_inputs[0:10],
+                cmd_solution,NO_SOLUTION_FLAG  = self.quad1.mpc_update(nn_mpc_inputs[0:10],
                                                     self.u,
                                                     out[0:3],
                                                     out[3:6],
@@ -316,7 +316,7 @@ class LearningAgileAgent():
                 self.solving_time.append(time.time()- t_comp)
                 self.u=cmd_solution['control_traj_opt'][0,:].tolist()
                 self.pos_vel_att_cmd=cmd_solution['state_traj_opt'][0,:]
-                self.tra_weight_list.append(weight_vis)
+                # self.tra_weight_list.append(weight_vis)
             
             self.state = np.array(self.quad1.uav1.dyn_fn(self.state, self.u)).reshape(10) # Yixiao's simulation environment ('uav1.dyn_fn'), replaced by pybullet
             self.state_n = np.concatenate((self.state_n,[self.state]),axis = 0)
@@ -351,7 +351,7 @@ class LearningAgileAgent():
         self.quad1.uav1.plot_position(self.state_n)
         self.quad1.uav1.plot_velocity(self.state_n)
         self.quad1.uav1.plot_quaternions(self.state_n)
-        self.quad1.uav1.plot_trav_weight(self.tra_weight_list)
+        # self.quad1.uav1.plot_trav_weight(self.tra_weight_list)
         self.quad1.uav1.plot_trav_time(self.T)
         self.quad1.uav1.plot_solving_time(self.solving_time)
         self.quad1.uav1.plot_3D_traj(wing_len=1.5,
@@ -378,7 +378,7 @@ def main():
 
     #------------------------------set the mission--------------------------------------#
     config_dict = learing_agile_agent.config_dict
-    learing_agile_agent.receive_mission_states( STATIC_GATE_TEST=False,
+    learing_agile_agent.receive_mission_states( STATIC_GATE_TEST=True,
                                                 ini_pos=np.array(config_dict['mission']['initial_position']),
                                                 end_pos=np.array(config_dict['mission']['goal_position']),
                                                 

@@ -214,6 +214,6 @@ if __name__ == '__main__':
         if (epoch)%2 == 0:
             torch.save(model, model_folder+"/NN1_deep2_"+str(epoch)+".pth")
     
-    np.save(training_data_folder+'/iteration',Iteration)
-    np.save(training_data_folder+'/mean_reward'+str(epoch),Mean_r)
-    np.save(training_data_folder+'/every_reward'+str(epoch),Every_reward)
+        np.save(training_data_folder+'/iteration',Iteration)
+        np.save(training_data_folder+'/mean_reward',Mean_r)
+        np.save(training_data_folder+'/every_reward',Every_reward)

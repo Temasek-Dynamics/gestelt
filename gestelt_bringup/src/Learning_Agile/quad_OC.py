@@ -107,14 +107,15 @@ class OCSys:
         self.final_cost_fn = casadi.Function('final_cost', [self.state,self.goal_state_sym, self.auxvar], [self.final_cost])
     
     def setTraCost(self, 
-                tra_cost, 
-                des_tra_r_I,
-                des_tra_q):
+                trav_cost, 
+                trav_auxvar,
+                t_node):
+                
 
-        self.tra_cost = tra_cost
-        self.des_tra_r_I = des_tra_r_I
-        self.des_tra_q = des_tra_q
-        self.tra_cost_fn = casadi.Function('tra_cost', [self.state, self.des_tra_r_I, self.des_tra_q, self.auxvar], [self.tra_cost])
+        self.trav_cost = trav_cost
+        self.trav_auxvar = trav_auxvar
+        self.t_node = t_node
+        self.trav_cost_fn = casadi.Function('trav_cost', [self.state,self.trav_auxvar,self.t_node], [self.trav_cost])
 
 
     def ocSolverInit(self, horizon=None, auxvar_value=1, print_level=0, dt = 0.1,costate_option=0):
@@ -182,8 +183,8 @@ class OCSys:
             # Integrate till the end of the interval
             Xnext = self.dyn_fn(X[:,k], U[:,k],auxvar_value)
 
-            # weight*self.tra_cost_fn(Xk, auxvar_value) + 
-            Ck = weight*self.tra_cost_fn(X[:,k], auxvar_value) + self.path_cost_fn(X[:,k], auxvar_value)\
+            # weight*self.trav_cost_fn(Xk, auxvar_value) + 
+            Ck = weight*self.trav_cost_fn(X[:,k], auxvar_value) + self.path_cost_fn(X[:,k], auxvar_value)\
                 +self.input_cost_fn(U[:,k], auxvar_value) #+ 1*dot(Uk-Ulast,Uk-Ulast)
                                                                
             J = J + Ck
@@ -313,8 +314,6 @@ class OCSys:
         # predict horizon in seconds
         T=horizon*dt
         self.n_nodes = horizon
-        self.state_traj_opt = np.zeros((self.n_nodes+1,self.n_state))
-        self.control_traj_opt = np.zeros((self.n_nodes,self.n_control))
 
         w = []
         self.w0 = []
@@ -380,13 +379,19 @@ class OCSys:
         ## parameters: received after solver initialization, includes:
         # goal state: 
         # Ulast: current state can be set as constraints 
-        # desired traverse pose: des_tra_r_I, des_tra_q
-        # tra_cost: weight
+        
+        # replace:
+            # desired traverse pose: des_tra_r_I, des_tra_q
+            # trav_cost: weight
+        # to
+            # desired traverse pose: des_tra_r_I, des_tra_rodi_param  (Rodrigues param)
+            # t_tra: traverse time
+            # t_node: current node time
+
        
         P=casadi.SX.sym('p',self.n_state+\
                         self.n_control+\
-                        self.des_tra_r_I.numel()\
-                        +self.des_tra_q.numel()+1)
+                        self.trav_auxvar.numel()+1)
         model.p=P
         
         ###############################################################
@@ -419,8 +424,8 @@ class OCSys:
         ocp.model = model
         ocp.dims.N = self.n_nodes    # number of nodes 
         ocp.solver_options.tf = T # horizon length T in seconds
-        ocp.dims.np = self.n_state+self.n_control+self.des_tra_r_I.numel()+self.des_tra_q.numel()+1    # number of parameters for solver input, here is the current state and control
-        ocp.parameter_values = np.zeros(self.n_state+self.n_control+self.des_tra_r_I.numel()+self.des_tra_q.numel()+1) 
+        ocp.dims.np = self.n_state+self.n_control+self.trav_auxvar.numel()+1    # number of parameters for solver input, here is the current state and control
+        ocp.parameter_values = np.zeros(self.n_state+self.n_control+self.trav_auxvar.numel()+1) 
 
 
 
@@ -435,16 +440,21 @@ class OCSys:
 
         Ulast=ocp.model.p[self.n_state:self.n_state+self.n_control]
         goal_state=ocp.model.p[0:self.n_state]  
-        des_tra_pos=ocp.model.p[self.n_state+self.n_control : self.n_state+self.n_control+3]
-        des_tra_q=ocp.model.p[self.n_state+self.n_control+3 : self.n_state+self.n_control+7]
+        # des_tra_pos=ocp.model.p[self.n_state+self.n_control : self.n_state+self.n_control+3]
+        # des_tra_q=ocp.model.p[self.n_state+self.n_control+3 : self.n_state+self.n_control+7]
     
+        # self.trav_auxvar = vertcat(self.des_tra_r_I, self.des_tra_rodi_param,self.des_t_tra)
+        trav_auxvar=ocp.model.p[self.n_state+self.n_control:self.n_state+self.n_control+self.trav_auxvar.numel()]
+
+        # current node time
+        t_node=ocp.model.p[-1]
 
         # # setting the cost function
         # weight = 60*casadi.exp(-10*(dt*k-model.p[-1])**2) #gamma should increase as the flight duration decreases
         # ocp.model.cost_expr_ext_cost_custom_hess/cost_expr_ext_cost
         ocp.model.cost_expr_ext_cost = self.path_cost_fn(ocp.model.x,goal_state,self.auxvar)\
             +self.final_cost_fn(ocp.model.x,goal_state,self.auxvar)\
-            +ocp.model.p[-1]*self.tra_cost_fn(ocp.model.x, des_tra_pos,des_tra_q, self.auxvar)\
+            +ocp.model.p[-1]*self.trav_cost_fn(ocp.model.x, trav_auxvar, t_node)\
             +self.wInputDiff*dot(ocp.model.u-Ulast,ocp.model.u-Ulast) \
             +self.input_cost_fn(ocp.model.u,self.auxvar)
         
@@ -516,12 +526,18 @@ class OCSys:
                     costate_option=0,
                     dt=0.1,
                     tra_pos=np.array([0,0,1.5]),
-                    tra_q=np.array([1,0,0,0]),
+                    tra_ang=np.array([0,0,0]),
                     t_tra=1.0,
                     max_tra_w=60):
         """
         This function is to solve the optimal control problem using ACADOS
         """
+        self.state_traj_opt = np.zeros((self.n_nodes+1,self.n_state))
+        self.control_traj_opt = np.zeros((self.n_nodes,self.n_control))
+
+        n_constraints = 2*(self.n_state + self.n_control)
+        self.costate_traj_opt = np.zeros((self.n_nodes,n_constraints))
+
         # #---------------------for linear cost---------------------##
         # # #set desired ref state
         desired_goal_vel=np.array([0, 0, 0])
@@ -535,15 +551,16 @@ class OCSys:
             # set the current input
             current_input = np.array(current_state_control[self.n_state:])
             # current_input = np.array([0,0,0,0])
-            gamma=self.config_dict['learning_agile']['traverse_weight_span']
+          
             # weight = max_tra_w*casadi.exp(-gamma*(dt*i-t_tra)**2) #gamma should increase as the flight duration decreases
-            weight=max_tra_w*np.exp(-gamma*(dt*i-t_tra)**2) #gamma should increase as the flight duration decreases
+            # weight=max_tra_w*np.exp(-gamma*(dt*i-t_tra)**2) #gamma should increase as the flight duration decreases
+            
             self.acados_solver.set(i, 'p',np.concatenate((goal_state,
                                                           current_input,# current is dummy
-                                                          np.concatenate((tra_pos,tra_q)),
-                                                          np.array([weight]))))
-            if i==10:
-                weight_vis=weight
+                                                          np.concatenate((tra_pos,tra_ang,np.array([t_tra]))),
+                                                          np.array([dt*i]))))
+            # if i==10:
+            #     weight_vis=weight
             
 
         # set the last state-control as the initial guess for the last node
@@ -553,8 +570,8 @@ class OCSys:
         weight = 0.0*casadi.exp(-10*(dt*self.n_nodes-t_tra)**2) #gamma should increase as the flight duration decreases
         self.acados_solver.set(self.n_nodes, "p",np.concatenate((goal_state,
                                                                  current_input,
-                                                                 np.concatenate((tra_pos,tra_q)),
-                                                                 np.array([weight]))))
+                                                                 np.concatenate((tra_pos,tra_ang,np.array([t_tra]))),
+                                                                 np.array([self.n_nodes*dt]))))
 
         # set initial condition aligned with the current state
         self.acados_solver.set(0, "lbx", np.array(current_state_control[0:self.n_state]))
@@ -574,6 +591,8 @@ class OCSys:
         for i in range(self.n_nodes):
             self.state_traj_opt[i,:]=self.acados_solver.get(i, "x")
             self.control_traj_opt[i,:]=self.acados_solver.get(i, "u")
+            self.costate_traj_opt[i,:]=self.acados_solver.get(i, "lam")
+
         self.state_traj_opt[-1,:]=self.acados_solver.get(self.n_nodes, "x")
         
        
@@ -581,106 +600,408 @@ class OCSys:
         # output
         opt_sol = {"state_traj_opt": self.state_traj_opt,
                 "control_traj_opt": self.control_traj_opt,
+                "costate_traj_opt": self.costate_traj_opt,
                 'auxvar_value': auxvar_value,
                 "time": time,
                 "horizon": self.horizon}
                 #"cost": sol['f'].full()}
     
 
-        return opt_sol,weight_vis ,NO_SOLUTION_FLAG   
+        return opt_sol,NO_SOLUTION_FLAG   
     
 
 
-    # def diffPMP(self):
-    #     assert hasattr(self, 'state'), "Define the state variable first!"
-    #     assert hasattr(self, 'control'), "Define the control variable first!"
-    #     assert hasattr(self, 'dyn'), "Define the system dynamics first!"
-    #     assert hasattr(self, 'path_cost'), "Define the running cost/reward function first!"
-    #     assert hasattr(self, 'final_cost'), "Define the final cost/reward function first!"
+    def diffPMP(self):
+        assert hasattr(self, 'state'), "Define the state variable first!"
+        assert hasattr(self, 'control'), "Define the control variable first!"
+        assert hasattr(self, 'dyn'), "Define the system dynamics first!"
+        assert hasattr(self, 'path_cost'), "Define the running cost/reward function first!"
+        assert hasattr(self, 'final_cost'), "Define the final cost/reward function first!"
 
-    #     # Define the Hamiltonian function
-    #     self.costate = casadi.SX.sym('lambda', self.state.numel())
-    #     self.path_Hamil = self.path_cost + dot(self.dyn, self.costate)  # path Hamiltonian
-    #     self.final_Hamil = self.final_cost  # final Hamiltonian
+        # Define the Hamiltonian function
+        self.costate = casadi.SX.sym('lambda', self.state.numel())
+        self.path_Hamil = self.path_cost + dot(self.dyn, self.costate)  # path Hamiltonian
+        self.final_Hamil = self.final_cost  # final Hamiltonian
 
-    #     # Differentiating dynamics; notations here are consistent with the PDP paper
-    #     self.dfx = jacobian(self.dyn, self.state)
-    #     self.dfx_fn = casadi.Function('dfx', [self.state, self.control, self.auxvar], [self.dfx])
-    #     self.dfu = jacobian(self.dyn, self.control)
-    #     self.dfu_fn = casadi.Function('dfu', [self.state, self.control, self.auxvar], [self.dfu])
-    #     self.dfe = jacobian(self.dyn, self.auxvar)
-    #     self.dfe_fn = casadi.Function('dfe', [self.state, self.control, self.auxvar], [self.dfe])
+        # Differentiating dynamics; notations here are consistent with the PDP paper
+        self.dfx = jacobian(self.dyn, self.state)
+        self.dfx_fn = casadi.Function('dfx', [self.state, self.control, self.auxvar], [self.dfx])
+        self.dfu = jacobian(self.dyn, self.control)
+        self.dfu_fn = casadi.Function('dfu', [self.state, self.control, self.auxvar], [self.dfu])
+        self.dfe = jacobian(self.dyn, self.auxvar)
+        self.dfe_fn = casadi.Function('dfe', [self.state, self.control, self.auxvar], [self.dfe])
 
-    #     # First-order derivative of path Hamiltonian
-    #     self.dHx = jacobian(self.path_Hamil, self.state).T
-    #     self.dHx_fn = casadi.Function('dHx', [self.state, self.control, self.costate, self.auxvar], [self.dHx])
-    #     self.dHu = jacobian(self.path_Hamil, self.control).T
-    #     self.dHu_fn = casadi.Function('dHu', [self.state, self.control, self.costate, self.auxvar], [self.dHu])
+        # First-order derivative of path Hamiltonian
+        self.dHx = jacobian(self.path_Hamil, self.state).T
+        self.dHx_fn = casadi.Function('dHx', [self.state, self.control, self.costate, self.auxvar], [self.dHx])
+        self.dHu = jacobian(self.path_Hamil, self.control).T
+        self.dHu_fn = casadi.Function('dHu', [self.state, self.control, self.costate, self.auxvar], [self.dHu])
 
-    #     # Second-order derivative of path Hamiltonian
-    #     self.ddHxx = jacobian(self.dHx, self.state)
-    #     self.ddHxx_fn = casadi.Function('ddHxx', [self.state, self.control, self.costate, self.auxvar], [self.ddHxx])
-    #     self.ddHxu = jacobian(self.dHx, self.control)
-    #     self.ddHxu_fn = casadi.Function('ddHxu', [self.state, self.control, self.costate, self.auxvar], [self.ddHxu])
-    #     self.ddHxe = jacobian(self.dHx, self.auxvar)
-    #     self.ddHxe_fn = casadi.Function('ddHxe', [self.state, self.control, self.costate, self.auxvar], [self.ddHxe])
-    #     self.ddHux = jacobian(self.dHu, self.state)
-    #     self.ddHux_fn = casadi.Function('ddHux', [self.state, self.control, self.costate, self.auxvar], [self.ddHux])
-    #     self.ddHuu = jacobian(self.dHu, self.control)
-    #     self.ddHuu_fn = casadi.Function('ddHuu', [self.state, self.control, self.costate, self.auxvar], [self.ddHuu])
-    #     self.ddHue = jacobian(self.dHu, self.auxvar)
-    #     self.ddHue_fn = casadi.Function('ddHue', [self.state, self.control, self.costate, self.auxvar], [self.ddHue])
+        # Second-order derivative of path Hamiltonian
+        self.ddHxx = jacobian(self.dHx, self.state)
+        self.ddHxx_fn = casadi.Function('ddHxx', [self.state, self.control, self.costate, self.auxvar], [self.ddHxx])
+        self.ddHxu = jacobian(self.dHx, self.control)
+        self.ddHxu_fn = casadi.Function('ddHxu', [self.state, self.control, self.costate, self.auxvar], [self.ddHxu])
+        self.ddHxe = jacobian(self.dHx, self.auxvar)
+        self.ddHxe_fn = casadi.Function('ddHxe', [self.state, self.control, self.costate, self.auxvar], [self.ddHxe])
+        self.ddHux = jacobian(self.dHu, self.state)
+        self.ddHux_fn = casadi.Function('ddHux', [self.state, self.control, self.costate, self.auxvar], [self.ddHux])
+        self.ddHuu = jacobian(self.dHu, self.control)
+        self.ddHuu_fn = casadi.Function('ddHuu', [self.state, self.control, self.costate, self.auxvar], [self.ddHuu])
+        self.ddHue = jacobian(self.dHu, self.auxvar)
+        self.ddHue_fn = casadi.Function('ddHue', [self.state, self.control, self.costate, self.auxvar], [self.ddHue])
 
-    #     # First-order derivative of final Hamiltonian
-    #     self.dhx = jacobian(self.final_Hamil, self.state).T
-    #     self.dhx_fn = casadi.Function('dhx', [self.state, self.auxvar], [self.dhx])
+        # First-order derivative of final Hamiltonian
+        self.dhx = jacobian(self.final_Hamil, self.state).T
+        self.dhx_fn = casadi.Function('dhx', [self.state, self.auxvar], [self.dhx])
 
-    #     # second order differential of path Hamiltonian
-    #     self.ddhxx = jacobian(self.dhx, self.state)
-    #     self.ddhxx_fn = casadi.Function('ddhxx', [self.state, self.auxvar], [self.ddhxx])
-    #     self.ddhxe = jacobian(self.dhx, self.auxvar)
-    #     self.ddhxe_fn = casadi.Function('ddhxe', [self.state, self.auxvar], [self.ddhxe])
+        # second order differential of path Hamiltonian
+        self.ddhxx = jacobian(self.dhx, self.state)
+        self.ddhxx_fn = casadi.Function('ddhxx', [self.state, self.auxvar], [self.ddhxx])
+        self.ddhxe = jacobian(self.dhx, self.auxvar)
+        self.ddhxe_fn = casadi.Function('ddhxe', [self.state, self.auxvar], [self.ddhxe])
 
-    # def getAuxSys(self, state_traj_opt, control_traj_opt, costate_traj_opt, auxvar_value=1):
-    #     statement = [hasattr(self, 'dfx_fn'), hasattr(self, 'dfu_fn'), hasattr(self, 'dfe_fn'),
-    #                  hasattr(self, 'ddHxx_fn'), \
-    #                  hasattr(self, 'ddHxu_fn'), hasattr(self, 'ddHxe_fn'), hasattr(self, 'ddHux_fn'),
-    #                  hasattr(self, 'ddHuu_fn'), \
-    #                  hasattr(self, 'ddHue_fn'), hasattr(self, 'ddhxx_fn'), hasattr(self, 'ddhxe_fn'), ]
-    #     if not all(statement):
-    #         self.diffPMP()
+    def getAuxSys(self, state_traj_opt, control_traj_opt, costate_traj_opt, auxvar_value=1):
+        statement = [hasattr(self, 'dfx_fn'), hasattr(self, 'dfu_fn'), hasattr(self, 'dfe_fn'),
+                     hasattr(self, 'ddHxx_fn'), \
+                     hasattr(self, 'ddHxu_fn'), hasattr(self, 'ddHxe_fn'), hasattr(self, 'ddHux_fn'),
+                     hasattr(self, 'ddHuu_fn'), \
+                     hasattr(self, 'ddHue_fn'), hasattr(self, 'ddhxx_fn'), hasattr(self, 'ddhxe_fn'), ]
+        if not all(statement):
+            self.diffPMP()
 
-    #     # Initialize the coefficient matrices of the auxiliary control system: note that all the notations used here are
-    #     # consistent with the notations defined in the PDP paper.
-    #     dynF, dynG, dynE = [], [], []
-    #     matHxx, matHxu, matHxe, matHux, matHuu, matHue, mathxx, mathxe = [], [], [], [], [], [], [], []
+        # Initialize the coefficient matrices of the auxiliary control system: note that all the notations used here are
+        # consistent with the notations defined in the PDP paper.
+        dynF, dynG, dynE = [], [], []
+        matHxx, matHxu, matHxe, matHux, matHuu, matHue, mathxx, mathxe = [], [], [], [], [], [], [], []
 
-    #     # Solve the above coefficient matrices
-    #     for t in range(numpy.size(control_traj_opt, 0)):
-    #         curr_x = state_traj_opt[t, :]
-    #         curr_u = control_traj_opt[t, :]
-    #         next_lambda = costate_traj_opt[t, :]
-    #         dynF += [self.dfx_fn(curr_x, curr_u, auxvar_value).full()]
-    #         dynG += [self.dfu_fn(curr_x, curr_u, auxvar_value).full()]
-    #         dynE += [self.dfe_fn(curr_x, curr_u, auxvar_value).full()]
-    #         matHxx += [self.ddHxx_fn(curr_x, curr_u, next_lambda, auxvar_value).full()]
-    #         matHxu += [self.ddHxu_fn(curr_x, curr_u, next_lambda, auxvar_value).full()]
-    #         matHxe += [self.ddHxe_fn(curr_x, curr_u, next_lambda, auxvar_value).full()]
-    #         matHux += [self.ddHux_fn(curr_x, curr_u, next_lambda, auxvar_value).full()]
-    #         matHuu += [self.ddHuu_fn(curr_x, curr_u, next_lambda, auxvar_value).full()]
-    #         matHue += [self.ddHue_fn(curr_x, curr_u, next_lambda, auxvar_value).full()]
-    #     mathxx = [self.ddhxx_fn(state_traj_opt[-1, :], auxvar_value).full()]
-    #     mathxe = [self.ddhxe_fn(state_traj_opt[-1, :], auxvar_value).full()]
+        # Solve the above coefficient matrices
+        for t in range(numpy.size(control_traj_opt, 0)):
+            curr_x = state_traj_opt[t, :]
+            curr_u = control_traj_opt[t, :]
+            next_lambda = costate_traj_opt[t, :]
+            dynF += [self.dfx_fn(curr_x, curr_u, auxvar_value).full()]
+            dynG += [self.dfu_fn(curr_x, curr_u, auxvar_value).full()]
+            dynE += [self.dfe_fn(curr_x, curr_u, auxvar_value).full()]
+            matHxx += [self.ddHxx_fn(curr_x, curr_u, next_lambda, auxvar_value).full()]
+            matHxu += [self.ddHxu_fn(curr_x, curr_u, next_lambda, auxvar_value).full()]
+            matHxe += [self.ddHxe_fn(curr_x, curr_u, next_lambda, auxvar_value).full()]
+            matHux += [self.ddHux_fn(curr_x, curr_u, next_lambda, auxvar_value).full()]
+            matHuu += [self.ddHuu_fn(curr_x, curr_u, next_lambda, auxvar_value).full()]
+            matHue += [self.ddHue_fn(curr_x, curr_u, next_lambda, auxvar_value).full()]
+        mathxx = [self.ddhxx_fn(state_traj_opt[-1, :], auxvar_value).full()]
+        mathxe = [self.ddhxe_fn(state_traj_opt[-1, :], auxvar_value).full()]
 
-    #     auxSys = {"dynF": dynF,
-    #               "dynG": dynG,
-    #               "dynE": dynE,
-    #               "Hxx": matHxx,
-    #               "Hxu": matHxu,
-    #               "Hxe": matHxe,
-    #               "Hux": matHux,
-    #               "Huu": matHuu,
-    #               "Hue": matHue,
-    #               "hxx": mathxx,
-    #               "hxe": mathxe}
-    #     return auxSys
+        auxSys = {"dynF": dynF,
+                  "dynG": dynG,
+                  "dynE": dynE,
+                  "Hxx": matHxx,
+                  "Hxu": matHxu,
+                  "Hxe": matHxe,
+                  "Hux": matHux,
+                  "Huu": matHuu,
+                  "Hue": matHue,
+                  "hxx": mathxx,
+                  "hxe": mathxe}
+        return auxSys
+    
+
+'''
+# =============================================================================================================
+# The LQR class is mainly for solving (time-varying or time-invariant) LQR problems.
+# The standard form of the dynamics in the LQR system is
+# X_k+1=dynF_k*X_k+dynG_k*U_k+dynE_k,
+# where matrices dynF_k, dynG_k, and dynE_k are system dynamics matrices you need to specify (maybe time-varying)
+# The standard form of cost function for the LQR system is
+# J=sum_0^(horizon-1) path_cost + final cost, where
+# path_cost  = trace (1/2*X'*Hxx*X +1/2*U'*Huu*U + 1/2*X'*Hxu*U + 1/2*U'*Hux*X + Hue'*U + Hxe'*X)
+# final_cost = trace (1/2*X'*hxx*X +hxe'*X)
+# Here, Hxx, Huu, Hux, Hxu, Heu, Hex, hxx, hex are cost matrices you need to specify (maybe time-varying).
+# Some of the above dynamics and cost matrices, by default, are zero (none) matrices
+# Note that the variable X and variable U can be matrix variables.
+# The above defined standard form is consistent with the auxiliary control system defined in the PDP paper
+'''
+
+
+class LQR:
+
+    def __init__(self, project_name="LQR system"):
+        self.project_name = project_name
+
+    def setDyn(self, dynF, dynG, dynE=None):
+        if type(dynF) is numpy.ndarray:
+            self.dynF = [dynF]
+            self.n_state = numpy.size(dynF, 0)
+        elif type(dynF[0]) is numpy.ndarray:
+            self.dynF = dynF
+            self.n_state = numpy.size(dynF[0], 0)
+        else:
+            assert False, "Type of dynF matrix should be numpy.ndarray  or list of numpy.ndarray"
+
+        if type(dynG) is numpy.ndarray:
+            self.dynG = [dynG]
+            self.n_control = numpy.size(dynG, 1)
+        elif type(dynG[0]) is numpy.ndarray:
+            self.dynG = dynG
+            self.n_control = numpy.size(self.dynG[0], 1)
+        else:
+            assert False, "Type of dynG matrix should be numpy.ndarray  or list of numpy.ndarray"
+
+        if dynE is not None:
+            if type(dynE) is numpy.ndarray:
+                self.dynE = [dynE]
+                self.n_batch = numpy.size(dynE, 1)
+            elif type(dynE[0]) is numpy.ndarray:
+                self.dynE = dynE
+                self.n_batch = numpy.size(dynE[0], 1)
+            else:
+                assert False, "Type of dynE matrix should be numpy.ndarray, list of numpy.ndarray, or None"
+        else:
+            self.dynE = None
+            self.n_batch = None
+
+    def setPathCost(self, Hxx, Huu, Hxu=None, Hux=None, Hxe=None, Hue=None):
+
+        if type(Hxx) is numpy.ndarray:
+            self.Hxx = [Hxx]
+        elif type(Hxx[0]) is numpy.ndarray:
+            self.Hxx = Hxx
+        else:
+            assert False, "Type of path cost Hxx matrix should be numpy.ndarray or list of numpy.ndarray, or None"
+
+        if type(Huu) is numpy.ndarray:
+            self.Huu = [Huu]
+        elif type(Huu[0]) is numpy.ndarray:
+            self.Huu = Huu
+        else:
+            assert False, "Type of path cost Huu matrix should be numpy.ndarray or list of numpy.ndarray, or None"
+
+        if Hxu is not None:
+            if type(Hxu) is numpy.ndarray:
+                self.Hxu = [Hxu]
+            elif type(Hxu[0]) is numpy.ndarray:
+                self.Hxu = Hxu
+            else:
+                assert False, "Type of path cost Hxu matrix should be numpy.ndarray or list of numpy.ndarray, or None"
+        else:
+            self.Hxu = None
+
+        if Hux is not None:
+            if type(Hux) is numpy.ndarray:
+                self.Hux = [Hux]
+            elif type(Hux[0]) is numpy.ndarray:
+                self.Hux = Hux
+            else:
+                assert False, "Type of path cost Hux matrix should be numpy.ndarray or list of numpy.ndarray, or None"
+        else:
+            self.Hux = None
+
+        if Hxe is not None:
+            if type(Hxe) is numpy.ndarray:
+                self.Hxe = [Hxe]
+            elif type(Hxe[0]) is numpy.ndarray:
+                self.Hxe = Hxe
+            else:
+                assert False, "Type of path cost Hxe matrix should be numpy.ndarray or list of numpy.ndarray, or None"
+        else:
+            self.Hxe = None
+
+        if Hue is not None:
+            if type(Hue) is numpy.ndarray:
+                self.Hue = [Hue]
+            elif type(Hue[0]) is numpy.ndarray:
+                self.Hue = Hue
+            else:
+                assert False, "Type of path cost Hue matrix should be numpy.ndarray or list of numpy.ndarray, or None"
+        else:
+            self.Hue = None
+
+    def setFinalCost(self, hxx, hxe=None):
+
+        if type(hxx) is numpy.ndarray:
+            self.hxx = [hxx]
+        elif type(hxx[0]) is numpy.ndarray:
+            self.hxx = hxx
+        else:
+            assert False, "Type of final cost hxx matrix should be numpy.ndarray or list of numpy.ndarray"
+
+        if hxe is not None:
+            if type(hxe) is numpy.ndarray:
+                self.hxe = [hxe]
+            elif type(hxe[0]) is numpy.ndarray:
+                self.hxe = hxe
+            else:
+                assert False, "Type of final cost hxe matrix should be numpy.ndarray, list of numpy.ndarray, or None"
+        else:
+            self.hxe = None
+
+    def lqrSolver(self, ini_state, horizon):
+
+        # Data pre-processing
+        n_state = numpy.size(self.dynF[0], 1)
+        if type(ini_state) is list:
+            self.ini_x = numpy.array(ini_state, numpy.float64)
+            if self.ini_x.ndim == 2:
+                self.n_batch = numpy.size(self.ini_x, 1)
+            else:
+                self.n_batch = 1
+                self.ini_x = self.ini_x.reshape(n_state, -1)
+        elif type(ini_state) is numpy.ndarray:
+            self.ini_x = ini_state
+            if self.ini_x.ndim == 2:
+                self.n_batch = numpy.size(self.ini_x, 1)
+            else:
+                self.n_batch = 1
+                self.ini_x = self.ini_x.reshape(n_state, -1)
+        else:
+            assert False, "Initial state should be of numpy.ndarray type or list!"
+
+        self.horizon = horizon
+
+        if self.dynE is not None:
+            assert self.n_batch == numpy.size(self.dynE[0],
+                                              1), "Number of data batch is not consistent with column of dynE"
+
+        # Check the time horizon
+        if len(self.dynF) > 1 and len(self.dynF) != self.horizon:
+            assert False, "time-varying dynF is not consistent with given horizon"
+        elif len(self.dynF) == 1:
+            F = self.horizon * self.dynF
+        else:
+            F = self.dynF
+
+        if len(self.dynG) > 1 and len(self.dynG) != self.horizon:
+            assert False, "time-varying dynG is not consistent with given horizon"
+        elif len(self.dynG) == 1:
+            G = self.horizon * self.dynG
+        else:
+            G = self.dynG
+
+        if self.dynE is not None:
+            if len(self.dynE) > 1 and len(self.dynE) != self.horizon:
+                assert False, "time-varying dynE is not consistent with given horizon"
+            elif len(self.dynE) == 1:
+                E = self.horizon * self.dynE
+            else:
+                E = self.dynE
+        else:
+            E = self.horizon * [numpy.zeros(self.ini_x.shape)]
+
+        if len(self.Hxx) > 1 and len(self.Hxx) != self.horizon:
+            assert False, "time-varying Hxx is not consistent with given horizon"
+        elif len(self.Hxx) == 1:
+            Hxx = self.horizon * self.Hxx
+        else:
+            Hxx = self.Hxx
+
+        if len(self.Huu) > 1 and len(self.Huu) != self.horizon:
+            assert False, "time-varying Huu is not consistent with given horizon"
+        elif len(self.Huu) == 1:
+            Huu = self.horizon * self.Huu
+        else:
+            Huu = self.Huu
+
+        hxx = self.hxx
+
+        if self.hxe is None:
+            hxe = [numpy.zeros(self.ini_x.shape)]
+
+        if self.Hxu is None:
+            Hxu = self.horizon * [numpy.zeros((self.n_state, self.n_control))]
+        else:
+            if len(self.Hxu) > 1 and len(self.Hxu) != self.horizon:
+                assert False, "time-varying Hxu is not consistent with given horizon"
+            elif len(self.Hxu) == 1:
+                Hxu = self.horizon * self.Hxu
+            else:
+                Hxu = self.Hxu
+
+        if self.Hux is None:  # Hux is the transpose of Hxu
+            Hux = self.horizon * [numpy.zeros((self.n_control, self.n_state))]
+        else:
+            if len(self.Hux) > 1 and len(self.Hux) != self.horizon:
+                assert False, "time-varying Hux is not consistent with given horizon"
+            elif len(self.Hux) == 1:
+                Hux = self.horizon * self.Hux
+            else:
+                Hux = self.Hux
+
+        if self.Hxe is None:
+            Hxe = self.horizon * [numpy.zeros((self.n_state, self.n_batch))]
+        else:
+            if len(self.Hxe) > 1 and len(self.Hxe) != self.horizon:
+                assert False, "time-varying Hxe is not consistent with given horizon"
+            elif len(self.Hxe) == 1:
+                Hxe = self.horizon * self.Hxe
+            else:
+                Hxe = self.Hxe
+
+        if self.Hue is None:
+            Hue = self.horizon * [numpy.zeros((self.n_control, self.n_batch))]
+        else:
+            if len(self.Hue) > 1 and len(self.Hue) != self.horizon:
+                assert False, "time-varying Hue is not consistent with given horizon"
+            elif len(self.Hue) == 1:
+                Hue = self.horizon * self.Hue
+            else:
+                Hue = self.Hue
+
+        # Solve the Riccati equations: the notations used here are consistent with Lemma 4.2 in the PDP paper
+        I = numpy.eye(self.n_state)
+        PP = self.horizon * [numpy.zeros((self.n_state, self.n_state))]
+        WW = self.horizon * [numpy.zeros((self.n_state, self.n_batch))]
+        PP[-1] = self.hxx[0]
+        WW[-1] = self.hxe[0]
+        for t in range(self.horizon - 1, 0, -1):
+            P_next = PP[t]
+            W_next = WW[t]
+            invHuu = numpy.linalg.inv(Huu[t])
+            GinvHuu = numpy.matmul(G[t], invHuu)
+            HxuinvHuu = numpy.matmul(Hxu[t], invHuu)
+            A_t = F[t] - numpy.matmul(GinvHuu, numpy.transpose(Hxu[t]))
+            R_t = numpy.matmul(GinvHuu, numpy.transpose(G[t]))
+            M_t = E[t] - numpy.matmul(GinvHuu, Hue[t])
+            Q_t = Hxx[t] - numpy.matmul(HxuinvHuu, numpy.transpose(Hxu[t]))
+            N_t = Hxe[t] - numpy.matmul(HxuinvHuu, Hue[t])
+
+            temp_mat = numpy.matmul(numpy.transpose(A_t), numpy.linalg.inv(I + numpy.matmul(P_next, R_t)))
+            P_curr = Q_t + numpy.matmul(temp_mat, numpy.matmul(P_next, A_t))
+            W_curr = N_t + numpy.matmul(temp_mat, W_next + numpy.matmul(P_next, M_t))
+
+            PP[t - 1] = P_curr
+            WW[t - 1] = W_curr
+
+        # Compute the trajectory using the Raccti matrices obtained from the above: the notations used here are
+        # consistent with the PDP paper in Lemma 4.2
+        state_traj_opt = (self.horizon + 1) * [numpy.zeros((self.n_state, self.n_batch))]
+        control_traj_opt = (self.horizon) * [numpy.zeros((self.n_control, self.n_batch))]
+        costate_traj_opt = (self.horizon) * [numpy.zeros((self.n_state, self.n_batch))]
+        state_traj_opt[0] = self.ini_x
+        for t in range(self.horizon):
+            P_next = PP[t]
+            W_next = WW[t]
+            invHuu = numpy.linalg.inv(Huu[t])
+            GinvHuu = numpy.matmul(G[t], invHuu)
+            A_t = F[t] - numpy.matmul(GinvHuu, numpy.transpose(Hxu[t]))
+            M_t = E[t] - numpy.matmul(GinvHuu, Hue[t])
+            R_t = numpy.matmul(GinvHuu, numpy.transpose(G[t]))
+
+            x_t = state_traj_opt[t]
+            u_t = -numpy.matmul(invHuu, numpy.matmul(numpy.transpose(Hxu[t]), x_t) + Hue[t]) \
+                  - numpy.linalg.multi_dot([invHuu, numpy.transpose(G[t]), numpy.linalg.inv(I + numpy.dot(P_next, R_t)),
+                                            (numpy.matmul(numpy.matmul(P_next, A_t), x_t) + numpy.matmul(P_next,
+                                                                                                         M_t) + W_next)])
+
+            x_next = numpy.matmul(F[t], x_t) + numpy.matmul(G[t], u_t) + E[t]
+            lambda_next = numpy.matmul(P_next, x_next) + W_next
+
+            state_traj_opt[t + 1] = x_next
+            control_traj_opt[t] = u_t
+            costate_traj_opt[t] = lambda_next
+        time = [k for k in range(self.horizon + 1)]
+
+        opt_sol = {'state_traj_opt': state_traj_opt,
+                   'control_traj_opt': control_traj_opt,
+                   'costate_traj_opt': costate_traj_opt,
+                   'time': time}
+        return opt_sol

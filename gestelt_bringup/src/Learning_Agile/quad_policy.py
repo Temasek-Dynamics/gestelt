@@ -1,6 +1,6 @@
 ## this file is a package for policy search for quadrotor
 
-from quad_OC import OCSys
+from quad_OC import OCSys,LQR
 from scipy.spatial.transform import Rotation as R
 from math import cos, pi, sin, sqrt, tan
 from quad_model import *
@@ -9,10 +9,7 @@ import scipy.io as sio
 import numpy as np
 import time
 from solid_geometry import *
-def Rd2Rp(tra_ang):
-    theta = 2*math.atan(magni(tra_ang))
-    vector = norm(tra_ang+np.array([1e-8,0,0]))
-    return [theta,vector]
+
 
 class run_quad:
     def __init__(self,config_dict,
@@ -91,15 +88,19 @@ class run_quad:
                            wwt=config_dict['learning_agile']['wwt'],
                            wrf=config_dict['learning_agile']['wrf'],
                            wvf=config_dict['learning_agile']['wvf'],
-                           wqf=config_dict['learning_agile']['wqf']) 
+                           wqf=config_dict['learning_agile']['wqf'],
+                           max_tra_w=config_dict['learning_agile']['max_traverse_weight'],
+                           gamma=config_dict['learning_agile']['traverse_weight_span']
+                           ) 
         self.uav1.init_TraCost()
 
         ## set the symbolic cost function to the solver
         self.uavoc1.setInputCost(self.uav1.input_cost,wInputDiff=config_dict['learning_agile']['wInputDiff'])
         self.uavoc1.setPathCost(self.uav1.goal_cost,goal_state_sym=self.uav1.goal_state_sym)
         self.uavoc1.setTraCost(self.uav1.tra_cost,
-                               self.uav1.des_tra_r_I,
-                               self.uav1.des_tra_q)
+                               self.uav1.trav_auxvar,
+                               self.uav1.t_node
+                              )
         
         self.uavoc1.setFinalCost(self.uav1.final_cost,goal_state_sym=self.uav1.goal_state_sym)
 
@@ -109,7 +110,13 @@ class run_quad:
                                        dt=self.dt,
                                        SQP_RTI_OPTION=SQP_RTI_OPTION,
                                        USE_PREV_SOLVER=USE_PREV_SOLVER)
-    
+
+        ###################################################################
+        ###------------ PDP auxiliary control system----------------#######
+        ###################################################################
+        # self.uavoc1.diffPMP()
+        # self.lqr_solver = LQR()
+        
     def init_state_and_mission(self,
                 goal_pos = [0, 8, 0],
                 goal_ori= toQuaternion(0.0,[3,3,5]),
@@ -200,19 +207,42 @@ class run_quad:
         ## fixed perturbation to calculate the gradient
         delta = 1e-3
 
-        # drdx,drdy,drdz,drda,drdb,drdc=0
-        drdx = np.clip(self.R_from_MPC(tra_pos+[delta,0,0],tra_ang, t_tra,Ulast) - j,-0.5,0.5)*0.1
-        drdy = np.clip(self.R_from_MPC(tra_pos+[0,delta,0],tra_ang, t_tra,Ulast) - j,-0.5,0.5)*0.1
-        drdz = np.clip(self.R_from_MPC(tra_pos+[0,0,delta],tra_ang, t_tra,Ulast) - j,-0.5,0.5)*0.1
-        drda = np.clip(self.R_from_MPC(tra_pos,tra_ang+[delta,0,0], t_tra,Ulast) - j,-0.5,0.5)*(1/(500*tra_ang[0]**2+5))
-        drdb = np.clip(self.R_from_MPC(tra_pos,tra_ang+[0,delta,0], t_tra,Ulast) - j,-0.5,0.5)*(1/(500*tra_ang[1]**2+5))
-        drdc = np.clip(self.R_from_MPC(tra_pos,tra_ang+[0,0,delta], t_tra,Ulast) - j,-0.5,0.5)*(1/(500*tra_ang[2]**2+5))
-        drdt =0
-        if((self.R_from_MPC(tra_pos,tra_ang,t_tra-0.1)-j)>2):
-            drdt = -0.05
-        if((self.R_from_MPC(tra_pos,tra_ang,t_tra+0.1)-j)>2):
-            drdt = 0.05
-        ## return gradient and reward (for deep learning)
+        FINIT_DIFFERENCE = True
+        if FINIT_DIFFERENCE:    
+            # drdx,drdy,drdz,drda,drdb,drdc=0
+            drdx = np.clip(self.R_from_MPC(tra_pos+[delta,0,0],tra_ang, t_tra,Ulast) - j,-0.5,0.5)*0.1
+            drdy = np.clip(self.R_from_MPC(tra_pos+[0,delta,0],tra_ang, t_tra,Ulast) - j,-0.5,0.5)*0.1
+            drdz = np.clip(self.R_from_MPC(tra_pos+[0,0,delta],tra_ang, t_tra,Ulast) - j,-0.5,0.5)*0.1
+            drda = np.clip(self.R_from_MPC(tra_pos,tra_ang+[delta,0,0], t_tra,Ulast) - j,-0.5,0.5)*(1/(500*tra_ang[0]**2+5))
+            drdb = np.clip(self.R_from_MPC(tra_pos,tra_ang+[0,delta,0], t_tra,Ulast) - j,-0.5,0.5)*(1/(500*tra_ang[1]**2+5))
+            drdc = np.clip(self.R_from_MPC(tra_pos,tra_ang+[0,0,delta], t_tra,Ulast) - j,-0.5,0.5)*(1/(500*tra_ang[2]**2+5))
+            drdt =0
+            if((self.R_from_MPC(tra_pos,tra_ang,t_tra-0.1)-j)>2):
+                drdt = -0.05
+            if((self.R_from_MPC(tra_pos,tra_ang,t_tra+0.1)-j)>2):
+                drdt = 0.05
+            ## return gradient and reward (for deep learning)
+        else:
+
+            ## using LQR solver to solve the auxilary control system to get the analytical gradient
+            aux_sys = self.uavoc1.getAuxSys(state_traj_opt=self.sol1['state_traj_opt'],
+                                            control_traj_opt=self.sol1['control_traj_opt'],
+                                            costate_traj_opt=self.sol1['costate_traj_opt'])
+            
+            self.lqr_solver.setDyn(dynF=aux_sys['dynF'], dynG=aux_sys['dynG'], dynE=aux_sys['dynE'])
+            self.lqr_solver.setPathCost(Hxx=aux_sys['Hxx'], Huu=aux_sys['Huu'], Hxu=aux_sys['Hxu'], Hux=aux_sys['Hux'],
+                                   Hxe=aux_sys['Hxe'], Hue=aux_sys['Hue'])
+            self.lqr_solver.setFinalCost(hxx=aux_sys['hxx'], hxe=aux_sys['hxe'])
+
+            # calculate the axuiliary control system solution
+            aux_sol=self.lqr_solver.lqrSolver(np.zeros((self.uavoc1.n_state, self.uavoc1.n_auxvar)), self.horizon)
+            
+
+            # take solution of the auxiliary control system
+            dxdp_traj = aux_sol['state_traj_opt']
+            dudp_traj = aux_sol['control_traj_opt'] 
+
+
         return np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,j])
 
 
@@ -319,23 +349,23 @@ class run_quad:
 
     
         ##----- cause the different bewteen the python and the gazebo--###
-        tra_atti = Rd2Rp(tra_ang)
+        # tra_atti = Rd2Rp(tra_ang)
 
-        tra_q=toQuaternion(tra_atti[0],tra_atti[1])
+        # tra_q=toQuaternion(tra_atti[0],tra_atti[1])
 
         current_state_control = np.concatenate((current_state,Ulast))
        
         # self.sol1 = self.uavoc1.ocSolver(current_state_control=current_state_control,t_tra=t)
-        self.sol1,weight_vis,NO_SOLUTION_FLAG = self.uavoc1.AcadosOcSolver(current_state_control=current_state_control,
+        self.sol1,NO_SOLUTION_FLAG = self.uavoc1.AcadosOcSolver(current_state_control=current_state_control,
                                                 goal_pos=self.goal_pos,
                                                 goal_ori=self.goal_ori,
                                                 tra_pos=tra_pos,
-                                                tra_q=tra_q,
+                                                tra_ang=tra_ang,
                                                 t_tra=t_tra,
                                                 max_tra_w = self.max_tra_w)
         
         # return control, pos_vel_cmd
-        return self.sol1,weight_vis,NO_SOLUTION_FLAG
+        return self.sol1,NO_SOLUTION_FLAG
 
 ## sample the perturbation (only for random perturbations)
 def sample(deviation):

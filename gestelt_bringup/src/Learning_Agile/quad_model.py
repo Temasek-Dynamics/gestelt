@@ -9,6 +9,7 @@ import math
 from scipy.spatial.transform import Rotation as R
 from solid_geometry import norm
 from math import sqrt
+from solid_geometry import *
 
 # quadrotor (UAV) environment
 class Quadrotor:
@@ -32,9 +33,12 @@ class Quadrotor:
         # self.thrust, self.Mx, self.My, self.Mz = SX.sym('T'), SX.sym('Mx'), SX.sym('My'), SX.sym('Mz')
         # self.U   = vertcat(self.thrust, self.Mx, self.My, self.Mz)
 
-        # define desire traverse pose
+        # define desire traverse pose and time
         self.des_tra_r_I = vertcat(SX.sym('des_tra_rx'), SX.sym('des_tra_ry'), SX.sym('des_tra_rz'))
+        self.des_tra_rodi_param=vertcat(SX.sym('des_tra_rodi_param0'),SX.sym('des_tra_rodi_param1'),SX.sym('des_tra_rodi_param2'))
         self.des_tra_q = vertcat(SX.sym('des_tra_q0'), SX.sym('des_tra_q1'), SX.sym('des_tra_q2'), SX.sym('des_tra_q3'))
+        self.des_t_tra = SX.sym('des_t_tra')
+        self.t_node = SX.sym('t_node')
 
         # define desired goal state
         self.goal_r_I  = vertcat(SX.sym('des_goal_rx'), SX.sym('des_goal_ry'), SX.sym('des_goal_rz'))
@@ -140,7 +144,7 @@ class Quadrotor:
         self.f = vertcat(dr_I, dv_I, dq)#, dw)
 
     def initCost(self, wrt=None, wqt=None, wrf=None, wvf=None, wqf=None, wwt=None, \
-        wthrust=0.5):
+        wthrust=0.5,max_tra_w=0,gamma=0):
         #traverse
         parameter = []
         if wrt is None:
@@ -186,6 +190,21 @@ class Quadrotor:
             parameter += [self.wthrust]
         else:
             self.wthrust = wthrust
+
+
+        # traversing manually set params
+        if max_tra_w is None:
+            self.max_tra_w = SX.sym('max_tra_w')
+            parameter += [self.max_tra_w]
+        else:
+            self.max_tra_w = max_tra_w
+        
+        if gamma is None:
+            self.gamma = SX.sym('gamma')
+            parameter += [self.gamma]
+        else:
+            self.gamma = gamma
+
         self.cost_auxvar = vcat(parameter)
 
         ## goal cost
@@ -227,8 +246,23 @@ class Quadrotor:
     def init_TraCost(self): # transforming Rodrigues to Quaternion is shown in mpc_update function
         ## traverse cost
         # traverse position in the world frame
-    
+        """   
+        acados solver external variables:   
+        self.t_node
+        self.des_t_r_I
+        self.des_t_tra
+        self.des_tra_rodi_param 
+
+        auxvar: (hyperparameters for PDP analytics gradient objects)
+        self.des_t_r_I
+        self.des_t_tra
+        self.des_tra_rodi_param 
+
+        """
         # replaced by symbolic variables: des_tra_r_I, des_tra_q
+        tra_atti = Rd2Rp_casadi(self.des_tra_rodi_param)
+        self.des_tra_q=toQuaternion_casadi(tra_atti[0],tra_atti[1])
+
         self.cost_r_I_t = dot(self.r_I - self.des_tra_r_I, self.r_I - self.des_tra_r_I)
 
         # traverse attitude error
@@ -236,8 +270,14 @@ class Quadrotor:
         R_B_I = self.dir_cosine(self.q)
         self.cost_q_t = trace(np.identity(3) - mtimes(transpose(tra_R_B_I), R_B_I))**2
 
-        self.tra_cost =   self.wrt * self.cost_r_I_t + \
-                            self.wqt * self.cost_q_t
+
+        # weight = max_tra_w*casadi.exp(-gamma*(dt*i-t_tra)**2) #gamma should increase as the flight duration decreases
+        self.tra_cost = self.max_tra_w * casadi.exp(-self.gamma*(self.t_node-self.des_t_tra)**2) * (self.wrt * self.cost_r_I_t + self.wqt * self.cost_q_t)
+                            
+        
+        
+        ## set traverse pose as the auxiliary variables (hyperparameters)
+        self.trav_auxvar = vertcat(self.des_tra_r_I, self.des_tra_rodi_param,self.des_t_tra)
 
     def setDyn(self, dt):       
 
@@ -917,6 +957,16 @@ class gate:
     def t_final(self, final_point):
         return np.matmul(self.I_G, final_point - self.centroid)
         
+def Rd2Rp(tra_ang):
+    theta = 2*math.atan(magni(tra_ang))
+    vector = norm(tra_ang+np.array([1e-8,0,0]))
+    return [theta,vector]
+
+
+def Rd2Rp_casadi(tra_ang):
+    theta = 2*casadi.atan(magni_casadi(tra_ang))
+    vector = tra_ang+np.array([1e-8,0,0])
+    return [theta,vector]
 
 def toQuaternion(angle, dir):
     if type(dir) == list:
@@ -926,6 +976,15 @@ def toQuaternion(angle, dir):
     quat[0] = math.cos(angle / 2)
     quat[1:] = math.sin(angle / 2) * dir
     return quat.tolist()
+
+
+def toQuaternion_casadi(angle, dir):
+    
+    dir = dir / casadi.norm_2(dir)
+    quat = casadi.SX.zeros(4)
+    quat[0] = casadi.cos(angle / 2)
+    quat[1:] = casadi.sin(angle / 2) * dir
+    return quat
 
 
 # normalized verctor
