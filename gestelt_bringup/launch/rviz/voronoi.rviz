@@ -87,7 +87,7 @@ Visualization Manager:
           Marker Topic: /swarm_collision_checker/collision
           Name: swarm_collision_checker
           Namespaces:
-            swarm_collision: true
+            {}
           Queue Size: 100
           Value: true
         - Class: rviz/Marker
@@ -822,26 +822,20 @@ Visualization Manager:
   Value: true
   Views:
     Current:
-      Class: rviz/XYOrbit
-      Distance: 13.378376007080078
+      Angle: -3.1300055980682373
+      Class: rviz/TopDownOrtho
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
-      Field of View: 0.7853981852531433
-      Focal Point:
-        X: 2.976903200149536
-        Y: 0.2670464515686035
-        Z: 0
-      Focal Shape Fixed Size: true
-      Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.6697965264320374
+      Scale: 53.02678680419922
       Target Frame: my_view
-      Yaw: 5.698582172393799
+      X: 0.1782703548669815
+      Y: -1.0175297260284424
     Saved:
       - Class: rviz/FPS
         Enable Stereo Rendering:

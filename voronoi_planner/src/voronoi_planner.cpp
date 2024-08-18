@@ -115,7 +115,10 @@ void VoronoiPlanner::FEPlanSubCB(const gestelt_msgs::FrontEndPlanConstPtr& msg)
 
   // Add all points on path (with inflation) to reservation table
   double inflation = 0.5; // [m]
+  double t_buffer = 1.5; // [s]
   int num_cells_inf = inflation/res_; // Number of cells used for inflation
+
+  int t_buffer_st = (int) std::lround(t_buffer/t_unit_);
 
   double t_now = ros::Time::now().toSec();
 
@@ -149,7 +152,7 @@ void VoronoiPlanner::FEPlanSubCB(const gestelt_msgs::FrontEndPlanConstPtr& msg)
         }
 
         // Add position for the entire time interval from previous t to current t
-        for (int j = -1; j < msg->plan_time[i] - prev_t + 1; j++) { 
+        for (int j = -t_buffer_st; j < msg->plan_time[i] - prev_t + t_buffer_st; j++) { 
           if (st_units_elapsed_plan_start + prev_t + j < 0){
             // if plan is in the past
             continue;
