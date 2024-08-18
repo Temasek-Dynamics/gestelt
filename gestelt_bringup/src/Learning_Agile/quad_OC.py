@@ -53,8 +53,8 @@ class OCSys:
             self.setAuxvarVariable()
 
         # self.dyn = casadi.Function('f',[self.state, self.control],[f])
-        # self.dyn = self.state + dt * f
-        # self.dyn_fn = casadi.Function('dynamics', [self.state, self.control, self.auxvar], [self.dyn],['x','u','p'],['x_next'])
+        self.dyn = self.state + dt * f
+        self.dyn_fn = casadi.Function('dynamics', [self.state, self.control, self.auxvar], [self.dyn],['x','u','p'],['x_next'])
         self.dyn_fn_acados = casadi.Function('dynamics', [self.state, self.control, self.auxvar], [f],['x','u','p'],['rhs'])
         #M = 4
         #DT = dt/4
@@ -73,40 +73,93 @@ class OCSys:
         ## Fold
         #self.dyn_fn = casadi.Function('dyn', [X0, U], [X])
 
-    def setInputCost(self, input_cost,wInputDiff):
+    def setInputCost(self,input_cost):
         if not hasattr(self, 'auxvar'):
             self.setAuxvarVariable()
 
         assert input_cost.numel() == 1, "input_cost must be a scalar function"        
-
+        
         self.input_cost = input_cost
         self.input_cost_fn = casadi.Function('input_cost',[self.control, self.auxvar], [self.input_cost])
-        self.wInputDiff = wInputDiff
-    def setPathCost(self, 
-                    path_cost,
-                    goal_state_sym):
-        self.goal_state_sym = goal_state_sym
+
+    def setInputDiffCost(self,input_diff_cost):   
+        if not hasattr(self, 'auxvar'):
+            self.setAuxvarVariable()
+
+        assert input_diff_cost.numel() == 1, "input_diff_cost must be a scalar function"
+
+        self.input_diff_cost = input_diff_cost
+        self.input_diff_cost_fn = casadi.Function('input_diff_cost', [self.control, self.auxvar], [self.input_diff_cost])
+    
+    
+    def setPathCost(self, path_cost):
         if not hasattr(self, 'auxvar'):
             self.setAuxvarVariable()
 
         assert path_cost.numel() == 1, "path_cost must be a scalar function"
 
         self.path_cost = path_cost
-        self.path_cost_fn = casadi.Function('path_cost', [self.state,self.goal_state_sym,self.auxvar], [self.path_cost])
-
-    def setFinalCost(self, 
-                     final_cost,
-                     goal_state_sym):
-        self.goal_state_sym = goal_state_sym
+        self.path_cost_fn = casadi.Function('path_cost', [self.state,  self.auxvar], [self.path_cost])
+    
+    
+    def setFinalCost(self, final_cost):
         if not hasattr(self, 'auxvar'):
             self.setAuxvarVariable()
 
         assert final_cost.numel() == 1, "final_cost must be a scalar function"
 
         self.final_cost = final_cost
-        self.final_cost_fn = casadi.Function('final_cost', [self.state,self.goal_state_sym, self.auxvar], [self.final_cost])
-    
+        self.final_cost_fn = casadi.Function('final_cost', [self.state, self.auxvar], [self.final_cost])
+
+
     def setTraCost(self, 
+                trav_cost):
+                
+
+        self.trav_cost = trav_cost
+        self.trav_cost_fn = casadi.Function('trav_cost', [self.state,self.trav_auxvar], [self.trav_cost])
+
+    def setInputDiffCostAllSym(self, Ulast,input_diff_cost_all_sym):
+        if not hasattr(self, 'auxvar'):
+            self.setAuxvarVariable()
+
+        assert input_diff_cost_all_sym.numel() == 1, "input_diff_cost must be a scalar function"
+
+        self.Ulast = Ulast
+        self.input_diff_cost_all_sym = input_diff_cost_all_sym
+        self.input_diff_cost_all_sym_fn = casadi.Function('input_diff_cost', [self.control,self.Ulast, self.auxvar], [self.input_diff_cost_all_sym])
+
+    def setPathCostAllSym(self, 
+                    path_cost_all_sym,
+                    goal_state_sym):
+        
+        " all symbolic path cost function, means the goal state is also a symbolic variable"
+
+        self.goal_state_sym = goal_state_sym
+        if not hasattr(self, 'auxvar'):
+            self.setAuxvarVariable()
+
+        assert path_cost_all_sym.numel() == 1, "path_cost must be a scalar function"
+
+        self.path_cost_all_sym = path_cost_all_sym
+        self.path_cost_all_sym_fn = casadi.Function('path_cost', [self.state,self.goal_state_sym,self.auxvar], [self.path_cost_all_sym])
+
+
+    def setFinalCostAllSym(self, 
+                     final_cost_all_sym,
+                     goal_state_sym):
+        " all symbolic path cost function, means the goal state is also a symbolic variable"
+
+        self.goal_state_sym = goal_state_sym
+        if not hasattr(self, 'auxvar'):
+            self.setAuxvarVariable()
+
+        assert final_cost_all_sym.numel() == 1, "final_cost must be a scalar function"
+
+        self.final_cost_all_sym = final_cost_all_sym
+        self.final_cost_all_sym_fn = casadi.Function('final_cost_all_sym', [self.state,self.goal_state_sym, self.auxvar], [self.final_cost_all_sym])
+    
+    def setTraCostAllSym(self, 
                 trav_cost, 
                 trav_auxvar,
                 t_node):
@@ -114,8 +167,10 @@ class OCSys:
 
         self.trav_cost = trav_cost
         self.trav_auxvar = trav_auxvar
+        self.n_trav_auxvar = self.trav_auxvar.numel()
         self.t_node = t_node
-        self.trav_cost_fn = casadi.Function('trav_cost', [self.state,self.trav_auxvar,self.t_node], [self.trav_cost])
+        self.trav_cost_all_sym_fn = casadi.Function('trav_cost', [self.state,self.trav_auxvar,self.t_node], [self.trav_cost])
+
 
 
     def ocSolverInit(self, horizon=None, auxvar_value=1, print_level=0, dt = 0.1,costate_option=0):
@@ -305,8 +360,8 @@ class OCSys:
         assert hasattr(self, 'state'), "Define the state variable first!"
         assert hasattr(self, 'control'), "Define the control variable first!"
         # assert hasattr(self, 'dyn'), "Define the system dynamics first!"
-        assert hasattr(self, 'path_cost'), "Define the running cost function first!"
-        assert hasattr(self, 'final_cost'), "Define the final cost function first!"
+        # assert hasattr(self, 'path_cost'), "Define the running cost function first!"
+        assert hasattr(self, 'final_cost_all_sym'), "Define the final cost function first!"
         # Start with an empty NLP
         self.horizon=horizon
         self.SQP_RTI_OPTION=SQP_RTI_OPTION
@@ -378,7 +433,7 @@ class OCSys:
         
         ## parameters: received after solver initialization, includes:
         # goal state: 
-        # Ulast: current state can be set as constraints 
+        # Ulast_value: current state can be set as constraints 
         
         # replace:
             # desired traverse pose: des_tra_r_I, des_tra_q
@@ -391,7 +446,7 @@ class OCSys:
        
         P=casadi.SX.sym('p',self.n_state+\
                         self.n_control+\
-                        self.trav_auxvar.numel()+1)
+                        self.trav_auxvar.numel()+1) # the last one is the current node time
         model.p=P
         
         ###############################################################
@@ -438,13 +493,13 @@ class OCSys:
         ocp.cost.cost_type = 'EXTERNAL'
         ocp.cost.cost_type_e = 'EXTERNAL'
 
-        Ulast=ocp.model.p[self.n_state:self.n_state+self.n_control]
+        Ulast_value=ocp.model.p[self.n_state:self.n_state+self.n_control]
         goal_state=ocp.model.p[0:self.n_state]  
         # des_tra_pos=ocp.model.p[self.n_state+self.n_control : self.n_state+self.n_control+3]
         # des_tra_q=ocp.model.p[self.n_state+self.n_control+3 : self.n_state+self.n_control+7]
     
         # self.trav_auxvar = vertcat(self.des_tra_r_I, self.des_tra_rodi_param,self.des_t_tra)
-        trav_auxvar=ocp.model.p[self.n_state+self.n_control:self.n_state+self.n_control+self.trav_auxvar.numel()]
+        trav_auxvar_value=ocp.model.p[self.n_state+self.n_control:self.n_state+self.n_control+self.trav_auxvar.numel()]
 
         # current node time
         t_node=ocp.model.p[-1]
@@ -452,16 +507,16 @@ class OCSys:
         # # setting the cost function
         # weight = 60*casadi.exp(-10*(dt*k-model.p[-1])**2) #gamma should increase as the flight duration decreases
         # ocp.model.cost_expr_ext_cost_custom_hess/cost_expr_ext_cost
-        ocp.model.cost_expr_ext_cost = self.path_cost_fn(ocp.model.x,goal_state,self.auxvar)\
-            +self.final_cost_fn(ocp.model.x,goal_state,self.auxvar)\
-            +ocp.model.p[-1]*self.trav_cost_fn(ocp.model.x, trav_auxvar, t_node)\
-            +self.wInputDiff*dot(ocp.model.u-Ulast,ocp.model.u-Ulast) \
+        ocp.model.cost_expr_ext_cost = self.path_cost_all_sym_fn(ocp.model.x,goal_state,self.auxvar)\
+            +self.final_cost_all_sym_fn(ocp.model.x,goal_state,self.auxvar)\
+            +self.trav_cost_all_sym_fn(ocp.model.x, trav_auxvar_value, t_node)\
+            +self.input_diff_cost_all_sym_fn(ocp.model.u,Ulast_value,self.auxvar) \
             +self.input_cost_fn(ocp.model.u,self.auxvar)
         
         # end cost
-        ocp.model.cost_expr_ext_cost_e = self.final_cost_fn(ocp.model.x,goal_state,self.auxvar)
+        ocp.model.cost_expr_ext_cost_e = self.final_cost_all_sym_fn(ocp.model.x,goal_state,self.auxvar)
 
-        Ulast=ocp.model.u
+        Ulast_value=ocp.model.u
         ############################################################### 
         ##----------------- setting the constraints -----------------##
         ###############################################################  
@@ -534,9 +589,7 @@ class OCSys:
         """
         self.state_traj_opt = np.zeros((self.n_nodes+1,self.n_state))
         self.control_traj_opt = np.zeros((self.n_nodes,self.n_control))
-
-        n_constraints = 2*(self.n_state + self.n_control)
-        self.costate_traj_opt = np.zeros((self.n_nodes,n_constraints))
+        self.costate_traj_opt = np.zeros((self.n_nodes,self.n_state))
 
         # #---------------------for linear cost---------------------##
         # # #set desired ref state
@@ -591,7 +644,7 @@ class OCSys:
         for i in range(self.n_nodes):
             self.state_traj_opt[i,:]=self.acados_solver.get(i, "x")
             self.control_traj_opt[i,:]=self.acados_solver.get(i, "u")
-            self.costate_traj_opt[i,:]=self.acados_solver.get(i, "lam")
+            self.costate_traj_opt[i,:]=self.acados_solver.get(i, "pi")
 
         self.state_traj_opt[-1,:]=self.acados_solver.get(self.n_nodes, "x")
         
@@ -610,7 +663,8 @@ class OCSys:
         return opt_sol,NO_SOLUTION_FLAG   
     
 
-
+    
+        
     def diffPMP(self):
         assert hasattr(self, 'state'), "Define the state variable first!"
         assert hasattr(self, 'control'), "Define the control variable first!"
@@ -620,48 +674,58 @@ class OCSys:
 
         # Define the Hamiltonian function
         self.costate = casadi.SX.sym('lambda', self.state.numel())
-        self.path_Hamil = self.path_cost + dot(self.dyn, self.costate)  # path Hamiltonian
+        self.path_Hamil = self.path_cost \
+                        + self.trav_cost \
+                        + self.input_cost \
+                        + self.input_diff_cost \
+                        + dot(self.dyn, self.costate)  # path Hamiltonian
+        
         self.final_Hamil = self.final_cost  # final Hamiltonian
 
         # Differentiating dynamics; notations here are consistent with the PDP paper
         self.dfx = jacobian(self.dyn, self.state)
-        self.dfx_fn = casadi.Function('dfx', [self.state, self.control, self.auxvar], [self.dfx])
+        self.dfx_fn = casadi.Function('dfx', [self.state, self.control, self.trav_auxvar], [self.dfx])
         self.dfu = jacobian(self.dyn, self.control)
-        self.dfu_fn = casadi.Function('dfu', [self.state, self.control, self.auxvar], [self.dfu])
-        self.dfe = jacobian(self.dyn, self.auxvar)
-        self.dfe_fn = casadi.Function('dfe', [self.state, self.control, self.auxvar], [self.dfe])
+        self.dfu_fn = casadi.Function('dfu', [self.state, self.control, self.trav_auxvar], [self.dfu])
+        self.dfe = jacobian(self.dyn, self.trav_auxvar)
+        self.dfe_fn = casadi.Function('dfe', [self.state, self.control, self.trav_auxvar], [self.dfe])
 
         # First-order derivative of path Hamiltonian
         self.dHx = jacobian(self.path_Hamil, self.state).T
-        self.dHx_fn = casadi.Function('dHx', [self.state, self.control, self.costate, self.auxvar], [self.dHx])
+        self.dHx_fn = casadi.Function('dHx', [self.state, self.control, self.costate, self.trav_auxvar], [self.dHx])
         self.dHu = jacobian(self.path_Hamil, self.control).T
-        self.dHu_fn = casadi.Function('dHu', [self.state, self.control, self.costate, self.auxvar], [self.dHu])
+        self.dHu_fn = casadi.Function('dHu', [self.state, self.control, self.costate, self.trav_auxvar], [self.dHu])
 
         # Second-order derivative of path Hamiltonian
         self.ddHxx = jacobian(self.dHx, self.state)
-        self.ddHxx_fn = casadi.Function('ddHxx', [self.state, self.control, self.costate, self.auxvar], [self.ddHxx])
+        self.ddHxx_fn = casadi.Function('ddHxx', [self.state, self.control, self.costate, self.trav_auxvar], [self.ddHxx])
         self.ddHxu = jacobian(self.dHx, self.control)
-        self.ddHxu_fn = casadi.Function('ddHxu', [self.state, self.control, self.costate, self.auxvar], [self.ddHxu])
-        self.ddHxe = jacobian(self.dHx, self.auxvar)
-        self.ddHxe_fn = casadi.Function('ddHxe', [self.state, self.control, self.costate, self.auxvar], [self.ddHxe])
+        self.ddHxu_fn = casadi.Function('ddHxu', [self.state, self.control, self.costate, self.trav_auxvar], [self.ddHxu])
+        self.ddHxe = jacobian(self.dHx, self.trav_auxvar)
+        self.ddHxe_fn = casadi.Function('ddHxe', [self.state, self.control, self.costate, self.trav_auxvar], [self.ddHxe])
         self.ddHux = jacobian(self.dHu, self.state)
-        self.ddHux_fn = casadi.Function('ddHux', [self.state, self.control, self.costate, self.auxvar], [self.ddHux])
+        self.ddHux_fn = casadi.Function('ddHux', [self.state, self.control, self.costate, self.trav_auxvar], [self.ddHux])
         self.ddHuu = jacobian(self.dHu, self.control)
-        self.ddHuu_fn = casadi.Function('ddHuu', [self.state, self.control, self.costate, self.auxvar], [self.ddHuu])
-        self.ddHue = jacobian(self.dHu, self.auxvar)
-        self.ddHue_fn = casadi.Function('ddHue', [self.state, self.control, self.costate, self.auxvar], [self.ddHue])
+        self.ddHuu_fn = casadi.Function('ddHuu', [self.state, self.control, self.costate, self.trav_auxvar], [self.ddHuu])
+        self.ddHue = jacobian(self.dHu, self.trav_auxvar)
+        self.ddHue_fn = casadi.Function('ddHue', [self.state, self.control, self.costate, self.trav_auxvar], [self.ddHue])
 
         # First-order derivative of final Hamiltonian
         self.dhx = jacobian(self.final_Hamil, self.state).T
-        self.dhx_fn = casadi.Function('dhx', [self.state, self.auxvar], [self.dhx])
+        self.dhx_fn = casadi.Function('dhx', [self.state, self.trav_auxvar], [self.dhx])
 
         # second order differential of path Hamiltonian
         self.ddhxx = jacobian(self.dhx, self.state)
-        self.ddhxx_fn = casadi.Function('ddhxx', [self.state, self.auxvar], [self.ddhxx])
-        self.ddhxe = jacobian(self.dhx, self.auxvar)
-        self.ddhxe_fn = casadi.Function('ddhxe', [self.state, self.auxvar], [self.ddhxe])
+        self.ddhxx_fn = casadi.Function('ddhxx', [self.state, self.trav_auxvar], [self.ddhxx])
+        self.ddhxe = jacobian(self.dhx, self.trav_auxvar)
+        self.ddhxe_fn = casadi.Function('ddhxe', [self.state, self.trav_auxvar], [self.ddhxe])
 
-    def getAuxSys(self, state_traj_opt, control_traj_opt, costate_traj_opt, auxvar_value=1):
+    def getAuxSys(self, goal_state,
+                   state_traj_opt, 
+                   control_traj_opt, 
+                   costate_traj_opt, 
+                   auxvar_value=1):
+        
         statement = [hasattr(self, 'dfx_fn'), hasattr(self, 'dfu_fn'), hasattr(self, 'dfe_fn'),
                      hasattr(self, 'ddHxx_fn'), \
                      hasattr(self, 'ddHxu_fn'), hasattr(self, 'ddHxe_fn'), hasattr(self, 'ddHux_fn'),

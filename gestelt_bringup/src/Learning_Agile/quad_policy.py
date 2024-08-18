@@ -9,7 +9,7 @@ import scipy.io as sio
 import numpy as np
 import time
 from solid_geometry import *
-
+import torch
 
 class run_quad:
     def __init__(self,config_dict,
@@ -46,7 +46,7 @@ class run_quad:
         # --------------------------- create PDP object1 ----------------------------------------
         # create a pdp object
         self.uavoc1 = OCSys(config_dict)
-        self.uavoc1.setAuxvarVariable()
+       
         sc= 1 #1e20
         pos_b   = config_dict['learning_agile']['pos_bound'] # in each axis
         vel_b   = config_dict['learning_agile']['linear_vel_bound'] #0.5 # in each axis
@@ -64,7 +64,7 @@ class run_quad:
         self.thrust_ub = config_dict['learning_agile']['single_motor_max_thrust']*4*config_dict['learning_agile']['throttle_upper_bound']
         self.thrust_lb = config_dict['learning_agile']['single_motor_max_thrust']*4*config_dict['learning_agile']['throttle_lower_bound']
         ang_rate_b = config_dict['learning_agile']['angular_vel_bound']
-
+        self.uavoc1.setAuxvarVariable()
         self.uavoc1.setControlVariable(self.uav1.U,
                                        control_lb=[self.thrust_lb ,-ang_rate_b,-ang_rate_b,-ang_rate_b],\
                                        control_ub= [self.thrust_ub,ang_rate_b,ang_rate_b,ang_rate_b]) # thrust-to-weight = 4:1
@@ -90,19 +90,25 @@ class run_quad:
                            wvf=config_dict['learning_agile']['wvf'],
                            wqf=config_dict['learning_agile']['wqf'],
                            max_tra_w=config_dict['learning_agile']['max_traverse_weight'],
-                           gamma=config_dict['learning_agile']['traverse_weight_span']
+                           gamma=config_dict['learning_agile']['traverse_weight_span'],
+                            wInputDiff=config_dict['learning_agile']['wInputDiff']
                            ) 
         self.uav1.init_TraCost()
 
         ## set the symbolic cost function to the solver
-        self.uavoc1.setInputCost(self.uav1.input_cost,wInputDiff=config_dict['learning_agile']['wInputDiff'])
-        self.uavoc1.setPathCost(self.uav1.goal_cost,goal_state_sym=self.uav1.goal_state_sym)
-        self.uavoc1.setTraCost(self.uav1.tra_cost,
+        self.uavoc1.setInputCost(self.uav1.input_cost)
+        
+        self.uavoc1.setInputDiffCostAllSym(self.uav1.Ulast,
+                                           self.uav1.input_diff_cost_all_sym)
+
+        # AllSym means the goal state is also a symbolic variable, not a fixed value
+        self.uavoc1.setPathCostAllSym(self.uav1.goal_cost_all_sym,goal_state_sym=self.uav1.goal_state_sym)
+        self.uavoc1.setTraCostAllSym(self.uav1.tra_cost_all_sym,
                                self.uav1.trav_auxvar,
                                self.uav1.t_node
                               )
         
-        self.uavoc1.setFinalCost(self.uav1.final_cost,goal_state_sym=self.uav1.goal_state_sym)
+        self.uavoc1.setFinalCostAllSym(self.uav1.final_cost_all_sym,goal_state_sym=self.uav1.goal_state_sym)
 
         # initialize the mpc solver
         # self.uavoc1.ocSolverInit(horizon=self.horizon,dt=self.dt)
@@ -111,19 +117,15 @@ class run_quad:
                                        SQP_RTI_OPTION=SQP_RTI_OPTION,
                                        USE_PREV_SOLVER=USE_PREV_SOLVER)
 
-        ###################################################################
-        ###------------ PDP auxiliary control system----------------#######
-        ###################################################################
-        # self.uavoc1.diffPMP()
-        # self.lqr_solver = LQR()
+        
         
     def init_state_and_mission(self,
                 goal_pos = [0, 8, 0],
-                goal_ori= toQuaternion(0.0,[3,3,5]),
+                goal_ori= toQuaternion(0.0,[0,0,1]),
                 
                 ini_r=[0,-8,0],
                 ini_v_I = [0.0, 0.0, 0.0], 
-                ini_q = toQuaternion(0.0,[3,3,5])):  
+                ini_q = toQuaternion(0.0,[0,0,1])):  
         # goal
         self.goal_pos = goal_pos
         self.goal_ori = goal_ori
@@ -147,55 +149,93 @@ class run_quad:
         self.point3 = gate_point[6:9]
         self.point4 = gate_point[9:12]        
         self.obstacle1 = obstacle(self.point1,self.point2,self.point3,self.point4)
-    
-    def R_from_MPC(self,tra_pos=None,tra_ang=None,t_tra = 3, Ulast = None):
+        self.obstacle1_torch=obstacle_torch(self.point1,self.point2,self.point3,self.point4)
+
+    def R_from_MPC(self,tra_pos=None,tra_ang=None,t_tra = 3, Ulast_value = None):
 
         # round the traversal time, keep to one decimal place
         # t_tra = round(t_tra,1)
 
-        Ulast=np.array([2,0.0,0.0,0.0])
-
+    
         # obtain solution of trajectory
         NO_SOLUTION_FLAG = False
-        self.sol1,weight_vis ,NO_SOLUTION_FLAG =self.mpc_update(self.ini_state, 
-                       Ulast, 
+        self.sol1,NO_SOLUTION_FLAG =self.mpc_update(self.ini_state, 
+                       Ulast_value, 
                        tra_pos, 
                        tra_ang, 
                        t_tra)
         
         # state_traj [x,y,z,vx,vy,vz,qw,qx,qy,qz]
         state_traj = self.sol1['state_traj_opt']
-
-
-        # get the quadrotor edges position trajectory
-        self.traj = self.uav1.get_quadrotor_position(wing_len = self.winglen, state_traj = state_traj)
-        # calculate trajectory reward
-        self.collision = 0
-        self.path = 0
-        ## detect whether there is collision
-        self.co = 0
-        for c in range(4):
-            self.collision += self.obstacle1.collis_det(self.traj[:,3*(c+1):3*(c+2)],self.horizon)
-            self.co += self.obstacle1.co 
-
-        ## calculate the path cost
-        # check the drone centroid position error with the goal position
-        for p in range(4):
-            self.path += np.dot(self.traj[self.horizon-1-p,0:3]-self.goal_pos, self.traj[self.horizon-1-p,0:3]-self.goal_pos)
         
-        # the sign of the collision is already negative
+        # get the quadrotor both center and edges position trajectory
+        self.traj = self.uav1.get_quadrotor_position(wing_len = self.winglen, state_traj = state_traj)
 
-        # pitch angle reward
-        pitch_reward=abs(tra_ang[1])
-        reward = 1000 * self.collision - 0.5 * self.path + 100 + 10 * pitch_reward
-        return reward
+       
+        if not self.PDP_GRAIDENT:
+            # calculate trajectory reward
+            self.collision = 0
+            self.path = 0
+            ## detect whether there is collision
+            self.co = 0
+
+            for c in range(4):
+                self.collision += self.obstacle1.collis_det(self.traj[:,3*(c+1):3*(c+2)],self.horizon)
+                self.co += self.obstacle1.co 
+
+            ## calculate the path cost
+            # check the drone centroid position error with the goal position
+            for p in range(4):
+                self.path += np.dot(self.traj[self.horizon-1-p,0:3]-self.goal_pos, self.traj[self.horizon-1-p,0:3]-self.goal_pos)
+            
+            # the sign of the collision is already negative
+
+            # pitch angle reward
+            pitch_reward=abs(tra_ang[1])
+            reward = 1000 * self.collision - 0.5 * self.path + 100 + 10 * pitch_reward
+            return reward
+        
+        else:   
+            self.traj_tensor = torch.tensor(self.traj,requires_grad=True)
+            self.collision_tensor = torch.tensor(0.0,  requires_grad=True)
+            self.co_tensor = torch.tensor(0.0,  requires_grad=True)
+            self.path_tensor = torch.tensor(0.0,  requires_grad=True)
+            self.pitch_reward_tensor = torch.tensor(0.0,  requires_grad=True)
+            self.reward_tensor = torch.tensor(0.0,  requires_grad=True)
+            self.goal_pose_tensor = torch.tensor(self.goal_pos,requires_grad=True)
+            
+            for c in range(4):
+                self.collision_tensor = torch.add(self.collision_tensor,self.obstacle1_torch.collis_det_torch(self.traj_tensor[:,3*(c+1):3*(c+2)],self.horizon))
+                # self.collision_tensor += self.obstacle1_torch.collis_det_torch(self.traj_tensor[:,3*(c+1):3*(c+2)],self.horizon)
+                # self.co_tensor += self.obstacle1_torch.co
+
+
+            # Calculate the path value
+            for p in range(4):
+                diff = self.traj_tensor[self.horizon-1-p, 0:3] - self.goal_pose_tensor
+                self.path_tensor = torch.add(self.path_tensor, torch.dot(diff, diff))
+                # self.path_tensor += torch.dot(diff, diff)
+            
+
+            # The sign of the collision is already negative
+
+            # Calculate pitch angle reward
+            tra_ang_tensor = torch.tensor(tra_ang, requires_grad=True)
+            pitch_reward_tensor = torch.abs(tra_ang_tensor[1])
+
+            # Calculate the reward
+            reward_tensor = 1000 * self.collision_tensor - 0.5 * self.path_tensor + 100 + 10 * pitch_reward_tensor
+
+            # Return the reward
+            return reward_tensor
+
     # --------------------------- solution and learning----------------------------------------
     ##solution and demo
-    def sol_gradient(self,tra_pos =None,tra_ang=None,t_tra=None,Ulast=None):
+    def sol_gradient(self,tra_pos =None,tra_ang=None,t_tra=None,Ulast_value=None,PDP_GRAIDENT=False):
         """
         receive the decision variables from DNN1, do the MPC, then calculate d_reward/d_z
         """
-        
+        self.PDP_GRAIDENT = PDP_GRAIDENT
         tra_ang = np.array(tra_ang)
         tra_pos = np.array(tra_pos)
 
@@ -203,46 +243,104 @@ class run_quad:
         # j is the reward
         j = self.R_from_MPC(tra_pos,
                             tra_ang,
-                            t_tra)
+                            t_tra,
+                            Ulast_value)
         ## fixed perturbation to calculate the gradient
         delta = 1e-3
 
-        FINIT_DIFFERENCE = True
-        if FINIT_DIFFERENCE:    
+        
+        if not self.PDP_GRAIDENT:    
             # drdx,drdy,drdz,drda,drdb,drdc=0
-            drdx = np.clip(self.R_from_MPC(tra_pos+[delta,0,0],tra_ang, t_tra,Ulast) - j,-0.5,0.5)*0.1
-            drdy = np.clip(self.R_from_MPC(tra_pos+[0,delta,0],tra_ang, t_tra,Ulast) - j,-0.5,0.5)*0.1
-            drdz = np.clip(self.R_from_MPC(tra_pos+[0,0,delta],tra_ang, t_tra,Ulast) - j,-0.5,0.5)*0.1
-            drda = np.clip(self.R_from_MPC(tra_pos,tra_ang+[delta,0,0], t_tra,Ulast) - j,-0.5,0.5)*(1/(500*tra_ang[0]**2+5))
-            drdb = np.clip(self.R_from_MPC(tra_pos,tra_ang+[0,delta,0], t_tra,Ulast) - j,-0.5,0.5)*(1/(500*tra_ang[1]**2+5))
-            drdc = np.clip(self.R_from_MPC(tra_pos,tra_ang+[0,0,delta], t_tra,Ulast) - j,-0.5,0.5)*(1/(500*tra_ang[2]**2+5))
+            drdx = np.clip(self.R_from_MPC(tra_pos+[delta,0,0],tra_ang, t_tra,Ulast_value) - j,-0.5,0.5)*0.1
+            drdy = np.clip(self.R_from_MPC(tra_pos+[0,delta,0],tra_ang, t_tra,Ulast_value) - j,-0.5,0.5)*0.1
+            drdz = np.clip(self.R_from_MPC(tra_pos+[0,0,delta],tra_ang, t_tra,Ulast_value) - j,-0.5,0.5)*0.1
+            drda = np.clip(self.R_from_MPC(tra_pos,tra_ang+[delta,0,0], t_tra,Ulast_value) - j,-0.5,0.5)*(1/(500*tra_ang[0]**2+5))
+            drdb = np.clip(self.R_from_MPC(tra_pos,tra_ang+[0,delta,0], t_tra,Ulast_value) - j,-0.5,0.5)*(1/(500*tra_ang[1]**2+5))
+            drdc = np.clip(self.R_from_MPC(tra_pos,tra_ang+[0,0,delta], t_tra,Ulast_value) - j,-0.5,0.5)*(1/(500*tra_ang[2]**2+5))
             drdt =0
-            if((self.R_from_MPC(tra_pos,tra_ang,t_tra-0.1)-j)>2):
+            if((self.R_from_MPC(tra_pos,tra_ang,t_tra-0.1,Ulast_value)-j)>2):
                 drdt = -0.05
-            if((self.R_from_MPC(tra_pos,tra_ang,t_tra+0.1)-j)>2):
+            if((self.R_from_MPC(tra_pos,tra_ang,t_tra+0.1,Ulast_value)-j)>2):
                 drdt = 0.05
             ## return gradient and reward (for deep learning)
+            
+            return np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,j])
         else:
 
+            
+
+            ###################################################################
+            ###----- Set mpc external variables VALUE to diffPMP--------#######
+            ###################################################################
+            ## goal state, Ulast value, t_node is set in the mpc_update function,
+            ## need to be given here
+            self.uav1.initCostGivenValue(self.goal_pos,
+                                            np.zeros(3),
+                                            self.goal_ori,
+                                            Ulast_value,
+                                            self.horizon)
+            
+            ## set the traverse hyperparameters (auxvar) here
+            current_trav_auxvar = np.array([tra_pos[0],tra_pos[1],tra_pos[2],tra_ang[0],tra_ang[1],tra_ang[2],t_tra])
+            
+            self.uavoc1.setFinalCost(self.uav1.final_cost) 
+            self.uavoc1.setPathCost(self.uav1.goal_cost)
+            self.uavoc1.setTraCost(self.uav1.tra_cost)
+            self.uavoc1.setInputDiffCost(self.uav1.input_diff_cost)
+            ###################################################################
+            ###------------ PDP auxiliary control system----------------#######
+            ###################################################################
+            self.uavoc1.diffPMP()
+            self.lqr_solver = LQR()
+
+            
             ## using LQR solver to solve the auxilary control system to get the analytical gradient
-            aux_sys = self.uavoc1.getAuxSys(state_traj_opt=self.sol1['state_traj_opt'],
+            aux_sys = self.uavoc1.getAuxSys(goal_state=np.concatenate((self.goal_pos,np.zeros(3),self.goal_ori)),
+                                            state_traj_opt=self.sol1['state_traj_opt'],
                                             control_traj_opt=self.sol1['control_traj_opt'],
-                                            costate_traj_opt=self.sol1['costate_traj_opt'])
+                                            costate_traj_opt=self.sol1['costate_traj_opt'],
+                                            auxvar_value=current_trav_auxvar)
             
             self.lqr_solver.setDyn(dynF=aux_sys['dynF'], dynG=aux_sys['dynG'], dynE=aux_sys['dynE'])
             self.lqr_solver.setPathCost(Hxx=aux_sys['Hxx'], Huu=aux_sys['Huu'], Hxu=aux_sys['Hxu'], Hux=aux_sys['Hux'],
                                    Hxe=aux_sys['Hxe'], Hue=aux_sys['Hue'])
             self.lqr_solver.setFinalCost(hxx=aux_sys['hxx'], hxe=aux_sys['hxe'])
 
+    
             # calculate the axuiliary control system solution
-            aux_sol=self.lqr_solver.lqrSolver(np.zeros((self.uavoc1.n_state, self.uavoc1.n_auxvar)), self.horizon)
+            aux_sol=self.lqr_solver.lqrSolver(np.zeros((self.uavoc1.n_state, self.uavoc1.n_trav_auxvar)), self.horizon)
             
 
             # take solution of the auxiliary control system
-            dxdp_traj = aux_sol['state_traj_opt']
-            dudp_traj = aux_sol['control_traj_opt'] 
+            
+            # which is the dtrajectory/dtraverse_auxvar 
+            dstate_trajdp = aux_sol['state_traj_opt']
+            dinput_trajdp = aux_sol['control_traj_opt'] 
+            
+            dstate_trajdp = np.array(dstate_trajdp)
+            # acquire dreward/dtrajectory
+            j.backward()
+            drdstate_traj=self.traj_tensor.grad
 
-
+            # only take the drone center position part
+            drdstate_traj=drdstate_traj.numpy()[:,0:3].reshape(self.horizon+1,1,3)
+            dstate_trajdp = dstate_trajdp[:,0:3,:]
+            
+            # print(drdstate_traj.shape)
+            # print(dstate_trajdp.shape)
+            drdp=np.zeros(7)
+            for i in range(self.horizon):
+                drdp += np.matmul(drdstate_traj[i,:,:],dstate_trajdp[i,:,:]).reshape(7)
+                
+   
+            drdx = drdp[0]
+            drdy = drdp[1]
+            drdz = drdp[2]
+            drda = drdp[3]
+            drdb = drdp[4]
+            drdc = drdp[5]
+            drdt = drdp[6]
+            j = j.detach().numpy()
         return np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,j])
 
 

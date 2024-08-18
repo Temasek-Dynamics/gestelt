@@ -24,14 +24,19 @@ class Quadrotor:
         # quaternions attitude of B w.r.t. I
         q0, q1, q2, q3 = SX.sym('q0'), SX.sym('q1'), SX.sym('q2'), SX.sym('q3')
         self.q = vertcat(q0, q1, q2, q3)
-        wx, wy, wz = SX.sym('wx'), SX.sym('wy'), SX.sym('wz')
-        self.ang_rate_B = vertcat(wx, wy, wz)
+       
         # define the quadrotor input
         f1, f2, f3, f4 = SX.sym('f1'), SX.sym('f2'), SX.sym('f3'), SX.sym('f4')
         self.T_B = vertcat(f1, f2, f3, f4)
-        # define total thrust and control torques
-        # self.thrust, self.Mx, self.My, self.Mz = SX.sym('T'), SX.sym('Mx'), SX.sym('My'), SX.sym('Mz')
-        # self.U   = vertcat(self.thrust, self.Mx, self.My, self.Mz)
+        wx, wy, wz = SX.sym('wx'), SX.sym('wy'), SX.sym('wz')
+        wx_last, wy_last, wz_last = SX.sym('wx_last'), SX.sym('wy_last'), SX.sym('wz_last')
+        self.ang_rate_B = vertcat(wx, wy, wz)
+        self.ang_rate_B_last = vertcat(wx_last, wy_last, wz_last)
+   
+        # total thrust in body frame
+        self.thrust_mag=SX.sym('thrust')
+        self.thrust_mag_last=SX.sym('thrust_last')
+ 
 
         # define desire traverse pose and time
         self.des_tra_r_I = vertcat(SX.sym('des_tra_rx'), SX.sym('des_tra_ry'), SX.sym('des_tra_rz'))
@@ -47,6 +52,7 @@ class Quadrotor:
         self.goal_w_B= vertcat(SX.sym('des_goal_wx'), SX.sym('des_goal_wy'), SX.sym('des_goal_wz'))
         
         self.goal_state_sym=vertcat(self.goal_r_I,self.goal_v_I,self.goal_q)#,self.goal_w_B)
+    
     def initDyn(self, Jx=None, Jy=None, Jz=None, mass=None, l=None, c=None):
         # global parameter
         g = 9.81
@@ -97,8 +103,7 @@ class Quadrotor:
         # Mass of rocket, assume is little changed during the landing process
         self.m = self.mass
 
-        # total thrust in body frame
-        self.thrust_mag=SX.sym('thrust')
+        
         # thrust = self.T_B[0] + self.T_B[1] + self.T_B[2] + self.T_B[3]
         self.thrust_B_vec = vertcat(0, 0, self.thrust_mag)
         # total moment M in body frame
@@ -138,13 +143,13 @@ class Quadrotor:
         # input
         # self.U = self.T_B
         self.U=vertcat(self.thrust_mag,self.ang_rate_B)
-        self.Ulast = vertcat(self.thrust_mag,self.ang_rate_B)
+        self.Ulast = vertcat(self.thrust_mag_last,self.ang_rate_B_last)
 
         # dynamics
         self.f = vertcat(dr_I, dv_I, dq)#, dw)
 
     def initCost(self, wrt=None, wqt=None, wrf=None, wvf=None, wqf=None, wwt=None, \
-        wthrust=0.5,max_tra_w=0,gamma=0):
+        wthrust=0.5,wInputDiff=10,max_tra_w=0,gamma=0):
         #traverse
         parameter = []
         if wrt is None:
@@ -204,23 +209,29 @@ class Quadrotor:
             parameter += [self.gamma]
         else:
             self.gamma = gamma
-
+        
+        if wInputDiff is None:
+            self.wInputDiff = SX.sym('wInputDiff')
+            parameter += [self.wInputDiff]
+        else:
+            self.wInputDiff = wInputDiff
+        
         self.cost_auxvar = vcat(parameter)
 
         ## goal cost
         # goal position in the world frame
         # self.goal_r_I is the external variable of the acados
-        self.cost_r_I_g = dot(self.r_I - self.goal_r_I, self.r_I - self.goal_r_I)
+        self.cost_r_I_g_all_sym = dot(self.r_I - self.goal_r_I, self.r_I - self.goal_r_I)
 
         # goal velocity
         # self.goal_v_I is the external variable of the acados
-        self.cost_v_I_g = dot(self.v_I - self.goal_v_I, self.v_I - self.goal_v_I)
+        self.cost_v_I_g_all_sym = dot(self.v_I - self.goal_v_I, self.v_I - self.goal_v_I)
 
         # final attitude error
         # self.goal_q = toQuaternion(goal_atti[0],goal_atti[1])
         goal_R_B_I = self.dir_cosine(self.goal_q)
         R_B_I = self.dir_cosine(self.q)
-        self.cost_q_g = trace(np.identity(3) - mtimes(transpose(goal_R_B_I), R_B_I))
+        self.cost_q_g_all_sym = trace(np.identity(3) - mtimes(transpose(goal_R_B_I), R_B_I))
 
         ## angular velocity cost
         self.goal_w_B = [0, 0, 0]
@@ -231,17 +242,57 @@ class Quadrotor:
         self.input_cost = self.wthrust * self.thrust_mag \
                          + self.wwt* self.cost_ang_rate_B
         
+        ## input difference cost
+        self.input_diff_cost_all_sym = self.wInputDiff*dot(self.U - self.Ulast, self.U - self.Ulast)
         
         ## the final (goal) cost
-        self.goal_cost = self.wrf * self.cost_r_I_g \
-                         + self.wvf * self.cost_v_I_g \
-                            + self.wqf * self.cost_q_g \
+        self.goal_cost_all_sym = self.wrf * self.cost_r_I_g_all_sym \
+                         + self.wvf * self.cost_v_I_g_all_sym \
+                            + self.wqf * self.cost_q_g_all_sym \
                      
         
-        self.final_cost = self.wrf * self.cost_r_I_g\
-                         + self.wvf * self.cost_v_I_g\
-                         + self.wqf * self.cost_q_g
+        self.final_cost_all_sym = self.wrf * self.cost_r_I_g_all_sym\
+                         + self.wvf * self.cost_v_I_g_all_sym\
+                         + self.wqf * self.cost_q_g_all_sym
+        
                      
+    def initCostGivenValue(self,goal_r_I_value,
+                               goal_v_I_value,
+                               goal_q_value,
+                               Ulast_value,
+                               horizon):
+        """
+        for the diffPMP, PMP required known goal state
+        """
+        # goal position in the world frame
+        self.cost_r_I_g = dot(self.r_I - goal_r_I_value, self.r_I - goal_r_I_value)
+
+        # goal velocity
+        self.cost_v_I_g  = dot(self.v_I - goal_v_I_value, self.v_I - goal_v_I_value)
+
+        # final attitude error
+        goal_R_B_I_value = self.dir_cosine(goal_q_value)
+        R_B_I = self.dir_cosine(self.q)
+        self.cost_q_g  = trace(np.identity(3) - mtimes(transpose(goal_R_B_I_value), R_B_I))
+
+        self.final_cost = self.wrf * self.cost_r_I_g \
+                         + self.wvf * self.cost_v_I_g \
+                         + self.wqf * self.cost_q_g 
+        
+        self.goal_cost = self.wrf * self.cost_r_I_g \
+                         + self.wvf * self.cost_v_I_g \
+                         + self.wqf * self.cost_q_g 
+        
+        ## input difference cost
+        self.input_diff_cost = self.wInputDiff*dot(self.U - Ulast_value, self.U - Ulast_value)
+
+
+        ## traverse cost with given t_node
+        self.tra_cost = 0
+        for i in range(horizon):
+            t_node_value = i * 0.1
+            self.tra_cost += self.max_tra_w * casadi.exp(-self.gamma*(t_node_value-self.des_t_tra)**2) * (self.wrt * self.cost_r_I_t + self.wqt * self.cost_q_t)
+           
 
     def init_TraCost(self): # transforming Rodrigues to Quaternion is shown in mpc_update function
         ## traverse cost
@@ -272,7 +323,7 @@ class Quadrotor:
 
 
         # weight = max_tra_w*casadi.exp(-gamma*(dt*i-t_tra)**2) #gamma should increase as the flight duration decreases
-        self.tra_cost = self.max_tra_w * casadi.exp(-self.gamma*(self.t_node-self.des_t_tra)**2) * (self.wrt * self.cost_r_I_t + self.wqt * self.cost_q_t)
+        self.tra_cost_all_sym = self.max_tra_w * casadi.exp(-self.gamma*(self.t_node-self.des_t_tra)**2) * (self.wrt * self.cost_r_I_t + self.wqt * self.cost_q_t)
                             
         
         
