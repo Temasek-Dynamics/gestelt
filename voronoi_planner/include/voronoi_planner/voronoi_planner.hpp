@@ -389,6 +389,10 @@ private:
 
   ros::Subscriber odom_sub_; // Subscriber to odometry
 
+  /* Mutexes*/
+  std::mutex resrv_tbl_mtx_;
+  std::mutex voro_map_mtx_;
+
   /* Mapping */
   std::shared_ptr<GridMap> map_;
   double local_origin_x_{0.0}, local_origin_y_{0.0}; // Origin of local map 

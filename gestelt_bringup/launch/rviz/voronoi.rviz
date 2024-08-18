@@ -6,9 +6,9 @@ Panels:
       Expanded:
         - /Global Options1
         - /TF1/Frames1
-        - /map1
-        - /drone41
         - /collision_checking1
+        - /drone81/vehicle_marker1
+        - /drone81/fe_plan/viz1
       Splitter Ratio: 0.4422188103199005
     Tree Height: 640
   - Class: rviz/Selection
@@ -80,6 +80,98 @@ Visualization Manager:
         {}
       Update Interval: 0
       Value: false
+    - Class: rviz/Group
+      Displays:
+        - Class: rviz/Marker
+          Enabled: true
+          Marker Topic: /swarm_collision_checker/collision
+          Name: swarm_collision_checker
+          Namespaces:
+            swarm_collision: true
+          Queue Size: 100
+          Value: true
+        - Class: rviz/Marker
+          Enabled: true
+          Marker Topic: /drone0/grid_map/collision_viz
+          Name: static_col_0
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: true
+        - Class: rviz/Marker
+          Enabled: true
+          Marker Topic: /drone1/grid_map/collision_viz
+          Name: static_col_1
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: true
+        - Class: rviz/Marker
+          Enabled: true
+          Marker Topic: /drone2/grid_map/collision_viz
+          Name: static_col_2
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: true
+        - Class: rviz/Marker
+          Enabled: true
+          Marker Topic: /drone3/grid_map/collision_viz
+          Name: static_col_3
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: true
+        - Class: rviz/Marker
+          Enabled: true
+          Marker Topic: /drone4/grid_map/collision_viz
+          Name: static_col_4
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: true
+        - Class: rviz/Marker
+          Enabled: true
+          Marker Topic: /drone5/grid_map/collision_viz
+          Name: static_col_5
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: true
+        - Class: rviz/Marker
+          Enabled: true
+          Marker Topic: /drone6/grid_map/collision_viz
+          Name: static_col_6
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: true
+        - Class: rviz/Marker
+          Enabled: true
+          Marker Topic: /drone7/grid_map/collision_viz
+          Name: static_col_7
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: true
+        - Class: rviz/Marker
+          Enabled: true
+          Marker Topic: /drone8/grid_map/collision_viz
+          Name: static_col_8
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: true
+        - Class: rviz/Marker
+          Enabled: true
+          Marker Topic: /drone9/grid_map/collision_viz
+          Name: static_col_9
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: true
+      Enabled: true
+      Name: collision_checking
     - Class: rviz/Group
       Displays:
         - Alpha: 0.5
@@ -266,11 +358,19 @@ Visualization Manager:
       Class: rviz/Map
       Color Scheme: raw
       Draw Behind: false
-      Enabled: false
+      Enabled: true
       Name: voro_map
       Topic: /drone0/voro/voro_map
       Unreliable: false
       Use Timestamp: false
+      Value: true
+    - Class: rviz/Marker
+      Enabled: false
+      Marker Topic: /drone0/voronoi_graph
+      Name: voronoi_graph
+      Namespaces:
+        {}
+      Queue Size: 100
       Value: false
     - Class: rviz/Group
       Displays:
@@ -305,15 +405,9 @@ Visualization Manager:
           Marker Topic: /drone0/fe_plan/viz
           Name: fe_plan/viz
           Namespaces:
-            {}
-          Queue Size: 100
-          Value: true
-        - Class: rviz/Marker
-          Enabled: true
-          Marker Topic: /drone0/voronoi_graph
-          Name: voronoi_graph
-          Namespaces:
-            voronoi_vertices: true
+            front_end_path_lines: true
+            front_end_sphere_list: true
+            start_end_points: true
           Queue Size: 100
           Value: true
         - Class: rviz/Marker
@@ -321,7 +415,23 @@ Visualization Manager:
           Marker Topic: /drone0/fe_plan/closed_list
           Name: closed_list
           Namespaces:
-            {}
+            closed_list: true
+          Queue Size: 100
+          Value: true
+        - Class: rviz/Marker
+          Enabled: true
+          Marker Topic: /drone0/fe_start
+          Name: fe_start
+          Namespaces:
+            start_goal_points: true
+          Queue Size: 100
+          Value: true
+        - Class: rviz/Marker
+          Enabled: true
+          Marker Topic: /drone0/fe_goal
+          Name: fe_goal
+          Namespaces:
+            start_goal_points: true
           Queue Size: 100
           Value: true
       Enabled: true
@@ -349,7 +459,9 @@ Visualization Manager:
           Marker Topic: /drone1/fe_plan/viz
           Name: fe_plan/viz
           Namespaces:
-            {}
+            front_end_path_lines: true
+            front_end_sphere_list: true
+            start_end_points: true
           Queue Size: 100
           Value: true
         - Class: rviz/MarkerArray
@@ -397,7 +509,9 @@ Visualization Manager:
           Marker Topic: /drone2/fe_plan/viz
           Name: fe_plan/viz
           Namespaces:
-            {}
+            front_end_path_lines: true
+            front_end_sphere_list: true
+            start_end_points: true
           Queue Size: 100
           Value: true
       Enabled: true
@@ -435,7 +549,9 @@ Visualization Manager:
           Marker Topic: /drone3/fe_plan/viz
           Name: fe_plan/viz
           Namespaces:
-            {}
+            front_end_path_lines: true
+            front_end_sphere_list: true
+            start_end_points: true
           Queue Size: 100
           Value: true
       Enabled: true
@@ -473,87 +589,213 @@ Visualization Manager:
           Marker Topic: /drone4/fe_plan/viz
           Name: fe_plan/viz
           Namespaces:
-            {}
+            front_end_path_lines: true
+            front_end_sphere_list: true
+            start_end_points: true
           Queue Size: 100
           Value: true
       Enabled: true
       Name: drone4
     - Class: rviz/Group
       Displays:
-        - Class: rviz/Marker
+        - Alpha: 1
+          Axes Length: 1
+          Axes Radius: 0.10000000149011612
+          Class: rviz/Pose
+          Color: 255; 25; 0
           Enabled: true
-          Marker Topic: /swarm_collision_checker/collision
-          Name: swarm_collision_checker
+          Head Length: 0.30000001192092896
+          Head Radius: 0.25
+          Name: pose
+          Queue Size: 10
+          Shaft Length: 0.30000001192092896
+          Shaft Radius: 0.10000000149011612
+          Shape: Arrow
+          Topic: /drone5/mavros/local_position/pose
+          Unreliable: false
+          Value: true
+        - Class: rviz/MarkerArray
+          Enabled: true
+          Marker Topic: /drone5/vehicle_marker
+          Name: vehicle_marker
           Namespaces:
-            {}
+            vehicle_arm: true
+            vehicle_body: true
+            vehicle_rotor: true
           Queue Size: 100
           Value: true
         - Class: rviz/Marker
           Enabled: true
-          Marker Topic: /drone0/grid_map/collision_viz
-          Name: static_col_0
+          Marker Topic: /drone5/fe_plan/viz
+          Name: fe_plan/viz
           Namespaces:
-            {}
-          Queue Size: 100
-          Value: true
-        - Class: rviz/Marker
-          Enabled: true
-          Marker Topic: /drone1/grid_map/collision_viz
-          Name: static_col_1
-          Namespaces:
-            {}
-          Queue Size: 100
-          Value: true
-        - Class: rviz/Marker
-          Enabled: true
-          Marker Topic: /drone2/grid_map/collision_viz
-          Name: static_col_2
-          Namespaces:
-            {}
-          Queue Size: 100
-          Value: true
-        - Class: rviz/Marker
-          Enabled: true
-          Marker Topic: /drone3/grid_map/collision_viz
-          Name: static_col_3
-          Namespaces:
-            {}
-          Queue Size: 100
-          Value: true
-        - Class: rviz/Marker
-          Enabled: true
-          Marker Topic: /drone4/grid_map/collision_viz
-          Name: static_col_4
-          Namespaces:
-            {}
-          Queue Size: 100
-          Value: true
-        - Class: rviz/Marker
-          Enabled: true
-          Marker Topic: /drone5/grid_map/collision_viz
-          Name: static_col_5
-          Namespaces:
-            {}
-          Queue Size: 100
-          Value: true
-        - Class: rviz/Marker
-          Enabled: true
-          Marker Topic: /drone6/grid_map/collision_viz
-          Name: static_col_6
-          Namespaces:
-            {}
-          Queue Size: 100
-          Value: true
-        - Class: rviz/Marker
-          Enabled: true
-          Marker Topic: /drone7/grid_map/collision_viz
-          Name: static_col_7
-          Namespaces:
-            {}
+            front_end_path_lines: true
+            front_end_sphere_list: true
+            start_end_points: true
           Queue Size: 100
           Value: true
       Enabled: true
-      Name: collision_checking
+      Name: drone5
+    - Class: rviz/Group
+      Displays:
+        - Alpha: 1
+          Axes Length: 1
+          Axes Radius: 0.10000000149011612
+          Class: rviz/Pose
+          Color: 255; 25; 0
+          Enabled: true
+          Head Length: 0.30000001192092896
+          Head Radius: 0.25
+          Name: pose
+          Queue Size: 10
+          Shaft Length: 0.30000001192092896
+          Shaft Radius: 0.10000000149011612
+          Shape: Arrow
+          Topic: /drone6/mavros/local_position/pose
+          Unreliable: false
+          Value: true
+        - Class: rviz/MarkerArray
+          Enabled: true
+          Marker Topic: /drone6/vehicle_marker
+          Name: vehicle_marker
+          Namespaces:
+            vehicle_arm: true
+            vehicle_body: true
+            vehicle_rotor: true
+          Queue Size: 100
+          Value: true
+        - Class: rviz/Marker
+          Enabled: true
+          Marker Topic: /drone6/fe_plan/viz
+          Name: fe_plan/viz
+          Namespaces:
+            front_end_path_lines: true
+            front_end_sphere_list: true
+            start_end_points: true
+          Queue Size: 100
+          Value: true
+      Enabled: true
+      Name: drone6
+    - Class: rviz/Group
+      Displays:
+        - Alpha: 1
+          Axes Length: 1
+          Axes Radius: 0.10000000149011612
+          Class: rviz/Pose
+          Color: 255; 25; 0
+          Enabled: true
+          Head Length: 0.30000001192092896
+          Head Radius: 0.25
+          Name: pose
+          Queue Size: 10
+          Shaft Length: 0.30000001192092896
+          Shaft Radius: 0.10000000149011612
+          Shape: Arrow
+          Topic: /drone7/mavros/local_position/pose
+          Unreliable: false
+          Value: true
+        - Class: rviz/MarkerArray
+          Enabled: true
+          Marker Topic: /drone7/vehicle_marker
+          Name: vehicle_marker
+          Namespaces:
+            vehicle_arm: true
+            vehicle_body: true
+            vehicle_rotor: true
+          Queue Size: 100
+          Value: true
+        - Class: rviz/Marker
+          Enabled: true
+          Marker Topic: /drone7/fe_plan/viz
+          Name: fe_plan/viz
+          Namespaces:
+            front_end_path_lines: true
+            front_end_sphere_list: true
+            start_end_points: true
+          Queue Size: 100
+          Value: true
+      Enabled: true
+      Name: drone7
+    - Class: rviz/Group
+      Displays:
+        - Alpha: 1
+          Axes Length: 1
+          Axes Radius: 0.10000000149011612
+          Class: rviz/Pose
+          Color: 255; 25; 0
+          Enabled: true
+          Head Length: 0.30000001192092896
+          Head Radius: 0.25
+          Name: pose
+          Queue Size: 10
+          Shaft Length: 0.30000001192092896
+          Shaft Radius: 0.10000000149011612
+          Shape: Arrow
+          Topic: /drone8/mavros/local_position/pose
+          Unreliable: false
+          Value: true
+        - Class: rviz/MarkerArray
+          Enabled: true
+          Marker Topic: /drone8/vehicle_marker
+          Name: vehicle_marker
+          Namespaces:
+            vehicle_arm: true
+            vehicle_body: true
+            vehicle_rotor: true
+          Queue Size: 100
+          Value: true
+        - Class: rviz/Marker
+          Enabled: true
+          Marker Topic: /drone8/fe_plan/viz
+          Name: fe_plan/viz
+          Namespaces:
+            front_end_path_lines: true
+            front_end_sphere_list: true
+            start_end_points: true
+          Queue Size: 100
+          Value: true
+      Enabled: true
+      Name: drone8
+    - Class: rviz/Group
+      Displays:
+        - Alpha: 1
+          Axes Length: 1
+          Axes Radius: 0.10000000149011612
+          Class: rviz/Pose
+          Color: 255; 25; 0
+          Enabled: true
+          Head Length: 0.30000001192092896
+          Head Radius: 0.25
+          Name: pose
+          Queue Size: 10
+          Shaft Length: 0.30000001192092896
+          Shaft Radius: 0.10000000149011612
+          Shape: Arrow
+          Topic: /drone9/mavros/local_position/pose
+          Unreliable: false
+          Value: true
+        - Class: rviz/MarkerArray
+          Enabled: true
+          Marker Topic: /drone9/vehicle_marker
+          Name: vehicle_marker
+          Namespaces:
+            vehicle_arm: true
+            vehicle_body: true
+            vehicle_rotor: true
+          Queue Size: 100
+          Value: true
+        - Class: rviz/Marker
+          Enabled: true
+          Marker Topic: /drone9/fe_plan/viz
+          Name: fe_plan/viz
+          Namespaces:
+            front_end_path_lines: true
+            front_end_sphere_list: true
+            start_end_points: true
+          Queue Size: 100
+          Value: true
+      Enabled: true
+      Name: drone9
   Enabled: true
   Global Options:
     Background Color: 255; 255; 255
@@ -581,7 +823,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/XYOrbit
-      Distance: 21.000722885131836
+      Distance: 13.378376007080078
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -589,17 +831,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 1.3363401889801025
-        Y: -4.414311408996582
-        Z: 2.86102294921875e-06
+        X: 2.976903200149536
+        Y: 0.2670464515686035
+        Z: 0
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.0997967720031738
+      Pitch: 0.6697965264320374
       Target Frame: my_view
-      Yaw: 5.303548336029053
+      Yaw: 5.698582172393799
     Saved:
       - Class: rviz/FPS
         Enable Stereo Rendering:

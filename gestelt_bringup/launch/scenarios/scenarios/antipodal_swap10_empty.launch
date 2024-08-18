@@ -15,7 +15,6 @@
     <param name="collision_check/fatal_radius" value="0.14"/>
   </node>
 
-
   <include file="$(find gestelt_bringup)/launch/fake_drone/include/fake_drone_complete.xml">
       <arg name="fake_drone_cfg_filepath" value="$(arg fake_drone_cfg_filepath)"/>
 

@@ -2,23 +2,21 @@
 
 <launch>
   <arg name="fake_drone_cfg_filepath" default="$(find gestelt_bringup)/config/fake_drone_params.yaml"/>
+  <arg name="num_drones" default="10"/>
   <arg name="a" default="2"/>
   <arg name="b" default="2"/>
   <arg name="height" default="0.5"/>
 
   <node pkg="swarm_collision_checker" name="swarm_collision_checker" 
         type="swarm_collision_checker_node" output="screen">
-    <param name="num_drones" value="10"/>
+    <param name="num_drones" value="$(arg num_drones)"/>
     <param name="pose_topic" value="mavros/local_position/pose"/>
     <param name="check_collision_freq" value="20.0"/>
     <param name="collision_check/warn_radius" value="0.225"/>
     <param name="collision_check/fatal_radius" value="0.14"/>
   </node>
 
-
-  <include file="$(find gestelt_bringup)/launch/fake_drone/include/fake_drone_complete.xml">
-      <arg name="fake_drone_cfg_filepath" value="$(arg fake_drone_cfg_filepath)"/>
-
+  <include file="$(find gestelt_bringup)/launch/fake_drone/include/grid_agent_complete.xml">
       <arg name="drone_id" value="0"/>
 
       <arg name="init_x" value="$(eval arg('a') + arg('b'))"/>
@@ -26,9 +24,7 @@
       <arg name="init_z" value="$(arg height)"/>
   </include>
 
-  <include file="$(find gestelt_bringup)/launch/fake_drone/include/fake_drone_complete.xml">
-      <arg name="fake_drone_cfg_filepath" value="$(arg fake_drone_cfg_filepath)"/>
-
+  <include file="$(find gestelt_bringup)/launch/fake_drone/include/grid_agent_complete.xml">
       <arg name="drone_id" value="1"/>
 
       <arg name="init_x" value="$(eval arg('a') + arg('b'))"/>
@@ -36,9 +32,7 @@
       <arg name="init_z" value="$(arg height)"/>
   </include>
 
-  <include file="$(find gestelt_bringup)/launch/fake_drone/include/fake_drone_complete.xml">
-      <arg name="fake_drone_cfg_filepath" value="$(arg fake_drone_cfg_filepath)"/>
-
+  <include file="$(find gestelt_bringup)/launch/fake_drone/include/grid_agent_complete.xml">
       <arg name="drone_id" value="2"/>
 
       <arg name="init_x" value="$(eval arg('a'))"/>
@@ -46,9 +40,7 @@
       <arg name="init_z" value="$(arg height)"/>
   </include>
 
-  <include file="$(find gestelt_bringup)/launch/fake_drone/include/fake_drone_complete.xml">
-      <arg name="fake_drone_cfg_filepath" value="$(arg fake_drone_cfg_filepath)"/>
-
+  <include file="$(find gestelt_bringup)/launch/fake_drone/include/grid_agent_complete.xml">
       <arg name="drone_id" value="3"/>
 
       <arg name="init_x" value="$(eval - arg('a'))"/>
@@ -56,9 +48,7 @@
       <arg name="init_z" value="$(arg height)"/>
   </include>
 
-  <include file="$(find gestelt_bringup)/launch/fake_drone/include/fake_drone_complete.xml">
-      <arg name="fake_drone_cfg_filepath" value="$(arg fake_drone_cfg_filepath)"/>
-
+  <include file="$(find gestelt_bringup)/launch/fake_drone/include/grid_agent_complete.xml">
       <arg name="drone_id" value="4"/>
 
       <arg name="init_x" value="$(eval - arg('a') - arg('b'))"/>
@@ -66,9 +56,7 @@
       <arg name="init_z" value="$(arg height)"/>
   </include>
 
-  <include file="$(find gestelt_bringup)/launch/fake_drone/include/fake_drone_complete.xml">
-      <arg name="fake_drone_cfg_filepath" value="$(arg fake_drone_cfg_filepath)"/>
-
+  <include file="$(find gestelt_bringup)/launch/fake_drone/include/grid_agent_complete.xml">
       <arg name="drone_id" value="5"/>
 
       <arg name="init_x" value="$(eval - arg('a') - arg('b'))"/>
@@ -76,9 +64,7 @@
       <arg name="init_z" value="$(arg height)"/>
   </include>
 
-  <include file="$(find gestelt_bringup)/launch/fake_drone/include/fake_drone_complete.xml">
-      <arg name="fake_drone_cfg_filepath" value="$(arg fake_drone_cfg_filepath)"/>
-
+  <include file="$(find gestelt_bringup)/launch/fake_drone/include/grid_agent_complete.xml">
       <arg name="drone_id" value="6"/>
 
       <arg name="init_x" value="$(eval -arg('a'))"/>
@@ -86,9 +72,7 @@
       <arg name="init_z" value="$(arg height)"/>
   </include>
 
-  <include file="$(find gestelt_bringup)/launch/fake_drone/include/fake_drone_complete.xml">
-      <arg name="fake_drone_cfg_filepath" value="$(arg fake_drone_cfg_filepath)"/>
-
+  <include file="$(find gestelt_bringup)/launch/fake_drone/include/grid_agent_complete.xml">
       <arg name="drone_id" value="7"/>
 
       <arg name="init_x" value="$(eval arg('a'))"/>
@@ -96,9 +80,7 @@
       <arg name="init_z" value="$(arg height)"/>
   </include>
 
-  <include file="$(find gestelt_bringup)/launch/fake_drone/include/fake_drone_complete.xml">
-      <arg name="fake_drone_cfg_filepath" value="$(arg fake_drone_cfg_filepath)"/>
-
+  <include file="$(find gestelt_bringup)/launch/fake_drone/include/grid_agent_complete.xml">
       <arg name="drone_id" value="8"/>
 
       <arg name="init_x" value="$(eval arg('a') + arg('b'))"/>
@@ -106,16 +88,12 @@
       <arg name="init_z" value="$(arg height)"/>
   </include>
 
-
-  <include file="$(find gestelt_bringup)/launch/fake_drone/include/fake_drone_complete.xml">
-      <arg name="fake_drone_cfg_filepath" value="$(arg fake_drone_cfg_filepath)"/>
-
+  <include file="$(find gestelt_bringup)/launch/fake_drone/include/grid_agent_complete.xml">
       <arg name="drone_id" value="9"/>
 
       <arg name="init_x" value="$(eval - arg('a') - arg('b'))"/>
       <arg name="init_y" value="$(eval - arg('a') - arg('b'))"/>
       <arg name="init_z" value="$(arg height)"/>
   </include>
-
 
 </launch>

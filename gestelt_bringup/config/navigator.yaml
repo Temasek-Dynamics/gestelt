@@ -1,3 +1,43 @@
+##### Mapping params
+grid_map:
+  global_map:
+    size_x: 50.0
+    size_y: 50.0
+    size_z: 20.0
+  local_map:      #local_map parameters must consider the "receding_horizon_planning_dist"!
+    # size_x: 15.5
+    # size_y: 15.5 
+    # size_z: 5.0
+    size_x: 17.0
+    size_y: 17.0
+    size_z: 5.0
+    update_frequency: 15.0
+    viz_frequency: 10.0
+    # build_kdtree_frequency: 30.0
+
+  occ_map:
+    resolution: 0.1
+    inflation: 0.2
+    ground_height: 0.0
+    max_range: 30.0
+
+  # For visualizing collision with static obstacles
+  collision_check:
+    warn_radius: 0.225
+    fatal_radius: 0.14
+
+  # camera extrinsic parameters 
+  camera_to_body: 
+    # roll: 90.0
+    # pitch: 180.0
+    # yaw: 90.0
+    roll: 0.0
+    pitch: 0.0
+    yaw: 0.0 
+    t_x: 0.0 # x translation
+    t_y: 0.0
+    t_z: 0.0
+
 
 #####
 # Navigator params
@@ -42,48 +82,6 @@ front_end:
     # dmp_heuristic_weight: 0.0   # DMP Heuristic weight
     dmp_pow: 1                  # DMP power index 
 
-##### Safe flight corridor
-sfc:
-  spherical: 
-    max_iterations: 100     # Corresponds to maximum number of spheres
-    debug_viz: true         # If true, publish visualization for debugging
-    # Sampling
-    max_sample_points: 100  # Maximum sample points for candidate sphere
-    # standard deviation: remember 68–95–99.7 rule
-    # mult_stddev_x: 0.1      # if mult_stddev_x is too high, the spheres cannot round corners and generate loads of spheres around the same area around corners
-    # mult_stddev_y: 0.3      # 
-    # mult_stddev_z: 0.3      # 
-
-    mult_stddev_x: 0.3      # 
-    mult_stddev_y: 0.4      # 
-    mult_stddev_z: 0.4      # 
-
-    # mult_stddev_x: 0.3      # 
-    # mult_stddev_y: 0.5      # 
-    # mult_stddev_z: 0.5      # 
-
-    W_cand_vol: 5           # Weight for candidate sphere volume
-    W_intersect_vol: 10     # Weight for volume of intersection between spheres
-    W_progress: 0           # Weight for progress along guide path
-
-    # Criteria for valid spheres
-    min_sphere_vol: 0.001 # (m^3) Minimum volume of sphere
-    max_sphere_vol: 99999.9 # (m^3) Maximum allowed sphere volume
-
-    time_allocation_type: 1 #  0: Max vel assignment(DANGEROUS), 1: Trapezoidal assignment
-    max_vel: 5.0 # Maximum velocity (m/s)
-    max_acc: 20.0 # Maximum acceleration (m/s^2)
-
-    # SFC Buffer 
-    spherical_buffer: 0.175 # (m) Reduce spherical SFCs by this fixed amount to increase buffer from obstacles
-
-  poly:
-    max_iterations: 60
-    debug_viz: true
-    poly_max: 6
-    cvx_decomp_type: 2 #Convex decomposition type
-    num_expansion_itr: 60
-
 ##### Back-end 
 back_end: 
   # planner_frequency: 1.0       # [Hz]
@@ -113,43 +111,3 @@ optimization:
     alpha: 2.0
     buffer: 0.4
     opt_weight: 0.0
-
-##### Mapping params
-grid_map:
-  global_map:
-    size_x: 50.0
-    size_y: 50.0
-    size_z: 20.0
-  local_map:      #local_map parameters must consider the "receding_horizon_planning_dist"!
-    # size_x: 15.5
-    # size_y: 15.5 
-    # size_z: 5.0
-    size_x: 18.0
-    size_y: 18.0
-    size_z: 5.0
-    update_frequency: 15.0
-    viz_frequency: 10.0
-    # build_kdtree_frequency: 30.0
-
-  occ_map:
-    resolution: 0.1
-    inflation: 0.2
-    ground_height: 0.0
-    max_range: 30.0
-
-  # For visualizing collision with static obstacles
-  collision_check:
-    warn_radius: 0.225
-    fatal_radius: 0.14
-
-  # camera extrinsic parameters 
-  camera_to_body: 
-    # roll: 90.0
-    # pitch: 180.0
-    # yaw: 90.0
-    roll: 0.0
-    pitch: 0.0
-    yaw: 0.0 
-    t_x: 0.0 # x translation
-    t_y: 0.0
-    t_z: 0.0

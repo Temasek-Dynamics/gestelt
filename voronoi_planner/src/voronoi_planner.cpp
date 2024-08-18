@@ -108,6 +108,8 @@ void VoronoiPlanner::FEPlanSubCB(const gestelt_msgs::FrontEndPlanConstPtr& msg)
     return;
   }
 
+  std::lock_guard<std::mutex> resrv_tbl_guard(resrv_tbl_mtx_);
+
   // Clear reservation table
   resrv_tbl_[msg->agent_id].clear();
 
@@ -177,6 +179,8 @@ void VoronoiPlanner::FEPlanSubCB(const gestelt_msgs::FrontEndPlanConstPtr& msg)
 void VoronoiPlanner::boolMapCB(const gestelt_msgs::BoolMapArrayConstPtr& msg)
 { 
   tm_voro_map_init_.start();
+
+  std::lock_guard<std::mutex> voro_map_guard(voro_map_mtx_);
 
   local_origin_x_ = msg->origin.x;
   local_origin_y_ = msg->origin.y;
@@ -284,8 +288,6 @@ void VoronoiPlanner::boolMapCB(const gestelt_msgs::BoolMapArrayConstPtr& msg)
 
   viz_helper::publishVertices(voro_verts, local_map_origin_, voronoi_graph_pub_);
 
-
-
   init_voro_maps_ = true; // Flag to indicate that all voronoi maps have been initialized
 }
 
@@ -350,13 +352,19 @@ bool VoronoiPlanner::plan(const Eigen::Vector3d& start, const Eigen::Vector3d& g
   }
   
   // Update reservation table on planner
-  fe_planner_->updateReservationTable(resrv_tbl_);
+  {
+    std::lock_guard<std::mutex> resrv_tbl_guard(resrv_tbl_mtx_);
+    fe_planner_->updateReservationTable(resrv_tbl_);
+  }
 
   // Assign voronoi map
-  fe_planner_->assignVoroMap(dyn_voro_arr_, z_separation_cm_, 
-                              local_origin_x_, local_origin_y_,
-                              max_height_cm_,
-                              res_);
+  {
+    std::lock_guard<std::mutex> voro_map_guard(voro_map_mtx_);
+    fe_planner_->assignVoroMap(dyn_voro_arr_, z_separation_cm_, 
+                                local_origin_x_, local_origin_y_,
+                                max_height_cm_,
+                                res_);
+  }
 
   viz_helper::publishStartAndGoal(start, goal, local_map_origin_, start_pt_pub_, goal_pt_pub_);
 
@@ -411,7 +419,6 @@ bool VoronoiPlanner::plan(const Eigen::Vector3d& start, const Eigen::Vector3d& g
   fe_plan_broadcast_pub_.publish(fe_plan_msg);
 
   // viz_helper::publishSpaceTimePath(space_time_path_, global_origin_, fe_plan_viz_pub_) ;
-
 
   viz_helper::publishFrontEndPath(front_end_path_, global_origin_, fe_plan_viz_pub_);
 
