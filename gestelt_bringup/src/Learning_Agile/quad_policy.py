@@ -13,8 +13,9 @@ import torch
 
 class run_quad:
     def __init__(self,config_dict,
-                SQP_RTI_OPTION, 
-                USE_PREV_SOLVER = False):
+                SQP_RTI_OPTION=True, 
+                USE_PREV_SOLVER = False,
+                PDP_GRADIENT=False):
         
        
 
@@ -116,7 +117,14 @@ class run_quad:
                                        SQP_RTI_OPTION=SQP_RTI_OPTION,
                                        USE_PREV_SOLVER=USE_PREV_SOLVER)
 
-        
+        ###################################################################
+        ###------------ PDP auxiliary control system----------------#######
+        ###################################################################
+        # define the auxilary control system symbolic functions
+        self.PDP_GRADIENT = PDP_GRADIENT
+        if self.PDP_GRADIENT:
+            self.uavoc1.diffPMP()
+            self.lqr_solver = LQR()
         
     def init_state_and_mission(self,
                 goal_pos = [0, 8, 0],
@@ -212,13 +220,12 @@ class run_quad:
 
             # Calculate the path value
             for p in range(4):
-                diff = self.traj_tensor[self.horizon-1-p, 0:3] - self.goal_pos_tensor
+                diff = self.traj_tensor[self.horizon-p, 0:3] - self.goal_pos_tensor
                 self.path_tensor = torch.add(self.path_tensor, torch.dot(diff, diff))
                 # self.path_tensor += torch.dot(diff, diff)
             
 
             
-
             # Calculate pitch angle reward
             # self.tra_ang_tensor = torch.tensor(tra_ang, requires_grad=True)
             # pitch_reward_tensor = torch.abs(self.tra_ang_tensor[1])
@@ -232,11 +239,11 @@ class run_quad:
 
     # --------------------------- solution and learning----------------------------------------
     ##solution and demo
-    def sol_gradient(self,tra_pos =None,tra_ang=None,t_tra=None,Ulast_value=None,PDP_GRADIENT=False):
+    def sol_gradient(self,tra_pos =None,tra_ang=None,t_tra=None,Ulast_value=None):
         """
         receive the decision variables from DNN1, do the MPC, then calculate d_reward/d_z
         """
-        self.PDP_GRADIENT = PDP_GRADIENT
+        
         tra_ang = np.array(tra_ang)
         tra_pos = np.array(tra_pos)
 
@@ -282,16 +289,9 @@ class run_quad:
         ## need to be given here
      
        
-        ## set the traverse hyperparameters (auxvar) here
-        current_trav_auxvar = np.array([tra_pos[0],tra_pos[1],tra_pos[2],tra_ang[0],tra_ang[1],tra_ang[2],t_tra])
+        ## set the traverse hyperparameters value (auxvar) here
+        trav_auxvar = np.array([tra_pos[0],tra_pos[1],tra_pos[2],tra_ang[0],tra_ang[1],tra_ang[2],t_tra])
         goal_state_value=np.concatenate((self.goal_pos,np.zeros(3),self.goal_ori))  
-    
-        ###################################################################
-        ###------------ PDP auxiliary control system----------------#######
-        ###################################################################
-        # define the auxilary control system symbolic functions
-        self.uavoc1.diffPMP()
-        self.lqr_solver = LQR()
 
         
         ## using LQR solver to solve the auxilary control system to get the analytical gradient
@@ -301,7 +301,7 @@ class run_quad:
                                         costate_traj_opt=self.sol1['costate_traj_opt'],
                                         goal_state_value=goal_state_value,
                                         Ulast_value=Ulast_value,
-                                        auxvar_value=current_trav_auxvar)
+                                        auxvar_value=trav_auxvar)
         
         # set values to the LQR solver
         self.lqr_solver.setDyn(dynF=aux_sys['dynF'], dynG=aux_sys['dynG'], dynE=aux_sys['dynE'])
@@ -349,6 +349,7 @@ class run_quad:
         drdc = drdp[5]
         drdt = drdp[6]
         j = j.detach().numpy()
+        print(np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,j]))
         return np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,j])
 
 

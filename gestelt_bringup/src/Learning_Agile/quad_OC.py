@@ -495,14 +495,14 @@ class OCSys:
         trav_auxvar_value=ocp.model.p[self.n_state+self.n_control:self.n_state+self.n_control+self.trav_auxvar.numel()]
 
         # current node time
-        t_node=ocp.model.p[-1]
+        t_node_value=ocp.model.p[-1]
 
         # # setting the cost function
         # weight = 60*casadi.exp(-10*(dt*k-model.p[-1])**2) #gamma should increase as the flight duration decreases
         # ocp.model.cost_expr_ext_cost_custom_hess/cost_expr_ext_cost
         ocp.model.cost_expr_ext_cost = self.path_cost_fn(ocp.model.x,goal_state_value,self.auxvar)\
             +self.final_cost_fn(ocp.model.x,goal_state_value,self.auxvar)\
-            +self.trav_cost_fn(ocp.model.x, trav_auxvar_value, t_node)\
+            +self.trav_cost_fn(ocp.model.x, trav_auxvar_value, t_node_value)\
             +self.input_diff_cost_fn(ocp.model.u,Ulast_value,self.auxvar) \
             +self.input_cost_fn(ocp.model.u,self.auxvar)
         

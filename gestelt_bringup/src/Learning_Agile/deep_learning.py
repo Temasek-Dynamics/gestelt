@@ -65,8 +65,7 @@ def calc_grad(config_dict,
     gra[:] = quad_instance.sol_gradient(outputs[0:3].astype(np.float64),
                                         outputs[3:6],
                                         outputs[6],
-                                        Ulast_value,
-                                        PDP_GRADIENT)
+                                        Ulast_value)
 
     
 
@@ -111,7 +110,8 @@ if __name__ == '__main__':
     for i in range(num_cores):
         quad = run_quad(config_dict,  
                     SQP_RTI_OPTION=False,
-                    USE_PREV_SOLVER=False)
+                    USE_PREV_SOLVER=False,
+                    PDP_GRADIENT=PDP_GRADIENT)
         
         quad_instance_list.append(quad)
     
