@@ -66,12 +66,11 @@ def calc_grad(config_dict,
                                         outputs[3:6],
                                         outputs[6],
                                         Ulast_value,
-                                        PDP_GRAIDENT)
+                                        PDP_GRADIENT)
 
     
 
 if __name__ == '__main__':
-
     ###############################################################
     ###----------------- deep learning option-------------------###
     ###############################################################
@@ -80,12 +79,12 @@ if __name__ == '__main__':
     # Hyper-parameters 
     TRAIN_FROM_CHECKPOINT = False
     MULTI_CORE = False
-    PDP_GRAIDENT = True
+    PDP_GRADIENT = True
     num_epochs = 50 #100
     batch_size = 100 # 100
-
-    if PDP_GRAIDENT:
-        learning_rate = 5e-5
+    
+    if PDP_GRADIENT:
+        learning_rate = 1e-4
     else:
         learning_rate = 1e-4
     num_cores =1 #5
@@ -251,8 +250,8 @@ if __name__ == '__main__':
                 Every_reward[epoch,i]=gra[7]
 
 
-            if (i+1)%1 == 0:
-                print (f'Epoch [{epoch+1}/{num_epochs}], Step [{(i+1)*num_cores}/{batch_size}], Reward: {gra[7]:.4f}')
+            # if (i+1)%1 == 0:
+                # print (f'Epoch [{epoch+1}/{num_epochs}], Step [{(i+1)*num_cores}/{batch_size}], Reward: {gra[7]:.4f}')
         
         # change state
         mean_reward = evalue/batch_size # evalue/int(batch_size/num_cores)

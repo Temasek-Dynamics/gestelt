@@ -287,13 +287,7 @@ class Quadrotor:
         self.input_diff_cost = self.wInputDiff*dot(self.U - Ulast_value, self.U - Ulast_value)
 
 
-        ## traverse cost with given t_node
-        self.tra_cost = 0
-        for i in range(horizon):
-            t_node_value = i * 0.1
-            self.tra_cost += self.max_tra_w * casadi.exp(-self.gamma*(t_node_value-self.des_t_tra)**2) * (self.wrt * self.cost_r_I_t + self.wqt * self.cost_q_t)
-           
-
+    
     def init_TraCost(self): # transforming Rodrigues to Quaternion is shown in mpc_update function
         ## traverse cost
         # traverse position in the world frame
@@ -304,7 +298,7 @@ class Quadrotor:
         self.des_t_tra
         self.des_tra_rodi_param 
 
-        auxvar: (hyperparameters for PDP analytics gradient objects)
+        trav_auxvar: (hyperparameters for PDP analytics gradient objects)
         self.des_t_r_I
         self.des_t_tra
         self.des_tra_rodi_param 
@@ -323,9 +317,9 @@ class Quadrotor:
 
 
         # weight = max_tra_w*casadi.exp(-gamma*(dt*i-t_tra)**2) #gamma should increase as the flight duration decreases
-        self.tra_cost_all_sym = self.max_tra_w * casadi.exp(-self.gamma*(self.t_node-self.des_t_tra)**2) * (self.wrt * self.cost_r_I_t + self.wqt * self.cost_q_t)
-                            
-        
+        self.tra_cost = self.max_tra_w * casadi.exp(-self.gamma*(self.t_node-self.des_t_tra)**2) * (self.wrt * self.cost_r_I_t + self.wqt * self.cost_q_t)
+         
+                    
         
         ## set traverse pose as the auxiliary variables (hyperparameters)
         self.trav_auxvar = vertcat(self.des_tra_r_I, self.des_tra_rodi_param,self.des_t_tra)
@@ -394,6 +388,45 @@ class Quadrotor:
 
         return position
     
+    def get_quadrotor_position_tensor(self, wing_len, state_traj):
+        # thrust_position in body frame
+        r1 = torch.tensor([wing_len * 0.5 / torch.sqrt(torch.tensor(2.0)),
+                        wing_len * 0.5 / torch.sqrt(torch.tensor(2.0)), 0.0], dtype=state_traj.dtype)
+        r2 = torch.tensor([-wing_len * 0.5 / torch.sqrt(torch.tensor(2.0)),
+                        wing_len * 0.5 / torch.sqrt(torch.tensor(2.0)), 0.0], dtype=state_traj.dtype)
+        r3 = torch.tensor([-wing_len * 0.5 / torch.sqrt(torch.tensor(2.0)),
+                        -wing_len * 0.5 / torch.sqrt(torch.tensor(2.0)), 0.0], dtype=state_traj.dtype)
+        r4 = torch.tensor([wing_len * 0.5 / torch.sqrt(torch.tensor(2.0)),
+                        -wing_len * 0.5 / torch.sqrt(torch.tensor(2.0)), 0.0], dtype=state_traj.dtype)
+
+        # horizon
+        horizon = state_traj.shape[0]
+        position = torch.zeros((horizon, 15), dtype=state_traj.dtype)
+        
+        for t in range(horizon):
+            # position of COM
+            rc = state_traj[t, 0:3]
+            # altitude of quaternion
+            q = state_traj[t, 6:10]
+
+            # direction cosine matrix from body to inertial
+            CIB = self.dir_cosine_tensor(q).transpose(0, 1)
+
+            # position of each rotor in inertial frame
+            r1_pos = rc + torch.matmul(CIB, r1)
+            r2_pos = rc + torch.matmul(CIB, r2)
+            r3_pos = rc + torch.matmul(CIB, r3)
+            r4_pos = rc + torch.matmul(CIB, r4)
+
+            # store
+            position[t, 0:3] = rc
+            position[t, 3:6] = r1_pos
+            position[t, 6:9] = r2_pos
+            position[t, 9:12] = r3_pos
+            position[t, 12:15] = r4_pos
+
+        return position
+
     def get_final_position(self,wing_len, p= None,q = None):
         p = self.tra_r_I
         q = self.tra_q
@@ -836,6 +869,14 @@ class Quadrotor:
         )
         return C_B_I
 
+    def dir_cosine_tensor(self, q):
+        # World frame to body frame direction cosine matrix
+        C_B_I = torch.stack([
+            torch.stack([1 - 2 * (q[2] ** 2 + q[3] ** 2), 2 * (q[1] * q[2] + q[0] * q[3]), 2 * (q[1] * q[3] - q[0] * q[2])]),
+            torch.stack([2 * (q[1] * q[2] - q[0] * q[3]), 1 - 2 * (q[1] ** 2 + q[3] ** 2), 2 * (q[2] * q[3] + q[0] * q[1])]),
+            torch.stack([2 * (q[1] * q[3] + q[0] * q[2]), 2 * (q[2] * q[3] - q[0] * q[1]), 1 - 2 * (q[1] ** 2 + q[2] ** 2)])
+        ])
+        return C_B_I
     def skew(self, v):
         v_cross = vertcat(
             horzcat(0, -v[2], v[1]),

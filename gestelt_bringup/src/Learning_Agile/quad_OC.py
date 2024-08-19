@@ -9,6 +9,35 @@ from acados_template import AcadosModel
 import time
 import scipy
 from os import system
+
+'''
+# =============================================================================================================
+# The OCSys class has multiple functionaries: 1) define an optimal control system, 2) solve the optimal control
+# system, and 3) obtain the auxiliary control system.
+
+# The standard form of the dynamics of an optimal control system is
+# x_k+1= f（x_k, u_k, auxvar)
+# The standard form of the cost function of an optimal control system is
+# J = sum_0^(T-1) path_cost + final_cost,
+# where path_cost = c(x, u, auxvar) and final_cost= h(x, auxvar).
+# Note that in the above standard optimal control system form, "auxvar" is the parameter (which can be learned)
+# If you don't need the parameter, e.g.m you just want to use this class to solve an optimal control problem,
+# instead of learning the parameter, you can ignore setting this augment in your code.
+
+# The procedure to use this class is fairly straightforward, just understand each method by looking at its name:
+# Step 1: set state variable ----> setStateVariable
+# Step 2: set control variable ----> setControlVariable
+# Step 3: set parameter (if applicable) ----> setAuxvarVariable; otherwise you can ignore this step.
+# Step 4: set dynamics equation----> setDyn
+# Step 5: set path cost function ----> setPathCost
+# Step 6: set final cost function -----> setFinalCost
+# Step 7: solve the optimal control problem -----> ocSolver
+# Step 8: differentiate the Pontryagin's maximum principle (if you have Step 3) -----> diffPMP
+# Step 9: get the auxiliary control system (if have Step 3) ------> getAuxSys
+
+# Note that if you are not wanting to learn the parameter in an optimal control system, you can ignore Step 3. 8. 9.
+# Note that most of the notations used here are consistent with the notations defined in the PDP paper.
+'''
 class OCSys:
 
     def __init__(self,config_dict, project_name="my optimal control system"):
@@ -675,7 +704,7 @@ class OCSys:
         # Define the Hamiltonian function
         self.costate = casadi.SX.sym('lambda', self.state.numel())
         self.path_Hamil = self.path_cost \
-                        + self.trav_cost \
+                        + self.trav_cost\
                         + self.input_cost \
                         + self.input_diff_cost \
                         + dot(self.dyn, self.costate)  # path Hamiltonian
@@ -692,23 +721,23 @@ class OCSys:
 
         # First-order derivative of path Hamiltonian
         self.dHx = jacobian(self.path_Hamil, self.state).T
-        self.dHx_fn = casadi.Function('dHx', [self.state, self.control, self.costate, self.trav_auxvar], [self.dHx])
+        self.dHx_fn = casadi.Function('dHx', [self.state, self.control, self.costate, self.t_node, self.trav_auxvar], [self.dHx])
         self.dHu = jacobian(self.path_Hamil, self.control).T
-        self.dHu_fn = casadi.Function('dHu', [self.state, self.control, self.costate, self.trav_auxvar], [self.dHu])
+        self.dHu_fn = casadi.Function('dHu', [self.state, self.control, self.costate, self.t_node, self.trav_auxvar], [self.dHu])
 
         # Second-order derivative of path Hamiltonian
         self.ddHxx = jacobian(self.dHx, self.state)
-        self.ddHxx_fn = casadi.Function('ddHxx', [self.state, self.control, self.costate, self.trav_auxvar], [self.ddHxx])
+        self.ddHxx_fn = casadi.Function('ddHxx', [self.state, self.control, self.costate, self.t_node, self.trav_auxvar], [self.ddHxx])
         self.ddHxu = jacobian(self.dHx, self.control)
-        self.ddHxu_fn = casadi.Function('ddHxu', [self.state, self.control, self.costate, self.trav_auxvar], [self.ddHxu])
+        self.ddHxu_fn = casadi.Function('ddHxu', [self.state, self.control, self.costate, self.t_node, self.trav_auxvar], [self.ddHxu])
         self.ddHxe = jacobian(self.dHx, self.trav_auxvar)
-        self.ddHxe_fn = casadi.Function('ddHxe', [self.state, self.control, self.costate, self.trav_auxvar], [self.ddHxe])
+        self.ddHxe_fn = casadi.Function('ddHxe', [self.state, self.control, self.costate, self.t_node, self.trav_auxvar], [self.ddHxe])
         self.ddHux = jacobian(self.dHu, self.state)
-        self.ddHux_fn = casadi.Function('ddHux', [self.state, self.control, self.costate, self.trav_auxvar], [self.ddHux])
+        self.ddHux_fn = casadi.Function('ddHux', [self.state, self.control, self.costate, self.t_node, self.trav_auxvar], [self.ddHux])
         self.ddHuu = jacobian(self.dHu, self.control)
-        self.ddHuu_fn = casadi.Function('ddHuu', [self.state, self.control, self.costate, self.trav_auxvar], [self.ddHuu])
+        self.ddHuu_fn = casadi.Function('ddHuu', [self.state, self.control, self.costate, self.t_node, self.trav_auxvar], [self.ddHuu])
         self.ddHue = jacobian(self.dHu, self.trav_auxvar)
-        self.ddHue_fn = casadi.Function('ddHue', [self.state, self.control, self.costate, self.trav_auxvar], [self.ddHue])
+        self.ddHue_fn = casadi.Function('ddHue', [self.state, self.control, self.costate, self.t_node, self.trav_auxvar], [self.ddHue])
 
         # First-order derivative of final Hamiltonian
         self.dhx = jacobian(self.final_Hamil, self.state).T
@@ -720,8 +749,7 @@ class OCSys:
         self.ddhxe = jacobian(self.dhx, self.trav_auxvar)
         self.ddhxe_fn = casadi.Function('ddhxe', [self.state, self.trav_auxvar], [self.ddhxe])
 
-    def getAuxSys(self, goal_state,
-                   state_traj_opt, 
+    def getAuxSys(self,state_traj_opt, 
                    control_traj_opt, 
                    costate_traj_opt, 
                    auxvar_value=1):
@@ -747,12 +775,12 @@ class OCSys:
             dynF += [self.dfx_fn(curr_x, curr_u, auxvar_value).full()]
             dynG += [self.dfu_fn(curr_x, curr_u, auxvar_value).full()]
             dynE += [self.dfe_fn(curr_x, curr_u, auxvar_value).full()]
-            matHxx += [self.ddHxx_fn(curr_x, curr_u, next_lambda, auxvar_value).full()]
-            matHxu += [self.ddHxu_fn(curr_x, curr_u, next_lambda, auxvar_value).full()]
-            matHxe += [self.ddHxe_fn(curr_x, curr_u, next_lambda, auxvar_value).full()]
-            matHux += [self.ddHux_fn(curr_x, curr_u, next_lambda, auxvar_value).full()]
-            matHuu += [self.ddHuu_fn(curr_x, curr_u, next_lambda, auxvar_value).full()]
-            matHue += [self.ddHue_fn(curr_x, curr_u, next_lambda, auxvar_value).full()]
+            matHxx += [self.ddHxx_fn(curr_x, curr_u, next_lambda, t, auxvar_value).full()]
+            matHxu += [self.ddHxu_fn(curr_x, curr_u, next_lambda, t, auxvar_value).full()]
+            matHxe += [self.ddHxe_fn(curr_x, curr_u, next_lambda, t, auxvar_value).full()]
+            matHux += [self.ddHux_fn(curr_x, curr_u, next_lambda, t, auxvar_value).full()]
+            matHuu += [self.ddHuu_fn(curr_x, curr_u, next_lambda, t, auxvar_value).full()]
+            matHue += [self.ddHue_fn(curr_x, curr_u, next_lambda, t, auxvar_value).full()]
         mathxx = [self.ddhxx_fn(state_traj_opt[-1, :], auxvar_value).full()]
         mathxe = [self.ddhxe_fn(state_traj_opt[-1, :], auxvar_value).full()]
 

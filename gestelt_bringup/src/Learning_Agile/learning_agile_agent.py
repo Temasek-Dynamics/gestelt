@@ -364,6 +364,7 @@ class LearningAgileAgent():
     
         
 def main():
+    STATIC_GATE_TEST = False
     # yaml file dir#
     conf_folder=os.path.abspath(os.path.join(current_dir, '..', '..','config'))
     yaml_file = os.path.join(conf_folder, 'learning_agile_mission.yaml')
@@ -378,7 +379,7 @@ def main():
 
     #------------------------------set the mission--------------------------------------#
     config_dict = learing_agile_agent.config_dict
-    learing_agile_agent.receive_mission_states( STATIC_GATE_TEST=True,
+    learing_agile_agent.receive_mission_states( STATIC_GATE_TEST,
                                                 ini_pos=np.array(config_dict['mission']['initial_position']),
                                                 end_pos=np.array(config_dict['mission']['goal_position']),
                                                 

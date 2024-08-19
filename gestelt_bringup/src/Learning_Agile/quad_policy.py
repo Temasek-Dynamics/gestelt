@@ -103,7 +103,7 @@ class run_quad:
 
         # AllSym means the goal state is also a symbolic variable, not a fixed value
         self.uavoc1.setPathCostAllSym(self.uav1.goal_cost_all_sym,goal_state_sym=self.uav1.goal_state_sym)
-        self.uavoc1.setTraCostAllSym(self.uav1.tra_cost_all_sym,
+        self.uavoc1.setTraCostAllSym(self.uav1.tra_cost,
                                self.uav1.trav_auxvar,
                                self.uav1.t_node
                               )
@@ -167,18 +167,19 @@ class run_quad:
         
         # state_traj [x,y,z,vx,vy,vz,qw,qx,qy,qz]
         state_traj = self.sol1['state_traj_opt']
-        
         # get the quadrotor both center and edges position trajectory
         self.traj = self.uav1.get_quadrotor_position(wing_len = self.winglen, state_traj = state_traj)
 
+        
        
-        if not self.PDP_GRAIDENT:
+        if not self.PDP_GRADIENT:
             # calculate trajectory reward
             self.collision = 0
             self.path = 0
             ## detect whether there is collision
             self.co = 0
 
+            
             for c in range(4):
                 self.collision += self.obstacle1.collis_det(self.traj[:,3*(c+1):3*(c+2)],self.horizon)
                 self.co += self.obstacle1.co 
@@ -189,20 +190,20 @@ class run_quad:
                 self.path += np.dot(self.traj[self.horizon-1-p,0:3]-self.goal_pos, self.traj[self.horizon-1-p,0:3]-self.goal_pos)
             
             # the sign of the collision is already negative
-
             # pitch angle reward
             pitch_reward=abs(tra_ang[1])
             reward = 1000 * self.collision - 0.5 * self.path + 100 + 10 * pitch_reward
             return reward
         
         else:   
-            self.traj_tensor = torch.tensor(self.traj,requires_grad=True)
+            self.state_traj_tensor = torch.tensor(state_traj,requires_grad=True)
+            self.traj_tensor = self.uav1.get_quadrotor_position_tensor(wing_len = self.winglen, state_traj = self.state_traj_tensor )
             self.collision_tensor = torch.tensor(0.0,  requires_grad=True)
             self.co_tensor = torch.tensor(0.0,  requires_grad=True)
             self.path_tensor = torch.tensor(0.0,  requires_grad=True)
             self.pitch_reward_tensor = torch.tensor(0.0,  requires_grad=True)
             self.reward_tensor = torch.tensor(0.0,  requires_grad=True)
-            self.goal_pose_tensor = torch.tensor(self.goal_pos,requires_grad=True)
+            self.goal_pos_tensor = torch.tensor(self.goal_pos,requires_grad=True)
             
             for c in range(4):
                 self.collision_tensor = torch.add(self.collision_tensor,self.obstacle1_torch.collis_det_torch(self.traj_tensor[:,3*(c+1):3*(c+2)],self.horizon))
@@ -212,30 +213,31 @@ class run_quad:
 
             # Calculate the path value
             for p in range(4):
-                diff = self.traj_tensor[self.horizon-1-p, 0:3] - self.goal_pose_tensor
+                diff = self.traj_tensor[self.horizon-1-p, 0:3] - self.goal_pos_tensor
                 self.path_tensor = torch.add(self.path_tensor, torch.dot(diff, diff))
                 # self.path_tensor += torch.dot(diff, diff)
             
 
-            # The sign of the collision is already negative
+            
 
             # Calculate pitch angle reward
-            tra_ang_tensor = torch.tensor(tra_ang, requires_grad=True)
-            pitch_reward_tensor = torch.abs(tra_ang_tensor[1])
+            # self.tra_ang_tensor = torch.tensor(tra_ang, requires_grad=True)
+            # pitch_reward_tensor = torch.abs(self.tra_ang_tensor[1])
 
             # Calculate the reward
-            reward_tensor = 1000 * self.collision_tensor - 0.5 * self.path_tensor + 100 + 10 * pitch_reward_tensor
+            # The sign of the collision is already negative
+            reward_tensor = 1000 * self.collision_tensor - 0.5 * self.path_tensor + 100 #+ 10 * pitch_reward_tensor
 
             # Return the reward
             return reward_tensor
 
     # --------------------------- solution and learning----------------------------------------
     ##solution and demo
-    def sol_gradient(self,tra_pos =None,tra_ang=None,t_tra=None,Ulast_value=None,PDP_GRAIDENT=False):
+    def sol_gradient(self,tra_pos =None,tra_ang=None,t_tra=None,Ulast_value=None,PDP_GRADIENT=False):
         """
         receive the decision variables from DNN1, do the MPC, then calculate d_reward/d_z
         """
-        self.PDP_GRAIDENT = PDP_GRAIDENT
+        self.PDP_GRADIENT = PDP_GRADIENT
         tra_ang = np.array(tra_ang)
         tra_pos = np.array(tra_pos)
 
@@ -249,7 +251,7 @@ class run_quad:
         delta = 1e-3
 
         
-        if not self.PDP_GRAIDENT:    
+        if not self.PDP_GRADIENT:    
             # drdx,drdy,drdz,drda,drdb,drdc=0
             drdx = np.clip(self.R_from_MPC(tra_pos+[delta,0,0],tra_ang, t_tra,Ulast_value) - j,-0.5,0.5)*0.1
             drdy = np.clip(self.R_from_MPC(tra_pos+[0,delta,0],tra_ang, t_tra,Ulast_value) - j,-0.5,0.5)*0.1
@@ -283,6 +285,9 @@ class run_quad:
             ## set the traverse hyperparameters (auxvar) here
             current_trav_auxvar = np.array([tra_pos[0],tra_pos[1],tra_pos[2],tra_ang[0],tra_ang[1],tra_ang[2],t_tra])
             
+            # set acados external variables value here
+            # goal_state, Ulast, t_node are external symbolic variables for acados
+            # and those value needs to be set here to rebuild the symbolic functions without external variables
             self.uavoc1.setFinalCost(self.uav1.final_cost) 
             self.uavoc1.setPathCost(self.uav1.goal_cost)
             self.uavoc1.setTraCost(self.uav1.tra_cost)
@@ -290,49 +295,55 @@ class run_quad:
             ###################################################################
             ###------------ PDP auxiliary control system----------------#######
             ###################################################################
+            # define the auxilary control system symbolic functions
             self.uavoc1.diffPMP()
             self.lqr_solver = LQR()
 
             
             ## using LQR solver to solve the auxilary control system to get the analytical gradient
-            aux_sys = self.uavoc1.getAuxSys(goal_state=np.concatenate((self.goal_pos,np.zeros(3),self.goal_ori)),
-                                            state_traj_opt=self.sol1['state_traj_opt'],
+            # set values to the auxilary control system symbolic functions 
+            aux_sys = self.uavoc1.getAuxSys(state_traj_opt=self.sol1['state_traj_opt'],
                                             control_traj_opt=self.sol1['control_traj_opt'],
                                             costate_traj_opt=self.sol1['costate_traj_opt'],
                                             auxvar_value=current_trav_auxvar)
             
+            # set values to the LQR solver
             self.lqr_solver.setDyn(dynF=aux_sys['dynF'], dynG=aux_sys['dynG'], dynE=aux_sys['dynE'])
             self.lqr_solver.setPathCost(Hxx=aux_sys['Hxx'], Huu=aux_sys['Huu'], Hxu=aux_sys['Hxu'], Hux=aux_sys['Hux'],
                                    Hxe=aux_sys['Hxe'], Hue=aux_sys['Hue'])
             self.lqr_solver.setFinalCost(hxx=aux_sys['hxx'], hxe=aux_sys['hxe'])
 
-    
-            # calculate the axuiliary control system solution
+
+            ## solve the auxilary control system and get the analytical gradient
             aux_sol=self.lqr_solver.lqrSolver(np.zeros((self.uavoc1.n_state, self.uavoc1.n_trav_auxvar)), self.horizon)
             
 
             # take solution of the auxiliary control system
             
             # which is the dtrajectory/dtraverse_auxvar 
-            dstate_trajdp = aux_sol['state_traj_opt']
+            dstate_trajdp = aux_sol['state_traj_opt'] #(n_node,n_state,n_trav_auxvar)
             dinput_trajdp = aux_sol['control_traj_opt'] 
             
             dstate_trajdp = np.array(dstate_trajdp)
+            
             # acquire dreward/dtrajectory
             j.backward()
-            drdstate_traj=self.traj_tensor.grad
+            drdstate_traj=self.state_traj_tensor.grad #(n_node,15)
+            # drdtrav_angle =self.tra_ang_tensor.grad
 
-            # only take the drone center position part
-            drdstate_traj=drdstate_traj.numpy()[:,0:3].reshape(self.horizon+1,1,3)
-            dstate_trajdp = dstate_trajdp[:,0:3,:]
+           
+            drdstate_traj=drdstate_traj.numpy().reshape(self.horizon+1,1,self.uavoc1.n_state)
+            # drdtrav_angle = drdtrav_angle.numpy().reshape(3)
+            
             
             # print(drdstate_traj.shape)
             # print(dstate_trajdp.shape)
             drdp=np.zeros(7)
             for i in range(self.horizon):
                 drdp += np.matmul(drdstate_traj[i,:,:],dstate_trajdp[i,:,:]).reshape(7)
-                
-   
+
+            drdp += np.matmul(drdstate_traj[self.horizon,:,:],dstate_trajdp[self.horizon,:,:]).reshape(7)    
+            drdp = -drdp/ ((self.horizon+1)*100)
             drdx = drdp[0]
             drdy = drdp[1]
             drdz = drdp[2]
