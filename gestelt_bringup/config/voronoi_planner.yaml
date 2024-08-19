@@ -1,0 +1,58 @@
+num_agents: 10
+
+planner: 
+  verbose_print: true               # If enabled, print debug information such as timing information
+  goal_tolerance: 0.2               # [m] Tolerance for goal execution to be complete
+  planner_frequency: 2.0            # [Hz] Frequency at which plan is generated
+  generate_voronoi_frequency: 1.0  # [Hz] Frequency at which voronoi is generated
+  plan_once: false
+
+reservation_table:
+  inflation: 0.3    # [m] buffer for reservation table in spatial domain
+  time_buffer: 0.7  # [s] buffer for reservation table in time domain
+
+##### Mapping params
+grid_map:
+  verbose_print: false       # If enabled, print debug information such as timing information
+
+  map_slicing: # 2D boolean map slices used for voronoi generation
+    min_height_cm:    50    # [cm] Minimum slice height
+    max_height_cm:    300   # [cm] Maximum slice height
+    z_separation_cm:  10    # [cm] Separation between slices
+    
+  global_map:
+    size_x: 50.0
+    size_y: 50.0
+    size_z: 20.0
+
+  local_map:      #local_map parameters must consider the "receding_horizon_planning_dist"!
+    size_x: 17.0
+    size_y: 17.0
+    size_z: 5.0
+    update_frequency: 15.0
+    viz_frequency: 10.0
+    # build_kdtree_frequency: 30.0
+
+  occ_map:
+    resolution: 0.1
+    inflation: 0.2
+    ground_height: 0.0
+    max_range: 30.0
+
+  # For visualizing collision with static obstacles
+  collision_check:
+    enable: true    # Enable checking of collisions
+    warn_radius: 0.25  # [m]
+    fatal_radius: 0.14  # [m] 
+
+  # camera extrinsic parameters 
+  camera_to_body: 
+    # roll: 90.0
+    # pitch: 180.0
+    # yaw: 90.0
+    roll: 0.0
+    pitch: 0.0
+    yaw: 0.0 
+    t_x: 0.0 # x translation
+    t_y: 0.0
+    t_z: 0.0

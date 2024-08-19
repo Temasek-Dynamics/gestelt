@@ -60,6 +60,7 @@ public:
                     const double& local_origin_x,
                     const double& local_origin_y,
                     const double& max_height,
+                    const double& min_height,
                     const double& res);
 
 

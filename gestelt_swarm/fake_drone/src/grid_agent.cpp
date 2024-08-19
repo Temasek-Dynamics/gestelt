@@ -90,19 +90,19 @@ GridAgent::~GridAgent()
 
 void GridAgent::frontEndPlanCB(const gestelt_msgs::FrontEndPlan::ConstPtr &msg)
 {	
-	fe_plan_msg_ = *msg;
+	// fe_plan_msg_ = *msg;
 
 	// Generate spline from plan 
-	std::vector<tinyspline::real> points;
+	// std::vector<tinyspline::real> points;
 
 	fe_space_time_path_.clear();
 
-	for (int i = 0; i < fe_plan_msg_.plan.size(); i+= 1)
+	for (size_t i = 0; i < msg->plan.size(); i++)
 	{	
-		// Add control point
-		points.push_back(fe_plan_msg_.plan[i].position.x);
-		points.push_back(fe_plan_msg_.plan[i].position.y);
-		points.push_back(fe_plan_msg_.plan[i].position.z);
+		// // Add control point
+		// points.push_back(fe_plan_msg_.plan[i].position.x);
+		// points.push_back(fe_plan_msg_.plan[i].position.y);
+		// points.push_back(fe_plan_msg_.plan[i].position.z);
 
 		fe_space_time_path_.push_back(Eigen::Vector4d{
 			msg->plan[i].position.x,
@@ -113,7 +113,7 @@ void GridAgent::frontEndPlanCB(const gestelt_msgs::FrontEndPlan::ConstPtr &msg)
 
 	}
 
-	spline_ = std::make_shared<tinyspline::BSpline>(tinyspline::BSpline::interpolateCubicNatural(points, 3));
+	// spline_ = std::make_shared<tinyspline::BSpline>(tinyspline::BSpline::interpolateCubicNatural(points, 3));
 
 	plan_start_exec_t_ = ros::Time::now().toSec();
 	plan_start_t_ = msg->plan_start_time;
@@ -131,7 +131,7 @@ void GridAgent::simUpdateTimer(const ros::TimerEvent &)
 	if (plan_received_){
 		if ((ros::Time::now() - last_pose_update_time_).toSec() > (1/pose_update_freq_))
 		{
-			setStateFromPlan(fe_plan_msg_, plan_start_t_);
+			setStateFromPlan(fe_space_time_path_, plan_start_t_);
 			last_pose_update_time_ = ros::Time::now();
 		}
 	}
@@ -172,15 +172,13 @@ void GridAgent::simUpdateTimer(const ros::TimerEvent &)
 
 /* Helper Methods */
 
-void GridAgent::setStateFromPlan(	const gestelt_msgs::FrontEndPlan &fe_plan_msg, 
-																	const double& plan_start_t)
+void GridAgent::setStateFromPlan(	const std::vector<Eigen::Vector4d>& space_time_path, 
+									const double& plan_start_t)
 {
 
-	double t_now = ros::Time::now().toSec();
-	double e_t_start = t_now - plan_start_t_;					// [s] Elapsed time since plan start
-	int e_t_start_st = tToSpaceTimeUnits(e_t_start); // [space-time units] Elapsed time since plan start
-
-	// std::cout << "e_t_start_st: " << e_t_start_st << std::endl;
+	ros::Time t_now = ros::Time::now();
+	double e_t_start = t_now.toSec() - plan_start_t;			 	// [s] Elapsed time since plan start
+	int e_t_start_st = (int) tToSpaceTimeUnits(e_t_start); 	// [space-time units] Elapsed time since plan start
 
 	if (e_t_start < 0){
 		std::cout << "trajectory starts in the future" << std::endl;
@@ -188,40 +186,48 @@ void GridAgent::setStateFromPlan(	const gestelt_msgs::FrontEndPlan &fe_plan_msg,
 		return;
 	}
 
-	if (e_t_start_st >= fe_space_time_path_.back()(3)){
+	if (e_t_start_st >= space_time_path.back()(3)){
 		// Time exceeded end of trajectory. Trajectory has finished executing in the past
 		std::cout << "Trajectory has finished executing in the past" << std::endl;
 		plan_received_ = false;
 		return;
 	}
 
-	// // Iterate through plan and choose state at current time
-	// int cur_idx = 0;
+	// Iterate through plan and choose state at current time
+	int cur_idx = 0;
+	bool exceed_prev = false;
 
-	// for (size_t i = 0; i < fe_space_time_path_.size(); i++){
-	// 	if (e_t_start_st > fe_space_time_path_[i](3)){ // Future point found
-	// 		std::cout << "future point found at " << i << std::endl;
-	// 		cur_idx = i; 
-	// 		break;
-	// 	}
-	// }
+	for (size_t i = 0; i < space_time_path.size(); i++){	// for each point in the path
+		cur_idx = i;
+		if (exceed_prev){
+			// if elapsed time exceeded previous timestamp and <= current timestamp, end loop
+			if (e_t_start_st < space_time_path[i](3))
+			{
+				// std::cout << "e_t_start_st(" << e_t_start_st << ") <= " << space_time_path[i](3) << std::endl;
+				break;
+			}
+		}
+		else {
+			exceed_prev = e_t_start_st >= space_time_path[i](3) ? true : false;
+		}
+	}
 
-	// double x = fe_space_time_path_[cur_idx](0);
-	// double y = fe_space_time_path_[cur_idx](1);
-	// double z = fe_space_time_path_[cur_idx](2);
+	double x = space_time_path[cur_idx](0);
+	double y = space_time_path[cur_idx](1);
+	double z = space_time_path[cur_idx](2);
 
 	// alpha: Arc length parameterization of spline. Formed by time ratio
-	double alpha = ((double)e_t_start_st) / (fe_plan_msg.plan_time.back());
+	// double alpha = ((double)e_t_start_st) / (fe_plan_msg.plan_time.back());
 
-	std::vector<tinyspline::real> result = spline_->eval(alpha).result();
-	double x = result[0];
-	double y = result[1];
-	double z = result[2];
+	// std::vector<tinyspline::real> result = spline_->eval(alpha).result();
+	// double x = result[0];
+	// double y = result[1];
+	// double z = result[2];
 
 	state_mutex_.lock();
 
 	// Set odom
-	odom_msg_.header.stamp = ros::Time::now();
+	odom_msg_.header.stamp = t_now;
 
 	// odom_msg_.pose.pose = fe_plan_msg.plan[cur_plan_idx];
 	odom_msg_.pose.pose.position.x = x;
@@ -234,7 +240,7 @@ void GridAgent::setStateFromPlan(	const gestelt_msgs::FrontEndPlan &fe_plan_msg,
 	odom_msg_.pose.pose.orientation.w = 1.0;
 
 	// Set Pose
-	pose_msg_.header.stamp = ros::Time::now();
+	pose_msg_.header.stamp = t_now;
 
 	// pose_msg_.pose = fe_plan_msg.plan[cur_plan_idx];
 	pose_msg_.pose.position.x = x;

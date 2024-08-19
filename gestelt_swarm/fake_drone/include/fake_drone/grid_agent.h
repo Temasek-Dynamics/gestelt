@@ -50,11 +50,11 @@ class GridAgent
         /* Checks */
 
         /** Helper methods */
-        void setStateFromPlan(   const gestelt_msgs::FrontEndPlan &msg, 
-                                            const double& exec_start_t);
+        void setStateFromPlan(	const std::vector<Eigen::Vector4d>& space_time_path, 
+                                const double& plan_start_t);
 
         /* Convert from time [s] to space-time units */
-        int tToSpaceTimeUnits(const double& t){
+        long tToSpaceTimeUnits(const double& t){
             return std::lround(t / t_unit_);
         }
 

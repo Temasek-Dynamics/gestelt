@@ -38,40 +38,6 @@ static const int8_t UNKNOWN = -1;
 
 #define INF std::numeric_limits<double>::max()
 
-// template<typename T, typename priority_t>
-// struct PriorityQueueV {
-//   typedef std::pair<priority_t, T> PQElement;
-//   struct PQComp {
-//     constexpr bool operator()(
-//       PQElement const& a,
-//       PQElement const& b)
-//       const noexcept
-//     {
-//       return a.first > b.first;
-//     }
-//   };
-
-//   std::priority_queue<PQElement, std::vector<PQElement>, PQComp > elements;
-
-//   inline bool empty() const {
-//      return elements.empty();
-//   }
-
-//   inline void put(T item, priority_t priority) {
-//     elements.emplace(priority, item);
-//   }
-
-//   T get() {
-//     T best_item = elements.top().second;
-//     elements.pop();
-//     return best_item;
-//   }
-
-//   void clear() {
-//     elements = std::priority_queue<PQElement, std::vector<PQElement>, PQComp>();
-//   }
-// };
-
 template<typename ... Args>
 std::string str_fmt( const std::string& format, Args ... args )
 {
@@ -210,11 +176,11 @@ private:
   /* Timer for front-end planner*/
   void planFETimerCB(const ros::TimerEvent &e);
 
+  /* Generate voronoi map timer callback*/
+  void genVoroMapTimerCB(const ros::TimerEvent &e);
+
   /* Front end plan subscription */
   void FEPlanSubCB(const gestelt_msgs::FrontEndPlanConstPtr& msg);
-
-  /*Subscription to occupancy map in the form of many 2D boolean map slices at different heights*/
-  void boolMapCB(const gestelt_msgs::BoolMapArrayConstPtr& msg);
 
   /* Plan request (for debug use)*/
   void planReqDbgCB(const gestelt_msgs::PlanRequestDebugConstPtr &msg);
@@ -250,7 +216,7 @@ private:
     occ_grid.header.frame_id = "map";
     occ_grid.info.width = dyn_voro.getSizeX();
     occ_grid.info.height = dyn_voro.getSizeY();
-    occ_grid.info.resolution = res_;
+    occ_grid.info.resolution = bool_map_3d_.resolution;
     occ_grid.info.origin.position.x = origin_x;
     occ_grid.info.origin.position.y = origin_y;
     occ_grid.info.origin.position.z = dyn_voro.getOriginZ();
@@ -282,7 +248,7 @@ private:
     occ_grid.header.frame_id = "map";
     occ_grid.info.width = dyn_voro.getSizeX();
     occ_grid.info.height = dyn_voro.getSizeY();
-    occ_grid.info.resolution = res_;
+    occ_grid.info.resolution = bool_map_3d_.resolution;
     occ_grid.info.origin.position.x = origin_x;
     occ_grid.info.origin.position.y = origin_y;
     occ_grid.info.origin.position.z = dyn_voro.getOriginZ();
@@ -326,12 +292,12 @@ private:
       return num;
     }
 
-    if (num >= max_height_cm_){
-      return max_height_cm_;
+    if (num > bool_map_3d_.max_height_cm){
+      return bool_map_3d_.max_height_cm;
     }
 
-    if (num <= min_height_){
-      return min_height_;
+    if (num < bool_map_3d_.min_height_cm){
+      return bool_map_3d_.min_height_cm;
     }
 
     int rem = (int)num % mult;
@@ -342,32 +308,41 @@ private:
     return rem < (mult/2) ? (num-rem) : (num-rem) + mult;
   }
 
+  // Convert from meters to centimeters
+  int mToCm(const double& val_m){
+    return (int) (val_m * 100.0);
+  }
 
+  // Convert from centimeters to meters
+  double cmToM(const int& val_cm) {
+    return ((double) val_cm)/100.0;  
+  }
 
 private:
   /* Params */
   std::string node_name_{"VoronoiPlanner"};
   int drone_id_{-1};
-  std::string local_map_origin_;
-  std::string global_origin_;
   int num_agents_; // Number of agents
 
-  bool plan_once_{false}; // Used for testing, only runs the planner once
-
-  bool verbose_planning_{false};  // enables printing of planning time
-  double res_;                    // [m] Resolution of map
-  double critical_clr_{-0.1};     // [m] minimum clearance of drone from obstacle
-  double fixed_pt_thresh_{-0.1};   // [m] points (on trajectory) below this threshold are defined as fixed points (not decision variables in optimization problem)
+  std::string local_map_origin_;
+  std::string global_origin_;
 
   // Planning params
-  double fe_planner_freq_{10}; // [Hz] Frequency for front-end planning
-  double squared_goal_tol_{0.1}; // Distance to goal before it is considered fulfilled.
   double t_unit_{0.1}; // [s] Time duration of each space-time A* unit
+  double fe_planner_freq_{10}; // [Hz] Frequency for front-end planning
+  double gen_voro_map_freq_{20}; // [Hz] Frequency for front-end planning
+  double sqr_goal_tol_{0.1}; // Distance to goal before it is considered fulfilled.
+  bool plan_once_{false}; // Used for testing, only runs the planner once
+  bool verbose_print_{false};  // enables printing of planning time
+
+  double resrv_tbl_inflation_{-1.0}; // Inflation of cells in the reservation table
+  double resrv_tbl_t_buffer_{-1.0}; // Time buffer in the reservation table
 
   AStarPlanner::AStarParams astar_params_; 
 
   /* Timers */
   ros::Timer plan_fe_timer_;
+  ros::Timer gen_voro_map_timer_;
 
   /* Publishers */
   ros::Publisher occ_map_pub_;      // Publishes original occupancy grid
@@ -384,7 +359,7 @@ private:
   /* Subscribers */
   ros::Subscriber plan_req_dbg_sub_;  // plan request (start and goal) debug subscriber
   ros::Subscriber goals_sub_;  // goal subscriber
-  ros::Subscriber bool_map_sub_; // Subscription to boolean map
+  // ros::Subscriber bool_map_sub_; // Subscription to boolean map
   ros::Subscriber fe_plan_broadcast_sub_; // Subscription to broadcasted front end plan from other agents
 
   ros::Subscriber odom_sub_; // Subscriber to odometry
@@ -392,83 +367,39 @@ private:
   /* Mutexes*/
   std::mutex resrv_tbl_mtx_;
   std::mutex voro_map_mtx_;
+  std::mutex cur_state_mtx_;
 
   /* Mapping */
-  std::shared_ptr<GridMap> map_;
-  double local_origin_x_{0.0}, local_origin_y_{0.0}; // Origin of local map 
-  int z_separation_cm_{50}; // [cm] separation between map slices
-  int max_height_cm_{300}, min_height_{50}; // [cm] max and minimum height of map
+  std::shared_ptr<GridMap> map_;  // Occupancy map object
 
-  // map{drone_id : unordered_set{(x,y,z,t)}}
-  std::map<int, std::unordered_set<Eigen::Vector4i>> resrv_tbl_; // Reservation table of (x,y,z_cm, t) where x,y are grid positions, z_cm is height in centimeters and t is space time units
+  BoolMap3D bool_map_3d_; // Bool map slices 
 
   /* Data structs */
   std::unique_ptr<AStarPlanner> fe_planner_; // Front end planner
 
+  // map{drone_id : unordered_set{(x,y,z,t)}}
+  std::map<int, std::unordered_set<Eigen::Vector4i>> resrv_tbl_; // Reservation table of (x,y,z_cm, t) where x,y are grid positions, z_cm is height in centimeters and t is space time units
+
   Waypoint waypoints_; // Goal waypoint handler object
 
   std::map<int, std::shared_ptr<DynamicVoronoi>> dyn_voro_arr_; // array of voronoi objects with key of height (cm)
-  std::map<int, std::shared_ptr<std::vector<std::vector<bool>>>> bool_map_arr_; //  array of voronoi objects with key of height (cm)
 
   std::vector<Eigen::Vector3d> front_end_path_; // Front-end Space path in space coordinates (x,y,z) in world frame
   std::vector<Eigen::Vector4d> space_time_path_; // Front-end Space time  path in space-time coordinates (x,y,z,t) in world frame
   std::vector<Eigen::Vector3d> smoothed_path_; // Front end smoothed path in space coordinates (x,y,z) in world frame
   std::vector<Eigen::Vector4d> smoothed_path_t_; // Front end smoothed space-time path in space coordinates (x,y,z) in world frame
 
-  bool init_voro_maps_{false}; // flag to indicate if voronoi map is initialized
 
   Eigen::Vector3d cur_pos_, cur_vel_;   // [LOCAL FRAME] current state
+
+  /* Flags*/
+  bool init_voro_maps_{false}; // flag to indicate if voronoi map is initialized
 
   /* Debugging */
   Timer tm_front_end_plan_{"front_end_plan"};
   Timer tm_voro_map_init_{"voro_map_init"};
 
-
-private: /* Logging functions */
-  
-  void logInfo(const std::string& str){
-    ROS_INFO_NAMED(node_name_, "UAV_%i: %s", 
-      drone_id_, str.c_str());
-  }
-
-  void logWarn(const std::string& str){
-    ROS_WARN_NAMED(node_name_, "UAV_%i: %s", 
-      drone_id_, str.c_str());
-  }
-
-  void logError(const std::string& str){
-    ROS_ERROR_NAMED(node_name_, "UAV_%i: %s", 
-      drone_id_, str.c_str());
-  }
-
-  void logFatal(const std::string& str){
-    ROS_FATAL_NAMED(node_name_, "UAV_%i: %s", 
-      drone_id_, str.c_str());
-  }
-
-  void logInfoThrottled(const std::string& str, double period){
-    ROS_INFO_THROTTLE_NAMED(period, node_name_, "UAV_%i: %s", 
-      drone_id_, str.c_str());
-  }
-
-  void logWarnThrottled(const std::string& str, double period){
-    ROS_WARN_THROTTLE_NAMED(period, node_name_, "UAV_%i: %s", 
-      drone_id_, str.c_str());
-  }
-
-  void logErrorThrottled(const std::string& str, double period){
-    ROS_ERROR_THROTTLE_NAMED(period, node_name_, "UAV_%i: %s", 
-      drone_id_, str.c_str());
-  }
-
-  void logFatalThrottled(const std::string& str, double period){
-    ROS_FATAL_THROTTLE_NAMED(period, node_name_, "UAV_%i: %s", 
-      drone_id_, str.c_str());
-  }
-
 }; // class VoronoiPlanner
-
-
 
   // void realignBoolMap(bool ***map, bool ***map_og, int& size_x, int& size_y)
   // {

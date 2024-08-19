@@ -11,7 +11,6 @@ set(ROS_LIBRARIES
   geometry_msgs
   visualization_msgs
   grid_map
-  jps3d
   logger
   dynamic_voronoi
 )
@@ -30,7 +29,7 @@ find_package(Eigen3 REQUIRED)
 catkin_package(
  INCLUDE_DIRS include
  LIBRARIES global_planner # Exported libraries
- CATKIN_DEPENDS grid_map jps3d logger dynamic_voronoi # Export packages as part of this package
+ CATKIN_DEPENDS grid_map logger dynamic_voronoi # Export packages as part of this package
 #  DEPENDS system_lib
 )
 
@@ -49,7 +48,6 @@ include_directories(
 ## Declare a C++ library
 add_library(global_planner 
   src/a_star.cpp
-  src/jps_wrapper.cpp
 )
 
 ## Specify libraries to link a library or executable target against

@@ -52,7 +52,7 @@ public:
   //! Initialization with an empty map
   void initializeEmpty(int _sizeX, int _sizeY, bool initGridMap=true);
   //! Initialization with a given binary map (false==free, true==occupied)
-  void initializeMap(int _sizeX, int _sizeY, std::shared_ptr<std::vector<std::vector<bool>>> _gridMap) ;
+  void initializeMap(int _sizeX, int _sizeY, const std::vector<bool>& bool_map_1d_arr) ;
 
   //! add an obstacle at the specified cell coordinate
   void occupyCell(int x, int y);

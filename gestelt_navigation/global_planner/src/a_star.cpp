@@ -11,14 +11,15 @@ void AStarPlanner::assignVoroMap(const std::map<int, std::shared_ptr<DynamicVoro
                                 const double& local_origin_x,
                                 const double& local_origin_y,
                                 const double& max_height,
+                                const double& min_height,
                                 const double& res)
 {
-    dyn_voro_arr_.clear();
     dyn_voro_arr_ = dyn_voro_arr;
     z_separation_cm_ = z_separation_cm;
     local_origin_x_ = local_origin_x;
     local_origin_y_ = local_origin_y;
     max_height_ = max_height;
+    min_height_ = min_height;
     res_ = res;
 }
 
@@ -246,7 +247,7 @@ bool AStarPlanner::generatePlanVoroT(   const Eigen::Vector3d& start_pos_3d,
                                         nb_node_eig(2), nb_t};
 
             bool occ_resrv_tbl = false;
-            for (auto const& tbl : resrv_tbl_){
+            for (auto const& tbl : resrv_tbl_){ // for each agent's reservation table
                 if (tbl.second.find(nb_grid_4d) != tbl.second.end() ){
                     // Position has been reserved by another agent
                     // std::cout << "Drone " << astar_params_.drone_id <<  ": Grid Pos (" << nb_grid_4d.transpose() << ") has been reserved" << std::endl;

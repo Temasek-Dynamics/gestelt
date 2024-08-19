@@ -1,7 +1,0 @@
-num_agents: 5
-
-verbose_planning: true
-plan_once: false
-front_end_planner_frequency: 1.0
-
-critical_clearance: 0.25

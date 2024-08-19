@@ -12,7 +12,7 @@
 
   <!-- Config filepath -->
   <arg name="grid_agent_cfg_filepath" default="$(find gestelt_bringup)/config/fake_drone_params.yaml"/>
-  <arg name="navigator_cfg_filepath" default="$(find gestelt_bringup)/config/navigator.yaml"/>
+  <arg name="voro_planner_cfg_filepath" default="$(find gestelt_bringup)/config/voronoi_planner.yaml"/>
 
   <!-- Mavros topics -->
   <arg name="command_topic" default="mavros/setpoint_raw/local" />
@@ -31,17 +31,15 @@
     <!-- Planning Module -->
     <node pkg="voronoi_planner" type="voronoi_planner_node" 
           name="voronoi_planner_node"  required="true" output="screen">
-      <rosparam command="load" file="$(find voronoi_planner)/config/voronoi_planner.yaml" />
-      <rosparam command="load" file="$(arg navigator_cfg_filepath)" />
-
-      <param name="drone_id" value="$(arg drone_id)"/>
-
-      <param name="t_unit" value="$(arg t_unit)"/>
 
       <remap from="odom" to="$(arg odometry_topic)"/>
 
       <remap from="grid_map/odom" to="$(arg odometry_topic)"/>
       <remap from="grid_map/cloud" to="$(arg cloud_topic)"/>
+
+      <rosparam command="load" file="$(arg voro_planner_cfg_filepath)" />
+      <param name="drone_id" value="$(arg drone_id)"/>
+      <param name="planner/t_unit" value="$(arg t_unit)"/>
 
       <param name="grid_map/global_frame" value="$(arg global_frame)"/>
       <param name="grid_map/uav_origin_frame" value="$(arg uav_origin_frame)"/>

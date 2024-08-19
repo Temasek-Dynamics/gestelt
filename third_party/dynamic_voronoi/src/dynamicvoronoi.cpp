@@ -87,8 +87,30 @@ void DynamicVoronoi::initializeEmpty(int _sizeX, int _sizeY, bool initGridMap) {
   }
 }
 
-void DynamicVoronoi::initializeMap(int _sizeX, int _sizeY, std::shared_ptr<std::vector<std::vector<bool>>> _gridMap) {
-  gridMap = _gridMap;
+void DynamicVoronoi::initializeMap(int _sizeX, int _sizeY, const std::vector<bool>& bool_map_1d_arr) {
+  gridMap = std::make_shared<std::vector<std::vector<bool>>>(_sizeY, std::vector<bool>(_sizeX, false));;
+  
+  // set values of boolean map
+  for(int j = 0; j < _sizeY; j++)
+  {
+    for (int i = 0; i < _sizeX; i++) 
+    {
+      (*gridMap)[i][j] = bool_map_1d_arr[i + j * _sizeX];
+    }
+  }
+
+  // set map boundaries as occupied
+  for(int j = 0; j < _sizeY; j++)
+  {
+    (*gridMap)[0][j] = true;
+    (*gridMap)[_sizeX-1][j] = true;
+  }
+  for (int i = 0; i < _sizeX; i++)
+  {
+    (*gridMap)[i][0] = true;
+    (*gridMap)[i][_sizeY-1] = true;
+  }
+  
   initializeEmpty(_sizeX, _sizeY, false);
 
   for (int x=0; x<sizeX; x++) {
@@ -914,7 +936,7 @@ bool DynamicVoronoi::isOccupied(const INTPOINT& grid_pos) const {
 bool DynamicVoronoi::isOccupied(const size_t& x, const size_t& y) const {
   // std::cout << "DynamicVoronoi::isOccupied(" << x << ", " << y << ")" << std::endl;
   dataCell c = data[x][y];
-  return (c.obstX == x && c.obstY == y);
+  return (c.obstX == (int) x && c.obstY == (int) y);
 }
 
 bool DynamicVoronoi::isOccupied(int x, int y) {

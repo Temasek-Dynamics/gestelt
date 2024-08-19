@@ -35,25 +35,6 @@
 #include <geometry_msgs/PolygonStamped.h>
 #include <geometry_msgs/Point32.h>
 
-///Pre-allocated std::vector for Eigen using vec_E
-template <typename T>
-using vec_E = std::vector<T, Eigen::aligned_allocator<T>>;
-///Eigen 1D float vector of size N
-template <int N>
-using Vecf = Eigen::Matrix<double, N, 1>;
-///Eigen 1D int vector of size N
-template <int N>
-using Veci = Eigen::Matrix<int, N, 1>;
-///Eigen 1D float vector of dynamic size
-using VecDf = Eigen::Matrix<double, Eigen::Dynamic, 1>;
-
-///Vector of Eigen 1D float vector
-template <int N>
-using vec_Vecf = vec_E<Vecf<N>>;
-///Vector of Eigen 1D int vector
-template <int N>
-using vec_Veci = vec_E<Veci<N>>;
-
 struct MappingParameters
 {
   /* map properties */
@@ -89,6 +70,25 @@ struct MappingParameters
   std::string global_frame_; // frame id of global reference 
   std::string uav_origin_frame_; // frame id of UAV origin
 
+};
+
+
+struct BoolMap3D {
+  int z_separation_cm;   // [cm] Separation between slice layers
+  int min_height_cm;     // [cm] Lowest slice height
+  int max_height_cm;     // [cm] Highest slice height
+
+  double z_separation_m; // [m] separation between slice layers
+  double min_height_m;   // [m] Lowest slice height
+  double max_height_m;   // [m] Highest slice height
+
+  Eigen::Vector3d origin{0.0, 0.0, 0.0}; // [m] Origin of local map
+
+  int width;            // [] Number of width cells 
+  int height;           // [] Number of height cells
+  double resolution;    // [cm] Resolution of map
+
+  std::map<int, std::vector<bool>> bool_maps; // Map of BoolMap objects
 };
 
 // intermediate mapping data for fusion
@@ -175,7 +175,6 @@ public:
   // Convert point cloud to point cloud map, transform it from camera-to-global frame and save it. 
   void pcdToMap(pcl::PointCloud<pcl::PointXYZ>::Ptr pcd);
 
-
   /** Getter methods */
 
   // Get occupancy grid resolution
@@ -195,6 +194,18 @@ public:
 
   // Get inflation value
   double getInflation() const{ return mp_.inflation_; }
+
+  bool getBoolMap3D(BoolMap3D& bool_map_3d) {
+    if (!init_bool_map_3d_){
+      return false;
+    }
+
+    std::lock_guard<std::mutex> bool_map_3d_guard(bool_map_3d_mtx_);
+
+    bool_map_3d = bool_map_3d_;
+
+    return true;
+  }
 
   /* Checks */
 
@@ -277,14 +288,29 @@ private:
 // Frequently used methods
 public:
 
+  // Convert from meters to centimeters
+  int mToCm(const double& val_m){
+    return (int) (val_m * 100.0);
+  }
+
+  // Convert from centimeters to meters
+  double cmToM(const int& val_cm) {
+    return ((double) val_cm)/100.0;  
+  }
+
+  /**
+   * @brief Get all point clouds at a slice of the local map centered at height z with specified thickness
+   * 
+   * @param slice_z [cm] Slice at height z
+   * @param thickness [m] Thickness of the map
+   * @return gestelt_msgs::BoolMap 
+   */
+  std::vector<bool> sliceMap(const double& slice_z_cm, const double& thickness);
+
   /* Gridmap operation methods */
 
   // Called by planners to update the local map
   void updateLocalMap();
-
-  std::vector<int8_t> getData() const {
-    return local_map_data_;
-  }
 
   // True if given GLOBAL position is within the GLOBAL map boundaries, else False
   bool isInGlobalMap(const Eigen::Vector3d &pos)
@@ -404,54 +430,6 @@ public:
     return !nb_points.empty();
   }
 
-
-
-  /**
-   * @brief Get the Nearest Occupied Cell  
-   * 
-   * @param pos (x,y,z) position to be queried
-   * @param occ_nearest position of nearest occupied cell
-   * @param dist_to_nearest_nb distance to nearest obstacle
-   * @return true 
-   * @return false 
-   */
-  bool getNearestOccupiedCellLocal(const Eigen::Vector3d &pos, 
-                                  Eigen::Vector3d& occ_nearest, double& dist_to_nearest_nb){
-    int nearest_num_nb = 1;
-    pcl::PointXYZ search_point(pos(0), pos(1), pos(2));
-    std::vector<pcl::PointXYZ, Eigen::aligned_allocator<pcl::PointXYZ>> nb_points;
-    std::vector<float> nb_radius_vec;
-
-    lcl_map_kdtree_->Nearest_Search(search_point, nearest_num_nb, nb_points, nb_radius_vec);
-
-    if (nb_points.empty()){
-      return false;
-    }
-
-    dist_to_nearest_nb = sqrt(nb_radius_vec[0]);
-
-    occ_nearest = Eigen::Vector3d{nb_points[0].x, nb_points[0].y, nb_points[0].z};
-
-    return true;
-  }
-
-  /**
-   * @brief Check if position is within a radius of an obstacle
-   * 
-   * @param pos 
-   * @param radius 
-   * @return true 
-   * @return false 
-   */
-  bool withinObsRadiusLocal(const Eigen::Vector3d &pos, const double& radius){
-    pcl::PointXYZ search_point(pos(0), pos(1), pos(2));
-    std::vector<pcl::PointXYZ, Eigen::aligned_allocator<pcl::PointXYZ>> nb_points;
-    lcl_map_kdtree_->Radius_Search(search_point, radius, nb_points);
-
-    return !nb_points.empty();
-  }
-
-
   // Check if current index is free
   bool isFree(const Eigen::Vector3i& idx) {
     return !isOccupied(idx);
@@ -466,20 +444,6 @@ public:
 
     // std::cout << "bonxai_map_->isFree( " << pos.transpose() <<  "): " << bonxai_map_->isFree(coord) << std::endl;
     // return bonxai_map_->isFree(coord);
-  }
-
-  /// Check current index is unknown
-  bool isUnknown(const Veci<3> &idx) {
-    if (!isInGlobalVoxelMap(idx)){
-      return true;
-    }
-
-    Eigen::Vector3d pos = intToFloat(idx);
-    Bonxai::CoordT coord = bonxai_map_->grid().posToCoord(pos(0), pos(1), pos(2));
-
-    // TODO: change is isUnknown method from bonxai_map_
-    // return bonxai_map_->isUnknown(coord);
-    return bonxai_map_->isOccupied(coord);
   }
 
   // Check if current index is occupied
@@ -517,43 +481,16 @@ public:
     return false;
   }
 
-  bool isOutside(const Eigen::Vector3i& idx){
-    return !isInGlobalVoxelMap(idx);
-  }
-  
-  /// Check if the ray from p1 to p2 is occluded
-  // TODO Remove val
-  bool isBlocked(const Vecf<3> &p1, const Vecf<3> &p2) {
-    vec_Veci<3> pns = rayTrace(p1, p2);
-    for (const auto &pn : pns) {
-      if (isOccupied(pn)) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  // // returns probability value of grid cell from 0.0 to 1.0
-  // double getOccVal(const Eigen::Vector3i& idx)
-  // {
-  //   if (!isInGlobalVoxelMap(idx)){
-  //     return 1.0;
-  //   }
-  //   Eigen::Vector3d pos = intToFloat(idx);
-  //   Bonxai::CoordT coord = bonxai_map_->grid().posToCoord(pos(0), pos(1), pos(2));
-  //   return bonxai_map_->getOccVal(coord);
-  // }
-
   /// Float position to discrete cell coordinate
-  Veci<3> floatToInt(const Eigen::Vector3d &pos) {
+  Eigen::Vector3i floatToInt(const Eigen::Vector3d &pos) {
 
-    // Veci<3> idx = (((pos - getGlobalOrigin()) / getRes() ) - Eigen::Vector3d::Constant(0.5)).cast<int>() ;
-    Veci<3> idx = ((pos - getGlobalOrigin()) / getRes() ).cast<int>() ;
+    // Eigen::Vector3i idx = (((pos - getGlobalOrigin()) / getRes() ) - Eigen::Vector3d::Constant(0.5)).cast<int>() ;
+    Eigen::Vector3i idx = ((pos - getGlobalOrigin()) / getRes() ).cast<int>() ;
     return idx;
   }
 
   /// Discrete cell coordinate to float position
-  Eigen::Vector3d intToFloat(const Veci<3> &idx) {
+  Eigen::Vector3d intToFloat(const Eigen::Vector3i &idx) {
     // return (idx.template cast<double>() + Vecf<3>::Constant(0.5)) * getRes() + getGlobalOrigin();
 
     // Eigen::Vector3d pos = (idx.cast<double>() + Eigen::Vector3d::Constant(0.5))  * getRes() + getGlobalOrigin();
@@ -561,32 +498,19 @@ public:
     return pos;
   }
 
-  /// Raytrace from float point pt1 to pt2
-  vec_Veci<3> rayTrace(const Vecf<3> &pt1, const Vecf<3> &pt2) {
-    Vecf<3> diff = pt2 - pt1;
-    double k = 0.8;
-    int max_diff = (diff / getRes()).template lpNorm<Eigen::Infinity>() / k;
-    double s = 1.0 / max_diff;
-    Vecf<3> step = diff * s;
-
-    vec_Veci<3> pns;
-    Veci<3> prev_pn = Veci<3>::Constant(-1);
-    for (int n = 1; n < max_diff; n++) {
-      Vecf<3> pt = pt1 + step * n;
-      Veci<3> new_pn = floatToInt(pt);
-      if (!isInGlobalVoxelMap(new_pn))
-        break;
-      if (new_pn != prev_pn)
-        pns.push_back(new_pn);
-      prev_pn = new_pn;
-    }
-    return pns;
-  }
-
-  /* Slice the voronoi map */
-  gestelt_msgs::BoolMap sliceMap(const double& slice_z);
 
 private: 
+  /* Params */
+  bool verbose_print_{false}; // Flag to enable printing of debug information such as timers
+  bool dbg_input_entire_map_{false}; // flag to indicate that map will be constructed at the start from the entire pcd map (instead of through incremental sensor data)
+  std::string entire_pcd_map_topic_; // Topic to listen for an entire PCD for debugging
+
+  double col_warn_radius_, col_fatal_radius_; // collision check radius
+
+  double viz_occ_map_freq_{-1.0}; // Frequency to publish occupancy map visualization
+  double update_local_map_freq_{-1.0};  // Frequency to update local map
+
+
   /* ROS Publishers, subscribers and Timers */
 
   // Message filters for point cloud/depth camera and pose/odom
@@ -610,7 +534,7 @@ private:
   ros::Publisher collision_viz_pub_; // Publisher for collision visualization spheres
   ros::Publisher local_map_poly_pub_; // Publisher to show local map bounds
 
-  ros::Publisher bool_map_arr_pub_; // Publisher of array of boolean map
+  // ros::Publisher bool_map_arr_pub_; // Publisher of array of boolean map
 
   ros::Timer vis_occ_timer_; // Timer for visualization
   ros::Timer check_collisions_timer_; // Timer for checking collisions
@@ -619,18 +543,7 @@ private:
   // TF transformation 
   tf2_ros::Buffer tfBuffer_;
   std::shared_ptr<tf2_ros::TransformListener> tfListener_;
-
   tf2_ros::TransformBroadcaster tf_broadcaster_; // broadcast tf link
-
-  /* Params */
-  bool dbg_origin_pose_{false}; // flag to run grid_map with pose set at origin (with no quadrotor)
-  bool dbg_input_entire_map_; // flag to indicate that map will be constructed at the start from the entire pcd map (instead of through incremental sensor data)
-  std::string entire_pcd_map_topic_; // Topic to listen for an entire PCD for debugging
-
-  double col_warn_radius_, col_fatal_radius_; // collision check radius
-
-  double viz_occ_map_freq_{-1.0}; // Frequency to publish occupancy map visualization
-  double update_local_map_freq_{-1.0};  // Frequency to update local map
 
   /* Data structures for point clouds */
   pcl::PointCloud<pcl::PointXYZ>::Ptr local_occ_map_pts_; // (In local frame) Occupancy map points formed by Bonxai probabilistic mapping (w.r.t local map origin)
@@ -638,25 +551,23 @@ private:
   pcl::PointCloud<pcl::PointXYZ>::Ptr global_map_in_origin_;  // Point cloud global map in UAV Origin frame
 
   std::unique_ptr<BonxaiT> bonxai_map_; // Bonxai data structure 
-  
   std::shared_ptr<KD_TREE<pcl::PointXYZ>> lcl_map_kdtree_; // Local map KD-Tree 
-
-  std::vector<int8_t> local_map_data_; // 1D array used by path planners for collision checking
 
   nav_msgs::Odometry odom_msg_; // Odom message
 
-  /* Logic flags*/
+  BoolMap3D bool_map_3d_; // Bool map slices 
 
+
+  /* Logic flags*/
   bool check_collisions_{true}; // Flag for checking collisions
+  bool init_bool_map_3d_{false};
 
   /* Mutexes */
-  // std::mutex occ_map_pts_mutex_;
+  std::mutex bool_map_3d_mtx_;  // Mutex lock for bool map 3d
 
   /* Stopwatch for profiling performance */
   Timer tm_bonxai_insert_{"bonxai->insertPointCloud"};
-
   Timer tm_lcl_map_kdtree_build_{"local_map_kdtree_->Build"};
-
   Timer tm_slice_map_{"grid_map.sliceMap"};
 
 }; // class GridMap
