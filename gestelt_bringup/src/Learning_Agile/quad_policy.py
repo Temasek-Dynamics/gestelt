@@ -98,17 +98,16 @@ class run_quad:
         ## set the symbolic cost function to the solver
         self.uavoc1.setInputCost(self.uav1.input_cost)
         
-        self.uavoc1.setInputDiffCostAllSym(self.uav1.Ulast,
-                                           self.uav1.input_diff_cost_all_sym)
+        self.uavoc1.setInputDiffCost(self.uav1.Ulast,
+                                           self.uav1.input_diff_cost)
 
-        # AllSym means the goal state is also a symbolic variable, not a fixed value
-        self.uavoc1.setPathCostAllSym(self.uav1.goal_cost_all_sym,goal_state_sym=self.uav1.goal_state_sym)
-        self.uavoc1.setTraCostAllSym(self.uav1.tra_cost,
+        self.uavoc1.setPathCost(self.uav1.goal_cost,goal_state=self.uav1.goal_state)
+        self.uavoc1.setTraCost(self.uav1.tra_cost,
                                self.uav1.trav_auxvar,
                                self.uav1.t_node
                               )
         
-        self.uavoc1.setFinalCostAllSym(self.uav1.final_cost_all_sym,goal_state_sym=self.uav1.goal_state_sym)
+        self.uavoc1.setFinalCost(self.uav1.final_cost,goal_state=self.uav1.goal_state)
 
         # initialize the mpc solver
         # self.uavoc1.ocSolverInit(horizon=self.horizon,dt=self.dt)
@@ -247,111 +246,109 @@ class run_quad:
                             tra_ang,
                             t_tra,
                             Ulast_value)
+        j = j.detach().numpy()
         ## fixed perturbation to calculate the gradient
         delta = 1e-3
 
         
-        if not self.PDP_GRADIENT:    
-            # drdx,drdy,drdz,drda,drdb,drdc=0
-            drdx = np.clip(self.R_from_MPC(tra_pos+[delta,0,0],tra_ang, t_tra,Ulast_value) - j,-0.5,0.5)*0.1
-            drdy = np.clip(self.R_from_MPC(tra_pos+[0,delta,0],tra_ang, t_tra,Ulast_value) - j,-0.5,0.5)*0.1
-            drdz = np.clip(self.R_from_MPC(tra_pos+[0,0,delta],tra_ang, t_tra,Ulast_value) - j,-0.5,0.5)*0.1
-            drda = np.clip(self.R_from_MPC(tra_pos,tra_ang+[delta,0,0], t_tra,Ulast_value) - j,-0.5,0.5)*(1/(500*tra_ang[0]**2+5))
-            drdb = np.clip(self.R_from_MPC(tra_pos,tra_ang+[0,delta,0], t_tra,Ulast_value) - j,-0.5,0.5)*(1/(500*tra_ang[1]**2+5))
-            drdc = np.clip(self.R_from_MPC(tra_pos,tra_ang+[0,0,delta], t_tra,Ulast_value) - j,-0.5,0.5)*(1/(500*tra_ang[2]**2+5))
-            drdt =0
-            if((self.R_from_MPC(tra_pos,tra_ang,t_tra-0.1,Ulast_value)-j)>2):
-                drdt = -0.05
-            if((self.R_from_MPC(tra_pos,tra_ang,t_tra+0.1,Ulast_value)-j)>2):
-                drdt = 0.05
-            ## return gradient and reward (for deep learning)
-            
-            return np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,j])
-        else:
+        # if not self.PDP_GRADIENT:    
+        # drdx,drdy,drdz,drda,drdb,drdc=0
+        drdx = np.clip(self.R_from_MPC(tra_pos+[delta,0,0],tra_ang, t_tra,Ulast_value).detach().numpy() - j,-0.5,0.5)*0.1
+        drdy = np.clip(self.R_from_MPC(tra_pos+[0,delta,0],tra_ang, t_tra,Ulast_value).detach().numpy() - j,-0.5,0.5)*0.1
+        drdz = np.clip(self.R_from_MPC(tra_pos+[0,0,delta],tra_ang, t_tra,Ulast_value).detach().numpy() - j,-0.5,0.5)*0.1
+        drda = np.clip(self.R_from_MPC(tra_pos,tra_ang+[delta,0,0], t_tra,Ulast_value).detach().numpy() - j,-0.5,0.5)*(1/(500*tra_ang[0]**2+5))
+        drdb = np.clip(self.R_from_MPC(tra_pos,tra_ang+[0,delta,0], t_tra,Ulast_value).detach().numpy() - j,-0.5,0.5)*(1/(500*tra_ang[1]**2+5))
+        drdc = np.clip(self.R_from_MPC(tra_pos,tra_ang+[0,0,delta], t_tra,Ulast_value).detach().numpy() - j,-0.5,0.5)*(1/(500*tra_ang[2]**2+5))
+        drdt =0
+        if((self.R_from_MPC(tra_pos,tra_ang,t_tra-0.1,Ulast_value).detach().numpy()-j)>2):
+            drdt = -0.05
+        if((self.R_from_MPC(tra_pos,tra_ang,t_tra+0.1,Ulast_value).detach().numpy()-j)>2):
+            drdt = 0.05
+        ## return gradient and reward (for deep learning)
+        
+        # return np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,j])
+        print(np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,j]))
+        # else:
 
-            
+        j = self.R_from_MPC(tra_pos,
+                            tra_ang,
+                            t_tra,
+                            Ulast_value)    
 
-            ###################################################################
-            ###----- Set mpc external variables VALUE to diffPMP--------#######
-            ###################################################################
-            ## goal state, Ulast value, t_node is set in the mpc_update function,
-            ## need to be given here
-            self.uav1.initCostGivenValue(self.goal_pos,
-                                            np.zeros(3),
-                                            self.goal_ori,
-                                            Ulast_value,
-                                            self.horizon)
-            
-            ## set the traverse hyperparameters (auxvar) here
-            current_trav_auxvar = np.array([tra_pos[0],tra_pos[1],tra_pos[2],tra_ang[0],tra_ang[1],tra_ang[2],t_tra])
-            
-            # set acados external variables value here
-            # goal_state, Ulast, t_node are external symbolic variables for acados
-            # and those value needs to be set here to rebuild the symbolic functions without external variables
-            self.uavoc1.setFinalCost(self.uav1.final_cost) 
-            self.uavoc1.setPathCost(self.uav1.goal_cost)
-            self.uavoc1.setTraCost(self.uav1.tra_cost)
-            self.uavoc1.setInputDiffCost(self.uav1.input_diff_cost)
-            ###################################################################
-            ###------------ PDP auxiliary control system----------------#######
-            ###################################################################
-            # define the auxilary control system symbolic functions
-            self.uavoc1.diffPMP()
-            self.lqr_solver = LQR()
+        ###################################################################
+        ###----- Set mpc external variables VALUE to diffPMP--------#######
+        ###################################################################
+        ## goal state, Ulast value, t_node is set in the mpc_update function,
+        ## need to be given here
+     
+       
+        ## set the traverse hyperparameters (auxvar) here
+        current_trav_auxvar = np.array([tra_pos[0],tra_pos[1],tra_pos[2],tra_ang[0],tra_ang[1],tra_ang[2],t_tra])
+        goal_state_value=np.concatenate((self.goal_pos,np.zeros(3),self.goal_ori))  
+    
+        ###################################################################
+        ###------------ PDP auxiliary control system----------------#######
+        ###################################################################
+        # define the auxilary control system symbolic functions
+        self.uavoc1.diffPMP()
+        self.lqr_solver = LQR()
 
-            
-            ## using LQR solver to solve the auxilary control system to get the analytical gradient
-            # set values to the auxilary control system symbolic functions 
-            aux_sys = self.uavoc1.getAuxSys(state_traj_opt=self.sol1['state_traj_opt'],
-                                            control_traj_opt=self.sol1['control_traj_opt'],
-                                            costate_traj_opt=self.sol1['costate_traj_opt'],
-                                            auxvar_value=current_trav_auxvar)
-            
-            # set values to the LQR solver
-            self.lqr_solver.setDyn(dynF=aux_sys['dynF'], dynG=aux_sys['dynG'], dynE=aux_sys['dynE'])
-            self.lqr_solver.setPathCost(Hxx=aux_sys['Hxx'], Huu=aux_sys['Huu'], Hxu=aux_sys['Hxu'], Hux=aux_sys['Hux'],
-                                   Hxe=aux_sys['Hxe'], Hue=aux_sys['Hue'])
-            self.lqr_solver.setFinalCost(hxx=aux_sys['hxx'], hxe=aux_sys['hxe'])
+        
+        ## using LQR solver to solve the auxilary control system to get the analytical gradient
+        # set values to the auxilary control system symbolic functions 
+        aux_sys = self.uavoc1.getAuxSys(state_traj_opt=self.sol1['state_traj_opt'],
+                                        control_traj_opt=self.sol1['control_traj_opt'],
+                                        costate_traj_opt=self.sol1['costate_traj_opt'],
+                                        goal_state_value=goal_state_value,
+                                        Ulast_value=Ulast_value,
+                                        auxvar_value=current_trav_auxvar)
+        
+        # set values to the LQR solver
+        self.lqr_solver.setDyn(dynF=aux_sys['dynF'], dynG=aux_sys['dynG'], dynE=aux_sys['dynE'])
+        self.lqr_solver.setPathCost(Hxx=aux_sys['Hxx'], Huu=aux_sys['Huu'], Hxu=aux_sys['Hxu'], Hux=aux_sys['Hux'],
+                                Hxe=aux_sys['Hxe'], Hue=aux_sys['Hue'])
+        self.lqr_solver.setFinalCost(hxx=aux_sys['hxx'], hxe=aux_sys['hxe'])
 
 
-            ## solve the auxilary control system and get the analytical gradient
-            aux_sol=self.lqr_solver.lqrSolver(np.zeros((self.uavoc1.n_state, self.uavoc1.n_trav_auxvar)), self.horizon)
-            
+        ## solve the auxilary control system and get the analytical gradient
+        aux_sol=self.lqr_solver.lqrSolver(np.zeros((self.uavoc1.n_state, self.uavoc1.n_trav_auxvar)), self.horizon)
+        
 
-            # take solution of the auxiliary control system
-            
-            # which is the dtrajectory/dtraverse_auxvar 
-            dstate_trajdp = aux_sol['state_traj_opt'] #(n_node,n_state,n_trav_auxvar)
-            dinput_trajdp = aux_sol['control_traj_opt'] 
-            
-            dstate_trajdp = np.array(dstate_trajdp)
-            
-            # acquire dreward/dtrajectory
-            j.backward()
-            drdstate_traj=self.state_traj_tensor.grad #(n_node,15)
-            # drdtrav_angle =self.tra_ang_tensor.grad
+        # take solution of the auxiliary control system
+        
+        # which is the dtrajectory/dtraverse_auxvar 
+        dstate_trajdp = aux_sol['state_traj_opt'] #(n_node,n_state,n_trav_auxvar)
+        dinput_trajdp = aux_sol['control_traj_opt'] 
+        
+        dstate_trajdp = np.array(dstate_trajdp)
+        
+        
+        # acquire dreward/dtrajectory
+        j.backward()
+        drdstate_traj=self.state_traj_tensor.grad #(n_node,15)
+        # drdtrav_angle =self.tra_ang_tensor.grad
 
-           
-            drdstate_traj=drdstate_traj.numpy().reshape(self.horizon+1,1,self.uavoc1.n_state)
-            # drdtrav_angle = drdtrav_angle.numpy().reshape(3)
-            
-            
-            # print(drdstate_traj.shape)
-            # print(dstate_trajdp.shape)
-            drdp=np.zeros(7)
-            for i in range(self.horizon):
-                drdp += np.matmul(drdstate_traj[i,:,:],dstate_trajdp[i,:,:]).reshape(7)
+        
+        drdstate_traj=drdstate_traj.numpy().reshape(self.horizon+1,1,self.uavoc1.n_state)
+        # drdtrav_angle = drdtrav_angle.numpy().reshape(3)
+        
+        
+        # print(drdstate_traj.shape)
+        # print(dstate_trajdp.shape)
+        drdp=np.zeros(7)
+        for i in range(self.horizon):
+            drdp += np.matmul(drdstate_traj[i,:,:],dstate_trajdp[i,:,:]).reshape(7)
 
-            drdp += np.matmul(drdstate_traj[self.horizon,:,:],dstate_trajdp[self.horizon,:,:]).reshape(7)    
-            drdp = -drdp/ ((self.horizon+1)*100)
-            drdx = drdp[0]
-            drdy = drdp[1]
-            drdz = drdp[2]
-            drda = drdp[3]
-            drdb = drdp[4]
-            drdc = drdp[5]
-            drdt = drdp[6]
-            j = j.detach().numpy()
+        drdp += np.matmul(drdstate_traj[self.horizon,:,:],dstate_trajdp[self.horizon,:,:]).reshape(7)    
+        drdp = drdp/ ((self.horizon+1))
+        drdx = drdp[0]
+        drdy = drdp[1]
+        drdz = drdp[2]
+        drda = drdp[3]
+        drdb = drdp[4]
+        drdc = drdp[5]
+        drdt = drdp[6]
+        j = j.detach().numpy()
         return np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,j])
 
 

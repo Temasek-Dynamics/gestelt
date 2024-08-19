@@ -51,7 +51,7 @@ class Quadrotor:
         self.goal_q = vertcat(SX.sym('des_goal_q0'), SX.sym('des_goal_q1'), SX.sym('des_goal_q2'), SX.sym('des_goal_q3'))
         self.goal_w_B= vertcat(SX.sym('des_goal_wx'), SX.sym('des_goal_wy'), SX.sym('des_goal_wz'))
         
-        self.goal_state_sym=vertcat(self.goal_r_I,self.goal_v_I,self.goal_q)#,self.goal_w_B)
+        self.goal_state=vertcat(self.goal_r_I,self.goal_v_I,self.goal_q)#,self.goal_w_B)
     
     def initDyn(self, Jx=None, Jy=None, Jz=None, mass=None, l=None, c=None):
         # global parameter
@@ -221,17 +221,17 @@ class Quadrotor:
         ## goal cost
         # goal position in the world frame
         # self.goal_r_I is the external variable of the acados
-        self.cost_r_I_g_all_sym = dot(self.r_I - self.goal_r_I, self.r_I - self.goal_r_I)
+        self.cost_r_I_g = dot(self.r_I - self.goal_r_I, self.r_I - self.goal_r_I)
 
         # goal velocity
         # self.goal_v_I is the external variable of the acados
-        self.cost_v_I_g_all_sym = dot(self.v_I - self.goal_v_I, self.v_I - self.goal_v_I)
+        self.cost_v_I_g = dot(self.v_I - self.goal_v_I, self.v_I - self.goal_v_I)
 
         # final attitude error
         # self.goal_q = toQuaternion(goal_atti[0],goal_atti[1])
         goal_R_B_I = self.dir_cosine(self.goal_q)
         R_B_I = self.dir_cosine(self.q)
-        self.cost_q_g_all_sym = trace(np.identity(3) - mtimes(transpose(goal_R_B_I), R_B_I))
+        self.cost_q_g = trace(np.identity(3) - mtimes(transpose(goal_R_B_I), R_B_I))
 
         ## angular velocity cost
         self.goal_w_B = [0, 0, 0]
@@ -243,50 +243,18 @@ class Quadrotor:
                          + self.wwt* self.cost_ang_rate_B
         
         ## input difference cost
-        self.input_diff_cost_all_sym = self.wInputDiff*dot(self.U - self.Ulast, self.U - self.Ulast)
+        self.input_diff_cost = self.wInputDiff*dot(self.U - self.Ulast, self.U - self.Ulast)
         
         ## the final (goal) cost
-        self.goal_cost_all_sym = self.wrf * self.cost_r_I_g_all_sym \
-                         + self.wvf * self.cost_v_I_g_all_sym \
-                            + self.wqf * self.cost_q_g_all_sym \
-                     
-        
-        self.final_cost_all_sym = self.wrf * self.cost_r_I_g_all_sym\
-                         + self.wvf * self.cost_v_I_g_all_sym\
-                         + self.wqf * self.cost_q_g_all_sym
-        
-                     
-    def initCostGivenValue(self,goal_r_I_value,
-                               goal_v_I_value,
-                               goal_q_value,
-                               Ulast_value,
-                               horizon):
-        """
-        for the diffPMP, PMP required known goal state
-        """
-        # goal position in the world frame
-        self.cost_r_I_g = dot(self.r_I - goal_r_I_value, self.r_I - goal_r_I_value)
-
-        # goal velocity
-        self.cost_v_I_g  = dot(self.v_I - goal_v_I_value, self.v_I - goal_v_I_value)
-
-        # final attitude error
-        goal_R_B_I_value = self.dir_cosine(goal_q_value)
-        R_B_I = self.dir_cosine(self.q)
-        self.cost_q_g  = trace(np.identity(3) - mtimes(transpose(goal_R_B_I_value), R_B_I))
-
-        self.final_cost = self.wrf * self.cost_r_I_g \
-                         + self.wvf * self.cost_v_I_g \
-                         + self.wqf * self.cost_q_g 
-        
         self.goal_cost = self.wrf * self.cost_r_I_g \
                          + self.wvf * self.cost_v_I_g \
-                         + self.wqf * self.cost_q_g 
+                            + self.wqf * self.cost_q_g \
+                     
         
-        ## input difference cost
-        self.input_diff_cost = self.wInputDiff*dot(self.U - Ulast_value, self.U - Ulast_value)
-
-
+        self.final_cost = self.wrf * self.cost_r_I_g\
+                         + self.wvf * self.cost_v_I_g\
+                         + self.wqf * self.cost_q_g
+        
     
     def init_TraCost(self): # transforming Rodrigues to Quaternion is shown in mpc_update function
         ## traverse cost
