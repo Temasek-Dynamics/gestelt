@@ -395,6 +395,7 @@ private:
 
   /* Flags*/
   bool init_voro_maps_{false}; // flag to indicate if voronoi map is initialized
+  bool plan_complete_{false}; // flag to indicate a plan has been completed
 
   /* Debugging */
   Timer tm_front_end_plan_{"front_end_plan"};

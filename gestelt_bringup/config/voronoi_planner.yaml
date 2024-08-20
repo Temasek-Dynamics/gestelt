@@ -3,13 +3,13 @@ num_agents: 10
 planner: 
   verbose_print: false               # If enabled, print debug information such as timing information
   goal_tolerance: 0.3               # [m] Tolerance for goal execution to be complete
-  planner_frequency: 5.0            # [Hz] Frequency at which plan is generated
+  planner_frequency: 1.0            # [Hz] Frequency at which plan is generated
   generate_voronoi_frequency: 5.0  # [Hz] Frequency at which voronoi is generated
-  plan_once: false
+  plan_once: false                # Only plan once
 
 reservation_table:
   inflation: 0.4    # [m] buffer for reservation table in spatial domain
-  time_buffer: 0.1  # [s] buffer for reservation table in time domain
+  time_buffer: 0.3  # [s] buffer for reservation table in time domain
 
 ##### Mapping params
 grid_map:

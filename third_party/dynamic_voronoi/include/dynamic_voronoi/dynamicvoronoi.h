@@ -154,8 +154,7 @@ public:
   // Get voronoi or voronoi bubble expansion neighbors
   void getVoroNeighbors(const Eigen::Vector4i& grid_pos, 
                         std::vector<Eigen::Vector4i>& neighbours,
-                        const std::unordered_set<IntPoint>& marked_bubble_cells, 
-                        const bool& allow_wait);
+                        const std::unordered_set<IntPoint>& marked_bubble_cells);
   /* Checking methods */
   // If cell is in map
   bool isInMap(int x, int y);

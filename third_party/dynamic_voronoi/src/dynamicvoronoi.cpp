@@ -857,8 +857,7 @@ DynamicVoronoi::markerMatchResult DynamicVoronoi::markerMatch(int x, int y) {
 // 8 Connected search for valid neighbours used in voronoi search. Returns vector of (grid_x, grid_y, map_z_cm)
 void DynamicVoronoi::getVoroNeighbors(const Eigen::Vector4i& grid_pos, 
                                       std::vector<Eigen::Vector4i>& neighbours,
-                                      const std::unordered_set<IntPoint>& marked_bubble_cells, 
-                                      const bool& allow_wait) 
+                                      const std::unordered_set<IntPoint>& marked_bubble_cells) 
 {
   neighbours.clear();
 
@@ -866,12 +865,6 @@ void DynamicVoronoi::getVoroNeighbors(const Eigen::Vector4i& grid_pos,
 
   for (int dx = -1; dx <= 1; dx++) {
     for (int dy = -1; dy <= 1; dy++) {
-
-      if (!allow_wait){ // If waiting is not allowed, then skip current cell
-        if ((dx == 0 && dy == 0)) { 
-          continue;
-        }
-      }
 
       int nx = grid_pos(0) + dx;
       int ny = grid_pos(1) + dy;

@@ -313,6 +313,23 @@ bool VoronoiPlanner::plan(const Eigen::Vector3d& start, const Eigen::Vector3d& g
     return false;
   }
 
+  if (plan_once_ && plan_complete_){
+    return true;
+  }
+
+  auto isAllPrioPlansRcv = [&] () {
+    for (int i = 0; i < drone_id_; i++){
+      if (resrv_tbl_.find(i) == resrv_tbl_.end()){
+        return false;
+      }
+    }
+    return true;
+  };
+
+  while (!isAllPrioPlansRcv()){
+    ros::Duration(0.001).sleep();  // sleep for 1 ms
+  }
+
   // Assign voronoi map
   {
     std::lock_guard<std::mutex> voro_map_guard(voro_map_mtx_);
@@ -328,6 +345,7 @@ bool VoronoiPlanner::plan(const Eigen::Vector3d& start, const Eigen::Vector3d& g
   {
     std::lock_guard<std::mutex> resrv_tbl_guard(resrv_tbl_mtx_);
     fe_planner_->updateReservationTable(resrv_tbl_);
+    resrv_tbl_.clear();
   }
 
 
@@ -401,6 +419,8 @@ bool VoronoiPlanner::plan(const Eigen::Vector3d& start, const Eigen::Vector3d& g
   //   }
   // }
   // std::cout << "Maximum clearance: " << max_clr << ", Minimum clearance: " << min_clr << std::endl;
+
+  plan_complete_ = true;
 
   return true;
 }

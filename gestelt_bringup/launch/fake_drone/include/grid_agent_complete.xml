@@ -8,7 +8,7 @@
   <arg name="init_y" default="0.0"/>
   <arg name="init_z" default="0.0"/>
 
-  <arg name="t_unit" default="0.5"/>
+  <arg name="t_unit" default="0.1"/>
 
   <!-- Config filepath -->
   <arg name="grid_agent_cfg_filepath" default="$(find gestelt_bringup)/config/fake_drone_params.yaml"/>

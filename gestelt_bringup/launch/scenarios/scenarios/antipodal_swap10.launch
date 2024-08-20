@@ -5,7 +5,7 @@
   <arg name="num_drones" default="10"/>
   <arg name="a" default="2"/>
   <arg name="b" default="2"/>
-  <arg name="height" default="0.5"/>
+  <arg name="height" default="1.0"/>
 
   <node pkg="swarm_collision_checker" name="swarm_collision_checker" 
         type="swarm_collision_checker_node" output="screen">

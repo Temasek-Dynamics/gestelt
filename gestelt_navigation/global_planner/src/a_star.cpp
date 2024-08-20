@@ -225,8 +225,7 @@ bool AStarPlanner::generatePlanVoroT(   const Eigen::Vector3d& start_pos_3d,
         // Get neighbours that are within the map
         dyn_voro_arr_[cur_node.z_cm]->getVoroNeighbors(
             Eigen::Vector4i(cur_node.x, cur_node.y, cur_node.z_cm, cur_node.t), 
-            neighbours, marked_bubble_cells_[cur_node.z_cm], 
-            true); // allow_waiting
+            neighbours, marked_bubble_cells_[cur_node.z_cm]);
 
         // Explore neighbors of current node. Each neighbor is (grid_x, grid_y, map_z_cm)
         for (const Eigen::Vector4i& nb_grid_4d : neighbours) 
@@ -246,10 +245,7 @@ bool AStarPlanner::generatePlanVoroT(   const Eigen::Vector3d& start_pos_3d,
                 continue;
             }
             
-            double tent_g_cost = std::numeric_limits<double>::max();
-            if (g_cost_v_.find(cur_node_3d) != g_cost_v_.end()) {
-                tent_g_cost = g_cost_v_[cur_node_3d] + cost_function(cur_node, nb_node);
-            }
+            double tent_g_cost = g_cost_v_[cur_node_3d] + cost_function(cur_node, nb_node);
 
             // If g_cost is not found or tentative cost is better than previously computed cost, then update costs
             if (g_cost_v_.find(nb_node_3d) == g_cost_v_.end() || tent_g_cost < g_cost_v_[nb_node_3d])
