@@ -364,7 +364,7 @@ class LearningAgileAgent():
     
         
 def main():
-    STATIC_GATE_TEST = True
+    STATIC_GATE_TEST = False
     # yaml file dir#
     conf_folder=os.path.abspath(os.path.join(current_dir, '..', '..','config'))
     yaml_file = os.path.join(conf_folder, 'learning_agile_mission.yaml')

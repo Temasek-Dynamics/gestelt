@@ -77,8 +77,13 @@ if __name__ == '__main__':
     ## deep learning
     # Hyper-parameters 
     TRAIN_FROM_CHECKPOINT = False
-    MULTI_CORE = False
-    PDP_GRADIENT = True
+    num_cores =1#5
+    if num_cores == 1:
+        MULTI_CORE = False
+    else:
+        MULTI_CORE = True
+    PDP_GRADIENT = False
+    USE_PREV_SOLVER =True 
     num_epochs = 50 #100
     batch_size = 100 # 100
     
@@ -86,7 +91,7 @@ if __name__ == '__main__':
         learning_rate = 1e-4
     else:
         learning_rate = 1e-4
-    num_cores =1 #5
+   
 
     ###############################################################
     ###------------------ load the files -----------------------###
@@ -110,7 +115,7 @@ if __name__ == '__main__':
     for i in range(num_cores):
         quad = run_quad(config_dict,  
                     SQP_RTI_OPTION=False,
-                    USE_PREV_SOLVER=False,
+                    USE_PREV_SOLVER=USE_PREV_SOLVER,
                     PDP_GRADIENT=PDP_GRADIENT)
         
         quad_instance_list.append(quad)

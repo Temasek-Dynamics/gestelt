@@ -52,6 +52,15 @@ class Quadrotor:
         self.goal_w_B= vertcat(SX.sym('des_goal_wx'), SX.sym('des_goal_wy'), SX.sym('des_goal_wz'))
         
         self.goal_state=vertcat(self.goal_r_I,self.goal_v_I,self.goal_q)#,self.goal_w_B)
+
+        ###################################################################
+        ###-----------ellipse drone collision detection-----------------###
+        ###################################################################
+        self.uav_radius = casadi.SX.sym('uav_radius',1)
+        self.uav_height = casadi.SX.sym('uav_height',1)
+        
+        
+        
     
     def initDyn(self, Jx=None, Jy=None, Jz=None, mass=None, l=None, c=None):
         # global parameter
@@ -125,7 +134,7 @@ class Quadrotor:
 
 
         # cosine directional matrix
-        C_B_I = self.dir_cosine(self.q)  # inertial to body
+        C_B_I = dir_cosine(self.q)  # inertial to body
         C_I_B = transpose(C_B_I)  # body to inertial
 
         # Newton's law
@@ -229,8 +238,8 @@ class Quadrotor:
 
         # final attitude error
         # self.goal_q = toQuaternion(goal_atti[0],goal_atti[1])
-        goal_R_B_I = self.dir_cosine(self.goal_q)
-        R_B_I = self.dir_cosine(self.q)
+        goal_R_B_I = dir_cosine(self.goal_q)
+        R_B_I = dir_cosine(self.q)
         self.cost_q_g = trace(np.identity(3) - mtimes(transpose(goal_R_B_I), R_B_I))
 
         ## angular velocity cost
@@ -279,8 +288,8 @@ class Quadrotor:
         self.cost_r_I_t = dot(self.r_I - self.des_tra_r_I, self.r_I - self.des_tra_r_I)
 
         # traverse attitude error
-        tra_R_B_I = self.dir_cosine(self.des_tra_q)
-        R_B_I = self.dir_cosine(self.q)
+        tra_R_B_I = dir_cosine(self.des_tra_q)
+        R_B_I = dir_cosine(self.q)
         self.cost_q_t = trace(np.identity(3) - mtimes(transpose(tra_R_B_I), R_B_I))**2
 
 
@@ -339,7 +348,7 @@ class Quadrotor:
             q = state_traj[t, 6:10]
 
             # direction cosine matrix from body to inertial
-            CIB = np.transpose(self.dir_cosine(q).full())
+            CIB = np.transpose(dir_cosine(q).full())
 
             # position of each rotor in inertial frame
             r1_pos = rc + mtimes(CIB, r1).full().flatten()
@@ -378,7 +387,7 @@ class Quadrotor:
             q = state_traj[t, 6:10]
 
             # direction cosine matrix from body to inertial
-            CIB = self.dir_cosine_tensor(q).transpose(0, 1)
+            CIB = dir_cosine_tensor(q).transpose(0, 1)
 
             # position of each rotor in inertial frame
             r1_pos = rc + torch.matmul(CIB, r1)
@@ -408,7 +417,7 @@ class Quadrotor:
         # r3 = vertcat(-wing_len*0.5,0, 0)
         # r4 = vertcat(0, wing_len*0.5, 0)
 
-        CIB = np.transpose(self.dir_cosine(q).full())
+        CIB = np.transpose(dir_cosine(q).full())
  
         r1_pos = p + mtimes(CIB, r1).full().flatten()   
         r2_pos = p + mtimes(CIB, r2).full().flatten()
@@ -829,13 +838,13 @@ class Quadrotor:
         plt.show()    
     
     
-    def dir_cosine(self, q): # world frame to body frame
-        C_B_I = vertcat(
-            horzcat(1 - 2 * (q[2] ** 2 + q[3] ** 2), 2 * (q[1] * q[2] + q[0] * q[3]), 2 * (q[1] * q[3] - q[0] * q[2])),
-            horzcat(2 * (q[1] * q[2] - q[0] * q[3]), 1 - 2 * (q[1] ** 2 + q[3] ** 2), 2 * (q[2] * q[3] + q[0] * q[1])),
-            horzcat(2 * (q[1] * q[3] + q[0] * q[2]), 2 * (q[2] * q[3] - q[0] * q[1]), 1 - 2 * (q[1] ** 2 + q[2] ** 2))
-        )
-        return C_B_I
+    # def dir_cosine(self, q): # world frame to body frame
+    #     C_B_I = vertcat(
+    #         horzcat(1 - 2 * (q[2] ** 2 + q[3] ** 2), 2 * (q[1] * q[2] + q[0] * q[3]), 2 * (q[1] * q[3] - q[0] * q[2])),
+    #         horzcat(2 * (q[1] * q[2] - q[0] * q[3]), 1 - 2 * (q[1] ** 2 + q[3] ** 2), 2 * (q[2] * q[3] + q[0] * q[1])),
+    #         horzcat(2 * (q[1] * q[3] + q[0] * q[2]), 2 * (q[2] * q[3] - q[0] * q[1]), 1 - 2 * (q[1] ** 2 + q[2] ** 2))
+    #     )
+    #     return C_B_I
 
     def dir_cosine_tensor(self, q):
         # World frame to body frame direction cosine matrix

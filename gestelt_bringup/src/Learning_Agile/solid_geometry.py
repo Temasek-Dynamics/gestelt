@@ -2,19 +2,26 @@
 # this file is to do some calculation of solid geometry to do the collision detection of quadrotor
 # this file consists of several classes
 import numpy as np
-import casadi
+import casadi as ca
 import torch
 ## return the maginitude of a vector
 def magni(vector):
     return np.sqrt(np.dot(np.array(vector),np.array(vector)))
 
 def magni_casadi(vector):
-    return casadi.norm_2(vector)
+    return ca.norm_2(vector)
 
 ## return the unit vector of a vector
 def norm(vector):
     return np.array(vector)/magni(np.array(vector))
 
+def dir_cosine(q): # world frame to body frame
+    C_B_I = ca.vertcat(
+        ca.horzcat(1 - 2 * (q[2] ** 2 + q[3] ** 2), 2 * (q[1] * q[2] + q[0] * q[3]), 2 * (q[1] * q[3] - q[0] * q[2])),
+        ca.horzcat(2 * (q[1] * q[2] - q[0] * q[3]), 1 - 2 * (q[1] ** 2 + q[3] ** 2), 2 * (q[2] * q[3] + q[0] * q[1])),
+        ca.horzcat(2 * (q[1] * q[3] + q[0] * q[2]), 2 * (q[2] * q[3] - q[0] * q[1]), 1 - 2 * (q[1] ** 2 + q[2] ** 2))
+    )
+    return C_B_I
 
 ## define a class of a plane (using three points on the plane)
 class plane():
@@ -184,9 +191,189 @@ class obstacle():
             collision = 0   
                   
         return collision
+    ############################################################################################################
+    ###----------------------------- drone as a ellipsoid, symbolic reward ---------------------------------####
+    ############################################################################################################
+    # def collis_det_ellipsoid
 
+class RewardCalc():
+    def __init__(self):
+    
+        self.gate_point=(ca.vertcat(ca.SX.sym('gate_point'+'_x'),\
+                        ca.SX.sym('gate_point'+'_y'),\
+                        ca.SX.sym('gate_point'+'_z')))
+
+        
+        
+    def reward_calc_sym(self,
+                        quad_sym,
+                        quad_radius,
+                        quad_height,
+                        alpha,
+                        beta,
+                        Q_tra,
+                        w_goal):
+        R_tra = ca.transpose(dir_cosine(quad_sym.q)) # body frame to world frame
+        
+
+        D = ca.diag(ca.vertcat(quad_radius, quad_radius, quad_height))
+        E=R_tra*D*R_tra.T
+
+        # the vector from the gate point to the drone center
+        v = self.gate_point-quad_sym.r_I
+        E_inv = ca.inv(E)
+        delta_d = ca.mtimes(E_inv,v)
+
+        # the magnitude of the vector
+        delta_d_mag = ca.norm_2(delta_d)
+        
+        # gate check points within the ellipsoid
+        # if the gate check point is within the ellipsoid,
+        # the delta_d_mag is less than 1 and the collision score is larger than 1
+
+        single_collision_score = - alpha*ca.exp(beta*(1-delta_d_mag))
+
+        # traverse score
+        # we hope the drone could traverse the gate in the middle
+        # so each point delta_d_mag should be larger than 1 but not too large
+        single_traverse_score = - Q_tra*delta_d_mag
+        
+
+        ## goal score
+        single_goal_score = - w_goal * ca.norm_2(quad_sym.goal_r_I - quad_sym.r_I)
+
+
+        ## define the forward function
+        self.single_collision_score_fun = ca.Function('single_collision_score_fn',[quad_sym.r_I,\
+                                                    quad_sym.q,\
+                                                    self.gate_point],[delta_d,single_collision_score])
+        
+        self.single_traverse_score_fun = ca.Function('single_traverse_score_fn',[quad_sym.r_I,\
+                                                    quad_sym.q,\
+                                                    self.gate_point],[single_traverse_score])
+        
+        self.single_goal_score_fun = ca.Function('single_goal_score_fn',[quad_sym.r_I,\
+                                                    quad_sym.goal_r_I],[single_goal_score])
+        
+        ## define the jacobian
+        self.d_collision_d_r_I = ca.jacobian(single_collision_score,quad_sym.r_I)
+        self.d_collision_d_q = ca.jacobian(single_collision_score,quad_sym.q)
+
+        self.d_traverse_d_r_I = ca.jacobian(single_traverse_score,quad_sym.r_I)
+        self.d_traverse_d_q = ca.jacobian(single_traverse_score,quad_sym.q)
+
+        self.d_goal_d_r_I = ca.jacobian(single_goal_score,quad_sym.r_I)
+
+        ## define the gradient function
+        self.d_collision_d_r_I_fun = ca.Function('d_collision_d_r_I',[quad_sym.r_I,\
+                                                                      quad_sym.q,\
+                                                                    self.gate_point],[self.d_collision_d_r_I])
+                                                                      
+        self.d_collision_d_q_fun = ca.Function('d_collision_d_q',[quad_sym.r_I,\
+                                                                      quad_sym.q,\
+                                                                    self.gate_point],[self.d_collision_d_q])
+
+        self.d_traverse_d_r_I_fun = ca.Function('d_traverse_d_r_I',[quad_sym.r_I,\
+                                                                    quad_sym.q,\
+                                                                    self.gate_point],[self.d_traverse_d_r_I])
+
+        self.d_traverse_d_q_fun = ca.Function('d_traverse_d_q',[quad_sym.r_I,\
+                                                                quad_sym.q,\
+                                                                self.gate_point],[self.d_traverse_d_q])
+        
+        self.d_goal_d_r_I_fun = ca.Function('d_goal_d_r_I',[quad_sym.r_I,\
+                                                            quad_sym.goal_r_I],[self.d_goal_d_r_I])
+    def reward_calc_value(self, 
+                            state_traj, 
+                            des_node_tra,
+                            gate_corners,
+                            goal_pos):
+        
+
+        if des_node_tra < state_traj.shape[0]:
+            des_tra_pose=state_traj[des_node_tra,0:3]
+        
+        ## init gate check points: four corners and four middle points
+        gate_check_points = np.zeros([8,3])
+        
+        collision_score = 0
+        traverse_score = 0
+        d_collision_d_r_I =  ca.DM([[0, 0, 0]])
+        d_collision_d_q = ca.DM([[0, 0, 0, 0]])
+        d_traverse_d_r_I = ca.DM([[0, 0, 0]])
+        d_traverse_d_q = ca.DM([[0, 0, 0, 0]])
+        d_goal_d_r_I = ca.DM([[0, 0, 0]])
+
+
+        ## traverse and collision score
+        ONLY_MIDDLE_POINTS = True
+        for i in range(8):
+
+            if i < 4:
+                ## load four corners first
+                gate_check_points[i,:] = gate_corners[i*3:i*3+3]
+
+            elif i < 7:
+                ## load four middle points
+                gate_check_points[i,:] = (gate_check_points[i-4,:]+gate_check_points[i-3,:])/2
+            
+            else: ## the last middle point
+                gate_check_points[i,:] = (gate_check_points[0,:]+gate_check_points[3,:])/2
+
+            if ONLY_MIDDLE_POINTS and i < 4:
+                continue
+            ## check collision and get the collision and traverse score
+            delta_d_value,single_collision_score = self.single_collision_score_fun(state_traj[des_node_tra,0:3],\
+                                                            state_traj[des_node_tra,6:10],\
+                                                            gate_check_points[i,:])
+            collision_score += single_collision_score
+            traverse_score += self.single_traverse_score_fun(state_traj[des_node_tra,0:3],\
+                                                            state_traj[des_node_tra,6:10],\
+                                                            gate_check_points[i,:])
+            
+            
+           ## get the gradient of the scores
+            d_collision_d_r_I += self.d_collision_d_r_I_fun(state_traj[des_node_tra,0:3],\
+                                                            state_traj[des_node_tra,6:10],\
+                                                            gate_check_points[i,:])
+            
+            d_collision_d_q += self.d_collision_d_q_fun(state_traj[des_node_tra,0:3],\
+                                                            state_traj[des_node_tra,6:10],\
+                                                            gate_check_points[i,:])
+            
+            d_traverse_d_r_I += self.d_traverse_d_r_I_fun(state_traj[des_node_tra,0:3],\
+                                                            state_traj[des_node_tra,6:10],\
+                                                            gate_check_points[i,:])
+            
+            d_traverse_d_q += self.d_traverse_d_q_fun(state_traj[des_node_tra,0:3],\
+                                                            state_traj[des_node_tra,6:10],\
+                                                            gate_check_points[i,:])
+        # goal score
+        goal_score = 0
+        d_goal_d_r_I = ca.DM([[0, 0, 0]])
+        for i in range(4):
+            last_state = state_traj[-i+1,0:3]
+            goal_score += self.single_goal_score_fun(last_state,goal_pos)
+            d_goal_d_r_I += self.d_goal_d_r_I_fun(last_state,goal_pos)
+           
+        collision_score.toarray()
+        traverse_score.toarray() 
+        goal_score.toarray()
+
+        d_collision_d_r_I.toarray()
+        d_collision_d_q.toarray()
+        d_traverse_d_r_I.toarray() 
+        d_traverse_d_q.toarray()
+        d_goal_d_r_I.toarray()
+
+        reward = collision_score+traverse_score + goal_score 
+        d_reward_d_r_I_tra = d_collision_d_r_I + d_traverse_d_r_I + d_goal_d_r_I
+        d_reward_d_q_tra = d_collision_d_q + d_traverse_d_q
+        return float(reward), d_reward_d_r_I_tra, d_reward_d_q_tra
+           
 ############################################################################################################
-### support torch auto differentiation ####
+###-------------------------------- support torch auto differentiation ---------------------------------####
+############################################################################################################
 def norm_torch(tensor):
     return tensor/torch.norm(tensor)
 
