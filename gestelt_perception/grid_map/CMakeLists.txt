@@ -5,7 +5,6 @@ set(CMAKE_BUILD_TYPE "Release")
 add_compile_options(-std=c++17)
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g")
 
-
 set(ROS_LIBRARIES
     roscpp
     tf2_ros
@@ -13,12 +12,9 @@ set(ROS_LIBRARIES
     sensor_msgs
     message_filters
     bonxai
-    ikd_tree
     logger
-    gestelt_msgs
 )
 
-find_package(octomap REQUIRED)
 find_package(PCL 1.7 REQUIRED)
 find_package(catkin REQUIRED COMPONENTS
     ${ROS_LIBRARIES}
@@ -28,8 +24,8 @@ find_package(Eigen3 REQUIRED)
 catkin_package(
  INCLUDE_DIRS include
  LIBRARIES ${PROJECT_NAME}
- CATKIN_DEPENDS tf2_ros bonxai ikd_tree logger gestelt_msgs
- DEPENDS PCL 
+ CATKIN_DEPENDS bonxai tf2_ros
+ DEPENDS PCL
 )
 
 include_directories( 
@@ -37,7 +33,6 @@ include_directories(
     ${catkin_INCLUDE_DIRS}
     ${EIGEN3_INCLUDE_DIRS} 
     ${PCL_INCLUDE_DIRS}
-    ${OCTOMAP_INCLUDE_DIRS}
 )
 
 add_definitions(${PCL_DEFINITIONS})
@@ -51,5 +46,4 @@ target_link_libraries(${PROJECT_NAME}
     ${catkin_LIBRARIES} 
     ${PCL_LIBRARIES}
     ${EIGEN3_LIBRARIES}
-    ${OCTOMAP_LIBRARIES}
 )  

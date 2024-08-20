@@ -101,8 +101,8 @@ namespace viz_helper{
                                   const std::string& frame_id, ros::Publisher& publisher) {
     visualization_msgs::Marker wp_sphere_list, path_line_strip;
     visualization_msgs::Marker start_sphere, goal_sphere;
-    double radius = 0.3;
-    double alpha = 0.8; 
+    double radius = 0.1;
+    double alpha = 0.6; 
 
     geometry_msgs::Point pt;
 

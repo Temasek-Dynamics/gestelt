@@ -8,7 +8,7 @@
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/filters/passthrough.h>
 
-#include <ikd_tree/ikd_tree.h>
+// #include <ikd_tree/ikd_tree.h>
 
 #include <ros/ros.h>
 
@@ -19,8 +19,6 @@
 #include <geometry_msgs/PoseStamped.h>
 #include <nav_msgs/Odometry.h>
 #include <visualization_msgs/Marker.h>
-#include <gestelt_msgs/BoolMap.h>
-#include <gestelt_msgs/BoolMapArray.h>
 
 #include <tf2_ros/transform_listener.h>
 #include <tf2_ros/message_filter.h>
@@ -351,84 +349,84 @@ public:
   }
 
   // Get occupied bool of given position in inflated Occupancy grid
-  bool getInflateOccupancy(const Eigen::Vector3d &pos) {
-    return getInflateOccupancy(pos, mp_.inflation_);
-  }
+  // bool getInflateOccupancy(const Eigen::Vector3d &pos) {
+  //   return getInflateOccupancy(pos, mp_.inflation_);
+  // }
 
-  // Get occupied bool of given position in occ grid with specified inflation
-  bool getInflateOccupancy(const Eigen::Vector3d &pos, const double& inflation) {
-    // if (!isInGlobalMap(pos)){
-    //   return true;
-    // }
+  // // Get occupied bool of given position in occ grid with specified inflation
+  // bool getInflateOccupancy(const Eigen::Vector3d &pos, const double& inflation) {
+  //   // if (!isInGlobalMap(pos)){
+  //   //   return true;
+  //   // }
 
-    // for(float x = pos(0) - mp_.inflation_; x <= pos(0) + mp_.inflation_; x += mp_.resolution_)
-    // {
-    //   for(float y = pos(1) - mp_.inflation_; y <= pos(1) + mp_.inflation_; y += mp_.resolution_)
-    //   {
-    //     for(float z = pos(2) - mp_.inflation_; z <= pos(2) + mp_.inflation_; z += mp_.resolution_)
-    //     {
-    //       Bonxai::CoordT coord = bonxai_map_->grid().posToCoord(x, y, z);
-    //       if (bonxai_map_->isOccupied(coord)){
-    //         return true;
-    //       }
-    //     }
-    //   }
-    // }
+  //   // for(float x = pos(0) - mp_.inflation_; x <= pos(0) + mp_.inflation_; x += mp_.resolution_)
+  //   // {
+  //   //   for(float y = pos(1) - mp_.inflation_; y <= pos(1) + mp_.inflation_; y += mp_.resolution_)
+  //   //   {
+  //   //     for(float z = pos(2) - mp_.inflation_; z <= pos(2) + mp_.inflation_; z += mp_.resolution_)
+  //   //     {
+  //   //       Bonxai::CoordT coord = bonxai_map_->grid().posToCoord(x, y, z);
+  //   //       if (bonxai_map_->isOccupied(coord)){
+  //   //         return true;
+  //   //       }
+  //   //     }
+  //   //   }
+  //   // }
     
-    // return false;
+  //   // return false;
 
-    /* Using KDTree to check for inflation */
-    if (!isInGlobalMap(pos)){
-      return true;
-    }
+  //   /* Using KDTree to check for inflation */
+  //   if (!isInGlobalMap(pos)){
+  //     return true;
+  //   }
 
-    return withinObsRadius(pos, inflation);
-  }
+  //   return withinObsRadius(pos, inflation);
+  // }
 
-  /**
-   * @brief Get the Nearest Occupied Cell  
-   * 
-   * @param pos 
-   * @param occ_nearest position of nearest occupied cell
-   * @param radius 
-   * @return true 
-   * @return false 
-   */
-  bool getNearestOccupiedCell(const Eigen::Vector3d &pos, 
-                              Eigen::Vector3d& occ_nearest, double& dist_to_nearest_nb){
-    int nearest_num_nb = 1;
-    pcl::PointXYZ search_point(pos(0), pos(1), pos(2));
-    std::vector<pcl::PointXYZ, Eigen::aligned_allocator<pcl::PointXYZ>> nb_points;
-    std::vector<float> nb_radius_vec;
+  // /**
+  //  * @brief Get the Nearest Occupied Cell  
+  //  * 
+  //  * @param pos 
+  //  * @param occ_nearest position of nearest occupied cell
+  //  * @param radius 
+  //  * @return true 
+  //  * @return false 
+  //  */
+  // bool getNearestOccupiedCell(const Eigen::Vector3d &pos, 
+  //                             Eigen::Vector3d& occ_nearest, double& dist_to_nearest_nb){
+  //   int nearest_num_nb = 1;
+  //   pcl::PointXYZ search_point(pos(0), pos(1), pos(2));
+  //   std::vector<pcl::PointXYZ, Eigen::aligned_allocator<pcl::PointXYZ>> nb_points;
+  //   std::vector<float> nb_radius_vec;
 
-    lcl_map_kdtree_->Nearest_Search(search_point, nearest_num_nb, nb_points, nb_radius_vec);
+  //   lcl_map_kdtree_->Nearest_Search(search_point, nearest_num_nb, nb_points, nb_radius_vec);
 
-    if (nb_points.empty()){
-      return false;
-    }
+  //   if (nb_points.empty()){
+  //     return false;
+  //   }
 
-    dist_to_nearest_nb = sqrt(nb_radius_vec[0]);
+  //   dist_to_nearest_nb = sqrt(nb_radius_vec[0]);
 
-    occ_nearest = Eigen::Vector3d{nb_points[0].x, nb_points[0].y, nb_points[0].z};
+  //   occ_nearest = Eigen::Vector3d{nb_points[0].x, nb_points[0].y, nb_points[0].z};
 
-    return true;
-  }
+  //   return true;
+  // }
 
-  /**
-   * @brief Check if position is within a radius of an obstacle
-   * 
-   * @param pos 
-   * @param radius 
-   * @return true 
-   * @return false 
-   */
-  bool withinObsRadius(const Eigen::Vector3d &pos, const double& radius){
-    pcl::PointXYZ search_point(pos(0), pos(1), pos(2));
-    std::vector<pcl::PointXYZ, Eigen::aligned_allocator<pcl::PointXYZ>> nb_points;
-    lcl_map_kdtree_->Radius_Search(search_point, radius, nb_points);
+  // /**
+  //  * @brief Check if position is within a radius of an obstacle
+  //  * 
+  //  * @param pos 
+  //  * @param radius 
+  //  * @return true 
+  //  * @return false 
+  //  */
+  // bool withinObsRadius(const Eigen::Vector3d &pos, const double& radius){
+  //   pcl::PointXYZ search_point(pos(0), pos(1), pos(2));
+  //   std::vector<pcl::PointXYZ, Eigen::aligned_allocator<pcl::PointXYZ>> nb_points;
+  //   lcl_map_kdtree_->Radius_Search(search_point, radius, nb_points);
 
-    return !nb_points.empty();
-  }
+  //   return !nb_points.empty();
+  // }
 
   // Check if current index is free
   bool isFree(const Eigen::Vector3i& idx) {
@@ -551,7 +549,6 @@ private:
   pcl::PointCloud<pcl::PointXYZ>::Ptr global_map_in_origin_;  // Point cloud global map in UAV Origin frame
 
   std::unique_ptr<BonxaiT> bonxai_map_; // Bonxai data structure 
-  std::shared_ptr<KD_TREE<pcl::PointXYZ>> lcl_map_kdtree_; // Local map KD-Tree 
 
   nav_msgs::Odometry odom_msg_; // Odom message
 
@@ -567,7 +564,6 @@ private:
 
   /* Stopwatch for profiling performance */
   Timer tm_bonxai_insert_{"bonxai->insertPointCloud"};
-  Timer tm_lcl_map_kdtree_build_{"local_map_kdtree_->Build"};
   Timer tm_slice_map_{"grid_map.sliceMap"};
 
 }; // class GridMap

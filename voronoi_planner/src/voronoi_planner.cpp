@@ -74,6 +74,7 @@ void VoronoiPlanner::initParams(ros::NodeHandle &pnh)
 
   pnh.param("reservation_table/inflation", resrv_tbl_inflation_, 0.3);
   pnh.param("reservation_table/time_buffer", resrv_tbl_t_buffer_, 0.5);
+  t_buffer_ = (int) std::lround(resrv_tbl_t_buffer_/t_unit_);  // [space-time units] for time buffer
 
   pnh.param("local_map_origin", local_map_origin_, std::string("local_map_origin"));
   pnh.param("global_origin", global_origin_, std::string("world"));
@@ -119,14 +120,13 @@ void VoronoiPlanner::genVoroMapTimerCB(const ros::TimerEvent &e)
     int z_cm = bool_map.first;
     double z_m = cmToM(bool_map.first);
 
-    printf("drone %d: z_cm(%d) \n", drone_id_, z_cm );
-
     // Create DynamicVoronoi object if it does not exist
     DynamicVoronoi::DynamicVoronoiParams dyn_voro_params;
-    dyn_voro_params.resolution = bool_map_3d_.resolution;
+    dyn_voro_params.res = bool_map_3d_.resolution;
     dyn_voro_params.origin_x = 0.0;
     dyn_voro_params.origin_y = 0.0;
     dyn_voro_params.origin_z = z_m;
+    dyn_voro_params.origin_z_cm = z_cm;
 
     // Initialize dynamic voronoi 
     dyn_voro_arr_[z_cm] = std::make_shared<DynamicVoronoi>(dyn_voro_params);
@@ -136,7 +136,7 @@ void VoronoiPlanner::genVoroMapTimerCB(const ros::TimerEvent &e)
     
     dyn_voro_arr_[z_cm]->update(); // update distance map and Voronoi diagram
     dyn_voro_arr_[z_cm]->prune();  // prune the Voronoi
-    // dyn_voro_arr_[z_cm]->updateAlternativePrunedDiagram();  
+    dyn_voro_arr_[z_cm]->updateAlternativePrunedDiagram();  
 
     // Get voronoi graph for current layer and append to voro_verts
     std::vector<Eigen::Vector3d> voro_verts_cur_layer = dyn_voro_arr_[z_cm]->getVoronoiVertices();
@@ -176,7 +176,6 @@ void VoronoiPlanner::genVoroMapTimerCB(const ros::TimerEvent &e)
   viz_helper::publishVertices(voro_verts, local_map_origin_, voronoi_graph_pub_);
 
   init_voro_maps_ = true; // Flag to indicate that all voronoi maps have been initialized
-
 }
 
 /* Subscriber callbacks*/
@@ -187,63 +186,52 @@ void VoronoiPlanner::FEPlanSubCB(const gestelt_msgs::FrontEndPlanConstPtr& msg)
     return;
   }
 
-  // PRIORITY-BASED PLANNING: Only consider trajectories of drones with higher agent_id
-  if (msg->agent_id == drone_id_){
+  // PRIORITY-BASED PLANNING: Only consider trajectories of drones with lower id
+  if (msg->agent_id >= drone_id_ ){
     return;
   }
 
   std::lock_guard<std::mutex> resrv_tbl_guard(resrv_tbl_mtx_);
 
   // Clear reservation table
-  resrv_tbl_[msg->agent_id].clear();
-
+  if (resrv_tbl_.find(msg->agent_id) != resrv_tbl_.end()){
+    resrv_tbl_[msg->agent_id].clear();
+  }
+  
   // Add all points on path (with inflation) to reservation table
-
-  int num_cells_inf = (int) std::lround(resrv_tbl_inflation_/bool_map_3d_.resolution); // Number of cells used for inflation
-  int t_buffer_st = (int) std::lround(resrv_tbl_t_buffer_/t_unit_);  // [space-time units] for time buffer
-
+  cells_inf_ = (int) std::lround(resrv_tbl_inflation_/bool_map_3d_.resolution); // Number of cells used for inflation
   double t_now = ros::Time::now().toSec();
-
-  // Round to nearest units of 0.1
-  // e_t_plan_start: space time units since plan started 
-  int e_t_plan_start =  (int) tToSpaceTimeUnits(t_now - msg->plan_start_time);
-
+  int e_t_plan_start =  (int) tToSpaceTimeUnits(t_now - msg->plan_start_time); // e_t_plan_start: space time units since plan started
   // std::cout << std::fixed << std::setprecision(11) << "t_now(" << t_now << "), msg->plan_start_time(" << msg->plan_start_time << ")" << std::endl;
   // std::cout << "e_t_plan_start(" << e_t_plan_start
   //           << ") = " << tToSpaceTimeUnits(t_now) << " - " << tToSpaceTimeUnits(msg->plan_start_time) << std::endl;
-                                                                
-  // prev_t: Relative time of last points
-  int prev_t = 0;
+  
+  int prev_t = 0; // prev_t: Relative time of last points
   for (size_t i = 0; i < msg->plan.size(); i++){ // for every point on plan
     IntPoint grid_pos;
     // get map position relative to local origin
     DblPoint map_2d_pos(msg->plan[i].position.x - bool_map_3d_.origin(0), 
                         msg->plan[i].position.y - bool_map_3d_.origin(1));
     int map_z_cm =roundToMultInt(mToCm(msg->plan[i].position.z), bool_map_3d_.z_separation_cm);
-    
     {
-      // std::lock_guard<std::mutex> voro_map_guard(voro_map_mtx_);
+      std::lock_guard<std::mutex> voro_map_guard(voro_map_mtx_);
       dyn_voro_arr_[map_z_cm]->posToIdx(map_2d_pos, grid_pos);
     }
 
     // Inflate the cells by the given inflation radius
-    for(int x = grid_pos.x - num_cells_inf; x <= grid_pos.x + num_cells_inf; x++)
+    for(int x = grid_pos.x - cells_inf_; x <= grid_pos.x + cells_inf_; x++)
     {
-      for(int y = grid_pos.y - num_cells_inf; y <= grid_pos.y + num_cells_inf; y++)
+      for(int y = grid_pos.y - cells_inf_; y <= grid_pos.y + cells_inf_; y++)
       {
-        // if (!dyn_voro_arr_[map_z_cm]->isVoronoi(x, y)){
-        //   // if cell is not voronoi
-        //   continue;
-        // }
-
         // Add position for the entire time interval from previous t to current t
-        for (int j = - t_buffer_st; j < msg->plan_time[i] - prev_t + t_buffer_st; j++) { 
+        for (int j = - t_buffer_; j < msg->plan_time[i] - prev_t + t_buffer_; j++) { 
           if (e_t_plan_start + prev_t + j < 0){
             // if plan is in the past
             continue;
           }
-          resrv_tbl_[msg->agent_id].insert(Eigen::Vector4i{x, y, map_z_cm, 
-                                                          e_t_plan_start + prev_t + j});
+          resrv_tbl_[msg->agent_id].insert(Eigen::Vector4i{ x, y, 
+                                                            map_z_cm, 
+                                                            e_t_plan_start + prev_t + j});
         }
       }
     }
@@ -257,7 +245,7 @@ void VoronoiPlanner::FEPlanSubCB(const gestelt_msgs::FrontEndPlanConstPtr& msg)
                       msg->plan.back().position.y - bool_map_3d_.origin(1));
   int map_z_cm =roundToMultInt(mToCm(msg->plan.back().position.z), bool_map_3d_.z_separation_cm);
   {
-    // std::lock_guard<std::mutex> voro_map_guard(voro_map_mtx_);
+    std::lock_guard<std::mutex> voro_map_guard(voro_map_mtx_);
     dyn_voro_arr_[map_z_cm]->posToIdx(map_2d_pos, grid_pos);
   }
   resrv_tbl_[msg->agent_id].insert(Eigen::Vector4i{ grid_pos.x, grid_pos.y, map_z_cm, 
@@ -324,12 +312,6 @@ bool VoronoiPlanner::plan(const Eigen::Vector3d& start, const Eigen::Vector3d& g
     std::cout << "Voronoi maps not initialized! Request a plan after initialization!" << std::endl;
     return false;
   }
-  
-  // Update reservation table on planner
-  {
-    std::lock_guard<std::mutex> resrv_tbl_guard(resrv_tbl_mtx_);
-    fe_planner_->updateReservationTable(resrv_tbl_);
-  }
 
   // Assign voronoi map
   {
@@ -342,33 +324,42 @@ bool VoronoiPlanner::plan(const Eigen::Vector3d& start, const Eigen::Vector3d& g
                                 bool_map_3d_.resolution);
   }
 
+  // Update reservation table on planner
+  {
+    std::lock_guard<std::mutex> resrv_tbl_guard(resrv_tbl_mtx_);
+    fe_planner_->updateReservationTable(resrv_tbl_);
+  }
+
+
   viz_helper::publishStartAndGoal(start, goal, local_map_origin_, start_pt_pub_, goal_pt_pub_);
 
   tm_front_end_plan_.start();
 
   // Generate plan 
-  if (!fe_planner_->generatePlanVoroT(start, goal)){
+  if (!fe_planner_->generatePlanVoroT(start, goal))
+  {
     ROS_ERROR("Drone %d: Failed to generate plan from (%f, %f, %f) to (%f, %f, %f)", drone_id_, start(0), start(1), start(2),
                                                                             goal(0), goal(1), goal(2));
 
     tm_front_end_plan_.stop(verbose_print_);
 
-    viz_helper::publishClosedList(fe_planner_->getClosedListVoroT(), 
-                      fe_closed_list_pub_, local_map_origin_);
+    // viz_helper::publishClosedList(fe_planner_->getClosedListVoroT(), 
+    //                   fe_closed_list_pub_, local_map_origin_);
 
-    ROS_ERROR("Closed list size: %ld", fe_planner_->getClosedListVoroT().size() );
+    // ROS_ERROR("Closed list size: %ld", fe_planner_->getClosedListVoroT().size() );
 
     return false;
   }
+
 
   tm_front_end_plan_.stop(verbose_print_);
 
   // Retrieve space time path and publish it
   front_end_path_ = fe_planner_->getPath(cur_pos_);
   space_time_path_ = fe_planner_->getPathWithTime(cur_pos_);
-  smoothed_path_ = fe_planner_->getSmoothedPath();
-  smoothed_path_t_ = fe_planner_->getSmoothedPathWithTime();
-  viz_helper::publishClosedList(fe_planner_->getClosedListVoroT(), fe_closed_list_pub_, local_map_origin_);
+  // smoothed_path_ = fe_planner_->getSmoothedPath();
+  // smoothed_path_t_ = fe_planner_->getSmoothedPathWithTime();
+  // viz_helper::publishClosedList(fe_planner_->getClosedListVoroT(), fe_closed_list_pub_, local_map_origin_);
 
   // Convert from space time path to gestelt_msgs::FrontEndPlan
   gestelt_msgs::FrontEndPlan fe_plan_msg;

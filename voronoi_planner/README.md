@@ -14,5 +14,9 @@ Message: Front End Plan (WORLD/Map frame)
 ->
 Node: Trajectory Server (WORLD/Map frame)
 
+# Issues
+1. Fix rounding of height to multiples, right now, minimum height must be a multiple of z_separation_cm
+
+
 # Acknowledgements
 1. dynamicvoronoi code from Boris Lau

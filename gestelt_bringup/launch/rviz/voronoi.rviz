@@ -6,7 +6,7 @@ Panels:
       Expanded:
         - /Global Options1
         - /TF1/Frames1
-        - /drone01
+        - /voronoi_graph1
         - /drone81/vehicle_marker1
         - /drone81/fe_plan/viz1
       Splitter Ratio: 0.4422188103199005
@@ -358,12 +358,12 @@ Visualization Manager:
       Class: rviz/Map
       Color Scheme: raw
       Draw Behind: false
-      Enabled: true
+      Enabled: false
       Name: voro_map
       Topic: /drone0/voro/voro_map
       Unreliable: false
       Use Timestamp: false
-      Value: true
+      Value: false
     - Class: rviz/Marker
       Enabled: false
       Marker Topic: /drone0/voronoi_graph
@@ -405,7 +405,9 @@ Visualization Manager:
           Marker Topic: /drone0/fe_plan/viz
           Name: fe_plan/viz
           Namespaces:
-            {}
+            front_end_path_lines: true
+            front_end_sphere_list: true
+            start_end_points: true
           Queue Size: 100
           Value: true
         - Class: rviz/Marker
@@ -457,7 +459,9 @@ Visualization Manager:
           Marker Topic: /drone1/fe_plan/viz
           Name: fe_plan/viz
           Namespaces:
-            {}
+            front_end_path_lines: true
+            front_end_sphere_list: true
+            start_end_points: true
           Queue Size: 100
           Value: true
         - Class: rviz/MarkerArray
@@ -465,7 +469,9 @@ Visualization Manager:
           Marker Topic: /drone1/vehicle_marker
           Name: vehicle_marker
           Namespaces:
-            {}
+            vehicle_arm: true
+            vehicle_body: true
+            vehicle_rotor: true
           Queue Size: 100
           Value: true
       Enabled: true
@@ -493,7 +499,9 @@ Visualization Manager:
           Marker Topic: /drone2/vehicle_marker
           Name: vehicle_marker
           Namespaces:
-            {}
+            vehicle_arm: true
+            vehicle_body: true
+            vehicle_rotor: true
           Queue Size: 100
           Value: true
         - Class: rviz/Marker
@@ -501,7 +509,9 @@ Visualization Manager:
           Marker Topic: /drone2/fe_plan/viz
           Name: fe_plan/viz
           Namespaces:
-            {}
+            front_end_path_lines: true
+            front_end_sphere_list: true
+            start_end_points: true
           Queue Size: 100
           Value: true
       Enabled: true
@@ -529,7 +539,9 @@ Visualization Manager:
           Marker Topic: /drone3/vehicle_marker
           Name: vehicle_marker
           Namespaces:
-            {}
+            vehicle_arm: true
+            vehicle_body: true
+            vehicle_rotor: true
           Queue Size: 100
           Value: true
         - Class: rviz/Marker
@@ -537,7 +549,9 @@ Visualization Manager:
           Marker Topic: /drone3/fe_plan/viz
           Name: fe_plan/viz
           Namespaces:
-            {}
+            front_end_path_lines: true
+            front_end_sphere_list: true
+            start_end_points: true
           Queue Size: 100
           Value: true
       Enabled: true
@@ -565,7 +579,9 @@ Visualization Manager:
           Marker Topic: /drone4/vehicle_marker
           Name: vehicle_marker
           Namespaces:
-            {}
+            vehicle_arm: true
+            vehicle_body: true
+            vehicle_rotor: true
           Queue Size: 100
           Value: true
         - Class: rviz/Marker
@@ -573,7 +589,9 @@ Visualization Manager:
           Marker Topic: /drone4/fe_plan/viz
           Name: fe_plan/viz
           Namespaces:
-            {}
+            front_end_path_lines: true
+            front_end_sphere_list: true
+            start_end_points: true
           Queue Size: 100
           Value: true
       Enabled: true
@@ -601,7 +619,9 @@ Visualization Manager:
           Marker Topic: /drone5/vehicle_marker
           Name: vehicle_marker
           Namespaces:
-            {}
+            vehicle_arm: true
+            vehicle_body: true
+            vehicle_rotor: true
           Queue Size: 100
           Value: true
         - Class: rviz/Marker
@@ -609,7 +629,9 @@ Visualization Manager:
           Marker Topic: /drone5/fe_plan/viz
           Name: fe_plan/viz
           Namespaces:
-            {}
+            front_end_path_lines: true
+            front_end_sphere_list: true
+            start_end_points: true
           Queue Size: 100
           Value: true
       Enabled: true
@@ -637,7 +659,9 @@ Visualization Manager:
           Marker Topic: /drone6/vehicle_marker
           Name: vehicle_marker
           Namespaces:
-            {}
+            vehicle_arm: true
+            vehicle_body: true
+            vehicle_rotor: true
           Queue Size: 100
           Value: true
         - Class: rviz/Marker
@@ -645,7 +669,9 @@ Visualization Manager:
           Marker Topic: /drone6/fe_plan/viz
           Name: fe_plan/viz
           Namespaces:
-            {}
+            front_end_path_lines: true
+            front_end_sphere_list: true
+            start_end_points: true
           Queue Size: 100
           Value: true
       Enabled: true
@@ -673,7 +699,9 @@ Visualization Manager:
           Marker Topic: /drone7/vehicle_marker
           Name: vehicle_marker
           Namespaces:
-            {}
+            vehicle_arm: true
+            vehicle_body: true
+            vehicle_rotor: true
           Queue Size: 100
           Value: true
         - Class: rviz/Marker
@@ -681,7 +709,9 @@ Visualization Manager:
           Marker Topic: /drone7/fe_plan/viz
           Name: fe_plan/viz
           Namespaces:
-            {}
+            front_end_path_lines: true
+            front_end_sphere_list: true
+            start_end_points: true
           Queue Size: 100
           Value: true
       Enabled: true
@@ -709,7 +739,9 @@ Visualization Manager:
           Marker Topic: /drone8/vehicle_marker
           Name: vehicle_marker
           Namespaces:
-            {}
+            vehicle_arm: true
+            vehicle_body: true
+            vehicle_rotor: true
           Queue Size: 100
           Value: true
         - Class: rviz/Marker
@@ -717,7 +749,9 @@ Visualization Manager:
           Marker Topic: /drone8/fe_plan/viz
           Name: fe_plan/viz
           Namespaces:
-            {}
+            front_end_path_lines: true
+            front_end_sphere_list: true
+            start_end_points: true
           Queue Size: 100
           Value: true
       Enabled: true
@@ -745,7 +779,9 @@ Visualization Manager:
           Marker Topic: /drone9/vehicle_marker
           Name: vehicle_marker
           Namespaces:
-            {}
+            vehicle_arm: true
+            vehicle_body: true
+            vehicle_rotor: true
           Queue Size: 100
           Value: true
         - Class: rviz/Marker
@@ -753,7 +789,9 @@ Visualization Manager:
           Marker Topic: /drone9/fe_plan/viz
           Name: fe_plan/viz
           Namespaces:
-            {}
+            front_end_path_lines: true
+            front_end_sphere_list: true
+            start_end_points: true
           Queue Size: 100
           Value: true
       Enabled: true
@@ -785,7 +823,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/XYOrbit
-      Distance: 11.302238464355469
+      Distance: 11.643267631530762
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -793,17 +831,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 2.1852633953094482
-        Y: 2.059448719024658
-        Z: 4.76837158203125e-07
+        X: 2.332792282104492
+        Y: -0.060704946517944336
+        Z: 0
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.2103978395462036
+      Pitch: 1.5697963237762451
       Target Frame: my_view
-      Yaw: 0.38039857149124146
+      Yaw: 0.10539859533309937
     Saved:
       - Class: rviz/FPS
         Enable Stereo Rendering:

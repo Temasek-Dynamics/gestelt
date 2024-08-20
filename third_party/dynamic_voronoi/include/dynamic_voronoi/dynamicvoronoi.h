@@ -22,32 +22,24 @@ class DynamicVoronoi {
 
 public:
   struct DynamicVoronoiParams{
-    double resolution{0.1};
+    double res{0.1};
+
     double origin_x{0.0};
     double origin_y{0.0};
     double origin_z{0.0};
+
+    int origin_z_cm{0};
+
+    double z_separation_cm{0.0};
   }; // struct DynamicVoronoiParams
+
 
 public:
   
   DynamicVoronoi();
+  DynamicVoronoi(const DynamicVoronoiParams& params);
+
   ~DynamicVoronoi();
-
-  DynamicVoronoi(const DynamicVoronoiParams& params)
-  {
-    sqrt2 = sqrt(2.0);
-    data = NULL;
-    gridMap = nullptr;
-    alternativeDiagram = NULL;
-    allocatedGridMap = false;
-
-    res_ = params.resolution;
-    origin_x_ = params.origin_x;
-    origin_y_ = params.origin_y;
-    origin_z_ = params.origin_z;
-
-    origin_z_cm_ = (int) (params.origin_z * 100);
-  }
 
   //! Initialization with an empty map
   void initializeEmpty(int _sizeX, int _sizeY, bool initGridMap=true);
@@ -55,9 +47,9 @@ public:
   void initializeMap(int _sizeX, int _sizeY, const std::vector<bool>& bool_map_1d_arr) ;
 
   //! add an obstacle at the specified cell coordinate
-  void occupyCell(int x, int y);
+  // void occupyCell(int x, int y);
   //! remove an obstacle at the specified cell coordinate
-  void clearCell(int x, int y);
+  // void clearCell(int x, int y);
   //! remove old dynamic obstacles and add the new ones
   void exchangeObstacles(std::vector<INTPOINT>& newObstacles);
 
@@ -105,7 +97,6 @@ public:
   }
   //! returns the obstacle distance at the specified location
   float getDistance( int x, int y );
-
 
   //! returns the horizontal size of the workspace/map
   unsigned int getSizeX() {return sizeX;}
@@ -155,15 +146,16 @@ public:
   /* Planning methods */
 
   // Update KD Tree with all voronoi cells for query of nearest voronoi cell 
-  void updateKDTree();
+  // void updateKDTree();
 
   // Get nearest vornoi cell given a position
   bool getNearestVoroCell(const INTPOINT& grid_pos, INTPOINT& nearest_voro_cell);
 
   // Get voronoi or voronoi bubble expansion neighbors
-  void getVoroNeighbors(const INTPOINT& grid_pos, std::vector<Eigen::Vector3i>& neighbours, 
-                        const std::unordered_set<IntPoint>& marked_bubble_cells, const bool& allow_wait=false) ;
-
+  void getVoroNeighbors(const Eigen::Vector4i& grid_pos, 
+                        std::vector<Eigen::Vector4i>& neighbours,
+                        const std::unordered_set<IntPoint>& marked_bubble_cells, 
+                        const bool& allow_wait);
   /* Checking methods */
   // If cell is in map
   bool isInMap(int x, int y);
@@ -179,15 +171,15 @@ public:
   void idxToPos(const INTPOINT& grid_pos, DblPoint& map_pos);
 
   double getOriginX() const {
-    return origin_x_;
+    return params_.origin_x;
   }
 
   double getOriginY() const {
-    return origin_y_;
+    return params_.origin_y;
   }
 
   double getOriginZ() const {
-    return origin_z_;
+    return params_.origin_z;
   }
 
   double getSizeX() const {
@@ -199,12 +191,22 @@ public:
   }
 
   // Top and bottom voronoi planes
-  std::shared_ptr<DynamicVoronoi> top_voro_{nullptr};
-  std::shared_ptr<DynamicVoronoi> bottom_voro_{nullptr};
+  std::weak_ptr<DynamicVoronoi> top_voro_;
+  std::weak_ptr<DynamicVoronoi> bottom_voro_;
 
 private:
-  // queues
+  // Parameters
+  int padding;
+  double doubleThreshold;
 
+  double sqrt2;
+
+  //  dataCell** getData(){ return data; }
+  int** alternativeDiagram;
+
+  DynamicVoronoiParams params_;
+
+  // queues
   BucketPrioQueue<INTPOINT> open;
   std::queue<INTPOINT> pruneQueue;
   BucketPrioQueue<INTPOINT> sortedPruneQueue;
@@ -218,25 +220,8 @@ private:
   int sizeY;
   int sizeX;
   dataCell** data;
-  std::shared_ptr<std::vector<std::vector<bool>>> gridMap; // 2d vector of booleans assigned upon initialization
+  // std::shared_ptr<std::vector<std::vector<bool>>> grid_map_; // 2d vector of booleans assigned upon initialization
   bool allocatedGridMap;
-
-  // parameters
-  int padding;
-  double doubleThreshold;
-
-  double sqrt2;
-
-  //  dataCell** getData(){ return data; }
-  int** alternativeDiagram;
-
-  double res_{0.1}; // Resolution of the voronoi map 
-
-  double origin_x_{0.0};  // in units of m
-  double origin_y_{0.0};  // in units of m
-  double origin_z_{0.0};  // in units of m
-
-  int origin_z_cm_;  // in units of cm
 
   // Data structure
   bool init_kd_tree_{false};

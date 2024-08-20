@@ -13,7 +13,7 @@
     <param name="pose_topic" value="mavros/local_position/pose"/>
     <param name="check_collision_freq" value="20.0"/>
     <param name="collision_check/warn_radius" value="0.225"/>
-    <param name="collision_check/fatal_radius" value="0.14"/>
+    <param name="collision_check/fatal_radius" value="0.1"/>
   </node>
 
   <include file="$(find gestelt_bringup)/launch/fake_drone/include/grid_agent_complete.xml">

@@ -13,6 +13,7 @@ set(ROS_LIBRARIES
   grid_map
   logger
   dynamic_voronoi
+  gestelt_msgs
 )
 
 ## Find catkin macros and libraries
@@ -29,7 +30,7 @@ find_package(Eigen3 REQUIRED)
 catkin_package(
  INCLUDE_DIRS include
  LIBRARIES global_planner # Exported libraries
- CATKIN_DEPENDS grid_map logger dynamic_voronoi # Export packages as part of this package
+#  CATKIN_DEPENDS  # Export packages as part of this package
 #  DEPENDS system_lib
 )
 

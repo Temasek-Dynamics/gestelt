@@ -175,10 +175,6 @@ void GridMap::reset(const double& resolution){
   // Set up Bonxai data structure
   bonxai_map_ = std::make_unique<BonxaiT>(resolution);
 
-  // Set up kdtree for generating safe flight corridors
-  //    KD_TREE(float delete_param = 0.5, float balance_param = 0.6 , float box_length = 0.2);
-  lcl_map_kdtree_ = std::make_shared<KD_TREE<pcl::PointXYZ>>(0.5, 0.6, 0.1);
-
   local_occ_map_pts_.reset(new pcl::PointCloud<pcl::PointXYZ>());
   local_global_occ_map_pts_.reset(new pcl::PointCloud<pcl::PointXYZ>());
   global_map_in_origin_.reset(new pcl::PointCloud<pcl::PointXYZ>());
@@ -316,21 +312,21 @@ void GridMap::checkCollisionsTimerCB(const ros::TimerEvent & /*event*/)
     return;
   }
 
-  Eigen::Vector3d query_pos( 	odom_msg_.pose.pose.position.x,
-                              odom_msg_.pose.pose.position.y,
-                              odom_msg_.pose.pose.position.z);
+  // Eigen::Vector3d query_pos( 	odom_msg_.pose.pose.position.x,
+  //                             odom_msg_.pose.pose.position.y,
+  //                             odom_msg_.pose.pose.position.z);
 
-  // Get nearest obstacle position
-  Eigen::Vector3d occ_nearest;
-  double dist_to_obs;
-  if (!getNearestOccupiedCell(query_pos, occ_nearest, dist_to_obs)){
-    return;
-  }
+  // // Get nearest obstacle position
+  // Eigen::Vector3d occ_nearest;
+  // double dist_to_obs;
+  // if (!getNearestOccupiedCell(query_pos, occ_nearest, dist_to_obs)){
+  //   return;
+  // }
 
-  // Publish collision sphere visualizations.
-  if (dist_to_obs <= col_warn_radius_){
-    publishCollisionSphere(occ_nearest, dist_to_obs, col_fatal_radius_, col_warn_radius_);
-  }
+  // // Publish collision sphere visualizations.
+  // if (dist_to_obs <= col_warn_radius_){
+  //   publishCollisionSphere(occ_nearest, dist_to_obs, col_fatal_radius_, col_warn_radius_);
+  // }
 }
 
 /** Subscriber callbacks */
@@ -451,9 +447,6 @@ void GridMap::updateLocalMap(){
   }
 
   // build kdtree for local map
-  tm_lcl_map_kdtree_build_.start();
-  lcl_map_kdtree_->Build(local_global_occ_map_pts_->points);
-  tm_lcl_map_kdtree_build_.stop(false);
 
   local_occ_map_pts_->width = local_occ_map_pts_->points.size();
   local_occ_map_pts_->height = 1;

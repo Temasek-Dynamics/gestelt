@@ -8,10 +8,12 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g")
 set(ROS_LIBRARIES
   roscpp
   nav_msgs
+  logger
   global_planner
   dynamic_voronoi
   gestelt_msgs
   grid_map
+  tf2_ros
 )
 
 ## Find catkin macros and libraries

@@ -331,12 +331,14 @@ private:
   double t_unit_{0.1}; // [s] Time duration of each space-time A* unit
   double fe_planner_freq_{10}; // [Hz] Frequency for front-end planning
   double gen_voro_map_freq_{20}; // [Hz] Frequency for front-end planning
-  double sqr_goal_tol_{0.1}; // Distance to goal before it is considered fulfilled.
+  double sqr_goal_tol_{0.1}; // [m] Distance to goal before it is considered fulfilled.
   bool plan_once_{false}; // Used for testing, only runs the planner once
   bool verbose_print_{false};  // enables printing of planning time
 
-  double resrv_tbl_inflation_{-1.0}; // Inflation of cells in the reservation table
-  double resrv_tbl_t_buffer_{-1.0}; // Time buffer in the reservation table
+  double resrv_tbl_inflation_{-1.0}; // [m] Inflation of cells in the reservation table
+  double resrv_tbl_t_buffer_{-1.0}; // [s] Time buffer in the reservation table
+  int t_buffer_{-1}; // [space-time units] Time buffer
+  int cells_inf_{-1}; // [voxels] Spatial buffer
 
   AStarPlanner::AStarParams astar_params_; 
 
@@ -388,7 +390,6 @@ private:
   std::vector<Eigen::Vector4d> space_time_path_; // Front-end Space time  path in space-time coordinates (x,y,z,t) in world frame
   std::vector<Eigen::Vector3d> smoothed_path_; // Front end smoothed path in space coordinates (x,y,z) in world frame
   std::vector<Eigen::Vector4d> smoothed_path_t_; // Front end smoothed space-time path in space coordinates (x,y,z) in world frame
-
 
   Eigen::Vector3d cur_pos_, cur_vel_;   // [LOCAL FRAME] current state
 

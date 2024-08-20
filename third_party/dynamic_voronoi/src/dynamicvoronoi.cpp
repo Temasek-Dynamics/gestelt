@@ -3,23 +3,42 @@
 DynamicVoronoi::DynamicVoronoi() {
   sqrt2 = sqrt(2.0);
   data = NULL;
-  gridMap = nullptr;
+  // grid_map_.reset();
   alternativeDiagram = NULL;
   allocatedGridMap = false;
 }
 
+DynamicVoronoi::DynamicVoronoi(const DynamicVoronoiParams& params): params_(params)
+{
+  sqrt2 = sqrt(2.0);
+  data = NULL;
+  // grid_map_.reset();
+  alternativeDiagram = NULL;
+  allocatedGridMap = false; 
+
+}
+
 DynamicVoronoi::~DynamicVoronoi() {
   if (data) {
-    for (int x=0; x<sizeX; x++) delete[] data[x];
+    for (int x=0; x<sizeX; x++){
+      delete[] data[x];
+    }
     delete[] data;
   }
-  if (allocatedGridMap && gridMap) {
-    gridMap = nullptr;
-    // for (int x=0; x<sizeX; x++) {
-    //   delete[] gridMap[x];
-    // }
-    // delete[] gridMap;
+  // if (allocatedGridMap && grid_map_) {
+  //   grid_map_.reset();
+  // }
+  if(alternativeDiagram){
+    for (int x=0; x<sizeX; x++) {
+      delete[] alternativeDiagram[x];
+    }
+    delete[] alternativeDiagram;    
+    alternativeDiagram = NULL;
   }
+
+  // Release weak reference to top and bottom layers
+  top_voro_.reset();
+  bottom_voro_.reset();
 }
 
 void DynamicVoronoi::initializeEmpty(int _sizeX, int _sizeY, bool initGridMap) {
@@ -35,32 +54,24 @@ void DynamicVoronoi::initializeEmpty(int _sizeX, int _sizeY, bool initGridMap) {
     delete[] alternativeDiagram;    
     alternativeDiagram = NULL;
   }
-  if (initGridMap) {
-    if (allocatedGridMap && gridMap) {
-      // for (int x=0; x<sizeX; x++)
-      // {
-      //   delete[] gridMap[x];
-      // }
-      // delete[] gridMap;
-      gridMap = nullptr;
-      allocatedGridMap = false;
-    }
-  }
+  // if (initGridMap) {
+  //   if (allocatedGridMap && grid_map_) {
+  //     grid_map_.reset();
+  //     allocatedGridMap = false;
+  //   }
+  // }
 
   sizeX = _sizeX;
   sizeY = _sizeY;
   data = new dataCell*[sizeX];
-  for (int x=0; x<sizeX; x++) data[x] = new dataCell[sizeY];
-
-  if (initGridMap) {
-    // gridMap = new bool*[sizeX];
-    // for (int x=0; x<sizeX; x++) 
-    // {
-    //   gridMap[x] = new bool[sizeY];
-    // }
-    gridMap = std::make_shared<std::vector<std::vector<bool>>>(sizeY, std::vector<bool>(sizeX, false));
-    allocatedGridMap = true;
+  for (int x=0; x<sizeX; x++) {
+    data[x] = new dataCell[sizeY];
   }
+
+  // if (initGridMap) {
+  //   grid_map_ = std::make_shared<std::vector<std::vector<bool>>>(sizeY, std::vector<bool>(sizeX, false));
+  //   allocatedGridMap = true;
+  // }
   
   dataCell c;
   c.dist = INFINITY;
@@ -77,45 +88,46 @@ void DynamicVoronoi::initializeEmpty(int _sizeX, int _sizeY, bool initGridMap) {
     }
   }
 
-  if (initGridMap) {
-    for (int x=0; x<sizeX; x++) 
-    {
-      for (int y=0; y<sizeY; y++) {
-        (*gridMap)[x][y] = 0;
-      }
-    }
-  }
+  // if (initGridMap) {
+  //   for (int x=0; x<sizeX; x++) 
+  //   {
+  //     for (int y=0; y<sizeY; y++) {
+  //       (*grid_map_)[x][y] = 0;
+  //     }
+  //   }
+  // }
 }
 
-void DynamicVoronoi::initializeMap(int _sizeX, int _sizeY, const std::vector<bool>& bool_map_1d_arr) {
-  gridMap = std::make_shared<std::vector<std::vector<bool>>>(_sizeY, std::vector<bool>(_sizeX, false));;
+void DynamicVoronoi::initializeMap(int _sizeX, int _sizeY, 
+                                    const std::vector<bool>& bool_map_1d_arr) {
+  // grid_map_ = std::make_shared<std::vector<std::vector<bool>>>(_sizeY, std::vector<bool>(_sizeX, false));;
   
-  // set values of boolean map
-  for(int j = 0; j < _sizeY; j++)
-  {
-    for (int i = 0; i < _sizeX; i++) 
-    {
-      (*gridMap)[i][j] = bool_map_1d_arr[i + j * _sizeX];
-    }
-  }
+  // // set values of boolean map
+  // for(int j = 0; j < _sizeY; j++)
+  // {
+  //   for (int i = 0; i < _sizeX; i++) 
+  //   {
+  //     (*grid_map_)[i][j] = bool_map_1d_arr[i + j * _sizeX];
+  //   }
+  // }
 
-  // set map boundaries as occupied
-  for(int j = 0; j < _sizeY; j++)
-  {
-    (*gridMap)[0][j] = true;
-    (*gridMap)[_sizeX-1][j] = true;
-  }
-  for (int i = 0; i < _sizeX; i++)
-  {
-    (*gridMap)[i][0] = true;
-    (*gridMap)[i][_sizeY-1] = true;
-  }
+  // // set map boundaries as occupied
+  // for(int j = 0; j < _sizeY; j++)
+  // {
+  //   (*grid_map_)[0][j] = true;
+  //   (*grid_map_)[_sizeX-1][j] = true;
+  // }
+  // for (int i = 0; i < _sizeX; i++)
+  // {
+  //   (*grid_map_)[i][0] = true;
+  //   (*grid_map_)[i][_sizeY-1] = true;
+  // }
   
   initializeEmpty(_sizeX, _sizeY, false);
 
   for (int x=0; x<sizeX; x++) {
     for (int y=0; y<sizeY; y++) {
-      if ((*gridMap)[x][y]) {
+      if (bool_map_1d_arr[x + y * _sizeX]) {
         dataCell c = data[x][y];
         if (!isOccupied(x,y,c)) {
           
@@ -133,7 +145,7 @@ void DynamicVoronoi::initializeMap(int _sizeX, int _sizeY, const std::vector<boo
               if (ny<=0 || ny>=sizeY-1){
                 continue;
               }
-              if (!(*gridMap)[nx][ny]) {
+              if (!bool_map_1d_arr[nx + ny * _sizeX]) { 
                 isSurrounded = false;
                 break;
               }
@@ -158,15 +170,15 @@ void DynamicVoronoi::initializeMap(int _sizeX, int _sizeY, const std::vector<boo
 
 }
 
-void DynamicVoronoi::occupyCell(int x, int y) {
-  (*gridMap)[x][y] = 1;
-  setObstacle(x,y);
-}
+// void DynamicVoronoi::occupyCell(int x, int y) {
+//   (*grid_map_)[x][y] = 1;
+//   setObstacle(x,y);
+// }
 
-void DynamicVoronoi::clearCell(int x, int y) {
-  (*gridMap)[x][y] = 0;
-  removeObstacle(x,y);
-}
+// void DynamicVoronoi::clearCell(int x, int y) {
+//   (*grid_map_)[x][y] = 0;
+//   removeObstacle(x,y);
+// }
 
 void DynamicVoronoi::setObstacle(int x, int y) {
   dataCell c = data[x][y];
@@ -191,25 +203,25 @@ void DynamicVoronoi::removeObstacle(int x, int y) {
 
 void DynamicVoronoi::exchangeObstacles(std::vector<INTPOINT>& points) {
 
-  for (unsigned int i=0; i<lastObstacles.size(); i++) {
-    int x = lastObstacles[i].x;
-    int y = lastObstacles[i].y;
+  // for (unsigned int i=0; i<lastObstacles.size(); i++) {
+  //   int x = lastObstacles[i].x;
+  //   int y = lastObstacles[i].y;
 
-    bool v = (*gridMap)[x][y];
-    if (v) continue;
-    removeObstacle(x,y);
-  }  
+  //   bool v = (*grid_map_)[x][y];
+  //   if (v) continue;
+  //   removeObstacle(x,y);
+  // }  
 
-  lastObstacles.clear();
+  // lastObstacles.clear();
 
-  for (unsigned int i=0; i<points.size(); i++) {
-    int x = points[i].x;
-    int y = points[i].y;
-    bool v = (*gridMap)[x][y];
-    if (v) continue;
-    setObstacle(x,y);
-    lastObstacles.push_back(points[i]);
-  }  
+  // for (unsigned int i=0; i<points.size(); i++) {
+  //   int x = points[i].x;
+  //   int y = points[i].y;
+  //   bool v = (*grid_map_)[x][y];
+  //   if (v) continue;
+  //   setObstacle(x,y);
+  //   lastObstacles.push_back(points[i]);
+  // }  
 }
 
 void DynamicVoronoi::update(bool updateRealDist) {
@@ -315,7 +327,7 @@ std::vector<Eigen::Vector3d> DynamicVoronoi::getVoronoiVertices()
     for (int x=0; x<sizeX; x++) {
       for (int y=0; y<sizeY; y++) {
         if (isVoronoiVertex(x, y)){
-          voronoi_vertices.push_back(Eigen::Vector3d{x*res_, y*res_, origin_z_});
+          voronoi_vertices.push_back(Eigen::Vector3d{x*params_.res, y*params_.res, params_.origin_z});
         }
       }
     }
@@ -710,24 +722,24 @@ bool DynamicVoronoi::markerMatchAlternative(int x, int y) {
   return true;
 }
 
-void DynamicVoronoi::updateKDTree()
-{
-  voro_cells_.clear();
+// void DynamicVoronoi::updateKDTree()
+// {
+//   voro_cells_.clear();
 
-  for (int x=0; x<sizeX; x++) {
-    for (int y=0; y<sizeY; y++) {
-      if (isVoronoi(x, y)){
-        voro_cells_.push_back(Eigen::Vector2i(x, y));
-      }
-    }
-  }
+//   for (int x=0; x<sizeX; x++) {
+//     for (int y=0; y<sizeY; y++) {
+//       if (isVoronoi(x, y)){
+//         voro_cells_.push_back(Eigen::Vector2i(x, y));
+//       }
+//     }
+//   }
 
-  voro_kd_tree_ = 
-    std::make_unique<KDTreeVectorOfVectorsAdaptor<std::vector<Eigen::Vector2i>, double>>(
-        3, voro_cells_, 10); //kd tree used to query nearest point on the front-end path
+//   voro_kd_tree_ = 
+//     std::make_unique<KDTreeVectorOfVectorsAdaptor<std::vector<Eigen::Vector2i>, double>>(
+//         3, voro_cells_, 10); 
   
-  init_kd_tree_ = true;
-}
+//   init_kd_tree_ = true;
+// }
 
 bool DynamicVoronoi::getNearestVoroCell(const INTPOINT& grid_pos, INTPOINT& nearest_voro_cell)
 {
@@ -843,10 +855,14 @@ DynamicVoronoi::markerMatchResult DynamicVoronoi::markerMatch(int x, int y) {
 /* Planning methods */
 
 // 8 Connected search for valid neighbours used in voronoi search. Returns vector of (grid_x, grid_y, map_z_cm)
-void DynamicVoronoi::getVoroNeighbors(const INTPOINT& grid_pos, std::vector<Eigen::Vector3i>& neighbours,
-                                      const std::unordered_set<IntPoint>& marked_bubble_cells, const bool& allow_wait) 
+void DynamicVoronoi::getVoroNeighbors(const Eigen::Vector4i& grid_pos, 
+                                      std::vector<Eigen::Vector4i>& neighbours,
+                                      const std::unordered_set<IntPoint>& marked_bubble_cells, 
+                                      const bool& allow_wait) 
 {
   neighbours.clear();
+
+  int cur_t = grid_pos(3);
 
   for (int dx = -1; dx <= 1; dx++) {
     for (int dy = -1; dy <= 1; dy++) {
@@ -857,8 +873,8 @@ void DynamicVoronoi::getVoroNeighbors(const INTPOINT& grid_pos, std::vector<Eige
         }
       }
 
-      int nx = grid_pos.x + dx;
-      int ny = grid_pos.y + dy;
+      int nx = grid_pos(0) + dx;
+      int ny = grid_pos(1) + dy;
 
       if (!isInMap(nx, ny) || isOccupied(nx, ny)){
         continue;
@@ -870,37 +886,39 @@ void DynamicVoronoi::getVoroNeighbors(const INTPOINT& grid_pos, std::vector<Eige
         continue;
       }
 
-      neighbours.push_back(Eigen::Vector3i{nx, ny, origin_z_cm_});
+      neighbours.push_back(Eigen::Vector4i{nx, ny, params_.origin_z_cm, cur_t + 1 });
     }
   }
 
   // Check if current cell is voronoi vertex. IF so, then add neighbors that go up and down
-  if (isVoronoiVertex(grid_pos.x, grid_pos.y)){
-      // If top is free:
-      if (top_voro_ != nullptr){
-        if (!top_voro_->isOccupied(grid_pos.x, grid_pos.y)){
-          neighbours.push_back(Eigen::Vector3i{grid_pos.x, grid_pos.y, top_voro_->origin_z_cm_});
-        }
+  if (isVoronoiVertex(grid_pos(0), grid_pos(1))){
+    // If top is free:
+    if (!top_voro_ .expired()){
+      auto top_voro = top_voro_.lock();
+      if (!top_voro->isOccupied(grid_pos(0), grid_pos(1))){
+        neighbours.push_back(Eigen::Vector4i{grid_pos(0), grid_pos(1), top_voro->params_.origin_z_cm, cur_t + 1 });
       }
-      // If bottom is free:
-      if (bottom_voro_ != nullptr){
-        if (!bottom_voro_->isOccupied(grid_pos.x, grid_pos.y)){
-          neighbours.push_back(Eigen::Vector3i{grid_pos.x, grid_pos.y, bottom_voro_->origin_z_cm_});
-        }
+    }
+    // If bottom is free:
+    if (!bottom_voro_ .expired()){
+      auto bottom_voro = bottom_voro_.lock();
+      if (!bottom_voro->isOccupied(grid_pos(0), grid_pos(1))){
+        neighbours.push_back(Eigen::Vector4i{grid_pos(0), grid_pos(1), bottom_voro->params_.origin_z_cm, cur_t + 1 });
       }
+    }
   }
 }
 
 // Convert from index to position
 bool DynamicVoronoi::posToIdx(const DblPoint& map_pos, INTPOINT& grid_pos) {
   
-  grid_pos.x = (map_pos.x - origin_x_) / res_;
+  grid_pos.x = (map_pos.x - params_.origin_x) / params_.res;
 
   if (flip_y_){
-    grid_pos.y = sizeY - (map_pos.y - origin_y_) / res_;
+    grid_pos.y = sizeY - (map_pos.y - params_.origin_y) / params_.res;
   }
   else {
-    grid_pos.y = (map_pos.y - origin_y_) / res_;
+    grid_pos.y = (map_pos.y - params_.origin_y) / params_.res;
   }
 
   if (!isInMap(grid_pos.x, grid_pos.y)){
@@ -912,12 +930,12 @@ bool DynamicVoronoi::posToIdx(const DblPoint& map_pos, INTPOINT& grid_pos) {
 
 // Convert from position to index
 void DynamicVoronoi::idxToPos(const INTPOINT& grid_pos, DblPoint& map_pos) {
-  map_pos.x = grid_pos.x * res_ + origin_x_;
+  map_pos.x = grid_pos.x * params_.res + params_.origin_x;
   if (flip_y_){
-    map_pos.y = (- grid_pos.y + sizeY) * res_ + origin_y_;
+    map_pos.y = (- grid_pos.y + sizeY) * params_.res + params_.origin_y;
   }
   else {
-    map_pos.y = grid_pos.y * res_ + origin_y_;
+    map_pos.y = grid_pos.y * params_.res + params_.origin_y;
   }
 }
 

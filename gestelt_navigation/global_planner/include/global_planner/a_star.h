@@ -2,6 +2,8 @@
 #define _A_STAR_PLANNER_H_
 
 #include <global_planner/planner_common.h>
+#include <grid_map/grid_map.h>
+#include "dynamic_voronoi/dynamicvoronoi.h"
 
 #include <Eigen/Eigen>
 
@@ -12,8 +14,6 @@
 #include <visualization_msgs/Marker.h>
 
 #include <chrono>
-
-#include "dynamic_voronoi/dynamicvoronoi.h"
 
 class AStarPlanner 
 {
@@ -121,43 +121,43 @@ private:
                                             map_2d_pos.y + local_origin_y_, cell.z_m});
     }
 
-    /* Get smoothed path */
+    // /* Get smoothed path */
 
-    // For each gridnode, get the position and index,
-    // So we can obtain a path in terms of indices and positions
-    path_idx_smoothed_t_.push_back(path_idx_vt_[0]);
-    for (size_t i = 1; i < path_idx_vt_.size()-1; i++)
-    {
-      if (path_idx_smoothed_t_.back().z_cm != path_idx_vt_[i].z_cm){ // If different height
-        // Add current point to smoothed path
-        path_idx_smoothed_t_.push_back(path_idx_vt_[i]);
-      }
-      else {
-        IntPoint a(path_idx_smoothed_t_.back().x, path_idx_smoothed_t_.back().y);
-        IntPoint b(path_idx_vt_[i].x, path_idx_vt_[i].y);
+    // // For each gridnode, get the position and index,
+    // // So we can obtain a path in terms of indices and positions
+    // path_idx_smoothed_t_.push_back(path_idx_vt_[0]);
+    // for (size_t i = 1; i < path_idx_vt_.size()-1; i++)
+    // {
+    //   if (path_idx_smoothed_t_.back().z_cm != path_idx_vt_[i].z_cm){ // If different height
+    //     // Add current point to smoothed path
+    //     path_idx_smoothed_t_.push_back(path_idx_vt_[i]);
+    //   }
+    //   else {
+    //     IntPoint a(path_idx_smoothed_t_.back().x, path_idx_smoothed_t_.back().y);
+    //     IntPoint b(path_idx_vt_[i].x, path_idx_vt_[i].y);
 
-        if (!lineOfSight(a, b, path_idx_smoothed_t_.back().z_cm )){ // If no line of sight
-          // Add current point to smoothed path
-          path_idx_smoothed_t_.push_back(path_idx_vt_[i]);
-        }
-      }
-    }
-    path_idx_smoothed_t_.push_back(path_idx_vt_.back());
+    //     if (!lineOfSight(a, b, path_idx_smoothed_t_.back().z_cm )){ // If no line of sight
+    //       // Add current point to smoothed path
+    //       path_idx_smoothed_t_.push_back(path_idx_vt_[i]);
+    //     }
+    //   }
+    // }
+    // path_idx_smoothed_t_.push_back(path_idx_vt_.back());
 
-    // For each gridnode, get the position and index,
-    // So we can obtain a path in terms of indices and positions
-    for (const VCell_T& cell : path_idx_smoothed_t_)
-    {
-      DblPoint map_2d_pos;
+    // // For each gridnode, get the position and index,
+    // // So we can obtain a path in terms of indices and positions
+    // for (const VCell_T& cell : path_idx_smoothed_t_)
+    // {
+    //   DblPoint map_2d_pos;
 
-      // Convert to map position
-      dyn_voro_arr_[cell.z_cm]->idxToPos(IntPoint(cell.x, cell.y), map_2d_pos);
-      // Add space time map position to path and transform it from local map to world frame
-      path_smoothed_t_.push_back(Eigen::Vector4d{map_2d_pos.x + local_origin_x_, 
-                                            map_2d_pos.y + local_origin_y_, cell.z_m, (double) cell.t});
-      path_smoothed_.push_back(Eigen::Vector3d{map_2d_pos.x + local_origin_x_, 
-                                            map_2d_pos.y + local_origin_y_, cell.z_m});
-    }
+    //   // Convert to map position
+    //   dyn_voro_arr_[cell.z_cm]->idxToPos(IntPoint(cell.x, cell.y), map_2d_pos);
+    //   // Add space time map position to path and transform it from local map to world frame
+    //   path_smoothed_t_.push_back(Eigen::Vector4d{map_2d_pos.x + local_origin_x_, 
+    //                                         map_2d_pos.y + local_origin_y_, cell.z_m, (double) cell.t});
+    //   path_smoothed_.push_back(Eigen::Vector3d{map_2d_pos.x + local_origin_x_, 
+    //                                         map_2d_pos.y + local_origin_y_, cell.z_m});
+    // }
   }
 
 /* Getter methods */

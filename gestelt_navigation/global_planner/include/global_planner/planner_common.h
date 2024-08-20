@@ -2,7 +2,7 @@
 #define _PLANNER_COMMON_H_
 
 // Common helper methods for planners
-#include <grid_map/grid_map.h>
+// #include <grid_map/grid_map.h>
 #include <limits>
 #include <Eigen/Eigen>
 #include <queue>
@@ -95,99 +95,6 @@ struct std::hash<PosIdx> {
     size_t H_x_y = 0.5 * (pos.x + pos.y)*(pos.x + pos.y + 1) + pos.y;
     return 0.5 * (H_x_y + pos.z)*(H_x_y + pos.z + 1) + pos.z;
   }
-};
-
-/**
- * @brief Class used by 3D A* search
- * 
- */
-class PlannerCommon {
-/**
- * PlannerCommon acts a wrapper to the underlying obstacle map and provides commonly
- * used methods for search-based planners
- * */ 
-public:
-  PlannerCommon(std::shared_ptr<GridMap> grid_map)
-  : map_(grid_map)
-  {
-  }
-
-  void getNeighbours(const PosIdx& cur_node, std::vector<PosIdx>& neighbours) {
-
-    neighbours.clear();
-    
-    // Explore all 26 neighbours
-    for (int dx = -1; dx <= 1; dx++)
-    {
-      for (int dy = -1; dy <= 1; dy++)
-      {
-        for (int dz = -1; dz <= 1; dz++)
-        {
-          // Skip it's own position
-          if (dx == 0 && dy == 0 && dz == 0){
-            continue;
-          }
-
-          PosIdx nb_idx(cur_node.x + dx, cur_node.y + dy, cur_node.z + dz);
-          
-          if (getOccupancy(nb_idx)){
-            // Skip if current index is occupied
-            continue;
-          }
-
-          neighbours.push_back(nb_idx);
-        }
-      }
-    }
-  } 
-
-  // Get index of grid node in string 
-  std::string getIndexStr(PosIdx idx){
-    return "("  + std::to_string(idx.x) + ", " 
-                + std::to_string(idx.y) + ", " 
-                + std::to_string(idx.z) + ")";
-  }
-
-  // Get position of grid node in string 
-  std::string getPosStr(PosIdx idx){
-    Eigen::Vector3d pos;
-    idxToPos(idx, pos);
-    return "(" + std::to_string(pos(0)) + ", " + std::to_string(pos(1)) + ", " +  std::to_string(pos(2)) + ")";
-  }
-
-  // Convert from 3d position to gridmap index
-  void posToIdx(const Eigen::Vector3d& pos, PosIdx& idx) {
-    idx.setIdx(((pos - map_->getGlobalOrigin()) / map_->getRes()).array().ceil().cast<int>());
-  }
-
-  // Convert from gridmap index to 3d position
-  void idxToPos(const PosIdx& idx, Eigen::Vector3d& pos){
-    pos = (idx.getIdx()).cast<double>() * map_->getRes() + map_->getGlobalOrigin();
-  }
-
-  bool isInGlobalMap(const PosIdx& idx){
-    Eigen::Vector3d pos;
-    idxToPos(idx, pos);
-    return map_->isInGlobalMap(pos);
-  }
-
-  bool isInGlobalMap(const Eigen::Vector3d& pos){
-    return map_->isInGlobalMap(pos);
-  }
-
-  int getOccupancy(const PosIdx& idx){
-    Eigen::Vector3d pos;
-    idxToPos(idx, pos);
-    return map_->getInflateOccupancy(pos);
-  }
-
-  int getOccupancy(const Eigen::Vector3d& pos){
-    return map_->getInflateOccupancy(pos);
-  }
-
-public: 
-
-  std::shared_ptr<GridMap> map_; 
 };
 
 

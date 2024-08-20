@@ -3,8 +3,7 @@
 #define L2_cost
 
 AStarPlanner::AStarPlanner( const AStarParams& astar_params): astar_params_(astar_params)
-{
-}
+{}
 
 void AStarPlanner::assignVoroMap(const std::map<int, std::shared_ptr<DynamicVoronoi>>& dyn_voro_arr,
                                 const int& z_separation_cm,
@@ -15,6 +14,7 @@ void AStarPlanner::assignVoroMap(const std::map<int, std::shared_ptr<DynamicVoro
                                 const double& res)
 {
     dyn_voro_arr_ = dyn_voro_arr;
+
     z_separation_cm_ = z_separation_cm;
     local_origin_x_ = local_origin_x;
     local_origin_y_ = local_origin_y;
@@ -31,10 +31,7 @@ void AStarPlanner::updateReservationTable(const std::map<int, std::unordered_set
 
 void AStarPlanner::reset()
 {
-    // Clear planning data
-
     // Voronoi planning data structs
-
     marked_bubble_cells_.clear();
 
     // Space time Voronoi planning data structs
@@ -200,7 +197,7 @@ bool AStarPlanner::generatePlanVoroT(   const Eigen::Vector3d& start_pos_3d,
     open_list_vt_.put(start_node, 0); // start_node has 0 f cost
 
     int num_iter = 0;
-    std::vector<Eigen::Vector3i> neighbours; // 3d indices of neighbors
+    std::vector<Eigen::Vector4i> neighbours; // 3d indices of neighbors
 
     while (!open_list_vt_.empty() && num_iter < astar_params_.max_iterations)
     {
@@ -223,34 +220,24 @@ bool AStarPlanner::generatePlanVoroT(   const Eigen::Vector3d& start_pos_3d,
 
             return true;
         }
-
-        IntPoint cur_node_2d(cur_node.x, cur_node.y);
+        
 
         // Get neighbours that are within the map
         dyn_voro_arr_[cur_node.z_cm]->getVoroNeighbors(
-            cur_node_2d, neighbours, marked_bubble_cells_[cur_node.z_cm], true);
-
-        // std::cout << "drone " << astar_params_.drone_id << " Itr " << num_iter << " " << 
-        //         " Number of nbs:" << neighbours.size() << std::endl;
+            Eigen::Vector4i(cur_node.x, cur_node.y, cur_node.z_cm, cur_node.t), 
+            neighbours, marked_bubble_cells_[cur_node.z_cm], 
+            true); // allow_waiting
 
         // Explore neighbors of current node. Each neighbor is (grid_x, grid_y, map_z_cm)
-        for (const Eigen::Vector3i& nb_node_eig : neighbours) 
+        for (const Eigen::Vector4i& nb_grid_4d : neighbours) 
         {   
-            int nb_t = cur_node.t + astar_params_.st_straight;
             
-            VCell_T nb_node(nb_node_eig(0), nb_node_eig(1), nb_node_eig(2), nb_t);
-            VCell nb_node_3d(nb_node_eig(0), nb_node_eig(1), nb_node_eig(2));
-
-            // Convert to map coordinates so as to check reservation table
-            Eigen::Vector4i nb_grid_4d{ nb_node_eig(0), 
-                                        nb_node_eig(1), 
-                                        nb_node_eig(2), nb_t};
+            VCell_T nb_node(nb_grid_4d(0), nb_grid_4d(1), nb_grid_4d(2), nb_grid_4d(3));
+            VCell nb_node_3d(nb_grid_4d(0), nb_grid_4d(1), nb_grid_4d(2));
 
             bool occ_resrv_tbl = false;
             for (auto const& tbl : resrv_tbl_){ // for each agent's reservation table
-                if (tbl.second.find(nb_grid_4d) != tbl.second.end() ){
-                    // Position has been reserved by another agent
-                    // std::cout << "Drone " << astar_params_.drone_id <<  ": Grid Pos (" << nb_grid_4d.transpose() << ") has been reserved" << std::endl;
+                if (tbl.second.find(nb_grid_4d) != tbl.second.end() ){ // Position has been reserved by another agent
                     occ_resrv_tbl = true;
                     break;
                 }
@@ -258,8 +245,11 @@ bool AStarPlanner::generatePlanVoroT(   const Eigen::Vector3d& start_pos_3d,
             if (occ_resrv_tbl){
                 continue;
             }
-
-            double tent_g_cost = g_cost_v_[cur_node_3d] + cost_function(cur_node, nb_node);
+            
+            double tent_g_cost = std::numeric_limits<double>::max();
+            if (g_cost_v_.find(cur_node_3d) != g_cost_v_.end()) {
+                tent_g_cost = g_cost_v_[cur_node_3d] + cost_function(cur_node, nb_node);
+            }
 
             // If g_cost is not found or tentative cost is better than previously computed cost, then update costs
             if (g_cost_v_.find(nb_node_3d) == g_cost_v_.end() || tent_g_cost < g_cost_v_[nb_node_3d])
