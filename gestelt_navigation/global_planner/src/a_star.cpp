@@ -23,10 +23,9 @@ void AStarPlanner::assignVoroMap(const std::map<int, std::shared_ptr<DynamicVoro
     res_ = res;
 }
 
-void AStarPlanner::updateReservationTable(const std::map<int, std::unordered_set<Eigen::Vector4i>>& resrv_tbl)
+void AStarPlanner::updateReservationTable(const std::map<int, RsvnTable>& rsvn_tbl)
 {
-    resrv_tbl_.clear();
-    resrv_tbl_ = resrv_tbl;
+    rsvn_tbl_ = rsvn_tbl;
 }
 
 void AStarPlanner::reset()
@@ -199,6 +198,8 @@ bool AStarPlanner::generatePlanVoroT(   const Eigen::Vector3d& start_pos_3d,
     int num_iter = 0;
     std::vector<Eigen::Vector4i> neighbours; // 3d indices of neighbors
 
+    double t_now = ros::Time::now().toSec();
+
     while (!open_list_vt_.empty() && num_iter < astar_params_.max_iterations)
     {
         // if (num_iter%100 == 1){
@@ -234,17 +235,27 @@ bool AStarPlanner::generatePlanVoroT(   const Eigen::Vector3d& start_pos_3d,
             VCell_T nb_node(nb_grid_4d(0), nb_grid_4d(1), nb_grid_4d(2), nb_grid_4d(3));
             VCell nb_node_3d(nb_grid_4d(0), nb_grid_4d(1), nb_grid_4d(2));
 
-            bool occ_resrv_tbl = false;
-            for (auto const& tbl : resrv_tbl_){ // for each agent's reservation table
-                if (tbl.second.find(nb_grid_4d) != tbl.second.end() ){ // Position has been reserved by another agent
-                    occ_resrv_tbl = true;
-                    break;
+            // Synchronize current planning time to that of reservation table entries
+            auto isInReservationTable = [this](const Eigen::Vector4i& grid_4d, const double &t_now) -> bool {
+                for (auto const& tbl : rsvn_tbl_){ // for each agent's reservation table
+                    // e_t_plan_start: space time units since plan started
+                    int e_t_plan_start =  (int) tToSpaceTimeUnits(t_now - tbl.second.t_plan_start);
+                    Eigen::Vector4i grid_4d_sync = grid_4d;
+                    grid_4d_sync(3) += e_t_plan_start;
+                    if (tbl.second.isReserved(grid_4d_sync)){
+                        // std::cout << "  grid(" << grid_4d_sync.transpose() << ") is reserved " << std::endl;
+                        return true;
+                    }
                 }
-            }
-            if (occ_resrv_tbl){
+                return false;
+            };
+
+            if (isInReservationTable(nb_grid_4d, t_now))
+            {
                 continue;
             }
-            
+
+
             double tent_g_cost = g_cost_v_[cur_node_3d] + cost_function(cur_node, nb_node);
 
             // If g_cost is not found or tentative cost is better than previously computed cost, then update costs

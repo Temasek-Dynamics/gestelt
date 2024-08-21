@@ -49,6 +49,8 @@ std::string str_fmt( const std::string& format, Args ... args )
   return std::string( buf.get(), buf.get() + size - 1 ); // We don't want the '\0' inside
 }
 
+
+
 class Waypoint
 {
 // Waypoint class is a LIFO queue 
@@ -335,8 +337,9 @@ private:
   bool plan_once_{false}; // Used for testing, only runs the planner once
   bool verbose_print_{false};  // enables printing of planning time
 
-  double resrv_tbl_inflation_{-1.0}; // [m] Inflation of cells in the reservation table
-  double resrv_tbl_t_buffer_{-1.0}; // [s] Time buffer in the reservation table
+  double rsvn_tbl_inflation_{-1.0}; // [m] Inflation of cells in the reservation table
+  double rsvn_tbl_t_buffer_{-1.0}; // [s] Time buffer in the reservation table
+  int rsvn_tbl_window_size_{-1}; // [s] Time buffer in the reservation table
   int t_buffer_{-1}; // [space-time units] Time buffer
   int cells_inf_{-1}; // [voxels] Spatial buffer
 
@@ -367,7 +370,7 @@ private:
   ros::Subscriber odom_sub_; // Subscriber to odometry
 
   /* Mutexes*/
-  std::mutex resrv_tbl_mtx_;
+  std::mutex rsvn_tbl_mtx_;
   std::mutex voro_map_mtx_;
   std::mutex cur_state_mtx_;
 
@@ -380,7 +383,7 @@ private:
   std::unique_ptr<AStarPlanner> fe_planner_; // Front end planner
 
   // map{drone_id : unordered_set{(x,y,z,t)}}
-  std::map<int, std::unordered_set<Eigen::Vector4i>> resrv_tbl_; // Reservation table of (x,y,z_cm, t) where x,y are grid positions, z_cm is height in centimeters and t is space time units
+  std::map<int, RsvnTable> rsvn_tbl_; // Reservation table of (x,y,z_cm, t) where x,y are grid positions, z_cm is height in centimeters and t is space time units
 
   Waypoint waypoints_; // Goal waypoint handler object
 

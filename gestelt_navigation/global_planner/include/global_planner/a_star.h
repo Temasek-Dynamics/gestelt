@@ -65,7 +65,7 @@ public:
 
 
   /* Update the assignement of the reservation table. TO be executed when the reservation table is updated*/
-  void updateReservationTable(const std::map<int, std::unordered_set<Eigen::Vector4i>>& resrv_tbl);
+  void updateReservationTable(const std::map<int, RsvnTable>& rsvn_tbl);
 
   /* Generate space-time plan on voronoi graph  */
   bool generatePlanVoroT( const Eigen::Vector3d& start_pos_3d, 
@@ -211,6 +211,7 @@ public:
   {
     std::vector<Eigen::Vector4d> path_pos_t = path_pos_t_;
 
+    // Transform to world frame
     Eigen::Vector4d start_t(cur_pos(0)+local_origin_x_, 
                             cur_pos(1)+local_origin_y_, 
                             cur_pos(2), 
@@ -220,6 +221,7 @@ public:
     // offset_t: time from current position to start of path
     double offset_t = (int)round((start_t.segment(0,3) - path_pos_t[0].segment(0,3)).norm()/res_) * astar_params_.st_straight; 
 
+    // Offset all time 
     for (size_t i = 1; i < path_pos_t.size(); i++){
       path_pos_t[i](3) += offset_t;
     }
@@ -291,6 +293,11 @@ public:
     return rem < (mult/2) ? (num-rem) : (num-rem) + mult;
   }
 
+  /* Convert from time [s] to space-time units */
+  long tToSpaceTimeUnits(const double& t){
+    return std::lround(t / astar_params_.t_unit);
+  }
+
   /* Check line of sight between 2 points*/
   bool lineOfSight(IntPoint s, IntPoint s_, int z_cm);
 
@@ -326,7 +333,7 @@ private:
   std::unordered_set<VCell_T> closed_list_vt_; // All closed nodes
 
   // map{drone_id : unordered_set{(x,y,z,t)}}
-  std::map<int, std::unordered_set<Eigen::Vector4i>> resrv_tbl_; // Reservation table of (x,y,z_cm, t) where x,y are grid positions, z_cm is height in centimeters and t is space time units
+  std::map<int, RsvnTable> rsvn_tbl_; // Reservation table of (x,y,z_cm, t) where x,y are grid positions, z_cm is height in centimeters and t is space time units
 };
 
 #endif // _A_STAR_PLANNER_H_

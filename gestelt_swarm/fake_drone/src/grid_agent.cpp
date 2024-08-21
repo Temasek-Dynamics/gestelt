@@ -91,7 +91,6 @@ GridAgent::~GridAgent()
 void GridAgent::frontEndPlanCB(const gestelt_msgs::FrontEndPlan::ConstPtr &msg)
 {	
 	// fe_plan_msg_ = *msg;
-
 	// Generate spline from plan 
 	// std::vector<tinyspline::real> points;
 
@@ -116,7 +115,7 @@ void GridAgent::frontEndPlanCB(const gestelt_msgs::FrontEndPlan::ConstPtr &msg)
 	// spline_ = std::make_shared<tinyspline::BSpline>(tinyspline::BSpline::interpolateCubicNatural(points, 3));
 
 	plan_start_exec_t_ = ros::Time::now().toSec();
-	plan_start_t_ = msg->plan_start_time;
+	plan_start_t_ = msg->t_plan_start;
 
 	plan_received_ = true;
 }

@@ -15,6 +15,7 @@
 
   <exec_depend>voronoi_planner</exec_depend>
   <exec_depend>fake_map</exec_depend>
+  <exec_depend>fake_drone</exec_depend>
   <exec_depend>swarm_collision_checker</exec_depend>
 
   <!-- The export tag contains other, unspecified, tags -->

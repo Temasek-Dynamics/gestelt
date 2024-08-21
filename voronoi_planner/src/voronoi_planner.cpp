@@ -72,9 +72,10 @@ void VoronoiPlanner::initParams(ros::NodeHandle &pnh)
   pnh.param("planner/plan_once", plan_once_, false);
   pnh.param("planner/t_unit", t_unit_, 0.1);
 
-  pnh.param("reservation_table/inflation", resrv_tbl_inflation_, 0.3);
-  pnh.param("reservation_table/time_buffer", resrv_tbl_t_buffer_, 0.5);
-  t_buffer_ = (int) std::lround(resrv_tbl_t_buffer_/t_unit_);  // [space-time units] for time buffer
+  pnh.param("reservation_table/inflation", rsvn_tbl_inflation_, 0.3);
+  pnh.param("reservation_table/time_buffer", rsvn_tbl_t_buffer_, 0.5);
+  pnh.param("reservation_table/window_size", rsvn_tbl_window_size_, -1);
+  t_buffer_ = (int) std::lround(rsvn_tbl_t_buffer_/t_unit_);  // [space-time units] for time buffer
 
   pnh.param("local_map_origin", local_map_origin_, std::string("local_map_origin"));
   pnh.param("global_origin", global_origin_, std::string("world"));
@@ -191,23 +192,18 @@ void VoronoiPlanner::FEPlanSubCB(const gestelt_msgs::FrontEndPlanConstPtr& msg)
     return;
   }
 
-  std::lock_guard<std::mutex> resrv_tbl_guard(resrv_tbl_mtx_);
+  std::lock_guard<std::mutex> rsvn_tbl_guard(rsvn_tbl_mtx_);
 
   // Clear reservation table
-  if (resrv_tbl_.find(msg->agent_id) != resrv_tbl_.end()){
-    resrv_tbl_[msg->agent_id].clear();
-  }
+  rsvn_tbl_[msg->agent_id] = RsvnTable(msg->t_plan_start);
   
   // Add all points on path (with inflation) to reservation table
-  cells_inf_ = (int) std::lround(resrv_tbl_inflation_/bool_map_3d_.resolution); // Number of cells used for inflation
-  double t_now = ros::Time::now().toSec();
-  int e_t_plan_start =  (int) tToSpaceTimeUnits(t_now - msg->plan_start_time); // e_t_plan_start: space time units since plan started
-  // std::cout << std::fixed << std::setprecision(11) << "t_now(" << t_now << "), msg->plan_start_time(" << msg->plan_start_time << ")" << std::endl;
-  // std::cout << "e_t_plan_start(" << e_t_plan_start
-  //           << ") = " << tToSpaceTimeUnits(t_now) << " - " << tToSpaceTimeUnits(msg->plan_start_time) << std::endl;
-  
+  cells_inf_ = (int) std::lround(rsvn_tbl_inflation_/bool_map_3d_.resolution); // Number of cells used for inflation
+
+  int window_size = (rsvn_tbl_window_size_ > 0) ? std::min(rsvn_tbl_window_size_, (int) msg->plan.size()) : msg->plan.size() ; 
+
   int prev_t = 0; // prev_t: Relative time of last points
-  for (size_t i = 0; i < msg->plan.size(); i++){ // for every point on plan
+  for (size_t i = 0; i < (size_t) window_size; i++){ // For points on plan up to window size
     IntPoint grid_pos;
     // get map position relative to local origin
     DblPoint map_2d_pos(msg->plan[i].position.x - bool_map_3d_.origin(0), 
@@ -223,33 +219,17 @@ void VoronoiPlanner::FEPlanSubCB(const gestelt_msgs::FrontEndPlanConstPtr& msg)
     {
       for(int y = grid_pos.y - cells_inf_; y <= grid_pos.y + cells_inf_; y++)
       {
-        // Add position for the entire time interval from previous t to current t
+        // Reserve for time interval from previous t to current t, including time buffer
         for (int j = - t_buffer_; j < msg->plan_time[i] - prev_t + t_buffer_; j++) { 
-          if (e_t_plan_start + prev_t + j < 0){
-            // if plan is in the past
-            continue;
-          }
-          resrv_tbl_[msg->agent_id].insert(Eigen::Vector4i{ x, y, 
-                                                            map_z_cm, 
-                                                            e_t_plan_start + prev_t + j});
+          rsvn_tbl_[msg->agent_id].table.insert(Eigen::Vector4i{ x, y, 
+                                                                map_z_cm, 
+                                                                prev_t + j});
         }
       }
     }
 
     prev_t = msg->plan_time[i]; 
   } 
-
-  IntPoint grid_pos;
-  // get map position relative to local origin
-  DblPoint map_2d_pos(msg->plan.back().position.x - bool_map_3d_.origin(0), 
-                      msg->plan.back().position.y - bool_map_3d_.origin(1));
-  int map_z_cm =roundToMultInt(mToCm(msg->plan.back().position.z), bool_map_3d_.z_separation_cm);
-  {
-    std::lock_guard<std::mutex> voro_map_guard(voro_map_mtx_);
-    dyn_voro_arr_[map_z_cm]->posToIdx(map_2d_pos, grid_pos);
-  }
-  resrv_tbl_[msg->agent_id].insert(Eigen::Vector4i{ grid_pos.x, grid_pos.y, map_z_cm, 
-                                                    e_t_plan_start + msg->plan_time.back()});
 
 }
 
@@ -319,7 +299,7 @@ bool VoronoiPlanner::plan(const Eigen::Vector3d& start, const Eigen::Vector3d& g
 
   auto isAllPrioPlansRcv = [&] () {
     for (int i = 0; i < drone_id_; i++){
-      if (resrv_tbl_.find(i) == resrv_tbl_.end()){
+      if (rsvn_tbl_.find(i) == rsvn_tbl_.end()){
         return false;
       }
     }
@@ -343,9 +323,9 @@ bool VoronoiPlanner::plan(const Eigen::Vector3d& start, const Eigen::Vector3d& g
 
   // Update reservation table on planner
   {
-    std::lock_guard<std::mutex> resrv_tbl_guard(resrv_tbl_mtx_);
-    fe_planner_->updateReservationTable(resrv_tbl_);
-    resrv_tbl_.clear();
+    std::lock_guard<std::mutex> rsvn_tbl_guard(rsvn_tbl_mtx_);
+    fe_planner_->updateReservationTable(rsvn_tbl_);
+    rsvn_tbl_.clear();
   }
 
 
@@ -396,7 +376,7 @@ bool VoronoiPlanner::plan(const Eigen::Vector3d& start, const Eigen::Vector3d& g
     fe_plan_msg.plan_time.push_back(int(space_time_path_[i](3)));
   }
 
-  fe_plan_msg.plan_start_time = ros::Time::now().toSec();
+  fe_plan_msg.t_plan_start = ros::Time::now().toSec();
 
   fe_plan_pub_.publish(fe_plan_msg);
   fe_plan_broadcast_pub_.publish(fe_plan_msg);

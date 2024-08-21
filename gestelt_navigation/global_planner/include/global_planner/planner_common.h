@@ -332,5 +332,28 @@ struct std::hash<Eigen::Vector4i> {
   }
 };
 
+  /* Reservation table for each agent
+  */
+struct RsvnTable{
+  RsvnTable(){}
+  
+  RsvnTable(const double& t_plan_start): t_plan_start(t_plan_start)
+  {}
+
+  /**
+   * @brief Check is position and time is in reservation table
+   * 
+   * @param pos_4d (x,y, z_cm, t) position to check
+   * @param e_t [Space-time units] Elapsed time since plan started 
+   */
+  bool isReserved(const Eigen::Vector4i& pos_4d) const {
+    return table.find(pos_4d) != table.end();
+  }
+
+  double t_plan_start; 
+  std::unordered_set<Eigen::Vector4i> table;
+};  // struct RsvnTable
+
+
 
 #endif // _PLANNER_COMMON_H_

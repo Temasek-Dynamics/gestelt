@@ -10,6 +10,7 @@ planner:
 reservation_table:
   inflation: 0.4    # [m] buffer for reservation table in spatial domain
   time_buffer: 0.3  # [s] buffer for reservation table in time domain
+  window_size: 30  # [voxels] Reserve only up to a given number of points on plan. Negative numbers reserve the whole plan.
 
 ##### Mapping params
 grid_map:
