@@ -23,8 +23,8 @@ class run_quad:
         #######------------ UAV PARAM----------------#########
         ######################################################
         ## definition 
-        self.wing_len = 1.5
-        self.uav_height = 0.2
+        self.wing_len = 1.5 
+        self.uav_height = 0.4
         # --------------------------- create model1 ----------------------------------------
         self.uav1 = Quadrotor()
         # jx, jy, jz = 0.0023, 0.0023, 0.004
@@ -126,18 +126,7 @@ class run_quad:
             self.uavoc1.diffPMP()
             self.lqr_solver = LQR()
 
-        ###################################################################
-        ###------------ Collision detection sym define--------------#######
-        ###################################################################
-        # initialize the drone ellipse
-        self.reward_calc = RewardCalc()
-        self.reward_calc.reward_calc_sym(self.uav1,
-                                        self.uav_height,
-                                        self.wing_len/2,
-                                        alpha=1,
-                                        beta=10,
-                                        Q_tra=5,
-                                        w_goal=0.5)
+       
         
     def init_state_and_mission(self,
                 goal_pos = [0, 8, 0],
@@ -172,7 +161,6 @@ class run_quad:
         self.obstacle1 = obstacle(self.point1,self.point2,self.point3,self.point4)
         self.obstacle1_torch=obstacle_torch(self.point1,self.point2,self.point3,self.point4)
 
-       
 
     def R_from_MPC(self,tra_pos=None,tra_ang=None,t_tra = 3, Ulast_value = None):
        
@@ -221,20 +209,43 @@ class run_quad:
             #############################################################
             ##-----------------ellipse collision check-----------------##
             #############################################################
+            
+            ###################################################################
+            ###------------ Collision detection sym define--------------#######
+            ###################################################################
+            # initialize the drone ellipse
+        
+            self.obstacle1.reward_calc_sym(self.uav1,
+                                            quad_height=self.uav_height,
+                                            quad_radius=self.wing_len/2,
+                                            alpha=5,
+                                            beta=10,
+                                            Q_tra=1,
+                                            safe_margin=0.0,
+                                            w_goal=0)    
+            
             d_reward_d_state = np.zeros((self.horizon+1,self.uavoc1.n_state))
             des_node_tra=int(np.round(t_tra*(10)))
-            reward_sum =0  
 
-            ## for four consecutive nodes around t_tra
-            for c in range(1):
-                reward,d_reward_d_r_I_tra, d_reward_d_q_tra=self.reward_calc.reward_calc_value(state_traj,
-                                                    des_node_tra-0+c,
-                                                    self.gate_corners,
-                                                    goal_pos=self.goal_pos)
-                d_reward_d_state[des_node_tra-0+c,0:3] = d_reward_d_r_I_tra
-                d_reward_d_state[des_node_tra-0+c,6:10] = d_reward_d_q_tra 
-                reward_sum += reward
-            return reward_sum
+           
+            reward,d_reward_d_r_I_tra, d_reward_d_q_tra,gate_check_points=self.obstacle1.reward_calc_value(state_traj,
+                                                des_node_tra,
+                                                self.gate_corners,
+                                                goal_pos=self.goal_pos,
+                                                vert_traj=self.traj[:,0:3],
+                                                horizon=self.horizon)
+            d_reward_d_state[des_node_tra,0:3] = d_reward_d_r_I_tra
+            d_reward_d_state[des_node_tra,6:10] = d_reward_d_q_tra 
+            
+            if sys.gettrace() is not None:  # In debug mode
+                self.uav1.plot_3D_traj(wing_len=1.5,
+                                    uav_height=self.uav_height,
+                                        state_traj=state_traj,
+                                        gate_traj=gate_check_points,
+                                        TRAIN_VIS=True,
+                                        tra_node=des_node_tra)
+            return reward + 500*pitch_reward
+        
         
         else:   
             self.state_traj_tensor = torch.tensor(state_traj,requires_grad=True)

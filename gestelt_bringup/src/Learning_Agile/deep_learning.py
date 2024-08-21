@@ -77,13 +77,13 @@ if __name__ == '__main__':
     ## deep learning
     # Hyper-parameters 
     TRAIN_FROM_CHECKPOINT = False
-    num_cores =1#5
+    num_cores =20#5
     if num_cores == 1:
         MULTI_CORE = False
     else:
         MULTI_CORE = True
     PDP_GRADIENT = False
-    USE_PREV_SOLVER =True 
+    USE_PREV_SOLVER = True
     num_epochs = 50 #100
     batch_size = 100 # 100
     

@@ -354,7 +354,8 @@ class LearningAgileAgent():
         # self.quad1.uav1.plot_trav_weight(self.tra_weight_list)
         self.quad1.uav1.plot_trav_time(self.T)
         self.quad1.uav1.plot_solving_time(self.solving_time)
-        self.quad1.uav1.plot_3D_traj(wing_len=1.5,
+        self.quad1.uav1.plot_3D_traj(wing_len=self.quad1.wing_len,
+                                    uav_height=self.quad1.uav_height,
                                     state_traj=self.state_n[::50,:],
                                     gate_traj=self.gate_move[::50,:,:])
 

@@ -10,7 +10,7 @@ from scipy.spatial.transform import Rotation as R
 from solid_geometry import norm
 from math import sqrt
 from solid_geometry import *
-
+from matplotlib.patches import Ellipse
 # quadrotor (UAV) environment
 class Quadrotor:
     def __init__(self, project_name='my UAV'):
@@ -387,7 +387,7 @@ class Quadrotor:
             q = state_traj[t, 6:10]
 
             # direction cosine matrix from body to inertial
-            CIB = dir_cosine_tensor(q).transpose(0, 1)
+            CIB = self.dir_cosine_tensor(q).transpose(0, 1)
 
             # position of each rotor in inertial frame
             r1_pos = rc + torch.matmul(CIB, r1)
@@ -799,16 +799,30 @@ class Quadrotor:
 
     def plot_3D_traj(self,
                      wing_len,
-                     state_traj,gate_traj):
+                     uav_height,
+                     state_traj,
+                     gate_traj,
+                     TRAIN_VIS=False,
+                     tra_node=None):
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
         position = self.get_quadrotor_position(wing_len, state_traj)
 
-        for i in range(np.size(gate_traj,0)):
-            p1_x, p1_y, p1_z = gate_traj[i, 0,:]
-            p2_x, p2_y, p2_z = gate_traj[i, 1,:]
-            p3_x, p3_y, p3_z = gate_traj[i, 2,:]
-            p4_x, p4_y, p4_z = gate_traj[i, 3,:]
+        
+
+        for i in range(np.size(state_traj,0)):
+
+            if TRAIN_VIS:
+                p1_x, p1_y, p1_z = gate_traj[0,:]
+                p2_x, p2_y, p2_z = gate_traj[1,:]
+                p3_x, p3_y, p3_z = gate_traj[2,:]
+                p4_x, p4_y, p4_z = gate_traj[3,:]
+
+            else:
+                p1_x, p1_y, p1_z = gate_traj[i, 0,:]
+                p2_x, p2_y, p2_z = gate_traj[i, 1,:]
+                p3_x, p3_y, p3_z = gate_traj[i, 2,:]
+                p4_x, p4_y, p4_z = gate_traj[i, 3,:]
             
             c_x, c_y, c_z = position[i,0:3]
             r1_x, r1_y, r1_z = position[i,3:6]
@@ -821,20 +835,59 @@ class Quadrotor:
             quadrotor_center = np.array([c_x,c_y,c_z])
 
             distance = np.linalg.norm(gate_center-quadrotor_center)
-
-            if distance < 0.5:
+            
+            condition_test=distance <= 0.5
+            condition_train=i==tra_node
+            condition=condition_test
+            if TRAIN_VIS:
+                condition=condition_train
+            if condition:
                 plot_alpha = 1
+                
+
+                ## plot the drone ellipsoid
+                
+                # rotation of the drone
+                q = state_traj[i,6:10]
+                R = transpose(dir_cosine(q)) # body frame to world frame
+                
+                # Create a grid of u, v values (parametric angles)
+                u = np.linspace(0, 2 * np.pi, 10)
+                v = np.linspace(0, np.pi, 10)
+
+                # Parametric equations for the ellipsoid
+                x = wing_len/2 * np.outer(np.cos(u), np.sin(v))
+                y = (wing_len/2) * np.outer(np.sin(u), np.sin(v))
+                z = uav_height * np.outer(np.ones(np.size(u)), np.cos(v))
+
+                points_3d = np.array([x.flatten(), y.flatten(), z.flatten()])
+                # Apply rotation matrix
+                rotated_points = np.dot(R, points_3d)
+                x = np.reshape(rotated_points[0, :], x.shape)
+                y = np.reshape(rotated_points[1, :], y.shape)
+                z = np.reshape(rotated_points[2, :], z.shape)
+                
+                ax.plot_surface(x + c_x, y + c_y, z + c_z, color='b', alpha=0.1)
             else:
                 plot_alpha = 0.1
             gate_l1, = ax.plot([p1_x,p2_x],[p1_y,p2_y],[p1_z,p2_z],linewidth=1,color='red',linestyle='-',alpha=plot_alpha)
             gate_l2, = ax.plot([p2_x,p3_x],[p2_y,p3_y],[p2_z,p3_z],linewidth=1,color='red',linestyle='-',alpha=plot_alpha)
             gate_l3, = ax.plot([p3_x,p4_x],[p3_y,p4_y],[p3_z,p4_z],linewidth=1,color='red',linestyle='-',alpha=plot_alpha)
             gate_l4, = ax.plot([p4_x,p1_x],[p4_y,p1_y],[p4_z,p1_z],linewidth=1,color='red',linestyle='-',alpha=plot_alpha)
+            
+            if TRAIN_VIS:
+                for i in range(12):
+                    ax.scatter(gate_traj[i+4,0],gate_traj[i+4,1],gate_traj[i+4,2],c='b',marker='o',s=10)
+
             line_arm1, = ax.plot([c_x, r1_x], [c_y, r1_y], [c_z, r1_z], linewidth=1, color='red', marker='o', markersize=1,alpha=plot_alpha)
             line_arm2, = ax.plot([c_x, r2_x], [c_y, r2_y], [c_z, r2_z], linewidth=1, color='blue', marker='o', markersize=1,alpha=plot_alpha)
             line_arm3, = ax.plot([c_x, r3_x], [c_y, r3_y], [c_z, r3_z], linewidth=1, color='orange', marker='o', markersize=1,alpha=plot_alpha)
             line_arm4, = ax.plot([c_x, r4_x], [c_y, r4_y], [c_z, r4_z], linewidth=1, color='green', marker='o', markersize=1,alpha=plot_alpha)
- 
+            
+            # set the axes limits
+            ax.set_xlim([-2, 2])
+            ax.set_ylim([-2, 2])
+            ax.set_zlim([-2, 2])
         plt.show()    
     
     
