@@ -1,7 +1,7 @@
 ##this file is to obtain the optimal solution
 
 from casadi import *
-import numpy
+import numpy as np
 from scipy import interpolate
 import casadi
 from acados_template import AcadosOcp, AcadosOcpSolver, AcadosSimSolver
@@ -302,16 +302,16 @@ class OCSys:
         w_opt = sol['x'].full().flatten()
         # print('solving time=',time.time()-t_)
         # take the optimal control and state
-        sol_traj = numpy.concatenate((w_opt, self.n_control * [0]))
-        sol_traj = numpy.reshape(sol_traj, (-1, self.n_state + self.n_control))
+        sol_traj = np.concatenate((w_opt, self.n_control * [0]))
+        sol_traj = np.reshape(sol_traj, (-1, self.n_state + self.n_control))
         state_traj_opt = sol_traj[:, 0:self.n_state]
-        control_traj_opt = numpy.delete(sol_traj[:, self.n_state:], -1, 0)
-        current_time = numpy.array([k for k in range(self.horizon + 1)])
+        control_traj_opt = np.delete(sol_traj[:, self.n_state:], -1, 0)
+        current_time = np.array([k for k in range(self.horizon + 1)])
 
         # Compute the costates using two options
         if costate_option == 0:
             # Default option, which directly obtains the costates from the NLP solver
-            costate_traj_opt = numpy.reshape(sol['lam_g'].full().flatten(), (-1, self.n_state))
+            costate_traj_opt = np.reshape(sol['lam_g'].full().flatten(), (-1, self.n_state))
         else:
             # Another option, which solve the costates by the Pontryagin's Maximum Principle
             # The variable name is consistent with the notations used in the PDP paper
@@ -319,12 +319,12 @@ class OCSys:
             dhx_fun = casadi.Function('dhx', [self.state, self.auxvar], [jacobian(self.final_cost, self.state)])
             dcx_fun = casadi.Function('dcx', [self.state, self.control, self.auxvar],
                                       [jacobian(self.path_cost, self.state)])
-            costate_traj_opt = numpy.zeros((self.horizon, self.n_state))
+            costate_traj_opt = np.zeros((self.horizon, self.n_state))
             costate_traj_opt[-1, :] = dhx_fun(state_traj_opt[-1, :], auxvar_value)
             for k in range(self.horizon - 1, 0, -1):
                 costate_traj_opt[k - 1, :] = dcx_fun(state_traj_opt[k, :], control_traj_opt[k, :],
-                                                     auxvar_value).full() + numpy.dot(
-                    numpy.transpose(dfx_fun(state_traj_opt[k, :], control_traj_opt[k, :], auxvar_value).full()),
+                                                     auxvar_value).full() + np.dot(
+                    np.transpose(dfx_fun(state_traj_opt[k, :], control_traj_opt[k, :], auxvar_value).full()),
                     costate_traj_opt[k, :])
 
         # output
@@ -734,7 +734,7 @@ class OCSys:
         matHxx, matHxu, matHxe, matHux, matHuu, matHue, mathxx, mathxe = [], [], [], [], [], [], [], []
 
         # Solve the above coefficient matrices
-        for t in range(numpy.size(control_traj_opt, 0)):
+        for t in range(np.size(control_traj_opt, 0)):
             curr_x = state_traj_opt[t, :]
             curr_u = control_traj_opt[t, :]
             next_lambda = costate_traj_opt[t, :]
@@ -787,137 +787,137 @@ class LQR:
         self.project_name = project_name
 
     def setDyn(self, dynF, dynG, dynE=None):
-        if type(dynF) is numpy.ndarray:
+        if type(dynF) is np.ndarray:
             self.dynF = [dynF]
-            self.n_state = numpy.size(dynF, 0)
-        elif type(dynF[0]) is numpy.ndarray:
+            self.n_state = np.size(dynF, 0)
+        elif type(dynF[0]) is np.ndarray:
             self.dynF = dynF
-            self.n_state = numpy.size(dynF[0], 0)
+            self.n_state = np.size(dynF[0], 0)
         else:
-            assert False, "Type of dynF matrix should be numpy.ndarray  or list of numpy.ndarray"
+            assert False, "Type of dynF matrix should be np.ndarray  or list of np.ndarray"
 
-        if type(dynG) is numpy.ndarray:
+        if type(dynG) is np.ndarray:
             self.dynG = [dynG]
-            self.n_control = numpy.size(dynG, 1)
-        elif type(dynG[0]) is numpy.ndarray:
+            self.n_control = np.size(dynG, 1)
+        elif type(dynG[0]) is np.ndarray:
             self.dynG = dynG
-            self.n_control = numpy.size(self.dynG[0], 1)
+            self.n_control = np.size(self.dynG[0], 1)
         else:
-            assert False, "Type of dynG matrix should be numpy.ndarray  or list of numpy.ndarray"
+            assert False, "Type of dynG matrix should be np.ndarray  or list of np.ndarray"
 
         if dynE is not None:
-            if type(dynE) is numpy.ndarray:
+            if type(dynE) is np.ndarray:
                 self.dynE = [dynE]
-                self.n_batch = numpy.size(dynE, 1)
-            elif type(dynE[0]) is numpy.ndarray:
+                self.n_batch = np.size(dynE, 1)
+            elif type(dynE[0]) is np.ndarray:
                 self.dynE = dynE
-                self.n_batch = numpy.size(dynE[0], 1)
+                self.n_batch = np.size(dynE[0], 1)
             else:
-                assert False, "Type of dynE matrix should be numpy.ndarray, list of numpy.ndarray, or None"
+                assert False, "Type of dynE matrix should be np.ndarray, list of np.ndarray, or None"
         else:
             self.dynE = None
             self.n_batch = None
 
     def setPathCost(self, Hxx, Huu, Hxu=None, Hux=None, Hxe=None, Hue=None):
 
-        if type(Hxx) is numpy.ndarray:
+        if type(Hxx) is np.ndarray:
             self.Hxx = [Hxx]
-        elif type(Hxx[0]) is numpy.ndarray:
+        elif type(Hxx[0]) is np.ndarray:
             self.Hxx = Hxx
         else:
-            assert False, "Type of path cost Hxx matrix should be numpy.ndarray or list of numpy.ndarray, or None"
+            assert False, "Type of path cost Hxx matrix should be np.ndarray or list of np.ndarray, or None"
 
-        if type(Huu) is numpy.ndarray:
+        if type(Huu) is np.ndarray:
             self.Huu = [Huu]
-        elif type(Huu[0]) is numpy.ndarray:
+        elif type(Huu[0]) is np.ndarray:
             self.Huu = Huu
         else:
-            assert False, "Type of path cost Huu matrix should be numpy.ndarray or list of numpy.ndarray, or None"
+            assert False, "Type of path cost Huu matrix should be np.ndarray or list of np.ndarray, or None"
 
         if Hxu is not None:
-            if type(Hxu) is numpy.ndarray:
+            if type(Hxu) is np.ndarray:
                 self.Hxu = [Hxu]
-            elif type(Hxu[0]) is numpy.ndarray:
+            elif type(Hxu[0]) is np.ndarray:
                 self.Hxu = Hxu
             else:
-                assert False, "Type of path cost Hxu matrix should be numpy.ndarray or list of numpy.ndarray, or None"
+                assert False, "Type of path cost Hxu matrix should be np.ndarray or list of np.ndarray, or None"
         else:
             self.Hxu = None
 
         if Hux is not None:
-            if type(Hux) is numpy.ndarray:
+            if type(Hux) is np.ndarray:
                 self.Hux = [Hux]
-            elif type(Hux[0]) is numpy.ndarray:
+            elif type(Hux[0]) is np.ndarray:
                 self.Hux = Hux
             else:
-                assert False, "Type of path cost Hux matrix should be numpy.ndarray or list of numpy.ndarray, or None"
+                assert False, "Type of path cost Hux matrix should be np.ndarray or list of np.ndarray, or None"
         else:
             self.Hux = None
 
         if Hxe is not None:
-            if type(Hxe) is numpy.ndarray:
+            if type(Hxe) is np.ndarray:
                 self.Hxe = [Hxe]
-            elif type(Hxe[0]) is numpy.ndarray:
+            elif type(Hxe[0]) is np.ndarray:
                 self.Hxe = Hxe
             else:
-                assert False, "Type of path cost Hxe matrix should be numpy.ndarray or list of numpy.ndarray, or None"
+                assert False, "Type of path cost Hxe matrix should be np.ndarray or list of np.ndarray, or None"
         else:
             self.Hxe = None
 
         if Hue is not None:
-            if type(Hue) is numpy.ndarray:
+            if type(Hue) is np.ndarray:
                 self.Hue = [Hue]
-            elif type(Hue[0]) is numpy.ndarray:
+            elif type(Hue[0]) is np.ndarray:
                 self.Hue = Hue
             else:
-                assert False, "Type of path cost Hue matrix should be numpy.ndarray or list of numpy.ndarray, or None"
+                assert False, "Type of path cost Hue matrix should be np.ndarray or list of np.ndarray, or None"
         else:
             self.Hue = None
 
     def setFinalCost(self, hxx, hxe=None):
 
-        if type(hxx) is numpy.ndarray:
+        if type(hxx) is np.ndarray:
             self.hxx = [hxx]
-        elif type(hxx[0]) is numpy.ndarray:
+        elif type(hxx[0]) is np.ndarray:
             self.hxx = hxx
         else:
-            assert False, "Type of final cost hxx matrix should be numpy.ndarray or list of numpy.ndarray"
+            assert False, "Type of final cost hxx matrix should be np.ndarray or list of np.ndarray"
 
         if hxe is not None:
-            if type(hxe) is numpy.ndarray:
+            if type(hxe) is np.ndarray:
                 self.hxe = [hxe]
-            elif type(hxe[0]) is numpy.ndarray:
+            elif type(hxe[0]) is np.ndarray:
                 self.hxe = hxe
             else:
-                assert False, "Type of final cost hxe matrix should be numpy.ndarray, list of numpy.ndarray, or None"
+                assert False, "Type of final cost hxe matrix should be np.ndarray, list of np.ndarray, or None"
         else:
             self.hxe = None
 
     def lqrSolver(self, ini_state, horizon):
 
         # Data pre-processing
-        n_state = numpy.size(self.dynF[0], 1)
+        n_state = np.size(self.dynF[0], 1)
         if type(ini_state) is list:
-            self.ini_x = numpy.array(ini_state, numpy.float64)
+            self.ini_x = np.array(ini_state, np.float64)
             if self.ini_x.ndim == 2:
-                self.n_batch = numpy.size(self.ini_x, 1)
+                self.n_batch = np.size(self.ini_x, 1)
             else:
                 self.n_batch = 1
                 self.ini_x = self.ini_x.reshape(n_state, -1)
-        elif type(ini_state) is numpy.ndarray:
+        elif type(ini_state) is np.ndarray:
             self.ini_x = ini_state
             if self.ini_x.ndim == 2:
-                self.n_batch = numpy.size(self.ini_x, 1)
+                self.n_batch = np.size(self.ini_x, 1)
             else:
                 self.n_batch = 1
                 self.ini_x = self.ini_x.reshape(n_state, -1)
         else:
-            assert False, "Initial state should be of numpy.ndarray type or list!"
+            assert False, "Initial state should be of np.ndarray type or list!"
 
         self.horizon = horizon
 
         if self.dynE is not None:
-            assert self.n_batch == numpy.size(self.dynE[0],
+            assert self.n_batch == np.size(self.dynE[0],
                                               1), "Number of data batch is not consistent with column of dynE"
 
         # Check the time horizon
@@ -943,7 +943,7 @@ class LQR:
             else:
                 E = self.dynE
         else:
-            E = self.horizon * [numpy.zeros(self.ini_x.shape)]
+            E = self.horizon * [np.zeros(self.ini_x.shape)]
 
         if len(self.Hxx) > 1 and len(self.Hxx) != self.horizon:
             assert False, "time-varying Hxx is not consistent with given horizon"
@@ -962,10 +962,10 @@ class LQR:
         hxx = self.hxx
 
         if self.hxe is None:
-            hxe = [numpy.zeros(self.ini_x.shape)]
+            hxe = [np.zeros(self.ini_x.shape)]
 
         if self.Hxu is None:
-            Hxu = self.horizon * [numpy.zeros((self.n_state, self.n_control))]
+            Hxu = self.horizon * [np.zeros((self.n_state, self.n_control))]
         else:
             if len(self.Hxu) > 1 and len(self.Hxu) != self.horizon:
                 assert False, "time-varying Hxu is not consistent with given horizon"
@@ -975,7 +975,7 @@ class LQR:
                 Hxu = self.Hxu
 
         if self.Hux is None:  # Hux is the transpose of Hxu
-            Hux = self.horizon * [numpy.zeros((self.n_control, self.n_state))]
+            Hux = self.horizon * [np.zeros((self.n_control, self.n_state))]
         else:
             if len(self.Hux) > 1 and len(self.Hux) != self.horizon:
                 assert False, "time-varying Hux is not consistent with given horizon"
@@ -985,7 +985,7 @@ class LQR:
                 Hux = self.Hux
 
         if self.Hxe is None:
-            Hxe = self.horizon * [numpy.zeros((self.n_state, self.n_batch))]
+            Hxe = self.horizon * [np.zeros((self.n_state, self.n_batch))]
         else:
             if len(self.Hxe) > 1 and len(self.Hxe) != self.horizon:
                 assert False, "time-varying Hxe is not consistent with given horizon"
@@ -995,7 +995,7 @@ class LQR:
                 Hxe = self.Hxe
 
         if self.Hue is None:
-            Hue = self.horizon * [numpy.zeros((self.n_control, self.n_batch))]
+            Hue = self.horizon * [np.zeros((self.n_control, self.n_batch))]
         else:
             if len(self.Hue) > 1 and len(self.Hue) != self.horizon:
                 assert False, "time-varying Hue is not consistent with given horizon"
@@ -1005,53 +1005,59 @@ class LQR:
                 Hue = self.Hue
 
         # Solve the Riccati equations: the notations used here are consistent with Lemma 4.2 in the PDP paper
-        I = numpy.eye(self.n_state)
-        PP = self.horizon * [numpy.zeros((self.n_state, self.n_state))]
-        WW = self.horizon * [numpy.zeros((self.n_state, self.n_batch))]
+        I = np.eye(self.n_state)
+        PP = self.horizon * [np.zeros((self.n_state, self.n_state))]
+        WW = self.horizon * [np.zeros((self.n_state, self.n_batch))]
         PP[-1] = self.hxx[0]
         WW[-1] = self.hxe[0]
         for t in range(self.horizon - 1, 0, -1):
             P_next = PP[t]
             W_next = WW[t]
-            invHuu = numpy.linalg.inv(Huu[t])
-            GinvHuu = numpy.matmul(G[t], invHuu)
-            HxuinvHuu = numpy.matmul(Hxu[t], invHuu)
-            A_t = F[t] - numpy.matmul(GinvHuu, numpy.transpose(Hxu[t]))
-            R_t = numpy.matmul(GinvHuu, numpy.transpose(G[t]))
-            M_t = E[t] - numpy.matmul(GinvHuu, Hue[t])
-            Q_t = Hxx[t] - numpy.matmul(HxuinvHuu, numpy.transpose(Hxu[t]))
-            N_t = Hxe[t] - numpy.matmul(HxuinvHuu, Hue[t])
+            invHuu = np.linalg.inv(Huu[t])
+            GinvHuu = np.matmul(G[t], invHuu)
+            HxuinvHuu = np.matmul(Hxu[t], invHuu)
+            A_t = F[t] - np.matmul(GinvHuu, np.transpose(Hxu[t]))
+            R_t = np.matmul(GinvHuu, np.transpose(G[t]))
+            M_t = E[t] - np.matmul(GinvHuu, Hue[t])
+            Q_t = Hxx[t] - np.matmul(HxuinvHuu, np.transpose(Hxu[t]))
+            N_t = Hxe[t] - np.matmul(HxuinvHuu, Hue[t])
 
-            temp_mat = numpy.matmul(numpy.transpose(A_t), numpy.linalg.inv(I + numpy.matmul(P_next, R_t)))
-            P_curr = Q_t + numpy.matmul(temp_mat, numpy.matmul(P_next, A_t))
-            W_curr = N_t + numpy.matmul(temp_mat, W_next + numpy.matmul(P_next, M_t))
+            temp_mat = np.matmul(np.transpose(A_t), np.linalg.inv(I + np.matmul(P_next, R_t)))
+            P_curr = Q_t + np.matmul(temp_mat, np.matmul(P_next, A_t))
+            W_curr = N_t + np.matmul(temp_mat, W_next + np.matmul(P_next, M_t))
+
+            # Updated one
+            # temp_mat = np.matmul(np.transpose(A_t), P_next)
+            # middle_mat = I + np.matmul(P_next, R_t)
+            # P_curr = Q_t+np.matmul(np.matmul(temp_mat,np.linalg.inv(middle_mat)),A_t)
+            # W_curr = np.matul(np.matmul(np.transpose(A_t),np.linalg.inv(middle_mat)),
 
             PP[t - 1] = P_curr
             WW[t - 1] = W_curr
 
         # Compute the trajectory using the Raccti matrices obtained from the above: the notations used here are
         # consistent with the PDP paper in Lemma 4.2
-        state_traj_opt = (self.horizon + 1) * [numpy.zeros((self.n_state, self.n_batch))]
-        control_traj_opt = (self.horizon) * [numpy.zeros((self.n_control, self.n_batch))]
-        costate_traj_opt = (self.horizon) * [numpy.zeros((self.n_state, self.n_batch))]
+        state_traj_opt = (self.horizon + 1) * [np.zeros((self.n_state, self.n_batch))]
+        control_traj_opt = (self.horizon) * [np.zeros((self.n_control, self.n_batch))]
+        costate_traj_opt = (self.horizon) * [np.zeros((self.n_state, self.n_batch))]
         state_traj_opt[0] = self.ini_x
         for t in range(self.horizon):
             P_next = PP[t]
             W_next = WW[t]
-            invHuu = numpy.linalg.inv(Huu[t])
-            GinvHuu = numpy.matmul(G[t], invHuu)
-            A_t = F[t] - numpy.matmul(GinvHuu, numpy.transpose(Hxu[t]))
-            M_t = E[t] - numpy.matmul(GinvHuu, Hue[t])
-            R_t = numpy.matmul(GinvHuu, numpy.transpose(G[t]))
+            invHuu = np.linalg.inv(Huu[t])
+            GinvHuu = np.matmul(G[t], invHuu)
+            A_t = F[t] - np.matmul(GinvHuu, np.transpose(Hxu[t]))
+            M_t = E[t] - np.matmul(GinvHuu, Hue[t])
+            R_t = np.matmul(GinvHuu, np.transpose(G[t]))
 
             x_t = state_traj_opt[t]
-            u_t = -numpy.matmul(invHuu, numpy.matmul(numpy.transpose(Hxu[t]), x_t) + Hue[t]) \
-                  - numpy.linalg.multi_dot([invHuu, numpy.transpose(G[t]), numpy.linalg.inv(I + numpy.dot(P_next, R_t)),
-                                            (numpy.matmul(numpy.matmul(P_next, A_t), x_t) + numpy.matmul(P_next,
+            u_t = -np.matmul(invHuu, np.matmul(np.transpose(Hxu[t]), x_t) + Hue[t]) \
+                  - np.linalg.multi_dot([invHuu, np.transpose(G[t]), np.linalg.inv(I + np.dot(P_next, R_t)),
+                                            (np.matmul(np.matmul(P_next, A_t), x_t) + np.matmul(P_next,
                                                                                                          M_t) + W_next)])
 
-            x_next = numpy.matmul(F[t], x_t) + numpy.matmul(G[t], u_t) + E[t]
-            lambda_next = numpy.matmul(P_next, x_next) + W_next
+            x_next = np.matmul(F[t], x_t) + np.matmul(G[t], u_t) + E[t]
+            lambda_next = np.matmul(P_next, x_next) + W_next
 
             state_traj_opt[t + 1] = x_next
             control_traj_opt[t] = u_t

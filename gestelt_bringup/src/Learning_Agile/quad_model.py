@@ -867,7 +867,7 @@ class Quadrotor:
                 y = np.reshape(rotated_points[1, :], y.shape)
                 z = np.reshape(rotated_points[2, :], z.shape)
                 
-                ax.plot_surface(x + c_x, y + c_y, z + c_z, color='b', alpha=0.1)
+                ax.plot_surface(x + c_x, y + c_y, z + c_z, color='b', alpha=0.05)
             else:
                 plot_alpha = 0.1
             gate_l1, = ax.plot([p1_x,p2_x],[p1_y,p2_y],[p1_z,p2_z],linewidth=1,color='red',linestyle='-',alpha=plot_alpha)

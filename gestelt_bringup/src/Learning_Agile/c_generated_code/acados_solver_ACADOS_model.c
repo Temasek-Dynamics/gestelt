@@ -146,7 +146,7 @@ void ACADOS_model_acados_create_1_set_plan(ocp_nlp_plan_t* nlp_solver_plan, cons
     *  plan
     ************************************************/
 
-    nlp_solver_plan->nlp_solver = SQP_RTI;
+    nlp_solver_plan->nlp_solver = SQP;
 
     nlp_solver_plan->ocp_qp_solver_plan.qp_solver = FULL_CONDENSING_QPOASES;
 
@@ -684,16 +684,44 @@ int fixed_hess = 0;
 
     int nlp_solver_ext_qp_res = 0;
     ocp_nlp_solver_opts_set(nlp_config, nlp_opts, "ext_qp_res", &nlp_solver_ext_qp_res);
+    int log_primal_step_norm = false;
+    ocp_nlp_solver_opts_set(nlp_config, nlp_opts, "log_primal_step_norm", &log_primal_step_norm);
+
+    double nlp_solver_tol_min_step_norm = 0;
+    ocp_nlp_solver_opts_set(nlp_config, nlp_opts, "tol_min_step_norm", &nlp_solver_tol_min_step_norm);
 
 
-    int as_rti_iter = 1;
-    ocp_nlp_solver_opts_set(nlp_config, nlp_opts, "as_rti_iter", &as_rti_iter);
+    // set SQP specific options
+    double nlp_solver_tol_stat = 0.000001;
+    ocp_nlp_solver_opts_set(nlp_config, nlp_opts, "tol_stat", &nlp_solver_tol_stat);
 
-    int as_rti_level = 4;
-    ocp_nlp_solver_opts_set(nlp_config, nlp_opts, "as_rti_level", &as_rti_level);
+    double nlp_solver_tol_eq = 0.000001;
+    ocp_nlp_solver_opts_set(nlp_config, nlp_opts, "tol_eq", &nlp_solver_tol_eq);
 
-    int rti_log_residuals = 0;
-    ocp_nlp_solver_opts_set(nlp_config, nlp_opts, "rti_log_residuals", &rti_log_residuals);
+    double nlp_solver_tol_ineq = 0.000001;
+    ocp_nlp_solver_opts_set(nlp_config, nlp_opts, "tol_ineq", &nlp_solver_tol_ineq);
+
+    double nlp_solver_tol_comp = 0.000001;
+    ocp_nlp_solver_opts_set(nlp_config, nlp_opts, "tol_comp", &nlp_solver_tol_comp);
+
+    int nlp_solver_max_iter = 100;
+    ocp_nlp_solver_opts_set(nlp_config, nlp_opts, "max_iter", &nlp_solver_max_iter);
+
+    // set options for adaptive Levenberg-Marquardt Update
+    bool with_adaptive_levenberg_marquardt = false;
+    ocp_nlp_solver_opts_set(nlp_config, nlp_opts, "with_adaptive_levenberg_marquardt", &with_adaptive_levenberg_marquardt);
+
+    double adaptive_levenberg_marquardt_lam = 5;
+    ocp_nlp_solver_opts_set(nlp_config, nlp_opts, "adaptive_levenberg_marquardt_lam", &adaptive_levenberg_marquardt_lam);
+
+    double adaptive_levenberg_marquardt_mu_min = 0.0000000000000001;
+    ocp_nlp_solver_opts_set(nlp_config, nlp_opts, "adaptive_levenberg_marquardt_mu_min", &adaptive_levenberg_marquardt_mu_min);
+
+    double adaptive_levenberg_marquardt_mu0 = 0.001;
+    ocp_nlp_solver_opts_set(nlp_config, nlp_opts, "adaptive_levenberg_marquardt_mu0", &adaptive_levenberg_marquardt_mu0);
+
+    bool eval_residual_at_max_iter = false;
+    ocp_nlp_solver_opts_set(nlp_config, nlp_opts, "eval_residual_at_max_iter", &eval_residual_at_max_iter);
 
     int qp_solver_iter_max = 50;
     ocp_nlp_solver_opts_set(nlp_config, nlp_opts, "qp_iter_max", &qp_solver_iter_max);
@@ -1082,13 +1110,23 @@ void ACADOS_model_acados_print_stats(ACADOS_model_solver_capsule* capsule)
     int nrow = nlp_iter+1 < stat_m ? nlp_iter+1 : stat_m;
 
 
-    printf("iter\tqp_stat\tqp_iter\n");
+    printf("iter\tres_stat\tres_eq\t\tres_ineq\tres_comp\tqp_stat\tqp_iter\talpha");
+    if (stat_n > 8)
+        printf("\t\tqp_res_stat\tqp_res_eq\tqp_res_ineq\tqp_res_comp");
+    printf("\n");
     for (int i = 0; i < nrow; i++)
     {
         for (int j = 0; j < stat_n + 1; j++)
         {
-            tmp_int = (int) stat[i + j * nrow];
-            printf("%d\t", tmp_int);
+            if (j == 0 || j == 5 || j == 6)
+            {
+                tmp_int = (int) stat[i + j * nrow];
+                printf("%d\t", tmp_int);
+            }
+            else
+            {
+                printf("%e\t", stat[i + j * nrow]);
+            }
         }
         printf("\n");
     }

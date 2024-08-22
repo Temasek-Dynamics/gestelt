@@ -61,16 +61,18 @@ class MovingGate():
         self.gate1 = gate(self.gate_point)
         
     
-    def let_gate_move(self,dt):
+    def let_gate_move(self,
+                      dt,
+                      gate_v,
+                      gate_w):
     
         ## define the kinematics of the narrow window
         # gate linear velocity
-        # self.v =np.array([0,0.0,0.0]) 
-        self.v =np.array([-1,-0.3,0.4])
-        
+        self.v =gate_v 
+       
         # gate pitch angular velocity
-        # self.w = 0 
-        self.w = pi/2 
+        self.w = gate_w 
+         
         self.gate_move, self.V = self.gate1.move(v = self.v ,w = self.w,dt=dt)
 
         # self.gate_move=np.zeros([1,4,3])
@@ -170,7 +172,10 @@ class LearningAgileAgent():
         print('start_point=',self.env_init_set[0:3])
         print('final_point=',self.env_init_set[3:6])
 
-    def problem_definition(self,USE_PREV_SOLVER=False,dyn_step=0.002):
+    def problem_definition(self,USE_PREV_SOLVER=False,
+                           dyn_step=0.002,
+                           gate_v=np.array([0,0,0]),
+                            gate_w=0):
         """
         initial traversal problem
 
@@ -200,7 +205,7 @@ class LearningAgileAgent():
         self.quad1.uav1.setDyn(self.dyn_step)
 
         ##---------------------gate initialization ------------------------##
-        self.moving_gate.let_gate_move(dt=self.dyn_step)
+        self.moving_gate.let_gate_move(dt=self.dyn_step,gate_v=gate_v,gate_w=gate_w)
         self.gate_move = self.moving_gate.gate_move
         self.gate_n = gate(self.gate_move[0])
 
@@ -365,20 +370,32 @@ class LearningAgileAgent():
     
         
 def main():
+
+    ########################################################################
+    #####---------------------- TEST option -------------------------#######
+    ########################################################################
+    NN2_model_name = 'NN2_imitate_1_ellipsoid.pth'
     STATIC_GATE_TEST = False
+    # gate_v = np.array([-1,-0.3,0.4])
+    # gate_w = pi/2
+    gate_v = np.array([0,0,0])
+    gate_w = 0
+
     # yaml file dir#
     conf_folder=os.path.abspath(os.path.join(current_dir, '..', '..','config'))
     yaml_file = os.path.join(conf_folder, 'learning_agile_mission.yaml')
     python_sim_data_folder = os.path.join(current_dir, 'python_sim_result')
-    model_file=os.path.join(current_dir, 'training_data/NN_model','NN2_imitate_1.pth')
-    ## --------------for single planning part test-------------------------------##.
+    model_file=os.path.join(current_dir, 'training_data/NN_model',NN2_model_name)
+    
     # create the learning agile agent
     learing_agile_agent=LearningAgileAgent(python_sim_time=5,
                                            yaml_file=yaml_file,
                                            model_file=model_file)
 
 
-    #------------------------------set the mission--------------------------------------#
+    ########################################################################
+    #####---------------------- load config -------------------------#######
+    ########################################################################
     config_dict = learing_agile_agent.config_dict
     learing_agile_agent.receive_mission_states( STATIC_GATE_TEST,
                                                 ini_pos=np.array(config_dict['mission']['initial_position']),
@@ -392,11 +409,13 @@ def main():
                                                 
                                                 t_tra_abs=config_dict['learning_agile']['traverse_time'])
 
-    # #------------------------------------------------------------------------------#
+    ########################################################################
+    #####---------------- Solve the problem -------------------------#######
+    ########################################################################
     # problem definition
     # the dyn_step is the simulation step in the simulation environment
     # for the acados ERK integrator, the step is (integral step)/4 =0.025s
-    learing_agile_agent.problem_definition(dyn_step=0.002)
+    learing_agile_agent.problem_definition(dyn_step=0.002,gate_v=gate_v,gate_w=gate_w)
 
     # solve the problem
     learing_agile_agent.solve_problem(python_sim_data_folder )

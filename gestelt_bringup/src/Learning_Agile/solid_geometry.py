@@ -233,12 +233,12 @@ class obstacle():
         # if the gate check point is within the ellipsoid,
         # the delta_d_mag is less than 1 and the collision score is larger than 1
 
-        single_collision_score = - alpha*ca.exp(beta*(1-delta_d_mag))
+        single_colli_score = - alpha * ca.exp(beta*(1-delta_d_mag))
 
         # traverse score
         # we hope the drone could traverse the gate in the middle
         # so each point delta_d_mag should be larger than 1 but not too large
-        single_traverse_score = - Q_tra*(delta_d_mag)
+        single_trav_score = - Q_tra * (delta_d_mag)
         
 
         ## goal score
@@ -246,75 +246,89 @@ class obstacle():
 
 
         ## define the forward function
-        self.single_collision_score_fun = ca.Function('single_collision_score_fn',[quad_sym.r_I,\
+        self.single_colli_score_fun = ca.Function('single_colli_score_fn',
+                                                    [quad_sym.r_I,\
                                                     quad_sym.q,\
-                                                    gate_point],[delta_d,single_collision_score])
+                                                    gate_point],[delta_d,single_colli_score])
         
-        self.single_traverse_score_fun = ca.Function('single_traverse_score_fn',[quad_sym.r_I,\
+        self.single_trav_score_fun = ca.Function('single_trav_score_fn',
+                                                    [quad_sym.r_I,\
                                                     quad_sym.q,\
-                                                    gate_point],[single_traverse_score])
+                                                    gate_point],[single_trav_score])
         
-        self.single_goal_score_fun = ca.Function('single_goal_score_fn',[quad_sym.r_I,\
+        self.single_goal_score_fun = ca.Function('single_goal_score_fn',
+                                                    [quad_sym.r_I,\
                                                     quad_sym.goal_r_I],[single_goal_score])
         
         ## define the jacobian
-        self.d_collision_d_r_I = ca.jacobian(single_collision_score,quad_sym.r_I)
-        self.d_collision_d_q = ca.jacobian(single_collision_score,quad_sym.q)
+        self.d_colli_d_r_I = ca.jacobian(single_colli_score,quad_sym.r_I)
+        self.d_colli_d_q = ca.jacobian(single_colli_score,quad_sym.q)
 
-        self.d_traverse_d_r_I = ca.jacobian(single_traverse_score,quad_sym.r_I)
-        self.d_traverse_d_q = ca.jacobian(single_traverse_score,quad_sym.q)
+        self.d_trav_d_r_I = ca.jacobian(single_trav_score,quad_sym.r_I)
+        self.d_trav_d_q = ca.jacobian(single_trav_score,quad_sym.q)
 
         self.d_goal_d_r_I = ca.jacobian(single_goal_score,quad_sym.r_I)
 
         ## define the gradient function
-        self.d_collision_d_r_I_fun = ca.Function('d_collision_d_r_I',[quad_sym.r_I,\
-                                                                      quad_sym.q,\
-                                                                    gate_point],[self.d_collision_d_r_I])
+        self.d_colli_d_r_I_fun = ca.Function('d_colli_d_r_I',
+                                             [quad_sym.r_I,\
+                                            quad_sym.q,\
+                                            gate_point],[self.d_colli_d_r_I])
                                                                       
-        self.d_collision_d_q_fun = ca.Function('d_collision_d_q',[quad_sym.r_I,\
-                                                                      quad_sym.q,\
-                                                                    gate_point],[self.d_collision_d_q])
+        self.d_colli_d_q_fun = ca.Function('d_colli_d_q',
+                                           [quad_sym.r_I,\
+                                            quad_sym.q,\
+                                            gate_point],[self.d_colli_d_q])
 
-        self.d_traverse_d_r_I_fun = ca.Function('d_traverse_d_r_I',[quad_sym.r_I,\
-                                                                    quad_sym.q,\
-                                                                    gate_point],[self.d_traverse_d_r_I])
+        self.d_trav_d_r_I_fun = ca.Function('d_trav_d_r_I',
+                                            [quad_sym.r_I,\
+                                            quad_sym.q,\
+                                            gate_point],[self.d_trav_d_r_I])
 
-        self.d_traverse_d_q_fun = ca.Function('d_traverse_d_q',[quad_sym.r_I,\
-                                                                quad_sym.q,\
-                                                                gate_point],[self.d_traverse_d_q])
+        self.d_trav_d_q_fun = ca.Function('d_trav_d_q',
+                                          [quad_sym.r_I,\
+                                           quad_sym.q,\
+                                           gate_point],[self.d_trav_d_q])
         
-        self.d_goal_d_r_I_fun = ca.Function('d_goal_d_r_I',[quad_sym.r_I,\
-                                                            quad_sym.goal_r_I],[self.d_goal_d_r_I])
+        self.d_goal_d_r_I_fun = ca.Function('d_goal_d_r_I',
+                                            [quad_sym.r_I,\
+                                            quad_sym.goal_r_I],[self.d_goal_d_r_I])
+    
     def reward_calc_value(self, 
                             state_traj, 
-                            des_node_tra,
                             gate_corners,
                             goal_pos,
                             vert_traj, 
                             horizon):
         collision_score = 0
         traverse_score = 0
-        d_collision_d_r_I =  ca.DM([[0, 0, 0]])
-        d_collision_d_q = ca.DM([[0, 0, 0, 0]])
-        d_traverse_d_r_I = ca.DM([[0, 0, 0]])
-        d_traverse_d_q = ca.DM([[0, 0, 0, 0]])
-        d_goal_d_r_I = ca.DM([[0, 0, 0]])
+        
         
         t_tra_seq_list=[]
+
+        ## find the traversal sequence
         for t in range(horizon):
             if(np.dot(self.plane1.nor_vec(),vert_traj[t]-self.centroid)<0):
                 t_tra_seq_list.append(t-3)
             if len(t_tra_seq_list)==6:
                 break
-        ## init gate check points: four corners and four middle points
-        gate_check_points = np.zeros([16,3])
         
+        ## init gate check points: four corners and twelve middle points
+        gate_check_points = np.zeros([16,3])
+        drdstate_traj = np.zeros((horizon+1,state_traj.shape[1]))
         
 
-        for des_node_tra in t_tra_seq_list:
+        for node_tra in t_tra_seq_list:
             ## traverse and collision score
             ONLY_MIDDLE_POINTS = False
 
+            d_colli_d_r_I =  ca.DM([[0, 0, 0]])
+            d_colli_d_q = ca.DM([[0, 0, 0, 0]])
+            d_trav_d_r_I = ca.DM([[0, 0, 0]])
+            d_trav_d_q = ca.DM([[0, 0, 0, 0]])
+            d_goal_d_r_I = ca.DM([[0, 0, 0]])
+            
+            ## for each gate check point
             for i in range(16):
 
                 if i < 4:
@@ -340,54 +354,59 @@ class obstacle():
                 if ONLY_MIDDLE_POINTS and i < 4:
                     continue
                 ## check collision and get the collision and traverse score
-                delta_d_value,single_collision_score = self.single_collision_score_fun(state_traj[des_node_tra,0:3],\
-                                                                state_traj[des_node_tra,6:10],\
+                delta_d_value,single_colli_score = self.single_colli_score_fun(state_traj[node_tra,0:3],\
+                                                                state_traj[node_tra,6:10],\
                                                                 gate_check_points[i,:])
                 
-                single_traverse_score = self.single_traverse_score_fun(state_traj[des_node_tra,0:3],\
-                                                                state_traj[des_node_tra,6:10],\
+                single_trav_score = self.single_trav_score_fun(state_traj[node_tra,0:3],\
+                                                                state_traj[node_tra,6:10],\
                                                                 gate_check_points[i,:])
                 
-                collision_score += single_collision_score
-                traverse_score += single_traverse_score
-            ## get the gradient of the scores
-                d_collision_d_r_I += self.d_collision_d_r_I_fun(state_traj[des_node_tra,0:3],\
-                                                                state_traj[des_node_tra,6:10],\
+                collision_score += single_colli_score
+                traverse_score += single_trav_score
+                
+                ## get the gradient of the scores
+                d_colli_d_r_I += self.d_colli_d_r_I_fun(state_traj[node_tra,0:3],\
+                                                                state_traj[node_tra,6:10],\
                                                                 gate_check_points[i,:])
                 
-                d_collision_d_q += self.d_collision_d_q_fun(state_traj[des_node_tra,0:3],\
-                                                                state_traj[des_node_tra,6:10],\
+                d_colli_d_q += self.d_colli_d_q_fun(state_traj[node_tra,0:3],\
+                                                                state_traj[node_tra,6:10],\
                                                                 gate_check_points[i,:])
                 
-                d_traverse_d_r_I += self.d_traverse_d_r_I_fun(state_traj[des_node_tra,0:3],\
-                                                                state_traj[des_node_tra,6:10],\
+                d_trav_d_r_I += self.d_trav_d_r_I_fun(state_traj[node_tra,0:3],\
+                                                                state_traj[node_tra,6:10],\
                                                                 gate_check_points[i,:])
                 
-                d_traverse_d_q += self.d_traverse_d_q_fun(state_traj[des_node_tra,0:3],\
-                                                                state_traj[des_node_tra,6:10],\
+                d_trav_d_q += self.d_trav_d_q_fun(state_traj[node_tra,0:3],\
+                                                                state_traj[node_tra,6:10],\
                                                                 gate_check_points[i,:])
+            
+            ## for each node
+            drdstate_traj[node_tra,0:3] = d_colli_d_r_I + d_trav_d_r_I
+            drdstate_traj[node_tra,6:10] = d_colli_d_q + d_trav_d_q  
+        
         # goal score
         goal_score = 0
         d_goal_d_r_I = ca.DM([[0, 0, 0]])
-        for i in range(4):
-            last_state = state_traj[-i+1,0:3]
-            goal_score += self.single_goal_score_fun(last_state,goal_pos)
-            d_goal_d_r_I += self.d_goal_d_r_I_fun(last_state,goal_pos)
-           
+
+        # for last four nodes
+        for i in range(-1,-5,-1):
+            goal_score += self.single_goal_score_fun(state_traj[i,0:3],goal_pos)
+            
+            d_goal_d_r_I = self.d_goal_d_r_I_fun(state_traj[i,0:3],goal_pos)
+            drdstate_traj[i,0:3] = d_goal_d_r_I
+
+
         collision_score.toarray()
         traverse_score.toarray() 
         goal_score.toarray()
 
-        d_collision_d_r_I.toarray()
-        d_collision_d_q.toarray()
-        d_traverse_d_r_I.toarray() 
-        d_traverse_d_q.toarray()
-        d_goal_d_r_I.toarray()
+        # drdstate_traj = drdstate_traj.toarray()
 
         reward = collision_score+traverse_score + goal_score 
-        d_reward_d_r_I_tra = d_collision_d_r_I + d_traverse_d_r_I + d_goal_d_r_I
-        d_reward_d_q_tra = d_collision_d_q + d_traverse_d_q
-        return float(reward), d_reward_d_r_I_tra, d_reward_d_q_tra, gate_check_points
+        
+        return float(reward), drdstate_traj, gate_check_points
            
 ############################################################################################################
 ###-------------------------------- support torch auto differentiation ---------------------------------####
