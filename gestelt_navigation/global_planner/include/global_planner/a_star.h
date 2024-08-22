@@ -212,18 +212,25 @@ public:
     std::vector<Eigen::Vector4d> path_pos_t = path_pos_t_;
 
     // Transform to world frame
-    Eigen::Vector4d start_t(cur_pos(0)+local_origin_x_, 
+    Eigen::Vector4d cur_pos_t(cur_pos(0)+local_origin_x_, 
                             cur_pos(1)+local_origin_y_, 
                             cur_pos(2), 
                             0);
-    path_pos_t.insert(path_pos_t.begin(), start_t);
 
     // offset_t: time from current position to start of path
-    double offset_t = (int)round((start_t.segment(0,3) - path_pos_t[0].segment(0,3)).norm()/res_) * astar_params_.st_straight; 
+    int offset_t = (int)round((cur_pos_t.segment(0,3) - path_pos_t[0].segment(0,3)).norm()/res_) * astar_params_.st_straight; 
 
-    // Offset all time 
-    for (size_t i = 1; i < path_pos_t.size(); i++){
-      path_pos_t[i](3) += offset_t;
+    if (offset_t == 0){ // Distance between start and path start is very close
+      // Replace start point of path with current point
+      path_pos_t[0] = cur_pos_t;
+    }
+    else {
+      // Insert current point at beginning of path
+      path_pos_t.insert(path_pos_t.begin(), cur_pos_t);
+      // Offset all time 
+      for (size_t i = 1; i < path_pos_t.size(); i++){
+        path_pos_t[i](3) += offset_t;
+      }
     }
 
     return path_pos_t;

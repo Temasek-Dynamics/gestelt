@@ -25,7 +25,6 @@ def create_transform(x, y, z):
 
     return pos
 
-
 def pub_goals(goals):
     if (len(goals) > NUM_DRONES):
         print(f"Failed to publish goals. No. of goals ({len(goals)}) > NUM_DRONES ({NUM_DRONES})")

@@ -43,7 +43,8 @@ roslaunch --wait gestelt_bringup fake_map_central.launch scenario:=$SCENARIO
 "
 
 # Start up central bridge and nodes
-CMD_2="killall -9 gazebo; killall -9 gzserver; killall -9 gzclient; killall -9 rosmaster; tmux kill-server;"
+# CMD_2="killall -9 gazebo; killall -9 gzserver; killall -9 gzclient; killall -9 rosmaster; tmux kill-server;"
+CMD_2="rosrun mpc_controller mpc_node.py"
 
 # Start up script to send commands
 CMD_3="roslaunch --wait gestelt_bringup scenario_mission.launch scenario:=$SCENARIO"
