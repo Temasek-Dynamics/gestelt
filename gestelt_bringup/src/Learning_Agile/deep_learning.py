@@ -8,7 +8,7 @@ from quad_model import *
 from quad_policy import *
 from multiprocessing import Process, Array
 import yaml
-
+import sys
 
 
 # for multiprocessing, obtain the gradient
@@ -57,9 +57,10 @@ def calc_grad(config_dict,
     # initialize the narrow window
     quad_instance.init_obstacle(gate_point.reshape(12))
 
-    # print("gate pose: ",inputs[8])
-    # print("NN1 output traversal pose pitch: ",outputs[4])
-    # print("NN1 output traversal time: ",outputs[6])
+    # if sys.gettrace is not None and not MULTI_CORE:
+    print("gate pitch pose: ",inputs[8])
+    print("NN1 output traversal pose pitch: ",outputs[4])
+    print("NN1 output traversal time: ",outputs[6])
     # receive the decision variables from DNN1, do the MPC, then calculate d_reward/d_z
     Ulast_value=np.array([2,0.0,0.0,0.0])
     gra[:] = quad_instance.sol_gradient(outputs[0:3].astype(np.float64),
@@ -77,14 +78,14 @@ if __name__ == '__main__':
     ## deep learning
     # Hyper-parameters 
     TRAIN_FROM_CHECKPOINT = False
-    num_cores =1 #5
+    num_cores = 20 #5
     if num_cores == 1:
         MULTI_CORE = False
     else:
         MULTI_CORE = True
     PDP_GRADIENT = True
-    USE_PREV_SOLVER = False
-    num_epochs = 50 #100
+    USE_PREV_SOLVER = True
+    num_epochs = 100 #100
     batch_size = 100 # 100
     
     if PDP_GRADIENT:
@@ -207,6 +208,8 @@ if __name__ == '__main__':
                     outputs = model(n_inputs[j])
 
                     # d_reward/d_z * z
+                    # normalize the gradient
+
                     loss = model.myloss(outputs,n_gra[j][0:7])        
 
                     optimizer.zero_grad()

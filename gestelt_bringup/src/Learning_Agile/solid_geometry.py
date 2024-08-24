@@ -209,22 +209,22 @@ class obstacle():
                         alpha,
                         beta,
                         Q_tra,
-                        safe_margin,
                         w_goal):
         
         gate_point=(ca.vertcat(ca.SX.sym('gate_point'+'_x'),\
                         ca.SX.sym('gate_point'+'_y'),\
                         ca.SX.sym('gate_point'+'_z')))
-        R_tra = ca.transpose(dir_cosine(quad_sym.q)) # body frame to world frame
+        R_tra = dir_cosine(quad_sym.q) # from world frame to body frame
         
 
-        D = ca.diag(ca.vertcat(quad_radius, quad_radius, quad_height))
-        E=R_tra*D*R_tra.T
-
+        A = ca.diag(ca.vertcat(quad_radius, quad_radius, quad_height))
+        
+        # E=ca.mtimes(R_tra,ca.mtimes(D,R_tra.T))
+        # E_inv = ca.inv(E)
         # the vector from the gate point to the drone center
-        v = gate_point-quad_sym.r_I
-        E_inv = ca.inv(E)
-        delta_d = ca.mtimes(E_inv,v)
+        v_W = gate_point-quad_sym.r_I # under world frame
+       
+        delta_d = ca.mtimes(ca.inv(A),ca.mtimes(R_tra,v_W))
 
         # the magnitude of the vector
         delta_d_mag = ca.norm_2(delta_d)
@@ -238,7 +238,7 @@ class obstacle():
         # traverse score
         # we hope the drone could traverse the gate in the middle
         # so each point delta_d_mag should be larger than 1 but not too large
-        single_trav_score = - Q_tra * (delta_d_mag)
+        single_trav_score = - Q_tra * (delta_d_mag) ** 2
         
 
         ## goal score
@@ -249,7 +249,7 @@ class obstacle():
         self.single_colli_score_fun = ca.Function('single_colli_score_fn',
                                                     [quad_sym.r_I,\
                                                     quad_sym.q,\
-                                                    gate_point],[delta_d,single_colli_score])
+                                                    gate_point],[delta_d_mag,single_colli_score])
         
         self.single_trav_score_fun = ca.Function('single_trav_score_fn',
                                                     [quad_sym.r_I,\

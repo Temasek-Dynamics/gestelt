@@ -83,8 +83,8 @@ class OCSys:
 
         # self.dyn = casadi.Function('f',[self.state, self.control],[f])
         self.dyn = self.state + dt * f
-        self.dyn_fn = casadi.Function('dynamics', [self.state, self.control, self.auxvar], [self.dyn],['x','u','p'],['x_next'])
-        self.dyn_fn_acados = casadi.Function('dynamics', [self.state, self.control, self.auxvar], [f],['x','u','p'],['rhs'])
+        self.dyn_fn = casadi.Function('dynamics', [self.state, self.control], [self.dyn],['x','u'],['x_next'])
+        self.dyn_fn_acados = casadi.Function('dynamics', [self.state, self.control], [f],['x','u'],['rhs'])
         #M = 4
         #DT = dt/4
         #X0 = casadi.SX.sym("X", self.n_state)
@@ -229,7 +229,7 @@ class OCSys:
             weight = 600*casadi.exp(-10*(dt*k-P[-1])**2) #gamma should increase as the flight duration decreases
              
             # Integrate till the end of the interval
-            Xnext = self.dyn_fn(X[:,k], U[:,k],auxvar_value)
+            Xnext = self.dyn_fn(X[:,k], U[:,k])
 
             # weight*self.trav_cost_fn(Xk, auxvar_value) + 
             Ck = weight*self.trav_cost_fn(X[:,k], auxvar_value) + self.path_cost_fn(X[:,k], auxvar_value)\
@@ -411,11 +411,11 @@ class OCSys:
 
         """
         # explicit model
-        model.f_expl_expr=self.dyn_fn_acados(self.state,self.control,self.auxvar)
+        model.f_expl_expr=self.dyn_fn_acados(self.state,self.control)
 
         # implicit model
         x_dot=casadi.SX.sym('x_dot',self.n_state)
-        model.f_impl_expr=x_dot-self.dyn_fn_acados(self.state,self.control,self.auxvar)
+        model.f_impl_expr=x_dot-self.dyn_fn_acados(self.state,self.control)
 
         # self.state = vertcat(self.r_I, self.v_I, self.q, self.w_B)
         model.x=self.state
@@ -501,10 +501,10 @@ class OCSys:
         # weight = 60*casadi.exp(-10*(dt*k-model.p[-1])**2) #gamma should increase as the flight duration decreases
         # ocp.model.cost_expr_ext_cost_custom_hess/cost_expr_ext_cost
         ocp.model.cost_expr_ext_cost = self.path_cost_fn(ocp.model.x,goal_state_value,self.auxvar)\
-            +self.final_cost_fn(ocp.model.x,goal_state_value,self.auxvar)\
-            +self.trav_cost_fn(ocp.model.x, trav_auxvar_value, t_node_value)\
-            +self.input_diff_cost_fn(ocp.model.u,Ulast_value,self.auxvar) \
-            +self.input_cost_fn(ocp.model.u,self.auxvar)
+                                      +self.final_cost_fn(ocp.model.x,goal_state_value,self.auxvar)\
+                                      +self.trav_cost_fn(ocp.model.x, trav_auxvar_value, t_node_value)\
+                                      +self.input_diff_cost_fn(ocp.model.u,Ulast_value,self.auxvar) \
+                                      +self.input_cost_fn(ocp.model.u,self.auxvar)
         
         # end cost
         ocp.model.cost_expr_ext_cost_e = self.final_cost_fn(ocp.model.x,goal_state_value,self.auxvar)
@@ -677,9 +677,9 @@ class OCSys:
 
         # Differentiating dynamics; notations here are consistent with the PDP paper
         self.dfx = jacobian(self.dyn, self.state)
-        self.dfx_fn = casadi.Function('dfx', [self.state, self.control, self.trav_auxvar], [self.dfx])
+        self.dfx_fn = casadi.Function('dfx', [self.state, self.control], [self.dfx])
         self.dfu = jacobian(self.dyn, self.control)
-        self.dfu_fn = casadi.Function('dfu', [self.state, self.control, self.trav_auxvar], [self.dfu])
+        self.dfu_fn = casadi.Function('dfu', [self.state, self.control], [self.dfu])
         self.dfe = jacobian(self.dyn, self.trav_auxvar)
         self.dfe_fn = casadi.Function('dfe', [self.state, self.control, self.trav_auxvar], [self.dfe])
 
@@ -738,8 +738,8 @@ class OCSys:
             curr_x = state_traj_opt[t, :]
             curr_u = control_traj_opt[t, :]
             next_lambda = costate_traj_opt[t, :]
-            dynF += [self.dfx_fn(curr_x, curr_u, auxvar_value).full()]
-            dynG += [self.dfu_fn(curr_x, curr_u, auxvar_value).full()]
+            dynF += [self.dfx_fn(curr_x, curr_u).full()]
+            dynG += [self.dfu_fn(curr_x, curr_u).full()]
             dynE += [self.dfe_fn(curr_x, curr_u, auxvar_value).full()]
             matHxx += [self.ddHxx_fn(curr_x, curr_u, next_lambda, t, goal_state_value, Ulast_value, auxvar_value).full()]
             matHxu += [self.ddHxu_fn(curr_x, curr_u, next_lambda, t, goal_state_value, Ulast_value, auxvar_value).full()]

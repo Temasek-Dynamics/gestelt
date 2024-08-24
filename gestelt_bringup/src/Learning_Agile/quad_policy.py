@@ -48,12 +48,10 @@ class run_quad:
         # create a pdp object
         self.uavoc1 = OCSys(config_dict)
        
-        sc= 1 #1e20
+        sc= 1 #1e2
         pos_b   = config_dict['learning_agile']['pos_bound'] # in each axis
         vel_b   = config_dict['learning_agile']['linear_vel_bound'] #0.5 # in each axis
-        wc   = pi/2 #pi
-        tw   = 1.22
-        t2w  = 2
+     
         # set symbolic functions for the MPC solver
         self.uavoc1.setStateVariable(self.uav1.X,state_lb=[-pos_b,-pos_b,-pos_b,
                                                            -vel_b,-vel_b,-vel_b,
@@ -202,8 +200,8 @@ class run_quad:
             
             # the sign of the collision is already negative
             # pitch angle reward temproally be here
-            pitch_reward =  1000 * 0.5 * tra_ang[1]**2
-            self.drdpitch = 1000 * tra_ang[1]
+            pitch_reward =  0 * 0.5 * tra_ang[1]**2
+            self.drdpitch = 0 * tra_ang[1]
             
             reward_origin = 1000 * self.collision - 0.5 * self.path + 100 + 10 * pitch_reward
 
@@ -217,10 +215,14 @@ class run_quad:
                                             quad_radius=self.wing_len/2,
                                             alpha=5,
                                             beta=10,
-                                            Q_tra=1,
-                                            safe_margin=0.0,
+                                            Q_tra=5,
                                             w_goal=0.1)    
             
+                                            # alpha=5,
+                                            # beta=10,
+                                            # Q_tra=1,
+                                            # safe_margin=0.0,
+                                            # w_goal=0.1)    
             
     
             reward,self.drdstate_traj,gate_check_points=self.obstacle1.reward_calc_value(state_traj,
@@ -230,16 +232,16 @@ class run_quad:
                                                 horizon=self.horizon)
             
             
-            if sys.gettrace() is not None:  # In debug mode
-                des_node_tra=int(np.round(t_tra*(10)))
-                self.uav1.plot_3D_traj(wing_len=1.5,
-                                    uav_height=self.uav_height,
-                                        state_traj=state_traj,
-                                        gate_traj=gate_check_points,
-                                        TRAIN_VIS=True,
-                                        tra_node=des_node_tra)
+            # if sys.gettrace() is not None:  # In debug mode
+            #     des_node_tra=int(np.round(t_tra*(10)))
+            #     self.uav1.plot_3D_traj(wing_len=1.5,
+            #                         uav_height=self.uav_height,
+            #                             state_traj=state_traj,
+            #                             gate_traj=gate_check_points,
+            #                             TRAIN_VIS=True,
+            #                             tra_node=des_node_tra)
             
-            return reward + pitch_reward
+            return reward #+ pitch_reward
         
         
         else:   
@@ -301,8 +303,8 @@ class run_quad:
         delta = 1e-3
 
         
-        # if not self.PDP_GRADIENT:    
-            # drdx,drdy,drdz,drda,drdb,drdc=0
+        if not self.PDP_GRADIENT:    
+            drdx,drdy,drdz,drda,drdb,drdc=0
         drdx = np.clip(self.R_from_MPC(tra_pos+[delta,0,0],tra_ang, t_tra,Ulast_value) - j,-0.5,0.5)*0.1
         drdy = np.clip(self.R_from_MPC(tra_pos+[0,delta,0],tra_ang, t_tra,Ulast_value) - j,-0.5,0.5)*0.1
         drdz = np.clip(self.R_from_MPC(tra_pos+[0,0,delta],tra_ang, t_tra,Ulast_value) - j,-0.5,0.5)*0.1
@@ -316,10 +318,15 @@ class run_quad:
             drdt = 0.05
         ## return gradient and reward (for deep learning)
         
-        
-        # print(np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,j]))
+        if sys.gettrace is not None:
+            print("finite diff:",np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,j]))
         return np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,j])
+        
+        ########################################################################
+        #=======================SYMBOLIC GRADIENT+PDP===========================
+        ########################################################################
         # else:
+
 
         ###################################################################
         ###----- Set mpc external variables VALUE to diffPMP--------#######
@@ -365,31 +372,31 @@ class run_quad:
         if  AUTO_DIFF:
             # acquire dreward/dtrajectory
             j.backward()
-            drdstate_traj=self.state_traj_tensor.grad #(n_node,15)
-            # drdtrav_angle =self.tra_ang_tensor.grad
-
-            
+            drdstate_traj=self.state_traj_tensor.grad #(n_node,15)     
             drdstate_traj=drdstate_traj.numpy().reshape(self.horizon+1,1,self.uavoc1.n_state)
-            # drdtrav_angle = drdtrav_angle.numpy().reshape(3)
-        
-        drdstate_traj=self.drdstate_traj.reshape(self.horizon+1,1,self.uavoc1.n_state)
             
-    
+            
+        drdstate_traj=self.drdstate_traj.reshape(self.horizon+1,1,self.uavoc1.n_state)
+        
+        # normalize the gradient
+        norm_drdstate_traj = drdstate_traj/np.linalg.norm(drdstate_traj)    
+        norm_dstate_trajdp = dstate_trajdp/np.linalg.norm(dstate_trajdp)
         drdp=np.zeros(7)
         for i in range(self.horizon):
-            drdp += np.exp(-0.05*i)*np.matmul(drdstate_traj[i,:,:],dstate_trajdp[i,:,:]).reshape(7)
+            drdp += np.matmul(norm_drdstate_traj[i,:,:],norm_dstate_trajdp[i,:,:]).reshape(7)
 
-        drdp += np.exp(-0.05*self.horizon)*np.matmul(drdstate_traj[self.horizon,:,:],dstate_trajdp[self.horizon,:,:]).reshape(7)    
-         
+        drdp += np.matmul(norm_drdstate_traj[self.horizon,:,:],norm_dstate_trajdp[self.horizon,:,:]).reshape(7)    
+
         drdx = drdp[0]
         drdy = drdp[1]
         drdz = drdp[2]
         drda = drdp[3]
-        drdb = drdp[4]+self.drdpitch
+        drdb = drdp[4]
         drdc = drdp[5]
         drdt = drdp[6]
         # j = j.detach().numpy()
-        # print(np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,j]))
+        if sys.gettrace() is not None:
+            print("analytic grad:",np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,j]))
         return np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,j])
 
 

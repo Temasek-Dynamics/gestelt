@@ -304,7 +304,7 @@ class LearningAgileAgent():
                     out = self.model(nn_mpc_inputs).data.numpy()
                     self.NN_T_tra = np.concatenate((self.NN_T_tra,[out[6]]),axis = 0)
                     # print('tra_position=',out[0:3],'tra_time_dnn2=',out[6])
-                    
+                    print('tra_orientation',out[3:6])
                     # transfer the gate position to the gate frame
                     self.quad1.update_goal_pos(nn_mpc_inputs[10:13])
                 t_comp = time.time()
@@ -374,7 +374,7 @@ def main():
     ########################################################################
     #####---------------------- TEST option -------------------------#######
     ########################################################################
-    NN2_model_name = 'NN2_imitate_1_ellipsoid.pth'
+    NN2_model_name = 'NN2_imitate_1_without_angle_reward.pth'
     STATIC_GATE_TEST = False
     # gate_v = np.array([-1,-0.3,0.4])
     # gate_w = pi/2

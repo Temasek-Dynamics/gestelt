@@ -71,7 +71,7 @@ learning_agile:
   #### for a stabler training,######## 
   wrt: 5.0
   wqt: 80.0
-  wthrust: 1.0
+  wthrust: 10.0
   wwt: 100.0
   wrf: 5.0
   wvf: 1.0

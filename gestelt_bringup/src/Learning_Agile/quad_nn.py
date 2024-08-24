@@ -41,7 +41,7 @@ def nn_sample(init_pos=None,final_pos=None,init_angle=None):
     ## random initial yaw angle of the quadrotor
     inputs[6] = np.random.uniform(-0.1,0.1)
     ## random width of the gate
-    inputs[7] = np.clip(np.random.normal(1.0,0.2),0.8,1.2) #(0.9,0.3),0.5,1.25   
+    inputs[7] = np.clip(np.random.normal(0.8,0.2),0.6,1.0) #(0.9,0.3),0.5,1.25   
     # inputs[7] = np.random.uniform(0.7,1.2)
     ## random pitch angle of the gate
     angle = np.clip(1.3*(1.2-inputs[7]),0,pi/3)
