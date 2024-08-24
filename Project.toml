@@ -1,0 +1,4 @@
+[deps]
+DifferentiableCollisions = "64b45163-ce2a-43f6-8f64-55d720633796"
+MeshCat = "283c5d60-a78f-5afe-a0af-af636b173e11"
+StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"

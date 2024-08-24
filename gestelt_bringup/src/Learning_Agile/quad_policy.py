@@ -320,7 +320,7 @@ class run_quad:
         
         if sys.gettrace is not None:
             print("finite diff:",np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,j]))
-        return np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,j])
+        # return np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,j])
         
         ########################################################################
         #=======================SYMBOLIC GRADIENT+PDP===========================

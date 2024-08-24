@@ -25,6 +25,9 @@ class Quadrotor:
         q0, q1, q2, q3 = SX.sym('q0'), SX.sym('q1'), SX.sym('q2'), SX.sym('q3')
         self.q = vertcat(q0, q1, q2, q3)
        
+        # quad state
+        self.quad_state=vertcat(self.r_I,self.v_I,self.q)
+        
         # define the quadrotor input
         f1, f2, f3, f4 = SX.sym('f1'), SX.sym('f2'), SX.sym('f3'), SX.sym('f4')
         self.T_B = vertcat(f1, f2, f3, f4)

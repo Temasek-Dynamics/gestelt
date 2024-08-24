@@ -374,10 +374,10 @@ def main():
     ########################################################################
     #####---------------------- TEST option -------------------------#######
     ########################################################################
-    NN2_model_name = 'NN2_imitate_1_without_angle_reward.pth'
+    NN2_model_name = 'NN2_imitate_1.pth'
     STATIC_GATE_TEST = False
     # gate_v = np.array([-1,-0.3,0.4])
-    # gate_w = pi/2
+    # gate_w = pi/2 * 0.5
     gate_v = np.array([0,0,0])
     gate_w = 0
 
