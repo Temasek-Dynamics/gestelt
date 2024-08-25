@@ -150,8 +150,9 @@ class run_quad:
     
 
     # initialize the narrow window
-    def init_obstacle(self,gate_point):
+    def init_obstacle(self,gate_point,gate_pitch):
         self.gate_corners = gate_point
+        self.gate_quat = toQuaternion(-gate_pitch,[0,1,0])
         self.point1 = gate_point[0:3]
         self.point2 = gate_point[3:6]
         self.point3 = gate_point[6:9]
@@ -225,21 +226,33 @@ class run_quad:
                                             # w_goal=0.1)    
             
     
-            reward,self.drdstate_traj,gate_check_points=self.obstacle1.reward_calc_value(state_traj,
-                                                self.gate_corners,
-                                                goal_pos=self.goal_pos,
-                                                vert_traj=self.traj[:,0:3],
-                                                horizon=self.horizon)
+            # reward,self.drdstate_traj,gate_check_points=self.obstacle1.reward_calc_value(state_traj,
+            #                                     self.gate_corners,
+            #                                     goal_pos=self.goal_pos,
+            #                                     vert_traj=self.traj[:,0:3],
+            #                                     horizon=self.horizon)
+            gate_check_points = np.zeros((4,3))
+            for i in range(4):
+                if i < 4:
+                        ## load four corners first
+                        gate_check_points[i,:] = self.gate_corners[i*3:i*3+3]
+
+            if sys.gettrace() is not None:  # In debug mode
+                des_node_tra=int(np.round(t_tra*(10)))
+                self.uav1.plot_3D_traj(wing_len=1.5,
+                                    uav_height=self.uav_height,
+                                        state_traj=state_traj,
+                                        gate_traj=gate_check_points,
+                                        TRAIN_VIS=True,
+                                        tra_node=des_node_tra)
+
+            self.obstacle1.reward_calc_differentiable_collision(state_traj,
+                                                                self.gate_corners,
+                                                                gate_quat=self.gate_quat,
+                                                                vert_traj=self.traj[:,0:3],
+                                                                horizon=self.horizon)
             
-            
-            # if sys.gettrace() is not None:  # In debug mode
-            #     des_node_tra=int(np.round(t_tra*(10)))
-            #     self.uav1.plot_3D_traj(wing_len=1.5,
-            #                         uav_height=self.uav_height,
-            #                             state_traj=state_traj,
-            #                             gate_traj=gate_check_points,
-            #                             TRAIN_VIS=True,
-            #                             tra_node=des_node_tra)
+           
             
             return reward #+ pitch_reward
         

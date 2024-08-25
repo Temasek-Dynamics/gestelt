@@ -55,7 +55,7 @@ def calc_grad(config_dict,
    
 
     # initialize the narrow window
-    quad_instance.init_obstacle(gate_point.reshape(12))
+    quad_instance.init_obstacle(gate_point.reshape(12),gate_pitch=inputs[8])
 
     # if sys.gettrace is not None and not MULTI_CORE:
     print("gate pitch pose: ",inputs[8])

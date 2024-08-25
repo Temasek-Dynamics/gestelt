@@ -4,6 +4,7 @@
 import numpy as np
 import casadi as ca
 import torch
+from differentiable_collision_wrapper import DifferentiableCollisionsWrapper
 ## return the maginitude of a vector
 def magni(vector):
     return np.sqrt(np.dot(np.array(vector),np.array(vector)))
@@ -14,6 +15,14 @@ def magni_casadi(vector):
 ## return the unit vector of a vector
 def norm(vector):
     return np.array(vector)/magni(np.array(vector))
+
+def dir_cosine_np(q):  # world frame to body frame
+    C_B_I = np.array([
+        [1 - 2 * (q[2] ** 2 + q[3] ** 2), 2 * (q[1] * q[2] + q[0] * q[3]), 2 * (q[1] * q[3] - q[0] * q[2])],
+        [2 * (q[1] * q[2] - q[0] * q[3]), 1 - 2 * (q[1] ** 2 + q[3] ** 2), 2 * (q[2] * q[3] + q[0] * q[1])],
+        [2 * (q[1] * q[3] + q[0] * q[2]), 2 * (q[2] * q[3] - q[0] * q[1]), 1 - 2 * (q[1] ** 2 + q[2] ** 2)]
+    ])
+    return C_B_I
 
 def dir_cosine(q): # world frame to body frame
     C_B_I = ca.vertcat(
@@ -197,6 +206,7 @@ class obstacle():
     # def collis_det_ellipsoid
 
 
+    
    
     
 
@@ -389,7 +399,54 @@ class obstacle():
         reward = collision_score+traverse_score + goal_score 
         
         return float(reward), drdstate_traj, gate_check_points
-           
+
+    def reward_calc_differentiable_collision(self, 
+                            state_traj, 
+                            gate_corners,
+                            gate_quat,
+                            vert_traj, 
+                            horizon):   
+
+        collision_score = 0
+        traverse_score = 0
+        
+        
+        t_tra_seq_list=[]
+
+        ## find the traversal sequence
+        for t in range(horizon):
+            if(np.dot(self.plane1.nor_vec(),vert_traj[t]-self.centroid)<0):
+                t_tra_seq_list.append(t-3)
+            if len(t_tra_seq_list)==6:
+                break
+        
+        ## init gate check points: four corners and twelve middle points
+        gate_check_points = np.zeros([16,3])
+        gate_lines = np.zeros([4,3])
+        drdstate_traj = np.zeros((horizon+1,state_traj.shape[1]))
+        
+        R_gate=dir_cosine_np(gate_quat) # world frame to gate frame
+        for node_tra in t_tra_seq_list:
+            ## traverse and collision score
+            ONLY_MIDDLE_POINTS = False
+
+            line_centers = np.zeros([4,3])
+            ## for each gate check point
+            for i in range(4):
+
+                if i == 3:
+                    line_centers[i,:] =(gate_corners[9:12]+gate_corners[0:3])/2
+
+                else:
+                    line_centers[i,:]= (gate_corners[3*i:3*i+3]+gate_corners[3*i+3:3*i+6])/2
+
+                
+                
+            
+            DifferentiableCollisionsWrapper(line_centers,
+                                            R_gate,
+                                            gate_quat,
+                                            state_traj[node_tra,:])
 ############################################################################################################
 ###-------------------------------- support torch auto differentiation ---------------------------------####
 ############################################################################################################
