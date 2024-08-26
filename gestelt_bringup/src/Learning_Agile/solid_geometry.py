@@ -2,7 +2,7 @@
 # this file is to do some calculation of solid geometry to do the collision detection of quadrotor
 # this file consists of several classes
 import numpy as np
-from differentiable_collision_wrapper import *
+# from differentiable_collision_wrapper import *
 import casadi as ca
 import torch
 
@@ -419,8 +419,8 @@ class obstacle():
         ## find the traversal sequence
         for t in range(horizon):
             if(np.dot(self.plane1.nor_vec(),vert_traj[t]-self.centroid)<0):
-                t_tra_seq_list.append(t-3)
-            if len(t_tra_seq_list)==6:
+                t_tra_seq_list.append(t)
+            if len(t_tra_seq_list)==1:
                 break
         
         ## init gate check points: four corners and twelve middle points
@@ -429,6 +429,7 @@ class obstacle():
         drdstate_traj = np.zeros((horizon+1,state_traj.shape[1]))
         
         R_gate=dir_cosine_np(gate_quat) # world frame to gate frame
+        reward_traj = 0
         for node_tra in t_tra_seq_list:
             ## traverse and collision score
             ONLY_MIDDLE_POINTS = False
@@ -446,17 +447,17 @@ class obstacle():
                 
                 
             # alpha>=1, no collision
-            alpha,dalpha_dstate_drone=DifferentiableCollisionsWrapper(line_centers,
+            reward_single,dalpha_dstate_drone=DifferentiableCollisionsWrapper(line_centers,
                                             R_gate,
                                             gate_quat,
                                             quad_radius,
                                             quad_height,
                                             state_traj[node_tra,:])
             
-            reward += alpha
+            reward_traj += reward_single
             drdstate_traj[node_tra,:] = dalpha_dstate_drone
         
-        return reward, drdstate_traj, gate_check_points
+        return reward_traj, drdstate_traj, gate_check_points
 ############################################################################################################
 ###-------------------------------- support torch auto differentiation ---------------------------------####
 ############################################################################################################

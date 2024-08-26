@@ -38,7 +38,7 @@ def DifferentiableCollisionsWrapper(line_centers,
                                     drone_state):
 
         
-    prism_size=10
+    prism_size=5
     A=np.diag([quad_radius,quad_radius,quad_height])
     A_inv=np.linalg.inv(A)
     P=A_inv.T@A_inv
@@ -56,11 +56,11 @@ def DifferentiableCollisionsWrapper(line_centers,
 
     # create rectangle walls with the desired size
    
-    P_obs = [jl.dc.create_rect_prism(10.0, 1.0, 10.0)[0],
-              jl.dc.create_rect_prism(10.0, 1.0, 10.0)[0],
-              jl.dc.create_rect_prism(10.0, 1.0, 10.0)[0],
-              jl.dc.create_rect_prism(10.0, 1.0, 10.0)[0]]
-               # 10x10x1 prism
+    P_obs = [jl.dc.create_rect_prism(prism_size, 1.0, prism_size*2)[0],
+            jl.dc.create_rect_prism(prism_size, 1.0, prism_size*2)[0],
+            jl.dc.create_rect_prism(prism_size, 1.0, prism_size*2)[0],
+            jl.dc.create_rect_prism(prism_size, 1.0, prism_size*2)[0]]
+
     
     P =jl.convert(jl.SMatrix[3,3,jl.Float64,9], P)
     Elli_drone = jl.dc.Ellipsoid(P) 
@@ -90,8 +90,9 @@ def DifferentiableCollisionsWrapper(line_centers,
 
     # return min scaling α and gradient of α wrt configurations 
     dalpha_dstate_drone=np.zeros(10) # p,v,q
-    alpha=0
-    for i in range(2): # P_obs[0],P_obs[1]
+    reward=0
+    reward_w=100
+    for i in [1,3]: # P_obs[1],P_obs[3]
 
         # dalpha_i_dstate: drone_p,drone_q,ellipse_p,ellipse_q
         alpha_i, dalpha_i_dstate=jl.dc.proximity_gradient(Elli_drone,P_obs[i],verbose = False, pdip_tol = 1e-6)
@@ -101,11 +102,16 @@ def DifferentiableCollisionsWrapper(line_centers,
         dalpha_i_dstate_np=np.array(dalpha_i_dstate.data)
         # print(dalpha_i_dstate_np)
 
-        alpha+=alpha_i
-        dalpha_dstate_drone[0:3] += dalpha_i_dstate_np[0:3]
-        dalpha_dstate_drone[6:10] += dalpha_i_dstate_np[3:7]
+        reward += 3*np.log((alpha_i))
+        dalpha_dstate_drone[0:3] += 3/alpha_i * dalpha_i_dstate_np[0:3]
+        dalpha_dstate_drone[6:10] += 3/alpha_i * dalpha_i_dstate_np[3:7]
 
-    return alpha,dalpha_dstate_drone
+
+    ## keep at the center reward
+    # reward_center = -2*(np.linalg.norm(drone_state[0:3]-np.array([0,0,0])))
+    # reward+=reward_center
+
+    return reward,dalpha_dstate_drone
 
 
 

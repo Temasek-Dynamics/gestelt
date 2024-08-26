@@ -58,25 +58,25 @@ learning_agile:
   # wwf: final angular velocity cost
   
   ##-----parameters for testing ------##
-  # wrt: 5.0
-  # wqt: 80.0
-  # wthrust: 1.0
-  # wwt: 10.0
-  # wrf: 5.0
-  # wvf: 1.0
-  # wqf: 1.0
-  # wInputDiff: 1 
-
-  ##-----parameters for training ------## 
-  #### for a stabler training,######## 
   wrt: 5.0
   wqt: 80.0
-  wthrust: 10.0
-  wwt: 100.0
+  wthrust: 1.0
+  wwt: 10.0
   wrf: 5.0
   wvf: 1.0
   wqf: 1.0
-  wInputDiff: 10
+  wInputDiff: 1 
+
+  ##-----parameters for training ------## 
+  #### for a stabler training,######## 
+  # wrt: 5.0
+  # wqt: 80.0
+  # wthrust: 10.0
+  # wwt: 100.0
+  # wrf: 5.0
+  # wvf: 1.0
+  # wqf: 1.0
+  # wInputDiff: 10
   ##------ traversing parameters ---##
   max_traverse_weight: 70 #70
   traverse_weight_span: 10

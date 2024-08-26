@@ -58,9 +58,9 @@ def calc_grad(config_dict,
     quad_instance.init_obstacle(gate_point.reshape(12),gate_pitch=inputs[8])
 
     # if sys.gettrace is not None and not MULTI_CORE:
-    print("gate pitch pose: ",inputs[8])
-    print("NN1 output traversal pose pitch: ",outputs[4])
-    print("NN1 output traversal time: ",outputs[6])
+    # print("gate pitch pose: ",inputs[8])
+    # print("NN1 output traversal pose pitch: ",outputs[4])
+    # print("NN1 output traversal time: ",outputs[6])
     # receive the decision variables from DNN1, do the MPC, then calculate d_reward/d_z
     Ulast_value=np.array([2,0.0,0.0,0.0])
     gra[:] = quad_instance.sol_gradient(outputs[0:3].astype(np.float64),
@@ -84,7 +84,7 @@ if __name__ == '__main__':
     else:
         MULTI_CORE = True
     PDP_GRADIENT = True
-    USE_PREV_SOLVER = False
+    USE_PREV_SOLVER = True
     num_epochs = 100 #100
     batch_size = 100 # 100
     
@@ -258,8 +258,8 @@ if __name__ == '__main__':
                 Every_reward[epoch,i]=gra[7]
 
 
-            # if (i+1)%1 == 0:
-                # print (f'Epoch [{epoch+1}/{num_epochs}], Step [{(i+1)*num_cores}/{batch_size}], Reward: {gra[7]:.4f}')
+                if (i+1)%10 == 0:
+                    print (f'Epoch [{epoch+1}/{num_epochs}], Step [{(i+1)}/{batch_size}], Reward: {gra[7]:.4f}')
         
         # change state
         mean_reward = evalue/batch_size # evalue/int(batch_size/num_cores)

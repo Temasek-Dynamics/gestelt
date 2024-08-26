@@ -198,7 +198,7 @@ class LearningAgileAgent():
                               ini_v_I = [0.0, 0.0, 0.0], # initial velocity
                               ini_q=ini_q,)
 
-        self.quad1.init_obstacle(self.gate_point.reshape(12))
+        self.quad1.init_obstacle(self.gate_point.reshape(12),gate_pitch=self.env_init_set[8])
 
         # set the dynamics step of the python sim
         self.dyn_step=dyn_step
@@ -374,12 +374,12 @@ def main():
     ########################################################################
     #####---------------------- TEST option -------------------------#######
     ########################################################################
-    NN2_model_name = 'NN2_imitate_1.pth'
+    NN2_model_name = 'NN2_imitate_1_FD_differentiable_collision.pth'
     STATIC_GATE_TEST = False
-    # gate_v = np.array([-1,-0.3,0.4])
-    # gate_w = pi/2 * 0.5
-    gate_v = np.array([0,0,0])
-    gate_w = 0
+    gate_v = np.array([-1,-0.3,0.4])
+    gate_w = pi/2 * 0.5
+    # gate_v = np.array([0,0,0])
+    # gate_w = 0
 
     # yaml file dir#
     conf_folder=os.path.abspath(os.path.join(current_dir, '..', '..','config'))

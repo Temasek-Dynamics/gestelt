@@ -318,8 +318,8 @@ class run_quad:
         delta = 1e-3
 
         
-        if not self.PDP_GRADIENT:    
-            drdx,drdy,drdz,drda,drdb,drdc=0
+        # if not self.PDP_GRADIENT:    
+        #     drdx,drdy,drdz,drda,drdb,drdc=0
         drdx = np.clip(self.R_from_MPC(tra_pos+[delta,0,0],tra_ang, t_tra,Ulast_value) - j,-0.5,0.5)*0.1
         drdy = np.clip(self.R_from_MPC(tra_pos+[0,delta,0],tra_ang, t_tra,Ulast_value) - j,-0.5,0.5)*0.1
         drdz = np.clip(self.R_from_MPC(tra_pos+[0,0,delta],tra_ang, t_tra,Ulast_value) - j,-0.5,0.5)*0.1
@@ -331,11 +331,11 @@ class run_quad:
             drdt = -0.05
         if((self.R_from_MPC(tra_pos,tra_ang,t_tra+0.1,Ulast_value)-j)>2):
             drdt = 0.05
-        ## return gradient and reward (for deep learning)
+        # return gradient and reward (for deep learning)
         
-        if sys.gettrace is not None:
-            print("finite diff:",np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,j]))
-        # return np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,j])
+        # if sys.gettrace is not None:
+        #     print("finite diff:",np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,j]))
+        return np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,j])
         
         ########################################################################
         #=======================SYMBOLIC GRADIENT+PDP===========================
@@ -410,8 +410,8 @@ class run_quad:
         drdc = drdp[5]
         drdt = drdp[6]
         # j = j.detach().numpy()
-        if sys.gettrace() is not None:
-            print("analytic grad:",np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,j]))
+        # if sys.gettrace() is not None:
+            # print("analytic grad:",np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,j]))
         return np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,j])
 
 
