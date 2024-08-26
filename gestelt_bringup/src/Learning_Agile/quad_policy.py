@@ -1,16 +1,15 @@
 ## this file is a package for policy search for quadrotor
 
 from quad_OC import OCSys,LQR
-from scipy.spatial.transform import Rotation as R
+# the sequence of importing solid_geometry
+# with juliacall is import
+from solid_geometry import *
 from math import cos, pi, sin, sqrt, tan
 from quad_model import *
-from casadi import *
-import scipy.io as sio
-import numpy as np
-import time
-from solid_geometry import *
-import torch
 
+import numpy as np
+import torch
+from casadi import *
 class run_quad:
     def __init__(self,config_dict,
                 SQP_RTI_OPTION=True, 
@@ -246,8 +245,11 @@ class run_quad:
                                         TRAIN_VIS=True,
                                         tra_node=des_node_tra)
 
-            self.obstacle1.reward_calc_differentiable_collision(state_traj,
-                                                                self.gate_corners,
+            reward,self.drdstate_traj,gate_check_points=self.obstacle1.reward_calc_differentiable_collision(
+                                                                quad_radius=self.wing_len/2,
+                                                                quad_height=self.uav_height,
+                                                                state_traj=state_traj,
+                                                                gate_corners=self.gate_corners,
                                                                 gate_quat=self.gate_quat,
                                                                 vert_traj=self.traj[:,0:3],
                                                                 horizon=self.horizon)
