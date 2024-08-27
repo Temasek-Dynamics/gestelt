@@ -16,7 +16,7 @@ with open(yaml_file, 'r', encoding='utf-8') as file:
 current_dir = os.path.dirname(os.path.abspath(__file__))
 training_data_folder=os.path.abspath(os.path.join(current_dir, 'training_data'))
 model_folder=os.path.abspath(os.path.join(training_data_folder, 'NN_model'))
-FILE_INPUT = model_folder+"/NN1_deep2_12.pth"
+FILE_INPUT = model_folder+"/NN1_deep2_16.pth"
 model_nn1 = torch.load(FILE_INPUT)
 # Hyper-parameters 
 input_size = 15 

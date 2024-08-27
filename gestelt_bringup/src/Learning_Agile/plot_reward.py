@@ -9,7 +9,7 @@ reward_data = np.load(reward_file)
 # 绘制奖励图
 plt.figure(figsize=(10, 5))
 plt.plot(reward_data, label='Reward')
-plt.ylim(0, 10000)
+# plt.ylim(0, 10000)
 plt.xlabel('Episode')
 plt.ylabel('Reward')
 plt.title('Reward per Episode')

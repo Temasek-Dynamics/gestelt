@@ -84,7 +84,7 @@ if __name__ == '__main__':
     else:
         MULTI_CORE = True
     PDP_GRADIENT = True
-    USE_PREV_SOLVER = True
+    USE_PREV_SOLVER = False
     num_epochs = 100 #100
     batch_size = 100 # 100
     

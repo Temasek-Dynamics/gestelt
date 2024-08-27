@@ -320,7 +320,7 @@ void ACADOS_model_acados_create_3_create_and_set_functions(ACADOS_model_solver_c
         capsule->__CAPSULE_FNC__.casadi_sparsity_in = & __MODEL_BASE_FNC__ ## _sparsity_in; \
         capsule->__CAPSULE_FNC__.casadi_sparsity_out = & __MODEL_BASE_FNC__ ## _sparsity_out; \
         capsule->__CAPSULE_FNC__.casadi_work = & __MODEL_BASE_FNC__ ## _work; \
-        external_function_param_casadi_create(&capsule->__CAPSULE_FNC__ , 22); \
+        external_function_param_casadi_create(&capsule->__CAPSULE_FNC__ , 18); \
     } while(false)
 
 
@@ -869,7 +869,7 @@ int ACADOS_model_acados_update_params(ACADOS_model_solver_capsule* capsule, int 
 {
     int solver_status = 0;
 
-    int casadi_np = 22;
+    int casadi_np = 18;
     if (casadi_np != np) {
         printf("acados_update_params: trying to set %i parameters for external functions."
             " External function has %i parameters. Exiting.\n", np, casadi_np);
@@ -929,7 +929,7 @@ int ACADOS_model_acados_update_params_sparse(ACADOS_model_solver_capsule * capsu
 {
     int solver_status = 0;
 
-    int casadi_np = 22;
+    int casadi_np = 18;
     if (casadi_np < n_update) {
         printf("ACADOS_model_acados_update_params_sparse: trying to set %d parameters for external functions."
             " External function has %d parameters. Exiting.\n", n_update, casadi_np);

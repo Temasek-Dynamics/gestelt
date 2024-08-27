@@ -248,14 +248,14 @@ class Quadrotor:
         ## angular velocity cost
         self.goal_w_B = [0, 0, 0]
         self.cost_ang_rate_B = dot(self.ang_rate_B - self.goal_w_B, self.ang_rate_B - self.goal_w_B)
+        self.cost_thrust = dot(self.thrust_mag, self.thrust_mag) 
 
 
-
-        self.input_cost = self.wthrust * self.thrust_mag \
+        self.input_cost = self.wthrust * self.cost_thrust \
                          + self.wwt* self.cost_ang_rate_B
         
         ## input difference cost
-        self.input_diff_cost = self.wInputDiff*dot(self.U - self.Ulast, self.U - self.Ulast)
+        # self.input_diff_cost = self.wInputDiff*dot(self.U - self.Ulast, self.U - self.Ulast)
         
         ## the final (goal) cost
         self.goal_cost = self.wrf * self.cost_r_I_g \

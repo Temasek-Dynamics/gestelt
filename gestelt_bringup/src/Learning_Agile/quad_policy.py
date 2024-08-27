@@ -89,15 +89,15 @@ class run_quad:
                            wqf=config_dict['learning_agile']['wqf'],
                            max_tra_w=config_dict['learning_agile']['max_traverse_weight'],
                            gamma=config_dict['learning_agile']['traverse_weight_span'],
-                            wInputDiff=config_dict['learning_agile']['wInputDiff']
+                            # wInputDiff=config_dict['learning_agile']['wInputDiff']
                            ) 
         self.uav1.init_TraCost()
 
         ## set the symbolic cost function to the solver
         self.uavoc1.setInputCost(self.uav1.input_cost)
         
-        self.uavoc1.setInputDiffCost(self.uav1.Ulast,
-                                           self.uav1.input_diff_cost)
+        # self.uavoc1.setInputDiffCost(self.uav1.Ulast,
+        #                                    self.uav1.input_diff_cost)
 
         self.uavoc1.setPathCost(self.uav1.goal_cost,goal_state=self.uav1.goal_state)
         self.uavoc1.setTraCost(self.uav1.tra_cost,
@@ -172,7 +172,8 @@ class run_quad:
                        Ulast_value, 
                        tra_pos, 
                        tra_ang, 
-                       t_tra)
+                       t_tra,
+                       OPEN_LOOP = True )
         
         # state_traj [x,y,z,vx,vy,vz,qw,qx,qy,qz]
         state_traj = self.sol1['state_traj_opt']
@@ -236,14 +237,14 @@ class run_quad:
                         ## load four corners first
                         gate_check_points[i,:] = self.gate_corners[i*3:i*3+3]
 
-            if sys.gettrace() is not None:  # In debug mode
-                des_node_tra=int(np.round(t_tra*(10)))
-                self.uav1.plot_3D_traj(wing_len=1.5,
-                                    uav_height=self.uav_height,
-                                        state_traj=state_traj,
-                                        gate_traj=gate_check_points,
-                                        TRAIN_VIS=True,
-                                        tra_node=des_node_tra)
+            # if sys.gettrace() is not None:  # In debug mode
+            #     des_node_tra=int(np.round(t_tra*(10)))
+            #     self.uav1.plot_3D_traj(wing_len=1.5,
+            #                         uav_height=self.uav_height,
+            #                             state_traj=state_traj,
+            #                             gate_traj=gate_check_points,
+            #                             TRAIN_VIS=True,
+            #                             tra_node=des_node_tra)
 
             reward,self.drdstate_traj,gate_check_points=self.obstacle1.reward_calc_differentiable_collision(
                                                                 quad_radius=self.wing_len/2,
@@ -313,30 +314,26 @@ class run_quad:
                             t_tra,
                             Ulast_value)
         
-       
+        ############==================finite difference===========================############
+        # if not self.PDP_GRADIENT:
         ## fixed perturbation to calculate the gradient
-        delta = 1e-3
-
-        
-        # if not self.PDP_GRADIENT:    
-        #     drdx,drdy,drdz,drda,drdb,drdc=0
-        drdx = np.clip(self.R_from_MPC(tra_pos+[delta,0,0],tra_ang, t_tra,Ulast_value) - j,-0.5,0.5)*0.1
-        drdy = np.clip(self.R_from_MPC(tra_pos+[0,delta,0],tra_ang, t_tra,Ulast_value) - j,-0.5,0.5)*0.1
-        drdz = np.clip(self.R_from_MPC(tra_pos+[0,0,delta],tra_ang, t_tra,Ulast_value) - j,-0.5,0.5)*0.1
-        drda = np.clip(self.R_from_MPC(tra_pos,tra_ang+[delta,0,0], t_tra,Ulast_value) - j,-0.5,0.5)*(1/(500*tra_ang[0]**2+5))
-        drdb = np.clip(self.R_from_MPC(tra_pos,tra_ang+[0,delta,0], t_tra,Ulast_value) - j,-0.5,0.5)*(1/(500*tra_ang[1]**2+5))
-        drdc = np.clip(self.R_from_MPC(tra_pos,tra_ang+[0,0,delta], t_tra,Ulast_value) - j,-0.5,0.5)*(1/(500*tra_ang[2]**2+5))
-        drdt =0
-        if((self.R_from_MPC(tra_pos,tra_ang,t_tra-0.1,Ulast_value)-j)>2):
-            drdt = -0.05
-        if((self.R_from_MPC(tra_pos,tra_ang,t_tra+0.1,Ulast_value)-j)>2):
-            drdt = 0.05
-        # return gradient and reward (for deep learning)
-        
-        # if sys.gettrace is not None:
-        #     print("finite diff:",np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,j]))
-        return np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,j])
-        
+        # delta = 1e-3
+        # drdx = np.clip(self.R_from_MPC(tra_pos+[delta,0,0],tra_ang, t_tra,Ulast_value) - j,-0.5,0.5)*0.1
+        # drdy = np.clip(self.R_from_MPC(tra_pos+[0,delta,0],tra_ang, t_tra,Ulast_value) - j,-0.5,0.5)*0.1
+        # drdz = np.clip(self.R_from_MPC(tra_pos+[0,0,delta],tra_ang, t_tra,Ulast_value) - j,-0.5,0.5)*0.1
+        # drda = np.clip(self.R_from_MPC(tra_pos,tra_ang+[delta,0,0], t_tra,Ulast_value) - j,-0.5,0.5)*(1/(500*tra_ang[0]**2+5))
+        # drdb = np.clip(self.R_from_MPC(tra_pos,tra_ang+[0,delta,0], t_tra,Ulast_value) - j,-0.5,0.5)*(1/(500*tra_ang[1]**2+5))
+        # drdc = np.clip(self.R_from_MPC(tra_pos,tra_ang+[0,0,delta], t_tra,Ulast_value) - j,-0.5,0.5)*(1/(500*tra_ang[2]**2+5))
+        # drdt =0
+        # if((self.R_from_MPC(tra_pos,tra_ang,t_tra-0.1,Ulast_value)-j)>2):
+        #     drdt = -0.05
+        # if((self.R_from_MPC(tra_pos,tra_ang,t_tra+0.1,Ulast_value)-j)>2):
+        #     drdt = 0.05
+        # # return gradient and reward (for deep learning)
+    
+        # print("finite diff:",np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,j]))
+        # return np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,j])
+        ############==============end of finite difference===========================############
         ########################################################################
         #=======================SYMBOLIC GRADIENT+PDP===========================
         ########################################################################
@@ -375,8 +372,7 @@ class run_quad:
         aux_sol=self.lqr_solver.lqrSolver(np.zeros((self.uavoc1.n_state, self.uavoc1.n_trav_auxvar)), self.horizon)
         
 
-        # take solution of the auxiliary control system
-        
+        ## take solution of the auxiliary control system
         # which is the dtrajectory/dtraverse_auxvar 
         dstate_trajdp = aux_sol['state_traj_opt'] #(n_node,n_state,n_trav_auxvar)
         dinput_trajdp = aux_sol['control_traj_opt'] 
@@ -410,8 +406,9 @@ class run_quad:
         drdc = drdp[5]
         drdt = drdp[6]
         # j = j.detach().numpy()
-        # if sys.gettrace() is not None:
-            # print("analytic grad:",np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,j]))
+
+      
+        # print("analytic grad:",np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,j]))
         return np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,j])
 
 
@@ -507,7 +504,8 @@ class run_quad:
                    Ulast ,
                    tra_pos, 
                    tra_ang, 
-                   t_tra):
+                   t_tra,
+                   OPEN_LOOP = False):
     
         # # initialize the NLP problem
         # # self.uav1.init_TraCost(tra_pos,tra_atti)
@@ -531,7 +529,8 @@ class run_quad:
                                                 tra_pos=tra_pos,
                                                 tra_ang=tra_ang,
                                                 t_tra=t_tra,
-                                                max_tra_w = self.max_tra_w)
+                                                max_tra_w = self.max_tra_w,
+                                                OPEN_LOOP = False)
         
         # return control, pos_vel_cmd
         return self.sol1,NO_SOLUTION_FLAG

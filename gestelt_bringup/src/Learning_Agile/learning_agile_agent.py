@@ -376,10 +376,10 @@ def main():
     ########################################################################
     NN2_model_name = 'NN2_imitate_1_FD_differentiable_collision.pth'
     STATIC_GATE_TEST = False
-    gate_v = np.array([-1,-0.3,0.4])
-    gate_w = pi/2 * 0.5
-    # gate_v = np.array([0,0,0])
-    # gate_w = 0
+    # gate_v = np.array([-1,-0.3,0.4])
+    # gate_w = pi/2 * 0.5
+    gate_v = np.array([0,0,0])
+    gate_w = 0
 
     # yaml file dir#
     conf_folder=os.path.abspath(os.path.join(current_dir, '..', '..','config'))
