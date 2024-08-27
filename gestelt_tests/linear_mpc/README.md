@@ -1,4 +1,4 @@
-# MPC Controller
+# Linear MPC
 
 # Structure
 1. mpc_node.py: ROS node subscribing to front-end path and calling the MPC solver routines.
@@ -7,5 +7,4 @@
 4. params.py: Contains all the parameters used for MPC
 
 # Acknowledgements
-[1] "Towards Time-optimal Tunnel-following for Quadrotors", Jon Arrizabalaga et al. and ACADOS quadrotor_nav example.
-[2] Minimum-Time trajectory generaiton for quadrotors in constrained environments.
+[1] [OSQP MPC Example](https://osqp.org/docs/examples/mpc.html)

@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>linear_mpc</name>
+  <version>0.0.0</version>
+  <description>The linear_mpc package</description>
+
+  <maintainer email="johntgz@nus.edu.sg">John Tan </maintainer>
+  <license>MIT</license>
+  <author email="johntgz@nus.edu.sg">John Tan</author>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>roscpp</build_depend>
+  <build_export_depend>roscpp</build_export_depend>
+  <exec_depend>roscpp</exec_depend>
+  <depend>rospy</depend>
+
+  <!-- The export tag contains other, unspecified, tags -->
+  <export>
+    <!-- Other tools can request additional information be placed here -->
+
+  </export>
+</package>
