@@ -41,7 +41,7 @@ def nn_sample(init_pos=None,final_pos=None,init_angle=None):
     ## random initial yaw angle of the quadrotor
     inputs[6] = np.random.uniform(-0.1,0.1)
     ## random width of the gate
-    inputs[7] = np.clip(np.random.normal(0.8,0.2),0.6,1.0) #(0.9,0.3),0.5,1.25   
+    inputs[7] = np.clip(np.random.normal(1.0,0.2),0.8,1.2) #(0.9,0.3),0.5,1.25   
     # inputs[7] = np.random.uniform(0.7,1.2)
     ## random pitch angle of the gate
     angle = np.clip(1.3*(1.2-inputs[7]),0,pi/3)
@@ -141,9 +141,9 @@ class network(nn.Module):
         self.F2 = nn.ReLU()
         self.l3 = nn.Linear(D_h2, D_out)
 
-    def forward(self, input):
+    def forward(self, input ,device='cpu'):
         # convert state s to tensor
-        S = torch.tensor(input, dtype=torch.float) # column 2D tensor
+        S = torch.tensor(input, dtype=torch.float).to(device) # column 2D tensor
         out = self.l1(S.t()) # linear function requires the input to be a row tensor
         out = self.F1(out)
         out = self.l2(out)
@@ -151,9 +151,9 @@ class network(nn.Module):
         out = self.l3(out)
         return out
 
-    def myloss(self, para, dp):
+    def myloss(self, para, dp, device='cpu'):
         # convert np.array to tensor
-        Dp = torch.tensor(dp, dtype=torch.float) # row 2D tensor
+        Dp = torch.tensor(dp, dtype=torch.float).to(device) # row 2D tensor
         loss_nn = torch.matmul(Dp, para)
         return loss_nn
 

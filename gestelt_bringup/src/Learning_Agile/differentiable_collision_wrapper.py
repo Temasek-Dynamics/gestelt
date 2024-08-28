@@ -5,8 +5,10 @@ from juliacall import Main as jl, convert
 
 ## load packages
 jl.seval('import Pkg') 
+jl.seval('Pkg.instantiate()')
 jl.seval('Pkg.add("StaticArrays")')
 jl.seval('Pkg.add("LinearAlgebra")')
+jl.seval('Pkg.add("MeshCat")')
 # jl.seval('Pkg.add(path="/home/tlab-uav/DifferentiableCollisions.jl")')
 jl.seval('Pkg.add("DifferentiableCollisions")')
 
@@ -21,6 +23,7 @@ jl.seval('using Revise')
 jl.seval('using LinearAlgebra')
 jl.seval('using StaticArrays')
 jl.seval('import DifferentiableCollisions as dc')
+jl.seval('import MeshCat as mc')
 
 def dir_cosine_np(q):  # world frame to body frame
     C_B_I = np.array([
@@ -48,18 +51,25 @@ def DifferentiableCollisionsWrapper(line_centers,
     # print('line_centers_G:',line_centers_G)
 
     prism_centers=np.zeros([4,3])
+
+    # left and right prisms centers
     prism_centers[1,]=line_centers_G[1,]+np.array([ prism_size/2,0,0])
     prism_centers[3,]=line_centers_G[3,]+np.array([-prism_size/2,0,0])
 
-    prism_centers_W=np.matmul(prism_centers,R_gate)
+    # up and down prisms centers
+    prism_centers[0,]=line_centers_G[0,]+np.array([0,0, prism_size/2])
+    prism_centers[2,]=line_centers_G[2,]+np.array([0,0,-prism_size/2])
 
+    prism_centers_W=np.matmul(prism_centers,R_gate)
+    
+    width_gap=np.abs(line_centers_G[1,0]-line_centers_G[3,0])
 
     # create rectangle walls with the desired size
    
-    P_obs = [jl.dc.create_rect_prism(prism_size, 1.0, prism_size*2)[0],
-            jl.dc.create_rect_prism(prism_size, 1.0, prism_size*2)[0],
-            jl.dc.create_rect_prism(prism_size, 1.0, prism_size*2)[0],
-            jl.dc.create_rect_prism(prism_size, 1.0, prism_size*2)[0]]
+    P_obs = [jl.dc.create_rect_prism(width_gap, 1.0, prism_size)[0],
+             jl.dc.create_rect_prism(prism_size, 1.0, prism_size*2)[0],
+             jl.dc.create_rect_prism(width_gap, 1.0, prism_size)[0],
+             jl.dc.create_rect_prism(prism_size, 1.0, prism_size*2)[0]]
 
     
     P =jl.convert(jl.SMatrix[3,3,jl.Float64,9], P)
@@ -86,13 +96,30 @@ def DifferentiableCollisionsWrapper(line_centers,
     Elli_drone.r = drone_state[0:3]
     Elli_drone.q = jl_q_drone
     
-        
 
+    #============================visualize=======================##
+    # vis = jl.mc.Visualizer()
+    # jl.mc.open(vis)  
+
+    # jl.seval('vis->mc.setprop!(vis["/Lights/AmbientLight/<object>"], "intensity", 0.9)')(vis)
+    # jl.seval('vis->mc.setprop!(vis["/Lights/PointLightPositiveX/<object>"], "intensity", 0.0)')(vis)
+    # jl.seval('vis->mc.setprop!(vis["/Lights/FillLight/<object>"], "intensity", 0.25)')(vis)
+    # jl.seval('vis->mc.setvisible!(vis["/Grid"],false)')(vis)
+    # jl.seval('vis->mc.setvisible!(vis["/Axes"],false)')(vis)
+
+
+    # jl.seval('(vis, Elli_drone)->dc.build_primitive!(vis, Elli_drone, Symbol("drone"); color = mc.RGBA(0.0, 0.0, 0.0, 1.0), α = 1.0)')(vis, Elli_drone)
+    # jl.seval('(vis, Elli_drone)->dc.update_pose!(vis[Symbol("drone")],Elli_drone)')(vis,Elli_drone) 
+    
+    # for i in range(len(P_obs)):
+    #     jl.seval('(i,vis,current_obs)->dc.build_primitive!(vis, current_obs, Symbol("P"*string(i)); α = 1.0)')(i,vis,P_obs[i])    
+    #     jl.seval('(i,vis,current_obs)->dc.update_pose!(vis[Symbol("P"*string(i))],current_obs)')(i,vis,P_obs[i]) 
+    #======================end of visualize=======================##
+    
     # return min scaling α and gradient of α wrt configurations 
     dalpha_dstate_drone=np.zeros(10) # p,v,q
     reward=0
-    reward_w=100
-    for i in [1,3]: # P_obs[1],P_obs[3]
+    for i in range(4): # P_obs[1],P_obs[3] (left and right walls)
 
         # dalpha_i_dstate: drone_p,drone_q,ellipse_p,ellipse_q
         alpha_i, dalpha_i_dstate=jl.dc.proximity_gradient(Elli_drone,P_obs[i],verbose = False, pdip_tol = 1e-6)
@@ -102,15 +129,17 @@ def DifferentiableCollisionsWrapper(line_centers,
         dalpha_i_dstate_np=np.array(dalpha_i_dstate.data)
         # print(dalpha_i_dstate_np)
 
-        reward += 3*np.log((alpha_i))
-        dalpha_dstate_drone[0:3] += 3/alpha_i * dalpha_i_dstate_np[0:3]
-        dalpha_dstate_drone[6:10] += 3/alpha_i * dalpha_i_dstate_np[3:7]
+        reward += 100 * np.log((alpha_i)) * (3/(alpha_i)**3) 
+        dalpha_dstate_drone[0:3] += (100/alpha_i * (3/(alpha_i)**3) + 100 * np.log((alpha_i)) * (-9/(alpha_i)**4)) * dalpha_i_dstate_np[0:3]
+        dalpha_dstate_drone[6:10] += (100/alpha_i * (3/(alpha_i)**3) + 100 * np.log((alpha_i)) * (-9/(alpha_i)**4)) * dalpha_i_dstate_np[3:7]
 
 
-    ## keep at the center reward
-    # reward_center = -2*(np.linalg.norm(drone_state[0:3]-np.array([0,0,0])))
-    # reward+=reward_center
+    # keep at the center reward
+    reward_center = - 1 * np.linalg.norm(drone_state[0:3]-np.array([0,0,0]),2)
+    reward+=reward_center
 
+    dalpha_dstate_drone[0:3] -= 1 * 2 * (drone_state[0:3]-np.array([0,0,0]))
+    
     return reward,dalpha_dstate_drone
 
 

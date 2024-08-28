@@ -408,6 +408,7 @@ class obstacle():
                                             gate_corners,
                                             gate_quat,
                                             vert_traj, 
+                                            goal_pos,
                                             horizon):   
 
         collision_score = 0
@@ -419,8 +420,8 @@ class obstacle():
         ## find the traversal sequence
         for t in range(horizon):
             if(np.dot(self.plane1.nor_vec(),vert_traj[t]-self.centroid)<0):
-                t_tra_seq_list.append(t)
-            if len(t_tra_seq_list)==1:
+                t_tra_seq_list.append(t-1)
+            if len(t_tra_seq_list)==2:
                 break
         
         ## init gate check points: four corners and twelve middle points
@@ -431,9 +432,7 @@ class obstacle():
         R_gate=dir_cosine_np(gate_quat) # world frame to gate frame
         reward_traj = 0
         for node_tra in t_tra_seq_list:
-            ## traverse and collision score
-            ONLY_MIDDLE_POINTS = False
-
+        
             line_centers = np.zeros([4,3])
             ## for each gate check point
             for i in range(4):
@@ -446,7 +445,6 @@ class obstacle():
 
                 
                 
-            # alpha>=1, no collision
             reward_single,dalpha_dstate_drone=DifferentiableCollisionsWrapper(line_centers,
                                             R_gate,
                                             gate_quat,
@@ -457,6 +455,16 @@ class obstacle():
             reward_traj += reward_single
             drdstate_traj[node_tra,:] = dalpha_dstate_drone
         
+
+         # goal score
+        goal_score = 0
+        
+        # for last four nodes
+        for i in range(-1,-5,-1): 
+            goal_score += -0.5 * np.dot(state_traj[i,:3]-goal_pos,state_traj[i,:3]-goal_pos)
+            drdstate_traj[i,:3] = -0.5 * 2 * (state_traj[i,:3]-goal_pos)
+        
+        reward_traj += goal_score
         return reward_traj, drdstate_traj, gate_check_points
 ############################################################################################################
 ###-------------------------------- support torch auto differentiation ---------------------------------####

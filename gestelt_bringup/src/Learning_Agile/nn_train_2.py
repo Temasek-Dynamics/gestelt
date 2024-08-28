@@ -6,8 +6,7 @@ import numpy as np
 import os
 import yaml
 # Device configuration
-device = torch.device('cpu')
-#torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 conf_folder=os.path.abspath(os.path.join(current_dir, '..', '..','config'))
 yaml_file = os.path.join(conf_folder, 'learning_agile_mission.yaml')
@@ -16,8 +15,8 @@ with open(yaml_file, 'r', encoding='utf-8') as file:
 current_dir = os.path.dirname(os.path.abspath(__file__))
 training_data_folder=os.path.abspath(os.path.join(current_dir, 'training_data'))
 model_folder=os.path.abspath(os.path.join(training_data_folder, 'NN_model'))
-FILE_INPUT = model_folder+"/NN1_deep2_16.pth"
-model_nn1 = torch.load(FILE_INPUT)
+FILE_INPUT = model_folder+"/NN1_deep2_20.pth"
+model_nn1 = torch.load(FILE_INPUT).to(device)
 # Hyper-parameters 
 input_size = 15 
 hidden_size = 128 
@@ -84,10 +83,9 @@ if __name__ == '__main__':
         for _ in range(num_cores):
             # sample
             inputs = nn_sample()
-            # inputs[0:3]=np.array([0,1.8,1.4])
-            # inputs[3:6]=np.array([0,-1.8,1.4])
+
             # forward pass
-            outputs = model_nn1(inputs)
+            outputs = model_nn1(inputs,device).to('cpu')
             out = outputs.data.numpy()
             # create shared variables
             state_traj = Array('d',np.zeros((batch_size+1)*10))
@@ -121,9 +119,9 @@ if __name__ == '__main__':
         
                 t_out = torch.tensor(out, dtype=torch.float).to(device)
                 # Forward pass
-                pre_outputs = model_nn2(inputs)
+                pre_outputs = model_nn2(inputs,device)
                 #print(inputs,' ',pre_outputs)
-                loss = criterion(pre_outputs, t_out)
+                loss = criterion(pre_outputs, t_out).to('cpu')
                 loss_t = loss.data.numpy()
                 # Backward and optimize
                 optimizer.zero_grad()

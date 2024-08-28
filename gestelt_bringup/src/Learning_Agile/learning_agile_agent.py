@@ -16,7 +16,6 @@ sys.path.append("../")
 sys.path.append(subdirectory_path)
 
 
-from typing import Any
 from quad_model import *
 from quad_policy import *
 from quad_nn import *
@@ -24,14 +23,9 @@ from quad_moving import *
 
 # ros
 import numpy as np
-import rospy
-# from gestelt_msgs.msg import CommanderState, Goals, CommanderCommand
-from geometry_msgs.msg import Pose, Accel,PoseArray,AccelStamped, TwistStamped, PoseStamped,Quaternion,Vector3
-from mavros_msgs.msg import PositionTarget, AttitudeTarget
-from std_msgs.msg import Int8, Bool,Float32
-import math
+
 import time
-import tf
+
 
 
 # load the DNN2 model
@@ -93,7 +87,7 @@ class LearningAgileAgent():
             self.config_dict = yaml.safe_load(file)
 
         # load trained DNN2 model
-        self.model = torch.load(model_file)
+        self.model = torch.load(model_file).to('cpu')
     
 
         ##-------------------- planning variables --------------------------##
@@ -360,7 +354,7 @@ class LearningAgileAgent():
         self.quad1.uav1.plot_trav_time(self.T)
         self.quad1.uav1.plot_solving_time(self.solving_time)
         self.quad1.uav1.plot_3D_traj(wing_len=self.quad1.wing_len,
-                                    uav_height=self.quad1.uav_height,
+                                    uav_height=self.quad1.uav_height/2,
                                     state_traj=self.state_n[::50,:],
                                     gate_traj=self.gate_move[::50,:,:])
 
@@ -374,12 +368,12 @@ def main():
     ########################################################################
     #####---------------------- TEST option -------------------------#######
     ########################################################################
-    NN2_model_name = 'NN2_imitate_1_FD_differentiable_collision.pth'
+    NN2_model_name = 'NN2_imitate_1.pth'
     STATIC_GATE_TEST = False
-    # gate_v = np.array([-1,-0.3,0.4])
-    # gate_w = pi/2 * 0.5
-    gate_v = np.array([0,0,0])
-    gate_w = 0
+    gate_v = np.array([-1,-0.3,0.4])
+    gate_w = pi/2 
+    # gate_v = np.array([0,0,0])
+    # gate_w = 0
 
     # yaml file dir#
     conf_folder=os.path.abspath(os.path.join(current_dir, '..', '..','config'))

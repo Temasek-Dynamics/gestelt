@@ -212,7 +212,7 @@ class run_quad:
             #############################################################
             # initialize the drone ellipse
             self.obstacle1.reward_calc_sym(self.uav1,
-                                            quad_height=self.uav_height,
+                                            quad_height=self.uav_height/2,
                                             quad_radius=self.wing_len/2,
                                             alpha=5,
                                             beta=10,
@@ -240,7 +240,7 @@ class run_quad:
             # if sys.gettrace() is not None:  # In debug mode
             #     des_node_tra=int(np.round(t_tra*(10)))
             #     self.uav1.plot_3D_traj(wing_len=1.5,
-            #                         uav_height=self.uav_height,
+            #                         uav_height=self.uav_height/2,
             #                             state_traj=state_traj,
             #                             gate_traj=gate_check_points,
             #                             TRAIN_VIS=True,
@@ -248,11 +248,12 @@ class run_quad:
 
             reward,self.drdstate_traj,gate_check_points=self.obstacle1.reward_calc_differentiable_collision(
                                                                 quad_radius=self.wing_len/2,
-                                                                quad_height=self.uav_height,
+                                                                quad_height=self.uav_height/2,
                                                                 state_traj=state_traj,
                                                                 gate_corners=self.gate_corners,
                                                                 gate_quat=self.gate_quat,
                                                                 vert_traj=self.traj[:,0:3],
+                                                                goal_pos=self.goal_pos,
                                                                 horizon=self.horizon)
             
            
@@ -315,7 +316,7 @@ class run_quad:
                             Ulast_value)
         
         ############==================finite difference===========================############
-        # if not self.PDP_GRADIENT:
+        ## if not self.PDP_GRADIENT:
         ## fixed perturbation to calculate the gradient
         # delta = 1e-3
         # drdx = np.clip(self.R_from_MPC(tra_pos+[delta,0,0],tra_ang, t_tra,Ulast_value) - j,-0.5,0.5)*0.1
@@ -329,9 +330,8 @@ class run_quad:
         #     drdt = -0.05
         # if((self.R_from_MPC(tra_pos,tra_ang,t_tra+0.1,Ulast_value)-j)>2):
         #     drdt = 0.05
-        # # return gradient and reward (for deep learning)
-    
-        # print("finite diff:",np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,j]))
+
+        # # print("finite diff:",np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,j]))
         # return np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,j])
         ############==============end of finite difference===========================############
         ########################################################################
@@ -343,7 +343,7 @@ class run_quad:
         ###################################################################
         ###----- Set mpc external variables VALUE to diffPMP--------#######
         ###################################################################
-        ## goal state, Ulast value, t_node is set in the mpc_update function,
+        ## goal state, t_node is set in the mpc_update function,
         ## need to be given here
     
     
@@ -394,10 +394,11 @@ class run_quad:
         norm_dstate_trajdp = dstate_trajdp/np.linalg.norm(dstate_trajdp)
         drdp=np.zeros(7)
         for i in range(self.horizon):
-            drdp += np.matmul(norm_drdstate_traj[i,:,:],norm_dstate_trajdp[i,:,:]).reshape(7)
+            drdp += np.matmul(drdstate_traj[i,:,:],dstate_trajdp[i,:,:]).reshape(7)
 
-        drdp += np.matmul(norm_drdstate_traj[self.horizon,:,:],norm_dstate_trajdp[self.horizon,:,:]).reshape(7)    
+        drdp += np.matmul(drdstate_traj[self.horizon,:,:],dstate_trajdp[self.horizon,:,:]).reshape(7)    
 
+        drdp = drdp/10000
         drdx = drdp[0]
         drdy = drdp[1]
         drdz = drdp[2]

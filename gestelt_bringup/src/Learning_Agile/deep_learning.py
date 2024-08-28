@@ -85,7 +85,7 @@ if __name__ == '__main__':
         MULTI_CORE = True
     PDP_GRADIENT = True
     USE_PREV_SOLVER = False
-    num_epochs = 100 #100
+    num_epochs = 50 #100
     batch_size = 100 # 100
     
     if PDP_GRADIENT:
@@ -93,7 +93,7 @@ if __name__ == '__main__':
     else:
         learning_rate = 1e-4
    
-
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     ###############################################################
     ###------------------ load the files -----------------------###
     ###############################################################
@@ -139,7 +139,7 @@ if __name__ == '__main__':
 
     else:
         FILE = os.path.join(model_folder, "NN1_pretrain.pth")
-        model = torch.load(FILE)
+        model = torch.load(FILE).to(device)
         start_epoch = 0
     
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
@@ -154,6 +154,8 @@ if __name__ == '__main__':
     ###############################################################
     ###------------------ training -----------------------------###
     ###############################################################
+
+    model.train()
     for epoch in range(start_epoch,num_epochs):
     #move = gate1.plane_move()
         evalue = 0
@@ -170,8 +172,8 @@ if __name__ == '__main__':
 
                 for _ in range(num_cores):
                     # sample
-                    inputs = nn_sample()
-                    
+                    inputs = nn_sample()   
+
                     # forward pass
                     outputs = model(inputs)
                     out = outputs.data.numpy()
@@ -228,7 +230,7 @@ if __name__ == '__main__':
                 inputs = nn_sample()
                 
                 # forward pass
-                outputs = model(inputs)
+                outputs = model(inputs,device).to('cpu')
                 out = outputs.data.numpy()
                 # print(out)
                 
@@ -244,10 +246,10 @@ if __name__ == '__main__':
                         gra)
                 
                 # Backward and optimize
-                outputs = model(inputs)
+                outputs = model(inputs,device)
 
                 # d_reward/d_z * z
-                loss = model.myloss(outputs,gra[0:7])        
+                loss = model.myloss(outputs,gra[0:7],device)        
 
                 optimizer.zero_grad()
 
