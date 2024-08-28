@@ -128,7 +128,7 @@ class LearningAgileAgent():
                                 goal_yaw,
                                 
                                 gate_center=np.array([0,0,1.5]),
-                                gate_ori_euler=np.array([0,0,0]),
+                                gate_ori_RP=np.array([0,0,0]),
                                 
                                 t_tra_abs=1
                                 ):
@@ -159,7 +159,7 @@ class LearningAgileAgent():
         self.goal_yaw = goal_yaw
         
         self.gate_center = gate_center
-        self.gate_ori_euler = gate_ori_euler
+        self.gate_ori_RP = gate_ori_RP
         self.t_tra_abs =t_tra_abs
         
 
@@ -280,7 +280,7 @@ class LearningAgileAgent():
                     # manually set the traversal time and pose
                     out=np.zeros(7)
                     out[0:3]=self.gate_center
-                    out[3:6]=self.gate_ori_euler # Rodrigues parameters
+                    out[3:6]=self.gate_ori_RP # Rodrigues parameters
 
                     # relative traversal time
                     out[6]=self.t_tra_rel
@@ -369,7 +369,7 @@ def main():
     #####---------------------- TEST option -------------------------#######
     ########################################################################
     NN2_model_name = 'NN2_imitate_1.pth'
-    STATIC_GATE_TEST = False
+    STATIC_GATE_TEST = True
     gate_v = np.array([-1,-0.3,0.4])
     gate_w = pi/2 
     # gate_v = np.array([0,0,0])
@@ -399,7 +399,7 @@ def main():
                                                 goal_yaw=np.array(config_dict['mission']['goal_ori_euler'])[2],
                                                 
                                                 gate_center=np.array(config_dict['mission']['gate_position']),
-                                                gate_ori_euler=np.array(config_dict['mission']['gate_ori_euler']),
+                                                gate_ori_RP=np.array(config_dict['mission']['gate_ori_RP']),
                                                 
                                                 t_tra_abs=config_dict['learning_agile']['traverse_time'])
 

@@ -61,3 +61,4 @@ CATKIN_IGNORE
 *.zip
 **/*.pth
 **/*.png
+**/*.jpeg

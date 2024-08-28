@@ -18,7 +18,7 @@ import cProfile
 # get ros params from rosparam server
 is_simulation=rospy.get_param('mission/is_simulation', False)
 gate_position=rospy.get_param('mission/gate_position', [0.0,0.0,1.2])
-gate_ori_euler=rospy.get_param('mission/gate_ori_euler', [0.0,0.0,0])
+gate_ori_RP=rospy.get_param('mission/gate_ori_RP', [0.0,0.0,0])
 
 goal_position=rospy.get_param('mission/goal_position', [0.0,0.0,1.2])
 goal_ori_euler=rospy.get_param('mission/goal_ori_euler', [0,0,0])
@@ -110,7 +110,7 @@ def create_pose(position,euler_angles):
     
     return pose
 
-def create_trav_pose(position,euler_angles):
+def create_trav_pose(position,RP_angles):
     pose = Pose()
 
     # transform waypoints from map to world
@@ -119,7 +119,7 @@ def create_trav_pose(position,euler_angles):
     pose.position.y = position[1]+trans[1]
     pose.position.z = position[2]+trans[2]
 
-    atti = Rd2Rp(euler_angles)
+    atti = Rd2Rp(RP_angles)
     quat=toQuaternion(atti[0],atti[1])
     pose.orientation.w = quat[0]
     pose.orientation.x = quat[1]
@@ -229,7 +229,7 @@ def main():
     # waypoints are under the map frame, will be transformed to world frame
 
     # # gate position
-    waypoints.append(create_trav_pose(gate_position,gate_ori_euler)) 
+    waypoints.append(create_trav_pose(gate_position,gate_ori_RP)) 
 
     # # end position
     waypoints.append(create_pose(goal_position,goal_ori_euler)) 

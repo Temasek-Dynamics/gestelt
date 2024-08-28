@@ -61,7 +61,7 @@ class mpcRosWrapper{
 
         //------------------misc-------------------
         void pred_traj_vis();
-
+        void quat_to_rodrigues();
         typedef std::shared_ptr<mpcRosWrapper> Ptr;
         
         // solver state 
@@ -82,13 +82,12 @@ class mpcRosWrapper{
     ros::Publisher mpc_runtime_pub_;
     ros::Publisher current_pred_traj_pub_;
 
-    ros::Timer soft_RT_mpc_timer_;
-
     //environment setting
     std::string origin_frame_="world";
 
     // desired traverse state
     Eigen::Vector3d des_trav_point_={0,0,0};
+    Eigen::Vector3d des_trav_rodrigues_={0,0,0};
     Eigen::Vector4d des_trav_quat_={1,0,0,0};
 
     // time setting

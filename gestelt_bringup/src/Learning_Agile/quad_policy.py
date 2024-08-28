@@ -508,18 +508,8 @@ class run_quad:
                    t_tra,
                    OPEN_LOOP = False):
     
-        # # initialize the NLP problem
-        # # self.uav1.init_TraCost(tra_pos,tra_atti)
-        # # self.uavoc1.setTraCost(self.uav1.tra_cost,
-        # #                        tra_pos,
-        # #                        tra_atti,
-        # #                        t_tra)
-
-    
+   
         ##----- cause the different bewteen the python and the gazebo--###
-        # tra_atti = Rd2Rp(tra_ang)
-
-        # tra_q=toQuaternion(tra_atti[0],tra_atti[1])
 
         current_state_control = np.concatenate((current_state,Ulast))
        

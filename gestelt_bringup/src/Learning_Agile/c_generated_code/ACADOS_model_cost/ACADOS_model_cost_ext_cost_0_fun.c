@@ -232,6 +232,14 @@ static int casadi_f0(const casadi_real** arg, casadi_real** res, casadi_int* iw,
   a3=atan(a3);
   a7=sin(a3);
   a9=1.0000000000000000e-08;
+  a14=(a4+a9);
+  a14=casadi_sq(a14);
+  a16=casadi_sq(a13);
+  a14=(a14+a16);
+  a16=casadi_sq(a11);
+  a14=(a14+a16);
+  a14=sqrt(a14);
+  a9=(a9/a14);
   a4=(a4+a9);
   a9=casadi_sq(a4);
   a14=casadi_sq(a13);

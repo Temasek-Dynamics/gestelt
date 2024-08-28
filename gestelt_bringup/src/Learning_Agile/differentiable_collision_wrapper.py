@@ -135,10 +135,10 @@ def DifferentiableCollisionsWrapper(line_centers,
 
 
     # keep at the center reward
-    reward_center = - 1 * np.linalg.norm(drone_state[0:3]-np.array([0,0,0]),2)
-    reward+=reward_center
+    # reward_center = - 1 * np.linalg.norm(drone_state[0:3]-np.array([0,0,0]),2)
+    # reward+=reward_center
 
-    dalpha_dstate_drone[0:3] -= 1 * 2 * (drone_state[0:3]-np.array([0,0,0]))
+    # dalpha_dstate_drone[0:3] -= 1 * 2 * (drone_state[0:3]-np.array([0,0,0]))
     
     return reward,dalpha_dstate_drone
 

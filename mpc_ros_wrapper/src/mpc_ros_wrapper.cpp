@@ -79,7 +79,7 @@ void mpcRosWrapper::solver_request(){
         ROS_INFO("the request period is too long, emergency stop");
     }
     else
-    {
+    {   
         //t_tra: time to the traverse point relative to the current time
         //t_tra_abs_: absolute time to the traverse point, w.r.t the mission start time
         double mission_t_progress= std::chrono::duration_cast<std::chrono::duration<double>>(current_time - mission_start_time_).count();
@@ -87,45 +87,43 @@ void mpcRosWrapper::solver_request(){
         // ROS_INFO("t_tra is %f", t_tra);
         for (int i = 0; i < n_nodes_; i++)
         {
-            current_input_=last_input_;
-            double varying_trav_weight = max_tra_w_ * std::exp(-tra_w_span_ * std::pow(dt_ * i - t_tra, 2));
+            // current_input_=last_input_;
+            // double varying_trav_weight = max_tra_w_ * std::exp(-tra_w_span_ * std::pow(dt_ * i - t_tra, 2));
             // ROS_INFO("dt_ is %f, i is %d, t_tra is %f, varying_trav_weight is %f", dt_, i, t_tra, varying_trav_weight);
             // set the external parameters for the solver
             // desired goal state, current input, desired traverse pose, varying traverse weight
-            Eigen::VectorXd solver_extern_param(22);
+            Eigen::VectorXd solver_extern_param(18);
             solver_extern_param.segment(0,10) = des_goal_state_;
-            solver_extern_param.segment(10,4) = current_input_;
-            solver_extern_param.segment(14,3) = des_trav_point_;
-            solver_extern_param.segment(17,4) = des_trav_quat_;
-            solver_extern_param(21) = varying_trav_weight;
+            solver_extern_param.segment(10,3) = des_trav_point_;
+            solver_extern_param.segment(13,3) = des_trav_rodrigues_;
+            solver_extern_param(16) = t_tra; 
+            solver_extern_param(17) = i * dt_; //current node relative time
 
-            int NP=22;
+            int NP=18;
             double *solver_extern_param_ptr = solver_extern_param.data();
         
             ACADOS_model_acados_update_params(acados_ocp_capsule, i,solver_extern_param_ptr,NP);
             
-            if (i==10)
-            {
-                weight_vis_ = varying_trav_weight;
-            }
+            // if (i==10)
+            // {
+            //     weight_vis_ = varying_trav_weight;
+            // }
         }
         //TODO
         // set the initial GUESS
         // ocp_nlp_out_set(nlp_config, nlp_dims, nlp_out, n_nodes_ , "x", &state_traj_opt_[n_nodes_*n_x_]);
 
         // set the end desired state
-        Eigen::VectorXd solver_extern_param(22);
-        double end_tra_weight=0;
+        Eigen::VectorXd solver_extern_param(18);
         solver_extern_param.segment(0,10) = des_goal_state_;
-        solver_extern_param.segment(10,4) = current_input_;
-        solver_extern_param.segment(14,3) = des_trav_point_;
-        solver_extern_param.segment(17,4) = des_trav_quat_;
-        solver_extern_param(21) = end_tra_weight;
-
+        solver_extern_param.segment(10,3) = des_trav_point_;
+        solver_extern_param.segment(13,3) = des_trav_rodrigues_;
+        solver_extern_param(16) = t_tra;
+        solver_extern_param(17) = n_nodes_ * dt_; //current node relative time
         
         double *solver_extern_param_ptr = solver_extern_param.data();
     
-        int NP=22;
+        int NP=18;
         ACADOS_model_acados_update_params(acados_ocp_capsule, n_nodes_, solver_extern_param_ptr, NP);
         //set initial condition aligned with the current state
         double *drone_state_ptr = drone_state_.data();
@@ -194,7 +192,7 @@ void mpcRosWrapper::mission_start_cb(const gestelt_msgs::GoalsPtr &msg)
 {
     des_trav_point_ << msg->waypoints[0].position.x, msg->waypoints[0].position.y, msg->waypoints[0].position.z;
     des_trav_quat_ << msg->waypoints[0].orientation.w, msg->waypoints[0].orientation.x, msg->waypoints[0].orientation.y, msg->waypoints[0].orientation.z;
-    
+    quat_to_rodrigues();
     des_goal_point_ << msg->waypoints[1].position.x, msg->waypoints[1].position.y, msg->waypoints[1].position.z;
     des_goal_quat_ << msg->waypoints[1].orientation.w, msg->waypoints[1].orientation.x, msg->waypoints[1].orientation.y, msg->waypoints[1].orientation.z;
     
@@ -278,4 +276,20 @@ void mpcRosWrapper::pred_traj_vis()
         pred_traj.poses.push_back(pose);
     }
     current_pred_traj_pub_.publish(pred_traj);
+}
+
+
+void mpcRosWrapper::quat_to_rodrigues()
+{   
+    double theta = 2 * acos(des_trav_quat_[0]);
+
+    if (sin(theta/2) < 1e-6)
+    {
+        des_trav_rodrigues_ = Eigen::Vector3d::Zero();
+        return;
+    }
+
+    Eigen::Vector3d axis = des_trav_quat_.tail(3)/sin(theta/2);
+    
+    des_trav_rodrigues_ = axis * tan(theta/2);
 }

@@ -1090,7 +1090,7 @@ def Rd2Rp(tra_ang):
 
 def Rd2Rp_casadi(tra_ang):
     theta = 2*casadi.atan(magni_casadi(tra_ang))
-    vector = tra_ang+np.array([1e-8,0,0])
+    vector = tra_ang+np.array([1e-8,0,0])/ca.norm_2(tra_ang+np.array([1e-8,0,0]))
     return [theta,vector]
 
 def toQuaternion(angle, dir):
