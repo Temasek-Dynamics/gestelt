@@ -1,9 +1,9 @@
 <launch>
-
+    <arg name="is_simulation" default="true"/>
   
     <rosparam file="$(find gestelt_bringup)/config/learning_agile_mission.yaml" command="load"/>
     <node pkg="gestelt_bringup" name="NN_wrapper" type="NN2_ROS_wrapper.py" output="screen">
-      
+        <param name="is_simulation" value="$(arg is_simulation)"/>
     </node>
   
   

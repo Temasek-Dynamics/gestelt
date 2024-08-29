@@ -22,6 +22,7 @@
 
 #include <std_msgs/Empty.h>
 #include <std_msgs/Int8.h>
+#include <std_msgs/Float32.h>
 #include <std_msgs/Float64.h>
 #include <std_msgs/String.h>
 #include <chrono>
@@ -51,7 +52,8 @@ class mpcRosWrapper{
         void setpoint_timer_cb(const ros::TimerEvent &e);
         void drone_state_pose_cb(const geometry_msgs::PoseStamped::ConstPtr& msg);
         void drone_state_twist_cb(const geometry_msgs::TwistStamped::ConstPtr& msg);
-
+        void NN_trav_pose_cb(const geometry_msgs::PoseStamped::ConstPtr& msg);
+        void NN_trav_time_cb(const std_msgs::Float32::ConstPtr& msg);
 
         //------------------acados solver-------------------
         void solver_request();
@@ -73,6 +75,8 @@ class mpcRosWrapper{
     ros::Subscriber drone_pose_sub_;
     ros::Subscriber drone_twist_sub_;
     ros::Subscriber waypoint_sub_;
+    ros::Subscriber NN_trav_pose_sub_;
+    ros::Subscriber NN_trav_time_sub_;
 
     ros::Publisher next_attitude_setpoint_pub_;
     ros::Publisher weight_vis_pub_;
@@ -92,6 +96,8 @@ class mpcRosWrapper{
 
     // time setting
     double t_tra_abs_=10;
+    double t_tra_rel_=10;
+
     std::chrono::high_resolution_clock::time_point mission_start_time_;
     std::chrono::high_resolution_clock::time_point last_request_time_;
     double pub_freq=100;
@@ -145,5 +151,6 @@ class mpcRosWrapper{
 
     // misc
     bool PRED_TRAJ_VIS_FLAG_=false;
+    bool STATIC_GATE_TEST_=true;
 
 };

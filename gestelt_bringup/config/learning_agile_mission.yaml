@@ -1,5 +1,6 @@
 
 # flight mission
+STATIC_GATE_TEST: false
 traj_server:
   takeoff_height: 1.2
   drone_yaw: 0.0 # take-off yaw
@@ -9,7 +10,7 @@ mission:
   #################################################
   ##------ MPC initial pose ----##
   # initial pose only works for python sim
-  initial_position: [0.0, 1.8, 0]
+  initial_position: [0.0, -3.8, 0]
   initial_ori_euler: [0.0, 0.0, 0.0] # RPY, only yaw is active
 
   ##------ gate pose ----##
@@ -18,7 +19,7 @@ mission:
   gate_ori_RP: [-0.0, -0.3535, 0.0]
 
   ##------ goal pose ----##
-  goal_position: [0.0, -1.8, 1]
+  goal_position: [0.0, 1.8, 1]
   goal_ori_euler: [0.0, 0.0, 0.0] # RPY, only yaw is active
   #################################################
   ######------------- Training -----------#########

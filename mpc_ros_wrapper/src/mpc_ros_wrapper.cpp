@@ -11,6 +11,7 @@ void mpcRosWrapper::init(ros::NodeHandle& nh)
     nh.param("learning_agile/no_solution_flag_t_thresh", no_solution_flag_t_thresh_, 0.02);
     nh.param("learning_agile/single_motor_max_thrust", single_motor_max_thrust_, 2.1334185);
     nh.param("learning_agile/pred_traj_vis", PRED_TRAJ_VIS_FLAG_, false);
+    nh.param("STATIC_GATE_TEST", STATIC_GATE_TEST_, true);
     
     /////////////////
     /* Subscribers */
@@ -19,6 +20,12 @@ void mpcRosWrapper::init(ros::NodeHandle& nh)
     drone_twist_sub_= nh.subscribe("/mavros/local_position/velocity_body", 1, &mpcRosWrapper::drone_state_twist_cb, this);
     waypoint_sub_ = nh.subscribe("/planner/goals_learning_agile", 1, &mpcRosWrapper::mission_start_cb, this);
 
+    if (!STATIC_GATE_TEST_)
+    {
+        NN_trav_pose_sub_ = nh.subscribe("/learning_agile_agent/NN_trav_pose", 1, &mpcRosWrapper::NN_trav_pose_cb, this);
+        NN_trav_time_sub_ = nh.subscribe("/learning_agile_agent/NN_trav_time", 1, &mpcRosWrapper::NN_trav_time_cb, this);
+    }
+    
 
     /////////////////
     /* Publishers */
@@ -82,8 +89,14 @@ void mpcRosWrapper::solver_request(){
     {   
         //t_tra: time to the traverse point relative to the current time
         //t_tra_abs_: absolute time to the traverse point, w.r.t the mission start time
+
         double mission_t_progress= std::chrono::duration_cast<std::chrono::duration<double>>(current_time - mission_start_time_).count();
-        double t_tra=t_tra_abs_-mission_t_progress;   
+        
+        if (STATIC_GATE_TEST_)
+        {
+            t_tra_rel_=t_tra_abs_-mission_t_progress; 
+        }
+        
         // ROS_INFO("t_tra is %f", t_tra);
         for (int i = 0; i < n_nodes_; i++)
         {
@@ -96,7 +109,7 @@ void mpcRosWrapper::solver_request(){
             solver_extern_param.segment(0,10) = des_goal_state_;
             solver_extern_param.segment(10,3) = des_trav_point_;
             solver_extern_param.segment(13,3) = des_trav_rodrigues_;
-            solver_extern_param(16) = t_tra; 
+            solver_extern_param(16) = t_tra_rel_; 
             solver_extern_param(17) = i * dt_; //current node relative time
 
             int NP=18;
@@ -118,7 +131,7 @@ void mpcRosWrapper::solver_request(){
         solver_extern_param.segment(0,10) = des_goal_state_;
         solver_extern_param.segment(10,3) = des_trav_point_;
         solver_extern_param.segment(13,3) = des_trav_rodrigues_;
-        solver_extern_param(16) = t_tra;
+        solver_extern_param(16) = t_tra_rel_;
         solver_extern_param(17) = n_nodes_ * dt_; //current node relative time
         
         double *solver_extern_param_ptr = solver_extern_param.data();
@@ -204,6 +217,18 @@ void mpcRosWrapper::mission_start_cb(const gestelt_msgs::GoalsPtr &msg)
     MISSION_LOADED_FLAG_=true;
     mission_start_time_= std::chrono::high_resolution_clock::now();
     last_request_time_=mission_start_time_;
+}
+
+void mpcRosWrapper::NN_trav_pose_cb(const geometry_msgs::PoseStamped::ConstPtr& msg)
+{
+    des_trav_point_ << msg->pose.position.x, msg->pose.position.y, msg->pose.position.z;
+    des_trav_quat_ << msg->pose.orientation.w, msg->pose.orientation.x, msg->pose.orientation.y, msg->pose.orientation.z;
+    quat_to_rodrigues();
+}
+
+void mpcRosWrapper::NN_trav_time_cb(const std_msgs::Float32::ConstPtr& msg)
+{
+    t_tra_rel_ = msg->data;
 }
 
 

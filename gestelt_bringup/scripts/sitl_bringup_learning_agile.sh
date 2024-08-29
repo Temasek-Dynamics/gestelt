@@ -43,7 +43,11 @@ roslaunch trajectory_server trajectory_server_node.launch rviz_config:=gz_sim
 
 
 # Start up script to send commands
-CMD_3="taskset -c 1 roslaunch gestelt_bringup learning_agile_mission.launch platform:='laptop' LAUNCH_DRONE_NODE:=false record:=true"
+CMD_2="taskset -c 1 roslaunch gestelt_bringup learning_agile_mission.launch platform:='laptop' LAUNCH_DRONE_NODE:=false record:=true"
+
+
+# start up the NN wrapper
+CMD_3="roslaunch gestelt_bringup NN2_ROS_wrapper.launch is_simuation:=true"
 
 # disarm drone
 # CMD_4="rosservice call /drone_commander/disarm"
@@ -61,7 +65,7 @@ then
     sleep 2
     tmux send-keys -t $SESSION:0.1 "$SOURCE_WS $CMD_1" C-m 
     sleep 1
-    tmux send-keys -t $SESSION:0.2 "$SOURCE_WS " #C-m 
+    tmux send-keys -t $SESSION:0.2 "$SOURCE_WS $CMD_2" C-m 
     sleep 1
     tmux send-keys -t $SESSION:0.3 "$SOURCE_WS $CMD_3" C-m
 fi

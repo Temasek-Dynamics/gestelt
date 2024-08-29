@@ -63,7 +63,7 @@ def get_server_state_callback():
     # print(msg)
     # print("==================")
 
-def transform_map_to_world():
+def transform_map_to_world(is_simulation):
     """
     this function calculates the transformation from map to world frame
     world frame is the initial position of the drone
@@ -97,7 +97,7 @@ def create_pose(position,euler_angles):
     pose = Pose()
 
     # transform waypoints from map to world
-    trans,rot=transform_map_to_world()
+    trans,rot=transform_map_to_world(is_simulation)
     pose.position.x = position[0]+trans[0]
     pose.position.y = position[1]+trans[1]
     pose.position.z = position[2]+trans[2]
@@ -114,7 +114,7 @@ def create_trav_pose(position,RP_angles):
     pose = Pose()
 
     # transform waypoints from map to world
-    trans,rot=transform_map_to_world()
+    trans,rot=transform_map_to_world(is_simulation)
     pose.position.x = position[0]+trans[0]
     pose.position.y = position[1]+trans[1]
     pose.position.z = position[2]+trans[2]
