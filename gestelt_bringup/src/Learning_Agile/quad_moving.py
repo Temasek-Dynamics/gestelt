@@ -27,7 +27,7 @@ class kalman:
     def v_es(self, position):
         return position
 
-def binary_search_solver(model, quad_state, final_point, gate1, velo, w ):
+def binary_search_solver(model,device, quad_state, final_point, gate1, velo, w ):
     velo = np.array(velo)
 
     t_guess = magni(gate1.centroid-quad_state[0:3])/3
@@ -41,7 +41,10 @@ def binary_search_solver(model, quad_state, final_point, gate1, velo, w ):
     inputs[14] = atan((gate_x.gate_point[0,2]-gate_x.gate_point[1,2])/(gate_x.gate_point[0,0]-gate_x.gate_point[1,0]))
     inputs[0:10] = gate_x.transform(quad_state)
     inputs[10:13] = gate_x.t_final(final_point)
-    t2 = model(inputs).data.numpy()[6]
+    
+    outputs = model(inputs,device).to('cpu')
+    outputs = outputs.data.numpy()
+    t2 = outputs[6]
 
     while abs(t2-t1)>0.01:
         t1 += (t2-t1)/2
@@ -53,6 +56,9 @@ def binary_search_solver(model, quad_state, final_point, gate1, velo, w ):
         inputs[14] = atan((gate_x.gate_point[0,2]-gate_x.gate_point[1,2])/(gate_x.gate_point[0,0]-gate_x.gate_point[1,0]))
         inputs[0:10] = gate_x.transform(quad_state)
         inputs[10:13] = gate_x.t_final(final_point)
-        t2 = model(inputs).data.numpy()[6]
+        
+        outputs = model(inputs,device).to('cpu')
+        outputs = outputs.data.numpy()
+        t2 = outputs[6]
     
     return t1

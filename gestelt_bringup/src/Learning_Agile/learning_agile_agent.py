@@ -21,19 +21,12 @@ from quad_policy import *
 from quad_nn import *
 from quad_moving import *
 
-# ros
 import numpy as np
-
 import time
 
 
 
-# load the DNN2 model
-abs_dir=os.path.dirname(os.path.abspath(__file__))
-print(abs_dir)
-
-# FILE ="nn3_1.pth"
-
+device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
 class MovingGate():
@@ -41,7 +34,7 @@ class MovingGate():
         
         # initialize the gate1, with the initial gate position
         # env_init_set[7]: gate width
-        gate_point_no_pitch = np.array([[-env_init_set[7]/2,-0,1],[env_init_set[7]/2,-0,1],[env_init_set[7]/2,-0,-1],[-env_init_set[7]/2,-0,-1]])
+        gate_point_no_pitch = np.array([[-env_init_set[7]/2,-0,2.5],[env_init_set[7]/2,-0,2.5],[env_init_set[7]/2,-0,0.5],[-env_init_set[7]/2,-0,0.5]])
         self.gate1 = gate(gate_point_no_pitch)
         self.gate_init_p = env_init_set[8]
         
@@ -67,11 +60,8 @@ class MovingGate():
         # gate pitch angular velocity
         self.w = gate_w 
          
-        self.gate_move, self.V = self.gate1.move(v = self.v ,w = self.w,dt=dt)
+        self.gate_points_list, self.V = self.gate1.move(v = self.v ,w = self.w,dt=dt)
 
-        # self.gate_move=np.zeros([1,4,3])
-        # self.V=np.zeros([1,3])
-        # return self.w
     
 class LearningAgileAgent():
     def __init__(self,python_sim_time,yaml_file,model_file) -> None:
@@ -87,7 +77,7 @@ class LearningAgileAgent():
             self.config_dict = yaml.safe_load(file)
 
         # load trained DNN2 model
-        self.model = torch.load(model_file).to('cpu')
+        self.model = torch.load(model_file)
     
 
         ##-------------------- planning variables --------------------------##
@@ -200,8 +190,8 @@ class LearningAgileAgent():
 
         ##---------------------gate initialization ------------------------##
         self.moving_gate.let_gate_move(dt=self.dyn_step,gate_v=gate_v,gate_w=gate_w)
-        self.gate_move = self.moving_gate.gate_move
-        self.gate_n = gate(self.gate_move[0])
+        self.gate_points_list = self.moving_gate.gate_points_list
+        self.gate_n = gate(self.gate_points_list[0])
 
         ##-------------- initial guess of the traversal time---------------##
         self.t_guess = magni(self.gate_n.centroid-self.state[0:3])/1
@@ -219,18 +209,18 @@ class LearningAgileAgent():
 
         
         if self.STATIC_GATE_TEST:
-            self.gate_n = gate(self.gate_move[0])
+            self.gate_n = gate(self.gate_points_list[0])
 
             # self.t_tra_abs is manually set
             self.t_tra_rel=self.t_tra_abs-self.i*self.dyn_step
 
         else:
 
-            self.gate_n = gate(self.gate_move[self.i])
+            self.gate_n = gate(self.gate_points_list[self.i])
             # print('gate_n.centroid=',self.gate_n.centroid)
             ## binary search for the traversal time
             ## to set the drone state under the gate frame, for the NN2 input
-            self.t_tra_rel = binary_search_solver(self.model,self.state,self.final_point,self.gate_n,self.moving_gate.V[self.i],self.moving_gate.w)
+            self.t_tra_rel = binary_search_solver(self.model,device,self.state,self.final_point,self.gate_n,self.moving_gate.V[self.i],self.moving_gate.w)
             self.t_tra_abs = self.t_tra_rel+self.i*self.dyn_step
 
     
@@ -271,10 +261,10 @@ class LearningAgileAgent():
                 # decision variable is updated in 100 hz
                 self.gate_state_estimation()
               
-                nn_mpc_inputs = np.zeros(15)
+                nn2_inputs = np.zeros(15)
                 if self.STATIC_GATE_TEST:
-                    nn_mpc_inputs[0:10] = self.state 
-                    nn_mpc_inputs[10:13] = self.final_point
+                    nn2_inputs[0:10] = self.state 
+                    nn2_inputs[10:13] = self.final_point
                     
 
                     # manually set the traversal time and pose
@@ -286,25 +276,26 @@ class LearningAgileAgent():
                     out[6]=self.t_tra_rel
                 else:
                     # drone state under the predicted gate frame(based on the binary search)
-                    nn_mpc_inputs[0:10] = self.gate_n.transform(self.state)
-                    nn_mpc_inputs[10:13] = self.gate_n.t_final(self.final_point)
+                    nn2_inputs[0:10] = self.gate_n.transform(self.state)
+                    nn2_inputs[10:13] = self.gate_n.t_final(self.final_point)
 
                     # width of the gate
-                    nn_mpc_inputs[13] = magni(self.gate_n.gate_point[0,:]-self.gate_n.gate_point[1,:]) # gate width
+                    nn2_inputs[13] = magni(self.gate_n.gate_point[0,:]-self.gate_n.gate_point[1,:]) # gate width
                     # pitch angle of the gate
-                    nn_mpc_inputs[14] = atan((self.gate_n.gate_point[0,2]-self.gate_n.gate_point[1,2])/(self.gate_n.gate_point[0,0]-self.gate_n.gate_point[1,0])) # compute the actual gate pitch ange in real-time
+                    nn2_inputs[14] = atan((self.gate_n.gate_point[0,2]-self.gate_n.gate_point[1,2])/(self.gate_n.gate_point[0,0]-self.gate_n.gate_point[1,0])) # compute the actual gate pitch ange in real-time
 
                     # NN2 OUTPUT the traversal time and pose
-                    out = self.model(nn_mpc_inputs).data.numpy()
+                    out = self.model(nn2_inputs,device).to('cpu')
+                    out = out.data.numpy()
                     self.NN_T_tra = np.concatenate((self.NN_T_tra,[out[6]]),axis = 0)
                     # print('tra_position=',out[0:3],'tra_time_dnn2=',out[6])
                     print('tra_orientation',out[3:6])
                     # transfer the gate position to the gate frame
-                    self.quad1.update_goal_pos(nn_mpc_inputs[10:13])
+                    self.quad1.update_goal_pos(nn2_inputs[10:13])
                 t_comp = time.time()
                 
                 
-                cmd_solution,NO_SOLUTION_FLAG  = self.quad1.mpc_update(nn_mpc_inputs[0:10],
+                cmd_solution,NO_SOLUTION_FLAG  = self.quad1.mpc_update(nn2_inputs[0:10],
                                                     self.u,
                                                     out[0:3],
                                                     out[3:6],
@@ -329,7 +320,7 @@ class LearningAgileAgent():
             # self.hl_variable = np.concatenate((self.hl_variable,[out]),axis=0)       
             
         print('MPC finished')   
-        np.save(os.path.join(python_sim_data_folder,'gate_move_traj'),self.gate_move)
+        np.save(os.path.join(python_sim_data_folder,'gate_points_list_traj'),self.gate_points_list)
         np.save(os.path.join(python_sim_data_folder,'uav_traj'),self.state_n)
         np.save(os.path.join(python_sim_data_folder,'uav_ctrl'),self.control_n)
         np.save(os.path.join(python_sim_data_folder,'abs_tra_time'),self.Ttra)
@@ -339,7 +330,7 @@ class LearningAgileAgent():
         np.save(os.path.join(python_sim_data_folder,'HL_Variable'),self.hl_variable)
         np.save(os.path.join(python_sim_data_folder,'solving_time'),self.solving_time)
         self.quad1.uav1.play_animation(wing_len=1.5,
-                                       gate_traj1=self.gate_move[::5,:,:],
+                                       gate_traj1=self.gate_points_list[::5,:,:],
                                        state_traj=self.state_n[::5,:],
                                        goal_pos=self.final_point.tolist(),
                                        dt=self.dyn_step)
@@ -356,7 +347,7 @@ class LearningAgileAgent():
         self.quad1.uav1.plot_3D_traj(wing_len=self.quad1.wing_len,
                                     uav_height=self.quad1.uav_height/2,
                                     state_traj=self.state_n[::50,:],
-                                    gate_traj=self.gate_move[::50,:,:])
+                                    gate_traj=self.gate_points_list[::50,:,:])
 
 
         # self.quad1.uav1.plot_T(control_tm)
@@ -369,12 +360,12 @@ def main():
     #####---------------------- TEST option -------------------------#######
     ########################################################################
     NN2_model_name = 'NN2_imitate_1.pth'
-    STATIC_GATE_TEST = True
+    STATIC_GATE_TEST = False
     gate_v = np.array([-1,-0.3,0.4])
     gate_w = pi/2 
     # gate_v = np.array([0,0,0])
     # gate_w = 0
-
+    
     # yaml file dir#
     conf_folder=os.path.abspath(os.path.join(current_dir, '..', '..','config'))
     yaml_file = os.path.join(conf_folder, 'learning_agile_mission.yaml')

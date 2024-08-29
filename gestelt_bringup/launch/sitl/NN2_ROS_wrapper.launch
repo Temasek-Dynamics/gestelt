@@ -1,0 +1,10 @@
+<launch>
+
+  
+    <rosparam file="$(find gestelt_bringup)/config/learning_agile_mission.yaml" command="load"/>
+    <node pkg="gestelt_bringup" name="NN_wrapper" type="NN2_ROS_wrapper.py" output="screen">
+      
+    </node>
+  
+  
+</launch>

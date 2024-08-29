@@ -1036,7 +1036,7 @@ class gate:
     ## given constant velocity and angular velocity around y axis, return a sequence of position representing the random move of the gate 
     def move(self, T = 5, dt = 0.01, v = [0,0,0], w = 0):
         gate_point = self.gate_point
-        move = [gate_point]
+        gate_points_list = [gate_point]
         velo = np.array(v) 
         V    = [velo]
         
@@ -1053,9 +1053,9 @@ class gate:
             # translation
             for j in range(4):
                 gate_point[j] += dt * (velo+v_noise)
-            move = np.concatenate((move,[gate_point]),axis=0)
+            gate_points_list = np.concatenate((gate_points_list,[gate_point]),axis=0)
             V    = np.concatenate((V,[velo+v_noise]),axis=0)
-        return move, V
+        return gate_points_list, V
     
     ## transform the state in world frame to the state in window frame
     def transform(self, inertial_state):

@@ -4,23 +4,38 @@ traj_server:
   takeoff_height: 1.2
   drone_yaw: 0.0 # take-off yaw
 mission:
-
   #################################################
   ######--------- aggressive test --------#########
   #################################################
   ##------ MPC initial pose ----##
   # initial pose only works for python sim
-  initial_position: [0.0, -6, 0]
-  initial_ori_euler: [0.0, 0.0, 0] # RPY, only yaw is active
+  initial_position: [0.0, 1.8, 0]
+  initial_ori_euler: [0.0, 0.0, 0.0] # RPY, only yaw is active
 
   ##------ gate pose ----##
   # only feasible for STATIC_GATE_TEST
-  gate_position: [1.0, -0.0, 1.5]
-  gate_ori_RP: [-0.0, -0.3535, -0.3535]
+  gate_position: [1.0, 0.0, 1.5]
+  gate_ori_RP: [-0.0, -0.3535, 0.0]
 
   ##------ goal pose ----##
-  goal_position: [0.0, 3, 0]
-  goal_ori_euler: [0.0, 0.0,0] # RPY, only yaw is active
+  goal_position: [0.0, -1.8, 1]
+  goal_ori_euler: [0.0, 0.0, 0.0] # RPY, only yaw is active
+  #################################################
+  ######------------- Training -----------#########
+  #################################################
+  # ##------ MPC initial pose ----##
+  # # initial pose only works for python sim
+  # initial_position: [0.0, -6, 0]
+  # initial_ori_euler: [0.0, 0.0, 0] # RPY, only yaw is active
+
+  # ##------ gate pose ----##
+  # # only feasible for STATIC_GATE_TEST
+  # gate_position: [1.0, -0.0, 1.5]
+  # gate_ori_RP: [-0.0, -0.3535, -0.3535]
+
+  # ##------ goal pose ----##
+  # goal_position: [0.0, 3, 0]
+  # goal_ori_euler: [0.0, 0.0,0] # RPY, only yaw is active
 
   #################################################
   ######-----end of aggressive test ----------#####
