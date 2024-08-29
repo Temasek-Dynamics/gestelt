@@ -257,10 +257,11 @@ class LearningAgileAgent():
             self.Time = np.concatenate((self.Time,[self.i*self.dyn_step]),axis = 0)
             self.Pitch = np.concatenate((self.Pitch,[self.gap_pitch]),axis = 0)      
             
-            if (self.i%5)==0: # control frequency = 100 hz
-                # decision variable is updated in 100 hz
+            if (self.i%25)==0: # estimation frequency = 20 hz 
+                # decision variable is updated in 20 hz
                 self.gate_state_estimation()
-              
+
+            if (self.i%5)==0: # control frequency = 100 hz  
                 nn2_inputs = np.zeros(15)
                 if self.STATIC_GATE_TEST:
                     nn2_inputs[0:10] = self.state 
@@ -288,16 +289,14 @@ class LearningAgileAgent():
                     out = self.model(nn2_inputs,device).to('cpu')
                     out = out.data.numpy()
                     self.NN_T_tra = np.concatenate((self.NN_T_tra,[out[6]]),axis = 0)
-                    # print('tra_position=',out[0:3],'tra_time_dnn2=',out[6])
-                    print('tra_orientation',out[3:6])
-                    # transfer the gate position to the gate frame
-                    self.quad1.update_goal_pos(nn2_inputs[10:13])
+                    
+                    
                 t_comp = time.time()
                 
                 
-                cmd_solution,NO_SOLUTION_FLAG  = self.quad1.mpc_update(nn2_inputs[0:10],
+                cmd_solution,NO_SOLUTION_FLAG  = self.quad1.mpc_update(self.state,
                                                     self.u,
-                                                    out[0:3],
+                                                    out[0:3]+self.gate_n.centroid,
                                                     out[3:6],
                                                     out[6]) # control input 4-by-1 thrusts to pybullet
                 
@@ -344,10 +343,10 @@ class LearningAgileAgent():
         # self.quad1.uav1.plot_trav_weight(self.tra_weight_list)
         self.quad1.uav1.plot_trav_time(self.T)
         self.quad1.uav1.plot_solving_time(self.solving_time)
-        self.quad1.uav1.plot_3D_traj(wing_len=self.quad1.wing_len,
-                                    uav_height=self.quad1.uav_height/2,
-                                    state_traj=self.state_n[::50,:],
-                                    gate_traj=self.gate_points_list[::50,:,:])
+        # self.quad1.uav1.plot_3D_traj(wing_len=self.quad1.wing_len,
+        #                             uav_height=self.quad1.uav_height/2,
+        #                             state_traj=self.state_n[::50,:],
+        #                             gate_traj=self.gate_points_list[::50,:,:])
 
 
         # self.quad1.uav1.plot_T(control_tm)
@@ -355,22 +354,23 @@ class LearningAgileAgent():
     
         
 def main():
+    # yaml file dir#
+    conf_folder=os.path.abspath(os.path.join(current_dir, '..', '..','config'))
+    yaml_file = os.path.join(conf_folder, 'learning_agile_mission.yaml')
+    python_sim_data_folder = os.path.join(current_dir, 'python_sim_result')
+    
 
     ########################################################################
     #####---------------------- TEST option -------------------------#######
     ########################################################################
     NN2_model_name = 'NN2_imitate_1.pth'
+    model_file=os.path.join(current_dir, 'training_data/NN_model',NN2_model_name)
     STATIC_GATE_TEST = False
-    gate_v = np.array([-1,-0.3,0.4])
-    gate_w = pi/2 
+    
     # gate_v = np.array([0,0,0])
     # gate_w = 0
     
-    # yaml file dir#
-    conf_folder=os.path.abspath(os.path.join(current_dir, '..', '..','config'))
-    yaml_file = os.path.join(conf_folder, 'learning_agile_mission.yaml')
-    python_sim_data_folder = os.path.join(current_dir, 'python_sim_result')
-    model_file=os.path.join(current_dir, 'training_data/NN_model',NN2_model_name)
+    
     
     # create the learning agile agent
     learing_agile_agent=LearningAgileAgent(python_sim_time=5,
@@ -382,6 +382,8 @@ def main():
     #####---------------------- load config -------------------------#######
     ########################################################################
     config_dict = learing_agile_agent.config_dict
+    gate_v = np.array(config_dict['gate']['linear_vel'])
+    gate_w = config_dict['gate']['angular_vel'] 
     learing_agile_agent.receive_mission_states( STATIC_GATE_TEST,
                                                 ini_pos=np.array(config_dict['mission']['initial_position']),
                                                 end_pos=np.array(config_dict['mission']['goal_position']),

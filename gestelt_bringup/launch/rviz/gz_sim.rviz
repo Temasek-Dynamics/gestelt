@@ -319,7 +319,7 @@ Visualization Manager:
       Shaft Length: 1
       Shaft Radius: 0.05000000074505806
       Shape: Axes
-      Topic: /learning_agile_agent/NN_trav_pose_viz
+      Topic: /learning_agile_agent/NN_trav_pose
       Unreliable: false
       Value: true
   Enabled: true
@@ -367,9 +367,9 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.8303983211517334
+      Pitch: 0.3353983163833618
       Target Frame: my_view
-      Yaw: 5.329036235809326
+      Yaw: 4.259037017822266
     Saved:
       - Class: rviz/FPS
         Enable Stereo Rendering:

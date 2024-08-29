@@ -214,6 +214,10 @@ void mpcRosWrapper::mission_start_cb(const gestelt_msgs::GoalsPtr &msg)
     des_goal_state_.segment(3,3) = des_goal_vel_;
     des_goal_state_.segment(6,4) = des_goal_quat_;
 
+    // wait for the NN to publish the traverse time
+    ROS_INFO("Mission loaded, will sleep 1s for the NN to publish the traverse time");
+    ros::Duration(1).sleep();
+
     MISSION_LOADED_FLAG_=true;
     mission_start_time_= std::chrono::high_resolution_clock::now();
     last_request_time_=mission_start_time_;

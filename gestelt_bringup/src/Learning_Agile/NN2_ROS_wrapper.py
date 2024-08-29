@@ -22,7 +22,7 @@ from quad_nn import *
 from quad_moving import *
 
 import rospy
-from gestelt_msgs.msg import Goals, NNOutputDecisionVariables
+from gestelt_msgs.msg import Goals, NNOutputDecisionVariables, CommanderState
 from geometry_msgs.msg import Pose, Accel,PoseArray,AccelStamped, Twist, PoseStamped, TwistStamped
 from mavros_msgs.msg import PositionTarget
 from std_msgs.msg import Int8, Bool,Float32
@@ -41,7 +41,29 @@ STATIC_GATE_TEST = rospy.get_param('STATIC_GATE_TEST', True)
 is_simulation=rospy.get_param('mission/is_simulation', False)
 goal_position=rospy.get_param('mission/goal_position', [0.0,0.0,1.2])
 goal_ori_euler=rospy.get_param('mission/goal_ori_euler', [0,0,0])
+gate_v = rospy.get_param('gate/linear_vel', [0,0,0])
+gate_w = rospy.get_param('gate/angular_vel', 0)
+###============================== Dictionary of UAV states =================================##
+server_states = {}
 
+# Check if UAV has achived desired traj_server_state
+def check_traj_server_states(des_traj_server_state):
+    if len(server_states.items()) == 0:
+        print("No Server states received!")
+        return False
+    
+    for server_state in server_states.items():
+        # print(f"{server_state[0]}: {des_traj_server_state}")
+        if server_state[1].traj_server_state != des_traj_server_state:
+            return False
+    return True
+
+def get_server_state_callback():
+    msg = rospy.wait_for_message(f"/traj_server/state", CommanderState, timeout=5.0)
+    server_states[str(msg.drone_id)] = msg
+    # print("==================")
+    # print(msg)
+    # print("==================")
 class NN2_ROS_wrapper:
     def __init__(self,
                 NN2_freq,
@@ -50,8 +72,9 @@ class NN2_ROS_wrapper:
                 gate_w=0):
         
         ## ==========================initialize ==========================-##
+        self.NN2_freq = NN2_freq
         self.state = np.zeros(10)
-        self.gate_step = 1/NN2_freq # consistent with the python simulation
+        self.gate_step = 1/500 # consistent with the python simulation
         self.MISSION_START = False
         self.RECEIVED_DRONE_POSE = False
         self.RECEIVED_DRONE_TWIST = False
@@ -64,7 +87,7 @@ class NN2_ROS_wrapper:
         self.NN_trav_pose_pub = rospy.Publisher("/learning_agile_agent/NN_trav_pose", PoseStamped, queue_size=10)
         self.NN_trav_time_pub = rospy.Publisher("/learning_agile_agent/NN_trav_time", Float32, queue_size=10)
 
-        self.NN_trav_pose_viz_pub = rospy.Publisher("/learning_agile_agent/NN_trav_pose_viz", PoseStamped, queue_size=10)
+        
         self.NN2_output_timer = rospy.Timer(rospy.Duration(1/NN2_freq), self.NN2_forward)
         
         ##================- load trained DNN2 model ======================-##
@@ -123,15 +146,22 @@ class NN2_ROS_wrapper:
         forward the neural network 2
         drone state input is under the world frame
         """
-   
+        get_server_state_callback()
         if self.MISSION_START and self.RECEIVED_DRONE_TWIST and self.RECEIVED_DRONE_POSE:
             
             ##================= call the gate state estimation function ================##
             ##====frequency of the gate state estimation is the same as the NN2 ========##
             curr_time = rospy.Time.now().to_sec()
-            self.i = int((curr_time-self.mission_start_time)/self.gate_step)
 
-            if self.i>500:
+            if self.MISSION_START:
+
+                # 1 second delay for loading the model
+                self.i = int((curr_time-(self.mission_start_time+1))*self.NN2_freq)
+                # print("i",self.i)
+            else:
+                self.i = 0
+            
+            if self.i>5*self.NN2_freq:
                 self.NN2_output_timer.shutdown()
                 print("Reach Maximum Time, NN2 output timer shutdown")
                 return
@@ -177,30 +207,22 @@ class NN2_ROS_wrapper:
             NN_trav_pose_msg.pose.orientation.z = quat[3]
             
             NN_trav_time_msg = Float32()
-            NN_trav_time_msg.data = self.t_tra_abs
+            NN_trav_time_msg.data = self.t_tra_rel
 
-            ##====================only for visualization========================##
-            NN_trav_pose_viz_msg = PoseStamped()
-            NN_trav_pose_viz_msg.header.stamp = rospy.Time.now()
-            NN_trav_pose_viz_msg.header.frame_id = "world"
-            NN_trav_pose_viz_msg.pose.position.x = out[0]+self.trans[0]+self.gate_n.centroid[0]
-            NN_trav_pose_viz_msg.pose.position.y = out[1]+self.trans[1]+self.gate_n.centroid[1]
-            NN_trav_pose_viz_msg.pose.position.z = out[2]+self.trans[2]+self.gate_n.centroid[2]
-            NN_trav_pose_viz_msg.pose.orientation.w = quat[0]
-            NN_trav_pose_viz_msg.pose.orientation.x = quat[1]
-            NN_trav_pose_viz_msg.pose.orientation.y = quat[2]
-            NN_trav_pose_viz_msg.pose.orientation.z = quat[3]
+    
         
             self.NN_trav_pose_pub.publish(NN_trav_pose_msg)
             self.NN_trav_time_pub.publish(NN_trav_time_msg)
-            self.NN_trav_pose_viz_pub.publish(NN_trav_pose_viz_msg)
+           
 
     def mission_start_cb(self,msg):
         """
         once this message is received, the mission starts
         """
         print("Detect Mission Start")
-        self.final_point = np.array([msg.waypoints[1].position.x,msg.waypoints[1].position.y,msg.waypoints[1].position.z])
+        self.final_point = np.array([msg.waypoints[1].position.x-self.trans[0],
+                                     msg.waypoints[1].position.y-self.trans[1],
+                                     msg.waypoints[1].position.z-self.trans[2]])
         self.mission_start_time = rospy.Time.now().to_sec()
         self.MISSION_START = True
 
@@ -237,14 +259,14 @@ if __name__ == '__main__':
     python_sim_data_folder = os.path.join(current_dir, 'python_sim_result')
     model_file=os.path.join(current_dir, 'training_data/NN_model',NN2_model_name)
 
-    if STATIC_GATE_TEST:
-        rospy.signal_shutdown("STATIC_GATE_TEST is True, no need to run the NN2_ROS_wrapper")
-    else:
-        ##=================initialize the node====================================##
-        rospy.init_node('NN2_ROS_wrapper', anonymous=True)
-        nn2_node=NN2_ROS_wrapper(NN2_freq=100,
-                                model_file=model_file,
-                                gate_v=np.array([0,0,0]),
-                                gate_w=0)    
-        
-        rospy.spin()
+    # if STATIC_GATE_TEST:
+    #     rospy.signal_shutdown("STATIC_GATE_TEST is True, no need to run the NN2_ROS_wrapper")
+    # else:
+    ##=================initialize the node====================================##
+    rospy.init_node('NN2_ROS_wrapper', anonymous=True)
+    nn2_node=NN2_ROS_wrapper(NN2_freq=100,
+                            model_file=model_file,
+                            gate_v=np.array(gate_v),
+                            gate_w=gate_w)    
+    
+    rospy.spin()

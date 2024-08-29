@@ -30,7 +30,7 @@ class kalman:
 def binary_search_solver(model,device, quad_state, final_point, gate1, velo, w ):
     velo = np.array(velo)
 
-    t_guess = magni(gate1.centroid-quad_state[0:3])/3
+    t_guess = magni(gate1.centroid-quad_state[0:3])/1
     
     t1 = t_guess
     gate_x = gate(gate1.translate_out(velo*t1))
@@ -46,7 +46,7 @@ def binary_search_solver(model,device, quad_state, final_point, gate1, velo, w )
     outputs = outputs.data.numpy()
     t2 = outputs[6]
 
-    while abs(t2-t1)>0.01:
+    while abs(t2-t1)>0.1:
         t1 += (t2-t1)/2
         gate_x = gate(gate1.translate_out(velo*t1)) # prediction of the gap future position
         gate_x.rotate_y(w*t1)
