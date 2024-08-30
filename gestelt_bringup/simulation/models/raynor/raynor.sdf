@@ -743,7 +743,7 @@
       <gyroscopeRandomWalk>3.8785e-15</gyroscopeRandomWalk>
       <gyroscopeBiasCorrelationTime>0000.0</gyroscopeBiasCorrelationTime>
       <gyroscopeTurnOnBiasSigma>0.000</gyroscopeTurnOnBiasSigma>
-      <accelerometerNoiseDensity>0.0010</accelerometerNoiseDensity>
+      <accelerometerNoiseDensity>0.0000</accelerometerNoiseDensity>
       <accelerometerRandomWalk>0.000</accelerometerRandomWalk>
       <accelerometerBiasCorrelationTime>000.0</accelerometerBiasCorrelationTime>
       <accelerometerTurnOnBiasSigma>0.00</accelerometerTurnOnBiasSigma>

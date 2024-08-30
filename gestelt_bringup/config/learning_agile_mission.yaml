@@ -6,8 +6,8 @@ STATIC_GATE_TEST: false
 gate:
   # linear_vel: [0.0, 0.0, 0.0]
   # angular_vel: 0.0 
-  linear_vel: [1,0.3,0.4]
-  angular_vel: 0.707
+  linear_vel: [1.0,0.3,0.4]
+  angular_vel: -0.707
 traj_server:
   takeoff_height: 1.2
   drone_yaw: 0.0 # take-off yaw
@@ -17,7 +17,7 @@ mission:
   #################################################
   ##------ MPC initial pose ----##
   # initial pose only works for python sim
-  initial_position: [0.0, -3.8, 0]
+  initial_position: [0.0, -1.8, 0]
   initial_ori_euler: [0.0, 0.0, 0.0] # RPY, only yaw is active
 
   ##------ gate pose ----##
@@ -81,27 +81,27 @@ learning_agile:
   # wwf: final angular velocity cost
   
   ##-----parameters for testing ------##
-  wrt: 5.0
-  wqt: 80.0
-  wthrust: 1.0
-  wwt: 10.0
-  wrf: 5.0
-  wvf: 1.0
-  wqf: 1.0
-  wInputDiff: 1 
-
-  ##-----parameters for training ------## 
-  #### for a stabler training,######## 
   # wrt: 5.0
   # wqt: 80.0
-  # wthrust: 10.0
-  # wwt: 100.0
+  # wthrust: 1.0
+  # wwt: 10.0
   # wrf: 5.0
   # wvf: 1.0
   # wqf: 1.0
-  # wInputDiff: 10
+  # wInputDiff: 1 
+
+  ##-----parameters for training ------## 
+  #### for a stabler training,######## 
+  wrt: 10.0
+  wqt: 80.0
+  wthrust: 10.0
+  wwt: 100.0
+  wrf: 5.0
+  wvf: 1.0
+  wqf: 1.0
+  wInputDiff: 10
   ##------ traversing parameters ---##
-  max_traverse_weight: 70 #70
+  max_traverse_weight: 40 #70
   traverse_weight_span: 10
   traverse_time: 1.5  
 
@@ -141,7 +141,7 @@ learning_agile:
   linear_vel_bound: 5 #m/s
 
   # angular velocity constraints
-  angular_vel_bound: 10.57 #rad/s
+  angular_vel_bound: 7.57 #rad/s
 
 
   ## ----- miscellaneous parameters  ----##
