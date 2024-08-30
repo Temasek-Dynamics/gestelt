@@ -66,12 +66,14 @@ def get_server_state_callback():
     # print("==================")
 class NN2_ROS_wrapper:
     def __init__(self,
+                mission_period,
                 NN2_freq,
                 model_file,
                 gate_v=np.array([0,0,0]),
                 gate_w=0):
         
         ## ==========================initialize ==========================-##
+        self.mission_period = mission_period
         self.NN2_freq = NN2_freq
         self.state = np.zeros(10)
         self.gate_step = 1/500 # consistent with the python simulation
@@ -82,11 +84,13 @@ class NN2_ROS_wrapper:
 
         ##======== declare the subscriber and the receiver================-##
         rospy.Subscriber("/mavros/local_position/pose", PoseStamped, self.drone_pose_cb)
-        rospy.Subscriber("/mavros/local_position/velocity_body", TwistStamped, self.drone_twist_cb)
+        rospy.Subscriber("/mavros/local_position/velocity_local", TwistStamped, self.drone_twist_cb)
         rospy.Subscriber("/planner/goals_learning_agile", Goals, self.mission_start_cb)
-        self.NN_trav_pose_pub = rospy.Publisher("/learning_agile_agent/NN_trav_pose", PoseStamped, queue_size=10)
-        self.NN_trav_time_pub = rospy.Publisher("/learning_agile_agent/NN_trav_time", Float32, queue_size=10)
+        self.NN_trav_pose_pub = rospy.Publisher("/learning_agile_agent/NN_trav_pose", PoseStamped, queue_size=1)
+        self.NN_trav_time_pub = rospy.Publisher("/learning_agile_agent/NN_trav_time", Float32, queue_size=1)
 
+        self.B_S_time_pub = rospy.Publisher("/learning_agile_agent/B_S_time", Float32, queue_size=1)
+        self.NN_forward_time_pub = rospy.Publisher("/learning_agile_agent/NN_forward_time", Float32, queue_size=1)
         
         self.NN2_output_timer = rospy.Timer(rospy.Duration(1/NN2_freq), self.NN2_forward)
         
@@ -155,23 +159,22 @@ class NN2_ROS_wrapper:
 
             if self.MISSION_START:
 
-                # 1 second delay for loading the model
-                self.i = int((curr_time-(self.mission_start_time+1))*self.NN2_freq)
+                self.i = int((curr_time-(self.mission_start_time))*self.NN2_freq)
                 # print("i",self.i)
             else:
                 self.i = 0
             
-            if self.i>5*self.NN2_freq:
+            if self.i>self.mission_period*self.NN2_freq:
                 self.NN2_output_timer.shutdown()
                 print("Reach Maximum Time, NN2 output timer shutdown")
                 return
             
+            t_comp = time.time()
             self.gate_state_estimation()
-
+            B_S_time=time.time()-t_comp
             ##============================ NN2 input ===================================##
             nn2_inputs = np.zeros(15)
 
-            
            
             # drone state under the predicted gate frame(based on the binary search)
             nn2_inputs[0:10] = self.gate_n.transform(self.state)
@@ -183,16 +186,15 @@ class NN2_ROS_wrapper:
             nn2_inputs[14] = atan((self.gate_n.gate_point[0,2]-self.gate_n.gate_point[1,2])/(self.gate_n.gate_point[0,0]-self.gate_n.gate_point[1,0])) # compute the actual gate pitch angle in real-time
 
             # NN2 OUTPUT the traversal time and pose
+            t_comp = time.time()
             out = self.model(nn2_inputs,device).to('cpu')
+            NN_forward_time=time.time()-t_comp
             out = out.data.numpy()
     
             ## transfer from Rodrigues parameters to quaternion
             atti = Rd2Rp(out[3:6])   
             quat=toQuaternion(atti[0],atti[1])
 
-            ## TODO: publish the goal position w.r.t the gate frame to the MPC wrapper as well
-            # transfer the gate position to the gate frame
-            # self.quad1.update_goal_pos(nn2_inputs[10:13])
             
             # wrap the NN output as the message
             NN_trav_pose_msg = PoseStamped()
@@ -207,13 +209,17 @@ class NN2_ROS_wrapper:
             NN_trav_pose_msg.pose.orientation.z = quat[3]
             
             NN_trav_time_msg = Float32()
-            NN_trav_time_msg.data = self.t_tra_rel
+            NN_forward_time_msg = Float32()
+            B_S_time_msg = Float32()
 
-    
+            NN_trav_time_msg.data = self.t_tra_rel
+            NN_forward_time_msg.data = NN_forward_time
+            B_S_time_msg.data = B_S_time
         
             self.NN_trav_pose_pub.publish(NN_trav_pose_msg)
             self.NN_trav_time_pub.publish(NN_trav_time_msg)
-           
+            self.NN_forward_time_pub.publish(NN_forward_time_msg)
+            self.B_S_time_pub.publish(B_S_time_msg)
 
     def mission_start_cb(self,msg):
         """
@@ -248,6 +254,8 @@ class NN2_ROS_wrapper:
         self.state[4] = msg.twist.linear.y
         self.state[5] = msg.twist.linear.z
         self.RECEIVED_DRONE_TWIST = True
+
+
 if __name__ == '__main__':
     ##========================= Test Options ================================##
     NN2_model_name = 'NN2_imitate_1.pth'
@@ -259,14 +267,12 @@ if __name__ == '__main__':
     python_sim_data_folder = os.path.join(current_dir, 'python_sim_result')
     model_file=os.path.join(current_dir, 'training_data/NN_model',NN2_model_name)
 
-    # if STATIC_GATE_TEST:
-    #     rospy.signal_shutdown("STATIC_GATE_TEST is True, no need to run the NN2_ROS_wrapper")
-    # else:
+
     ##=================initialize the node====================================##
     rospy.init_node('NN2_ROS_wrapper', anonymous=True)
-    nn2_node=NN2_ROS_wrapper(NN2_freq=100,
+    nn2_node=NN2_ROS_wrapper(mission_period=5,
+                            NN2_freq=100,
                             model_file=model_file,
                             gate_v=np.array(gate_v),
                             gate_w=gate_w)    
-    
     rospy.spin()

@@ -17,7 +17,7 @@ void mpcRosWrapper::init(ros::NodeHandle& nh)
     /* Subscribers */
     /////////////////
     drone_pose_sub_= nh.subscribe("/mavros/local_position/pose", 1, &mpcRosWrapper::drone_state_pose_cb, this);
-    drone_twist_sub_= nh.subscribe("/mavros/local_position/velocity_body", 1, &mpcRosWrapper::drone_state_twist_cb, this);
+    drone_twist_sub_= nh.subscribe("/mavros/local_position/velocity_local", 1, &mpcRosWrapper::drone_state_twist_cb, this);
     waypoint_sub_ = nh.subscribe("/planner/goals_learning_agile", 1, &mpcRosWrapper::mission_start_cb, this);
 
     if (!STATIC_GATE_TEST_)
@@ -202,10 +202,12 @@ void mpcRosWrapper::drone_state_twist_cb(const geometry_msgs::TwistStamped::Cons
 }
 
 void mpcRosWrapper::mission_start_cb(const gestelt_msgs::GoalsPtr &msg)
-{
-    des_trav_point_ << msg->waypoints[0].position.x, msg->waypoints[0].position.y, msg->waypoints[0].position.z;
-    des_trav_quat_ << msg->waypoints[0].orientation.w, msg->waypoints[0].orientation.x, msg->waypoints[0].orientation.y, msg->waypoints[0].orientation.z;
-    quat_to_rodrigues();
+{   
+    if (STATIC_GATE_TEST_)
+    {   des_trav_point_ << msg->waypoints[0].position.x, msg->waypoints[0].position.y, msg->waypoints[0].position.z;
+        des_trav_quat_ << msg->waypoints[0].orientation.w, msg->waypoints[0].orientation.x, msg->waypoints[0].orientation.y, msg->waypoints[0].orientation.z;
+        quat_to_rodrigues();
+    }
     des_goal_point_ << msg->waypoints[1].position.x, msg->waypoints[1].position.y, msg->waypoints[1].position.z;
     des_goal_quat_ << msg->waypoints[1].orientation.w, msg->waypoints[1].orientation.x, msg->waypoints[1].orientation.y, msg->waypoints[1].orientation.z;
     
