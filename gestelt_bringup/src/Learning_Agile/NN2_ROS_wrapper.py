@@ -150,7 +150,7 @@ class NN2_ROS_wrapper:
         forward the neural network 2
         drone state input is under the world frame
         """
-        get_server_state_callback()
+       
         if self.MISSION_START and self.RECEIVED_DRONE_TWIST and self.RECEIVED_DRONE_POSE:
             
             ##================= call the gate state estimation function ================##
