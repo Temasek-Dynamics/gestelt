@@ -3,7 +3,7 @@
    <rosparam file="$(find gestelt_bringup)/config/learning_agile_mission.yaml" command="load"/>
   <!-- initial position -->
   <arg name="init_x" default="0.0"/>
-  <arg name="init_y" default="-2.8"/>
+  <arg name="init_y" default="-4.8"/>
   <arg name="inv_init_x" default="$(eval 0-arg('init_x'))"/>
   <arg name="inv_init_y" default="$(eval 0-arg('init_y'))"/>
 

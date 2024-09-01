@@ -92,16 +92,16 @@ learning_agile:
 
   ##-----parameters for training ------## 
   #### for a stabler training,######## 
-  wrt: 10.0
+  wrt: 50.0
   wqt: 80.0
   wthrust: 10.0
   wwt: 100.0
-  wrf: 5.0
+  wrf: 50.0
   wvf: 1.0
   wqf: 1.0
   wInputDiff: 10
   ##------ traversing parameters ---##
-  max_traverse_weight: 40 #70
+  max_traverse_weight: 60 #70
   traverse_weight_span: 10
   traverse_time: 1.5  
 
