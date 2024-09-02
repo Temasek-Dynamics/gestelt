@@ -22,15 +22,11 @@ from quad_nn import *
 from quad_moving import *
 
 import rospy
-from gestelt_msgs.msg import Goals, NNOutputDecisionVariables, CommanderState
-from geometry_msgs.msg import Pose, Accel,PoseArray,AccelStamped, Twist, PoseStamped, TwistStamped, Point
-from mavros_msgs.msg import PositionTarget
-from std_msgs.msg import Int8, Bool,Float32
+from gestelt_msgs.msg import Goals,  CommanderState
+from geometry_msgs.msg import  PoseStamped, TwistStamped, Point
+from std_msgs.msg import Float32
 from visualization_msgs.msg import Marker
-import math
 import time
-import tf
-from tf.transformations import quaternion_from_euler
 from quad_policy import Rd2Rp
 from quad_model import toQuaternion
 from learning_agile_agent import MovingGate
