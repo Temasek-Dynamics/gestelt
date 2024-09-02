@@ -27,9 +27,9 @@ class TrackManager:
 
         InterOpts = {'degree': [5]}
 
-        self.x_ref_MX = ca.interpolant("x_ref", "bspline", [s_ref], x_ref, InterOpts)
-        self.y_ref_MX = ca.interpolant("y_ref", "bspline", [s_ref], y_ref, InterOpts)
-        self.z_ref_MX = ca.interpolant("z_ref", "bspline", [s_ref], z_ref, InterOpts)
+        self.x_ref_interpolant = ca.interpolant("x_ref", "bspline", [s_ref], x_ref, InterOpts)
+        self.y_ref_interpolant = ca.interpolant("y_ref", "bspline", [s_ref], y_ref, InterOpts)
+        self.z_ref_interpolant = ca.interpolant("z_ref", "bspline", [s_ref], z_ref, InterOpts)
 
     def projFrenSerretBasis(self, s: Union[ca.MX, float] ):
         ''' project to the Frenet Serret space
@@ -40,9 +40,9 @@ class TrackManager:
         
         # gamma: continuous progress function
         # Second and first derivative of gamma w.r.t s
-        [d2GammaX_ds2, dGammaX_ds] = ca.hessian(self.x_ref_MX(s), s)
-        [d2GammaY_ds2, dGammaY_ds] = ca.hessian(self.y_ref_MX(s), s)
-        [d2GammaZ_ds2, dGammaZ_ds] = ca.hessian(self.z_ref_MX(s), s)
+        [d2GammaX_ds2, dGammaX_ds] = ca.hessian(self.x_ref_interpolant(s), s)
+        [d2GammaY_ds2, dGammaY_ds] = ca.hessian(self.y_ref_interpolant(s), s)
+        [d2GammaZ_ds2, dGammaZ_ds] = ca.hessian(self.z_ref_interpolant(s), s)
 
         # fourth and third derivative of gamma w.r.t s
         [d4GammaX_ds4, d3GammaX_ds3] = ca.hessian(d2GammaX_ds2, s)
@@ -112,10 +112,10 @@ class TrackManager:
         # y_ref_curve = ca.interpolant("y_ref", "bspline", [s_ref], y_ref)
         # z_ref_curve = ca.interpolant("z_ref", "bspline", [s_ref], z_ref)
 
-        return self.x_ref_MX(s), self.y_ref_MX(s), self.z_ref_MX(s)
+        return self.x_ref_interpolant(s), self.y_ref_interpolant(s), self.z_ref_interpolant(s)
     
     def evalFrenSerretBasis(self, s: ca.MX, kap_MX, tau_MX, et_MX, en_MX, eb_MX):
-        '''evaluation functions for curve in Frenet Serret space
+        '''Returns evaluation functions for curve in Frenet Serret space
         <-- kap_fun, tau_fun : Curvature, torsion casADi functions
         <-- et_fun, en_fun, eb_fun : tangent , normal , binormal casADi functions '''
 

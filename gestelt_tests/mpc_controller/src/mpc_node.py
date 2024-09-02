@@ -86,7 +86,7 @@ class MPCController:
             self.path_4d.t.append(path_4d_tmp.t[i] * self.t_unit)
 
         print(f"Downsample path_4d to shape: {len(self.path_4d.x)}")
-        self.path_4d.printPath()
+        # self.path_4d.printPath()
 
         self.track_mngr.setReferences(self.path_4d.t, self.path_4d.x, self.path_4d.y, self.path_4d.z )
 
@@ -119,7 +119,7 @@ class MPCController:
         #####
         # (nx, mpc_iter) to plot state during entire Horizon
         state_steps = ca.repmat(zeta_0, 1, N+1)     # state per step
-        # extend (nu, ) to (nu, 1)
+        # extend (nu, ) to (nu, 1) 
         control_steps = ca.repmat(u_0, 1, 1)
         # (2, mpc_iter) to represent (iteration time, cost) for each mpc iteration
         misc_step = ca.repmat(np.array([0, 0]).T, 1)
