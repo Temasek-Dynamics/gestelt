@@ -162,8 +162,10 @@ class NN2_ROS_wrapper:
             gate_vis_msg.action = Marker.ADD
             for k in range(len(self.gate_n.gate_point)):
                 p = self.gate_points_list[self.i,k,:]
-                gate_vis_msg.points.append(Point(x=p[0],y=p[1],z=p[2]))
-            gate_vis_msg.points.append(Point(x=self.gate_points_list[self.i,0,0],y=self.gate_points_list[self.i,0,1],z=self.gate_points_list[self.i,0,2]))
+                gate_vis_msg.points.append(Point(x=p[0]+ self.trans[0],y=p[1]+ self.trans[1],z=p[2]+ self.trans[2]))
+            gate_vis_msg.points.append(Point(x=self.gate_points_list[self.i,0,0]+ self.trans[0],
+                                             y=self.gate_points_list[self.i,0,1]+ self.trans[1],
+                                             z=self.gate_points_list[self.i,0,2]))
             gate_vis_msg.color.a = 1.0
             gate_vis_msg.color.r = 1.0
             gate_vis_msg.color.g = 0.0
@@ -173,9 +175,9 @@ class NN2_ROS_wrapper:
             gate_vis_msg.pose.orientation.x = 0.0
             gate_vis_msg.pose.orientation.y = 0.0
             gate_vis_msg.pose.orientation.z = 0.0
-            gate_vis_msg.pose.position.x = 0 + self.trans[0]
-            gate_vis_msg.pose.position.y = 0 + self.trans[1]
-            gate_vis_msg.pose.position.z = 0 + self.trans[2]
+            gate_vis_msg.pose.position.x = 0 
+            gate_vis_msg.pose.position.y = 0 
+            gate_vis_msg.pose.position.z = 0 
             self.gate_vis_pub.publish(gate_vis_msg)
         else:
             self.i = 0
