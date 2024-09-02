@@ -23,9 +23,10 @@ from quad_moving import *
 
 import rospy
 from gestelt_msgs.msg import Goals, NNOutputDecisionVariables, CommanderState
-from geometry_msgs.msg import Pose, Accel,PoseArray,AccelStamped, Twist, PoseStamped, TwistStamped
+from geometry_msgs.msg import Pose, Accel,PoseArray,AccelStamped, Twist, PoseStamped, TwistStamped, Point
 from mavros_msgs.msg import PositionTarget
 from std_msgs.msg import Int8, Bool,Float32
+from visualization_msgs.msg import Marker
 import math
 import time
 import tf
@@ -76,7 +77,7 @@ class NN2_ROS_wrapper:
         self.mission_period = mission_period
         self.NN2_freq = NN2_freq
         self.state = np.zeros(10)
-        self.gate_step = 1/500 # consistent with the python simulation
+        self.gate_step = 1/NN2_freq 
         self.MISSION_START = False
         self.RECEIVED_DRONE_POSE = False
         self.RECEIVED_DRONE_TWIST = False
@@ -91,9 +92,11 @@ class NN2_ROS_wrapper:
 
         self.B_S_time_pub = rospy.Publisher("/learning_agile_agent/B_S_time", Float32, queue_size=1)
         self.NN_forward_time_pub = rospy.Publisher("/learning_agile_agent/NN_forward_time", Float32, queue_size=1)
+        self.gate_vis_pub = rospy.Publisher("/learning_agile_agent/gate_vis", Marker, queue_size=1)
         
+        self.gate_vis_timer = rospy.Timer(rospy.Duration(1/NN2_freq), self.gate_vis)
         self.NN2_output_timer = rospy.Timer(rospy.Duration(1/NN2_freq), self.NN2_forward)
-        
+       
         ##================- load trained DNN2 model ======================-##
         self.model = torch.load(model_file)
         
@@ -132,8 +135,7 @@ class NN2_ROS_wrapper:
         t_tra_rel: the relative traversal time w.r.t the current time
 
         """
-        self.gate_n = gate(self.gate_points_list[self.i])
-
+        
         ## binary search for the traversal time
         ## to set the drone state under the gate frame, for the NN2 input
         self.t_tra_rel = binary_search_solver(self.model,device,self.state,self.final_point,self.gate_n,self.moving_gate.V[self.i],self.moving_gate.w)
@@ -143,8 +145,45 @@ class NN2_ROS_wrapper:
         self.gate_n.translate(self.t_tra_rel*self.moving_gate.V[self.i])
         self.gate_n.rotate_y(self.t_tra_rel*self.moving_gate.w)
         # print('rotation matrix I_G=',gate_n.I_G)
-            
-       
+    
+    def gate_vis(self,event):
+        ##====frequency of the gate state estimation is the same as the NN2 ========##
+        curr_time = rospy.Time.now().to_sec()
+
+        if self.MISSION_START:
+
+            self.i = int((curr_time-(self.mission_start_time))*self.NN2_freq)
+            # print("i",self.i)
+        
+            self.gate_n = gate(self.gate_points_list[self.i])
+            ##============================ gate visualization =========================##
+            gate_vis_msg = Marker()
+            gate_vis_msg.header.frame_id = "world"
+            gate_vis_msg.header.stamp = rospy.Time.now()
+            gate_vis_msg.ns = "gate"
+            gate_vis_msg.id = 0
+            gate_vis_msg.type = Marker.LINE_STRIP
+            gate_vis_msg.action = Marker.ADD
+            for k in range(len(self.gate_n.gate_point)):
+                p = self.gate_points_list[self.i,k,:]
+                gate_vis_msg.points.append(Point(x=p[0],y=p[1],z=p[2]))
+            gate_vis_msg.points.append(Point(x=self.gate_points_list[self.i,0,0],y=self.gate_points_list[self.i,0,1],z=self.gate_points_list[self.i,0,2]))
+            gate_vis_msg.color.a = 1.0
+            gate_vis_msg.color.r = 1.0
+            gate_vis_msg.color.g = 0.0
+            gate_vis_msg.color.b = 0.0
+            gate_vis_msg.scale.x = 0.05   # control the width of the line
+            gate_vis_msg.pose.orientation.w = 1.0
+            gate_vis_msg.pose.orientation.x = 0.0
+            gate_vis_msg.pose.orientation.y = 0.0
+            gate_vis_msg.pose.orientation.z = 0.0
+            gate_vis_msg.pose.position.x = 0 + self.trans[0]
+            gate_vis_msg.pose.position.y = 0 + self.trans[1]
+            gate_vis_msg.pose.position.z = 0 + self.trans[2]
+            self.gate_vis_pub.publish(gate_vis_msg)
+        else:
+            self.i = 0
+
     def NN2_forward(self,event):
         """
         forward the neural network 2
@@ -154,15 +193,7 @@ class NN2_ROS_wrapper:
         if self.MISSION_START and self.RECEIVED_DRONE_TWIST and self.RECEIVED_DRONE_POSE:
             
             ##================= call the gate state estimation function ================##
-            ##====frequency of the gate state estimation is the same as the NN2 ========##
-            curr_time = rospy.Time.now().to_sec()
-
-            if self.MISSION_START:
-
-                self.i = int((curr_time-(self.mission_start_time))*self.NN2_freq)
-                # print("i",self.i)
-            else:
-                self.i = 0
+            
             
             if self.i>self.mission_period*self.NN2_freq:
                 self.NN2_output_timer.shutdown()
@@ -215,12 +246,12 @@ class NN2_ROS_wrapper:
             NN_trav_time_msg.data = self.t_tra_rel
             NN_forward_time_msg.data = NN_forward_time
             B_S_time_msg.data = B_S_time
-        
+
             self.NN_trav_pose_pub.publish(NN_trav_pose_msg)
             self.NN_trav_time_pub.publish(NN_trav_time_msg)
             self.NN_forward_time_pub.publish(NN_forward_time_msg)
             self.B_S_time_pub.publish(B_S_time_msg)
-
+            
     def mission_start_cb(self,msg):
         """
         once this message is received, the mission starts

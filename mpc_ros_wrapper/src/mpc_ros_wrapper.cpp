@@ -67,6 +67,9 @@ void mpcRosWrapper::init(ros::NodeHandle& nh)
 
     state_traj_opt_=new double[n_nodes_*n_x_];
     
+    //initialize 
+    MISSION_LOADED_FLAG_=false;
+    NO_SOLUTION_FLAG_=false;
 
 }
 
@@ -80,7 +83,7 @@ void mpcRosWrapper::solver_request(){
     // ROS_INFO("request gap is %f", request_gap);
     
     // if two requests gap is too long, emergency stop
-    if (MISSION_LOADED_FLAG_ && request_gap > no_solution_flag_t_thresh_)
+    if (request_gap > no_solution_flag_t_thresh_)
     {
         NO_SOLUTION_FLAG_=true;
         ROS_INFO("the request period is too long, emergency stop");
@@ -180,6 +183,7 @@ void mpcRosWrapper::solver_request(){
         }
     }
     last_request_time_=current_time;
+    
 }
 
 
@@ -220,9 +224,13 @@ void mpcRosWrapper::mission_start_cb(const gestelt_msgs::GoalsPtr &msg)
     // ROS_INFO("Mission loaded, will sleep 1s for the NN to publish the traverse time");
     // ros::Duration(1).sleep();
 
-    MISSION_LOADED_FLAG_=true;
-    mission_start_time_= std::chrono::high_resolution_clock::now();
-    last_request_time_=mission_start_time_;
+    if (STATIC_GATE_TEST_)
+    {
+        MISSION_LOADED_FLAG_=true;
+        mission_start_time_= std::chrono::high_resolution_clock::now();
+        last_request_time_=mission_start_time_;
+    }
+    
 }
 
 void mpcRosWrapper::NN_trav_pose_cb(const geometry_msgs::PoseStamped::ConstPtr& msg)
@@ -235,6 +243,9 @@ void mpcRosWrapper::NN_trav_pose_cb(const geometry_msgs::PoseStamped::ConstPtr& 
 void mpcRosWrapper::NN_trav_time_cb(const std_msgs::Float32::ConstPtr& msg)
 {
     t_tra_rel_ = msg->data;
+    MISSION_LOADED_FLAG_=true;
+    mission_start_time_= std::chrono::high_resolution_clock::now();
+    last_request_time_=mission_start_time_;
 }
 
 
@@ -285,7 +296,7 @@ void mpcRosWrapper::Update()
     else
     {
         ROS_WARN("No mission loaded, will send the hover setpoint");
-        NO_SOLUTION_FLAG_=true;
+        // NO_SOLUTION_FLAG_=true;
     }
 }
 

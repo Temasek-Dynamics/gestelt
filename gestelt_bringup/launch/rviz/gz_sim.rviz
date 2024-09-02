@@ -12,6 +12,7 @@ Panels:
         - /AccelStamped1
         - /predicted_traj1
         - /NN_output_pose1
+        - /Marker1
       Splitter Ratio: 0.6323529481887817
     Tree Height: 1026
   - Class: rviz/Selection
@@ -322,6 +323,14 @@ Visualization Manager:
       Topic: /learning_agile_agent/NN_trav_pose
       Unreliable: false
       Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /learning_agile_agent/gate_vis
+      Name: Marker
+      Namespaces:
+        {}
+      Queue Size: 100
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 255; 255; 255
@@ -351,7 +360,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/XYOrbit
-      Distance: 9.77623176574707
+      Distance: 11.572050094604492
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -359,17 +368,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: -0.06193441152572632
-        Y: 0.7592470645904541
+        X: -0.1440700888633728
+        Y: 4.018256664276123
         Z: 1.1920928955078125e-06
       Focal Shape Fixed Size: false
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.3353983163833618
+      Pitch: 0.8253982663154602
       Target Frame: my_view
-      Yaw: 4.259037017822266
+      Yaw: 6.244041442871094
     Saved:
       - Class: rviz/FPS
         Enable Stereo Rendering:
