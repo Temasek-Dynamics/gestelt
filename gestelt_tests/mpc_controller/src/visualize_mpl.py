@@ -30,7 +30,7 @@
 
 # reference : "Towards Time-optimal Tunnel-following for Quadrotors", Jon Arrizabalaga et al.
 
-import os
+# import os
 import numpy as np
 from matplotlib import pyplot, animation
 
@@ -111,7 +111,7 @@ def animOptVars(misc_steps, traj_ST, traj_U, track_mngr):
     def init():
         time_text.set_text('')
 
-        return path, horizon, drone
+        return horizon, drone
 
     def onClick(event):
         nonlocal anim_running
@@ -129,7 +129,10 @@ def animOptVars(misc_steps, traj_ST, traj_U, track_mngr):
         # update simulation time
         time_text.set_text(f'time = {misc_steps[0, iter]:.2f} s' )
 
-        drone[0]._offsets3d = (float(zetaC_hat[0, 0, iter]), float(zetaC_hat[1, 0, iter]), zetaC_hat[2, 0, iter:iter+1])
+        offset = (float(zetaC_hat[0, 0, iter]), float(zetaC_hat[1, 0, iter]), zetaC_hat[2, 0, iter:iter+1])
+        # offset = (float(zetaC_hat[0, 0, iter]), float(zetaC_hat[1, 0, iter]), float(zetaC_hat[2, 0, iter]))
+        print(f"offset: {offset}")
+        drone[0]._offsets3d = offset
 
         horizon.set_data(zetaC_hat[0: 2, 1:, iter])
         horizon.set_3d_properties(zetaC_hat[2, 1:, iter])
@@ -152,7 +155,7 @@ def animOptVars(misc_steps, traj_ST, traj_U, track_mngr):
         # # update cost plot
         # costAx.set_data(misc_steps[1, :iter], misc_steps[0, :iter +1] )
 
-        return path, horizon, drone
+        return horizon, drone
 
     # Create a figure which occupies the full screen
 #    et = np.append(np.asarray(et_fun(s_i[i])).flatten(), 0 )
@@ -173,8 +176,6 @@ def animOptVars(misc_steps, traj_ST, traj_U, track_mngr):
 
     # reference trajectory
     pyplot.plot(xref_track, yref_track, zref_track, linestyle='dashed', marker = 'x', c='cornflowerblue', dashes=(5, 15), alpha=0.3)
-    # path
-    path = ax3d.plot([], [], 'b', alpha=0.5, linewidth=0.5)[0]
     # horizon
     horizon, = ax3d.plot([], [],'x-g', alpha=0.5)
 
@@ -223,7 +224,6 @@ def animOptVars(misc_steps, traj_ST, traj_U, track_mngr):
     zetaDotF.grid()
     zetaDotF.legend(loc='upper right')
 
-
     # plot control u
     u = fig.add_subplot(3, 3, 2)
     ohm1 = u.stairs([], [0], baseline=None,label="$\\Omega_{1}$ ($rad s^{-1}$)", color="lightcoral" )
@@ -260,6 +260,4 @@ def animOptVars(misc_steps, traj_ST, traj_U, track_mngr):
 
     fig.tight_layout()
 
-    # avoid plotting when running on Travis
-    if os.environ.get("ACADOS_ON_CI") is None:
-        pyplot.show()
+    pyplot.show()

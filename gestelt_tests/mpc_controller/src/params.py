@@ -23,7 +23,7 @@ drone_rad = 0.04                           # radius of the drone covering sphere
 
 '''MatPlotLib animation settings'''
 Tstart_offset = 0
-f_plot = 10
+f_plot = 1
 refresh_ms = 10
 sphere_scale = 20000 #TODO make dependant on map size. (10000/ 20 obst)
 z_const = 0.1
@@ -55,15 +55,14 @@ Qn = np.diag([10, 1e-3, 1e-2,             # frenet position
              1e-5, 1e-5, 1e-5,            # cartesian velocity
              1e-8, 1e-8, 1e-8, 1e-8])     # rotor angular velocity
 
-R = np.diag([1e-5, 1e-5, 1e-5, 1e-5])     # Weights on controls
+R = np.diag([1e-4, 1e-4, 1e-4, 1e-4])     # Weights on controls
 
 '''Solver'''
-T_del = 0.02                # [s] time between steps in seconds
-N = 50                      # number of shooting nodes
+T_del = 0.04                # [s] time between steps in seconds
+N = 25                      # number of shooting nodes
 Tf = N * T_del              # [s] Prediction time horizon
 
 Tsim = 5                   # [s] Simulation time
 Nsim = int(Tsim / T_del)    # Number of simulations required to simulate for Tsim 
 
-
-
+S_REF = 0.1875  # Rate of progress along path Used for debugging

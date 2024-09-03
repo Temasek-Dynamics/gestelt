@@ -144,7 +144,7 @@ class AcadosCustomOcp:
     # ocp.solver_options.time_steps = time_steps
     # ocp.solver_options.shooting_nodes = shooting_nodes
 
-    ocp.solver_options.qp_solver = "PARTIAL_CONDENSING_HPIPM"#"PARTIAL_CONDENSING_HPIPM" #"FULL_CONDENSING_HPIPM" #"PARTIAL_CONDENSING_HPIPM"
+    ocp.solver_options.qp_solver = "FULL_CONDENSING_QPOASES" # FULL_CONDENSING_QPOASES, PARTIAL_CONDENSING_HPIPM, FULL_CONDENSING_HPIPM, PARTIAL_CONDENSING_QPDUNES, PARTIAL_CONDENSING_OSQP, FULL_CONDENSING_DAQP
     ocp.solver_options.hessian_approx =  "GAUSS_NEWTON"#"EXACT",
     # ocp.solver_options.cost_discretization ="INTEGRATOR"
     ocp.solver_options.qp_solver_cond_N = int(N/2)
@@ -196,9 +196,12 @@ class AcadosCustomOcp:
     if self.track_mngr.isPathEnded(s0):
       return True # Path has ended
     
-    sref = s0 + Tf  # Reference at end of time horizon
-    # srefDot = S_DOT / Tf  # Rate of change of reference point
-    srefDot = 1.0   # Rate of change of reference point
+    # sref = s0 + Tf  # Reference at end of time horizon
+    # srefDot = 0.1   # Rate of change of reference point
+
+    sref = s0 + S_REF  # Reference at end of time horizon
+    srefDot = S_REF / Tf   # Rate of change of reference point
+    
     for j in range(N):  # For each intermediate shooting node
       sref_j = s0 + (sref - s0) * j / N
       yref = np.array([sref_j, 0, 0, 

@@ -30,8 +30,6 @@
 
 
 
-
-
 # define sources and use make's implicit rules to generate object files (*.o)
 
 # model
@@ -40,7 +38,6 @@ MODEL_SRC+= quadrotor_model/quadrotor_expl_ode_fun.c
 MODEL_SRC+= quadrotor_model/quadrotor_expl_vde_forw.c
 MODEL_SRC+= quadrotor_model/quadrotor_expl_vde_adj.c
 MODEL_OBJ := $(MODEL_SRC:.c=.o)
-
 # optimal control problem - mostly CasADi exports
 OCP_SRC=
 OCP_SRC+= quadrotor_constraints/quadrotor_constr_h_fun_jac_uxt_zt.c
@@ -59,22 +56,21 @@ OCP_SRC+= quadrotor_cost/quadrotor_cost_y_e_hess.c
 
 OCP_SRC+= acados_solver_quadrotor.c
 OCP_OBJ := $(OCP_SRC:.c=.o)
-
 # for sim solver
 SIM_SRC= acados_sim_solver_quadrotor.c
 SIM_OBJ := $(SIM_SRC:.c=.o)
-
-# for target example
-EX_SRC= main_quadrotor.c
-EX_OBJ := $(EX_SRC:.c=.o)
-EX_EXE := $(EX_SRC:.c=)
 
 # for target example_sim
 EX_SIM_SRC= main_sim_quadrotor.c
 EX_SIM_OBJ := $(EX_SIM_SRC:.c=.o)
 EX_SIM_EXE := $(EX_SIM_SRC:.c=)
+# for target example
+EX_SRC= main_quadrotor.c
+EX_OBJ := $(EX_SRC:.c=.o)
+EX_EXE := $(EX_SRC:.c=)
 
-# combine model, sim and ocp object files
+
+# combine model, (potentially) sim and ocp object files
 OBJ=
 OBJ+= $(MODEL_OBJ)
 OBJ+= $(SIM_OBJ)
@@ -83,14 +79,16 @@ OBJ+= $(OCP_OBJ)
 EXTERNAL_DIR=
 EXTERNAL_LIB=
 
-INCLUDE_PATH = /home/john/repos/acados/include
-LIB_PATH = /home/john/repos/acados/lib
+INCLUDE_PATH = /home/john/acados/include
+LIB_PATH = /home/john/acados/lib
 
 # preprocessor flags for make's implicit rules
+CPPFLAGS += -DACADOS_WITH_QPOASES
 CPPFLAGS+= -I$(INCLUDE_PATH)
 CPPFLAGS+= -I$(INCLUDE_PATH)/acados
 CPPFLAGS+= -I$(INCLUDE_PATH)/blasfeo/include
 CPPFLAGS+= -I$(INCLUDE_PATH)/hpipm/include
+CPPFLAGS+= -I $(INCLUDE_PATH)/qpOASES_e/
 
 
 # define the c-compiler flags for make's implicit rules
@@ -108,7 +106,7 @@ LDLIBS+= -lacados
 LDLIBS+= -lhpipm
 LDLIBS+= -lblasfeo
 LDLIBS+= -lm
-LDLIBS+= 
+LDLIBS+= -lqpOASES_e
 
 # libraries
 LIBACADOS_SOLVER=libacados_solver_quadrotor.so
@@ -117,8 +115,6 @@ LIBACADOS_SIM_SOLVER=lib$(SIM_SRC:.c=.so)
 
 # virtual targets
 .PHONY : all clean
-
-#all: clean example_sim example shared_lib
 
 all: clean example_sim example
 shared_lib: bundled_shared_lib ocp_shared_lib sim_shared_lib
@@ -130,15 +126,14 @@ example: $(EX_OBJ) $(OBJ)
 example_sim: $(EX_SIM_OBJ) $(MODEL_OBJ) $(SIM_OBJ)
 	$(CC) $^ -o $(EX_SIM_EXE) $(LDFLAGS) $(LDLIBS)
 
+sim_shared_lib: $(SIM_OBJ) $(MODEL_OBJ)
+	$(CC) -shared $^ -o $(LIBACADOS_SIM_SOLVER) $(LDFLAGS) $(LDLIBS)
 bundled_shared_lib: $(OBJ)
 	$(CC) -shared $^ -o $(LIBACADOS_SOLVER) $(LDFLAGS) $(LDLIBS)
 
 ocp_shared_lib: $(OCP_OBJ) $(MODEL_OBJ)
 	$(CC) -shared $^ -o $(LIBACADOS_OCP_SOLVER) $(LDFLAGS) $(LDLIBS) \
 	-L$(EXTERNAL_DIR) -l$(EXTERNAL_LIB)
-
-sim_shared_lib: $(SIM_OBJ) $(MODEL_OBJ)
-	$(CC) -shared $^ -o $(LIBACADOS_SIM_SOLVER) $(LDFLAGS) $(LDLIBS)
 
 
 # Cython targets
@@ -147,7 +142,7 @@ ocp_cython_c: ocp_shared_lib
 	-o acados_ocp_solver_pyx.c \
 	-I $(INCLUDE_PATH)/../interfaces/acados_template/acados_template \
 	$(INCLUDE_PATH)/../interfaces/acados_template/acados_template/acados_ocp_solver_pyx.pyx \
-	-I /home/john/gestelt_ws/src/gestelt/gestelt_tests/mpc_controller/c_generated_code \
+	-I /home/john/gvd_swarm/src/gestelt/gestelt_tests/mpc_controller/c_generated_code \
 
 ocp_cython_o: ocp_cython_c
 	$(CC) $(ACADOS_FLAGS) -c -O2 \
@@ -168,13 +163,14 @@ ocp_cython: ocp_cython_o
 	$(abspath .)/libacados_ocp_solver_quadrotor.so \
 	$(LDFLAGS) $(LDLIBS)
 
+
 # Sim Cython targets
 sim_cython_c: sim_shared_lib
 	cython \
 	-o acados_sim_solver_pyx.c \
 	-I $(INCLUDE_PATH)/../interfaces/acados_template/acados_template \
 	$(INCLUDE_PATH)/../interfaces/acados_template/acados_template/acados_sim_solver_pyx.pyx \
-	-I /home/john/gestelt_ws/src/gestelt/gestelt_tests/mpc_controller/c_generated_code \
+	-I /home/john/gvd_swarm/src/gestelt/gestelt_tests/mpc_controller/c_generated_code \
 
 sim_cython_o: sim_cython_c
 	$(CC) $(ACADOS_FLAGS) -c -O2 \
@@ -199,7 +195,6 @@ clean:
 	$(RM) $(OBJ) $(EX_OBJ) $(EX_SIM_OBJ)
 	$(RM) $(LIBACADOS_SOLVER) $(LIBACADOS_OCP_SOLVER) $(LIBACADOS_SIM_SOLVER)
 	$(RM) $(EX_EXE) $(EX_SIM_EXE)
-
 clean_ocp_shared_lib:
 	$(RM) $(LIBACADOS_OCP_SOLVER)
 	$(RM) $(OCP_OBJ)
