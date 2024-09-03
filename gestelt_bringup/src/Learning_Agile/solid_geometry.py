@@ -457,14 +457,15 @@ class obstacle():
         
 
          # goal score
-        goal_score = 0
+        # goal_score = 0
         
-        # for last four nodes
-        for i in range(-1,-5,-1): 
-            goal_score += -0.5 * np.dot(state_traj[i,:3]-goal_pos,state_traj[i,:3]-goal_pos)
-            drdstate_traj[i,:3] = -0.5 * 2 * (state_traj[i,:3]-goal_pos)
+        # goal_w=0.05
+        # # for last four nodes
+        # for i in range(-1,-5,-1): 
+        #     goal_score += -goal_w * np.dot(state_traj[i,:3]-goal_pos,state_traj[i,:3]-goal_pos)
+        #     drdstate_traj[i,:3] = -goal_w * 2 * (state_traj[i,:3]-goal_pos)
         
-        reward_traj += goal_score
+        # reward_traj += goal_score
         return reward_traj, drdstate_traj, gate_check_points
 ############################################################################################################
 ###-------------------------------- support torch auto differentiation ---------------------------------####

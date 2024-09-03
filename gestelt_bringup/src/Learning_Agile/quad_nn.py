@@ -20,8 +20,8 @@ conf_folder=os.path.abspath(os.path.join(current_dir, '..', '..','config'))
 yaml_file = os.path.join(conf_folder, 'learning_agile_mission.yaml')
 with open(yaml_file, 'r', encoding='utf-8') as file:
     config_dict = yaml.safe_load(file) 
-ini_pos=np.array(config_dict['mission']['initial_position'])
-end_pos=np.array(config_dict['mission']['goal_position'])
+pre_ini_pos=np.array(config_dict['mission']['initial_position'])
+pre_end_pos=np.array(config_dict['mission']['goal_position'])
 desired_average_vel=config_dict['training_param']['desired_average_vel']
 
 # load the configuration file
@@ -30,18 +30,20 @@ desired_average_vel=config_dict['training_param']['desired_average_vel']
 def nn_sample(init_pos=None,final_pos=None,init_angle=None):
     inputs = np.zeros(9)
     if init_pos is None:
-        inputs[0:3] = np.random.uniform(-2,2,size=3) + ini_pos #-5~5, -9
+        inputs[0:3] = np.random.uniform(-2,2,size=3) + pre_ini_pos #-5~5, -9
+        inputs[1]=np.clip(inputs[1],pre_ini_pos[1]-0.5,pre_ini_pos[1]+0.5)
     else:
         inputs[0:3] = init_pos
     ## random final postion 
     if final_pos is None:
-        inputs[3:6] = np.random.uniform(-2,2,size=3) + end_pos #-2~2, 6
+        inputs[3:6] = np.random.uniform(-2,2,size=3) + pre_end_pos #-2~2, 6
+        inputs[4]=np.clip(inputs[4],pre_end_pos[1]-0.5,pre_end_pos[1]+0.5)
     else:
         inputs[3:6] = final_pos
     ## random initial yaw angle of the quadrotor
     inputs[6] = np.random.uniform(-0.1,0.1)
     ## random width of the gate
-    inputs[7] = np.clip(np.random.normal(1.0,0.2),0.8,1.2) #(0.9,0.3),0.5,1.25   
+    inputs[7] = np.clip(np.random.normal(0.6,0.2),0.4,0.8) #(0.9,0.3),0.5,1.25   
     # inputs[7] = np.random.uniform(0.7,1.2)
     ## random pitch angle of the gate
     angle = np.clip(1.3*(1.2-inputs[7]),0,pi/3)
@@ -55,7 +57,7 @@ def nn_sample(init_pos=None,final_pos=None,init_angle=None):
             inputs[8] = np.clip(np.random.normal(-angle - angle1, 2*angle1/3),-pi/2,-angle)
     else:
         inputs[8] = init_angle
-    
+    # inputs[8] = np.random.uniform(-pi/2,pi/2)    
     # inputs[8] = 0.8879
     return inputs
 

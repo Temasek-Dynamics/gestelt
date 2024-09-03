@@ -1,7 +1,6 @@
 import numpy as np
 from juliacall import Main as jl, convert
 
-# 请确保在 Julia 环境中这些包已经正确加载
 
 ## load packages
 jl.seval('import Pkg') 

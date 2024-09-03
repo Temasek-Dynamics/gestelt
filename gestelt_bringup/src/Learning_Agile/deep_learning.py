@@ -32,7 +32,7 @@ def calc_grad(config_dict,
                         j: reward after MPC plan and execute
     """
     ## gate initialization
-    gate_point = np.array([[-inputs[7]/2,0,1],[inputs[7]/2,0,1],[inputs[7]/2,0,-1],[-inputs[7]/2,0,-1]])
+    gate_point = np.array([[-inputs[7]/2,0,0.65],[inputs[7]/2,0,0.65],[inputs[7]/2,0,-0.65],[-inputs[7]/2,0,-0.65]])
     gate1 = gate(gate_point)
     gate_point = gate1.rotate_y_out(inputs[8])
 

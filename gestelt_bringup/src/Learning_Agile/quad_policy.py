@@ -22,7 +22,7 @@ class run_quad:
         #######------------ UAV PARAM----------------#########
         ######################################################
         ## definition 
-        self.wing_len = 1.5 
+        self.wing_len = 1 
         self.uav_height = 0.4
         # --------------------------- create model1 ----------------------------------------
         self.uav1 = Quadrotor()
