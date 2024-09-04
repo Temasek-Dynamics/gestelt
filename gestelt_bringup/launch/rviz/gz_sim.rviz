@@ -12,7 +12,8 @@ Panels:
         - /AccelStamped1
         - /predicted_traj1
         - /NN_output_pose1
-        - /Marker1
+        - /gate_vis1
+        - /drone_vis1
       Splitter Ratio: 0.6323529481887817
     Tree Height: 1026
   - Class: rviz/Selection
@@ -326,9 +327,17 @@ Visualization Manager:
     - Class: rviz/Marker
       Enabled: true
       Marker Topic: /learning_agile_agent/gate_vis
-      Name: Marker
+      Name: gate_vis
       Namespaces:
         {}
+      Queue Size: 100
+      Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /learning_agile_agent/drone_ellispoid
+      Name: drone_vis
+      Namespaces:
+        drone_ellispoid: true
       Queue Size: 100
       Value: true
   Enabled: true
@@ -360,7 +369,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/XYOrbit
-      Distance: 4.161708354949951
+      Distance: 8.246731758117676
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -376,9 +385,9 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.2853987216949463
+      Pitch: 0.1103987917304039
       Target Frame: my_view
-      Yaw: 1.5308563709259033
+      Yaw: 1.1858564615249634
     Saved:
       - Class: rviz/FPS
         Enable Stereo Rendering:

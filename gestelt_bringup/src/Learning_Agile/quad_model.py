@@ -839,7 +839,7 @@ class Quadrotor:
 
             distance = np.linalg.norm(gate_center-quadrotor_center)
             
-            condition_test=distance <= 0.5
+            condition_test=distance <= 0.3
             condition_train=i==tra_node
             condition=condition_test
             if TRAIN_VIS:

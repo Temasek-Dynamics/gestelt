@@ -193,7 +193,8 @@ class NN2_ROS_wrapper:
             ##================= call the gate state estimation function ================##
             
             
-            if self.i>self.mission_period*self.NN2_freq:
+            if self.i>=self.mission_period*self.NN2_freq:
+                self.gate_vis_timer.shutdown()
                 self.NN2_output_timer.shutdown()
                 print("Reach Maximum Time, NN2 output timer shutdown")
                 return

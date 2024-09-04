@@ -9,10 +9,10 @@ For simulation and deployment on a physical drone, PX4 is the firmware of choice
 
 # MPC to do
 - [x] MPC hover test
-- [ ] MPC solver construction code clean
+- [x] MPC solver construction code clean
 - [x] MPC setpoint test
+- [x] MPC RL joint training
 - [ ] NeuroMHE deployment
-- [ ] MPC RL joint training
 # MPC dependencies
 - Before the installation, the cmake should be updated to the latest version. please refer to this [cmake update](https://zhuanlan.zhihu.com/p/513871916).
 - Requirements
@@ -22,7 +22,7 @@ For simulation and deployment on a physical drone, PX4 is the firmware of choice
   - Pytorch: version 1.12.0+cu116 Info: https://pytorch.org/
   - Matplotlib: version 3.3.0 Info:   https://matplotlib.org/
   - Python: version 3.8.10 Info: https://www.python.org/
-  - ACADOS: version LATEST Info: https://docs.acados.org/
+  - acados: version LATEST Info: https://docs.acados.org/
       Please refer to this [acados doc](https://docs.acados.org/installation/index.html#linux-mac) for detail.
 
 # Installation and Setup for Simulation

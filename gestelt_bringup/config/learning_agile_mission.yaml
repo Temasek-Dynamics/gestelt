@@ -7,7 +7,7 @@ gate:
   # linear_vel: [0.0, 0.0, 0.0]
   # angular_vel: 0.0 
   linear_vel: [0.5,0.3,0.4]
-  angular_vel: -1.57
+  angular_vel: 1.57
 traj_server:
   takeoff_height: 1.2
   drone_yaw: 0.0 # take-off yaw
@@ -17,7 +17,7 @@ mission:
   #################################################
   ##------ MPC initial pose ----##
   # initial pose only works for python sim
-  initial_position: [0.0, -6.0, 0]
+  initial_position: [0.0, -6.0, 1]
   initial_ori_euler: [0.0, 0.0, 1.0] # RPY, only yaw is active
 
   ##------ gate pose ----##
