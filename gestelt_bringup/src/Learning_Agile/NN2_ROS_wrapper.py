@@ -195,61 +195,66 @@ class NN2_ROS_wrapper:
             
             if self.i>=self.mission_period*self.NN2_freq:
                 self.gate_vis_timer.shutdown()
+                
+                print("Reach Maximum Time, stop the NN forward, set -5s as the traversing time")
+                NN_trav_time_msg = Float32()
+                NN_trav_time_msg.data = -5 # set a constant minus traversing time to indicate the mission is done
+                self.NN_trav_time_pub.publish(NN_trav_time_msg)
+                print("shutdown the NN forward timer")
                 self.NN2_output_timer.shutdown()
-                print("Reach Maximum Time, NN2 output timer shutdown")
-                return
-            
-            t_comp = time.time()
-            self.gate_state_estimation()
-            B_S_time=time.time()-t_comp
-            ##============================ NN2 input ===================================##
-            nn2_inputs = np.zeros(15)
 
-           
-            # drone state under the predicted gate frame(based on the binary search)
-            nn2_inputs[0:10] = self.gate_n.transform(self.state)
-            nn2_inputs[10:13] = self.gate_n.t_final(self.final_point)
-
-            # width of the gate
-            nn2_inputs[13] = magni(self.gate_n.gate_point[0,:]-self.gate_n.gate_point[1,:]) # gate width
-            # pitch angle of the gate
-            nn2_inputs[14] = atan((self.gate_n.gate_point[0,2]-self.gate_n.gate_point[1,2])/(self.gate_n.gate_point[0,0]-self.gate_n.gate_point[1,0])) # compute the actual gate pitch angle in real-time
-
-            # NN2 OUTPUT the traversal time and pose
-            t_comp = time.time()
-            out = self.model(nn2_inputs,device).to('cpu')
-            NN_forward_time=time.time()-t_comp
-            out = out.data.numpy()
-    
-            ## transfer from Rodrigues parameters to quaternion
-            atti = Rd2Rp(out[3:6])   
-            quat=toQuaternion(atti[0],atti[1])
+            else:
+                t_comp = time.time()
+                self.gate_state_estimation()
+                B_S_time=time.time()-t_comp
+                ##============================ NN2 input ===================================##
+                nn2_inputs = np.zeros(15)
 
             
-            # wrap the NN output as the message
-            NN_trav_pose_msg = PoseStamped()
-            NN_trav_pose_msg.header.stamp = rospy.Time.now()
-            NN_trav_pose_msg.header.frame_id = "world"
-            NN_trav_pose_msg.pose.position.x = out[0]+self.trans[0]+self.gate_n.centroid[0]
-            NN_trav_pose_msg.pose.position.y = out[1]+self.trans[1]+self.gate_n.centroid[1]
-            NN_trav_pose_msg.pose.position.z = out[2]+self.trans[2]+self.gate_n.centroid[2]
-            NN_trav_pose_msg.pose.orientation.w = quat[0]
-            NN_trav_pose_msg.pose.orientation.x = quat[1]
-            NN_trav_pose_msg.pose.orientation.y = quat[2]
-            NN_trav_pose_msg.pose.orientation.z = quat[3]
-            
-            NN_trav_time_msg = Float32()
-            NN_forward_time_msg = Float32()
-            B_S_time_msg = Float32()
+                # drone state under the predicted gate frame(based on the binary search)
+                nn2_inputs[0:10] = self.gate_n.transform(self.state)
+                nn2_inputs[10:13] = self.gate_n.t_final(self.final_point)
 
-            NN_trav_time_msg.data = self.t_tra_rel
-            NN_forward_time_msg.data = NN_forward_time
-            B_S_time_msg.data = B_S_time
+                # width of the gate
+                nn2_inputs[13] = magni(self.gate_n.gate_point[0,:]-self.gate_n.gate_point[1,:]) # gate width
+                # pitch angle of the gate
+                nn2_inputs[14] = atan((self.gate_n.gate_point[0,2]-self.gate_n.gate_point[1,2])/(self.gate_n.gate_point[0,0]-self.gate_n.gate_point[1,0])) # compute the actual gate pitch angle in real-time
 
-            self.NN_trav_pose_pub.publish(NN_trav_pose_msg)
-            self.NN_trav_time_pub.publish(NN_trav_time_msg)
-            self.NN_forward_time_pub.publish(NN_forward_time_msg)
-            self.B_S_time_pub.publish(B_S_time_msg)
+                # NN2 OUTPUT the traversal time and pose
+                t_comp = time.time()
+                out = self.model(nn2_inputs,device).to('cpu')
+                NN_forward_time=time.time()-t_comp
+                out = out.data.numpy()
+        
+                ## transfer from Rodrigues parameters to quaternion
+                atti = Rd2Rp(out[3:6])   
+                quat=toQuaternion(atti[0],atti[1])
+
+                
+                # wrap the NN output as the message
+                NN_trav_pose_msg = PoseStamped()
+                NN_trav_pose_msg.header.stamp = rospy.Time.now()
+                NN_trav_pose_msg.header.frame_id = "world"
+                NN_trav_pose_msg.pose.position.x = out[0]+self.trans[0]+self.gate_n.centroid[0]
+                NN_trav_pose_msg.pose.position.y = out[1]+self.trans[1]+self.gate_n.centroid[1]
+                NN_trav_pose_msg.pose.position.z = out[2]+self.trans[2]+self.gate_n.centroid[2]
+                NN_trav_pose_msg.pose.orientation.w = quat[0]
+                NN_trav_pose_msg.pose.orientation.x = quat[1]
+                NN_trav_pose_msg.pose.orientation.y = quat[2]
+                NN_trav_pose_msg.pose.orientation.z = quat[3]
+                
+                NN_trav_time_msg = Float32()
+                NN_forward_time_msg = Float32()
+                B_S_time_msg = Float32()
+
+                NN_trav_time_msg.data = self.t_tra_rel
+                NN_forward_time_msg.data = NN_forward_time
+                B_S_time_msg.data = B_S_time
+
+                self.NN_trav_pose_pub.publish(NN_trav_pose_msg)
+                self.NN_trav_time_pub.publish(NN_trav_time_msg)
+                self.NN_forward_time_pub.publish(NN_forward_time_msg)
+                self.B_S_time_pub.publish(B_S_time_msg)
             
     def mission_start_cb(self,msg):
         """
@@ -301,7 +306,7 @@ if __name__ == '__main__':
     ##=================initialize the node====================================##
     rospy.init_node('NN2_ROS_wrapper', anonymous=True)
     nn2_node=NN2_ROS_wrapper(mission_period=5,
-                            NN2_freq=100,
+                            NN2_freq=20,
                             model_file=model_file,
                             gate_v=np.array(gate_v),
                             gate_w=gate_w)    
