@@ -22,11 +22,9 @@ Ct  = 3.25e-4       # [N/krpm^2] Thrust coefficient
 drone_rad = 0.04                           # radius of the drone covering sphere
 
 '''MatPlotLib animation settings'''
-Tstart_offset = 0
-f_plot = 1
+f_plot = 10       # Interval of sampling the optimal state, controls. Value of 1 means plot everything
 refresh_ms = 10
 sphere_scale = 20000 #TODO make dependant on map size. (10000/ 20 obst)
-z_const = 0.1
 
 '''Constraints'''
 # U_MAX = 22                                              # [krpm]
@@ -58,11 +56,20 @@ Qn = np.diag([10, 1e-3, 1e-2,             # frenet position
 R = np.diag([1e-4, 1e-4, 1e-4, 1e-4])     # Weights on controls
 
 '''Solver'''
+<<<<<<< HEAD
 T_del = 0.04                # [s] time between steps in seconds
 N = 25                      # number of shooting nodes
+=======
+T_del = 0.05                # [s] time between steps in seconds
+N = 30                      # number of shooting nodes
+>>>>>>> 1d12bfe91b84ab7592b183e7fb853e008b66e7f9
 Tf = N * T_del              # [s] Prediction time horizon
 
-Tsim = 5                   # [s] Simulation time
+Tsim = 25                   # [s] Simulation time
 Nsim = int(Tsim / T_del)    # Number of simulations required to simulate for Tsim 
 
+<<<<<<< HEAD
 S_REF = 0.1875  # Rate of progress along path Used for debugging
+=======
+S_REF = 0.1
+>>>>>>> 1d12bfe91b84ab7592b183e7fb853e008b66e7f9

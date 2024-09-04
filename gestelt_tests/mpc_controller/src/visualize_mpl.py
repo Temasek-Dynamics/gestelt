@@ -51,38 +51,51 @@ def DM2Arr(dm):
     return np.array(dm.full(), dtype=object)
 
 def animOptVars(misc_steps, traj_ST, traj_U, track_mngr):
-    '''Plot data as animate matplotlib graph'''
+    """Plot data as animated matplotlib graph
+
+    Args:
+        misc_steps (_type_): Stra
+        traj_ST (_type_): Optimal States
+        traj_U (_type_): Optimal Controls
+        track_mngr (_type_): TrackManager object 
+
+    """
+    anim_running = True
+
     sysModel = SysDyn()
     zetaMx, _, _, _, _ = sysModel.setupODE(track_mngr)
 
-    # (nx , N+1 , mpc_iter)
-    dim_st = np.shape(traj_ST)
-    anim_running = True
+    dim_st = np.shape(traj_ST)  # Dimension of state trajectory: (nx , N+1 , num_iter)
 
     # Plot only the original track without repetition
     [s_ref, xref_track, yref_track, zref_track] = track_mngr.getTrack()
     # subsample the solutions for faster animation
 
-    # nx X N X (mpc_iter/freq)
+    # (nx, N+1, (num_iter/freq))
     traj_ST = traj_ST[:, :, ::f_plot]
-    # nu X N X (mpc_iter/freq)
+    # (nu, N, (num_iter/freq))
     traj_U = traj_U[:, ::f_plot]
-    # Contains miscelleanous info for plots (times, cost) 2x (mpc_iter/freq)
+    # Contains miscelleanous info for plots (times, cost) 2x (num_iter/freq)
     misc_steps = misc_steps[:, ::f_plot]
 
-    zetaC_hat = np.zeros((3, dim_st[1], dim_st[2]))
-    zetaC_hat = zetaC_hat[:, :, ::f_plot]
+    zetaC_hat = np.zeros((3, dim_st[1], dim_st[2])) # ((x,y,z), N+1, (num_iter/freq))
+    zetaC_hat = zetaC_hat[:, :, ::f_plot]   # Only select every 10th sample of zetaC_hat 
 
-    zetaEul = np.zeros((3, dim_st[1], dim_st[2]))
-    zetaCEul = zetaEul[:, :, ::f_plot]
+    # zetaEul = np.zeros((3, dim_st[1], dim_st[2])) # Euler angles
+    # zetaCEul = zetaEul[:, :, ::f_plot]
 
-    list_kap = []
-    list_tau = []
+    list_kap = []   # List of curvatures at each sampled s
+    list_tau = []   # List of torsion at each sampled s
+    # Given the first sampled s, get the frenet serret states
     kap, tau, et, en, eb, kapBar, tauBar, _, _, _ = track_mngr.projFrenSerretBasis(zetaMx[0])
+    # Get functions to evaluate curvature and torsion at a given arc length
     kap_fun, tau_fun, _, _, _ = track_mngr.evalFrenSerretBasis(zetaMx[0], kap, tau, et, en, eb)
     # kapBar_fun, tauBar_fun = evalFrenSerretDerv(zetaMx[0], kapBar, tauBar)
 
-    for k in range(N+1):
+    for k in range(N+1):    # For all shooting nodes
+        # traj_ST[ STATE_IDX , SHOOTING_NODE, :]
+        # traj_ST = [s, n, b, q1, q2, q3, q4, sDot, nDot, bDot, ]
+
         s_i = traj_ST[0, k, :]
         n_i = traj_ST[1, k, :]
         b_i = traj_ST[2, k, :]
@@ -91,18 +104,19 @@ def animOptVars(misc_steps, traj_ST, traj_U, track_mngr):
         nDot_i = traj_ST[8, k, :]
         bDot_i = traj_ST[9, k, :]
 
+        # Save (x,y,z)
         x_i, y_i, z_i = track_mngr.Fren2CartT(zetaMx, s_i, n_i, b_i)
-
+        
         zetaC_hat[0, k, : ] = np.ravel(DM2Arr(x_i))
         zetaC_hat[1, k, : ] = np.ravel(DM2Arr(y_i))
         zetaC_hat[2, k, : ] = np.ravel(DM2Arr(z_i))
 
-        q1_i = traj_ST[3, k, :]
-        q2_i = traj_ST[4, k, :]
-        q3_i = traj_ST[5, k, :]
-        q4_i = traj_ST[6, k, :]
+        # q1_i = traj_ST[3, k, :]
+        # q2_i = traj_ST[4, k, :]
+        # q3_i = traj_ST[5, k, :]
+        # q4_i = traj_ST[6, k, :]
 
-    for i in range((s_ref.shape[0])):
+    for i in range((s_ref.shape[0])): # For each sampled arc length s
        #et_fun1 = et_fun(s_ref[i]/2)
        #print("\t", gam4(s_ref[i]))
        list_kap.append(float(kap_fun(s_ref[i])))

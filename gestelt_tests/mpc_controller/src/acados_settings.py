@@ -20,7 +20,7 @@ class AcadosCustomOcp:
     self.sysModel = None    # System dynamics model
 
     self.zeta_0 = zeta_0_default  # Initial state
-    self.zeta_N = None  # States for intermediate shooting nodes
+    self.zeta_N = None  # States for all intermediate shooting nodes from 0 to N
     self.u_N = None     # Control inputs for intermediate shooting nodes
 
     self.track_mngr = track_mngr
@@ -139,7 +139,7 @@ class AcadosCustomOcp:
     ocp.solver_options.integrator_type = "ERK"
     ocp.solver_options.tf = Tf
     ocp.solver_options.sim_method_num_stages = 4
-    ocp.solver_options.sim_method_num_steps = 1
+    ocp.solver_options.sim_method_num_steps = 2
     # ocp.solver_options.collocation_type = 'GAUSS_RADAU_IIA'
     # ocp.solver_options.time_steps = time_steps
     # ocp.solver_options.shooting_nodes = shooting_nodes
@@ -147,7 +147,9 @@ class AcadosCustomOcp:
     ocp.solver_options.qp_solver = "FULL_CONDENSING_QPOASES" # FULL_CONDENSING_QPOASES, PARTIAL_CONDENSING_HPIPM, FULL_CONDENSING_HPIPM, PARTIAL_CONDENSING_QPDUNES, PARTIAL_CONDENSING_OSQP, FULL_CONDENSING_DAQP
     ocp.solver_options.hessian_approx =  "GAUSS_NEWTON"#"EXACT",
     # ocp.solver_options.cost_discretization ="INTEGRATOR"
-    ocp.solver_options.qp_solver_cond_N = int(N/2)
+    # ocp.solver_options.regularize_method = 'CONVEXIFY'#'CONVEXIFY', PROJECT_REDUC_HESS
+    # ocp.solver_options.levenberg_marquardt = 1e-5 # small value for gauss newton method, large value for gradient descent method
+    # ocp.solver_options.qp_solver_cond_N = int(N/2)  # For use with partial condensing
     ocp.solver_options.nlp_solver_type = "SQP_RTI"
     ocp.solver_options.tol = 1e-3
     ocp.qp_solver_tol = 1e-3
@@ -197,11 +199,19 @@ class AcadosCustomOcp:
       return True # Path has ended
     
     # sref = s0 + Tf  # Reference at end of time horizon
+<<<<<<< HEAD
     # srefDot = 0.1   # Rate of change of reference point
 
     sref = s0 + S_REF  # Reference at end of time horizon
     srefDot = S_REF / Tf   # Rate of change of reference point
     
+=======
+    # srefDot = 1.0   # Rate of change of reference point
+
+    sref =  s0 + S_REF
+    srefDot = S_REF / Tf
+
+>>>>>>> 1d12bfe91b84ab7592b183e7fb853e008b66e7f9
     for j in range(N):  # For each intermediate shooting node
       sref_j = s0 + (sref - s0) * j / N
       yref = np.array([sref_j, 0, 0, 
