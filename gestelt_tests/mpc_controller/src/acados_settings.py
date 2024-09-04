@@ -199,19 +199,11 @@ class AcadosCustomOcp:
       return True # Path has ended
     
     # sref = s0 + Tf  # Reference at end of time horizon
-<<<<<<< HEAD
-    # srefDot = 0.1   # Rate of change of reference point
-
-    sref = s0 + S_REF  # Reference at end of time horizon
-    srefDot = S_REF / Tf   # Rate of change of reference point
-    
-=======
     # srefDot = 1.0   # Rate of change of reference point
 
     sref =  s0 + S_REF
     srefDot = S_REF / Tf
 
->>>>>>> 1d12bfe91b84ab7592b183e7fb853e008b66e7f9
     for j in range(N):  # For each intermediate shooting node
       sref_j = s0 + (sref - s0) * j / N
       yref = np.array([sref_j, 0, 0, 

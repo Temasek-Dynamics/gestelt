@@ -16,6 +16,7 @@ from acados_settings import AcadosCustomOcp
 from params import *
 from visualize_mpl import animOptVars
 
+from scipy import stats
 
 from matplotlib import pyplot, animation
 
@@ -80,7 +81,7 @@ class MPCController:
         # print(f"Loaded zeta_0: {self.zeta_0}")
         print(f"Loaded path_4d with shape: {len(path_4d_tmp.x)}")
 
-        stride = 2
+        stride = 1
         # Get front-end path
         for i in range(0, len(path_4d_tmp.x), stride):
             self.path_4d.x.append(path_4d_tmp.x[i])
@@ -104,28 +105,32 @@ class MPCController:
         kap_fun, tau_fun, _, _, _ = self.track_mngr.evalFrenSerretBasis(zetaMx[0], kap, tau, et, en, eb)
 
         list_kap = []   # List of curvatures at each sampled s
-        list_tau = []   # List of torsion at each sampled s
+        # list_tau = []   # List of torsion at each sampled s
 
         for i in range((s_ref.shape[0])): # For each sampled arc length s
             #et_fun1 = et_fun(s_ref[i]/2)
             #print("\t", gam4(s_ref[i]))
             list_kap.append(float(kap_fun(s_ref[i])))
-            list_tau.append(float(tau_fun(s_ref[i])))
+            # list_tau.append(float(tau_fun(s_ref[i])))
 
-        fig = pyplot.figure(figsize=(15, 10))
 
         """Plot 
         """
+        fig = pyplot.figure(figsize=(15, 10))
         # add_subplot(nrows, ncols, index)
         param = fig.add_subplot(1, 1, 1)
-        tauAx = param.stairs(list_tau[:-1], s_ref, baseline=None,label="$\\tau$", color="red" )
-        kapAx = param.stairs(list_kap[:-1], s_ref, baseline=None,label="$\\kappa$", color="blue")
+        # tauAx = param.stairs(list_tau[:-1], s_ref, baseline=None,label="$\\tau$", color="red" )
+        kapAx = param.stairs(list_kap[:-1], s_ref, baseline=None,label="$\\kappa$", color="blue", fill=False)
         param.set_xlim(0, np.amax(s_ref) + 0.2)
-        param.set_ylim( ymin = np.amin(np.ravel(list_tau[:] + list_kap[:]))*1.10 - 0.2,
-                        ymax = np.amax(np.ravel(list_tau[:] + list_kap[:]))*1.10 + 0.2)
+        param.set_ylim( ymin = np.amin(np.ravel(list_kap[:]))*1.10 - 0.2,
+                        ymax = np.amax(np.ravel(list_kap[:]))*1.10 + 0.2)
+        param.set_ylabel('Curvature')
         param.set_xlabel('$s\,$(m)')
         param.legend(loc='upper right')
         param.grid()
+
+        total_kap = np.sum(list_kap)
+        print(f"Total curvature: {total_kap}")
 
         pyplot.show()
 
@@ -140,6 +145,9 @@ def main():
     mpc_controller = MPCController()
     mpc_controller.loadTrackFromPickle("pickles/path_4d.pickle", "pickles/zeta_0.pickle")
     mpc_controller.plotPathParams()
+
+    # mpc_controller.test1()
+
 
     print("mpc_controller: Finished execution")
 

@@ -56,20 +56,11 @@ Qn = np.diag([10, 1e-3, 1e-2,             # frenet position
 R = np.diag([1e-4, 1e-4, 1e-4, 1e-4])     # Weights on controls
 
 '''Solver'''
-<<<<<<< HEAD
-T_del = 0.04                # [s] time between steps in seconds
-N = 25                      # number of shooting nodes
-=======
 T_del = 0.05                # [s] time between steps in seconds
 N = 30                      # number of shooting nodes
->>>>>>> 1d12bfe91b84ab7592b183e7fb853e008b66e7f9
 Tf = N * T_del              # [s] Prediction time horizon
 
 Tsim = 25                   # [s] Simulation time
 Nsim = int(Tsim / T_del)    # Number of simulations required to simulate for Tsim 
 
-<<<<<<< HEAD
-S_REF = 0.1875  # Rate of progress along path Used for debugging
-=======
 S_REF = 0.1
->>>>>>> 1d12bfe91b84ab7592b183e7fb853e008b66e7f9
