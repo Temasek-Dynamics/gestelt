@@ -332,7 +332,7 @@ class LearningAgileAgent():
                                        gate_traj1=self.gate_points_list[::5,:,:],
                                        state_traj=self.state_n[::5,:],
                                        goal_pos=self.final_point.tolist(),
-                                       dt=self.dyn_step)
+                                       dt=0.01)
         
         # save the data, not show it
         self.quad1.uav1.plot_thrust(self.control_n)

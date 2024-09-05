@@ -10,6 +10,7 @@ from quad_model import *
 import numpy as np
 import torch
 from casadi import *
+import logging
 class run_quad:
     def __init__(self,config_dict,
                 SQP_RTI_OPTION=True, 
@@ -174,7 +175,12 @@ class run_quad:
                        tra_ang, 
                        t_tra,
                        OPEN_LOOP = True )
-        
+        # if NO_SOLUTION_FLAG:
+        #     logging.info("MPC solver failed, here is the NN output")
+        #     logging.info("traverse time: "+str(t_tra))
+        #     logging.info("traverse position: "+str(tra_pos))
+        #     logging.info("traverse angle: "+str(tra_ang))
+
         # state_traj [x,y,z,vx,vy,vz,qw,qx,qy,qz]
         state_traj = self.sol1['state_traj_opt']
         # get the quadrotor both center and edges position trajectory
@@ -316,8 +322,8 @@ class run_quad:
                             Ulast_value)
         
         ############==================finite difference===========================############
-        ## if not self.PDP_GRADIENT:
-        ## fixed perturbation to calculate the gradient
+        # if not self.PDP_GRADIENT:
+        # fixed perturbation to calculate the gradient
         # delta = 1e-3
         # drdx = np.clip(self.R_from_MPC(tra_pos+[delta,0,0],tra_ang, t_tra,Ulast_value) - j,-0.5,0.5)*0.1
         # drdy = np.clip(self.R_from_MPC(tra_pos+[0,delta,0],tra_ang, t_tra,Ulast_value) - j,-0.5,0.5)*0.1
@@ -398,7 +404,7 @@ class run_quad:
 
         drdp += np.matmul(drdstate_traj[self.horizon,:,:],dstate_trajdp[self.horizon,:,:]).reshape(7)    
 
-        drdp = drdp/10000
+        drdp = drdp/20000
         drdx = drdp[0]
         drdy = drdp[1]
         drdz = drdp[2]

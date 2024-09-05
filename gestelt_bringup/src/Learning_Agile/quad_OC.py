@@ -621,7 +621,7 @@ class OCSys:
 
         if status != 0:
             NO_SOLUTION_FLAG=True
-        
+            # raise Exception(f'acados returned status {status}.')
         #-------------take the optimal control and state sequences
         #self.n_nodes
         for i in range(self.n_nodes):

@@ -15,7 +15,7 @@ with open(yaml_file, 'r', encoding='utf-8') as file:
 current_dir = os.path.dirname(os.path.abspath(__file__))
 training_data_folder=os.path.abspath(os.path.join(current_dir, 'training_data'))
 model_folder=os.path.abspath(os.path.join(training_data_folder, 'NN_model'))
-FILE_INPUT = model_folder+"/NN1_deep2_34.pth"
+FILE_INPUT = model_folder+"/NN1_deep2_22.pth"
 model_nn1 = torch.load(FILE_INPUT).to(device)
 # Hyper-parameters 
 input_size = 15 
@@ -37,11 +37,7 @@ def traj(inputs, outputs, state_traj):
     gate1 = gate(gate_point)
     gate_point = gate1.rotate_y_out(inputs[8])
 
-    # quad1 = run_quad(goal_pos=inputs[3:6],ini_r=inputs[0:3].tolist(),ini_q=toQuaternion(inputs[6],[0,0,1]),horizon=20)
-    # quad1.init_obstacle(gate_point.reshape(12))
-
-    # quad1.mpc_update(ini_state=quad1.ini_state,tra_pos=outputs[0:3],tra_ang=outputs[3:6],t=outputs[6],Ulast=[0,0,0,0])
-
+    
     final_q=R.from_euler('xyz',[0,0,inputs[6]]).as_quat()
     final_q=np.roll(final_q,1)
     
@@ -116,7 +112,8 @@ if __name__ == '__main__':
                 out = np.zeros(7)
                 out[0:6] = n_out[k][0:6]
                 out[6] = n_out[k][6]-i*0.10
-        
+                print("current drone state:",inputs)
+                print("current NN1 output",out)
                 t_out = torch.tensor(out, dtype=torch.float).to(device)
                 # Forward pass
                 pre_outputs = model_nn2(inputs,device)
