@@ -5,6 +5,7 @@
     <arg name="drone_id"/>
     <arg name="drone_id_ns" value="drone$(arg drone_id)"/>
     <!-- Input/output topics -->
+    <arg name="actuator_cmd_topic" default="mavros/actuator_control" />
     <arg name="command_topic" default="mavros/setpoint_raw/local" />
     <arg name="odometry_topic" default="mavros/local_position/odom" />
     <arg name="pose_topic" default="mavros/local_position/pose" />
@@ -24,6 +25,7 @@
             
             <!-- Published Topics -->
             <remap from="mavros/setpoint_raw/local" to="$(arg command_topic)"/>
+            <remap from="mavros/actuator_control" to="$(arg actuator_cmd_topic)"/>
 
         </node>
     </group>

@@ -50,6 +50,7 @@ void TrajectoryServer::init(ros::NodeHandle& nh, ros::NodeHandle& pnh)
   /////////////////
   /* Publishers */
   /////////////////
+  act_cmd_pub_ = nh.advertise<mavros_msgs::ActuatorControl>("mavros/actuator_control", 50);
   pos_cmd_raw_pub_ = nh.advertise<mavros_msgs::PositionTarget>("mavros/setpoint_raw/local", 50);
   server_state_pub_ = nh.advertise<gestelt_msgs::CommanderState>("traj_server/state", 50);
 
@@ -136,7 +137,10 @@ void TrajectoryServer::serverCommandCb(const gestelt_msgs::Command::ConstPtr & m
 {
   if (msg->command < 0 || msg->command > ServerEvent::EMPTY_E){
     logError("Invalid server command, ignoring...");
+    return;
   }
+
+  std::cout << "[traj_server] Received Event " << EventToString(ServerEvent(msg->command)) << std::endl;
 
   setServerEvent(ServerEvent(msg->command));
 }
@@ -169,7 +173,7 @@ void TrajectoryServer::execTrajTimerCb(const ros::TimerEvent &e)
     case ServerState::HOVER:
       execHover();
       break;
-    
+
     case ServerState::MISSION:
       if (!isExecutingMission()){ // isExecutingMission() is true if last exec trajectory message did not exceed timeout
         logInfoThrottled("No Mission Received, waiting...", 5.0);
@@ -178,6 +182,10 @@ void TrajectoryServer::execTrajTimerCb(const ros::TimerEvent &e)
       else {
         execMission();
       }
+      break;
+
+    case ServerState::ACTUATOR_TEST:
+      execActuatorTest();
       break;
 
     case ServerState::E_STOP:
@@ -227,6 +235,10 @@ void TrajectoryServer::tickServerStateTimerCb(const ros::TimerEvent &e)
         case E_STOP_E:
           logFatal("[IDLE] EMERGENCY STOP ACTIVATED!");
           setServerState(ServerState::E_STOP);
+          break;
+        case ACTUATOR_TEST_E:
+          logFatal("[IDLE] EXECUTING ACTUATOR TEST");
+          setServerState(ServerState::ACTUATOR_TEST);
           break;
         case EMPTY_E:
           // Default case if no event sent
@@ -370,6 +382,15 @@ void TrajectoryServer::tickServerStateTimerCb(const ros::TimerEvent &e)
 
       break;
 
+    case ServerState::ACTUATOR_TEST:
+      if (!isUAVReady()){
+        logInfo("[ACTUATOR_TEST] Calling toggle offboard mode");
+        toggleOffboardMode(true);
+        return;
+      }
+
+      logInfoThrottled("[ACTUATOR_TEST] Executing Actuator test", 1.0 );
+
     case ServerState::E_STOP:
       logFatalThrottled("[E_STOP] Currently in E STOP State, please reset the vehicle and trajectory server!", 1.0);
       break;
@@ -391,6 +412,24 @@ void TrajectoryServer::debugTimerCb(const ros::TimerEvent &e){
 }
 
 /* Trajectory execution methods */
+
+void TrajectoryServer::execActuatorTest()
+{
+  mavros_msgs::ActuatorControl msg;
+  msg.header.stamp = ros::Time::now();
+
+  // uint8 PX4_MIX_FLIGHT_CONTROL = 0
+  // uint8 PX4_MIX_FLIGHT_CONTROL_VTOL_ALT = 1
+  // uint8 PX4_MIX_PAYLOAD = 2
+  // uint8 PX4_MIX_MANUAL_PASSTHROUGH = 3
+  msg.group_mix = mavros_msgs::ActuatorControl::PX4_MIX_FLIGHT_CONTROL;
+  msg.controls[0] = 0.1;
+  msg.controls[1] = 0.1;
+  msg.controls[2] = 0.1;
+  msg.controls[3] = 0.1;
+
+  act_cmd_pub_.publish(msg);
+}
 
 void TrajectoryServer::execLand()
 {

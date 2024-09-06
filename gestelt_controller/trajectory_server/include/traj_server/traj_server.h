@@ -12,10 +12,13 @@
 #include <geometry_msgs/Vector3.h>
 #include <nav_msgs/Odometry.h>
 #include <nav_msgs/Path.h>
+
 #include <mavros_msgs/PositionTarget.h>
 #include <mavros_msgs/CommandBool.h>
 #include <mavros_msgs/State.h>
 #include <mavros_msgs/SetMode.h>
+#include <mavros_msgs/ActuatorControl.h>
+
 #include <std_msgs/Empty.h>
 #include <std_msgs/Int8.h>
 #include <std_msgs/String.h>
@@ -32,13 +35,14 @@ using namespace Eigen;
 /* State machine  */
 enum ServerState
 {
-  INIT,
-  IDLE,
-  TAKEOFF,
-  LAND,
-  HOVER,
-  MISSION,
-  E_STOP,
+  INIT,           // 0
+  IDLE,           // 1
+  TAKEOFF,        // 2
+  LAND,           // 3
+  HOVER,          // 4
+  MISSION,        // 5
+  ACTUATOR_TEST,  // 6
+  E_STOP,         // 7
 };
 
 /* State machine events */
@@ -49,7 +53,8 @@ enum ServerEvent
   MISSION_E,        // 2
   HOVER_E,          // 3
   E_STOP_E,         // 4
-  EMPTY_E,          // 5
+  ACTUATOR_TEST_E,  // 5
+  EMPTY_E,          // 6
 };
 
 enum TrajMode
@@ -150,6 +155,11 @@ private: // Class Methods
    * Execute Mission Trajectory
   */
   void execMission();
+
+  /**
+   * Execute actuator test
+  */
+  void execActuatorTest();
 
   /* Conditional checking methods */
 
@@ -266,6 +276,7 @@ private: // Class Methods
           case ServerState::LAND:     return "LAND";
           case ServerState::HOVER:    return "HOVER";
           case ServerState::MISSION:  return "MISSION";
+          case ServerState::ACTUATOR_TEST:   return "ACTUATOR_TEST";
           case ServerState::E_STOP:   return "E_STOP";
           default:                    return "[Unknown State]";
       }
@@ -281,6 +292,7 @@ private: // Class Methods
           case ServerEvent::MISSION_E:  return "MISSION";
           case ServerEvent::HOVER_E:    return "HOVER";
           case ServerEvent::EMPTY_E:    return "EMPTY";
+          case ServerEvent::ACTUATOR_TEST_E:   return "ACTUATOR_TEST";
           case ServerEvent::E_STOP_E:   return "E_STOP";
           default:                      return "[Unknown Event]";
       }
@@ -326,6 +338,7 @@ private: // Member variables
   std::string origin_frame_; // frame that the drone originated from i.e. it's local pose is (0,0,0) w.r.t to this frame.
 
   /* Publisher  */
+  ros::Publisher act_cmd_pub_; // Publisher of actuator commands for PX4 
   ros::Publisher pos_cmd_raw_pub_; // Publisher of commands for PX4 
   ros::Publisher server_state_pub_; // Publisher of current uav and server state
   

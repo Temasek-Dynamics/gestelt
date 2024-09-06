@@ -1,0 +1,23 @@
+<launch>
+  <arg name="drone_id" default="0"/>
+  <!-- initial position -->
+  <arg name="init_x" default="0.0"/>
+  <arg name="init_y" default="0.0"/>
+
+  <!-- Planning module -->
+  <include file="$(find gestelt_bringup)/launch/navigator/include/navigation_module.xml">
+      <arg name="drone_id" value="$(arg drone_id)"/>
+      <!-- <arg name="cloud_topic" value="$(arg cloud_topic)"/> -->
+  </include>
+
+  <!-- Spawn drone in gazebo with mavros plugin -->
+  <include file="$(find gestelt_bringup)/launch/sitl/include/px4_sitl.xml">
+    <arg name="drone_id"   value="$(arg drone_id)"/>
+    <arg name="vehicle" default="iris"/>
+    <arg name="model"   default="raynor"/>
+    <arg name="init_x"  value="$(arg init_x)"/>
+    <arg name="init_y"  value="$(arg init_y)"/>
+    <arg name="init_z"  value="0.0"/>
+  </include>
+
+</launch>

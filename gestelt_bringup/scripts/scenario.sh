@@ -34,7 +34,7 @@ source $SCRIPT_DIR/../../../devel/setup.bash &&
 #####
 # Start drones with planner modules
 CMD_0="
-roslaunch gestelt_bringup $SCENARIO.launch 
+roslaunch gestelt_bringup sitl_central.launch 
 "
 
 # Start up rviz
@@ -42,7 +42,6 @@ CMD_1="
 roslaunch --wait gestelt_bringup fake_map_central.launch scenario:=$SCENARIO
 "
 
-# Start up central bridge and nodes
 # CMD_2="killall -9 gazebo; killall -9 gzserver; killall -9 gzclient; killall -9 rosmaster; tmux kill-server;"
 CMD_2="rosrun mpc_controller mpc_node.py"
 

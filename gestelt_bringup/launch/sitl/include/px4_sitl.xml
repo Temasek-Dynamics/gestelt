@@ -39,8 +39,8 @@
 
       <!-- generate sdf vehicle model -->
       <arg name="cmd" default="xmlstarlet ed -u '//plugin[@name=&quot;mavlink_interface&quot;]/mavlink_tcp_port' -v $(arg mavlink_tcp_port) -u '//plugin[@name=&quot;camera_controller&quot;]/frameName' -v $(arg drone_id_ns)_cam_link $(find gestelt_bringup)/simulation/models/$(arg model)/$(arg model).sdf"/>
-
       <param command="$(arg cmd)" name="model_description"/>
+      
       <!-- PX4 SITL -->
       <arg unless="$(arg interactive)" name="px4_command_arg1" value=""/>
       <arg     if="$(arg interactive)" name="px4_command_arg1" value="-d"/>

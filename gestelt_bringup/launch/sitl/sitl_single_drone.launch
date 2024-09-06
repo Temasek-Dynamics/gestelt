@@ -1,10 +1,7 @@
 <!-- Spawns Gazebo model and PX4 SITL instances -->
 
 <launch>
-  <arg name="drone_id" default="0"/>
-  <!-- initial position -->
-  <arg name="init_x" default="0.0"/>
-  <arg name="init_y" default="0.0"/>
+
   <!-- world_filename_rel is defined relative to gestelt_bringup/simulations/worlds -->
   <arg name="world_filename_rel" default="empty.world" />
   <!-- world_filename_abs is absolute filepath -->
@@ -22,14 +19,11 @@
     <arg name="physics" value="ode"/>
   </include>
 
-  <!-- Spawn drone in gazebo with mavros plugin -->
-  <include file="$(find gestelt_bringup)/launch/sitl/include/px4_sitl.xml">
-    <arg name="drone_id"   value="$(arg drone_id)"/>
-    <arg name="vehicle" default="iris"/>
-    <arg name="model"   default="raynor"/>
-    <arg name="init_x"  value="$(arg init_x)"/>
-    <arg name="init_y"  value="$(arg init_y)"/>
-    <arg name="init_z"  value="0.0"/>
+
+  <include file="$(find gestelt_bringup)/launch/sitl/include/sitl_drone_complete.xml">
+    <arg name="drone_id"   value="0"/>
+    <arg name="init_x"  value="0.0"/>
+    <arg name="init_y"  value="0.0"/>
   </include>
 
 </launch>
