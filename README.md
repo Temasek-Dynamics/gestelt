@@ -8,37 +8,37 @@ For simulation and deployment on a physical drone, PX4 is the firmware of choice
 
 # Installation and Setup for Simulation
 1. Install dependencies
-```bash
-# Install ROS (if not done)
-sudo apt install ros-noetic-desktop-full
+- ROS 2 Jazzy
 
-# Install other dependencies
-sudo apt install git build-essential tmux python3-catkin-tools python3-vcstool xmlstarlet -y
-sudo apt install ros-${ROS_DISTRO}-mavlink ros-${ROS_DISTRO}-mavros ros-${ROS_DISTRO}-mavros-msgs ros-${ROS_DISTRO}-mavros-extras -y
-```
-
-2. Clone repositories
+2. Required Repos
+- PX4-msgs: bcb3d020bd2f2a994b0633a6fccf8ae47190d867
+- PX4-Autopilot: 3d36c8519de83afd7b4617c3496d0304fb17cc28
+- px4-ros2-interface-lib: fe9d3785384b4d1ca5399384f8480cdfee9030e8
+- eProsima/Micro-XRCE-DDS-Agent: v2.4.3
+    -  XRCE DDS installation
 ```bash
-mkdir -p ~/gestelt_ws/src/
-cd ~/gestelt_ws/src
-git clone https://github.com/JohnTGZ/gestelt.git -b min_snap
-cd gestelt
-vcs import < simulators.repos --recursive
-vcs import < thirdparty.repos --recursive
+git clone https://github.com/eProsima/Micro-XRCE-DDS-Agent.git --recursive -b v2.4.3
+cd Micro-XRCE-DDS-Agent
+mkdir build
+cd build
+cmake ..
+make
+sudo make install
+sudo ldconfig /usr/local/lib/
 ```
 
 3. Install PX4 firmware
 ```bash
 # cd to PX4-Autopilot repo
-cd ~/gestelt_ws/PX4-Autopilot
+cd ~/PX4-Autopilot
 bash ./Tools/setup/ubuntu.sh 
-# Make SITL target for Gazebo simulation
-DONT_RUN=1 make px4_sitl gazebo-classic
+# Make SITL target for simulation
+DONT_RUN=1 make px4_sitl 
 
 # Copy the custom drone model over
 cp -r ~/gestelt_ws/src/gestelt/gestelt_bringup/simulation/models/raynor ~/gestelt_ws/PX4-Autopilot/Tools/simulation/gazebo-classic/sitl_gazebo-classic/models/
 
-# [EMERGENCY USE] IF you screw up the PX4 Autopilot build at any point, clean up the build files via the following command:
+# [FOR EMERGENCY USE] IF you screw up the PX4 Autopilot build at any point, clean up the build files via the following command:
 make distclean
 ```
 
@@ -46,57 +46,127 @@ make distclean
 ```bash
 # Assuming your workspace is named as follows
 cd ~/gestelt_ws/
-
-# Building for debugging/development
-catkin build
-# Building for release mode (For use on Radxa)
-catkin build -DCMAKE_BUILD_TYPE=Release
+colcon build
 ```
+
+5. Additional checks
+```bash
+# Check if px4_msg definitions match those in PX4 Firmware
+./src/px4-ros2-interface-lib/scripts/check-message-compatibility.py -v ./src/px4_msgs/ ../PX4-Autopilot/
+```
+
+6. Configuration
+- MAV_MODE_FLAG: needs to be set to 1
+- COM_RC_IN_MODE: Set to 4 to disable need for manual controller to arm
+- COM_OF_LOSS_T: Time-out (in seconds) to wait when offboard connection is lost before triggering offboard lost failsafe (COM_OBL_RC_ACT)
+- COM_OBL_RC_ACT: Flight mode to switch to if offboard control is lost (Values are - 0: Position, 1: Altitude, 2: Manual, 3: *Return, 4: *Land*).
+- COM_RC_OVERRIDE: Controls whether stick movement on a multicopter (or VTOL in MC mode) causes a mode change to Position mode. This is not enabled for offboard mode by default.
+
+# Important notes
+1. All topics that you can use are defined in `dds_topics.yaml`
+
+2. Specifically, nodes should subscribe using the ROS 2 predefined QoS sensor data (from the listener example source code):
+```cpp
+...
+rmw_qos_profile_t qos_profile = rmw_qos_profile_sensor_data;
+auto qos = rclcpp::QoS(rclcpp::QoSInitialization(qos_profile.history, 5), qos_profile);
+
+subscription_ = this->create_subscription<px4_msgs::msg::SensorCombined>("/fmu/out/sensor_combined", qos,
+...
+```
+
+3. Examples of vectors that require rotation are:
+- all fields in TrajectorySetpoint message; ENU to NED conversion is required before sending them.
+    - first a pi/2 rotation around the Z-axis (up),
+    - then a pi rotation around the X-axis (old East/new North).
+- all fields in VehicleThrustSetpoint message; FLU to FRD conversion is required before sending them.
+    - a pi rotation around the X-axis (front) is sufficient.
+
 
 # Quick start
-There are 2 scripts you can use to run an example simulation. 
 
-## 1. Run PX4 SITL with Gazebo. 
-The first script runs a simulated PX4 SITL instance with Gazebo, with physics. This should be tested before deployment on an actual drone. It runs the following:
-1. Gazebo simulation environment.
-2. Trajectory Server.
-3. Minimum Snap Trajectory Planner and Sampler.
-4. Mission commands.
+## Initial setup
 ```bash
-cd ~/gestelt_ws/src/gestelt/gestelt_bringup/scripts
-# Run the script, the script sources all the relevant workspaces so you don't have to worry about sourcing. 
-./sitl_drone_bringup.sh
-
-# To kill everything, use the following command
-killall -9 gazebo; killall -9 gzserver; killall -9 gzclient; killall -9 rosmaster; tmux kill-server;
-
-# IF you want to add a shortcut to kill the simulation you can add the following to ~/.bashrc
-alias killbill="killall -9 gazebo; killall -9 gzserver; killall -9 gzclient; killall -9 rosmaster; tmux kill-server;
+# Start gazebo and PX4 SITL
+make px4_sitl gz_x500
+# Start QGround Control
+~/Documents/QGroundControl.AppImage
+# Start XRCE DDS agent  
+MicroXRCEAgent udp4 -p 8888
 ```
-5. If you want to change the planning setpoints:
-- The mission source code is in [mission.py](gestelt_bringup/src/mission.py)
-    - Here, the quadrotor is commanded to take off, enter mission mode and are given goal points.
-- The trajectory planner source code is in [example_planner.cc](trajectory_planner/src/example_planner.cc)
-    - Here, given a goal point, a minimum snap trajectory is planned
-- The trajectory sampler source code is in [trajectory_sampler.cpp](trajectory_planner/src/trajectory_sampler.cpp)
-    - Here, given a minimum snap trajectory, the points are sampled and sent to the Trajectory server.
-- The trajectory execution source code is in [traj_server.cpp](trajectory_server/src/traj_server.cpp)
-    - Here, each individual setpoint is converted to PVA commands and sent to the quadrotor.
-    - The function in charge of converting the minimum snap point to PVA point is `void TrajectoryServer::multiDOFJointTrajectoryCb(const trajectory_msgs::MultiDOFJointTrajectory::ConstPtr &msg)`
-- Refer to the architecture above for more information on how they are connected.
 
-## 2. Run a fake physics-less drone simulation
-The second one is a fake drone with no physics and be used to test the architecture or algorithm. It runs the following:
-1. Fake drone simulation.
-2. Trajectory Server.
-3. Minimum Snap Trajectory Planner and Sampler.
-4. Mission commands.
+## Demo 1: Listener example
+```bash
+ros2 launch px4_ros_com sensor_combined_listener.launch.py
+```
+## Demo 2: Offboard control
+```bash
+ros2 run px4_ros_com offboard_control
+```
 
-# Additional debugging tips
-1. Build for debugging
+## Demo 1 example
+```bash
+# Example
+ros2 run example_mode_manual_cpp example_mode_manual
+
+# Check on PX4 shell that the custom mode is registered
+commander status
 ```
-catkin build -DCMAKE_BUILD_TYPE=debug
+
+
+## Debugging
+```bash
+ros2 topic echo /fmu/out/vehicle_status
 ```
+
+# Message types
+1. Control input topics
+    - **Position, Velocity and Acceleration**
+        - [TrajectorySetpoint](https://docs.px4.io/main/en/msg_docs/TrajectorySetpoint.html): PVA
+            - All values are interpreted in NED (Nord, East, Down) coordinate system and the units are [m], [m/s] and [m/s^2] for position, velocity and acceleration, respectively.
+    - **Collective thrust, attitude**
+        - [VehicleAttitudeSetpoint](https://docs.px4.io/main/en/msg_docs/VehicleAttitudeSetpoint.html) Normalized thrust vector, attitude (quaternion)
+            - The quaternion represents the rotation between the drone body FRD (front, right, down) frame and the NED frame. The thrust is in the drone body FRD frame and expressed in normalized [-1, 1] values.
+    - Collective thrust, rates
+        - [VehicleRatesSetpoint](https://docs.px4.io/main/en/msg_docs/VehicleRatesSetpoint.html)
+            - All the values are in the drone body FRD frame. The rates are in [rad/s] while thrust_body is normalized in [-1, 1].
+    - **Thrust and torque**
+        - [VehicleThrustSetpoint](https://docs.px4.io/main/en/msg_docs/VehicleThrustSetpoint.html) Thrust setpoint along X, Y, Z body axis [-1, 1]
+        - [VehicleTorqueSetpoint](https://docs.px4.io/main/en/msg_docs/VehicleTorqueSetpoint.html) Torque setpoint about X, Y, Z body axis (normalized)
+            - All the values are in the drone body FRD frame and normalized in [-1, 1].
+    - **Individual motors**
+        - [ActuatorMotors](https://docs.px4.io/main/en/msg_docs/ActuatorMotors.html) Individual motor values
+            - `Topic: "/fmu/in/actuator_motors"`
+            - All the values normalized in [-1, 1]. For outputs that do not support negative values, negative entries map to NaN. 
+            - NaN maps to disarmed.
+
+2. [VehicleCommand](https://docs.px4.io/main/en/msg_docs/VehicleCommand.html)
+    - `Topic: "/fmu/in/vehicle_command"`
+    - Used to set to offboard mode
+
+3. [OffboardControlMode](https://docs.px4.io/main/en/msg_docs/OffboardControlMode.html)
+    - `Topic: "/fmu/in/offboard_control_mode"`
+    - The vehicle must be already be receiving a stream of MAVLink setpoint messages or ROS 2 OffboardControlMode messages before arming in offboard mode or switching to offboard mode when flying.
+    - The vehicle will exit offboard mode if MAVLink setpoint messages or OffboardControlMode are not received at a rate of > 2Hz.
+
+## Gazebo PX4 targets
+```bash
+# make px4_sitl 
+gz_x500
+gz_x500_depth
+gz_x500_vision
+gz_x500_lidar
+gz_standard_vtol
+gz_rc_cessna
+gz_advanced_plane
+gz_r1_rover
+gz_rover_ackermann
+```
+
+
+# Reference
+1. [Virtual env usage](https://github.com/ros2/ros2/issues/1094)
+2. [Gazebo Simulation](https://docs.px4.io/main/en/sim_gazebo_gz/)
 
 # Acknowledgements
 1. [EGO-Planner-V2 repo](https://github.com/ZJU-FAST-Lab/EGO-Planner-v2)
