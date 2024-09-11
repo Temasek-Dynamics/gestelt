@@ -4,10 +4,10 @@ STATIC_GATE_TEST: false
 
 # gate parameters
 gate:
-  # linear_vel: [0.0, 0.0, 0.0]
-  angular_vel: 0.0 
-  linear_vel: [0.5,-0.3,0.4]
-  # angular_vel: 1.57
+  linear_vel: [0.0, 0.0, 0.0]
+  # angular_vel: 0.0 
+  # linear_vel: [-1,-0.3,0.4]
+  angular_vel: -1.57
 traj_server:
   takeoff_height: 1.2
   drone_yaw: 0.0 # take-off yaw
@@ -17,17 +17,17 @@ mission:
   #################################################
   ##------ MPC initial pose ----##
   # initial pose only works for python sim
-  initial_position: [0.0, -6.0, 1]
-  initial_ori_euler: [0.0, 0.0, 1.0] # RPY, only yaw is active
+  # initial_position: [0.0, -6.0, 1]
+  # initial_ori_euler: [0.0, 0.0, 1.0] # RPY, only yaw is active
 
-  ##------ gate pose ----##
-  # only feasible for STATIC_GATE_TEST
-  gate_position: [1.0, 0.0, 1.5]
-  gate_ori_RP: [-0.0, -0.3535, 0.0]
+  # ##------ gate pose ----##
+  # # only feasible for STATIC_GATE_TEST
+  # gate_position: [1.0, 0.0, 1.5]
+  # gate_ori_RP: [-0.0, -0.3535, 0.0]
 
-  ##------ goal pose ----##
-  goal_position: [0.0, 1.8, 1]
-  goal_ori_euler: [0.0, 0.0, 0.0] # RPY, only yaw is active
+  # ##------ goal pose ----##
+  # goal_position: [0.0, 1.8, 1]
+  # goal_ori_euler: [0.0, 0.0, 0.0] # RPY, only yaw is active
 
   #################################################
   ######-----end of for testing --------------#####
@@ -37,17 +37,17 @@ mission:
   #################################################
   ##------ MPC initial pose ----##
   # initial pose only works for python sim
-  # initial_position: [0.0, -6, 0]
-  # initial_ori_euler: [0.0, 0.0, 0] # RPY, only yaw is active
+  initial_position: [0.0, -6, 0]
+  initial_ori_euler: [0.0, 0.0, 0] # RPY, only yaw is active
 
-  # ##------ gate pose ----##
-  # # only feasible for STATIC_GATE_TEST
-  # gate_position: [1.0, -0.0, 1.5]
-  # gate_ori_RP: [-0.0, -0.3535, -0.3535]
+  ##------ gate pose ----##
+  # only feasible for STATIC_GATE_TEST
+  gate_position: [1.0, -0.0, 1.5]
+  gate_ori_RP: [-0.0, -0.3535, -0.3535]
 
-  # ##------ goal pose ----##
-  # goal_position: [0.0, 3, 0]
-  # goal_ori_euler: [0.0, 0.0,0] # RPY, only yaw is active
+  ##------ goal pose ----##
+  goal_position: [0.0, 3, 0]
+  goal_ori_euler: [0.0, 0.0,0] # RPY, only yaw is active
 
   
 # MPC parameters
@@ -75,7 +75,7 @@ learning_agile:
 
   ##-----parameters for training ------## 
   #### for a stabler training,######## 
-  wrt: 50.0
+  wrt: 5.0
   wqt: 80.0
   wthrust: 10.0
   wwt: 100.0
@@ -124,7 +124,8 @@ learning_agile:
   linear_vel_bound: 5 #m/s
 
   # angular velocity constraints
-  angular_vel_bound: 7.57 #rad/s
+  angular_vel_bound_xy: 7.57 #rad/s
+  angular_vel_bound_z: 3.57 #rad/s
 
 
   ## ----- miscellaneous parameters  ----##

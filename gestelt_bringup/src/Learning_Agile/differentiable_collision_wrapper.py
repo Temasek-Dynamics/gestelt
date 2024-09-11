@@ -36,39 +36,41 @@ def DifferentiableCollisionsWrapper(line_centers,
                                     R_gate,
                                     gate_quat,
                                     quad_radius,
-                                    quad_height,
+                                    quad_half_height,
                                     drone_state):
-
-        
-    prism_size=5
-    A=np.diag([quad_radius,quad_radius,quad_height])
+    
+    line_centers_G=np.matmul(line_centers,R_gate.T) 
+    width_gap=np.abs(line_centers_G[1,0]-line_centers_G[3,0])
+    height_gap=np.abs(line_centers_G[0,2]-line_centers_G[2,2])
+    
+    prism_size=quad_half_height
+    A=np.diag([quad_radius,quad_radius,quad_half_height])
     A_inv=np.linalg.inv(A)
     P=A_inv.T@A_inv
   
-    line_centers_G=np.matmul(line_centers,R_gate.T) 
+   
     # test=np.matmul(R_gate.T,line_centers[0,])
     # print('line_centers_G:',line_centers_G)
 
     prism_centers=np.zeros([4,3])
 
     # left and right prisms centers
-    prism_centers[1,]=line_centers_G[1,]+np.array([ prism_size/2,0,0])
-    prism_centers[3,]=line_centers_G[3,]+np.array([-prism_size/2,0,0])
+    prism_centers[1,]=line_centers_G[1,]+np.array([ quad_half_height,0,0])
+    prism_centers[3,]=line_centers_G[3,]+np.array([-quad_half_height,0,0])
 
     # up and down prisms centers
-    prism_centers[0,]=line_centers_G[0,]+np.array([0,0, prism_size/2])
-    prism_centers[2,]=line_centers_G[2,]+np.array([0,0,-prism_size/2])
+    prism_centers[0,]=line_centers_G[0,]+np.array([0,0, quad_radius])
+    prism_centers[2,]=line_centers_G[2,]+np.array([0,0,-quad_radius])
 
     prism_centers_W=np.matmul(prism_centers,R_gate)
     
-    width_gap=np.abs(line_centers_G[1,0]-line_centers_G[3,0])
-
+    
     # create rectangle walls with the desired size
    
-    P_obs = [jl.dc.create_rect_prism(width_gap, 1.0, prism_size)[0],
-             jl.dc.create_rect_prism(prism_size, 1.0, prism_size*2)[0],
-             jl.dc.create_rect_prism(width_gap, 1.0, prism_size)[0],
-             jl.dc.create_rect_prism(prism_size, 1.0, prism_size*2)[0]]
+    P_obs = [jl.dc.create_rect_prism(width_gap, 1.0, quad_radius*2)[0],
+             jl.dc.create_rect_prism(quad_half_height*2, 1.0, height_gap)[0],
+             jl.dc.create_rect_prism(width_gap, 1.0, quad_radius*2)[0],
+             jl.dc.create_rect_prism(quad_half_height*2, 1.0, height_gap)[0]]
 
     
     P =jl.convert(jl.SMatrix[3,3,jl.Float64,9], P)
@@ -132,16 +134,18 @@ def DifferentiableCollisionsWrapper(line_centers,
         # dalpha_dstate_drone[0:3] += (100/alpha_i * (3/(alpha_i)**3) + 100 * np.log((alpha_i)) * (-9/(alpha_i)**4)) * dalpha_i_dstate_np[0:3]
         # dalpha_dstate_drone[6:10] += (100/alpha_i * (3/(alpha_i)**3) + 100 * np.log((alpha_i)) * (-9/(alpha_i)**4)) * dalpha_i_dstate_np[3:7]
         
-        reward+=-(500*(alpha_i-1.1)**2)
-        dalpha_dstate_drone[0:3] += -1000*(alpha_i-1.1) * dalpha_i_dstate_np[0:3]
-        dalpha_dstate_drone[6:10] += -1000*(alpha_i-1.1) * dalpha_i_dstate_np[3:7]
+        reward+=-(1000*(alpha_i-1.1)**2)
+        dalpha_dstate_drone[0:3] += -2000*(alpha_i-1.1) * dalpha_i_dstate_np[0:3]
+        dalpha_dstate_drone[6:10] += -2000*(alpha_i-1.1) * dalpha_i_dstate_np[3:7]
 
     # keep at the center reward
-    # reward_center = - 1 * np.linalg.norm(drone_state[0:3]-np.array([0,0,0]),2)
+    # reward_center = - 0.1 * (drone_state[0]-0)**2
+    # reward_center += - 0.1 * (drone_state[2]-0)**2
     # reward+=reward_center
 
-    # dalpha_dstate_drone[0:3] -= 1 * 2 * (drone_state[0:3]-np.array([0,0,0]))
-    
+    # dalpha_dstate_drone[0] -= 0.1 * 2 * (drone_state[0]-0)
+    # dalpha_dstate_drone[2] -= 0.1 * 2 * (drone_state[2]-0) 
+
     return reward,dalpha_dstate_drone
 
 

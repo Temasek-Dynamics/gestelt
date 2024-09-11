@@ -43,21 +43,26 @@ def nn_sample(init_pos=None,final_pos=None,init_angle=None):
     ## random initial yaw angle of the quadrotor
     inputs[6] = np.random.uniform(-0.1,0.1)
     ## random width of the gate
-    inputs[7] = np.clip(np.random.normal(0.6,0.2),0.4,0.8) #(0.9,0.3),0.5,1.25   
+    inputs[7] = np.clip(np.random.normal(0.6,0.2),0.6,0.6) #(0.9,0.3),0.5,1.25   
     # inputs[7] = np.random.uniform(0.7,1.2)
     ## random pitch angle of the gate
-    angle = np.clip(1.3*(1.2-inputs[7]),0,pi/3)
-    angle1 = (pi/2-angle)/3
-    judge = np.random.normal(0,1)
-    if init_angle is None:
-        if judge > 0:
-            inputs[8] = np.clip(np.random.normal(angle + angle1, 2*angle1/3),angle,pi/2)
-            # inputs[8] = np.random.uniform(angle - angle1, angle + angle1)
-        else:
-            inputs[8] = np.clip(np.random.normal(-angle - angle1, 2*angle1/3),-pi/2,-angle)
+    # angle = np.clip(2*(1.5-inputs[7]),0,pi/3)
+    # angle1 = (pi/2-angle)/3
+    # judge = np.random.normal(0,1)
+    # if init_angle is None:
+    #     if judge > 0:
+    #         inputs[8] = np.clip(np.random.normal(angle + angle1, 2*angle1/3),angle,pi/2)
+    #         # inputs[8] = np.random.uniform(angle - angle1, angle + angle1)
+    #     else:
+    #         inputs[8] = np.clip(np.random.normal(-angle - angle1, 2*angle1/3),-pi/2,-angle)
+    # else:
+    #     inputs[8] = init_angle
+    # inputs[8] = np.random.uniform(-pi/2,pi/2)  
+    inputs[8] = np.clip(np.random.normal(0,pi/6),-pi/3,pi/3)  
+    if inputs[8]>0:
+        inputs[8]=inputs[8]-pi/3
     else:
-        inputs[8] = init_angle
-    # inputs[8] = np.random.uniform(-pi/2,pi/2)    
+        inputs[8]=inputs[8]+pi/3
     # inputs[8] = 0.8879
     return inputs
 
@@ -67,8 +72,8 @@ def t_output(inputs):
     outputs = np.zeros(7)
     #outputs[5] = math.tan(inputs[6]/2)
     ## traversal time is propotional to the distance of the centroids
-    raw_time=round(magni(inputs[0:3])/4,1)
-    outputs[6] = np.clip(raw_time,1.5,3)
+    raw_time=round(magni(inputs[0:3])/2,1)
+    outputs[6] = raw_time #np.clip(raw_time,3,3)
     return outputs
 
 ## sample a random gate (not necessary in our method) (not important)
@@ -143,10 +148,10 @@ class network(nn.Module):
         self.F2 = nn.ReLU()
         self.l3 = nn.Linear(D_h2, D_out)
 
-    def forward(self, input ,device='cpu'):
+    def forward(self, input):
         # convert state s to tensor
-        S = torch.tensor(input, dtype=torch.float).to(device) # column 2D tensor
-        out = self.l1(S.t()) # linear function requires the input to be a row tensor
+        S = input # column 2D tensor
+        out = self.l1(S) # linear function requires the input to be a row tensor
         out = self.F1(out)
         out = self.l2(out)
         out = self.F2(out)
@@ -156,8 +161,9 @@ class network(nn.Module):
     def myloss(self, para, dp, device='cpu'):
         # convert np.array to tensor
         Dp = torch.tensor(dp, dtype=torch.float).to(device) # row 2D tensor
-        loss_nn = torch.matmul(Dp, para)
-        return loss_nn
+        # loss_nn = torch.matmul(Dp, para)
+        loss_nn =torch.trace(torch.matmul(Dp, para.t()))/(Dp.shape[0])
+        return loss_nn # size is 1
 
 
 

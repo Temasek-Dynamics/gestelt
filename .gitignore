@@ -63,3 +63,4 @@ CATKIN_IGNORE
 **/*.png
 **/*.jpeg
 **/*.log
+/gestelt_bringup/src/Learning_Agile/NN1_training_logs/

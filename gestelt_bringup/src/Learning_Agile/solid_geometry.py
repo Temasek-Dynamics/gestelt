@@ -2,7 +2,7 @@
 # this file is to do some calculation of solid geometry to do the collision detection of quadrotor
 # this file consists of several classes
 import numpy as np
-# from differentiable_collision_wrapper import *
+from differentiable_collision_wrapper import *
 import casadi as ca
 import torch
 

@@ -11,6 +11,11 @@ import yaml
 from logger_config import LoggerConfig
 import logging
 from tqdm import tqdm
+from torch.utils.tensorboard import SummaryWriter
+import datetime
+import os
+
+
 # for multiprocessing, obtain the gradient
 
 """
@@ -58,9 +63,10 @@ def calc_grad(config_dict,
     quad_instance.init_obstacle(gate_point.reshape(12),gate_pitch=inputs[8])
 
     # if sys.gettrace is not None and not MULTI_CORE:
-    # logging.info("gate pitch pose: ",inputs[8])
-    # logging.info("NN1 output traversal pose pitch: ",outputs[4])
-    # logging.info("NN1 output traversal time: ",outputs[6])
+    # print("gate pitch pose: ",inputs[8])
+    # print("NN1 output traversal position: ",outputs[0:3])
+    # print("NN1 output traversal pose: ",outputs[3:6])
+    # print("NN1 output traversal time: ",outputs[6])
     # receive the decision variables from DNN1, do the MPC, then calculate d_reward/d_z
     Ulast_value=np.array([2,0.0,0.0,0.0])
     gra[:] = quad_instance.sol_gradient(outputs[0:3].astype(np.float64),
@@ -68,9 +74,27 @@ def calc_grad(config_dict,
                                         outputs[6],
                                         Ulast_value)
 
-    
+def log_outputs(writer,outputs,global_step):
+    writer.add_scalar('x_tra', outputs[0], global_step)
+    writer.add_scalar('y_tra', outputs[1], global_step)
+    writer.add_scalar('z_tra', outputs[2], global_step)
+    writer.add_scalar('Rx_tra', outputs[3], global_step)
+    writer.add_scalar('Ry_tra', outputs[4], global_step)
+    writer.add_scalar('Rz_tra', outputs[5], global_step)
+    writer.add_scalar('t_tra', outputs[6], global_step)
 
-if __name__ == '__main__':
+
+def log_gradient(writer,gra,global_step):
+    writer.add_scalar('drdx', gra[0], global_step)
+    writer.add_scalar('drdy', gra[1], global_step)
+    writer.add_scalar('drdz', gra[2], global_step)
+    writer.add_scalar('drda', gra[3], global_step)
+    writer.add_scalar('drdb', gra[4], global_step)
+    writer.add_scalar('drdc', gra[5], global_step)
+    writer.add_scalar('drdt', gra[6], global_step)
+    writer.add_scalar('step_reward', gra[7], global_step)
+
+if __name__ == '__main__':    
     ###############################################################
     ###----------------- deep learning option-------------------###
     ###############################################################
@@ -85,27 +109,38 @@ if __name__ == '__main__':
         MULTI_CORE = True
     PDP_GRADIENT = True
     USE_PREV_SOLVER = False
-    num_epochs = 50 #100
-    batch_size = 100 # 100
-    
+    num_epochs = 100 #100
+    batch_size = 40 # 100
+    step_pre_epoch = 5
     if PDP_GRADIENT:
         learning_rate = 1e-4
+        method_name = 'PDP'
     else:
         learning_rate = 1e-4
+        method_name = 'FD'
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    training_notes = "same mod, drdt clip -0.1,0.1, batch 40 step once, gate pitch 0, -pi/4 (horizontal) reward -1000 "
 
     logger_config=LoggerConfig("NN1_training_logs")
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     ###############################################################
     ###------------------ load the files -----------------------###
     ###############################################################
     
     # acquire the current directory
     current_dir = os.path.dirname(os.path.abspath(__file__))
+
+    ## logging initialization
+    log_dir = os.path.join(current_dir, "NN1_training_logs")
+    current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    file_dir = os.path.join(log_dir, f"train-{current_time}-{method_name}={training_notes}")
+    writer = SummaryWriter(log_dir=file_dir)
+    logging.info(current_dir)
+    
+    ## configuration file and model file
     conf_folder=os.path.abspath(os.path.join(current_dir, '..', '..','config'))
     training_data_folder=os.path.abspath(os.path.join(current_dir, 'training_data'))
     model_folder=os.path.abspath(os.path.join(training_data_folder, 'NN_model'))
-    logging.info(current_dir)
     yaml_file = os.path.join(conf_folder, 'learning_agile_mission.yaml')
     with open(yaml_file, 'r', encoding='utf-8') as file:
         config_dict = yaml.safe_load(file)
@@ -131,14 +166,14 @@ if __name__ == '__main__':
     
     
     if TRAIN_FROM_CHECKPOINT:
-        FILE = os.path.join(model_folder, "NN1_deep2_2.pth")
+        FILE = os.path.join(model_folder, "NN1_deep2_48.pth")
         # checkpoint = torch.load(FILE)
         # start_epoch = checkpoint['epoch']   
         # model = checkpoint['model']
         # optimizer = checkpoint['optimizer']
         model = torch.load(FILE)
         start_epoch = 0
-
+        logging.info('load model from %s',FILE)
     else:
         FILE = os.path.join(model_folder, "NN1_pretrain.pth")
         model = torch.load(FILE).to(device)
@@ -158,12 +193,14 @@ if __name__ == '__main__':
     ###############################################################
 
     model.train()
+    global_step = 0
     for epoch in range(start_epoch,num_epochs):
         with tqdm(total=num_epochs, desc=f'Epoch {epoch+1}/{num_epochs}', unit='batch') as pbar:
             #move = gate1.plane_move()
             evalue = 0
             Iteration += [epoch+1]
-            for i in range(int(batch_size/num_cores)):
+            # for i in range(int(batch_size/num_cores)):
+            for i in range(step_pre_epoch):
 
                 if MULTI_CORE:
                     n_inputs = []
@@ -229,54 +266,81 @@ if __name__ == '__main__':
                         logging.info (f'Epoch [{epoch+1}/{num_epochs}], Step [{(i+1)*num_cores}/{batch_size}], Reward: {n_gra[0][7]:.4f}')
             
                 else:
-                    # sample
-                    inputs = nn_sample()
                     
-                    # forward pass
-                    outputs = model(inputs,device).to('cpu')
-                    out = outputs.data.numpy()
-                    # logging.info(out)
+                    n_inputs = []
+                    n_outputs = []
+                    n_out = []
+                    n_gra = []
+                    n_process = []
                     
-                    # create shared variables (shared between processes)
-                    gra = Array('d',np.zeros(8)
-                    )
-                    
-                    # calculate gradient and loss
-                    calc_grad(config_dict,
-                            quad_instance_list[0],
-                            inputs,
-                            out,
-                            gra)
-                    
-                    # Backward and optimize
-                    outputs = model(inputs,device)
 
+                    # sampling in a batch
+                    for k in range(batch_size): 
+                        inputs = nn_sample()
+                        n_inputs.append(inputs)  
+
+                    # forward pass
+                    n_inputs = np.array(n_inputs)  # batch_size x 9
+
+                    n_outputs = model(torch.tensor(n_inputs, dtype=torch.float).to(device)).to('cpu') # batch_size x 7
+                    np_n_outputs = n_outputs.to('cpu')
+                    np_n_outputs = np_n_outputs.data.numpy()
+
+                       
+                    
+                    ## MPC forward for each batch element
+                    for k in range(batch_size):     
+                        # create shared variables (shared between processes)
+                        gra = Array('d',np.zeros(8)
+                        )
+                        
+                        # calculate gradient and loss
+                        calc_grad(config_dict,
+                                quad_instance_list[0],
+                                n_inputs[k,:].reshape(9),
+                                np_n_outputs[k,:].reshape(7),
+                                gra)
+                        
+                        
+                        # create a gradient array for assemble all process gradient result
+                        n_gra.append(gra)
+
+                    ##=== Backward and optimize ===##
+                    n_outputs = n_outputs.to(device)
+                    n_gra = np.array(n_gra)
                     # d_reward/d_z * z
-                    loss = model.myloss(outputs,gra[0:7],device)        
+                    loss = model.myloss(n_outputs,n_gra[:,0:7],device)        
 
                     optimizer.zero_grad()
 
                     # d_reward/d_z * d_z/d_dnn1
                     loss.backward()
                     optimizer.step()
-                    evalue += gra[7]
-                    Every_reward[epoch,i]=gra[7]
+                    evalue += n_gra[:,7].sum()/batch_size
+                    Every_reward[epoch,i]=n_gra[:,7].sum()/batch_size
 
 
-                    # if (i+1)%10 == 0:
-                    #     logging.info (f'Epoch [{epoch+1}/{num_epochs}], Step [{(i+1)}/{batch_size}], Reward: {gra[7]:.4f}')
-                pbar.set_postfix({'step': i+1, 'reward': gra[7]})
+                    
+                    ## record the gradient and step reward
+                    log_outputs(writer,np_n_outputs[0,:].reshape(7),global_step)
+                    log_gradient(writer,n_gra[0,:].reshape(8),global_step)
+
+                global_step += 1
+                pbar.set_postfix({'step': i+1, 'reward': n_gra[:,7].sum()/batch_size})
                 pbar.update(1)
             
             # change state
-            mean_reward = evalue/batch_size # evalue/int(batch_size/num_cores)
+            mean_reward = evalue/step_pre_epoch # evalue/int(batch_size/num_cores)
             Mean_r += [mean_reward]
             logging.info('evaluation: %s ',mean_reward)
+            writer.add_scalar('mean_reward', mean_reward, epoch)
             
 
             if (epoch)%2 == 0:
                 torch.save(model, model_folder+"/NN1_deep2_"+str(epoch)+".pth")
-        
+            
+            
             np.save(training_data_folder+'/iteration',Iteration)
             np.save(training_data_folder+'/mean_reward',Mean_r)
             np.save(training_data_folder+'/every_reward',Every_reward)
+            writer.close()

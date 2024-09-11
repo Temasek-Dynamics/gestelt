@@ -257,7 +257,7 @@ class LearningAgileAgent():
             self.Time = np.concatenate((self.Time,[self.i*self.dyn_step]),axis = 0)
             self.Pitch = np.concatenate((self.Pitch,[self.gap_pitch]),axis = 0)      
             
-            if (self.i%25)==0: # estimation frequency = 20 hz 
+            if (self.i%5)==0: # estimation frequency = 20 hz 
                 # decision variable is updated in 20 hz
                 self.gate_state_estimation()
 
@@ -286,7 +286,7 @@ class LearningAgileAgent():
                     nn2_inputs[14] = atan((self.gate_n.gate_point[0,2]-self.gate_n.gate_point[1,2])/(self.gate_n.gate_point[0,0]-self.gate_n.gate_point[1,0])) # compute the actual gate pitch ange in real-time
 
                     # NN2 OUTPUT the traversal time and pose
-                    out = self.model(nn2_inputs,device).to('cpu')
+                    out = self.model(torch.tensor(nn2_inputs, dtype=torch.float).to(device)).to('cpu')
                     out = out.data.numpy()
                     self.NN_T_tra = np.concatenate((self.NN_T_tra,[out[6]]),axis = 0)
                     

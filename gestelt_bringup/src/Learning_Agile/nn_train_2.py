@@ -15,7 +15,7 @@ with open(yaml_file, 'r', encoding='utf-8') as file:
 current_dir = os.path.dirname(os.path.abspath(__file__))
 training_data_folder=os.path.abspath(os.path.join(current_dir, 'training_data'))
 model_folder=os.path.abspath(os.path.join(training_data_folder, 'NN_model'))
-FILE_INPUT = model_folder+"/NN1_deep2_22.pth"
+FILE_INPUT = model_folder+"/NN1_deep2_60.pth"
 model_nn1 = torch.load(FILE_INPUT).to(device)
 # Hyper-parameters 
 input_size = 15 
@@ -33,7 +33,8 @@ criterion = nn.MSELoss()
 optimizer = torch.optim.Adam(model_nn2.parameters(), lr=learning_rate)  
 
 def traj(inputs, outputs, state_traj):
-    gate_point = np.array([[-inputs[7]/2,0,1],[inputs[7]/2,0,1],[inputs[7]/2,0,-1],[-inputs[7]/2,0,-1]])
+    gate_point = np.array([[-inputs[7]/2,0,0.65],[inputs[7]/2,0,0.65],[inputs[7]/2,0,-0.65],[-inputs[7]/2,0,-0.65]])
+
     gate1 = gate(gate_point)
     gate_point = gate1.rotate_y_out(inputs[8])
 
@@ -81,7 +82,7 @@ if __name__ == '__main__':
             inputs = nn_sample()
 
             # forward pass
-            outputs = model_nn1(inputs,device).to('cpu')
+            outputs = model_nn1(torch.tensor(inputs, dtype=torch.float).to(device)).to('cpu')
             out = outputs.data.numpy()
             # create shared variables
             state_traj = Array('d',np.zeros((batch_size+1)*10))
@@ -116,7 +117,7 @@ if __name__ == '__main__':
                 print("current NN1 output",out)
                 t_out = torch.tensor(out, dtype=torch.float).to(device)
                 # Forward pass
-                pre_outputs = model_nn2(inputs,device)
+                pre_outputs = model_nn2(torch.tensor(inputs, dtype=torch.float).to(device))
                 #print(inputs,' ',pre_outputs)
                 loss = criterion(pre_outputs, t_out).to('cpu')
                 loss_t = loss.data.numpy()

@@ -62,11 +62,12 @@ class run_quad:
         
         self.thrust_ub = config_dict['learning_agile']['single_motor_max_thrust']*4*config_dict['learning_agile']['throttle_upper_bound']
         self.thrust_lb = config_dict['learning_agile']['single_motor_max_thrust']*4*config_dict['learning_agile']['throttle_lower_bound']
-        ang_rate_b = config_dict['learning_agile']['angular_vel_bound']
+        ang_rate_b_xy = config_dict['learning_agile']['angular_vel_bound_xy']
+        ang_rate_b_z = config_dict['learning_agile']['angular_vel_bound_z']
         self.uavoc1.setAuxvarVariable()
         self.uavoc1.setControlVariable(self.uav1.U,
-                                       control_lb=[self.thrust_lb ,-ang_rate_b,-ang_rate_b,-ang_rate_b],\
-                                       control_ub= [self.thrust_ub,ang_rate_b,ang_rate_b,ang_rate_b]) # thrust-to-weight = 4:1
+                                       control_lb=[self.thrust_lb ,-ang_rate_b_xy,-ang_rate_b_xy,-ang_rate_b_z],\
+                                       control_ub= [self.thrust_ub,ang_rate_b_xy,ang_rate_b_xy,ang_rate_b_z]) # thrust-to-weight = 4:1
 
         self.uavoc1.setDyn(self.uav1.f,self.dt)
       
@@ -322,101 +323,110 @@ class run_quad:
                             Ulast_value)
         
         ############==================finite difference===========================############
-        # if not self.PDP_GRADIENT:
-        # fixed perturbation to calculate the gradient
-        # delta = 1e-3
-        # drdx = np.clip(self.R_from_MPC(tra_pos+[delta,0,0],tra_ang, t_tra,Ulast_value) - j,-0.5,0.5)*0.1
-        # drdy = np.clip(self.R_from_MPC(tra_pos+[0,delta,0],tra_ang, t_tra,Ulast_value) - j,-0.5,0.5)*0.1
-        # drdz = np.clip(self.R_from_MPC(tra_pos+[0,0,delta],tra_ang, t_tra,Ulast_value) - j,-0.5,0.5)*0.1
-        # drda = np.clip(self.R_from_MPC(tra_pos,tra_ang+[delta,0,0], t_tra,Ulast_value) - j,-0.5,0.5)*(1/(500*tra_ang[0]**2+5))
-        # drdb = np.clip(self.R_from_MPC(tra_pos,tra_ang+[0,delta,0], t_tra,Ulast_value) - j,-0.5,0.5)*(1/(500*tra_ang[1]**2+5))
-        # drdc = np.clip(self.R_from_MPC(tra_pos,tra_ang+[0,0,delta], t_tra,Ulast_value) - j,-0.5,0.5)*(1/(500*tra_ang[2]**2+5))
-        # drdt =0
-        # if((self.R_from_MPC(tra_pos,tra_ang,t_tra-0.1,Ulast_value)-j)>2):
-        #     drdt = -0.05
-        # if((self.R_from_MPC(tra_pos,tra_ang,t_tra+0.1,Ulast_value)-j)>2):
-        #     drdt = 0.05
+        if not self.PDP_GRADIENT:
+            # fixed perturbation to calculate the gradient
+            delta = 1e-3
+            drdx = np.clip(self.R_from_MPC(tra_pos+[delta,0,0],tra_ang, t_tra,Ulast_value) - j,-0.5,0.5)*0.1
+            drdy = np.clip(self.R_from_MPC(tra_pos+[0,delta,0],tra_ang, t_tra,Ulast_value) - j,-0.5,0.5)*0.1
+            drdz = np.clip(self.R_from_MPC(tra_pos+[0,0,delta],tra_ang, t_tra,Ulast_value) - j,-0.5,0.5)*0.1
+            drda = np.clip(self.R_from_MPC(tra_pos,tra_ang+[delta,0,0], t_tra,Ulast_value) - j,-0.5,0.5)*(1/(500*tra_ang[0]**2+5))
+            drdb = np.clip(self.R_from_MPC(tra_pos,tra_ang+[0,delta,0], t_tra,Ulast_value) - j,-0.5,0.5)*(1/(500*tra_ang[1]**2+5))
+            drdc = np.clip(self.R_from_MPC(tra_pos,tra_ang+[0,0,delta], t_tra,Ulast_value) - j,-0.5,0.5)*(1/(500*tra_ang[2]**2+5))
+            drdt =0
+            if((self.R_from_MPC(tra_pos,tra_ang,t_tra-0.1,Ulast_value)-j)>2):
+                drdt = -0.05
+            if((self.R_from_MPC(tra_pos,tra_ang,t_tra+0.1,Ulast_value)-j)>2):
+                drdt = 0.05
 
-        # # print("finite diff:",np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,j]))
-        # return np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,j])
+            # print("finite diff:",np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,j]))
+            return np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,j])
+        
         ############==============end of finite difference===========================############
+        
         ########################################################################
         #=======================SYMBOLIC GRADIENT+PDP===========================
         ########################################################################
-        # else:
-
-
-        ###################################################################
-        ###----- Set mpc external variables VALUE to diffPMP--------#######
-        ###################################################################
-        ## goal state, t_node is set in the mpc_update function,
-        ## need to be given here
-    
-    
-        ## set the traverse hyperparameters value (auxvar) here
-        trav_auxvar = np.array([tra_pos[0],tra_pos[1],tra_pos[2],tra_ang[0],tra_ang[1],tra_ang[2],t_tra])
-        goal_state_value=np.concatenate((self.goal_pos,np.zeros(3),self.goal_ori))  
-
-        
-        ## using LQR solver to solve the auxilary control system to get the analytical gradient
-        # set values to the auxilary control system symbolic functions 
-        aux_sys = self.uavoc1.getAuxSys(state_traj_opt=self.sol1['state_traj_opt'],
-                                        control_traj_opt=self.sol1['control_traj_opt'],
-                                        costate_traj_opt=self.sol1['costate_traj_opt'],
-                                        goal_state_value=goal_state_value,
-                                        Ulast_value=Ulast_value,
-                                        auxvar_value=trav_auxvar)
-        
-        # set values to the LQR solver
-        self.lqr_solver.setDyn(dynF=aux_sys['dynF'], dynG=aux_sys['dynG'], dynE=aux_sys['dynE'])
-        self.lqr_solver.setPathCost(Hxx=aux_sys['Hxx'], Huu=aux_sys['Huu'], Hxu=aux_sys['Hxu'], Hux=aux_sys['Hux'],
-                                Hxe=aux_sys['Hxe'], Hue=aux_sys['Hue'])
-        self.lqr_solver.setFinalCost(hxx=aux_sys['hxx'], hxe=aux_sys['hxe'])
-
-
-        ## solve the auxilary control system and get the analytical gradient
-        aux_sol=self.lqr_solver.lqrSolver(np.zeros((self.uavoc1.n_state, self.uavoc1.n_trav_auxvar)), self.horizon)
-        
-
-        ## take solution of the auxiliary control system
-        # which is the dtrajectory/dtraverse_auxvar 
-        dstate_trajdp = aux_sol['state_traj_opt'] #(n_node,n_state,n_trav_auxvar)
-        dinput_trajdp = aux_sol['control_traj_opt'] 
-        
-        dstate_trajdp = np.array(dstate_trajdp)
+        else:
+            ###################################################################
+            ###----- Set mpc external variables VALUE to diffPMP--------#######
+            ###################################################################
+            ## goal state, t_node is set in the mpc_update function,
+            ## need to be given here
         
         
-        if  AUTO_DIFF:
-            # acquire dreward/dtrajectory
-            j.backward()
-            drdstate_traj=self.state_traj_tensor.grad #(n_node,15)     
-            drdstate_traj=drdstate_traj.numpy().reshape(self.horizon+1,1,self.uavoc1.n_state)
+            ## set the traverse hyperparameters value (auxvar) here
+            trav_auxvar = np.array([tra_pos[0],tra_pos[1],tra_pos[2],tra_ang[0],tra_ang[1],tra_ang[2],t_tra])
+            goal_state_value=np.concatenate((self.goal_pos,np.zeros(3),self.goal_ori))  
+
+            
+            ## using LQR solver to solve the auxilary control system to get the analytical gradient
+            # set values to the auxilary control system symbolic functions 
+            aux_sys = self.uavoc1.getAuxSys(state_traj_opt=self.sol1['state_traj_opt'],
+                                            control_traj_opt=self.sol1['control_traj_opt'],
+                                            costate_traj_opt=self.sol1['costate_traj_opt'],
+                                            goal_state_value=goal_state_value,
+                                            Ulast_value=Ulast_value,
+                                            auxvar_value=trav_auxvar)
+            
+            # set values to the LQR solver
+            self.lqr_solver.setDyn(dynF=aux_sys['dynF'], dynG=aux_sys['dynG'], dynE=aux_sys['dynE'])
+            self.lqr_solver.setPathCost(Hxx=aux_sys['Hxx'], Huu=aux_sys['Huu'], Hxu=aux_sys['Hxu'], Hux=aux_sys['Hux'],
+                                    Hxe=aux_sys['Hxe'], Hue=aux_sys['Hue'])
+            self.lqr_solver.setFinalCost(hxx=aux_sys['hxx'], hxe=aux_sys['hxe'])
+
+
+            ## solve the auxilary control system and get the analytical gradient
+            aux_sol=self.lqr_solver.lqrSolver(np.zeros((self.uavoc1.n_state, self.uavoc1.n_trav_auxvar)), self.horizon)
+            
+
+            ## take solution of the auxiliary control system
+            # which is the dtrajectory/dtraverse_auxvar 
+            dstate_trajdp = aux_sol['state_traj_opt'] #(n_node,n_state,n_trav_auxvar)
+            dinput_trajdp = aux_sol['control_traj_opt'] 
+            
+            dstate_trajdp = np.array(dstate_trajdp)
             
             
-        drdstate_traj=self.drdstate_traj.reshape(self.horizon+1,1,self.uavoc1.n_state)
+            if  AUTO_DIFF:
+                # acquire dreward/dtrajectory
+                j.backward()
+                drdstate_traj=self.state_traj_tensor.grad #(n_node,15)     
+                drdstate_traj=drdstate_traj.numpy().reshape(self.horizon+1,1,self.uavoc1.n_state)
+                
+                
+            drdstate_traj=self.drdstate_traj.reshape(self.horizon+1,1,self.uavoc1.n_state)
+            
+            
+            drdp=np.zeros(7)
+            for i in range(self.horizon):
+                drdp += np.matmul(drdstate_traj[i,:,:],dstate_trajdp[i,:,:]).reshape(7)
+
+            drdp += np.matmul(drdstate_traj[self.horizon,:,:],dstate_trajdp[self.horizon,:,:]).reshape(7)    
+            
+            # clip the traverse time gradient
+            # drdp[:]=np.clip(drdp[:],-0.1,0.1)
+            
+            # drdp[0] = np.clip(drdp[0],-0.5,0.5)
+            # drdp[1] = np.clip(drdp[1],-0.5,0.5)
+            # drdp[2] = np.clip(drdp[2],-0.5,0.5)
+            # drdp[3] = np.clip(drdp[3],-0.5,0.5)
+            # drdp[4] = np.clip(drdp[4],-0.5,0.5)
+            # drdp[5] = np.clip(drdp[5],-0.5,0.5)
+            drdp[6] = np.clip(drdp[6],-0.1,0.1)
+
+            drdp = drdp/20000
+            drdx = drdp[0]
+            drdy = drdp[1]
+            drdz = drdp[2]
+            drda = drdp[3]
+            drdb = drdp[4]
+            drdc = drdp[5]
+            drdt = drdp[6]
+            # j = j.detach().numpy()
+
         
-        # normalize the gradient
-        norm_drdstate_traj = drdstate_traj/np.linalg.norm(drdstate_traj)    
-        norm_dstate_trajdp = dstate_trajdp/np.linalg.norm(dstate_trajdp)
-        drdp=np.zeros(7)
-        for i in range(self.horizon):
-            drdp += np.matmul(drdstate_traj[i,:,:],dstate_trajdp[i,:,:]).reshape(7)
-
-        drdp += np.matmul(drdstate_traj[self.horizon,:,:],dstate_trajdp[self.horizon,:,:]).reshape(7)    
-
-        drdp = drdp/20000
-        drdx = drdp[0]
-        drdy = drdp[1]
-        drdz = drdp[2]
-        drda = drdp[3]
-        drdb = drdp[4]
-        drdc = drdp[5]
-        drdt = drdp[6]
-        # j = j.detach().numpy()
-
-      
-        # print("analytic grad:",np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,j]))
-        return np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,j])
+            # print("analytic grad:",np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,j]))
+            return np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,j])
 
 
     def optimize(self, t):
