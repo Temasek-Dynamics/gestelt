@@ -5,9 +5,9 @@ STATIC_GATE_TEST: false
 # gate parameters
 gate:
   linear_vel: [0.0, 0.0, 0.0]
-  # angular_vel: 0.0 
-  # linear_vel: [-1,-0.3,0.4]
-  angular_vel: -1.57
+  angular_vel: 0.0 
+  # linear_vel: [1.0,-0.3,0.4]
+  # angular_vel: 1.57
 traj_server:
   takeoff_height: 1.2
   drone_yaw: 0.0 # take-off yaw
@@ -35,8 +35,8 @@ mission:
   #################################################
   ######------------- Training -----------#########
   #################################################
-  ##------ MPC initial pose ----##
-  # initial pose only works for python sim
+  # ##------ MPC initial pose ----##
+  # # initial pose only works for python sim
   initial_position: [0.0, -6, 0]
   initial_ori_euler: [0.0, 0.0, 0] # RPY, only yaw is active
 
@@ -64,25 +64,25 @@ learning_agile:
   # wwf: final angular velocity cost
   
   ##-----parameters for testing ------##
-  # wrt: 5.0
-  # wqt: 80.0
-  # wthrust: 1.0
-  # wwt: 10.0
-  # wrf: 5.0
-  # wvf: 1.0
-  # wqf: 1.0
-  # wInputDiff: 1 
-
-  ##-----parameters for training ------## 
-  #### for a stabler training,######## 
   wrt: 5.0
   wqt: 80.0
-  wthrust: 10.0
-  wwt: 100.0
+  wthrust: 1.0
+  wwt: 10.0
   wrf: 5.0
   wvf: 1.0
   wqf: 1.0
-  wInputDiff: 10
+  wInputDiff: 1 
+
+  ##-----parameters for training ------## 
+  # #### for a stabler training,######## 
+  # wrt: 5.0
+  # wqt: 80.0
+  # wthrust: 10.0
+  # wwt: 100.0
+  # wrf: 5.0
+  # wvf: 1.0
+  # wqf: 1.0
+  # wInputDiff: 10
   ##------ traversing parameters ---##
   max_traverse_weight: 60 #70
   traverse_weight_span: 10

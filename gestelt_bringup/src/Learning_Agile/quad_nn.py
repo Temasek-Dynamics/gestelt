@@ -46,12 +46,10 @@ def nn_sample(init_pos=None,final_pos=None,init_angle=None,cur_epoch=100):
     inputs[6] = np.random.uniform(-0.1,0.1)
     
     ## === random width of the gate  =========##
-    
     inputs[7] = np.clip(np.random.normal(0.6,0.2),0.56,0.56) #(0.9,0.3),0.5,1.25 
   
-  
     ## === random pitch angle of the gate ====##
-    # angle = np.clip(2*(1.3-inputs[7]),0,pi/3)
+    # angle = np.clip(1.3*(1.2-inputs[7]),0,pi/3)
     # angle1 = (pi/2-angle)/3
     # judge = np.random.normal(0,1)
     # if init_angle is None:
@@ -63,21 +61,20 @@ def nn_sample(init_pos=None,final_pos=None,init_angle=None,cur_epoch=100):
     # else:
     #     inputs[8] = init_angle
 
-    
-    # inputs[8] = np.random.uniform(-pi/2,pi/2)
-
     ###==== curriculum learning ===###
     # pi/2 -> gate is horizontal
     # 0 -> gate is vertical
     des_pitch_mean_min = pi/2
     des_pitch_mean_max = pi/3 
     des_pitch_mean = des_pitch_mean_min - (des_pitch_mean_min - des_pitch_mean_max) * (cur_epoch / 100) 
-    inputs[8] = np.clip(np.random.normal(0,pi/8),-pi/6,pi/6)  
+    inputs[8] = np.clip(np.random.normal(0,pi/18),-pi/6,pi/6)  
     if inputs[8]>0:
         inputs[8]=inputs[8]-des_pitch_mean
     else:
         inputs[8]=inputs[8]+des_pitch_mean
     
+
+    # # inputs[8] = np.random.uniform(-pi/2,pi/2)
     return inputs
 
 ## define the expected output of an input (for pretraining)

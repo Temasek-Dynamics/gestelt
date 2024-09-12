@@ -211,6 +211,11 @@ class run_quad:
             pitch_reward =  0 * 0.5 * tra_ang[1]**2
             self.drdpitch = 0 * tra_ang[1]
             
+            roll_reward = - 1000 * 0.5 * tra_ang[0]**2
+            self.drdroll = - 1000 * tra_ang[0]
+
+            yaw_reward = - 1000 * 0.5 * tra_ang[2]**2
+            self.drdyaw = - 1000 * tra_ang[2]
             reward_origin = 1000 * self.collision - 0.5 * self.path + 100 + 10 * pitch_reward
 
 
@@ -265,7 +270,7 @@ class run_quad:
             
            
             
-            return reward #+ pitch_reward
+            return reward + roll_reward + yaw_reward#+ pitch_reward
         
         
         else:   
@@ -406,21 +411,18 @@ class run_quad:
             # clip the traverse time gradient
             # drdp[:]=np.clip(drdp[:],-0.1,0.1)
             
-            # drdp[0] = np.clip(drdp[0],-0.5,0.5)
-            # drdp[1] = np.clip(drdp[1],-0.5,0.5)
-            # drdp[2] = np.clip(drdp[2],-0.5,0.5)
-            # drdp[3] = np.clip(drdp[3],-0.5,0.5)
-            # drdp[4] = np.clip(drdp[4],-0.5,0.5)
-            # drdp[5] = np.clip(drdp[5],-0.5,0.5)
+            drdp[3] = drdp[3]+self.drdroll
+            drdp[5] = drdp[5]+self.drdyaw
+
             drdp[6] = np.clip(drdp[6],-0.1,0.1)
 
             drdp = drdp/20000
-            drdx = drdp[0]
-            drdy = drdp[1]
-            drdz = drdp[2]
-            drda = drdp[3]
-            drdb = drdp[4]
-            drdc = drdp[5]
+            drdx = np.clip(drdp[0],-0.2,0.2)
+            drdy = np.clip(drdp[1],-0.01,0.01)
+            drdz = np.clip(drdp[2],-0.05,0.05)
+            drda = np.clip(drdp[3],-0.5,0.5)
+            drdb = np.clip(drdp[4],-0.15,0.15)
+            drdc= np.clip(drdp[5],-0.02,0.02)
             drdt = drdp[6]
             # j = j.detach().numpy()
 

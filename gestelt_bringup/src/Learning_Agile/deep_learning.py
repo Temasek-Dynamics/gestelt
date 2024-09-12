@@ -114,8 +114,8 @@ if __name__ == '__main__':
     PDP_GRADIENT = True
     USE_PREV_SOLVER = False
     num_epochs = 100 #100
-    batch_size = 50 # 100
-    step_pre_epoch = 10
+    batch_size = 20 # 100
+    step_pre_epoch = 20
     if PDP_GRADIENT:
         learning_rate = 1e-4
         method_name = 'PDP'
@@ -123,7 +123,7 @@ if __name__ == '__main__':
         learning_rate = 1e-4
         method_name = 'FD'
 
-    training_notes = "same mod, gate curriculum width 0.56, pitch pi/2->pi/3"
+    training_notes = "same mod, roll yaw reward"
 
     logger_config=LoggerConfig("NN1_training_logs")
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -187,7 +187,7 @@ if __name__ == '__main__':
 
     
     ## prepare logging
-    Every_reward = np.zeros((num_epochs,batch_size))    
+    Every_reward = np.zeros((num_epochs,step_pre_epoch))    
     Iteration = []
     Mean_r = []
     
