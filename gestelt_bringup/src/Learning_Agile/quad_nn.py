@@ -27,7 +27,7 @@ desired_average_vel=config_dict['training_param']['desired_average_vel']
 # load the configuration file
 
 ## sample an input for the neural network 1
-def nn_sample(init_pos=None,final_pos=None,init_angle=None):
+def nn_sample(init_pos=None,final_pos=None,init_angle=None,cur_epoch=100):
     inputs = np.zeros(9)
     if init_pos is None:
         inputs[0:3] = np.random.uniform(-2,2,size=3) + pre_ini_pos #-5~5, -9
@@ -40,13 +40,18 @@ def nn_sample(init_pos=None,final_pos=None,init_angle=None):
         inputs[4]=np.clip(inputs[4],pre_end_pos[1]-0.5,pre_end_pos[1]+0.5)
     else:
         inputs[3:6] = final_pos
-    ## random initial yaw angle of the quadrotor
+
+        
+    ##random initial yaw angle of the quadrotor ##
     inputs[6] = np.random.uniform(-0.1,0.1)
-    ## random width of the gate
-    inputs[7] = np.clip(np.random.normal(0.6,0.2),0.6,0.6) #(0.9,0.3),0.5,1.25   
-    # inputs[7] = np.random.uniform(0.7,1.2)
-    ## random pitch angle of the gate
-    # angle = np.clip(2*(1.5-inputs[7]),0,pi/3)
+    
+    ## === random width of the gate  =========##
+    
+    inputs[7] = np.clip(np.random.normal(0.6,0.2),0.56,0.56) #(0.9,0.3),0.5,1.25 
+  
+  
+    ## === random pitch angle of the gate ====##
+    # angle = np.clip(2*(1.3-inputs[7]),0,pi/3)
     # angle1 = (pi/2-angle)/3
     # judge = np.random.normal(0,1)
     # if init_angle is None:
@@ -57,13 +62,22 @@ def nn_sample(init_pos=None,final_pos=None,init_angle=None):
     #         inputs[8] = np.clip(np.random.normal(-angle - angle1, 2*angle1/3),-pi/2,-angle)
     # else:
     #     inputs[8] = init_angle
-    # inputs[8] = np.random.uniform(-pi/2,pi/2)  
-    inputs[8] = np.clip(np.random.normal(0,pi/6),-pi/3,pi/3)  
+
+    
+    # inputs[8] = np.random.uniform(-pi/2,pi/2)
+
+    ###==== curriculum learning ===###
+    # pi/2 -> gate is horizontal
+    # 0 -> gate is vertical
+    des_pitch_mean_min = pi/2
+    des_pitch_mean_max = pi/3 
+    des_pitch_mean = des_pitch_mean_min - (des_pitch_mean_min - des_pitch_mean_max) * (cur_epoch / 100) 
+    inputs[8] = np.clip(np.random.normal(0,pi/8),-pi/6,pi/6)  
     if inputs[8]>0:
-        inputs[8]=inputs[8]-pi/3
+        inputs[8]=inputs[8]-des_pitch_mean
     else:
-        inputs[8]=inputs[8]+pi/3
-    # inputs[8] = 0.8879
+        inputs[8]=inputs[8]+des_pitch_mean
+    
     return inputs
 
 ## define the expected output of an input (for pretraining)

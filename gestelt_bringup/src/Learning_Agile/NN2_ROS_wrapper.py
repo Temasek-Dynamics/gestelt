@@ -222,7 +222,7 @@ class NN2_ROS_wrapper:
 
                 # NN2 OUTPUT the traversal time and pose
                 t_comp = time.time()
-                out = self.model(nn2_inputs,device).to('cpu')
+                out = self.model(torch.tensor(nn2_inputs, dtype=torch.float).to(device)).to('cpu')
                 NN_forward_time=time.time()-t_comp
                 out = out.data.numpy()
         

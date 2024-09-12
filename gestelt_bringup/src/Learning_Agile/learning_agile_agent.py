@@ -257,7 +257,7 @@ class LearningAgileAgent():
             self.Time = np.concatenate((self.Time,[self.i*self.dyn_step]),axis = 0)
             self.Pitch = np.concatenate((self.Pitch,[self.gap_pitch]),axis = 0)      
             
-            if (self.i%5)==0: # estimation frequency = 20 hz 
+            if (self.i%25)==0: # estimation frequency = 20 hz 
                 # decision variable is updated in 20 hz
                 self.gate_state_estimation()
 
