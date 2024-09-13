@@ -417,10 +417,10 @@ class run_quad:
             drdp[6] = np.clip(drdp[6],-0.1,0.1)
 
             drdp = drdp/20000
-            drdx = np.clip(drdp[0],-0.2,0.2)
+            drdx = np.clip(drdp[0],-0.02,0.02)
             drdy = np.clip(drdp[1],-0.01,0.01)
-            drdz = np.clip(drdp[2],-0.05,0.05)
-            drda = np.clip(drdp[3],-0.5,0.5)
+            drdz = np.clip(drdp[2],-0.02,0.02)
+            drda = np.clip(drdp[3],-0.02,0.02)
             drdb = np.clip(drdp[4],-0.15,0.15)
             drdc= np.clip(drdp[5],-0.02,0.02)
             drdt = drdp[6]

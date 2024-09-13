@@ -123,7 +123,7 @@ if __name__ == '__main__':
         learning_rate = 1e-4
         method_name = 'FD'
 
-    training_notes = "same mod, roll yaw reward"
+    training_notes = "same mod, add goal reward, init_pos=-3"
 
     logger_config=LoggerConfig("NN1_training_logs")
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')

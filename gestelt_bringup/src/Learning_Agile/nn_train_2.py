@@ -5,6 +5,8 @@ from multiprocessing import Process, Array
 import numpy as np
 import os
 import yaml
+from torch.utils.tensorboard import SummaryWriter
+import datetime
 # Device configuration
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -15,13 +17,21 @@ with open(yaml_file, 'r', encoding='utf-8') as file:
 current_dir = os.path.dirname(os.path.abspath(__file__))
 training_data_folder=os.path.abspath(os.path.join(current_dir, 'training_data'))
 model_folder=os.path.abspath(os.path.join(training_data_folder, 'NN_model'))
-FILE_INPUT = model_folder+"/NN1_deep2_90.pth"
+FILE_INPUT = model_folder+"/NN1_deep2_98.pth"
 model_nn1 = torch.load(FILE_INPUT).to(device)
-# Hyper-parameters 
+
+##====== NN2 logging initialization ======##
+log_dir = os.path.join(current_dir, "NN2_training_logs")
+current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+file_dir = os.path.join(log_dir, f"train-{current_time}-teacher-{FILE_INPUT.split('/')[-1]}")
+writer = SummaryWriter(log_dir=file_dir)
+
+
+##========== Hyper-parameters ============##
 input_size = 15 
 hidden_size = 128 
 output_size = 7
-num_epochs = 16*200 #16*100
+num_epochs = 16*400 #16*100
 batch_size = config_dict['learning_agile']['horizon']
 num_cores = 20
 learning_rate = 1e-6
@@ -113,8 +123,8 @@ if __name__ == '__main__':
                 out = np.zeros(7)
                 out[0:6] = n_out[k][0:6]
                 out[6] = n_out[k][6]-i*0.10
-                print("current drone state:",inputs)
-                print("current NN1 output",out)
+                # print("current drone state:",inputs)
+                # print("current NN1 output",out)
                 t_out = torch.tensor(out, dtype=torch.float).to(device)
                 # Forward pass
                 pre_outputs = model_nn2(torch.tensor(inputs, dtype=torch.float).to(device))
@@ -130,7 +140,7 @@ if __name__ == '__main__':
         
         print (f'Epoch [{(epoch+1)*num_cores}/{num_epochs}], Loss: {loss_n/(batch_size*num_cores):.4f}')
 
+        writer.add_scalar('Loss', loss_n/(batch_size*num_cores), (epoch+1)*num_cores)
 #save model
 torch.save(model_nn2, model_folder+"/NN2_imitate_1.pth")
-
-
+writer.close()

@@ -60,7 +60,7 @@ class MovingGate():
         # gate pitch angular velocity
         self.w = gate_w 
          
-        self.gate_points_list, self.V = self.gate1.move(v = self.v ,w = self.w,dt=dt)
+        self.gate_points_list, self.V = self.gate1.move(T = 8, v = self.v ,w = self.w,dt=dt)
 
     
 class LearningAgileAgent():
