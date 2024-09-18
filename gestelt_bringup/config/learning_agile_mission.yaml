@@ -5,9 +5,9 @@ mission_period: 8.0 #s
 # gate parameters
 gate:
   # linear_vel: [0.0, 0.0, 0.0]
-  # angular_vel: 0.0 
-  linear_vel: [0.5,-0.3,0.0]
-  angular_vel: 1.57
+  angular_vel: 0.0 
+  linear_vel: [-1.0,-0.3,0.0]
+  # angular_vel: -1.57
 traj_server:
   takeoff_height: 1.2
   drone_yaw: 0.0 # take-off yaw
@@ -16,8 +16,8 @@ mission:
   ######--------- for test --------#########
   #################################################
   ##------ MPC initial pose ----##
-  # initial pose only works for python sim
-  initial_position: [0.0, -3.0, 1]
+  ## ##initial pose only works for python sim
+  initial_position: [0.0, -6.0, 1]
   initial_ori_euler: [0.0, 0.0, 1.0] # RPY, only yaw is active
 
   ##------ gate pose ----##
@@ -26,7 +26,7 @@ mission:
   gate_ori_RP: [-0.0, -0.3535, 0.0]
 
   ##------ goal pose ----##
-  goal_position: [0.0, 1.8, 1]
+  goal_position: [0.0, 3, 1]
   goal_ori_euler: [0.0, 0.0, 0.0] # RPY, only yaw is active
 
   #################################################
@@ -36,8 +36,8 @@ mission:
   ######------------- Training -----------#########
   #################################################
   # ##------ MPC initial pose ----##
-  # # initial pose only works for python sim
-  # initial_position: [0.0, -3, 0]
+  # ##initial pose only works for python sim
+  # initial_position: [0.0, -6, 0]
   # initial_ori_euler: [0.0, 0.0, 0] # RPY, only yaw is active
 
   # ##------ gate pose ----##
@@ -84,9 +84,9 @@ learning_agile:
   wqf: 1.0
   wInputDiff: 10
   ##------ traversing parameters ---##
-  max_traverse_weight: 100 #70
+  max_traverse_weight: 70 #70
   traverse_weight_span: 10
-  traverse_time: 1.5  
+  traverse_time: 1.5  # only for STATIC_GATE_TEST
 
   ##------ safety parameters  ------##
   no_solution_flag_t_thresh: 0.1
@@ -121,11 +121,11 @@ learning_agile:
   pos_bound: 15 #m (-b,b)
 
   # velocity constraints
-  linear_vel_bound: 5 #m/s
+  linear_vel_bound: 15 #m/s
 
   # angular velocity constraints
-  angular_vel_bound_xy: 7.57 #rad/s
-  angular_vel_bound_z: 3.57 #rad/s
+  angular_vel_bound_xy: 15.57 #rad/s
+  angular_vel_bound_z: 15.57 #rad/s
 
 
   ## ----- miscellaneous parameters  ----##

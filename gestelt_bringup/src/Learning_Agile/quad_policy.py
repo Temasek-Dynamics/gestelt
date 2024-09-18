@@ -23,8 +23,8 @@ class run_quad:
         #######------------ UAV PARAM----------------#########
         ######################################################
         ## definition 
-        self.wing_len = 1 
-        self.uav_height = 0.4
+        self.wing_len = 0.8 
+        self.uav_height = 0.3
         # --------------------------- create model1 ----------------------------------------
         self.uav1 = Quadrotor()
         # jx, jy, jz = 0.0023, 0.0023, 0.004
@@ -422,7 +422,14 @@ class run_quad:
             drdz = np.clip(drdp[2],-0.02,0.02)
             drda = np.clip(drdp[3],-0.02,0.02)
             drdb = np.clip(drdp[4],-0.15,0.15)
-            drdc= np.clip(drdp[5],-0.02,0.02)
+            drdc = np.clip(drdp[5],-0.02,0.02)
+            # drdx = drdp[0]
+            # drdy = drdp[1]
+            # drdz = drdp[2]
+            # drda = drdp[3]
+            # drdb = drdp[4]
+            # drdc = drdp[5]
+            
             drdt = drdp[6]
             # j = j.detach().numpy()
 

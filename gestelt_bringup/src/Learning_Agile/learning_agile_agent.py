@@ -34,7 +34,7 @@ class MovingGate():
         
         # initialize the gate1, with the initial gate position
         # env_init_set[7]: gate width
-        gate_point_no_pitch = np.array([[-env_init_set[7]/2,-0,1.8],[env_init_set[7]/2,-0,1.8],[env_init_set[7]/2,-0,0.5],[-env_init_set[7]/2,-0,0.5]])
+        gate_point_no_pitch = np.array([[-env_init_set[7]/2,-0,1.8],[env_init_set[7]/2,-0,1.8],[env_init_set[7]/2,-0,0.6],[-env_init_set[7]/2,-0,0.6]])
         self.gate1 = gate(gate_point_no_pitch)
         self.gate_init_p = env_init_set[8]
         
@@ -328,7 +328,7 @@ class LearningAgileAgent():
         np.save(os.path.join(python_sim_data_folder,'Pitch'),self.Pitch)
         np.save(os.path.join(python_sim_data_folder,'HL_Variable'),self.hl_variable)
         np.save(os.path.join(python_sim_data_folder,'solving_time'),self.solving_time)
-        self.quad1.uav1.play_animation(wing_len=1,
+        self.quad1.uav1.play_animation(wing_len=self.quad1.wing_len,
                                        gate_traj1=self.gate_points_list[::5,:,:],
                                        state_traj=self.state_n[::5,:],
                                        goal_pos=self.final_point.tolist(),

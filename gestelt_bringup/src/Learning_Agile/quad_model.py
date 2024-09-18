@@ -293,7 +293,7 @@ class Quadrotor:
         # traverse attitude error
         tra_R_B_I = dir_cosine(self.des_tra_q)
         R_B_I = dir_cosine(self.q)
-        self.cost_q_t = trace(np.identity(3) - mtimes(transpose(tra_R_B_I), R_B_I))**2
+        self.cost_q_t = trace(np.identity(3) - mtimes(transpose(tra_R_B_I), R_B_I))
 
 
         # weight = max_tra_w*casadi.exp(-gamma*(dt*i-t_tra)**2) #gamma should increase as the flight duration decreases
@@ -453,9 +453,9 @@ class Quadrotor:
         ax.tick_params(axis='x',which='major',pad=-5)
         ax.tick_params(axis='y',which='major',pad=-5)
         ax.tick_params(axis='z',which='major',pad=-5)
-        ax.set_zlim(-0.1, 3)
-        ax.set_ylim(-3, 3)#9
-        ax.set_xlim(-3, 3)#6
+        ax.set_zlim(-1, 3)
+        ax.set_ylim(-2, 2)#9
+        ax.set_xlim(-2, 2)#6
         # ax.set_title(title, pad=20, fontsize=15)
         # for t in ax.xaxis.get_major_ticks(): 
         #     t.label.set_font('Times New Roman') 
