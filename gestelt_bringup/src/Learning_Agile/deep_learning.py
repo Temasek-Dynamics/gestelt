@@ -111,10 +111,10 @@ if __name__ == '__main__':
         MULTI_CORE = False
     else:
         MULTI_CORE = True
-    PDP_GRADIENT = True
+    PDP_GRADIENT = False
     USE_PREV_SOLVER = False
     num_epochs = 100 #100
-    batch_size = 20 # 100
+    batch_size = 40 # 100
     step_pre_epoch = 20
     if PDP_GRADIENT:
         learning_rate = 1e-4
@@ -123,7 +123,7 @@ if __name__ == '__main__':
         learning_rate = 1e-4
         method_name = 'FD'
 
-    training_notes = "same mod, add goal reward, init_pos=-3"
+    training_notes = "same mod, pitch uniform, batch 40"
 
     logger_config=LoggerConfig("NN1_training_logs")
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')

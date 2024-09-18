@@ -64,17 +64,17 @@ def nn_sample(init_pos=None,final_pos=None,init_angle=None,cur_epoch=100):
     ###==== curriculum learning ===###
     # pi/2 -> gate is horizontal
     # 0 -> gate is vertical
-    des_pitch_mean_min = pi/2
-    des_pitch_mean_max = pi/3 
-    des_pitch_mean = des_pitch_mean_min - (des_pitch_mean_min - des_pitch_mean_max) * (cur_epoch / 100) 
-    inputs[8] = np.clip(np.random.normal(0,pi/18),-pi/6,pi/6)  
-    if inputs[8]>0:
-        inputs[8]=inputs[8]-des_pitch_mean
-    else:
-        inputs[8]=inputs[8]+des_pitch_mean
+    # des_pitch_mean_min = pi/2
+    # des_pitch_mean_max = pi/6 
+    # des_pitch_mean = des_pitch_mean_min - (des_pitch_mean_min - des_pitch_mean_max) * (cur_epoch / 100) 
+    # inputs[8] = np.clip(np.random.normal(0,pi/18),-pi/6,pi/6) 
+    # if inputs[8]>0:
+    #     inputs[8]=inputs[8]-des_pitch_mean
+    # else:
+    #     inputs[8]=inputs[8]+des_pitch_mean
     
 
-    # # inputs[8] = np.random.uniform(-pi/2,pi/2)
+    inputs[8] = np.random.uniform(-pi/2,pi/2)
     return inputs
 
 ## define the expected output of an input (for pretraining)

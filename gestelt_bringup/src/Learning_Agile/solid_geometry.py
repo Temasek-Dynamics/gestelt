@@ -2,7 +2,7 @@
 # this file is to do some calculation of solid geometry to do the collision detection of quadrotor
 # this file consists of several classes
 import numpy as np
-# from differentiable_collision_wrapper import *
+from differentiable_collision_wrapper import *
 import casadi as ca
 import torch
 
@@ -420,8 +420,8 @@ class obstacle():
         ## find the traversal sequence
         for t in range(horizon):
             if(np.dot(self.plane1.nor_vec(),vert_traj[t]-self.centroid)<0):
-                t_tra_seq_list.append(t-1)
-            if len(t_tra_seq_list)==2:
+                t_tra_seq_list.append(t-2)
+            if len(t_tra_seq_list)==4:
                 break
         
         ## init gate check points: four corners and twelve middle points
