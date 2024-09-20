@@ -1,0 +1,10 @@
+training:
+  TRAIN_FROM_CHECKPOINT: false
+  PDP_GRADIENT: true
+  USE_PREV_SOLVER: false
+  num_epochs: 100
+  batch_size: 40
+  steps_per_epoch: 2
+  horizon: 30
+  learning_rate: 0.0001
+  

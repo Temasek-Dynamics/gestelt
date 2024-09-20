@@ -199,7 +199,7 @@ if __name__ == '__main__':
     model.train()
     global_step = 0
     for epoch in range(start_epoch,num_epochs):
-        with tqdm(total=step_pre_epoch, desc=f'Epoch {epoch+1}/{num_epochs}', unit='step') as pbar:
+        with tqdm(total=step_pre_epoch, desc=f'Epoch {epoch+1}/{num_epochs}', unit='epoch') as pbar:
             #move = gate1.plane_move()
             evalue = 0
             Iteration += [epoch+1]

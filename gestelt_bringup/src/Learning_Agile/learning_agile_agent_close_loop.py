@@ -247,12 +247,12 @@ class LearningAgileAgent():
             self.Time = np.concatenate((self.Time,[self.i*self.dyn_step]),axis = 0)
             self.Pitch = np.concatenate((self.Pitch,[self.gap_pitch]),axis = 0)      
             
-            if (self.i%25)==0: # estimation frequency = 20 hz 
-                # decision variable is updated in 20 hz
-                self.gate_state_estimation()
+            # if (self.i%25)==0: # estimation frequency = 20 hz 
+            #     # decision variable is updated in 20 hz
+            #     self.gate_state_estimation()
 
             if (self.i%5)==0: # control frequency = 100 hz  
-                nn2_inputs = np.zeros(15)
+                nn2_inputs = np.zeros(18)
                 if self.STATIC_GATE_TEST:
                     nn2_inputs[0:10] = self.state 
                     nn2_inputs[10:13] = self.final_point
@@ -269,11 +269,12 @@ class LearningAgileAgent():
                     # drone state under the predicted gate frame(based on the binary search)
                     nn2_inputs[0:10] = self.gate_t_i.transform(self.state)
                     nn2_inputs[10:13] = self.gate_t_i.t_final(self.final_point)
-
+                    # position of the gate
+                    nn2_inputs[13:16] = self.gate_t_i.centroid
                     # width of the gate
-                    nn2_inputs[13] = magni(self.gate_t_i.gate_point[0,:]-self.gate_t_i.gate_point[1,:]) # gate width
+                    nn2_inputs[16] = magni(self.gate_t_i.gate_point[0,:]-self.gate_t_i.gate_point[1,:]) # gate width
                     # pitch angle of the gate
-                    nn2_inputs[14] = atan((self.gate_t_i.gate_point[0,2]-self.gate_t_i.gate_point[1,2])/(self.gate_t_i.gate_point[0,0]-self.gate_t_i.gate_point[1,0])) # compute the actual gate pitch ange in real-time
+                    nn2_inputs[17] = atan((self.gate_t_i.gate_point[0,2]-self.gate_t_i.gate_point[1,2])/(self.gate_t_i.gate_point[0,0]-self.gate_t_i.gate_point[1,0])) # compute the actual gate pitch ange in real-time
 
                     # NN2 OUTPUT the traversal time and pose
                     out = self.model(torch.tensor(nn2_inputs, dtype=torch.float).to(device)).to('cpu')
@@ -285,7 +286,7 @@ class LearningAgileAgent():
                 
                 
                 cmd_solution,NO_SOLUTION_FLAG  = self.quad.mpc_update(self.state,
-                                                    out[0:3]+self.gate_t_i.centroid,
+                                                    out[0:3],
                                                     out[3:6],
                                                     out[6]) # control input 4-by-1 thrusts to pybullet
                 
@@ -312,7 +313,7 @@ class LearningAgileAgent():
         np.save(os.path.join(python_sim_data_folder,'uav_traj'),self.state_n)
         np.save(os.path.join(python_sim_data_folder,'uav_ctrl'),self.control_n)
         np.save(os.path.join(python_sim_data_folder,'abs_tra_time'),self.Ttra)
-        np.save(os.path.join(python_sim_data_folder,'tra_time'),self.T)
+        np.save(os.path.join(python_sim_data_folder,'tra_time'),self.NN_T_tra)
         np.save(os.path.join(python_sim_data_folder,'Time'),self.Time)
         np.save(os.path.join(python_sim_data_folder,'Pitch'),self.Pitch)
         np.save(os.path.join(python_sim_data_folder,'HL_Variable'),self.hl_variable)
@@ -330,7 +331,7 @@ class LearningAgileAgent():
         self.quad.uav1.plot_velocity(self.state_n)
         self.quad.uav1.plot_quaternions(self.state_n)
         # self.quad.uav1.plot_trav_weight(self.tra_weight_list)
-        self.quad.uav1.plot_trav_time(self.T)
+        self.quad.uav1.plot_trav_time(self.NN_T_tra)
         self.quad.uav1.plot_solving_time(self.solving_time)
         self.quad.uav1.plot_3D_traj(wing_len=self.quad.wing_len,
                                     uav_height=self.quad.uav_height/2,
@@ -352,7 +353,7 @@ def main():
     ########################################################################
     #####---------------------- TEST option -------------------------#######
     ########################################################################
-    NN2_model_name = 'NN2_imitate_1.pth'
+    NN2_model_name = 'NN_close_8.pth'
     model_file=os.path.join(current_dir, 'training_data/NN_model',NN2_model_name)
     STATIC_GATE_TEST = False
         

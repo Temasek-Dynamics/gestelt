@@ -89,10 +89,9 @@ class NN2_ROS_wrapper:
         ## random gate initialization
         self.env_init_set = nn_sample()
         self.moving_gate = MovingGate(self.env_init_set)
-        self.gate_point = self.moving_gate.gate_point
-        self.moving_gate.let_gate_move(dt=self.gate_step,gate_v=gate_v,gate_w=gate_w)
+        self.moving_gate.set_vel(dt=self.gate_step,gate_v=gate_v,gate_w=gate_w)
         self.gate_points_list = self.moving_gate.gate_points_list
-        self.gate_n = gate(self.gate_points_list[0]) 
+        self.gate_t_i = gate(self.gate_points_list[0]) 
         
         ##=======================misc ====================================##
         """
@@ -117,13 +116,13 @@ class NN2_ROS_wrapper:
         
         ## binary search for the traversal time
         ## to set the drone state under the gate frame, for the NN2 input
-        self.t_tra_rel = binary_search_solver(self.model,device,self.state,self.final_point,self.gate_n,self.moving_gate.V[self.i],self.moving_gate.w)
+        self.t_tra_rel = binary_search_solver(self.model,device,self.state,self.final_point,self.gate_t_i,self.moving_gate.V[self.i],self.moving_gate.w)
         self.t_tra_abs = self.t_tra_rel+self.i*self.gate_step
 
         ## obtain the future traversal window state
-        self.gate_n.translate(self.t_tra_rel*self.moving_gate.V[self.i])
-        self.gate_n.rotate_y(self.t_tra_rel*self.moving_gate.w)
-        # print('rotation matrix I_G=',gate_n.I_G)
+        self.gate_t_i.translate(self.t_tra_rel*self.moving_gate.V[self.i])
+        self.gate_t_i.rotate_y(self.t_tra_rel*self.moving_gate.w)
+        # print('rotation matrix I_G=',gate_t_i.I_G)
     
     def gate_vis(self,event):
         ##====frequency of the gate state estimation is the same as the NN2 ========##
@@ -134,7 +133,7 @@ class NN2_ROS_wrapper:
             self.i = int((curr_time-(self.mission_start_time))*self.NN2_freq)
             # print("i",self.i)
         
-            self.gate_n = gate(self.gate_points_list[self.i])
+            self.gate_t_i = gate(self.gate_points_list[self.i])
             ##============================ gate visualization =========================##
             gate_vis_msg = Marker()
             gate_vis_msg.header.frame_id = "world"
@@ -143,7 +142,7 @@ class NN2_ROS_wrapper:
             gate_vis_msg.id = 0
             gate_vis_msg.type = Marker.LINE_STRIP
             gate_vis_msg.action = Marker.ADD
-            for k in range(len(self.gate_n.gate_point)):
+            for k in range(len(self.gate_t_i.gate_point)):
                 p = self.gate_points_list[self.i,k,:]
                 gate_vis_msg.points.append(Point(x=p[0]+ self.trans[0],y=p[1]+ self.trans[1],z=p[2]+ self.trans[2]))
             gate_vis_msg.points.append(Point(x=self.gate_points_list[self.i,0,0]+ self.trans[0],
@@ -195,13 +194,13 @@ class NN2_ROS_wrapper:
 
             
                 # drone state under the predicted gate frame(based on the binary search)
-                nn2_inputs[0:10] = self.gate_n.transform(self.state)
-                nn2_inputs[10:13] = self.gate_n.t_final(self.final_point)
+                nn2_inputs[0:10] = self.gate_t_i.transform(self.state)
+                nn2_inputs[10:13] = self.gate_t_i.t_final(self.final_point)
 
                 # width of the gate
-                nn2_inputs[13] = magni(self.gate_n.gate_point[0,:]-self.gate_n.gate_point[1,:]) # gate width
+                nn2_inputs[13] = magni(self.gate_t_i.gate_point[0,:]-self.gate_t_i.gate_point[1,:]) # gate width
                 # pitch angle of the gate
-                nn2_inputs[14] = atan((self.gate_n.gate_point[0,2]-self.gate_n.gate_point[1,2])/(self.gate_n.gate_point[0,0]-self.gate_n.gate_point[1,0])) # compute the actual gate pitch angle in real-time
+                nn2_inputs[14] = atan((self.gate_t_i.gate_point[0,2]-self.gate_t_i.gate_point[1,2])/(self.gate_t_i.gate_point[0,0]-self.gate_t_i.gate_point[1,0])) # compute the actual gate pitch angle in real-time
 
                 # NN2 OUTPUT the traversal time and pose
                 t_comp = time.time()
@@ -218,9 +217,9 @@ class NN2_ROS_wrapper:
                 NN_trav_pose_msg = PoseStamped()
                 NN_trav_pose_msg.header.stamp = rospy.Time.now()
                 NN_trav_pose_msg.header.frame_id = "world"
-                NN_trav_pose_msg.pose.position.x = out[0]+self.trans[0]+self.gate_n.centroid[0]
-                NN_trav_pose_msg.pose.position.y = out[1]+self.trans[1]+self.gate_n.centroid[1]
-                NN_trav_pose_msg.pose.position.z = out[2]+self.trans[2]+self.gate_n.centroid[2]
+                NN_trav_pose_msg.pose.position.x = out[0]+self.trans[0]+self.gate_t_i.centroid[0]
+                NN_trav_pose_msg.pose.position.y = out[1]+self.trans[1]+self.gate_t_i.centroid[1]
+                NN_trav_pose_msg.pose.position.z = out[2]+self.trans[2]+self.gate_t_i.centroid[2]
                 NN_trav_pose_msg.pose.orientation.w = quat[0]
                 NN_trav_pose_msg.pose.orientation.x = quat[1]
                 NN_trav_pose_msg.pose.orientation.y = quat[2]

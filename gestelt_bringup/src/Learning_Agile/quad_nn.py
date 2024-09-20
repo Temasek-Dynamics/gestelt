@@ -27,16 +27,20 @@ desired_average_vel=config_dict['training_param']['desired_average_vel']
 # load the configuration file
 
 ## sample an input for the neural network 1
-def nn_sample(init_pos=None,final_pos=None,init_angle=None,cur_epoch=100):
+def nn_sample(init_pos=None,final_pos=None,init_angle=None,cur_epoch=100,pretrain=False):
     inputs = np.zeros(9)
     if init_pos is None:
-        inputs[0:3] = np.random.uniform(-2,2,size=3) + pre_ini_pos #-5~5, -9
-        inputs[1]=np.clip(inputs[1],pre_ini_pos[1]-0.5,pre_ini_pos[1]+0.5)
+        inputs[0:3] = np.random.uniform(-0.1,0.1,size=3) + pre_ini_pos #-5~5, -9
+        if pretrain:
+            inputs[1] = np.random.uniform(-5,5) + pre_ini_pos[1]
+        else:
+            inputs[1] = np.clip(inputs[1],pre_ini_pos[1]-0.5,pre_ini_pos[1]+0.5)
     else:
         inputs[0:3] = init_pos
-    ## random final postion 
+    ## random final position 
     if final_pos is None:
         inputs[3:6] = np.random.uniform(-2,2,size=3) + pre_end_pos #-2~2, 6
+
         inputs[4]=np.clip(inputs[4],pre_end_pos[1]-0.5,pre_end_pos[1]+0.5)
     else:
         inputs[3:6] = final_pos
@@ -64,17 +68,17 @@ def nn_sample(init_pos=None,final_pos=None,init_angle=None,cur_epoch=100):
     ###==== curriculum learning ===###
     # pi/2 -> gate is horizontal
     # 0 -> gate is vertical
-    # des_pitch_mean_min = pi/2
-    # des_pitch_mean_max = pi/6 
-    # des_pitch_mean = des_pitch_mean_min - (des_pitch_mean_min - des_pitch_mean_max) * (cur_epoch / 100) 
-    # inputs[8] = np.clip(np.random.normal(0,pi/18),-pi/6,pi/6) 
-    # if inputs[8]>0:
-    #     inputs[8]=inputs[8]-des_pitch_mean
-    # else:
-    #     inputs[8]=inputs[8]+des_pitch_mean
+    des_pitch_mean_min = pi/2
+    des_pitch_mean_max = pi/2 
+    des_pitch_mean = des_pitch_mean_min - (des_pitch_mean_min - des_pitch_mean_max) * (cur_epoch / 100) 
+    inputs[8] = np.clip(np.random.normal(0,pi/180),-pi/6,pi/6) 
+    if inputs[8]>0:
+        inputs[8]=inputs[8]-des_pitch_mean
+    else:
+        inputs[8]=inputs[8]+des_pitch_mean
     
 
-    inputs[8] = np.random.uniform(-pi/2,pi/2)
+    # inputs[8] = np.random.uniform(-pi/2,pi/2)
     return inputs
 
 ## define the expected output of an input (for pretraining)
@@ -83,8 +87,12 @@ def t_output(inputs):
     outputs = np.zeros(7)
     #outputs[5] = math.tan(inputs[6]/2)
     ## traversal time is propotional to the distance of the centroids
-    raw_time=round(magni(inputs[0:3])/2,1)
+    if inputs[1]>0:
+        raw_time = -round(magni(inputs[0:3])/2,1)
+    else:
+        raw_time=round(magni(inputs[0:3])/2,1)
     outputs[6] = raw_time #np.clip(raw_time,3,3)
+    print('desired_traversing_time',outputs[6])
     return outputs
 
 ## sample a random gate (not necessary in our method) (not important)
@@ -176,6 +184,28 @@ class network(nn.Module):
         loss_nn =torch.trace(torch.matmul(Dp, para.t()))/(Dp.shape[0])
         return loss_nn # size is 1
 
-
+class network_with_GRU(nn.Module):
+    def __init__(self, D_in, D_h1, D_h2, D_out):
+        super(network_with_GRU, self).__init__()        
+        # D_in : dimension of input layer
+        # D_h  : dimension of hidden layer
+        # D_out: dimension of output layer
+        self.l1 = nn.Linear(D_in, D_h1)
+        self.F1 = nn.ReLU()
+        self.l2 = nn.Linear(D_h1, D_h2)
+        self.F2 = nn.ReLU()
+        self.GRU = nn.GRU(input_size=D_h2, hidden_size=D_h2,num_layers=1,batch_first=True)
+        self.l3 = nn.Linear(D_h2, D_out)
+        
+    def forward(self, input):
+        # convert state s to tensor
+        S = input.unsqueeze(0) # column 2D tensor
+        out = self.l1(S) # linear function requires the input to be a row tensor
+        out = self.F1(out)
+        out = self.l2(out)
+        out = self.F2(out)
+        out = self.GRU(out)
+        out = self.l3(out)
+        return out
 
 
