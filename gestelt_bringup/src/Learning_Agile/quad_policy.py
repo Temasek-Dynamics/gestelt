@@ -367,7 +367,7 @@ class run_quad:
 
         
             # print("analytic grad:",np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,j]))
-            return np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,j])
+            return np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,R])
     
     def PDP_grad(self, tra_pos,tra_ang,t_tra):
         ###################################################################

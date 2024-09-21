@@ -3,8 +3,7 @@ training:
   PDP_GRADIENT: true
   USE_PREV_SOLVER: false
   num_epochs: 100
-  batch_size: 40
-  steps_per_epoch: 2
-  horizon: 30
+  steps_per_epoch: 100
+  horizon: 2
   learning_rate: 0.0001
-  
+  dyn_decay: 0.7

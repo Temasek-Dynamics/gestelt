@@ -30,11 +30,11 @@ desired_average_vel=config_dict['training_param']['desired_average_vel']
 def nn_sample(init_pos=None,final_pos=None,init_angle=None,cur_epoch=100,pretrain=False):
     inputs = np.zeros(9)
     if init_pos is None:
-        inputs[0:3] = np.random.uniform(-0.1,0.1,size=3) + pre_ini_pos #-5~5, -9
+        inputs[0:3] = np.random.uniform(-2,2,size=3) + pre_ini_pos #-5~5, -9
         if pretrain:
             inputs[1] = np.random.uniform(-5,5) + pre_ini_pos[1]
         else:
-            inputs[1] = np.clip(inputs[1],pre_ini_pos[1]-0.5,pre_ini_pos[1]+0.5)
+            inputs[1] = np.clip(inputs[1],pre_ini_pos[1]-1,pre_ini_pos[1]+1)
     else:
         inputs[0:3] = init_pos
     ## random final position 
@@ -71,7 +71,7 @@ def nn_sample(init_pos=None,final_pos=None,init_angle=None,cur_epoch=100,pretrai
     des_pitch_mean_min = pi/2
     des_pitch_mean_max = pi/2 
     des_pitch_mean = des_pitch_mean_min - (des_pitch_mean_min - des_pitch_mean_max) * (cur_epoch / 100) 
-    inputs[8] = np.clip(np.random.normal(0,pi/180),-pi/6,pi/6) 
+    inputs[8] = np.clip(np.random.normal(0,pi/18),-pi/6,pi/6) 
     if inputs[8]>0:
         inputs[8]=inputs[8]-des_pitch_mean
     else:

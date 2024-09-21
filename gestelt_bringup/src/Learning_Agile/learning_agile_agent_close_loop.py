@@ -118,11 +118,11 @@ class LearningAgileAgent():
         # trajectory pos_vel_att_cmd
         self.pos_vel_att_cmd=np.zeros(10)
         self.pos_vel_att_cmd_n = [self.pos_vel_att_cmd]
-
+        self.nn_output_pos_list = []
         # FIXME Temporally set the traversal time here, for both python and gazebo simulation
         
     
-    def receive_mission_states(self,STATIC_GATE_TEST):
+    def generate_mission(self,STATIC_GATE_TEST):
         """
         receive the ini_pos,end point defined in the mission file
 
@@ -240,6 +240,7 @@ class LearningAgileAgent():
         
         self.state = self.quad.ini_state # state= feedback from pybullet, 13-by-1, 3 position, 3 velocity (world frame), 4 quaternion, 3 angular rate
         self.state_n = [self.state]
+        self.nn_output_pos_list = [np.zeros(3)]
         for self.i in range(self.sim_time*(int(1/self.dyn_step))): # 5s, 500 Hz
             
             
@@ -247,7 +248,7 @@ class LearningAgileAgent():
             self.Time = np.concatenate((self.Time,[self.i*self.dyn_step]),axis = 0)
             self.Pitch = np.concatenate((self.Pitch,[self.gap_pitch]),axis = 0)      
             
-            # if (self.i%25)==0: # estimation frequency = 20 hz 
+            # if (self.i%50)==0: # estimation frequency = 20 hz 
             #     # decision variable is updated in 20 hz
             #     self.gate_state_estimation()
 
@@ -280,6 +281,8 @@ class LearningAgileAgent():
                     out = self.model(torch.tensor(nn2_inputs, dtype=torch.float).to(device)).to('cpu')
                     out = out.data.numpy()
                     self.NN_T_tra = np.concatenate((self.NN_T_tra,[out[6]]),axis = 0)
+                    
+                    self.nn_output_pos_list=np.concatenate((self.nn_output_pos_list,[out[0:3]]),axis = 0)
                     
                     
                 t_comp = time.time()
@@ -328,6 +331,7 @@ class LearningAgileAgent():
         self.quad.uav1.plot_thrust(self.control_n)
         self.quad.uav1.plot_angularrate(self.control_n)
         self.quad.uav1.plot_position(self.state_n)
+        self.quad.uav1.plot_position(self.nn_output_pos_list)
         self.quad.uav1.plot_velocity(self.state_n)
         self.quad.uav1.plot_quaternions(self.state_n)
         # self.quad.uav1.plot_trav_weight(self.tra_weight_list)
@@ -353,7 +357,7 @@ def main():
     ########################################################################
     #####---------------------- TEST option -------------------------#######
     ########################################################################
-    NN2_model_name = 'NN_close_8.pth'
+    NN2_model_name = 'NN_close_2.pth'
     model_file=os.path.join(current_dir, 'training_data/NN_model',NN2_model_name)
     STATIC_GATE_TEST = False
         
@@ -373,7 +377,7 @@ def main():
 
     
     #####==============load env config ====================#######
-    learing_agile_agent.receive_mission_states( STATIC_GATE_TEST)
+    learing_agile_agent.generate_mission( STATIC_GATE_TEST)
     learing_agile_agent.prepare_gate()
     
     #####============== Solve the problem ====================#######

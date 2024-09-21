@@ -261,7 +261,7 @@ class obstacle():
          # goal score
         goal_score = 0
         
-        goal_w=20
+        goal_w=1
         # for last four nodes
         for i in range(-1,-5,-1): 
             goal_score += -goal_w * np.dot(state_traj[i,:3]-goal_pos,state_traj[i,:3]-goal_pos)

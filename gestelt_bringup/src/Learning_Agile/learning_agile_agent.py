@@ -122,7 +122,7 @@ class LearningAgileAgent():
         # FIXME Temporally set the traversal time here, for both python and gazebo simulation
         
     
-    def receive_mission_states(self,STATIC_GATE_TEST):
+    def generate_mission(self,STATIC_GATE_TEST):
         """
         receive the ini_pos,end point defined in the mission file
 
@@ -154,8 +154,8 @@ class LearningAgileAgent():
         self.final_point = self.env_init_set[3:6]
     
 
-        print('start_point=',self.env_init_set[0:3])
-        print('final_point=',self.env_init_set[3:6])
+        # print('start_point=',self.env_init_set[0:3])
+        # print('final_point=',self.env_init_set[3:6])
 
         ## ===== send mission to the quadrotor mpc solver ======== ##
         ini_q=toQuaternion(self.env_init_set[6],[0,0,1])
@@ -372,7 +372,7 @@ def main():
 
     
     #####==============load env config ====================#######
-    learing_agile_agent.receive_mission_states( STATIC_GATE_TEST)
+    learing_agile_agent.generate_mission( STATIC_GATE_TEST)
     learing_agile_agent.prepare_gate()
     
     #####============== Solve the problem ====================#######

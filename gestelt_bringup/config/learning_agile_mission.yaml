@@ -94,7 +94,7 @@ learning_agile:
   ##------ MPC problem parameters---## 
   ## ---- hard coded in the solver ----##
   ## modify this required recompilation of the solver
-  horizon: 20
+  horizon: 40
   dt: 0.1
     
   ##------ model parameters --------##
@@ -139,4 +139,4 @@ training_param:
 
 ## ------NN configuration ----##
 NN2_model_name: 'NN2_imitate_1.pth'
-NN2_freq: 20
+NN2_freq: 10
