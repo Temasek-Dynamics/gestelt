@@ -231,8 +231,47 @@ class LearningAgileAgent():
         
         # return self.t_tra_abs,self.gate_t_i.centroid
 
+    def close_loop_model_forward(self):
 
-    def forward_sim(self,python_sim_data_folder ):
+        nn2_inputs = np.zeros(18)
+        # drone state under the predicted gate frame(based on the binary search)
+        nn2_inputs[0:10] = self.gate_t_i.transform(self.state)
+        nn2_inputs[10:13] = self.gate_t_i.t_final(self.final_point)
+        # position of the gate
+        nn2_inputs[13:16] = self.gate_t_i.centroid
+        # width of the gate
+        nn2_inputs[16] = magni(self.gate_t_i.gate_point[0,:]-self.gate_t_i.gate_point[1,:]) # gate width
+        # pitch angle of the gate
+        nn2_inputs[17] = atan((self.gate_t_i.gate_point[0,2]-self.gate_t_i.gate_point[1,2])/(self.gate_t_i.gate_point[0,0]-self.gate_t_i.gate_point[1,0])) # compute the actual gate pitch ange in real-time
+
+        # NN2 OUTPUT the traversal time and pose
+        out = self.model(torch.tensor(nn2_inputs, dtype=torch.float).to(device)).to('cpu')
+        out = out.data.numpy()
+        self.NN_T_tra = np.concatenate((self.NN_T_tra,[out[6]]),axis = 0)
+        self.nn_output_pos_list=np.concatenate((self.nn_output_pos_list,[out[0:3]]),axis = 0)
+
+        return out 
+    
+    def imitate_model_forward(self):
+        nn2_inputs = np.zeros(15)
+         # drone state under the predicted gate frame(based on the binary search)
+        nn2_inputs[0:10] = self.gate_t_i.transform(self.state)
+        nn2_inputs[10:13] = self.gate_t_i.t_final(self.final_point)
+
+        # width of the gate
+        nn2_inputs[13] = magni(self.gate_t_i.gate_point[0,:]-self.gate_t_i.gate_point[1,:]) # gate width
+        # pitch angle of the gate
+        nn2_inputs[14] = atan((self.gate_t_i.gate_point[0,2]-self.gate_t_i.gate_point[1,2])/(self.gate_t_i.gate_point[0,0]-self.gate_t_i.gate_point[1,0])) # compute the actual gate pitch ange in real-time
+
+        # NN2 OUTPUT the traversal time and pose
+        out = self.model(torch.tensor(nn2_inputs, dtype=torch.float).to(device)).to('cpu')
+        out = out.data.numpy()
+        self.NN_T_tra = np.concatenate((self.NN_T_tra,[out[6]]),axis = 0)
+        self.nn_output_pos_list=np.concatenate((self.nn_output_pos_list,[out[0:3]]),axis = 0)
+                    
+        return out
+
+    def forward_sim(self,python_sim_data_folder,CLOSE_LOOP_MODEL=False):
         """
         python simulation
 
@@ -240,6 +279,7 @@ class LearningAgileAgent():
         
         self.state = self.quad.ini_state # state= feedback from pybullet, 13-by-1, 3 position, 3 velocity (world frame), 4 quaternion, 3 angular rate
         self.state_n = [self.state]
+        self.nn_output_pos_list = [np.zeros(3)]
         for self.i in range(self.sim_time*(int(1/self.dyn_step))): # 5s, 500 Hz
             
             
@@ -247,13 +287,15 @@ class LearningAgileAgent():
             self.Time = np.concatenate((self.Time,[self.i*self.dyn_step]),axis = 0)
             self.Pitch = np.concatenate((self.Pitch,[self.gap_pitch]),axis = 0)      
             
-            if (self.i%25)==0: # estimation frequency = 20 hz 
-                # decision variable is updated in 20 hz
-                self.gate_state_estimation()
+            if not CLOSE_LOOP_MODEL:
+                if (self.i%25)==0: # estimation frequency = 20 hz 
+                    # decision variable is updated in 20 hz
+                    self.gate_state_estimation()
 
             if (self.i%5)==0: # control frequency = 100 hz  
-                nn2_inputs = np.zeros(15)
+                
                 if self.STATIC_GATE_TEST:
+                    nn2_inputs = np.zeros(15)
                     nn2_inputs[0:10] = self.state 
                     nn2_inputs[10:13] = self.final_point
                     
@@ -266,20 +308,10 @@ class LearningAgileAgent():
                     # relative traversal time
                     out[6]=self.t_tra_rel
                 else:
-                    # drone state under the predicted gate frame(based on the binary search)
-                    nn2_inputs[0:10] = self.gate_t_i.transform(self.state)
-                    nn2_inputs[10:13] = self.gate_t_i.t_final(self.final_point)
-
-                    # width of the gate
-                    nn2_inputs[13] = magni(self.gate_t_i.gate_point[0,:]-self.gate_t_i.gate_point[1,:]) # gate width
-                    # pitch angle of the gate
-                    nn2_inputs[14] = atan((self.gate_t_i.gate_point[0,2]-self.gate_t_i.gate_point[1,2])/(self.gate_t_i.gate_point[0,0]-self.gate_t_i.gate_point[1,0])) # compute the actual gate pitch ange in real-time
-
-                    # NN2 OUTPUT the traversal time and pose
-                    out = self.model(torch.tensor(nn2_inputs, dtype=torch.float).to(device)).to('cpu')
-                    out = out.data.numpy()
-                    self.NN_T_tra = np.concatenate((self.NN_T_tra,[out[6]]),axis = 0)
-                    
+                    if CLOSE_LOOP_MODEL:
+                        out = self.close_loop_model_forward()
+                    else:
+                        out = self.imitate_model_forward()
                     
                 t_comp = time.time()
                 
@@ -312,7 +344,7 @@ class LearningAgileAgent():
         np.save(os.path.join(python_sim_data_folder,'uav_traj'),self.state_n)
         np.save(os.path.join(python_sim_data_folder,'uav_ctrl'),self.control_n)
         np.save(os.path.join(python_sim_data_folder,'abs_tra_time'),self.Ttra)
-        np.save(os.path.join(python_sim_data_folder,'tra_time'),self.T)
+        np.save(os.path.join(python_sim_data_folder,'tra_time'),self.NN_T_tra)
         np.save(os.path.join(python_sim_data_folder,'Time'),self.Time)
         np.save(os.path.join(python_sim_data_folder,'Pitch'),self.Pitch)
         np.save(os.path.join(python_sim_data_folder,'HL_Variable'),self.hl_variable)
@@ -324,13 +356,19 @@ class LearningAgileAgent():
                                        dt=0.01)
         
         # save the data, not show it
+        if not self.STATIC_GATE_TEST:
+            self.quad.uav1.plot_position(self.nn_output_pos_list)
         self.quad.uav1.plot_thrust(self.control_n)
         self.quad.uav1.plot_angularrate(self.control_n)
         self.quad.uav1.plot_position(self.state_n)
         self.quad.uav1.plot_velocity(self.state_n)
         self.quad.uav1.plot_quaternions(self.state_n)
         # self.quad.uav1.plot_trav_weight(self.tra_weight_list)
-        self.quad.uav1.plot_trav_time(self.T)
+
+        if CLOSE_LOOP_MODEL:
+            self.quad.uav1.plot_trav_time(self.NN_T_tra) # pure NN close loop traversal time
+        else:
+            self.quad.uav1.plot_trav_time(self.T) # Binary search traversal time
         self.quad.uav1.plot_solving_time(self.solving_time)
         self.quad.uav1.plot_3D_traj(wing_len=self.quad.wing_len,
                                     uav_height=self.quad.uav_height/2,
@@ -352,9 +390,16 @@ def main():
     ########################################################################
     #####---------------------- TEST option -------------------------#######
     ########################################################################
-    NN2_model_name = 'NN2_imitate_1.pth'
-    model_file=os.path.join(current_dir, 'training_data/NN_model',NN2_model_name)
     STATIC_GATE_TEST = False
+    CLOSE_LOOP_MODEL = True
+
+    if CLOSE_LOOP_MODEL:
+        NN2_model_name = 'NN_close_0.pth'#'NN2_imitate_1.pth' #'NN_close_2.pth'
+    else:   
+        NN2_model_name = 'NN2_imitate_1.pth'
+
+    model_file=os.path.join(current_dir, 'training_data/NN_model',NN2_model_name)
+    
         
     # create the learning agile agent
     # problem definition
@@ -372,12 +417,12 @@ def main():
 
     
     #####==============load env config ====================#######
-    learing_agile_agent.generate_mission( STATIC_GATE_TEST)
+    learing_agile_agent.generate_mission(STATIC_GATE_TEST)
     learing_agile_agent.prepare_gate()
     
     #####============== Solve the problem ====================#######
     # solve the problem
-    learing_agile_agent.forward_sim(python_sim_data_folder)
+    learing_agile_agent.forward_sim(python_sim_data_folder,CLOSE_LOOP_MODEL)
 
     # every time after reconstruct the solver, need to catkin build the MPC wrapper to 
     # relink the shared library

@@ -23,7 +23,7 @@ mission:
   ##------ gate pose ----##
   # only feasible for STATIC_GATE_TEST
   gate_position: [1.0, 0.0, 1.5]
-  gate_ori_RP: [-0.0, -0.3535, 0.0]
+  gate_ori_RP: [-0.0, -0.655, 0.0]
 
   ##------ goal pose ----##
   goal_position: [0.0, 3, 1]
