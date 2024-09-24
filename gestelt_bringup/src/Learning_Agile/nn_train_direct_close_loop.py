@@ -135,7 +135,7 @@ class DirectCloseLoop():
         4. state update
         """
         ## == gate forward === ##
-        self.gate_t_i = gate(self.gate_points_list[self.i])
+        self.gate_t_i = Gate(self.gate_points_list[self.i])
         
         
             
@@ -188,7 +188,7 @@ class DirectCloseLoop():
     def backward(self):
         
         ## acquire p_R_i/p_X_traj_i
-        self.R_i=self.quad.R_from_MPC_pred(self.np_nn_out[0:3],self.np_nn_out[3:6],self.np_nn_out[6])
+        self.R_i=self.quad.R_from_MPC(self.np_nn_out[0:3],self.np_nn_out[3:6],self.np_nn_out[6])
 
         # H * 1* 10
         self.p_R_i_p_X_traj_i.append(torch.tensor(self.quad.d_R_d_st_traj[:,:,:], dtype=torch.float).to(self.device))

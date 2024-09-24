@@ -20,7 +20,7 @@ from quad_model import *
 from quad_policy import *
 from quad_nn import *
 from quad_moving import *
-
+from result_analysis import *
 import numpy as np
 import time
 
@@ -30,37 +30,36 @@ device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
 class MovingGate():
-    def __init__(self, env_init_set):
+    def __init__(self, env_init_set,
+                        gate_cen_h,
+                        gate_length):
         
         # initialize the gate1, with the initial gate position
         # env_init_set[7]: gate width
-        gate_point_no_pitch = np.array([[-env_init_set[7]/2,-0,1.8],[env_init_set[7]/2,-0,1.8],[env_init_set[7]/2,-0,0.6],[-env_init_set[7]/2,-0,0.6]])
-        self.gate1 = gate(gate_point_no_pitch)
-        self.gate_init_p = env_init_set[8]
+        gate_width = env_init_set[7]
+        gate_point_no_pitch = np.array([[-gate_length/2, 0, gate_cen_h+gate_width/2],
+                                        [ gate_length/2, 0, gate_cen_h+gate_width/2],
+                                        [ gate_length/2, 0, gate_cen_h-gate_width/2],
+                                        [-gate_length/2, 0, gate_cen_h-gate_width/2]])
         
-        # add the pitch angle to the gate1
-        self.gate1.rotate_y(self.gate_init_p)
+        self.gate = Gate(gate_point_no_pitch)
 
-        # generate new four corners of the gate1
-        self.gate_point = self.gate1.gate_point
+        # add the pitch angle to the gate
 
-        # update the gate1 with the initial pitch angle
-        self.gate1 = gate(self.gate_point)
-        
+        self.gate_init_pitch = env_init_set[8]
+        self.gate.rotate_y(self.gate_init_pitch)
+
+
     
     def set_vel(self,
-                      dt,
-                      gate_v,
-                      gate_w):
-    
-        ## define the kinematics of the narrow window
-        # gate linear velocity
-        self.v =gate_v 
-       
-        # gate pitch angular velocity
-        self.w = gate_w 
+                dt,
+                gate_v,
+                gate_w):
+        
+        self.v=gate_v
+        self.w=gate_w
          
-        self.gate_points_list, self.V = self.gate1.move(T = 8, v = self.v ,w = self.w,dt=dt)
+        self.gate_points_list, self.V = self.gate.move(T = 8, v = gate_v ,w = gate_w ,dt = dt)
 
     
 class LearningAgileAgent():
@@ -103,6 +102,8 @@ class LearningAgileAgent():
                             SQP_RTI_OPTION=SQP_RTI_OPTION,
                             USE_PREV_SOLVER=USE_PREV_SOLVER,
                             PDP_GRADIENT=PDP_GRADIENT)
+        
+ 
         # set the dynamics step of the python sim
         self.dyn_step=dyn_step
         self.quad.uav1.setDyn(self.dyn_step)
@@ -175,14 +176,17 @@ class LearningAgileAgent():
     def prepare_gate(self):
         
         ##---------------------gate initialization ------------------------##
+        gate_length = self.config_dict['gate']['length'] 
         gate_v = np.array(self.config_dict['gate']['linear_vel'])
         gate_w = self.config_dict['gate']['angular_vel'] 
         ## ================ gate initialization ================== ##
-        self.moving_gate = MovingGate(self.env_init_set)
-     
+        self.moving_gate = MovingGate(self.env_init_set,
+                                      gate_cen_h=1.2,
+                                      gate_length=gate_length)
+
         self.moving_gate.set_vel(dt=self.dyn_step,gate_v=gate_v,gate_w=gate_w)
         self.gate_points_list = self.moving_gate.gate_points_list
-        self.gate_t_i = gate(self.gate_points_list[0])
+        self.gate_t_i = Gate(self.gate_points_list[0])
 
         self.quad.init_obstacle(self.gate_points_list[0].reshape(12),gate_pitch=self.env_init_set[8])
         
@@ -199,14 +203,14 @@ class LearningAgileAgent():
 
         
         if self.STATIC_GATE_TEST:
-            self.gate_t_i = gate(self.gate_points_list[0])
+            self.gate_t_i = Gate(self.gate_points_list[0])
 
             # self.t_tra_abs is manually set
             self.t_tra_rel=self.t_tra_abs-self.i*self.dyn_step
 
         else:
 
-            self.gate_t_i = gate(self.gate_points_list[self.i])
+            self.gate_t_i = Gate(self.gate_points_list[self.i])
             # print('gate_t_i.centroid=',self.gate_t_i.centroid)
             ## binary search for the traversal time
             ## to set the drone state under the gate frame, for the NN2 input
@@ -248,7 +252,7 @@ class LearningAgileAgent():
         out = self.model(torch.tensor(nn2_inputs, dtype=torch.float).to(device)).to('cpu')
         out = out.data.numpy()
         self.NN_T_tra = np.concatenate((self.NN_T_tra,[out[6]]),axis = 0)
-        self.nn_output_pos_list=np.concatenate((self.nn_output_pos_list,[out[0:3]]),axis = 0)
+        self.nn_output_list=np.concatenate((self.nn_output_list,[out[0:3]]),axis = 0)
 
         return out 
     
@@ -262,13 +266,13 @@ class LearningAgileAgent():
         nn2_inputs[13] = magni(self.gate_t_i.gate_point[0,:]-self.gate_t_i.gate_point[1,:]) # gate width
         # pitch angle of the gate
         nn2_inputs[14] = atan((self.gate_t_i.gate_point[0,2]-self.gate_t_i.gate_point[1,2])/(self.gate_t_i.gate_point[0,0]-self.gate_t_i.gate_point[1,0])) # compute the actual gate pitch ange in real-time
-
+        
         # NN2 OUTPUT the traversal time and pose
         out = self.model(torch.tensor(nn2_inputs, dtype=torch.float).to(device)).to('cpu')
         out = out.data.numpy()
         self.NN_T_tra = np.concatenate((self.NN_T_tra,[out[6]]),axis = 0)
-        self.nn_output_pos_list=np.concatenate((self.nn_output_pos_list,[out[0:3]]),axis = 0)
-                    
+        self.nn_output_list=np.concatenate((self.nn_output_list,[out[:]]),axis = 0)
+        self.Pitch = np.concatenate((self.Pitch,[nn2_inputs[14]]),axis = 0)                  
         return out
 
     def forward_sim(self,python_sim_data_folder,CLOSE_LOOP_MODEL=False):
@@ -279,13 +283,10 @@ class LearningAgileAgent():
         
         self.state = self.quad.ini_state # state= feedback from pybullet, 13-by-1, 3 position, 3 velocity (world frame), 4 quaternion, 3 angular rate
         self.state_n = [self.state]
-        self.nn_output_pos_list = [np.zeros(3)]
+        self.nn_output_list = [np.zeros(7)]
         for self.i in range(self.sim_time*(int(1/self.dyn_step))): # 5s, 500 Hz
             
-            
-            self.gap_pitch = self.moving_gate.gate_init_p + self.moving_gate.w*self.i*self.dyn_step
             self.Time = np.concatenate((self.Time,[self.i*self.dyn_step]),axis = 0)
-            self.Pitch = np.concatenate((self.Pitch,[self.gap_pitch]),axis = 0)      
             
             if not CLOSE_LOOP_MODEL:
                 if (self.i%25)==0: # estimation frequency = 20 hz 
@@ -295,6 +296,7 @@ class LearningAgileAgent():
             if (self.i%5)==0: # control frequency = 100 hz  
                 
                 if self.STATIC_GATE_TEST:
+                    self.gate_state_estimation()
                     nn2_inputs = np.zeros(15)
                     nn2_inputs[0:10] = self.state 
                     nn2_inputs[10:13] = self.final_point
@@ -349,6 +351,7 @@ class LearningAgileAgent():
         np.save(os.path.join(python_sim_data_folder,'Pitch'),self.Pitch)
         np.save(os.path.join(python_sim_data_folder,'HL_Variable'),self.hl_variable)
         np.save(os.path.join(python_sim_data_folder,'solving_time'),self.solving_time)
+        np.save(os.path.join(python_sim_data_folder,'nn_output_list'),self.nn_output_list)
         self.quad.uav1.play_animation(wing_len=self.quad.wing_len,
                                        gate_traj1=self.gate_points_list[::5,:,:],
                                        state_traj=self.state_n[::5,:],
@@ -357,10 +360,10 @@ class LearningAgileAgent():
         
         # save the data, not show it
         if not self.STATIC_GATE_TEST:
-            self.quad.uav1.plot_position(self.nn_output_pos_list)
+            self.quad.uav1.plot_position(self.nn_output_list,name='NN2_output')
         self.quad.uav1.plot_thrust(self.control_n)
         self.quad.uav1.plot_angularrate(self.control_n)
-        self.quad.uav1.plot_position(self.state_n)
+        self.quad.uav1.plot_position(self.state_n,name='drone_actual')
         self.quad.uav1.plot_velocity(self.state_n)
         self.quad.uav1.plot_quaternions(self.state_n)
         # self.quad.uav1.plot_trav_weight(self.tra_weight_list)
@@ -370,6 +373,9 @@ class LearningAgileAgent():
         else:
             self.quad.uav1.plot_trav_time(self.T) # Binary search traversal time
         self.quad.uav1.plot_solving_time(self.solving_time)
+        python_sim_npy_parser(uav_traj=self.state_n,
+                              nn_output_list=self.nn_output_list,
+                              gate_pitch=self.Pitch)
         self.quad.uav1.plot_3D_traj(wing_len=self.quad.wing_len,
                                     uav_height=self.quad.uav_height/2,
                                     state_traj=self.state_n[::50,:],
@@ -391,14 +397,14 @@ def main():
     #####---------------------- TEST option -------------------------#######
     ########################################################################
     STATIC_GATE_TEST = False
-    CLOSE_LOOP_MODEL = True
+    CLOSE_LOOP_MODEL = False
 
     if CLOSE_LOOP_MODEL:
-        NN2_model_name = 'NN_close_0.pth'#'NN2_imitate_1.pth' #'NN_close_2.pth'
+        model_name = 'NN_close_0.pth'#'NN2_imitate_1.pth' #'NN_close_2.pth'
     else:   
-        NN2_model_name = 'NN2_imitate_1.pth'
+        model_name = 'NN2_imitate_1.pth'
 
-    model_file=os.path.join(current_dir, 'training_data/NN_model',NN2_model_name)
+    model_file=os.path.join(current_dir, 'training_data/NN_model',model_name)
     
         
     # create the learning agile agent

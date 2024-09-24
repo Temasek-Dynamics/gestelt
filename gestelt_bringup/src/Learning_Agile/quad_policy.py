@@ -15,7 +15,8 @@ class run_quad:
     def __init__(self,config_dict,
                 SQP_RTI_OPTION=True, 
                 USE_PREV_SOLVER = False,
-                PDP_GRADIENT=False):
+                PDP_GRADIENT=False,
+                ORIGIN_REWARD=False):
         
        
 
@@ -23,8 +24,8 @@ class run_quad:
         #######------------ UAV PARAM----------------#########
         ######################################################
         ## definition 
-        self.wing_len = 0.8 
-        self.uav_height = 0.3
+        self.wing_len = config_dict['drone']['wing_len'] 
+        self.uav_height = config_dict['drone']['height']
         # --------------------------- create model1 ----------------------------------------
         self.uav1 = Quadrotor()
         # jx, jy, jz = 0.0023, 0.0023, 0.004
@@ -119,6 +120,7 @@ class run_quad:
         ###################################################################
         # define the auxilary control system symbolic functions
         self.PDP_GRADIENT = PDP_GRADIENT
+        self.ORIGIN_REWARD = ORIGIN_REWARD
         if self.PDP_GRADIENT:
             self.uavoc1.diffPMP()
             self.lqr_solver = LQR()
@@ -160,9 +162,14 @@ class run_quad:
 
 
 
-    def R_from_MPC_pred(self,tra_pos=None,tra_ang=None,t_tra = 3):
+    def R_from_MPC(self,tra_pos=None,tra_ang=None,t_tra = 3):
 
-
+        if not self.PDP_GRADIENT:
+            NO_SOLUTION_FLAG = False
+            self.sol1,NO_SOLUTION_FLAG =self.mpc_update(self.ini_state, 
+                                                        tra_pos, 
+                                                        tra_ang, 
+                                                        t_tra)
         # state_traj [x,y,z,vx,vy,vz,qw,qx,qy,qz]
         state_traj = self.sol1['state_traj_opt']
         # get the quadrotor both center and edges position trajectory
@@ -177,110 +184,52 @@ class run_quad:
         ## detect whether there is collision
         self.co = 0
 
-        
-        for c in range(4):
-            self.collision += self.obstacle1.collis_det(self.traj[:,3*(c+1):3*(c+2)],self.horizon)
-            self.co += self.obstacle1.co 
-
-        ## calculate the path cost
-        # check the drone centroid position error with the goal position
-        for p in range(4):
-            self.path += np.dot(self.traj[self.horizon-1-p,0:3]-self.goal_pos, self.traj[self.horizon-1-p,0:3]-self.goal_pos)
-        
-        # the sign of the collision is already negative
-        # pitch angle reward temproally be here
-        pitch_reward =  0 * 0.5 * tra_ang[1]**2
-        self.drdpitch = 0 * tra_ang[1]
-        
         roll_reward = - 1000 * 0.5 * tra_ang[0]**2
         self.drdroll = - 1000 * tra_ang[0]
 
         yaw_reward = - 1000 * 0.5 * tra_ang[2]**2
         self.drdyaw = - 1000 * tra_ang[2]
-        reward_origin = 1000 * self.collision - 0.5 * self.path + 100 + 10 * pitch_reward
 
+        if self.ORIGIN_REWARD:   
+            for c in range(4):
+                self.collision += self.obstacle1.collis_det(self.traj[:,3*(c+1):3*(c+2)],self.horizon)
+                self.co += self.obstacle1.co 
 
+            ## calculate the path cost
+            # check the drone centroid position error with the goal position
+            for p in range(4):
+                self.path += np.dot(self.traj[self.horizon-1-p,0:3]-self.goal_pos, self.traj[self.horizon-1-p,0:3]-self.goal_pos)
+            
+            # the sign of the collision is already negative
+            # pitch angle reward temproally be here
+            # pitch_reward =  0 * 0.5 * tra_ang[1]**2
+            # self.drdpitch = 0 * tra_ang[1]
+            
+ 
+            return 1000 * self.collision - 0.5 * self.path + 100 #+ 10 * pitch_reward
+
+        else:
         
-        gate_check_points = np.zeros((4,3))
-        for i in range(4):
-            if i < 4:
-                    ## load four corners first
-                    gate_check_points[i,:] = self.gate_corners[i*3:i*3+3]
+            gate_check_points = np.zeros((4,3))
+            for i in range(4):
+                if i < 4:
+                        ## load four corners first
+                        gate_check_points[i,:] = self.gate_corners[i*3:i*3+3]
 
-        reward,self.d_R_d_st_traj,gate_check_points=self.obstacle1.reward_calc_differentiable_collision(
-                                                            quad_radius=self.wing_len/2,
-                                                            quad_height=self.uav_height/2,
-                                                            state_traj=state_traj,
-                                                            gate_corners=self.gate_corners,
-                                                            gate_quat=self.gate_quat,
-                                                            vert_traj=self.traj[:,0:3],
-                                                            goal_pos=self.goal_pos,
-                                                            horizon=self.horizon)
-        
-        self.d_R_d_st_traj = self.d_R_d_st_traj.reshape(self.horizon+1,1,self.uavoc1.n_state)
-        
-        return reward + roll_reward + yaw_reward#+ pitch_reward
-        
-    def R_from_MPC_close_loop(self,tra_pos=None,tra_ang=None,t_tra = 3):
+            reward,self.d_R_d_st_traj,gate_check_points=self.obstacle1.reward_calc_differentiable_collision(
+                                                                quad_radius=self.wing_len/2,
+                                                                quad_height=self.uav_height/2,
+                                                                state_traj=state_traj,
+                                                                gate_corners=self.gate_corners,
+                                                                gate_quat=self.gate_quat,
+                                                                vert_traj=self.traj[:,0:3],
+                                                                goal_pos=self.goal_pos,
+                                                                horizon=self.horizon)
+            
+            self.d_R_d_st_traj = self.d_R_d_st_traj.reshape(self.horizon+1,1,self.uavoc1.n_state)
+            
+            return reward + roll_reward + yaw_reward#+ pitch_reward
 
-
-        # state_traj [x,y,z,vx,vy,vz,qw,qx,qy,qz]
-        state_traj = self.sol1['state_traj_opt'][0]
-        # get the quadrotor both center and edges position trajectory
-        self.traj = self.uav1.get_quadrotor_position(wing_len = self.wing_len, state_traj = state_traj)
-
-        
-        ELLIPSOID_COLLISION_CHECK = False
-      
-        # calculate trajectory reward
-        self.collision = 0
-        self.path = 0
-        ## detect whether there is collision
-        self.co = 0
-
-        
-        for c in range(4):
-            self.collision += self.obstacle1.collis_det(self.traj[:,3*(c+1):3*(c+2)],self.horizon)
-            self.co += self.obstacle1.co 
-
-        ## calculate the path cost
-        # check the drone centroid position error with the goal position
-        for p in range(4):
-            self.path += np.dot(self.traj[self.horizon-1-p,0:3]-self.goal_pos, self.traj[self.horizon-1-p,0:3]-self.goal_pos)
-        
-        # the sign of the collision is already negative
-        # pitch angle reward temproally be here
-        pitch_reward =  0 * 0.5 * tra_ang[1]**2
-        self.drdpitch = 0 * tra_ang[1]
-        
-        roll_reward = - 1000 * 0.5 * tra_ang[0]**2
-        self.drdroll = - 1000 * tra_ang[0]
-
-        yaw_reward = - 1000 * 0.5 * tra_ang[2]**2
-        self.drdyaw = - 1000 * tra_ang[2]
-        reward_origin = 1000 * self.collision - 0.5 * self.path + 100 + 10 * pitch_reward
-
-
-        
-        gate_check_points = np.zeros((4,3))
-        for i in range(4):
-            if i < 4:
-                    ## load four corners first
-                    gate_check_points[i,:] = self.gate_corners[i*3:i*3+3]
-
-        reward,self.d_R_d_st_traj,gate_check_points=self.obstacle1.reward_calc_differentiable_collision(
-                                                            quad_radius=self.wing_len/2,
-                                                            quad_height=self.uav_height/2,
-                                                            state_traj=state_traj,
-                                                            gate_corners=self.gate_corners,
-                                                            gate_quat=self.gate_quat,
-                                                            vert_traj=self.traj[:,0:3],
-                                                            goal_pos=self.goal_pos,
-                                                            horizon=self.horizon)
-        
-        self.d_R_d_st_traj = self.d_R_d_st_traj.reshape(self.horizon+1,1,self.uavoc1.n_state)
-        
-        return reward #+ roll_reward + yaw_reward#+ pitch_reward    
 
     # --------------------------- solution and learning----------------------------------------
     ##solution and demo
@@ -294,12 +243,13 @@ class run_quad:
 
         # run the MPC to execute plan and execute based on the high-level variables
         # obtain solution of trajectory
-        NO_SOLUTION_FLAG = False
-        self.sol1,NO_SOLUTION_FLAG =self.mpc_update(self.ini_state, 
-                       tra_pos, 
-                       tra_ang, 
-                       t_tra,
-                       OPEN_LOOP = True )
+        if self.PDP_GRADIENT:
+            NO_SOLUTION_FLAG = False
+            self.sol1,NO_SOLUTION_FLAG =self.mpc_update(self.ini_state, 
+                                                        tra_pos, 
+                                                        tra_ang, 
+                                                        t_tra)
+        
         
         # R is the Reward
         R = self.R_from_MPC(tra_pos,

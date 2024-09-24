@@ -1,6 +1,7 @@
 ## this file is for neural network training
 from quad_nn import *
 from quad_policy import *
+from learning_agile_agent import MovingGate
 from multiprocessing import Process, Array
 import numpy as np
 import os
@@ -17,7 +18,7 @@ with open(yaml_file, 'r', encoding='utf-8') as file:
 current_dir = os.path.dirname(os.path.abspath(__file__))
 training_data_folder=os.path.abspath(os.path.join(current_dir, 'training_data'))
 model_folder=os.path.abspath(os.path.join(training_data_folder, 'NN_model'))
-FILE_INPUT = model_folder+"/NN1_deep2_44.pth"
+FILE_INPUT = model_folder+"/NN1_deep2_56.pth"
 model_nn1 = torch.load(FILE_INPUT).to(device)
 
 ##====== NN2 logging initialization ======##
@@ -43,11 +44,15 @@ criterion = nn.MSELoss()
 optimizer = torch.optim.Adam(model_nn2.parameters(), lr=learning_rate)  
 
 def traj(inputs, outputs, state_traj):
-    gate_point = np.array([[-inputs[7]/2,0,0.65],[inputs[7]/2,0,0.65],[inputs[7]/2,0,-0.65],[-inputs[7]/2,0,-0.65]])
-
-    gate1 = gate(gate_point)
-    gate_point = gate1.rotate_y_out(inputs[8])
-
+    # gate_point = np.array([[-inputs[7]/2,0,0.6],[inputs[7]/2,0,0.6],[inputs[7]/2,0,-0.6],[-inputs[7]/2,0,-0.6]])
+    # gate = Gate(gate_point)
+    # gate_point = gate.rotate_y_out(inputs[8])
+    
+    moving_gate = MovingGate(inputs,
+                            gate_cen_h=0,
+                            gate_length=config_dict['gate']['length'])
+    
+    gate_point = moving_gate.gate.gate_point
     
     final_q=R.from_euler('xyz',[0,0,inputs[6]]).as_quat()
     final_q=np.roll(final_q,1)
@@ -62,13 +67,12 @@ def traj(inputs, outputs, state_traj):
                 ini_v_I = [0.0, 0.0, 0.0], # initial velocity
                 ini_q=toQuaternion(inputs[6],[0,0,1]))
     
-    Ulast=np.array([2,0.0,0.0,0.0])
+
     quad1.mpc_update(quad1.ini_state,
-                     Ulast,
                      outputs[0:3],
                      outputs[3:6],
-                     outputs[6],
-                     )
+                     outputs[6])
+    
     state_t = np.reshape(quad1.sol1['state_traj_opt'],(batch_size+1)*10)
     state_traj[:] = state_t
 
