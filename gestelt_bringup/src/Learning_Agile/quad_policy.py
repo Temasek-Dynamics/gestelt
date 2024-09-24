@@ -15,7 +15,8 @@ class run_quad:
     def __init__(self,config_dict,
                 SQP_RTI_OPTION=True, 
                 USE_PREV_SOLVER = False,
-                PDP_GRADIENT=False):
+                PDP_GRADIENT=False,
+                ORIGIN_REWARD=False):
         
        
 
@@ -23,8 +24,8 @@ class run_quad:
         #######------------ UAV PARAM----------------#########
         ######################################################
         ## definition 
-        self.wing_len = 1 
-        self.uav_height = 0.4
+        self.wing_len = config_dict['drone']['wing_len'] 
+        self.uav_height = config_dict['drone']['height']
         # --------------------------- create model1 ----------------------------------------
         self.uav1 = Quadrotor()
         # jx, jy, jz = 0.0023, 0.0023, 0.004
@@ -120,6 +121,7 @@ class run_quad:
         ###################################################################
         # define the auxilary control system symbolic functions
         self.PDP_GRADIENT = PDP_GRADIENT
+        self.ORIGIN_REWARD = ORIGIN_REWARD
         if self.PDP_GRADIENT:
             self.uavoc1.diffPMP()
             self.lqr_solver = LQR()
@@ -161,26 +163,14 @@ class run_quad:
         self.obstacle1_torch=obstacle_torch(self.point1,self.point2,self.point3,self.point4)
 
 
-    def R_from_MPC(self,tra_pos=None,tra_ang=None,t_tra = 3, Ulast_value = None):
-       
-        # round the traversal time, keep to one decimal place
-        # t_tra = round(t_tra,1)
+    def R_from_MPC(self,tra_pos=None,tra_ang=None,t_tra = 3):
 
-    
-        # obtain solution of trajectory
-        NO_SOLUTION_FLAG = False
-        self.sol1,NO_SOLUTION_FLAG =self.mpc_update(self.ini_state, 
-                       Ulast_value, 
-                       tra_pos, 
-                       tra_ang, 
-                       t_tra,
-                       OPEN_LOOP = True )
-        # if NO_SOLUTION_FLAG:
-        #     logging.info("MPC solver failed, here is the NN output")
-        #     logging.info("traverse time: "+str(t_tra))
-        #     logging.info("traverse position: "+str(tra_pos))
-        #     logging.info("traverse angle: "+str(tra_ang))
-
+        if not self.PDP_GRADIENT:
+            NO_SOLUTION_FLAG = False
+            self.sol1,NO_SOLUTION_FLAG =self.mpc_update(self.ini_state, 
+                                                        tra_pos, 
+                                                        tra_ang, 
+                                                        t_tra)
         # state_traj [x,y,z,vx,vy,vz,qw,qx,qy,qz]
         state_traj = self.sol1['state_traj_opt']
         # get the quadrotor both center and edges position trajectory
@@ -195,7 +185,13 @@ class run_quad:
             ## detect whether there is collision
             self.co = 0
 
-            
+        roll_reward = - 1000 * 0.5 * tra_ang[0]**2
+        self.drdroll = - 1000 * tra_ang[0]
+
+        yaw_reward = - 1000 * 0.5 * tra_ang[2]**2
+        self.drdyaw = - 1000 * tra_ang[2]
+
+        if self.ORIGIN_REWARD:   
             for c in range(4):
                 self.collision += self.obstacle1.collis_det(self.traj[:,3*(c+1):3*(c+2)],self.horizon)
                 self.co += self.obstacle1.co 
@@ -207,52 +203,21 @@ class run_quad:
             
             # the sign of the collision is already negative
             # pitch angle reward temproally be here
-            pitch_reward =  0 * 0.5 * tra_ang[1]**2
-            self.drdpitch = 0 * tra_ang[1]
+            # pitch_reward =  0 * 0.5 * tra_ang[1]**2
+            # self.drdpitch = 0 * tra_ang[1]
             
-            reward_origin = 1000 * self.collision - 0.5 * self.path + 100 + 10 * pitch_reward
+ 
+            return 1000 * self.collision - 0.5 * self.path + 100 #+ 10 * pitch_reward
 
-
-            #############################################################
-            ##-----------------ellipse collision check-----------------##
-            #############################################################
-            # initialize the drone ellipse
-            self.obstacle1.reward_calc_sym(self.uav1,
-                                            quad_height=self.uav_height/2,
-                                            quad_radius=self.wing_len/2,
-                                            alpha=5,
-                                            beta=10,
-                                            Q_tra=5,
-                                            w_goal=0.1)    
-            
-                                            # alpha=5,
-                                            # beta=10,
-                                            # Q_tra=1,
-                                            # safe_margin=0.0,
-                                            # w_goal=0.1)    
-            
-    
-            # reward,self.drdstate_traj,gate_check_points=self.obstacle1.reward_calc_value(state_traj,
-            #                                     self.gate_corners,
-            #                                     goal_pos=self.goal_pos,
-            #                                     vert_traj=self.traj[:,0:3],
-            #                                     horizon=self.horizon)
+        else:
+        
             gate_check_points = np.zeros((4,3))
             for i in range(4):
                 if i < 4:
                         ## load four corners first
                         gate_check_points[i,:] = self.gate_corners[i*3:i*3+3]
 
-            # if sys.gettrace() is not None:  # In debug mode
-            #     des_node_tra=int(np.round(t_tra*(10)))
-            #     self.uav1.plot_3D_traj(wing_len=1.5,
-            #                         uav_height=self.uav_height/2,
-            #                             state_traj=state_traj,
-            #                             gate_traj=gate_check_points,
-            #                             TRAIN_VIS=True,
-            #                             tra_node=des_node_tra)
-
-            reward,self.drdstate_traj,gate_check_points=self.obstacle1.reward_calc_differentiable_collision(
+            reward,self.d_R_d_st_traj,gate_check_points=self.obstacle1.reward_calc_differentiable_collision(
                                                                 quad_radius=self.wing_len/2,
                                                                 quad_height=self.uav_height/2,
                                                                 state_traj=state_traj,
@@ -262,47 +227,10 @@ class run_quad:
                                                                 goal_pos=self.goal_pos,
                                                                 horizon=self.horizon)
             
-           
+            self.d_R_d_st_traj = self.d_R_d_st_traj.reshape(self.horizon+1,1,self.uavoc1.n_state)
             
-            return reward #+ pitch_reward
-        
-        
-        else:   
-            self.state_traj_tensor = torch.tensor(state_traj,requires_grad=True)
-            self.traj_tensor = self.uav1.get_quadrotor_position_tensor(wing_len = self.wing_len, state_traj = self.state_traj_tensor )
-            self.collision_tensor = torch.tensor(0.0,  requires_grad=True)
-            self.co_tensor = torch.tensor(0.0,  requires_grad=True)
-            self.path_tensor = torch.tensor(0.0,  requires_grad=True)
-            self.pitch_reward_tensor = torch.tensor(0.0,  requires_grad=True)
-            self.reward_tensor = torch.tensor(0.0,  requires_grad=True)
-            self.goal_pos_tensor = torch.tensor(self.goal_pos,requires_grad=True)
-            
-            for c in range(4):
-                self.collision_tensor = torch.add(self.collision_tensor,self.obstacle1_torch.collis_det_torch(self.traj_tensor[:,3*(c+1):3*(c+2)],self.horizon))
-                # self.collision_tensor += self.obstacle1_torch.collis_det_torch(self.traj_tensor[:,3*(c+1):3*(c+2)],self.horizon)
-                # self.co_tensor += self.obstacle1_torch.co
+            return reward + roll_reward + yaw_reward#+ pitch_reward
 
-
-            # Calculate the path value
-            for p in range(4):
-                diff = self.traj_tensor[self.horizon-p, 0:3] - self.goal_pos_tensor
-                self.path_tensor = torch.add(self.path_tensor, torch.dot(diff, diff))
-                # self.path_tensor += torch.dot(diff, diff)
-            
-
-            
-            # Calculate pitch angle reward
-            # self.tra_ang_tensor = torch.tensor(tra_ang, requires_grad=True)
-            # pitch_reward_tensor = torch.abs(self.tra_ang_tensor[1])
-
-            # Calculate the reward
-            # The sign of the collision is already negative
-            reward_tensor = 1000 * self.collision_tensor - 0.5 * self.path_tensor + 100 #+ 10 * pitch_reward_tensor
-            
-            if not self.PDP_GRADIENT: 
-                reward_tensor.detach().numpy()
-            # Return the reward
-            return reward_tensor
 
     # --------------------------- solution and learning----------------------------------------
     ##solution and demo
@@ -315,8 +243,17 @@ class run_quad:
         tra_pos = np.array(tra_pos)
 
         # run the MPC to execute plan and execute based on the high-level variables
-        # j is the reward
-        j = self.R_from_MPC(tra_pos,
+        # obtain solution of trajectory
+        if self.PDP_GRADIENT:
+            NO_SOLUTION_FLAG = False
+            self.sol1,NO_SOLUTION_FLAG =self.mpc_update(self.ini_state, 
+                                                        tra_pos, 
+                                                        tra_ang, 
+                                                        t_tra)
+        
+        
+        # R is the Reward
+        R = self.R_from_MPC(tra_pos,
                             tra_ang,
                             t_tra,
                             Ulast_value)

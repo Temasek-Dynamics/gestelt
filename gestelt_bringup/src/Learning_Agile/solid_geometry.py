@@ -410,10 +410,6 @@ class obstacle():
                                             vert_traj, 
                                             goal_pos,
                                             horizon):   
-
-        collision_score = 0
-        traverse_score = 0
-        
         
         t_tra_seq_list=[]
 
@@ -426,8 +422,7 @@ class obstacle():
         
         ## init gate check points: four corners and twelve middle points
         gate_check_points = np.zeros([16,3])
-        gate_lines = np.zeros([4,3])
-        drdstate_traj = np.zeros((horizon+1,state_traj.shape[1]))
+        drdstate_traj = np.zeros((state_traj.shape[0],state_traj.shape[1]))
         
         R_gate=dir_cosine_np(gate_quat) # world frame to gate frame
         reward_traj = 0

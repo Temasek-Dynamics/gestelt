@@ -244,7 +244,7 @@ class Quadrotor:
         goal_R_B_I = dir_cosine(self.goal_q)
         R_B_I = dir_cosine(self.q)
         self.cost_q_g = trace(np.identity(3) - mtimes(transpose(goal_R_B_I), R_B_I))
-
+        # self.cost_q_g = 2-sqrt(1+trace(mtimes(transpose(goal_R_B_I), R_B_I)))
         ## angular velocity cost
         self.goal_w_B = [0, 0, 0]
         self.cost_ang_rate_B = dot(self.ang_rate_B - self.goal_w_B, self.ang_rate_B - self.goal_w_B)
@@ -267,6 +267,8 @@ class Quadrotor:
                          + self.wvf * self.cost_v_I_g\
                          + self.wqf * self.cost_q_g
         
+    def vee_map(self,mat):
+        return ca.vertcat(mat[2, 1], mat[0, 2], mat[1, 0])
     
     def init_TraCost(self): # transforming Rodrigues to Quaternion is shown in mpc_update function
         ## traverse cost
@@ -293,7 +295,9 @@ class Quadrotor:
         # traverse attitude error
         tra_R_B_I = dir_cosine(self.des_tra_q)
         R_B_I = dir_cosine(self.q)
-        self.cost_q_t = trace(np.identity(3) - mtimes(transpose(tra_R_B_I), R_B_I))**2
+        self.cost_q_t = trace(np.identity(3) - mtimes(transpose(tra_R_B_I), R_B_I))
+        # self.cost_q_t = 2-sqrt(1+trace(mtimes(transpose(tra_R_B_I), R_B_I)))
+
 
 
         # weight = max_tra_w*casadi.exp(-gamma*(dt*i-t_tra)**2) #gamma should increase as the flight duration decreases
@@ -674,15 +678,15 @@ class Quadrotor:
 
         plt.show()
 
-    def plot_position(self,state_traj,dt = 0.1):
+    def plot_position(self,state_traj,name,dt = 0.1):
         fig, axs = plt.subplots(3)
-        fig.suptitle('position vs t')
+        fig.suptitle(f'{name}+position vs t')
         N = len(state_traj[:,0])
         x = np.arange(0,N*dt,dt)
         axs[0].plot(x,state_traj[:,0])
         axs[1].plot(x,state_traj[:,1])
         axs[2].plot(x,state_traj[:,2])
-        plt.savefig('./python_sim_result/position.png')
+        plt.savefig(f'./python_sim_result/{name}+position.png')
         # plt.show()
         
     def plot_velocity(self,state_traj,dt = 0.1):
@@ -696,7 +700,7 @@ class Quadrotor:
         plt.savefig('./python_sim_result/velocity.png')
         # plt.show()
 
-    def plot_quaternions(self,state_traj,dt = 0.1):
+    def plot_quaternions(self,state_traj,dt = 0.1,save=True):
         fig, axs = plt.subplots(4)
         fig.suptitle('quaternions vs t')
         N = len(state_traj[:,0])
@@ -705,7 +709,9 @@ class Quadrotor:
         axs[1].plot(x,state_traj[:,7])
         axs[2].plot(x,state_traj[:,8])
         axs[3].plot(x,state_traj[:,9])
-        plt.savefig('./python_sim_result/quaternions.png')
+        
+        if save:
+            plt.savefig('./python_sim_result/quaternions.png')
         # plt.show()
     
     def plot_angularrate(self,state_traj,dt = 0.01):
@@ -839,7 +845,7 @@ class Quadrotor:
 
             distance = np.linalg.norm(gate_center-quadrotor_center)
             
-            condition_test=distance <= 0.3
+            condition_test=distance <= 0.5
             condition_train=i==tra_node
             condition=condition_test
             if TRAIN_VIS:
@@ -935,7 +941,7 @@ class Quadrotor:
                        )
 
 ## define the class of the gate (kinematics)
-class gate:
+class Gate:
     ## using 12 coordinates to define a gate
     def __init__(self, gate_point = None):
         self.gate_point = gate_point
@@ -1081,7 +1087,6 @@ class gate:
     ## transform the final point in world frame to the point in window frame
     def t_final(self, final_point):
         return np.matmul(self.I_G, final_point - self.centroid)
-        
 def Rd2Rp(tra_ang):
     theta = 2*math.atan(magni(tra_ang))
     vector = norm(tra_ang+np.array([1e-8,0,0]))

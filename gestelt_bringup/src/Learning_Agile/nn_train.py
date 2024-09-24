@@ -29,7 +29,7 @@ for epoch in range(num_epochs):
         outputs  = torch.tensor(t_output(inputs), dtype=torch.float).to(device)
         
         # Forward pass
-        pre_outputs = model(inputs)
+        pre_outputs = model(torch.tensor(inputs, dtype=torch.float).to(device))
         print("desired_traversing_time",pre_outputs[6])
         #print(inputs,' ',pre_outputs)
         loss = criterion(pre_outputs, outputs)
@@ -56,7 +56,7 @@ with torch.no_grad():
         outputs  = torch.tensor(t_output(inputs), dtype=torch.float).to(device)
         
         # Forward pass
-        pre_outputs = model(inputs)
+        pre_outputs = model(torch.tensor(inputs, dtype=torch.float).to(device))
         loss = criterion(pre_outputs, outputs).cpu().data.numpy()
         # max returns (value ,index)
         #_, predicted = torch.max(outputs.data, 1)

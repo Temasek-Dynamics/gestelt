@@ -101,15 +101,13 @@ class NN2_ROS_wrapper:
 
         ## random gate initialization
         self.env_init_set = nn_sample()
-        self.moving_gate = MovingGate(self.env_init_set)
-        self.gate_point = self.moving_gate.gate_point
-        self.moving_gate.let_gate_move(dt=self.gate_step,gate_v=gate_v,gate_w=gate_w)
+        gate_length = rospy.get_param('gate/length', 1.2)
+        self.moving_gate = MovingGate(self.env_init_set,
+                                      gate_cen_h=1.2,
+                                      gate_length=gate_length)
+        self.moving_gate.set_vel(dt=self.gate_step,gate_v=gate_v,gate_w=gate_w)
         self.gate_points_list = self.moving_gate.gate_points_list
-        self.gate_n = gate(self.gate_points_list[0])
-
-        ##============== initial guess of the traversal time==============-##
-        self.t_guess = magni(self.gate_n.centroid-self.state[0:3])/1
-        
+        self.gate_t_i = Gate(self.gate_points_list[0]) 
         
         ##=======================misc ====================================##
         """
@@ -151,7 +149,7 @@ class NN2_ROS_wrapper:
             self.i = int((curr_time-(self.mission_start_time))*self.NN2_freq)
             # print("i",self.i)
         
-            self.gate_n = gate(self.gate_points_list[self.i])
+            self.gate_t_i = Gate(self.gate_points_list[self.i])
             ##============================ gate visualization =========================##
             gate_vis_msg = Marker()
             gate_vis_msg.header.frame_id = "world"

@@ -33,7 +33,7 @@ def binary_search_solver(model,device, quad_state, final_point, gate1, velo, w )
     t_guess = magni(gate1.centroid-quad_state[0:3])/1
     
     t1 = t_guess
-    gate_x = gate(gate1.translate_out(velo*t1))
+    gate_x = Gate(gate1.translate_out(velo*t1))
     gate_x.rotate_y(w*t1)
 
     inputs = np.zeros(15)
@@ -48,7 +48,7 @@ def binary_search_solver(model,device, quad_state, final_point, gate1, velo, w )
 
     while abs(t2-t1)>0.1:
         t1 += (t2-t1)/2
-        gate_x = gate(gate1.translate_out(velo*t1)) # prediction of the gap future position
+        gate_x = Gate(gate1.translate_out(velo*t1)) # prediction of the gap future position
         gate_x.rotate_y(w*t1)
 
         inputs = np.zeros(15)

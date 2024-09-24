@@ -1,12 +1,19 @@
 
 # flight mission
 STATIC_GATE_TEST: false
+mission_period: 8.0 #s
 
-# gate parameters
+drone:
+  wing_len: 0.8
+  height: 0.3
+
+# gate parameters  
 gate:
-  # linear_vel: [0.0, 0.0, 0.0]
+  length: 1.2
+  width: 0.56
+  linear_vel: [0.0, 0.0, 0.0]
   angular_vel: 0.0 
-  linear_vel: [0.5,-0.3,0.4]
+  # linear_vel: [1.0,-0.3,0.0]
   # angular_vel: 1.57
 traj_server:
   takeoff_height: 1.2
@@ -15,19 +22,19 @@ mission:
   #################################################
   ######--------- for test --------#########
   #################################################
-  ##------ MPC initial pose ----##
-  # initial pose only works for python sim
-  initial_position: [0.0, -6.0, 1]
-  initial_ori_euler: [0.0, 0.0, 1.0] # RPY, only yaw is active
+  # ##------ MPC initial pose ----##
+  ## ##initial pose only works for python sim
+  # initial_position: [0.0, -3.0, 1]
+  # initial_ori_euler: [0.0, 0.0, 0.0] # RPY, only yaw is active
 
-  ##------ gate pose ----##
-  # only feasible for STATIC_GATE_TEST
-  gate_position: [1.0, 0.0, 1.5]
-  gate_ori_RP: [-0.0, -0.3535, 0.0]
+  # ##------ gate pose ----##
+  # # only feasible for STATIC_GATE_TEST
+  # gate_position: [1.0, 0.0, 1.5]
+  # gate_ori_RP: [-0.0, -1.055, 0.0]
 
-  ##------ goal pose ----##
-  goal_position: [0.0, 1.8, 1]
-  goal_ori_euler: [0.0, 0.0, 0.0] # RPY, only yaw is active
+  # ##------ goal pose ----##
+  # goal_position: [0.0, 3, 1]
+  # goal_ori_euler: [0.0, 0.0, 0.0] # RPY, only yaw is active
 
   #################################################
   ######-----end of for testing --------------#####
@@ -36,18 +43,18 @@ mission:
   ######------------- Training -----------#########
   #################################################
   ##------ MPC initial pose ----##
-  # initial pose only works for python sim
-  # initial_position: [0.0, -6, 0]
-  # initial_ori_euler: [0.0, 0.0, 0] # RPY, only yaw is active
+  ##initial pose only works for python sim
+  initial_position: [0.0, -6, 0]
+  initial_ori_euler: [0.0, 0.0, 0] # RPY, only yaw is active
 
-  # ##------ gate pose ----##
-  # # only feasible for STATIC_GATE_TEST
-  # gate_position: [1.0, -0.0, 1.5]
-  # gate_ori_RP: [-0.0, -0.3535, -0.3535]
+  ##------ gate pose ----##
+  # only feasible for STATIC_GATE_TEST
+  gate_position: [1.0, -0.0, 1.5]
+  gate_ori_RP: [-0.0, -0.955, -0.0]
 
-  # ##------ goal pose ----##
-  # goal_position: [0.0, 3, 0]
-  # goal_ori_euler: [0.0, 0.0,0] # RPY, only yaw is active
+  ##------ goal pose ----##
+  goal_position: [0.0, 3, 0]
+  goal_ori_euler: [0.0, 0.0,0] # RPY, only yaw is active
 
   
 # MPC parameters
@@ -94,8 +101,8 @@ learning_agile:
   ##------ MPC problem parameters---## 
   ## ---- hard coded in the solver ----##
   ## modify this required recompilation of the solver
-  horizon: 40
-  dt: 0.1
+  horizon: 80
+  dt: 0.05
     
   ##------ model parameters --------##
   ## ---- hard coded in the solver ----##

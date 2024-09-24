@@ -23,7 +23,7 @@ with open(yaml_file, 'r', encoding='utf-8') as file:
 pre_ini_pos=np.array(config_dict['mission']['initial_position'])
 pre_end_pos=np.array(config_dict['mission']['goal_position'])
 desired_average_vel=config_dict['training_param']['desired_average_vel']
-
+gate_width = config_dict['gate']['width']
 # load the configuration file
 
 ## sample an input for the neural network 1
@@ -42,23 +42,37 @@ def nn_sample(init_pos=None,final_pos=None,init_angle=None):
         inputs[3:6] = final_pos
     ## random initial yaw angle of the quadrotor
     inputs[6] = np.random.uniform(-0.1,0.1)
-    ## random width of the gate
-    inputs[7] = np.clip(np.random.normal(0.6,0.2),0.4,0.8) #(0.9,0.3),0.5,1.25   
-    # inputs[7] = np.random.uniform(0.7,1.2)
-    ## random pitch angle of the gate
-    angle = np.clip(1.3*(1.2-inputs[7]),0,pi/3)
-    angle1 = (pi/2-angle)/3
-    judge = np.random.normal(0,1)
-    if init_angle is None:
-        if judge > 0:
-            inputs[8] = np.clip(np.random.normal(angle + angle1, 2*angle1/3),angle,pi/2)
-            # inputs[8] = np.random.uniform(angle - angle1, angle + angle1)
-        else:
-            inputs[8] = np.clip(np.random.normal(-angle - angle1, 2*angle1/3),-pi/2,-angle)
+    
+    ## === random width of the gate  =========##
+    inputs[7] = np.clip(np.random.normal(0.6,0.2),gate_width,gate_width) #(0.9,0.3),0.5,1.25 
+  
+    ## === random pitch angle of the gate ====##
+    # angle = np.clip(1.3*(1.2-inputs[7]),0,pi/3)
+    # angle1 = (pi/2-angle)/3
+    # judge = np.random.normal(0,1)
+    # if init_angle is None:
+    #     if judge > 0:
+    #         inputs[8] = np.clip(np.random.normal(angle + angle1, 2*angle1/3),angle,pi/2)
+    #         # inputs[8] = np.random.uniform(angle - angle1, angle + angle1)
+    #     else:
+    #         inputs[8] = np.clip(np.random.normal(-angle - angle1, 2*angle1/3),-pi/2,-angle)
+    # else:
+    #     inputs[8] = init_angle
+
+    ###==== curriculum learning ===###
+    # 0 -> gate is horizontal
+    # pi/2 -> gate is vertical
+    des_pitch_mean_min = 3*pi/10
+    des_pitch_mean_max = 3*pi/10
+    des_pitch_mean = des_pitch_mean_min - (des_pitch_mean_min - des_pitch_mean_max) * (cur_epoch / 100) 
+    inputs[8] = np.clip(np.random.normal(0,pi/18),-pi/6,pi/6) 
+    if inputs[8]>0:
+        inputs[8]=inputs[8]+des_pitch_mean
     else:
-        inputs[8] = init_angle
-    # inputs[8] = np.random.uniform(-pi/2,pi/2)    
-    # inputs[8] = 0.8879
+        inputs[8]=inputs[8]-des_pitch_mean
+    
+
+    # inputs[8] = np.random.uniform(-pi/2,pi/2)
     return inputs
 
 ## define the expected output of an input (for pretraining)
@@ -152,6 +166,12 @@ class network(nn.Module):
         out = self.F2(out)
         out = self.l3(out)
         return out
+
+    def myloss_original(self, para, dp):
+        # convert np.array to tensor
+        Dp = torch.tensor(dp, dtype=torch.float) # row 2D tensor
+        loss_nn = torch.matmul(Dp, para)
+        return loss_nn
 
     def myloss(self, para, dp, device='cpu'):
         # convert np.array to tensor
