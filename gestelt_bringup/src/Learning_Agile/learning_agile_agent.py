@@ -271,7 +271,12 @@ class LearningAgileAgent():
         out = self.model(torch.tensor(nn2_inputs, dtype=torch.float).to(device)).to('cpu')
         out = out.data.numpy()
         self.NN_T_tra = np.concatenate((self.NN_T_tra,[out[6]]),axis = 0)
-        self.nn_output_list=np.concatenate((self.nn_output_list,[out[:]]),axis = 0)
+
+        atti = Rd2Rp(out[3:6])
+        quat_nn=toQuaternion(atti[0],atti[1])
+        
+        out_as_quat=np.concatenate((out[0:3],np.array(quat_nn),out[6].reshape([1,])),axis = 0)
+        self.nn_output_list=np.concatenate((self.nn_output_list,[out_as_quat]),axis = 0)
         self.Pitch = np.concatenate((self.Pitch,[nn2_inputs[14]]),axis = 0)                  
         return out
 
@@ -283,7 +288,7 @@ class LearningAgileAgent():
         
         self.state = self.quad.ini_state # state= feedback from pybullet, 13-by-1, 3 position, 3 velocity (world frame), 4 quaternion, 3 angular rate
         self.state_n = [self.state]
-        self.nn_output_list = [np.zeros(7)]
+        self.nn_output_list = [np.zeros(8)] # 3 position, 4 quaternion, 1 traversal time
         for self.i in range(self.sim_time*(int(1/self.dyn_step))): # 5s, 500 Hz
             
             self.Time = np.concatenate((self.Time,[self.i*self.dyn_step]),axis = 0)
@@ -404,7 +409,7 @@ def main():
     else:   
         model_name = 'NN2_imitate_1.pth'
 
-    model_file=os.path.join(current_dir, 'training_data/NN_model',model_name)
+    model_file=os.path.join(current_dir, 'training_data/NN_model/20240924-151841-FD-Trial_1',model_name)
     
         
     # create the learning agile agent

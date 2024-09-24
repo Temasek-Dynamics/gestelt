@@ -151,6 +151,10 @@ if __name__ == '__main__':
     conf_folder=os.path.abspath(os.path.join(current_dir, '..', '..','config'))
     training_data_folder=os.path.abspath(os.path.join(current_dir, 'training_data'))
     model_folder=os.path.abspath(os.path.join(training_data_folder, 'NN_model'))
+    saved_folder=os.path.join(model_folder,f"{current_time}-{method_name}-{training_notes}")
+    if saved_folder not in os.listdir(model_folder):
+        os.mkdir(saved_folder)
+
     yaml_file = os.path.join(conf_folder, 'learning_agile_mission.yaml')
     with open(yaml_file, 'r', encoding='utf-8') as file:
         config_dict = yaml.safe_load(file)
@@ -291,10 +295,7 @@ if __name__ == '__main__':
                 logging.info('evaluation: %s ',mean_reward)
                 writer.add_scalar('mean_reward', mean_reward, epoch)
                 
-                saved_folder=os.path.join(model_folder,f"{current_time}-{method_name}-{training_notes}")
-                if saved_folder not in os.listdir(model_folder):
-                    os.mkdir(saved_folder)
-
+        
                 if (epoch)%2 == 0:
                     torch.save(model, saved_folder+"/NN1_deep2_"+str(epoch)+".pth")
                 
@@ -376,10 +377,6 @@ if __name__ == '__main__':
                 logging.info('evaluation: %s ',mean_reward)
                 writer.add_scalar('mean_reward', mean_reward, epoch)
                 
-
-                saved_folder=os.path.join(model_folder,f"{current_time}-{method_name}-{training_notes}")
-                if saved_folder not in os.listdir(model_folder):
-                    os.mkdir(saved_folder)
 
                 if (epoch)%2 == 0:
                     torch.save(model, saved_folder+"/NN1_deep2_"+str(epoch)+".pth")
