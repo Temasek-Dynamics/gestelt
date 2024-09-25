@@ -58,7 +58,8 @@ class MovingGate():
         
         self.v=gate_v
         self.w=gate_w
-         
+        
+        # pre calculate gate points for future T durations
         self.gate_points_list, self.V = self.gate.move(T = 8, v = gate_v ,w = gate_w ,dt = dt)
 
     
@@ -245,16 +246,25 @@ class LearningAgileAgent():
             
         
 
-            ## obtain the future traversal window state
-            self.gate_n.translate(self.t_tra_rel*self.moving_gate.V[self.i])
-            self.gate_n.rotate_y(self.t_tra_rel*self.moving_gate.w)
-            # print('rotation matrix I_G=',gate_n.I_G)
+            ## obtain the future traversal window state w.r.t current time-step gate_t_i
+            self.gate_t_i.translate(self.t_tra_rel*self.moving_gate.V[self.i])
+            self.gate_t_i.rotate_y(self.t_tra_rel*self.moving_gate.w)
+            # print('rotation matrix I_G=',gate_t_i.I_G)
             
         self.Ttra= np.concatenate((self.Ttra,[self.t_tra_abs]),axis = 0)
         self.T = np.concatenate((self.T,[self.t_tra_rel]),axis = 0)
         
         
-        # return self.t_tra_abs,self.gate_t_i.centroid
+       
+    def log_NN_IO(self,nn2_inputs,out):
+        atti = Rd2Rp(out[3:6])
+        quat_nn=toQuaternion(atti[0],atti[1])
+        
+        out_as_quat=np.concatenate((out[0:3],np.array(quat_nn),out[6].reshape([1,])),axis = 0)
+        
+        self.NN_T_tra = np.concatenate((self.NN_T_tra,[out[6]]),axis = 0)
+        self.nn_output_list=np.concatenate((self.nn_output_list,[out_as_quat]),axis = 0)
+        self.Pitch = np.concatenate((self.Pitch,[nn2_inputs[14]]),axis = 0) 
 
     def close_loop_model_forward(self):
 
@@ -272,9 +282,8 @@ class LearningAgileAgent():
         # NN2 OUTPUT the traversal time and pose
         out = self.model(torch.tensor(nn2_inputs, dtype=torch.float).to(device)).to('cpu')
         out = out.data.numpy()
-        self.NN_T_tra = np.concatenate((self.NN_T_tra,[out[6]]),axis = 0)
-        self.nn_output_list=np.concatenate((self.nn_output_list,[out[0:3]]),axis = 0)
 
+        self.log_NN_IO(nn2_inputs,out)
         return out 
     
     def imitate_model_forward(self):
@@ -291,9 +300,8 @@ class LearningAgileAgent():
         # NN2 OUTPUT the traversal time and pose
         out = self.model(torch.tensor(nn2_inputs, dtype=torch.float).to(device)).to('cpu')
         out = out.data.numpy()
-        self.NN_T_tra = np.concatenate((self.NN_T_tra,[out[6]]),axis = 0)
-        self.nn_output_list=np.concatenate((self.nn_output_list,[out[:]]),axis = 0)
-        self.Pitch = np.concatenate((self.Pitch,[nn2_inputs[14]]),axis = 0)                  
+        
+        self.log_NN_IO(nn2_inputs,out)       
         return out
 
     def forward_sim(self,python_sim_data_folder,CLOSE_LOOP_MODEL=False):
@@ -329,6 +337,8 @@ class LearningAgileAgent():
 
                     # relative traversal time
                     out[6]=self.t_tra_rel
+
+                    self.log_NN_IO(nn2_inputs,out)       
                 else:
                     # drone state under the predicted gate frame(based on the binary search)
                     nn2_inputs[0:10] = self.gate_n.transform(self.state)
@@ -427,7 +437,7 @@ def main():
     ########################################################################
     #####---------------------- TEST option -------------------------#######
     ########################################################################
-    STATIC_GATE_TEST = False
+    STATIC_GATE_TEST = True
     CLOSE_LOOP_MODEL = False
 
     if CLOSE_LOOP_MODEL:
