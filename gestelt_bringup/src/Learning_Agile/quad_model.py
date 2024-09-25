@@ -160,8 +160,10 @@ class Quadrotor:
         # dynamics
         self.f = vertcat(dr_I, dv_I, dq)#, dw)
 
-    def initCost(self, wrt=None, wqt=None, wrf=None, wvf=None, wqf=None, wwt=None, \
-        wthrust=0.5,wInputDiff=10,max_tra_w=0,gamma=0):
+    def initCost(self, wrt=None, wqt=None,max_tra_w=0,gamma=0,
+                 wrp=None, wvp=None, wqp=None,
+                wrf=None, wvf=None, wqf=None, 
+                wwt=None, wwt_z=None,wthrust=0.5,wInputDiff=10):
         #traverse
         parameter = []
         if wrt is None:
@@ -177,6 +179,24 @@ class Quadrotor:
             self.wqt = wqt
 
         #path
+        if wrf is None:
+            self.wrp = SX.sym('wrp')
+            parameter += [self.wrp]
+        else:
+            self.wrp = wrp
+        
+        if wvp is None:
+            self.wvp = SX.sym('wvp')
+            parameter += [self.wvp]
+        else:
+            self.wvp = wvp
+        
+        if wqp is None:
+            self.wqp = SX.sym('wqp')
+            parameter += [self.wqp]
+        else:
+            self.wqp = wqp
+        # Terminal cost
         if wrf is None:
             self.wrf = SX.sym('wrf')
             parameter += [self.wrf]
@@ -200,6 +220,12 @@ class Quadrotor:
             parameter += [self.wwt]
         else:
             self.wwt = wwt
+
+        if wwt_z is None:
+            self.wwt_z = SX.sym('wwt_z')
+            parameter += [self.wwt_z]
+        else:
+            self.wwt_z = wwt_z
 
         #thrust
         if wthrust is None:
@@ -247,23 +273,24 @@ class Quadrotor:
         # self.cost_q_g = 2-sqrt(1+trace(mtimes(transpose(goal_R_B_I), R_B_I)))
         ## angular velocity cost
         self.goal_w_B = [0, 0, 0]
-        self.cost_ang_rate_B = dot(self.ang_rate_B - self.goal_w_B, self.ang_rate_B - self.goal_w_B)
+        self.cost_ang_rate_B = dot(self.ang_rate_B[0:2] - self.goal_w_B[0:2], self.ang_rate_B[0:2] - self.goal_w_B[0:2])
+        self.cost_ang_rate_B_z = dot(self.ang_rate_B[2] - self.goal_w_B[2], self.ang_rate_B[2] - self.goal_w_B[2])
         self.cost_thrust = dot(self.thrust_mag, self.thrust_mag) 
 
 
         self.input_cost = self.wthrust * self.cost_thrust \
-                         + self.wwt* self.cost_ang_rate_B
-        
+                         + self.wwt  * self.cost_ang_rate_B \
+                         + self.wwt_z* self.cost_ang_rate_B_z
         ## input difference cost
         # self.input_diff_cost = self.wInputDiff*dot(self.U - self.Ulast, self.U - self.Ulast)
         
         ## the final (goal) cost
-        self.goal_cost = self.wrf * self.cost_r_I_g \
-                         + self.wvf * self.cost_v_I_g \
-                            + self.wqf * self.cost_q_g \
+        self.goal_cost =  self.wrp * self.cost_r_I_g \
+                        + self.wvp * self.cost_v_I_g \
+                        + self.wqp * self.cost_q_g \
                      
         
-        self.final_cost = self.wrf * self.cost_r_I_g\
+        self.final_cost =  self.wrf * self.cost_r_I_g\
                          + self.wvf * self.cost_v_I_g\
                          + self.wqf * self.cost_q_g
         
@@ -739,7 +766,7 @@ class Quadrotor:
         # plt.plot(x,control_traj[:,2],color = 'y', label = 'u3')
         # plt.plot(x,control_traj[:,3],color = 'g', label = 'u4')
         plt.title('collective thrust vs time (N)')
-        plt.ylim([0,5])
+        plt.ylim([0,10])
         plt.xlabel('t')
         plt.ylabel('u')
         plt.grid(True,color='0.6',dashes=(2,2,1,1))

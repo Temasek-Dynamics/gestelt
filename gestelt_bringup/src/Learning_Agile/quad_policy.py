@@ -87,6 +87,12 @@ class run_quad:
                            wqt=config_dict['learning_agile']['wqt'],
                            wthrust=config_dict['learning_agile']['wthrust'],
                            wwt=config_dict['learning_agile']['wwt'],
+                           wwt_z=config_dict['learning_agile']['wwt_z'], 
+                             
+                           wrp=config_dict['learning_agile']['wrp'],
+                           wvp=config_dict['learning_agile']['wvp'],
+                           wqp=config_dict['learning_agile']['wqp'],
+
                            wrf=config_dict['learning_agile']['wrf'],
                            wvf=config_dict['learning_agile']['wvf'],
                            wqf=config_dict['learning_agile']['wqf'],
@@ -458,6 +464,7 @@ class run_quad:
                                                 goal_ori=self.goal_ori,
                                                 tra_pos=tra_pos,
                                                 tra_ang=tra_ang,
+                                                dt=self.dt,
                                                 t_tra=t_tra,
                                                 max_tra_w = self.max_tra_w,
                                                 OPEN_LOOP = False)
