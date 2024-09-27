@@ -42,7 +42,7 @@ sudo bash ./install_geographiclib_datasets.sh
 ```bash
 mkdir -p ~/gestelt_ws/src/
 cd ~/gestelt_ws/src
-git clone https://github.com/JohnTGZ/gestelt.git -b min_snap_tianchensun
+git clone https://github.com/JohnTGZ/gestelt.git -b longbin_learning_agile
 cd gestelt
 vcs import < simulators.repos --recursive
 vcs import < thirdparty.repos --recursive
@@ -101,7 +101,7 @@ catkin build -DCMAKE_BUILD_TYPE=Release
 There are 2 scripts you can use to run an example simulation. 
 
 ## 0. Config PX4 parameters
-1. download QGroundControl from [here](https://docs.qgroundcontrol.com/master/en/getting_started/download_and_install.html)
+1. download QGroundControl from [here](https://docs.qgroundcontrol.com/master/en/qgc-user-guide/getting_started/download_and_install.html)
 2. load our drone parameters from `~/gestelt_ws/src/gestelt/gestelt_bringup/customized_controller/sim_from_Nuswarm_drone1_final_demo_16April2024.params` to the PX4 firmware.
 3. if the **drone cannot take off**, in the QGroundControl, set `COM_RCL_EXCEPT`=4, choose `OFFBOARD` mode.
 
@@ -120,7 +120,7 @@ cd ~/gestelt_ws/src/gestelt/gestelt_bringup/scripts
 killall -9 gazebo; killall -9 gzserver; killall -9 gzclient; killall -9 rosmaster; tmux kill-server;
 
 # IF you want to add a shortcut to kill the simulation you can add the following to ~/.bashrc
-alias killbill="killall -9 gazebo; killall -9 gzserver; killall -9 gzclient; killall -9 rosmaster; tmux kill-server;
+alias killbill="killall -9 gazebo; killall -9 gzserver; killall -9 gzclient; killall -9 rosmaster; tmux kill-server;"
 ```
 5. If you want to change the planning setpoints:
 - The mission source code is in [mission.py](gestelt_bringup/src/mission.py)
