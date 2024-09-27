@@ -11,8 +11,8 @@ gestelt_bringup_DIR="$SCRIPT_DIR/.."
 PX4_AUTOPILOT_REPO_DIR="$SCRIPT_DIR/../../../PX4-Autopilot"
 
 # check data directory for recording bag
-RECORD=false
-DATA_DIR=""$SCRIPT_DIR/../../../data""
+RECORD=true
+DATA_DIR="$SCRIPT_DIR/../../../data"
 DATA_DIR=$(realpath "$DATA_DIR") # get the real path
 if [ ! -d "$DATA_DIR" ]; then
     # create data directory if it doesn't exist

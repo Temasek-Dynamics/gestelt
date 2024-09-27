@@ -45,7 +45,6 @@ cd ~/gestelt_ws/src
 git clone https://github.com/JohnTGZ/gestelt.git -b longbin_learning_agile
 cd gestelt
 vcs import < simulators.repos --recursive
-vcs import < thirdparty.repos --recursive
 ```
 
 3. Install PX4 firmware
