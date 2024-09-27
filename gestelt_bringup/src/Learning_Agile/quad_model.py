@@ -484,9 +484,9 @@ class Quadrotor:
         ax.tick_params(axis='x',which='major',pad=-5)
         ax.tick_params(axis='y',which='major',pad=-5)
         ax.tick_params(axis='z',which='major',pad=-5)
-        ax.set_zlim(-0.1, 3)
-        ax.set_ylim(-3, 3)#9
-        ax.set_xlim(-3, 3)#6
+        ax.set_zlim(-1, 3)
+        ax.set_ylim(-2, 2)#9
+        ax.set_xlim(-2, 2)#6
         # ax.set_title(title, pad=20, fontsize=15)
         # for t in ax.xaxis.get_major_ticks(): 
         #     t.label.set_font('Times New Roman') 

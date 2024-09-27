@@ -21,24 +21,29 @@ def python_sim_npy_parser(uav_traj=None,
     nn_output_list = np.load( nn_output_file)
     gate_pitch = np.load(gate_pitch_file)
     
-    # == convert the quaternion to euler angles == ##
+    nn_output_list[0][3]=1
+    # == convert drone state from quaternion to euler angles == ##
     quat = R.from_quat(uav_traj[::5, 6:])
     euler = quat.as_euler('zyx', degrees=True)
     rot_vec = quat.as_rotvec()
     
     
     ## == covert nn output Rodrigues to euler angles == ##
-    RP=R.from_rotvec(nn_output_list[:, 3:6])
-    euler_nn=RP.as_euler('zyx', degrees=True)
-    rot_vec_nn = RP.as_rotvec()
+    ## transfer from Rodrigues parameters to quaternion
+
+    quat_nn=R.from_quat(nn_output_list[:, 3:7])
+    euler_nn=quat_nn.as_euler('zyx', degrees=True)
+    rot_vec_nn = quat_nn.as_rotvec()
     
     
     ## == convert the gate pitch start from horizontal == ##
     gate_pitch[:] = np.degrees(gate_pitch[:])
   
     ## == traversing time == ##
-    t_tra = np.where(nn_output_list[:, 6] < 0)[0][0]
-    # plot the euler angles
+    t_tra = np.where(nn_output_list[:, 7] < 0)[0][0]
+    
+    
+    ## ==== plot nn and actual euler angles ==##
     plt.figure(figsize=(10, 5))
     plt.axvline(x=t_tra, color='r', linestyle='--', label='traverse time')
 
@@ -50,7 +55,6 @@ def python_sim_npy_parser(uav_traj=None,
     
 
     plt.plot(gate_pitch[:] , label='Gate_Pitch')
-    # plt.plot(euler[:, 2], label='Yaw')
     plt.xlabel('Time')
     plt.grid(True)
 
@@ -63,13 +67,16 @@ def python_sim_npy_parser(uav_traj=None,
 
     ## == plot as axis angle == ##
     # plt.figure(figsize=(10, 5))
-    # plt.plot(rot_vec[:, 0], label='x_rot_vec')
+    # plt.axvline(x=t_tra, color='r', linestyle='--', label='traverse time')
+    # plt.plot(rot_vec[:, 2], label='x_rot_vec')
     # plt.plot(rot_vec[:, 1], label='y_rot_vec')
 
-    # plt.plot(rot_vec_nn[:, 0], label='NN_x_rot_vec')
+    # plt.plot(rot_vec_nn[:, 2], label='NN_x_rot_vec')
     # plt.plot(rot_vec_nn[:, 1], label='NN_y_rot_vec')
+
+    ## == global plt settings == ##
     plt.legend()
-    
+    plt.grid(True)
 
     if seprate_plot: 
         plt.show()    
@@ -79,8 +86,8 @@ def python_sim_npy_parser(uav_traj=None,
 def plot_reward():
     reward_file = os.path.join(current_dir, 'training_data/mean_reward.npy')
     reward_data = np.load(reward_file)
-    # reward_data.resize((:,))
-    # 绘制奖励图
+    
+
     plt.figure(figsize=(10, 5))
     plt.plot(reward_data, label='Reward')
     plt.ylim(-30, 0)

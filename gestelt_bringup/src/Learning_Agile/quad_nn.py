@@ -27,20 +27,26 @@ gate_width = config_dict['gate']['width']
 # load the configuration file
 
 ## sample an input for the neural network 1
-def nn_sample(init_pos=None,final_pos=None,init_angle=None):
+def nn_sample(init_pos=None,final_pos=None,init_angle=None,cur_epoch=100,pretrain=False):
     inputs = np.zeros(9)
     if init_pos is None:
         inputs[0:3] = np.random.uniform(-2,2,size=3) + pre_ini_pos #-5~5, -9
-        inputs[1]=np.clip(inputs[1],pre_ini_pos[1]-0.5,pre_ini_pos[1]+0.5)
+        if pretrain:
+            inputs[1] = np.random.uniform(-5,5) + pre_ini_pos[1]
+        else:
+            inputs[1] = np.clip(inputs[1],pre_ini_pos[1]-1,pre_ini_pos[1]+1)
     else:
         inputs[0:3] = init_pos
-    ## random final postion 
+    ## random final position 
     if final_pos is None:
         inputs[3:6] = np.random.uniform(-2,2,size=3) + pre_end_pos #-2~2, 6
+
         inputs[4]=np.clip(inputs[4],pre_end_pos[1]-0.5,pre_end_pos[1]+0.5)
     else:
         inputs[3:6] = final_pos
-    ## random initial yaw angle of the quadrotor
+
+        
+    ##random initial yaw angle of the quadrotor ##
     inputs[6] = np.random.uniform(-0.1,0.1)
     
     ## === random width of the gate  =========##
@@ -81,8 +87,12 @@ def t_output(inputs):
     outputs = np.zeros(7)
     #outputs[5] = math.tan(inputs[6]/2)
     ## traversal time is propotional to the distance of the centroids
-    raw_time=round(magni(inputs[0:3])/4,1)
-    outputs[6] = np.clip(raw_time,1.5,3)
+    if inputs[1]>0:
+        raw_time = -round(magni(inputs[0:3])/2,1)
+    else:
+        raw_time=round(magni(inputs[0:3])/2,1)
+    outputs[6] = raw_time #np.clip(raw_time,3,3)
+    print('desired_traversing_time',outputs[6])
     return outputs
 
 ## sample a random gate (not necessary in our method) (not important)
@@ -157,10 +167,10 @@ class network(nn.Module):
         self.F2 = nn.ReLU()
         self.l3 = nn.Linear(D_h2, D_out)
 
-    def forward(self, input ,device='cpu'):
+    def forward(self, input):
         # convert state s to tensor
-        S = torch.tensor(input, dtype=torch.float).to(device) # column 2D tensor
-        out = self.l1(S.t()) # linear function requires the input to be a row tensor
+        S = input # column 2D tensor
+        out = self.l1(S) # linear function requires the input to be a row tensor
         out = self.F1(out)
         out = self.l2(out)
         out = self.F2(out)
@@ -176,9 +186,32 @@ class network(nn.Module):
     def myloss(self, para, dp, device='cpu'):
         # convert np.array to tensor
         Dp = torch.tensor(dp, dtype=torch.float).to(device) # row 2D tensor
-        loss_nn = torch.matmul(Dp, para)
-        return loss_nn
+        # loss_nn = torch.matmul(Dp, para)
+        loss_nn =torch.trace(torch.matmul(Dp, para.t()))/(Dp.shape[0])
+        return loss_nn # size is 1
 
-
+class network_with_GRU(nn.Module):
+    def __init__(self, D_in, D_h1, D_h2, D_out):
+        super(network_with_GRU, self).__init__()        
+        # D_in : dimension of input layer
+        # D_h  : dimension of hidden layer
+        # D_out: dimension of output layer
+        self.l1 = nn.Linear(D_in, D_h1)
+        self.F1 = nn.ReLU()
+        self.l2 = nn.Linear(D_h1, D_h2)
+        self.F2 = nn.ReLU()
+        self.GRU = nn.GRU(input_size=D_h2, hidden_size=D_h2,num_layers=1,batch_first=True)
+        self.l3 = nn.Linear(D_h2, D_out)
+        
+    def forward(self, input):
+        # convert state s to tensor
+        S = input.unsqueeze(0) # column 2D tensor
+        out = self.l1(S) # linear function requires the input to be a row tensor
+        out = self.F1(out)
+        out = self.l2(out)
+        out = self.F2(out)
+        out = self.GRU(out)
+        out = self.l3(out)
+        return out
 
 

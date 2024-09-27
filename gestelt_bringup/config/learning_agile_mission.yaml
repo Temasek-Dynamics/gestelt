@@ -136,10 +136,11 @@ learning_agile:
   pos_bound: 15 #m (-b,b)
 
   # velocity constraints
-  linear_vel_bound: 5 #m/s
+  linear_vel_bound: 15 #m/s
 
   # angular velocity constraints
-  angular_vel_bound: 7.57 #rad/s
+  angular_vel_bound_xy: 15.57 #rad/s
+  angular_vel_bound_z: 15.57 #rad/s
 
 
   ## ----- miscellaneous parameters  ----##
@@ -149,3 +150,8 @@ learning_agile:
   ##------  training parameters  ------##
 training_param:
   desired_average_vel: 1.0
+
+
+## ------NN configuration ----##
+NN2_model_name: 'NN2_imitate_1.pth'
+NN2_freq: 10

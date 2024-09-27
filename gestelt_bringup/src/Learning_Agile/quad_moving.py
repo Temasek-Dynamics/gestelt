@@ -42,7 +42,7 @@ def binary_search_solver(model,device, quad_state, final_point, gate1, velo, w )
     inputs[0:10] = gate_x.transform(quad_state)
     inputs[10:13] = gate_x.t_final(final_point)
     
-    outputs = model(inputs,device).to('cpu')
+    outputs = model(torch.tensor(inputs, dtype=torch.float).to(device)).to('cpu')
     outputs = outputs.data.numpy()
     t2 = outputs[6]
 
@@ -57,7 +57,7 @@ def binary_search_solver(model,device, quad_state, final_point, gate1, velo, w )
         inputs[0:10] = gate_x.transform(quad_state)
         inputs[10:13] = gate_x.t_final(final_point)
         
-        outputs = model(inputs,device).to('cpu')
+        outputs = model(torch.tensor(inputs, dtype=torch.float).to(device)).to('cpu')
         outputs = outputs.data.numpy()
         t2 = outputs[6]
     

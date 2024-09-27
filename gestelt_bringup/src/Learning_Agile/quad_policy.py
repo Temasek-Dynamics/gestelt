@@ -63,11 +63,12 @@ class run_quad:
         
         self.thrust_ub = config_dict['learning_agile']['single_motor_max_thrust']*4*config_dict['learning_agile']['throttle_upper_bound']
         self.thrust_lb = config_dict['learning_agile']['single_motor_max_thrust']*4*config_dict['learning_agile']['throttle_lower_bound']
-        ang_rate_b = config_dict['learning_agile']['angular_vel_bound']
+        ang_rate_b_xy = config_dict['learning_agile']['angular_vel_bound_xy']
+        ang_rate_b_z = config_dict['learning_agile']['angular_vel_bound_z']
         self.uavoc1.setAuxvarVariable()
         self.uavoc1.setControlVariable(self.uav1.U,
-                                       control_lb=[self.thrust_lb ,-ang_rate_b,-ang_rate_b,-ang_rate_b],\
-                                       control_ub= [self.thrust_ub,ang_rate_b,ang_rate_b,ang_rate_b]) # thrust-to-weight = 4:1
+                                       control_lb=[self.thrust_lb ,-ang_rate_b_xy,-ang_rate_b_xy,-ang_rate_b_z],\
+                                       control_ub= [self.thrust_ub,ang_rate_b_xy,ang_rate_b_xy,ang_rate_b_z]) # thrust-to-weight = 4:1
 
         self.uavoc1.setDyn(self.uav1.f,self.dt)
       
@@ -104,8 +105,6 @@ class run_quad:
         ## set the symbolic cost function to the solver
         self.uavoc1.setInputCost(self.uav1.input_cost)
         
-        # self.uavoc1.setInputDiffCost(self.uav1.Ulast,
-        #                                    self.uav1.input_diff_cost)
 
         self.uavoc1.setPathCost(self.uav1.goal_cost,goal_state=self.uav1.goal_state)
         self.uavoc1.setTraCost(self.uav1.tra_cost,
@@ -166,7 +165,7 @@ class run_quad:
         self.point3 = gate_point[6:9]
         self.point4 = gate_point[9:12]        
         self.obstacle1 = obstacle(self.point1,self.point2,self.point3,self.point4)
-        self.obstacle1_torch=obstacle_torch(self.point1,self.point2,self.point3,self.point4)
+
 
 
     def R_from_MPC(self,tra_pos=None,tra_ang=None,t_tra = 3):
@@ -184,12 +183,12 @@ class run_quad:
 
         
         ELLIPSOID_COLLISION_CHECK = False
-        if not self.AUTO_DIFF:
-            # calculate trajectory reward
-            self.collision = 0
-            self.path = 0
-            ## detect whether there is collision
-            self.co = 0
+      
+        # calculate trajectory reward
+        self.collision = 0
+        self.path = 0
+        ## detect whether there is collision
+        self.co = 0
 
         roll_reward = - 1000 * 0.5 * tra_ang[0]**2
         self.drdroll = - 1000 * tra_ang[0]
@@ -240,7 +239,7 @@ class run_quad:
 
     # --------------------------- solution and learning----------------------------------------
     ##solution and demo
-    def sol_gradient(self,tra_pos =None,tra_ang=None,t_tra=None,Ulast_value=None, AUTO_DIFF = False):
+    def sol_gradient(self,tra_pos =None,tra_ang=None,t_tra=None, AUTO_DIFF = False):
         """
         receive the decision variables from DNN1, do the MPC, then calculate d_reward/d_z
         """
@@ -261,34 +260,72 @@ class run_quad:
         # R is the Reward
         R = self.R_from_MPC(tra_pos,
                             tra_ang,
-                            t_tra,
-                            Ulast_value)
+                            t_tra)
         
         ############==================finite difference===========================############
-        # if not self.PDP_GRADIENT:
-        # fixed perturbation to calculate the gradient
-        # delta = 1e-3
-        # drdx = np.clip(self.R_from_MPC(tra_pos+[delta,0,0],tra_ang, t_tra,Ulast_value) - j,-0.5,0.5)*0.1
-        # drdy = np.clip(self.R_from_MPC(tra_pos+[0,delta,0],tra_ang, t_tra,Ulast_value) - j,-0.5,0.5)*0.1
-        # drdz = np.clip(self.R_from_MPC(tra_pos+[0,0,delta],tra_ang, t_tra,Ulast_value) - j,-0.5,0.5)*0.1
-        # drda = np.clip(self.R_from_MPC(tra_pos,tra_ang+[delta,0,0], t_tra,Ulast_value) - j,-0.5,0.5)*(1/(500*tra_ang[0]**2+5))
-        # drdb = np.clip(self.R_from_MPC(tra_pos,tra_ang+[0,delta,0], t_tra,Ulast_value) - j,-0.5,0.5)*(1/(500*tra_ang[1]**2+5))
-        # drdc = np.clip(self.R_from_MPC(tra_pos,tra_ang+[0,0,delta], t_tra,Ulast_value) - j,-0.5,0.5)*(1/(500*tra_ang[2]**2+5))
-        # drdt =0
-        # if((self.R_from_MPC(tra_pos,tra_ang,t_tra-0.1,Ulast_value)-j)>2):
-        #     drdt = -0.05
-        # if((self.R_from_MPC(tra_pos,tra_ang,t_tra+0.1,Ulast_value)-j)>2):
-        #     drdt = 0.05
+        if not self.PDP_GRADIENT:
+            # fixed perturbation to calculate the gradient
+            delta = 1e-3
+            drdx = np.clip(self.R_from_MPC(tra_pos+[delta,0,0],tra_ang, t_tra) - R,-0.5,0.5)*0.1
+            drdy = np.clip(self.R_from_MPC(tra_pos+[0,delta,0],tra_ang, t_tra) - R,-0.5,0.5)*0.1
+            drdz = np.clip(self.R_from_MPC(tra_pos+[0,0,delta],tra_ang, t_tra) - R,-0.5,0.5)*0.1
+            drda = np.clip(self.R_from_MPC(tra_pos,tra_ang+[delta,0,0], t_tra) - R,-0.5,0.5)*(1/(500*tra_ang[0]**2+5))
+            drdb = np.clip(self.R_from_MPC(tra_pos,tra_ang+[0,delta,0], t_tra) - R,-0.5,0.5)*(1/(500*tra_ang[1]**2+5))
+            drdc = np.clip(self.R_from_MPC(tra_pos,tra_ang+[0,0,delta], t_tra) - R,-0.5,0.5)*(1/(500*tra_ang[2]**2+5))
+            drdt =0
+            if((self.R_from_MPC(tra_pos,tra_ang,t_tra-0.1)-R)>2):
+                drdt = -0.05
+            if((self.R_from_MPC(tra_pos,tra_ang,t_tra+0.1)-R)>2):
+                drdt = 0.05
 
-        # # print("finite diff:",np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,j]))
-        # return np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,j])
+            # print("finite diff:",np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,j]))
+            return np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,R])
+        
         ############==============end of finite difference===========================############
+        
         ########################################################################
         #=======================SYMBOLIC GRADIENT+PDP===========================
         ########################################################################
-        # else:
+        else:
+            self.PDP_grad(tra_pos,tra_ang,t_tra)                
+    
+            
+            drdp=np.zeros(7)
+            for i in range(self.horizon):
+                drdp += np.matmul(self.d_R_d_st_traj[i,:,:],self.d_st_traj_d_z[i,:,:]).reshape(7)
 
+            drdp += np.matmul(self.d_R_d_st_traj[self.horizon,:,:],self.d_st_traj_d_z[self.horizon,:,:]).reshape(7)    
+            
+            # clip the traverse time gradient
+            # drdp[:]=np.clip(drdp[:],-0.1,0.1)
+            
+            drdp[3] = drdp[3]+self.drdroll
+            drdp[5] = drdp[5]+self.drdyaw
 
+            drdp[6] = np.clip(drdp[6],-0.1,0.1)
+
+            drdp = drdp/20000
+            drdx = np.clip(drdp[0],-0.02,0.02)
+            drdy = np.clip(drdp[1],-0.01,0.01)
+            drdz = np.clip(drdp[2],-0.02,0.02)
+            drda = np.clip(drdp[3],-0.02,0.02)
+            drdb = np.clip(drdp[4],-0.15,0.15)
+            drdc = np.clip(drdp[5],-0.02,0.02)
+            # drdx = drdp[0]
+            # drdy = drdp[1]
+            # drdz = drdp[2]
+            # drda = drdp[3]
+            # drdb = drdp[4]
+            # drdc = drdp[5]
+            
+            drdt = drdp[6]
+          
+
+        
+            # print("analytic grad:",np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,j]))
+            return np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,R])
+    
+    def PDP_grad(self, tra_pos,tra_ang,t_tra):
         ###################################################################
         ###----- Set mpc external variables VALUE to diffPMP--------#######
         ###################################################################
@@ -307,7 +344,6 @@ class run_quad:
                                         control_traj_opt=self.sol1['control_traj_opt'],
                                         costate_traj_opt=self.sol1['costate_traj_opt'],
                                         goal_state_value=goal_state_value,
-                                        Ulast_value=Ulast_value,
                                         auxvar_value=trav_auxvar)
         
         # set values to the LQR solver
@@ -323,44 +359,8 @@ class run_quad:
 
         ## take solution of the auxiliary control system
         # which is the dtrajectory/dtraverse_auxvar 
-        dstate_trajdp = aux_sol['state_traj_opt'] #(n_node,n_state,n_trav_auxvar)
-        dinput_trajdp = aux_sol['control_traj_opt'] 
-        
-        dstate_trajdp = np.array(dstate_trajdp)
-        
-        
-        if  AUTO_DIFF:
-            # acquire dreward/dtrajectory
-            j.backward()
-            drdstate_traj=self.state_traj_tensor.grad #(n_node,15)     
-            drdstate_traj=drdstate_traj.numpy().reshape(self.horizon+1,1,self.uavoc1.n_state)
-            
-            
-        drdstate_traj=self.drdstate_traj.reshape(self.horizon+1,1,self.uavoc1.n_state)
-        
-        # normalize the gradient
-        norm_drdstate_traj = drdstate_traj/np.linalg.norm(drdstate_traj)    
-        norm_dstate_trajdp = dstate_trajdp/np.linalg.norm(dstate_trajdp)
-        drdp=np.zeros(7)
-        for i in range(self.horizon):
-            drdp += np.matmul(drdstate_traj[i,:,:],dstate_trajdp[i,:,:]).reshape(7)
-
-        drdp += np.matmul(drdstate_traj[self.horizon,:,:],dstate_trajdp[self.horizon,:,:]).reshape(7)    
-
-        drdp = drdp/20000
-        drdx = drdp[0]
-        drdy = drdp[1]
-        drdz = drdp[2]
-        drda = drdp[3]
-        drdb = drdp[4]
-        drdc = drdp[5]
-        drdt = drdp[6]
-        # j = j.detach().numpy()
-
-      
-        # print("analytic grad:",np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,j]))
-        return np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,j])
-
+        self.d_st_traj_d_z = np.array(aux_sol['state_traj_opt']) #(n_node,n_state,n_trav_auxvar)
+        self.d_input_traj_d_z = np.array(aux_sol['control_traj_opt'])
 
     def optimize(self, t):
         tra_pos = self.obstacle1.centroid
@@ -450,20 +450,16 @@ class run_quad:
     
     ## given initial state, control command, high-level parameters, obtain the first control command of the quadrotor
     def mpc_update(self, 
-                   current_state, 
-                   Ulast ,
+                   current_state,
                    tra_pos, 
                    tra_ang, 
-                   t_tra,
-                   OPEN_LOOP = False):
+                   t_tra):
     
    
         ##----- cause the different bewteen the python and the gazebo--###
-
-        current_state_control = np.concatenate((current_state,Ulast))
        
         # self.sol1 = self.uavoc1.ocSolver(current_state_control=current_state_control,t_tra=t)
-        self.sol1,NO_SOLUTION_FLAG = self.uavoc1.AcadosOcSolver(current_state_control=current_state_control,
+        self.sol1,NO_SOLUTION_FLAG = self.uavoc1.AcadosOcSolver(current_state=current_state,
                                                 goal_pos=self.goal_pos,
                                                 goal_ori=self.goal_ori,
                                                 tra_pos=tra_pos,
@@ -480,3 +476,29 @@ class run_quad:
 def sample(deviation):
     act = np.random.normal(0,deviation,size=6)
     return act
+
+
+#############################################################
+##-----------------ellipse collision check-----------------##
+#############################################################
+# initialize the drone ellipse
+# self.obstacle1.reward_calc_sym(self.uav1,
+#                                 quad_height=self.uav_height/2,
+#                                 quad_radius=self.wing_len/2,
+#                                 alpha=5,
+#                                 beta=10,
+#                                 Q_tra=5,
+#                                 w_goal=0.1)    
+
+#                                 # alpha=5,
+#                                 # beta=10,
+#                                 # Q_tra=1,
+#                                 # safe_margin=0.0,
+#                                 # w_goal=0.1)    
+
+
+# reward,self.d_R_d_st_traj,gate_check_points=self.obstacle1.reward_calc_value(state_traj,
+#                                     self.gate_corners,
+#                                     goal_pos=self.goal_pos,
+#                                     vert_traj=self.traj[:,0:3],
+#                                     horizon=self.horizon)

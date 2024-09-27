@@ -562,7 +562,7 @@ class OCSys:
 
 
     def AcadosOcSolver(self, 
-                    current_state_control, 
+                    current_state, 
                     goal_pos,
                     goal_ori,
                     auxvar_value=1, 
@@ -610,8 +610,8 @@ class OCSys:
                                                                  np.array([3*self.n_nodes*dt]))))
 
         # set initial condition aligned with the current state
-        self.acados_solver.set(0, "lbx", np.array(current_state_control[0:self.n_state]))
-        self.acados_solver.set(0, "ubx", np.array(current_state_control[0:self.n_state]))
+        self.acados_solver.set(0, "lbx", np.array(current_state))
+        self.acados_solver.set(0, "ubx", np.array(current_state))
         
        
         NO_SOLUTION_FLAG=False
@@ -706,7 +706,6 @@ class OCSys:
                    control_traj_opt, 
                    costate_traj_opt,
                    goal_state_value,
-                   Ulast_value, 
                    auxvar_value=1):
         
         statement = [hasattr(self, 'dfx_fn'), hasattr(self, 'dfu_fn'), hasattr(self, 'dfe_fn'),

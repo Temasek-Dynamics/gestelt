@@ -12,6 +12,11 @@ import yaml
 from logger_config import LoggerConfig
 import logging
 from tqdm import tqdm
+from torch.utils.tensorboard import SummaryWriter
+import datetime
+import os
+
+
 # for multiprocessing, obtain the gradient
 
 """
@@ -60,6 +65,7 @@ def calc_grad(config_dict,
     # initialize the narrow window
     quad_instance.init_obstacle(gate_point.reshape(12),gate_pitch=inputs[8])
 
+
     # receive the decision variables from DNN1, do the MPC, then calculate d_reward/d_z
     Ulast_value=np.array([2,0.0,0.0,0.0])
     gra[:] = quad_instance.sol_gradient(outputs[0:3].astype(np.float64),
@@ -67,9 +73,31 @@ def calc_grad(config_dict,
                                         outputs[6],
                                         Ulast_value)
 
+def log_train_in_ouputs(writer,inputs,outputs,global_step):
+
+    
+    writer.add_scalar('gate_pitch', inputs[8], global_step)
+  
+    writer.add_scalar('x_tra', outputs[0], global_step)
+    writer.add_scalar('y_tra', outputs[1], global_step)
+    writer.add_scalar('z_tra', outputs[2], global_step)
+    writer.add_scalar('Rx_tra', outputs[3], global_step)
+    writer.add_scalar('Ry_tra', outputs[4], global_step)
+    writer.add_scalar('Rz_tra', outputs[5], global_step)
+    writer.add_scalar('t_tra', outputs[6], global_step)
     
 
-if __name__ == '__main__':
+def log_gradient(writer,gra,global_step):
+    writer.add_scalar('drdx', gra[0], global_step)
+    writer.add_scalar('drdy', gra[1], global_step)
+    writer.add_scalar('drdz', gra[2], global_step)
+    writer.add_scalar('drda', gra[3], global_step)
+    writer.add_scalar('drdb', gra[4], global_step)
+    writer.add_scalar('drdc', gra[5], global_step)
+    writer.add_scalar('drdt', gra[6], global_step)
+    writer.add_scalar('step_reward', gra[7], global_step)
+
+if __name__ == '__main__':    
     ###############################################################
     ###----------------- deep learning option-------------------###
     ###############################################################
@@ -96,8 +124,10 @@ if __name__ == '__main__':
 
     if PDP_GRADIENT:
         learning_rate = 1e-4
+        method_name = 'PDP'
     else:
         learning_rate = 1e-4
+        method_name = 'FD'
 
     training_notes = "Trial_1"
 
@@ -121,7 +151,10 @@ if __name__ == '__main__':
     conf_folder=os.path.abspath(os.path.join(current_dir, '..', '..','config'))
     training_data_folder=os.path.abspath(os.path.join(current_dir, 'training_data'))
     model_folder=os.path.abspath(os.path.join(training_data_folder, 'NN_model'))
-    logging.info(current_dir)
+    saved_folder=os.path.join(model_folder,f"{current_time}-{method_name}-{training_notes}")
+    if saved_folder not in os.listdir(model_folder):
+        os.mkdir(saved_folder)
+
     yaml_file = os.path.join(conf_folder, 'learning_agile_mission.yaml')
     with open(yaml_file, 'r', encoding='utf-8') as file:
         config_dict = yaml.safe_load(file)
@@ -148,14 +181,14 @@ if __name__ == '__main__':
     
     
     if TRAIN_FROM_CHECKPOINT:
-        FILE = os.path.join(model_folder, "NN1_deep2_2.pth")
+        FILE = os.path.join(model_folder, "NN1_deep2_48.pth")
         # checkpoint = torch.load(FILE)
         # start_epoch = checkpoint['epoch']   
         # model = checkpoint['model']
         # optimizer = checkpoint['optimizer']
         model = torch.load(FILE)
         start_epoch = 0
-
+        logging.info('load model from %s',FILE)
     else:
         FILE = os.path.join(model_folder, "NN1_pretrain.pth")
         model = torch.load(FILE).to(device)
@@ -165,7 +198,7 @@ if __name__ == '__main__':
 
     
     ## prepare logging
-    Every_reward = np.zeros((num_epochs,batch_size))    
+    Every_reward = np.zeros((num_epochs,step_pre_epoch))    
     Iteration = []
     Mean_r = []
     
@@ -175,6 +208,7 @@ if __name__ == '__main__':
     ###############################################################
 
     model.train()
+    global_step = 0
     for epoch in range(start_epoch,num_epochs):
         
             
@@ -261,10 +295,7 @@ if __name__ == '__main__':
                 logging.info('evaluation: %s ',mean_reward)
                 writer.add_scalar('mean_reward', mean_reward, epoch)
                 
-                saved_folder=os.path.join(model_folder,f"{current_time}-{method_name}-{training_notes}")
-                if saved_folder not in os.listdir(model_folder):
-                    os.mkdir(saved_folder)
-
+        
                 if (epoch)%2 == 0:
                     torch.save(model, saved_folder+"/NN1_deep2_"+str(epoch)+".pth")
                 
@@ -346,10 +377,6 @@ if __name__ == '__main__':
                 logging.info('evaluation: %s ',mean_reward)
                 writer.add_scalar('mean_reward', mean_reward, epoch)
                 
-
-                saved_folder=os.path.join(model_folder,f"{current_time}-{method_name}-{training_notes}")
-                if saved_folder not in os.listdir(model_folder):
-                    os.mkdir(saved_folder)
 
                 if (epoch)%2 == 0:
                     torch.save(model, saved_folder+"/NN1_deep2_"+str(epoch)+".pth")

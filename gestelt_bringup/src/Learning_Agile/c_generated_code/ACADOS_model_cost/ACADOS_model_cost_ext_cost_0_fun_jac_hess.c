@@ -58,10 +58,10 @@ static const casadi_int casadi_s2[3] = {0, 0, 0};
 static const casadi_int casadi_s3[22] = {18, 1, 0, 18, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17};
 static const casadi_int casadi_s4[5] = {1, 1, 0, 1, 0};
 static const casadi_int casadi_s5[18] = {14, 1, 0, 14, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13};
-static const casadi_int casadi_s6[43] = {14, 14, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 14, 18, 22, 26, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 10, 11, 12, 13, 10, 11, 12, 13, 10, 11, 12, 13};
+static const casadi_int casadi_s6[42] = {14, 14, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 13, 17, 21, 25, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 10, 11, 12, 13, 10, 11, 12, 13, 10, 11, 12, 13};
 static const casadi_int casadi_s7[17] = {0, 14, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
-/* ACADOS_model_cost_ext_cost_0_fun_jac_hess:(i0[10],i1[4],i2[],i3[18])->(o0,o1[14],o2[14x14,26nz],o3[],o4[0x14]) */
+/* ACADOS_model_cost_ext_cost_0_fun_jac_hess:(i0[10],i1[4],i2[],i3[18])->(o0,o1[14],o2[14x14,25nz],o3[],o4[0x14]) */
 static int casadi_f0(const casadi_real** arg, casadi_real** res, casadi_int* iw, casadi_real* w, int mem) {
   casadi_real a0, a1, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a2, a20, a21, a22, a23, a24, a25, a26, a27, a28, a29, a3, a30, a31, a32, a33, a34, a35, a36, a37, a38, a39, a4, a40, a41, a42, a43, a5, a6, a7, a8, a9;
   a0=arg[0]? arg[0][0] : 0;
