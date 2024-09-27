@@ -53,9 +53,6 @@ vcs import < thirdparty.repos --recursive
 # cd to PX4-Autopilot repo
 cd ~/gestelt_ws/PX4-Autopilot
 
-# switch to PX4 version v1.13.0
-git checkout v1.13.0
-
 # Copy the custom controller over
 cp -r ~/gestelt_ws/src/gestelt/gestelt_bringup/customized_controller/mc_pos_control ~/gestelt_ws/PX4-Autopilot/src/modules/
 
