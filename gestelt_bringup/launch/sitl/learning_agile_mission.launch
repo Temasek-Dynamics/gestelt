@@ -1,6 +1,7 @@
 <launch>
   <arg name="platform" default="laptop"/> <!-- for the python.prof check-->
   <arg name="record" default="false"/>
+  <arg name="data_dir" default="$(find gestelt_bringup)/data"/> <!-- Set data directory path -->
 
   <rosparam file="$(find gestelt_bringup)/config/learning_agile_mission.yaml" command="load"/>
   <node pkg="gestelt_bringup" name="mission" type="learning_agile_mission.py">
@@ -18,8 +19,8 @@
   "
   />
 
-  <node if="$(arg record)" pkg="rosbag" type="record" name="record" output="screen" args="-o $(find gestelt_bringup)/data/
-  -e $(arg record_topics)"/>
-
+  <!-- record topic if record = true -->
+  <node if="$(arg record)" pkg="rosbag" type="record" name="record" output="screen"
+        args="-o $(arg data_dir)/ -e $(arg record_topics)"/>
 
 </launch>

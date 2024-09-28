@@ -10,6 +10,16 @@ SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 gestelt_bringup_DIR="$SCRIPT_DIR/.."
 PX4_AUTOPILOT_REPO_DIR="$SCRIPT_DIR/../../../PX4-Autopilot"
 
+# check data directory for recording bag
+RECORD=true
+DATA_DIR="$SCRIPT_DIR/../../../data"
+DATA_DIR=$(realpath "$DATA_DIR") # get the real path
+if [ ! -d "$DATA_DIR" ]; then
+    # create data directory if it doesn't exist
+    mkdir -p "$DATA_DIR"
+    echo "Directory created: $DATA_DIR"
+fi
+
 #####
 # Sourcing
 #####
@@ -36,14 +46,12 @@ roslaunch gestelt_bringup sitl_drone.launch
 "
 
 # Start up drone commander (Handles taking off, execution of mission and landing etc.)
-CMD_1="
-roslaunch trajectory_server trajectory_server_node.launch rviz_config:=gz_sim
-"
+CMD_1="roslaunch trajectory_server trajectory_server_node.launch rviz_config:=gz_sim"
 
 
 
 # Start up script to send commands
-CMD_2="taskset -c 1 roslaunch gestelt_bringup learning_agile_mission.launch platform:='laptop' LAUNCH_DRONE_NODE:=false record:=true"
+CMD_2="taskset -c 1 roslaunch gestelt_bringup learning_agile_mission.launch platform:='laptop' LAUNCH_DRONE_NODE:=false record:=$RECORD data_dir:=$DATA_DIR"
 
 
 # start up the NN wrapper

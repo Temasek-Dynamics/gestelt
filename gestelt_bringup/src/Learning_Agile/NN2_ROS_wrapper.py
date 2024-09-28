@@ -64,6 +64,8 @@ class NN2_ROS_wrapper:
         self.RECEIVED_DRONE_POSE = False
         self.RECEIVED_DRONE_TWIST = False
         self.mission_start_time = rospy.Time.now().to_sec() # will be updated once the mission starts
+        self.trans = [0.0, 0.0, 0.0] # initialization to avoid "not found" error
+        self.rot = [0.0, 0.0, 0.0, 1.0] # initialization to avoid "not found" error
 
         ##======== declare the subscriber and the receiver================-##
         rospy.Subscriber("/mavros/local_position/pose", PoseStamped, self.drone_pose_cb)
