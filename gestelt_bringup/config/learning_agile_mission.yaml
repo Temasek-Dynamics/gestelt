@@ -78,7 +78,6 @@ learning_agile:
   # wrf: 5.0
   # wvf: 1.0
   # wqf: 1.0
-  # wInputDiff: 1 
 
   ##-----parameters for training ------## 
   # #### for a stabler training,######## 
@@ -97,7 +96,6 @@ learning_agile:
   wrf: 10.0     ## large, unstable
   wvf: 100.0
   wqf: 100.0
-  wInputDiff: 10
   ##------ traversing parameters ---##
   max_traverse_weight: 100 #100
   traverse_weight_span: 10

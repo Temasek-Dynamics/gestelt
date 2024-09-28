@@ -97,8 +97,7 @@ class run_quad:
                            wvf=config_dict['learning_agile']['wvf'],
                            wqf=config_dict['learning_agile']['wqf'],
                            max_tra_w=config_dict['learning_agile']['max_traverse_weight'],
-                           gamma=config_dict['learning_agile']['traverse_weight_span'],
-                            # wInputDiff=config_dict['learning_agile']['wInputDiff']
+                           gamma=config_dict['learning_agile']['traverse_weight_span']
                            ) 
         self.uav1.init_TraCost()
 

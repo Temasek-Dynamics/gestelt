@@ -163,7 +163,7 @@ class Quadrotor:
     def initCost(self, wrt=None, wqt=None,max_tra_w=0,gamma=0,
                  wrp=None, wvp=None, wqp=None,
                 wrf=None, wvf=None, wqf=None, 
-                wwt=None, wwt_z=None,wthrust=0.5,wInputDiff=10):
+                wwt=None, wwt_z=None,wthrust=0.5):
         #traverse
         parameter = []
         if wrt is None:
@@ -248,11 +248,6 @@ class Quadrotor:
         else:
             self.gamma = gamma
         
-        if wInputDiff is None:
-            self.wInputDiff = SX.sym('wInputDiff')
-            parameter += [self.wInputDiff]
-        else:
-            self.wInputDiff = wInputDiff
         
         self.cost_auxvar = vcat(parameter)
 
@@ -281,8 +276,6 @@ class Quadrotor:
         self.input_cost = self.wthrust * self.cost_thrust \
                          + self.wwt  * self.cost_ang_rate_B \
                          + self.wwt_z* self.cost_ang_rate_B_z
-        ## input difference cost
-        # self.input_diff_cost = self.wInputDiff*dot(self.U - self.Ulast, self.U - self.Ulast)
         
         ## the final (goal) cost
         self.goal_cost =  self.wrp * self.cost_r_I_g \

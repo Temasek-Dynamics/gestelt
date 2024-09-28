@@ -406,15 +406,15 @@ def main():
     ########################################################################
     #####---------------------- TEST option -------------------------#######
     ########################################################################
-    STATIC_GATE_TEST = True
+    STATIC_GATE_TEST = False
     CLOSE_LOOP_MODEL = False
 
     if CLOSE_LOOP_MODEL:
         model_name = 'NN_close_0.pth'#'NN2_imitate_1.pth' #'NN_close_2.pth'
     else:   
-        model_name = 'NN2_imitate_1.pth'
+        model_name = '20240925-130606-FD-Trial_1/NN2_imitate_1.pth'
 
-    model_file=os.path.join(current_dir, 'training_data/NN_model/20240924-151841-FD-Trial_1',model_name)
+    model_file=os.path.join(current_dir, f'training_data/NN_model/',model_name)
     
         
     # create the learning agile agent
