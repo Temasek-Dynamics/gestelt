@@ -266,6 +266,8 @@ class Quadrotor:
         R_B_I = dir_cosine(self.q)
         self.cost_q_g = trace(np.identity(3) - mtimes(transpose(goal_R_B_I), R_B_I))
         # self.cost_q_g = 2-sqrt(1+trace(mtimes(transpose(goal_R_B_I), R_B_I)))
+
+        self.cost_q_manifold= trace(np.identity(3) - mtimes(transpose(R_B_I), R_B_I))
         ## angular velocity cost
         self.goal_w_B = [0, 0, 0]
         self.cost_ang_rate_B = dot(self.ang_rate_B[0:2] - self.goal_w_B[0:2], self.ang_rate_B[0:2] - self.goal_w_B[0:2])
@@ -281,12 +283,12 @@ class Quadrotor:
         self.goal_cost =  self.wrp * self.cost_r_I_g \
                         + self.wvp * self.cost_v_I_g \
                         + self.wqp * self.cost_q_g \
-                     
+                        + 0 * self.cost_q_manifold
         
         self.final_cost =  self.wrf * self.cost_r_I_g\
                          + self.wvf * self.cost_v_I_g\
-                         + self.wqf * self.cost_q_g
-        
+                         + self.wqf * self.cost_q_g \
+                         + 0 * self.cost_q_manifold
     def vee_map(self,mat):
         return ca.vertcat(mat[2, 1], mat[0, 2], mat[1, 0])
     
@@ -330,26 +332,29 @@ class Quadrotor:
 
     def setDyn(self, dt):       
 
-        # self.dyn = casadi.Function('f',[self.X, self.U],[self.f])
-        self.dyn = self.X + dt * self.f
-        self.dyn_fn = casadi.Function('dynamics', [self.X, self.U], [self.dyn])
+        ##============Explict Euler============##
+        # self.dyn = self.X + dt * self.f
+        # self.dyn_fn = casadi.Function('dynamics', [self.X, self.U], [self.dyn])
 
-        #M = 4
-        #DT = dt/4
-        #X0 = casadi.SX.sym("X", self.X.numel())
-        #U = casadi.SX.sym("U", self.U.numel())
-        # #
-        #X = X0
-        #for _ in range(M):
+
+        ##============RK4 =====================##
+        self.dyn = casadi.Function('f',[self.X, self.U],[self.f])
+        M = 4
+        DT = dt/4
+        X0 = casadi.SX.sym("X", self.X.numel())
+        U = casadi.SX.sym("U", self.U.numel())
+        
+        X = X0
+        for _ in range(M):
             # --------- RK4------------
-        #    k1 =DT*self.dyn(X, U)
-        #    k2 =DT*self.dyn(X+0.5*k1, U)
-        #    k3 =DT*self.dyn(X+0.5*k2, U)
-        #    k4 =DT*self.dyn(X+k3, U)
-            #
-        #    X = X + (k1 + 2*k2 + 2*k3 + k4)/6        
+           k1 =DT*self.dyn(X, U)
+           k2 =DT*self.dyn(X+0.5*k1, U)
+           k3 =DT*self.dyn(X+0.5*k2, U)
+           k4 =DT*self.dyn(X+k3, U)
+            
+           X = X + (k1 + 2*k2 + 2*k3 + k4)/6        
         # Fold
-        #self.dyn_fn = casadi.Function('dyn', [X0, U], [X])
+        self.dyn_fn = casadi.Function('dyn', [X0, U], [X])
 
     ## below is for animation (demo)
     def get_quadrotor_position(self, wing_len, state_traj):
@@ -733,7 +738,16 @@ class Quadrotor:
         if save:
             plt.savefig('./python_sim_result/quaternions.png')
         # plt.show()
-    
+    def plot_quaternions_norm(self,state_traj,dt = 0.1,save=True):
+        fig, axs = plt.subplots(1)
+        fig.suptitle('MPC last predicted status quaternions norm vs each MPC t')
+        N = len(state_traj[:,0])
+        x = np.arange(0,N*dt,dt)
+        norm = np.linalg.norm(state_traj[:,6:10],axis=1)
+        axs.plot(x,norm)
+        if save:
+            plt.savefig('./python_sim_result/quaternions_norm.png')
+        # plt.show()
     def plot_angularrate(self,state_traj,dt = 0.01):
         plt.figure() 
         plt.title('angularrate vs time')

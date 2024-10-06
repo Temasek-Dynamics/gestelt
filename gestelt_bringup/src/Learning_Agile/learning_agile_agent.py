@@ -105,7 +105,7 @@ class LearningAgileAgent():
                             PDP_GRADIENT=PDP_GRADIENT)
         
  
-        # set the dynamics step of the python sim
+        # set the dynamics step of the python sim (Explict Euler, ERK4)
         self.dyn_step=dyn_step
         self.quad.uav1.setDyn(self.dyn_step)
 
@@ -119,6 +119,7 @@ class LearningAgileAgent():
         self.tra_weight_list = []   
         # trajectory pos_vel_att_cmd
         self.pos_vel_att_cmd=np.zeros(10)
+        self.pos_vel_att_cmd[6:10] = [1,0,0,0]
         self.pos_vel_att_cmd_n = [self.pos_vel_att_cmd]
 
         # FIXME Temporally set the traversal time here, for both python and gazebo simulation
@@ -337,10 +338,16 @@ class LearningAgileAgent():
                 print('solving time at main=',time.time()-t_comp)
                 self.solving_time.append(time.time()- t_comp)
                 self.u=cmd_solution['control_traj_opt'][0,:].tolist()
-                self.pos_vel_att_cmd=cmd_solution['state_traj_opt'][0,:]
+                self.pos_vel_att_cmd=cmd_solution['state_traj_opt'][40,:]
                 # self.tra_weight_list.append(weight_vis)
             
+            # state update
             self.state = np.array(self.quad.uav1.dyn_fn(self.state, self.u)).reshape(10) # Yixiao's simulation environment ('uav1.dyn_fn'), replaced by pybullet
+            
+            # re-normalize the quaternion
+            self.state[6:10] = self.state[6:10]/np.linalg.norm(self.state[6:10])
+
+
             self.state_n = np.concatenate((self.state_n,[self.state]),axis = 0)
             self.control_n = np.concatenate((self.control_n,[self.u]),axis = 0)
             self.pos_vel_att_cmd_n = np.concatenate((self.pos_vel_att_cmd_n,[self.pos_vel_att_cmd]),axis = 0)
@@ -376,6 +383,7 @@ class LearningAgileAgent():
         self.quad.uav1.plot_position(self.state_n,name='drone_actual')
         self.quad.uav1.plot_velocity(self.state_n)
         self.quad.uav1.plot_quaternions(self.state_n)
+        self.quad.uav1.plot_quaternions_norm(self.pos_vel_att_cmd_n)
         # self.quad.uav1.plot_trav_weight(self.tra_weight_list)
 
         if CLOSE_LOOP_MODEL:
@@ -406,7 +414,7 @@ def main():
     ########################################################################
     #####---------------------- TEST option -------------------------#######
     ########################################################################
-    STATIC_GATE_TEST = False
+    STATIC_GATE_TEST = True
     CLOSE_LOOP_MODEL = False
 
     if CLOSE_LOOP_MODEL:

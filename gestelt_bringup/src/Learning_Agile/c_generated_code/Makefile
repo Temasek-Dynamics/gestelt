@@ -36,9 +36,9 @@
 
 # model
 MODEL_SRC=
-MODEL_SRC+= ACADOS_model_model/ACADOS_model_expl_ode_fun.c
-MODEL_SRC+= ACADOS_model_model/ACADOS_model_expl_vde_forw.c
-MODEL_SRC+= ACADOS_model_model/ACADOS_model_expl_vde_adj.c
+MODEL_SRC+= ACADOS_model_model/ACADOS_model_impl_dae_fun.c
+MODEL_SRC+= ACADOS_model_model/ACADOS_model_impl_dae_fun_jac_x_xdot_z.c
+MODEL_SRC+= ACADOS_model_model/ACADOS_model_impl_dae_jac_x_xdot_u_z.c
 MODEL_OBJ := $(MODEL_SRC:.c=.o)
 
 # optimal control problem - mostly CasADi exports
