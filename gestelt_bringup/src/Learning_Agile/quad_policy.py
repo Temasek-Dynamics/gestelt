@@ -115,6 +115,7 @@ class run_quad:
 
         # initialize the mpc solver
         # self.uavoc1.ocSolverInit(horizon=self.horizon,dt=self.dt)
+        self.uavoc1.AcadosModelInit()
         self.uavoc1.AcadosOcSolverInit(horizon=self.horizon,
                                        dt=self.dt,
                                        SQP_RTI_OPTION=SQP_RTI_OPTION,

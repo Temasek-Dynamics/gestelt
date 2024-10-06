@@ -267,7 +267,7 @@ class Quadrotor:
         self.cost_q_g = trace(np.identity(3) - mtimes(transpose(goal_R_B_I), R_B_I))
         # self.cost_q_g = 2-sqrt(1+trace(mtimes(transpose(goal_R_B_I), R_B_I)))
 
-        self.cost_q_manifold= trace(np.identity(3) - mtimes(transpose(R_B_I), R_B_I))
+        self.cost_q_manifold= dot(1-ca.norm_2(self.q[0:4]),1-ca.norm_2(self.q[0:4]))
         ## angular velocity cost
         self.goal_w_B = [0, 0, 0]
         self.cost_ang_rate_B = dot(self.ang_rate_B[0:2] - self.goal_w_B[0:2], self.ang_rate_B[0:2] - self.goal_w_B[0:2])
@@ -337,7 +337,7 @@ class Quadrotor:
         # self.dyn_fn = casadi.Function('dynamics', [self.X, self.U], [self.dyn])
 
 
-        ##============RK4 =====================##
+        ##============  ERK4 =====================##
         self.dyn = casadi.Function('f',[self.X, self.U],[self.f])
         M = 4
         DT = dt/4

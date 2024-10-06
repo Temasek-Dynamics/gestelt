@@ -30,7 +30,7 @@ gate_width = config_dict['gate']['width']
 def nn_sample(init_pos=None,final_pos=None,init_angle=None,cur_epoch=100,pretrain=False):
     inputs = np.zeros(9)
     if init_pos is None:
-        inputs[0:3] = np.random.uniform(-2,2,size=3) + pre_ini_pos #-5~5, -9
+        inputs[0:3] = np.random.uniform(-1,1,size=3) + pre_ini_pos #-5~5, -9
         if pretrain:
             inputs[1] = np.random.uniform(-5,5) + pre_ini_pos[1]
         else:

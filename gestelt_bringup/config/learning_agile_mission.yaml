@@ -49,12 +49,12 @@ mission:
 
   ##------ gate pose ----##
   # only feasible for STATIC_GATE_TEST
-  gate_position: [1.0, -0.0, 1.5]
+  gate_position: [1.0, -0.0, 2.5]
   gate_ori_RP: [-0.0, -0.99, -0.0]  # 1 for 90 degree
 
   ##------ goal pose ----##
   goal_position: [0.0, 3, 0]
-  goal_ori_euler: [0.0, 0.0,0] # RPY, only yaw is active
+  goal_ori_euler: [0.0, 0.0,0.0] # RPY, only yaw is active
 
   
 # MPC parameters
@@ -81,25 +81,25 @@ learning_agile:
 
   ##-----parameters for training ------## 
   # #### for a stabler training,######## 
-  wrt: 1.0
+  wrt: 5.0
   wqt: 10.0
   wthrust: 1.0
-  wwt: 10.0
+  wwt: 5.0
   wwt_z: 50
   
   # path cost
-  wrp: 1        ## too small, large deviation to the goal
+  wrp: 10        ## too small, large deviation to the goal
   wvp: 0.01
   wqp: 0.01
 
   # terminal cost
-  wrf: 10.0     ## large, unstable
+  wrf: 500.0     ## large, unstable
   wvf: 100.0
   wqf: 100.0
   ##------ traversing parameters ---##
   max_traverse_weight: 100 #100
   traverse_weight_span: 10
-  traverse_time: 3.0 # only for STATIC_GATE_TEST
+  traverse_time: 1.5 # only for STATIC_GATE_TEST
 
   ##------ safety parameters  ------##
   no_solution_flag_t_thresh: 0.1
@@ -107,7 +107,7 @@ learning_agile:
   ##------ MPC problem parameters---## 
   ## ---- hard coded in the solver ----##
   ## modify this required recompilation of the solver
-  horizon: 40
+  horizon: 20
   dt: 0.1
     
   ##------ model parameters --------##

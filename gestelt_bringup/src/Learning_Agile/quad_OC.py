@@ -4,8 +4,7 @@ from casadi import *
 import numpy as np
 from scipy import interpolate
 import casadi
-from acados_template import AcadosOcp, AcadosOcpSolver, AcadosSimSolver
-from acados_template import AcadosModel
+from acados_template import AcadosOcp, AcadosOcpSolver, AcadosSimSolver,AcadosSim,AcadosModel
 import time
 import scipy
 from os import system
@@ -82,8 +81,11 @@ class OCSys:
             self.setAuxvarVariable()
 
         # self.dyn = casadi.Function('f',[self.state, self.control],[f])
+        ## ================== for casADi ================== ##
         self.dyn = self.state + dt * f
         self.dyn_fn = casadi.Function('dynamics', [self.state, self.control], [self.dyn],['x','u'],['x_next'])
+
+        ## ================== for acados ================== ##
         self.dyn_fn_acados = casadi.Function('dynamics', [self.state, self.control], [f],['x','u'],['rhs'])
         #M = 4
         #DT = dt/4
@@ -337,54 +339,23 @@ class OCSys:
                    "cost": sol['f'].full()}
 
         return opt_sol 
-
-    def AcadosOcSolverInit(self, horizon=20, auxvar_value=1,
-                            print_level=0, 
-                            dt = 0.1,
-                            costate_option=0,
-                            SQP_RTI_OPTION=False,
-                            USE_PREV_SOLVER=False
-                            ):
+    
+    def AcadosModelInit(self):
         """
-        This function is to define the optimal control problem using ACADOS
+        This function is to define the dynamics model problem using ACADOS
         """
-       
-        
-        assert hasattr(self, 'state'), "Define the state variable first!"
-        assert hasattr(self, 'control'), "Define the control variable first!"
-        # assert hasattr(self, 'dyn'), "Define the system dynamics first!"
-        # assert hasattr(self, 'path_cost'), "Define the running cost function first!"
-        assert hasattr(self, 'final_cost'), "Define the final cost function first!"
-        # Start with an empty NLP
-        self.horizon=horizon
-        self.SQP_RTI_OPTION=SQP_RTI_OPTION
-
-        # predict horizon in seconds
-        T=horizon*dt
-        self.n_nodes = horizon
-
-        w = []
-        self.w0 = []
-        self.lbw = []
-        self.ubw = []
-        J = 0
-        g = []
-        self.lbg = []
-        self.ubg = []
-
-
         ###############################################################
         ###############################################################
         ##----------model dynamic symbolic expression----------------##
         ###############################################################
         ###############################################################
-        model=AcadosModel()
+        self.model=AcadosModel()
         
         
         ############################################################### 
         ##----------------- mapping CasADi to ACADOS ----------------##
         ###############################################################
-        model.name="ACADOS_model" 
+        self.model.name="ACADOS_model" 
 
         # symbolical variables has already been defined in the quad_model.py
         """
@@ -411,18 +382,18 @@ class OCSys:
 
         """
         # explicit model
-        model.f_expl_expr=self.dyn_fn_acados(self.state,self.control)
+        self.model.f_expl_expr=self.dyn_fn_acados(self.state,self.control)
 
         # implicit model
         x_dot=casadi.SX.sym('x_dot',self.n_state)
-        model.f_impl_expr=x_dot-self.dyn_fn_acados(self.state,self.control)
+        self.model.f_impl_expr=x_dot-self.dyn_fn_acados(self.state,self.control)
 
         # self.state = vertcat(self.r_I, self.v_I, self.q, self.w_B)
-        model.x=self.state
-        model.xdot=x_dot
+        self.model.x=self.state
+        self.model.xdot=x_dot
 
         #  self.control = self.T_B
-        model.u=self.control
+        self.model.u=self.control
         
         ## parameters: received after solver initialization, includes:
         # goal state: 
@@ -439,7 +410,39 @@ class OCSys:
        
         P=casadi.SX.sym('p',self.n_state+\
                         self.trav_auxvar.numel()+1) # the last one is the current node time
-        model.p=P
+        self.model.p=P
+
+    def AcadosOcSolverInit(self, horizon=20, auxvar_value=1,
+                            print_level=0, 
+                            dt = 0.1,
+                            costate_option=0,
+                            SQP_RTI_OPTION=False,
+                            USE_PREV_SOLVER=False
+                            ):
+        """
+        This function is to define the optimal control problem using ACADOS
+        """
+       
+    
+        # Start with an empty NLP
+        self.horizon=horizon
+        self.SQP_RTI_OPTION=SQP_RTI_OPTION
+
+        # predict horizon in seconds
+        T=horizon*dt
+        self.n_nodes = horizon
+
+        w = []
+        self.w0 = []
+        self.lbw = []
+        self.ubw = []
+        J = 0
+        g = []
+        self.lbg = []
+        self.ubg = []
+
+
+        
         
         ###############################################################
         ###############################################################
@@ -468,7 +471,7 @@ class OCSys:
         ############################################################### 
         ##------------------ setting the ocp model ------------------##
         ############################################################### 
-        ocp.model = model
+        ocp.model = self.model
         ocp.dims.N = self.n_nodes    # number of nodes 
         ocp.solver_options.tf = T # horizon length T in seconds
         ocp.dims.np = self.n_state+self.trav_auxvar.numel()+1    # number of parameters for solver input, here is the current state and control
@@ -536,9 +539,11 @@ class OCSys:
         ocp.solver_options.hessian_approx = 'GAUSS_NEWTON' # GAUSS_NEWTON, EXACT
         ocp.solver_options.regularize_method = 'CONVEXIFY'#'CONVEXIFY', PROJECT_REDUC_HESS
         ocp.solver_options.integrator_type = 'IRK' # ERK (explicit Runge-Kutta integrator) or IRK (Implicit Runge-Kutta integrator)
+        ocp.solver_options.sim_method_num_steps =4
         ocp.solver_options.sim_method_num_stages = 4 # default 4
+        ocp.solver_options.sim_method_newton_iter = 3
         ocp.solver_options.print_level = 0
-        ocp.solver_options.levenberg_marquardt = 1e-5 # small value for gauss newton method, large value for gradient descent method
+        ocp.solver_options.levenberg_marquardt = 1e-10 # small value for gauss newton method, large value for gradient descent method
         
         if SQP_RTI_OPTION: 
             # for deployment
@@ -549,7 +554,7 @@ class OCSys:
         # ocp.solver_options.nlp_solver_max_iter = 100
         ##------------------ setting the code generation ------------------##
         # compile acados ocp
-        json_file = os.path.join('./'+model.name+'_acados_ocp.json')
+        json_file = os.path.join('./'+self.model.name+'_acados_ocp.json')
 
         # load solver from json file
         build=True
@@ -558,7 +563,23 @@ class OCSys:
             build=False
             generate=False
         self.acados_solver = AcadosOcpSolver(ocp,generate=generate,build=build, json_file=json_file)
- 
+    
+    def AcadosSimIntegratorInit(self,dyn_step):
+        sim=AcadosSim()
+        sim.model=self.model
+
+        ## integrator options
+        sim.solver_options.T=dyn_step # integration time
+        sim.solver_options
+
+        sim.solver_options.integrator_type = 'IRK' # ERK (explicit Runge-Kutta integrator) or IRK (Implicit Runge-Kutta integrator)
+        sim.solver_options.num_stages = 4
+        sim.solver_options.num_steps = 4
+        sim.solver_options.newton_iter = 3 # for implicit integrator
+        sim.parameter_values = np.zeros((18))
+        build=True
+        generate=True
+        self.acados_integrator = AcadosSimSolver(sim, cmake_builder=None, generate=generate, build=build)
 
 
     def AcadosOcSolver(self, 
