@@ -264,8 +264,13 @@ class Quadrotor:
         # self.goal_q = toQuaternion(goal_atti[0],goal_atti[1])
         goal_R_B_I = dir_cosine(self.goal_q)
         R_B_I = dir_cosine(self.q)
-        self.cost_q_g = trace(np.identity(3) - mtimes(transpose(goal_R_B_I), R_B_I))
+        # self.cost_q_g = trace(np.identity(3) - mtimes(transpose(goal_R_B_I), R_B_I))
         # self.cost_q_g = 2-sqrt(1+trace(mtimes(transpose(goal_R_B_I), R_B_I)))
+
+        self.cost_q_g = 0
+        ## Chordal distance
+        for i in range(3):
+            self.cost_q_g += dot(R_B_I[i, :] - goal_R_B_I[i, :], R_B_I[i, :] - goal_R_B_I[i, :])
 
         self.cost_q_manifold= dot(1-ca.norm_2(self.q[0:4]),1-ca.norm_2(self.q[0:4]))
         ## angular velocity cost
@@ -317,8 +322,11 @@ class Quadrotor:
         # traverse attitude error
         tra_R_B_I = dir_cosine(self.des_tra_q)
         R_B_I = dir_cosine(self.q)
-        self.cost_q_t = trace(np.identity(3) - mtimes(transpose(tra_R_B_I), R_B_I))
-        # self.cost_q_t = 2-sqrt(1+trace(mtimes(transpose(tra_R_B_I), R_B_I)))
+        # self.cost_q_t = trace(np.identity(3) - mtimes(transpose(tra_R_B_I), R_B_I))
+        self.cost_q_t = 0
+        ## Chordal distance
+        for i in range(3):
+            self.cost_q_t += dot(R_B_I[i, :] - tra_R_B_I[i, :], R_B_I[i, :] - tra_R_B_I[i, :])
 
 
 

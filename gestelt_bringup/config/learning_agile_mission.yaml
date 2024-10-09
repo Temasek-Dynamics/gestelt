@@ -49,7 +49,7 @@ mission:
 
   ##------ gate pose ----##
   # only feasible for STATIC_GATE_TEST
-  gate_position: [1.0, -0.0, 2.5]
+  gate_position: [1.0, -0.0, 1.5]
   gate_ori_RP: [-0.0, -0.99, -0.0]  # 1 for 90 degree
 
   ##------ goal pose ----##

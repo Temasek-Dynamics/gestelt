@@ -468,7 +468,7 @@ def main():
                                            dyn_step=0.002,
                                            USE_PREV_SOLVER=False,
                                            PDP_GRADIENT=False,
-                                           SQP_RTI_OPTION=False,
+                                           SQP_RTI_OPTION=True,
                                            STATIC_GATE_TEST=STATIC_GATE_TEST)
     
     
