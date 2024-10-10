@@ -44,7 +44,6 @@ const int *ACADOS_model_impl_dae_fun_sparsity_in(int);
 const int *ACADOS_model_impl_dae_fun_sparsity_out(int);
 int ACADOS_model_impl_dae_fun_n_in(void);
 int ACADOS_model_impl_dae_fun_n_out(void);
-real_t* ACADOS_model_impl_dae_fun_get_pool_double(const char*);
 
 // implicit ODE: function + jacobians
 int ACADOS_model_impl_dae_fun_jac_x_xdot_z(const real_t** arg, real_t** res, int* iw, real_t* w, void *mem);
@@ -53,7 +52,6 @@ const int *ACADOS_model_impl_dae_fun_jac_x_xdot_z_sparsity_in(int);
 const int *ACADOS_model_impl_dae_fun_jac_x_xdot_z_sparsity_out(int);
 int ACADOS_model_impl_dae_fun_jac_x_xdot_z_n_in(void);
 int ACADOS_model_impl_dae_fun_jac_x_xdot_z_n_out(void);
-real_t* ACADOS_model_impl_dae_fun_jac_x_xdot_z_get_pool_double(const char*);
 
 // implicit ODE: jacobians only
 int ACADOS_model_impl_dae_jac_x_xdot_u_z(const real_t** arg, real_t** res, int* iw, real_t* w, void *mem);
@@ -62,7 +60,6 @@ const int *ACADOS_model_impl_dae_jac_x_xdot_u_z_sparsity_in(int);
 const int *ACADOS_model_impl_dae_jac_x_xdot_u_z_sparsity_out(int);
 int ACADOS_model_impl_dae_jac_x_xdot_u_z_n_in(void);
 int ACADOS_model_impl_dae_jac_x_xdot_u_z_n_out(void);
-real_t* ACADOS_model_impl_dae_jac_x_xdot_u_z_get_pool_double(const char*);
 
 // implicit ODE - for lifted_irk
 int ACADOS_model_impl_dae_fun_jac_x_xdot_u(const real_t** arg, real_t** res, int* iw, real_t* w, void *mem);
@@ -71,7 +68,6 @@ const int *ACADOS_model_impl_dae_fun_jac_x_xdot_u_sparsity_in(int);
 const int *ACADOS_model_impl_dae_fun_jac_x_xdot_u_sparsity_out(int);
 int ACADOS_model_impl_dae_fun_jac_x_xdot_u_n_in(void);
 int ACADOS_model_impl_dae_fun_jac_x_xdot_u_n_out(void);
-real_t* ACADOS_model_impl_dae_fun_jac_x_xdot_u_get_pool_double(const char*);
   
 
 

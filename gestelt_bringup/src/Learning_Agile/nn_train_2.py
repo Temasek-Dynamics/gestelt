@@ -79,11 +79,13 @@ def traj(inputs, outputs, state_traj):
 if __name__ == '__main__':
      # load the configuration file
     # yaml file dir#
+    options={}
+    options['MPC_BACKWARD']=False
+    options['SQP_RTI_OPTION']=False
+    options['USE_PREV_SOLVER']=False
     
     # generate the solver
-    quad1 = run_quad(config_dict,  
-                    SQP_RTI_OPTION=False, 
-                    USE_PREV_SOLVER=False)
+    quad1 = PlanningForBackwardWrapper(config_dict, options)
     
     for epoch in range(int(num_epochs/num_cores)):
         n_inputs = []

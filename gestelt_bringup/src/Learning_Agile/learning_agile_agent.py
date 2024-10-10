@@ -68,11 +68,9 @@ class LearningAgileAgent():
                  yaml_file,
                  model_file=None,
                  dyn_step=0.002,
-                 USE_PREV_SOLVER=False,                 
-                 PDP_GRADIENT=False,
-                 SQP_RTI_OPTION=False,
-                 STATIC_GATE_TEST=True) -> None:
-        self.STATIC_GATE_TEST=STATIC_GATE_TEST
+                 options:dict=None) -> None:
+        self.options=options
+        
         self.sim_time=python_sim_time
     
         # drone state
@@ -83,7 +81,7 @@ class LearningAgileAgent():
         with open(yaml_file, 'r', encoding='utf-8') as file:
             self.config_dict = yaml.safe_load(file)
 
-        if not STATIC_GATE_TEST:
+        if not self.options['STATIC_GATE_TEST']:
             # load trained DNN2 model
             if model_file is not None:
                 self.model = torch.load(model_file)
@@ -101,17 +99,14 @@ class LearningAgileAgent():
         self.hl_variable = [self.hl_para]
         
 
-        self.quad = run_quad(self.config_dict,
-                            SQP_RTI_OPTION=SQP_RTI_OPTION,
-                            USE_PREV_SOLVER=USE_PREV_SOLVER,
-                            PDP_GRADIENT=PDP_GRADIENT)
+        self.planner = PlanningForBackwardWrapper(self.config_dict,options=self.options)
         
  
         # set the dynamics step of the python sim (Explict Euler, ERK4)
         self.dyn_step=dyn_step
-        self.quad.uav1.setDyn(self.dyn_step)
-        self.quad.uavoc1.AcadosSimIntegratorInit(self.dyn_step)
-        self.integrator=self.quad.uavoc1.acados_integrator
+        self.planner.uav1.setDyn(self.dyn_step)
+        self.planner.uavoc1.AcadosSimIntegratorInit(self.dyn_step)
+        self.integrator=self.planner.uavoc1.acados_integrator
 
         self.Ttra    = []
         self.T       = []
@@ -153,7 +148,7 @@ class LearningAgileAgent():
         self.t_tra_abs=self.config_dict['learning_agile']['traverse_time']
         
         self.env_init_set = nn_sample()
-        if self.STATIC_GATE_TEST:
+        if self.options['STATIC_GATE_TEST']:
             self.env_init_set[0:3]=ini_pos
             self.env_init_set[3:6]=end_pos
         self.env_init_set[6]=ini_yaw # drone_init_yaw
@@ -168,7 +163,7 @@ class LearningAgileAgent():
         final_q=toQuaternion(self.goal_yaw,[0,0,1])
           
 
-        self.quad.init_state_and_mission(goal_pos=self.env_init_set[3:6].tolist(),
+        self.planner.init_state_and_mission(goal_pos=self.env_init_set[3:6].tolist(),
                               goal_ori=final_q,
                               
                               ini_r=self.env_init_set[0:3].tolist(),
@@ -193,7 +188,7 @@ class LearningAgileAgent():
         self.gate_points_list = self.moving_gate.gate_points_list
         self.gate_t_i = Gate(self.gate_points_list[0])
 
-        self.quad.init_obstacle(self.gate_points_list[0].reshape(12),gate_pitch=self.env_init_set[8])
+        self.planner.init_obstacle(self.gate_points_list[0].reshape(12),gate_pitch=self.env_init_set[8])
         
     
     def gate_state_estimation(self):
@@ -207,7 +202,7 @@ class LearningAgileAgent():
 
 
         
-        if self.STATIC_GATE_TEST:
+        if self.options['STATIC_GATE_TEST']:
             self.gate_t_i = Gate(self.gate_points_list[0])
 
             # self.t_tra_abs is manually set
@@ -287,27 +282,27 @@ class LearningAgileAgent():
         self.log_NN_IO(nn2_inputs,out)       
         return out
 
-    def forward_sim(self,python_sim_data_folder,CLOSE_LOOP_MODEL=False):
+    def forward_sim(self,python_sim_data_folder):
         """
         python simulation
 
         """
         
-        self.state = self.quad.ini_state # state= feedback from pybullet, 13-by-1, 3 position, 3 velocity (world frame), 4 quaternion, 3 angular rate
+        self.state = self.planner.ini_state # state= feedback from pybullet, 13-by-1, 3 position, 3 velocity (world frame), 4 quaternion, 3 angular rate
         self.state_n = [self.state]
         self.nn_output_list = [np.zeros(8)] # 3 position, 4 quaternion, 1 traversal time
         for self.i in range(self.sim_time*(int(1/self.dyn_step))): # 5s, 500 Hz
             
             self.Time = np.concatenate((self.Time,[self.i*self.dyn_step]),axis = 0)
             
-            if not CLOSE_LOOP_MODEL:
+            if not self.options['CLOSE_LOOP_MODEL']:
                 if (self.i%25)==0: # estimation frequency = 20 hz 
                     # decision variable is updated in 20 hz
                     self.gate_state_estimation()
 
             if (self.i%5)==0: # control frequency = 100 hz  
                 
-                if self.STATIC_GATE_TEST:
+                if self.options['STATIC_GATE_TEST']:
                     self.gate_state_estimation()
                     nn2_inputs = np.zeros(15)
                     nn2_inputs[0:10] = self.state 
@@ -325,7 +320,7 @@ class LearningAgileAgent():
                     self.log_NN_IO(nn2_inputs,out)       
                 else:
                     des_trav_pos=self.gate_t_i.centroid+out[0:3]
-                    if CLOSE_LOOP_MODEL:
+                    if self.options['CLOSE_LOOP_MODEL']:
                         out = self.close_loop_model_forward()
                     else:
                         out = self.imitate_model_forward()
@@ -335,7 +330,7 @@ class LearningAgileAgent():
                 
                     
                 
-                cmd_solution,NO_SOLUTION_FLAG  = self.quad.mpc_update(self.state,
+                cmd_solution,NO_SOLUTION_FLAG  = self.planner.mpc_update(self.state,
                                                     des_trav_pos,
                                                     out[3:6],
                                                     out[6]) # control input 4-by-1 thrusts to pybullet
@@ -357,7 +352,7 @@ class LearningAgileAgent():
             ########################################################
 
             ###===================Explict Euler(obsolete) or ERK4====================###
-            # self.state = np.array(self.quad.uav1.dyn_fn(self.state, test_u)).reshape(10) # Yixiao's simulation environment ('uav1.dyn_fn'), replaced by pybullet
+            # self.state = np.array(self.planner.uav1.dyn_fn(self.state, test_u)).reshape(10) # Yixiao's simulation environment ('uav1.dyn_fn'), replaced by pybullet
             
             
             ##================= acados integrator IRK========================###
@@ -381,7 +376,7 @@ class LearningAgileAgent():
             self.state_n = np.concatenate((self.state_n,[self.state]),axis = 0)
             self.control_n = np.concatenate((self.control_n,[self.u]),axis = 0)
             self.pos_vel_att_cmd_n = np.concatenate((self.pos_vel_att_cmd_n,[self.pos_vel_att_cmd]),axis = 0)
-            u_m = self.quad.uav1.u_m
+            u_m = self.planner.uav1.u_m
             u1 = np.reshape(self.u,(4,1))
             tm = np.matmul(u_m,u1)
             tm = np.reshape(tm,4)
@@ -399,42 +394,42 @@ class LearningAgileAgent():
         np.save(os.path.join(python_sim_data_folder,'HL_Variable'),self.hl_variable)
         np.save(os.path.join(python_sim_data_folder,'solving_time'),self.solving_time)
         np.save(os.path.join(python_sim_data_folder,'nn_output_list'),self.nn_output_list)
-        self.quad.uav1.play_animation(wing_len=self.quad.wing_len,
+        self.planner.uav1.play_animation(wing_len=self.planner.wing_len,
                                        gate_traj1=self.gate_points_list[::5,:,:],
                                        state_traj=self.state_n[::5,:],
                                        goal_pos=self.final_point.tolist(),
                                        dt=0.01)
         
         # save the data, not show it
-        if not self.STATIC_GATE_TEST:
-            self.quad.uav1.plot_position(self.nn_output_list,name='NN2_output')
+        if not self.options['STATIC_GATE_TEST']:
+            self.planner.uav1.plot_position(self.nn_output_list,name='NN2_output')
 
-            if CLOSE_LOOP_MODEL:
-                self.quad.uav1.plot_trav_time(self.NN_T_tra) # pure NN close loop traversal time
+            if self.options['CLOSE_LOOP_MODEL']:
+                self.planner.uav1.plot_trav_time(self.NN_T_tra) # pure NN close loop traversal time
             else:
-                self.quad.uav1.plot_trav_time(self.T) # Binary search traversal time
-        self.quad.uav1.plot_thrust(self.control_n)
-        self.quad.uav1.plot_angularrate(self.control_n)
-        self.quad.uav1.plot_position(self.state_n,name='drone_actual')
-        self.quad.uav1.plot_velocity(self.state_n)
-        self.quad.uav1.plot_quaternions(self.state_n)
+                self.planner.uav1.plot_trav_time(self.T) # Binary search traversal time
+        self.planner.uav1.plot_thrust(self.control_n)
+        self.planner.uav1.plot_angularrate(self.control_n)
+        self.planner.uav1.plot_position(self.state_n,name='drone_actual')
+        self.planner.uav1.plot_velocity(self.state_n)
+        self.planner.uav1.plot_quaternions(self.state_n)
 
-        # self.quad.uav1.plot_quaternions_norm(self.state_n)
-        self.quad.uav1.plot_quaternions_norm(self.pos_vel_att_cmd_n)
-        # self.quad.uav1.plot_trav_weight(self.tra_weight_list)
+        # self.planner.uav1.plot_quaternions_norm(self.state_n)
+        self.planner.uav1.plot_quaternions_norm(self.pos_vel_att_cmd_n)
+        # self.planner.uav1.plot_trav_weight(self.tra_weight_list)
 
-        self.quad.uav1.plot_solving_time(self.solving_time)
+        self.planner.uav1.plot_solving_time(self.solving_time)
         python_sim_npy_parser(uav_traj=self.state_n,
                               nn_output_list=self.nn_output_list,
                               gate_pitch=self.Pitch)
-        self.quad.uav1.plot_3D_traj(wing_len=self.quad.wing_len,
-                                    uav_height=self.quad.uav_height/2,
+        self.planner.uav1.plot_3D_traj(wing_len=self.planner.wing_len,
+                                    uav_height=self.planner.uav_height/2,
                                     state_traj=self.state_n[::50,:],
                                     gate_traj=self.gate_points_list[::50,:,:])
 
 
-        # self.quad.uav1.plot_T(control_tm)
-        # self.quad.uav1.plot_M(control_tm)
+        # self.planner.uav1.plot_T(control_tm)
+        # self.planner.uav1.plot_M(control_tm)
     
         
 def main():
@@ -447,17 +442,22 @@ def main():
     ########################################################################
     #####---------------------- TEST option -------------------------#######
     ########################################################################
-    STATIC_GATE_TEST = True
-    CLOSE_LOOP_MODEL = False
+    options={}
+    options['MPC_BACKWARD']=False
+    options['USE_PREV_SOLVER']=False
+    options['PDP_GRADIENT']=False
+    options['SQP_RTI_OPTION']=True
+    options['STATIC_GATE_TEST']=True
+    options['CLOSE_LOOP_MODEL']= False
 
-    if CLOSE_LOOP_MODEL:
+    if options['CLOSE_LOOP_MODEL']:
         model_name = 'NN_close_0.pth'#'NN2_imitate_1.pth' #'NN_close_2.pth'
     else:   
         model_name = '20240925-130606-FD-Trial_1/NN2_imitate_1.pth'
 
     model_file=os.path.join(current_dir, f'training_data/NN_model/',model_name)
     
-        
+    
     # create the learning agile agent
     # problem definition
     # the dyn_step is the simulation step in the simulation environment
@@ -466,10 +466,7 @@ def main():
                                            yaml_file=yaml_file,
                                            model_file=model_file,
                                            dyn_step=0.002,
-                                           USE_PREV_SOLVER=False,
-                                           PDP_GRADIENT=False,
-                                           SQP_RTI_OPTION=True,
-                                           STATIC_GATE_TEST=STATIC_GATE_TEST)
+                                            options=options)
     
     
 
@@ -480,7 +477,7 @@ def main():
     
     #####============== Solve the problem ====================#######
     # solve the problem
-    learing_agile_agent.forward_sim(python_sim_data_folder,CLOSE_LOOP_MODEL)
+    learing_agile_agent.forward_sim(python_sim_data_folder)
 
     # every time after reconstruct the solver, need to catkin build the MPC wrapper to 
     # relink the shared library

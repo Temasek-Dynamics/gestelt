@@ -4,6 +4,7 @@ from quad_OC import OCSys,LQR
 # the sequence of importing solid_geometry
 # with juliacall is import
 from solid_geometry import *
+from collision_detection import *
 from math import cos, pi, sin, sqrt, tan
 from quad_model import *
 
@@ -11,21 +12,19 @@ import numpy as np
 import torch
 from casadi import *
 import logging
-class run_quad:
-    def __init__(self,config_dict,
-                SQP_RTI_OPTION=True, 
-                USE_PREV_SOLVER = False,
-                PDP_GRADIENT=False,
-                ORIGIN_REWARD=False):
-        
-       
+class PlanningForBackwardWrapper():
+    """
+    Wrapper the MPC forward and backward process
+    """
 
+    def __init__(self,config:dict,options: dict):
+    
         ######################################################
         #######------------ UAV PARAM----------------#########
         ######################################################
         ## definition 
-        self.wing_len = config_dict['drone']['wing_len'] 
-        self.uav_height = config_dict['drone']['height']
+        self.wing_len = config['drone']['wing_len'] 
+        self.uav_height = config['drone']['height']
         # --------------------------- create model1 ----------------------------------------
         self.uav1 = Quadrotor()
         # jx, jy, jz = 0.0023, 0.0023, 0.004
@@ -39,19 +38,19 @@ class run_quad:
         ######################################################
 
         # MPC prediction step, and prediction horizon
-        self.horizon = config_dict['learning_agile']['horizon']
-        self.dt=config_dict['learning_agile']['dt']
+        self.horizon = config['learning_agile']['horizon']
+        self.dt=config['learning_agile']['dt']
         # initialize the cost function with symbolic variables
-        self.max_tra_w = config_dict['learning_agile']['max_traverse_weight']
+        self.max_tra_w = config['learning_agile']['max_traverse_weight']
 
     
         # --------------------------- create PDP object1 ----------------------------------------
         # create a pdp object
-        self.uavoc1 = OCSys(config_dict)
+        self.uavoc1 = OCSys(config)
        
         sc= 1 #1e2
-        pos_b   = config_dict['learning_agile']['pos_bound'] # in each axis
-        vel_b   = config_dict['learning_agile']['linear_vel_bound'] #0.5 # in each axis
+        pos_b   = config['learning_agile']['pos_bound'] # in each axis
+        vel_b   = config['learning_agile']['linear_vel_bound'] #0.5 # in each axis
      
         # set symbolic functions for the MPC solver
         self.uavoc1.setStateVariable(self.uav1.X,state_lb=[-pos_b,-pos_b,-pos_b,
@@ -61,10 +60,10 @@ class run_quad:
                                                vel_b,vel_b,vel_b,
                                                sc,sc,sc,sc]) 
         
-        self.thrust_ub = config_dict['learning_agile']['single_motor_max_thrust']*4*config_dict['learning_agile']['throttle_upper_bound']
-        self.thrust_lb = config_dict['learning_agile']['single_motor_max_thrust']*4*config_dict['learning_agile']['throttle_lower_bound']
-        ang_rate_b_xy = config_dict['learning_agile']['angular_vel_bound_xy']
-        ang_rate_b_z = config_dict['learning_agile']['angular_vel_bound_z']
+        self.thrust_ub = config['learning_agile']['single_motor_max_thrust']*4*config['learning_agile']['throttle_upper_bound']
+        self.thrust_lb = config['learning_agile']['single_motor_max_thrust']*4*config['learning_agile']['throttle_lower_bound']
+        ang_rate_b_xy = config['learning_agile']['angular_vel_bound_xy']
+        ang_rate_b_z = config['learning_agile']['angular_vel_bound_z']
         self.uavoc1.setAuxvarVariable()
         self.uavoc1.setControlVariable(self.uav1.U,
                                        control_lb=[self.thrust_lb ,-ang_rate_b_xy,-ang_rate_b_xy,-ang_rate_b_z],\
@@ -83,21 +82,21 @@ class run_quad:
         # wwf: final angular velocity cost
 
         ## initialize the cost function
-        self.uav1.initCost(wrt=config_dict['learning_agile']['wrt'],
-                           wqt=config_dict['learning_agile']['wqt'],
-                           wthrust=config_dict['learning_agile']['wthrust'],
-                           wwt=config_dict['learning_agile']['wwt'],
-                           wwt_z=config_dict['learning_agile']['wwt_z'], 
+        self.uav1.initCost(wrt=config['learning_agile']['wrt'],
+                           wqt=config['learning_agile']['wqt'],
+                           wthrust=config['learning_agile']['wthrust'],
+                           wwt=config['learning_agile']['wwt'],
+                           wwt_z=config['learning_agile']['wwt_z'], 
                              
-                           wrp=config_dict['learning_agile']['wrp'],
-                           wvp=config_dict['learning_agile']['wvp'],
-                           wqp=config_dict['learning_agile']['wqp'],
+                           wrp=config['learning_agile']['wrp'],
+                           wvp=config['learning_agile']['wvp'],
+                           wqp=config['learning_agile']['wqp'],
 
-                           wrf=config_dict['learning_agile']['wrf'],
-                           wvf=config_dict['learning_agile']['wvf'],
-                           wqf=config_dict['learning_agile']['wqf'],
-                           max_tra_w=config_dict['learning_agile']['max_traverse_weight'],
-                           gamma=config_dict['learning_agile']['traverse_weight_span']
+                           wrf=config['learning_agile']['wrf'],
+                           wvf=config['learning_agile']['wvf'],
+                           wqf=config['learning_agile']['wqf'],
+                           max_tra_w=config['learning_agile']['max_traverse_weight'],
+                           gamma=config['learning_agile']['traverse_weight_span']
                            ) 
         self.uav1.init_TraCost()
 
@@ -118,18 +117,21 @@ class run_quad:
         self.uavoc1.AcadosModelInit()
         self.uavoc1.AcadosOcSolverInit(horizon=self.horizon,
                                        dt=self.dt,
-                                       SQP_RTI_OPTION=SQP_RTI_OPTION,
-                                       USE_PREV_SOLVER=USE_PREV_SOLVER)
-
+                                       SQP_RTI_OPTION=options['SQP_RTI_OPTION'],
+                                       USE_PREV_SOLVER=options['USE_PREV_SOLVER'])
+        self.options = options
+        self.config = config
         ###################################################################
         ###------------ PDP auxiliary control system----------------#######
         ###################################################################
         # define the auxilary control system symbolic functions
-        self.PDP_GRADIENT = PDP_GRADIENT
-        self.ORIGIN_REWARD = ORIGIN_REWARD
-        if self.PDP_GRADIENT:
-            self.uavoc1.diffPMP()
-            self.lqr_solver = LQR()
+        
+       
+        if options['MPC_BACKWARD']:
+            
+            if self.options['PDP_GRADIENT']:
+                self.uavoc1.diffPMP()
+                self.lqr_solver = LQR()
 
        
         
@@ -164,13 +166,19 @@ class run_quad:
         self.point2 = gate_point[3:6]
         self.point3 = gate_point[6:9]
         self.point4 = gate_point[9:12]        
-        self.obstacle1 = obstacle(self.point1,self.point2,self.point3,self.point4)
+        self.obstacle = Obstacle(self.point1,self.point2,self.point3,self.point4)
 
 
+    def tra_ang_direct_reward(self,tra_ang):
+        self.roll_reward = - 1000 * 0.5 * tra_ang[0]**2
+        self.drdroll = - 1000 * tra_ang[0]
+
+        self.yaw_reward = - 1000 * 0.5 * tra_ang[2]**2
+        self.drdyaw = - 1000 * tra_ang[2]
 
     def R_from_MPC(self,tra_pos=None,tra_ang=None,t_tra = 3):
 
-        if not self.PDP_GRADIENT:
+        if not self.options['PDP_GRADIENT']:
             NO_SOLUTION_FLAG = False
             self.sol1,NO_SOLUTION_FLAG =self.mpc_update(self.ini_state, 
                                                         tra_pos, 
@@ -179,10 +187,9 @@ class run_quad:
         # state_traj [x,y,z,vx,vy,vz,qw,qx,qy,qz]
         state_traj = self.sol1['state_traj_opt']
         # get the quadrotor both center and edges position trajectory
-        self.traj = self.uav1.get_quadrotor_position(wing_len = self.wing_len, state_traj = state_traj)
+        self.vert_traj = self.uav1.get_quad_vert_pos(wing_len = self.wing_len, state_traj = state_traj)
 
         
-        ELLIPSOID_COLLISION_CHECK = False
       
         # calculate trajectory reward
         self.collision = 0
@@ -190,21 +197,17 @@ class run_quad:
         ## detect whether there is collision
         self.co = 0
 
-        roll_reward = - 1000 * 0.5 * tra_ang[0]**2
-        self.drdroll = - 1000 * tra_ang[0]
+        
 
-        yaw_reward = - 1000 * 0.5 * tra_ang[2]**2
-        self.drdyaw = - 1000 * tra_ang[2]
-
-        if self.ORIGIN_REWARD:   
+        if self.options['ORIGIN_REWARD']:   
             for c in range(4):
-                self.collision += self.obstacle1.collis_det(self.traj[:,3*(c+1):3*(c+2)],self.horizon)
-                self.co += self.obstacle1.co 
+                self.collision += self.obstacle.collis_det(self.vert_traj[:,3*(c+1):3*(c+2)],self.horizon)
+                self.co += self.obstacle.co 
 
             ## calculate the path cost
             # check the drone centroid position error with the goal position
             for p in range(4):
-                self.path += np.dot(self.traj[self.horizon-1-p,0:3]-self.goal_pos, self.traj[self.horizon-1-p,0:3]-self.goal_pos)
+                self.path += np.dot(self.vert_traj[self.horizon-1-p,0:3]-self.goal_pos, self.vert_traj[self.horizon-1-p,0:3]-self.goal_pos)
             
             # the sign of the collision is already negative
             # pitch angle reward temproally be here
@@ -215,41 +218,33 @@ class run_quad:
             return 1000 * self.collision - 0.5 * self.path + 100 #+ 10 * pitch_reward
 
         else:
-        
-            gate_check_points = np.zeros((4,3))
-            for i in range(4):
-                if i < 4:
-                        ## load four corners first
-                        gate_check_points[i,:] = self.gate_corners[i*3:i*3+3]
+            # self.tra_ang_direct_reward(tra_ang)
 
-            reward,self.d_R_d_st_traj,gate_check_points=self.obstacle1.reward_calc_differentiable_collision(
-                                                                quad_radius=self.wing_len/2,
-                                                                quad_height=self.uav_height/2,
+            reward,self.d_R_d_st_traj=self.obstacle.reward_calc_differentiable_collision(
+                                                                self.config,
                                                                 state_traj=state_traj,
                                                                 gate_corners=self.gate_corners,
                                                                 gate_quat=self.gate_quat,
-                                                                vert_traj=self.traj[:,0:3],
-                                                                goal_pos=self.goal_pos,
-                                                                horizon=self.horizon)
+                                                                vert_traj=self.vert_traj[:,0:3],
+                                                                goal_pos=self.goal_pos)
             
             self.d_R_d_st_traj = self.d_R_d_st_traj.reshape(self.horizon+1,1,self.uavoc1.n_state)
             
-            return reward + roll_reward + yaw_reward#+ pitch_reward
+            return reward #+ self.roll_reward + self.yaw_reward#+ pitch_reward
 
 
-    # --------------------------- solution and learning----------------------------------------
-    ##solution and demo
-    def sol_gradient(self,tra_pos =None,tra_ang=None,t_tra=None, AUTO_DIFF = False):
+    # --------------------------- solution and learning---------------------------------------
+    def sol_gradient(self,tra_pos =None,tra_ang=None,t_tra=None):
         """
         receive the decision variables from DNN1, do the MPC, then calculate d_reward/d_z
         """
-        self.AUTO_DIFF = AUTO_DIFF
+
         tra_ang = np.array(tra_ang)
         tra_pos = np.array(tra_pos)
 
         # run the MPC to execute plan and execute based on the high-level variables
         # obtain solution of trajectory
-        if self.PDP_GRADIENT:
+        if self.options['PDP_GRADIENT']:
             NO_SOLUTION_FLAG = False
             self.sol1,NO_SOLUTION_FLAG =self.mpc_update(self.ini_state, 
                                                         tra_pos, 
@@ -258,12 +253,10 @@ class run_quad:
         
         
         # R is the Reward
-        R = self.R_from_MPC(tra_pos,
-                            tra_ang,
-                            t_tra)
+        R = self.R_from_MPC(tra_pos,tra_ang,t_tra)
         
         ############==================finite difference===========================############
-        if not self.PDP_GRADIENT:
+        if not self.options['PDP_GRADIENT']:
             # fixed perturbation to calculate the gradient
             delta = 1e-3
             drdx = np.clip(self.R_from_MPC(tra_pos+[delta,0,0],tra_ang, t_tra) - R,-0.5,0.5)*0.1
@@ -299,24 +292,24 @@ class run_quad:
             # clip the traverse time gradient
             # drdp[:]=np.clip(drdp[:],-0.1,0.1)
             
-            drdp[3] = drdp[3]+self.drdroll
-            drdp[5] = drdp[5]+self.drdyaw
+            drdp[3] = drdp[3]#+self.drdroll
+            drdp[5] = drdp[5]#+self.drdyaw
 
             drdp[6] = np.clip(drdp[6],-0.1,0.1)
 
             drdp = drdp/20000
-            drdx = np.clip(drdp[0],-0.02,0.02)
-            drdy = np.clip(drdp[1],-0.01,0.01)
-            drdz = np.clip(drdp[2],-0.02,0.02)
-            drda = np.clip(drdp[3],-0.02,0.02)
-            drdb = np.clip(drdp[4],-0.15,0.15)
-            drdc = np.clip(drdp[5],-0.02,0.02)
-            # drdx = drdp[0]
-            # drdy = drdp[1]
-            # drdz = drdp[2]
-            # drda = drdp[3]
-            # drdb = drdp[4]
-            # drdc = drdp[5]
+            # drdx = np.clip(drdp[0],-0.02,0.02)
+            # drdy = np.clip(drdp[1],-0.01,0.01)
+            # drdz = np.clip(drdp[2],-0.02,0.02)
+            # drda = np.clip(drdp[3],-0.02,0.02)
+            # drdb = np.clip(drdp[4],-0.15,0.15)
+            # drdc = np.clip(drdp[5],-0.02,0.02)
+            drdx = drdp[0]
+            drdy = drdp[1]
+            drdz = drdp[2]
+            drda = drdp[3]
+            drdb = drdp[4]
+            drdc = drdp[5]
             
             drdt = drdp[6]
           
@@ -363,10 +356,10 @@ class run_quad:
         self.d_input_traj_d_z = np.array(aux_sol['control_traj_opt'])
 
     def optimize(self, t):
-        tra_pos = self.obstacle1.centroid
-        tra_posx = self.obstacle1.centroid[0]
-        tra_posy = self.obstacle1.centroid[1]
-        tra_posz = self.obstacle1.centroid[2]
+        tra_pos = self.obstacle.centroid
+        tra_posx = self.obstacle.centroid[0]
+        tra_posy = self.obstacle.centroid[1]
+        tra_posz = self.obstacle.centroid[2]
         tra_a = 0
         tra_b = 0
         tra_c = 0
@@ -401,9 +394,9 @@ class run_quad:
 
     ## use random perturbations to calculate the gradient and update(not recommonded)
     def LSFD(self,t):
-        tra_posx = self.obstacle1.centroid[0]
-        tra_posy = self.obstacle1.centroid[1]
-        tra_posz = self.obstacle1.centroid[2]
+        tra_posx = self.obstacle.centroid[0]
+        tra_posy = self.obstacle.centroid[1]
+        tra_posz = self.obstacle.centroid[2]
         tra_a = 0
         tra_b = 0
         tra_c = 0
@@ -443,7 +436,7 @@ class run_quad:
         ## obtain the trajectory
         self.sol1 = self.uavoc1.ocSolver(horizon=self.horizon,dt=self.dt,Ulast=Ulast)
         state_traj1 = self.sol1['state_traj_opt']
-        traj = self.uav1.get_quadrotor_position(wing_len = self.wing_len, state_traj = state_traj1)
+        traj = self.uav1.get_quad_vert_pos(wing_len = self.wing_len, state_traj = state_traj1)
         ## plot the animation
         self.uav1.play_animation(wing_len = self.wing_len, state_traj = state_traj1,dt=self.dt, point1 = self.point1,\
             point2 = self.point2, point3 = self.point3, point4 = self.point4)
@@ -465,9 +458,7 @@ class run_quad:
                                                 tra_pos=tra_pos,
                                                 tra_ang=tra_ang,
                                                 dt=self.dt,
-                                                t_tra=t_tra,
-                                                max_tra_w = self.max_tra_w,
-                                                OPEN_LOOP = False)
+                                                t_tra=t_tra)
         
         # return control, pos_vel_cmd
         return self.sol1,NO_SOLUTION_FLAG
@@ -482,7 +473,7 @@ def sample(deviation):
 ##-----------------ellipse collision check-----------------##
 #############################################################
 # initialize the drone ellipse
-# self.obstacle1.reward_calc_sym(self.uav1,
+# self.obstacle.reward_calc_sym(self.uav1,
 #                                 quad_height=self.uav_height/2,
 #                                 quad_radius=self.wing_len/2,
 #                                 alpha=5,
@@ -497,8 +488,8 @@ def sample(deviation):
 #                                 # w_goal=0.1)    
 
 
-# reward,self.d_R_d_st_traj,gate_check_points=self.obstacle1.reward_calc_value(state_traj,
+# reward,self.d_R_d_st_traj,gate_check_points=self.obstacle.reward_calc_value(state_traj,
 #                                     self.gate_corners,
 #                                     goal_pos=self.goal_pos,
-#                                     vert_traj=self.traj[:,0:3],
+#                                     vert_traj=self.vert_traj[:,0:3],
 #                                     horizon=self.horizon)

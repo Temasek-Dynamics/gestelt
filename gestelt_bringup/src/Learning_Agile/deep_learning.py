@@ -25,7 +25,7 @@ output is the decision variables z. [x,y,z,a,b,c,t_traverse]
 [a,b,c] is the theta*k, k is the rotation axis
 """
 def calc_grad(config_dict,
-              quad_instance,
+              planner,
               inputs, 
               outputs, 
               gra):
@@ -53,7 +53,7 @@ def calc_grad(config_dict,
     
     
     # logging.info('inputs:',inputs)
-    quad_instance.init_state_and_mission(
+    planner.init_state_and_mission(
                 goal_pos=inputs[3:6],
                 goal_ori=final_q.tolist(),
                 
@@ -63,15 +63,13 @@ def calc_grad(config_dict,
    
 
     # initialize the narrow window
-    quad_instance.init_obstacle(gate_point.reshape(12),gate_pitch=inputs[8])
+    planner.init_obstacle(gate_point.reshape(12),gate_pitch=inputs[8])
 
 
     # receive the decision variables from DNN1, do the MPC, then calculate d_reward/d_z
-    Ulast_value=np.array([2,0.0,0.0,0.0])
-    gra[:] = quad_instance.sol_gradient(outputs[0:3].astype(np.float64),
-                                        outputs[3:6],
-                                        outputs[6],
-                                        Ulast_value)
+    gra[:] = planner.sol_gradient(outputs[0:3].astype(np.float64),
+                                 outputs[3:6],
+                                 outputs[6])
 
 def log_train_in_ouputs(writer,inputs,outputs,global_step):
 
@@ -103,26 +101,35 @@ if __name__ == '__main__':
     ###############################################################
     # initialization
     # Hyper-parameters 
-    TRAIN_FROM_CHECKPOINT = False
-    PDP_GRADIENT = True
-    USE_PREV_SOLVER = False
-    MULTI_CORE = False
-    ORIGIN_REWARD = True
+    options={
+    
+    'SQP_RTI_OPTION' : False,
+    'USE_PREV_SOLVER'  : False,
 
+    ## BACKWARD required
+    'MPC_BACKWARD' : True,
+    'ORIGIN_REWARD'  : False,
+    'PDP_GRADIENT' : True,
+    
+    
+    ## training option
+    'MULTI_CORE'  : False,
+    'TRAIN_FROM_CHECKPOINT' : False
+    }
     num_cores = 1 #5
     num_epochs = 100 #100
     batch_size = 40 # 100
     step_pre_epoch = 20
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-    if ORIGIN_REWARD:
-        PDP_GRADIENT = False
-        MULTI_CORE = True
+    if options['ORIGIN_REWARD']:
+        options['PDP_GRADIENT']= False
+        options['MULTI_CORE']=True
         num_cores = 20
         device = torch.device('cpu')
         batch_size = 100
 
-    if PDP_GRADIENT:
+    if options['PDP_GRADIENT']:
         learning_rate = 1e-4
         method_name = 'PDP'
     else:
@@ -162,16 +169,12 @@ if __name__ == '__main__':
     ###############################################################
     ###------------------ generate the solver ------------------###
     ###############################################################
-    quad_instance_list = []
+    planner_list = []
     # for each core, generate a quadrotor MPC solver
     for i in range(num_cores):
-        quad = run_quad(config_dict,  
-                    SQP_RTI_OPTION=False,
-                    USE_PREV_SOLVER=USE_PREV_SOLVER,
-                    PDP_GRADIENT=PDP_GRADIENT,
-                    ORIGIN_REWARD=ORIGIN_REWARD)
+        planner = PlanningForBackwardWrapper(config_dict, options)
         
-        quad_instance_list.append(quad)
+        planner_list.append(planner)
     
 
    
@@ -180,7 +183,7 @@ if __name__ == '__main__':
     ###############################################################
     
     
-    if TRAIN_FROM_CHECKPOINT:
+    if options['TRAIN_FROM_CHECKPOINT']:
         FILE = os.path.join(model_folder, "NN1_deep2_48.pth")
         # checkpoint = torch.load(FILE)
         # start_epoch = checkpoint['epoch']   
@@ -212,7 +215,7 @@ if __name__ == '__main__':
     for epoch in range(start_epoch,num_epochs):
         
             
-        if MULTI_CORE:
+        if options['MULTI_CORE']:
             with tqdm(total=int(batch_size/num_cores), desc=f'Epoch {epoch+1}/{num_epochs}', unit='epoch') as pbar:
                 
                 evalue = 0
@@ -251,7 +254,7 @@ if __name__ == '__main__':
                         
                         
                         p = Process(target=calc_grad,args=(config_dict,
-                                                        quad_instance_list[j],
+                                                        planner_list[j],
                                                         n_inputs[j],
                                                         n_out[j],
                                                         n_gra[j]))
@@ -307,6 +310,8 @@ if __name__ == '__main__':
 
         else:
             with tqdm(total=step_pre_epoch, desc=f'Epoch {epoch+1}/{num_epochs}', unit='epoch') as pbar:
+                evalue = 0
+                Iteration += [epoch+1]
                 for i in range(step_pre_epoch):
                     n_inputs = []
                     n_outputs = []
@@ -337,7 +342,7 @@ if __name__ == '__main__':
                         
                         # calculate gradient and loss
                         calc_grad(config_dict,
-                                quad_instance_list[0],
+                                planner_list[0],
                                 n_inputs[k,:].reshape(9),
                                 np_n_outputs[k,:].reshape(7),
                                 gra)
@@ -423,7 +428,7 @@ if __name__ == '__main__':
                         
                         
 #                         p = Process(target=calc_grad,args=(config_dict,
-#                                                         quad_instance_list[j],
+#                                                         planner_list[j],
 #                                                         n_inputs[j],
 #                                                         n_out[j],
 #                                                         n_gra[j]))

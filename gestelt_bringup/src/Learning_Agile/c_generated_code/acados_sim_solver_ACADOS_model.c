@@ -73,6 +73,7 @@ int ACADOS_model_acados_sim_create(ACADOS_model_sim_solver_capsule * capsule)
     const int np = ACADOS_MODEL_NP;
     bool tmp_bool;
 
+    
     double Tsim = 0.002;
 
     

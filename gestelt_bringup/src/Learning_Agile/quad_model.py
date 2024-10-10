@@ -44,6 +44,12 @@ class Quadrotor:
         # define desire traverse pose and time
         self.des_tra_r_I = vertcat(SX.sym('des_tra_rx'), SX.sym('des_tra_ry'), SX.sym('des_tra_rz'))
         self.des_tra_rodi_param=vertcat(SX.sym('des_tra_rodi_param0'),SX.sym('des_tra_rodi_param1'),SX.sym('des_tra_rodi_param2'))
+
+        ##==traverse pose 9D == ##
+        self.des_tra_m = vertcat(SX.sym('des_tra_m0'),SX.sym('des_tra_m1'),SX.sym('des_tra_m2'),\
+                                SX.sym('des_tra_m3'),SX.sym('des_tra_m4'),SX.sym('des_tra_m5'),\
+                                SX.sym('des_tra_m6'),SX.sym('des_tra_m7'),SX.sym('des_tra_m8'))
+        
         self.des_tra_q = vertcat(SX.sym('des_tra_q0'), SX.sym('des_tra_q1'), SX.sym('des_tra_q2'), SX.sym('des_tra_q3'))
         self.des_t_tra = SX.sym('des_t_tra')
         self.t_node = SX.sym('t_node')
@@ -268,7 +274,7 @@ class Quadrotor:
         # self.cost_q_g = 2-sqrt(1+trace(mtimes(transpose(goal_R_B_I), R_B_I)))
 
         self.cost_q_g = 0
-        ## Chordal distance
+        ## squared Chordal distance
         for i in range(3):
             self.cost_q_g += dot(R_B_I[i, :] - goal_R_B_I[i, :], R_B_I[i, :] - goal_R_B_I[i, :])
 
@@ -365,7 +371,7 @@ class Quadrotor:
         self.dyn_fn = casadi.Function('dyn', [X0, U], [X])
 
     ## below is for animation (demo)
-    def get_quadrotor_position(self, wing_len, state_traj):
+    def get_quad_vert_pos(self, wing_len, state_traj):
 
         # thrust_position in body frame
         r1 = vertcat(wing_len*0.5/ sqrt(2) , wing_len*0.5/ sqrt(2) , 0)
@@ -405,7 +411,7 @@ class Quadrotor:
 
         return position
     
-    def get_quadrotor_position_tensor(self, wing_len, state_traj):
+    def get_quad_vert_pos_tensor(self, wing_len, state_traj):
         # thrust_position in body frame
         r1 = torch.tensor([wing_len * 0.5 / torch.sqrt(torch.tensor(2.0)),
                         wing_len * 0.5 / torch.sqrt(torch.tensor(2.0)), 0.0], dtype=state_traj.dtype)
@@ -525,13 +531,13 @@ class Quadrotor:
             ax.plot([point3[0],point4[0]],[point3[1],point4[1]],[point3[2],point4[2]],linewidth=1,color='red',linestyle='-')
             ax.plot([point4[0],point1[0]],[point4[1],point1[1]],[point4[2],point1[2]],linewidth=1,color='red',linestyle='-')
         # data
-        position = self.get_quadrotor_position(wing_len, state_traj)
+        position = self.get_quad_vert_pos(wing_len, state_traj)
         sim_horizon = np.size(position, 0)
 
         if state_traj_ref is None:
-            position_ref = self.get_quadrotor_position(0, numpy.zeros_like(position))
+            position_ref = self.get_quad_vert_pos(0, numpy.zeros_like(position))
         else:
-            position_ref = self.get_quadrotor_position(wing_len, state_traj_ref)
+            position_ref = self.get_quad_vert_pos(wing_len, state_traj_ref)
 
         ## plot the process of moving window and quadrotor
         #for i in range(10):
@@ -857,7 +863,7 @@ class Quadrotor:
                      tra_node=None):
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
-        position = self.get_quadrotor_position(wing_len, state_traj)
+        position = self.get_quad_vert_pos(wing_len, state_traj)
 
         
 

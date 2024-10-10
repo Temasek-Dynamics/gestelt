@@ -587,13 +587,10 @@ class OCSys:
                     goal_pos,
                     goal_ori,
                     auxvar_value=1, 
-                    costate_option=0,
                     dt=0.1,
                     tra_pos=np.array([0,0,1.5]),
                     tra_ang=np.array([0,0,0]),
-                    t_tra=1.0,
-                    max_tra_w=60,
-                    OPEN_LOOP = False):
+                    t_tra=1.0):
         """
         This function is to solve the optimal control problem using ACADOS
         """

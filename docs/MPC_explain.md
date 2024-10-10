@@ -44,7 +44,7 @@ where:
 3. In the `quad_model.py`
     1. MPC cost function and the Drone Dynamic in `CasADi` symbolic function format is defined. `acados` will use the symbolic function as well.
 4. In the `quad_policy.py`
-    1. the initialization of the class `run_quad` will define: 
+    1. the initialization of the class `PlanningForBackwardWrapper` will define: 
         1. the initial state of the drone for the **python simulation**.  
         2. the drone dynamics values.
         3. the weight of each cost term.
