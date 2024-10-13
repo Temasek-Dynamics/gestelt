@@ -99,7 +99,7 @@ class LearningAgileAgent():
         self.hl_variable = [self.hl_para]
         
 
-        self.planner = PlanningForBackwardWrapper(self.config_dict,options=self.options)
+        self.planner = PlanningForBackwardWrapper(self.config_dict,self.options)
         
  
         # set the dynamics step of the python sim (Explict Euler, ERK4)
@@ -310,12 +310,13 @@ class LearningAgileAgent():
                     
 
                     # manually set the traversal time and pose
-                    out=np.zeros(7)
+                    out=np.zeros(13)
                     out[0:3]=self.gate_center
-                    out[3:6]=self.gate_ori_RP # Rodrigues parameters
+                    # out[3:6]=self.gate_ori_RP # Rodrigues parameters
+                    out[3:12]=np.identity(3).flatten() # 9D vector
                     des_trav_pos=out[0:3]
                     # relative traversal time
-                    out[6]=self.t_tra_rel
+                    out[12]=self.t_tra_rel
 
                     self.log_NN_IO(nn2_inputs,out)       
                 else:
@@ -332,8 +333,8 @@ class LearningAgileAgent():
                 
                 cmd_solution,NO_SOLUTION_FLAG  = self.planner.mpc_update(self.state,
                                                     des_trav_pos,
-                                                    out[3:6],
-                                                    out[6]) # control input 4-by-1 thrusts to pybullet
+                                                    out[3:12],
+                                                    out[12]) # control input 4-by-1 thrusts to pybullet
                 
                 
                 print('solving time at main=',time.time()-t_comp)

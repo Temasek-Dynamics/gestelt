@@ -5,21 +5,31 @@ import numpy as np
 # from differentiable_collision_wrapper import *
 import casadi as ca
 import torch
-
-
-# def SVD_M_to_SO3(m: ca.SM):
-#     """Maps 3x3 matrices onto SO(3) via symmetric orthogonalization using CasADi with symbolic matrix."""
-#     # Perform singular value decomposition using CasADi
-#     U, S, V = ca.svd(m)  # CasADi returns U, S, V (note V is not transposed)
+from casadi import Opti
+def SVD_M_to_SO3(m_flatten):
+    m=ca.reshape(m_flatten,3,3)
+    """Maps 3x3 matrices onto SO(3) via symmetric orthogonalization using CasADi with symbolic matrix."""
+    # Perform singular value decomposition using CasADi
+    mTm = ca.mtimes(m.T, m)
+    eigenvalues=ca.eig_symbolic(mTm)
     
-#     # Calculate the determinant of the product of U and V.T
-#     det = ca.det(ca.mtimes(U, V.T))
+    ## get mTm's eigenvectors
+    opti=Opti()
+    V=opti.variable(3,3)
     
-#     # Adjust the last column of U based on the determinant
-#     U[:, -1] = U[:, -1] * det
+    opti.subject_to(ca.mtimes(V.T,V)==ca.eye(3))
+    singular_values=ca.sqrt(eigenvalues)
+    S=ca.diag(singular_values)
+    U=ca.mtimes(ca.mtimes(m,V),ca.diag(1/singular_values))
     
-#     # Return the orthogonalized matrix
-#     return ca.mtimes(U, V.T)  # Return U * V^T (which is orthogonalized)
+    # Calculate the determinant of the product of U and V.T
+    det = ca.det(ca.mtimes(U, V.T))
+    
+    # Adjust the last column of U based on the determinant
+    U[:, -1] = U[:, -1] * det
+    
+    # Return the orthogonalized matrix
+    return ca.mtimes(U, V.T)  # Return U * V^T (which is orthogonalized)
 
 ## return the maginitude of a vector
 def magni(vector):

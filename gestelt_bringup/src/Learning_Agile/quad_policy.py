@@ -429,17 +429,17 @@ class PlanningForBackwardWrapper():
         return [current_para, j,self.collision,self.path]        
 
     ## play the animation for one set of high-level paramters of such a scenario
-    def play_ani(self, tra_pos=None,tra_ang=None, t = 3,Ulast = None):
-        tra_atti = Rd2Rp(tra_ang)
-        self.uav1.init_TraCost(tra_pos,tra_atti)
-        self.uavoc1.setTraCost(self.uav1.tra_cost,t)
-        ## obtain the trajectory
-        self.sol1 = self.uavoc1.ocSolver(horizon=self.horizon,dt=self.dt,Ulast=Ulast)
-        state_traj1 = self.sol1['state_traj_opt']
-        traj = self.uav1.get_quad_vert_pos(wing_len = self.wing_len, state_traj = state_traj1)
-        ## plot the animation
-        self.uav1.play_animation(wing_len = self.wing_len, state_traj = state_traj1,dt=self.dt, point1 = self.point1,\
-            point2 = self.point2, point3 = self.point3, point4 = self.point4)
+    # def play_ani(self, tra_pos=None,tra_ang=None, t = 3,Ulast = None):
+    #     tra_atti = Rd2Rp(tra_ang)
+    #     self.uav1.init_TraCost(tra_pos,tra_atti)
+    #     self.uavoc1.setTraCost(self.uav1.tra_cost,t)
+    #     ## obtain the trajectory
+    #     self.sol1 = self.uavoc1.ocSolver(horizon=self.horizon,dt=self.dt,Ulast=Ulast)
+    #     state_traj1 = self.sol1['state_traj_opt']
+    #     traj = self.uav1.get_quad_vert_pos(wing_len = self.wing_len, state_traj = state_traj1)
+    #     ## plot the animation
+    #     self.uav1.play_animation(wing_len = self.wing_len, state_traj = state_traj1,dt=self.dt, point1 = self.point1,\
+    #         point2 = self.point2, point3 = self.point3, point4 = self.point4)
     
     ## given initial state, control command, high-level parameters, obtain the first control command of the quadrotor
     def mpc_update(self, 

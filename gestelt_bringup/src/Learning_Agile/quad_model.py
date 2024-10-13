@@ -49,7 +49,6 @@ class Quadrotor:
         self.des_tra_m = vertcat(SX.sym('des_tra_m0'),SX.sym('des_tra_m1'),SX.sym('des_tra_m2'),\
                                 SX.sym('des_tra_m3'),SX.sym('des_tra_m4'),SX.sym('des_tra_m5'),\
                                 SX.sym('des_tra_m6'),SX.sym('des_tra_m7'),SX.sym('des_tra_m8'))
-        
         self.des_tra_q = vertcat(SX.sym('des_tra_q0'), SX.sym('des_tra_q1'), SX.sym('des_tra_q2'), SX.sym('des_tra_q3'))
         self.des_t_tra = SX.sym('des_t_tra')
         self.t_node = SX.sym('t_node')
@@ -319,14 +318,27 @@ class Quadrotor:
         self.des_tra_rodi_param 
 
         """
-        # replaced by symbolic variables: des_tra_r_I, des_tra_q
-        tra_atti = Rd2Rp_casadi(self.des_tra_rodi_param)
-        self.des_tra_q=toQuaternion_casadi(tra_atti[0],tra_atti[1])
+    
+        ## set traverse pose as the auxiliary variables (hyperparameters)
+        # self.trav_auxvar = vertcat(self.des_tra_r_I, self.des_tra_rodi_param,self.des_t_tra)
+        self.trav_auxvar = vertcat(self.des_tra_r_I, self.des_tra_m,self.des_t_tra)
 
+        ##=== Rodrigues parameters version ===##
+        # replaced by symbolic variables: des_tra_r_I, des_tra_q
+        # tra_atti = Rd2Rp_casadi(self.des_tra_rodi_param)
+        # self.des_tra_q=toQuaternion_casadi(tra_atti[0],tra_atti[1])
+        # tra_R_B_I = dir_cosine(self.des_tra_q)
+        
+        ##============== 9D version ==========##
+        tra_R_B_I= SVD_M_to_SO3(self.des_tra_m)
+
+       
+
+        ## =========== traverse cost =========##
+        # posotion error
         self.cost_r_I_t = dot(self.r_I - self.des_tra_r_I, self.r_I - self.des_tra_r_I)
 
-        # traverse attitude error
-        tra_R_B_I = dir_cosine(self.des_tra_q)
+        # attitude error
         R_B_I = dir_cosine(self.q)
         # self.cost_q_t = trace(np.identity(3) - mtimes(transpose(tra_R_B_I), R_B_I))
         self.cost_q_t = 0
@@ -341,8 +353,7 @@ class Quadrotor:
          
                     
         
-        ## set traverse pose as the auxiliary variables (hyperparameters)
-        self.trav_auxvar = vertcat(self.des_tra_r_I, self.des_tra_rodi_param,self.des_t_tra)
+       
 
     def setDyn(self, dt):       
 
