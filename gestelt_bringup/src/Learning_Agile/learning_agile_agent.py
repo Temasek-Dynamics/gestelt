@@ -23,7 +23,7 @@ from quad_moving import *
 from result_analysis import *
 import numpy as np
 import time
-
+from solid_geometry import *
 
 
 device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -99,7 +99,7 @@ class LearningAgileAgent():
         self.hl_variable = [self.hl_para]
         
 
-        self.planner = PlanningForBackwardWrapper(self.config_dict,self.options)
+        self.planner = PlanFwdBwdWrapper(self.config_dict,self.options)
         
  
         # set the dynamics step of the python sim (Explict Euler, ERK4)
@@ -234,7 +234,10 @@ class LearningAgileAgent():
         
         
        
-    def log_NN_IO(self,nn2_inputs,out):
+    def log_NN_IO_for_RP(self,nn2_inputs,out):
+        """
+        record the NN output Rodrigues parameters, convert it to quaternion
+        """
         atti = Rd2Rp(out[3:6])
         quat_nn=toQuaternion(atti[0],atti[1])
         
@@ -242,6 +245,15 @@ class LearningAgileAgent():
         
         self.NN_T_tra = np.concatenate((self.NN_T_tra,[out[6]]),axis = 0)
         self.nn_output_list=np.concatenate((self.nn_output_list,[out_as_quat]),axis = 0)
+        self.Pitch = np.concatenate((self.Pitch,[nn2_inputs[14]]),axis = 0) 
+
+    def log_NN_IO_for_RM(self,nn2_inputs,out,des_tra_R):
+        """
+        record the NN output raw 9D vector and converted rotation matrix
+        """
+        self.NN_T_tra = np.concatenate((self.NN_T_tra,[out[6]]),axis = 0)
+        self.nn_output_list=np.concatenate((self.nn_output_list,[out]),axis = 0)
+        self.des_tra_R_list = np.concatenate((self.des_tra_R_list,[des_tra_R]),axis = 0)
         self.Pitch = np.concatenate((self.Pitch,[nn2_inputs[14]]),axis = 0) 
 
     def close_loop_model_forward(self):
@@ -290,7 +302,8 @@ class LearningAgileAgent():
         
         self.state = self.planner.ini_state # state= feedback from pybullet, 13-by-1, 3 position, 3 velocity (world frame), 4 quaternion, 3 angular rate
         self.state_n = [self.state]
-        self.nn_output_list = [np.zeros(8)] # 3 position, 4 quaternion, 1 traversal time
+        self.nn_output_list = [np.zeros(13)] # 3 position, 4 quaternion, 1 traversal time
+        self.des_tra_R_list = [np.zeros(9)] # 3x3 rotation matrix(in flat form)
         for self.i in range(self.sim_time*(int(1/self.dyn_step))): # 5s, 500 Hz
             
             self.Time = np.concatenate((self.Time,[self.i*self.dyn_step]),axis = 0)
@@ -313,14 +326,40 @@ class LearningAgileAgent():
                     out=np.zeros(13)
                     out[0:3]=self.gate_center
                     # out[3:6]=self.gate_ori_RP # Rodrigues parameters
-                    out[3:12]=np.identity(3).flatten() # 9D vector
-                    des_trav_pos=out[0:3]
-                    # relative traversal time
-                    out[12]=self.t_tra_rel
+                    out[3:12]=np.array([[0.7603140,  0.0000000, -0.6495557],
+                                        [0.0000000,  1.0000000,  0.0000000],
+                                        [0.6495557,  0.0000000,  0.7603140]]).flatten() # 3x3 rotation matrix(in flat form)
+                    print("="*50)
+                    print("NN pose det before SVD",np.linalg.det(out[3:12].reshape(3,3)))
+                    
+                    des_tra_pos=out[0:3]
 
-                    self.log_NN_IO(nn2_inputs,out)       
+                    
+
+                    if self.options['JAX_SVD']:
+                        ### SVD through JAX
+                        des_tra_R=SVD_M_to_SO3(out[3:12]).flatten() # 9D vector to 3x3 rotation matrix(in flat form)
+                        print("NN pose det after SVD",np.linalg.det(des_tra_R.reshape(3,3)))
+                        # relative traversal time
+                        out[12]=self.t_tra_rel
+                        self.log_NN_IO_for_RM(nn2_inputs,out,des_tra_R) 
+                    else:
+                        ### SVD through CasADi
+                        des_tra_m=out[3:12].flatten()
+
+                        ## call the SVD casADi function separately, to verify the SVD result
+                        svd= SVD()
+                        SVD_func=svd.SVD_M_to_SO3_casadi_func()
+                        verify_tra_R,sigma=SVD_func(des_tra_m)
+                        verify_tra_R=verify_tra_R.toarray()
+                        print("sigma=",sigma)
+                        print("NN pose det after SVD",np.linalg.det(verify_tra_R))
+                        # relative traversal time
+                        out[12]=self.t_tra_rel
+
+                        self.log_NN_IO_for_RM(nn2_inputs,out,verify_tra_R.flatten())       
                 else:
-                    des_trav_pos=self.gate_t_i.centroid+out[0:3]
+                    des_tra_pos=self.gate_t_i.centroid+out[0:3]
                     if self.options['CLOSE_LOOP_MODEL']:
                         out = self.close_loop_model_forward()
                     else:
@@ -330,12 +369,16 @@ class LearningAgileAgent():
                 
                 
                     
-                
-                cmd_solution,NO_SOLUTION_FLAG  = self.planner.mpc_update(self.state,
-                                                    des_trav_pos,
-                                                    out[3:12],
-                                                    out[12]) # control input 4-by-1 thrusts to pybullet
-                
+                if self.options['JAX_SVD']:
+                    cmd_solution,NO_SOLUTION_FLAG  = self.planner.mpc_update(self.state,
+                                                        des_tra_pos,
+                                                        des_tra_R,#des_tra_R, SVD JAX output
+                                                        out[12]) # control input 4-by-1 thrusts to pybullet
+                else:
+                    cmd_solution,NO_SOLUTION_FLAG  = self.planner.mpc_update(self.state,
+                                                        des_tra_pos,
+                                                        des_tra_m,#des_tra_m, 9D vector
+                                                        out[12])
                 
                 print('solving time at main=',time.time()-t_comp)
                 self.solving_time.append(time.time()- t_comp)
@@ -347,6 +390,7 @@ class LearningAgileAgent():
                 # test_u=np.array([2.6,0,0,0])
                 # if self.i>=500:
                 #     test_u=np.array([4.6,160,0,0])
+                
 
             ########################################################
             ###================= state update====================###
@@ -371,7 +415,7 @@ class LearningAgileAgent():
 
 
             # re-normalize the quaternion
-            # self.state[6:10] = self.state[6:10]/np.linalg.norm(self.state[6:10])
+            # self.state[6:10] = self.state[6:10]jnp.linalg.det(U),jnp.linalg.det(Vh))/np.linalg.norm(self.state[6:10])
 
 
             self.state_n = np.concatenate((self.state_n,[self.state]),axis = 0)
@@ -395,6 +439,7 @@ class LearningAgileAgent():
         np.save(os.path.join(python_sim_data_folder,'HL_Variable'),self.hl_variable)
         np.save(os.path.join(python_sim_data_folder,'solving_time'),self.solving_time)
         np.save(os.path.join(python_sim_data_folder,'nn_output_list'),self.nn_output_list)
+        np.save(os.path.join(python_sim_data_folder,'des_tra_R_list'),self.des_tra_R_list)
         self.planner.uav1.play_animation(wing_len=self.planner.wing_len,
                                        gate_traj1=self.gate_points_list[::5,:,:],
                                        state_traj=self.state_n[::5,:],
@@ -422,6 +467,7 @@ class LearningAgileAgent():
         self.planner.uav1.plot_solving_time(self.solving_time)
         python_sim_npy_parser(uav_traj=self.state_n,
                               nn_output_list=self.nn_output_list,
+                              des_tra_R_list=self.des_tra_R_list,
                               gate_pitch=self.Pitch)
         self.planner.uav1.plot_3D_traj(wing_len=self.planner.wing_len,
                                     uav_height=self.planner.uav_height/2,
@@ -450,6 +496,7 @@ def main():
     options['SQP_RTI_OPTION']=True
     options['STATIC_GATE_TEST']=True
     options['CLOSE_LOOP_MODEL']= False
+    options['JAX_SVD']=True
 
     if options['CLOSE_LOOP_MODEL']:
         model_name = 'NN_close_0.pth'#'NN2_imitate_1.pth' #'NN_close_2.pth'

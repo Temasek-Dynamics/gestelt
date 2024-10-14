@@ -12,7 +12,7 @@ import numpy as np
 import torch
 from casadi import *
 import logging
-class PlanningForBackwardWrapper():
+class PlanFwdBwdWrapper():
     """
     Wrapper the MPC forward and backward process
     """
@@ -26,7 +26,7 @@ class PlanningForBackwardWrapper():
         self.wing_len = config['drone']['wing_len'] 
         self.uav_height = config['drone']['height']
         # --------------------------- create model1 ----------------------------------------
-        self.uav1 = Quadrotor()
+        self.uav1 = Quadrotor(options)
         # jx, jy, jz = 0.0023, 0.0023, 0.004
         # self.uav1.initDyn(Jx=0.0023,Jy=0.0023,Jz=0.004,mass=0.5,l=0.35,c=0.0245) # hb quadrotor
 

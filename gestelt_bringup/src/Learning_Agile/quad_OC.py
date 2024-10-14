@@ -576,7 +576,7 @@ class OCSys:
         sim.solver_options.num_stages = 4
         sim.solver_options.num_steps = 4
         sim.solver_options.newton_iter = 3 # for implicit integrator
-        sim.parameter_values = np.zeros((18))
+        sim.parameter_values = np.zeros(self.n_state+self.trav_auxvar.numel()+1) 
         build=True
         generate=True
         self.acados_integrator = AcadosSimSolver(sim, cmake_builder=None, generate=generate, build=build)

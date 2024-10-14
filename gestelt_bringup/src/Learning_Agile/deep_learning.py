@@ -105,6 +105,7 @@ if __name__ == '__main__':
     
     'SQP_RTI_OPTION' : False,
     'USE_PREV_SOLVER'  : False,
+    'JAX_SVD' : False, # JAX_SVD or CasADi_SVD
 
     ## BACKWARD required
     'MPC_BACKWARD' : True,
@@ -172,7 +173,7 @@ if __name__ == '__main__':
     planner_list = []
     # for each core, generate a quadrotor MPC solver
     for i in range(num_cores):
-        planner = PlanningForBackwardWrapper(config_dict, options)
+        planner = PlanFwdBwdWrapper(config_dict, options)
         
         planner_list.append(planner)
     

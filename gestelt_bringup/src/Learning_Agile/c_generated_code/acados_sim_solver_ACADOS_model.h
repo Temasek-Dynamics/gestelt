@@ -37,7 +37,7 @@
 #define ACADOS_MODEL_NX     10
 #define ACADOS_MODEL_NZ     0
 #define ACADOS_MODEL_NU     4
-#define ACADOS_MODEL_NP     18
+#define ACADOS_MODEL_NP     24
 
 #ifdef __cplusplus
 extern "C" {
@@ -57,7 +57,7 @@ typedef struct ACADOS_model_sim_solver_capsule
 
     /* external functions */
     // ERK
-    external_function_param_casadi * sim_forw_vde_casadi;
+    external_function_param_casadi * sim_expl_vde_forw;
     external_function_param_casadi * sim_vde_adj_casadi;
     external_function_param_casadi * sim_expl_ode_fun_casadi;
     external_function_param_casadi * sim_expl_ode_hess;

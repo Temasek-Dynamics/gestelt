@@ -7,7 +7,7 @@ device = torch.device('cpu')#torch.device('cuda' if torch.cuda.is_available() el
 # Hyper-parameters 
 input_size = 9 
 hidden_size = 64 
-output_size = 7
+output_size = 13 #tra_pos, tra_9D_orientation, traversing_time
 num_epochs = 3
 batch_size = 10000
 learning_rate = 2e-5

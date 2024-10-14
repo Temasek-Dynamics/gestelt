@@ -5,31 +5,79 @@ import numpy as np
 # from differentiable_collision_wrapper import *
 import casadi as ca
 import torch
+import jax
+import jax.numpy as jnp
+from einops import rearrange
+import copy
 from casadi import Opti
-def SVD_M_to_SO3(m_flatten):
-    m=ca.reshape(m_flatten,3,3)
-    """Maps 3x3 matrices onto SO(3) via symmetric orthogonalization using CasADi with symbolic matrix."""
-    # Perform singular value decomposition using CasADi
-    mTm = ca.mtimes(m.T, m)
-    eigenvalues=ca.eig_symbolic(mTm)
-    
-    ## get mTm's eigenvectors
-    opti=Opti()
-    V=opti.variable(3,3)
-    
-    opti.subject_to(ca.mtimes(V.T,V)==ca.eye(3))
-    singular_values=ca.sqrt(eigenvalues)
-    S=ca.diag(singular_values)
-    U=ca.mtimes(ca.mtimes(m,V),ca.diag(1/singular_values))
-    
-    # Calculate the determinant of the product of U and V.T
-    det = ca.det(ca.mtimes(U, V.T))
-    
-    # Adjust the last column of U based on the determinant
-    U[:, -1] = U[:, -1] * det
-    
-    # Return the orthogonalized matrix
-    return ca.mtimes(U, V.T)  # Return U * V^T (which is orthogonalized)
+
+
+def qr_eigen(A, iterations=10):
+    """ 
+    perform the QR algorithm for eigenvalue decomposition
+    source code from https://gist.github.com/edxmorgan/51bdb566592a3bc0e386db1f8c50104b
+    """
+    pQ = ca.SX.eye(A.size1())
+    X = copy.deepcopy(A)
+    for _ in range(iterations):
+        Q, R = ca.qr(X)  # QR decomposition in CasADi
+        pQ = pQ @ Q # Update eigenvector matrix for next iteration
+        X = R @ Q  # Update eigenvalue matrix for next iteration
+    return ca.diag(X), pQ    
+
+def mat2vec(mat, dimb=3):
+    # Same as table.T.reshape(-1, 1)
+    return rearrange(mat, "a b -> (b a)", a=3, b=dimb)
+
+
+def vec2mat(vec, dimb=3):
+    return rearrange(vec, "(b a) -> a b", a=3, b=dimb)
+
+@jax.jit
+def SVD_M_to_SO3(m: np.ndarray) -> np.ndarray:
+    """Maps 3x3 matrices onto SO(3) via symmetric orthogonalization.
+    Source: Google research - https://github.com/google-research/google-research/blob/193eb9d7b643ee5064cb37fd8e6e3ecde78737dc/special_orthogonalization/utils.py#L93-L115
+    """
+    m=m.reshape(3,3)
+    m = jnp.asarray(m)
+    U, _, Vh = jnp.linalg.svd(m, full_matrices=False)
+    det = jnp.linalg.det(jnp.matmul(U, Vh))
+    R= jnp.matmul(jnp.c_[U[:, :-1], U[:, -1] * det], Vh)
+    return R
+
+class SVD():
+    def __init__(self):
+        self.m_flatten = ca.SX.sym('m_flatten',9)
+        self.sigma = ca.SX.sym('sigma',3,3)
+
+    def SVD_M_to_SO3_casadi(self,m_flatten):
+        self.m_flatten = m_flatten
+        m=ca.reshape(m_flatten,3,3)
+        """Maps 3x3 matrices onto SO(3) via symmetric orthogonalization using CasADi with symbolic matrix."""
+        # Perform singular value decomposition using CasADi
+        mTm = ca.mtimes(m.T, m)
+        self.sigma, V = qr_eigen(mTm)
+        
+
+        singular_val=ca.sqrt(self.sigma)
+        U=ca.mtimes(ca.mtimes(m,V),ca.diag(1/singular_val))
+        
+        # Calculate the determinant of the product of U and V.T
+        det = ca.det(ca.mtimes(U, V.T))
+        
+        # Adjust the last column of U based on the determinant
+        U[:, -1] = U[:, -1] * det
+        
+        # Return the orthogonalized matrix
+        return ca.mtimes(U, V.T)  # Return U * V^T (which is orthogonalized)
+
+    def SVD_M_to_SO3_casadi_func(self):
+        """
+        this function wrap the symbolic SVD_M_to_SO3_casadi function
+        """
+        SVD_func = ca.Function('SVD_func', [self.m_flatten], [self.SVD_M_to_SO3_casadi(self.m_flatten),self.sigma])
+        
+        return SVD_func
 
 ## return the maginitude of a vector
 def magni(vector):

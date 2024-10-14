@@ -18,8 +18,9 @@ def trace_I_minus_RdT_R(Rd, theta):
 def chordal_distance(Rd, theta):
     R = rotation_matrix_z(theta)
     c_dis = 0
-    for i in range(3):
-        c_dis += np.dot(Rd[:,i]-R[:,i],Rd[:,i]-R[:,i])
+    # for i in range(3):
+    #     c_dis += np.dot(Rd[:,i]-R[:,i],Rd[:,i]-R[:,i])
+    c_dis = np.dot(np.linalg.norm(Rd-R),np.linalg.norm(Rd-R))
     return c_dis
 
 # 定义期望旋转矩阵 R_d (例如设为单位矩阵，即无旋转)

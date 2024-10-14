@@ -85,7 +85,7 @@ if __name__ == '__main__':
     options['USE_PREV_SOLVER']=False
     
     # generate the solver
-    quad1 = PlanningForBackwardWrapper(config_dict, options)
+    quad1 = PlanFwdBwdWrapper(config_dict, options)
     
     for epoch in range(int(num_epochs/num_cores)):
         n_inputs = []
