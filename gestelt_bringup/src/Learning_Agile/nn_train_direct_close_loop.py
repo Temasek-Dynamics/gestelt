@@ -9,7 +9,7 @@ from quad_policy import *
 from multiprocessing import Process, Array
 import rospy
 import yaml
-from logger_config import LoggerConfig
+from gestelt_bringup.src.Learning_Agile.logger_misc import LoggerConfig
 import logging
 from tqdm import tqdm
 from torch.utils.tensorboard import SummaryWriter

@@ -249,7 +249,7 @@ class LearningAgileAgent():
 
     def log_NN_IO_for_RM(self,nn2_inputs,out,des_tra_R):
         """
-        record the NN output raw 9D vector and converted rotation matrix
+        record the NN output raw 9D vector and converted Rotation Matrix
         """
         self.NN_T_tra = np.concatenate((self.NN_T_tra,[out[6]]),axis = 0)
         self.nn_output_list=np.concatenate((self.nn_output_list,[out]),axis = 0)
@@ -277,7 +277,7 @@ class LearningAgileAgent():
         return out 
     
     def imitate_model_forward(self):
-        nn2_inputs = np.zeros(15)
+        nn2_inputs = np.zeros(23)
          # drone state under the predicted gate frame(based on the binary search)
         nn2_inputs[0:10] = self.gate_t_i.transform(self.state)
         nn2_inputs[10:13] = self.gate_t_i.t_final(self.final_point)
@@ -285,14 +285,19 @@ class LearningAgileAgent():
         # width of the gate
         nn2_inputs[13] = magni(self.gate_t_i.gate_point[0,:]-self.gate_t_i.gate_point[1,:]) # gate width
         # pitch angle of the gate
-        nn2_inputs[14] = atan((self.gate_t_i.gate_point[0,2]-self.gate_t_i.gate_point[1,2])/(self.gate_t_i.gate_point[0,0]-self.gate_t_i.gate_point[1,0])) # compute the actual gate pitch ange in real-time
+        gate_pitch = atan((self.gate_t_i.gate_point[0,2]-self.gate_t_i.gate_point[1,2])/(self.gate_t_i.gate_point[0,0]-self.gate_t_i.gate_point[1,0])) # compute the actual gate pitch ange in real-time
         
+        ##==calculate the gate RM
+        rot=R.from_euler('zyx',[gate_pitch,0,0])
+        nn2_inputs[14:23]=rot.as_matrix().flatten()
         # NN2 OUTPUT the traversal time and pose
         out = self.model(torch.tensor(nn2_inputs, dtype=torch.float).to(device)).to('cpu')
         out = out.data.numpy()
         
-        self.log_NN_IO(nn2_inputs,out)       
+        verify_tra_R=verify_SVD_casadi(out[3:12])
+        self.log_NN_IO_for_RM(nn2_inputs,out,verify_tra_R.flatten())       
         return out
+    
 
     def forward_sim(self,python_sim_data_folder):
         """
@@ -317,7 +322,7 @@ class LearningAgileAgent():
                 
                 if self.options['STATIC_GATE_TEST']:
                     self.gate_state_estimation()
-                    nn2_inputs = np.zeros(15)
+                    nn2_inputs = np.zeros(23)
                     nn2_inputs[0:10] = self.state 
                     nn2_inputs[10:13] = self.final_point
                     
@@ -345,26 +350,20 @@ class LearningAgileAgent():
                         self.log_NN_IO_for_RM(nn2_inputs,out,des_tra_R) 
                     else:
                         ### SVD through CasADi
-                        des_tra_m=out[3:12].flatten()
+                        des_tra_m=out[3:12]
 
-                        ## call the SVD casADi function separately, to verify the SVD result
-                        svd= SVD()
-                        SVD_func=svd.SVD_M_to_SO3_casadi_func()
-                        verify_tra_R,sigma=SVD_func(des_tra_m)
-                        verify_tra_R=verify_tra_R.toarray()
-                        print("sigma=",sigma)
-                        print("NN pose det after SVD",np.linalg.det(verify_tra_R))
                         # relative traversal time
                         out[12]=self.t_tra_rel
-
+                        verify_tra_R=verify_SVD_casadi(out[3:12])
                         self.log_NN_IO_for_RM(nn2_inputs,out,verify_tra_R.flatten())       
                 else:
-                    des_tra_pos=self.gate_t_i.centroid+out[0:3]
+                    
                     if self.options['CLOSE_LOOP_MODEL']:
                         out = self.close_loop_model_forward()
                     else:
                         out = self.imitate_model_forward()
-                    
+                    des_tra_pos=self.gate_t_i.centroid+out[0:3]
+                    des_tra_m=out[3:12]
                 t_comp = time.time()
                 
                 
@@ -494,14 +493,14 @@ def main():
     options['USE_PREV_SOLVER']=False
     options['PDP_GRADIENT']=False
     options['SQP_RTI_OPTION']=True
-    options['STATIC_GATE_TEST']=True
+    options['STATIC_GATE_TEST']=False
     options['CLOSE_LOOP_MODEL']= False
-    options['JAX_SVD']=True
+    options['JAX_SVD']=False
 
     if options['CLOSE_LOOP_MODEL']:
         model_name = 'NN_close_0.pth'#'NN2_imitate_1.pth' #'NN_close_2.pth'
     else:   
-        model_name = '20240925-130606-FD-Trial_1/NN2_imitate_1.pth'
+        model_name = '20241015-202452-PDP-SVD(9D)_Trial_6/NN2_imitate_1.pth'
 
     model_file=os.path.join(current_dir, f'training_data/NN_model/',model_name)
     

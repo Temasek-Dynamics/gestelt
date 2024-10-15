@@ -14,7 +14,7 @@ gate:
   linear_vel: [0.0, 0.0, 0.0]
   angular_vel: 0.0 
   # linear_vel: [1.0,-0.3,0.0]
-  # angular_vel: 1.57
+  # angular_vel: -1.57
 traj_server:
   takeoff_height: 1.2
   drone_yaw: 0.0 # take-off yaw
@@ -85,7 +85,7 @@ learning_agile:
   wqt: 10.0
   wthrust: 1.0
   wwt: 5.0
-  wwt_z: 50
+  wwt_z: 5
   
   # path cost
   wrp: 10        ## too small, large deviation to the goal
@@ -107,7 +107,7 @@ learning_agile:
   ##------ MPC problem parameters---## 
   ## ---- hard coded in the solver ----##
   ## modify this required recompilation of the solver
-  horizon: 20
+  horizon: 40
   dt: 0.1
     
   ##------ model parameters --------##

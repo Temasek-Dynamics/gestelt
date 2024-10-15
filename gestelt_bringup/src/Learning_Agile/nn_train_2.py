@@ -8,6 +8,7 @@ import os
 import yaml
 from torch.utils.tensorboard import SummaryWriter
 import datetime
+from logger_misc import log_train_IO
 # Device configuration
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -17,8 +18,8 @@ with open(yaml_file, 'r', encoding='utf-8') as file:
     config_dict = yaml.safe_load(file)
 current_dir = os.path.dirname(os.path.abspath(__file__))
 training_data_folder=os.path.abspath(os.path.join(current_dir, 'training_data'))
-model_folder=os.path.abspath(os.path.join(training_data_folder, 'NN_model'))
-FILE_INPUT = model_folder+"/20240925-130606-FD-Trial_1/NN1_deep2_38.pth"
+model_folder=os.path.abspath(os.path.join(training_data_folder, 'NN_model/20241015-202452-PDP-SVD(9D)_Trial_6'))
+FILE_INPUT = model_folder+"/NN1_deep2_12.pth"
 model_nn1 = torch.load(FILE_INPUT).to(device)
 
 ##====== NN2 logging initialization ======##
@@ -29,9 +30,9 @@ writer = SummaryWriter(log_dir=file_dir)
 
 
 ##========== Hyper-parameters ============##
-input_size = 15 
+input_size = 23 
 hidden_size = 128 
-output_size = 7
+output_size = 13
 num_epochs = 16*200 #16*100
 batch_size = config_dict['learning_agile']['horizon']
 num_cores = 20
@@ -70,8 +71,8 @@ def traj(inputs, outputs, state_traj):
 
     quad1.mpc_update(quad1.ini_state,
                      outputs[0:3],
-                     outputs[3:6],
-                     outputs[6])
+                     outputs[3:12],
+                     outputs[-1])
     
     state_t = np.reshape(quad1.sol1['state_traj_opt'],(batch_size+1)*10)
     state_traj[:] = state_t
@@ -83,7 +84,7 @@ if __name__ == '__main__':
     options['MPC_BACKWARD']=False
     options['SQP_RTI_OPTION']=False
     options['USE_PREV_SOLVER']=False
-    
+    options['JAX_SVD']=False
     # generate the solver
     quad1 = PlanFwdBwdWrapper(config_dict, options)
     
@@ -121,16 +122,17 @@ if __name__ == '__main__':
             state_traj = np.reshape(n_traj[k],[(batch_size+1),10])
             for i in range(batch_size):  
         
-                inputs = np.zeros(15)
+                inputs = np.zeros(input_size)
                 inputs[0:10] = state_traj[i,:] # in world frame
                 inputs[10:13] = n_inputs[k][3:6] # final position
-                inputs[13:15] = n_inputs[k][7:9] # gap information, width and pitch angle
+                inputs[13:23] = n_inputs[k][7:17] # gap information, width and pitch angle
 
-                out = np.zeros(7)
-                out[0:6] = n_out[k][0:6]
-                out[6] = n_out[k][6]-i*0.10
+                out = np.zeros(output_size)
+                out[0:12] = n_out[k][0:12]
+                out[-1] = n_out[k][-1]-i*0.10
                 # print("current drone state:",inputs)
                 # print("current NN1 output",out)
+                log_train_IO(writer,n_inputs[k],out,epoch*num_cores+k)
                 t_out = torch.tensor(out, dtype=torch.float).to(device)
                 # Forward pass
                 pre_outputs = model_nn2(torch.tensor(inputs, dtype=torch.float).to(device))

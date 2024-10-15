@@ -280,20 +280,22 @@ class PlanFwdBwdWrapper():
         #=======================SYMBOLIC GRADIENT+PDP===========================
         ########################################################################
         else:
+
+            ## solve the PDP
             self.PDP_grad(tra_pos,tra_ang,t_tra)                
     
             
-            drdp=np.zeros(7)
+            drdp=np.zeros(13)
             for i in range(self.horizon):
-                drdp += np.matmul(self.d_R_d_st_traj[i,:,:],self.d_st_traj_d_z[i,:,:]).reshape(7)
+                drdp += np.matmul(self.d_R_d_st_traj[i,:,:],self.d_st_traj_d_z[i,:,:]).reshape(len(drdp))
 
-            drdp += np.matmul(self.d_R_d_st_traj[self.horizon,:,:],self.d_st_traj_d_z[self.horizon,:,:]).reshape(7)    
+            drdp += np.matmul(self.d_R_d_st_traj[self.horizon,:,:],self.d_st_traj_d_z[self.horizon,:,:]).reshape(len(drdp))   
             
             # clip the traverse time gradient
             # drdp[:]=np.clip(drdp[:],-0.1,0.1)
             
-            drdp[3] = drdp[3]#+self.drdroll
-            drdp[5] = drdp[5]#+self.drdyaw
+            # drdp[3] = drdp[3]+self.drdroll
+            # drdp[5] = drdp[5]+self.drdyaw
 
             drdp[6] = np.clip(drdp[6],-0.1,0.1)
 
@@ -304,19 +306,20 @@ class PlanFwdBwdWrapper():
             # drda = np.clip(drdp[3],-0.02,0.02)
             # drdb = np.clip(drdp[4],-0.15,0.15)
             # drdc = np.clip(drdp[5],-0.02,0.02)
-            drdx = drdp[0]
-            drdy = drdp[1]
-            drdz = drdp[2]
-            drda = drdp[3]
-            drdb = drdp[4]
-            drdc = drdp[5]
+            # drdx = drdp[0]
+            # drdy = drdp[1]
+            # drdz = drdp[2]
+            # drda = drdp[3]
+            # drdb = drdp[4]
+            # drdc = drdp[5]
             
-            drdt = drdp[6]
+            # drdt = drdp[6]
           
 
         
             # print("analytic grad:",np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,j]))
-            return np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,R])
+            # return np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,R])
+            return np.concatenate((drdp,np.array([R])))
     
     def PDP_grad(self, tra_pos,tra_ang,t_tra):
         ###################################################################
@@ -327,7 +330,7 @@ class PlanFwdBwdWrapper():
     
     
         ## set the traverse hyperparameters value (auxvar) here
-        trav_auxvar = np.array([tra_pos[0],tra_pos[1],tra_pos[2],tra_ang[0],tra_ang[1],tra_ang[2],t_tra])
+        trav_auxvar = np.concatenate((tra_pos,tra_ang,np.array([t_tra])))
         goal_state_value=np.concatenate((self.goal_pos,np.zeros(3),self.goal_ori))  
 
         

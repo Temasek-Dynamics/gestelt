@@ -28,7 +28,7 @@ gate_width = config_dict['gate']['width']
 
 ## sample an input for the neural network 1
 def nn_sample(init_pos=None,final_pos=None,init_angle=None,cur_epoch=100,pretrain=False):
-    inputs = np.zeros(9)
+    inputs = np.zeros(17)
     if init_pos is None:
         inputs[0:3] = np.random.uniform(-1,1,size=3) + pre_ini_pos #-5~5, -9
         if pretrain:
@@ -68,31 +68,43 @@ def nn_sample(init_pos=None,final_pos=None,init_angle=None,cur_epoch=100,pretrai
     ###==== curriculum learning ===###
     # 0 -> gate is horizontal
     # pi/2 -> gate is vertical
-    des_pitch_mean_min = 3*pi/10
-    des_pitch_mean_max = 3*pi/10
-    des_pitch_mean = des_pitch_mean_min - (des_pitch_mean_min - des_pitch_mean_max) * (cur_epoch / 100) 
-    inputs[8] = np.clip(np.random.normal(0,pi/18),-pi/6,pi/6) 
-    if inputs[8]>0:
-        inputs[8]=inputs[8]+des_pitch_mean
+    if pretrain:
+        des_pitch_mean_min = 0
+        des_pitch_mean_max = 0
     else:
-        inputs[8]=inputs[8]-des_pitch_mean
+        des_pitch_mean_min = 3*pi/10
+        des_pitch_mean_max = 3*pi/10
+    des_pitch_mean = des_pitch_mean_min - (des_pitch_mean_min - des_pitch_mean_max) * (cur_epoch / 100) 
+    gate_pitch = np.clip(np.random.normal(0,pi/18),-pi/6,pi/6) 
+    if gate_pitch>0:
+        gate_pitch=gate_pitch+des_pitch_mean
+    else:
+        gate_pitch=gate_pitch-des_pitch_mean
     
 
-    # inputs[8] = np.random.uniform(-pi/2,pi/2)
+    # gate_pitch = np.random.uniform(-pi/2,pi/2)
+
+    ##==calculate the gate RM
+    rot=R.from_euler('zyx',[gate_pitch,0,0])
+    inputs[8:17]=rot.as_matrix().flatten()
     return inputs
 
 ## define the expected output of an input (for pretraining)
 def t_output(inputs):
     inputs = np.array(inputs)
-    outputs = np.zeros(7)
+    outputs = np.zeros(13)
+    outputs[3:12]=np.eye(3).flatten()
+    # outputs[3:12] = np.array([[0.0007963,  0.0000000, -0.9999997],
+    #                         [0.0000000,  1.0000000,  0.0000000],
+    #                         [0.9999997,  0.0000000,  0.0007963]]).flatten()  
     #outputs[5] = math.tan(inputs[6]/2)
     ## traversal time is propotional to the distance of the centroids
     if inputs[1]>0:
         raw_time = -round(magni(inputs[0:3])/2,1)
     else:
         raw_time=round(magni(inputs[0:3])/2,1)
-    outputs[6] = raw_time #np.clip(raw_time,3,3)
-    print('desired_traversing_time',outputs[6])
+    outputs[-1] = raw_time #np.clip(raw_time,3,3)
+    print('desired_traversing_time',outputs[-1])
     return outputs
 
 ## sample a random gate (not necessary in our method) (not important)

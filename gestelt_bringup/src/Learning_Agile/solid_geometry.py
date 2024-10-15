@@ -2,7 +2,6 @@
 # this file is to do some calculation of solid geometry to do the collision detection of quadrotor
 # this file consists of several classes
 import numpy as np
-# from differentiable_collision_wrapper import *
 import casadi as ca
 import torch
 import jax
@@ -78,6 +77,17 @@ class SVD():
         SVD_func = ca.Function('SVD_func', [self.m_flatten], [self.SVD_M_to_SO3_casadi(self.m_flatten),self.sigma])
         
         return SVD_func
+    
+def verify_SVD_casadi(des_tra_m):
+        ## call the SVD casADi function separately, to verify the SVD result
+        svd= SVD()
+        SVD_func=svd.SVD_M_to_SO3_casadi_func()
+        verify_tra_R,sigma=SVD_func(des_tra_m)
+        verify_tra_R=verify_tra_R.toarray()
+        verify_tra_R=verify_tra_R.T
+        # print("sigma=",sigma)
+        # print("NN pose det after SVD",np.linalg.det(verify_tra_R))
+        return verify_tra_R
 
 ## return the maginitude of a vector
 def magni(vector):

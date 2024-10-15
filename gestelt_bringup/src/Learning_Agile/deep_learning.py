@@ -6,16 +6,19 @@ DNN1 should generate single one open loop MPC decision variables. supervised by 
 from quad_nn import *
 from quad_model import *
 from quad_policy import *
-from learning_agile_agent import MovingGate
+from learning_agile_agent import MovingGate,verify_SVD_casadi
 from multiprocessing import Process, Array
 import yaml
-from logger_config import LoggerConfig
+from logger_misc import LoggerConfig,log_gradient,log_train_IO
 import logging
 from tqdm import tqdm
 from torch.utils.tensorboard import SummaryWriter
 import datetime
 import os
 
+# from nn_train import input_size,output_size
+input_size=17
+output_size=13
 
 # for multiprocessing, obtain the gradient
 
@@ -68,32 +71,10 @@ def calc_grad(config_dict,
 
     # receive the decision variables from DNN1, do the MPC, then calculate d_reward/d_z
     gra[:] = planner.sol_gradient(outputs[0:3].astype(np.float64),
-                                 outputs[3:6],
-                                 outputs[6])
+                                 outputs[3:12],
+                                 outputs[-1])
 
-def log_train_in_ouputs(writer,inputs,outputs,global_step):
 
-    
-    writer.add_scalar('gate_pitch', inputs[8], global_step)
-  
-    writer.add_scalar('x_tra', outputs[0], global_step)
-    writer.add_scalar('y_tra', outputs[1], global_step)
-    writer.add_scalar('z_tra', outputs[2], global_step)
-    writer.add_scalar('Rx_tra', outputs[3], global_step)
-    writer.add_scalar('Ry_tra', outputs[4], global_step)
-    writer.add_scalar('Rz_tra', outputs[5], global_step)
-    writer.add_scalar('t_tra', outputs[6], global_step)
-    
-
-def log_gradient(writer,gra,global_step):
-    writer.add_scalar('drdx', gra[0], global_step)
-    writer.add_scalar('drdy', gra[1], global_step)
-    writer.add_scalar('drdz', gra[2], global_step)
-    writer.add_scalar('drda', gra[3], global_step)
-    writer.add_scalar('drdb', gra[4], global_step)
-    writer.add_scalar('drdc', gra[5], global_step)
-    writer.add_scalar('drdt', gra[6], global_step)
-    writer.add_scalar('step_reward', gra[7], global_step)
 
 if __name__ == '__main__':    
     ###############################################################
@@ -119,7 +100,7 @@ if __name__ == '__main__':
     }
     num_cores = 1 #5
     num_epochs = 100 #100
-    batch_size = 40 # 100
+    batch_size = 5 # 100
     step_pre_epoch = 20
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -137,7 +118,7 @@ if __name__ == '__main__':
         learning_rate = 1e-4
         method_name = 'FD'
 
-    training_notes = "Trial_1"
+    training_notes = "SVD(9D)_Trial_4"
 
     logger_config=LoggerConfig("NN1_training_logs")
     
@@ -223,10 +204,10 @@ if __name__ == '__main__':
                 Iteration += [epoch+1]
                 for i in range(int(batch_size/num_cores)):
           
-                    n_inputs = []
-                    n_outputs = []
+                    inputs_list = []
+                    outputs_list = []
                     n_out = []
-                    n_gra = []
+                    grads_list = []
                     n_process = []
                     
 
@@ -243,12 +224,12 @@ if __name__ == '__main__':
                         gra = Array('d',np.zeros(8))
                     
                         # collection
-                        n_inputs.append(inputs)
-                        n_outputs.append(outputs)
+                        inputs_list.append(inputs)
+                        outputs_list.append(outputs)
                         n_out.append(out)
 
                         # create a gradient array for assemble all process gradient result
-                        n_gra.append(gra)
+                        grads_list.append(gra)
 
                     #calculate gradient and loss
                     for j in range(num_cores):
@@ -256,9 +237,9 @@ if __name__ == '__main__':
                         
                         p = Process(target=calc_grad,args=(config_dict,
                                                         planner_list[j],
-                                                        n_inputs[j],
+                                                        inputs_list[j],
                                                         n_out[j],
-                                                        n_gra[j]))
+                                                        grads_list[j]))
                         p.start()
                         n_process.append(p)
             
@@ -267,30 +248,30 @@ if __name__ == '__main__':
 
                     # Backward and optimize
                     for j in range(num_cores):                
-                        outputs = model(torch.tensor(n_inputs[j], dtype=torch.float).to(device))
+                        outputs = model(torch.tensor(inputs_list[j], dtype=torch.float).to(device))
 
                         # d_reward/d_z * z
                         # normalize the gradient
 
-                        loss = model.myloss_original(outputs,n_gra[j][0:7])        
+                        loss = model.myloss_original(outputs,grads_list[j][0:7])        
 
                         optimizer.zero_grad()
 
                         # d_reward/d_z * d_z/d_dnn1
                         loss.backward()
                         optimizer.step()
-                        evalue += n_gra[j][7]
-                        # Every_reward[epoch,j+num_cores*i]=n_gra[j][7]
+                        evalue += grads_list[j][7]
+                        # Every_reward[epoch,j+num_cores*i]=grads_list[j][7]
 
                     ## record the gradient and step reward
-                    log_train_in_ouputs(writer,n_inputs[0],n_out[0],global_step)
-                    log_gradient(writer,n_gra[0][:],global_step)
+                    # log_train_IO(writer,inputs_list[0],n_out[0],global_step)
+                    log_gradient(writer,grads_list[0][:],global_step)
 
                     if (i+1)%1 == 0:
-                        logging.info (f'Epoch [{epoch+1}/{num_epochs}], Step [{(i+1)*num_cores}/{batch_size}], Reward: {n_gra[0][7]:.4f}')
+                        logging.info (f'Epoch [{epoch+1}/{num_epochs}], Step [{(i+1)*num_cores}/{batch_size}], Reward: {grads_list[0][7]:.4f}')
 
                     global_step += 1
-                    pbar.set_postfix({'step': i+1, 'reward': n_gra[0][7]/batch_size})
+                    pbar.set_postfix({'step': i+1, 'reward': grads_list[0][7]/batch_size})
                     pbar.update(1)
                 
                 # mean reward for a epoch
@@ -314,48 +295,46 @@ if __name__ == '__main__':
                 evalue = 0
                 Iteration += [epoch+1]
                 for i in range(step_pre_epoch):
-                    n_inputs = []
-                    n_outputs = []
-                    n_out = []
-                    n_gra = []
-                    n_process = []
+                    inputs_list = []
+                    outputs_list = []
+                    grads_list = []
                     
 
                     # sampling in a batch
                     for k in range(batch_size): 
                         inputs = nn_sample(cur_epoch=epoch)
-                        n_inputs.append(inputs)  
+                        inputs_list.append(inputs)  
 
                     # forward pass
-                    n_inputs = np.array(n_inputs)  # batch_size x 9
+                    inputs_list = np.array(inputs_list)  # batch_size x 9
 
-                    n_outputs = model(torch.tensor(n_inputs, dtype=torch.float).to(device)) # batch_size x 7
-                    np_n_outputs = n_outputs.to('cpu')
-                    np_n_outputs = np_n_outputs.data.numpy()
+                    outputs_list = model(torch.tensor(inputs_list, dtype=torch.float).to(device)) # batch_size x 7
+                    np_outputs_list = outputs_list.to('cpu')
+                    np_outputs_list = np_outputs_list.data.numpy()
 
                         
                     
                     ## MPC forward for each batch element
                     for k in range(batch_size):     
                         # create shared variables (shared between processes)
-                        gra = Array('d',np.zeros(8)
+                        gra = Array('d',np.zeros(output_size+1)
                         )
                         
                         # calculate gradient and loss
                         calc_grad(config_dict,
                                 planner_list[0],
-                                n_inputs[k,:].reshape(9),
-                                np_n_outputs[k,:].reshape(7),
+                                inputs_list[k,:].reshape(input_size),
+                                np_outputs_list[k,:].reshape(output_size),
                                 gra)
                         
                         
                         # create a gradient array for assemble all process gradient result
-                        n_gra.append(gra)
+                        grads_list.append(gra)
 
                     ##=== Backward and optimize ===##
-                    n_gra = np.array(n_gra)
+                    grads_list = np.array(grads_list)
                     # d_reward/d_z * z
-                    loss = model.myloss(n_outputs,n_gra[:,0:7],device)        
+                    loss = model.myloss(outputs_list,grads_list[:,0:output_size],device)        
 
                     optimizer.zero_grad()
 
@@ -364,17 +343,17 @@ if __name__ == '__main__':
                     optimizer.step()
 
                     ##  record the average reward for a batch
-                    evalue += n_gra[:,7].sum()/batch_size
-                    Every_reward[epoch,i]=n_gra[:,7].sum()/batch_size
+                    evalue += grads_list[:,-1].sum()/batch_size
+                    Every_reward[epoch,i]=grads_list[:,-1].sum()/batch_size
 
 
                 
                     ## record the gradient and step reward
-                    log_train_in_ouputs(writer,n_inputs[0,:],np_n_outputs[0,:].reshape(7),global_step)
-                    log_gradient(writer,n_gra[0,:].reshape(8),global_step)
+                    log_train_IO(writer,inputs_list[0,:],np_outputs_list[0,:].reshape(output_size),global_step)
+                    log_gradient(writer,grads_list[0,:].reshape(output_size+1),global_step)
 
                     global_step += 1
-                    pbar.set_postfix({'step': i+1, 'reward': n_gra[:,7].sum()/batch_size})
+                    pbar.set_postfix({'step': i+1, 'reward': grads_list[:,-1].sum()/batch_size})
                     pbar.update(1)
             
                 # mean reward for a epoch
@@ -397,10 +376,10 @@ if __name__ == '__main__':
 
 
 # #if MULTI_CORE:
-#                     n_inputs = []
-#                     n_outputs = []
+#                     inputs_list = []
+#                     outputs_list = []
 #                     n_out = []
-#                     n_gra = []
+#                     grads_list = []
 #                     n_process = []
                     
 
@@ -417,12 +396,12 @@ if __name__ == '__main__':
 #                         gra = Array('d',np.zeros(8))
                     
 #                         # collection
-#                         n_inputs.append(inputs)
-#                         n_outputs.append(outputs)
+#                         inputs_list.append(inputs)
+#                         outputs_list.append(outputs)
 #                         n_out.append(out)
 
 #                         # create a gradient array for assemble all process gradient result
-#                         n_gra.append(gra)
+#                         grads_list.append(gra)
 
 #                     #calculate gradient and loss
 #                     for j in range(num_cores):
@@ -430,9 +409,9 @@ if __name__ == '__main__':
                         
 #                         p = Process(target=calc_grad,args=(config_dict,
 #                                                         planner_list[j],
-#                                                         n_inputs[j],
+#                                                         inputs_list[j],
 #                                                         n_out[j],
-#                                                         n_gra[j]))
+#                                                         grads_list[j]))
 #                         p.start()
 #                         n_process.append(p)
             
@@ -441,22 +420,22 @@ if __name__ == '__main__':
 
 #                     # Backward and optimize
 #                     for j in range(num_cores):                
-#                         outputs = model(n_inputs[j])
+#                         outputs = model(inputs_list[j])
 
 #                         # d_reward/d_z * z
 #                         # normalize the gradient
 
-#                         loss = model.myloss(outputs,n_gra[j][0:7])        
+#                         loss = model.myloss(outputs,grads_list[j][0:7])        
 
 #                         optimizer.zero_grad()
 
 #                         # d_reward/d_z * d_z/d_dnn1
 #                         loss.backward()
 #                         optimizer.step()
-#                         evalue += n_gra[j][7]
-#                         Every_reward[epoch,j+num_cores*i]=n_gra[j][7]
+#                         evalue += grads_list[j][7]
+#                         Every_reward[epoch,j+num_cores*i]=grads_list[j][7]
                 
 #                     if (i+1)%1 == 0:
-#                         logging.info (f'Epoch [{epoch+1}/{num_epochs}], Step [{(i+1)*num_cores}/{batch_size}], Reward: {n_gra[0][7]:.4f}')
+#                         logging.info (f'Epoch [{epoch+1}/{num_epochs}], Step [{(i+1)*num_cores}/{batch_size}], Reward: {grads_list[0][7]:.4f}')
             
 #                 else:

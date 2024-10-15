@@ -1,5 +1,5 @@
 import numpy as np
-# from differentiable_collision_wrapper import *
+from differentiable_collision_wrapper import *
 import casadi as ca
 import torch
 from solid_geometry import *
@@ -128,7 +128,7 @@ class Obstacle():
         drdstate_traj = np.zeros((state_traj.shape[0],state_traj.shape[1]))
         
         R_gate=dir_cosine_np(gate_quat) # world frame to gate frame
-        reward_traj = 0
+        penalty_traj = 0
         for node_tra in t_tra_seq_list:
         
             line_centers = np.zeros([4,3])
@@ -143,28 +143,28 @@ class Obstacle():
 
                 
                 
-            reward_single,dalpha_dstate_drone=DifferentiableCollisionsWrapper(line_centers,
+            penalty_single,dalpha_dstate_drone=DifferentiableCollisionsWrapper(line_centers,
                                             R_gate,
                                             gate_quat,
                                             config['drone']['wing_len']/2,
                                             config['drone']['height']/2,
                                             state_traj[node_tra,:])
             
-            reward_traj += reward_single
+            penalty_traj += penalty_single
             drdstate_traj[node_tra,:] = dalpha_dstate_drone
         
 
          # goal score
-        goal_score = 0
+        goal_penalty = 0
         
         goal_w=2
         # for last four nodes
         for i in range(-1,-5,-1): 
-            goal_score += -goal_w * np.dot(state_traj[i,:3]-goal_pos,state_traj[i,:3]-goal_pos)
-            drdstate_traj[i,:3] = -goal_w * 2 * (state_traj[i,:3]-goal_pos)
+            goal_penalty += goal_w * np.dot(state_traj[i,:3]-goal_pos,state_traj[i,:3]-goal_pos)
+            drdstate_traj[i,:3] = goal_w * 2 * (state_traj[i,:3]-goal_pos)
         
-        # reward_traj += goal_score
-        return reward_traj, drdstate_traj
+        penalty_traj += goal_penalty
+        return penalty_traj, drdstate_traj
 
 
 
@@ -230,7 +230,7 @@ class Obstacle():
     
 
 #     ## goal score
-#     single_goal_score = - w_goal * ca.norm_2(quad_sym.goal_r_I - quad_sym.quad_state[0:3])
+#     single_goal_penalty = - w_goal * ca.norm_2(quad_sym.goal_r_I - quad_sym.quad_state[0:3])
 
 
 #     ## define the forward function
@@ -244,16 +244,16 @@ class Obstacle():
 #                                                 gate_corner_1,\
 #                                                 gate_corner_2],[single_trav_score])
     
-#     self.single_goal_score_fun = ca.Function('single_goal_score_fn',
+#     self.single_goal_penalty_fun = ca.Function('single_goal_penalty_fn',
 #                                                 [quad_sym.quad_state,\
-#                                                 quad_sym.goal_r_I],[single_goal_score])
+#                                                 quad_sym.goal_r_I],[single_goal_penalty])
     
 #     ## define the jacobian
 #     self.d_colli_d_state = ca.jacobian(single_colli_score,quad_sym.quad_state)
     
 #     self.d_trav_d_state = ca.jacobian(single_trav_score,quad_sym.quad_state)
 
-#     self.d_goal_d_state = ca.jacobian(single_goal_score,quad_sym.quad_state)
+#     self.d_goal_d_state = ca.jacobian(single_goal_penalty,quad_sym.quad_state)
 
 #     ## define the gradient function
 #     self.d_colli_d_state_fun = ca.Function('d_colli_d_state',
@@ -342,12 +342,12 @@ class Obstacle():
         
     
 #     # goal score
-#     goal_score = 0
+#     goal_penalty = 0
 #     d_goal_d_state = ca.DM([[0, 0, 0]])
 
 #     # for last four nodes
 #     for i in range(-1,-5,-1):
-#         goal_score += self.single_goal_score_fun(state_traj[i,:],goal_pos)
+#         goal_penalty += self.single_goal_penalty_fun(state_traj[i,:],goal_pos)
         
 #         d_goal_d_state = self.d_goal_d_state_fun(state_traj[i,:],goal_pos)
 #         drdstate_traj[i,:] = d_goal_d_state
@@ -355,10 +355,10 @@ class Obstacle():
 
 #     collision_score.toarray()
 #     traverse_score.toarray() 
-#     goal_score.toarray()
+#     goal_penalty.toarray()
 
 #     # drdstate_traj = drdstate_traj.toarray()
 
-#     reward = collision_score+traverse_score + goal_score 
+#     reward = collision_score+traverse_score + goal_penalty 
     
 #     return float(reward), drdstate_traj, gate_check_points

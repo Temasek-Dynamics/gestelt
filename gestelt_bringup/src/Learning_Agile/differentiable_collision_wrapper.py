@@ -119,7 +119,7 @@ def DifferentiableCollisionsWrapper(line_centers,
     
     # return min scaling α and gradient of α wrt configurations 
     dalpha_dstate_drone=np.zeros(10) # p,v,q
-    reward=0
+    penalty=0
     for i in range(4): # P_obs[1],P_obs[3] (left and right walls)
 
         # dalpha_i_dstate: drone_p,drone_q,ellipse_p,ellipse_q
@@ -130,17 +130,17 @@ def DifferentiableCollisionsWrapper(line_centers,
         dalpha_i_dstate_np=np.array(dalpha_i_dstate.data)
         # print(dalpha_i_dstate_np)
 
-        # reward += 100 * np.log((alpha_i)) * (3/(alpha_i)**3) 
+        # penalty += 100 * np.log((alpha_i)) * (3/(alpha_i)**3) 
         # dalpha_dstate_drone[0:3] += (100/alpha_i * (3/(alpha_i)**3) + 100 * np.log((alpha_i)) * (-9/(alpha_i)**4)) * dalpha_i_dstate_np[0:3]
         # dalpha_dstate_drone[6:10] += (100/alpha_i * (3/(alpha_i)**3) + 100 * np.log((alpha_i)) * (-9/(alpha_i)**4)) * dalpha_i_dstate_np[3:7]
         
         scaling_w=100
-        reward+=-(scaling_w*(alpha_i-1.2)**2)
-        dalpha_dstate_drone[0:3] += -2 * scaling_w * (alpha_i-1.2) * dalpha_i_dstate_np[0:3]
-        dalpha_dstate_drone[6:10] += -2 * scaling_w *(alpha_i-1.2) * dalpha_i_dstate_np[3:7]
+        penalty+=(scaling_w*(alpha_i-1.2)**2)
+        dalpha_dstate_drone[0:3] += 2 * scaling_w * (alpha_i-1.2) * dalpha_i_dstate_np[0:3]
+        dalpha_dstate_drone[6:10] += 2 * scaling_w *(alpha_i-1.2) * dalpha_i_dstate_np[3:7]
 
     
-    return reward,dalpha_dstate_drone
+    return penalty,dalpha_dstate_drone
 
 
 

@@ -5,8 +5,8 @@ import os
 device = torch.device('cpu')#torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # Hyper-parameters 
-input_size = 9 
-hidden_size = 64 
+input_size = 17   #drone init position, final position, init yaw, width of the gate, gate rotation matrix
+hidden_size = 128 
 output_size = 13 #tra_pos, tra_9D_orientation, traversing_time
 num_epochs = 3
 batch_size = 10000
@@ -25,7 +25,7 @@ for epoch in range(num_epochs):
     for i in range(batch_size):  
         
 
-        inputs = nn_sample()
+        inputs = nn_sample(pretrain=True)
         outputs  = torch.tensor(t_output(inputs), dtype=torch.float).to(device)
         
         # Forward pass
@@ -50,7 +50,7 @@ torch.save(model, FILE)
 with torch.no_grad():
     n_loss = 0
     for i in range(100):
-        inputs = nn_sample()
+        inputs = nn_sample(pretrain=True)
 
         ## obtain the expected output
         outputs  = torch.tensor(t_output(inputs), dtype=torch.float).to(device)
@@ -66,5 +66,5 @@ with torch.no_grad():
     print(n_loss/100)
 
 a = nn_sample()
-print(a,' ',model(a))
+print(a,' ',model(torch.tensor(a, dtype=torch.float).to(device)))
 
