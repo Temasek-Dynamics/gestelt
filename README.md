@@ -15,7 +15,7 @@
 
 Paper: [Gestelt: A framework for accelerating the sim-to-real transition for swarm UAVs](https://ieeexplore.ieee.org/document/10591863)
 
-Or see the pdf at:  [tan2024gestelt.pdf](paper/tan2024gestelt.pdf) 
+Or see the pdf at:  [tan2024gestelt.pdf](Gestelt__A_framework_for_acceleration_the_sim_to_real_transition_for_swarm_UAVs.pdf) 
 
 For simulation and deployment on a physical drone, PX4 is the firmware of choice, although it is possible to remap the topics for use with Ardupilot or any other Mavlink-compatible system.
 
