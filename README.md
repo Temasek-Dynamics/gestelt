@@ -1,7 +1,25 @@
-# gestelt
-A swarm framework with a focus on simulating multi-UAV navigation in cluttered environments. 
+# Gestelt
+
+**Gestelt**: A framework for accelerating the sim-to-real transition for swarm UAVs
+
+
+```
+@article{tan2024gestelt,
+  title={Gestelt: A framework for accelerating the sim-to-real transition for swarm UAVs},
+  author={Tan, John and Sun, Tianchen and Lin, Feng and Teo, Rodney and Khoo, Boo Cheong},
+  journal={IEEE International Conference on Control & Automation},
+  year={2024},
+  publisher={IEEE}
+}
+```
+
+Paper: [Gestelt: A framework for accelerating the sim-to-real transition for swarm UAVs](https://ieeexplore.ieee.org/document/10591863)
+
+Or see the pdf at:  [tan2024gestelt.pdf](paper/tan2024gestelt.pdf) 
+
 For simulation and deployment on a physical drone, PX4 is the firmware of choice, although it is possible to remap the topics for use with Ardupilot or any other Mavlink-compatible system.
 
+# Multi-agent navigation with corridor constraints
 <img src="docs/pictures/fake_drones_10_antipodal.gif" alt="10 simulated drones antipodal (Spherical)" style="width: 300px;"/>
 <img src="docs/pictures/poly_sfc_multi.gif" alt="8 simulated drones antipodal (Polyhedral)" style="width: 300px;"/>
 <img src="docs/pictures/virtual_physical_6drones_antipodal.gif" alt="virtual physical environment" style="width: 400px;"/>
