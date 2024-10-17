@@ -25,30 +25,6 @@ output is the decision variables z. [x,y,z,a,b,c,t_traverse]
 [a,b,c] is the theta*k, k is the rotation axis
 """
 
-def log_train_in_ouputs(writer,inputs,outputs,global_step):
-
-    
-    writer.add_scalar('gate_pitch', inputs[8], global_step)
-  
-    writer.add_scalar('x_tra', outputs[0], global_step)
-    writer.add_scalar('y_tra', outputs[1], global_step)
-    writer.add_scalar('z_tra', outputs[2], global_step)
-    writer.add_scalar('Rx_tra', outputs[3], global_step)
-    writer.add_scalar('Ry_tra', outputs[4], global_step)
-    writer.add_scalar('Rz_tra', outputs[5], global_step)
-    writer.add_scalar('t_tra', outputs[6], global_step)
-    
-
-def log_gradient(writer,gra,global_step):
-    writer.add_scalar('drdx', gra[0], global_step)
-    writer.add_scalar('drdy', gra[1], global_step)
-    writer.add_scalar('drdz', gra[2], global_step)
-    writer.add_scalar('drda', gra[3], global_step)
-    writer.add_scalar('drdb', gra[4], global_step)
-    writer.add_scalar('drdc', gra[5], global_step)
-    writer.add_scalar('drdt', gra[6], global_step)
-    writer.add_scalar('step_reward', gra[7], global_step)
-
 
 class DirectCloseLoop():
     def __init__(self, mission_yaml, train_yaml) -> None:

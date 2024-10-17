@@ -72,8 +72,8 @@ def nn_sample(init_pos=None,final_pos=None,init_angle=None,cur_epoch=100,pretrai
         des_pitch_mean_min = 0
         des_pitch_mean_max = 0
     else:
-        des_pitch_mean_min = 3*pi/10
-        des_pitch_mean_max = 3*pi/10
+        des_pitch_mean_min = 1*pi/6
+        des_pitch_mean_max = 1*pi/6
     des_pitch_mean = des_pitch_mean_min - (des_pitch_mean_min - des_pitch_mean_max) * (cur_epoch / 100) 
     gate_pitch = np.clip(np.random.normal(0,pi/18),-pi/6,pi/6) 
     if gate_pitch>0:
@@ -85,7 +85,7 @@ def nn_sample(init_pos=None,final_pos=None,init_angle=None,cur_epoch=100,pretrai
     # gate_pitch = np.random.uniform(-pi/2,pi/2)
 
     ##==calculate the gate RM
-    rot=R.from_euler('zyx',[gate_pitch,0,0])
+    rot=R.from_euler('zyx',[0,gate_pitch,0])
     inputs[8:17]=rot.as_matrix().flatten()
     return inputs
 
@@ -227,3 +227,14 @@ class network_with_GRU(nn.Module):
         return out
 
 
+## run the above code
+if __name__ == "__main__":
+    # sample 1000 nn_sample() and plot the gate_pitch
+    import matplotlib.pyplot as plt
+    gate_euler_list = []
+    for i in range(1000):
+        inputs = nn_sample()
+        gate_euler = R.from_matrix(inputs[8:17].reshape(3,3)).as_euler('zyx')
+        gate_euler_list.append(gate_euler[1])
+    plt.hist(gate_euler_list,bins=100)
+    plt.show()

@@ -1,5 +1,5 @@
 import numpy as np
-from differentiable_collision_wrapper import *
+# from differentiable_collision_wrapper import *
 import casadi as ca
 import torch
 from solid_geometry import *
@@ -113,17 +113,20 @@ class Obstacle():
                                             gate_corners,
                                             gate_quat,
                                             vert_traj, 
-                                            goal_pos):   
+                                            goal_pos,
+                                            PENALTY_HELPER = False):   
         
         t_tra_seq_list=[]
 
         ## find the traversal sequence
-        for t in range(state_traj.shape[0]):
-            if(np.dot(self.plane1.nor_vec(),vert_traj[t]-self.centroid)<0):
-                t_tra_seq_list.append(t-2)
-            if len(t_tra_seq_list)==4:
-                break
-        
+        if not PENALTY_HELPER:
+            for t in range(state_traj.shape[0]):
+                if(np.dot(self.plane1.nor_vec(),vert_traj[t]-self.centroid)<0):
+                    t_tra_seq_list.append(t-2)
+                if len(t_tra_seq_list)==4:
+                    break
+        else:
+            t_tra_seq_list = [0]
         ## init gate check points: four corners and twelve middle point
         drdstate_traj = np.zeros((state_traj.shape[0],state_traj.shape[1]))
         
@@ -155,15 +158,17 @@ class Obstacle():
         
 
          # goal score
-        goal_penalty = 0
         
-        goal_w=2
-        # for last four nodes
-        for i in range(-1,-5,-1): 
-            goal_penalty += goal_w * np.dot(state_traj[i,:3]-goal_pos,state_traj[i,:3]-goal_pos)
-            drdstate_traj[i,:3] = goal_w * 2 * (state_traj[i,:3]-goal_pos)
-        
-        penalty_traj += goal_penalty
+        if not PENALTY_HELPER:
+            goal_penalty = 0
+            
+            goal_w=2
+            # for last four nodes
+            for i in range(-1,-5,-1): 
+                goal_penalty += goal_w * np.dot(state_traj[i,:3]-goal_pos,state_traj[i,:3]-goal_pos)
+                drdstate_traj[i,:3] = goal_w * 2 * (state_traj[i,:3]-goal_pos)
+            
+            penalty_traj += goal_penalty    
         return penalty_traj, drdstate_traj
 
 

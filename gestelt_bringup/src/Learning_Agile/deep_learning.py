@@ -49,8 +49,7 @@ def calc_grad(config_dict,
                             gate_cen_h=0,
                             gate_length=config_dict['gate']['length'])
     
-    gate_point = moving_gate.gate.gate_point
-    
+   
     final_q=R.from_euler('xyz',[0,0,inputs[6]]).as_quat()
     final_q=np.roll(final_q,1)
     
@@ -66,11 +65,11 @@ def calc_grad(config_dict,
    
 
     # initialize the narrow window
-    planner.init_obstacle(gate_point.reshape(12),gate_pitch=inputs[8])
+    planner.init_obstacle(moving_gate.gate.gate_point.reshape(12),gate_pitch=moving_gate.gate_init_pitch)
 
 
     # receive the decision variables from DNN1, do the MPC, then calculate d_reward/d_z
-    gra[:] = planner.sol_gradient(outputs[0:3].astype(np.float64),
+    gra[:] = planner.sol_gradient(outputs[0:3],
                                  outputs[3:12],
                                  outputs[-1])
 
@@ -100,7 +99,7 @@ if __name__ == '__main__':
     }
     num_cores = 1 #5
     num_epochs = 100 #100
-    batch_size = 5 # 100
+    batch_size = 10 # 100
     step_pre_epoch = 20
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -118,7 +117,7 @@ if __name__ == '__main__':
         learning_rate = 1e-4
         method_name = 'FD'
 
-    training_notes = "SVD(9D)_Trial_4"
+    training_notes = "SVD(9D)_Trial_1"
 
     logger_config=LoggerConfig("NN1_training_logs")
     

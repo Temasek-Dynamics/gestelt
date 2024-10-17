@@ -18,8 +18,8 @@ with open(yaml_file, 'r', encoding='utf-8') as file:
     config_dict = yaml.safe_load(file)
 current_dir = os.path.dirname(os.path.abspath(__file__))
 training_data_folder=os.path.abspath(os.path.join(current_dir, 'training_data'))
-model_folder=os.path.abspath(os.path.join(training_data_folder, 'NN_model/20241015-202452-PDP-SVD(9D)_Trial_6'))
-FILE_INPUT = model_folder+"/NN1_deep2_12.pth"
+model_folder=os.path.abspath(os.path.join(training_data_folder, 'NN_model/20241017-130657-PDP-SVD(9D)_Trial_1'))
+FILE_INPUT = model_folder+"/NN1_deep2_26.pth"
 model_nn1 = torch.load(FILE_INPUT).to(device)
 
 ##====== NN2 logging initialization ======##
@@ -53,7 +53,6 @@ def traj(inputs, outputs, state_traj):
                             gate_cen_h=0,
                             gate_length=config_dict['gate']['length'])
     
-    gate_point = moving_gate.gate.gate_point
     
     final_q=R.from_euler('xyz',[0,0,inputs[6]]).as_quat()
     final_q=np.roll(final_q,1)

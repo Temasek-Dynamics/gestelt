@@ -55,22 +55,22 @@ def DifferentiableCollisionsWrapper(line_centers,
     prism_centers=np.zeros([4,3])
 
     # left and right prisms centers
-    prism_centers[1,]=line_centers_G[1,]+np.array([ quad_half_height,0,0])
-    prism_centers[3,]=line_centers_G[3,]+np.array([-quad_half_height,0,0])
+    prism_centers[1,]=line_centers_G[1,]+np.array([ quad_radius,0,0])
+    prism_centers[3,]=line_centers_G[3,]+np.array([-quad_radius,0,0])
 
     # up and down prisms centers
-    prism_centers[0,]=line_centers_G[0,]+np.array([0,0, quad_radius])
-    prism_centers[2,]=line_centers_G[2,]+np.array([0,0,-quad_radius])
+    prism_centers[0,]=line_centers_G[0,]+np.array([0,0, quad_half_height])
+    prism_centers[2,]=line_centers_G[2,]+np.array([0,0,-quad_half_height])
 
     prism_centers_W=np.matmul(prism_centers,R_gate)
     
     
     # create rectangle walls with the desired size
    
-    P_obs = [jl.dc.create_rect_prism(width_gap, 1.0, quad_radius*2)[0],
-             jl.dc.create_rect_prism(quad_half_height*2, 1.0, height_gap)[0],
-             jl.dc.create_rect_prism(width_gap, 1.0, quad_radius*2)[0],
-             jl.dc.create_rect_prism(quad_half_height*2, 1.0, height_gap)[0]]
+    P_obs = [jl.dc.create_rect_prism(width_gap, 1.0, quad_half_height*2)[0],
+             jl.dc.create_rect_prism(quad_radius*2, 1.0, height_gap)[0],
+             jl.dc.create_rect_prism(width_gap, 1.0, quad_half_height*2)[0],
+             jl.dc.create_rect_prism(quad_radius*2, 1.0, height_gap)[0]]
 
     
     P =jl.convert(jl.SMatrix[3,3,jl.Float64,9], P)
@@ -121,6 +121,16 @@ def DifferentiableCollisionsWrapper(line_centers,
     dalpha_dstate_drone=np.zeros(10) # p,v,q
     penalty=0
     for i in range(4): # P_obs[1],P_obs[3] (left and right walls)
+        
+        # des_alpha comes from the penalty design helper
+        if i == 1 or i == 3:
+            # for the left and right walls
+            alpha_importance=0.1
+            des_alpha=1.81825
+        else:
+            # for the up and down walls
+            alpha_importance=1
+            des_alpha=1.4325
 
         # dalpha_i_dstate: drone_p,drone_q,ellipse_p,ellipse_q
         alpha_i, dalpha_i_dstate=jl.dc.proximity_gradient(Elli_drone,P_obs[i],verbose = False, pdip_tol = 1e-6)
@@ -135,10 +145,12 @@ def DifferentiableCollisionsWrapper(line_centers,
         # dalpha_dstate_drone[6:10] += (100/alpha_i * (3/(alpha_i)**3) + 100 * np.log((alpha_i)) * (-9/(alpha_i)**4)) * dalpha_i_dstate_np[3:7]
         
         scaling_w=100
-        penalty+=(scaling_w*(alpha_i-1.2)**2)
-        dalpha_dstate_drone[0:3] += 2 * scaling_w * (alpha_i-1.2) * dalpha_i_dstate_np[0:3]
-        dalpha_dstate_drone[6:10] += 2 * scaling_w *(alpha_i-1.2) * dalpha_i_dstate_np[3:7]
+        penalty+=(scaling_w * alpha_importance * (alpha_i-des_alpha)**2)
+        # penalty +=alpha_i*alpha_importance
+        dalpha_dstate_drone[0:3] += 2 * scaling_w * alpha_importance * (alpha_i-des_alpha) * dalpha_i_dstate_np[0:3]
+        dalpha_dstate_drone[6:10] += 2 * scaling_w * alpha_importance * (alpha_i-des_alpha) * dalpha_i_dstate_np[3:7]
 
+        
     
     return penalty,dalpha_dstate_drone
 

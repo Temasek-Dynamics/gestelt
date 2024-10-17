@@ -43,10 +43,10 @@ class MovingGate():
                                         [-gate_length/2, 0, gate_cen_h-gate_width/2]])
         
         self.gate = Gate(gate_point_no_pitch)
-
+        
         # add the pitch angle to the gate
-
-        self.gate_init_pitch = env_init_set[8]
+        gate_init_euler = R.from_matrix(env_init_set[8:17].reshape(3,3)).as_euler('zyx')
+        self.gate_init_pitch = gate_init_euler[1]
         self.gate.rotate_y(self.gate_init_pitch)
 
 
@@ -188,7 +188,6 @@ class LearningAgileAgent():
         self.gate_points_list = self.moving_gate.gate_points_list
         self.gate_t_i = Gate(self.gate_points_list[0])
 
-        self.planner.init_obstacle(self.gate_points_list[0].reshape(12),gate_pitch=self.env_init_set[8])
         
     
     def gate_state_estimation(self):
@@ -247,14 +246,14 @@ class LearningAgileAgent():
         self.nn_output_list=np.concatenate((self.nn_output_list,[out_as_quat]),axis = 0)
         self.Pitch = np.concatenate((self.Pitch,[nn2_inputs[14]]),axis = 0) 
 
-    def log_NN_IO_for_RM(self,nn2_inputs,out,des_tra_R):
+    def log_NN_IO_for_RM(self,gate_pitch,out,des_tra_R):
         """
         record the NN output raw 9D vector and converted Rotation Matrix
         """
         self.NN_T_tra = np.concatenate((self.NN_T_tra,[out[6]]),axis = 0)
         self.nn_output_list=np.concatenate((self.nn_output_list,[out]),axis = 0)
         self.des_tra_R_list = np.concatenate((self.des_tra_R_list,[des_tra_R]),axis = 0)
-        self.Pitch = np.concatenate((self.Pitch,[nn2_inputs[14]]),axis = 0) 
+        self.Pitch = np.concatenate((self.Pitch,[gate_pitch]),axis = 0) 
 
     def close_loop_model_forward(self):
 
@@ -268,7 +267,7 @@ class LearningAgileAgent():
         nn2_inputs[16] = magni(self.gate_t_i.gate_point[0,:]-self.gate_t_i.gate_point[1,:]) # gate width
         # pitch angle of the gate
         nn2_inputs[17] = atan((self.gate_t_i.gate_point[0,2]-self.gate_t_i.gate_point[1,2])/(self.gate_t_i.gate_point[0,0]-self.gate_t_i.gate_point[1,0])) # compute the actual gate pitch ange in real-time
-
+        
         # NN2 OUTPUT the traversal time and pose
         out = self.model(torch.tensor(nn2_inputs, dtype=torch.float).to(device)).to('cpu')
         out = out.data.numpy()
@@ -277,25 +276,15 @@ class LearningAgileAgent():
         return out 
     
     def imitate_model_forward(self):
-        nn2_inputs = np.zeros(23)
-         # drone state under the predicted gate frame(based on the binary search)
-        nn2_inputs[0:10] = self.gate_t_i.transform(self.state)
-        nn2_inputs[10:13] = self.gate_t_i.t_final(self.final_point)
-
-        # width of the gate
-        nn2_inputs[13] = magni(self.gate_t_i.gate_point[0,:]-self.gate_t_i.gate_point[1,:]) # gate width
-        # pitch angle of the gate
-        gate_pitch = atan((self.gate_t_i.gate_point[0,2]-self.gate_t_i.gate_point[1,2])/(self.gate_t_i.gate_point[0,0]-self.gate_t_i.gate_point[1,0])) # compute the actual gate pitch ange in real-time
         
-        ##==calculate the gate RM
-        rot=R.from_euler('zyx',[gate_pitch,0,0])
-        nn2_inputs[14:23]=rot.as_matrix().flatten()
+        nn2_inputs,gate_pitch = input_cal(self.state,self.final_point,self.gate_t_i)
+       
         # NN2 OUTPUT the traversal time and pose
         out = self.model(torch.tensor(nn2_inputs, dtype=torch.float).to(device)).to('cpu')
         out = out.data.numpy()
         
         verify_tra_R=verify_SVD_casadi(out[3:12])
-        self.log_NN_IO_for_RM(nn2_inputs,out,verify_tra_R.flatten())       
+        self.log_NN_IO_for_RM(gate_pitch,out,verify_tra_R.flatten())       
         return out
     
 
@@ -347,7 +336,7 @@ class LearningAgileAgent():
                         print("NN pose det after SVD",np.linalg.det(des_tra_R.reshape(3,3)))
                         # relative traversal time
                         out[12]=self.t_tra_rel
-                        self.log_NN_IO_for_RM(nn2_inputs,out,des_tra_R) 
+                        self.log_NN_IO_for_RM(out,des_tra_R,gate_pitch=0) 
                     else:
                         ### SVD through CasADi
                         des_tra_m=out[3:12]
@@ -355,7 +344,7 @@ class LearningAgileAgent():
                         # relative traversal time
                         out[12]=self.t_tra_rel
                         verify_tra_R=verify_SVD_casadi(out[3:12])
-                        self.log_NN_IO_for_RM(nn2_inputs,out,verify_tra_R.flatten())       
+                        self.log_NN_IO_for_RM(out,verify_tra_R.flatten(),gate_pitch=0)       
                 else:
                     
                     if self.options['CLOSE_LOOP_MODEL']:
@@ -500,7 +489,7 @@ def main():
     if options['CLOSE_LOOP_MODEL']:
         model_name = 'NN_close_0.pth'#'NN2_imitate_1.pth' #'NN_close_2.pth'
     else:   
-        model_name = '20241015-202452-PDP-SVD(9D)_Trial_6/NN2_imitate_1.pth'
+        model_name = '20241017-130657-PDP-SVD(9D)_Trial_1/NN2_imitate_1.pth'
 
     model_file=os.path.join(current_dir, f'training_data/NN_model/',model_name)
     

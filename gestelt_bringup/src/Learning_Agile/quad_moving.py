@@ -27,6 +27,21 @@ class kalman:
     def v_es(self, position):
         return position
 
+def input_cal(quad_state, final_point, gate_x):
+
+    inputs = np.zeros(23)
+    inputs[13] = magni(gate_x.gate_point[0,:]-gate_x.gate_point[1,:])
+    gate_pitch = atan((gate_x.gate_point[0,2]-gate_x.gate_point[1,2])/(gate_x.gate_point[0,0]-gate_x.gate_point[1,0]))
+    ##==calculate the gate RM
+   
+    rot=R.from_euler('zyx',[0,gate_pitch,0])
+    inputs[14:23]=rot.as_matrix().flatten()
+    
+    inputs[0:10] = gate_x.transform(quad_state)
+    inputs[10:13] = gate_x.t_final(final_point)
+
+    return inputs, -gate_pitch
+
 def binary_search_solver(model,device, quad_state, final_point, gate1, velo, w ):
     velo = np.array(velo)
 
@@ -36,15 +51,7 @@ def binary_search_solver(model,device, quad_state, final_point, gate1, velo, w )
     gate_x = Gate(gate1.translate_out(velo*t1))
     gate_x.rotate_y(w*t1)
 
-    inputs = np.zeros(23)
-    inputs[13] = magni(gate_x.gate_point[0,:]-gate_x.gate_point[1,:])
-    gate_pitch = atan((gate_x.gate_point[0,2]-gate_x.gate_point[1,2])/(gate_x.gate_point[0,0]-gate_x.gate_point[1,0]))
-    ##==calculate the gate RM
-    rot=R.from_euler('zyx',[gate_pitch,0,0])
-    inputs[14:23]=rot.as_matrix().flatten()
-    
-    inputs[0:10] = gate_x.transform(quad_state)
-    inputs[10:13] = gate_x.t_final(final_point)
+    inputs,_ = input_cal(quad_state, final_point, gate_x)
     
     outputs = model(torch.tensor(inputs, dtype=torch.float).to(device)).to('cpu')
     outputs = outputs.data.numpy()
@@ -55,14 +62,7 @@ def binary_search_solver(model,device, quad_state, final_point, gate1, velo, w )
         gate_x = Gate(gate1.translate_out(velo*t1)) # prediction of the gap future position
         gate_x.rotate_y(w*t1)
 
-        inputs = np.zeros(23)
-        inputs[13] = magni(gate_x.gate_point[0,:]-gate_x.gate_point[1,:])
-        gate_pitch = atan((gate_x.gate_point[0,2]-gate_x.gate_point[1,2])/(gate_x.gate_point[0,0]-gate_x.gate_point[1,0]))
-        ##==calculate the gate RM
-        rot=R.from_euler('zyx',[gate_pitch,0,0])
-        inputs[14:23]=rot.as_matrix().flatten()
-        inputs[0:10] = gate_x.transform(quad_state)
-        inputs[10:13] = gate_x.t_final(final_point)
+        inputs,_ = input_cal(quad_state, final_point, gate_x)
         
         outputs = model(torch.tensor(inputs, dtype=torch.float).to(device)).to('cpu')
         outputs = outputs.data.numpy()

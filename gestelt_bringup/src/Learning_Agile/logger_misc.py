@@ -5,7 +5,7 @@ import os
 import yaml
 from scipy.spatial.transform import Rotation as R
 from solid_geometry import *
-
+import numpy as np
 class LoggerConfig:
     def __init__(self, log_dir="logs"):
         # 创建日志目录，如果不存在的话
@@ -48,8 +48,10 @@ def log_train_IO(writer,inputs,outputs,global_step):
     R_nn=verify_SVD_casadi(outputs[3:12])
     quat_nn=R.from_matrix(R_nn.reshape(3,3))
     euler_nn=quat_nn.as_euler('zyx', degrees=True)
-
-    writer.add_scalar('gate_pitch', inputs[8], global_step)
+    
+    gate_euler=R.from_matrix(inputs[8:17].reshape(3,3)).as_euler('zyx')
+    gate_pitch=gate_euler[1]*180/np.pi
+    writer.add_scalar('gate_pitch', gate_pitch, global_step)
   
     writer.add_scalar('x_tra', outputs[0], global_step)
     writer.add_scalar('y_tra', outputs[1], global_step)
