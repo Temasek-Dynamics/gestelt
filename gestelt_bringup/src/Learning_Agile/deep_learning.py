@@ -117,7 +117,7 @@ if __name__ == '__main__':
         learning_rate = 1e-4
         method_name = 'FD'
 
-    training_notes = "SVD(9D)_Trial_1"
+    training_notes = "Trial_1"
 
     logger_config=LoggerConfig("NN1_training_logs")
     
@@ -177,9 +177,11 @@ if __name__ == '__main__':
         FILE = os.path.join(model_folder, "NN1_pretrain.pth")
         model = torch.load(FILE).to(device)
         start_epoch = 0
-    
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    
+    # learning rate scheduler
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.9)
     
     ## prepare logging
     Every_reward = np.zeros((num_epochs,step_pre_epoch))    
@@ -340,7 +342,7 @@ if __name__ == '__main__':
                     # d_reward/d_z * d_z/d_dnn1
                     loss.backward()
                     optimizer.step()
-
+                       
                     ##  record the average reward for a batch
                     evalue += grads_list[:,-1].sum()/batch_size
                     Every_reward[epoch,i]=grads_list[:,-1].sum()/batch_size
@@ -354,7 +356,7 @@ if __name__ == '__main__':
                     global_step += 1
                     pbar.set_postfix({'step': i+1, 'reward': grads_list[:,-1].sum()/batch_size})
                     pbar.update(1)
-            
+                scheduler.step() # update the learning rate
                 # mean reward for a epoch
                 mean_reward = evalue/step_pre_epoch # evalue/int(batch_size/num_cores)
                 Mean_r += [mean_reward]

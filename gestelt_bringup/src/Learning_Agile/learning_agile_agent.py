@@ -47,6 +47,7 @@ class MovingGate():
         # add the pitch angle to the gate
         gate_init_euler = R.from_matrix(env_init_set[8:17].reshape(3,3)).as_euler('zyx')
         self.gate_init_pitch = gate_init_euler[1]
+        # self.gate_init_pitch = 1.5
         self.gate.rotate_y(self.gate_init_pitch)
 
 
@@ -489,7 +490,7 @@ def main():
     if options['CLOSE_LOOP_MODEL']:
         model_name = 'NN_close_0.pth'#'NN2_imitate_1.pth' #'NN_close_2.pth'
     else:   
-        model_name = '20241017-130657-PDP-SVD(9D)_Trial_1/NN2_imitate_1.pth'
+        model_name = '20241018-093741-PDP-Trial_1/NN2_imitate_1.pth'
 
     model_file=os.path.join(current_dir, f'training_data/NN_model/',model_name)
     

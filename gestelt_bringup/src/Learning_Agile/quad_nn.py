@@ -13,6 +13,7 @@ from quad_model import toQuaternion
 from solid_geometry import norm,magni
 from solid_geometry import plane
 from scipy.spatial.transform import Rotation as R
+import scipy.stats as stats
 import os
 import yaml
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -75,7 +76,12 @@ def nn_sample(init_pos=None,final_pos=None,init_angle=None,cur_epoch=100,pretrai
         des_pitch_mean_min = 1*pi/6
         des_pitch_mean_max = 1*pi/6
     des_pitch_mean = des_pitch_mean_min - (des_pitch_mean_min - des_pitch_mean_max) * (cur_epoch / 100) 
-    gate_pitch = np.clip(np.random.normal(0,pi/18),-pi/6,pi/6) 
+    # gate_pitch = np.clip(np.random.normal(0,pi/18),-pi/6,pi/6) 
+    # truncated normal distribution
+    mu,sigma = 0,pi/6
+    lower,upper = -pi/4,pi/4
+    X = stats.truncnorm((lower - mu) / sigma, (upper - mu) / sigma, loc=mu, scale=sigma)
+    gate_pitch = X.rvs(1)[0]
     if gate_pitch>0:
         gate_pitch=gate_pitch+des_pitch_mean
     else:

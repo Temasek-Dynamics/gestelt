@@ -13,8 +13,8 @@ gate:
   width: 0.56
   linear_vel: [0.0, 0.0, 0.0]
   angular_vel: 0.0 
-  # linear_vel: [1.0,-0.3,0.0]
-  # angular_vel: -1.57
+  linear_vel: [-0.5,-0.3,0.0]
+  angular_vel: -1.57
 traj_server:
   takeoff_height: 1.2
   drone_yaw: 0.0 # take-off yaw
