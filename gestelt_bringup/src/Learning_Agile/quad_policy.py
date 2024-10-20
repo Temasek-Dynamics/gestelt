@@ -1,5 +1,6 @@
 ## this file is a package for policy search for quadrotor
-
+import math
+import numpy as np
 from quad_OC import OCSys,LQR
 # the sequence of importing solid_geometry
 # with juliacall is import
@@ -8,10 +9,8 @@ from collision_detection import *
 from math import cos, pi, sin, sqrt, tan
 from quad_model import *
 
-import numpy as np
-import torch
+
 from casadi import *
-import logging
 class PlanFwdBwdWrapper():
     """
     Wrapper the MPC forward and backward process
@@ -297,7 +296,7 @@ class PlanFwdBwdWrapper():
             # drdp[3] = drdp[3]+self.drdroll
             # drdp[5] = drdp[5]+self.drdyaw
 
-            drdp[6] = np.clip(drdp[6],-0.1,0.1)
+            drdp[-1] = np.clip(drdp[-1],-0.1,0.1)
 
             drdp = drdp/20000
             # drdx = np.clip(drdp[0],-0.02,0.02)

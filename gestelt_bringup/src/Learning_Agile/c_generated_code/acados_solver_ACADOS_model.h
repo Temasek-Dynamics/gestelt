@@ -40,7 +40,6 @@
 #define ACADOS_MODEL_NZ     0
 #define ACADOS_MODEL_NU     4
 #define ACADOS_MODEL_NP     24
-#define ACADOS_MODEL_NP_GLOBAL     0
 #define ACADOS_MODEL_NBX    10
 #define ACADOS_MODEL_NBX0   10
 #define ACADOS_MODEL_NBU    4
@@ -95,36 +94,35 @@ typedef struct ACADOS_model_solver_capsule
     unsigned int nlp_np;
 
     /* external functions */
-
     // dynamics
 
-    external_function_external_param_casadi *impl_dae_fun;
-    external_function_external_param_casadi *impl_dae_fun_jac_x_xdot_z;
-    external_function_external_param_casadi *impl_dae_jac_x_xdot_u_z;
+    external_function_param_casadi *impl_dae_fun;
+    external_function_param_casadi *impl_dae_fun_jac_x_xdot_z;
+    external_function_param_casadi *impl_dae_jac_x_xdot_u_z;
 
 
 
 
     // cost
 
-    external_function_external_param_casadi *ext_cost_fun;
-    external_function_external_param_casadi *ext_cost_fun_jac;
-    external_function_external_param_casadi *ext_cost_fun_jac_hess;
+    external_function_param_casadi *ext_cost_fun;
+    external_function_param_casadi *ext_cost_fun_jac;
+    external_function_param_casadi *ext_cost_fun_jac_hess;
 
 
 
 
 
-    external_function_external_param_casadi ext_cost_0_fun;
-    external_function_external_param_casadi ext_cost_0_fun_jac;
-    external_function_external_param_casadi ext_cost_0_fun_jac_hess;
+    external_function_param_casadi ext_cost_0_fun;
+    external_function_param_casadi ext_cost_0_fun_jac;
+    external_function_param_casadi ext_cost_0_fun_jac_hess;
 
 
 
 
-    external_function_external_param_casadi ext_cost_e_fun;
-    external_function_external_param_casadi ext_cost_e_fun_jac;
-    external_function_external_param_casadi ext_cost_e_fun_jac_hess;
+    external_function_param_casadi ext_cost_e_fun;
+    external_function_param_casadi ext_cost_e_fun_jac;
+    external_function_param_casadi ext_cost_e_fun_jac_hess;
 
 
 
@@ -162,7 +160,6 @@ ACADOS_SYMBOL_EXPORT int ACADOS_model_acados_update_time_steps(ACADOS_model_solv
 ACADOS_SYMBOL_EXPORT int ACADOS_model_acados_update_qp_solver_cond_N(ACADOS_model_solver_capsule * capsule, int qp_solver_cond_N);
 ACADOS_SYMBOL_EXPORT int ACADOS_model_acados_update_params(ACADOS_model_solver_capsule * capsule, int stage, double *value, int np);
 ACADOS_SYMBOL_EXPORT int ACADOS_model_acados_update_params_sparse(ACADOS_model_solver_capsule * capsule, int stage, int *idx, double *p, int n_update);
-ACADOS_SYMBOL_EXPORT int ACADOS_model_acados_set_p_global_and_precompute_dependencies(ACADOS_model_solver_capsule* capsule, double* data, int data_len);
 
 ACADOS_SYMBOL_EXPORT int ACADOS_model_acados_solve(ACADOS_model_solver_capsule * capsule);
 ACADOS_SYMBOL_EXPORT void ACADOS_model_acados_batch_solve(ACADOS_model_solver_capsule ** capsules, int N_batch);

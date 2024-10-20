@@ -3,9 +3,10 @@
 here, DNN1 is trained for static gate, random drone static initial position and orientation
 DNN1 should generate single one open loop MPC decision variables. supervised by finite policy gradient
 """
-
-from quad_model import *
 from quad_policy import *
+import os
+from quad_model import *
+
 from learning_agile_agent import MovingGate,verify_SVD_casadi
 from quad_nn import *
 from multiprocessing import Process, Array
@@ -96,7 +97,7 @@ if __name__ == '__main__':
     
     ## training option
     'MULTI_CORE'  : False,
-    'TRAIN_FROM_CHECKPOINT' : False
+    'TRAIN_FROM_CHECKPOINT' : False 
     }
     num_cores = 1 #5
     num_epochs = 100 #100
@@ -112,7 +113,7 @@ if __name__ == '__main__':
         batch_size = 100
 
     if options['PDP_GRADIENT']:
-        learning_rate = 1e-4
+        learning_rate = 1e-5
         method_name = 'PDP'
     else:
         learning_rate = 1e-4
@@ -166,8 +167,8 @@ if __name__ == '__main__':
     
     
     if options['TRAIN_FROM_CHECKPOINT']:
-        existing_model_folder = os.path.join(model_folder, 'empty')
-        FILE = os.path.join(existing_model_folder, "NN1_deep2_48.pth")
+        existing_model_folder = os.path.join(model_folder, '20241020-103450-PDP-Trial_1')
+        FILE = os.path.join(existing_model_folder, "NN1_deep2_0.pth")
         # checkpoint = torch.load(FILE)
         # start_epoch = checkpoint['epoch']   
         # model = checkpoint['model']

@@ -6,9 +6,7 @@ import math
 from numpy import random
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import numpy as np
-from quad_policy import Rd2Rp
 from quad_model import toQuaternion
 from solid_geometry import norm,magni
 from solid_geometry import plane
@@ -100,7 +98,8 @@ def nn_sample(init_pos=None,final_pos=None,init_angle=None,cur_epoch=100,pretrai
 def t_output(inputs):
     inputs = np.array(inputs)
     outputs = np.zeros(13)
-    outputs[3:12]=inputs[8:17]
+    R_gate=inputs[8:17].reshape(3,3)
+    outputs[3:12]=R_gate.T.flatten()
     # outputs[3:12] = np.array([[0.0007963,  0.0000000, -0.9999997],
     #                         [0.0000000,  1.0000000,  0.0000000],
     #                         [0.9999997,  0.0000000,  0.0007963]]).flatten()  
