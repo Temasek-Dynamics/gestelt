@@ -3,10 +3,11 @@
 here, DNN1 is trained for static gate, random drone static initial position and orientation
 DNN1 should generate single one open loop MPC decision variables. supervised by finite policy gradient
 """
-from quad_nn import *
+
 from quad_model import *
 from quad_policy import *
 from learning_agile_agent import MovingGate,verify_SVD_casadi
+from quad_nn import *
 from multiprocessing import Process, Array
 import yaml
 from logger_misc import LoggerConfig,log_gradient,log_train_IO
@@ -165,13 +166,15 @@ if __name__ == '__main__':
     
     
     if options['TRAIN_FROM_CHECKPOINT']:
-        FILE = os.path.join(model_folder, "NN1_deep2_48.pth")
+        existing_model_folder = os.path.join(model_folder, 'empty')
+        FILE = os.path.join(existing_model_folder, "NN1_deep2_48.pth")
         # checkpoint = torch.load(FILE)
         # start_epoch = checkpoint['epoch']   
         # model = checkpoint['model']
         # optimizer = checkpoint['optimizer']
         model = torch.load(FILE)
         start_epoch = 0
+        saved_folder = existing_model_folder
         logging.info('load model from %s',FILE)
     else:
         FILE = os.path.join(model_folder, "NN1_pretrain.pth")

@@ -1,4 +1,5 @@
 import numpy as np
+import os
 from juliacall import Main as jl, convert
 
 
@@ -12,7 +13,8 @@ jl.seval('Pkg.add("MeshCat")')
 jl.seval('Pkg.add("DifferentiableCollisions")')
 
 ## necessary for the package update
-jl.seval('Pkg.develop(path="/home/tlab-uav/DifferentiableCollisions.jl")')
+relative_path = os.path.abspath("../../../DifferentiableCollisions.jl")
+jl.seval(f'Pkg.develop(path="{relative_path}")')
 jl.seval('Pkg.add("Revise")')
 
 jl.seval('println("Hello, Julia!")')

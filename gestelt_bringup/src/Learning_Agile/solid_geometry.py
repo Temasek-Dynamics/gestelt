@@ -3,7 +3,6 @@
 # this file consists of several classes
 import numpy as np
 import casadi as ca
-import torch
 import jax
 import jax.numpy as jnp
 from einops import rearrange

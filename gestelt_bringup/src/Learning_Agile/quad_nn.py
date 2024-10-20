@@ -32,10 +32,12 @@ def nn_sample(init_pos=None,final_pos=None,init_angle=None,cur_epoch=100,pretrai
     inputs = np.zeros(17)
     if init_pos is None:
         inputs[0:3] = np.random.uniform(-1,1,size=3) + pre_ini_pos #-5~5, -9
+
+        # TODO: transfer to trauncated normal distribution
         if pretrain:
             inputs[1] = np.random.uniform(-5,5) + pre_ini_pos[1]
         else:
-            inputs[1] = np.clip(inputs[1],pre_ini_pos[1]-1,pre_ini_pos[1]+1)
+            inputs[1] = np.clip(inputs[1],pre_ini_pos[1]-1,pre_ini_pos[1]+1) 
     else:
         inputs[0:3] = init_pos
     ## random final position 
@@ -70,25 +72,24 @@ def nn_sample(init_pos=None,final_pos=None,init_angle=None,cur_epoch=100,pretrai
     # 0 -> gate is horizontal
     # pi/2 -> gate is vertical
     if pretrain:
-        des_pitch_mean_min = 0
-        des_pitch_mean_max = 0
+        gate_pitch = np.random.uniform(-pi/2,pi/2)
     else:
         des_pitch_mean_min = 1*pi/6
         des_pitch_mean_max = 1*pi/6
-    des_pitch_mean = des_pitch_mean_min - (des_pitch_mean_min - des_pitch_mean_max) * (cur_epoch / 100) 
-    # gate_pitch = np.clip(np.random.normal(0,pi/18),-pi/6,pi/6) 
-    # truncated normal distribution
-    mu,sigma = 0,pi/6
-    lower,upper = -pi/4,pi/4
-    X = stats.truncnorm((lower - mu) / sigma, (upper - mu) / sigma, loc=mu, scale=sigma)
-    gate_pitch = X.rvs(1)[0]
-    if gate_pitch>0:
-        gate_pitch=gate_pitch+des_pitch_mean
-    else:
-        gate_pitch=gate_pitch-des_pitch_mean
+        des_pitch_mean = des_pitch_mean_min - (des_pitch_mean_min - des_pitch_mean_max) * (cur_epoch / 100) 
+        # gate_pitch = np.clip(np.random.normal(0,pi/18),-pi/6,pi/6) 
+        # truncated normal distribution
+        mu,sigma = 0,pi/18
+        lower,upper = -pi/6,pi/6
+        X = stats.truncnorm((lower - mu) / sigma, (upper - mu) / sigma, loc=mu, scale=sigma)
+        gate_pitch = X.rvs(1)[0]
+        if gate_pitch>0:
+            gate_pitch=gate_pitch+des_pitch_mean
+        else:
+            gate_pitch=gate_pitch-des_pitch_mean
     
 
-    # gate_pitch = np.random.uniform(-pi/2,pi/2)
+    
 
     ##==calculate the gate RM
     rot=R.from_euler('zyx',[0,gate_pitch,0])
@@ -99,7 +100,7 @@ def nn_sample(init_pos=None,final_pos=None,init_angle=None,cur_epoch=100,pretrai
 def t_output(inputs):
     inputs = np.array(inputs)
     outputs = np.zeros(13)
-    outputs[3:12]=np.eye(3).flatten()
+    outputs[3:12]=inputs[8:17]
     # outputs[3:12] = np.array([[0.0007963,  0.0000000, -0.9999997],
     #                         [0.0000000,  1.0000000,  0.0000000],
     #                         [0.9999997,  0.0000000,  0.0007963]]).flatten()  

@@ -1,5 +1,5 @@
 import numpy as np
-from differentiable_collision_wrapper import *
+# from differentiable_collision_wrapper import *
 import casadi as ca
 import torch
 from solid_geometry import *

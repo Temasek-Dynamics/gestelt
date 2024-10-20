@@ -11,7 +11,7 @@ def rotation_matrix_z(theta):
 # 定义 trace(I - R_d^T R) 的函数，R_d 为期望的旋转矩阵，R 为真实旋转矩阵
 def trace_I_minus_RdT_R(Rd, theta):
     R = rotation_matrix_z(theta)
-    return np.trace(np.eye(3) - np.dot(Rd.T, R))
+    return 2*np.trace(np.eye(3) - np.dot(Rd.T, R))
 
 
 # Chordal distance
