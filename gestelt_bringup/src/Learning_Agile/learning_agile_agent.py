@@ -47,7 +47,7 @@ class MovingGate():
         # add the pitch angle to the gate
         gate_init_euler = R.from_matrix(env_init_set[8:17].reshape(3,3)).as_euler('zyx')
         self.gate_init_pitch = gate_init_euler[1]
-        # self.gate_init_pitch = 1.5
+        # self.gate_init_pitch = 1.2
         self.gate.rotate_y(self.gate_init_pitch)
 
 
@@ -321,9 +321,12 @@ class LearningAgileAgent():
                     out=np.zeros(13)
                     out[0:3]=self.gate_center
                     # out[3:6]=self.gate_ori_RP # Rodrigues parameters
-                    out[3:12]=np.array([[0.7603140,  0.0000000, -0.6495557],
+                    # out[3:12]=np.array([[0.7603140,  0.0000000, -0.6495557],
+                    #                     [0.0000000,  1.0000000,  0.0000000],
+                    #                     [0.6495557,  0.0000000,  0.7603140]]).flatten() # 3x3 rotation matrix(in flat form)
+                    out[3:12]=np.array([[0.0007963,  0.0000000, -0.9999997],
                                         [0.0000000,  1.0000000,  0.0000000],
-                                        [0.6495557,  0.0000000,  0.7603140]]).flatten() # 3x3 rotation matrix(in flat form)
+                                        [0.9999997,  0.0000000,  0.0007963]]).flatten()
                     print("="*50)
                     print("NN pose det before SVD",np.linalg.det(out[3:12].reshape(3,3)))
                     
@@ -345,7 +348,8 @@ class LearningAgileAgent():
                         # relative traversal time
                         out[12]=self.t_tra_rel
                         verify_tra_R=verify_SVD_casadi(out[3:12])
-                        self.log_NN_IO_for_RM(out,verify_tra_R.flatten(),gate_pitch=0)       
+                        gate_pitch=0
+                        self.log_NN_IO_for_RM(gate_pitch,out,verify_tra_R.flatten())       
                 else:
                     
                     if self.options['CLOSE_LOOP_MODEL']:
@@ -491,6 +495,7 @@ def main():
         model_name = 'NN_close_0.pth'#'NN2_imitate_1.pth' #'NN_close_2.pth'
     else:   
         model_name = '20241018-093741-PDP-Trial_1/NN2_imitate_1.pth'
+
 
     model_file=os.path.join(current_dir, f'training_data/NN_model/',model_name)
     

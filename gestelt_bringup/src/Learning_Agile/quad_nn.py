@@ -106,9 +106,9 @@ def t_output(inputs):
     #outputs[5] = math.tan(inputs[6]/2)
     ## traversal time is propotional to the distance of the centroids
     if inputs[1]>0:
-        raw_time = -round(magni(inputs[0:3])/2,1)
+        raw_time = -round(magni(inputs[0:3])/4,1)
     else:
-        raw_time=round(magni(inputs[0:3])/2,1)
+        raw_time=round(magni(inputs[0:3])/4,1)
     outputs[-1] = raw_time #np.clip(raw_time,3,3)
     print('desired_traversing_time',outputs[-1])
     return outputs
@@ -131,45 +131,45 @@ def gene_gate():
 
 
 ## sample any initial state, final point and 12 elements window (not necessary in our method) (not important)
-def con_sample():
-    inputs = np.zeros(25)
-    # generate first three inouts
-    scaling = np.random.uniform(3,16)
-    phi = np.random.uniform(0,2*pi)
-    theta = np.clip(np.random.normal(pi/2,pi/8,size=1), pi/4, 3*pi/4)
-    #transformation
-    inputs[0] = scaling*sin(theta)*cos(phi)
-    inputs[1] = scaling*sin(theta)*sin(phi)
-    inputs[2] = scaling*cos(theta)
-    beta = np.random.uniform(0,2*pi)
-    rotation1 = np.array([[cos(beta),0,sin(beta)],[0,1,0],[-sin(beta),0,cos(beta)]])
-    rotation2 = np.array([[cos(phi-pi/2),-sin(phi-pi/2),0],[sin(phi-pi/2),cos(phi-pi/2),0],[0,0,1]])
-    rotation  = np.matmul(rotation2,rotation1)
-    # generate rotation pair
-    l = norm(np.random.normal(0,1,size=3))
-    a = np.random.normal(0,pi/16)
-    r = R.from_rotvec(a * l)
-    rotation = np.matmul(r.as_matrix(),rotation)
-    # generate translation
-    length = np.random.uniform(2,scaling-1) 
-    tranlation1 = np.array([length*sin(theta)*cos(phi),length*sin(theta)*sin(phi),length*cos(theta)])
-    tranlation = tranlation1 + np.random.normal(0,1,size=3)
-    # generate real obstacle
-    gate = gene_gate()
-    for i in range(4):
-        gate[i] = np.matmul(rotation,gate[i]) + tranlation
-    inputs[3:15] = gate.reshape(12)
-        #generate velocity
-    inputs[15:18] = np.random.normal(0,3,size=3)
-    #generate quaternions
-    Rd = np.random.normal(0,0.5,size=3)
-    rp = Rd2Rp(Rd)
-    inputs[18:22] = toQuaternion(rp[0],rp[1])
-    distance = np.random.uniform(0,scaling)
-    inputs[22] = distance*sin(theta)*cos(phi)+np.random.normal(0,1)
-    inputs[23] = distance*sin(theta)*sin(phi)+np.random.normal(0,1)
-    inputs[24] = distance*cos(theta)+np.random.normal(0,1)
-    return inputs
+# def con_sample():
+    # inputs = np.zeros(25)
+    # # generate first three inouts
+    # scaling = np.random.uniform(3,16)
+    # phi = np.random.uniform(0,2*pi)
+    # theta = np.clip(np.random.normal(pi/2,pi/8,size=1), pi/4, 3*pi/4)
+    # #transformation
+    # inputs[0] = scaling*sin(theta)*cos(phi)
+    # inputs[1] = scaling*sin(theta)*sin(phi)
+    # inputs[2] = scaling*cos(theta)
+    # beta = np.random.uniform(0,2*pi)
+    # rotation1 = np.array([[cos(beta),0,sin(beta)],[0,1,0],[-sin(beta),0,cos(beta)]])
+    # rotation2 = np.array([[cos(phi-pi/2),-sin(phi-pi/2),0],[sin(phi-pi/2),cos(phi-pi/2),0],[0,0,1]])
+    # rotation  = np.matmul(rotation2,rotation1)
+    # # generate rotation pair
+    # l = norm(np.random.normal(0,1,size=3))
+    # a = np.random.normal(0,pi/16)
+    # r = R.from_rotvec(a * l)
+    # rotation = np.matmul(r.as_matrix(),rotation)
+    # # generate translation
+    # length = np.random.uniform(2,scaling-1) 
+    # tranlation1 = np.array([length*sin(theta)*cos(phi),length*sin(theta)*sin(phi),length*cos(theta)])
+    # tranlation = tranlation1 + np.random.normal(0,1,size=3)
+    # # generate real obstacle
+    # gate = gene_gate()
+    # for i in range(4):
+    #     gate[i] = np.matmul(rotation,gate[i]) + tranlation
+    # inputs[3:15] = gate.reshape(12)
+    #     #generate velocity
+    # inputs[15:18] = np.random.normal(0,3,size=3)
+    # #generate quaternions
+    # Rd = np.random.normal(0,0.5,size=3)
+    # rp = Rd2Rp(Rd)
+    # inputs[18:22] = toQuaternion(rp[0],rp[1])
+    # distance = np.random.uniform(0,scaling)
+    # inputs[22] = distance*sin(theta)*cos(phi)+np.random.normal(0,1)
+    # inputs[23] = distance*sin(theta)*sin(phi)+np.random.normal(0,1)
+    # inputs[24] = distance*cos(theta)+np.random.normal(0,1)
+    # return inputs
 
 
 ## define the class of neural network (2 hidden layers, unit = ReLU)

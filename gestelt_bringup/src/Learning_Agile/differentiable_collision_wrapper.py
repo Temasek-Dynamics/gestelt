@@ -1,5 +1,6 @@
 import numpy as np
 import os
+os.environ['LD_LIBRARY_PATH'] = ""
 from juliacall import Main as jl, convert
 
 
@@ -13,8 +14,9 @@ jl.seval('Pkg.add("MeshCat")')
 jl.seval('Pkg.add("DifferentiableCollisions")')
 
 ## necessary for the package update
-relative_path = os.path.abspath("../../../DifferentiableCollisions.jl")
-jl.seval(f'Pkg.develop(path="{relative_path}")')
+# relative_path = os.path.abspath("../../../DifferentiableCollisions.jl")
+# jl.seval(f'Pkg.develop(path="{relative_path}")')
+jl.seval(f'Pkg.develop(path="/home/tlab-uav/DifferentiableCollisions.jl")')
 jl.seval('Pkg.add("Revise")')
 
 jl.seval('println("Hello, Julia!")')
@@ -25,6 +27,8 @@ jl.seval('using LinearAlgebra')
 jl.seval('using StaticArrays')
 jl.seval('import DifferentiableCollisions as dc')
 jl.seval('import MeshCat as mc')
+
+
 
 def dir_cosine_np(q):  # world frame to body frame
     C_B_I = np.array([

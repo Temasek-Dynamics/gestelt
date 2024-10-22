@@ -1,5 +1,6 @@
 import numpy as np
-from differentiable_collision_wrapper import *
+# from differentiable_collision_wrapper import *
+from jax_differentiable_collision_call import *
 import casadi as ca
 import torch
 from solid_geometry import *
@@ -146,7 +147,7 @@ class Obstacle():
 
                 
                 
-            penalty_single,dalpha_dstate_drone=DifferentiableCollisionsWrapper(line_centers,
+            penalty_single,dalpha_dstate_drone=JAXDifferentiableCollisionsWrapper(line_centers,
                                             R_gate,
                                             gate_quat,
                                             config['drone']['wing_len']/2,

@@ -18,8 +18,8 @@ with open(yaml_file, 'r', encoding='utf-8') as file:
     config_dict = yaml.safe_load(file)
 current_dir = os.path.dirname(os.path.abspath(__file__))
 training_data_folder=os.path.abspath(os.path.join(current_dir, 'training_data'))
-model_folder=os.path.abspath(os.path.join(training_data_folder, 'NN_model/20241018-093741-PDP-Trial_1'))
-FILE_INPUT = model_folder+"/NN1_deep2_50.pth"
+model_folder=os.path.abspath(os.path.join(training_data_folder, 'NN_model/20241020-133309-PDP-Trial_2'))
+FILE_INPUT = model_folder+"/NN1_deep2_22.pth"
 model_nn1 = torch.load(FILE_INPUT).to(device)
 
 ##====== NN2 logging initialization ======##

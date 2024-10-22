@@ -1,11 +1,12 @@
 ## this file is a package for policy search for quadrotor
+from collision_detection import *
 import math
 import numpy as np
 from quad_OC import OCSys,LQR
 # the sequence of importing solid_geometry
 # with juliacall is import
 from solid_geometry import *
-from collision_detection import *
+
 from math import cos, pi, sin, sqrt, tan
 from quad_model import *
 
@@ -317,6 +318,7 @@ class PlanFwdBwdWrapper():
 
         
             # print("analytic grad:",np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,j]))
+            # print(drdp)
             # return np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,R])
             return np.concatenate((drdp,np.array([R])))
     

@@ -5,7 +5,7 @@ sys.path.append('../')
 import numpy as np
 from solid_geometry import *
 from quad_model import*
-
+import torch
 class kalman:
     def __init__(self,velo_devia):
         A = np.array([[1,0.1],[0,1]])
