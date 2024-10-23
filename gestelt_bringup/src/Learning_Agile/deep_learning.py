@@ -97,11 +97,11 @@ if __name__ == '__main__':
     
     ## training option
     'MULTI_CORE'  : False,
-    'TRAIN_FROM_CHECKPOINT' : False 
+    'TRAIN_FROM_CHECKPOINT' : True
     }
     num_cores = 1 #5
     num_epochs = 100 #100
-    batch_size = 10 # 100
+    batch_size = 20 # 100
     step_pre_epoch = 20
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -113,7 +113,7 @@ if __name__ == '__main__':
         batch_size = 100
 
     if options['PDP_GRADIENT']:
-        learning_rate = 1e-5
+        learning_rate = 1e-4
         method_name = 'PDP'
     else:
         learning_rate = 1e-4
@@ -130,7 +130,7 @@ if __name__ == '__main__':
     # acquire the current directory
     current_dir = os.path.dirname(os.path.abspath(__file__))
 
-    ## logging initialization
+    ## tensorboard logging initialization
     log_dir = os.path.join(current_dir, "NN1_training_logs")
     current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     file_dir = os.path.join(log_dir, f"train-{current_time}-{method_name}-{training_notes}")
@@ -154,7 +154,7 @@ if __name__ == '__main__':
     ###############################################################
     planner_list = []
     # for each core, generate a quadrotor MPC solver
-    for i in range(num_cores):
+    for i in range(batch_size):
         planner = PlanFwdBwdWrapper(config_dict, options)
         
         planner_list.append(planner)
@@ -167,14 +167,14 @@ if __name__ == '__main__':
     
     
     if options['TRAIN_FROM_CHECKPOINT']:
-        existing_model_folder = os.path.join(model_folder, '20241020-103450-PDP-Trial_1')
-        FILE = os.path.join(existing_model_folder, "NN1_deep2_0.pth")
+        existing_model_folder = os.path.join(model_folder, '20241023-123353-PDP-Trial_1')
+        FILE = os.path.join(existing_model_folder, "NN1_deep2_10.pth")
         # checkpoint = torch.load(FILE)
         # start_epoch = checkpoint['epoch']   
         # model = checkpoint['model']
         # optimizer = checkpoint['optimizer']
         model = torch.load(FILE)
-        start_epoch = 0
+        start_epoch = 10
         saved_folder = existing_model_folder
         logging.info('load model from %s',FILE)
     else:
@@ -303,7 +303,7 @@ if __name__ == '__main__':
                     inputs_list = []
                     outputs_list = []
                     grads_list = []
-                    
+                    process_list = []
 
                     # sampling in a batch
                     for k in range(batch_size): 
@@ -324,17 +324,28 @@ if __name__ == '__main__':
                         # create shared variables (shared between processes)
                         gra = Array('d',np.zeros(output_size+1)
                         )
-                        
-                        # calculate gradient and loss
-                        calc_grad(config_dict,
-                                planner_list[0],
-                                inputs_list[k,:].reshape(input_size),
-                                np_outputs_list[k,:].reshape(output_size),
-                                gra)
-                        
+                        ##=========batch on Single processes=========##
+                        # # calculate gradient and loss
+                        # calc_grad(config_dict,
+                        #         planner_list[0],
+                        #         inputs_list[k,:].reshape(input_size),
+                        #         np_outputs_list[k,:].reshape(output_size),
+                        #         gra)
+                        # grads_list.append(gra)
+                        ##=========batch on Multiple processes=========##
+                        p=Process(target=calc_grad,args=(config_dict,
+                                                        planner_list[k],
+                                                        inputs_list[k,:].reshape(input_size),
+                                                        np_outputs_list[k,:].reshape(output_size),
+                                                        gra))
                         
                         # create a gradient array for assemble all process gradient result
+                        p.start()
                         grads_list.append(gra)
+                        process_list.append(p)
+                        
+                    for process in process_list:
+                        process.join()
 
                     ##=== Backward and optimize ===##
                     grads_list = np.array(grads_list)

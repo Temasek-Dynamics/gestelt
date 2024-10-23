@@ -49,12 +49,19 @@ def DifferentiableCollisionsWrapper(line_centers,
     width_gap=np.abs(line_centers_G[1,0]-line_centers_G[3,0])
     height_gap=np.abs(line_centers_G[0,2]-line_centers_G[2,2])
     
-    prism_size=quad_half_height
-    A=np.diag([quad_radius,quad_radius,quad_half_height])
-    A_inv=np.linalg.inv(A)
-    P=A_inv.T@A_inv
-  
-   
+    ## Ellipsoid  drone
+    # prism_size=quad_half_height
+    # A=np.diag([quad_radius,quad_radius,quad_half_height])
+    # A_inv=np.linalg.inv(A)
+    # P=A_inv.T@A_inv
+    # drone_convex = jl.dc.Ellipsoid(P) 
+    # P =jl.convert(jl.SMatrix[3,3,jl.Float64,9], P)
+    
+
+    ## polytope drone
+    drone_convex = jl.dc.create_rect_prism(quad_radius*2, quad_radius*2, quad_half_height*2)[0]
+    
+
     # test=np.matmul(R_gate.T,line_centers[0,])
     # print('line_centers_G:',line_centers_G)
 
@@ -79,8 +86,8 @@ def DifferentiableCollisionsWrapper(line_centers,
              jl.dc.create_rect_prism(quad_radius*2, 1.0, height_gap)[0]]
 
     
-    P =jl.convert(jl.SMatrix[3,3,jl.Float64,9], P)
-    Elli_drone = jl.dc.Ellipsoid(P) 
+    
+    
     
     ## assign pose of the prisms and ellipsoid
     # covert from numpy to Julia SVectors
@@ -100,8 +107,8 @@ def DifferentiableCollisionsWrapper(line_centers,
     P_obs[3].r = prism_centers_W[3,]
     P_obs[3].q = jl_q_prism
 
-    Elli_drone.r = drone_state[0:3]
-    Elli_drone.q = jl_q_drone
+    drone_convex.r = drone_state[0:3]
+    drone_convex.q = jl_q_drone
     
 
     #============================visualize=======================##
@@ -115,8 +122,8 @@ def DifferentiableCollisionsWrapper(line_centers,
     # jl.seval('vis->mc.setvisible!(vis["/Axes"],false)')(vis)
 
 
-    # jl.seval('(vis, Elli_drone)->dc.build_primitive!(vis, Elli_drone, Symbol("drone"); color = mc.RGBA(0.0, 0.0, 0.0, 1.0), α = 1.0)')(vis, Elli_drone)
-    # jl.seval('(vis, Elli_drone)->dc.update_pose!(vis[Symbol("drone")],Elli_drone)')(vis,Elli_drone) 
+    # jl.seval('(vis, drone_convex)->dc.build_primitive!(vis, drone_convex, Symbol("drone"); color = mc.RGBA(0.0, 0.0, 0.0, 1.0), α = 1.0)')(vis, drone_convex)
+    # jl.seval('(vis, drone_convex)->dc.update_pose!(vis[Symbol("drone")],drone_convex)')(vis,drone_convex) 
     
     # for i in range(len(P_obs)):
     #     jl.seval('(i,vis,current_obs)->dc.build_primitive!(vis, current_obs, Symbol("P"*string(i)); α = 1.0)')(i,vis,P_obs[i])    
@@ -131,15 +138,15 @@ def DifferentiableCollisionsWrapper(line_centers,
         # des_alpha comes from the penalty design helper
         if i == 1 or i == 3:
             # for the left and right walls
-            alpha_importance=0.1
+            alpha_importance=1
             des_alpha=1.81825
         else:
             # for the up and down walls
-            alpha_importance=1
+            alpha_importance=0
             des_alpha=1.4325
 
         # dalpha_i_dstate: drone_p,drone_q,ellipse_p,ellipse_q
-        alpha_i, dalpha_i_dstate=jl.dc.proximity_gradient(Elli_drone,P_obs[i],verbose = False, pdip_tol = 1e-6)
+        alpha_i, dalpha_i_dstate=jl.dc.proximity_gradient(drone_convex,P_obs[i],verbose = False, pdip_tol = 1e-6)
 
         # print(alpha_i)
 
@@ -151,8 +158,8 @@ def DifferentiableCollisionsWrapper(line_centers,
         # dalpha_dstate_drone[6:10] += (100/alpha_i * (3/(alpha_i)**3) + 100 * np.log((alpha_i)) * (-9/(alpha_i)**4)) * dalpha_i_dstate_np[3:7]
         
         scaling_w=100
-        penalty+=(scaling_w * alpha_importance * (alpha_i-des_alpha)**2)
-        # penalty +=alpha_i*alpha_importance
+        # penalty+=(scaling_w * alpha_importance * (alpha_i-des_alpha)**2)
+        penalty +=alpha_i*alpha_importance
         dalpha_dstate_drone[0:3] += 2 * scaling_w * alpha_importance * (alpha_i-des_alpha) * dalpha_i_dstate_np[0:3]
         dalpha_dstate_drone[6:10] += 2 * scaling_w * alpha_importance * (alpha_i-des_alpha) * dalpha_i_dstate_np[3:7]
 

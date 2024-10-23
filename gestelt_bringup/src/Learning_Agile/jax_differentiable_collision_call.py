@@ -5,8 +5,11 @@ from jax.test_util import check_grads
 from jax.scipy.spatial.transform import Rotation as R
 import dpax
 from dpax.mrp import dcm_from_mrp
-from dpax.polytopes import polytope_proximity
+from dpax.polytopes import polytope_proximity,grad_f
 import numpy as np
+import os
+# 设置环境变量，隐藏警告信息
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 """ 
 with this, the drone is represented by a polytope as well.
 """
@@ -46,7 +49,7 @@ class Polytope():
 
 
 
-def JAXDifferentiableCollisionsWrapper(line_centers,
+def DifferentiableCollisionsWrapper(line_centers,
                                     R_gate,
                                     gate_quat,
                                     quad_radius,
@@ -135,21 +138,23 @@ def JAXDifferentiableCollisionsWrapper(line_centers,
         if i == 1 or i == 3:
             # for the left and right walls
             alpha_importance=0.1
-            des_alpha=1.81825
+            des_alpha=1.81825 # ellipsoid
         else:
             # for the up and down walls
             alpha_importance=1
-            des_alpha=1.4325
+            # des_alpha=1.4325 # ellipsoid
+            des_alpha=1.4
 
         # dalpha_i_dstate: drone_p,drone_q,ellipse_p,ellipse_q
         # alpha_i, dalpha_i_dstate=jl.dc.proximity_gradient(Elli_drone,P_obs[i],verbose = False, pdip_tol = 1e-6)
 
         alpha_i = polytope_proximity(drone_polytope.A, drone_polytope.b, drone_polytope.r, drone_polytope.q,
                                      P_obs[i].A, P_obs[i].b, P_obs[i].r, P_obs[i].q)
-        print(alpha_i)
+        # print(alpha_i)
         
         # calculate all the gradients 
-        grad_f = jit(grad(polytope_proximity, argnums =(2,3) ))#(0,1,2,3,4,5,6,7)
+        # has already been defined inside the dpax/polytope
+        # grad_f = jit(grad(polytope_proximity, argnums =(2,3) ))#(0,1,2,3,4,5,6,7)
         
         dalpha_i_dstate=grad_f(drone_polytope.A,drone_polytope.b,drone_polytope.r,drone_polytope.q,
                                   P_obs[i].A,P_obs[i].b,P_obs[i].r,P_obs[i].q)
@@ -159,8 +164,8 @@ def JAXDifferentiableCollisionsWrapper(line_centers,
         
         scaling_w=100
         penalty+=(scaling_w * alpha_importance * (alpha_i-des_alpha)**2)
-
         # penalty +=alpha_i*alpha_importance
+
         dalpha_dstate_drone[0:3] += 2 * scaling_w * alpha_importance * (alpha_i-des_alpha) * np.array(dalpha_i_dstate[0])
         dalpha_dstate_drone[6:10] += 2 * scaling_w * alpha_importance * (alpha_i-des_alpha) * np.array(dalpha_i_dstate[1])
         
@@ -168,44 +173,44 @@ def JAXDifferentiableCollisionsWrapper(line_centers,
     return penalty,dalpha_dstate_drone
 
 
-if __name__ == '__main__':
-    #================================================================================================
-    # create polytopes 
-    P_obs = []
-    for i in range(2):
-        P_obs.append(Polytope())
+# if __name__ == '__main__':
+#     #================================================================================================
+#     # create polytopes 
+#     P_obs = []
+#     for i in range(2):
+#         P_obs.append(Polytope())
 
-    P_obs[0].create_rect_prism(1,2,3)
-    P_obs[1].create_rect_prism(2,4,3)
+#     P_obs[0].create_rect_prism(1,2,3)
+#     P_obs[1].create_rect_prism(2,4,3)
 
-    # position and attitude for each polytope 
-    P_obs[0].r = jnp.array([1,3,-2.])
-    p1 = jnp.array([.1,.3,.4])
-    Q1 = dcm_from_mrp(p1)
+#     # position and attitude for each polytope 
+#     P_obs[0].r = jnp.array([1,3,-2.])
+#     p1 = jnp.array([.1,.3,.4])
+#     Q1 = dcm_from_mrp(p1)
 
-    P_obs[1].r = jnp.array([-1,0.1,2.])
-    p2 = jnp.array([-.3,.3,-.2])
-    Q2 = dcm_from_mrp(p2)
+#     P_obs[1].r = jnp.array([-1,0.1,2.])
+#     p2 = jnp.array([-.3,.3,-.2])
+#     Q2 = dcm_from_mrp(p2)
 
-    # calculate proximity (alpha <= 1 means collision) 
+#     # calculate proximity (alpha <= 1 means collision) 
 
-    P_obs[0].q=R.from_matrix(Q1).as_quat()
-    P_obs[1].q=R.from_matrix(Q2).as_quat()
-    P_obs[0].q=jnp.roll(P_obs[0].q,1)
-    P_obs[1].q=jnp.roll(P_obs[1].q,1)
-    alpha = polytope_proximity(P_obs[0].A,P_obs[0].b,P_obs[0].r,P_obs[0].q,
-                            P_obs[1].A,P_obs[1].b,P_obs[1].r,P_obs[1].q)
+#     P_obs[0].q=R.from_matrix(Q1).as_quat()
+#     P_obs[1].q=R.from_matrix(Q2).as_quat()
+#     P_obs[0].q=jnp.roll(P_obs[0].q,1)
+#     P_obs[1].q=jnp.roll(P_obs[1].q,1)
+#     alpha = polytope_proximity(P_obs[0].A,P_obs[0].b,P_obs[0].r,P_obs[0].q,
+#                             P_obs[1].A,P_obs[1].b,P_obs[1].r,P_obs[1].q)
 
 
-    print("alpha: ", alpha)
+#     print("alpha: ", alpha)
 
-    # calculate all the gradients 
-    grad_f = jit(grad(polytope_proximity, argnums =(2,3) ))#(0,1,2,3,4,5,6,7)
-    grads = grad_f(P_obs[0].A,P_obs[0].b,P_obs[0].r,P_obs[0].q,
-                P_obs[1].A,P_obs[1].b,P_obs[1].r,P_obs[1].q)
+#     # calculate all the gradients 
+#     grad_f = jit(grad(polytope_proximity, argnums =(2,3) ))#(0,1,2,3,4,5,6,7)
+#     grads = grad_f(P_obs[0].A,P_obs[0].b,P_obs[0].r,P_obs[0].q,
+#                 P_obs[1].A,P_obs[1].b,P_obs[1].r,P_obs[1].q)
 
-    d1=np.array(grads[0])
-    print(d1)
-    # check gradients 
-    check_grads(polytope_proximity,  (P_obs[0].A,P_obs[0].b,P_obs[0].r,P_obs[0].q,
-                                        P_obs[1].A,P_obs[1].b,P_obs[1].r,P_obs[1].q), order=1, atol = 2e-1)
+#     d1=np.array(grads[0])
+#     print(d1)
+#     # check gradients 
+#     check_grads(polytope_proximity,  (P_obs[0].A,P_obs[0].b,P_obs[0].r,P_obs[0].q,
+#                                         P_obs[1].A,P_obs[1].b,P_obs[1].r,P_obs[1].q), order=1, atol = 2e-1)

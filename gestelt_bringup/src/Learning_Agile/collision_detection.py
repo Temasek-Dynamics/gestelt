@@ -147,7 +147,7 @@ class Obstacle():
 
                 
                 
-            penalty_single,dalpha_dstate_drone=JAXDifferentiableCollisionsWrapper(line_centers,
+            penalty_single,dalpha_dstate_drone=DifferentiableCollisionsWrapper(line_centers,
                                             R_gate,
                                             gate_quat,
                                             config['drone']['wing_len']/2,
