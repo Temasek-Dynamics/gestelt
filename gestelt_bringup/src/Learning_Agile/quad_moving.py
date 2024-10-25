@@ -30,7 +30,7 @@ class kalman:
 def input_cal(quad_state, final_point, gate_x):
 
     inputs = np.zeros(23)
-    inputs[13] = magni(gate_x.gate_point[0,:]-gate_x.gate_point[1,:])
+    inputs[13] = magni(gate_x.gate_point[0,:]-gate_x.gate_point[3,:])
     gate_pitch = atan((gate_x.gate_point[0,2]-gate_x.gate_point[1,2])/(gate_x.gate_point[0,0]-gate_x.gate_point[1,0]))
     ##==calculate the gate RM
    

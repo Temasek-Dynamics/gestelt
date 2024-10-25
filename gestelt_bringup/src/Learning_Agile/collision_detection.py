@@ -1,6 +1,6 @@
 import numpy as np
 # from differentiable_collision_wrapper import *
-from jax_differentiable_collision_call import *
+# from jax_differentiable_collision_call import *
 import casadi as ca
 import torch
 from solid_geometry import *

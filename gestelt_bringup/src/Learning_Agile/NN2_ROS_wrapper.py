@@ -203,7 +203,7 @@ class NN2_ROS_wrapper:
                 nn2_inputs[10:13] = self.gate_t_i.t_final(self.final_point)
 
                 # width of the gate
-                nn2_inputs[13] = magni(self.gate_t_i.gate_point[0,:]-self.gate_t_i.gate_point[1,:]) # gate width
+                nn2_inputs[13] = magni(self.gate_t_i.gate_point[0,:]-self.gate_t_i.gate_point[3,:]) # gate width
                 # pitch angle of the gate
                 nn2_inputs[14] = atan((self.gate_t_i.gate_point[0,2]-self.gate_t_i.gate_point[1,2])/(self.gate_t_i.gate_point[0,0]-self.gate_t_i.gate_point[1,0])) # compute the actual gate pitch angle in real-time
 

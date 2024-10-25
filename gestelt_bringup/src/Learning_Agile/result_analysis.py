@@ -85,7 +85,7 @@ def python_sim_npy_parser(uav_traj=None,
     ## == global plt settings == ##
     plt.legend()
     plt.grid(True)
-    plt.savefig('./python_sim_result/euler.png')
+    # plt.savefig('python_sim_result/euler.png')
     plt.figure()
     plt.plot(np.linalg.det(nn_output_list[:,3:12].reshape(-1,3,3)), label='9d_vector_determinant',color='r')
     plt.plot(np.linalg.det(des_tra_R_list[:, 0:9].reshape(-1,3,3)), label='SVD_result_determinant',color='b')

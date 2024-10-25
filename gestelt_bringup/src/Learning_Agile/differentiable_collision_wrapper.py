@@ -51,15 +51,14 @@ def DifferentiableCollisionsWrapper(line_centers,
     
     ## Ellipsoid  drone
     # prism_size=quad_half_height
-    # A=np.diag([quad_radius,quad_radius,quad_half_height])
-    # A_inv=np.linalg.inv(A)
-    # P=A_inv.T@A_inv
-    # drone_convex = jl.dc.Ellipsoid(P) 
-    # P =jl.convert(jl.SMatrix[3,3,jl.Float64,9], P)
-    
+    A=np.diag([quad_radius,quad_radius,quad_half_height])
+    A_inv=np.linalg.inv(A)
+    P=A_inv.T@A_inv
+    P =jl.convert(jl.SMatrix[3,3,jl.Float64,9], P)
+    drone_convex = jl.dc.Ellipsoid(P) 
 
     ## polytope drone
-    drone_convex = jl.dc.create_rect_prism(quad_radius*2, quad_radius*2, quad_half_height*2)[0]
+    # drone_convex = jl.dc.create_rect_prism(quad_radius*2, quad_radius*2, quad_half_height*2)[0]
     
 
     # test=np.matmul(R_gate.T,line_centers[0,])
@@ -138,11 +137,11 @@ def DifferentiableCollisionsWrapper(line_centers,
         # des_alpha comes from the penalty design helper
         if i == 1 or i == 3:
             # for the left and right walls
-            alpha_importance=1
+            alpha_importance=0.1
             des_alpha=1.81825
         else:
             # for the up and down walls
-            alpha_importance=0
+            alpha_importance=1
             des_alpha=1.4325
 
         # dalpha_i_dstate: drone_p,drone_q,ellipse_p,ellipse_q
@@ -158,8 +157,8 @@ def DifferentiableCollisionsWrapper(line_centers,
         # dalpha_dstate_drone[6:10] += (100/alpha_i * (3/(alpha_i)**3) + 100 * np.log((alpha_i)) * (-9/(alpha_i)**4)) * dalpha_i_dstate_np[3:7]
         
         scaling_w=100
-        # penalty+=(scaling_w * alpha_importance * (alpha_i-des_alpha)**2)
-        penalty +=alpha_i*alpha_importance
+        penalty+=(scaling_w * alpha_importance * (alpha_i-des_alpha)**2)
+        # penalty +=alpha_i*alpha_importance
         dalpha_dstate_drone[0:3] += 2 * scaling_w * alpha_importance * (alpha_i-des_alpha) * dalpha_i_dstate_np[0:3]
         dalpha_dstate_drone[6:10] += 2 * scaling_w * alpha_importance * (alpha_i-des_alpha) * dalpha_i_dstate_np[3:7]
 

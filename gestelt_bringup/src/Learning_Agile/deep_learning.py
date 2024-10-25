@@ -97,7 +97,7 @@ if __name__ == '__main__':
     
     ## training option
     'MULTI_CORE'  : False,
-    'TRAIN_FROM_CHECKPOINT' : True
+    'TRAIN_FROM_CHECKPOINT' : False
     }
     num_cores = 1 #5
     num_epochs = 100 #100
@@ -119,7 +119,7 @@ if __name__ == '__main__':
         learning_rate = 1e-4
         method_name = 'FD'
 
-    training_notes = "Trial_1"
+    training_notes = "Trial 2 back to ellipsoid drone"
 
     logger_config=LoggerConfig("NN1_training_logs")
     
@@ -132,8 +132,9 @@ if __name__ == '__main__':
 
     ## tensorboard logging initialization
     log_dir = os.path.join(current_dir, "NN1_training_logs")
-    current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-    file_dir = os.path.join(log_dir, f"train-{current_time}-{method_name}-{training_notes}")
+    current_day = datetime.datetime.now().strftime("%Y-%m-%d")
+    current_time = datetime.datetime.now().strftime("%H%M%S")
+    file_dir = os.path.join(log_dir,current_day, f"train-{current_time}-{method_name}-{training_notes}")
     writer = SummaryWriter(log_dir=file_dir)
     logging.info(current_dir)
     
@@ -154,7 +155,7 @@ if __name__ == '__main__':
     ###############################################################
     planner_list = []
     # for each core, generate a quadrotor MPC solver
-    for i in range(batch_size):
+    for i in range(1):
         planner = PlanFwdBwdWrapper(config_dict, options)
         
         planner_list.append(planner)
@@ -309,7 +310,9 @@ if __name__ == '__main__':
                     for k in range(batch_size): 
                         inputs = nn_sample(cur_epoch=epoch)
                         inputs_list.append(inputs)  
-
+                        # create shared variables (shared between processes)
+                        gra = Array('d',np.zeros(output_size+1))
+                        grads_list.append(gra)
                     # forward pass
                     inputs_list = np.array(inputs_list)  # batch_size x 9
 
@@ -321,31 +324,28 @@ if __name__ == '__main__':
                     
                     ## MPC forward for each batch element
                     for k in range(batch_size):     
-                        # create shared variables (shared between processes)
-                        gra = Array('d',np.zeros(output_size+1)
-                        )
+                        
                         ##=========batch on Single processes=========##
-                        # # calculate gradient and loss
-                        # calc_grad(config_dict,
-                        #         planner_list[0],
-                        #         inputs_list[k,:].reshape(input_size),
-                        #         np_outputs_list[k,:].reshape(output_size),
-                        #         gra)
-                        # grads_list.append(gra)
-                        ##=========batch on Multiple processes=========##
-                        p=Process(target=calc_grad,args=(config_dict,
-                                                        planner_list[k],
-                                                        inputs_list[k,:].reshape(input_size),
-                                                        np_outputs_list[k,:].reshape(output_size),
-                                                        gra))
+                        # calculate gradient and loss
+                        calc_grad(config_dict,
+                                planner_list[0],
+                                inputs_list[k,:].reshape(input_size),
+                                np_outputs_list[k,:].reshape(output_size),
+                                grads_list[k])
+                   
+                    #     ##=========batch on Multiple processes=========##
+                    #     p=Process(target=calc_grad,args=(config_dict,
+                    #                                     planner_list[k],
+                    #                                     inputs_list[k,:].reshape(input_size),
+                    #                                     np_outputs_list[k,:].reshape(output_size),
+                    #                                     grads_list[k]))
                         
-                        # create a gradient array for assemble all process gradient result
-                        p.start()
-                        grads_list.append(gra)
-                        process_list.append(p)
+                    #     # create a gradient array for assemble all process gradient result
+                    #     p.start()
+                    #     process_list.append(p)
                         
-                    for process in process_list:
-                        process.join()
+                    # for process in process_list:
+                    #     process.join()
 
                     ##=== Backward and optimize ===##
                     grads_list = np.array(grads_list)

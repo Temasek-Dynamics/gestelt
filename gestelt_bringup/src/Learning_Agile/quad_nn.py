@@ -33,7 +33,7 @@ def nn_sample(init_pos=None,final_pos=None,init_angle=None,cur_epoch=100,pretrai
 
         # TODO: transfer to trauncated normal distribution
         if pretrain:
-            inputs[1] = np.random.uniform(-5,5) + pre_ini_pos[1]
+            inputs[1] = np.random.uniform(-5,5) #+ pre_ini_pos[1]
         else:
             inputs[1] = np.clip(inputs[1],pre_ini_pos[1]-1,pre_ini_pos[1]+1) 
     else:
@@ -97,9 +97,10 @@ def nn_sample(init_pos=None,final_pos=None,init_angle=None,cur_epoch=100,pretrai
 
 ## define the expected output of an input (for pretraining)
 def t_output(inputs):
-    inputs = np.array(inputs)
+    inputs = np.array(inputs[0])
+    
     outputs = np.zeros(13)
-    R_gate=inputs[8:17].reshape(3,3)
+    R_gate=inputs[-9:].reshape(3,3)
     outputs[3:12]=R_gate.T.flatten()
     # outputs[3:12] = np.array([[0.0007963,  0.0000000, -0.9999997],
     #                         [0.0000000,  1.0000000,  0.0000000],
@@ -107,7 +108,7 @@ def t_output(inputs):
     #outputs[5] = math.tan(inputs[6]/2)
     ## traversal time is propotional to the distance of the centroids
     if inputs[1]>0:
-        raw_time = -round(magni(inputs[0:3])/4,1)
+        raw_time = -round(magni(inputs[0:3])/3,1)
     else:
         raw_time=round(magni(inputs[0:3])/4,1)
     outputs[-1] = raw_time #np.clip(raw_time,3,3)
@@ -215,24 +216,32 @@ class network_with_GRU(nn.Module):
         # D_in : dimension of input layer
         # D_h  : dimension of hidden layer
         # D_out: dimension of output layer
-        self.l1 = nn.Linear(D_in, D_h1)
+        self.GRU = nn.GRU(input_size=D_in, hidden_size=D_h2,num_layers=1,batch_first=True)
+        self.l1 = nn.Linear(D_h1, D_h1)
         self.F1 = nn.ReLU()
         self.l2 = nn.Linear(D_h1, D_h2)
         self.F2 = nn.ReLU()
-        self.GRU = nn.GRU(input_size=D_h2, hidden_size=D_h2,num_layers=1,batch_first=True)
         self.l3 = nn.Linear(D_h2, D_out)
         
     def forward(self, input):
         # convert state s to tensor
         S = input.unsqueeze(0) # column 2D tensor
-        out = self.l1(S) # linear function requires the input to be a row tensor
+        out,hidden = self.GRU(S)
+        out = out [:,-1,:]
+        out = self.l1(out) # linear function requires the input to be a row tensor
         out = self.F1(out)
         out = self.l2(out)
         out = self.F2(out)
-        out = self.GRU(out)
+        out = out.squeeze(1)
         out = self.l3(out)
         return out
-
+    
+    def myloss(self, para, dp, device='cpu'):
+        # convert np.array to tensor
+        Dp = torch.tensor(dp, dtype=torch.float).to(device) # row 2D tensor
+        # loss_nn = torch.matmul(Dp, para)
+        loss_nn =torch.trace(torch.matmul(Dp, para.t()))/(Dp.shape[0])
+        return loss_nn # size is 1
 
 ## run the above code
 if __name__ == "__main__":

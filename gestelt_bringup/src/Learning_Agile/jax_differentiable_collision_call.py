@@ -8,7 +8,6 @@ from dpax.mrp import dcm_from_mrp
 from dpax.polytopes import polytope_proximity,grad_f
 import numpy as np
 import os
-# 设置环境变量，隐藏警告信息
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 """ 
 with this, the drone is represented by a polytope as well.

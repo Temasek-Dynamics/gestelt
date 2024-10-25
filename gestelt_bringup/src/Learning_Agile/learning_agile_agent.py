@@ -14,7 +14,7 @@ subdirectory_path = os.path.join(current_dir, 'Learning_Agile')
 # add to sys.path
 sys.path.append("../")
 sys.path.append(subdirectory_path)
-
+from collections import deque
 
 from quad_model import *
 from quad_policy import *
@@ -27,6 +27,7 @@ from solid_geometry import *
 
 
 device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+# device=torch.device('cpu')
 
 
 class MovingGate():
@@ -46,8 +47,8 @@ class MovingGate():
         
         # add the pitch angle to the gate
         gate_init_euler = R.from_matrix(env_init_set[8:17].reshape(3,3)).as_euler('zyx')
-        self.gate_init_pitch = gate_init_euler[1]
-        # self.gate_init_pitch = 1.2
+        # self.gate_init_pitch = gate_init_euler[1]
+        self.gate_init_pitch = -1
         self.gate.rotate_y(self.gate_init_pitch)
 
 
@@ -121,7 +122,7 @@ class LearningAgileAgent():
         self.pos_vel_att_cmd=np.zeros(10)
         self.pos_vel_att_cmd[6:10] = [1,0,0,0]
         self.pos_vel_att_cmd_n = [self.pos_vel_att_cmd]
-
+        self.history_state = deque(maxlen=5)
        
     
     def generate_mission(self):
@@ -258,22 +259,38 @@ class LearningAgileAgent():
 
     def close_loop_model_forward(self):
 
-        nn2_inputs = np.zeros(18)
-        # drone state under the predicted gate frame(based on the binary search)
-        nn2_inputs[0:10] = self.gate_t_i.transform(self.state)
-        nn2_inputs[10:13] = self.gate_t_i.t_final(self.final_point)
+        ## == NN forward === ##
+        nn2_inputs=np.zeros(26)
+        nn2_inputs[0:10]=self.state
+        nn2_inputs[10:13]=self.final_point
+
+
         # position of the gate
         nn2_inputs[13:16] = self.gate_t_i.centroid
         # width of the gate
-        nn2_inputs[16] = magni(self.gate_t_i.gate_point[0,:]-self.gate_t_i.gate_point[1,:]) # gate width
+        nn2_inputs[16] = magni(self.gate_t_i.gate_point[0,:]-self.gate_t_i.gate_point[3,:]) # gate width
         # pitch angle of the gate
-        nn2_inputs[17] = atan((self.gate_t_i.gate_point[0,2]-self.gate_t_i.gate_point[1,2])/(self.gate_t_i.gate_point[0,0]-self.gate_t_i.gate_point[1,0])) # compute the actual gate pitch ange in real-time
+        gate_pitch = atan((self.gate_t_i.gate_point[0,2]-self.gate_t_i.gate_point[1,2])/(self.gate_t_i.gate_point[0,0]-self.gate_t_i.gate_point[1,0])) # compute the actual gate pitch ange in real-time
         
-        # NN2 OUTPUT the traversal time and pose
-        out = self.model(torch.tensor(nn2_inputs, dtype=torch.float).to(device)).to('cpu')
-        out = out.data.numpy()
+        self.planner.init_obstacle(self.gate_t_i.gate_point[:,:].reshape(12),gate_pitch)
+        
+        ##==calculate the gate RM
+        rot=R.from_euler('zyx',[0,gate_pitch,0])
+        nn2_inputs[17:26]=rot.as_matrix().flatten()
 
-        self.log_NN_IO(nn2_inputs,out)
+        if self.i == 0:
+            for i in range(5):
+                self.history_state.append(nn2_inputs)
+        else:
+            self.history_state.append(nn2_inputs)
+        
+        full_input=np.array(self.history_state)
+        # NN output the traversal time and pose
+        nn_output = self.model(torch.tensor(full_input, dtype=torch.float).to(device))[0]
+        out = nn_output.to('cpu').data.numpy()
+
+        verify_tra_R=verify_SVD_casadi(out[3:12])
+        self.log_NN_IO_for_RM(gate_pitch,out,verify_tra_R.flatten()) 
         return out 
     
     def imitate_model_forward(self):
@@ -354,9 +371,10 @@ class LearningAgileAgent():
                     
                     if self.options['CLOSE_LOOP_MODEL']:
                         out = self.close_loop_model_forward()
+                        des_tra_pos=+out[0:3]
                     else:
                         out = self.imitate_model_forward()
-                    des_tra_pos=self.gate_t_i.centroid+out[0:3]
+                        des_tra_pos=self.gate_t_i.centroid+out[0:3]
                     des_tra_m=out[3:12]
                 t_comp = time.time()
                 
@@ -458,10 +476,10 @@ class LearningAgileAgent():
         # self.planner.uav1.plot_trav_weight(self.tra_weight_list)
 
         self.planner.uav1.plot_solving_time(self.solving_time)
-        python_sim_npy_parser(uav_traj=self.state_n,
-                              nn_output_list=self.nn_output_list,
-                              des_tra_R_list=self.des_tra_R_list,
-                              gate_pitch=self.Pitch)
+        # python_sim_npy_parser(uav_traj=self.state_n,
+        #                       nn_output_list=self.nn_output_list,
+        #                       des_tra_R_list=self.des_tra_R_list,
+        #                       gate_pitch=self.Pitch)
         self.planner.uav1.plot_3D_traj(wing_len=self.planner.wing_len,
                                     uav_height=self.planner.uav_height/2,
                                     state_traj=self.state_n[::50,:],
@@ -492,7 +510,7 @@ def main():
     options['JAX_SVD']=False
 
     if options['CLOSE_LOOP_MODEL']:
-        model_name = 'NN_close_0.pth'#'NN2_imitate_1.pth' #'NN_close_2.pth'
+        model_name = '2024-10-24-close_loop/203903/NN_close_0.pth'#'NN2_imitate_1.pth' #'NN_close_2.pth'
     else:   
         model_name = '20241018-093741-PDP-Trial_1/NN2_imitate_1.pth'
 

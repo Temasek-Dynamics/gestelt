@@ -49,7 +49,7 @@ def log_train_IO(writer,inputs,outputs,global_step):
     quat_nn=R.from_matrix(R_nn.reshape(3,3))
     euler_nn=quat_nn.as_euler('zyx', degrees=True)
     
-    gate_euler=R.from_matrix(inputs[8:17].reshape(3,3)).as_euler('zyx')
+    gate_euler=R.from_matrix(inputs[-9:].reshape(3,3)).as_euler('zyx')
     gate_pitch=gate_euler[1]*180/np.pi
     writer.add_scalar('gate_pitch', gate_pitch, global_step)
   
@@ -67,8 +67,7 @@ def log_gradient(writer,gra,global_step):
     writer.add_scalar('drdx', gra[0], global_step)
     writer.add_scalar('drdy', gra[1], global_step)
     writer.add_scalar('drdz', gra[2], global_step)
-    # writer.add_scalar('drda', gra[3], global_step)
-    # writer.add_scalar('drdb', gra[4], global_step)
-    # writer.add_scalar('drdc', gra[5], global_step)
-    # writer.add_scalar('drdt', gra[6], global_step)
+    drd9D_norm = np.linalg.norm(gra[3:12])
+    writer.add_scalar('drd9D_norm', drd9D_norm, global_step)
+    writer.add_scalar('drdt', gra[-2], global_step)
     writer.add_scalar('step_reward', gra[-1], global_step)

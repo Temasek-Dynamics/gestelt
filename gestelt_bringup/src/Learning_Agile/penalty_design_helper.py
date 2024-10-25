@@ -15,7 +15,7 @@ class PenaltyDesignHelper():
         pass
 
     def rotating_quad(self):
-        self.axis_angle_range=np.linspace(-np.pi/2,np.pi/2,100)
+        self.axis_angle_range=np.linspace(0,np.pi/2,100)
         self.pitch_seq=self.axis_angle_range
         self.roll_seq=self.axis_angle_range
         self.R,self.P=np.meshgrid(self.roll_seq,self.pitch_seq)
@@ -24,7 +24,7 @@ class PenaltyDesignHelper():
 
         ## choose the roll, pitch, or yaw
         self.euler_table={0:'yaw',1:'pitch',2:'roll'}
-        self.euler_choose=2
+        self.euler_choose=1
         euler_angle[:,self.euler_choose]=self.axis_angle_range
         self.quad_quat=R.from_euler('zyx', euler_angle).as_quat()
         self.quad_quat=np.roll(self.quad_quat,1,axis=1)
