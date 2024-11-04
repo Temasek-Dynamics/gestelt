@@ -7,7 +7,7 @@ from quad_policy import *
 import os
 from quad_model import *
 
-from learning_agile_agent import MovingGate,verify_SVD_casadi
+from learning_agile_sim import MovingGate,verify_SVD_casadi
 from quad_nn import *
 from multiprocessing import Process, Array
 import yaml
@@ -16,7 +16,6 @@ import logging
 from tqdm import tqdm
 from torch.utils.tensorboard import SummaryWriter
 import datetime
-import os
 
 # from nn_train import input_size,output_size
 input_size=17
@@ -119,7 +118,7 @@ if __name__ == '__main__':
         learning_rate = 1e-4
         method_name = 'FD'
 
-    training_notes = "Trial 2 back to ellipsoid drone"
+    training_notes = "Trial 1, shrink the gate from [1.2,0.56] to [1.0, 0.4]"
 
     logger_config=LoggerConfig("NN1_training_logs")
     
@@ -142,7 +141,7 @@ if __name__ == '__main__':
     conf_folder=os.path.abspath(os.path.join(current_dir, '..', '..','config'))
     training_data_folder=os.path.abspath(os.path.join(current_dir, 'training_data'))
     model_folder=os.path.abspath(os.path.join(training_data_folder, 'NN_model'))
-    saved_folder=os.path.join(model_folder,f"{current_time}-{method_name}-{training_notes}")
+    saved_folder=os.path.join(model_folder,f"{current_day}/{current_time}-{method_name}-{training_notes}")
     if saved_folder not in os.listdir(model_folder):
         os.mkdir(saved_folder)
 
@@ -155,7 +154,7 @@ if __name__ == '__main__':
     ###############################################################
     planner_list = []
     # for each core, generate a quadrotor MPC solver
-    for i in range(1):
+    for i in range(batch_size):
         planner = PlanFwdBwdWrapper(config_dict, options)
         
         planner_list.append(planner)
@@ -327,25 +326,25 @@ if __name__ == '__main__':
                         
                         ##=========batch on Single processes=========##
                         # calculate gradient and loss
-                        calc_grad(config_dict,
-                                planner_list[0],
-                                inputs_list[k,:].reshape(input_size),
-                                np_outputs_list[k,:].reshape(output_size),
-                                grads_list[k])
+                        # calc_grad(config_dict,
+                        #         planner_list[0],
+                        #         inputs_list[k,:].reshape(input_size),
+                        #         np_outputs_list[k,:].reshape(output_size),
+                        #         grads_list[k])
                    
                     #     ##=========batch on Multiple processes=========##
-                    #     p=Process(target=calc_grad,args=(config_dict,
-                    #                                     planner_list[k],
-                    #                                     inputs_list[k,:].reshape(input_size),
-                    #                                     np_outputs_list[k,:].reshape(output_size),
-                    #                                     grads_list[k]))
+                        p=Process(target=calc_grad,args=(config_dict,
+                                                        planner_list[k],
+                                                        inputs_list[k,:].reshape(input_size),
+                                                        np_outputs_list[k,:].reshape(output_size),
+                                                        grads_list[k]))
                         
-                    #     # create a gradient array for assemble all process gradient result
-                    #     p.start()
-                    #     process_list.append(p)
+                        # create a gradient array for assemble all process gradient result
+                        p.start()
+                        process_list.append(p)
                         
-                    # for process in process_list:
-                    #     process.join()
+                    for process in process_list:
+                        process.join()
 
                     ##=== Backward and optimize ===##
                     grads_list = np.array(grads_list)

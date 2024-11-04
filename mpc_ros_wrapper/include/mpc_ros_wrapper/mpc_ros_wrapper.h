@@ -48,7 +48,6 @@ class mpcRosWrapper{
         void init(ros::NodeHandle& nh);
         
         void mission_start_cb(const gestelt_msgs::GoalsPtr &msg);
-        void gate_state_estimation_cb(const ros::TimerEvent &e);
         void setpoint_timer_cb(const ros::TimerEvent &e);
         void drone_state_pose_cb(const geometry_msgs::PoseStamped::ConstPtr& msg);
         void drone_state_twist_cb(const geometry_msgs::TwistStamped::ConstPtr& msg);

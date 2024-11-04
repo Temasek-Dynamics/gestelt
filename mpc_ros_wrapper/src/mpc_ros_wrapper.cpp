@@ -22,8 +22,8 @@ void mpcRosWrapper::init(ros::NodeHandle& nh)
 
     if (!STATIC_GATE_TEST_)
     {
-        NN_trav_pose_sub_ = nh.subscribe("/learning_agile_agent/NN_trav_pose", 1, &mpcRosWrapper::NN_trav_pose_cb, this);
-        NN_trav_time_sub_ = nh.subscribe("/learning_agile_agent/NN_trav_time", 1, &mpcRosWrapper::NN_trav_time_cb, this);
+        NN_trav_pose_sub_ = nh.subscribe("/learning_agile_sim/NN_trav_pose", 1, &mpcRosWrapper::NN_trav_pose_cb, this);
+        NN_trav_time_sub_ = nh.subscribe("/learning_agile_sim/NN_trav_time", 1, &mpcRosWrapper::NN_trav_time_cb, this);
     }
     
 
@@ -31,12 +31,12 @@ void mpcRosWrapper::init(ros::NodeHandle& nh)
     /* Publishers */
     /////////////////
     next_attitude_setpoint_pub_ = nh.advertise<mavros_msgs::AttitudeTarget>("/mavros/setpoint_raw/attitude", 1);
-    weight_vis_pub_ = nh.advertise<std_msgs::Float64>("/learning_agile_agent/weight_vis", 1);
-    // gate_centroid_pub_ = nh.advertise<geometry_msgs::PoseStamped>("/learning_agile_agent/gate_centroid", 1);
+    weight_vis_pub_ = nh.advertise<std_msgs::Float64>("/learning_agile_sim/weight_vis", 1);
+    // gate_centroid_pub_ = nh.advertise<geometry_msgs::PoseStamped>("/learning_agile_sim/gate_centroid", 1);
 
-    // traverse_time_pub_ = nh.advertise<std_msgs::Float32>>("/learning_agile_agent/traverse_time", 10);
-    mpc_runtime_pub_ = nh.advertise<std_msgs::Float64>("/learning_agile_agent/callback_runtime", 10);
-    current_pred_traj_pub_ = nh.advertise<geometry_msgs::PoseArray>("/learning_agile_agent/current_pred_traj", 10);
+    // traverse_time_pub_ = nh.advertise<std_msgs::Float32>>("/learning_agile_sim/traverse_time", 10);
+    mpc_runtime_pub_ = nh.advertise<std_msgs::Float64>("/learning_agile_sim/callback_runtime", 10);
+    current_pred_traj_pub_ = nh.advertise<geometry_msgs::PoseArray>("/learning_agile_sim/current_pred_traj", 10);
     
 
     // solver loading 

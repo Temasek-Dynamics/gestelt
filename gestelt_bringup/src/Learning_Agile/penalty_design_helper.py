@@ -6,7 +6,7 @@ import os
 from scipy.spatial.transform import Rotation as R
 from solid_geometry import *
 from quad_policy import *
-from learning_agile_agent import MovingGate
+from learning_agile_sim import MovingGate
 """
 this file will plot the penalty value change w.r.t the euler angle change of the quadrotor
 """
@@ -15,7 +15,7 @@ class PenaltyDesignHelper():
         pass
 
     def rotating_quad(self):
-        self.axis_angle_range=np.linspace(0,np.pi/2,100)
+        self.axis_angle_range=np.linspace(-np.pi/2,np.pi/2,100)
         self.pitch_seq=self.axis_angle_range
         self.roll_seq=self.axis_angle_range
         self.R,self.P=np.meshgrid(self.roll_seq,self.pitch_seq)

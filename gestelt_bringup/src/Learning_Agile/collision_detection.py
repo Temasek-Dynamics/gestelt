@@ -1,6 +1,6 @@
 import numpy as np
 # from differentiable_collision_wrapper import *
-# from jax_differentiable_collision_call import *
+from jax_differentiable_collision_call import *
 import casadi as ca
 import torch
 from solid_geometry import *
@@ -152,7 +152,8 @@ class Obstacle():
                                             gate_quat,
                                             config['drone']['wing_len']/2,
                                             config['drone']['height']/2,
-                                            state_traj[node_tra,:])
+                                            state_traj[node_tra,:],
+                                            PENALTY_HELPER)
             
             penalty_traj += penalty_single
             drdstate_traj[node_tra,:] = dalpha_dstate_drone

@@ -47,8 +47,8 @@ class MovingGate():
         
         # add the pitch angle to the gate
         gate_init_euler = R.from_matrix(env_init_set[8:17].reshape(3,3)).as_euler('zyx')
-        # self.gate_init_pitch = gate_init_euler[1]
-        self.gate_init_pitch = -1
+        self.gate_init_pitch = gate_init_euler[1]
+        # self.gate_init_pitch = 0.6
         self.gate.rotate_y(self.gate_init_pitch)
 
 
@@ -65,7 +65,7 @@ class MovingGate():
         self.gate_points_list, self.V = self.gate.move(T = 8, v = gate_v ,w = gate_w ,dt = dt)
 
     
-class LearningAgileAgent():
+class LearningAgileSim():
     def __init__(self,python_sim_time,
                  yaml_file,
                  model_file=None,
@@ -182,8 +182,12 @@ class LearningAgileAgent():
         gate_v = np.array(self.config_dict['gate']['linear_vel'])
         gate_w = self.config_dict['gate']['angular_vel'] 
         ## ================ gate initialization ================== ##
+        if self.options['CLOSE_LOOP_TRAINING']:
+            gate_cen_h=0
+        else:
+            gate_cen_h=1.2
         self.moving_gate = MovingGate(self.env_init_set,
-                                      gate_cen_h=1.2,
+                                      gate_cen_h=gate_cen_h,
                                       gate_length=gate_length)
 
         self.moving_gate.set_vel(dt=self.dyn_step,gate_v=gate_v,gate_w=gate_w)
@@ -192,7 +196,7 @@ class LearningAgileAgent():
 
         
     
-    def gate_state_estimation(self):
+    def gate_state_search(self):
 
         """
         estimate the gate pose, using binary search
@@ -306,7 +310,7 @@ class LearningAgileAgent():
         return out
     
 
-    def forward_sim(self,python_sim_data_folder):
+    def forward(self,python_sim_data_folder):
         """
         python simulation
 
@@ -323,12 +327,12 @@ class LearningAgileAgent():
             if not self.options['CLOSE_LOOP_MODEL']:
                 if (self.i%25)==0: # estimation frequency = 20 hz 
                     # decision variable is updated in 20 hz
-                    self.gate_state_estimation()
+                    self.gate_state_search()
 
             if (self.i%5)==0: # control frequency = 100 hz  
                 
                 if self.options['STATIC_GATE_TEST']:
-                    self.gate_state_estimation()
+                    self.gate_state_search()
                     nn2_inputs = np.zeros(23)
                     nn2_inputs[0:10] = self.state 
                     nn2_inputs[10:13] = self.final_point
@@ -476,10 +480,10 @@ class LearningAgileAgent():
         # self.planner.uav1.plot_trav_weight(self.tra_weight_list)
 
         self.planner.uav1.plot_solving_time(self.solving_time)
-        # python_sim_npy_parser(uav_traj=self.state_n,
-        #                       nn_output_list=self.nn_output_list,
-        #                       des_tra_R_list=self.des_tra_R_list,
-        #                       gate_pitch=self.Pitch)
+        python_sim_npy_parser(uav_traj=self.state_n,
+                              nn_output_list=self.nn_output_list,
+                              des_tra_R_list=self.des_tra_R_list,
+                              gate_pitch=self.Pitch)
         self.planner.uav1.plot_3D_traj(wing_len=self.planner.wing_len,
                                     uav_height=self.planner.uav_height/2,
                                     state_traj=self.state_n[::50,:],
@@ -508,11 +512,11 @@ def main():
     options['STATIC_GATE_TEST']=False
     options['CLOSE_LOOP_MODEL']= False
     options['JAX_SVD']=False
-
+    options['CLOSE_LOOP_TRAINING']=False
     if options['CLOSE_LOOP_MODEL']:
         model_name = '2024-10-24-close_loop/203903/NN_close_0.pth'#'NN2_imitate_1.pth' #'NN_close_2.pth'
     else:   
-        model_name = '20241018-093741-PDP-Trial_1/NN2_imitate_1.pth'
+        model_name = '20241031-142733-PDP-Trial 1, shrink the gate from [1.2,0.56] to [1.0, 0.4]/NN2_imitate_1.pth' #
 
 
     model_file=os.path.join(current_dir, f'training_data/NN_model/',model_name)
@@ -522,7 +526,7 @@ def main():
     # problem definition
     # the dyn_step is the simulation step in the simulation environment
     # for the acados ERK integrator, the step is (integral step)/4 =0.025s
-    learing_agile_agent=LearningAgileAgent(python_sim_time=5,
+    learning_agile_sim=LearningAgileSim(python_sim_time=5,
                                            yaml_file=yaml_file,
                                            model_file=model_file,
                                            dyn_step=0.002,
@@ -532,12 +536,12 @@ def main():
 
     
     #####==============load env config ====================#######
-    learing_agile_agent.generate_mission()
-    learing_agile_agent.prepare_gate()
+    learning_agile_sim.generate_mission()
+    learning_agile_sim.prepare_gate()
     
     #####============== Solve the problem ====================#######
     # solve the problem
-    learing_agile_agent.forward_sim(python_sim_data_folder)
+    learning_agile_sim.forward(python_sim_data_folder)
 
     # every time after reconstruct the solver, need to catkin build the MPC wrapper to 
     # relink the shared library

@@ -16,7 +16,7 @@ from tqdm import tqdm
 from torch.utils.tensorboard import SummaryWriter
 import datetime
 import os
-from learning_agile_agent import MovingGate, LearningAgileAgent
+from learning_agile_sim import MovingGate, LearningAgileSim
 from deep_learning import log_train_IO, log_gradient
 
 # for multiprocessing, obtain
@@ -28,6 +28,7 @@ output is the decision variables z. [x,y,z,a,b,c,t_traverse]
 """
 input_size = 26 # current drone state (10), goal position (3), gate position(3), gate width(1) and orientation(9)
 output_size = 13  # #tra_pos(3), tra_9D_orientation(9), traversing_time(1)
+
 
 class DirectCloseLoop():
     def __init__(self, mission_yaml, train_yaml) -> None:
@@ -55,11 +56,12 @@ class DirectCloseLoop():
         options['JAX_SVD']=False
         options['STATIC_GATE_TEST']=False
         options['ORIGIN_REWARD']=False
-        self.learning_agile_agent = LearningAgileAgent(python_sim_time=5,
+        options['CLOSE_LOOP_TRAINING']=True
+        self.learning_agile_sim = LearningAgileSim(python_sim_time=5,
                                                        yaml_file=self.mission_yaml,
                                                        dyn_step=1/self.NN_freq,
                                                        options=options)
-        # self.learning_agile_agent = LearningAgileAgent(self.config_dict,
+        # self.learning_agile_sim = LearningAgileSim(self.config_dict,
         #                                                self.mission_yaml,
         #                                                USE_PREV_SOLVER=False,
         #                                                dyn_step=1/self.NN_freq,
@@ -80,7 +82,7 @@ class DirectCloseLoop():
 
         current_day = datetime.datetime.now().strftime("%Y-%m-%d")
         current_time = datetime.datetime.now().strftime("%H%M%S")
-        training_notes = "Trial 3, LR decay, gradient clip"
+        training_notes = "Trial 4, 5 steps, no differentiable physic"
         file_dir = os.path.join(log_dir,current_day, f"train-{current_time}-{method_name}-{training_notes}")
         self.writer = SummaryWriter(log_dir=file_dir)
         logger_config=LoggerConfig("NN_direct_close_loop_training_logs")
@@ -109,15 +111,15 @@ class DirectCloseLoop():
     def reset(self):
         
         #== random generate the env and set to the mpc solver
-        self.learning_agile_agent.generate_mission()
-        self.planner = self.learning_agile_agent.planner
+        self.learning_agile_sim.generate_mission()
+        self.planner = self.learning_agile_sim.planner
         self.state = self.planner.ini_state
 
         #== reset the gate
-        self.learning_agile_agent.prepare_gate()
+        self.learning_agile_sim.prepare_gate()
         self.i = 0
-        self.gate_t_i = self.learning_agile_agent.gate_t_i
-        self.gate_points_list = self.learning_agile_agent.gate_points_list
+        self.gate_t_i = self.learning_agile_sim.gate_t_i
+        self.gate_points_list = self.learning_agile_sim.gate_points_list
         
 
         self.init_gradient()
@@ -138,7 +140,7 @@ class DirectCloseLoop():
         ## == NN forward === ##
         nn_input=np.zeros(input_size)
         nn_input[0:10]=self.state
-        nn_input[10:13]=self.learning_agile_agent.final_point
+        nn_input[10:13]=self.learning_agile_sim.final_point
 
 
         # position of the gate

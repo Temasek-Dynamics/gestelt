@@ -2,7 +2,7 @@
   <arg name="record_topics" default="
   (.*)mavros(.*)
   (.*)traj_server(.*)
-  (.*)learning_agile_agent(.*)
+  (.*)learning_agile_sim(.*)
   (.*)planner(.*)
   (.*)tf(.*)
   (.*)tf_static(.*)
@@ -18,5 +18,5 @@
   </launch>
 
 
-    <!-- /learning_agile_agent/traverse_time /planner/sample_trajectory   /learning_agile_agent/solver_input_state 
-  /learning_agile_agent/gate_centroid    -->
+    <!-- /learning_agile_sim/traverse_time /planner/sample_trajectory   /learning_agile_sim/solver_input_state 
+  /learning_agile_sim/gate_centroid    -->

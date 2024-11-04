@@ -17,8 +17,8 @@ from visualization_msgs.msg import Marker
 import time
 from quad_policy import Rd2Rp
 from quad_model import toQuaternion
-from learning_agile_agent import MovingGate
-from learning_agile_mission import transform_map_to_world
+from learning_agile_sim import MovingGate
+from gestelt_bringup.src.Learning_Agile.learning_agile_ROS_mission import transform_map_to_world
 ##=================Load the model and configuration file=================##
 # acquire the current directory
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -71,12 +71,12 @@ class NN2_ROS_wrapper:
         rospy.Subscriber("/mavros/local_position/pose", PoseStamped, self.drone_pose_cb)
         rospy.Subscriber("/mavros/local_position/velocity_local", TwistStamped, self.drone_twist_cb)
         rospy.Subscriber("/planner/goals_learning_agile", Goals, self.mission_start_cb)
-        self.NN_trav_pose_pub = rospy.Publisher("/learning_agile_agent/NN_trav_pose", PoseStamped, queue_size=1)
-        self.NN_trav_time_pub = rospy.Publisher("/learning_agile_agent/NN_trav_time", Float32, queue_size=1)
+        self.NN_trav_pose_pub = rospy.Publisher("/learning_agile_sim/NN_trav_pose", PoseStamped, queue_size=1)
+        self.NN_trav_time_pub = rospy.Publisher("/learning_agile_sim/NN_trav_time", Float32, queue_size=1)
 
-        self.B_S_time_pub = rospy.Publisher("/learning_agile_agent/B_S_time", Float32, queue_size=1)
-        self.NN_forward_time_pub = rospy.Publisher("/learning_agile_agent/NN_forward_time", Float32, queue_size=1)
-        self.gate_vis_pub = rospy.Publisher("/learning_agile_agent/gate_vis", Marker, queue_size=1)
+        self.B_S_time_pub = rospy.Publisher("/learning_agile_sim/B_S_time", Float32, queue_size=1)
+        self.NN_forward_time_pub = rospy.Publisher("/learning_agile_sim/NN_forward_time", Float32, queue_size=1)
+        self.gate_vis_pub = rospy.Publisher("/learning_agile_sim/gate_vis", Marker, queue_size=1)
         
         self.gate_vis_timer = rospy.Timer(rospy.Duration(1/self.NN2_freq), self.gate_vis)
         self.NN2_output_timer = rospy.Timer(rospy.Duration(1/self.NN2_freq), self.NN2_forward)
@@ -110,7 +110,7 @@ class NN2_ROS_wrapper:
         self.trans,self.rot = transform_map_to_world(is_simulation)
         print("map to world translation",self.trans)
         print("map to world rotation",self.rot)
-    def gate_state_estimation(self):
+    def gate_state_search(self):
 
         """
         estimate the gate pose, using binary search
@@ -192,7 +192,7 @@ class NN2_ROS_wrapper:
 
             else:
                 t_comp = time.time()
-                self.gate_state_estimation()
+                self.gate_state_search()
                 B_S_time=time.time()-t_comp
                 ##============================ NN2 input ===================================##
                 nn2_inputs = np.zeros(15)

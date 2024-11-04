@@ -19,7 +19,7 @@ from geometry_msgs.msg import  PoseStamped, TwistStamped, Point
 from std_msgs.msg import Float32
 from visualization_msgs.msg import Marker
 import time
-drone_ellispoid_pub = rospy.Publisher('/learning_agile_agent/drone_ellispoid', Marker, queue_size=10)
+drone_ellispoid_pub = rospy.Publisher('/learning_agile_sim/drone_ellispoid', Marker, queue_size=10)
 def drone_state_callback(msg):
     drone_ellispoid = Marker()
     drone_ellispoid.header.frame_id = "world"

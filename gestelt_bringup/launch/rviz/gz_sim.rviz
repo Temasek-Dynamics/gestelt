@@ -305,7 +305,7 @@ Visualization Manager:
       Shaft Length: 0.23000000417232513
       Shaft Radius: 0.009999999776482582
       Shape: Arrow (Flat)
-      Topic: /learning_agile_agent/current_pred_traj
+      Topic: /learning_agile_sim/current_pred_traj
       Unreliable: false
       Value: true
     - Alpha: 1
@@ -321,12 +321,12 @@ Visualization Manager:
       Shaft Length: 1
       Shaft Radius: 0.05000000074505806
       Shape: Axes
-      Topic: /learning_agile_agent/NN_trav_pose
+      Topic: /learning_agile_sim/NN_trav_pose
       Unreliable: false
       Value: true
     - Class: rviz/Marker
       Enabled: true
-      Marker Topic: /learning_agile_agent/gate_vis
+      Marker Topic: /learning_agile_sim/gate_vis
       Name: gate_vis
       Namespaces:
         {}
@@ -334,7 +334,7 @@ Visualization Manager:
       Value: true
     - Class: rviz/Marker
       Enabled: true
-      Marker Topic: /learning_agile_agent/drone_ellispoid
+      Marker Topic: /learning_agile_sim/drone_ellispoid
       Name: drone_vis
       Namespaces:
         drone_ellispoid: true

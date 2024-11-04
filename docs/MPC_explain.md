@@ -8,7 +8,7 @@ https://nusu-my.sharepoint.com/:p:/g/personal/e1101704_u_nus_edu/ETM5ynQhbRdOqy5
 <img src="pictures/python_simulation.jpeg" alt="Python Simulation" style="width: 300px;"/>
     1. running steps:
         1. config your desired params in the file `gestelt_bringup/config/learning_agile_mission.yaml`
-        2. running the `gestelt_bringup/src/Learning_Agile/learning_agile_agent.py`, it will <u>construct the solver based on your current config</u>, and running the **python simulation**.
+        2. running the `gestelt_bringup/src/Learning_Agile/learning_agile_sim.py`, it will <u>construct the solver based on your current config</u>, and running the **python simulation**.
 1. **Gazebo PX4_SITL simulation:**\
 <img src="pictures/gazebo_sim.jpeg" alt="Gazebo Simulation" style="width: 300px;"/>
     1. running steps:
@@ -24,7 +24,7 @@ https://nusu-my.sharepoint.com/:p:/g/personal/e1101704_u_nus_edu/ETM5ynQhbRdOqy5
 ```plaintext
 gestelt_bringup/
 ├── src/
-│   ├── learning_agile_agent.py
+│   ├── learning_agile_sim.py
 │   ├── c_generated_code
 │   ├── acados_template
 │   ├── quad_OC.py
@@ -33,7 +33,7 @@ gestelt_bringup/
 │   ├── ...
 ```
 where:
-1. `learning_agile_agent.py` is the main file for constructing the MPC solver and running the **python simulation**.
+1. `learning_agile_sim.py` is the main file for constructing the MPC solver and running the **python simulation**.
 
 2. In the `quad_OC.py`
     1. The function `acadosOcpSolverInit` constructs the solver and generated the C code. 
@@ -50,7 +50,7 @@ where:
         3. the weight of each cost term.
         4. initialize the the solver.
 
-5. **Each time after modifying the MPC problem definition, like the weight and the model parameters, you need to run the `learning_agile_agent.py` to regenerate the solver. The script will also compile the MPC ROS wrapper to relink the solver shared library.** (I will refine the procedure)
+5. **Each time after modifying the MPC problem definition, like the weight and the model parameters, you need to run the `learning_agile_sim.py` to regenerate the solver. The script will also compile the MPC ROS wrapper to relink the solver shared library.** (I will refine the procedure)
 ## 2. The MPC ROS node/wrapper is in the package:
 ```plaintext
 mpc_ros_wrapper/

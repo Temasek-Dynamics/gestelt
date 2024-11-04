@@ -1,7 +1,7 @@
 ## this file is for neural network training
 from quad_nn import *
 from quad_policy import *
-from learning_agile_agent import MovingGate
+from learning_agile_sim import MovingGate
 from multiprocessing import Process, Array
 import numpy as np
 import os
@@ -18,8 +18,8 @@ with open(yaml_file, 'r', encoding='utf-8') as file:
     config_dict = yaml.safe_load(file)
 current_dir = os.path.dirname(os.path.abspath(__file__))
 training_data_folder=os.path.abspath(os.path.join(current_dir, 'training_data'))
-model_folder=os.path.abspath(os.path.join(training_data_folder, 'NN_model/20241020-133309-PDP-Trial_2'))
-FILE_INPUT = model_folder+"/NN1_deep2_22.pth"
+model_folder=os.path.abspath(os.path.join(training_data_folder, 'NN_model/20241031-142733-PDP-Trial 1, shrink the gate from [1.2,0.56] to [1.0, 0.4]'))
+FILE_INPUT = model_folder+"/NN1_deep2_24.pth"
 model_nn1 = torch.load(FILE_INPUT).to(device)
 
 ##====== NN2 logging initialization ======##

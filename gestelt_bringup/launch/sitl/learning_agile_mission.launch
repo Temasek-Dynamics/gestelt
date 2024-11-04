@@ -15,7 +15,7 @@
   <arg name="record_topics" default="
     (.*)mavros(.*)
   (.*)traj_server(.*)
-  (.*)learning_agile_agent(.*)
+  (.*)learning_agile_sim(.*)
   "
   />
 
