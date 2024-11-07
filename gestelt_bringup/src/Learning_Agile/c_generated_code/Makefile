@@ -143,8 +143,8 @@ ocp_cython_o: ocp_cython_c
 	-I $(INCLUDE_PATH)/blasfeo/include/ \
 	-I $(INCLUDE_PATH)/hpipm/include/ \
 	-I $(INCLUDE_PATH) \
-	-I /home/tlab-uav/.local/lib/python3.8/site-packages/numpy/core/include \
-	-I /usr/include/python3.8 \
+	-I /usr/local/lib/python3.9/dist-packages/numpy-1.24.4-py3.9-linux-x86_64.egg/numpy/core/include \
+	-I /usr/include/python3.9 \
 	acados_ocp_solver_pyx.c \
 
 ocp_cython: ocp_cython_o
@@ -170,8 +170,8 @@ sim_cython_o: sim_cython_c
 	-I $(INCLUDE_PATH)/blasfeo/include/ \
 	-I $(INCLUDE_PATH)/hpipm/include/ \
 	-I $(INCLUDE_PATH) \
-	-I /home/tlab-uav/.local/lib/python3.8/site-packages/numpy/core/include \
-	-I /usr/include/python3.8 \
+	-I /usr/local/lib/python3.9/dist-packages/numpy-1.24.4-py3.9-linux-x86_64.egg/numpy/core/include \
+	-I /usr/include/python3.9 \
 	acados_sim_solver_pyx.c \
 
 sim_cython: sim_cython_o

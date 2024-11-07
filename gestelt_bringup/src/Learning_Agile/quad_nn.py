@@ -225,7 +225,7 @@ class network_with_GRU(nn.Module):
         
     def forward(self, input):
         # convert state s to tensor
-        S = input.unsqueeze(0) # column 2D tensor
+        S = input # column 2D tensor
         out,hidden = self.GRU(S)
         out = out [:,-1,:]
         out = self.l1(out) # linear function requires the input to be a row tensor
@@ -240,6 +240,7 @@ class network_with_GRU(nn.Module):
         # convert np.array to tensor
         Dp = torch.tensor(dp, dtype=torch.float).to(device) # row 2D tensor
         # loss_nn = torch.matmul(Dp, para)
+        para=para.to(device)
         loss_nn =torch.trace(torch.matmul(Dp, para.t()))/(Dp.shape[0])
         return loss_nn # size is 1
 

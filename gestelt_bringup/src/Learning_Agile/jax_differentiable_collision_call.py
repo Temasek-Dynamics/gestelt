@@ -9,7 +9,7 @@ from jax import jit, grad, vmap
 from jax.test_util import check_grads
 from jax.scipy.spatial.transform import Rotation as R
 
-from dpax.ellipsoid_polytope import ellipsoid_problem_matrices, create_rect_prism,ellipsoid_polytope_proximity,grad_f
+from dpax.ellipsoid_polytope import ellipsoid_polytope_proximity,grad_f
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 """ 
@@ -56,50 +56,29 @@ class Ellipsoid():
 
 
 
-def DifferentiableCollisionsWrapper(line_centers,
+def DiffCollisionWrapper(line_centers,
                                     R_gate,
                                     gate_quat,
                                     quad_radius,
                                     quad_half_height,
+                                    P_obs,
+                                    P,
                                     drone_state,
                                     PENALTY_HELPER=False):
     
     ## convert from numpy to jnp
+    prism_centers=jnp.zeros([4,3])
     line_centers=jnp.array(line_centers)
     R_gate=jnp.array(R_gate)
     gate_quat=jnp.array(gate_quat)
     quad_radius=jnp.array(quad_radius)
     quad_half_height=jnp.array(quad_half_height)
     drone_state=jnp.array(drone_state)
-
     line_centers_G=jnp.matmul(line_centers,R_gate.T) 
-    width_gap=jnp.abs(line_centers_G[1,0]-line_centers_G[3,0])
-    height_gap=jnp.abs(line_centers_G[0,2]-line_centers_G[2,2])
-    
 
-    # create the drone ellipsoid
-    prism_size=quad_half_height
-    A=jnp.diag(np.array([quad_radius,quad_radius,quad_half_height]))
-    A_inv=jnp.linalg.inv(A)
-    P=A_inv.T@A_inv
     drone_ellipsoid=Ellipsoid(P,drone_state[0:3],drone_state[6:10])
 
-    ## create the drone polytope
-    # drone_ellipsoid=Polytope()
-    # drone_ellipsoid.create_rect_prism(quad_radius*2,quad_radius*2,quad_half_height*2)
-   
-    # test=jnp.matmul(R_gate.T,line_centers[0,])
-    # print('line_centers_G:',line_centers_G)
-
-    prism_centers=jnp.zeros([4,3])
-
-    # # left and right prisms centers
-    # prism_centers[1,]=line_centers_G[1,]+jnp.array([ quad_radius,0,0])
-    # prism_centers[3,]=line_centers_G[3,]+jnp.array([-quad_radius,0,0])
-
-    # # up and down prisms centers
-    # prism_centers[0,]=line_centers_G[0,]+jnp.array([0,0, quad_half_height])
-    # prism_centers[2,]=line_centers_G[2,]+jnp.array([0,0,-quad_half_height])
+    
 
     ## left and right prisms centers
     prism_centers = prism_centers.at[1].set(line_centers_G[1] + jnp.array([quad_radius, 0, 0]))
@@ -111,17 +90,6 @@ def DifferentiableCollisionsWrapper(line_centers,
 
     prism_centers_W=jnp.matmul(prism_centers,R_gate)
     
-    
-    ## create rectangle walls with the desired size
-    P_obs = []
-    for i in range(4):
-        P_obs.append(Polytope())
-    
-    P_obs[0].create_rect_prism(width_gap, 1.0, quad_half_height*2),
-    P_obs[1].create_rect_prism(quad_radius*2, 1.0, height_gap),
-    P_obs[2].create_rect_prism(width_gap, 1.0, quad_half_height*2),
-    P_obs[3].create_rect_prism(quad_radius*2, 1.0, height_gap)
-
 
     ## assign pose of the prisms and ellipsoid
     P_obs[0].r = prism_centers_W[0,]
@@ -148,13 +116,13 @@ def DifferentiableCollisionsWrapper(line_centers,
         if i == 1 or i == 3:
             # for the left and right walls
             alpha_importance=0.1
-            # des_alpha=1.81825 # gate length =1.2ellipsoid
-            des_alpha =1.125 # gate length =1
+            des_alpha=1.81825 # gate length =1.2ellipsoid
+            # des_alpha =1.125 # gate length =1
         else:
             # for the up and down walls
             alpha_importance=1
-            # des_alpha=1.4325 # gate width 0.56 ellipsoid
-            des_alpha= 1.17 # gate width 0.4
+            des_alpha=1.4325 # gate width 0.56 ellipsoid
+            # des_alpha= 1.17 # gate width 0.4
 
         # dalpha_i_dstate: drone_p,drone_q,ellipse_p,ellipse_q
         # alpha_i, dalpha_i_dstate=jl.dc.proximity_gradient(Elli_drone,P_obs[i],verbose = False, pdip_tol = 1e-6)
@@ -166,15 +134,15 @@ def DifferentiableCollisionsWrapper(line_centers,
         
         scaling_w=100
 
-        if not PENALTY_HELPER:
-            penalty+=(scaling_w * alpha_importance * (alpha_i-des_alpha)**2)
-            dalpha_i_dstate=grad_f(drone_ellipsoid.P,drone_ellipsoid.r,drone_ellipsoid.q,
-                                    P_obs[i].A,P_obs[i].b,P_obs[i].r,P_obs[i].q)
-            
-            dalpha_dstate_drone[0:3] += 2 * scaling_w * alpha_importance * (alpha_i-des_alpha) * np.array(dalpha_i_dstate[0])
-            dalpha_dstate_drone[6:10] += 2 * scaling_w * alpha_importance * (alpha_i-des_alpha) * np.array(dalpha_i_dstate[1])
-        else:
-            penalty +=alpha_i*alpha_importance
+        # if not PENALTY_HELPER:
+        penalty+=(scaling_w * alpha_importance * (alpha_i-des_alpha)**2)
+        dalpha_i_dstate=grad_f(drone_ellipsoid.P,drone_ellipsoid.r,drone_ellipsoid.q,
+                                P_obs[i].A,P_obs[i].b,P_obs[i].r,P_obs[i].q)
+        
+        dalpha_dstate_drone[0:3] += 2 * scaling_w * alpha_importance * (alpha_i-des_alpha) * np.array(dalpha_i_dstate[0])
+        dalpha_dstate_drone[6:10] += 2 * scaling_w * alpha_importance * (alpha_i-des_alpha) * np.array(dalpha_i_dstate[1])
+        # else:
+        #     penalty +=alpha_i*alpha_importance
     
     return penalty,dalpha_dstate_drone
 

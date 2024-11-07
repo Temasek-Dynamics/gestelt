@@ -15,12 +15,14 @@ class PenaltyDesignHelper():
         pass
 
     def rotating_quad(self):
-        self.axis_angle_range=np.linspace(-np.pi/2,np.pi/2,100)
+
+        number_of_pts=10
+        self.axis_angle_range=np.linspace(-np.pi/2,np.pi/2,number_of_pts)
         self.pitch_seq=self.axis_angle_range
         self.roll_seq=self.axis_angle_range
         self.R,self.P=np.meshgrid(self.roll_seq,self.pitch_seq)
         
-        euler_angle=np.zeros((100,3))
+        euler_angle=np.zeros((number_of_pts,3))
 
         ## choose the roll, pitch, or yaw
         self.euler_table={0:'yaw',1:'pitch',2:'roll'}
@@ -30,7 +32,7 @@ class PenaltyDesignHelper():
         self.quad_quat=np.roll(self.quad_quat,1,axis=1)
         
     
-        
+    
 
     def load_config(self):
         current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -73,9 +75,12 @@ class PenaltyDesignHelper():
         gate_point = moving_gate.gate.gate_point
         # initialize the narrow window
         self.planner.init_obstacle(gate_point.reshape(12),gate_pitch=moving_gate.gate_init_pitch)
+    
+    
         
+
     def penalty_cal(self,state_traj):
-        penalty,_=self.planner.obstacle.reward_calc_differentiable_collision(self.config_dict,
+        penalty,_=self.planner.obstacle.reward_calc_diff_collision(self.config_dict,
                                                                 state_traj=state_traj,
                                                                 gate_corners=self.planner.gate_corners,
                                                                 gate_quat=self.planner.gate_quat,

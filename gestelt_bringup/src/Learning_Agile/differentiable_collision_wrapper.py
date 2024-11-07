@@ -38,7 +38,7 @@ def dir_cosine_np(q):  # world frame to body frame
     ])
     return C_B_I
 
-def DifferentiableCollisionsWrapper(line_centers,
+def DiffCollisionWrapper(line_centers,
                                     R_gate,
                                     gate_quat,
                                     quad_radius,
@@ -46,8 +46,8 @@ def DifferentiableCollisionsWrapper(line_centers,
                                     drone_state):
     
     line_centers_G=np.matmul(line_centers,R_gate.T) 
-    width_gap=np.abs(line_centers_G[1,0]-line_centers_G[3,0])
-    height_gap=np.abs(line_centers_G[0,2]-line_centers_G[2,2])
+    length_gap=np.abs(line_centers_G[1,0]-line_centers_G[3,0])
+    width_gap=np.abs(line_centers_G[0,2]-line_centers_G[2,2])
     
     ## Ellipsoid  drone
     # prism_size=quad_half_height
@@ -79,10 +79,10 @@ def DifferentiableCollisionsWrapper(line_centers,
     
     # create rectangle walls with the desired size
    
-    P_obs = [jl.dc.create_rect_prism(width_gap, 1.0, quad_half_height*2)[0],
-             jl.dc.create_rect_prism(quad_radius*2, 1.0, height_gap)[0],
-             jl.dc.create_rect_prism(width_gap, 1.0, quad_half_height*2)[0],
-             jl.dc.create_rect_prism(quad_radius*2, 1.0, height_gap)[0]]
+    P_obs = [jl.dc.create_rect_prism(length_gap, 1.0, quad_half_height*2)[0],
+             jl.dc.create_rect_prism(quad_radius*2, 1.0, width_gap)[0],
+             jl.dc.create_rect_prism(length_gap, 1.0, quad_half_height*2)[0],
+             jl.dc.create_rect_prism(quad_radius*2, 1.0, width_gap)[0]]
 
     
     

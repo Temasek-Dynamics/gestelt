@@ -67,7 +67,8 @@ class MovingGate():
     
 class LearningAgileSim():
     def __init__(self,python_sim_time,
-                 yaml_file,
+                 yaml_file=None,
+                 mission_cfg:dict=None,
                  model_file=None,
                  dyn_step=0.002,
                  options:dict=None) -> None:
@@ -80,9 +81,12 @@ class LearningAgileSim():
 
 
         # load the configuration file
-        with open(yaml_file, 'r', encoding='utf-8') as file:
-            self.config_dict = yaml.safe_load(file)
-
+        if yaml_file is not None:
+            with open(yaml_file, 'r', encoding='utf-8') as file:
+                self.config_dict = yaml.safe_load(file)
+        else:
+            self.config_dict = mission_cfg
+            
         if not self.options['STATIC_GATE_TEST']:
             # load trained DNN2 model
             if model_file is not None:

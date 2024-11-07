@@ -1,5 +1,6 @@
 import numpy as np
 # from differentiable_collision_wrapper import *
+
 from jax_differentiable_collision_call import *
 import casadi as ca
 import torch
@@ -7,7 +8,7 @@ from solid_geometry import *
 
 ## define the narrow window which is also the obstacle for the quadrotor
 class Obstacle():
-    def __init__(self, point1, point2, point3, point4):
+    def __init__(self,config, point1, point2, point3, point4):
         self.point1 = np.array(point1)
         self.point2 = np.array(point2)
         self.point3 = np.array(point3)
@@ -28,6 +29,31 @@ class Obstacle():
         self.line2 = line(point2, point3)
         self.line3 = line(point3, point4)
         self.line4 = line(point4, point1)
+
+        ##==for differentiable collision detection==##
+        
+        ## create rectangle walls with the desired size
+        quad_radius=jnp.array(config['drone']['wing_len']/2)
+        quad_half_height=jnp.array(config['drone']['height']/2)
+        
+        self.P_obs = []
+        for i in range(4):
+            self.P_obs.append(Polytope())
+        
+        # length_gap=jnp.abs(line_centers_G[1,0]-line_centers_G[3,0])
+        # width_gap=jnp.abs(line_centers_G[0,2]-line_centers_G[2,2])
+        length_gap = jnp.array(config['gate']['length'])  # 1.2
+        width_gap = jnp.array(config['gate']['width'])  # 0.56
+    
+        self.P_obs[0].create_rect_prism(length_gap, 1.0, quad_half_height*2),
+        self.P_obs[1].create_rect_prism(quad_radius*2, 1.0, width_gap),
+        self.P_obs[2].create_rect_prism(length_gap, 1.0, quad_half_height*2),
+        self.P_obs[3].create_rect_prism(quad_radius*2, 1.0, width_gap)
+
+        ##==quadrotor ellipsoid==##
+        A=jnp.diag(np.array([quad_radius,quad_radius,quad_half_height]))
+        A_inv=jnp.linalg.inv(A)
+        self.P=A_inv.T@A_inv
 
     def collis_det(self, vert_traj, horizon):
         """
@@ -108,14 +134,14 @@ class Obstacle():
         return collision
   
 
-    def reward_calc_differentiable_collision(self, 
-                                            config,
-                                            state_traj, 
-                                            gate_corners,
-                                            gate_quat,
-                                            vert_traj, 
-                                            goal_pos,
-                                            PENALTY_HELPER = False):   
+    def reward_calc_diff_collision(self, 
+                                    config,
+                                    state_traj, 
+                                    gate_corners,
+                                    gate_quat,
+                                    vert_traj, 
+                                    goal_pos,
+                                    PENALTY_HELPER = False):   
         
         t_tra_seq_list=[]
 
@@ -133,25 +159,27 @@ class Obstacle():
         
         R_gate=dir_cosine_np(gate_quat) # world frame to gate frame
         penalty_traj = 0
+
+        line_centers = np.zeros([4,3])
+        ## for each gate check point
+        for i in range(4):
+
+            if i == 3:
+                line_centers[i,:] =(gate_corners[9:12]+gate_corners[0:3])/2
+
+            else:
+                line_centers[i,:]= (gate_corners[3*i:3*i+3]+gate_corners[3*i+3:3*i+6])/2
+
         for node_tra in t_tra_seq_list:
         
-            line_centers = np.zeros([4,3])
-            ## for each gate check point
-            for i in range(4):
-
-                if i == 3:
-                    line_centers[i,:] =(gate_corners[9:12]+gate_corners[0:3])/2
-
-                else:
-                    line_centers[i,:]= (gate_corners[3*i:3*i+3]+gate_corners[3*i+3:3*i+6])/2
-
                 
-                
-            penalty_single,dalpha_dstate_drone=DifferentiableCollisionsWrapper(line_centers,
+            penalty_single,dalpha_dstate_drone=DiffCollisionWrapper(line_centers,
                                             R_gate,
                                             gate_quat,
                                             config['drone']['wing_len']/2,
                                             config['drone']['height']/2,
+                                            self.P_obs,
+                                            self.P,
                                             state_traj[node_tra,:],
                                             PENALTY_HELPER)
             

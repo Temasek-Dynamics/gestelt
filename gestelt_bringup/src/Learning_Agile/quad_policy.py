@@ -166,7 +166,7 @@ class PlanFwdBwdWrapper():
         self.point2 = gate_point[3:6]
         self.point3 = gate_point[6:9]
         self.point4 = gate_point[9:12]        
-        self.obstacle = Obstacle(self.point1,self.point2,self.point3,self.point4)
+        self.obstacle = Obstacle(self.config,self.point1,self.point2,self.point3,self.point4)
 
 
     def tra_ang_direct_reward(self,tra_ang):
@@ -176,7 +176,7 @@ class PlanFwdBwdWrapper():
         self.yaw_reward = - 1000 * 0.5 * tra_ang[2]**2
         self.drdyaw = - 1000 * tra_ang[2]
 
-    def R_from_MPC(self,tra_pos=None,tra_ang=None,t_tra = 3):
+    def MPC_and_R(self,tra_pos=None,tra_ang=None,t_tra = 3):
 
         if not self.options['PDP_GRADIENT']:
             NO_SOLUTION_FLAG = False
@@ -220,7 +220,7 @@ class PlanFwdBwdWrapper():
         else:
             # self.tra_ang_direct_reward(tra_ang)
 
-            reward,self.d_R_d_st_traj=self.obstacle.reward_calc_differentiable_collision(
+            reward,self.d_R_d_st_traj=self.obstacle.reward_calc_diff_collision(
                                                                 self.config,
                                                                 state_traj=state_traj,
                                                                 gate_corners=self.gate_corners,
@@ -232,6 +232,19 @@ class PlanFwdBwdWrapper():
             
             return reward #+ self.roll_reward + self.yaw_reward#+ pitch_reward
 
+    def get_reward(self,state_traj):
+        self.vert_traj = self.uav1.get_quad_vert_pos(wing_len = self.wing_len, state_traj = state_traj)
+        reward,self.d_R_d_st_traj=self.obstacle.reward_calc_diff_collision(
+                                                                self.config,
+                                                                state_traj=state_traj,
+                                                                gate_corners=self.gate_corners,
+                                                                gate_quat=self.gate_quat,
+                                                                vert_traj=self.vert_traj[:,0:3],
+                                                                goal_pos=self.goal_pos)
+            
+        self.d_R_d_st_traj = self.d_R_d_st_traj.reshape(self.horizon+1,1,self.uavoc1.n_state)
+            
+        return reward 
 
     # --------------------------- solution and learning---------------------------------------
     def sol_gradient(self,tra_pos =None,tra_ang=None,t_tra=None):
@@ -253,22 +266,22 @@ class PlanFwdBwdWrapper():
         
         
         # R is the Reward
-        R = self.R_from_MPC(tra_pos,tra_ang,t_tra)
+        R = self.MPC_and_R(tra_pos,tra_ang,t_tra)
         
         ############==================finite difference===========================############
         if not self.options['PDP_GRADIENT']:
             # fixed perturbation to calculate the gradient
             delta = 1e-3
-            drdx = np.clip(self.R_from_MPC(tra_pos+[delta,0,0],tra_ang, t_tra) - R,-0.5,0.5)*0.1
-            drdy = np.clip(self.R_from_MPC(tra_pos+[0,delta,0],tra_ang, t_tra) - R,-0.5,0.5)*0.1
-            drdz = np.clip(self.R_from_MPC(tra_pos+[0,0,delta],tra_ang, t_tra) - R,-0.5,0.5)*0.1
-            drda = np.clip(self.R_from_MPC(tra_pos,tra_ang+[delta,0,0], t_tra) - R,-0.5,0.5)*(1/(500*tra_ang[0]**2+5))
-            drdb = np.clip(self.R_from_MPC(tra_pos,tra_ang+[0,delta,0], t_tra) - R,-0.5,0.5)*(1/(500*tra_ang[1]**2+5))
-            drdc = np.clip(self.R_from_MPC(tra_pos,tra_ang+[0,0,delta], t_tra) - R,-0.5,0.5)*(1/(500*tra_ang[2]**2+5))
+            drdx = np.clip(self.MPC_and_R(tra_pos+[delta,0,0],tra_ang, t_tra) - R,-0.5,0.5)*0.1
+            drdy = np.clip(self.MPC_and_R(tra_pos+[0,delta,0],tra_ang, t_tra) - R,-0.5,0.5)*0.1
+            drdz = np.clip(self.MPC_and_R(tra_pos+[0,0,delta],tra_ang, t_tra) - R,-0.5,0.5)*0.1
+            drda = np.clip(self.MPC_and_R(tra_pos,tra_ang+[delta,0,0], t_tra) - R,-0.5,0.5)*(1/(500*tra_ang[0]**2+5))
+            drdb = np.clip(self.MPC_and_R(tra_pos,tra_ang+[0,delta,0], t_tra) - R,-0.5,0.5)*(1/(500*tra_ang[1]**2+5))
+            drdc = np.clip(self.MPC_and_R(tra_pos,tra_ang+[0,0,delta], t_tra) - R,-0.5,0.5)*(1/(500*tra_ang[2]**2+5))
             drdt =0
-            if((self.R_from_MPC(tra_pos,tra_ang,t_tra-0.1)-R)>2):
+            if((self.MPC_and_R(tra_pos,tra_ang,t_tra-0.1)-R)>2):
                 drdt = -0.05
-            if((self.R_from_MPC(tra_pos,tra_ang,t_tra+0.1)-R)>2):
+            if((self.MPC_and_R(tra_pos,tra_ang,t_tra+0.1)-R)>2):
                 drdt = 0.05
 
             # print("finite diff:",np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,j]))
@@ -370,14 +383,14 @@ class PlanFwdBwdWrapper():
         tra_ang = np.array([tra_a,tra_b,tra_c])
         ## fixed perturbation to calculate the gradient
         for k in range(200):
-            j = self.R_from_MPC (tra_pos,tra_ang,t)
-            drdx = np.clip(self.R_from_MPC(tra_pos+[0.001,0,0],tra_ang=tra_ang, t=t) - j,-0.5,0.5)
-            drdy = np.clip(self.R_from_MPC(tra_pos+[0,0.001,0],tra_ang=tra_ang, t=t) - j,-0.5,0.5)
-            drdz = np.clip(self.R_from_MPC(tra_pos+[0,0,0.001],tra_ang=tra_ang, t=t) - j,-0.5,0.5)
-            drda = np.clip(self.R_from_MPC(tra_pos,tra_ang=tra_ang+[0.001,0,0], t=t) - j,-0.5,0.5)
-            drdb = np.clip(self.R_from_MPC(tra_pos,tra_ang=tra_ang+[0,0.001,0], t=t) - j,-0.5,0.5)
-            drdc = np.clip(self.R_from_MPC(tra_pos,tra_ang=tra_ang+[0,0,0.001], t=t) - j,-0.5,0.5)
-            #drdt = np.clip(self.R_from_MPC(tra_pos,tra_ang,t-0.1)-j,-10,10)
+            j = self.MPC_and_R (tra_pos,tra_ang,t)
+            drdx = np.clip(self.MPC_and_R(tra_pos+[0.001,0,0],tra_ang=tra_ang, t=t) - j,-0.5,0.5)
+            drdy = np.clip(self.MPC_and_R(tra_pos+[0,0.001,0],tra_ang=tra_ang, t=t) - j,-0.5,0.5)
+            drdz = np.clip(self.MPC_and_R(tra_pos+[0,0,0.001],tra_ang=tra_ang, t=t) - j,-0.5,0.5)
+            drda = np.clip(self.MPC_and_R(tra_pos,tra_ang=tra_ang+[0.001,0,0], t=t) - j,-0.5,0.5)
+            drdb = np.clip(self.MPC_and_R(tra_pos,tra_ang=tra_ang+[0,0.001,0], t=t) - j,-0.5,0.5)
+            drdc = np.clip(self.MPC_and_R(tra_pos,tra_ang=tra_ang+[0,0,0.001], t=t) - j,-0.5,0.5)
+            #drdt = np.clip(self.MPC_and_R(tra_pos,tra_ang,t-0.1)-j,-10,10)
             # update
             tra_posx += 0.1*drdx
             tra_posy += 0.1*drdy
@@ -385,9 +398,9 @@ class PlanFwdBwdWrapper():
             tra_a += (1/(500*tra_a**2+5))*drda
             tra_b += (1/(500*tra_b**2+5))*drdb
             tra_c += (1/(500*tra_c**2+5))*drdc
-            if((self.R_from_MPC(tra_pos,tra_ang,t-0.1)-j)>2):
+            if((self.MPC_and_R(tra_pos,tra_ang,t-0.1)-j)>2):
                 t = t-0.1
-            if((self.R_from_MPC(tra_pos,tra_ang,t+0.1)-j)>2):
+            if((self.MPC_and_R(tra_pos,tra_ang,t+0.1)-j)>2):
                 t = t+0.1
             t = round(t,1)
             tra_pos = np.array([tra_posx,tra_posy,tra_posz])
@@ -407,13 +420,13 @@ class PlanFwdBwdWrapper():
         current_para = np.array([tra_posx,tra_posy,tra_posz,tra_a,tra_b,tra_c])
         lr = np.array([2e-4,2e-4,2e-4,5e-5,5e-5,5e-5])
         for k in range(50):
-            j = self.R_from_MPC(current_para[0:3],current_para[3:6],t)
+            j = self.MPC_and_R(current_para[0:3],current_para[3:6],t)
             # calculate derivatives
             c = []
             f = []
             for i in range(24):
                 dx = sample(0.001)
-                dr = self.R_from_MPC (current_para[0:3]+dx[0:3],current_para[3:6]+dx[3:6],t)-j
+                dr = self.MPC_and_R (current_para[0:3]+dx[0:3],current_para[3:6]+dx[3:6],t)-j
                 c += [dx]
                 f += [dr]
             # update
@@ -422,11 +435,11 @@ class PlanFwdBwdWrapper():
             a = np.matmul(np.linalg.inv(np.matmul(cm.T,cm)),cm.T)
             drdx = np.matmul(a,fm)
             current_para = current_para + lr * drdx
-            j = self.R_from_MPC(current_para[0:3],current_para[3:6],t)
-            if((self.R_from_MPC(current_para[0:3],current_para[3:6],t+0.1)-j)>20):
+            j = self.MPC_and_R(current_para[0:3],current_para[3:6],t)
+            if((self.MPC_and_R(current_para[0:3],current_para[3:6],t+0.1)-j)>20):
                 t = t + 0.1
             else:
-                if((self.R_from_MPC(current_para[0:3],current_para[3:6],t-0.1)-j)>20):
+                if((self.MPC_and_R(current_para[0:3],current_para[3:6],t-0.1)-j)>20):
                     t = t - 0.1
             t = round(t,1) 
             print(str(t)+str('  ')+str(drdx)+str('  ')+str(k))

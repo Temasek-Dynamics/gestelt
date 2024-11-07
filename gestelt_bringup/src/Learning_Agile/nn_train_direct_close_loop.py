@@ -202,7 +202,7 @@ class DirectCloseLoop():
     def backward(self):
         
         ## acquire p_R_i/p_X_traj_i
-        self.R_i=self.planner.R_from_MPC(self.np_nn_out[0:3],self.np_nn_out[3:12],self.np_nn_out[-1])
+        self.R_i=self.planner.MPC_and_R(self.np_nn_out[0:3],self.np_nn_out[3:12],self.np_nn_out[-1])
 
         # H * 1* 10
         self.p_R_i_p_X_traj_i.append(torch.tensor(self.planner.d_R_d_st_traj[:,:,:], dtype=torch.float).to(self.device))
@@ -246,7 +246,7 @@ class DirectCloseLoop():
             d_R_i_d_w = torch.zeros(1).to(self.device)
             
         
-            d_R_i_d_z=torch.einsum('bij,bjk->ik',self.p_R_i_p_X_traj_i[self.i],self.p_X_traj_i_p_z_i[self.i])
+            d_R_i_d_z = torch.einsum('bij,bjk->ik',self.p_R_i_p_X_traj_i[self.i],self.p_X_traj_i_p_z_i[self.i])
             d_R_i_d_w = torch.matmul(d_R_i_d_z,self.p_z_i_p_w[self.i])
            
             d_R_d_w += d_R_i_d_w[0]    
