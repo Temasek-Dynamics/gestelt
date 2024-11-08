@@ -3,16 +3,22 @@ import torch
 import os
 from multiprocessing import Process, Array, Queue
 import multiprocessing
+from tqdm import tqdm
 
 from scipy.spatial.transform import Rotation as R
-
+from torch.utils.tensorboard import SummaryWriter
 
 from solid_geometry import magni
 from learningAgileBase import LearningAgileBase
-
-from config import mission_cfg, train_cfg,current_dir
+from config import mission_cfg,train_cfg,current_dir,log_folder,trained_model_folder
+from logger_misc import *
+import logging
 
 ## this options is for close loop training
+training_data_folder=os.path.abspath(os.path.join(current_dir, 'training_data'))
+model_folder=os.path.abspath(os.path.join(training_data_folder, 'NN_model'))
+writer = SummaryWriter(log_dir=log_folder)
+
 options = {}
 options['MPC_BACKWARD']=True
 options['USE_PREV_SOLVER']=False
@@ -25,8 +31,11 @@ options['CLOSE_LOOP_TRAINING']=True
 options['TRAINING']=True
 options['DEBUG']=False
 options['BACKWARD']=True
+options['MULTI_PROCESSES']=True
+
 class LearningAgileAPG:
     """
+    APG: Analytical Policy Gradient
     this class is responsible for running episodes batches in multi-process manner,
     collect gradients in a batch and update the network
     """
@@ -43,8 +52,10 @@ class LearningAgileAPG:
         self.episodes = []
         for i in range(self.batch_size):
             self.episodes.append(LearningAgileBase(mission_cfg=self.mission_cfg,
-                                            train_cfg=self.train_cfg,
-                                            options=options))
+                                                 train_cfg=self.train_cfg,
+                                                 options=options))
+
+        
     def init_train(self,model_folder):
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         FILE = os.path.join(model_folder, "NN_close_pretrain.pth")
@@ -59,45 +70,62 @@ class LearningAgileAPG:
         # learning rate scheduler
         self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=5, gamma=0.9)\
     
-    def get_observations(self,i, episode:LearningAgileBase,obs_queue:Queue): 
-        """
-        get the observations from the single episode
+    # def get_observations(self, i:int,  
+    #                      episode:LearningAgileBase,
+    #                      obs_queue:Queue):#, drones_state_queue:Queue 
+    #     """
+    #     get the observations from the single episode
 
-        Args:
-            episode (LearningAgileBase): _description_
+    #     Args:
+    #         episode (LearningAgileBase): _description_
         
-        Returns:
-            observations
-        """
-        obs=episode.get_obs(i)
-        obs_queue.put(obs)
-        return obs_queue
+    #     Returns:
+    #         observations
+    #     """
+        
+    #     obs=episode.get_obs(i)
+    #     obs_queue.put(obs)
+    #     # drones_state_queue.put(episode.drone_state)
+    #     # return obs_queue
     
-    def run_step_episodes(self, i:int, episode:LearningAgileBase , nn_output:torch.tensor, R_Grad_queue:Queue):
-        """
-        run the episode and put the reward and gradient into the queue
+    # def run_step_episodes(self, i:int, 
+    #                       episode:LearningAgileBase, 
+    #                       nn_output:torch.tensor, 
+    #                       R_Grad_queue:Queue):
+    #     """
+    #     run the episode and put the reward and gradient into the queue
 
-        Args:
-            index (int): _description_
-            episode (LearningAgileBase): _description_
-            R_Grad_queue (Queue): _description_
+    #     Args:
+    #         index (int): _description_
+    #         episode (LearningAgileBase): _description_
+    #         R_Grad_queue (Queue): _description_
         
-        Returns:
-            each episode's reward and gradient
-        """
-        episode.run_single_step(nn_output)
+    #     Returns:
+    #         each episode's reward and gradient
+    #     """
+    #     episode.step(nn_output)
 
 
-        ## at the end of the close loop,
-        ## return the reward and gradient
-        if i==train_cfg['training']['close_loop_horizon']-1:
-            R_Grad_queue.put([episode.reward, episode.p_R_p_z])
-        
+    #     ## at the end of the close loop,
+    #     ## return the reward and gradient
+    #     if i==train_cfg['training']['close_loop_horizon']-1:
+    #         R_Grad_queue.put([episode.reward, episode.p_R_p_z])
+
+    def get_reward_episodes(self, i:int,
+                            episode:LearningAgileBase,
+                            R_Grad_queue:Queue):
+        R_i = np.array(episode.planner.get_reward(episode.pred_st_traj)[0])
+        p_R_i_p_X_traj_i = (episode.planner.get_reward(episode.pred_st_traj)[1])
+
+        R_Grad_queue.put([R_i, p_R_i_p_X_traj_i])
 
     def update_network(self):
-        pass  
+        self.optimizer.zero_grad()
+        self.loss.backward()
+        self.optimizer.step()
+        self.scheduler.step()
 
-    def train(self, episodes):
+    def train_one_epoch(self):
         """
         run the episodes in parallel, collect the reward and gradient and update the network
         0. reset all the episodes
@@ -111,80 +139,98 @@ class LearningAgileAPG:
             episodes (list): list of episodes
         """
 
-       ## assign each episode to a process
+    
         processes = []
         R_Grad_queue=Queue()
-        obs_queue = Queue()
+   
 
         
         reward_list = []
         p_R_p_z_list = []
        
         ##==0. reset all the episodes
-        for episode in episodes:
+        for episode in self.episodes:
             episode.reset()
 
         for i in range(train_cfg['training']['close_loop_horizon']):
             obs_batch_list = []
             ##== 1. get observations for every episode
             for k in range(self.batch_size):
-                p = Process(target=self.get_observations, args=(i,
-                                                                episodes[k],
-                                                                obs_queue))
-                p.start()
-                processes.append(p)
-            for p in processes:
-                p.join()
+                obs_batch_list.append(self.episodes[k].get_obs(i))
 
-            for k in range(self.batch_size):
-                obs_batch_list.append(obs_queue.get())
-            
-            
             
             ##== 2. model forward in a batch    
             obs_batch=np.array(obs_batch_list)
-            print('obs_batch shape',obs_batch.shape)
             outputs_batch = self.model(torch.tensor(obs_batch,dtype=torch.float32).to(self.device)).to('cpu')
-            print('nn_output shape',outputs_batch.shape)
-            # print('nn_output',outputs_batch)
-            
-            #== 3. step for every episode
-            for k in range(self.batch_size):
-            
-                p = Process(target=self.run_step_episodes, args=(i,
-                                                            episodes[k],
-                                                            outputs_batch[k],
-                                                            R_Grad_queue))
-                p.start()
-                processes.append(p)
 
+            
+            ##== 3. step for every episode
+            for k in range(self.batch_size):
+                self.episodes[k].step(outputs_batch[k])
+            
+
+            ##== 4. Multi-process calculate each episode's reward and gradient p_R_i_p_X_traj_i
+
+            for k in range(self.batch_size):
+                p = Process(target=self.get_reward_episodes, args=(i,
+                                                     self.episodes[k],
+                                                     R_Grad_queue))
+                processes.append(p)
+                p.start()
 
             for p in processes:
                 p.join()
-            
-            
-        for k in range(self.batch_size):
-            single_episodes_result=R_Grad_queue.get()
-            reward_list.append(single_episodes_result[0])
-            p_R_p_z_list.append(single_episodes_result[1])
 
-        self.reward_batch = sum(reward_list)
+            for k in range(self.batch_size):
+                single_episode_r_grad = R_Grad_queue.get()
+                self.episodes[k].R_i.append(single_episode_r_grad[0])
+                self.episodes[k].p_R_i_p_X_traj_i.append(single_episode_r_grad[1])
+
+            ##== 5. backward the gradient to get the p_R_p_z
+            for k in range(self.batch_size):
+                self.episodes[k].backward_per_step()   
+
+            ##== record NN obs and output per episode step
+            log_drone_state(writer,obs_batch[0,-1,:],self.global_step)
+            log_train_IO(writer,obs_batch[0,-1,:],outputs_batch[0,:].data.numpy().reshape(self.episodes[0].output_size),self.global_step)
+            # writer.add_scalar('reward_single_step', self.episodes[0].reward, self.global_step)
+            
+            self.global_step  += 1
+        
+        ##== collect the reward and gradient from each episode
+        for k in range(self.batch_size):
+            reward_list.append(self.episodes[k].reward)
+            p_R_p_z_list.append(self.episodes[k].p_R_p_z)
+        
+        self.reward_batch = sum(reward_list)/self.batch_size
         self.p_R_p_z_batch = np.array(p_R_p_z_list)
 
         
         ##== 4. model backward in a batch
-        loss=self.model.myloss(outputs_batch.to(self.device), self.p_R_p_z_batch, self.device)
+        self.loss=self.model.myloss(outputs_batch.to(self.device), self.p_R_p_z_batch, self.device)
+        # self.update_network()
 
-        self.optimizer.zero_grad()
-        loss.backward()
-        self.optimizer.step()
-        self.scheduler.step()
+        ##== record the gradient and the reward
+        log_gradient(writer,self.p_R_p_z_batch[0,:],self.reward_batch[0],self.global_step)
+       
+
+    def train(self):
+        """
+        the main function of the training, with multiple epochs,multiple episodes
+        """
+        self.model.train()
+        self.global_step = 0
+        num_epochs = self.train_cfg['training']['num_epochs']
+        with tqdm(total=num_epochs) as pbar:
+            for epoch in range(num_epochs):
+                self.train_one_epoch()
+                pbar.update(1)
+                pbar.set_description(f"epoch:{epoch}, reward:{self.reward_batch[0]}")
+                if epoch % 2 == 0:
+                    torch.save(self.model, os.path.join(trained_model_folder, f"NN_close_{epoch}.pth"))
 
 if __name__ == "__main__":
-    training_data_folder=os.path.abspath(os.path.join(current_dir, 'training_data'))
-    model_folder=os.path.abspath(os.path.join(training_data_folder, 'NN_model'))
-    
-    # multiprocessing.set_start_method('spawn')
+
     apg = LearningAgileAPG(mission_cfg,train_cfg,options)
     apg.init_train(model_folder)
-    apg.train(apg.episodes)
+    apg.train()

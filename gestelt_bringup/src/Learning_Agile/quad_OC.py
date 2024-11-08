@@ -564,7 +564,7 @@ class OCSys:
             generate=False
         self.acados_solver = AcadosOcpSolver(ocp,generate=generate,build=build, json_file=json_file)
     
-    def AcadosSimIntegratorInit(self,dyn_step):
+    def AcadosSimIntegratorInit(self,dyn_step,USE_PREV_SOLVER:bool=False):
         sim=AcadosSim()
         sim.model=self.model
 
@@ -577,8 +577,12 @@ class OCSys:
         sim.solver_options.num_steps = 4
         sim.solver_options.newton_iter = 3 # for implicit integrator
         sim.parameter_values = np.zeros(self.n_state+self.trav_auxvar.numel()+1) 
-        build=True
-        generate=True
+        if USE_PREV_SOLVER:
+            build=False
+            generate=False
+        else:
+            build=True
+            generate=True
         self.acados_integrator = AcadosSimSolver(sim, cmake_builder=None, generate=generate, build=build)
 
 

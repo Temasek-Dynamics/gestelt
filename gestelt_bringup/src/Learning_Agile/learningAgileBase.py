@@ -28,7 +28,7 @@ options['DEBUG']=False
 options['BACKWARD']=True
 class LearningAgileBase:
     """
-    this class is responsible for wrap the single epsiode,
+    this class is responsible for wrap the single episode,
     include forward, reward, backward, 
     return the Reward and Gradient of this episode
     Reward: [R_0, R_1, R_2, ..., R_H] for each step's prediction
@@ -177,15 +177,9 @@ class LearningAgileBase:
         ## === actual trajectory === ##
         self.state_traj.append(self.state)
         self.state_n = np.concatenate((self.state_n,[self.state]),axis = 0)
-
+        # print('state:',self.state)
+        # print('control:',self.u)
     
-
-    def get_reward(self):
-        """
-        calculate the reward of MPC solution
-        """
-        self.R_i.append(np.array(self.planner.get_reward(self.pred_st_traj)))
-         
     
     def backward_per_step(self):
         """
@@ -196,7 +190,8 @@ class LearningAgileBase:
         """
 
         # append N * 1* 10
-        self.p_R_i_p_X_traj_i.append(self.planner.d_R_d_st_traj[:,:,:])
+        ## this has been done in the get_reward function
+        # self.p_R_i_p_X_traj_i.append(self.planner.d_R_d_st_traj[:,:,:])
 
         
         ## acquire p_X_traj_i/p_x_i
@@ -233,23 +228,34 @@ class LearningAgileBase:
         # print(p_R_i_p_z.shape)
     
 
-    def run_single_step(self,nn_output):
-        self.step(nn_output)
-        self.get_reward()
-        if options['BACKWARD']:
-            self.backward_per_step()
+    # def run_single_step(self,nn_output):
+    #     self.step(nn_output)
+    #     self.get_reward()
+    #     if options['BACKWARD']:
+    #         self.backward_per_step()
 
+    @property
+    def drone_state(self):
+        return self.state
+    
     @property
     def reward(self):
         return np.array([sum(self.R_i)])
     
     @property
     def p_R_p_z(self):
-        p_R_p_z = np.sum(np.array(self.p_R_i_p_z_i),axis=0)/self.train_cfg['training']['close_loop_horizon']
+        p_R_p_z = np.sum(np.array(self.p_R_i_p_z_i),axis=0)/(self.train_cfg['training']['close_loop_horizon']*10000)
 
         return p_R_p_z
    
+def get_reward(base):
+    """
+    calculate the reward of MPC solution
+    """
+    R_i = np.array(base.planner.get_reward(base.pred_st_traj)[0])
+    p_R_i_p_X_traj_i = (base.planner.get_reward(base.pred_st_traj)[1])
 
+    return [R_i, p_R_i_p_X_traj_i]
 
 def run_single_episode(base,nn_out=None):
     base.reset()
@@ -262,7 +268,10 @@ def run_single_episode(base,nn_out=None):
 
         if i > 0: 
             # skip the first step since the first prediction of the SQP_RTI is initial guess
-            base.get_reward()
+            reward_and_gradient=get_reward(base)
+            base.R_i.append(reward_and_gradient[0])
+            base.p_R_i_p_X_traj_i.append(reward_and_gradient[1])
+
             if options['BACKWARD']:
                 base.backward_per_step()    
 

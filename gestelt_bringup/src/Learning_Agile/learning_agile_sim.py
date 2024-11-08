@@ -111,8 +111,8 @@ class LearningAgileSim():
         # set the dynamics step of the python sim (Explict Euler, ERK4)
         self.dyn_step=dyn_step
         self.planner.uav1.setDyn(self.dyn_step)
-        self.planner.uavoc1.AcadosSimIntegratorInit(self.dyn_step)
-        self.integrator=self.planner.uavoc1.acados_integrator
+        # self.planner.uavoc1.AcadosSimIntegratorInit(self.dyn_step,options['USE_PREV_SOLVER'])
+        # self.integrator=self.planner.uavoc1.acados_integrator
 
         self.Ttra    = []
         self.T       = []

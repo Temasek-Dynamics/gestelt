@@ -25,3 +25,27 @@ with open(mission_yaml_file, 'r', encoding='utf-8') as file:
     mission_cfg = yaml.safe_load(file)
 with open(training_yaml_file, 'r', encoding='utf-8') as file:
     train_cfg = yaml.safe_load(file)
+
+
+##== training results folder
+## day 
+## time
+## log + model
+training_results_folder=os.path.abspath(os.path.join(current_dir,'training_results'))
+if not os.path.exists(training_results_folder):
+    os.makedirs(training_results_folder)
+
+## today:
+current_day = datetime.datetime.now().strftime("%Y-%m-%d")
+current_time = datetime.datetime.now().strftime("%H-%M-%S")
+current_train_folder=os.path.join(training_results_folder,current_day,current_time)
+if not os.path.exists(current_train_folder):
+    os.makedirs(current_train_folder)
+
+trained_model_folder=os.path.join(current_train_folder,'trained_model')
+if not os.path.exists(trained_model_folder):
+    os.makedirs(trained_model_folder)
+
+log_folder=os.path.join(current_train_folder,'log')
+if not os.path.exists(log_folder):
+    os.makedirs(log_folder)

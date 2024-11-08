@@ -149,8 +149,8 @@ class Obstacle():
         if not PENALTY_HELPER:
             for t in range(state_traj.shape[0]):
                 if(np.dot(self.plane1.nor_vec(),vert_traj[t]-self.centroid)<0):
-                    t_tra_seq_list.append(t-2)
-                if len(t_tra_seq_list)==4:
+                    t_tra_seq_list.append(t-1)
+                if len(t_tra_seq_list)==2:
                     break
         else:
             t_tra_seq_list = [0]

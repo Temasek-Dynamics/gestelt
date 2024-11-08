@@ -244,7 +244,7 @@ class PlanFwdBwdWrapper():
             
         self.d_R_d_st_traj = self.d_R_d_st_traj.reshape(self.horizon+1,1,self.uavoc1.n_state)
             
-        return reward 
+        return [reward,self.d_R_d_st_traj]
 
     # --------------------------- solution and learning---------------------------------------
     def sol_gradient(self,tra_pos =None,tra_ang=None,t_tra=None):
@@ -476,7 +476,7 @@ class PlanFwdBwdWrapper():
                                                 tra_ang=tra_ang,
                                                 dt=self.dt,
                                                 t_tra=t_tra)
-        
+        # print('goal_pos:',self.goal_pos)
         # return control, pos_vel_cmd
         return self.sol1,NO_SOLUTION_FLAG
 
