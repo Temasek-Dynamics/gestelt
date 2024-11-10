@@ -82,12 +82,12 @@ def nn_sample(init_pos=None,final_pos=None,init_angle=None,cur_epoch=100,pretrai
         lower,upper = -pi/6,pi/6
         X = stats.truncnorm((lower - mu) / sigma, (upper - mu) / sigma, loc=mu, scale=sigma)
         gate_pitch = X.rvs(1)[0]
-        if gate_pitch>0:
-            gate_pitch=gate_pitch+des_pitch_mean
-        else:
-            gate_pitch=gate_pitch-des_pitch_mean
-    
-
+        # if gate_pitch>0:
+        #     gate_pitch=gate_pitch+des_pitch_mean
+        # else:
+        #     gate_pitch=gate_pitch-des_pitch_mean
+        
+        # gate_pitch = pi/6
     
 
     ##==calculate the gate RM

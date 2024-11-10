@@ -134,13 +134,25 @@ int ACADOS_model_acados_sim_create(ACADOS_model_sim_solver_capsule * capsule)
     sim_collocation_type collocation_type = GAUSS_LEGENDRE;
     sim_opts_set(ACADOS_model_sim_config, ACADOS_model_sim_opts, "collocation_type", &collocation_type);
 
- 
+
     tmp_int = 4;
     sim_opts_set(ACADOS_model_sim_config, ACADOS_model_sim_opts, "num_stages", &tmp_int);
     tmp_int = 4;
     sim_opts_set(ACADOS_model_sim_config, ACADOS_model_sim_opts, "num_steps", &tmp_int);
-    tmp_bool = 0;
-    sim_opts_set(ACADOS_model_sim_config, ACADOS_model_sim_opts, "jac_reuse", &tmp_bool);
+
+    // options that are not available to AcadosOcpSolver
+    //  (in OCP they will be determined by other options, like exact_hessian)
+    tmp_bool = true;
+    sim_opts_set(ACADOS_model_sim_config, ACADOS_model_sim_opts, "sens_forw", &tmp_bool);
+    tmp_bool = false;
+    sim_opts_set(ACADOS_model_sim_config, ACADOS_model_sim_opts, "sens_adj", &tmp_bool);
+    tmp_bool = false;
+    sim_opts_set(ACADOS_model_sim_config, ACADOS_model_sim_opts, "sens_algebraic", &tmp_bool);
+    tmp_bool = false;
+    sim_opts_set(ACADOS_model_sim_config, ACADOS_model_sim_opts, "sens_hess", &tmp_bool);
+    tmp_bool = true;
+    sim_opts_set(ACADOS_model_sim_config, ACADOS_model_sim_opts, "output_z", &tmp_bool);
+
 
 
     // sim in / out

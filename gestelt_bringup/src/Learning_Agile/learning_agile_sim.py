@@ -111,8 +111,8 @@ class LearningAgileSim():
         # set the dynamics step of the python sim (Explict Euler, ERK4)
         self.dyn_step=dyn_step
         self.planner.uav1.setDyn(self.dyn_step)
-        # self.planner.uavoc1.AcadosSimIntegratorInit(self.dyn_step,options['USE_PREV_SOLVER'])
-        # self.integrator=self.planner.uavoc1.acados_integrator
+        self.planner.uavoc1.AcadosSimIntegratorInit(self.dyn_step,options['USE_PREV_SOLVER'])
+        self.integrator=self.planner.uavoc1.acados_integrator
 
         self.Ttra    = []
         self.T       = []
@@ -189,7 +189,7 @@ class LearningAgileSim():
         if self.options['CLOSE_LOOP_TRAINING']:
             gate_cen_h=0
         else:
-            gate_cen_h=1.2
+            gate_cen_h=0
         self.moving_gate = MovingGate(self.env_init_set,
                                       gate_cen_h=gate_cen_h,
                                       gate_length=gate_length)
@@ -292,7 +292,7 @@ class LearningAgileSim():
         else:
             self.history_state.append(nn2_inputs)
         
-        full_input=np.array(self.history_state)
+        full_input=np.array(self.history_state).reshape(1,5,-1)
         # NN output the traversal time and pose
         nn_output = self.model(torch.tensor(full_input, dtype=torch.float).to(device))[0]
         out = nn_output.to('cpu').data.numpy()
@@ -514,16 +514,15 @@ def main():
     options['PDP_GRADIENT']=False
     options['SQP_RTI_OPTION']=True
     options['STATIC_GATE_TEST']=False
-    options['CLOSE_LOOP_MODEL']= False
+    options['CLOSE_LOOP_MODEL']= True
     options['JAX_SVD']=False
     options['CLOSE_LOOP_TRAINING']=False
     if options['CLOSE_LOOP_MODEL']:
-        model_name = '2024-10-24-close_loop/203903/NN_close_0.pth'#'NN2_imitate_1.pth' #'NN_close_2.pth'
+        model_name = 'training_results/2024-11-09/15-08-43/trained_model/NN_close_444.pth'#'NN2_imitate_1.pth' #'NN_close_2.pth'
+        model_file=os.path.join(current_dir,model_name)
     else:   
-        model_name = '20241031-142733-PDP-Trial 1, shrink the gate from [1.2,0.56] to [1.0, 0.4]/NN2_imitate_1.pth' #
-
-
-    model_file=os.path.join(current_dir, f'training_data/NN_model/',model_name)
+        model_name = '20241031-142733-PDP-Trial 1, shrink the gate from [1.2,0.56] to [1.0, 0.4]/NN2_imitate_1.pth' 
+        model_file=os.path.join(current_dir, f'training_data/NN_model/',model_name)
     
     
     # create the learning agile agent

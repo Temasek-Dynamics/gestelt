@@ -23,7 +23,7 @@ options = {}
 options['MPC_BACKWARD']=True
 options['USE_PREV_SOLVER']=False
 options['PDP_GRADIENT']= True
-options['SQP_RTI_OPTION']=False
+options['SQP_RTI_OPTION']=True
 options['JAX_SVD']=False
 options['STATIC_GATE_TEST']=False
 options['ORIGIN_REWARD']=False
@@ -70,46 +70,6 @@ class LearningAgileAPG:
         # learning rate scheduler
         self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=5, gamma=0.9)\
     
-    # def get_observations(self, i:int,  
-    #                      episode:LearningAgileBase,
-    #                      obs_queue:Queue):#, drones_state_queue:Queue 
-    #     """
-    #     get the observations from the single episode
-
-    #     Args:
-    #         episode (LearningAgileBase): _description_
-        
-    #     Returns:
-    #         observations
-    #     """
-        
-    #     obs=episode.get_obs(i)
-    #     obs_queue.put(obs)
-    #     # drones_state_queue.put(episode.drone_state)
-    #     # return obs_queue
-    
-    # def run_step_episodes(self, i:int, 
-    #                       episode:LearningAgileBase, 
-    #                       nn_output:torch.tensor, 
-    #                       R_Grad_queue:Queue):
-    #     """
-    #     run the episode and put the reward and gradient into the queue
-
-    #     Args:
-    #         index (int): _description_
-    #         episode (LearningAgileBase): _description_
-    #         R_Grad_queue (Queue): _description_
-        
-    #     Returns:
-    #         each episode's reward and gradient
-    #     """
-    #     episode.step(nn_output)
-
-
-    #     ## at the end of the close loop,
-    #     ## return the reward and gradient
-    #     if i==train_cfg['training']['close_loop_horizon']-1:
-    #         R_Grad_queue.put([episode.reward, episode.p_R_p_z])
 
     def get_reward_episodes(self, i:int,
                             episode:LearningAgileBase,
@@ -152,7 +112,7 @@ class LearningAgileAPG:
         for episode in self.episodes:
             episode.reset()
 
-        for i in range(train_cfg['training']['close_loop_horizon']):
+        for i in range(1,train_cfg['training']['close_loop_horizon']+1):
             obs_batch_list = []
             ##== 1. get observations for every episode
             for k in range(self.batch_size):
@@ -168,32 +128,33 @@ class LearningAgileAPG:
             for k in range(self.batch_size):
                 self.episodes[k].step(outputs_batch[k])
             
+            ## since the SQP_RTI first solution is not feasible
+            if i > 1:
+                ##== 4. Multi-process calculate each episode's reward and gradient p_R_i_p_X_traj_i
 
-            ##== 4. Multi-process calculate each episode's reward and gradient p_R_i_p_X_traj_i
+                for k in range(self.batch_size):
+                    p = Process(target=self.get_reward_episodes, args=(i,
+                                                        self.episodes[k],
+                                                        R_Grad_queue))
+                    processes.append(p)
+                    p.start()
 
-            for k in range(self.batch_size):
-                p = Process(target=self.get_reward_episodes, args=(i,
-                                                     self.episodes[k],
-                                                     R_Grad_queue))
-                processes.append(p)
-                p.start()
+                for p in processes:
+                    p.join()
 
-            for p in processes:
-                p.join()
+                for k in range(self.batch_size):
+                    single_episode_r_grad = R_Grad_queue.get()
+                    self.episodes[k].R_i.append(single_episode_r_grad[0])
+                    self.episodes[k].p_R_i_p_X_traj_i.append(single_episode_r_grad[1])
 
-            for k in range(self.batch_size):
-                single_episode_r_grad = R_Grad_queue.get()
-                self.episodes[k].R_i.append(single_episode_r_grad[0])
-                self.episodes[k].p_R_i_p_X_traj_i.append(single_episode_r_grad[1])
-
-            ##== 5. backward the gradient to get the p_R_p_z
-            for k in range(self.batch_size):
-                self.episodes[k].backward_per_step()   
+                ##== 5. backward the gradient to get the p_R_p_z
+                for k in range(self.batch_size):
+                    self.episodes[k].backward_per_step()   
 
             ##== record NN obs and output per episode step
             log_drone_state(writer,obs_batch[0,-1,:],self.global_step)
             log_train_IO(writer,obs_batch[0,-1,:],outputs_batch[0,:].data.numpy().reshape(self.episodes[0].output_size),self.global_step)
-            # writer.add_scalar('reward_single_step', self.episodes[0].reward, self.global_step)
+            writer.add_scalar('reward_single_step', self.episodes[0].reward, self.global_step)
             
             self.global_step  += 1
         
@@ -203,12 +164,12 @@ class LearningAgileAPG:
             p_R_p_z_list.append(self.episodes[k].p_R_p_z)
         
         self.reward_batch = sum(reward_list)/self.batch_size
-        self.p_R_p_z_batch = np.array(p_R_p_z_list)
+        self.p_R_p_z_batch = np.array(p_R_p_z_list).squeeze(1)
 
         
         ##== 4. model backward in a batch
         self.loss=self.model.myloss(outputs_batch.to(self.device), self.p_R_p_z_batch, self.device)
-        # self.update_network()
+        self.update_network()
 
         ##== record the gradient and the reward
         log_gradient(writer,self.p_R_p_z_batch[0,:],self.reward_batch[0],self.global_step)
@@ -234,3 +195,46 @@ if __name__ == "__main__":
     apg = LearningAgileAPG(mission_cfg,train_cfg,options)
     apg.init_train(model_folder)
     apg.train()
+
+
+
+    # def get_observations(self, i:int,  
+    #                      episode:LearningAgileBase,
+    #                      obs_queue:Queue):#, drones_state_queue:Queue 
+    #     """
+    #     get the observations from the single episode
+
+    #     Args:
+    #         episode (LearningAgileBase): _description_
+        
+    #     Returns:
+    #         observations
+    #     """
+        
+    #     obs=episode.get_obs(i)
+    #     obs_queue.put(obs)
+    #     # drones_state_queue.put(episode.drone_state)
+    #     # return obs_queue
+    
+    # def run_step_episodes(self, i:int, 
+    #                       episode:LearningAgileBase, 
+    #                       nn_output:torch.tensor, 
+    #                       R_Grad_queue:Queue):
+    #     """
+    #     run the episode and put the reward and gradient into the queue
+
+    #     Args:
+    #         index (int): _description_
+    #         episode (LearningAgileBase): _description_
+    #         R_Grad_queue (Queue): _description_
+        
+    #     Returns:
+    #         each episode's reward and gradient
+    #     """
+    #     episode.step(nn_output)
+
+
+    #     ## at the end of the close loop,
+    #     ## return the reward and gradient
+    #     if i==train_cfg['training']['close_loop_horizon']-1:
+    #         R_Grad_queue.put([episode.reward, episode.p_R_p_z])

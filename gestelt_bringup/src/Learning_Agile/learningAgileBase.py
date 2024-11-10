@@ -136,6 +136,7 @@ class LearningAgileBase:
         self.p_R_i_p_X_traj_i = []
         self.p_X_traj_i_p_x_i = []
         self.p_X_traj_i_p_z_i = []
+        self.p_R_i_p_z_i = []
         self.p_z_i_p_w = []
         self.p_R_i_p_w = []
 
@@ -177,8 +178,7 @@ class LearningAgileBase:
         ## === actual trajectory === ##
         self.state_traj.append(self.state)
         self.state_n = np.concatenate((self.state_n,[self.state]),axis = 0)
-        # print('state:',self.state)
-        # print('control:',self.u)
+       
     
     
     def backward_per_step(self):
@@ -216,7 +216,7 @@ class LearningAgileBase:
         # self.p_z_i_p_w.append(self.nn_out.unsqueeze(1))
         self.p_z_i_p_w.append(self.np_nn_out.reshape(13,1))
         ## 13 * 1
-        self.p_R_i_p_z_i = np.einsum('bij,bjk->ik',self.p_R_i_p_X_traj_i[self.i-1],self.p_X_traj_i_p_z_i[self.i-1])
+        self.p_R_i_p_z_i.append(np.einsum('bij,bjk->ik',self.p_R_i_p_X_traj_i[self.i-2],self.p_X_traj_i_p_z_i[self.i-2]))
         
         ## acquire p_R_i/p_w
         # append size 1 * 1
@@ -244,7 +244,7 @@ class LearningAgileBase:
     
     @property
     def p_R_p_z(self):
-        p_R_p_z = np.sum(np.array(self.p_R_i_p_z_i),axis=0)/(self.train_cfg['training']['close_loop_horizon']*10000)
+        p_R_p_z = np.sum(np.array(self.p_R_i_p_z_i),axis=0)/(self.train_cfg['training']['close_loop_horizon']*1000)
 
         return p_R_p_z
    
