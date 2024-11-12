@@ -244,8 +244,7 @@ class LearningAgileBase:
     
     @property
     def p_R_p_z(self):
-        p_R_p_z = np.sum(np.array(self.p_R_i_p_z_i),axis=0)/(self.train_cfg['training']['close_loop_horizon']*1000)
-
+        p_R_p_z = np.array(self.p_R_i_p_z_i)
         return p_R_p_z
    
 def get_reward(base):

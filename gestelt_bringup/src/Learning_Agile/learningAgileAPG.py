@@ -18,7 +18,7 @@ import logging
 training_data_folder=os.path.abspath(os.path.join(current_dir, 'training_data'))
 model_folder=os.path.abspath(os.path.join(training_data_folder, 'NN_model'))
 writer = SummaryWriter(log_dir=log_folder)
-
+checkpoint_trained_model_folder=os.path.abspath(os.path.join(current_dir,'training_results/'))
 options = {}
 options['MPC_BACKWARD']=True
 options['USE_PREV_SOLVER']=False
@@ -32,7 +32,7 @@ options['TRAINING']=True
 options['DEBUG']=False
 options['BACKWARD']=True
 options['MULTI_PROCESSES']=True
-
+options['TRAIN_FROM_CHECKPOINT']=True
 class LearningAgileAPG:
     """
     APG: Analytical Policy Gradient
@@ -56,9 +56,13 @@ class LearningAgileAPG:
                                                  options=options))
 
         
-    def init_train(self,model_folder):
+    def init_train(self,model_folder,checkpoint_trained_model_folder):
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        FILE = os.path.join(model_folder, "NN_close_pretrain.pth")
+
+        if options['TRAIN_FROM_CHECKPOINT']:
+            FILE = os.path.join(checkpoint_trained_model_folder, "2024-11-11/13-20-23/trained_model/NN_close_900.pth")
+        else:
+            FILE = os.path.join(model_folder, "NN_close_pretrain.pth")
         self.model = torch.load(FILE).to(self.device)
 
         
@@ -68,7 +72,7 @@ class LearningAgileAPG:
         # Loss and optimizer
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate)  
         # learning rate scheduler
-        self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=5, gamma=0.9)\
+        self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=50, gamma=0.9)\
     
 
     def get_reward_episodes(self, i:int,
@@ -106,6 +110,7 @@ class LearningAgileAPG:
 
         
         reward_list = []
+        outputs_list = []
         p_R_p_z_list = []
        
         ##==0. reset all the episodes
@@ -122,7 +127,7 @@ class LearningAgileAPG:
             ##== 2. model forward in a batch    
             obs_batch=np.array(obs_batch_list)
             outputs_batch = self.model(torch.tensor(obs_batch,dtype=torch.float32).to(self.device)).to('cpu')
-
+            
             
             ##== 3. step for every episode
             for k in range(self.batch_size):
@@ -130,6 +135,7 @@ class LearningAgileAPG:
             
             ## since the SQP_RTI first solution is not feasible
             if i > 1:
+                outputs_list.append(outputs_batch)
                 ##== 4. Multi-process calculate each episode's reward and gradient p_R_i_p_X_traj_i
 
                 for k in range(self.batch_size):
@@ -161,18 +167,27 @@ class LearningAgileAPG:
         ##== collect the reward and gradient from each episode
         for k in range(self.batch_size):
             reward_list.append(self.episodes[k].reward)
-            p_R_p_z_list.append(self.episodes[k].p_R_p_z)
+            p_R_p_z_list.append(self.episodes[k].p_R_p_z) 
+        
+        ## assemble
+        p_R_p_z_list = np.array(p_R_p_z_list)/10000 # (batch_size, close_loop_horizon, 1, 13)
+
+        # (close_loop_horizon, batch_size, 13)->(batch_size, close_loop_horizon, 13)
+        outputs_stack = torch.stack(outputs_list).permute(1,0,2) 
+       
+        # ->(batch_size, close_loop_horizon, 13, 1)
+        outputs_stack = outputs_stack.unsqueeze(-1) 
         
         self.reward_batch = sum(reward_list)/self.batch_size
-        self.p_R_p_z_batch = np.array(p_R_p_z_list).squeeze(1)
+        self.p_R_p_z_batch = np.array(p_R_p_z_list).squeeze(2)
 
         
         ##== 4. model backward in a batch
-        self.loss=self.model.myloss(outputs_batch.to(self.device), self.p_R_p_z_batch, self.device)
+        self.loss=self.model.loss_close_loop(outputs_stack.to(self.device), p_R_p_z_list, self.device)
         self.update_network()
 
         ##== record the gradient and the reward
-        log_gradient(writer,self.p_R_p_z_batch[0,:],self.reward_batch[0],self.global_step)
+        log_gradient(writer,self.p_R_p_z_batch[0,0,:],self.reward_batch[0],self.global_step)
        
 
     def train(self):
@@ -187,13 +202,13 @@ class LearningAgileAPG:
                 self.train_one_epoch()
                 pbar.update(1)
                 pbar.set_description(f"epoch:{epoch}, reward:{self.reward_batch[0]}")
-                if epoch % 2 == 0:
+                if epoch % 10 == 0:
                     torch.save(self.model, os.path.join(trained_model_folder, f"NN_close_{epoch}.pth"))
 
 if __name__ == "__main__":
 
     apg = LearningAgileAPG(mission_cfg,train_cfg,options)
-    apg.init_train(model_folder)
+    apg.init_train(model_folder,checkpoint_trained_model_folder)
     apg.train()
 
 

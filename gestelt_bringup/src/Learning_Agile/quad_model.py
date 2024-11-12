@@ -728,7 +728,7 @@ class Quadrotor:
      
 
         frames=np.arange(0,500)
-        ani = animation.FuncAnimation(fig,update_traj,frames, interval=1, blit=True)
+        ani = animation.FuncAnimation(fig,update_traj,frames, interval=10, blit=True)
 
         if save_option != 0:
             Writer = animation.writers['ffmpeg']

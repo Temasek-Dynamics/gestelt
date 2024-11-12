@@ -35,14 +35,14 @@ def nn_sample(init_pos=None,final_pos=None,init_angle=None,cur_epoch=100,pretrai
         if pretrain:
             inputs[1] = np.random.uniform(-5,5) #+ pre_ini_pos[1]
         else:
-            inputs[1] = np.clip(inputs[1],pre_ini_pos[1]-1,pre_ini_pos[1]+1) 
+            inputs[1] = np.random.uniform(-0.5,0.5) + pre_ini_pos[1]
     else:
         inputs[0:3] = init_pos
     ## random final position 
     if final_pos is None:
         inputs[3:6] = np.random.uniform(-2,2,size=3) + pre_end_pos #-2~2, 6
 
-        inputs[4]=np.clip(inputs[4],pre_end_pos[1]-0.5,pre_end_pos[1]+0.5)
+        inputs[4] = np.random.uniform(-0.5,0.5)+pre_end_pos[1]
     else:
         inputs[3:6] = final_pos
 
@@ -82,12 +82,12 @@ def nn_sample(init_pos=None,final_pos=None,init_angle=None,cur_epoch=100,pretrai
         lower,upper = -pi/6,pi/6
         X = stats.truncnorm((lower - mu) / sigma, (upper - mu) / sigma, loc=mu, scale=sigma)
         gate_pitch = X.rvs(1)[0]
-        # if gate_pitch>0:
-        #     gate_pitch=gate_pitch+des_pitch_mean
-        # else:
-        #     gate_pitch=gate_pitch-des_pitch_mean
+        if gate_pitch>0:
+            gate_pitch=gate_pitch+des_pitch_mean
+        else:
+            gate_pitch=gate_pitch-des_pitch_mean
         
-        # gate_pitch = pi/6
+        # gate_pitch = pi/4
     
 
     ##==calculate the gate RM
@@ -242,6 +242,17 @@ class network_with_GRU(nn.Module):
         # loss_nn = torch.matmul(Dp, para)
         para=para.to(device)
         loss_nn =torch.trace(torch.matmul(Dp, para.t()))/(Dp.shape[0])
+        return loss_nn # size is 1
+
+    def loss_close_loop(self, para, dp, device='cpu'):
+        # convert np.array to tensor
+        Dp = torch.tensor(dp, dtype=torch.float).to(device) 
+        para=para.to(device)
+        
+
+        # 1x2x1x13 x 1x2x13x1 -> 1x2
+        loss_nn = torch.sum(torch.einsum('bijk,bikj -> b',para,Dp))/(Dp.shape[0]*Dp.shape[1])
+
         return loss_nn # size is 1
 
 ## run the above code

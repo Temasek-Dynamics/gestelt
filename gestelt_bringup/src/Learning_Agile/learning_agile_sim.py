@@ -260,7 +260,7 @@ class LearningAgileSim():
         """
         record the NN output raw 9D vector and converted Rotation Matrix
         """
-        self.NN_T_tra = np.concatenate((self.NN_T_tra,[out[6]]),axis = 0)
+        self.NN_T_tra = np.concatenate((self.NN_T_tra,[out[-1]]),axis = 0)
         self.nn_output_list=np.concatenate((self.nn_output_list,[out]),axis = 0)
         self.des_tra_R_list = np.concatenate((self.des_tra_R_list,[des_tra_R]),axis = 0)
         self.Pitch = np.concatenate((self.Pitch,[gate_pitch]),axis = 0) 
@@ -287,7 +287,7 @@ class LearningAgileSim():
         nn2_inputs[17:26]=rot.as_matrix().flatten()
 
         if self.i == 0:
-            for i in range(5):
+            for k in range(5):
                 self.history_state.append(nn2_inputs)
         else:
             self.history_state.append(nn2_inputs)
@@ -480,7 +480,7 @@ class LearningAgileSim():
         self.planner.uav1.plot_quaternions(self.state_n)
 
         # self.planner.uav1.plot_quaternions_norm(self.state_n)
-        self.planner.uav1.plot_quaternions_norm(self.pos_vel_att_cmd_n)
+        # self.planner.uav1.plot_quaternions_norm(self.pos_vel_att_cmd_n)
         # self.planner.uav1.plot_trav_weight(self.tra_weight_list)
 
         self.planner.uav1.plot_solving_time(self.solving_time)
@@ -518,7 +518,7 @@ def main():
     options['JAX_SVD']=False
     options['CLOSE_LOOP_TRAINING']=False
     if options['CLOSE_LOOP_MODEL']:
-        model_name = 'training_results/2024-11-09/15-08-43/trained_model/NN_close_444.pth'#'NN2_imitate_1.pth' #'NN_close_2.pth'
+        model_name = 'training_results/2024-11-11/13-20-23/trained_model/NN_close_900.pth'#'NN2_imitate_1.pth' #'NN_close_2.pth'
         model_file=os.path.join(current_dir,model_name)
     else:   
         model_name = '20241031-142733-PDP-Trial 1, shrink the gate from [1.2,0.56] to [1.0, 0.4]/NN2_imitate_1.pth' 
