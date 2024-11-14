@@ -140,6 +140,8 @@ class LearningAgileBase:
         self.p_z_i_p_w = []
         self.p_R_i_p_w = []
 
+        self.p_R_i_p_x_i={}
+        self.p_R_i_p_z_last={}
     
     
     def step(self,nn_out=None):
@@ -188,45 +190,55 @@ class LearningAgileBase:
         H: close loop horizon
         N: prediction horizon
         """
-
-        # append N * 1* 10
-        ## this has been done in the get_reward function
-        # self.p_R_i_p_X_traj_i.append(self.planner.d_R_d_st_traj[:,:,:])
-
         
         ## acquire p_X_traj_i/p_x_i
-        # cur_p_X_traj_i_p_x_i = np.ones([self.planner.horizon+1,10,10])
+        cur_p_X_traj_i_p_x_i = np.ones([self.planner.horizon+1,10,10])
         
-        # for j in range(self.planner.horizon+1):
-        #     if j == 1:
-        #         cur_p_X_traj_i_p_x_i[j,:,:] = self.dyn_decay * self.planner.uavoc1.dfx_fn(self.pred_st_traj[j-1],self.control_traj[j-1]).toarray()    
-            
-        #     if j > 1:
-        #         cur_p_X_traj_i_p_x_i[j,:,:] = self.dyn_decay * self.planner.uavoc1.dfx_fn(self.pred_st_traj[j-1],self.control_traj[j-1]).toarray() * cur_p_X_traj_i_p_x_i[j-1,:,:]
+        for j in range(1,self.planner.horizon+1):
+            cur_p_X_traj_i_p_x_i[j,:,:] = self.planner.uavoc1.dfx_fn(self.pred_st_traj[j-1],self.control_traj[j-1]).toarray() * cur_p_X_traj_i_p_x_i[j-1,:,:]
         
-        # self.p_X_traj_i_p_x_i.append(torch.tensor(cur_p_X_traj_i_p_x_i, dtype=torch.float).to(self.device))
+        self.p_X_traj_i_p_x_i.append(cur_p_X_traj_i_p_x_i)
         
         ## acquire p_X_traj_i/p_z_i
         self.planner.PDP_grad(self.np_nn_out[0:3],self.np_nn_out[3:12],self.np_nn_out[-1])
         # append size N * 10 * 13
         self.p_X_traj_i_p_z_i.append(self.planner.d_st_traj_d_z[:,:,:])
 
-        ## acquire p_z_i/p_w (w is the weight of the NN)
-        # append size 13 * 1
-        # self.p_z_i_p_w.append(self.nn_out.unsqueeze(1))
-        self.p_z_i_p_w.append(self.np_nn_out.reshape(13,1))
+       
         ## 13 * 1
+        # self.p_R_i_p_z_i.append(np.einsum('bij,bjk->ik',self.p_R_i_p_X_traj_i[self.i-2],self.p_X_traj_i_p_z_i[self.i-2]))
+        ## z_i:
         self.p_R_i_p_z_i.append(np.einsum('bij,bjk->ik',self.p_R_i_p_X_traj_i[self.i-2],self.p_X_traj_i_p_z_i[self.i-2]))
         
-        ## acquire p_R_i/p_w
-        # append size 1 * 1
-        # self.p_R_i_p_w.append(np.matmul(p_R_i_p_z_i,self.p_z_i_p_w[self.i-1]))
+        
+        ## Backpropagate through the last one time-step
+        if self.i > 2:
+            self.p_R_i_p_x_i[f'{self.i}-2'] = np.einsum('bij,bjk->ik', self.p_R_i_p_X_traj_i[self.i-2],self.p_X_traj_i_p_x_i[self.i-2])
+            self.p_R_i_p_z_last[f'{self.i}-3'] = np.einsum('ij,jk->ik',self.p_R_i_p_x_i[f'{self.i}-2'],self.p_X_traj_i_p_z_i[self.i-3][1,:,:])
+            
+            self.p_R_i_p_z_i[self.i-3] += self.p_R_i_p_z_last[f'{self.i}-3']
+        
+        
 
-        # print(self.p_R_i_p_X_traj_i[self.i-1].shape)
-        # print(self.p_X_traj_i_p_z_i[self.i-1].shape)
-        # print(self.p_z_i_p_w[self.i-1].shape)
-        # print(p_R_i_p_z.shape)
-    
+        if self.i > 3:       
+            ## Backpropagate through the last second time-step     
+            self.p_R_i_p_x_i[f'{self.i}-3'] = np.einsum('ij,jk->ik',self.p_R_i_p_x_i[f'{self.i}-2'],self.p_X_traj_i_p_x_i[self.i-3][1,:,:])
+            self.p_R_i_p_z_last[f'{self.i}-4'] = np.einsum('ij,jk->ik',self.p_R_i_p_x_i[f'{self.i}-3'],self.p_X_traj_i_p_z_i[self.i-4][1,:,:])
+
+            self.p_R_i_p_z_i[self.i-4] += self.p_R_i_p_z_last[f'{self.i}-4']
+            
+
+            ## Backpropagate through the all last time-steps
+            num=0
+            for k in range(4,self.i):
+                self.p_R_i_p_x_i[f'{self.i}-{k}'] = np.einsum('ij,jk->ik',self.p_R_i_p_x_i[f'{self.i}-{k-1}'],self.p_X_traj_i_p_x_i[self.i-k][1,:,:])
+                self.p_R_i_p_z_last[f'{self.i}-{k+1}'] = np.einsum('ij,jk->ik',self.p_R_i_p_x_i[f'{self.i}-{k}'],self.p_X_traj_i_p_z_i[self.i-k-1][1,:,:])
+
+                self.p_R_i_p_z_i[self.i-k-1] += self.p_R_i_p_z_last[f'{self.i}-{k+1}']
+                num+=1
+
+                if num == 3:
+                    break
 
     # def run_single_step(self,nn_output):
     #     self.step(nn_output)

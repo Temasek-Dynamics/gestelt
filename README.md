@@ -17,14 +17,14 @@ For simulation and deployment on a physical drone, PX4 is the firmware of choice
 - Before the installation, the cmake should be updated to the latest version. please refer to this [cmake update](https://zhuanlan.zhihu.com/p/513871916).
 - Requirements
 
-  - CasADi: version 3.5.5 Info: https://web.casadi.org/
+  - CasADi: version 3.5.5 Info: https://web.casadi.org/ ->3.6.5
   - Numpy: version 1.23.0 Info: https://numpy.org/
   - Pytorch: version 1.12.0+cu116 Info: https://pytorch.org/
   - Matplotlib: version 3.3.0 Info:   https://matplotlib.org/
   - Python: version 3.8.10 Info: https://www.python.org/
   - acados: version LATEST Info: https://docs.acados.org/
       Please refer to this [acados doc](https://docs.acados.org/installation/index.html#linux-mac) for detail.
-
+  - JAX:
 # Installation and Setup for Simulation
 1. Install dependencies
 ```bash

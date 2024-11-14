@@ -1,6 +1,6 @@
 import numpy as np
 # from differentiable_collision_wrapper import *
-
+import time
 import yaml
 import os
 from scipy.spatial.transform import Rotation as R
@@ -16,7 +16,7 @@ class PenaltyDesignHelper():
 
     def rotating_quad(self):
 
-        number_of_pts=10
+        number_of_pts=50
         self.axis_angle_range=np.linspace(-np.pi/2,np.pi/2,number_of_pts)
         self.pitch_seq=self.axis_angle_range
         self.roll_seq=self.axis_angle_range
@@ -26,7 +26,7 @@ class PenaltyDesignHelper():
 
         ## choose the roll, pitch, or yaw
         self.euler_table={0:'yaw',1:'pitch',2:'roll'}
-        self.euler_choose=1
+        self.euler_choose=2
         euler_angle[:,self.euler_choose]=self.axis_angle_range
         self.quad_quat=R.from_euler('zyx', euler_angle).as_quat()
         self.quad_quat=np.roll(self.quad_quat,1,axis=1)
@@ -93,10 +93,11 @@ class PenaltyDesignHelper():
         # ax=fig.add_subplot(projection='3d')
         state_traj=np.zeros((1,10))
         penalty=np.zeros(len(self.quad_quat))
+        start_time = time.time()
         for i in range(len(self.quad_quat)):
             state_traj[:,6:10]=self.quad_quat[i]
             penalty[i]=self.penalty_cal(state_traj)
-
+        print("--- %s seconds ---" % (time.time() - start_time))
         plt.plot(self.axis_angle_range,penalty)
         plt.xlabel(f'{self.euler_table[self.euler_choose]} angle')
         plt.grid()
@@ -107,6 +108,7 @@ class PenaltyDesignHelper():
         ax=fig.add_subplot(projection='3d')
         state_traj=np.zeros((1,10))
         penalty=np.zeros((100,100))
+       
         for i in range(len(self.roll_seq)):
             for j in range(len(self.pitch_seq)):
                 euler_angle=np.zeros(3)
@@ -116,6 +118,7 @@ class PenaltyDesignHelper():
                 quad_quat=np.roll(quad_quat,1)
                 state_traj[:,6:10]=quad_quat
                 penalty[j,i]=self.penalty_cal(state_traj)
+        
         ax.plot_surface(self.R,self.P,penalty*2,cmap=plt.cm.CMRmap)
         # Tweak the limits and add latex math labels.
         

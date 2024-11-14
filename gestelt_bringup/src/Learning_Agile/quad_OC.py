@@ -103,6 +103,7 @@ class OCSys:
         #    X = X + (k1 + 2*k2 + 2*k3 + k4)/6        
         ## Fold
         #self.dyn_fn = casadi.Function('dyn', [X0, U], [X])
+        self.dyn_fn_acados.save("dyn_fn_acados.casadi")
 
     def setInputCost(self,input_cost):
         if not hasattr(self, 'auxvar'):

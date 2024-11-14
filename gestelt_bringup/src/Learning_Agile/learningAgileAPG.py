@@ -32,7 +32,7 @@ options['TRAINING']=True
 options['DEBUG']=False
 options['BACKWARD']=True
 options['MULTI_PROCESSES']=True
-options['TRAIN_FROM_CHECKPOINT']=True
+options['TRAIN_FROM_CHECKPOINT']=False
 class LearningAgileAPG:
     """
     APG: Analytical Policy Gradient
@@ -60,7 +60,7 @@ class LearningAgileAPG:
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
         if options['TRAIN_FROM_CHECKPOINT']:
-            FILE = os.path.join(checkpoint_trained_model_folder, "2024-11-11/13-20-23/trained_model/NN_close_900.pth")
+            FILE = os.path.join(checkpoint_trained_model_folder, "2024-11-12/21-44-20/trained_model/NN_close_40.pth")
         else:
             FILE = os.path.join(model_folder, "NN_close_pretrain.pth")
         self.model = torch.load(FILE).to(self.device)
@@ -138,16 +138,24 @@ class LearningAgileAPG:
                 outputs_list.append(outputs_batch)
                 ##== 4. Multi-process calculate each episode's reward and gradient p_R_i_p_X_traj_i
 
-                for k in range(self.batch_size):
-                    p = Process(target=self.get_reward_episodes, args=(i,
-                                                        self.episodes[k],
-                                                        R_Grad_queue))
-                    processes.append(p)
-                    p.start()
+                if self.batch_size!=1:
+                    ### multi-process
+                    for k in range(self.batch_size):
+                        p = Process(target=self.get_reward_episodes, args=(i,
+                                                            self.episodes[k],
+                                                            R_Grad_queue))
+                        processes.append(p)
+                        p.start()
 
-                for p in processes:
-                    p.join()
+                    for p in processes:
+                        p.join()
+                else:
+                ##== single-process
+                    for k in range(self.batch_size):
+                        self.get_reward_episodes(i,self.episodes[k],R_Grad_queue)
 
+
+                ##== collect the reward and gradient from each episode
                 for k in range(self.batch_size):
                     single_episode_r_grad = R_Grad_queue.get()
                     self.episodes[k].R_i.append(single_episode_r_grad[0])
@@ -171,7 +179,7 @@ class LearningAgileAPG:
         
         ## assemble
         p_R_p_z_list = np.array(p_R_p_z_list)/10000 # (batch_size, close_loop_horizon, 1, 13)
-
+        p_R_p_z_list = np.clip(p_R_p_z_list, -0.01, 0.01)
         # (close_loop_horizon, batch_size, 13)->(batch_size, close_loop_horizon, 13)
         outputs_stack = torch.stack(outputs_list).permute(1,0,2) 
        

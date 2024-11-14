@@ -43,6 +43,21 @@ MODEL_OBJ := $(MODEL_SRC:.c=.o)
 
 # optimal control problem - mostly CasADi exports
 OCP_SRC=
+OCP_SRC+= ACADOS_model_cost/ACADOS_model_cost_ext_cost_0_fun.c
+OCP_SRC+= ACADOS_model_cost/ACADOS_model_cost_ext_cost_0_fun_jac.c
+OCP_SRC+= ACADOS_model_cost/ACADOS_model_cost_ext_cost_0_fun_jac_hess.c
+
+
+OCP_SRC+= ACADOS_model_cost/ACADOS_model_cost_ext_cost_fun.c
+OCP_SRC+= ACADOS_model_cost/ACADOS_model_cost_ext_cost_fun_jac.c
+OCP_SRC+= ACADOS_model_cost/ACADOS_model_cost_ext_cost_fun_jac_hess.c
+
+
+OCP_SRC+= ACADOS_model_cost/ACADOS_model_cost_ext_cost_e_fun.c
+OCP_SRC+= ACADOS_model_cost/ACADOS_model_cost_ext_cost_e_fun_jac.c
+OCP_SRC+= ACADOS_model_cost/ACADOS_model_cost_ext_cost_e_fun_jac_hess.c
+
+
 
 OCP_SRC+= acados_solver_ACADOS_model.c
 OCP_OBJ := $(OCP_SRC:.c=.o)
@@ -74,10 +89,12 @@ INCLUDE_PATH = /home/tlab-uav/acados/include
 LIB_PATH = /home/tlab-uav/acados/lib
 
 # preprocessor flags for make's implicit rules
+CPPFLAGS += -DACADOS_WITH_QPOASES
 CPPFLAGS+= -I$(INCLUDE_PATH)
 CPPFLAGS+= -I$(INCLUDE_PATH)/acados
 CPPFLAGS+= -I$(INCLUDE_PATH)/blasfeo/include
 CPPFLAGS+= -I$(INCLUDE_PATH)/hpipm/include
+CPPFLAGS+= -I $(INCLUDE_PATH)/qpOASES_e/
 
 
 # define the c-compiler flags for make's implicit rules
@@ -95,7 +112,7 @@ LDLIBS+= -lacados
 LDLIBS+= -lhpipm
 LDLIBS+= -lblasfeo
 LDLIBS+= -lm
-LDLIBS+= 
+LDLIBS+= -lqpOASES_e
 
 # libraries
 LIBACADOS_SOLVER=libacados_solver_ACADOS_model.so
@@ -143,8 +160,8 @@ ocp_cython_o: ocp_cython_c
 	-I $(INCLUDE_PATH)/blasfeo/include/ \
 	-I $(INCLUDE_PATH)/hpipm/include/ \
 	-I $(INCLUDE_PATH) \
-	-I /usr/local/lib/python3.9/dist-packages/numpy-1.24.4-py3.9-linux-x86_64.egg/numpy/core/include \
-	-I /usr/include/python3.9 \
+	-I /home/tlab-uav/.local/lib/python3.8/site-packages/numpy/core/include \
+	-I /usr/include/python3.8 \
 	acados_ocp_solver_pyx.c \
 
 ocp_cython: ocp_cython_o
@@ -170,8 +187,8 @@ sim_cython_o: sim_cython_c
 	-I $(INCLUDE_PATH)/blasfeo/include/ \
 	-I $(INCLUDE_PATH)/hpipm/include/ \
 	-I $(INCLUDE_PATH) \
-	-I /usr/local/lib/python3.9/dist-packages/numpy-1.24.4-py3.9-linux-x86_64.egg/numpy/core/include \
-	-I /usr/include/python3.9 \
+	-I /home/tlab-uav/.local/lib/python3.8/site-packages/numpy/core/include \
+	-I /usr/include/python3.8 \
 	acados_sim_solver_pyx.c \
 
 sim_cython: sim_cython_o

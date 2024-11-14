@@ -76,19 +76,20 @@ def nn_sample(init_pos=None,final_pos=None,init_angle=None,cur_epoch=100,pretrai
         des_pitch_mean_min = 1*pi/6
         des_pitch_mean_max = 1*pi/6
         des_pitch_mean = des_pitch_mean_min - (des_pitch_mean_min - des_pitch_mean_max) * (cur_epoch / 100) 
-        # gate_pitch = np.clip(np.random.normal(0,pi/18),-pi/6,pi/6) 
+
         # truncated normal distribution
         mu,sigma = 0,pi/18
         lower,upper = -pi/6,pi/6
         X = stats.truncnorm((lower - mu) / sigma, (upper - mu) / sigma, loc=mu, scale=sigma)
         gate_pitch = X.rvs(1)[0]
+        
         if gate_pitch>0:
             gate_pitch=gate_pitch+des_pitch_mean
         else:
             gate_pitch=gate_pitch-des_pitch_mean
         
-        # gate_pitch = pi/4
-    
+        # gate_pitch = 1.0
+        # gate_pitch = np.random.uniform(-pi/6,pi/6)
 
     ##==calculate the gate RM
     rot=R.from_euler('zyx',[0,gate_pitch,0])

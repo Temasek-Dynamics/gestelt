@@ -5,6 +5,6 @@ training:
   num_epochs: 5000
   # steps_per_epoch: 20
   close_loop_horizon: 20
-  learning_rate: 0.0001
+  learning_rate: 0.0002
   dyn_decay: 0.7
-  batch_size: 10
+  batch_size: 1

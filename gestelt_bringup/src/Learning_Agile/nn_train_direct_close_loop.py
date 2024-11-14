@@ -255,63 +255,63 @@ class DirectCloseLoop():
         return R,d_R_d_w
         
         
-    # def train_one_step(self,global_step):
+    def train_one_step(self,global_step):
 
-    #     """ 
-    #     the drone will execute the whole trajectory and then update the weights of the NN
-    #     """
-    #     R=0
-    #     d_R_d_w=torch.zeros(1).to(self.device)
+        """ 
+        the drone will execute the whole trajectory and then update the weights of the NN
+        """
+        R=0
+        d_R_d_w=torch.zeros(1).to(self.device)
 
-    #     ## for each node in the trajectory
-    #     for self.i in range(self.training_horizon):
-    #         self.step(global_step)
-    #         self.backward()
+        ## for each node in the trajectory
+        for self.i in range(self.training_horizon):
+            self.step(global_step)
+            self.backward()
             
-    #         R += self.R_i
-    #         d_R_i_d_w = torch.zeros(1).to(self.device)
+            R += self.R_i
+            d_R_i_d_w = torch.zeros(1).to(self.device)
 
-    #         ### == assemble the gradient of the loss function == ###
-    #         ## each node is related to all history nodes NN decisions
-    #         for k in range(0,self.i+1):
-    #             p_z_k_p_w = self.p_z_i_p_w[k] # size 7
+            ### == assemble the gradient of the loss function == ###
+            ## each node is related to all history nodes NN decisions
+            for k in range(0,self.i+1):
+                p_z_k_p_w = self.p_z_i_p_w[k] # size 7
 
-    #             if k == self.i:
-    #                 p_X_traj_p_w = torch.matmul(self.p_X_traj_i_p_z_i[k],p_z_k_p_w) # H x 10 x 7 * 7 x 1 = H x 10 x 1
+                if k == self.i:
+                    p_X_traj_p_w = torch.matmul(self.p_X_traj_i_p_z_i[k],p_z_k_p_w) # H x 10 x 7 * 7 x 1 = H x 10 x 1
                 
-    #             else:
+                else:
                     
-    #                 ## propagate from the k-th history node to the i-th current node
-    #                 # p_x_k+1/p_z_k
-    #                 p_x_k_next_p_w = torch.matmul(self.p_X_traj_i_p_z_i[k][1] , p_z_k_p_w) # 10 x 7 * 7 x 1 = 10 x 1
+                    ## propagate from the k-th history node to the i-th current node
+                    # p_x_k+1/p_z_k
+                    p_x_k_next_p_w = torch.matmul(self.p_X_traj_i_p_z_i[k][1] , p_z_k_p_w) # 10 x 7 * 7 x 1 = 10 x 1
                     
-    #                 j=k
-    #                 while j < self.i-1: 
-    #                     j += 1
-    #                     # p_x_j+2/p_x_j+1
-    #                     p_x_k_next_p_w  = self.dyn_decay * torch.matmul(self.p_X_traj_i_p_x_i[j][1] , p_x_k_next_p_w ) #10 x 10 * 10 x 1 = 10 x 1
+                    j=k
+                    while j < self.i-1: 
+                        j += 1
+                        # p_x_j+2/p_x_j+1
+                        p_x_k_next_p_w  = self.dyn_decay * torch.matmul(self.p_X_traj_i_p_x_i[j][1] , p_x_k_next_p_w ) #10 x 10 * 10 x 1 = 10 x 1
                         
                     
-    #                 #p_X_traj_i/p_x_i
-    #                 p_X_traj_p_w = torch.matmul(self.p_X_traj_i_p_x_i[self.i] , p_x_k_next_p_w) #H x 10 x 10 * 10 x 1 = H x 10 x 1      
+                    #p_X_traj_i/p_x_i
+                    p_X_traj_p_w = torch.matmul(self.p_X_traj_i_p_x_i[self.i] , p_x_k_next_p_w) #H x 10 x 10 * 10 x 1 = H x 10 x 1      
                 
-    #             # p_R_i/p_X_traj_i
-    #             p_R_i_p_w = torch.matmul(self.p_R_i_p_X_traj_i[self.i], p_X_traj_p_w) #H x 1 x 10* H x 10 x 1 = 1x1
+                # p_R_i/p_X_traj_i
+                p_R_i_p_w = torch.matmul(self.p_R_i_p_X_traj_i[self.i], p_X_traj_p_w) #H x 1 x 10* H x 10 x 1 = 1x1
                 
-    #             d_R_i_d_w += p_R_i_p_w.sum()
+                d_R_i_d_w += p_R_i_p_w.sum()
             
-    #         d_R_d_w += d_R_i_d_w
-    #         self.i += 1
+            d_R_d_w += d_R_i_d_w
+            self.i += 1
 
-    #     d_R_d_w = d_R_d_w/(self.training_horizon*20000)
+        d_R_d_w = d_R_d_w/(self.training_horizon*20000)
         
-    #     self.optimizer.zero_grad()
-    #     d_R_d_w.backward()
-    #     self.optimizer.step()
+        self.optimizer.zero_grad()
+        d_R_d_w.backward()
+        self.optimizer.step()
 
-    #     ##== log and reward ==##
-    #     self.writer.add_scalar('step_reward', R, global_step)
-    #     self.writer.add_scalar('loss', d_R_d_w, global_step)
+        ##== log and reward ==##
+        self.writer.add_scalar('step_reward', R, global_step)
+        self.writer.add_scalar('loss', d_R_d_w, global_step)
 
 
     

@@ -48,7 +48,6 @@ class MovingGate():
         # add the pitch angle to the gate
         gate_init_euler = R.from_matrix(env_init_set[8:17].reshape(3,3)).as_euler('zyx')
         self.gate_init_pitch = gate_init_euler[1]
-        # self.gate_init_pitch = 0.6
         self.gate.rotate_y(self.gate_init_pitch)
 
 
@@ -266,7 +265,7 @@ class LearningAgileSim():
         self.Pitch = np.concatenate((self.Pitch,[gate_pitch]),axis = 0) 
 
     def close_loop_model_forward(self):
-
+        self.gate_t_i = Gate(self.gate_points_list[self.i])
         ## == NN forward === ##
         nn2_inputs=np.zeros(26)
         nn2_inputs[0:10]=self.state
@@ -518,7 +517,7 @@ def main():
     options['JAX_SVD']=False
     options['CLOSE_LOOP_TRAINING']=False
     if options['CLOSE_LOOP_MODEL']:
-        model_name = 'training_results/2024-11-11/13-20-23/trained_model/NN_close_900.pth'#'NN2_imitate_1.pth' #'NN_close_2.pth'
+        model_name = 'training_results/2024-11-13/20-36-17/trained_model/NN_close_550.pth'#'NN2_imitate_1.pth' #'NN_close_2.pth'
         model_file=os.path.join(current_dir,model_name)
     else:   
         model_name = '20241031-142733-PDP-Trial 1, shrink the gate from [1.2,0.56] to [1.0, 0.4]/NN2_imitate_1.pth' 
