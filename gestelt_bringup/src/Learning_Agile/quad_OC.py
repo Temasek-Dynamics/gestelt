@@ -595,6 +595,7 @@ class OCSys:
                     dt=0.1,
                     tra_pos=np.array([0,0,1.5]),
                     tra_ang=np.array([0,0,0]),
+                    gamma=10.0,
                     t_tra=1.0):
         """
         This function is to solve the optimal control problem using ACADOS
@@ -617,7 +618,8 @@ class OCSys:
             # weight=max_tra_w*np.exp(-gamma*(dt*i-t_tra)**2) #gamma should increase as the flight duration decreases
             
             self.acados_solver.set(i, 'p',np.concatenate((goal_state_value,
-                                                          np.concatenate((tra_pos,tra_ang,np.array([t_tra]))),
+                                                          np.concatenate((tra_pos,tra_ang,np.array([t_tra]))), 
+                                                        #   np.array([gamma]),
                                                           np.array([dt*i]))))
             # if i==10:
             #     weight_vis=weight
@@ -629,7 +631,8 @@ class OCSys:
         # set the end desired goal
         # weight = 0.0*casadi.exp(-10*(dt*self.n_nodes-t_tra)**2) #gamma should increase as the flight duration decreases
         self.acados_solver.set(self.n_nodes, "p",np.concatenate((goal_state_value,
-                                                                 np.concatenate((tra_pos,tra_ang,np.array([t_tra]))),
+                                                                 np.concatenate((tra_pos,tra_ang,np.array([t_tra]))), 
+                                                                #  np.array([gamma]),
                                                                  np.array([3*self.n_nodes*dt]))))
 
         # set initial condition aligned with the current state

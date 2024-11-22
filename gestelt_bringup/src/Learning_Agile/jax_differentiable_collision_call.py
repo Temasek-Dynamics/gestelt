@@ -57,15 +57,17 @@ class Ellipsoid():
 
 
 def DiffCollisionWrapper(line_centers,
-                                    R_gate,
-                                    gate_quat,
-                                    quad_radius,
-                                    quad_half_height,
-                                    P_obs,
-                                    P,
-                                    drone_state,
-                                    PENALTY_HELPER=False,
-                                    SUCCESS_RATE_TEST=False):
+                        R_gate,
+                        gate_width, 
+                        gate_quat,
+                        quad_radius,
+                        quad_half_height,
+                        P_obs,
+                        P,
+                        drone_state,
+                        node_tra,
+                        PENALTY_HELPER=False,
+                        SUCCESS_RATE_TEST=False):
     
     ## convert from numpy to jnp
     prism_centers=jnp.zeros([4,3])
@@ -124,7 +126,9 @@ def DiffCollisionWrapper(line_centers,
             # for the up and down walls
             alpha_importance=1
             # des_alpha=1.4325 # gate width 0.56 ellipsoid
-            des_alpha= 1.37 # gate width 0.4 1.17+0.2
+            # des_alpha= 1.37 # gate width 0.4 1.17+0.2
+            # des_alpha =1.6 # gate width 0.6
+            des_alpha =gate_width+1
 
         # dalpha_i_dstate: drone_p,drone_q,ellipse_p,ellipse_q
         # alpha_i, dalpha_i_dstate=jl.dc.proximity_gradient(Elli_drone,P_obs[i],verbose = False, pdip_tol = 1e-6)
@@ -134,8 +138,8 @@ def DiffCollisionWrapper(line_centers,
         # print(alpha_i)
 
         
-        scaling_w=100
-
+        scaling_w=100 #100
+        # scaling_w = scaling_w * np.exp(-node_tra/5)
         # if not PENALTY_HELPER:
         if not SUCCESS_RATE_TEST:
             penalty+=(scaling_w * alpha_importance * (alpha_i-des_alpha)**2)

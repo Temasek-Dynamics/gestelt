@@ -10,13 +10,9 @@ from torch.utils.tensorboard import SummaryWriter
 
 from solid_geometry import magni
 from learningAgileBase import LearningAgileBase
-from config import mission_cfg,train_cfg,current_dir,setup_training_directories
+from config import mission_cfg,train_cfg,current_dir,log_folder,trained_model_folder
 from logger_misc import *
 import logging
-
-folder_dict=setup_training_directories()
-trained_model_folder=folder_dict['trained_model_folder']
-log_folder=folder_dict['log_folder']
 
 ## this options is for close loop training
 training_data_folder=os.path.abspath(os.path.join(current_dir, 'training_data'))
@@ -37,14 +33,9 @@ options['DEBUG']=False
 options['BACKWARD']=True
 options['MULTI_PROCESSES']=True
 options['TRAIN_FROM_CHECKPOINT']=False
-options['STATE_2_MOVING_GATE']=True
-
-input_size = 38 # current drone state (10), goal position (3), gate position(3), gate width(1) and orientation(9)
-hidden_size = 128 
-output_size = 13  # #tra_pos(3), tra_9D_orientation(9), traversing_time(1) / tra_gamma
-class LearningAgileAPG:
+class LearningAgileCriticAPG:
     """
-    APG: Analytical Policy Gradient
+    CriticAPG: combines the State value with the immediate reward to form the critic
     this class is responsible for running episodes batches in multi-process manner,
     collect gradients in a batch and update the network
     """
@@ -68,10 +59,8 @@ class LearningAgileAPG:
     def init_train(self,model_folder,checkpoint_trained_model_folder):
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-        if options['TRAIN_FROM_CHECKPOINT'] or options['STATE_2_MOVING_GATE']:
-            FILE = os.path.join(checkpoint_trained_model_folder, "2024-11-22/10-07-08/trained_model/NN_close_400.pth")
-
-            self.learning_rate = self.train_cfg['training']['learning_rate']*0.9**(800/100)
+        if options['TRAIN_FROM_CHECKPOINT']:
+            FILE = os.path.join(checkpoint_trained_model_folder, "2024-11-14/14-27-41/trained_model/NN_close_360.pth")
         else:
             FILE = os.path.join(model_folder, "NN_close_pretrain.pth")
         self.model = torch.load(FILE).to(self.device)
@@ -81,10 +70,10 @@ class LearningAgileAPG:
         self.dyn_decay = self.train_cfg['training']['dyn_decay']
 
         # Loss and optimizer
-        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate)  #,weight_decay=0.01
+        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate)  
         # learning rate scheduler
-        self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=100, gamma=0.9)
-        # self.scheduler=torch.optim.lr_scheduler.CosineAnnealingLR(self.optimizer,T_max=50,eta_min=self.train_cfg['training']['eta_min'])
+        # self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=50, gamma=0.9)
+        self.scheduler=torch.optim.lr_scheduler.CosineAnnealingLR(self.optimizer,T_max=50,eta_min=self.train_cfg['training']['eta_min'])
 
     def get_reward_episodes(self, i:int,
                             episode:LearningAgileBase,
@@ -100,7 +89,7 @@ class LearningAgileAPG:
         self.optimizer.step()
         self.scheduler.step()
 
-    def train_one_epoch(self,cur_epoch:int):
+    def train_one_epoch(self):
         """
         run the episodes in parallel, collect the reward and gradient and update the network
         0. reset all the episodes
@@ -126,7 +115,7 @@ class LearningAgileAPG:
        
         ##==0. reset all the episodes
         for episode in self.episodes:
-            episode.reset(cur_epoch)
+            episode.reset()
 
         for i in range(1,train_cfg['training']['close_loop_horizon']+1):
             obs_batch_list = []
@@ -137,7 +126,7 @@ class LearningAgileAPG:
             
             ##== 2. model forward in a batch    
             obs_batch=np.array(obs_batch_list)
-            outputs_batch = self.model(torch.tensor(obs_batch,dtype=torch.float32).to(self.device),deterministic=True).to('cpu')
+            outputs_batch = self.model(torch.tensor(obs_batch,dtype=torch.float32).to(self.device)).to('cpu')
             
             
             ##== 3. step for every episode
@@ -178,7 +167,7 @@ class LearningAgileAPG:
 
             ##== record NN obs and output per episode step
             log_drone_state(writer,obs_batch[0,-1,:],self.global_step)
-            euler_nn = log_train_IO(writer,obs_batch[0,-1,:],outputs_batch[0,:].data.numpy().reshape(self.episodes[0].output_size),self.global_step)
+            log_train_IO(writer,obs_batch[0,-1,:],outputs_batch[0,:].data.numpy().reshape(self.episodes[0].output_size),self.global_step)
             writer.add_scalar('reward_single_step', self.episodes[0].reward, self.global_step)
             
             self.global_step  += 1
@@ -189,8 +178,8 @@ class LearningAgileAPG:
             p_R_p_z_list.append(self.episodes[k].p_R_p_z) 
         
         ## assemble
-        p_R_p_z_list = np.array(p_R_p_z_list)/(10000*(0.1*magni(euler_nn))) #*((10*euler_nn[1]))(batch_size, close_loop_horizon, 1, 13)
-        p_R_p_z_list = np.clip(p_R_p_z_list, -0.02, 0.02)
+        p_R_p_z_list = np.array(p_R_p_z_list)/10000 # (batch_size, close_loop_horizon, 1, 13)
+        p_R_p_z_list = np.clip(p_R_p_z_list, -0.2, 0.2)
         # (close_loop_horizon, batch_size, 13)->(batch_size, close_loop_horizon, 13)
         outputs_stack = torch.stack(outputs_list).permute(1,0,2) 
        
@@ -218,7 +207,7 @@ class LearningAgileAPG:
         num_epochs = self.train_cfg['training']['num_epochs']
         with tqdm(total=num_epochs) as pbar:
             for epoch in range(num_epochs):
-                self.train_one_epoch(epoch)
+                self.train_one_epoch()
                 pbar.update(1)
                 pbar.set_description(f"epoch:{epoch}, reward:{self.reward_batch[0]}")
                 if epoch % 10 == 0:
@@ -226,9 +215,9 @@ class LearningAgileAPG:
 
 if __name__ == "__main__":
 
-    apg = LearningAgileAPG(mission_cfg,train_cfg,options)
-    apg.init_train(model_folder,checkpoint_trained_model_folder)
-    apg.train()
+    criticAPG = LearningAgileCriticAPG(mission_cfg,train_cfg,options)
+    criticAPG.init_train(model_folder,checkpoint_trained_model_folder)
+    criticAPG.train()
 
 
 

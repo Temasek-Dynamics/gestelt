@@ -3,13 +3,14 @@ from quad_nn import *
 import os
 from collections import deque
 from scipy.spatial.transform import Rotation as R
+from config import mission_cfg
 # Device configuration
 device = torch.device('cpu')#torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # Hyper-parameters 
-input_size = 26 # current drone state (10), goal position (3), gate position(3), gate width(1) and orientation(9)
+input_size = 38 # current drone state (10), goal position (3),gate points (4x3), gate position(3),  gate width(1) and orientation(9)
 hidden_size = 128 
-output_size = 13  # #tra_pos(3), tra_9D_orientation(9), traversing_time(1)
+output_size = 13  # #tra_pos(3), tra_9D_orientation(9), tra_gamma, traversing_time(1)
 num_epochs = 3
 batch_size = 10000
 learning_rate = 2e-5
@@ -21,7 +22,7 @@ model = network_with_GRU(input_size, hidden_size, hidden_size,output_size).to(de
 # model = torch.load(FILE)
 # Loss and optimizer
 criterion = nn.MSELoss()
-optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)  
+optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)   #, weight_decay=1e-2
 
 def input_cal():
     inputs=np.zeros(input_size)
@@ -35,9 +36,22 @@ def input_cal():
     inputs[6:10]=np.roll(inputs[6:10],1)
 
     inputs[10:13] = static_env[3:6] # goal position
-    inputs[13:16] = np.array([0,0,0]) # gate position
-    inputs[16:26] = static_env[7:17] # gate width and gate orientation
+    
+
+
+    ## gate points
+    gate_cen_h=0
+    gate_width = mission_cfg['gate']['width']
+    gate_length = mission_cfg['gate']['length']
+    inputs[13:25] = np.array([[-gate_length/2, 0, gate_cen_h+gate_width/2],
+                              [ gate_length/2, 0, gate_cen_h+gate_width/2],
+                              [ gate_length/2, 0, gate_cen_h-gate_width/2],
+                              [-gate_length/2, 0, gate_cen_h-gate_width/2]]).flatten() # gate points     
+    
+    inputs[25:28] = np.array([0,0,0]) # gate position
+    inputs[28:38] = static_env[7:17] # gate width and gate orientation
     return inputs
+
 history_state=deque(maxlen=5)
 for epoch in range(num_epochs):
     for i in range(batch_size):  
@@ -49,7 +63,7 @@ for epoch in range(num_epochs):
         outputs  = torch.tensor(t_output(full_input), dtype=torch.float).to(device)
         
         # Forward pass
-        pre_outputs = model(torch.tensor(full_input, dtype=torch.float).to(device))[0]
+        pre_outputs = model(torch.tensor(full_input, dtype=torch.float).unsqueeze(0).to(device),deterministic=False)[0]
         print("desired_traversing_time",pre_outputs[-1])
         #print(inputs,' ',pre_outputs)
         loss = criterion(pre_outputs, outputs)
@@ -76,7 +90,7 @@ with torch.no_grad():
         outputs  = torch.tensor(t_output(inputs), dtype=torch.float).to(device)
         
         # Forward pass
-        pre_outputs = model(torch.tensor(inputs, dtype=torch.float).to(device))
+        pre_outputs = model(torch.tensor(inputs, dtype=torch.float).unsqueeze(0).to(device))[0]
         loss = criterion(pre_outputs, outputs).cpu().data.numpy()
         # max returns (value ,index)
         #_, predicted = torch.max(outputs.data, 1)

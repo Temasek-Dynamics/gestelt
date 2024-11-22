@@ -11,10 +11,11 @@ drone:
 gate:
   length: 1.2 #1.2
   width: 0.4 # 0.56
+  init_width: 0.6
   linear_vel: [0.0, 0.0, 0.0]
-  angular_vel: 0.0 
+  # angular_vel: 0.0 
   # linear_vel: [0.1,-0.1,0.0]  #[0.5,-0.3,0.0]
-  # angular_vel: 1.0
+  angular_vel: 0.5
 traj_server:
   takeoff_height: 1.2
   drone_yaw: 0.0 # take-off yaw
@@ -84,7 +85,7 @@ learning_agile:
   wrt: 5.0
   wqt: 10.0
   wthrust: 1.0
-  wwt: 5.0
+  wwt: 15.0
   wwt_z: 5
   
   # path cost
@@ -98,7 +99,7 @@ learning_agile:
   wqf: 100.0
   ##------ traversing parameters ---##
   max_traverse_weight: 100 #100
-  traverse_weight_span: 10
+  traverse_weight_span: 10 #gamma, could be a learning variable
   traverse_time: 1.5 # only for STATIC_GATE_TEST
 
   ##------ safety parameters  ------##

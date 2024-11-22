@@ -56,7 +56,7 @@ class Quadrotor:
         self.des_tra_q = vertcat(SX.sym('des_tra_q0'), SX.sym('des_tra_q1'), SX.sym('des_tra_q2'), SX.sym('des_tra_q3'))
         self.des_t_tra = SX.sym('des_t_tra')
         self.t_node = SX.sym('t_node')
-
+        # self.gamma = SX.sym('gamma')
         # define desired goal state
         self.goal_r_I  = vertcat(SX.sym('des_goal_rx'), SX.sym('des_goal_ry'), SX.sym('des_goal_rz'))
         self.goal_v_I = vertcat(SX.sym('des_goal_vx'), SX.sym('des_goal_vy'), SX.sym('des_goal_vz'))
@@ -326,11 +326,11 @@ class Quadrotor:
         ## set traverse pose as the auxiliary variables (hyperparameters)
         if self.options['JAX_SVD']: 
             ## SVD conducted before CasADi
-            self.trav_auxvar = vertcat(self.des_tra_r_I, self.des_tra_R,self.des_t_tra) 
+            self.trav_auxvar = vertcat(self.des_tra_r_I, self.des_tra_R,  self.des_t_tra) #self.gamma,
             tra_R_B_I = ca.reshape(self.des_tra_R,3,3)
         else:   
             svd= SVD()
-            self.trav_auxvar = vertcat(self.des_tra_r_I, self.des_tra_m,self.des_t_tra)
+            self.trav_auxvar = vertcat(self.des_tra_r_I, self.des_tra_m,  self.des_t_tra) #self.gamma,
             tra_R_B_I= svd.SVD_M_to_SO3_casadi(self.des_tra_m)
        
         

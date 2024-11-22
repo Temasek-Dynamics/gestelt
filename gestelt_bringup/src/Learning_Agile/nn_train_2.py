@@ -69,9 +69,7 @@ def traj(inputs, outputs, state_traj):
     
 
     quad1.mpc_update(quad1.ini_state,
-                     outputs[0:3],
-                     outputs[3:12],
-                     outputs[-1])
+                     outputs)
     
     state_t = np.reshape(quad1.sol1['state_traj_opt'],(batch_size+1)*10)
     state_traj[:] = state_t

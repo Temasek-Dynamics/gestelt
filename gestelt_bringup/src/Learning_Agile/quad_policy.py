@@ -159,7 +159,9 @@ class PlanFwdBwdWrapper():
     
 
     # initialize the narrow window
-    def init_obstacle(self,gate_point,gate_pitch):
+    def init_obstacle(self,gate_point):
+        gate_pitch = atan((gate_point[2]-gate_point[5])/(gate_point[0]-gate_point[3])) # compute the actual gate pitch ange in real-time
+        
         self.gate_corners = gate_point
         self.gate_quat = toQuaternion(-gate_pitch,[0,1,0])
         self.point1 = gate_point[0:3]
@@ -180,10 +182,10 @@ class PlanFwdBwdWrapper():
 
         if not self.options['PDP_GRADIENT']:
             NO_SOLUTION_FLAG = False
-            self.sol1,NO_SOLUTION_FLAG =self.mpc_update(self.ini_state, 
-                                                        tra_pos, 
-                                                        tra_ang, 
-                                                        t_tra)
+            ## set the traverse hyperparameters value (auxvar) here
+            trav_auxvar_value = np.concatenate((tra_pos,tra_ang,np.array([t_tra]))) #np.array([gamma]),
+            self.sol1,NO_SOLUTION_FLAG =self.mpc_update(current_state=self.ini_state, 
+                                                        trav_auxvar_value=trav_auxvar_value)
         # state_traj [x,y,z,vx,vy,vz,qw,qx,qy,qz]
         state_traj = self.sol1['state_traj_opt']
         # get the quadrotor both center and edges position trajectory
@@ -259,10 +261,9 @@ class PlanFwdBwdWrapper():
         # obtain solution of trajectory
         if self.options['PDP_GRADIENT']:
             NO_SOLUTION_FLAG = False
-            self.sol1,NO_SOLUTION_FLAG =self.mpc_update(self.ini_state, 
-                                                        tra_pos, 
-                                                        tra_ang, 
-                                                        t_tra)
+            trav_auxvar_value = np.concatenate((tra_pos,tra_ang,np.array([t_tra])))
+            self.sol1,NO_SOLUTION_FLAG =self.mpc_update(current_state=self.ini_state, 
+                                                        trav_auxvar_value=trav_auxvar_value)
         
         
         # R is the Reward
@@ -335,7 +336,7 @@ class PlanFwdBwdWrapper():
             # return np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,R])
             return np.concatenate((drdp,np.array([R])))
     
-    def PDP_grad(self, tra_pos,tra_ang,t_tra):
+    def PDP_grad(self, trav_auxvar_value):
         ###################################################################
         ###----- Set mpc external variables VALUE to diffPMP--------#######
         ###################################################################
@@ -344,7 +345,7 @@ class PlanFwdBwdWrapper():
     
     
         ## set the traverse hyperparameters value (auxvar) here
-        trav_auxvar = np.concatenate((tra_pos,tra_ang,np.array([t_tra])))
+        # trav_auxvar_value = np.concatenate((tra_pos,tra_ang,np.array([gamma]),np.array([t_tra]))) #
         goal_state_value=np.concatenate((self.goal_pos,np.zeros(3),self.goal_ori))  
 
         
@@ -354,7 +355,7 @@ class PlanFwdBwdWrapper():
                                         control_traj_opt=self.sol1['control_traj_opt'],
                                         costate_traj_opt=self.sol1['costate_traj_opt'],
                                         goal_state_value=goal_state_value,
-                                        auxvar_value=trav_auxvar)
+                                        auxvar_value=trav_auxvar_value)
         
         # set values to the LQR solver
         self.lqr_solver.setDyn(dynF=aux_sys['dynF'], dynG=aux_sys['dynG'], dynE=aux_sys['dynE'])
@@ -461,11 +462,13 @@ class PlanFwdBwdWrapper():
     ## given initial state, control command, high-level parameters, obtain the first control command of the quadrotor
     def mpc_update(self, 
                    current_state,
-                   tra_pos, 
-                   tra_ang, 
-                   t_tra):
+                   trav_auxvar_value):
     
-   
+        tra_pos=trav_auxvar_value[0:3]
+        tra_ang=trav_auxvar_value[3:12]
+        # gamma=trav_auxvar_value[-2]
+        t_tra=trav_auxvar_value[-1]
+        
         ##----- cause the different bewteen the python and the gazebo--###
        
         # self.sol1 = self.uavoc1.ocSolver(current_state_control=current_state_control,t_tra=t)

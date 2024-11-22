@@ -43,7 +43,7 @@ def python_sim_npy_parser(uav_traj=None,
     rot_vec_nn = quat_nn.as_rotvec()
     
     ## == convert the gate pitch start from horizontal == ##
-    gate_pitch[:] = np.degrees(gate_pitch[:])
+    gate_pitch[:] = -np.degrees(gate_pitch[:])
   
     ## == traversing time == ##
     t_tra = np.where(nn_output_list[:, -1] < 0)[0][0]

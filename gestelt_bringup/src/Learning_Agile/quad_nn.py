@@ -1,5 +1,5 @@
 ##this file is the package about neural network
-
+from torch.distributions.normal import Normal
 from cmath import tan
 from math import cos, pi, sin, sqrt, tan
 import math
@@ -14,19 +14,18 @@ from scipy.spatial.transform import Rotation as R
 import scipy.stats as stats
 import os
 import yaml
-current_dir = os.path.dirname(os.path.abspath(__file__))
-conf_folder=os.path.abspath(os.path.join(current_dir, '..', '..','config'))
-yaml_file = os.path.join(conf_folder, 'learning_agile_mission.yaml')
-with open(yaml_file, 'r', encoding='utf-8') as file:
-    config_dict = yaml.safe_load(file) 
-pre_ini_pos=np.array(config_dict['mission']['initial_position'])
-pre_end_pos=np.array(config_dict['mission']['goal_position'])
-desired_average_vel=config_dict['training_param']['desired_average_vel']
-gate_width = config_dict['gate']['width']
+from config import mission_cfg, train_cfg,current_dir
+
+pre_ini_pos=np.array(mission_cfg['mission']['initial_position'])
+pre_end_pos=np.array(mission_cfg['mission']['goal_position'])
+desired_average_vel=mission_cfg['training_param']['desired_average_vel']
+gate_width = mission_cfg['gate']['width']
+init_gate_width = mission_cfg['gate']['init_width']
+
 # load the configuration file
 
 ## sample an input for the neural network 1
-def nn_sample(init_pos=None,final_pos=None,init_angle=None,cur_epoch=100,pretrain=False):
+def nn_sample(init_pos=None,final_pos=None,init_angle=None,cur_epoch=train_cfg['training']['num_epochs'],pretrain=False):
     inputs = np.zeros(17)
     if init_pos is None:
         inputs[0:3] = np.random.uniform(-1,1,size=3) + pre_ini_pos #-5~5, -9
@@ -51,7 +50,8 @@ def nn_sample(init_pos=None,final_pos=None,init_angle=None,cur_epoch=100,pretrai
     inputs[6] = np.random.uniform(-0.1,0.1)
     
     ## === random width of the gate  =========##
-    inputs[7] = np.clip(np.random.normal(0.6,0.2),gate_width,gate_width) #(0.9,0.3),0.5,1.25 
+    # inputs[7] = np.clip(np.random.normal(0.6,0.2),gate_width,gate_width) #(0.9,0.3),0.5,1.25 
+    inputs[7] = init_gate_width - (init_gate_width - gate_width) * (cur_epoch / train_cfg['training']['num_epochs'])
   
     ## === random pitch angle of the gate ====##
     # angle = np.clip(1.3*(1.2-inputs[7]),0,pi/3)
@@ -73,22 +73,24 @@ def nn_sample(init_pos=None,final_pos=None,init_angle=None,cur_epoch=100,pretrai
         # gate_pitch = np.random.uniform(-pi/2,pi/2)
         gate_pitch = 0
     else:
-        des_pitch_mean_min = 1*pi/6
-        des_pitch_mean_max = 1*pi/6
+        des_pitch_mean_min = 1*pi/4
+        des_pitch_mean_max = 1*pi/4
         des_pitch_mean = des_pitch_mean_min - (des_pitch_mean_min - des_pitch_mean_max) * (cur_epoch / 100) 
 
         # truncated normal distribution
-        mu,sigma = 0,pi/18
-        lower,upper = -pi/6,pi/6
+        mu,sigma = 0,pi/16
+        lower,upper = -pi/3,pi/3
         X = stats.truncnorm((lower - mu) / sigma, (upper - mu) / sigma, loc=mu, scale=sigma)
         gate_pitch = X.rvs(1)[0]
         
-        if gate_pitch>0:
+        judge = np.random.normal(0,1)
+        # if gate_pitch>0:
+        if judge > 0:
             gate_pitch=gate_pitch+des_pitch_mean
         else:
             gate_pitch=gate_pitch-des_pitch_mean
         
-        # gate_pitch = 1.0
+        # gate_pitch = -1.2 #1.2rad = 68.754 degrees
         # gate_pitch = np.random.uniform(-pi/6,pi/6)
 
     ##==calculate the gate RM
@@ -109,11 +111,17 @@ def t_output(inputs):
     #outputs[5] = math.tan(inputs[6]/2)
     ## traversal time is propotional to the distance of the centroids
     if inputs[1]>0:
-        raw_time = -round(magni(inputs[0:3])/3,1)
+        raw_time = -round(magni(inputs[0:3])/3,1) #3
     else:
-        raw_time=round(magni(inputs[0:3])/4,1)
+        raw_time=round(magni(inputs[0:3])/4,1) #4
     outputs[-1] = raw_time #np.clip(raw_time,3,3)
+
+    # outputs[-1]=np.random.normal(0,3)
+    # outputs[-1]=np.random.normal(raw_time,3)
     print('desired_traversing_time',outputs[-1])
+
+    ## traversal gamma
+    # outputs[-2]=10
     return outputs
 
 ## sample a random gate (not necessary in our method) (not important)
@@ -223,8 +231,12 @@ class network_with_GRU(nn.Module):
         self.l2 = nn.Linear(D_h1, D_h2)
         self.F2 = nn.ReLU()
         self.l3 = nn.Linear(D_h2, D_out)
+
+        # logstd = -3
+        # self.logstd = nn.Parameter(torch.ones(D_out, dtype=torch.float32) * logstd)
+
         
-    def forward(self, input):
+    def forward(self, input,deterministic=True):
         # convert state s to tensor
         S = input # column 2D tensor
         out,hidden = self.GRU(S)
@@ -235,7 +247,15 @@ class network_with_GRU(nn.Module):
         out = self.F2(out)
         out = out.squeeze(1)
         out = self.l3(out)
+
+        # if deterministic:
         return out
+        # else:
+        #    std=self.logstd.exp()
+        #    dist=Normal(out,std)
+        #    sample=dist.rsample()
+           
+        #    return sample
     
     def myloss(self, para, dp, device='cpu'):
         # convert np.array to tensor
@@ -251,7 +271,7 @@ class network_with_GRU(nn.Module):
         para=para.to(device)
         
 
-        # 1x2x1x13 x 1x2x13x1 -> 1x2
+        # bxHx1x13 x bxHx13x1 -> 1
         loss_nn = torch.sum(torch.einsum('bijk,bikj -> b',para,Dp))/(Dp.shape[0]*Dp.shape[1])
 
         return loss_nn # size is 1

@@ -7,6 +7,7 @@ from scipy.spatial.transform import Rotation as R
 from solid_geometry import *
 from quad_policy import *
 from learning_agile_sim import MovingGate
+from quad_nn import nn_sample
 """
 this file will plot the penalty value change w.r.t the euler angle change of the quadrotor
 """
@@ -65,7 +66,8 @@ class PenaltyDesignHelper():
 
         ##== let the gate to be horizontal
         inputs=np.zeros(17)
-        inputs[7]=self.config_dict['gate']['width']
+        inputs[7]=nn_sample()[7]
+        # inputs[7]=self.config_dict['gate']['width']
         inputs[8:17]=np.eye(3).flatten()
 
         moving_gate = MovingGate(inputs,
@@ -74,7 +76,7 @@ class PenaltyDesignHelper():
     
         gate_point = moving_gate.gate.gate_point
         # initialize the narrow window
-        self.planner.init_obstacle(gate_point.reshape(12),gate_pitch=moving_gate.gate_init_pitch)
+        self.planner.init_obstacle(gate_point.reshape(12))
     
     
         

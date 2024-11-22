@@ -5,7 +5,7 @@ import cProfile
 from collections import deque
 from math import atan
 from scipy.spatial.transform import Rotation as R
-
+import matplotlib.pyplot as plt
 
 from solid_geometry import magni
 from learning_agile_sim import LearningAgileSim, Gate
@@ -41,8 +41,8 @@ class LearningAgileBase:
         self.mission_cfg = mission_cfg
         self.train_cfg = train_cfg
 
-        self.gate_v = np.array(self.mission_cfg['gate']['linear_vel'])
-        self.gate_w = mission_cfg['gate']['angular_vel'] 
+        # self.gate_v = np.array(self.mission_cfg['gate']['linear_vel'])
+        # self.gate_w = mission_cfg['gate']['angular_vel'] 
         self.NN_freq = mission_cfg['NN2_freq']
         self.learning_agile_sim = LearningAgileSim(python_sim_time=5,
                                                     mission_cfg=self.mission_cfg,
@@ -50,7 +50,7 @@ class LearningAgileBase:
                                                     options=options)
         self.planner = self.learning_agile_sim.planner
         ## keep history five states, RING BUFFER
-        self.input_size = 26
+        self.input_size = 38
         self.output_size = 13
 
         
@@ -61,9 +61,9 @@ class LearningAgileBase:
         FILE = os.path.join(model_folder, "NN_close_pretrain.pth")
         self.model = torch.load(FILE).to(device)
 
-    def reset(self):
+    def reset(self,cur_epoch: int=0):
         #== random generate the env and set to the mpc solver
-        self.learning_agile_sim.generate_mission()
+        self.learning_agile_sim.generate_mission(cur_epoch)
         
         self.state = self.planner.ini_state
 
@@ -95,11 +95,14 @@ class LearningAgileBase:
         immed_obs=np.zeros(self.input_size)
         immed_obs[0:10]=self.state
         immed_obs[10:13]=self.learning_agile_sim.final_point
+        
 
+        ## gate points
+        immed_obs[13:25]=gate_t_i.gate_point.flatten() # gate points
         # position of the gate,# width of the gate,# pitch angle of the gate
-        immed_obs[13:16] = gate_t_i.centroid
-        immed_obs[16] = magni(gate_t_i.gate_point[0,:]-gate_t_i.gate_point[3,:]) # gate width
-        immed_obs[17:26]=rot.as_matrix().flatten()
+        immed_obs[25:28] = gate_t_i.centroid
+        immed_obs[28] = magni(gate_t_i.gate_point[0,:]-gate_t_i.gate_point[3,:]) # gate width
+        immed_obs[29:38]=rot.as_matrix().flatten()
 
         if i == 0:
             for i in range(5):
@@ -108,7 +111,7 @@ class LearningAgileBase:
             self.history_obs.append(immed_obs)
         
         self.obs=np.array(self.history_obs)
-        self.planner.init_obstacle(gate_t_i.gate_point[:,:].reshape(12),gate_pitch)
+       
 
         return self.obs
 
@@ -158,11 +161,11 @@ class LearningAgileBase:
             self.nn_out = nn_out
 
         self.np_nn_out = self.nn_out.to('cpu').data.numpy()
+        self.t_tra_rel = self.np_nn_out[-1]
         ## == MPC forward === ##
-        cmd_solution,NO_SOLUTION_FLAG = self.planner.mpc_update(self.state,
-                                            self.np_nn_out[0:3],
-                                            self.np_nn_out[3:12],
-                                            self.np_nn_out[-1]) # control input 4-by-1 thrusts to pybullet
+                
+        cmd_solution,NO_SOLUTION_FLAG = self.planner.mpc_update(current_state=self.state,
+                                            trav_auxvar_value=self.np_nn_out) # control input 4-by-1 thrusts to pybullet
         
        
         ## record the gradient and step reward
@@ -181,9 +184,12 @@ class LearningAgileBase:
         self.state_traj.append(self.state)
         self.state_n = np.concatenate((self.state_n,[self.state]),axis = 0)
        
+        ## === initial gate obstacle based on current NN prediction === ##
+        pred_t_i = self.i + self.t_tra_rel*10
+        gate_t_i = Gate(self.gate_points_list[int(pred_t_i)])
+        self.planner.init_obstacle(gate_t_i.gate_point[:,:].reshape(12))
     
-    
-    def backward_per_step(self):
+    def backward_per_step(self,dyn_decay=0.9):
         """
         get the gradient of the reward w.r.t. the NN output, 
         store the gradient per step in a list
@@ -200,7 +206,7 @@ class LearningAgileBase:
         self.p_X_traj_i_p_x_i.append(cur_p_X_traj_i_p_x_i)
         
         ## acquire p_X_traj_i/p_z_i
-        self.planner.PDP_grad(self.np_nn_out[0:3],self.np_nn_out[3:12],self.np_nn_out[-1])
+        self.planner.PDP_grad(self.np_nn_out)
         # append size N * 10 * 13
         self.p_X_traj_i_p_z_i.append(self.planner.d_st_traj_d_z[:,:,:])
 
@@ -214,31 +220,31 @@ class LearningAgileBase:
         ## Backpropagate through the last one time-step
         if self.i > 2:
             self.p_R_i_p_x_i[f'{self.i}-2'] = np.einsum('bij,bjk->ik', self.p_R_i_p_X_traj_i[self.i-2],self.p_X_traj_i_p_x_i[self.i-2])
-            self.p_R_i_p_z_last[f'{self.i}-3'] = np.einsum('ij,jk->ik',self.p_R_i_p_x_i[f'{self.i}-2'],self.p_X_traj_i_p_z_i[self.i-3][1,:,:])
-            
+            self.p_R_i_p_z_last[f'{self.i}-3'] = self.p_R_i_p_x_i[f'{self.i}-2'] @ self.p_X_traj_i_p_z_i[self.i-3][1, :, :]
+
             self.p_R_i_p_z_i[self.i-3] += self.p_R_i_p_z_last[f'{self.i}-3']
         
         
 
         if self.i > 3:       
-            ## Backpropagate through the last second time-step     
-            self.p_R_i_p_x_i[f'{self.i}-3'] = np.einsum('ij,jk->ik',self.p_R_i_p_x_i[f'{self.i}-2'],self.p_X_traj_i_p_x_i[self.i-3][1,:,:])
-            self.p_R_i_p_z_last[f'{self.i}-4'] = np.einsum('ij,jk->ik',self.p_R_i_p_x_i[f'{self.i}-3'],self.p_X_traj_i_p_z_i[self.i-4][1,:,:])
+            # Backpropagate through the last second time-step     
+            self.p_R_i_p_x_i[f'{self.i}-3'] = dyn_decay * self.p_R_i_p_x_i[f'{self.i}-2'] @ self.p_X_traj_i_p_x_i[self.i-3][1, :, :]
+            self.p_R_i_p_z_last[f'{self.i}-4'] =  self.p_R_i_p_x_i[f'{self.i}-3'] @ self.p_X_traj_i_p_z_i[self.i-4][1, :, :]
 
             self.p_R_i_p_z_i[self.i-4] += self.p_R_i_p_z_last[f'{self.i}-4']
-            
 
-            ## Backpropagate through the all last time-steps
-            num=0
-            for k in range(4,self.i):
-                self.p_R_i_p_x_i[f'{self.i}-{k}'] = np.einsum('ij,jk->ik',self.p_R_i_p_x_i[f'{self.i}-{k-1}'],self.p_X_traj_i_p_x_i[self.i-k][1,:,:])
-                self.p_R_i_p_z_last[f'{self.i}-{k+1}'] = np.einsum('ij,jk->ik',self.p_R_i_p_x_i[f'{self.i}-{k}'],self.p_X_traj_i_p_z_i[self.i-k-1][1,:,:])
+            # Backpropagate through all last time-steps
+            # num = 0
+            # for k in range(4, self.i):
+            #     self.p_R_i_p_x_i[f'{self.i}-{k}'] = dyn_decay * self.p_R_i_p_x_i[f'{self.i}-{k-1}'] @ self.p_X_traj_i_p_x_i[self.i-k][1, :, :]
+            #     self.p_R_i_p_z_last[f'{self.i}-{k+1}'] = self.p_R_i_p_x_i[f'{self.i}-{k}'] @ self.p_X_traj_i_p_z_i[self.i-k-1][1, :, :]
 
-                self.p_R_i_p_z_i[self.i-k-1] += self.p_R_i_p_z_last[f'{self.i}-{k+1}']
-                num+=1
+            #     self.p_R_i_p_z_i[self.i-k-1] += self.p_R_i_p_z_last[f'{self.i}-{k+1}']
+                # num += 1
 
-                if num == 3:
-                    break
+                # if num == 3:
+                #     break
+
 
     # def run_single_step(self,nn_output):
     #     self.step(nn_output)
@@ -295,6 +301,18 @@ def run_debug(planner,state_n,final_point,gate_points_list):
                                 goal_pos=final_point.tolist(),
                                 dt=0.1)
     
+def vis_gradient_norm(p_R_p_z:list):
+    p_R_p_z=np.array(p_R_p_z)
+    p_R_p_z_norm = np.linalg.norm(p_R_p_z,axis=2)
+    p_R_p_z_norm = p_R_p_z_norm.reshape(p_R_p_z_norm.shape[0],-1)
+    ## plot the gradient norm
+    fig, ax = plt.subplots()
+    ax.plot(p_R_p_z_norm)
+    ax.set(xlabel='time step', ylabel='gradient norm',
+           title='Gradient Norm')
+    ax.grid()
+    plt.show()
+
 if __name__ == "__main__":
     training_data_folder=os.path.abspath(os.path.join(current_dir, 'training_data'))
     model_folder=os.path.abspath(os.path.join(training_data_folder, 'NN_model'))
@@ -308,6 +326,8 @@ if __name__ == "__main__":
     run_single_episode(base)
     print(base.reward)
     print(base.p_R_p_z)
+
+    vis_gradient_norm(base.p_R_p_z)
     # run_debug(base.learning_agile_sim.planner,
     #               base.state_n,
     #               base.learning_agile_sim.final_point,

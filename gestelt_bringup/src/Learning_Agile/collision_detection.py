@@ -42,13 +42,13 @@ class Obstacle():
         
         # length_gap=jnp.abs(line_centers_G[1,0]-line_centers_G[3,0])
         # width_gap=jnp.abs(line_centers_G[0,2]-line_centers_G[2,2])
-        length_gap = jnp.array(config['gate']['length'])  # 1.2
-        width_gap = jnp.array(config['gate']['width'])  # 0.56
+        length_gap = jnp.array(magni(point1-point2))  # 1.2
+        self.width_gap = jnp.array(magni(point1-point4))  # 0.56
     
         self.P_obs[0].create_rect_prism(length_gap, 1.0, quad_half_height*2),
-        self.P_obs[1].create_rect_prism(quad_radius*2, 1.0, width_gap),
+        self.P_obs[1].create_rect_prism(quad_radius*2, 1.0, self.width_gap),
         self.P_obs[2].create_rect_prism(length_gap, 1.0, quad_half_height*2),
-        self.P_obs[3].create_rect_prism(quad_radius*2, 1.0, width_gap)
+        self.P_obs[3].create_rect_prism(quad_radius*2, 1.0, self.width_gap)
 
         ##==quadrotor ellipsoid==##
         A=jnp.diag(np.array([quad_radius,quad_radius,quad_half_height]))
@@ -177,22 +177,34 @@ class Obstacle():
         
                 
             penalty_single,dalpha_dstate_drone=DiffCollisionWrapper(line_centers,
-                                            R_gate,
-                                            gate_quat,
-                                            config['drone']['wing_len']/2,
-                                            config['drone']['height']/2,
-                                            self.P_obs,
-                                            self.P,
-                                            state_traj[node_tra,:],
-                                            PENALTY_HELPER)
+                                                                    R_gate,
+                                                                    self.width_gap,
+                                                                    gate_quat,
+                                                                    config['drone']['wing_len']/2,
+                                                                    config['drone']['height']/2,
+                                                                    self.P_obs,
+                                                                    self.P,
+                                                                    state_traj[node_tra,:],
+                                                                    node_tra,
+                                                                    PENALTY_HELPER)
             
             penalty_traj += penalty_single
             drdstate_traj[node_tra,:] = dalpha_dstate_drone
         
-
-         # goal score
+        
         
         if not PENALTY_HELPER:
+            ## velocity penalty
+            # vel_penalty = 0
+            # vel_w = 1
+            # for i in range(state_traj.shape[0]):
+            #     vel_penalty += vel_w * np.dot(state_traj[i,3:6],state_traj[i,3:6])
+            #     drdstate_traj[i,3:6] += vel_w * 2 * state_traj[i,3:6]
+            
+            # penalty_traj += vel_penalty
+
+
+            ## goal score
             goal_penalty = 0
             
             goal_w=2

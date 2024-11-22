@@ -60,7 +60,9 @@ def log_train_IO(writer,inputs,outputs,global_step):
     writer.add_scalar('pitch_tra', euler_nn[1], global_step)
     writer.add_scalar('yaw_tra', euler_nn[2], global_step)
     writer.add_scalar('t_tra', outputs[-1], global_step)
+    writer.add_scalar('gamma', outputs[-2], global_step)
 
+    return euler_nn
 
 
 def log_gradient(writer,gra,reward,global_step):
@@ -71,6 +73,7 @@ def log_gradient(writer,gra,reward,global_step):
     writer.add_scalar('drd9D_norm', drd9D_norm, global_step)
     writer.add_scalar('drdt', gra[-2], global_step)
     writer.add_scalar('mean_reward_pre_batch',reward, global_step)
+    writer.add_scalar('drdgamma',gra[-3], global_step)
 
 
 def log_drone_state(writer,drone_state, global_step):

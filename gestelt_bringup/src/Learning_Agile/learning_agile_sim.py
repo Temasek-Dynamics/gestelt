@@ -24,11 +24,13 @@ from result_analysis import *
 import numpy as np
 import time
 from solid_geometry import *
-
+from config import train_cfg
 
 device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 # device=torch.device('cpu')
-
+input_size = 38 # current drone state (10), goal position (3), gate position(3), gate width(1) and orientation(9)
+hidden_size = 128 
+output_size = 13
 
 class MovingGate():
     def __init__(self, env_init_set,
@@ -38,6 +40,16 @@ class MovingGate():
         # initialize the gate1, with the initial gate position
         # env_init_set[7]: gate width
         gate_width = env_init_set[7]
+        ###############################################
+        ###############################################
+        ##################gate length##################
+        # 0------------------------------------------1
+        # |                   ^y                     |
+        # |<-gate width       |                      |
+        # |                   *--> x                 |
+        # 3------------------------------------------2
+        ###############################################
+        ###############################################
         gate_point_no_pitch = np.array([[-gate_length/2, 0, gate_cen_h+gate_width/2],
                                         [ gate_length/2, 0, gate_cen_h+gate_width/2],
                                         [ gate_length/2, 0, gate_cen_h-gate_width/2],
@@ -128,7 +140,7 @@ class LearningAgileSim():
         self.history_state = deque(maxlen=5)
        
     
-    def generate_mission(self):
+    def generate_mission(self,i=train_cfg['training']['num_epochs']):
         """
         receive the ini_pos,end point defined in the mission file
 
@@ -152,7 +164,7 @@ class LearningAgileSim():
         
         self.t_tra_abs=self.config_dict['learning_agile']['traverse_time']
         
-        self.env_init_set = nn_sample()
+        self.env_init_set = nn_sample(cur_epoch=i)
         if self.options['STATIC_GATE_TEST']:
             self.env_init_set[0:3]=ini_pos
             self.env_init_set[3:6]=end_pos
@@ -184,6 +196,13 @@ class LearningAgileSim():
         gate_length = self.config_dict['gate']['length'] 
         gate_v = np.array(self.config_dict['gate']['linear_vel'])
         gate_w = self.config_dict['gate']['angular_vel'] 
+
+        gate_w = np.random.normal(gate_w,0.1)
+        judge = np.random.normal(0,1)
+        if judge>0:
+            gate_w = -gate_w
+        else:
+            gate_w = gate_w
         ## ================ gate initialization ================== ##
         if self.options['CLOSE_LOOP_TRAINING']:
             gate_cen_h=0
@@ -253,7 +272,7 @@ class LearningAgileSim():
         
         self.NN_T_tra = np.concatenate((self.NN_T_tra,[out[6]]),axis = 0)
         self.nn_output_list=np.concatenate((self.nn_output_list,[out_as_quat]),axis = 0)
-        self.Pitch = np.concatenate((self.Pitch,[nn2_inputs[14]]),axis = 0) 
+        self.Pitch = np.concatenate((self.Pitch,[nn2_inputs[output_size]]),axis = 0) 
 
     def log_NN_IO_for_RM(self,gate_pitch,out,des_tra_R):
         """
@@ -267,23 +286,24 @@ class LearningAgileSim():
     def close_loop_model_forward(self):
         self.gate_t_i = Gate(self.gate_points_list[self.i])
         ## == NN forward === ##
-        nn2_inputs=np.zeros(26)
+        nn2_inputs=np.zeros(input_size)
         nn2_inputs[0:10]=self.state
         nn2_inputs[10:13]=self.final_point
 
+        nn2_inputs[13:25]=self.gate_t_i.gate_point[:,:].flatten() # gate points
 
         # position of the gate
-        nn2_inputs[13:16] = self.gate_t_i.centroid
+        nn2_inputs[25:28] = self.gate_t_i.centroid
         # width of the gate
-        nn2_inputs[16] = magni(self.gate_t_i.gate_point[0,:]-self.gate_t_i.gate_point[3,:]) # gate width
+        nn2_inputs[28] = magni(self.gate_t_i.gate_point[0,:]-self.gate_t_i.gate_point[3,:]) # gate width
         # pitch angle of the gate
         gate_pitch = atan((self.gate_t_i.gate_point[0,2]-self.gate_t_i.gate_point[1,2])/(self.gate_t_i.gate_point[0,0]-self.gate_t_i.gate_point[1,0])) # compute the actual gate pitch ange in real-time
         
-        self.planner.init_obstacle(self.gate_t_i.gate_point[:,:].reshape(12),gate_pitch)
+        self.planner.init_obstacle(self.gate_t_i.gate_point[:,:].reshape(12))
         
         ##==calculate the gate RM
         rot=R.from_euler('zyx',[0,gate_pitch,0])
-        nn2_inputs[17:26]=rot.as_matrix().flatten()
+        nn2_inputs[input_size-9:input_size]=rot.as_matrix().flatten()
 
         if self.i == 0:
             for k in range(5):
@@ -321,14 +341,14 @@ class LearningAgileSim():
         
         self.state = self.planner.ini_state # state= feedback from pybullet, 13-by-1, 3 position, 3 velocity (world frame), 4 quaternion, 3 angular rate
         self.state_n = [self.state]
-        self.nn_output_list = [np.zeros(13)] # 3 position, 4 quaternion, 1 traversal time
+        self.nn_output_list = [np.zeros(output_size)] # 3 position, 4 quaternion, 1 traversal time
         self.des_tra_R_list = [np.zeros(9)] # 3x3 rotation matrix(in flat form)
         for self.i in range(self.sim_time*(int(1/self.dyn_step))): # 5s, 500 Hz
             
             self.Time = np.concatenate((self.Time,[self.i*self.dyn_step]),axis = 0)
             
             if not self.options['CLOSE_LOOP_MODEL']:
-                if (self.i%25)==0: # estimation frequency = 20 hz 
+                if (self.i%5)==0: # estimation frequency = 20 hz 
                     # decision variable is updated in 20 hz
                     self.gate_state_search()
 
@@ -388,15 +408,13 @@ class LearningAgileSim():
                 
                     
                 if self.options['JAX_SVD']:
-                    cmd_solution,NO_SOLUTION_FLAG  = self.planner.mpc_update(self.state,
-                                                        des_tra_pos,
-                                                        des_tra_R,#des_tra_R, SVD JAX output
-                                                        out[12]) # control input 4-by-1 thrusts to pybullet
+                    trav_auxvar_value=np.concatenate((des_tra_pos,des_tra_R,np.array([out[12]])),axis=0)
+                
                 else:
-                    cmd_solution,NO_SOLUTION_FLAG  = self.planner.mpc_update(self.state,
-                                                        des_tra_pos,
-                                                        des_tra_m,#des_tra_m, 9D vector
-                                                        out[12])
+                    trav_auxvar_value=out
+    
+                cmd_solution,NO_SOLUTION_FLAG  = self.planner.mpc_update(current_state=self.state,
+                                                        trav_auxvar_value=trav_auxvar_value)
                 
                 print('solving time at main=',time.time()-t_comp)
                 self.solving_time.append(time.time()- t_comp)
@@ -517,7 +535,7 @@ def main():
     options['JAX_SVD']=False
     options['CLOSE_LOOP_TRAINING']=False
     if options['CLOSE_LOOP_MODEL']:
-        model_name = 'training_results/2024-11-13/20-36-17/trained_model/NN_close_550.pth'#'NN2_imitate_1.pth' #'NN_close_2.pth'
+        model_name = 'training_results/2024-11-22/12-56-50/trained_model/NN_close_500.pth'#'NN2_imitate_1.pth' #'NN_close_2.pth'
         model_file=os.path.join(current_dir,model_name)
     else:   
         model_name = '20241031-142733-PDP-Trial 1, shrink the gate from [1.2,0.56] to [1.0, 0.4]/NN2_imitate_1.pth' 
