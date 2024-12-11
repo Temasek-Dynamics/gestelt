@@ -28,7 +28,7 @@
 #include <chrono>
 
 #include <gestelt_msgs/Goals.h>
-
+#include <gestelt_msgs/close_loop_NN_output.h>
 // acados
 #include "acados/utils/math.h"
 #include "acados_c/ocp_nlp_interface.h"
@@ -52,10 +52,12 @@ class mpcRosWrapper{
         void drone_state_pose_cb(const geometry_msgs::PoseStamped::ConstPtr& msg);
         void drone_state_twist_cb(const geometry_msgs::TwistStamped::ConstPtr& msg);
         void NN_trav_pose_cb(const geometry_msgs::PoseStamped::ConstPtr& msg);
+        void close_loop_NN_trav_pose_cb(const gestelt_msgs::close_loop_NN_output::ConstPtr& msg);
         void NN_trav_time_cb(const std_msgs::Float32::ConstPtr& msg);
 
         //------------------acados solver-------------------
         void solver_request();
+        void close_loop_solver_request();
 
         double* getcontrolOpt() { return control_opt_; };
         void Update();
@@ -63,6 +65,7 @@ class mpcRosWrapper{
         //------------------misc-------------------
         void pred_traj_vis();
         void quat_to_rodrigues();
+        void quat_to_rotation_matrix();
         typedef std::shared_ptr<mpcRosWrapper> Ptr;
         
         // solver state 
@@ -91,6 +94,7 @@ class mpcRosWrapper{
     // desired traverse state
     Eigen::Vector3d des_trav_point_={0,0,0};
     Eigen::Vector3d des_trav_rodrigues_={0,0,0};
+    Eigen::VectorXd des_trav_9d_=Eigen::VectorXd::Ones(9);
     Eigen::Vector4d des_trav_quat_={1,0,0,0};
 
     // time setting

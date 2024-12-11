@@ -365,12 +365,12 @@ class LearningAgileSim():
                     out=np.zeros(13)
                     out[0:3]=self.gate_center
                     # out[3:6]=self.gate_ori_RP # Rodrigues parameters
-                    # out[3:12]=np.array([[0.7603140,  0.0000000, -0.6495557],
-                    #                     [0.0000000,  1.0000000,  0.0000000],
-                    #                     [0.6495557,  0.0000000,  0.7603140]]).flatten() # 3x3 rotation matrix(in flat form)
-                    out[3:12]=np.array([[0.0007963,  0.0000000, -0.9999997],
+                    out[3:12]=np.array([[0.6427876,  0.0000000,  -0.7660444],
                                         [0.0000000,  1.0000000,  0.0000000],
-                                        [0.9999997,  0.0000000,  0.0007963]]).flatten()
+                                        [0.7660444,  0.0000000,  0.6427876]]).flatten() # 3x3 rotation matrix(in flat form)
+                    # out[3:12]=np.array([[0.0007963,  0.0000000, -0.9999997],
+                    #                     [0.0000000,  1.0000000,  0.0000000],
+                    #                     [0.9999997,  0.0000000,  0.0007963]]).flatten()
                     print("="*50)
                     print("NN pose det before SVD",np.linalg.det(out[3:12].reshape(3,3)))
                     

@@ -22,7 +22,7 @@ void mpcRosWrapper::init(ros::NodeHandle& nh)
 
     if (!STATIC_GATE_TEST_)
     {
-        NN_trav_pose_sub_ = nh.subscribe("/learning_agile_sim/NN_trav_pose", 1, &mpcRosWrapper::NN_trav_pose_cb, this);
+        NN_trav_pose_sub_ = nh.subscribe("/learning_agile_sim/NN_trav_pose", 1, &mpcRosWrapper::close_loop_NN_trav_pose_cb, this);
         NN_trav_time_sub_ = nh.subscribe("/learning_agile_sim/NN_trav_time", 1, &mpcRosWrapper::NN_trav_time_cb, this);
     }
     
@@ -185,7 +185,119 @@ void mpcRosWrapper::solver_request(){
     last_request_time_=current_time;
     
 }
+void mpcRosWrapper::close_loop_solver_request(){
+    
+    ocp_nlp_out_set(nlp_config, nlp_dims, nlp_out, n_nodes_,"x", des_goal_state_.data());
+    
+    
+    auto current_time = std::chrono::high_resolution_clock::now();
+    double request_gap = std::chrono::duration_cast<std::chrono::duration<double>>(current_time - last_request_time_).count();
+    // ROS_INFO("request gap is %f", request_gap);
+    
+    // if two requests gap is too long, emergency stop
+    if (request_gap > no_solution_flag_t_thresh_)
+    {
+        NO_SOLUTION_FLAG_=true;
+        ROS_INFO("the request period is too long, emergency stop");
+    }
+    else
+    {   
+        //t_tra: time to the traverse point relative to the current time
+        //t_tra_abs_: absolute time to the traverse point, w.r.t the mission start time
 
+        double mission_t_progress= std::chrono::duration_cast<std::chrono::duration<double>>(current_time - mission_start_time_).count();
+        
+        if (STATIC_GATE_TEST_)
+        {
+            t_tra_rel_=t_tra_abs_-mission_t_progress; 
+        }
+        
+        // ROS_INFO("t_tra is %f", t_tra);
+        int NP=24;
+        for (int i = 0; i < n_nodes_; i++)
+        {
+            // current_input_=last_input_;
+            // double varying_trav_weight = max_tra_w_ * std::exp(-tra_w_span_ * std::pow(dt_ * i - t_tra, 2));
+            // ROS_INFO("dt_ is %f, i is %d, t_tra is %f, varying_trav_weight is %f", dt_, i, t_tra, varying_trav_weight);
+            // set the external parameters for the solver
+            // desired goal state, current input, desired traverse pose, varying traverse weight
+            Eigen::VectorXd solver_extern_param(NP);
+            solver_extern_param.segment(0,10) = des_goal_state_;
+            solver_extern_param.segment(10,3) = des_trav_point_;
+            solver_extern_param.segment(13,9) = des_trav_9d_;
+            solver_extern_param(22) = t_tra_rel_; 
+            solver_extern_param(23) = i * dt_; //current node relative time
+
+            
+            double *solver_extern_param_ptr = solver_extern_param.data();
+        
+            ACADOS_model_acados_update_params(acados_ocp_capsule, i,solver_extern_param_ptr,NP);
+            
+            // if (i==10)
+            // {
+            //     weight_vis_ = varying_trav_weight;
+            // }
+        }
+        //TODO
+        // set the initial GUESS
+        // ocp_nlp_out_set(nlp_config, nlp_dims, nlp_out, n_nodes_ , "x", &state_traj_opt_[n_nodes_*n_x_]);
+
+        // set the end desired state
+        Eigen::VectorXd solver_extern_param(NP);
+        solver_extern_param.segment(0,10) = des_goal_state_;
+        solver_extern_param.segment(10,3) = des_trav_point_;
+        solver_extern_param.segment(13,9) = des_trav_9d_;
+        solver_extern_param(22) = t_tra_rel_;
+        solver_extern_param(23) = n_nodes_ * dt_; //current node relative time
+        
+        double *solver_extern_param_ptr = solver_extern_param.data();
+    
+       
+        ACADOS_model_acados_update_params(acados_ocp_capsule, n_nodes_, solver_extern_param_ptr, NP);
+        //set initial condition aligned with the current state
+        double *drone_state_ptr = drone_state_.data();
+        ocp_nlp_constraints_model_set(nlp_config, nlp_dims, nlp_in, 0, "lbx",drone_state_ptr);
+        ocp_nlp_constraints_model_set(nlp_config, nlp_dims, nlp_in, 0, "ubx",drone_state_ptr);
+
+
+        // solve the problem
+        status = ACADOS_model_acados_solve(acados_ocp_capsule);
+        if (status != 0){
+            NO_SOLUTION_FLAG_=true;
+            ROS_INFO("acados no solution");
+        }
+        else
+        {
+            // // get the state solution for visualization
+
+            if (PRED_TRAJ_VIS_FLAG_){
+                
+                
+                
+                for (int i = 0; i < n_nodes_; i++)
+                {   
+                    ocp_nlp_out_get(nlp_config, nlp_dims, nlp_out, i, "x", &state_traj_opt_[i*n_x_]);
+                }
+
+
+                // get the last state
+                ocp_nlp_out_get(nlp_config, nlp_dims, nlp_out, n_nodes_, "x",  &state_traj_opt_[n_nodes_*n_x_]);
+                
+            pred_traj_vis();
+
+                
+            }
+            
+        
+            // get the control input
+            ocp_nlp_out_get(nlp_config, nlp_dims, nlp_out, 0, "u", &control_opt_);
+        
+
+        }
+    }
+    last_request_time_=current_time;
+    
+}
 
 void mpcRosWrapper::drone_state_pose_cb(const geometry_msgs::PoseStamped::ConstPtr& msg)
 {
@@ -210,7 +322,9 @@ void mpcRosWrapper::mission_start_cb(const gestelt_msgs::GoalsPtr &msg)
     if (STATIC_GATE_TEST_)
     {   des_trav_point_ << msg->waypoints[0].position.x, msg->waypoints[0].position.y, msg->waypoints[0].position.z;
         des_trav_quat_ << msg->waypoints[0].orientation.w, msg->waypoints[0].orientation.x, msg->waypoints[0].orientation.y, msg->waypoints[0].orientation.z;
-        quat_to_rodrigues();
+        // quat_to_rodrigues();
+        quat_to_rotation_matrix();
+
     }
     des_goal_point_ << msg->waypoints[1].position.x, msg->waypoints[1].position.y, msg->waypoints[1].position.z;
     des_goal_quat_ << msg->waypoints[1].orientation.w, msg->waypoints[1].orientation.x, msg->waypoints[1].orientation.y, msg->waypoints[1].orientation.z;
@@ -240,6 +354,19 @@ void mpcRosWrapper::NN_trav_pose_cb(const geometry_msgs::PoseStamped::ConstPtr& 
     quat_to_rodrigues();
 }
 
+void mpcRosWrapper::close_loop_NN_trav_pose_cb(const gestelt_msgs::close_loop_NN_output::ConstPtr& msg)
+{
+    des_trav_point_ = Eigen::Map<const Eigen::VectorXd>(msg->position.data(), msg->position.size());
+    des_trav_9d_ = Eigen::Map<const Eigen::VectorXd>(msg->vector_9D_orientation.data(), msg->vector_9D_orientation.size());
+
+    // print the 9d vector
+    for (int i = 0; i < 9; i++)
+    {
+        ROS_INFO("9d vector is %f", des_trav_9d_(i));
+    }
+}
+
+
 void mpcRosWrapper::NN_trav_time_cb(const std_msgs::Float32::ConstPtr& msg)
 {
     t_tra_rel_ = msg->data;
@@ -261,7 +388,7 @@ void mpcRosWrapper::Update()
 
     if (MISSION_LOADED_FLAG_==true)
     {   
-        solver_request();
+        close_loop_solver_request();
         if (NO_SOLUTION_FLAG_)
         {   
             // traj server will send the current position as the setpoint
@@ -334,4 +461,27 @@ void mpcRosWrapper::quat_to_rodrigues()
     Eigen::Vector3d axis = des_trav_quat_.tail(3)/sin(theta/2);
     
     des_trav_rodrigues_ = axis * tan(theta/2);
+}
+
+
+void mpcRosWrapper::quat_to_rotation_matrix()
+{
+    double w = des_trav_quat_[0];
+    double x = des_trav_quat_[1];
+    double y = des_trav_quat_[2];
+    double z = des_trav_quat_[3];
+
+
+    // this function is used for static gate test, which 9d_vector is the rotation matrix,converted from the quaternion
+    
+    //full code of the quaternion to rotation matrix
+    des_trav_9d_(0) = 1 - 2*y*y - 2*z*z;
+    des_trav_9d_(1) = 2*x*y - 2*z*w;
+    des_trav_9d_(2) = 2*x*z + 2*y*w;
+    des_trav_9d_(3) = 2*x*y + 2*z*w;
+    des_trav_9d_(4) = 1 - 2*x*x - 2*z*z;
+    des_trav_9d_(5) = 2*y*z - 2*x*w;
+    des_trav_9d_(6) = 2*x*z - 2*y*w;
+    des_trav_9d_(7) = 2*y*z + 2*x*w;
+    des_trav_9d_(8) = 1 - 2*x*x - 2*y*y;
 }

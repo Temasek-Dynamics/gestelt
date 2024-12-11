@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 import numpy as np
 import rospy
+from scipy.spatial.transform import Rotation as R
+
+
 from gestelt_msgs.msg import CommanderState, Goals, CommanderCommand
 from geometry_msgs.msg import Pose, Accel,PoseArray,AccelStamped, Twist
 from mavros_msgs.msg import PositionTarget
@@ -19,6 +22,7 @@ import cProfile
 is_simulation=rospy.get_param('mission/is_simulation', False)
 gate_position=rospy.get_param('mission/gate_position', [0.0,0.0,1.2])
 gate_ori_RP=rospy.get_param('mission/gate_ori_RP', [0.0,0.0,0])
+gate_ori_euler=rospy.get_param('mission/gate_ori_euler', [0,0,0])
 
 goal_position=rospy.get_param('mission/goal_position', [0.0,0.0,1.2])
 goal_ori_euler=rospy.get_param('mission/goal_ori_euler', [0,0,0])
@@ -128,6 +132,25 @@ def create_trav_pose(position,RP_angles):
     print(f"trav pose: {pose}")
     return pose
 
+
+def create_close_loop_trav_pose(position,gate_ori_euler):
+    pose = Pose()
+
+    # transform waypoints from map to world
+    trans,rot=transform_map_to_world(is_simulation)
+    pose.position.x = position[0]+trans[0]
+    pose.position.y = position[1]+trans[1]
+    pose.position.z = position[2]+trans[2]
+
+    quat=quaternion_from_euler(gate_ori_euler[0],gate_ori_euler[1],gate_ori_euler[2])
+    # quat=R.from_euler('xyz', gate_ori_euler).as_quat()
+    pose.orientation.x = quat[0]
+    pose.orientation.y = quat[1]
+    pose.orientation.z = quat[2]
+    pose.orientation.w = quat[3]
+    print(f"trav pose: {pose}")
+    return pose
+
 def create_accel(acc_x,acc_y,acc_z):
     acc = Accel()
     acc_mask = Bool()
@@ -229,7 +252,8 @@ def main():
     # waypoints are under the map frame, will be transformed to world frame
 
     # # gate position
-    waypoints.append(create_trav_pose(gate_position,gate_ori_RP)) 
+    # waypoints.append(create_trav_pose(gate_position,gate_ori_RP)) 
+    waypoints.append(create_close_loop_trav_pose(gate_position,gate_ori_euler)) 
 
     # # end position
     waypoints.append(create_pose(goal_position,goal_ori_euler)) 

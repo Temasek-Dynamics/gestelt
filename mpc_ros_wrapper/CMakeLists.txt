@@ -81,7 +81,10 @@ file(GLOB ocp_solver
 
 file(GLOB casadi_fun
         ../gestelt_bringup/src/Learning_Agile/c_generated_code/ACADOS_model_model/ACADOS_model_expl_ode_fun.c
-        ../gestelt_bringup/src/Learning_Agile/c_generated_code/ACADOS_model_model/ACADOS_model_expl_vde_forw.c)
+        ../gestelt_bringup/src/Learning_Agile/c_generated_code/ACADOS_model_model/ACADOS_model_expl_vde_forw.c
+        ../gestelt_bringup/src/Learning_Agile/c_generated_code/ACADOS_model_model/ACADOS_model_impl_dae_fun.c
+        ../gestelt_bringup/src/Learning_Agile/c_generated_code/ACADOS_model_model/ACADOS_model_impl_dae_fun_jac_x_xdot_z.c
+        ../gestelt_bringup/src/Learning_Agile/c_generated_code/ACADOS_model_model/ACADOS_model_impl_dae_jac_x_xdot_u_z.c)
 
 
 add_library(ocp_shared_lib SHARED ${ocp_solver} ${casadi_fun} )

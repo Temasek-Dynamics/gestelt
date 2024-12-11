@@ -156,7 +156,7 @@ class Quadrotor:
         # Euler's law
         dq = 1 / 2 * mtimes(self.omega(self.ang_rate_B), self.q)
         
-        dw = mtimes(inv(self.J_B), self.M_B - mtimes(mtimes(self.skew(self.ang_rate_B), self.J_B), self.ang_rate_B))
+        # dw = mtimes(inv(self.J_B), self.M_B - mtimes(mtimes(self.skew(self.ang_rate_B), self.J_B), self.ang_rate_B))
         
         # state
         self.X = vertcat(self.r_I, self.v_I, self.q)#, self.ang_rate_B)

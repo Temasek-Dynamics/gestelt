@@ -1,6 +1,6 @@
 
 # flight mission
-STATIC_GATE_TEST: false
+STATIC_GATE_TEST: true
 mission_period: 8.0 #s
 
 drone:
@@ -15,7 +15,7 @@ gate:
   linear_vel: [0.0, 0.0, 0.0]
   # angular_vel: 0.0 
   # linear_vel: [0.1,-0.1,0.0]  #[0.5,-0.3,0.0]
-  angular_vel: 0.5
+  angular_vel: 0.0
 traj_server:
   takeoff_height: 1.2
   drone_yaw: 0.0 # take-off yaw
@@ -50,12 +50,13 @@ mission:
 
   ##------ gate pose ----##
   # only feasible for STATIC_GATE_TEST
-  gate_position: [1.0, -0.0, 1.5]
+  gate_position: [0.0, -0.0, 1.5]
   gate_ori_RP: [-0.0, -0.99, -0.0]  # 1 for 90 degree
+  gate_ori_euler: [0.0, -1.5,0.0] # RPY # 135 degree is radian is 2.35619
 
   ##------ goal pose ----##
-  goal_position: [0.0, 3, 0]
-  goal_ori_euler: [0.0, 0.0,0.0] # RPY, only yaw is active
+  goal_position: [0.0, 3, 2.5]
+  goal_ori_euler: [0.0, 0.0, 0.0] # RPY, only yaw is active
 
   
 # MPC parameters
@@ -153,4 +154,4 @@ training_param:
 
 ## ------NN configuration ----##
 NN2_model_name: 'NN2_imitate_1.pth'
-NN2_freq: 10
+NN2_freq: 100

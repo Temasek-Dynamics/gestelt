@@ -90,7 +90,7 @@ def nn_sample(init_pos=None,final_pos=None,init_angle=None,cur_epoch=train_cfg['
         else:
             gate_pitch=gate_pitch-des_pitch_mean
         
-        # gate_pitch = -1.2 #1.2rad = 68.754 degrees
+        gate_pitch = -0.2 #1.2rad = 68.754 degrees
         # gate_pitch = np.random.uniform(-pi/6,pi/6)
 
     ##==calculate the gate RM

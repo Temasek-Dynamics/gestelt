@@ -23,6 +23,7 @@ add_message_files(
   CommanderCommand.msg
   CommanderState.msg
   Goals.msg
+  close_loop_NN_output.msg
 )
 
 ## Generate services in the 'srv' folder
