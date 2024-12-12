@@ -540,9 +540,9 @@ class OCSys:
         ocp.solver_options.hessian_approx = 'GAUSS_NEWTON' # GAUSS_NEWTON, EXACT
         ocp.solver_options.regularize_method = 'CONVEXIFY'#'CONVEXIFY', PROJECT_REDUC_HESS
         ocp.solver_options.integrator_type = 'ERK' # fast ERK (explicit Runge-Kutta integrator) or IRK (Implicit Runge-Kutta integrator)
-        ocp.solver_options.sim_method_num_steps =4
+        ocp.solver_options.sim_method_num_steps =4 #Default 1
         ocp.solver_options.sim_method_num_stages = 4 # default 4
-        ocp.solver_options.sim_method_newton_iter = 3
+        ocp.solver_options.sim_method_newton_iter = 3 # default 3
         ocp.solver_options.print_level = 0
         ocp.solver_options.levenberg_marquardt = 1e-10 # small value for gauss newton method, large value for gradient descent method
         
