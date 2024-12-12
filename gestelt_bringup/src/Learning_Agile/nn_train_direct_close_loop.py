@@ -54,7 +54,7 @@ class DirectCloseLoop():
         options['PDP_GRADIENT']= True
         options['SQP_RTI_OPTION']=False
         options['JAX_SVD']=False
-        options['STATIC_GATE_TEST']=False
+        options['MANUAL_SET_POSE_TEST']=False
         options['ORIGIN_REWARD']=False
         options['CLOSE_LOOP_TRAINING']=True
         self.learning_agile_sim = LearningAgileSim(python_sim_time=5,

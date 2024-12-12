@@ -60,6 +60,7 @@ class NN2_ROS_wrapper:
         self.mission_period = rospy.get_param('mission/period', 8)
         NN2_model_name=rospy.get_param('NN2_model_name', 'NN2_imitate_1.pth')
         self.NN2_freq = rospy.get_param('NN2_freq', 100)
+        MANUAL_SET_POSE_TEST = rospy.get_param('MANUAL_SET_POSE_TEST', False)
         ## ==========================initialize ==========================-##
         
         self.state = np.zeros(10)
@@ -83,14 +84,16 @@ class NN2_ROS_wrapper:
         self.NN_forward_time_pub = rospy.Publisher("/learning_agile_sim/NN_forward_time", Float32, queue_size=1)
         self.gate_vis_pub = rospy.Publisher("/learning_agile_sim/gate_vis", Marker, queue_size=1)
         
-        self.gate_vis_timer = rospy.Timer(rospy.Duration(1/self.NN2_freq), self.gate_vis)
-        self.NN2_output_timer = rospy.Timer(rospy.Duration(1/self.NN2_freq), self.close_loop_NN_forward)
        
-        ##================- load trained DNN2 model ======================-##
-        # model_file=os.path.join(current_dir, 'training_data/NN_model',NN2_model_name)
-        model_file = os.path.join(current_dir, 'training_results/2024-11-22/12-56-50/trained_model/NN_close_500.pth')
-        self.model = torch.load(model_file)
-    
+        if not MANUAL_SET_POSE_TEST:
+            self.gate_vis_timer = rospy.Timer(rospy.Duration(1/self.NN2_freq), self.gate_vis)
+            self.NN2_output_timer = rospy.Timer(rospy.Duration(1/self.NN2_freq), self.close_loop_NN_forward)
+        
+            ##================- load trained DNN2 model ======================-##
+            # model_file=os.path.join(current_dir, 'training_data/NN_model',NN2_model_name)
+            model_file = os.path.join(current_dir, 'training_results/2024-11-22/12-56-50/trained_model/NN_close_500.pth')
+            self.model = torch.load(model_file)
+        
         
         ##====================-gate initialization ========================##
 

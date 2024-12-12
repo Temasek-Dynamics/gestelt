@@ -375,8 +375,8 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: -0.36051511764526367
-        Y: 5.460660934448242
+        X: -0.46265196800231934
+        Y: -1.0152640342712402
         Z: 1.1920928955078125e-06
       Focal Shape Fixed Size: false
       Focal Shape Size: 0.05000000074505806
@@ -385,7 +385,7 @@ Visualization Manager:
       Near Clip Distance: 0.009999999776482582
       Pitch: 0.11539888381958008
       Target Frame: my_view
-      Yaw: 0.9208552837371826
+      Yaw: 1.0908551216125488
     Saved:
       - Class: rviz/FPS
         Enable Stereo Rendering:

@@ -11,7 +11,7 @@ void mpcRosWrapper::init(ros::NodeHandle& nh)
     nh.param("learning_agile/no_solution_flag_t_thresh", no_solution_flag_t_thresh_, 0.02);
     nh.param("learning_agile/single_motor_max_thrust", single_motor_max_thrust_, 2.1334185);
     nh.param("learning_agile/pred_traj_vis", PRED_TRAJ_VIS_FLAG_, false);
-    nh.param("STATIC_GATE_TEST", STATIC_GATE_TEST_, true);
+    nh.param("MANUAL_SET_POSE_TEST", MANUAL_SET_POSE_TEST_, true);
     
     /////////////////
     /* Subscribers */
@@ -20,7 +20,7 @@ void mpcRosWrapper::init(ros::NodeHandle& nh)
     drone_twist_sub_= nh.subscribe("/mavros/local_position/velocity_local", 1, &mpcRosWrapper::drone_state_twist_cb, this);
     waypoint_sub_ = nh.subscribe("/planner/goals_learning_agile", 1, &mpcRosWrapper::mission_start_cb, this);
 
-    if (!STATIC_GATE_TEST_)
+    if (!MANUAL_SET_POSE_TEST_)
     {
         NN_trav_pose_sub_ = nh.subscribe("/learning_agile_sim/NN_trav_pose", 1, &mpcRosWrapper::close_loop_NN_trav_pose_cb, this);
         NN_trav_time_sub_ = nh.subscribe("/learning_agile_sim/NN_trav_time", 1, &mpcRosWrapper::NN_trav_time_cb, this);
@@ -71,6 +71,9 @@ void mpcRosWrapper::init(ros::NodeHandle& nh)
     MISSION_LOADED_FLAG_=false;
     NO_SOLUTION_FLAG_=false;
 
+    int n = 3;
+    Eigen::MatrixXd identityMatrix = Eigen::MatrixXd::Identity(n, n);
+    des_trav_9d_ = Eigen::Map<Eigen::VectorXd>(identityMatrix.data(), identityMatrix.size());
 }
 
 void mpcRosWrapper::solver_request(){
@@ -95,7 +98,7 @@ void mpcRosWrapper::solver_request(){
 
         double mission_t_progress= std::chrono::duration_cast<std::chrono::duration<double>>(current_time - mission_start_time_).count();
         
-        if (STATIC_GATE_TEST_)
+        if (MANUAL_SET_POSE_TEST_)
         {
             t_tra_rel_=t_tra_abs_-mission_t_progress; 
         }
@@ -207,7 +210,7 @@ void mpcRosWrapper::close_loop_solver_request(){
 
         double mission_t_progress= std::chrono::duration_cast<std::chrono::duration<double>>(current_time - mission_start_time_).count();
         
-        if (STATIC_GATE_TEST_)
+        if (MANUAL_SET_POSE_TEST_)
         {
             t_tra_rel_=t_tra_abs_-mission_t_progress; 
         }
@@ -319,7 +322,7 @@ void mpcRosWrapper::drone_state_twist_cb(const geometry_msgs::TwistStamped::Cons
 
 void mpcRosWrapper::mission_start_cb(const gestelt_msgs::GoalsPtr &msg)
 {   
-    if (STATIC_GATE_TEST_)
+    if (MANUAL_SET_POSE_TEST_)
     {   des_trav_point_ << msg->waypoints[0].position.x, msg->waypoints[0].position.y, msg->waypoints[0].position.z;
         des_trav_quat_ << msg->waypoints[0].orientation.w, msg->waypoints[0].orientation.x, msg->waypoints[0].orientation.y, msg->waypoints[0].orientation.z;
         // quat_to_rodrigues();
@@ -338,7 +341,7 @@ void mpcRosWrapper::mission_start_cb(const gestelt_msgs::GoalsPtr &msg)
     // ROS_INFO("Mission loaded, will sleep 1s for the NN to publish the traverse time");
     // ros::Duration(1).sleep();
 
-    if (STATIC_GATE_TEST_)
+    if (MANUAL_SET_POSE_TEST_)
     {
         MISSION_LOADED_FLAG_=true;
         mission_start_time_= std::chrono::high_resolution_clock::now();

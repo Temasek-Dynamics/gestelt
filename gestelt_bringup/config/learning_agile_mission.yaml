@@ -1,6 +1,6 @@
 
 # flight mission
-STATIC_GATE_TEST: true
+MANUAL_SET_POSE_TEST: true
 mission_period: 8.0 #s
 
 drone:
@@ -23,19 +23,20 @@ mission:
   #################################################
   ######--------- for test --------#########
   #################################################
-  # ##------ MPC initial pose ----##
-  ## ##initial pose only works for python sim
-  # initial_position: [0.0, -3.0, 1]
-  # initial_ori_euler: [0.0, 0.0, 0.0] # RPY, only yaw is active
+  ##------ MPC initial pose ----##
+  # ##initial pose only works for python sim
+  initial_position: [0.0, 1.8, 1]
+  initial_ori_euler: [0.0, 0.0, 0.0] # RPY, only yaw is active
 
-  # ##------ gate pose ----##
-  # # only feasible for STATIC_GATE_TEST
-  # gate_position: [1.0, 0.0, 1.5]
+  ##------ gate pose ----##
+  # only feasible for MANUAL_SET_POSE_TEST
+  gate_position: [1.5, 0.0, 1.8]
   # gate_ori_RP: [-0.0, -1.055, 0.0]
-
-  # ##------ goal pose ----##
-  # goal_position: [0.0, 3, 1]
-  # goal_ori_euler: [0.0, 0.0, 0.0] # RPY, only yaw is active
+  gate_ori_euler: [0.0, -1.0,0.0] # 1.0 radian is 57.2958 degree, 1.5 radian is 85.9437 degree
+  
+  ##------ goal pose ----##
+  goal_position: [0.0, -1.8, 1]
+  goal_ori_euler: [0.0, 0.0, 0.0] # RPY, only yaw is active
 
   #################################################
   ######-----end of for testing --------------#####
@@ -45,18 +46,18 @@ mission:
   #################################################
   ##------ MPC initial pose ----##
   ##initial pose only works for python sim
-  initial_position: [0.0, -6, 0]
-  initial_ori_euler: [0.0, 0.0, 0] # RPY, only yaw is active
+  # initial_position: [0.0, -6, 0]
+  # initial_ori_euler: [0.0, 0.0, 0] # RPY, only yaw is active
 
-  ##------ gate pose ----##
-  # only feasible for STATIC_GATE_TEST
-  gate_position: [0.0, -0.0, 1.5]
-  gate_ori_RP: [-0.0, -0.99, -0.0]  # 1 for 90 degree
-  gate_ori_euler: [0.0, -1.5,0.0] # RPY # 135 degree is radian is 2.35619
+  # ##------ gate pose ----##
+  # # only feasible for MANUAL_SET_POSE_TEST
+  # gate_position: [0.0, -0.0, 1.5]
+  # gate_ori_RP: [-0.0, -0.99, -0.0]  # 1 for 90 degree
+  # gate_ori_euler: [0.0, -1.5,0.0] # RPY # 135 degree is radian is 2.35619
 
-  ##------ goal pose ----##
-  goal_position: [0.0, 3, 2.5]
-  goal_ori_euler: [0.0, 0.0, 0.0] # RPY, only yaw is active
+  # ##------ goal pose ----##
+  # goal_position: [0.0, 3, 1.5]
+  # goal_ori_euler: [0.0, 0.0, 0.0] # RPY, only yaw is active
 
   
 # MPC parameters
@@ -101,7 +102,7 @@ learning_agile:
   ##------ traversing parameters ---##
   max_traverse_weight: 100 #100
   traverse_weight_span: 10 #gamma, could be a learning variable
-  traverse_time: 1.5 # only for STATIC_GATE_TEST
+  traverse_time: 1.5 # only for MANUAL_SET_POSE_TEST
 
   ##------ safety parameters  ------##
   no_solution_flag_t_thresh: 0.1
@@ -109,7 +110,7 @@ learning_agile:
   ##------ MPC problem parameters---## 
   ## ---- hard coded in the solver ----##
   ## modify this required recompilation of the solver
-  horizon: 40
+  horizon: 20
   dt: 0.1
     
   ##------ model parameters --------##

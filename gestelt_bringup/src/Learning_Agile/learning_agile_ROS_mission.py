@@ -26,7 +26,7 @@ gate_ori_euler=rospy.get_param('mission/gate_ori_euler', [0,0,0])
 
 goal_position=rospy.get_param('mission/goal_position', [0.0,0.0,1.2])
 goal_ori_euler=rospy.get_param('mission/goal_ori_euler', [0,0,0])
-
+MANUAL_SET_POSE_TEST = rospy.get_param('MANUAL_SET_POSE_TEST', False)
 
 # Publisher of server events to trigger change of states for trajectory server 
 server_event_pub = rospy.Publisher('/traj_server/command', CommanderCommand, queue_size=10)
@@ -253,7 +253,8 @@ def main():
 
     # # gate position
     # waypoints.append(create_trav_pose(gate_position,gate_ori_RP)) 
-    waypoints.append(create_close_loop_trav_pose(gate_position,gate_ori_euler)) 
+    if MANUAL_SET_POSE_TEST:
+        waypoints.append(create_close_loop_trav_pose(gate_position,gate_ori_euler)) 
 
     # # end position
     waypoints.append(create_pose(goal_position,goal_ori_euler)) 

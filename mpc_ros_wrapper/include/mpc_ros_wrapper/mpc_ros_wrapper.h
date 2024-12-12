@@ -94,7 +94,7 @@ class mpcRosWrapper{
     // desired traverse state
     Eigen::Vector3d des_trav_point_={0,0,0};
     Eigen::Vector3d des_trav_rodrigues_={0,0,0};
-    Eigen::VectorXd des_trav_9d_=Eigen::VectorXd::Ones(9);
+    Eigen::VectorXd des_trav_9d_=Eigen::VectorXd::Zero(9);
     Eigen::Vector4d des_trav_quat_={1,0,0,0};
 
     // time setting
@@ -154,6 +154,6 @@ class mpcRosWrapper{
 
     // misc
     bool PRED_TRAJ_VIS_FLAG_=false;
-    bool STATIC_GATE_TEST_=true;
+    bool MANUAL_SET_POSE_TEST_=true;
 
 };

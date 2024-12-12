@@ -98,7 +98,7 @@ class LearningAgileSim():
         else:
             self.config_dict = mission_cfg
             
-        if not self.options['STATIC_GATE_TEST']:
+        if not self.options['MANUAL_SET_POSE_TEST']:
             # load trained DNN2 model
             if model_file is not None:
                 self.model = torch.load(model_file)
@@ -160,12 +160,14 @@ class LearningAgileSim():
         self.goal_yaw=np.array(self.config_dict['mission']['goal_ori_euler'])[2]
         
         self.gate_center=np.array(self.config_dict['mission']['gate_position'])
-        self.gate_ori_RP=np.array(self.config_dict['mission']['gate_ori_RP'])
-        
+        # self.gate_ori_RP=np.array(self.config_dict['mission']['gate_ori_RP'])
+        gate_ori_euler=np.array(self.config_dict['mission']['gate_ori_euler'])
+        self.gate_ori_9d=R.from_euler('zyx',gate_ori_euler).as_matrix().flatten()
+
         self.t_tra_abs=self.config_dict['learning_agile']['traverse_time']
         
         self.env_init_set = nn_sample(cur_epoch=i)
-        if self.options['STATIC_GATE_TEST']:
+        if self.options['MANUAL_SET_POSE_TEST']:
             self.env_init_set[0:3]=ini_pos
             self.env_init_set[3:6]=end_pos
         self.env_init_set[6]=ini_yaw # drone_init_yaw
@@ -229,7 +231,7 @@ class LearningAgileSim():
 
 
         
-        if self.options['STATIC_GATE_TEST']:
+        if self.options['MANUAL_SET_POSE_TEST']:
             self.gate_t_i = Gate(self.gate_points_list[0])
 
             # self.t_tra_abs is manually set
@@ -283,7 +285,7 @@ class LearningAgileSim():
         self.des_tra_R_list = np.concatenate((self.des_tra_R_list,[des_tra_R]),axis = 0)
         self.Pitch = np.concatenate((self.Pitch,[gate_pitch]),axis = 0) 
 
-    def close_loop_model_forward(self):
+    def close_loop_NN_forward(self):
         self.gate_t_i = Gate(self.gate_points_list[self.i])
         ## == NN forward === ##
         nn2_inputs=np.zeros(input_size)
@@ -320,7 +322,7 @@ class LearningAgileSim():
         self.log_NN_IO_for_RM(gate_pitch,out,verify_tra_R.flatten()) 
         return out 
     
-    def imitate_model_forward(self):
+    def imiate_NN_forward(self):
         
         nn2_inputs,gate_pitch = input_cal(self.state,self.final_point,self.gate_t_i)
        
@@ -354,7 +356,7 @@ class LearningAgileSim():
 
             if (self.i%5)==0: # control frequency = 100 hz  
                 
-                if self.options['STATIC_GATE_TEST']:
+                if self.options['MANUAL_SET_POSE_TEST']:
                     self.gate_state_search()
                     nn2_inputs = np.zeros(23)
                     nn2_inputs[0:10] = self.state 
@@ -365,12 +367,7 @@ class LearningAgileSim():
                     out=np.zeros(13)
                     out[0:3]=self.gate_center
                     # out[3:6]=self.gate_ori_RP # Rodrigues parameters
-                    out[3:12]=np.array([[0.6427876,  0.0000000,  -0.7660444],
-                                        [0.0000000,  1.0000000,  0.0000000],
-                                        [0.7660444,  0.0000000,  0.6427876]]).flatten() # 3x3 rotation matrix(in flat form)
-                    # out[3:12]=np.array([[0.0007963,  0.0000000, -0.9999997],
-                    #                     [0.0000000,  1.0000000,  0.0000000],
-                    #                     [0.9999997,  0.0000000,  0.0007963]]).flatten()
+                    out[3:12]=self.gate_ori_9d # manual set 9D vector (is rotation matrix directly)
                     print("="*50)
                     print("NN pose det before SVD",np.linalg.det(out[3:12].reshape(3,3)))
                     
@@ -397,10 +394,10 @@ class LearningAgileSim():
                 else:
                     
                     if self.options['CLOSE_LOOP_MODEL']:
-                        out = self.close_loop_model_forward()
+                        out = self.close_loop_NN_forward()
                         des_tra_pos=+out[0:3]
                     else:
-                        out = self.imitate_model_forward()
+                        out = self.imiate_NN_forward()
                         des_tra_pos=self.gate_t_i.centroid+out[0:3]
                     des_tra_m=out[3:12]
                 t_comp = time.time()
@@ -483,7 +480,7 @@ class LearningAgileSim():
                                        dt=0.01)
         
         # save the data, not show it
-        if not self.options['STATIC_GATE_TEST']:
+        if not self.options['MANUAL_SET_POSE_TEST']:
             self.planner.uav1.plot_position(self.nn_output_list,name='NN2_output')
 
             if self.options['CLOSE_LOOP_MODEL']:
@@ -530,7 +527,7 @@ def main():
     options['USE_PREV_SOLVER']=False
     options['PDP_GRADIENT']=False
     options['SQP_RTI_OPTION']=True
-    options['STATIC_GATE_TEST']=False
+    options['MANUAL_SET_POSE_TEST']=True
     options['CLOSE_LOOP_MODEL']= True
     options['JAX_SVD']=False
     options['CLOSE_LOOP_TRAINING']=False
