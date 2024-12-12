@@ -42,7 +42,7 @@ docker buildx prune
 ## Running containers
 ```bash
 # To use host USB devices, add "--privileged" flag or "--device=/dev/ttyAML1"
-docker run -it --rm --network host --privileged -e "MASTER_IP=$MASTER_IP" -e "SELF_IP=$SELF_IP" gestelt/learning-agile:latest
+docker run -it --rm --network host --privileged -e "MASTER_IP=$MASTER_IP" -e "SELF_IP=$SELF_IP" -e "DRONE_NAME_VICON=$DRONE_NAME_VICON" gestelt/learning-agile:latest
 
 # Find name of new machine 
 docker ps -l
@@ -77,7 +77,7 @@ docker container inspect CONTAINER_NAME
 ```bash
 # Pull Images
 docker pull gestelt/learning-agile:latest
-docker run -it --rm --network host --privileged -e "MASTER_IP=$MASTER_IP" -e "SELF_IP=$SELF_IP" gestelt/learning-agile:latest
+docker run -it --rm --network host --privileged -e "MASTER_IP=$MASTER_IP" -e "SELF_IP=$SELF_IP" -e "DRONE_NAME_VICON=$DRONE_NAME_VICON" gestelt/learning-agile:latest
 ```
 
 # Repositories
