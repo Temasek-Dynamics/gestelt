@@ -20,7 +20,7 @@ RUN git checkout tianchensun_learning_agile
 
 # compile the workspace
 WORKDIR /gestelt_ws/
-RUN python3 ./src/gestelt/gestelt_bringup/src/Learning_Agile/learning_agile_sim.py
+# RUN python3 ./src/gestelt/gestelt_bringup/src/Learning_Agile/learning_agile_sim.py
 RUN export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/root/acados/lib \
     && export ACADOS_SOURCE_DIR=/root/acados \
     && source /opt/ros/noetic/setup.bash \
