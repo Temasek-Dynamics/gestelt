@@ -2,7 +2,7 @@ import os
 import datetime
 import logging
 import yaml
-from torch.utils.tensorboard import SummaryWriter
+
 
 from logger_misc import LoggerConfig,log_gradient,log_train_IO
 
@@ -52,6 +52,7 @@ with open(training_yaml_file, 'r', encoding='utf-8') as file:
 # 延迟执行的目录创建逻辑
 def setup_training_directories(base_dir='training_results'):
     """仅在需要时创建训练目录和子目录"""
+   
     training_results_folder = os.path.abspath(os.path.join(current_dir, base_dir))
     if not os.path.exists(training_results_folder):
         os.makedirs(training_results_folder)
