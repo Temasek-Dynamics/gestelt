@@ -1,5 +1,5 @@
 ## this file is a package for policy search for quadrotor
-from collision_detection import *
+
 import math
 import numpy as np
 from quad_OC import OCSys,LQR
@@ -125,7 +125,7 @@ class PlanFwdBwdWrapper():
         ###------------ PDP auxiliary control system----------------#######
         ###################################################################
         # define the auxilary control system symbolic functions
-        
+    
        
         if options['MPC_BACKWARD']:
             
@@ -167,7 +167,8 @@ class PlanFwdBwdWrapper():
         self.point1 = gate_point[0:3]
         self.point2 = gate_point[3:6]
         self.point3 = gate_point[6:9]
-        self.point4 = gate_point[9:12]        
+        self.point4 = gate_point[9:12]     
+        from collision_detection import Obstacle   
         self.obstacle = Obstacle(self.config,self.point1,self.point2,self.point3,self.point4)
 
 

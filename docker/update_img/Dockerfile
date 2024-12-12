@@ -10,7 +10,6 @@ SHELL ["/bin/bash", "-c"]
 #     jax \
 #     && rm -rf /var/lib/apt/lists/*
 
-
 # WORKDIR /gestelt_ws/src/
 # RUN git clone https://github.com/ros-drivers/vrpn_client_ros.git
 
