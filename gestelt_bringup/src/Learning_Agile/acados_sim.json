@@ -103,7 +103,7 @@
         "Tsim": 0.002,
         "collocation_type": "GAUSS_LEGENDRE",
         "ext_fun_compile_flags": "-O2",
-        "integrator_type": "IRK",
+        "integrator_type": "ERK",
         "num_threads_in_batch_solve": 1,
         "output_z": true,
         "sens_adj": false,

@@ -539,7 +539,7 @@ class OCSys:
         ocp.solver_options.qp_solver = 'FULL_CONDENSING_QPOASES'# FULL_CONDENSING_HPIPM PARTIAL_CONDENSING_HPIPM  FULL_CONDENSING_QPOASES PARTIAL_CONDENSING_OSQP
         ocp.solver_options.hessian_approx = 'GAUSS_NEWTON' # GAUSS_NEWTON, EXACT
         ocp.solver_options.regularize_method = 'CONVEXIFY'#'CONVEXIFY', PROJECT_REDUC_HESS
-        ocp.solver_options.integrator_type = 'IRK' # ERK (explicit Runge-Kutta integrator) or IRK (Implicit Runge-Kutta integrator)
+        ocp.solver_options.integrator_type = 'ERK' # fast ERK (explicit Runge-Kutta integrator) or IRK (Implicit Runge-Kutta integrator)
         ocp.solver_options.sim_method_num_steps =4
         ocp.solver_options.sim_method_num_stages = 4 # default 4
         ocp.solver_options.sim_method_newton_iter = 3
@@ -573,7 +573,7 @@ class OCSys:
         sim.solver_options.T=dyn_step # integration time
         sim.solver_options
 
-        sim.solver_options.integrator_type = 'IRK' # ERK (explicit Runge-Kutta integrator) or IRK (Implicit Runge-Kutta integrator)
+        sim.solver_options.integrator_type = 'ERK' # ERK (explicit Runge-Kutta integrator) fast or IRK (Implicit Runge-Kutta integrator) slow
         sim.solver_options.num_stages = 4
         sim.solver_options.num_steps = 4
         sim.solver_options.newton_iter = 3 # for implicit integrator
