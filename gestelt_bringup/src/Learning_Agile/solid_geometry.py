@@ -6,8 +6,8 @@ import casadi as ca
 import os
 os.environ["JAX_PLATFORM_NAME"] = "cpu" 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
-import jax
-import jax.numpy as jnp
+# import jax
+# import jax.numpy as jnp
 from einops import rearrange
 import copy
 from casadi import Opti
@@ -34,17 +34,17 @@ def mat2vec(mat, dimb=3):
 def vec2mat(vec, dimb=3):
     return rearrange(vec, "(b a) -> a b", a=3, b=dimb)
 
-@jax.jit
-def SVD_M_to_SO3(m: np.ndarray) -> np.ndarray:
-    """Maps 3x3 matrices onto SO(3) via symmetric orthogonalization.
-    Source: Google research - https://github.com/google-research/google-research/blob/193eb9d7b643ee5064cb37fd8e6e3ecde78737dc/special_orthogonalization/utils.py#L93-L115
-    """
-    m=m.reshape(3,3)
-    m = jnp.asarray(m)
-    U, _, Vh = jnp.linalg.svd(m, full_matrices=False)
-    det = jnp.linalg.det(jnp.matmul(U, Vh))
-    R= jnp.matmul(jnp.c_[U[:, :-1], U[:, -1] * det], Vh)
-    return R
+# @jax.jit
+# def SVD_M_to_SO3(m: np.ndarray) -> np.ndarray:
+#     """Maps 3x3 matrices onto SO(3) via symmetric orthogonalization.
+#     Source: Google research - https://github.com/google-research/google-research/blob/193eb9d7b643ee5064cb37fd8e6e3ecde78737dc/special_orthogonalization/utils.py#L93-L115
+#     """
+#     m=m.reshape(3,3)
+#     m = jnp.asarray(m)
+#     U, _, Vh = jnp.linalg.svd(m, full_matrices=False)
+#     det = jnp.linalg.det(jnp.matmul(U, Vh))
+#     R= jnp.matmul(jnp.c_[U[:, :-1], U[:, -1] * det], Vh)
+#     return R
 
 class SVD():
     def __init__(self):

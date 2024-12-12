@@ -7,8 +7,13 @@ SHELL ["/bin/bash", "-c"]
 # Copy .bashrc file
 # COPY .bashrc /root/
 # RUN apt-get update && apt-get install --no-install-recommends -y \
-#     ros-noetic-tf2-geometry-msgs    \
+#     jax \
 #     && rm -rf /var/lib/apt/lists/*
+
+RUN pip install jax==0.4.13
+RUN pip install --upgrade pip
+RUN pip install jaxlib
+
 # WORKDIR /gestelt_ws/src/
 # RUN git clone https://github.com/ros-drivers/vrpn_client_ros.git
 
