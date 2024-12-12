@@ -8,9 +8,9 @@ os.environ["JAX_PLATFORM_NAME"] = "cpu"
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 # import jax
 # import jax.numpy as jnp
-from einops import rearrange
+# from einops import rearrange
 import copy
-from casadi import Opti
+# from casadi import Opti
 
 
 def qr_eigen(A, iterations=10):
@@ -26,13 +26,13 @@ def qr_eigen(A, iterations=10):
         X = R @ Q  # Update eigenvalue matrix for next iteration
     return ca.diag(X), pQ    
 
-def mat2vec(mat, dimb=3):
-    # Same as table.T.reshape(-1, 1)
-    return rearrange(mat, "a b -> (b a)", a=3, b=dimb)
+# def mat2vec(mat, dimb=3):
+#     # Same as table.T.reshape(-1, 1)
+#     return rearrange(mat, "a b -> (b a)", a=3, b=dimb)
 
 
-def vec2mat(vec, dimb=3):
-    return rearrange(vec, "(b a) -> a b", a=3, b=dimb)
+# def vec2mat(vec, dimb=3):
+#     return rearrange(vec, "(b a) -> a b", a=3, b=dimb)
 
 # @jax.jit
 # def SVD_M_to_SO3(m: np.ndarray) -> np.ndarray:
