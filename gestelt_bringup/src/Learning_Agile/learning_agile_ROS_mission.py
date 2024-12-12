@@ -12,8 +12,8 @@ import math
 import time
 import tf
 from tf.transformations import quaternion_from_euler
-from quad_policy import Rd2Rp
-from quad_model import toQuaternion
+# from quad_policy import Rd2Rp
+# from quad_model import toQuaternion
 
 # running time statistics
 import cProfile
@@ -114,23 +114,23 @@ def create_pose(position,euler_angles):
     
     return pose
 
-def create_trav_pose(position,RP_angles):
-    pose = Pose()
+# def create_trav_pose(position,RP_angles):
+#     pose = Pose()
 
-    # transform waypoints from map to world
-    trans,rot=transform_map_to_world(is_simulation)
-    pose.position.x = position[0]+trans[0]
-    pose.position.y = position[1]+trans[1]
-    pose.position.z = position[2]+trans[2]
+#     # transform waypoints from map to world
+#     trans,rot=transform_map_to_world(is_simulation)
+#     pose.position.x = position[0]+trans[0]
+#     pose.position.y = position[1]+trans[1]
+#     pose.position.z = position[2]+trans[2]
 
-    atti = Rd2Rp(RP_angles)
-    quat=toQuaternion(atti[0],atti[1])
-    pose.orientation.w = quat[0]
-    pose.orientation.x = quat[1]
-    pose.orientation.y = quat[2]
-    pose.orientation.z = quat[3]
-    print(f"trav pose: {pose}")
-    return pose
+#     atti = Rd2Rp(RP_angles)
+#     quat=toQuaternion(atti[0],atti[1])
+#     pose.orientation.w = quat[0]
+#     pose.orientation.x = quat[1]
+#     pose.orientation.y = quat[2]
+#     pose.orientation.z = quat[3]
+#     print(f"trav pose: {pose}")
+#     return pose
 
 
 def create_close_loop_trav_pose(position,gate_ori_euler):
