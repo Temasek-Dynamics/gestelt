@@ -533,7 +533,7 @@ def main():
     options['CLOSE_LOOP_MODEL']= True
     options['JAX_SVD']=False
     options['CLOSE_LOOP_TRAINING']=False
-    options['VISUALIZE']=False
+    options['VISUALIZE']=True
     if options['CLOSE_LOOP_MODEL']:
         model_name = 'training_results/2024-11-22/12-56-50/trained_model/NN_close_500.pth'#'NN2_imitate_1.pth' #'NN_close_2.pth'
         model_file=os.path.join(current_dir,model_name)
