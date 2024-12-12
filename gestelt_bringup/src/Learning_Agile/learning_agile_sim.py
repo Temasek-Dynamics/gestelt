@@ -473,39 +473,41 @@ class LearningAgileSim():
         np.save(os.path.join(python_sim_data_folder,'solving_time'),self.solving_time)
         np.save(os.path.join(python_sim_data_folder,'nn_output_list'),self.nn_output_list)
         np.save(os.path.join(python_sim_data_folder,'des_tra_R_list'),self.des_tra_R_list)
-        self.planner.uav1.play_animation(wing_len=self.planner.wing_len,
-                                       gate_traj1=self.gate_points_list[::5,:,:],
-                                       state_traj=self.state_n[::5,:],
-                                       goal_pos=self.final_point.tolist(),
-                                       dt=0.01)
-        
-        # save the data, not show it
-        if not self.options['MANUAL_SET_POSE_TEST']:
-            self.planner.uav1.plot_position(self.nn_output_list,name='NN2_output')
 
-            if self.options['CLOSE_LOOP_MODEL']:
-                self.planner.uav1.plot_trav_time(self.NN_T_tra) # pure NN close loop traversal time
-            else:
-                self.planner.uav1.plot_trav_time(self.T) # Binary search traversal time
-        self.planner.uav1.plot_thrust(self.control_n)
-        self.planner.uav1.plot_angularrate(self.control_n)
-        self.planner.uav1.plot_position(self.state_n,name='drone_actual')
-        self.planner.uav1.plot_velocity(self.state_n)
-        self.planner.uav1.plot_quaternions(self.state_n)
+        if self.options['VISUALIZE']:
+            self.planner.uav1.play_animation(wing_len=self.planner.wing_len,
+                                        gate_traj1=self.gate_points_list[::5,:,:],
+                                        state_traj=self.state_n[::5,:],
+                                        goal_pos=self.final_point.tolist(),
+                                        dt=0.01)
+            
+            # save the data, not show it
+            if not self.options['MANUAL_SET_POSE_TEST']:
+                self.planner.uav1.plot_position(self.nn_output_list,name='NN2_output')
 
-        # self.planner.uav1.plot_quaternions_norm(self.state_n)
-        # self.planner.uav1.plot_quaternions_norm(self.pos_vel_att_cmd_n)
-        # self.planner.uav1.plot_trav_weight(self.tra_weight_list)
+                if self.options['CLOSE_LOOP_MODEL']:
+                    self.planner.uav1.plot_trav_time(self.NN_T_tra) # pure NN close loop traversal time
+                else:
+                    self.planner.uav1.plot_trav_time(self.T) # Binary search traversal time
+            self.planner.uav1.plot_thrust(self.control_n)
+            self.planner.uav1.plot_angularrate(self.control_n)
+            self.planner.uav1.plot_position(self.state_n,name='drone_actual')
+            self.planner.uav1.plot_velocity(self.state_n)
+            self.planner.uav1.plot_quaternions(self.state_n)
 
-        self.planner.uav1.plot_solving_time(self.solving_time)
-        python_sim_npy_parser(uav_traj=self.state_n,
-                              nn_output_list=self.nn_output_list,
-                              des_tra_R_list=self.des_tra_R_list,
-                              gate_pitch=self.Pitch)
-        self.planner.uav1.plot_3D_traj(wing_len=self.planner.wing_len,
-                                    uav_height=self.planner.uav_height/2,
-                                    state_traj=self.state_n[::50,:],
-                                    gate_traj=self.gate_points_list[::50,:,:])
+            # self.planner.uav1.plot_quaternions_norm(self.state_n)
+            # self.planner.uav1.plot_quaternions_norm(self.pos_vel_att_cmd_n)
+            # self.planner.uav1.plot_trav_weight(self.tra_weight_list)
+
+            self.planner.uav1.plot_solving_time(self.solving_time)
+            python_sim_npy_parser(uav_traj=self.state_n,
+                                nn_output_list=self.nn_output_list,
+                                des_tra_R_list=self.des_tra_R_list,
+                                gate_pitch=self.Pitch)
+            self.planner.uav1.plot_3D_traj(wing_len=self.planner.wing_len,
+                                        uav_height=self.planner.uav_height/2,
+                                        state_traj=self.state_n[::50,:],
+                                        gate_traj=self.gate_points_list[::50,:,:])
 
 
         # self.planner.uav1.plot_T(control_tm)
@@ -531,6 +533,7 @@ def main():
     options['CLOSE_LOOP_MODEL']= True
     options['JAX_SVD']=False
     options['CLOSE_LOOP_TRAINING']=False
+    options['VISUALIZE']=False
     if options['CLOSE_LOOP_MODEL']:
         model_name = 'training_results/2024-11-22/12-56-50/trained_model/NN_close_500.pth'#'NN2_imitate_1.pth' #'NN_close_2.pth'
         model_file=os.path.join(current_dir,model_name)
