@@ -25,7 +25,7 @@ mission:
   #################################################
   ##------ MPC initial pose ----##
   # ##initial pose only works for python sim
-  initial_position: [0.0, 1.8, 1]
+  initial_position: [0.0, 1.8, 1.2]
   initial_ori_euler: [0.0, 0.0, 0.0] # RPY, only yaw is active
 
   ##------ gate pose ----##
@@ -35,7 +35,7 @@ mission:
   gate_ori_euler: [0.0, -1.0,0.0] # 1.0 radian is 57.2958 degree, 1.5 radian is 85.9437 degree
   
   ##------ goal pose ----##
-  goal_position: [0.0, -1.8, 1]
+  goal_position: [0.0, -1.8, 1.5]
   goal_ori_euler: [0.0, 0.0, 0.0] # RPY, only yaw is active
 
   #################################################
