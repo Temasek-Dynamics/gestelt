@@ -91,7 +91,7 @@ learning_agile:
   wwt_z: 5
   
   # path cost
-  wrp: 10        ## too small, large deviation to the goal
+  wrp: 30        ## too small, large deviation to the goal
   wvp: 0.01
   wqp: 0.01
 
