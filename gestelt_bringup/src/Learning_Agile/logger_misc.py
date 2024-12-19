@@ -6,6 +6,7 @@ import yaml
 from scipy.spatial.transform import Rotation as R
 from solid_geometry import *
 import numpy as np
+import pandas as pd
 class LoggerConfig:
     def __init__(self, log_dir="logs"):
         # 创建日志目录，如果不存在的话
@@ -80,4 +81,33 @@ def log_drone_state(writer,drone_state, global_step):
     writer.add_scalar('actual_x', drone_state[0], global_step)
     writer.add_scalar('actual_y', drone_state[1], global_step)
     writer.add_scalar('actual_z', drone_state[2], global_step)
-    
+
+def save_state_csv(time,drone_state,python_sim_data_folder):
+    data={
+        "Time":time.transpose(),
+        "Position_x":drone_state[:,0].transpose(),
+        "Position_y":drone_state[:,1].transpose(),
+        "Position_z":drone_state[:,2].transpose(),
+        "Velocity_x":drone_state[:,3].transpose(),
+        "Velocity_y":drone_state[:,4].transpose(),
+        "Velocity_z":drone_state[:,5].transpose(),
+        "quat_w":drone_state[:,6].transpose(),
+        "quat_x":drone_state[:,7].transpose(),
+        "quat_y":drone_state[:,8].transpose(),
+        "quat_z":drone_state[:,9].transpose(),
+    }
+    df=pd.DataFrame(data)
+    output_file=os.path.join(python_sim_data_folder,"python_sim_drone_state.csv")
+    df.to_csv(output_file,index=False)
+
+def save_mpc_ctl_csv(time,ctl,python_sim_data_folder):
+    data={
+        "Time":time.transpose(),
+        "thrust":ctl[:,0].transpose(),
+        "body_rate_x":ctl[:,1].transpose(),
+        "body_rate_y":ctl[:,2].transpose(),
+        "body_rate_z":ctl[:,3].transpose(),
+    }
+    df=pd.DataFrame(data)
+    output_file=os.path.join(python_sim_data_folder,"python_sim_mpc_ctl.csv")
+    df.to_csv(output_file,index=False)

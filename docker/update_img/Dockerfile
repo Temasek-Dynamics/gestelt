@@ -25,7 +25,8 @@ RUN export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/root/acados/lib \
     && export ACADOS_SOURCE_DIR=/root/acados \
     && source /opt/ros/noetic/setup.bash \
     && catkin config --skiplist trajectory_planner se3_controller\
-    && catkin build 
+    && catkin build \
+    && rm -rf /var/lib/apt/lists/* 
 
 # DRONE_ID environment variable can be overriden on docker image startup
 ENV MASTER_IP=localhost

@@ -26,6 +26,7 @@ import time
 from solid_geometry import *
 from config import train_cfg
 
+from logger_misc import *
 device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 # device=torch.device('cpu')
 input_size = 38 # current drone state (10), goal position (3), gate position(3), gate width(1) and orientation(9)
@@ -343,6 +344,7 @@ class LearningAgileSim():
         
         self.state = self.planner.ini_state # state= feedback from pybullet, 13-by-1, 3 position, 3 velocity (world frame), 4 quaternion, 3 angular rate
         self.state_n = [self.state]
+        self.Time = [0]
         self.nn_output_list = [np.zeros(output_size)] # 3 position, 4 quaternion, 1 traversal time
         self.des_tra_R_list = [np.zeros(9)] # 3x3 rotation matrix(in flat form)
         for self.i in range(self.sim_time*(int(1/self.dyn_step))): # 5s, 500 Hz
@@ -473,6 +475,9 @@ class LearningAgileSim():
         np.save(os.path.join(python_sim_data_folder,'solving_time'),self.solving_time)
         np.save(os.path.join(python_sim_data_folder,'nn_output_list'),self.nn_output_list)
         np.save(os.path.join(python_sim_data_folder,'des_tra_R_list'),self.des_tra_R_list)
+
+        save_state_csv(self.Time,self.state_n,python_sim_data_folder)
+        save_mpc_ctl_csv(self.Time,self.control_n,python_sim_data_folder)
 
         if self.options['VISUALIZE']:
             self.planner.uav1.play_animation(wing_len=self.planner.wing_len,
