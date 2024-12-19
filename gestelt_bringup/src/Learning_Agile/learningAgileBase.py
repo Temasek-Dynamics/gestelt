@@ -7,7 +7,7 @@ from math import atan
 from scipy.spatial.transform import Rotation as R
 import matplotlib.pyplot as plt
 
-from solid_geometry import magni
+from solid_geometry import *
 from learning_agile_sim import LearningAgileSim, Gate
 
 from config import mission_cfg, train_cfg,current_dir
@@ -87,7 +87,7 @@ class LearningAgileBase:
         self.i = i
         ## == gate forward === ##
         gate_t_i = Gate(self.gate_points_list[i])
-        gate_pitch = atan((gate_t_i.gate_point[0,2]-gate_t_i.gate_point[1,2])/(gate_t_i.gate_point[0,0]-gate_t_i.gate_point[1,0])) # compute the actual gate pitch ange in real-time
+        gate_pitch = pitch_from_gate(gate_t_i)
         
         ##==calculate the gate RM
         rot=R.from_euler('zyx',[0,gate_pitch,0])
@@ -187,7 +187,7 @@ class LearningAgileBase:
         ## === initial gate obstacle based on current NN prediction === ##
         pred_t_i = self.i + self.t_tra_rel*10
         gate_t_i = Gate(self.gate_points_list[int(pred_t_i)])
-        self.planner.init_obstacle(gate_t_i.gate_point[:,:].reshape(12))
+        self.planner.init_obstacle(gate_t_i)
     
     def backward_per_step(self,dyn_decay=0.9):
         """

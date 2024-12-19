@@ -324,7 +324,7 @@ class Quadrotor:
             tra_R_B_I = ca.reshape(self.des_tra_R,3,3)
         else:   
             svd= SVD()
-            self.trav_auxvar = vertcat(self.des_tra_r_I, self.des_tra_m, self.wrp, self.des_t_tra) #self.max_tra_w, self.wrt, self.wqt, 
+            self.trav_auxvar = vertcat(self.des_tra_r_I, self.des_tra_m, self.des_t_tra) #self.wrp,  self.max_tra_w, self.wrt, self.wqt, 
             tra_R_B_I= svd.SVD_M_to_SO3_casadi(self.des_tra_m)
        
         
@@ -1008,7 +1008,7 @@ class Gate:
     ## rotate an angle around y axis of thw window
     def rotate_y(self,angle):
         ## define the rotation matrix to rotate
-        rotation = np.array([[math.cos(angle),-math.sin(angle)],[math.sin(angle),math.cos(angle)]])
+        rotation = np.array([[math.cos(angle),math.sin(angle)],[-math.sin(angle),math.cos(angle)]])
         gate_point = self.gate_point - np.array([self.centroid,self.centroid,self.centroid,self.centroid])
         for i in range(4):
             [gate_point[i,0],gate_point[i,2]] = np.matmul(rotation,np.array([gate_point[i,0],gate_point[i,2]]))

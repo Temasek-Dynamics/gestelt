@@ -22,7 +22,7 @@ from quad_policy import Rd2Rp
 from quad_model import toQuaternion
 from learning_agile_sim import MovingGate, input_size
 from learning_agile_ROS_mission import transform_map_to_world
-
+from solid_geometry import *
 from config import mission_cfg,train_cfg,current_dir,setup_training_directories
 ##=================Load the model and configuration file=================##
 # acquire the current directory
@@ -214,7 +214,7 @@ class NN2_ROS_wrapper:
                 # width of the gate
                 nn2_inputs[13] = magni(self.gate_t_i.gate_point[0,:]-self.gate_t_i.gate_point[3,:]) # gate width
                 # pitch angle of the gate
-                nn2_inputs[14] = atan((self.gate_t_i.gate_point[0,2]-self.gate_t_i.gate_point[1,2])/(self.gate_t_i.gate_point[0,0]-self.gate_t_i.gate_point[1,0])) # compute the actual gate pitch angle in real-time
+                nn2_inputs[14] = pitch_from_gate(self.gate_t_i)
 
                 # NN2 OUTPUT the traversal time and pose
                 t_comp = time.time()
@@ -286,7 +286,7 @@ class NN2_ROS_wrapper:
                 # width of the gate
                 nn2_inputs[28] = magni(self.gate_t_i.gate_point[0,:]-self.gate_t_i.gate_point[3,:]) # gate width
                 # pitch angle of the gate
-                gate_pitch = atan((self.gate_t_i.gate_point[0,2]-self.gate_t_i.gate_point[1,2])/(self.gate_t_i.gate_point[0,0]-self.gate_t_i.gate_point[1,0])) # compute the actual gate pitch ange in real-time
+                gate_pitch = pitch_from_gate(self.gate_t_i)
                 
             
                 ##==calculate the gate RM

@@ -91,6 +91,13 @@ def verify_SVD_casadi(des_tra_m):
         # print("NN pose det after SVD",np.linalg.det(verify_tra_R))
         return verify_tra_R
 
+def pitch_from_gate(gate_t_i):
+    """
+    Calculate the pitch angle of the gate from the gate points
+    """
+    gate_pitch = ca.atan((gate_t_i.gate_point[1,2]-gate_t_i.gate_point[0,2])/(gate_t_i.gate_point[0,0]-gate_t_i.gate_point[1,0])) # compute the actual gate pitch ange in real-time 
+    return gate_pitch
+
 ## return the maginitude of a vector
 def magni(vector):
     return np.sqrt(np.dot(np.array(vector),np.array(vector)))

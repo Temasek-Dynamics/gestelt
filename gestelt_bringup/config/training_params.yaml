@@ -5,7 +5,7 @@ training:
   num_epochs: 5000
   # steps_per_epoch: 20
   close_loop_horizon: 50
-  learning_rate: 0.0001
+  learning_rate: 0.0002
   eta_min: 0.00002 #for cosine decay 1% of learning rate
   dyn_decay: 0.90 ## the BPTT decay
   batch_size: 1
@@ -13,4 +13,4 @@ training:
 model:
   input_size: 38 # current drone state (10), goal position (3),gate points (4x3), gate position(3),  gate width(1) and orientation(9)
   hidden_size: 128
-  output_size: 14 # tra_pos(3), tra_9D_orientation(9), wrp, max_tra_w, wrt, wqt, traversing_time(1)
+  output_size: 13 # tra_pos(3), tra_9D_orientation(9), wrp, max_tra_w, wrt, wqt, traversing_time(1)

@@ -7,7 +7,9 @@ import jax
 import jax.numpy as jnp 
 
 from dpax.ellipsoid_polytope import ellipsoid_polytope_proximity,grad_f
-
+from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+import matplotlib.pyplot as plt
+from scipy.spatial import ConvexHull
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 """ 
 with this, the drone is represented by a polytope as well.
@@ -32,7 +34,7 @@ class Polytope():
             [0,0,-1.]
         ])
 
-        cs = jnp.array([
+        self.cs = jnp.array([
             [length/2,0,0.],
             [0,width/2,0.],
             [0.,0,height/2],
@@ -42,7 +44,7 @@ class Polytope():
         ])
         
         # b[i] = dot(A[i,:], b[i,:]) 
-        self.b = jax.vmap(jnp.dot, in_axes = (0,0))(self.A, cs)
+        self.b = jax.vmap(jnp.dot, in_axes = (0,0))(self.A, self.cs)  
 
 class Ellipsoid():
         
@@ -75,7 +77,10 @@ def DiffCollisionWrapper(line_centers,
     quad_radius=jnp.array(quad_radius)
     quad_half_height=jnp.array(quad_half_height)
     drone_state=jnp.array(drone_state)
-    line_centers_G=jnp.matmul(line_centers,R_gate.T) 
+
+    ## line centers in the gate frame
+    gate_center=(line_centers[0]+line_centers[2])/2
+    line_centers_G=jnp.matmul(line_centers-gate_center,R_gate.T)
 
     drone_ellipsoid=Ellipsoid(P,drone_state[0:3],drone_state[6:10])
 
@@ -88,8 +93,9 @@ def DiffCollisionWrapper(line_centers,
     ## up and down prisms centers
     prism_centers = prism_centers.at[0].set(line_centers_G[0] + jnp.array([0, 0, quad_half_height]))
     prism_centers = prism_centers.at[2].set(line_centers_G[2] + jnp.array([0, 0, -quad_half_height]))
-
-    prism_centers_W=jnp.matmul(prism_centers,R_gate)
+    
+    # transform the prisms to the world frame
+    prism_centers_W=jnp.matmul(prism_centers,R_gate) + gate_center
     
 
     ## assign pose of the prisms and ellipsoid
@@ -105,8 +111,6 @@ def DiffCollisionWrapper(line_centers,
     P_obs[3].r = prism_centers_W[3,]
     P_obs[3].q = gate_quat
 
-   
-    
 
     # return min scaling α and gradient of α wrt configurations 
     dalpha_dstate_drone=np.zeros(10) # p,v,q
@@ -117,7 +121,7 @@ def DiffCollisionWrapper(line_centers,
         # des_alpha comes from the penalty design helper
         if i == 1 or i == 3:
             # for the left and right walls
-            alpha_importance=0.4
+            alpha_importance=1
             des_alpha=1.81825 # gate length =1.2ellipsoid
             # des_alpha =1.125 # gate length =1
         else:

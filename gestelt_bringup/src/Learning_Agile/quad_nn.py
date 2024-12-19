@@ -18,7 +18,7 @@ from config import mission_cfg, train_cfg,current_dir
 
 pre_ini_pos=np.array(mission_cfg['mission']['initial_position'])
 pre_end_pos=np.array(mission_cfg['mission']['goal_position'])
-desired_average_vel=mission_cfg['training_param']['desired_average_vel']
+desired_average_vel=mission_cfg['pretrain_param']['desired_average_vel']
 gate_width = mission_cfg['gate']['width']
 init_gate_width = mission_cfg['gate']['init_width']
 input_size = train_cfg['model']['input_size'] 
@@ -30,7 +30,7 @@ output_size = train_cfg['model']['output_size']
 def nn_sample(init_pos=None,final_pos=None,init_angle=None,cur_epoch=train_cfg['training']['num_epochs'],pretrain=False):
     env_init_set = np.zeros(17)
     if init_pos is None:
-        env_init_set[0] = np.random.uniform(-2,2) + pre_ini_pos[0] #-5~5, -9
+        env_init_set[0] = pre_ini_pos[0] #np.random.uniform(-1,1) + pre_ini_pos[0] #-5~5, -9
 
         # TODO: transfer to trauncated normal distribution
         if pretrain:
@@ -43,7 +43,7 @@ def nn_sample(init_pos=None,final_pos=None,init_angle=None,cur_epoch=train_cfg['
         env_init_set[0:3] = init_pos
     ## random final position 
     if final_pos is None:
-        env_init_set[3] = np.random.uniform(-2,2) + pre_end_pos[0] #-2~2, 6
+        env_init_set[3] = np.random.uniform(-1,1) + pre_end_pos[0] #-2~2, 6
 
         env_init_set[4] = np.random.uniform(-0.5,0.5)+pre_end_pos[1]
         env_init_set[5] = np.random.uniform(-0.5,0.5)+pre_end_pos[2]
@@ -95,7 +95,7 @@ def nn_sample(init_pos=None,final_pos=None,init_angle=None,cur_epoch=train_cfg['
         else:
             gate_pitch=gate_pitch-des_pitch_mean
         
-        gate_pitch = -0.8 #1.2rad = 68.754 degrees, 0.8rad = 45.729 degrees 
+        gate_pitch = mission_cfg['mission']['gate_ori_euler'][1] #1.2rad = 68.754 degrees, 0.8rad = 45.729 degrees 
         # gate_pitch = np.random.uniform(-pi/6,pi/6)
 
     ##==calculate the gate RM
@@ -108,12 +108,12 @@ def t_output(inputs):
     inputs = np.array(inputs[0])
     
     outputs = np.zeros(output_size)
-    outputs[2]=mission_cfg['mission']['gate_position'][2]
+    outputs[0:3]=mission_cfg['mission']['gate_position']
     R_gate=inputs[-9:].reshape(3,3)
     outputs[3:12]=R_gate.T.flatten()
 
     ## wrp
-    outputs[-2]=mission_cfg['learning_agile']['wrp']
+    # outputs[-2]=mission_cfg['learning_agile']['wrp']
     
     ## wrp
     # outputs[-5]=10
@@ -129,9 +129,9 @@ def t_output(inputs):
 
     ## traversal time is proportional to the distance of the centroids
     if inputs[1]>0:
-        raw_time = round(magni(inputs[0:3])/4,1) #3
+        raw_time = round(magni(inputs[0:3])/desired_average_vel,2) #3
     else:
-        raw_time = -round(magni(inputs[0:3])/3,1) #4
+        raw_time = -round(magni(inputs[0:3])/desired_average_vel,2) #4
     outputs[-1] = raw_time #np.clip(raw_time,3,3)
 
     print('desired_traversing_time',outputs[-1])

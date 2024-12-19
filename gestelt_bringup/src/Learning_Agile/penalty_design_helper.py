@@ -71,12 +71,12 @@ class PenaltyDesignHelper():
         inputs[8:17]=np.eye(3).flatten()
 
         moving_gate = MovingGate(inputs,
-                                gate_cen_h=0,
+                                gate_center=np.zeros(3),
                                 gate_length=self.config_dict['gate']['length'])
     
-        gate_point = moving_gate.gate.gate_point
+        gate_t_0 = moving_gate.gate
         # initialize the narrow window
-        self.planner.init_obstacle(gate_point.reshape(12))
+        self.planner.init_obstacle(gate_t_0)
     
     
         

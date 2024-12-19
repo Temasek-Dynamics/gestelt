@@ -35,7 +35,7 @@ output_size = train_cfg['model']['output_size']
 
 class MovingGate():
     def __init__(self, env_init_set,
-                        gate_cen_h,
+                        gate_center,
                         gate_length):
         
         # initialize the gate1, with the initial gate position
@@ -43,18 +43,18 @@ class MovingGate():
         gate_width = env_init_set[7]
         ###############################################
         ###############################################
-        ##################gate length##################
-        # 0------------------------------------------1
-        # |                   ^y                     |
-        # |<-gate width       |                      |
-        # |                   *--> x                 |
+        ##################gate length##################    z
+        # 0------------------------------------------1     ^     y
+        # |                   ^z                     |     |   /
+        # |<-gate width       |                      |     | /
+        # |                   *--> x                 |     *-------> x
         # 3------------------------------------------2
         ###############################################
         ###############################################
-        gate_point_no_pitch = np.array([[-gate_length/2, 0, gate_cen_h+gate_width/2],
-                                        [ gate_length/2, 0, gate_cen_h+gate_width/2],
-                                        [ gate_length/2, 0, gate_cen_h-gate_width/2],
-                                        [-gate_length/2, 0, gate_cen_h-gate_width/2]])
+        gate_point_no_pitch = np.array([[gate_center[0]-gate_length/2, gate_center[1], gate_center[2]+gate_width/2],
+                                        [gate_center[0]+gate_length/2, gate_center[1], gate_center[2]+gate_width/2],
+                                        [gate_center[0]+gate_length/2, gate_center[1], gate_center[2]-gate_width/2],
+                                        [gate_center[0]-gate_length/2, gate_center[1], gate_center[2]-gate_width/2]])
         
         self.gate = Gate(gate_point_no_pitch)
         
@@ -208,9 +208,8 @@ class LearningAgileSim():
             else:
                 gate_w = gate_w
         ## ================ gate initialization ================== ##
-        gate_cen_h = self.gate_center[2]
         self.moving_gate = MovingGate(self.env_init_set,
-                                      gate_cen_h=gate_cen_h,
+                                      gate_center=self.gate_center,
                                       gate_length=gate_length)
 
         self.moving_gate.set_vel(dt=self.dyn_step,gate_v=gate_v,gate_w=gate_w)
@@ -299,9 +298,8 @@ class LearningAgileSim():
         # width of the gate
         nn2_inputs[28] = magni(self.gate_t_i.gate_point[0,:]-self.gate_t_i.gate_point[3,:]) # gate width
         # pitch angle of the gate
-        gate_pitch = atan((self.gate_t_i.gate_point[0,2]-self.gate_t_i.gate_point[1,2])/(self.gate_t_i.gate_point[0,0]-self.gate_t_i.gate_point[1,0])) # compute the actual gate pitch ange in real-time
-        
-        self.planner.init_obstacle(self.gate_t_i.gate_point[:,:].reshape(12))
+        gate_pitch=pitch_from_gate(self.gate_t_i)
+        self.planner.init_obstacle(self.gate_t_i)
         
         ##==calculate the gate RM
         rot=R.from_euler('zyx',[0,gate_pitch,0])
@@ -389,10 +387,10 @@ class LearningAgileSim():
                         des_tra_m=out[3:12]
 
                         # relative traversal time
-                        out[12]=10 #wrp
-                        out[13]=100 #max_tra_w
-                        out[14]=5  #wrt
-                        out[15]=10 #wqt
+                        # out[12]=10 #wrp
+                        # out[13]=100 #max_tra_w
+                        # out[14]=5  #wrt
+                        # out[15]=10 #wqt
                         out[-1]=self.t_tra_rel
                         verify_tra_R=verify_SVD_casadi(out[3:12])
                         gate_pitch=0
@@ -547,7 +545,7 @@ def main():
     options['STATE_2_MOVING_GATE']=False
     if options['CLOSE_LOOP_MODEL']:
         # good : 'training_results/2024-11-22/12-56-50/trained_model/NN_close_500.pth
-        model_name = 'training_results/new_format/2024-12-16/12-41-58/trained_model/NN_close_20.pth'#'NN2_imitate_1.pth' #'NN_close_2.pth'
+        model_name = 'training_results/new_format/2024-12-19/17-15-34/trained_model/NN_close_80.pth'#'NN2_imitate_1.pth' #'NN_close_2.pth'
         model_file=os.path.join(current_dir,model_name)
     else:   
         model_name = '20241031-142733-PDP-Trial 1, shrink the gate from [1.2,0.56] to [1.0, 0.4]/NN2_imitate_1.pth' 

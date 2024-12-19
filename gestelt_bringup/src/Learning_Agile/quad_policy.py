@@ -88,7 +88,7 @@ class PlanFwdBwdWrapper():
                            wwt=config['learning_agile']['wwt'],
                            wwt_z=config['learning_agile']['wwt_z'], 
                              
-                        #    wrp=config['learning_agile']['wrp'],
+                           wrp=config['learning_agile']['wrp'],
                            wvp=config['learning_agile']['wvp'],
                            wqp=config['learning_agile']['wqp'],
 
@@ -157,15 +157,16 @@ class PlanFwdBwdWrapper():
     
 
     # initialize the narrow window
-    def init_obstacle(self,gate_point):
-        gate_pitch = atan((gate_point[2]-gate_point[5])/(gate_point[0]-gate_point[3])) # compute the actual gate pitch ange in real-time
+    def init_obstacle(self,gate_t_i):
+
+        gate_pitch = pitch_from_gate(gate_t_i)
         
-        self.gate_corners = gate_point
-        self.gate_quat = toQuaternion(-gate_pitch,[0,1,0])
-        self.point1 = gate_point[0:3]
-        self.point2 = gate_point[3:6]
-        self.point3 = gate_point[6:9]
-        self.point4 = gate_point[9:12]     
+        self.gate_corners = gate_t_i.gate_point[:,:].reshape(12)
+        self.gate_quat = toQuaternion(gate_pitch,[0,1,0])
+        self.point1 = self.gate_corners[0:3]
+        self.point2 = self.gate_corners[3:6]
+        self.point3 = self.gate_corners[6:9]
+        self.point4 = self.gate_corners[9:12]     
         from collision_detection import Obstacle   
         self.obstacle = Obstacle(self.config,self.point1,self.point2,self.point3,self.point4)
 
