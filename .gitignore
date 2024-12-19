@@ -69,3 +69,5 @@ CATKIN_IGNORE
 /gestelt_bringup/src/Learning_Agile/training_results/
 *.tar.gz
 *.csv
+/gestelt_bringup/src/Learning_Agile/c_generated_code/
+/gestelt_bringup/src/Learning_Agile/acados_sim.json

@@ -169,70 +169,64 @@ class Quadrotor:
         # dynamics
         self.f = vertcat(dr_I, dv_I, dq)#, dw)
 
-    def initCost(self, wrt=None, wqt=None,max_tra_w=0,gamma=0,
+    def initCost(self, wrt=None, wqt=None,max_tra_w=None,gamma=None,
                  wrp=None, wvp=None, wqp=None,
                 wrf=None, wvf=None, wqf=None, 
-                wwt=None, wwt_z=None,wthrust=0.5):
+                wwt=None, wwt_z=None,wthrust=None):
+        
+        """
+        If the weight value is None, it means this value is a learnable parameter
+        """
         #traverse
         parameter = []
         if wrt is None:
             self.wrt = SX.sym('wrt')
-            parameter += [self.wr]
         else:
             self.wrt = wrt
 
         if wqt is None:
             self.wqt = SX.sym('wqt')
-            parameter += [self.wq]
         else:
             self.wqt = wqt
 
         #path
-        if wrf is None:
+        if wrp is None:
             self.wrp = SX.sym('wrp')
-            parameter += [self.wrp]
         else:
             self.wrp = wrp
         
         if wvp is None:
             self.wvp = SX.sym('wvp')
-            parameter += [self.wvp]
         else:
             self.wvp = wvp
         
         if wqp is None:
             self.wqp = SX.sym('wqp')
-            parameter += [self.wqp]
         else:
             self.wqp = wqp
         # Terminal cost
         if wrf is None:
             self.wrf = SX.sym('wrf')
-            parameter += [self.wrf]
         else:
             self.wrf = wrf
         
         if wvf is None:
             self.wvf = SX.sym('wvf')
-            parameter += [self.wvf]
         else:
             self.wvf = wvf
         
         if wqf is None:
             self.wqf = SX.sym('wqf')
-            parameter += [self.wqf]
         else:
             self.wqf = wqf
         
         if wwt is None:
             self.wwt = SX.sym('wwt')
-            parameter += [self.wwt]
         else:
             self.wwt = wwt
 
         if wwt_z is None:
             self.wwt_z = SX.sym('wwt_z')
-            parameter += [self.wwt_z]
         else:
             self.wwt_z = wwt_z
 
@@ -290,21 +284,21 @@ class Quadrotor:
 
 
         self.input_cost = self.wthrust * self.cost_thrust \
-                         + self.wwt  * self.cost_ang_rate_B \
-                         + self.wwt_z* self.cost_ang_rate_B_z
+                        + self.wwt * self.cost_ang_rate_B \
+                        + self.wwt_z * self.cost_ang_rate_B_z
         
-        ## the final (goal) cost
-        self.goal_cost =  self.wrp * self.cost_r_I_g \
-                        + self.wvp * self.cost_v_I_g \
-                        + self.wqp * self.cost_q_g \
+        ## the path cost to the goal
+        self.path_cost = self.wrp * self.cost_r_I_g \
+                       + self.wvp * self.cost_v_I_g \
+                       + self.wqp * self.cost_q_g \
+                       + 0 * self.cost_q_manifold
+        
+        # the final cost
+        self.final_cost = self.wrf * self.cost_r_I_g\
+                        + self.wvf * self.cost_v_I_g\
+                        + self.wqf * self.cost_q_g \
                         + 0 * self.cost_q_manifold
-        
-        self.final_cost =  self.wrf * self.cost_r_I_g\
-                         + self.wvf * self.cost_v_I_g\
-                         + self.wqf * self.cost_q_g \
-                         + 0 * self.cost_q_manifold
-    def vee_map(self,mat):
-        return ca.vertcat(mat[2, 1], mat[0, 2], mat[1, 0])
+  
     
     def init_TraCost(self): # transforming Rodrigues to Quaternion is shown in mpc_update function
         ## traverse cost
@@ -326,11 +320,11 @@ class Quadrotor:
         ## set traverse pose as the auxiliary variables (hyperparameters)
         if self.options['JAX_SVD']: 
             ## SVD conducted before CasADi
-            self.trav_auxvar = vertcat(self.des_tra_r_I, self.des_tra_R,  self.des_t_tra) #self.gamma,
+            self.trav_auxvar = vertcat(self.des_tra_r_I, self.des_tra_R, self.wrp, self.max_tra_w, self.wrt, self.wqt, self.des_t_tra) 
             tra_R_B_I = ca.reshape(self.des_tra_R,3,3)
         else:   
             svd= SVD()
-            self.trav_auxvar = vertcat(self.des_tra_r_I, self.des_tra_m,  self.des_t_tra) #self.gamma,
+            self.trav_auxvar = vertcat(self.des_tra_r_I, self.des_tra_m, self.wrp, self.des_t_tra) #self.max_tra_w, self.wrt, self.wqt, 
             tra_R_B_I= svd.SVD_M_to_SO3_casadi(self.des_tra_m)
        
         
@@ -432,6 +426,8 @@ class Quadrotor:
 
         return position
     
+    def vee_map(self,mat):
+        return ca.vertcat(mat[2, 1], mat[0, 2], mat[1, 0])
     def get_quad_vert_pos_tensor(self, wing_len, state_traj):
         # thrust_position in body frame
         r1 = torch.tensor([wing_len * 0.5 / torch.sqrt(torch.tensor(2.0)),
@@ -816,23 +812,6 @@ class Quadrotor:
         plt.savefig('./python_sim_result/thrust.png')
         # plt.show()
         
-    def plot_trav_weight(self,trav_weight):
-        plt.figure() 
-        plt.plot(trav_weight)
-        plt.title('trav_weight vs time')
-        plt.xlabel('t')
-        plt.ylabel('trav_weight')
-        plt.grid(True,color='0.6',dashes=(2,2,1,1))
-        plt.legend()
-        plt.savefig('./python_sim_result/trav_weight.png')
-        # plt.show()
-
-    def plot_solving_time(self,solving_time):
-        plt.figure()    
-        plt.plot(solving_time)
-        plt.title('mpc solving time at the main loop')
-        plt.savefig('./python_sim_result/solving_time.png') 
-        # plt.show()
                
     def plot_T(self,control_traj,dt = 0.1):
         N = int(len(control_traj[:,0]))
@@ -864,17 +843,18 @@ class Quadrotor:
         plt.show()
         
 
-    def plot_trav_time(self,trav_time):
+    def plot_scalar(self,scalar, scalar_name):
         plt.figure() 
-        plt.plot(trav_time)
-        plt.title('trav_time vs time')
+        plt.plot(scalar)
+        plt.title(f'{scalar_name} vs time')
         plt.xlabel('t')
-        plt.ylabel('trav_time')
+        plt.ylabel(scalar_name)
         plt.grid(True,color='0.6',dashes=(2,2,1,1))
         plt.legend()
-        plt.savefig('./python_sim_result/trav_time.png')
+        plt.savefig(f'./python_sim_result/{scalar_name}.png')
         # plt.show()
 
+        
     def plot_3D_traj(self,
                      wing_len,
                      uav_height,

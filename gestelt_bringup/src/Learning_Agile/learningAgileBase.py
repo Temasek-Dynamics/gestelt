@@ -50,8 +50,8 @@ class LearningAgileBase:
                                                     options=options)
         self.planner = self.learning_agile_sim.planner
         ## keep history five states, RING BUFFER
-        self.input_size = 38
-        self.output_size = 13
+        self.input_size = train_cfg['model']['input_size']
+        self.output_size = train_cfg['model']['output_size']
 
         
         self.history_obs = deque(maxlen=5)
@@ -165,7 +165,7 @@ class LearningAgileBase:
         ## == MPC forward === ##
                 
         cmd_solution,NO_SOLUTION_FLAG = self.planner.mpc_update(current_state=self.state,
-                                            trav_auxvar_value=self.np_nn_out) # control input 4-by-1 thrusts to pybullet
+                                                                trav_auxvar_value=self.np_nn_out) # control input 4-by-1 thrusts to pybullet
         
        
         ## record the gradient and step reward

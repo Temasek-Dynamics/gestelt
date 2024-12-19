@@ -3,15 +3,15 @@ from quad_nn import *
 import os
 from collections import deque
 from scipy.spatial.transform import Rotation as R
-from config import mission_cfg
+from config import mission_cfg, train_cfg
 # Device configuration
 device = torch.device('cpu')#torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # Hyper-parameters 
-input_size = 38 # current drone state (10), goal position (3),gate points (4x3), gate position(3),  gate width(1) and orientation(9)
-hidden_size = 128 
-output_size = 13  # #tra_pos(3), tra_9D_orientation(9), tra_gamma, traversing_time(1)
-num_epochs = 3
+input_size = train_cfg['model']['input_size'] 
+hidden_size = train_cfg['model']['hidden_size']
+output_size = train_cfg['model']['output_size']
+num_epochs = 3  
 batch_size = 10000
 learning_rate = 2e-5
 current_dir = os.path.dirname(os.path.abspath(__file__))

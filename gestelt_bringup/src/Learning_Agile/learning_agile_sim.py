@@ -29,9 +29,9 @@ from config import train_cfg
 from logger_misc import *
 device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 # device=torch.device('cpu')
-input_size = 38 # current drone state (10), goal position (3), gate position(3), gate width(1) and orientation(9)
-hidden_size = 128 
-output_size = 13
+input_size = train_cfg['model']['input_size'] 
+hidden_size = train_cfg['model']['hidden_size']
+output_size = train_cfg['model']['output_size']  
 
 class MovingGate():
     def __init__(self, env_init_set,
@@ -200,17 +200,15 @@ class LearningAgileSim():
         gate_v = np.array(self.config_dict['gate']['linear_vel'])
         gate_w = self.config_dict['gate']['angular_vel'] 
 
-        gate_w = np.random.normal(gate_w,0.1)
-        judge = np.random.normal(0,1)
-        if judge>0:
-            gate_w = -gate_w
-        else:
-            gate_w = gate_w
+        if self.options['STATE_2_MOVING_GATE']:
+            gate_w = np.random.normal(gate_w,0.1)
+            judge = np.random.normal(0,1)
+            if judge>0:
+                gate_w = -gate_w
+            else:
+                gate_w = gate_w
         ## ================ gate initialization ================== ##
-        if self.options['CLOSE_LOOP_TRAINING']:
-            gate_cen_h=0
-        else:
-            gate_cen_h=0
+        gate_cen_h = self.gate_center[2]
         self.moving_gate = MovingGate(self.env_init_set,
                                       gate_cen_h=gate_cen_h,
                                       gate_length=gate_length)
@@ -284,6 +282,7 @@ class LearningAgileSim():
         self.NN_T_tra = np.concatenate((self.NN_T_tra,[out[-1]]),axis = 0)
         self.nn_output_list=np.concatenate((self.nn_output_list,[out]),axis = 0)
         self.des_tra_R_list = np.concatenate((self.des_tra_R_list,[des_tra_R]),axis = 0)
+        self.wrp_list = np.concatenate((self.wrp_list,[out[-2]]),axis = 0)
         self.Pitch = np.concatenate((self.Pitch,[gate_pitch]),axis = 0) 
 
     def close_loop_NN_forward(self):
@@ -347,6 +346,7 @@ class LearningAgileSim():
         self.Time = [0]
         self.nn_output_list = [np.zeros(output_size)] # 3 position, 4 quaternion, 1 traversal time
         self.des_tra_R_list = [np.zeros(9)] # 3x3 rotation matrix(in flat form)
+        self.wrp_list = [0]
         for self.i in range(self.sim_time*(int(1/self.dyn_step))): # 5s, 500 Hz
             
             self.Time = np.concatenate((self.Time,[self.i*self.dyn_step]),axis = 0)
@@ -366,7 +366,7 @@ class LearningAgileSim():
                     
 
                     # manually set the traversal time and pose
-                    out=np.zeros(13)
+                    out=np.zeros(output_size)
                     out[0:3]=self.gate_center
                     # out[3:6]=self.gate_ori_RP # Rodrigues parameters
                     out[3:12]=self.gate_ori_9d # manual set 9D vector (is rotation matrix directly)
@@ -389,7 +389,11 @@ class LearningAgileSim():
                         des_tra_m=out[3:12]
 
                         # relative traversal time
-                        out[12]=self.t_tra_rel
+                        out[12]=10 #wrp
+                        out[13]=100 #max_tra_w
+                        out[14]=5  #wrt
+                        out[15]=10 #wqt
+                        out[-1]=self.t_tra_rel
                         verify_tra_R=verify_SVD_casadi(out[3:12])
                         gate_pitch=0
                         self.log_NN_IO_for_RM(gate_pitch,out,verify_tra_R.flatten())       
@@ -491,20 +495,21 @@ class LearningAgileSim():
                 self.planner.uav1.plot_position(self.nn_output_list,name='NN2_output')
 
                 if self.options['CLOSE_LOOP_MODEL']:
-                    self.planner.uav1.plot_trav_time(self.NN_T_tra) # pure NN close loop traversal time
+                    self.planner.uav1.plot_scalar(self.NN_T_tra, scalar_name='NN_traverse_time') # pure NN close loop traversal time
                 else:
-                    self.planner.uav1.plot_trav_time(self.T) # Binary search traversal time
+                    self.planner.uav1.plot_scalar(self.T, scalar_name='NN_traverse_time')# Binary search traversal time
             self.planner.uav1.plot_thrust(self.control_n)
             self.planner.uav1.plot_angularrate(self.control_n)
             self.planner.uav1.plot_position(self.state_n,name='drone_actual')
             self.planner.uav1.plot_velocity(self.state_n)
             self.planner.uav1.plot_quaternions(self.state_n)
+            self.planner.uav1.plot_scalar(self.wrp_list,scalar_name='path_position_error_weight')
 
             # self.planner.uav1.plot_quaternions_norm(self.state_n)
             # self.planner.uav1.plot_quaternions_norm(self.pos_vel_att_cmd_n)
             # self.planner.uav1.plot_trav_weight(self.tra_weight_list)
 
-            self.planner.uav1.plot_solving_time(self.solving_time)
+            self.planner.uav1.plot_scalar(self.solving_time,scalar_name='MPC_solving_time')
             python_sim_npy_parser(uav_traj=self.state_n,
                                 nn_output_list=self.nn_output_list,
                                 des_tra_R_list=self.des_tra_R_list,
@@ -534,13 +539,15 @@ def main():
     options['USE_PREV_SOLVER']=False
     options['PDP_GRADIENT']=False
     options['SQP_RTI_OPTION']=True
-    options['MANUAL_SET_POSE_TEST']=True
+    options['MANUAL_SET_POSE_TEST']=False
     options['CLOSE_LOOP_MODEL']= True
     options['JAX_SVD']=False
     options['CLOSE_LOOP_TRAINING']=False
     options['VISUALIZE']=True
+    options['STATE_2_MOVING_GATE']=False
     if options['CLOSE_LOOP_MODEL']:
-        model_name = 'training_results/2024-11-22/12-56-50/trained_model/NN_close_500.pth'#'NN2_imitate_1.pth' #'NN_close_2.pth'
+        # good : 'training_results/2024-11-22/12-56-50/trained_model/NN_close_500.pth
+        model_name = 'training_results/new_format/2024-12-16/12-41-58/trained_model/NN_close_20.pth'#'NN2_imitate_1.pth' #'NN_close_2.pth'
         model_file=os.path.join(current_dir,model_name)
     else:   
         model_name = '20241031-142733-PDP-Trial 1, shrink the gate from [1.2,0.56] to [1.0, 0.4]/NN2_imitate_1.pth' 

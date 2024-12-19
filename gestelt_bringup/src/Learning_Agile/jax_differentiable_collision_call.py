@@ -5,9 +5,6 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
 import jax
 import jax.numpy as jnp 
-from jax import jit, grad, vmap 
-from jax.test_util import check_grads
-from jax.scipy.spatial.transform import Rotation as R
 
 from dpax.ellipsoid_polytope import ellipsoid_polytope_proximity,grad_f
 
@@ -66,6 +63,7 @@ def DiffCollisionWrapper(line_centers,
                         P,
                         drone_state,
                         node_tra,
+                        scaling_w,
                         PENALTY_HELPER=False,
                         SUCCESS_RATE_TEST=False):
     
@@ -135,10 +133,8 @@ def DiffCollisionWrapper(line_centers,
 
         alpha_i = ellipsoid_polytope_proximity(drone_ellipsoid.P, drone_ellipsoid.r, drone_ellipsoid.q,
                                      P_obs[i].A, P_obs[i].b, P_obs[i].r, P_obs[i].q)
-        # print(alpha_i)
 
         
-        scaling_w=100 #100
         # scaling_w = scaling_w * np.exp(-node_tra/5)
         # if not PENALTY_HELPER:
         if not SUCCESS_RATE_TEST:

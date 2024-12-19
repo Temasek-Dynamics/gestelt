@@ -84,8 +84,8 @@ learning_agile:
 
   ##-----parameters for training ------## 
   # #### for a stabler training,######## 
-  wrt: 5.0
-  wqt: 10.0
+  wrt: 5.0    #be the learnable variable
+  wqt: 10.0   #be the learnable variable
   wthrust: 1.0
   wwt: 15.0
   wwt_z: 5
@@ -100,7 +100,7 @@ learning_agile:
   wvf: 100.0
   wqf: 100.0
   ##------ traversing parameters ---##
-  max_traverse_weight: 100 #100
+  max_tra_w: 100 #100 be the learnable variable
   traverse_weight_span: 10 #gamma, could be a learning variable
   traverse_time: 1.5 # only for MANUAL_SET_POSE_TEST
 
@@ -156,3 +156,7 @@ training_param:
 ## ------NN configuration ----##
 NN2_model_name: 'NN2_imitate_1.pth'
 NN2_freq: 100
+
+reward:
+  goal_w: 2 #2.0
+  scaling_w: 100

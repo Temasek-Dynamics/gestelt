@@ -41,7 +41,7 @@ class PlanFwdBwdWrapper():
         self.horizon = config['learning_agile']['horizon']
         self.dt=config['learning_agile']['dt']
         # initialize the cost function with symbolic variables
-        self.max_tra_w = config['learning_agile']['max_traverse_weight']
+        self.max_tra_w = config['learning_agile']['max_tra_w']
 
     
         # --------------------------- create PDP object1 ----------------------------------------
@@ -88,28 +88,26 @@ class PlanFwdBwdWrapper():
                            wwt=config['learning_agile']['wwt'],
                            wwt_z=config['learning_agile']['wwt_z'], 
                              
-                           wrp=config['learning_agile']['wrp'],
+                        #    wrp=config['learning_agile']['wrp'],
                            wvp=config['learning_agile']['wvp'],
                            wqp=config['learning_agile']['wqp'],
 
                            wrf=config['learning_agile']['wrf'],
                            wvf=config['learning_agile']['wvf'],
                            wqf=config['learning_agile']['wqf'],
-                           max_tra_w=config['learning_agile']['max_traverse_weight'],
+                           max_tra_w=config['learning_agile']['max_tra_w'],
                            gamma=config['learning_agile']['traverse_weight_span']
                            ) 
         self.uav1.init_TraCost()
 
         ## set the symbolic cost function to the solver
-        self.uavoc1.setInputCost(self.uav1.input_cost)
-        
-
-        self.uavoc1.setPathCost(self.uav1.goal_cost,goal_state=self.uav1.goal_state)
         self.uavoc1.setTraCost(self.uav1.tra_cost,
                                self.uav1.trav_auxvar,
                                self.uav1.t_node
                               )
         
+        self.uavoc1.setInputCost(self.uav1.input_cost)
+        self.uavoc1.setPathCost(self.uav1.path_cost,goal_state=self.uav1.goal_state)
         self.uavoc1.setFinalCost(self.uav1.final_cost,goal_state=self.uav1.goal_state)
 
         # initialize the mpc solver
@@ -180,7 +178,9 @@ class PlanFwdBwdWrapper():
         self.drdyaw = - 1000 * tra_ang[2]
 
     def MPC_and_R(self,tra_pos=None,tra_ang=None,t_tra = 3):
-
+        """
+        deprecated in the close loop training
+        """
         if not self.options['PDP_GRADIENT']:
             NO_SOLUTION_FLAG = False
             ## set the traverse hyperparameters value (auxvar) here
@@ -235,7 +235,7 @@ class PlanFwdBwdWrapper():
             
             return reward #+ self.roll_reward + self.yaw_reward#+ pitch_reward
 
-    def get_reward(self,state_traj):
+    def get_reward(self,state_traj,real_state_i):
         self.vert_traj = self.uav1.get_quad_vert_pos(wing_len = self.wing_len, state_traj = state_traj)
         reward,self.d_R_d_st_traj=self.obstacle.reward_calc_diff_collision(
                                                                 self.config,
@@ -243,7 +243,8 @@ class PlanFwdBwdWrapper():
                                                                 gate_corners=self.gate_corners,
                                                                 gate_quat=self.gate_quat,
                                                                 vert_traj=self.vert_traj[:,0:3],
-                                                                goal_pos=self.goal_pos)
+                                                                goal_pos=self.goal_pos,
+                                                                real_state_i=real_state_i)
             
         self.d_R_d_st_traj = self.d_R_d_st_traj.reshape(self.horizon+1,1,self.uavoc1.n_state)
             
@@ -252,6 +253,7 @@ class PlanFwdBwdWrapper():
     # --------------------------- solution and learning---------------------------------------
     def sol_gradient(self,tra_pos =None,tra_ang=None,t_tra=None):
         """
+        deprecated in the close loop training
         receive the decision variables from DNN1, do the MPC, then calculate d_reward/d_z
         """
 
@@ -345,8 +347,6 @@ class PlanFwdBwdWrapper():
         ## need to be given here
     
     
-        ## set the traverse hyperparameters value (auxvar) here
-        # trav_auxvar_value = np.concatenate((tra_pos,tra_ang,np.array([gamma]),np.array([t_tra]))) #
         goal_state_value=np.concatenate((self.goal_pos,np.zeros(3),self.goal_ori))  
 
         
@@ -465,21 +465,14 @@ class PlanFwdBwdWrapper():
                    current_state,
                    trav_auxvar_value):
     
-        tra_pos=trav_auxvar_value[0:3]
-        tra_ang=trav_auxvar_value[3:12]
-        # gamma=trav_auxvar_value[-2]
-        t_tra=trav_auxvar_value[-1]
-        
-        ##----- cause the different bewteen the python and the gazebo--###
+        ## MPC requires both the goal state adn the traverse hyperparameters
        
         # self.sol1 = self.uavoc1.ocSolver(current_state_control=current_state_control,t_tra=t)
         self.sol1,NO_SOLUTION_FLAG = self.uavoc1.AcadosOcSolver(current_state=current_state,
                                                 goal_pos=self.goal_pos,
                                                 goal_ori=self.goal_ori,
-                                                tra_pos=tra_pos,
-                                                tra_ang=tra_ang,
                                                 dt=self.dt,
-                                                t_tra=t_tra)
+                                                trav_auxvar_value=trav_auxvar_value)
         # print('goal_pos:',self.goal_pos)
         # return control, pos_vel_cmd
         return self.sol1,NO_SOLUTION_FLAG

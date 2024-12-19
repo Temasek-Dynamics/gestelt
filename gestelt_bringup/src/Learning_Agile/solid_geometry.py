@@ -13,7 +13,7 @@ import copy
 # from casadi import Opti
 
 
-def qr_eigen(A, iterations=5):
+def qr_eigen(A, iterations=10):
     """ 
     perform the QR algorithm for eigenvalue decomposition
     source code from https://gist.github.com/edxmorgan/51bdb566592a3bc0e386db1f8c50104b

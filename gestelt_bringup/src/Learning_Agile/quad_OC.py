@@ -138,7 +138,7 @@ class OCSys:
         assert path_cost.numel() == 1, "path_cost must be a scalar function"
 
         self.path_cost = path_cost
-        self.path_cost_fn = casadi.Function('path_cost', [self.state,self.goal_state,self.auxvar], [self.path_cost])
+        self.path_cost_fn = casadi.Function('path_cost', [self.state,self.goal_state,self.trav_auxvar], [self.path_cost])
 
 
     def setFinalCost(self, 
@@ -395,19 +395,7 @@ class OCSys:
 
         #  self.control = self.T_B
         self.model.u=self.control
-        
-        ## parameters: received after solver initialization, includes:
-        # goal state: 
-        # Ulast_value: current state can be set as constraints 
-        
-        # replace:
-            # desired traverse pose: des_tra_r_I, des_tra_q
-            # trav_cost: weight
-        # to
-            # desired traverse pose: des_tra_r_I, des_tra_rodi_param  (Rodrigues param)
-            # t_tra: traverse time
-            # t_node: current node time
-
+    
        
         P=casadi.SX.sym('p',self.n_state+\
                         self.trav_auxvar.numel()+1) # the last one is the current node time
@@ -490,21 +478,21 @@ class OCSys:
         ocp.cost.cost_type_e = 'EXTERNAL'
 
         goal_state_value=ocp.model.p[0:self.n_state]  
-        # des_tra_pos=ocp.model.p[self.n_state : self.n_state+3]
-        # des_tra_q=ocp.model.p[self.n_state+3 : self.n_state+7]
+       
     
-        # self.trav_auxvar = vertcat(self.des_tra_r_I, self.des_tra_rodi_param,self.des_t_tra)
         trav_auxvar_value=ocp.model.p[self.n_state:self.n_state+self.trav_auxvar.numel()]
 
         # current node time
         t_node_value=ocp.model.p[-1]
 
+        # weight path position error
+        wrp_value=trav_auxvar_value[-2]
+
         # # setting the cost function
-        # weight = 60*casadi.exp(-10*(dt*k-model.p[-1])**2) #gamma should increase as the flight duration decreases
         # ocp.model.cost_expr_ext_cost_custom_hess/cost_expr_ext_cost
-        ocp.model.cost_expr_ext_cost = self.path_cost_fn(ocp.model.x,goal_state_value,self.auxvar)\
-                                      +self.trav_cost_fn(ocp.model.x, trav_auxvar_value, t_node_value)\
-                                      +self.input_cost_fn(ocp.model.u,self.auxvar)
+        ocp.model.cost_expr_ext_cost = self.path_cost_fn(ocp.model.x, goal_state_value, trav_auxvar_value)\
+                                     + self.trav_cost_fn(ocp.model.x, trav_auxvar_value, t_node_value)\
+                                     + self.input_cost_fn(ocp.model.u,self.auxvar)
         
         # end cost
         ocp.model.cost_expr_ext_cost_e = self.final_cost_fn(ocp.model.x,goal_state_value,self.auxvar)
@@ -591,12 +579,8 @@ class OCSys:
                     current_state, 
                     goal_pos,
                     goal_ori,
-                    auxvar_value=1, 
                     dt=0.1,
-                    tra_pos=np.array([0,0,1.5]),
-                    tra_ang=np.array([0,0,0]),
-                    gamma=10.0,
-                    t_tra=1.0):
+                    trav_auxvar_value=None):
         """
         This function is to solve the optimal control problem using ACADOS
         """
@@ -618,8 +602,7 @@ class OCSys:
             # weight=max_tra_w*np.exp(-gamma*(dt*i-t_tra)**2) #gamma should increase as the flight duration decreases
             
             self.acados_solver.set(i, 'p',np.concatenate((goal_state_value,
-                                                          np.concatenate((tra_pos,tra_ang,np.array([t_tra]))), 
-                                                        #   np.array([gamma]),
+                                                          trav_auxvar_value, 
                                                           np.array([dt*i]))))
             # if i==10:
             #     weight_vis=weight
@@ -631,9 +614,8 @@ class OCSys:
         # set the end desired goal
         # weight = 0.0*casadi.exp(-10*(dt*self.n_nodes-t_tra)**2) #gamma should increase as the flight duration decreases
         self.acados_solver.set(self.n_nodes, "p",np.concatenate((goal_state_value,
-                                                                 np.concatenate((tra_pos,tra_ang,np.array([t_tra]))), 
-                                                                #  np.array([gamma]),
-                                                                 np.array([3*self.n_nodes*dt]))))
+                                                                 trav_auxvar_value, 
+                                                                 np.array([self.n_nodes*dt]))))
 
         # set initial condition aligned with the current state
         self.acados_solver.set(0, "lbx", np.array(current_state))
@@ -663,7 +645,7 @@ class OCSys:
         opt_sol = {"state_traj_opt": self.state_traj_opt,
                 "control_traj_opt": self.control_traj_opt,
                 "costate_traj_opt": self.costate_traj_opt,
-                'auxvar_value': auxvar_value,
+                'auxvar_value': trav_auxvar_value,
                 "time": time,
                 "horizon": self.horizon}
                 #"cost": sol['f'].full()}

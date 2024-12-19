@@ -1,17 +1,16 @@
 import numpy as np
 import torch
 import os
-from multiprocessing import Process, Array, Queue
-import multiprocessing
+from multiprocessing import Process, Queue
 from tqdm import tqdm
 
-from scipy.spatial.transform import Rotation as R
+
 from torch.utils.tensorboard import SummaryWriter
 
 from solid_geometry import magni
 from learningAgileBase import LearningAgileBase
 from config import mission_cfg,train_cfg,current_dir,setup_training_directories
-from logger_misc import *
+from logger_misc import log_drone_state,log_train_IO,log_gradient
 import logging
 
 folder_dict=setup_training_directories()
@@ -37,11 +36,8 @@ options['DEBUG']=False
 options['BACKWARD']=True
 options['MULTI_PROCESSES']=True
 options['TRAIN_FROM_CHECKPOINT']=False
-options['STATE_2_MOVING_GATE']=True
+options['STATE_2_MOVING_GATE']=False
 
-input_size = 38 # current drone state (10), goal position (3), gate position(3), gate width(1) and orientation(9)
-hidden_size = 128 
-output_size = 13  # #tra_pos(3), tra_9D_orientation(9), traversing_time(1) / tra_gamma
 class LearningAgileAPG:
     """
     APG: Analytical Policy Gradient
@@ -59,7 +55,7 @@ class LearningAgileAPG:
         self.gradient_batch=torch.zeros(1)
 
         self.episodes = []
-        for i in range(self.batch_size):
+        for _ in range(self.batch_size):
             self.episodes.append(LearningAgileBase(mission_cfg=self.mission_cfg,
                                                  train_cfg=self.train_cfg,
                                                  options=options))
@@ -89,8 +85,8 @@ class LearningAgileAPG:
     def get_reward_episodes(self, i:int,
                             episode:LearningAgileBase,
                             R_Grad_queue:Queue):
-        R_i = np.array(episode.planner.get_reward(episode.pred_st_traj)[0])
-        p_R_i_p_X_traj_i = (episode.planner.get_reward(episode.pred_st_traj)[1])
+        R_i = np.array(episode.planner.get_reward(episode.pred_st_traj,real_state_i=i)[0])
+        p_R_i_p_X_traj_i = (episode.planner.get_reward(episode.pred_st_traj,real_state_i=i)[1])
 
         R_Grad_queue.put([R_i, p_R_i_p_X_traj_i])
 
@@ -221,7 +217,7 @@ class LearningAgileAPG:
                 self.train_one_epoch(epoch)
                 pbar.update(1)
                 pbar.set_description(f"epoch:{epoch}, reward:{self.reward_batch[0]}")
-                if epoch % 10 == 0:
+                if epoch % 2 == 0:
                     torch.save(self.model, os.path.join(trained_model_folder, f"NN_close_{epoch}.pth"))
 
 if __name__ == "__main__":

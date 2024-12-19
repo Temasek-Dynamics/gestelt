@@ -5,7 +5,7 @@ void mpcRosWrapper::init(ros::NodeHandle& nh)
     /////////////////
     /*parameters*/
     /////////////////
-    nh.param("learning_agile/max_traverse_weight", max_tra_w_, 0.0);
+    nh.param("learning_agile/max_tra_w", max_tra_w_, 0.0);
     nh.param("learning_agile/traverse_weight_span", tra_w_span_, 0.0);
     nh.param("learning_agile/traverse_time", t_tra_abs_, 10.0);
     nh.param("learning_agile/no_solution_flag_t_thresh", no_solution_flag_t_thresh_, 0.02);

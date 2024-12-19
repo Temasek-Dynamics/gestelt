@@ -21,50 +21,55 @@ pre_end_pos=np.array(mission_cfg['mission']['goal_position'])
 desired_average_vel=mission_cfg['training_param']['desired_average_vel']
 gate_width = mission_cfg['gate']['width']
 init_gate_width = mission_cfg['gate']['init_width']
-
+input_size = train_cfg['model']['input_size'] 
+hidden_size = train_cfg['model']['hidden_size']
+output_size = train_cfg['model']['output_size']  
 # load the configuration file
 
 ## sample an input for the neural network 1
 def nn_sample(init_pos=None,final_pos=None,init_angle=None,cur_epoch=train_cfg['training']['num_epochs'],pretrain=False):
-    inputs = np.zeros(17)
+    env_init_set = np.zeros(17)
     if init_pos is None:
-        inputs[0:3] = np.random.uniform(-1,1,size=3) + pre_ini_pos #-5~5, -9
+        env_init_set[0] = np.random.uniform(-2,2) + pre_ini_pos[0] #-5~5, -9
 
         # TODO: transfer to trauncated normal distribution
         if pretrain:
-            inputs[1] = np.random.uniform(-5,5) #+ pre_ini_pos[1]
+            env_init_set[1] = np.random.uniform(-5,5) #+ pre_ini_pos[1]
         else:
-            inputs[1] = np.random.uniform(-0.5,0.5) + pre_ini_pos[1]
+            env_init_set[1] = np.random.uniform(-0.5,0.5) + pre_ini_pos[1]
+
+        env_init_set[2] = np.random.uniform(-0.5, 0.5) + pre_ini_pos[2] #-5~5, 0
     else:
-        inputs[0:3] = init_pos
+        env_init_set[0:3] = init_pos
     ## random final position 
     if final_pos is None:
-        inputs[3:6] = np.random.uniform(-2,2,size=3) + pre_end_pos #-2~2, 6
+        env_init_set[3] = np.random.uniform(-2,2) + pre_end_pos[0] #-2~2, 6
 
-        inputs[4] = np.random.uniform(-0.5,0.5)+pre_end_pos[1]
+        env_init_set[4] = np.random.uniform(-0.5,0.5)+pre_end_pos[1]
+        env_init_set[5] = np.random.uniform(-0.5,0.5)+pre_end_pos[2]
     else:
-        inputs[3:6] = final_pos
+        env_init_set[3:6] = final_pos
 
         
     ##random initial yaw angle of the quadrotor ##
-    inputs[6] = np.random.uniform(-0.1,0.1)
+    env_init_set[6] = np.random.uniform(-0.1,0.1)
     
     ## === random width of the gate  =========##
-    # inputs[7] = np.clip(np.random.normal(0.6,0.2),gate_width,gate_width) #(0.9,0.3),0.5,1.25 
-    inputs[7] = init_gate_width - (init_gate_width - gate_width) * (cur_epoch / train_cfg['training']['num_epochs'])
+    # env_init_set[7] = np.clip(np.random.normal(0.6,0.2),gate_width,gate_width) #(0.9,0.3),0.5,1.25 
+    env_init_set[7] = init_gate_width - (init_gate_width - gate_width) * (cur_epoch / train_cfg['training']['num_epochs'])
   
     ## === random pitch angle of the gate ====##
-    # angle = np.clip(1.3*(1.2-inputs[7]),0,pi/3)
+    # angle = np.clip(1.3*(1.2-env_init_set[7]),0,pi/3)
     # angle1 = (pi/2-angle)/3
     # judge = np.random.normal(0,1)
     # if init_angle is None:
     #     if judge > 0:
-    #         inputs[8] = np.clip(np.random.normal(angle + angle1, 2*angle1/3),angle,pi/2)
-    #         # inputs[8] = np.random.uniform(angle - angle1, angle + angle1)
+    #         env_init_set[8] = np.clip(np.random.normal(angle + angle1, 2*angle1/3),angle,pi/2)
+    #         # env_init_set[8] = np.random.uniform(angle - angle1, angle + angle1)
     #     else:
-    #         inputs[8] = np.clip(np.random.normal(-angle - angle1, 2*angle1/3),-pi/2,-angle)
+    #         env_init_set[8] = np.clip(np.random.normal(-angle - angle1, 2*angle1/3),-pi/2,-angle)
     # else:
-    #     inputs[8] = init_angle
+    #     env_init_set[8] = init_angle
 
     ###==== curriculum learning ===###
     # 0 -> gate is horizontal
@@ -90,38 +95,48 @@ def nn_sample(init_pos=None,final_pos=None,init_angle=None,cur_epoch=train_cfg['
         else:
             gate_pitch=gate_pitch-des_pitch_mean
         
-        gate_pitch = -0.2 #1.2rad = 68.754 degrees
+        gate_pitch = -0.8 #1.2rad = 68.754 degrees, 0.8rad = 45.729 degrees 
         # gate_pitch = np.random.uniform(-pi/6,pi/6)
 
     ##==calculate the gate RM
     rot=R.from_euler('zyx',[0,gate_pitch,0])
-    inputs[8:17]=rot.as_matrix().flatten()
-    return inputs
+    env_init_set[8:17]=rot.as_matrix().flatten()
+    return env_init_set
 
 ## define the expected output of an input (for pretraining)
 def t_output(inputs):
     inputs = np.array(inputs[0])
     
-    outputs = np.zeros(13)
+    outputs = np.zeros(output_size)
+    outputs[2]=mission_cfg['mission']['gate_position'][2]
     R_gate=inputs[-9:].reshape(3,3)
     outputs[3:12]=R_gate.T.flatten()
-    # outputs[3:12] = np.array([[0.0007963,  0.0000000, -0.9999997],
-    #                         [0.0000000,  1.0000000,  0.0000000],
-    #                         [0.9999997,  0.0000000,  0.0007963]]).flatten()  
-    #outputs[5] = math.tan(inputs[6]/2)
-    ## traversal time is propotional to the distance of the centroids
+
+    ## wrp
+    outputs[-2]=mission_cfg['learning_agile']['wrp']
+    
+    ## wrp
+    # outputs[-5]=10
+
+    # ## max_tra_w
+    # outputs[-4]=100
+
+    # ## wrt
+    # outputs[-3]=5
+
+    # ## wqt
+    # outputs[-2]=10
+
+    ## traversal time is proportional to the distance of the centroids
     if inputs[1]>0:
-        raw_time = -round(magni(inputs[0:3])/3,1) #3
+        raw_time = round(magni(inputs[0:3])/4,1) #3
     else:
-        raw_time=round(magni(inputs[0:3])/4,1) #4
+        raw_time = -round(magni(inputs[0:3])/3,1) #4
     outputs[-1] = raw_time #np.clip(raw_time,3,3)
 
-    # outputs[-1]=np.random.normal(0,3)
-    # outputs[-1]=np.random.normal(raw_time,3)
     print('desired_traversing_time',outputs[-1])
 
-    ## traversal gamma
-    # outputs[-2]=10
+    
     return outputs
 
 ## sample a random gate (not necessary in our method) (not important)

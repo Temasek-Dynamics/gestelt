@@ -50,7 +50,7 @@ with open(training_yaml_file, 'r', encoding='utf-8') as file:
 # if not os.path.exists(log_folder):
 #     os.makedirs(log_folder)
 # 延迟执行的目录创建逻辑
-def setup_training_directories(base_dir='training_results'):
+def setup_training_directories(base_dir='training_results/new_format'):
     """仅在需要时创建训练目录和子目录"""
    
     training_results_folder = os.path.abspath(os.path.join(current_dir, base_dir))

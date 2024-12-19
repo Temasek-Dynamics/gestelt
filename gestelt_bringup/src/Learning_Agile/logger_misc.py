@@ -52,35 +52,44 @@ def log_train_IO(writer,inputs,outputs,global_step):
     
     gate_euler=R.from_matrix(inputs[-9:].reshape(3,3)).as_euler('zyx')
     gate_pitch=gate_euler[1]*180/np.pi
-    writer.add_scalar('gate_pitch', gate_pitch, global_step)
+    writer.add_scalar('env/gate_pitch', gate_pitch, global_step)
   
-    writer.add_scalar('x_tra', outputs[0], global_step)
-    writer.add_scalar('y_tra', outputs[1], global_step)
-    writer.add_scalar('z_tra', outputs[2], global_step)
-    writer.add_scalar('roll_tra', euler_nn[0], global_step)
-    writer.add_scalar('pitch_tra', euler_nn[1], global_step)
-    writer.add_scalar('yaw_tra', euler_nn[2], global_step)
-    writer.add_scalar('t_tra', outputs[-1], global_step)
-    writer.add_scalar('gamma', outputs[-2], global_step)
+    writer.add_scalar('NN_output/x_tra', outputs[0], global_step)
+    writer.add_scalar('NN_output/y_tra', outputs[1], global_step)
+    writer.add_scalar('NN_output/z_tra', outputs[2], global_step)
+    writer.add_scalar('NN_output/roll_tra', euler_nn[0], global_step)
+    writer.add_scalar('NN_output/pitch_tra', euler_nn[1], global_step)
+    writer.add_scalar('NN_output/yaw_tra', euler_nn[2], global_step)
+    writer.add_scalar('NN_output/wrp', outputs[-2], global_step)
+    # writer.add_scalar('max_tra_w', outputs[-4], global_step)
+    # writer.add_scalar('wrt', outputs[-3], global_step)
+    # writer.add_scalar('wqt', outputs[-2], global_step)
+    writer.add_scalar('NN_output/t_tra', outputs[-1], global_step)
+
 
     return euler_nn
 
 
 def log_gradient(writer,gra,reward,global_step):
-    writer.add_scalar('drdx', gra[0], global_step)
-    writer.add_scalar('drdy', gra[1], global_step)
-    writer.add_scalar('drdz', gra[2], global_step)
+    ## log as a group named gradient:
+    
+    writer.add_scalar('gradient/drdx', gra[0], global_step)
+    writer.add_scalar('gradient/drdy', gra[1], global_step)
+    writer.add_scalar('gradient/drdz', gra[2], global_step)
     drd9D_norm = np.linalg.norm(gra[3:12])
-    writer.add_scalar('drd9D_norm', drd9D_norm, global_step)
-    writer.add_scalar('drdt', gra[-2], global_step)
+    writer.add_scalar('gradient/drd9D_norm', drd9D_norm, global_step)
+    writer.add_scalar('gradient/drdwrp',gra[-3], global_step)
+    # writer.add_scalar('drdmax_tra_w',gra[-5], global_step)
+    # writer.add_scalar('drdwrt',gra[-4], global_step)
+    # writer.add_scalar('drdwqt',gra[-3], global_step)
+    writer.add_scalar('gradient/drdt', gra[-2], global_step)
     writer.add_scalar('mean_reward_pre_batch',reward, global_step)
-    writer.add_scalar('drdgamma',gra[-3], global_step)
 
 
 def log_drone_state(writer,drone_state, global_step):
-    writer.add_scalar('actual_x', drone_state[0], global_step)
-    writer.add_scalar('actual_y', drone_state[1], global_step)
-    writer.add_scalar('actual_z', drone_state[2], global_step)
+    writer.add_scalar('drone_state/actual_x', drone_state[0], global_step)
+    writer.add_scalar('drone_state/actual_y', drone_state[1], global_step)
+    writer.add_scalar('drone_state/actual_z', drone_state[2], global_step)
 
 def save_state_csv(time,drone_state,python_sim_data_folder):
     data={
@@ -111,3 +120,5 @@ def save_mpc_ctl_csv(time,ctl,python_sim_data_folder):
     df=pd.DataFrame(data)
     output_file=os.path.join(python_sim_data_folder,"python_sim_mpc_ctl.csv")
     df.to_csv(output_file,index=False)
+    
+    

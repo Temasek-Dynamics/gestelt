@@ -2,8 +2,6 @@ import numpy as np
 # from differentiable_collision_wrapper import *
 
 from jax_differentiable_collision_call import *
-import casadi as ca
-import torch
 from solid_geometry import *
 
 ## define the narrow window which is also the obstacle for the quadrotor
@@ -141,7 +139,8 @@ class Obstacle():
                                     gate_quat,
                                     vert_traj, 
                                     goal_pos,
-                                    PENALTY_HELPER = False):   
+                                    PENALTY_HELPER = False,
+                                    real_state_i=None):   
         
         t_tra_seq_list=[]
 
@@ -150,9 +149,9 @@ class Obstacle():
             for t in range(state_traj.shape[0]):
                 
                 # if the current state is already behind the gate, then break
-                if len(t_tra_seq_list)==2 or np.dot(self.plane1.nor_vec(),vert_traj[0]-self.centroid)<0:
+                if len(t_tra_seq_list)==2 or np.dot(self.plane1.nor_vec(),vert_traj[0]-self.centroid)>0:
                     break
-                if(np.dot(self.plane1.nor_vec(),vert_traj[t]-self.centroid)<0):
+                if(np.dot(self.plane1.nor_vec(),vert_traj[t]-self.centroid)>0):
                     t_tra_seq_list.append(t-1)
                 
         else:
@@ -186,6 +185,7 @@ class Obstacle():
                                                                     self.P,
                                                                     state_traj[node_tra,:],
                                                                     node_tra,
+                                                                    config['reward']['scaling_w'],
                                                                     PENALTY_HELPER)
             
             penalty_traj += penalty_single
@@ -207,7 +207,8 @@ class Obstacle():
             ## goal score
             goal_penalty = 0
             
-            goal_w=2
+            # goal_w=config['reward']['goal_w']*np.exp(0.7*(real_state_i-50)) # 50 is the close loop horizon
+            goal_w=config['reward']['goal_w']
             # for last four nodes
             for i in range(-1,-5,-1): 
                 goal_penalty += goal_w * np.dot(state_traj[i,:3]-goal_pos,state_traj[i,:3]-goal_pos)
