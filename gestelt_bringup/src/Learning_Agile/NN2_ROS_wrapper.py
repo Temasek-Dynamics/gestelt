@@ -27,7 +27,8 @@ from config import mission_cfg,train_cfg,current_dir,setup_training_directories
 # acquire the current directory
 
 
-device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+# device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device=torch.device('cpu')
 
 ###============================== Dictionary of UAV states =================================##
 server_states = {}
@@ -91,7 +92,7 @@ class NN2_ROS_wrapper:
             ##================- load trained DNN2 model ======================-##
             # model_file=os.path.join(current_dir, 'training_data/NN_model',NN2_model_name)
             model_file = os.path.join(current_dir, NN_model_name)
-            self.model = torch.load(model_file)
+            self.model = torch.load(model_file,map_location=torch.device('cpu'))
         
         
         ##====================-gate initialization ========================##
