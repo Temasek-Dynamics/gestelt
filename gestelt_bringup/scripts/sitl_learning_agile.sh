@@ -25,6 +25,7 @@ fi
 #####
 SOURCE_WS="
 source $SCRIPT_DIR/../../../devel/setup.bash &&
+export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:$gestelt_bringup_DIR
 "
 # PX4 v1.14.0
 # SOURCE_PX4_AUTOPILOT="

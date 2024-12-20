@@ -1,7 +1,7 @@
 
 # flight mission
 MANUAL_SET_POSE_TEST: false     # only works for ROS nodes
-mission_period: 8.0 #s
+mission_period: 5.0 #s
 
 drone:
   wing_len: 0.8
@@ -155,7 +155,7 @@ pretrain_param:
 ## ------NN configuration ----##
 NN_model_name: 'training_results/new_format/2024-12-19/16-57-20/trained_model/NN_close_210.pth'
 NN_deploy_model_name: 'deployed_model/NN_close_210.pth' # used in the sitl
-NN_freq: 100
+NN_freq: 20
 
 reward:
   goal_w: 2 #2.0

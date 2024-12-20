@@ -334,10 +334,10 @@ Visualization Manager:
       Value: true
     - Class: rviz/Marker
       Enabled: true
-      Marker Topic: /learning_agile_sim/drone_ellispoid
+      Marker Topic: /learning_agile_sim/drone_ellipsoid
       Name: drone_vis
       Namespaces:
-        drone_ellispoid: true
+        drone_ellipsoid: true
       Queue Size: 100
       Value: true
   Enabled: true

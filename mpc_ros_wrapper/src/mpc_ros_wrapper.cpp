@@ -191,7 +191,7 @@ void mpcRosWrapper::solver_request(){
 void mpcRosWrapper::close_loop_solver_request(){
     
     ocp_nlp_out_set(nlp_config, nlp_dims, nlp_out, n_nodes_,"x", des_goal_state_.data());
-    
+    // ROS_INFO("des_trav_point_ is %f, %f, %f", des_trav_point_(0), des_trav_point_(1), des_trav_point_(2));
     
     auto current_time = std::chrono::high_resolution_clock::now();
     double request_gap = std::chrono::duration_cast<std::chrono::duration<double>>(current_time - last_request_time_).count();

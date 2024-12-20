@@ -15,6 +15,7 @@ PX4_AUTOPILOT_REPO_DIR="$SCRIPT_DIR/../../../PX4-Autopilot"
 #####
 SOURCE_WS="
 source $SCRIPT_DIR/../../../devel/setup.bash &&
+export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:$gestelt_bringup_DIR
 "
 # export ROS_MASTER_URI (for distributed simulation)
 # drone's side ROS_MASTER_URI should be the laptop
@@ -48,7 +49,7 @@ taskset -c 2 roslaunch trajectory_server trajectory_server_node.launch rviz_conf
 CMD_2="roslaunch gestelt_bringup learning_agile_mission.launch platform:='drone'  record:=false"
 
 # start up the NN wrapper
-CMD_3="taskset -c 2 roslaunch gestelt_bringup NN2_ROS_wrapper.launch is_simulation:=true"
+CMD_3="taskset -c 3 roslaunch gestelt_bringup NN2_ROS_wrapper.launch is_simulation:=true"
 # disarm drone
 # CMD_4="rosservice call /drone_commander/disarm"
 # CMD_4="rosrun mavros mavparam set COM_RCL_EXCEPT 4"

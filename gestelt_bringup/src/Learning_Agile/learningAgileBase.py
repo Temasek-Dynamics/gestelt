@@ -43,7 +43,7 @@ class LearningAgileBase:
 
         # self.gate_v = np.array(self.mission_cfg['gate']['linear_vel'])
         # self.gate_w = mission_cfg['gate']['angular_vel'] 
-        self.NN_freq = mission_cfg['NN2_freq']
+        self.NN_freq = mission_cfg['NN_freq']
         self.learning_agile_sim = LearningAgileSim(python_sim_time=5,
                                                     mission_cfg=self.mission_cfg,
                                                     dyn_step=1/self.NN_freq,

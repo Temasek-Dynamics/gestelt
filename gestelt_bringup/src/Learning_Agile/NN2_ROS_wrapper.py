@@ -59,12 +59,12 @@ class NN2_ROS_wrapper:
         gate_w = rospy.get_param('gate/angular_vel', 0)
         self.mission_period = rospy.get_param('mission/period', 8)
         NN_model_name=rospy.get_param('NN_deploy_model_name', 'NN2_imitate_1.pth')
-        self.NN2_freq = rospy.get_param('NN2_freq', 100)
+        self.NN_freq = rospy.get_param('NN_freq', 100)
         MANUAL_SET_POSE_TEST = rospy.get_param('MANUAL_SET_POSE_TEST', False)
         ## ==========================initialize ==========================-##
         
         self.state = np.zeros(10)
-        self.gate_step = 1/self.NN2_freq 
+        self.gate_step = 1/self.NN_freq 
         self.MISSION_START = False
         self.RECEIVED_DRONE_POSE = False
         self.RECEIVED_DRONE_TWIST = False
@@ -86,8 +86,8 @@ class NN2_ROS_wrapper:
         
        
         if not MANUAL_SET_POSE_TEST:
-            self.gate_vis_timer = rospy.Timer(rospy.Duration(1/self.NN2_freq), self.gate_vis)
-            self.NN2_output_timer = rospy.Timer(rospy.Duration(1/self.NN2_freq), self.close_loop_NN_forward)
+            self.gate_vis_timer = rospy.Timer(rospy.Duration(1/self.NN_freq), self.gate_vis)
+            self.NN2_output_timer = rospy.Timer(rospy.Duration(1/self.NN_freq), self.close_loop_NN_forward)
         
             ##================- load trained DNN2 model ======================-##
             # model_file=os.path.join(current_dir, 'training_data/NN_model',NN2_model_name)
@@ -145,7 +145,7 @@ class NN2_ROS_wrapper:
 
         if self.MISSION_START:
 
-            self.i = int((curr_time-(self.mission_start_time))*self.NN2_freq)
+            self.i = int((curr_time-(self.mission_start_time))*self.NN_freq)
             # print("i",self.i)
         
             self.gate_t_i = Gate(self.gate_points_list[self.i])
@@ -190,7 +190,7 @@ class NN2_ROS_wrapper:
             ##================= call the gate state estimation function ================##
             
             
-            if self.i>=self.mission_period*self.NN2_freq:
+            if self.i>=self.mission_period*self.NN_freq:
                 self.gate_vis_timer.shutdown()
                 
                 print("Reach Maximum Time, stop the NN forward, set -5s as the traversing time")
@@ -263,7 +263,7 @@ class NN2_ROS_wrapper:
             ##================= call the gate state estimation function ================##
             
             
-            if self.i>=self.mission_period*self.NN2_freq:
+            if self.i>=self.mission_period*self.NN_freq-1:
                 self.gate_vis_timer.shutdown()
                 
                 print("Reach Maximum Time, stop the NN forward, set -5s as the traversing time")
