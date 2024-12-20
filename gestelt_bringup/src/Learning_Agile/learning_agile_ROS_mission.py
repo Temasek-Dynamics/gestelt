@@ -1,14 +1,11 @@
 #!/usr/bin/env python3
-import numpy as np
 import rospy
 from scipy.spatial.transform import Rotation as R
 
 
 from gestelt_msgs.msg import CommanderState, Goals, CommanderCommand
 from geometry_msgs.msg import Pose, Accel,PoseArray,AccelStamped, Twist
-from mavros_msgs.msg import PositionTarget
 from std_msgs.msg import Int8, Bool
-import math
 import time
 import tf
 from tf.transformations import quaternion_from_euler
@@ -21,11 +18,13 @@ import cProfile
 # get ros params from rosparam server
 is_simulation=rospy.get_param('mission/is_simulation', False)
 gate_position=rospy.get_param('mission/gate_position', [0.0,0.0,1.2])
+
 gate_ori_RP=rospy.get_param('mission/gate_ori_RP', [0.0,0.0,0])
 gate_ori_euler=rospy.get_param('mission/gate_ori_euler', [0,0,0])
 
 goal_position=rospy.get_param('mission/goal_position', [0.0,0.0,1.2])
 goal_ori_euler=rospy.get_param('mission/goal_ori_euler', [0,0,0])
+
 MANUAL_SET_POSE_TEST = rospy.get_param('MANUAL_SET_POSE_TEST', False)
 
 # Publisher of server events to trigger change of states for trajectory server 
@@ -180,7 +179,6 @@ def pub_waypoints(waypoints,accels,vels):
     wp_acc_msg=AccelStamped()
 
     wp_msg.header.frame_id = "world"
-    # wp_msg.waypoints.header.frame_id = "world"
     wp_pos_msg.header.frame_id = "world"
     wp_acc_msg.header.frame_id = "world"
 
@@ -252,8 +250,8 @@ def main():
     # waypoints are under the map frame, will be transformed to world frame
 
     # # gate position
-    # waypoints.append(create_trav_pose(gate_position,gate_ori_RP)) 
-    if MANUAL_SET_POSE_TEST:
+    if MANUAL_SET_POSE_TEST: 
+        # waypoints.append(create_trav_pose(gate_position,gate_ori_RP)) 
         waypoints.append(create_close_loop_trav_pose(gate_position,gate_ori_euler)) 
 
     # # end position

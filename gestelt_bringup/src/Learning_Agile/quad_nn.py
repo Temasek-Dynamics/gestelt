@@ -78,8 +78,8 @@ def nn_sample(init_pos=None,final_pos=None,init_angle=None,cur_epoch=train_cfg['
         # gate_pitch = np.random.uniform(-pi/2,pi/2)
         gate_pitch = 0
     else:
-        des_pitch_mean_min = 1*pi/4
-        des_pitch_mean_max = 1*pi/4
+        des_pitch_mean_min = 1*pi/8
+        des_pitch_mean_max = 1*pi/8
         des_pitch_mean = des_pitch_mean_min - (des_pitch_mean_min - des_pitch_mean_max) * (cur_epoch / 100) 
 
         # truncated normal distribution

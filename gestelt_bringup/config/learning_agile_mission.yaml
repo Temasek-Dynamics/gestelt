@@ -1,6 +1,6 @@
 
 # flight mission
-MANUAL_SET_POSE_TEST: true
+MANUAL_SET_POSE_TEST: false     # only works for ROS nodes
 mission_period: 8.0 #s
 
 drone:
@@ -153,8 +153,8 @@ pretrain_param:
   desired_average_vel: 1.5
 
 ## ------NN configuration ----##
-NN2_model_name: 'NN2_imitate_1.pth'
-NN2_freq: 100
+NN_model_name: 'training_results/new_format/2024-12-19/16-57-20/trained_model/NN_close_210.pth'
+NN_freq: 100
 
 reward:
   goal_w: 2 #2.0

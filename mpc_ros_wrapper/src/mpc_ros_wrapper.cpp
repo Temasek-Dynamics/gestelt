@@ -329,8 +329,10 @@ void mpcRosWrapper::mission_start_cb(const gestelt_msgs::GoalsPtr &msg)
         quat_to_rotation_matrix();
 
     }
-    des_goal_point_ << msg->waypoints[1].position.x, msg->waypoints[1].position.y, msg->waypoints[1].position.z;
-    des_goal_quat_ << msg->waypoints[1].orientation.w, msg->waypoints[1].orientation.x, msg->waypoints[1].orientation.y, msg->waypoints[1].orientation.z;
+    // des_goal_point_ << msg->waypoints[-1].position.x, msg->waypoints[-1].position.y, msg->waypoints[-1].position.z;
+    des_goal_point_ << msg->waypoints[msg->waypoints.size()-1].position.x, msg ->waypoints[msg->waypoints.size()-1].position.y, msg ->waypoints[msg->waypoints.size()-1].position.z;
+    // des_goal_quat_ << msg->waypoints[-1].orientation.w, msg->waypoints[-1].orientation.x, msg->waypoints[-1].orientation.y, msg->waypoints[-1].orientation.z;
+    des_goal_quat_ << msg->waypoints[msg->waypoints.size()-1].orientation.w, msg->waypoints[msg->waypoints.size()-1].orientation.x, msg->waypoints[msg->waypoints.size()-1].orientation.y, msg->waypoints[msg->waypoints.size()-1].orientation.z;
     
     //set the goal state
     des_goal_state_.segment(0,3) = des_goal_point_;
@@ -361,12 +363,6 @@ void mpcRosWrapper::close_loop_NN_trav_pose_cb(const gestelt_msgs::close_loop_NN
 {
     des_trav_point_ = Eigen::Map<const Eigen::VectorXd>(msg->position.data(), msg->position.size());
     des_trav_9d_ = Eigen::Map<const Eigen::VectorXd>(msg->vector_9D_orientation.data(), msg->vector_9D_orientation.size());
-
-    // print the 9d vector
-    for (int i = 0; i < 9; i++)
-    {
-        ROS_INFO("9d vector is %f", des_trav_9d_(i));
-    }
 }
 
 

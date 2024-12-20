@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
 ## this file is for traversing moving narrow window
-import sys
 import os
-
+import time
+import rospy
 from scipy.spatial.transform import Rotation as R
 from collections import deque
 
@@ -12,12 +12,11 @@ from quad_policy import *
 from quad_nn import *
 from quad_moving import *
 
-import rospy
+
 from gestelt_msgs.msg import Goals,  CommanderState, close_loop_NN_output
 from geometry_msgs.msg import  PoseStamped, TwistStamped, Point
 from std_msgs.msg import Float32
 from visualization_msgs.msg import Marker
-import time
 from quad_policy import Rd2Rp
 from quad_model import toQuaternion
 from learning_agile_sim import MovingGate, input_size
@@ -58,7 +57,7 @@ class NN2_ROS_wrapper:
         gate_v = rospy.get_param('gate/linear_vel', [0,0,0])
         gate_w = rospy.get_param('gate/angular_vel', 0)
         self.mission_period = rospy.get_param('mission/period', 8)
-        NN2_model_name=rospy.get_param('NN2_model_name', 'NN2_imitate_1.pth')
+        NN_model_name=rospy.get_param('NN_model_name', 'NN2_imitate_1.pth')
         self.NN2_freq = rospy.get_param('NN2_freq', 100)
         MANUAL_SET_POSE_TEST = rospy.get_param('MANUAL_SET_POSE_TEST', False)
         ## ==========================initialize ==========================-##
@@ -91,7 +90,7 @@ class NN2_ROS_wrapper:
         
             ##================- load trained DNN2 model ======================-##
             # model_file=os.path.join(current_dir, 'training_data/NN_model',NN2_model_name)
-            model_file = os.path.join(current_dir, 'training_results/2024-11-22/12-56-50/trained_model/NN_close_500.pth')
+            model_file = os.path.join(current_dir, NN_model_name)
             self.model = torch.load(model_file)
         
         
@@ -100,8 +99,9 @@ class NN2_ROS_wrapper:
         ## random gate initialization
         self.env_init_set = nn_sample()
         gate_length = rospy.get_param('gate/length', 1.2)
+        gate_center = rospy.get_param('mission/gate_position', [0,0,1.5])
         self.moving_gate = MovingGate(self.env_init_set,
-                                      gate_cen_h=1.0,
+                                      gate_center=gate_center,
                                       gate_length=gate_length)
         self.moving_gate.set_vel(dt=self.gate_step,gate_v=gate_v,gate_w=gate_w)
         self.gate_points_list = self.moving_gate.gate_points_list
@@ -314,7 +314,7 @@ class NN2_ROS_wrapper:
                 NN_trav_pose_msg = close_loop_NN_output()
                 NN_trav_pose_msg.header.stamp = rospy.Time.now()
                 NN_trav_pose_msg.header.frame_id = "world"
-                NN_trav_pose_msg.position[0:3] = out[0:3]+self.gate_t_i.centroid+self.trans
+                NN_trav_pose_msg.position[0:3] = out[0:3]+self.trans
                 NN_trav_pose_msg.vector_9D_orientation[0:9]=out[3:12]
                 
                 NN_trav_time_msg = Float32()
@@ -327,9 +327,9 @@ class NN2_ROS_wrapper:
                 vis_NN_trav_pose_msg = PoseStamped()
                 vis_NN_trav_pose_msg.header.stamp = rospy.Time.now()
                 vis_NN_trav_pose_msg.header.frame_id = "world"
-                vis_NN_trav_pose_msg.pose.position.x = out[0]+self.trans[0]+self.gate_t_i.centroid[0]
-                vis_NN_trav_pose_msg.pose.position.y = out[1]+self.trans[1]+self.gate_t_i.centroid[1]
-                vis_NN_trav_pose_msg.pose.position.z = out[2]+self.trans[2]+self.gate_t_i.centroid[2]
+                vis_NN_trav_pose_msg.pose.position.x = NN_trav_pose_msg.position[0]
+                vis_NN_trav_pose_msg.pose.position.y = NN_trav_pose_msg.position[1]
+                vis_NN_trav_pose_msg.pose.position.z = NN_trav_pose_msg.position[2]
                 vis_NN_trav_pose_msg.pose.orientation.w = quat[0]
                 vis_NN_trav_pose_msg.pose.orientation.x = quat[1]
                 vis_NN_trav_pose_msg.pose.orientation.y = quat[2]
@@ -347,9 +347,9 @@ class NN2_ROS_wrapper:
         once this message is received, the mission starts
         """
         print("Detect Mission Start")
-        self.final_point = np.array([msg.waypoints[1].position.x-self.trans[0],
-                                     msg.waypoints[1].position.y-self.trans[1],
-                                     msg.waypoints[1].position.z-self.trans[2]])
+        self.final_point = np.array([msg.waypoints[-1].position.x-self.trans[0],
+                                     msg.waypoints[-1].position.y-self.trans[1],
+                                     msg.waypoints[-1].position.z-self.trans[2]])
         self.mission_start_time = rospy.Time.now().to_sec()
         self.MISSION_START = True
 

@@ -383,18 +383,12 @@ class LearningAgileSim():
                         out[12]=self.t_tra_rel
                         self.log_NN_IO_for_RM(out,des_tra_R,gate_pitch=0) 
                     else:
-                        ### SVD through CasADi
-                        des_tra_m=out[3:12]
-
-                        # relative traversal time
-                        # out[12]=10 #wrp
-                        # out[13]=100 #max_tra_w
-                        # out[14]=5  #wrt
-                        # out[15]=10 #wqt
                         out[-1]=self.t_tra_rel
+                        ### SVD through CasADi
                         verify_tra_R=verify_SVD_casadi(out[3:12])
                         gate_pitch=0
-                        self.log_NN_IO_for_RM(gate_pitch,out,verify_tra_R.flatten())       
+                        self.log_NN_IO_for_RM(gate_pitch,out,verify_tra_R.flatten())  
+                        trav_auxvar_value=np.concatenate((des_tra_pos,des_tra_R,np.array([out[12]])),axis=0)     
                 else:
                     
                     if self.options['CLOSE_LOOP_MODEL']:
@@ -403,17 +397,10 @@ class LearningAgileSim():
                     else:
                         out = self.imiate_NN_forward()
                         des_tra_pos=self.gate_t_i.centroid+out[0:3]
-                    des_tra_m=out[3:12]
-                t_comp = time.time()
-                
-                
                     
-                if self.options['JAX_SVD']:
-                    trav_auxvar_value=np.concatenate((des_tra_pos,des_tra_R,np.array([out[12]])),axis=0)
-                
-                else:
                     trav_auxvar_value=out
-    
+                
+                t_comp = time.time()
                 cmd_solution,NO_SOLUTION_FLAG  = self.planner.mpc_update(current_state=self.state,
                                                         trav_auxvar_value=trav_auxvar_value)
                 
@@ -545,7 +532,7 @@ def main():
     options['STATE_2_MOVING_GATE']=False
     if options['CLOSE_LOOP_MODEL']:
         # good : 'training_results/2024-11-22/12-56-50/trained_model/NN_close_500.pth
-        model_name = 'training_results/new_format/2024-12-19/17-15-34/trained_model/NN_close_80.pth'#'NN2_imitate_1.pth' #'NN_close_2.pth'
+        model_name = mission_cfg['NN_model_name']#'NN2_imitate_1.pth' #'NN_close_2.pth'
         model_file=os.path.join(current_dir,model_name)
     else:   
         model_name = '20241031-142733-PDP-Trial 1, shrink the gate from [1.2,0.56] to [1.0, 0.4]/NN2_imitate_1.pth' 
