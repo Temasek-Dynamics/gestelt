@@ -28,7 +28,7 @@ docker run --privileged --rm tonistiigi/binfmt --install all
 ## Building and Pushing images to Docker Hub repository
 ```bash
 # Build image
-docker build --platform linux/arm64 -t gestelt/learning-agile:latest .
+docker build --no-cache --platform linux/arm64 -t gestelt/learning-agile:latest .
 # Push image to docker hub repository
 docker push gestelt/learning-agile:latest
 

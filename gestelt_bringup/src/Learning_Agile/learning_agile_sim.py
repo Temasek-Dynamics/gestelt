@@ -369,18 +369,14 @@ class LearningAgileSim():
                     # out[3:6]=self.gate_ori_RP # Rodrigues parameters
                     out[3:12]=self.gate_ori_9d # manual set 9D vector (is rotation matrix directly)
                     print("="*50)
-                    print("NN pose det before SVD",np.linalg.det(out[3:12].reshape(3,3)))
-                    
-                    des_tra_pos=out[0:3]
-
-                    
+                    # print("NN pose det before SVD",np.linalg.det(out[3:12].reshape(3,3)))
 
                     if self.options['JAX_SVD']:
                         ### SVD through JAX
                         des_tra_R=SVD_M_to_SO3(out[3:12]).flatten() # 9D vector to 3x3 rotation matrix(in flat form)
                         print("NN pose det after SVD",np.linalg.det(des_tra_R.reshape(3,3)))
                         # relative traversal time
-                        out[12]=self.t_tra_rel
+                        out[-1]=self.t_tra_rel
                         self.log_NN_IO_for_RM(out,des_tra_R,gate_pitch=0) 
                     else:
                         out[-1]=self.t_tra_rel
@@ -388,21 +384,22 @@ class LearningAgileSim():
                         verify_tra_R=verify_SVD_casadi(out[3:12])
                         gate_pitch=0
                         self.log_NN_IO_for_RM(gate_pitch,out,verify_tra_R.flatten())  
-                        trav_auxvar_value=np.concatenate((des_tra_pos,des_tra_R,np.array([out[12]])),axis=0)     
+
+                            
                 else:
                     
                     if self.options['CLOSE_LOOP_MODEL']:
                         out = self.close_loop_NN_forward()
-                        des_tra_pos=+out[0:3]
+                      
                     else:
                         out = self.imiate_NN_forward()
                         des_tra_pos=self.gate_t_i.centroid+out[0:3]
                     
-                    trav_auxvar_value=out
+    
                 
                 t_comp = time.time()
                 cmd_solution,NO_SOLUTION_FLAG  = self.planner.mpc_update(current_state=self.state,
-                                                        trav_auxvar_value=trav_auxvar_value)
+                                                        trav_auxvar_value=out)
                 
                 print('solving time at main=',time.time()-t_comp)
                 self.solving_time.append(time.time()- t_comp)
@@ -508,7 +505,25 @@ class LearningAgileSim():
         # self.planner.uav1.plot_T(control_tm)
         # self.planner.uav1.plot_M(control_tm)
     
-        
+import argparse
+
+def parse_options():
+    parser = argparse.ArgumentParser(description="Options for the program.")
+
+    parser.add_argument('--MPC_BACKWARD', type=bool, default=False, help='Enable or disable MPC_BACKWARD.')
+    parser.add_argument('--USE_PREV_SOLVER', type=bool, default=False, help='Enable or disable USE_PREV_SOLVER.')
+    parser.add_argument('--PDP_GRADIENT', type=bool, default=False, help='Enable or disable PDP_GRADIENT.')
+    parser.add_argument('--SQP_RTI_OPTION', type=bool, default=True, help='Enable or disable SQP_RTI_OPTION.')
+    parser.add_argument('--MANUAL_SET_POSE_TEST', type=bool, default=False, help='Enable or disable MANUAL_SET_POSE_TEST.')
+    parser.add_argument('--CLOSE_LOOP_MODEL', type=bool, default=True, help='Enable or disable CLOSE_LOOP_MODEL.')
+    parser.add_argument('--JAX_SVD', type=bool, default=False, help='Enable or disable JAX_SVD.')
+    parser.add_argument('--CLOSE_LOOP_TRAINING', type=bool, default=False, help='Enable or disable CLOSE_LOOP_TRAINING.')
+    parser.add_argument('--VISUALIZE', type=bool, default=True, help='Enable or disable VISUALIZE.')
+    parser.add_argument('--STATE_2_MOVING_GATE', type=bool, default=False, help='Enable or disable STATE_2_MOVING_GATE.')
+
+    args = parser.parse_args()
+    return vars(args)  # Return options as a dictionary  
+      
 def main():
     # yaml file dir#
     conf_folder=os.path.abspath(os.path.join(current_dir, '..', '..','config'))
@@ -519,17 +534,9 @@ def main():
     ########################################################################
     #####---------------------- TEST option -------------------------#######
     ########################################################################
-    options={}
-    options['MPC_BACKWARD']=False
-    options['USE_PREV_SOLVER']=False
-    options['PDP_GRADIENT']=False
-    options['SQP_RTI_OPTION']=True
-    options['MANUAL_SET_POSE_TEST']=False
-    options['CLOSE_LOOP_MODEL']= True
-    options['JAX_SVD']=False
-    options['CLOSE_LOOP_TRAINING']=False
-    options['VISUALIZE']=True
-    options['STATE_2_MOVING_GATE']=False
+    options=parse_options()
+    print("Parsed Options:", options)
+
     if options['CLOSE_LOOP_MODEL']:
         # good : 'training_results/2024-11-22/12-56-50/trained_model/NN_close_500.pth
         model_name = mission_cfg['NN_model_name']#'NN2_imitate_1.pth' #'NN_close_2.pth'
