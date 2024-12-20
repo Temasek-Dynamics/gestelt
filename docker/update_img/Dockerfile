@@ -18,6 +18,10 @@ WORKDIR /gestelt_ws/src/gestelt
 RUN git pull
 RUN git checkout tianchensun_learning_agile
 
+WORKDIR /gestelt_ws/src/gestelt/gestelt_bringup/src/Learning_Agile/
+RUN python3 learning_agile_sim.py \
+    && rm -rf /var/lib/apt/lists/*
+    
 # compile the workspace
 WORKDIR /gestelt_ws/
 # RUN python3 ./src/gestelt/gestelt_bringup/src/Learning_Agile/learning_agile_sim.py
@@ -27,6 +31,7 @@ RUN export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/root/acados/lib \
     && catkin config --skiplist trajectory_planner se3_controller\
     && catkin build \
     && rm -rf /var/lib/apt/lists/* 
+
 
 # DRONE_ID environment variable can be overriden on docker image startup
 ENV MASTER_IP=localhost

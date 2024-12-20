@@ -465,8 +465,8 @@ class LearningAgileSim():
         np.save(os.path.join(python_sim_data_folder,'nn_output_list'),self.nn_output_list)
         np.save(os.path.join(python_sim_data_folder,'des_tra_R_list'),self.des_tra_R_list)
 
-        save_state_csv(self.Time,self.state_n,python_sim_data_folder)
-        save_mpc_ctl_csv(self.Time,self.control_n,python_sim_data_folder)
+        # save_state_csv(self.Time,self.state_n,python_sim_data_folder)
+        # save_mpc_ctl_csv(self.Time,self.control_n,python_sim_data_folder)
 
         if self.options['VISUALIZE']:
             self.planner.uav1.play_animation(wing_len=self.planner.wing_len,
