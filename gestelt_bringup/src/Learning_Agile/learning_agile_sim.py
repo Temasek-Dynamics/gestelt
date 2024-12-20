@@ -450,22 +450,23 @@ class LearningAgileSim():
             # self.hl_variable = np.concatenate((self.hl_variable,[out]),axis=0)       
             
         print('MPC finished')   
-        np.save(os.path.join(python_sim_data_folder,'gate_points_list_traj'),self.gate_points_list)
-        np.save(os.path.join(python_sim_data_folder,'uav_traj'),self.state_n)
-        np.save(os.path.join(python_sim_data_folder,'uav_ctrl'),self.control_n)
-        np.save(os.path.join(python_sim_data_folder,'abs_tra_time'),self.Ttra)
-        np.save(os.path.join(python_sim_data_folder,'tra_time'),self.NN_T_tra)
-        np.save(os.path.join(python_sim_data_folder,'Time'),self.Time)
-        np.save(os.path.join(python_sim_data_folder,'Pitch'),self.Pitch)
-        np.save(os.path.join(python_sim_data_folder,'HL_Variable'),self.hl_variable)
-        np.save(os.path.join(python_sim_data_folder,'solving_time'),self.solving_time)
-        np.save(os.path.join(python_sim_data_folder,'nn_output_list'),self.nn_output_list)
-        np.save(os.path.join(python_sim_data_folder,'des_tra_R_list'),self.des_tra_R_list)
+        
 
         # save_state_csv(self.Time,self.state_n,python_sim_data_folder)
         # save_mpc_ctl_csv(self.Time,self.control_n,python_sim_data_folder)
 
         if self.options['VISUALIZE']:
+            np.save(os.path.join(python_sim_data_folder,'gate_points_list_traj'),self.gate_points_list)
+            np.save(os.path.join(python_sim_data_folder,'uav_traj'),self.state_n)
+            np.save(os.path.join(python_sim_data_folder,'uav_ctrl'),self.control_n)
+            np.save(os.path.join(python_sim_data_folder,'abs_tra_time'),self.Ttra)
+            np.save(os.path.join(python_sim_data_folder,'tra_time'),self.NN_T_tra)
+            np.save(os.path.join(python_sim_data_folder,'Time'),self.Time)
+            np.save(os.path.join(python_sim_data_folder,'Pitch'),self.Pitch)
+            np.save(os.path.join(python_sim_data_folder,'HL_Variable'),self.hl_variable)
+            np.save(os.path.join(python_sim_data_folder,'solving_time'),self.solving_time)
+            np.save(os.path.join(python_sim_data_folder,'nn_output_list'),self.nn_output_list)
+            np.save(os.path.join(python_sim_data_folder,'des_tra_R_list'),self.des_tra_R_list)
             self.planner.uav1.play_animation(wing_len=self.planner.wing_len,
                                         gate_traj1=self.gate_points_list[::5,:,:],
                                         state_traj=self.state_n[::5,:],
