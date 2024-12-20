@@ -18,13 +18,18 @@ WORKDIR /gestelt_ws/src/gestelt
 RUN git pull
 RUN git checkout tianchensun_learning_agile
 
+
+## if the c_generated_code is git ignored, than this script is required to generate the c code
+# WORKDIR /gestelt_ws/src/gestelt/gestelt_bringup/src/Learning_Agile/
+# RUN  export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/root/acados/lib \
+#     && export ACADOS_SOURCE_DIR=/root/acados \
+#     && source ~/.bashrc \
+#     && python3 learning_agile_sim.py --MANUAL_SET_POSE_TEST True --VISUALIZE False \
+#     && rm -rf /var/lib/apt/lists/*
+
+# copy the deployed model in the image
 WORKDIR /gestelt_ws/src/gestelt/gestelt_bringup/src/Learning_Agile/
-RUN  export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/root/acados/lib \
-    && export ACADOS_SOURCE_DIR=/root/acados \
-    && source ~/.bashrc \
-    && python3 learning_agile_sim.py --MANUAL_SET_POSE_TEST True --VISUALIZE False \
-    && rm -rf /var/lib/apt/lists/*
-    
+COPY deployed_model /gestelt_ws/src/gestelt/gestelt_bringup/src/Learning_Agile/deployed_model
 # compile the workspace
 WORKDIR /gestelt_ws/
 # RUN python3 ./src/gestelt/gestelt_bringup/src/Learning_Agile/learning_agile_sim.py

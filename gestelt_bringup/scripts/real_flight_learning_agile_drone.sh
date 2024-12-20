@@ -36,7 +36,11 @@ export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:$gestelt_bringup_DIR:$PX4_AUTOPILOT_RE
 
 
 # Start up script to send commands
-CMD_3="roslaunch gestelt_bringup mission_realflight.launch"
+CMD_2="roslaunch gestelt_bringup mission_realflight.launch"
+
+
+# start up the NN wrapper
+CMD_3="taskset -c 2 roslaunch gestelt_bringup NN2_ROS_wrapper.launch"
 
 # disarm drone
 # CMD_4="rosservice call /drone_commander/disarm"
