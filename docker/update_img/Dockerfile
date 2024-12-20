@@ -19,8 +19,7 @@ RUN git pull
 RUN git checkout tianchensun_learning_agile
 
 WORKDIR /gestelt_ws/src/gestelt/gestelt_bringup/src/Learning_Agile/
-RUN source ~/.bashrc \
-    && python3 learning_agile_sim.py --MANUAL_SET_POSE_TEST True --VISUALIZE False \
+RUN python3 learning_agile_sim.py --MANUAL_SET_POSE_TEST True --VISUALIZE False \
     && rm -rf /var/lib/apt/lists/*
     
 # compile the workspace

@@ -6,6 +6,7 @@ import yaml
 from scipy.spatial.transform import Rotation as R
 from solid_geometry import *
 import numpy as np
+import argparse
 # import pandas as pd
 class LoggerConfig:
     def __init__(self, log_dir="logs"):
@@ -122,3 +123,12 @@ def save_mpc_ctl_csv(time,ctl,python_sim_data_folder):
     df.to_csv(output_file,index=False)
     
     
+def str2bool(value):
+    if isinstance(value, bool):
+        return value
+    if value.lower() in ('yes', 'true', 't', '1'):
+        return True
+    elif value.lower() in ('no', 'false', 'f', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError(f"Invalid boolean value: {value}")

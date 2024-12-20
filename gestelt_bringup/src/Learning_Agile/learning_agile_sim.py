@@ -510,16 +510,16 @@ import argparse
 def parse_options():
     parser = argparse.ArgumentParser(description="Options for the program.")
 
-    parser.add_argument('--MPC_BACKWARD', type=bool, default=False, help='Enable or disable MPC_BACKWARD.')
-    parser.add_argument('--USE_PREV_SOLVER', type=bool, default=False, help='Enable or disable USE_PREV_SOLVER.')
-    parser.add_argument('--PDP_GRADIENT', type=bool, default=False, help='Enable or disable PDP_GRADIENT.')
-    parser.add_argument('--SQP_RTI_OPTION', type=bool, default=True, help='Enable or disable SQP_RTI_OPTION.')
-    parser.add_argument('--MANUAL_SET_POSE_TEST', type=bool, default=False, help='Enable or disable MANUAL_SET_POSE_TEST.')
-    parser.add_argument('--CLOSE_LOOP_MODEL', type=bool, default=True, help='Enable or disable CLOSE_LOOP_MODEL.')
-    parser.add_argument('--JAX_SVD', type=bool, default=False, help='Enable or disable JAX_SVD.')
-    parser.add_argument('--CLOSE_LOOP_TRAINING', type=bool, default=False, help='Enable or disable CLOSE_LOOP_TRAINING.')
-    parser.add_argument('--VISUALIZE', type=bool, default=True, help='Enable or disable VISUALIZE.')
-    parser.add_argument('--STATE_2_MOVING_GATE', type=bool, default=False, help='Enable or disable STATE_2_MOVING_GATE.')
+    parser.add_argument('--MPC_BACKWARD', type=str2bool, default=False, help='Enable or disable MPC_BACKWARD.')
+    parser.add_argument('--USE_PREV_SOLVER', type=str2bool, default=False, help='Enable or disable USE_PREV_SOLVER.')
+    parser.add_argument('--PDP_GRADIENT', type=str2bool, default=False, help='Enable or disable PDP_GRADIENT.')
+    parser.add_argument('--SQP_RTI_OPTION', type=str2bool, default=True, help='Enable or disable SQP_RTI_OPTION.')
+    parser.add_argument('--MANUAL_SET_POSE_TEST', type=str2bool, default=False, help='Enable or disable MANUAL_SET_POSE_TEST.')
+    parser.add_argument('--CLOSE_LOOP_MODEL', type=str2bool, default=True, help='Enable or disable CLOSE_LOOP_MODEL.')
+    parser.add_argument('--JAX_SVD', type=str2bool, default=False, help='Enable or disable JAX_SVD.')
+    parser.add_argument('--CLOSE_LOOP_TRAINING', type=str2bool, default=False, help='Enable or disable CLOSE_LOOP_TRAINING.')
+    parser.add_argument('--VISUALIZE', type=str2bool, default=True, help='Enable or disable VISUALIZE.')
+    parser.add_argument('--STATE_2_MOVING_GATE', type=str2bool, default=False, help='Enable or disable STATE_2_MOVING_GATE.')
 
     args = parser.parse_args()
     return vars(args)  # Return options as a dictionary  
