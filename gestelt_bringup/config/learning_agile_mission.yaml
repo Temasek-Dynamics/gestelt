@@ -154,6 +154,7 @@ pretrain_param:
 
 ## ------NN configuration ----##
 NN_model_name: 'training_results/new_format/2024-12-19/16-57-20/trained_model/NN_close_210.pth'
+NN_deploy_model_name: 'deployed_model/NN_close_210.pth' # used in the sitl
 NN_freq: 100
 
 reward:

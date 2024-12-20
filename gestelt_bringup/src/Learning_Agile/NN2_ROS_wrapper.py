@@ -57,7 +57,7 @@ class NN2_ROS_wrapper:
         gate_v = rospy.get_param('gate/linear_vel', [0,0,0])
         gate_w = rospy.get_param('gate/angular_vel', 0)
         self.mission_period = rospy.get_param('mission/period', 8)
-        NN_model_name=rospy.get_param('NN_model_name', 'NN2_imitate_1.pth')
+        NN_model_name=rospy.get_param('NN_deploy_model_name', 'NN2_imitate_1.pth')
         self.NN2_freq = rospy.get_param('NN2_freq', 100)
         MANUAL_SET_POSE_TEST = rospy.get_param('MANUAL_SET_POSE_TEST', False)
         ## ==========================initialize ==========================-##
