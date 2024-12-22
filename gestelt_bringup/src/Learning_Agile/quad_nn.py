@@ -30,23 +30,23 @@ output_size = train_cfg['model']['output_size']
 def nn_sample(init_pos=None,final_pos=None,init_angle=None,cur_epoch=train_cfg['training']['num_epochs'],pretrain=False):
     env_init_set = np.zeros(17)
     if init_pos is None:
-        env_init_set[0] = pre_ini_pos[0] #np.random.uniform(-1,1) + pre_ini_pos[0] #-5~5, -9
+        env_init_set[0:3] =  np.random.uniform(-0.5,0.5,3) + pre_ini_pos #-5~5, -9 
 
-        # TODO: transfer to trauncated normal distribution
         if pretrain:
             env_init_set[1] = np.random.uniform(-5,5) #+ pre_ini_pos[1]
-        else:
-            env_init_set[1] = np.random.uniform(-0.5,0.5) + pre_ini_pos[1]
+        # else:
+        #     env_init_set[1] = pre_ini_pos[1] #np.random.uniform(-0.5,0.5) + 
 
-        env_init_set[2] = np.random.uniform(-0.5, 0.5) + pre_ini_pos[2] #-5~5, 0
+        # env_init_set[2] = np.random.uniform(-1, 1) + pre_ini_pos[2] #-5~5, 0
     else:
         env_init_set[0:3] = init_pos
     ## random final position 
     if final_pos is None:
-        env_init_set[3] = np.random.uniform(-1,1) + pre_end_pos[0] #-2~2, 6
+        # env_init_set[3] = np.random.uniform(-1,1) + pre_end_pos[0] #-2~2, 6
 
-        env_init_set[4] = np.random.uniform(-0.5,0.5)+pre_end_pos[1]
-        env_init_set[5] = np.random.uniform(-0.5,0.5)+pre_end_pos[2]
+        # env_init_set[4] = np.random.uniform(-0.5,0.5)+pre_end_pos[1]
+        # env_init_set[5] = np.random.uniform(-1,1)+pre_end_pos[2]
+        env_init_set[3:6]=np.random.uniform(-0.5,0.5,3)+pre_end_pos
     else:
         env_init_set[3:6] = final_pos
 
@@ -78,13 +78,13 @@ def nn_sample(init_pos=None,final_pos=None,init_angle=None,cur_epoch=train_cfg['
         # gate_pitch = np.random.uniform(-pi/2,pi/2)
         gate_pitch = 0
     else:
-        des_pitch_mean_min = 1*pi/8
-        des_pitch_mean_max = 1*pi/8
+        des_pitch_mean_min = 1*pi/6
+        des_pitch_mean_max = 1*pi/6
         des_pitch_mean = des_pitch_mean_min - (des_pitch_mean_min - des_pitch_mean_max) * (cur_epoch / 100) 
 
         # truncated normal distribution
-        mu,sigma = 0,pi/16
-        lower,upper = -pi/3,pi/3
+        mu,sigma = 0,pi/32
+        lower,upper = -pi/8,pi/8
         X = stats.truncnorm((lower - mu) / sigma, (upper - mu) / sigma, loc=mu, scale=sigma)
         gate_pitch = X.rvs(1)[0]
         
@@ -95,7 +95,10 @@ def nn_sample(init_pos=None,final_pos=None,init_angle=None,cur_epoch=train_cfg['
         else:
             gate_pitch=gate_pitch-des_pitch_mean
         
-        gate_pitch = mission_cfg['mission']['gate_ori_euler'][1] #1.2rad = 68.754 degrees, 0.8rad = 45.729 degrees 
+        ## or 
+        # gate_pitch = mission_cfg['mission']['gate_ori_euler'][1] #1.2rad = 68.754 degrees, 0.8rad = 45.729 degrees 
+
+        ## or 
         # gate_pitch = np.random.uniform(-pi/6,pi/6)
 
     ##==calculate the gate RM
@@ -105,6 +108,14 @@ def nn_sample(init_pos=None,final_pos=None,init_angle=None,cur_epoch=train_cfg['
 
 ## define the expected output of an input (for pretraining)
 def t_output(inputs):
+    """the traverse time is calculated based on the signed distance between the drone position and the gate position.
+
+    Args:
+        inputs (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
     inputs = np.array(inputs[0])
     
     outputs = np.zeros(output_size)
@@ -129,9 +140,9 @@ def t_output(inputs):
 
     ## traversal time is proportional to the distance of the centroids
     if inputs[1]>0:
-        raw_time = round(magni(inputs[0:3])/desired_average_vel,2) #3
+        raw_time = round(magni(inputs[0:3]-outputs[0:3])/desired_average_vel,1) #3
     else:
-        raw_time = -round(magni(inputs[0:3])/desired_average_vel,2) #4
+        raw_time = -round(magni(inputs[0:3]-outputs[0:3])/desired_average_vel,1) #4
     outputs[-1] = raw_time #np.clip(raw_time,3,3)
 
     print('desired_traversing_time',outputs[-1])

@@ -485,8 +485,6 @@ class OCSys:
         # current node time
         t_node_value=ocp.model.p[-1]
 
-        # weight path position error
-        wrp_value=trav_auxvar_value[-2]
 
         # # setting the cost function
         # ocp.model.cost_expr_ext_cost_custom_hess/cost_expr_ext_cost

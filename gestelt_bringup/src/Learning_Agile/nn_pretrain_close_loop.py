@@ -4,6 +4,8 @@ import os
 from collections import deque
 from scipy.spatial.transform import Rotation as R
 from config import mission_cfg, train_cfg
+
+from quad_model import get_gate_points
 # Device configuration
 device = torch.device('cpu')#torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -19,15 +21,25 @@ training_data_folder=os.path.abspath(os.path.join(current_dir, 'training_data'))
 model_folder=os.path.abspath(os.path.join(training_data_folder, 'NN_model'))
 FILE = model_folder+"/NN_close_pretrain.pth"
 model = network_with_GRU(input_size, hidden_size, hidden_size,output_size).to(device)
-# model = torch.load(FILE)
+
 # Loss and optimizer
 criterion = nn.MSELoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)   #, weight_decay=1e-2
 
 def input_cal():
+    """This function is used in pretrain, to calculate the input for the neural network 
+       in the pretrain, the gate is in the preset position, with no pitch.
+                        the drone position is rondomly generated, 
+    Returns:
+        _type_: _description_
+    """
     inputs=np.zeros(input_size)
     static_env = nn_sample(pretrain=True)
+    
+    ## drone initial position
     inputs[0:3] = static_env[0:3]
+    
+    ## drone initial velocity
     inputs[3:6] = np.array([0,0,0])
 
     ## drone initial orientation: yaw to quaternion
@@ -40,15 +52,12 @@ def input_cal():
 
 
     ## gate points
-    gate_cen_h=0
-    gate_width = mission_cfg['gate']['width']
+    gate_width  = mission_cfg['gate']['width']
     gate_length = mission_cfg['gate']['length']
-    inputs[13:25] = np.array([[-gate_length/2, 0, gate_cen_h+gate_width/2],
-                              [ gate_length/2, 0, gate_cen_h+gate_width/2],
-                              [ gate_length/2, 0, gate_cen_h-gate_width/2],
-                              [-gate_length/2, 0, gate_cen_h-gate_width/2]]).flatten() # gate points     
+    gate_center = mission_cfg['mission']['gate_position']
+    inputs[13:25] = get_gate_points(gate_center,gate_length,gate_width).flatten()
     
-    inputs[25:28] = np.array([0,0,0]) # gate position
+    inputs[25:28] = gate_center # gate position
     inputs[28:38] = static_env[7:17] # gate width and gate orientation
     return inputs
 

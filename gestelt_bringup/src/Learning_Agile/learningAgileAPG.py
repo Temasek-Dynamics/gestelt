@@ -65,7 +65,7 @@ class LearningAgileAPG:
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
         if options['TRAIN_FROM_CHECKPOINT'] or options['STATE_2_MOVING_GATE']:
-            FILE = os.path.join(checkpoint_trained_model_folder, "2024-11-22/10-07-08/trained_model/NN_close_400.pth")
+            FILE = os.path.join(checkpoint_trained_model_folder, "new_format/2024-12-21/15-49-52/trained_model/NN_close_300.pth")
 
             self.learning_rate = self.train_cfg['training']['learning_rate']*0.9**(800/100)
         else:

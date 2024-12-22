@@ -51,10 +51,7 @@ class MovingGate():
         # 3------------------------------------------2
         ###############################################
         ###############################################
-        gate_point_no_pitch = np.array([[gate_center[0]-gate_length/2, gate_center[1], gate_center[2]+gate_width/2],
-                                        [gate_center[0]+gate_length/2, gate_center[1], gate_center[2]+gate_width/2],
-                                        [gate_center[0]+gate_length/2, gate_center[1], gate_center[2]-gate_width/2],
-                                        [gate_center[0]-gate_length/2, gate_center[1], gate_center[2]-gate_width/2]])
+        gate_point_no_pitch = get_gate_points(gate_center,gate_length,gate_width)
         
         self.gate = Gate(gate_point_no_pitch)
         
@@ -345,6 +342,7 @@ class LearningAgileSim():
         self.nn_output_list = [np.zeros(output_size)] # 3 position, 4 quaternion, 1 traversal time
         self.des_tra_R_list = [np.zeros(9)] # 3x3 rotation matrix(in flat form)
         self.wrp_list = [0]
+        trav_auxvar_value = np.zeros(output_size)
         for self.i in range(self.sim_time*(int(1/self.dyn_step))): # 5s, 500 Hz
             
             self.Time = np.concatenate((self.Time,[self.i*self.dyn_step]),axis = 0)
@@ -388,9 +386,10 @@ class LearningAgileSim():
                             
                 else:
                     
+                    # if (self.i%25)==0:
                     if self.options['CLOSE_LOOP_MODEL']:
-                        out = self.close_loop_NN_forward()
-                      
+                        trav_auxvar_value = self.close_loop_NN_forward()
+                    
                     else:
                         out = self.imiate_NN_forward()
                         des_tra_pos=self.gate_t_i.centroid+out[0:3]
@@ -399,7 +398,7 @@ class LearningAgileSim():
                 
                 t_comp = time.time()
                 cmd_solution,NO_SOLUTION_FLAG  = self.planner.mpc_update(current_state=self.state,
-                                                        trav_auxvar_value=out)
+                                                        trav_auxvar_value=trav_auxvar_value)
                 
                 print('solving time at main=',time.time()-t_comp)
                 self.solving_time.append(time.time()- t_comp)

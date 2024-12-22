@@ -30,7 +30,7 @@ mission:
 
   ##------ gate pose ----##
   # only feasible for MANUAL_SET_POSE_TEST
-  gate_position: [0.0, 0.0, 1.8]
+  gate_position: [0.0, -0.0, 1.8]
   # gate_ori_RP: [-0.0, -1.055, 0.0]
   gate_ori_euler: [0.0, -1.0,0.0] # 1.0 radian is 57.2958 degree, 1.5 radian is 85.9437 degree
   
@@ -91,7 +91,7 @@ learning_agile:
   wwt_z: 5
   
   # path cost
-  wrp: 30        ## too small, large deviation to the goal
+  wrp: 10        ## too small, large deviation to the goal
   wvp: 0.01
   wqp: 0.01
 
@@ -150,13 +150,13 @@ learning_agile:
 
   ##------  training parameters  ------##
 pretrain_param:
-  desired_average_vel: 1.5
+  desired_average_vel: 4
 
 ## ------NN configuration ----##
-NN_model_name: 'training_results/new_format/2024-12-19/16-57-20/trained_model/NN_close_210.pth'
+NN_model_name: 'training_results/new_format/2024-12-22/13-38-00/trained_model/NN_close_1350.pth'
 NN_deploy_model_name: 'deployed_model/NN_close_210.pth' # used in the sitl
 NN_freq: 20
 
 reward:
-  goal_w: 2 #2.0
+  goal_w: 8 #2.0
   scaling_w: 100

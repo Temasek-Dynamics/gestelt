@@ -1136,6 +1136,13 @@ class Gate:
     ## transform the final point in world frame to the point in window frame
     def t_final(self, final_point):
         return np.matmul(self.I_G, final_point - self.centroid)
+
+def get_gate_points(gate_center,gate_length,gate_width):
+    return np.array([[gate_center[0]-gate_length/2, gate_center[1], gate_center[2]+gate_width/2],
+                     [gate_center[0]+gate_length/2, gate_center[1], gate_center[2]+gate_width/2],
+                     [gate_center[0]+gate_length/2, gate_center[1], gate_center[2]-gate_width/2],
+                     [gate_center[0]-gate_length/2, gate_center[1], gate_center[2]-gate_width/2]])
+
 def Rd2Rp(tra_ang):
     theta = 2*math.atan(magni(tra_ang))
     vector = norm(tra_ang+np.array([1e-8,0,0]))
