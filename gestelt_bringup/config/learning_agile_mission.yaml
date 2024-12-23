@@ -153,10 +153,11 @@ pretrain_param:
   desired_average_vel: 4
 
 ## ------NN configuration ----##
-NN_model_name: 'training_results/new_format/2024-12-22/13-38-00/trained_model/NN_close_1350.pth'
-NN_deploy_model_name: 'deployed_model/NN_close_210.pth' # used in the sitl
+# NN_model_name: 'training_results/new_format/2024-12-22/13-38-00/trained_model/NN_close_1350.pth'
+NN_model_name: 'training_results/new_format/2024-12-22/16-30-11/trained_model/NN_close_1300.pth'
+NN_deploy_model_name: 'deployed_model/2024-12-22/16-30-11/trained_model/NN_close_850.pth' # used in the sitl
 NN_freq: 20
 
 reward:
-  goal_w: 8 #2.0
+  goal_w: 12 #2.0
   scaling_w: 100

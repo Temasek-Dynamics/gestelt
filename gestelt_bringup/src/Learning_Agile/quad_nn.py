@@ -1,20 +1,18 @@
 ##this file is the package about neural network
-from torch.distributions.normal import Normal
-from cmath import tan
-from math import cos, pi, sin, sqrt, tan
-import math
-from numpy import random
+from config import mission_cfg, train_cfg
+from math import pi
 import torch
 import torch.nn as nn
 import numpy as np
-from quad_model import toQuaternion
-from solid_geometry import norm,magni
-from solid_geometry import plane
 from scipy.spatial.transform import Rotation as R
 import scipy.stats as stats
-import os
-import yaml
-from config import mission_cfg, train_cfg,current_dir
+
+
+from solid_geometry import magni
+
+
+
+
 
 pre_ini_pos=np.array(mission_cfg['mission']['initial_position'])
 pre_end_pos=np.array(mission_cfg['mission']['goal_position'])
@@ -27,12 +25,17 @@ output_size = train_cfg['model']['output_size']
 # load the configuration file
 
 ## sample an input for the neural network 1
-def nn_sample(init_pos=None,final_pos=None,init_angle=None,cur_epoch=train_cfg['training']['num_epochs'],pretrain=False):
+def nn_sample(init_pos=None,
+              final_pos=None,
+              init_angle=None,
+              cur_epoch=train_cfg['training']['num_epochs'],
+              PRTRAIN=False,
+              TEST=False):
     env_init_set = np.zeros(17)
     if init_pos is None:
         env_init_set[0:3] =  np.random.uniform(-0.5,0.5,3) + pre_ini_pos #-5~5, -9 
 
-        if pretrain:
+        if PRTRAIN:
             env_init_set[1] = np.random.uniform(-5,5) #+ pre_ini_pos[1]
         # else:
         #     env_init_set[1] = pre_ini_pos[1] #np.random.uniform(-0.5,0.5) + 
@@ -74,17 +77,19 @@ def nn_sample(init_pos=None,final_pos=None,init_angle=None,cur_epoch=train_cfg['
     ###==== curriculum learning ===###
     # 0 -> gate is horizontal
     # pi/2 -> gate is vertical
-    if pretrain:
+    if PRTRAIN:
         # gate_pitch = np.random.uniform(-pi/2,pi/2)
         gate_pitch = 0
+    elif TEST:
+        gate_pitch =  np.random.uniform(-pi/2,pi/2)
     else:
-        des_pitch_mean_min = 1*pi/6
-        des_pitch_mean_max = 1*pi/6
+        des_pitch_mean_min = 1*pi/4
+        des_pitch_mean_max = 1*pi/4
         des_pitch_mean = des_pitch_mean_min - (des_pitch_mean_min - des_pitch_mean_max) * (cur_epoch / 100) 
 
         # truncated normal distribution
-        mu,sigma = 0,pi/32
-        lower,upper = -pi/8,pi/8
+        mu,sigma = 0,pi/18
+        lower,upper = -pi/3,pi/3
         X = stats.truncnorm((lower - mu) / sigma, (upper - mu) / sigma, loc=mu, scale=sigma)
         gate_pitch = X.rvs(1)[0]
         
@@ -100,6 +105,8 @@ def nn_sample(init_pos=None,final_pos=None,init_angle=None,cur_epoch=train_cfg['
 
         ## or 
         # gate_pitch = np.random.uniform(-pi/6,pi/6)
+        
+        
 
     ##==calculate the gate RM
     rot=R.from_euler('zyx',[0,gate_pitch,0])

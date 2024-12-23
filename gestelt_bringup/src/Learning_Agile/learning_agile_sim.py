@@ -1,32 +1,25 @@
 #!/usr/bin/env python3
 
 ## this file is for traversing moving narrow window
-import sys
 import os
 import subprocess
-import yaml
-# acquire the current directory
-current_dir = os.path.dirname(os.path.abspath(__file__))
-
-# build the path to the subdirectory
-subdirectory_path = os.path.join(current_dir, 'Learning_Agile')
-
-# add to sys.path
-sys.path.append("../")
-sys.path.append(subdirectory_path)
-from collections import deque
-
-from quad_model import *
-from quad_policy import *
-from quad_nn import *
-from quad_moving import *
-from result_analysis import *
-import numpy as np
 import time
-from solid_geometry import *
-from config import train_cfg
+import argparse
 
-from logger_misc import *
+from config import train_cfg, mission_cfg, current_dir
+import numpy as np
+from collections import deque
+from scipy.spatial.transform import Rotation as R
+import torch 
+
+from quad_model import toQuaternion, Gate, Rd2Rp, get_gate_points
+from quad_policy import PlanFwdBwdWrapper
+from quad_nn import nn_sample
+from quad_moving import binary_search_solver,input_cal
+from result_analysis import python_sim_npy_parser
+from solid_geometry import magni, pitch_from_gate, verify_SVD_casadi#,SVD_M_to_SO3
+from logger_misc import str2bool #save_mpc_ctl_csv, save_state_csv
+
 device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 # device=torch.device('cpu')
 input_size = train_cfg['model']['input_size'] 
@@ -76,8 +69,8 @@ class MovingGate():
     
 class LearningAgileSim():
     def __init__(self,python_sim_time,
-                 yaml_file=None,
                  mission_cfg:dict=None,
+                 train_cfg:dict=None,
                  model_file=None,
                  dyn_step=0.002,
                  options:dict=None) -> None:
@@ -90,11 +83,7 @@ class LearningAgileSim():
 
 
         # load the configuration file
-        if yaml_file is not None:
-            with open(yaml_file, 'r', encoding='utf-8') as file:
-                self.config_dict = yaml.safe_load(file)
-        else:
-            self.config_dict = mission_cfg
+        self.config_dict = mission_cfg
             
         if not self.options['MANUAL_SET_POSE_TEST']:
             # load trained DNN2 model
@@ -135,8 +124,11 @@ class LearningAgileSim():
         self.pos_vel_att_cmd=np.zeros(10)
         self.pos_vel_att_cmd[6:10] = [1,0,0,0]
         self.pos_vel_att_cmd_n = [self.pos_vel_att_cmd]
-        self.history_state = deque(maxlen=5)
-       
+        self.history_obs= deque(maxlen=5)
+        
+        ##==================NN params=======================##
+        self.input_size = train_cfg['model']['input_size']
+        self.output_size = train_cfg['model']['output_size']
     
     def generate_mission(self,i=train_cfg['training']['num_epochs']):
         """
@@ -164,7 +156,7 @@ class LearningAgileSim():
 
         self.t_tra_abs=self.config_dict['learning_agile']['traverse_time']
         
-        self.env_init_set = nn_sample(cur_epoch=i)
+        self.env_init_set = nn_sample(cur_epoch=i,TEST=True)
         if self.options['MANUAL_SET_POSE_TEST']:
             self.env_init_set[0:3]=ini_pos
             self.env_init_set[3:6]=end_pos
@@ -192,6 +184,10 @@ class LearningAgileSim():
 
     def prepare_gate(self):
         
+        """
+        this function is to initialize a gate with pitch angle, and set the gate velocity
+        """
+        
         ##---------------------gate initialization ------------------------##
         gate_length = self.config_dict['gate']['length'] 
         gate_v = np.array(self.config_dict['gate']['linear_vel'])
@@ -200,10 +196,9 @@ class LearningAgileSim():
         if self.options['STATE_2_MOVING_GATE']:
             gate_w = np.random.normal(gate_w,0.1)
             judge = np.random.normal(0,1)
-            if judge>0:
+            if judge<0:
                 gate_w = -gate_w
-            else:
-                gate_w = gate_w
+           
         ## ================ gate initialization ================== ##
         self.moving_gate = MovingGate(self.env_init_set,
                                       gate_center=self.gate_center,
@@ -218,6 +213,7 @@ class LearningAgileSim():
     def gate_state_search(self):
 
         """
+        depricated.
         estimate the gate pose, using binary search
         t_tra_abs: the absolute traversal time w.r.t the mission start time
         t_tra_rel: the relative traversal time w.r.t the current time
@@ -281,40 +277,54 @@ class LearningAgileSim():
         self.wrp_list = np.concatenate((self.wrp_list,[out[-2]]),axis = 0)
         self.Pitch = np.concatenate((self.Pitch,[gate_pitch]),axis = 0) 
 
-    def close_loop_NN_forward(self):
-        self.gate_t_i = Gate(self.gate_points_list[self.i])
-        ## == NN forward === ##
-        nn2_inputs=np.zeros(input_size)
-        nn2_inputs[0:10]=self.state
-        nn2_inputs[10:13]=self.final_point
-
-        nn2_inputs[13:25]=self.gate_t_i.gate_point[:,:].flatten() # gate points
-
-        # position of the gate
-        nn2_inputs[25:28] = self.gate_t_i.centroid
-        # width of the gate
-        nn2_inputs[28] = magni(self.gate_t_i.gate_point[0,:]-self.gate_t_i.gate_point[3,:]) # gate width
-        # pitch angle of the gate
-        gate_pitch=pitch_from_gate(self.gate_t_i)
-        self.planner.init_obstacle(self.gate_t_i)
+    def get_obs(self,
+                gate_t_i,
+                drone_state):
+        """
+        get both immediate and past observation from the environment
         
+        Args:
+            gate_t_i: the current gate state
+            drone_state: the current drone state
+            
+        Returns:
+            obs: the observation for the NN input
+        """
         ##==calculate the gate RM
-        rot=R.from_euler('zyx',[0,gate_pitch,0])
-        nn2_inputs[input_size-9:input_size]=rot.as_matrix().flatten()
-
-        if self.i == 0:
-            for k in range(5):
-                self.history_state.append(nn2_inputs)
-        else:
-            self.history_state.append(nn2_inputs)
+        self.gate_pitch = pitch_from_gate(gate_t_i)
+        rot=R.from_euler('zyx',[0,self.gate_pitch,0])
         
-        full_input=np.array(self.history_state).reshape(1,5,-1)
-        # NN output the traversal time and pose
-        nn_output = self.model(torch.tensor(full_input, dtype=torch.float).to(device))[0]
+        immed_obs=np.zeros(self.input_size)
+        immed_obs[0:10]=drone_state
+        immed_obs[10:13]=self.final_point
+        
+         ## gate points
+        immed_obs[13:25]=gate_t_i.gate_point.flatten() # gate points
+        
+        # position of the gate,# width of the gate,# pitch angle of the gate
+        immed_obs[25:28] = gate_t_i.centroid
+        immed_obs[28] = magni(gate_t_i.gate_point[0,:]-gate_t_i.gate_point[3,:]) # gate width
+        immed_obs[29:38]=rot.as_matrix().flatten()
+        
+        if self.i == 0:
+            for _ in range(5):
+                self.history_obs.append(immed_obs)
+        else:
+            self.history_obs.append(immed_obs)
+        
+        obs=np.array(self.history_obs)
+       
+
+        return obs
+        
+    def close_loop_NN_forward(self):
+        
+        obs=self.get_obs(self.gate_t_i,self.state)
+        nn_output = self.model(torch.tensor(obs.reshape([1,5,-1]), dtype=torch.float).to(device))[0]
         out = nn_output.to('cpu').data.numpy()
 
         verify_tra_R=verify_SVD_casadi(out[3:12])
-        self.log_NN_IO_for_RM(gate_pitch,out,verify_tra_R.flatten()) 
+        self.log_NN_IO_for_RM(self.gate_pitch,out,verify_tra_R.flatten()) 
         return out 
     
     def imiate_NN_forward(self):
@@ -347,6 +357,7 @@ class LearningAgileSim():
             
             self.Time = np.concatenate((self.Time,[self.i*self.dyn_step]),axis = 0)
             
+            
             if not self.options['CLOSE_LOOP_MODEL']:
                 if (self.i%5)==0: # estimation frequency = 20 hz 
                     # decision variable is updated in 20 hz
@@ -369,30 +380,33 @@ class LearningAgileSim():
                     print("="*50)
                     # print("NN pose det before SVD",np.linalg.det(out[3:12].reshape(3,3)))
 
-                    if self.options['JAX_SVD']:
-                        ### SVD through JAX
-                        des_tra_R=SVD_M_to_SO3(out[3:12]).flatten() # 9D vector to 3x3 rotation matrix(in flat form)
-                        print("NN pose det after SVD",np.linalg.det(des_tra_R.reshape(3,3)))
-                        # relative traversal time
-                        out[-1]=self.t_tra_rel
-                        self.log_NN_IO_for_RM(out,des_tra_R,gate_pitch=0) 
-                    else:
-                        out[-1]=self.t_tra_rel
-                        ### SVD through CasADi
-                        verify_tra_R=verify_SVD_casadi(out[3:12])
-                        gate_pitch=0
-                        self.log_NN_IO_for_RM(gate_pitch,out,verify_tra_R.flatten())  
+                    # if self.options['JAX_SVD']:
+                    #     ### SVD through JAX
+                    #     des_tra_R=SVD_M_to_SO3(out[3:12]).flatten() # 9D vector to 3x3 rotation matrix(in flat form)
+                    #     print("NN pose det after SVD",np.linalg.det(des_tra_R.reshape(3,3)))
+                    #     # relative traversal time
+                    #     out[-1]=self.t_tra_rel
+                    #     gate_pitch=0
+                    #     self.log_NN_IO_for_RM(gate_pitch,out,des_tra_R) 
+                    # else:
+                    out[-1]=self.t_tra_rel
+                    ### SVD through CasADi
+                    verify_tra_R=verify_SVD_casadi(out[3:12])
+                    gate_pitch=0
+                    self.log_NN_IO_for_RM(gate_pitch,out,verify_tra_R.flatten())  
 
                             
                 else:
                     
                     # if (self.i%25)==0:
                     if self.options['CLOSE_LOOP_MODEL']:
+                        self.gate_t_i = Gate(self.gate_points_list[self.i])
                         trav_auxvar_value = self.close_loop_NN_forward()
                     
                     else:
                         out = self.imiate_NN_forward()
-                        des_tra_pos=self.gate_t_i.centroid+out[0:3]
+                        out[0:3]=self.gate_t_i.centroid+out[0:3]
+                        trav_auxvar_value = out
                     
     
                 
@@ -505,7 +519,6 @@ class LearningAgileSim():
         # self.planner.uav1.plot_T(control_tm)
         # self.planner.uav1.plot_M(control_tm)
     
-import argparse
 
 def parse_options():
     parser = argparse.ArgumentParser(description="Options for the program.")
@@ -525,9 +538,7 @@ def parse_options():
     return vars(args)  # Return options as a dictionary  
       
 def main():
-    # yaml file dir#
-    conf_folder=os.path.abspath(os.path.join(current_dir, '..', '..','config'))
-    yaml_file = os.path.join(conf_folder, 'learning_agile_mission.yaml')
+
     python_sim_data_folder = os.path.join(current_dir, 'python_sim_result')
     
 
@@ -551,10 +562,11 @@ def main():
     # the dyn_step is the simulation step in the simulation environment
     # for the acados ERK integrator, the step is (integral step)/4 =0.025s
     learning_agile_sim=LearningAgileSim(python_sim_time=5,
-                                           yaml_file=yaml_file,
-                                           model_file=model_file,
-                                           dyn_step=0.002,
-                                            options=options)
+                                        mission_cfg=mission_cfg,
+                                        train_cfg=train_cfg,
+                                        model_file=model_file,
+                                        dyn_step=0.002,
+                                        options=options)
     
     
 
@@ -572,7 +584,7 @@ def main():
     shell_script="""catkin build mpc_ros_wrapper"""
 
     # run the shell script
-    subprocess.run(shell_script,shell=True)
+    subprocess.run(shell_script,shell=True,check=False)
 
 if __name__ == '__main__':
     main()

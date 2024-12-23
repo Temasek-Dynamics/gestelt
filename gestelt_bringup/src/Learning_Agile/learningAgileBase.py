@@ -1,13 +1,13 @@
 import numpy as np
 import torch
 import os
-import cProfile
+# import cProfile
 from collections import deque
-from math import atan
+
 from scipy.spatial.transform import Rotation as R
 import matplotlib.pyplot as plt
 
-from solid_geometry import *
+from solid_geometry import magni,pitch_from_gate
 from learning_agile_sim import LearningAgileSim, Gate
 
 from config import mission_cfg, train_cfg,current_dir
@@ -54,8 +54,6 @@ class LearningAgileBase:
         self.output_size = train_cfg['model']['output_size']
 
         
-        self.history_obs = deque(maxlen=5)
-
     def load_model(self,model_folder):
         ##== load the pre-trained model ==##
         FILE = os.path.join(model_folder, "NN_close_pretrain.pth")
@@ -78,42 +76,17 @@ class LearningAgileBase:
         self.state_traj=[]
         self.state_n = np.array([self.state])
 
-        obs=self.get_obs(0)
+        obs=self.gate_step_and_obs(0)
         return obs
 
 
 
-    def get_obs(self,i):
+    def gate_step_and_obs(self,i):
         self.i = i
         ## == gate forward === ##
         gate_t_i = Gate(self.gate_points_list[i])
-        gate_pitch = pitch_from_gate(gate_t_i)
-        
-        ##==calculate the gate RM
-        rot=R.from_euler('zyx',[0,gate_pitch,0])
 
-        immed_obs=np.zeros(self.input_size)
-        immed_obs[0:10]=self.state
-        immed_obs[10:13]=self.learning_agile_sim.final_point
-        
-
-        ## gate points
-        immed_obs[13:25]=gate_t_i.gate_point.flatten() # gate points
-        # position of the gate,# width of the gate,# pitch angle of the gate
-        immed_obs[25:28] = gate_t_i.centroid
-        immed_obs[28] = magni(gate_t_i.gate_point[0,:]-gate_t_i.gate_point[3,:]) # gate width
-        immed_obs[29:38]=rot.as_matrix().flatten()
-
-        if i == 0:
-            for i in range(5):
-                self.history_obs.append(immed_obs)
-        else:
-            self.history_obs.append(immed_obs)
-        
-        self.obs=np.array(self.history_obs)
-       
-
-        return self.obs
+        return self.learning_agile_sim.get_obs(gate_t_i, self.state)
 
     def get_NN_decision(self,obs):
         # NN output the traversal time and pose
@@ -122,7 +95,7 @@ class LearningAgileBase:
         
         return nn_out
     
-    def get_NN_decision_debug(self,obs):
+    def get_NN_decision_debug(self):
         # manually set the traversal time and pose
         np_nn_out=np.zeros(self.output_size)
         np_nn_out[0:3]=[0,0,0]
@@ -153,7 +126,7 @@ class LearningAgileBase:
         if nn_out is None:
             ## if training, self.nn_out comes from the model for a batch of episodes
             if options['DEBUG']:
-                self.nn_out = self.get_NN_decision_debug(self.obs)
+                self.nn_out = self.get_NN_decision_debug()
             else:  
                 self.nn_out = self.get_NN_decision(self.obs)       
         else:
@@ -186,8 +159,8 @@ class LearningAgileBase:
        
         ## === initial gate obstacle based on current NN prediction === ##
         pred_t_i = self.i + self.t_tra_rel*10
-        gate_t_i = Gate(self.gate_points_list[int(pred_t_i)])
-        self.planner.init_obstacle(gate_t_i)
+        gate_t_pred = Gate(self.gate_points_list[int(pred_t_i)])
+        self.planner.init_obstacle(gate_t_pred)
     
     def backward_per_step(self,dyn_decay=0.9):
         """
@@ -280,7 +253,7 @@ def run_single_episode(base,nn_out=None):
         base.nn_out = nn_out
 
     for i in range(base.train_cfg['training']['close_loop_horizon']):
-        base.get_obs(i)
+        base.gate_step_and_obs(i)
         base.step()
 
         if i > 0: 

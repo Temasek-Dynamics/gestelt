@@ -9,8 +9,7 @@ import math
 from scipy.spatial.transform import Rotation as R
 from solid_geometry import norm
 from math import sqrt
-from solid_geometry import *
-from matplotlib.patches import Ellipse
+from solid_geometry import dir_cosine, SVD, magni, magni_casadi
 # quadrotor (UAV) environment
 class Quadrotor:
     def __init__(self,options, project_name='my UAV'):
@@ -275,7 +274,7 @@ class Quadrotor:
         for i in range(3):
             self.cost_q_g += dot(R_B_I[i, :] - goal_R_B_I[i, :], R_B_I[i, :] - goal_R_B_I[i, :])
 
-        self.cost_q_manifold= dot(1-ca.norm_2(self.q[0:4]),1-ca.norm_2(self.q[0:4]))
+
         ## angular velocity cost
         self.goal_w_B = [0, 0, 0]
         self.cost_ang_rate_B = dot(self.ang_rate_B[0:2] - self.goal_w_B[0:2], self.ang_rate_B[0:2] - self.goal_w_B[0:2])
@@ -291,13 +290,13 @@ class Quadrotor:
         self.path_cost = self.wrp * self.cost_r_I_g \
                        + self.wvp * self.cost_v_I_g \
                        + self.wqp * self.cost_q_g \
-                       + 0 * self.cost_q_manifold
+
         
         # the final cost
         self.final_cost = self.wrf * self.cost_r_I_g\
                         + self.wvf * self.cost_v_I_g\
                         + self.wqf * self.cost_q_g \
-                        + 0 * self.cost_q_manifold
+
   
     
     def init_TraCost(self): # transforming Rodrigues to Quaternion is shown in mpc_update function
@@ -321,7 +320,7 @@ class Quadrotor:
         if self.options['JAX_SVD']: 
             ## SVD conducted before CasADi
             self.trav_auxvar = vertcat(self.des_tra_r_I, self.des_tra_R, self.wrp, self.max_tra_w, self.wrt, self.wqt, self.des_t_tra) 
-            tra_R_B_I = ca.reshape(self.des_tra_R,3,3)
+            tra_R_B_I = casadi.reshape(self.des_tra_R,3,3)
         else:   
             svd= SVD()
             self.trav_auxvar = vertcat(self.des_tra_r_I, self.des_tra_m, self.des_t_tra) #self.wrp,  self.max_tra_w, self.wrt, self.wqt, 
@@ -349,7 +348,7 @@ class Quadrotor:
         # self.cost_q_t = trace(np.identity(3) - mtimes(transpose(tra_R_B_I), R_B_I))
         
         ## squared Chordal distance
-        self.cost_q_t = ca.norm_fro(tra_R_B_I-R_B_I)**2
+        self.cost_q_t = casadi.norm_fro(tra_R_B_I-R_B_I)**2
 
 
         # weight = max_tra_w*casadi.exp(-gamma*(dt*i-t_tra)**2) #gamma should increase as the flight duration decreases
@@ -426,46 +425,6 @@ class Quadrotor:
 
         return position
     
-    def vee_map(self,mat):
-        return ca.vertcat(mat[2, 1], mat[0, 2], mat[1, 0])
-    def get_quad_vert_pos_tensor(self, wing_len, state_traj):
-        # thrust_position in body frame
-        r1 = torch.tensor([wing_len * 0.5 / torch.sqrt(torch.tensor(2.0)),
-                        wing_len * 0.5 / torch.sqrt(torch.tensor(2.0)), 0.0], dtype=state_traj.dtype)
-        r2 = torch.tensor([-wing_len * 0.5 / torch.sqrt(torch.tensor(2.0)),
-                        wing_len * 0.5 / torch.sqrt(torch.tensor(2.0)), 0.0], dtype=state_traj.dtype)
-        r3 = torch.tensor([-wing_len * 0.5 / torch.sqrt(torch.tensor(2.0)),
-                        -wing_len * 0.5 / torch.sqrt(torch.tensor(2.0)), 0.0], dtype=state_traj.dtype)
-        r4 = torch.tensor([wing_len * 0.5 / torch.sqrt(torch.tensor(2.0)),
-                        -wing_len * 0.5 / torch.sqrt(torch.tensor(2.0)), 0.0], dtype=state_traj.dtype)
-
-        # horizon
-        horizon = state_traj.shape[0]
-        position = torch.zeros((horizon, 15), dtype=state_traj.dtype)
-        
-        for t in range(horizon):
-            # position of COM
-            rc = state_traj[t, 0:3]
-            # altitude of quaternion
-            q = state_traj[t, 6:10]
-
-            # direction cosine matrix from body to inertial
-            CIB = self.dir_cosine_tensor(q).transpose(0, 1)
-
-            # position of each rotor in inertial frame
-            r1_pos = rc + torch.matmul(CIB, r1)
-            r2_pos = rc + torch.matmul(CIB, r2)
-            r3_pos = rc + torch.matmul(CIB, r3)
-            r4_pos = rc + torch.matmul(CIB, r4)
-
-            # store
-            position[t, 0:3] = rc
-            position[t, 3:6] = r1_pos
-            position[t, 6:9] = r2_pos
-            position[t, 9:12] = r3_pos
-            position[t, 12:15] = r4_pos
-
-        return position
 
     def get_final_position(self,wing_len, p= None,q = None):
         p = self.tra_r_I
@@ -957,14 +916,7 @@ class Quadrotor:
     #     )
     #     return C_B_I
 
-    def dir_cosine_tensor(self, q):
-        # World frame to body frame direction cosine matrix
-        C_B_I = torch.stack([
-            torch.stack([1 - 2 * (q[2] ** 2 + q[3] ** 2), 2 * (q[1] * q[2] + q[0] * q[3]), 2 * (q[1] * q[3] - q[0] * q[2])]),
-            torch.stack([2 * (q[1] * q[2] - q[0] * q[3]), 1 - 2 * (q[1] ** 2 + q[3] ** 2), 2 * (q[2] * q[3] + q[0] * q[1])]),
-            torch.stack([2 * (q[1] * q[3] + q[0] * q[2]), 2 * (q[2] * q[3] - q[0] * q[1]), 1 - 2 * (q[1] ** 2 + q[2] ** 2)])
-        ])
-        return C_B_I
+
     def skew(self, v):
         v_cross = vertcat(
             horzcat(0, -v[2], v[1]),
@@ -1151,7 +1103,7 @@ def Rd2Rp(tra_ang):
 
 def Rd2Rp_casadi(tra_ang):
     theta = 2*casadi.atan(magni_casadi(tra_ang))
-    vector = tra_ang+np.array([1e-8,0,0])/ca.norm_2(tra_ang+np.array([1e-8,0,0]))
+    vector = tra_ang+np.array([1e-8,0,0])/casadi.norm_2(tra_ang+np.array([1e-8,0,0]))
     return [theta,vector]
 
 def toQuaternion(angle, dir):

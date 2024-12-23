@@ -4,7 +4,7 @@ from datetime import datetime
 import os
 import yaml
 from scipy.spatial.transform import Rotation as R
-from solid_geometry import *
+from solid_geometry import verify_SVD_casadi
 import numpy as np
 import argparse
 # import pandas as pd

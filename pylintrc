@@ -131,6 +131,9 @@ disable=R,
         zip-builtin-not-iterating,
 
 
+        trailing-whitespace,
+        bad-indentation,
+
 [REPORTS]
 
 # Set the output format. Available formats are text, parseable, colorized, msvs

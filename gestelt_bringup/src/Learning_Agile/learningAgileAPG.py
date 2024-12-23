@@ -128,7 +128,7 @@ class LearningAgileAPG:
             obs_batch_list = []
             ##== 1. get observations for every episode
             for k in range(self.batch_size):
-                obs_batch_list.append(self.episodes[k].get_obs(i))
+                obs_batch_list.append(self.episodes[k].gate_step_and_obs(i))
 
             
             ##== 2. model forward in a batch    
@@ -217,7 +217,7 @@ class LearningAgileAPG:
                 self.train_one_epoch(epoch)
                 pbar.update(1)
                 pbar.set_description(f"epoch:{epoch}, reward:{self.reward_batch[0]}")
-                if epoch % 2 == 0:
+                if epoch % 10 == 0:
                     torch.save(self.model, os.path.join(trained_model_folder, f"NN_close_{epoch}.pth"))
 
 if __name__ == "__main__":
@@ -241,7 +241,7 @@ if __name__ == "__main__":
     #         observations
     #     """
         
-    #     obs=episode.get_obs(i)
+    #     obs=episode.gate_step_and_obs(i)
     #     obs_queue.put(obs)
     #     # drones_state_queue.put(episode.drone_state)
     #     # return obs_queue

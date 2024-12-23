@@ -1,17 +1,14 @@
 ## this file is a package for policy search for quadrotor
-
-import math
 import numpy as np
+
+
 from quad_OC import OCSys,LQR
 # the sequence of importing solid_geometry
 # with juliacall is import
-from solid_geometry import *
-
-from math import cos, pi, sin, sqrt, tan
-from quad_model import *
+from solid_geometry import pitch_from_gate
+from quad_model import Quadrotor, toQuaternion
 
 
-from casadi import *
 class PlanFwdBwdWrapper():
     """
     Wrapper the MPC forward and backward process
@@ -134,12 +131,11 @@ class PlanFwdBwdWrapper():
        
         
     def init_state_and_mission(self,
-                goal_pos = [0, 8, 0],
-                goal_ori= toQuaternion(0.0,[0,0,1]),
-                
-                ini_r=[0,-8,0],
-                ini_v_I = [0.0, 0.0, 0.0], 
-                ini_q = toQuaternion(0.0,[0,0,1])):  
+                             goal_pos, 
+                             goal_ori,
+                             ini_r,
+                             ini_v_I, 
+                             ini_q):  
         # goal
         self.goal_pos = goal_pos
         self.goal_ori = goal_ori
@@ -300,7 +296,8 @@ class PlanFwdBwdWrapper():
         else:
 
             ## solve the PDP
-            self.PDP_grad(tra_pos,tra_ang,t_tra)                
+            trav_auxvar_value = np.concatenate(tra_pos,tra_ang,np.array([t_tra]))
+            self.PDP_grad(trav_auxvar_value)                
     
             
             drdp=np.zeros(13)
@@ -375,91 +372,7 @@ class PlanFwdBwdWrapper():
         self.d_st_traj_d_z = np.array(aux_sol['state_traj_opt']) #(n_node,n_state,n_trav_auxvar)
         self.d_input_traj_d_z = np.array(aux_sol['control_traj_opt'])
 
-    def optimize(self, t):
-        tra_pos = self.obstacle.centroid
-        tra_posx = self.obstacle.centroid[0]
-        tra_posy = self.obstacle.centroid[1]
-        tra_posz = self.obstacle.centroid[2]
-        tra_a = 0
-        tra_b = 0
-        tra_c = 0
-        tra_ang = np.array([tra_a,tra_b,tra_c])
-        ## fixed perturbation to calculate the gradient
-        for k in range(200):
-            j = self.MPC_and_R (tra_pos,tra_ang,t)
-            drdx = np.clip(self.MPC_and_R(tra_pos+[0.001,0,0],tra_ang=tra_ang, t=t) - j,-0.5,0.5)
-            drdy = np.clip(self.MPC_and_R(tra_pos+[0,0.001,0],tra_ang=tra_ang, t=t) - j,-0.5,0.5)
-            drdz = np.clip(self.MPC_and_R(tra_pos+[0,0,0.001],tra_ang=tra_ang, t=t) - j,-0.5,0.5)
-            drda = np.clip(self.MPC_and_R(tra_pos,tra_ang=tra_ang+[0.001,0,0], t=t) - j,-0.5,0.5)
-            drdb = np.clip(self.MPC_and_R(tra_pos,tra_ang=tra_ang+[0,0.001,0], t=t) - j,-0.5,0.5)
-            drdc = np.clip(self.MPC_and_R(tra_pos,tra_ang=tra_ang+[0,0,0.001], t=t) - j,-0.5,0.5)
-            #drdt = np.clip(self.MPC_and_R(tra_pos,tra_ang,t-0.1)-j,-10,10)
-            # update
-            tra_posx += 0.1*drdx
-            tra_posy += 0.1*drdy
-            tra_posz += 0.1*drdz
-            tra_a += (1/(500*tra_a**2+5))*drda
-            tra_b += (1/(500*tra_b**2+5))*drdb
-            tra_c += (1/(500*tra_c**2+5))*drdc
-            if((self.MPC_and_R(tra_pos,tra_ang,t-0.1)-j)>2):
-                t = t-0.1
-            if((self.MPC_and_R(tra_pos,tra_ang,t+0.1)-j)>2):
-                t = t+0.1
-            t = round(t,1)
-            tra_pos = np.array([tra_posx,tra_posy,tra_posz])
-            tra_ang = np.array([tra_a,tra_b,tra_c])
-            ## display the process
-            print(str(j)+str('  ')+str(tra_pos)+str('  ')+str(tra_ang)+str('  ')+str(t)+str('  ')+str(k))
-        return [t,tra_posx,tra_posy,tra_posz,tra_a, tra_b,tra_c, j,self.collision,self.path]
 
-    ## use random perturbations to calculate the gradient and update(not recommonded)
-    def LSFD(self,t):
-        tra_posx = self.obstacle.centroid[0]
-        tra_posy = self.obstacle.centroid[1]
-        tra_posz = self.obstacle.centroid[2]
-        tra_a = 0
-        tra_b = 0
-        tra_c = 0
-        current_para = np.array([tra_posx,tra_posy,tra_posz,tra_a,tra_b,tra_c])
-        lr = np.array([2e-4,2e-4,2e-4,5e-5,5e-5,5e-5])
-        for k in range(50):
-            j = self.MPC_and_R(current_para[0:3],current_para[3:6],t)
-            # calculate derivatives
-            c = []
-            f = []
-            for i in range(24):
-                dx = sample(0.001)
-                dr = self.MPC_and_R (current_para[0:3]+dx[0:3],current_para[3:6]+dx[3:6],t)-j
-                c += [dx]
-                f += [dr]
-            # update
-            cm = np.array(c)
-            fm = np.array(f)
-            a = np.matmul(np.linalg.inv(np.matmul(cm.T,cm)),cm.T)
-            drdx = np.matmul(a,fm)
-            current_para = current_para + lr * drdx
-            j = self.MPC_and_R(current_para[0:3],current_para[3:6],t)
-            if((self.MPC_and_R(current_para[0:3],current_para[3:6],t+0.1)-j)>20):
-                t = t + 0.1
-            else:
-                if((self.MPC_and_R(current_para[0:3],current_para[3:6],t-0.1)-j)>20):
-                    t = t - 0.1
-            t = round(t,1) 
-            print(str(t)+str('  ')+str(drdx)+str('  ')+str(k))
-        return [current_para, j,self.collision,self.path]        
-
-    ## play the animation for one set of high-level paramters of such a scenario
-    # def play_ani(self, tra_pos=None,tra_ang=None, t = 3,Ulast = None):
-    #     tra_atti = Rd2Rp(tra_ang)
-    #     self.uav1.init_TraCost(tra_pos,tra_atti)
-    #     self.uavoc1.setTraCost(self.uav1.tra_cost,t)
-    #     ## obtain the trajectory
-    #     self.sol1 = self.uavoc1.ocSolver(horizon=self.horizon,dt=self.dt,Ulast=Ulast)
-    #     state_traj1 = self.sol1['state_traj_opt']
-    #     traj = self.uav1.get_quad_vert_pos(wing_len = self.wing_len, state_traj = state_traj1)
-    #     ## plot the animation
-    #     self.uav1.play_animation(wing_len = self.wing_len, state_traj = state_traj1,dt=self.dt, point1 = self.point1,\
-    #         point2 = self.point2, point3 = self.point3, point4 = self.point4)
     
     ## given initial state, control command, high-level parameters, obtain the first control command of the quadrotor
     def mpc_update(self, 
@@ -508,3 +421,90 @@ def sample(deviation):
 #                                     goal_pos=self.goal_pos,
 #                                     vert_traj=self.vert_traj[:,0:3],
 #                                     horizon=self.horizon)
+
+
+    # def optimize(self, t):
+    #     tra_pos = self.obstacle.centroid
+    #     tra_posx = self.obstacle.centroid[0]
+    #     tra_posy = self.obstacle.centroid[1]
+    #     tra_posz = self.obstacle.centroid[2]
+    #     tra_a = 0
+    #     tra_b = 0
+    #     tra_c = 0
+    #     tra_ang = np.array([tra_a,tra_b,tra_c])
+    #     ## fixed perturbation to calculate the gradient
+    #     for k in range(200):
+    #         j = self.MPC_and_R (tra_pos,tra_ang,t)
+    #         drdx = np.clip(self.MPC_and_R(tra_pos+[0.001,0,0],tra_ang=tra_ang, t=t) - j,-0.5,0.5)
+    #         drdy = np.clip(self.MPC_and_R(tra_pos+[0,0.001,0],tra_ang=tra_ang, t=t) - j,-0.5,0.5)
+    #         drdz = np.clip(self.MPC_and_R(tra_pos+[0,0,0.001],tra_ang=tra_ang, t=t) - j,-0.5,0.5)
+    #         drda = np.clip(self.MPC_and_R(tra_pos,tra_ang=tra_ang+[0.001,0,0], t=t) - j,-0.5,0.5)
+    #         drdb = np.clip(self.MPC_and_R(tra_pos,tra_ang=tra_ang+[0,0.001,0], t=t) - j,-0.5,0.5)
+    #         drdc = np.clip(self.MPC_and_R(tra_pos,tra_ang=tra_ang+[0,0,0.001], t=t) - j,-0.5,0.5)
+    #         #drdt = np.clip(self.MPC_and_R(tra_pos,tra_ang,t-0.1)-j,-10,10)
+    #         # update
+    #         tra_posx += 0.1*drdx
+    #         tra_posy += 0.1*drdy
+    #         tra_posz += 0.1*drdz
+    #         tra_a += (1/(500*tra_a**2+5))*drda
+    #         tra_b += (1/(500*tra_b**2+5))*drdb
+    #         tra_c += (1/(500*tra_c**2+5))*drdc
+    #         if((self.MPC_and_R(tra_pos,tra_ang,t-0.1)-j)>2):
+    #             t = t-0.1
+    #         if((self.MPC_and_R(tra_pos,tra_ang,t+0.1)-j)>2):
+    #             t = t+0.1
+    #         t = round(t,1)
+    #         tra_pos = np.array([tra_posx,tra_posy,tra_posz])
+    #         tra_ang = np.array([tra_a,tra_b,tra_c])
+    #         ## display the process
+    #         print(str(j)+str('  ')+str(tra_pos)+str('  ')+str(tra_ang)+str('  ')+str(t)+str('  ')+str(k))
+    #     return [t,tra_posx,tra_posy,tra_posz,tra_a, tra_b,tra_c, j,self.collision,self.path]
+
+    # ## use random perturbations to calculate the gradient and update(not recommonded)
+    # def LSFD(self,t):
+    #     tra_posx = self.obstacle.centroid[0]
+    #     tra_posy = self.obstacle.centroid[1]
+    #     tra_posz = self.obstacle.centroid[2]
+    #     tra_a = 0
+    #     tra_b = 0
+    #     tra_c = 0
+    #     current_para = np.array([tra_posx,tra_posy,tra_posz,tra_a,tra_b,tra_c])
+    #     lr = np.array([2e-4,2e-4,2e-4,5e-5,5e-5,5e-5])
+    #     for k in range(50):
+    #         j = self.MPC_and_R(current_para[0:3],current_para[3:6],t)
+    #         # calculate derivatives
+    #         c = []
+    #         f = []
+    #         for i in range(24):
+    #             dx = sample(0.001)
+    #             dr = self.MPC_and_R (current_para[0:3]+dx[0:3],current_para[3:6]+dx[3:6],t)-j
+    #             c += [dx]
+    #             f += [dr]
+    #         # update
+    #         cm = np.array(c)
+    #         fm = np.array(f)
+    #         a = np.matmul(np.linalg.inv(np.matmul(cm.T,cm)),cm.T)
+    #         drdx = np.matmul(a,fm)
+    #         current_para = current_para + lr * drdx
+    #         j = self.MPC_and_R(current_para[0:3],current_para[3:6],t)
+    #         if((self.MPC_and_R(current_para[0:3],current_para[3:6],t+0.1)-j)>20):
+    #             t = t + 0.1
+    #         else:
+    #             if((self.MPC_and_R(current_para[0:3],current_para[3:6],t-0.1)-j)>20):
+    #                 t = t - 0.1
+    #         t = round(t,1) 
+    #         print(str(t)+str('  ')+str(drdx)+str('  ')+str(k))
+    #     return [current_para, j,self.collision,self.path]        
+
+    ## play the animation for one set of high-level paramters of such a scenario
+    # def play_ani(self, tra_pos=None,tra_ang=None, t = 3,Ulast = None):
+    #     tra_atti = Rd2Rp(tra_ang)
+    #     self.uav1.init_TraCost(tra_pos,tra_atti)
+    #     self.uavoc1.setTraCost(self.uav1.tra_cost,t)
+    #     ## obtain the trajectory
+    #     self.sol1 = self.uavoc1.ocSolver(horizon=self.horizon,dt=self.dt,Ulast=Ulast)
+    #     state_traj1 = self.sol1['state_traj_opt']
+    #     traj = self.uav1.get_quad_vert_pos(wing_len = self.wing_len, state_traj = state_traj1)
+    #     ## plot the animation
+    #     self.uav1.play_animation(wing_len = self.wing_len, state_traj = state_traj1,dt=self.dt, point1 = self.point1,\
+    #         point2 = self.point2, point3 = self.point3, point4 = self.point4)

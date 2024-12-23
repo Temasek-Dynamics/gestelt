@@ -34,7 +34,7 @@ def input_cal():
         _type_: _description_
     """
     inputs=np.zeros(input_size)
-    static_env = nn_sample(pretrain=True)
+    static_env = nn_sample(PRTRAIN=True)
     
     ## drone initial position
     inputs[0:3] = static_env[0:3]
