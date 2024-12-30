@@ -52,7 +52,7 @@ CMD_2="roslaunch gestelt_bringup learning_agile_mission.launch platform:='drone'
 CMD_3="taskset -c 3 roslaunch gestelt_bringup NN2_ROS_wrapper.launch is_simulation:=true"
 
 CMD_4="
-roslaunch gestelt_bringup record.launch record_platform:drone test_mode:=HITL
+roslaunch gestelt_bringup record.launch record_platform:=drone test_mode:=HITL
 "
 if [ "$SESSIONEXISTS" = "" ]
 then 
