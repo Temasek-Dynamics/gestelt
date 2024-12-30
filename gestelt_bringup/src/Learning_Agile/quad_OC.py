@@ -557,8 +557,6 @@ class OCSys:
 
         ## integrator options
         sim.solver_options.T=dyn_step # integration time
-        sim.solver_options
-
         sim.solver_options.integrator_type = 'ERK' # ERK (explicit Runge-Kutta integrator) fast or IRK (Implicit Runge-Kutta integrator) slow
         sim.solver_options.num_stages = 4
         sim.solver_options.num_steps = 4

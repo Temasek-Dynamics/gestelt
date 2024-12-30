@@ -3,10 +3,13 @@ import logging
 from datetime import datetime
 import os
 import yaml
-from scipy.spatial.transform import Rotation as R
-from solid_geometry import verify_SVD_casadi
 import numpy as np
-import argparse
+import multiprocessing
+
+from scipy.spatial.transform import Rotation as R
+from learning_agile_sim import success_eval,parse_options
+from solid_geometry import verify_SVD_casadi
+from config import mission_cfg,train_cfg
 # import pandas as pd
 class LoggerConfig:
     def __init__(self, log_dir="logs"):
@@ -84,7 +87,7 @@ def log_gradient(writer,gra,reward,global_step):
     # writer.add_scalar('drdwrt',gra[-4], global_step)
     # writer.add_scalar('drdwqt',gra[-3], global_step)
     writer.add_scalar('gradient/drdt', gra[-2], global_step)
-    writer.add_scalar('mean_reward_pre_batch',reward, global_step)
+    writer.add_scalar('mean_penalty_pre_batch',reward, global_step)
 
 
 def log_drone_state(writer,drone_state, global_step):
@@ -92,43 +95,56 @@ def log_drone_state(writer,drone_state, global_step):
     writer.add_scalar('drone_state/actual_y', drone_state[1], global_step)
     writer.add_scalar('drone_state/actual_z', drone_state[2], global_step)
 
-def save_state_csv(time,drone_state,python_sim_data_folder):
-    data={
-        "Time":time.transpose(),
-        "Position_x":drone_state[:,0].transpose(),
-        "Position_y":drone_state[:,1].transpose(),
-        "Position_z":drone_state[:,2].transpose(),
-        "Velocity_x":drone_state[:,3].transpose(),
-        "Velocity_y":drone_state[:,4].transpose(),
-        "Velocity_z":drone_state[:,5].transpose(),
-        "quat_w":drone_state[:,6].transpose(),
-        "quat_x":drone_state[:,7].transpose(),
-        "quat_y":drone_state[:,8].transpose(),
-        "quat_z":drone_state[:,9].transpose(),
-    }
-    df=pd.DataFrame(data)
-    output_file=os.path.join(python_sim_data_folder,"python_sim_drone_state.csv")
-    df.to_csv(output_file,index=False)
+# def save_state_csv(time,drone_state,python_sim_data_folder):
+#     data={
+#         "Time":time.transpose(),
+#         "Position_x":drone_state[:,0].transpose(),
+#         "Position_y":drone_state[:,1].transpose(),
+#         "Position_z":drone_state[:,2].transpose(),
+#         "Velocity_x":drone_state[:,3].transpose(),
+#         "Velocity_y":drone_state[:,4].transpose(),
+#         "Velocity_z":drone_state[:,5].transpose(),
+#         "quat_w":drone_state[:,6].transpose(),
+#         "quat_x":drone_state[:,7].transpose(),
+#         "quat_y":drone_state[:,8].transpose(),
+#         "quat_z":drone_state[:,9].transpose(),
+#     }
+#     df=pd.DataFrame(data)
+#     output_file=os.path.join(python_sim_data_folder,"python_sim_drone_state.csv")
+#     df.to_csv(output_file,index=False)
 
-def save_mpc_ctl_csv(time,ctl,python_sim_data_folder):
-    data={
-        "Time":time.transpose(),
-        "thrust":ctl[:,0].transpose(),
-        "body_rate_x":ctl[:,1].transpose(),
-        "body_rate_y":ctl[:,2].transpose(),
-        "body_rate_z":ctl[:,3].transpose(),
-    }
-    df=pd.DataFrame(data)
-    output_file=os.path.join(python_sim_data_folder,"python_sim_mpc_ctl.csv")
-    df.to_csv(output_file,index=False)
+# def save_mpc_ctl_csv(time,ctl,python_sim_data_folder):
+#     data={
+#         "Time":time.transpose(),
+#         "thrust":ctl[:,0].transpose(),
+#         "body_rate_x":ctl[:,1].transpose(),
+#         "body_rate_y":ctl[:,2].transpose(),
+#         "body_rate_z":ctl[:,3].transpose(),
+#     }
+#     df=pd.DataFrame(data)
+#     output_file=os.path.join(python_sim_data_folder,"python_sim_mpc_ctl.csv")
+#     df.to_csv(output_file,index=False)
     
     
-def str2bool(value):
-    if isinstance(value, bool):
-        return value
-    if value.lower() in ('yes', 'true', 't', '1'):
-        return True
-    elif value.lower() in ('no', 'false', 'f', '0'):
-        return False
-    else:
-        raise argparse.ArgumentTypeError(f"Invalid boolean value: {value}")
+
+
+def evaluation(writer,model_file,global_step):
+    """evaluate the success rate every 20 epsiodes, by running the trained model 32 times
+    Args:
+        model_file (str): the path to the model file
+    """
+    
+    ## run the success evaluation 32 times and return the success rate
+    count=0
+    options=parse_options()
+    test_num=24
+    for _ in range(test_num):
+        FAILED = success_eval(mission_cfg,
+                                train_cfg,
+                                options,
+                                model_file,
+                                INTRAIN=True)
+        if FAILED:
+            count+=1
+    success_rate=1-count/test_num
+    writer.add_scalar('success_rate', success_rate, global_step)

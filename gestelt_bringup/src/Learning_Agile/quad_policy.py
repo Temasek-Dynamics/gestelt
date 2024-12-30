@@ -6,7 +6,7 @@ from quad_OC import OCSys,LQR
 # the sequence of importing solid_geometry
 # with juliacall is import
 from solid_geometry import pitch_from_gate
-from quad_model import Quadrotor, toQuaternion
+from quad_model import Quadrotor, toQuaternion,Gate
 
 
 class PlanFwdBwdWrapper():
@@ -20,8 +20,12 @@ class PlanFwdBwdWrapper():
         #######------------ UAV PARAM----------------#########
         ######################################################
         ## definition 
-        self.wing_len = config['drone']['wing_len'] 
-        self.uav_height = config['drone']['height']
+        if options["CLOSE_LOOP_TRAINING"]:
+            self.wing_len = config['drone']['wing_len_train'] 
+            self.uav_height = config['drone']['height_train']
+        else:
+            self.wing_len = config['drone']['wing_len'] 
+            self.uav_height = config['drone']['height']
         # --------------------------- create model1 ----------------------------------------
         self.uav1 = Quadrotor(options)
         # jx, jy, jz = 0.0023, 0.0023, 0.004
@@ -163,16 +167,9 @@ class PlanFwdBwdWrapper():
         self.point2 = self.gate_corners[3:6]
         self.point3 = self.gate_corners[6:9]
         self.point4 = self.gate_corners[9:12]     
-        from collision_detection import Obstacle   
-        self.obstacle = Obstacle(self.config,self.point1,self.point2,self.point3,self.point4)
+        from penalty_cal import Obstacle   
+        self.obstacle = Obstacle(self.point1,self.point2,self.point3,self.point4,self.wing_len,self.uav_height)
 
-
-    def tra_ang_direct_reward(self,tra_ang):
-        self.roll_reward = - 1000 * 0.5 * tra_ang[0]**2
-        self.drdroll = - 1000 * tra_ang[0]
-
-        self.yaw_reward = - 1000 * 0.5 * tra_ang[2]**2
-        self.drdyaw = - 1000 * tra_ang[2]
 
     def MPC_and_R(self,tra_pos=None,tra_ang=None,t_tra = 3):
         """
@@ -220,7 +217,7 @@ class PlanFwdBwdWrapper():
         else:
             # self.tra_ang_direct_reward(tra_ang)
 
-            reward,self.d_R_d_st_traj=self.obstacle.reward_calc_diff_collision(
+            reward,self.d_R_d_st_traj=self.obstacle.penalty_cal_diff_collision(
                                                                 self.config,
                                                                 state_traj=state_traj,
                                                                 gate_corners=self.gate_corners,
@@ -232,21 +229,41 @@ class PlanFwdBwdWrapper():
             
             return reward #+ self.roll_reward + self.yaw_reward#+ pitch_reward
 
-    def get_reward(self,state_traj,real_state_i):
+    def get_reward(self,state_traj,real_state_i=None):
         self.vert_traj = self.uav1.get_quad_vert_pos(wing_len = self.wing_len, state_traj = state_traj)
-        reward,self.d_R_d_st_traj=self.obstacle.reward_calc_diff_collision(
-                                                                self.config,
+        reward,self.d_R_d_st_traj,_=self.obstacle.penalty_cal_diff_collision(self.config,
+                                                                            state_traj=state_traj,
+                                                                            gate_corners=self.gate_corners,
+                                                                            gate_quat=self.gate_quat,
+                                                                            vert_traj=self.vert_traj[:,0:3],
+                                                                            goal_pos=self.goal_pos,
+                                                                            real_state_i=real_state_i)
+            
+        self.d_R_d_st_traj = self.d_R_d_st_traj.reshape(self.horizon+1,1,self.uavoc1.n_state)
+        return [reward,self.d_R_d_st_traj]
+    
+    def git_failed(self,state_traj,gate_points_list):
+        
+        """
+        generate the gate obstacle when the real drone trajectory is close to the gate (real drone trajectory y=0)
+        since the gate could move
+        """
+        try:
+            real_t_tra = np.where(np.abs(state_traj[:,1])<0.1)[0][0]
+            gate_real_t_tra= Gate(gate_points_list[int(real_t_tra)])
+            self.init_obstacle(gate_real_t_tra)
+            
+            self.vert_traj = self.uav1.get_quad_vert_pos(wing_len = self.wing_len, state_traj = state_traj)
+            _,_,FAILED=self.obstacle.penalty_cal_diff_collision(self.config,
                                                                 state_traj=state_traj,
                                                                 gate_corners=self.gate_corners,
                                                                 gate_quat=self.gate_quat,
                                                                 vert_traj=self.vert_traj[:,0:3],
-                                                                goal_pos=self.goal_pos,
-                                                                real_state_i=real_state_i)
-            
-        self.d_R_d_st_traj = self.d_R_d_st_traj.reshape(self.horizon+1,1,self.uavoc1.n_state)
-            
-        return [reward,self.d_R_d_st_traj]
-
+                                                                goal_pos=self.goal_pos)
+        except: 
+            FAILED = True
+        
+        return FAILED
     # --------------------------- solution and learning---------------------------------------
     def sol_gradient(self,tra_pos =None,tra_ang=None,t_tra=None):
         """
@@ -391,10 +408,10 @@ class PlanFwdBwdWrapper():
         # return control, pos_vel_cmd
         return self.sol1,NO_SOLUTION_FLAG
 
-## sample the perturbation (only for random perturbations)
-def sample(deviation):
-    act = np.random.normal(0,deviation,size=6)
-    return act
+# ## sample the perturbation (only for random perturbations)
+# def sample(deviation):
+#     act = np.random.normal(0,deviation,size=6)
+#     return act
 
 
 #############################################################
@@ -508,3 +525,11 @@ def sample(deviation):
     #     ## plot the animation
     #     self.uav1.play_animation(wing_len = self.wing_len, state_traj = state_traj1,dt=self.dt, point1 = self.point1,\
     #         point2 = self.point2, point3 = self.point3, point4 = self.point4)
+
+
+        # def tra_ang_direct_reward(self,tra_ang):
+        # self.roll_reward = - 1000 * 0.5 * tra_ang[0]**2
+        # self.drdroll = - 1000 * tra_ang[0]
+
+        # self.yaw_reward = - 1000 * 0.5 * tra_ang[2]**2
+        # self.drdyaw = - 1000 * tra_ang[2]

@@ -81,15 +81,18 @@ def nn_sample(init_pos=None,
         # gate_pitch = np.random.uniform(-pi/2,pi/2)
         gate_pitch = 0
     elif TEST:
-        gate_pitch =  np.random.uniform(-pi/2,pi/2)
+        if not mission_cfg['FIX_GATE_PITCH_TEST']:
+           gate_pitch =  np.random.uniform(-pi/4,pi/4)
+        else:
+            gate_pitch = mission_cfg['gate_pitch'] 
     else:
-        des_pitch_mean_min = 1*pi/4
-        des_pitch_mean_max = 1*pi/4
+        des_pitch_mean_min = 1*pi/6
+        des_pitch_mean_max = 1*pi/6
         des_pitch_mean = des_pitch_mean_min - (des_pitch_mean_min - des_pitch_mean_max) * (cur_epoch / 100) 
 
         # truncated normal distribution
-        mu,sigma = 0,pi/18
-        lower,upper = -pi/3,pi/3
+        mu,sigma = 0,pi/24
+        lower,upper = -pi/6,pi/6
         X = stats.truncnorm((lower - mu) / sigma, (upper - mu) / sigma, loc=mu, scale=sigma)
         gate_pitch = X.rvs(1)[0]
         

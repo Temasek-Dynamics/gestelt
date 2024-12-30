@@ -18,14 +18,56 @@ from quad_nn import nn_sample
 from quad_moving import binary_search_solver,input_cal
 from result_analysis import python_sim_npy_parser
 from solid_geometry import magni, pitch_from_gate, verify_SVD_casadi#,SVD_M_to_SO3
-from logger_misc import str2bool #save_mpc_ctl_csv, save_state_csv
+from misc.misc import str2bool #save_mpc_ctl_csv, save_state_csv
 
 device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 # device=torch.device('cpu')
 input_size = train_cfg['model']['input_size'] 
 hidden_size = train_cfg['model']['hidden_size']
 output_size = train_cfg['model']['output_size']  
+def get_obs(history_obs = None,    
+            i = None,
+            input_size= None,
+            drone_state = None,
+            final_point = None,
+            gate_t_i= None):
+    """
+    get both immediate and past observation from the environment
+    
+    Args:
+        gate_t_i: the current gate state
+        drone_state: the current drone state
+        
+    Returns:
+        obs: the observation for the NN input
+    """
+    ##==calculate the gate RM
+    gate_pitch = pitch_from_gate(gate_t_i)
+    rot=R.from_euler('zyx',[0,gate_pitch,0])
+    
+    immed_obs=np.zeros(input_size)
+    immed_obs[0:10]=drone_state
+    immed_obs[10:13]=final_point
+    
+        ## gate points
+    immed_obs[13:25]=gate_t_i.gate_point.flatten() # gate points
+    
+    # position of the gate,# width of the gate,# pitch angle of the gate
+    immed_obs[25:28] = gate_t_i.centroid
+    immed_obs[28] = magni(gate_t_i.gate_point[0,:]-gate_t_i.gate_point[3,:]) # gate width
+    immed_obs[29:38]=rot.as_matrix().flatten()
+    
+    if i == 0:
+        for _ in range(5):
+            history_obs.append(immed_obs)
+    else:
+        history_obs.append(immed_obs)
+    
+    obs=np.array(history_obs)
+    
 
+    return obs,gate_pitch
+        
 class MovingGate():
     def __init__(self, env_init_set,
                         gate_center,
@@ -58,13 +100,15 @@ class MovingGate():
     def set_vel(self,
                 dt,
                 gate_v,
-                gate_w):
+                gate_w,
+                python_sim_time):
         
         self.v=gate_v
         self.w=gate_w
         
         # pre calculate gate points for future T durations
-        self.gate_points_list, self.V = self.gate.move(T = 8, v = gate_v ,w = gate_w ,dt = dt)
+        self.gate_points_list, self.V = self.gate.move(T = python_sim_time, v = gate_v ,w = gate_w ,dt = dt)
+
 
     
 class LearningAgileSim():
@@ -84,7 +128,7 @@ class LearningAgileSim():
 
         # load the configuration file
         self.config_dict = mission_cfg
-            
+        self.train_cfg = train_cfg    
         if not self.options['MANUAL_SET_POSE_TEST']:
             # load trained DNN2 model
             if model_file is not None:
@@ -204,7 +248,7 @@ class LearningAgileSim():
                                       gate_center=self.gate_center,
                                       gate_length=gate_length)
 
-        self.moving_gate.set_vel(dt=self.dyn_step,gate_v=gate_v,gate_w=gate_w)
+        self.moving_gate.set_vel(dt=self.dyn_step,gate_v=gate_v,gate_w=gate_w,python_sim_time=self.sim_time)
         self.gate_points_list = self.moving_gate.gate_points_list
         self.gate_t_i = Gate(self.gate_points_list[0])
 
@@ -277,49 +321,15 @@ class LearningAgileSim():
         self.wrp_list = np.concatenate((self.wrp_list,[out[-2]]),axis = 0)
         self.Pitch = np.concatenate((self.Pitch,[gate_pitch]),axis = 0) 
 
-    def get_obs(self,
-                gate_t_i,
-                drone_state):
-        """
-        get both immediate and past observation from the environment
-        
-        Args:
-            gate_t_i: the current gate state
-            drone_state: the current drone state
-            
-        Returns:
-            obs: the observation for the NN input
-        """
-        ##==calculate the gate RM
-        self.gate_pitch = pitch_from_gate(gate_t_i)
-        rot=R.from_euler('zyx',[0,self.gate_pitch,0])
-        
-        immed_obs=np.zeros(self.input_size)
-        immed_obs[0:10]=drone_state
-        immed_obs[10:13]=self.final_point
-        
-         ## gate points
-        immed_obs[13:25]=gate_t_i.gate_point.flatten() # gate points
-        
-        # position of the gate,# width of the gate,# pitch angle of the gate
-        immed_obs[25:28] = gate_t_i.centroid
-        immed_obs[28] = magni(gate_t_i.gate_point[0,:]-gate_t_i.gate_point[3,:]) # gate width
-        immed_obs[29:38]=rot.as_matrix().flatten()
-        
-        if self.i == 0:
-            for _ in range(5):
-                self.history_obs.append(immed_obs)
-        else:
-            self.history_obs.append(immed_obs)
-        
-        obs=np.array(self.history_obs)
-       
 
-        return obs
-        
     def close_loop_NN_forward(self):
         
-        obs=self.get_obs(self.gate_t_i,self.state)
+        obs, self.gate_pitch = get_obs(self.history_obs,
+                                       self.i,
+                                       self.input_size,
+                                       self.state,
+                                       self.final_point,
+                                       self.gate_t_i)
         nn_output = self.model(torch.tensor(obs.reshape([1,5,-1]), dtype=torch.float).to(device))[0]
         out = nn_output.to('cpu').data.numpy()
 
@@ -340,7 +350,7 @@ class LearningAgileSim():
         return out
     
 
-    def forward(self,python_sim_data_folder):
+    def forward(self,python_sim_data_dir=None):
         """
         python simulation
 
@@ -414,7 +424,7 @@ class LearningAgileSim():
                 cmd_solution,NO_SOLUTION_FLAG  = self.planner.mpc_update(current_state=self.state,
                                                         trav_auxvar_value=trav_auxvar_value)
                 
-                print('solving time at main=',time.time()-t_comp)
+                # print('solving time at main=',time.time()-t_comp)
                 self.solving_time.append(time.time()- t_comp)
                 self.u=cmd_solution['control_traj_opt'][0,:].tolist()
                 self.pos_vel_att_cmd=cmd_solution['state_traj_opt'][1,:] #self.config_dict['learning_agile']['horizon']
@@ -464,22 +474,17 @@ class LearningAgileSim():
             
         print('MPC finished')   
         
+        if self.options['SAVE_SIM']:
+            self.save(python_sim_data_dir)
+        
+        if self.options['SUCCESS_EVAL']:
+            
+            FAILED=self.planner.git_failed(self.state_n[::10,:],self.gate_points_list[::10,:,:])
 
-        # save_state_csv(self.Time,self.state_n,python_sim_data_folder)
-        # save_mpc_ctl_csv(self.Time,self.control_n,python_sim_data_folder)
+            print('FAILED=',FAILED)
+       
 
         if self.options['VISUALIZE']:
-            np.save(os.path.join(python_sim_data_folder,'gate_points_list_traj'),self.gate_points_list)
-            np.save(os.path.join(python_sim_data_folder,'uav_traj'),self.state_n)
-            np.save(os.path.join(python_sim_data_folder,'uav_ctrl'),self.control_n)
-            np.save(os.path.join(python_sim_data_folder,'abs_tra_time'),self.Ttra)
-            np.save(os.path.join(python_sim_data_folder,'tra_time'),self.NN_T_tra)
-            np.save(os.path.join(python_sim_data_folder,'Time'),self.Time)
-            np.save(os.path.join(python_sim_data_folder,'Pitch'),self.Pitch)
-            np.save(os.path.join(python_sim_data_folder,'HL_Variable'),self.hl_variable)
-            np.save(os.path.join(python_sim_data_folder,'solving_time'),self.solving_time)
-            np.save(os.path.join(python_sim_data_folder,'nn_output_list'),self.nn_output_list)
-            np.save(os.path.join(python_sim_data_folder,'des_tra_R_list'),self.des_tra_R_list)
             self.planner.uav1.play_animation(wing_len=self.planner.wing_len,
                                         gate_traj1=self.gate_points_list[::5,:,:],
                                         state_traj=self.state_n[::5,:],
@@ -514,11 +519,30 @@ class LearningAgileSim():
                                         uav_height=self.planner.uav_height/2,
                                         state_traj=self.state_n[::50,:],
                                         gate_traj=self.gate_points_list[::50,:,:])
-
-
-        # self.planner.uav1.plot_T(control_tm)
-        # self.planner.uav1.plot_M(control_tm)
-    
+            
+        if self.options['SUCCESS_EVAL']:
+            return FAILED
+        else:
+            return None
+        
+       
+    def save(self,python_sim_data_dir):
+        """
+        save the data
+        """
+        # save_state_csv(self.Time,self.state_n,python_sim_data_dir)
+        # save_mpc_ctl_csv(self.Time,self.control_n,python_sim_data_dir)
+        np.save(os.path.join(python_sim_data_dir,'gate_points_list_traj'),self.gate_points_list)
+        np.save(os.path.join(python_sim_data_dir,'uav_traj'),self.state_n)
+        np.save(os.path.join(python_sim_data_dir,'uav_ctrl'),self.control_n)
+        np.save(os.path.join(python_sim_data_dir,'abs_tra_time'),self.Ttra)
+        np.save(os.path.join(python_sim_data_dir,'tra_time'),self.NN_T_tra)
+        np.save(os.path.join(python_sim_data_dir,'Time'),self.Time)
+        np.save(os.path.join(python_sim_data_dir,'Pitch'),self.Pitch)
+        np.save(os.path.join(python_sim_data_dir,'HL_Variable'),self.hl_variable)
+        np.save(os.path.join(python_sim_data_dir,'solving_time'),self.solving_time)
+        np.save(os.path.join(python_sim_data_dir,'nn_output_list'),self.nn_output_list)
+        np.save(os.path.join(python_sim_data_dir,'des_tra_R_list'),self.des_tra_R_list)
 
 def parse_options():
     parser = argparse.ArgumentParser(description="Options for the program.")
@@ -533,29 +557,27 @@ def parse_options():
     parser.add_argument('--CLOSE_LOOP_TRAINING', type=str2bool, default=False, help='Enable or disable CLOSE_LOOP_TRAINING.')
     parser.add_argument('--VISUALIZE', type=str2bool, default=True, help='Enable or disable VISUALIZE.')
     parser.add_argument('--STATE_2_MOVING_GATE', type=str2bool, default=False, help='Enable or disable STATE_2_MOVING_GATE.')
-
+    parser.add_argument('--SUCCESS_EVAL', type=str2bool, default=True, help='Enable or disable SUCCESS_EVAL.')
+    parser.add_argument('--SAVE_SIM', type=str2bool, default=True, help='Enable or disable SAVE_SIM.')
     args = parser.parse_args()
     return vars(args)  # Return options as a dictionary  
-      
-def main():
 
-    python_sim_data_folder = os.path.join(current_dir, 'python_sim_result')
+        
+def success_eval(mission_cfg=None,
+                 train_cfg=None,
+                 options=None,
+                 model_file=None,
+                 python_sim_data_dir=None,
+                 INTRAIN=False):
+    """
+    test the success rate, evaluate the real executed trajectory
+    """
+
     
-
-    ########################################################################
-    #####---------------------- TEST option -------------------------#######
-    ########################################################################
-    options=parse_options()
-    print("Parsed Options:", options)
-
-    if options['CLOSE_LOOP_MODEL']:
-        # good : 'training_results/2024-11-22/12-56-50/trained_model/NN_close_500.pth
-        model_name = mission_cfg['NN_model_name']#'NN2_imitate_1.pth' #'NN_close_2.pth'
-        model_file=os.path.join(current_dir,model_name)
-    else:   
-        model_name = '20241031-142733-PDP-Trial 1, shrink the gate from [1.2,0.56] to [1.0, 0.4]/NN2_imitate_1.pth' 
-        model_file=os.path.join(current_dir, f'training_data/NN_model/',model_name)
-    
+    if INTRAIN:
+        options['VISUALIZE']=False
+        options['SAVE_SIM']=False
+        options['USE_PREV_SOLVER']=True
     
     # create the learning agile agent
     # problem definition
@@ -577,7 +599,31 @@ def main():
     
     #####============== Solve the problem ====================#######
     # solve the problem
-    learning_agile_sim.forward(python_sim_data_folder)
+    return learning_agile_sim.forward(python_sim_data_dir)
+    
+          
+def main():
+
+    python_sim_data_dir = os.path.join(current_dir, 'python_sim_result')
+    options=parse_options()
+    print("Parsed Options:", options)
+
+    if options['CLOSE_LOOP_MODEL']:
+        # good : 'training_results/2024-11-22/12-56-50/trained_model/NN_close_500.pth
+        model_name = mission_cfg['NN_model_name']#'NN2_imitate_1.pth' #'NN_close_2.pth'
+        model_file=os.path.join(current_dir,model_name)
+    else:   
+        model_name = '20241031-142733-PDP-Trial 1, shrink the gate from [1.2,0.56] to [1.0, 0.4]/NN2_imitate_1.pth' 
+        model_file=os.path.join(current_dir, f'training_data/NN_model/',model_name)
+    
+    success_eval(mission_cfg,
+                 train_cfg,
+                 options,
+                 model_file,
+                 python_sim_data_dir,
+                 INTRAIN=False)
+    
+    
 
     # every time after reconstruct the solver, need to catkin build the MPC wrapper to 
     # relink the shared library

@@ -66,8 +66,7 @@ def DiffCollisionWrapper(line_centers,
                         drone_state,
                         node_tra,
                         scaling_w,
-                        PENALTY_HELPER=False,
-                        SUCCESS_RATE_TEST=False):
+                        PENALTY_HELPER=False):
     
     ## convert from numpy to jnp
     prism_centers=jnp.zeros([4,3])
@@ -122,7 +121,7 @@ def DiffCollisionWrapper(line_centers,
         if i == 1 or i == 3:
             # for the left and right walls
             alpha_importance=1
-            des_alpha=1.81825 # gate length =1.2ellipsoid
+            des_alpha=1# gate length =1.2ellipsoid .81825 
             # des_alpha =1.125 # gate length =1
         else:
             # for the up and down walls
@@ -130,7 +129,7 @@ def DiffCollisionWrapper(line_centers,
             # des_alpha=1.4325 # gate width 0.56 ellipsoid
             # des_alpha= 1.37 # gate width 0.4 1.17+0.2
             # des_alpha =1.6 # gate width 0.6
-            des_alpha =gate_width+1
+            des_alpha =1#gate_width+
 
         # dalpha_i_dstate: drone_p,drone_q,ellipse_p,ellipse_q
         # alpha_i, dalpha_i_dstate=jl.dc.proximity_gradient(Elli_drone,P_obs[i],verbose = False, pdip_tol = 1e-6)
@@ -140,23 +139,26 @@ def DiffCollisionWrapper(line_centers,
 
         
         # scaling_w = scaling_w * np.exp(-node_tra/5)
-        # if not PENALTY_HELPER:
-        if not SUCCESS_RATE_TEST:
-            penalty+=(scaling_w * alpha_importance * (alpha_i-des_alpha)**2)
-            dalpha_i_dstate=grad_f(drone_ellipsoid.P,drone_ellipsoid.r,drone_ellipsoid.q,
-                                    P_obs[i].A,P_obs[i].b,P_obs[i].r,P_obs[i].q)
-            
-            dalpha_dstate_drone[0:3] += 2 * scaling_w * alpha_importance * (alpha_i-des_alpha) * np.array(dalpha_i_dstate[0])
-            dalpha_dstate_drone[6:10] += 2 * scaling_w * alpha_importance * (alpha_i-des_alpha) * np.array(dalpha_i_dstate[1])
-        else:
-            penalty +=alpha_i*alpha_importance
-            if alpha_i <= 1:
-                HIT=True
+        
+        
+        # if PENALTY_HELPER:
+        #     ## To find the optimal scale
+        #     penalty +=alpha_i*alpha_importance 
+        # else:
+        penalty += (scaling_w * alpha_importance * (alpha_i-des_alpha)**2)
+        dalpha_i_dstate=grad_f(drone_ellipsoid.P,drone_ellipsoid.r,drone_ellipsoid.q,
+                                P_obs[i].A,P_obs[i].b,P_obs[i].r,P_obs[i].q)
+        
+        dalpha_dstate_drone[0:3] += 2 * scaling_w * alpha_importance * (alpha_i-des_alpha) * np.array(dalpha_i_dstate[0])
+        dalpha_dstate_drone[6:10] += 2 * scaling_w * alpha_importance * (alpha_i-des_alpha) * np.array(dalpha_i_dstate[1])
 
-    if SUCCESS_RATE_TEST:
-        return HIT
     
-    return penalty,dalpha_dstate_drone
+        if alpha_i <= 1:
+            HIT=True
+
+       
+    
+    return HIT, penalty, dalpha_dstate_drone
 
 
 # if __name__ == '__main__':

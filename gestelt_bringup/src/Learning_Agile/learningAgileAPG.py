@@ -10,7 +10,7 @@ from torch.utils.tensorboard import SummaryWriter
 from solid_geometry import magni
 from learningAgileBase import LearningAgileBase
 from config import mission_cfg,train_cfg,current_dir,setup_training_directories
-from logger_misc import log_drone_state,log_train_IO,log_gradient
+from logger_misc import log_drone_state,log_train_IO,log_gradient,evaluation
 import logging
 
 folder_dict=setup_training_directories()
@@ -65,9 +65,9 @@ class LearningAgileAPG:
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
         if options['TRAIN_FROM_CHECKPOINT'] or options['STATE_2_MOVING_GATE']:
-            FILE = os.path.join(checkpoint_trained_model_folder, "new_format/2024-12-21/15-49-52/trained_model/NN_close_300.pth")
+            FILE = os.path.join(checkpoint_trained_model_folder, "new_format/2024-12-29/15-46-23/trained_model/NN_close_700.pth")
 
-            self.learning_rate = self.train_cfg['training']['learning_rate']*0.9**(800/100)
+            self.learning_rate = self.train_cfg['training']['learning_rate']#*0.9**(300/self.train_cfg['training']['lr_decay_num_epochs'])
         else:
             FILE = os.path.join(model_folder, "NN_close_pretrain.pth")
         self.model = torch.load(FILE).to(self.device)
@@ -75,11 +75,13 @@ class LearningAgileAPG:
         
         self.learning_rate = self.train_cfg['training']['learning_rate']
         self.dyn_decay = self.train_cfg['training']['dyn_decay']
+        lr_gamma = self.train_cfg['training']['lr_gamma']
+        lr_decay_num_epochs = self.train_cfg['training']['lr_decay_num_epochs']
 
         # Loss and optimizer
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate)  #,weight_decay=0.01
         # learning rate scheduler
-        self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=100, gamma=0.9)
+        self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=lr_decay_num_epochs, gamma=lr_gamma)
         # self.scheduler=torch.optim.lr_scheduler.CosineAnnealingLR(self.optimizer,T_max=50,eta_min=self.train_cfg['training']['eta_min'])
 
     def get_reward_episodes(self, i:int,
@@ -175,7 +177,7 @@ class LearningAgileAPG:
             ##== record NN obs and output per episode step
             log_drone_state(writer,obs_batch[0,-1,:],self.global_step)
             euler_nn = log_train_IO(writer,obs_batch[0,-1,:],outputs_batch[0,:].data.numpy().reshape(self.episodes[0].output_size),self.global_step)
-            writer.add_scalar('reward_single_step', self.episodes[0].reward, self.global_step)
+            writer.add_scalar('penalty_single_step', self.episodes[0].reward, self.global_step)
             
             self.global_step  += 1
         
@@ -184,7 +186,7 @@ class LearningAgileAPG:
             reward_list.append(self.episodes[k].reward)
             p_R_p_z_list.append(self.episodes[k].p_R_p_z) 
         
-        ## assemble
+        ## assemble 
         p_R_p_z_list = np.array(p_R_p_z_list)/(10000*(0.1*magni(euler_nn))) #*((10*euler_nn[1]))(batch_size, close_loop_horizon, 1, 13)
         p_R_p_z_list = np.clip(p_R_p_z_list, -0.02, 0.02)
         # (close_loop_horizon, batch_size, 13)->(batch_size, close_loop_horizon, 13)
@@ -218,7 +220,11 @@ class LearningAgileAPG:
                 pbar.update(1)
                 pbar.set_description(f"epoch:{epoch}, reward:{self.reward_batch[0]}")
                 if epoch % 10 == 0:
-                    torch.save(self.model, os.path.join(trained_model_folder, f"NN_close_{epoch}.pth"))
+                    model_file=os.path.join(trained_model_folder, f"NN_close_{epoch}.pth")
+                    torch.save(self.model, model_file)
+
+                if (epoch+1) % 100 == 0:
+                    evaluation(writer,model_file,self.global_step)
 
 if __name__ == "__main__":
 

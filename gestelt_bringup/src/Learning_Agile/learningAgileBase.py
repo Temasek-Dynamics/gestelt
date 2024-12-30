@@ -8,7 +8,7 @@ from scipy.spatial.transform import Rotation as R
 import matplotlib.pyplot as plt
 
 from solid_geometry import magni,pitch_from_gate
-from learning_agile_sim import LearningAgileSim, Gate
+from learning_agile_sim import LearningAgileSim, Gate,get_obs
 
 from config import mission_cfg, train_cfg,current_dir
 
@@ -28,7 +28,8 @@ options['DEBUG']=False
 options['BACKWARD']=True
 class LearningAgileBase:
     """
-    this class is responsible for wrap the single episode,
+    this class is responsible for wrap the single episode for training,
+    take the MPC predicted first state as the drone real state to update,
     include forward, reward, backward, 
     return the Reward and Gradient of this episode
     Reward: [R_0, R_1, R_2, ..., R_H] for each step's prediction
@@ -41,18 +42,16 @@ class LearningAgileBase:
         self.mission_cfg = mission_cfg
         self.train_cfg = train_cfg
 
-        # self.gate_v = np.array(self.mission_cfg['gate']['linear_vel'])
-        # self.gate_w = mission_cfg['gate']['angular_vel'] 
-        self.NN_freq = mission_cfg['NN_freq']
-        self.learning_agile_sim = LearningAgileSim(python_sim_time=5,
+        self.learning_agile_sim = LearningAgileSim(python_sim_time=self.mission_cfg['mission_period'],
                                                     mission_cfg=self.mission_cfg,
-                                                    dyn_step=1/self.NN_freq,
+                                                    train_cfg=self.train_cfg,
+                                                    dyn_step=0.002,
                                                     options=options)
         self.planner = self.learning_agile_sim.planner
-        ## keep history five states, RING BUFFER
+      
         self.input_size = train_cfg['model']['input_size']
         self.output_size = train_cfg['model']['output_size']
-
+        self.history_obs = deque(maxlen=5)
         
     def load_model(self,model_folder):
         ##== load the pre-trained model ==##
@@ -76,8 +75,9 @@ class LearningAgileBase:
         self.state_traj=[]
         self.state_n = np.array([self.state])
 
-        obs=self.gate_step_and_obs(0)
-        return obs
+        self.gate_step_and_obs(0)
+        
+ 
 
 
 
@@ -86,14 +86,17 @@ class LearningAgileBase:
         ## == gate forward === ##
         gate_t_i = Gate(self.gate_points_list[i])
 
-        return self.learning_agile_sim.get_obs(gate_t_i, self.state)
+        self.obs,_ = get_obs(self.history_obs,
+                            self.i,
+                            self.input_size,
+                            self.state,
+                            self.learning_agile_sim.final_point,
+                            gate_t_i)
+        return self.obs
 
     def get_NN_decision(self,obs):
         # NN output the traversal time and pose
-        nn_out = self.model(torch.tensor(obs, dtype=torch.float).unsqueeze(0).to(device))[0]
-        
-        
-        return nn_out
+        return self.model(torch.tensor(obs, dtype=torch.float).unsqueeze(0).to(device))[0]
     
     def get_NN_decision_debug(self):
         # manually set the traversal time and pose
@@ -158,7 +161,7 @@ class LearningAgileBase:
         self.state_n = np.concatenate((self.state_n,[self.state]),axis = 0)
        
         ## === initial gate obstacle based on current NN prediction === ##
-        pred_t_i = self.i + self.t_tra_rel*10
+        pred_t_i = self.i + self.t_tra_rel*(1/self.mission_cfg['learning_agile']['dt'])
         gate_t_pred = Gate(self.gate_points_list[int(pred_t_i)])
         self.planner.init_obstacle(gate_t_pred)
     
@@ -207,16 +210,15 @@ class LearningAgileBase:
             self.p_R_i_p_z_i[self.i-4] += self.p_R_i_p_z_last[f'{self.i}-4']
 
             # Backpropagate through all last time-steps
-            # num = 0
             # for k in range(4, self.i):
             #     self.p_R_i_p_x_i[f'{self.i}-{k}'] = dyn_decay * self.p_R_i_p_x_i[f'{self.i}-{k-1}'] @ self.p_X_traj_i_p_x_i[self.i-k][1, :, :]
             #     self.p_R_i_p_z_last[f'{self.i}-{k+1}'] = self.p_R_i_p_x_i[f'{self.i}-{k}'] @ self.p_X_traj_i_p_z_i[self.i-k-1][1, :, :]
 
             #     self.p_R_i_p_z_i[self.i-k-1] += self.p_R_i_p_z_last[f'{self.i}-{k+1}']
-                # num += 1
+                
 
-                # if num == 3:
-                #     break
+            #     if k == 6:
+            #         break
 
 
     # def run_single_step(self,nn_output):
@@ -237,6 +239,7 @@ class LearningAgileBase:
     def p_R_p_z(self):
         p_R_p_z = np.array(self.p_R_i_p_z_i)
         return p_R_p_z
+
    
 def get_reward(base):
     """

@@ -6,23 +6,23 @@ import time
 import rospy
 from scipy.spatial.transform import Rotation as R
 from collections import deque
+import torch
+import numpy as np
 
-from quad_model import *
-from quad_policy import *
-from quad_nn import *
-from quad_moving import *
-
+from config import current_dir,train_cfg
+from quad_model import Rd2Rp,toQuaternion,Gate
+from quad_nn import nn_sample
+from quad_moving import binary_search_solver
+from solid_geometry import pitch_from_gate,magni,verify_SVD_casadi
 
 from gestelt_msgs.msg import Goals,  CommanderState, close_loop_NN_output
 from geometry_msgs.msg import  PoseStamped, TwistStamped, Point
 from std_msgs.msg import Float32
 from visualization_msgs.msg import Marker
-from quad_policy import Rd2Rp
-from quad_model import toQuaternion
-from learning_agile_sim import MovingGate, input_size
+from learning_agile_sim import MovingGate, get_obs
 from learning_agile_ROS_mission import transform_map_to_world
-from solid_geometry import *
-from config import mission_cfg,train_cfg,current_dir,setup_training_directories
+
+
 ##=================Load the model and configuration file=================##
 # acquire the current directory
 
@@ -57,13 +57,14 @@ class NN2_ROS_wrapper:
         is_simulation=rospy.get_param('mission/is_simulation', False)
         gate_v = rospy.get_param('gate/linear_vel', [0,0,0])
         gate_w = rospy.get_param('gate/angular_vel', 0)
-        self.mission_period = rospy.get_param('mission/period', 8)
+        self.mission_period = rospy.get_param('mission/period', 5)
         NN_model_name=rospy.get_param('NN_deploy_model_name', 'NN2_imitate_1.pth')
         self.NN_freq = rospy.get_param('NN_freq', 100)
         MANUAL_SET_POSE_TEST = rospy.get_param('MANUAL_SET_POSE_TEST', False)
         ## ==========================initialize ==========================-##
         
         self.state = np.zeros(10)
+        self.input_size = train_cfg['model']['input_size']
         self.gate_step = 1/self.NN_freq 
         self.MISSION_START = False
         self.RECEIVED_DRONE_POSE = False
@@ -83,8 +84,8 @@ class NN2_ROS_wrapper:
         self.B_S_time_pub = rospy.Publisher("/learning_agile_sim/B_S_time", Float32, queue_size=1)
         self.NN_forward_time_pub = rospy.Publisher("/learning_agile_sim/NN_forward_time", Float32, queue_size=1)
         self.gate_vis_pub = rospy.Publisher("/learning_agile_sim/gate_vis", Marker, queue_size=1)
-        
-       
+        self.gate_pitch_pub = rospy.Publisher("/learning_agile_sim/gate_pitch", Float32, queue_size=1)
+
         if not MANUAL_SET_POSE_TEST:
             self.gate_vis_timer = rospy.Timer(rospy.Duration(1/self.NN_freq), self.gate_vis)
             self.NN2_output_timer = rospy.Timer(rospy.Duration(1/self.NN_freq), self.close_loop_NN_forward)
@@ -98,16 +99,16 @@ class NN2_ROS_wrapper:
         ##====================-gate initialization ========================##
 
         ## random gate initialization
-        self.env_init_set = nn_sample()
+        self.env_init_set = nn_sample(TEST=True)
         gate_length = rospy.get_param('gate/length', 1.2)
         gate_center = rospy.get_param('mission/gate_position', [0,0,1.5])
         self.moving_gate = MovingGate(self.env_init_set,
                                       gate_center=gate_center,
                                       gate_length=gate_length)
-        self.moving_gate.set_vel(dt=self.gate_step,gate_v=gate_v,gate_w=gate_w)
+        self.moving_gate.set_vel(dt=self.gate_step,gate_v=gate_v,gate_w=gate_w,python_sim_time=self.mission_period)
         self.gate_points_list = self.moving_gate.gate_points_list
         self.gate_t_i = Gate(self.gate_points_list[0]) 
-        self.history_state = deque(maxlen=5)
+        self.history_obs = deque(maxlen=5)
         ##=======================misc ====================================##
         """
         callback function for the drone pose, under the world frame,
@@ -273,34 +274,15 @@ class NN2_ROS_wrapper:
                 print("shutdown the NN forward timer")
                 self.NN2_output_timer.shutdown()
 
-            else:
+            else: 
+                obs,gate_pitch = get_obs(self.history_obs,
+                                self.i,
+                                self.input_size,
+                                self.state,
+                                self.final_point,
+                                self.gate_t_i)
                 
-                ## == NN forward === ##
-                nn2_inputs=np.zeros(input_size)
-                nn2_inputs[0:10]=self.state
-                nn2_inputs[10:13]=self.final_point
-
-                nn2_inputs[13:25]=self.gate_t_i.gate_point[:,:].flatten() # gate points
-
-                # position of the gate
-                nn2_inputs[25:28] = self.gate_t_i.centroid
-                # width of the gate
-                nn2_inputs[28] = magni(self.gate_t_i.gate_point[0,:]-self.gate_t_i.gate_point[3,:]) # gate width
-                # pitch angle of the gate
-                gate_pitch = pitch_from_gate(self.gate_t_i)
-                
-            
-                ##==calculate the gate RM
-                rot=R.from_euler('zyx',[0,gate_pitch,0])
-                nn2_inputs[input_size-9:input_size]=rot.as_matrix().flatten()
-
-                if self.i == 0:
-                    for k in range(5):
-                        self.history_state.append(nn2_inputs)
-                else:
-                    self.history_state.append(nn2_inputs)
-                
-                full_input=np.array(self.history_state).reshape(1,5,-1)
+                full_input=np.array(obs).reshape([1,5,-1])
                 # NN output the traversal time and pose
                 t_comp = time.time()
                 nn_output = self.model(torch.tensor(full_input, dtype=torch.float).to(device))[0]
@@ -320,9 +302,11 @@ class NN2_ROS_wrapper:
                 
                 NN_trav_time_msg = Float32()
                 NN_forward_time_msg = Float32()
-           
+                gate_pitch_msg = Float32()
+
                 NN_trav_time_msg.data = out[-1]
                 NN_forward_time_msg.data = NN_forward_time
+                gate_pitch_msg.data = gate_pitch
 
                 ##= visualize the traversing pose
                 vis_NN_trav_pose_msg = PoseStamped()
@@ -341,7 +325,7 @@ class NN2_ROS_wrapper:
                 self.NN_trav_time_pub.publish(NN_trav_time_msg)
                 self.NN_forward_time_pub.publish(NN_forward_time_msg)
                 self.vis_NN_trav_pose_pub.publish(vis_NN_trav_pose_msg)
-                
+                self.gate_pitch_pub.publish(gate_pitch_msg)
 
     def mission_start_cb(self,msg):
         """

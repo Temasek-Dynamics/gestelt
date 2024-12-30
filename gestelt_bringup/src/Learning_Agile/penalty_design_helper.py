@@ -1,46 +1,51 @@
+'''
+this file will plot the penalty value change w.r.t the euler angle change of the quadrotor
+'''
 import numpy as np
-# from differentiable_collision_wrapper import *
 import time
-import yaml
-import os
+
+import matplotlib.pyplot as plt
 from scipy.spatial.transform import Rotation as R
-from solid_geometry import *
-from quad_policy import *
+
+
+
+from quad_policy import PlanFwdBwdWrapper
 from learning_agile_sim import MovingGate
 from quad_nn import nn_sample
-"""
-this file will plot the penalty value change w.r.t the euler angle change of the quadrotor
-"""
+from config import mission_cfg
 class PenaltyDesignHelper():
-    def __init__(self):
-        pass
-
-    def rotating_quad(self):
-
-        number_of_pts=50
-        self.axis_angle_range=np.linspace(-np.pi/2,np.pi/2,number_of_pts)
+    '''
+    this class is used to help design the penalty function w.r.t the quadrotor's euler angle change and translation change
+    '''
+    def __init__(self,
+                 trans_choice,
+                 euler_choice,
+                 ROT_VIS=False):
+        self.num_of_pts=50
+        self.ROT_VIS=ROT_VIS
+        self.trans_range=np.linspace(-1,1,self.num_of_pts)
+        self.axis_angle_range=np.linspace(-np.pi/2,np.pi/2,self.num_of_pts)
+        
+        ## for 3d penalty w.r.t angle plot
         self.pitch_seq=self.axis_angle_range
         self.roll_seq=self.axis_angle_range
         self.R,self.P=np.meshgrid(self.roll_seq,self.pitch_seq)
         
-        euler_angle=np.zeros((number_of_pts,3))
+        euler_angle=np.zeros((self.num_of_pts,3))
 
         ## choose the roll, pitch, or yaw
         self.euler_table={0:'yaw',1:'pitch',2:'roll'}
-        self.euler_choose=2
-        euler_angle[:,self.euler_choose]=self.axis_angle_range
+        self.euler_choice=euler_choice
+        euler_angle[:,self.euler_choice]=self.axis_angle_range
         self.quad_quat=R.from_euler('zyx', euler_angle).as_quat()
         self.quad_quat=np.roll(self.quad_quat,1,axis=1)
         
-    
-    
+        ## choose the translation direction
+        self.trans_table={0:'x',1:'y',2:'z'}
+        self.trans_choice=trans_choice
 
-    def load_config(self):
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        conf_folder=os.path.abspath(os.path.join(current_dir, '..', '..','config'))
-        yaml_file = os.path.join(conf_folder, 'learning_agile_mission.yaml')
-        with open(yaml_file, 'r', encoding='utf-8') as file:
-            self.config_dict = yaml.safe_load(file)
+    def load_config(self, mission_config):
+        self.config_dict=mission_config
        
 
 
@@ -55,7 +60,7 @@ class PenaltyDesignHelper():
         'MPC_BACKWARD' : True,
         'ORIGIN_REWARD'  : False,
         'PDP_GRADIENT' : True,
-
+        'CLOSE_LOOP_TRAINING' : True,
 
         ## training option
         'MULTI_CORE'  : False,
@@ -82,7 +87,7 @@ class PenaltyDesignHelper():
         
 
     def penalty_cal(self,state_traj):
-        penalty,_=self.planner.obstacle.reward_calc_diff_collision(self.config_dict,
+        penalty,_,_=self.planner.obstacle.penalty_cal_diff_collision(self.config_dict,
                                                                 state_traj=state_traj,
                                                                 gate_corners=self.planner.gate_corners,
                                                                 gate_quat=self.planner.gate_quat,
@@ -91,17 +96,21 @@ class PenaltyDesignHelper():
                                                                 PENALTY_HELPER=True)
         return penalty
     def plot_penalty_seq(self):
-        fig=plt.figure()
+        plt.figure()
         # ax=fig.add_subplot(projection='3d')
         state_traj=np.zeros((1,10))
         penalty=np.zeros(len(self.quad_quat))
         start_time = time.time()
         for i in range(len(self.quad_quat)):
-            state_traj[:,6:10]=self.quad_quat[i]
+            if self.ROT_VIS:
+                state_traj[:,6:10]=self.quad_quat[i]
+            else:
+                state_traj[:,6:10]=np.array([1,0,0,0])
+                state_traj[:,self.trans_choice]=self.trans_range[i]
             penalty[i]=self.penalty_cal(state_traj)
         print("--- %s seconds ---" % (time.time() - start_time))
         plt.plot(self.axis_angle_range,penalty)
-        plt.xlabel(f'{self.euler_table[self.euler_choose]} angle')
+        plt.xlabel(f'{self.euler_table[self.euler_choice]} angle')
         plt.grid()
         plt.show()
     
@@ -128,10 +137,10 @@ class PenaltyDesignHelper():
         ax.set_ylabel('pitch')
         ax.set_zlabel('penalty')
         plt.show()
-if __name__ == "__main__":
-    helper=PenaltyDesignHelper()
-    helper.load_config()
-    helper.rotating_quad()
+        
+if __name__ == '__main__':
+    helper=PenaltyDesignHelper(trans_choice=0,euler_choice=2,ROT_VIS=False)
+    helper.load_config(mission_config=mission_cfg)
     helper.init_env()
     helper.plot_penalty_seq()
     # helper.plot_penalty_3d()

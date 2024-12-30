@@ -1,12 +1,13 @@
 import numpy as np
+import jax.numpy as jnp
 # from differentiable_collision_wrapper import *
 
-from jax_differentiable_collision_call import *
-from solid_geometry import *
+from jax_differentiable_collision_call import DiffCollisionWrapper, Polytope
+from solid_geometry import plane, line, magni,dir_cosine_np
 
 ## define the narrow window which is also the obstacle for the quadrotor
 class Obstacle():
-    def __init__(self,config, point1, point2, point3, point4):
+    def __init__(self, point1, point2, point3, point4,wing_len,uav_height):
         self.point1 = np.array(point1)
         self.point2 = np.array(point2)
         self.point3 = np.array(point3)
@@ -31,11 +32,11 @@ class Obstacle():
         ##==for differentiable collision detection==##
         
         ## create rectangle walls with the desired size
-        quad_radius=jnp.array(config['drone']['wing_len']/2)
-        quad_half_height=jnp.array(config['drone']['height']/2)
+        self.quad_radius=jnp.array(wing_len/2)
+        self.quad_half_height=jnp.array(uav_height/2)
         
         self.P_obs = []
-        for i in range(4):
+        for _ in range(4):
             self.P_obs.append(Polytope())
         
         # length_gap=jnp.abs(line_centers_G[1,0]-line_centers_G[3,0])
@@ -43,13 +44,13 @@ class Obstacle():
         length_gap = jnp.array(magni(point1-point2))  # 1.2
         self.width_gap = jnp.array(magni(point1-point4))  # 0.56
     
-        self.P_obs[0].create_rect_prism(length_gap, 1.0, quad_half_height*2),
-        self.P_obs[1].create_rect_prism(quad_radius*2, 1.0, self.width_gap),
-        self.P_obs[2].create_rect_prism(length_gap, 1.0, quad_half_height*2),
-        self.P_obs[3].create_rect_prism(quad_radius*2, 1.0, self.width_gap)
+        self.P_obs[0].create_rect_prism(length_gap, 1.0, self.quad_half_height*2)
+        self.P_obs[1].create_rect_prism(self.quad_radius*2, 1.0, self.width_gap)
+        self.P_obs[2].create_rect_prism(length_gap, 1.0, self.quad_half_height*2)
+        self.P_obs[3].create_rect_prism(self.quad_radius*2, 1.0, self.width_gap)
 
         ##==quadrotor ellipsoid==##
-        A=jnp.diag(np.array([quad_radius,quad_radius,quad_half_height]))
+        A=jnp.diag(np.array([self.quad_radius,self.quad_radius,self.quad_half_height]))
         A_inv=jnp.linalg.inv(A)
         self.P=A_inv.T@A_inv
 
@@ -132,7 +133,7 @@ class Obstacle():
         return collision
   
 
-    def reward_calc_diff_collision(self, 
+    def penalty_cal_diff_collision(self, 
                                     config,
                                     state_traj, 
                                     gate_corners,
@@ -149,7 +150,7 @@ class Obstacle():
             for t in range(state_traj.shape[0]):
                 
                 # if the current state is already behind the gate, then break
-                if len(t_tra_seq_list)==2 or np.dot(self.plane1.nor_vec(),vert_traj[0]-self.centroid)>0:
+                if len(t_tra_seq_list)==3 or np.dot(self.plane1.nor_vec(),vert_traj[0]-self.centroid)>0:
                     break
                 if(np.dot(self.plane1.nor_vec(),vert_traj[t]-self.centroid)>0):
                     t_tra_seq_list.append(t-1)
@@ -172,15 +173,15 @@ class Obstacle():
             else:
                 line_centers[i,:]= (gate_corners[3*i:3*i+3]+gate_corners[3*i+3:3*i+6])/2
 
+        FAILED=False
         for node_tra in t_tra_seq_list:
         
-                
-            penalty_single,dalpha_dstate_drone=DiffCollisionWrapper(line_centers,
+            HIT,penalty_single,dalpha_dstate_drone=DiffCollisionWrapper(line_centers,
                                                                     R_gate,
                                                                     self.width_gap,
                                                                     gate_quat,
-                                                                    config['drone']['wing_len']/2,
-                                                                    config['drone']['height']/2,
+                                                                    self.quad_radius,
+                                                                    self.quad_half_height,
                                                                     self.P_obs,
                                                                     self.P,
                                                                     state_traj[node_tra,:],
@@ -190,7 +191,8 @@ class Obstacle():
             
             penalty_traj += penalty_single
             drdstate_traj[node_tra,:] = dalpha_dstate_drone
-        
+            if HIT:
+                FAILED=True
         
         
         if not PENALTY_HELPER:
@@ -207,15 +209,22 @@ class Obstacle():
             ## goal score
             goal_penalty = 0
             
-            # goal_w=config['reward']['goal_w']*np.exp(0.7*(real_state_i-50)) # 50 is the close loop horizon
+            # goal_w=config['reward']['goal_w']*np.exp(0.3*(real_state_i-20)) # 50 is the close loop horizon
             goal_w=config['reward']['goal_w']
             # for last four nodes
-            for i in range(-1,-5,-1): 
-                goal_penalty += goal_w * np.dot(state_traj[i,:3]-goal_pos,state_traj[i,:3]-goal_pos)
-                drdstate_traj[i,:3] = goal_w * 2 * (state_traj[i,:3]-goal_pos)
+            for i in range(-1,-3,-1): 
+                # goal_penalty += goal_w * np.dot(state_traj[i,:3]-goal_pos,state_traj[i,:3]-goal_pos)
+                # drdstate_traj[i,:3] = goal_w * 2 * (state_traj[i,:3]-goal_pos)
+                ## only on the goal position y and z axis
+                goal_penalty += goal_w * np.dot(state_traj[i,1:3]-goal_pos[1:3],state_traj[i,1:3]-goal_pos[1:3])
+                drdstate_traj[i,1:3] = goal_w * 2 * (state_traj[i,1:3]-goal_pos[1:3])
+                
+                # This is for success rate evaluation on the real trajectory
+                if i ==-1 and np.dot(state_traj[i,:3]-goal_pos,state_traj[i,:3]-goal_pos)>0.1:
+                    FAILED=True
             
             penalty_traj += goal_penalty    
-        return penalty_traj, drdstate_traj
+        return penalty_traj, drdstate_traj, FAILED
 
 
 

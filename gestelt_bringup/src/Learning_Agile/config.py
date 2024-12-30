@@ -4,13 +4,6 @@ import logging
 import yaml
 
 
-from logger_misc import LoggerConfig,log_gradient,log_train_IO
-
-###############################################################
-###------------------ load the files -----------------------###
-###############################################################
-logger_config=LoggerConfig("NN1_training_logs")
-
 # acquire the current directory
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
