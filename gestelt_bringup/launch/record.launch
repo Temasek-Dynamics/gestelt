@@ -1,4 +1,7 @@
   <launch>
+  <arg name="test_mode" default="SITL"/>  <!-- SITL, HITL, or REAL -->
+  <arg name="record_platform" default="laptop"/> <!-- laptop on onboard record-->
+  <arg name="launch_rviz" default="false"/>
   <arg name="record_topics" default="
   (.*)mavros(.*)
   (.*)traj_server(.*)
@@ -8,13 +11,16 @@
   (.*)tf_static(.*)
  "/>
 
-
-  <node pkg="rosbag" type="record" name="record" output="screen" args="-o $(find gestelt_bringup)/data/
-  -e $(arg record_topics)"/> 
+  <arg name="rosbag_name" default="$(arg test_mode)_$(arg record_platform)"/>
+  <node pkg="rosbag" type="record" name="$(arg record_platform)_record" output="screen" args="-o $(find gestelt_bringup)/data/$(arg rosbag_name)
+  -e $(arg record_topics) "/>  <!-- output-prefix=$(arg rosbag_name) -->
 
   <!-- record all topics -->
   <!-- <node pkg="rosbag" type="record" name="record" output="screen" args="-a -o $(find gestelt_bringup)/data/"/> -->
-
+  
+  <!-- RVIZ -->
+  <node if="$(arg launch_rviz)" name="rviz" pkg="rviz" type="rviz" required="true" 
+    args="-d $(find gestelt_bringup)/launch/rviz/gz_sim.rviz"/>
   </launch>
 
 

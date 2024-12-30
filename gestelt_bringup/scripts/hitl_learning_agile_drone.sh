@@ -50,9 +50,10 @@ CMD_2="roslaunch gestelt_bringup learning_agile_mission.launch platform:='drone'
 
 # start up the NN wrapper
 CMD_3="taskset -c 3 roslaunch gestelt_bringup NN2_ROS_wrapper.launch is_simulation:=true"
-# disarm drone
-# CMD_4="rosservice call /drone_commander/disarm"
-# CMD_4="rosrun mavros mavparam set COM_RCL_EXCEPT 4"
+
+CMD_4="
+roslaunch gestelt_bringup record.launch record_platform:drone test_mode:=HITL
+"
 if [ "$SESSIONEXISTS" = "" ]
 then 
 
@@ -62,13 +63,13 @@ then
     tmux split-window -t $SESSION:0.1 -h
     tmux split-window -t $SESSION:0.0 -h
 
-    tmux send-keys -t $SESSION:0.0 "$SOURCE_PX4_AUTOPILOT " #C-m 
+    tmux send-keys -t $SESSION:0.0 "$SOURCE_WS $EXPORT_ROS_MASTER_URI $CMD_1" C-m 
     sleep 2
-    tmux send-keys -t $SESSION:0.1 "$SOURCE_WS $EXPORT_ROS_MASTER_URI $CMD_1" C-m 
+    tmux send-keys -t $SESSION:0.1 "$SOURCE_WS $EXPORT_ROS_MASTER_URI $CMD_2" C-m 
     sleep 1
-    tmux send-keys -t $SESSION:0.2 "$SOURCE_WS $EXPORT_ROS_MASTER_URI $CMD_2" C-m 
+    tmux send-keys -t $SESSION:0.2 "$SOURCE_WS $EXPORT_ROS_MASTER_URI $CMD_3" C-m 
     sleep 1
-    tmux send-keys -t $SESSION:0.3 "$SOURCE_WS $EXPORT_ROS_MASTER_URI $CMD_3" C-m
+    tmux send-keys -t $SESSION:0.3 "$SOURCE_WS $EXPORT_ROS_MASTER_URI $CMD_4" C-m
 fi
 
 # Attach session on the first window

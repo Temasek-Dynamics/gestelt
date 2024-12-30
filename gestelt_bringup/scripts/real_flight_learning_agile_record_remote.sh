@@ -38,7 +38,7 @@ export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:$gestelt_bringup_DIR:$PX4_AUTOPILOT_RE
 
 
 CMD_2="
-roslaunch gestelt_bringup record.launch
+roslaunch gestelt_bringup record.launch record_platform:laptop test_mode:=REAL
 "
 
 
