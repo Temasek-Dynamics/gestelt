@@ -37,7 +37,7 @@
 #define ACADOS_MODEL_NX     10
 #define ACADOS_MODEL_NZ     0
 #define ACADOS_MODEL_NU     4
-#define ACADOS_MODEL_NP     24
+#define ACADOS_MODEL_NP     25
 
 #ifdef __cplusplus
 extern "C" {

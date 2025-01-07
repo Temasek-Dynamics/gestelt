@@ -65,7 +65,7 @@ class LearningAgileAPG:
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
         if options['TRAIN_FROM_CHECKPOINT'] or options['STATE_2_MOVING_GATE']:
-            FILE = os.path.join(checkpoint_trained_model_folder, "new_format/2024-12-29/15-46-23/trained_model/NN_close_700.pth")
+            FILE = os.path.join(checkpoint_trained_model_folder, "new_format/2025-01-02/09-47-03/trained_model/NN_close_220.pth")
 
             self.learning_rate = self.train_cfg['training']['learning_rate']#*0.9**(300/self.train_cfg['training']['lr_decay_num_epochs'])
         else:
@@ -176,7 +176,7 @@ class LearningAgileAPG:
 
             ##== record NN obs and output per episode step
             log_drone_state(writer,obs_batch[0,-1,:],self.global_step)
-            euler_nn = log_train_IO(writer,obs_batch[0,-1,:],outputs_batch[0,:].data.numpy().reshape(self.episodes[0].output_size),self.global_step)
+            euler_nn,gate_pitch = log_train_IO(writer,obs_batch[0,-1,:],outputs_batch[0,:].data.numpy().reshape(self.episodes[0].output_size),self.global_step)
             writer.add_scalar('penalty_single_step', self.episodes[0].reward, self.global_step)
             
             self.global_step  += 1
@@ -187,8 +187,11 @@ class LearningAgileAPG:
             p_R_p_z_list.append(self.episodes[k].p_R_p_z) 
         
         ## assemble 
-        p_R_p_z_list = np.array(p_R_p_z_list)/(10000*(0.1*magni(euler_nn))) #*((10*euler_nn[1]))(batch_size, close_loop_horizon, 1, 13)
+        p_R_p_z_list = np.array(p_R_p_z_list)/(10000*(0.05*magni(euler_nn)))#*((10*euler_nn[1]))(batch_size, close_loop_horizon, 1, 13)
+        # p_R_p_z_list = np.array(p_R_p_z_list)*0.005*magni(euler_nn[1]-gate_pitch)/(10000)
+        # p_R_p_z_list[:,:,:,-1]=p_R_p_z_list[:,:,:,-1]*0.1
         p_R_p_z_list = np.clip(p_R_p_z_list, -0.02, 0.02)
+        
         # (close_loop_horizon, batch_size, 13)->(batch_size, close_loop_horizon, 13)
         outputs_stack = torch.stack(outputs_list).permute(1,0,2) 
        

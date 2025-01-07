@@ -44,7 +44,7 @@ CMD_3="taskset -c 2 roslaunch gestelt_bringup NN2_ROS_wrapper.launch"
 
 
 CMD_4="
-roslaunch gestelt_bringup record.launch record_platform:drone test_mode:=REAL
+roslaunch gestelt_bringup record.launch record_platform:=drone test_mode:=REAL
 "
 if [ "$SESSIONEXISTS" = "" ]
 then 

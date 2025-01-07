@@ -89,7 +89,7 @@ class PlanFwdBwdWrapper():
                            wwt=config['learning_agile']['wwt'],
                            wwt_z=config['learning_agile']['wwt_z'], 
                              
-                           wrp=config['learning_agile']['wrp'],
+                        #    wrp=config['learning_agile']['wrp'],
                            wvp=config['learning_agile']['wvp'],
                            wqp=config['learning_agile']['wqp'],
 
@@ -242,7 +242,7 @@ class PlanFwdBwdWrapper():
         self.d_R_d_st_traj = self.d_R_d_st_traj.reshape(self.horizon+1,1,self.uavoc1.n_state)
         return [reward,self.d_R_d_st_traj]
     
-    def git_failed(self,state_traj,gate_points_list):
+    def get_failed(self,state_traj,gate_points_list):
         
         """
         generate the gate obstacle when the real drone trajectory is close to the gate (real drone trajectory y=0)

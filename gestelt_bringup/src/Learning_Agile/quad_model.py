@@ -323,7 +323,7 @@ class Quadrotor:
             tra_R_B_I = casadi.reshape(self.des_tra_R,3,3)
         else:   
             svd= SVD()
-            self.trav_auxvar = vertcat(self.des_tra_r_I, self.des_tra_m, self.des_t_tra) #self.wrp,  self.max_tra_w, self.wrt, self.wqt, 
+            self.trav_auxvar = vertcat(self.des_tra_r_I, self.des_tra_m,self.wrp, self.des_t_tra) #self.wrp,  self.max_tra_w, self.wrt, self.wqt, 
             tra_R_B_I= svd.SVD_M_to_SO3_casadi(self.des_tra_m)
        
         
@@ -456,8 +456,32 @@ class Quadrotor:
         return position
 
     
+    def get_NN_pose(self,NN_pos,NN_R):
+        """the pose is the NN decided pose coordinate
 
-    def play_animation(self, wing_len, state_traj, gate_traj1=None, gate_traj2=None,state_traj_ref=None, dt=0.01, \
+        Args:
+            NN_pos (_type_): a list of NN decided position
+            NN_R (_type_): a list of NN decided rotation matrix
+        """ 
+        #1 create unit coordinate array, with the shape of (N,3)
+        X=np.tile(np.array([1,0,0]),(np.size(NN_pos,0),1)) # shape is (N,3)
+        Y=np.tile(np.array([0,1,0]),(np.size(NN_pos,0),1))
+        Z=np.tile(np.array([0,0,1]),(np.size(NN_pos,0),1))
+
+        # NN_pose shape is (N,3,3)
+        NN_pose=np.stack((X,Y,Z),axis=1)
+        #2 rotate the unit coordinate array by the rotation matrix
+        NN_pose=np.matmul(NN_pose,NN_R.reshape(-1,3,3).transpose(0,2,1))
+
+        #3. translate the rotated unit coordinate array by the position 
+        NN_pose+=NN_pos.reshape(-1,1,3)
+        
+        
+    
+        return NN_pose
+
+
+    def play_animation(self, wing_len, state_traj, gate_traj1=None, gate_traj2=None,state_traj_ref=None,NN_pos=None,NN_R=None, dt=0.01, \
             point1 = None,point2 = None,point3 = None,point4 = None,save_option=0, title='UAV Maneuvering',\
                 goal_pos=[0,0,0]):
         font1 = {'family':'Times New Roman',
@@ -509,7 +533,7 @@ class Quadrotor:
         # data
         position = self.get_quad_vert_pos(wing_len, state_traj)
         sim_horizon = np.size(position, 0)
-
+        NN_pose = self.get_NN_pose(NN_pos,NN_R)
         if state_traj_ref is None:
             position_ref = self.get_quad_vert_pos(0, numpy.zeros_like(position))
         else:
@@ -588,6 +612,15 @@ class Quadrotor:
         # line_arm4_ref, = ax.plot([c_x_ref, r4_x_ref], [c_y_ref, r4_y_ref], [c_z_ref, r4_z_ref], linewidth=2,
         #                          color='green', marker='o', markersize=3, alpha=0.7)
 
+        ## NN pose
+        NN_c_x,NN_c_y,NN_c_z=NN_pos[0,:]
+        NN_x_axis_x,NN_x_axis_y,NN_x_axis_z=NN_pose[0,0,:]
+        NN_y_axis_x,NN_y_axis_y,NN_y_axis_z=NN_pose[0,1,:]
+        NN_z_axis_x,NN_z_axis_y,NN_z_axis_z=NN_pose[0,2,:]
+        NN_pose_x_traj, = ax.plot([NN_c_x,NN_x_axis_x],[NN_c_y,NN_x_axis_y],[NN_c_z,NN_x_axis_z],linewidth=1,color='red',linestyle='--')
+        NN_pose_y_traj, = ax.plot([NN_c_x,NN_y_axis_x],[NN_c_y,NN_y_axis_y],[NN_c_z,NN_y_axis_z],linewidth=1,color='blue',linestyle='--')
+        NN_pose_z_traj, = ax.plot([NN_c_x,NN_z_axis_x],[NN_c_y,NN_z_axis_y],[NN_c_z,NN_z_axis_z],linewidth=1,color='green',linestyle='--')
+
         # time label
         time_template = 'time = %.2fs'
         time_text = ax.text2D(0.2, 0.7, "time", transform=ax.transAxes,**font1)
@@ -612,6 +645,18 @@ class Quadrotor:
             r2_x, r2_y, r2_z = position[num, 6:9]
             r3_x, r3_y, r3_z = position[num, 9:12]
             r4_x, r4_y, r4_z = position[num, 12:15]
+
+            # NN output pose
+            NN_c_x,NN_c_y,NN_c_z=NN_pos[num,:]
+            NN_x_axis_x,NN_x_axis_y,NN_x_axis_z=NN_pose[num,0,:]
+            NN_y_axis_x,NN_y_axis_y,NN_y_axis_z=NN_pose[num,1,:]
+            NN_z_axis_x,NN_z_axis_y,NN_z_axis_z=NN_pose[num,2,:]
+            
+            NN_pose_x_traj.set_data_3d([NN_c_x,NN_x_axis_x],[NN_c_y,NN_x_axis_y],[NN_c_z,NN_x_axis_z])
+            NN_pose_y_traj.set_data_3d([NN_c_x,NN_y_axis_x],[NN_c_y,NN_y_axis_y],[NN_c_z,NN_y_axis_z])
+            NN_pose_z_traj.set_data_3d([NN_c_x,NN_z_axis_x],[NN_c_y,NN_z_axis_y],[NN_c_z,NN_z_axis_z])
+
+
 
             line_arm1.set_data_3d([c_x, r1_x], [c_y, r1_y],[c_z, r1_z])
             #line_arm1.set_3d_properties()
@@ -676,9 +721,11 @@ class Quadrotor:
 
 
                 return line_traj,gate_l1,gate_l2,gate_l3,gate_l4,line_arm1, line_arm2, line_arm3, line_arm4, \
+                        NN_pose_x_traj,NN_pose_y_traj,NN_pose_z_traj,\
                     line_traj_ref, time_text
                                             #, line_arm1_ref, line_arm2_ref, line_arm3_ref, line_arm4_ref
             return line_traj, line_arm1, line_arm2, line_arm3, line_arm4, \
+                NN_pose_x_traj,NN_pose_y_traj,NN_pose_z_traj,\
                 line_traj_ref, time_text #, line_arm1_ref, line_arm2_ref, line_arm3_ref, line_arm4_ref, time_text
      
 

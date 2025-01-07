@@ -139,7 +139,7 @@ class PenaltyDesignHelper():
         plt.show()
         
 if __name__ == '__main__':
-    helper=PenaltyDesignHelper(trans_choice=0,euler_choice=2,ROT_VIS=False)
+    helper=PenaltyDesignHelper(trans_choice=1,euler_choice=1,ROT_VIS=False)
     helper.load_config(mission_config=mission_cfg)
     helper.init_env()
     helper.plot_penalty_seq()

@@ -53,9 +53,9 @@ def get_obs(history_obs = None,
     immed_obs[13:25]=gate_t_i.gate_point.flatten() # gate points
     
     # position of the gate,# width of the gate,# pitch angle of the gate
-    immed_obs[25:28] = gate_t_i.centroid
-    immed_obs[28] = magni(gate_t_i.gate_point[0,:]-gate_t_i.gate_point[3,:]) # gate width
-    immed_obs[29:38]=rot.as_matrix().flatten()
+    # immed_obs[25:28] = gate_t_i.centroid
+    # immed_obs[28] = magni(gate_t_i.gate_point[0,:]-gate_t_i.gate_point[3,:]) # gate width
+    # immed_obs[29:38]=rot.as_matrix().flatten()
     
     if i == 0:
         for _ in range(5):
@@ -174,7 +174,7 @@ class LearningAgileSim():
         self.input_size = train_cfg['model']['input_size']
         self.output_size = train_cfg['model']['output_size']
     
-    def generate_mission(self,i=train_cfg['training']['num_epochs']):
+    def generate_mission(self,i=train_cfg['training']['num_epochs'],TEST=True):
         """
         receive the ini_pos,end point defined in the mission file
 
@@ -200,7 +200,7 @@ class LearningAgileSim():
 
         self.t_tra_abs=self.config_dict['learning_agile']['traverse_time']
         
-        self.env_init_set = nn_sample(cur_epoch=i,TEST=True)
+        self.env_init_set = nn_sample(cur_epoch=i,TEST=TEST)
         if self.options['MANUAL_SET_POSE_TEST']:
             self.env_init_set[0:3]=ini_pos
             self.env_init_set[3:6]=end_pos
@@ -479,7 +479,7 @@ class LearningAgileSim():
         
         if self.options['SUCCESS_EVAL']:
             
-            FAILED=self.planner.git_failed(self.state_n[::10,:],self.gate_points_list[::10,:,:])
+            FAILED=self.planner.get_failed(self.state_n[::10,:],self.gate_points_list[::10,:,:])
 
             print('FAILED=',FAILED)
        
@@ -489,6 +489,8 @@ class LearningAgileSim():
                                         gate_traj1=self.gate_points_list[::5,:,:],
                                         state_traj=self.state_n[::5,:],
                                         goal_pos=self.final_point.tolist(),
+                                        NN_pos=self.nn_output_list[:,0:3],
+                                        NN_R=self.des_tra_R_list,
                                         dt=0.01)
             
             # save the data, not show it
@@ -594,7 +596,7 @@ def success_eval(mission_cfg=None,
 
     
     #####==============load env config ====================#######
-    learning_agile_sim.generate_mission()
+    learning_agile_sim.generate_mission(TEST=True)
     learning_agile_sim.prepare_gate()
     
     #####============== Solve the problem ====================#######

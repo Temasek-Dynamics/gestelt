@@ -71,7 +71,7 @@ def log_train_IO(writer,inputs,outputs,global_step):
     writer.add_scalar('NN_output/t_tra', outputs[-1], global_step)
 
 
-    return euler_nn
+    return euler_nn,gate_pitch
 
 
 def log_gradient(writer,gra,reward,global_step):

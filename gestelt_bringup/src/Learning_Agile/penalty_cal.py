@@ -44,10 +44,10 @@ class Obstacle():
         length_gap = jnp.array(magni(point1-point2))  # 1.2
         self.width_gap = jnp.array(magni(point1-point4))  # 0.56
     
-        self.P_obs[0].create_rect_prism(length_gap, 1.0, self.quad_half_height*2)
-        self.P_obs[1].create_rect_prism(self.quad_radius*2, 1.0, self.width_gap)
-        self.P_obs[2].create_rect_prism(length_gap, 1.0, self.quad_half_height*2)
-        self.P_obs[3].create_rect_prism(self.quad_radius*2, 1.0, self.width_gap)
+        self.P_obs[0].create_rect_prism(length_gap, 2.0, self.quad_half_height*2)
+        self.P_obs[1].create_rect_prism(self.quad_radius*2, 2.0, self.width_gap)
+        self.P_obs[2].create_rect_prism(length_gap, 2.0, self.quad_half_height*2)
+        self.P_obs[3].create_rect_prism(self.quad_radius*2, 2.0, self.width_gap)
 
         ##==quadrotor ellipsoid==##
         A=jnp.diag(np.array([self.quad_radius,self.quad_radius,self.quad_half_height]))
@@ -174,6 +174,13 @@ class Obstacle():
                 line_centers[i,:]= (gate_corners[3*i:3*i+3]+gate_corners[3*i+3:3*i+6])/2
 
         FAILED=False
+        
+        ### take more care of the real_state_i that is close to t_tra_seq_list
+        # if len(t_tra_seq_list)>0:
+        #     # if t_tra_seq_list is not empty
+        #     scaling_w = config['reward']['scaling_w'] * np.exp(-2*(real_state_i-t_tra_seq_list[0])**2)
+        # else:
+        scaling_w = config['reward']['scaling_w']
         for node_tra in t_tra_seq_list:
         
             HIT,penalty_single,dalpha_dstate_drone=DiffCollisionWrapper(line_centers,
@@ -186,7 +193,7 @@ class Obstacle():
                                                                     self.P,
                                                                     state_traj[node_tra,:],
                                                                     node_tra,
-                                                                    config['reward']['scaling_w'],
+                                                                    scaling_w,
                                                                     PENALTY_HELPER)
             
             penalty_traj += penalty_single
@@ -196,12 +203,13 @@ class Obstacle():
         
         
         if not PENALTY_HELPER:
-            ## velocity penalty
+            # # velocity penalty, encourage the drone to fly through the gate, instead of hovering in front of the gate
             # vel_penalty = 0
-            # vel_w = 1
+            # vel_w = -5
             # for i in range(state_traj.shape[0]):
-            #     vel_penalty += vel_w * np.dot(state_traj[i,3:6],state_traj[i,3:6])
-            #     drdstate_traj[i,3:6] += vel_w * 2 * state_traj[i,3:6]
+            #     if i in t_tra_seq_list:
+            #         vel_penalty += vel_w * np.dot(state_traj[i,4],state_traj[i,4])
+            #         drdstate_traj[i,3:6] += vel_w * 2 * state_traj[i,4]
             
             # penalty_traj += vel_penalty
 
@@ -209,15 +217,30 @@ class Obstacle():
             ## goal score
             goal_penalty = 0
             
-            # goal_w=config['reward']['goal_w']*np.exp(0.3*(real_state_i-20)) # 50 is the close loop horizon
-            goal_w=config['reward']['goal_w']
+            # goal_yz_axis_w=config['reward']['goal_yz_axis_w']*10*np.exp(0.1*(real_state_i-50))+config['reward']['goal_yz_axis_w'] # 50 is the close loop horizon
+            goal_x_axis_w=config['reward']['goal_x_axis_w']
+            goal_yz_axis_w=config['reward']['goal_yz_axis_w']
             # for last four nodes
-            for i in range(-1,-3,-1): 
-                # goal_penalty += goal_w * np.dot(state_traj[i,:3]-goal_pos,state_traj[i,:3]-goal_pos)
-                # drdstate_traj[i,:3] = goal_w * 2 * (state_traj[i,:3]-goal_pos)
+
+            if len(t_tra_seq_list)>0:
+                ## before the gate travsering
+                # goal_check_start_id = t_tra_seq_list[0]-config['learning_agile']['horizon']
+                goal_check_start_id = -5
+                goal_check_end_id=-1
+            else:
+                ## after the gate traversing
+                goal_check_start_id = -5
+                goal_check_end_id = -1
+                goal_x_axis_w=config['reward']['goal_x_axis_w']*20
+                
+            for i in range(goal_check_end_id,goal_check_start_id,-1): 
+                
+                # # for x axis
+                goal_penalty += goal_x_axis_w * np.dot(state_traj[i,0]-goal_pos[0],state_traj[i,0]-goal_pos[0])
+                drdstate_traj[i,:3] = goal_x_axis_w * 2 * (state_traj[i,0]-goal_pos[0])
                 ## only on the goal position y and z axis
-                goal_penalty += goal_w * np.dot(state_traj[i,1:3]-goal_pos[1:3],state_traj[i,1:3]-goal_pos[1:3])
-                drdstate_traj[i,1:3] = goal_w * 2 * (state_traj[i,1:3]-goal_pos[1:3])
+                goal_penalty += goal_yz_axis_w * np.dot(state_traj[i,1]-goal_pos[1],state_traj[i,1]-goal_pos[1])
+                drdstate_traj[i,1] = goal_yz_axis_w * 2 * (state_traj[i,1]-goal_pos[1])
                 
                 # This is for success rate evaluation on the real trajectory
                 if i ==-1 and np.dot(state_traj[i,:3]-goal_pos,state_traj[i,:3]-goal_pos)>0.1:

@@ -298,8 +298,8 @@ class NN2_ROS_wrapper:
                 NN_trav_pose_msg.header.stamp = rospy.Time.now()
                 NN_trav_pose_msg.header.frame_id = "world"
                 NN_trav_pose_msg.position[0:3] = out[0:3]+self.trans
-                NN_trav_pose_msg.vector_9D_orientation[0:9]=out[3:12]
-                
+                NN_trav_pose_msg.vector_9D_orientation[0:9] = out[3:12]
+                NN_trav_pose_msg.running_cost_weight = out[-2]
                 NN_trav_time_msg = Float32()
                 NN_forward_time_msg = Float32()
                 gate_pitch_msg = Float32()

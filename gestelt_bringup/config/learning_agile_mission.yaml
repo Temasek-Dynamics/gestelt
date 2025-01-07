@@ -1,16 +1,16 @@
 
 # flight mission
 MANUAL_SET_POSE_TEST: false     # only works for ROS nodes
-FIX_GATE_PITCH_TEST: true
-gate_pitch: -0.6 # 0.6rad = 34.38 degree
+FIX_GATE_PITCH_TEST: true 
+gate_pitch: 1 # 0.6rad = 34.38 degree, 1.3rad = 74.4 degree
 mission_period: 5.0 #s
 
 drone:
   wing_len: 0.8
   height: 0.3
   ## in the training, the drone size should be the same as with the gate size
-  wing_len_train: 1.2
-  height_train: 0.5
+  wing_len_train: 1.25
+  height_train: 0.55
 
 # gate parameters  
 gate:
@@ -96,7 +96,8 @@ learning_agile:
   wwt_z: 5
   
   # path cost
-  wrp: 10        ## too small, large deviation to the goal
+  wrp_before_gate: 10        ## too small, large deviation to the goal
+  wrp_after_gate: 10
   wvp: 0.01
   wqp: 0.01
 
@@ -156,14 +157,18 @@ learning_agile:
   ##------  training parameters  ------##
 pretrain_param:
   desired_average_vel: 4
+  desired_average_vel_after_gate: 2
 
 ## ------NN configuration ----##
 # NN_model_name: 'training_results/new_format/2024-12-22/13-38-00/trained_model/NN_close_1350.pth'
 # NN_model_name: 'training_results/new_format/2024-12-22/16-30-11/trained_model/NN_close_1300.pth'
-NN_model_name: 'training_results/new_format/2024-12-30/09-42-13/trained_model/NN_close_940.pth' #**#
-NN_deploy_model_name: 'deployed_model/2024-12-30/09-42-13/trained_model/NN_close_940.pth' # used in the sitl
-NN_freq: 20
+# NN_model_name: 'training_results/new_format/2024-12-30/09-42-13/trained_model/NN_close_940.pth' #**#
+NN_model_name: 'training_results/new_format/2025-01-07/09-17-00/trained_model/NN_close_400.pth'
+# NN_model_name: 'training_results/new_format/2025-01-02/10-11-02/trained_model/NN_close_490.pth'
+NN_deploy_model_name: 'deployed_model/2025-01-07/09-17-00/trained_model/NN_close_400.pth' # used in the sitl
+NN_freq: 100
 
 reward:
-  goal_w: 240 #12.0 for last 5 nodes
+  goal_x_axis_w: 5
+  goal_yz_axis_w: 500 #12.0 for last 5 nodes, 240 for last 3 nodes (xz axis)
   scaling_w: 100

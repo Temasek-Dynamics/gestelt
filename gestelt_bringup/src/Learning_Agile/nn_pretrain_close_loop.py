@@ -1,11 +1,14 @@
 ## this file is for neural network training
-from quad_nn import *
 import os
+import torch
+import torch.nn as nn
+import numpy as np
 from collections import deque
 from scipy.spatial.transform import Rotation as R
 from config import mission_cfg, train_cfg
 
 from quad_model import get_gate_points
+from quad_nn import network_with_GRU, nn_sample, t_output
 # Device configuration
 device = torch.device('cpu')#torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -14,7 +17,7 @@ input_size = train_cfg['model']['input_size']
 hidden_size = train_cfg['model']['hidden_size']
 output_size = train_cfg['model']['output_size']
 num_epochs = 3  
-batch_size = 1000
+batch_size = 10000
 learning_rate = 2e-5
 current_dir = os.path.dirname(os.path.abspath(__file__))
 training_data_folder=os.path.abspath(os.path.join(current_dir, 'training_data'))
@@ -57,8 +60,8 @@ def input_cal():
     gate_center = mission_cfg['mission']['gate_position']
     inputs[13:25] = get_gate_points(gate_center,gate_length,gate_width).flatten()
     
-    inputs[25:28] = gate_center # gate position
-    inputs[28:38] = static_env[7:17] # gate width and gate orientation
+    # inputs[25:28] = gate_center # gate position
+    # inputs[28:38] = static_env[7:17] # gate width and gate orientation
     return inputs
 
 history_state=deque(maxlen=5)
@@ -75,8 +78,9 @@ for epoch in range(num_epochs):
         pre_outputs = model(torch.tensor(full_input, dtype=torch.float).unsqueeze(0).to(device),deterministic=False)[0]
         print("desired_traversing_time",pre_outputs[-1])
         #print(inputs,' ',pre_outputs)
-        loss = criterion(pre_outputs, outputs)
-        
+
+        loss = criterion(pre_outputs[3:12]+pre_outputs[-1], outputs[3:12]+outputs[-1])
+        # loss = criterion(pre_outputs[3:12], outputs[3:12])
         # Backward and optimize
         optimizer.zero_grad()
         loss.backward()

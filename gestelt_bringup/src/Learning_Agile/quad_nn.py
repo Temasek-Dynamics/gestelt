@@ -17,6 +17,7 @@ from solid_geometry import magni
 pre_ini_pos=np.array(mission_cfg['mission']['initial_position'])
 pre_end_pos=np.array(mission_cfg['mission']['goal_position'])
 desired_average_vel=mission_cfg['pretrain_param']['desired_average_vel']
+desired_average_vel_after_gate=mission_cfg['pretrain_param']['desired_average_vel_after_gate']
 gate_width = mission_cfg['gate']['width']
 init_gate_width = mission_cfg['gate']['init_width']
 input_size = train_cfg['model']['input_size'] 
@@ -34,22 +35,17 @@ def nn_sample(init_pos=None,
     env_init_set = np.zeros(17)
     if init_pos is None:
         env_init_set[0:3] =  np.random.uniform(-0.5,0.5,3) + pre_ini_pos #-5~5, -9 
-
+        env_init_set[1] = np.random.uniform(-0.2,0.2) + pre_ini_pos[1]
         if PRTRAIN:
             env_init_set[1] = np.random.uniform(-5,5) #+ pre_ini_pos[1]
-        # else:
-        #     env_init_set[1] = pre_ini_pos[1] #np.random.uniform(-0.5,0.5) + 
 
-        # env_init_set[2] = np.random.uniform(-1, 1) + pre_ini_pos[2] #-5~5, 0
     else:
         env_init_set[0:3] = init_pos
     ## random final position 
     if final_pos is None:
-        # env_init_set[3] = np.random.uniform(-1,1) + pre_end_pos[0] #-2~2, 6
-
-        # env_init_set[4] = np.random.uniform(-0.5,0.5)+pre_end_pos[1]
-        # env_init_set[5] = np.random.uniform(-1,1)+pre_end_pos[2]
-        env_init_set[3:6]=np.random.uniform(-0.5,0.5,3)+pre_end_pos
+       
+        env_init_set[3:6]=np.random.uniform(-0.5,0.5,3) + pre_end_pos
+        env_init_set[4]=np.random.uniform(-0.2,0.2) + pre_end_pos[1]
     else:
         env_init_set[3:6] = final_pos
 
@@ -82,7 +78,7 @@ def nn_sample(init_pos=None,
         gate_pitch = 0
     elif TEST:
         if not mission_cfg['FIX_GATE_PITCH_TEST']:
-           gate_pitch =  np.random.uniform(-pi/4,pi/4)
+           gate_pitch =  np.random.uniform(-pi/2,pi/2)
         else:
             gate_pitch = mission_cfg['gate_pitch'] 
     else:
@@ -91,14 +87,14 @@ def nn_sample(init_pos=None,
         des_pitch_mean = des_pitch_mean_min - (des_pitch_mean_min - des_pitch_mean_max) * (cur_epoch / 100) 
 
         # truncated normal distribution
-        mu,sigma = 0,pi/24
-        lower,upper = -pi/6,pi/6
+        mu,sigma = 0,pi/18
+        lower,upper = -pi/3,pi/3
         X = stats.truncnorm((lower - mu) / sigma, (upper - mu) / sigma, loc=mu, scale=sigma)
         gate_pitch = X.rvs(1)[0]
         
         judge = np.random.normal(0,1)
-        # if gate_pitch>0:
-        if judge > 0:
+        if gate_pitch>0:
+        # if judge > 0:
             gate_pitch=gate_pitch+des_pitch_mean
         else:
             gate_pitch=gate_pitch-des_pitch_mean
@@ -130,11 +126,11 @@ def t_output(inputs):
     
     outputs = np.zeros(output_size)
     outputs[0:3]=mission_cfg['mission']['gate_position']
-    R_gate=inputs[-9:].reshape(3,3)
-    outputs[3:12]=R_gate.T.flatten()
+    # R_gate=inputs[-9:].reshape(3,3)
+    # outputs[3:12]=R_gate.T.flatten()
+    outputs[3:12]=np.eye(3).flatten()
 
-    ## wrp
-    # outputs[-2]=mission_cfg['learning_agile']['wrp']
+    
     
     ## wrp
     # outputs[-5]=10
@@ -151,8 +147,12 @@ def t_output(inputs):
     ## traversal time is proportional to the distance of the centroids
     if inputs[1]>0:
         raw_time = round(magni(inputs[0:3]-outputs[0:3])/desired_average_vel,1) #3
+        ## wrp
+        outputs[-2]=mission_cfg['learning_agile']['wrp_before_gate']
     else:
-        raw_time = -round(magni(inputs[0:3]-outputs[0:3])/desired_average_vel,1) #4
+        raw_time = -round(magni(inputs[0:3]-outputs[0:3])/desired_average_vel_after_gate,1) #4
+        ## wrp
+        outputs[-2]=mission_cfg['learning_agile']['wrp_after_gate']
     outputs[-1] = raw_time #np.clip(raw_time,3,3)
 
     print('desired_traversing_time',outputs[-1])
@@ -284,14 +284,21 @@ class network_with_GRU(nn.Module):
         out = out.squeeze(1)
         out = self.l3(out)
 
-        # if deterministic:
+        # traverse position x,y
+        out [:,0:2]=torch.tanh(out[:,0:2])*3
+        
+        # traverse position z
+        out [:,2] = torch.sigmoid(out[:,2])*2+0.5
+
+        # wrp
+        out [:,-2]=torch.sigmoid(out[:,-2])*50+10
+
+
+        ## if pretrained, do not use this
+        # out [:,-1]=torch.tanh(out[:,-1])*10
+
         return out
-        # else:
-        #    std=self.logstd.exp()
-        #    dist=Normal(out,std)
-        #    sample=dist.rsample()
-           
-        #    return sample
+
     
     def myloss(self, para, dp, device='cpu'):
         # convert np.array to tensor
