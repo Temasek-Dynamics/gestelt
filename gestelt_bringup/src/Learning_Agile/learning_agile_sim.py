@@ -16,9 +16,9 @@ from quad_model import toQuaternion, Gate, Rd2Rp, get_gate_points
 from quad_policy import PlanFwdBwdWrapper
 from quad_nn import nn_sample
 from quad_moving import binary_search_solver,input_cal
-from result_analysis import python_sim_npy_parser
+from result_analysis import rotation_vis
 from solid_geometry import magni, pitch_from_gate, verify_SVD_casadi#,SVD_M_to_SO3
-from misc.misc import str2bool #save_mpc_ctl_csv, save_state_csv
+from misc.misc import str2bool 
 
 device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 # device=torch.device('cpu')
@@ -42,15 +42,16 @@ def get_obs(history_obs = None,
         obs: the observation for the NN input
     """
     ##==calculate the gate RM
-    gate_pitch = pitch_from_gate(gate_t_i)
+    gate_pitch = pitch_from_gate(gate_t_i.gate_point)
     rot=R.from_euler('zyx',[0,gate_pitch,0])
     
     immed_obs=np.zeros(input_size)
     immed_obs[0:10]=drone_state
     immed_obs[10:13]=final_point
     
-        ## gate points
-    immed_obs[13:25]=gate_t_i.gate_point.flatten() # gate points
+    ## gate points
+    relative_gate_points = gate_t_i.gate_point-drone_state[0:3]
+    immed_obs[13:25]=relative_gate_points.flatten() # gate points
     
     # position of the gate,# width of the gate,# pitch angle of the gate
     # immed_obs[25:28] = gate_t_i.centroid
@@ -318,7 +319,9 @@ class LearningAgileSim():
         self.NN_T_tra = np.concatenate((self.NN_T_tra,[out[-1]]),axis = 0)
         self.nn_output_list=np.concatenate((self.nn_output_list,[out]),axis = 0)
         self.des_tra_R_list = np.concatenate((self.des_tra_R_list,[des_tra_R]),axis = 0)
-        self.wrp_list = np.concatenate((self.wrp_list,[out[-2]]),axis = 0)
+        self.wrp_list = np.concatenate((self.wrp_list,[out[-4]]),axis = 0)
+        self.wrt_list = np.concatenate((self.wrt_list,[out[-3]]),axis = 0)
+        self.wqt_list = np.concatenate((self.wqt_list,[out[-2]]),axis = 0)
         self.Pitch = np.concatenate((self.Pitch,[gate_pitch]),axis = 0) 
 
 
@@ -362,6 +365,8 @@ class LearningAgileSim():
         self.nn_output_list = [np.zeros(output_size)] # 3 position, 4 quaternion, 1 traversal time
         self.des_tra_R_list = [np.zeros(9)] # 3x3 rotation matrix(in flat form)
         self.wrp_list = [0]
+        self.wrt_list = [0]
+        self.wqt_list = [0]
         trav_auxvar_value = np.zeros(output_size)
         for self.i in range(self.sim_time*(int(1/self.dyn_step))): # 5s, 500 Hz
             
@@ -429,11 +434,7 @@ class LearningAgileSim():
                 self.u=cmd_solution['control_traj_opt'][0,:].tolist()
                 self.pos_vel_att_cmd=cmd_solution['state_traj_opt'][1,:] #self.config_dict['learning_agile']['horizon']
                 # self.tra_weight_list.append(weight_vis)
-            
-                ##=== for integrator test===##
-                # test_u=np.array([2.6,0,0,0])
-                # if self.i>=500:
-                #     test_u=np.array([4.6,160,0,0])
+           
                 
 
             ########################################################
@@ -474,18 +475,21 @@ class LearningAgileSim():
             
         print('MPC finished')   
         
-        if self.options['SAVE_SIM']:
-            self.save(python_sim_data_dir)
-        
-        if self.options['SUCCESS_EVAL']:
-            
-            FAILED=self.planner.get_failed(self.state_n[::10,:],self.gate_points_list[::10,:,:])
-
-            print('FAILED=',FAILED)
-       
+                    
+        FAILED=self.planner.get_failed(self.state_n[::10,:],self.gate_points_list[::10,:,:])
+        print('FAILED=',FAILED)
 
         if self.options['VISUALIZE']:
-            self.planner.uav1.play_animation(wing_len=self.planner.wing_len,
+            self.visualize()
+
+        if self.options['SAVE_SIM']:
+            self.save(python_sim_data_dir)
+
+        return FAILED
+
+        
+    def visualize(self):
+        self.planner.uav1.play_animation(wing_len=self.planner.wing_len,
                                         gate_traj1=self.gate_points_list[::5,:,:],
                                         state_traj=self.state_n[::5,:],
                                         goal_pos=self.final_point.tolist(),
@@ -493,47 +497,50 @@ class LearningAgileSim():
                                         NN_R=self.des_tra_R_list,
                                         dt=0.01)
             
-            # save the data, not show it
-            if not self.options['MANUAL_SET_POSE_TEST']:
-                self.planner.uav1.plot_position(self.nn_output_list,name='NN2_output')
+        # save the data, not show it
+        if not self.options['MANUAL_SET_POSE_TEST']:
+            self.planner.uav1.plot_position(self.nn_output_list,name='NN2_output')
 
-                if self.options['CLOSE_LOOP_MODEL']:
-                    self.planner.uav1.plot_scalar(self.NN_T_tra, scalar_name='NN_traverse_time') # pure NN close loop traversal time
-                else:
-                    self.planner.uav1.plot_scalar(self.T, scalar_name='NN_traverse_time')# Binary search traversal time
-            self.planner.uav1.plot_thrust(self.control_n)
-            self.planner.uav1.plot_angularrate(self.control_n)
-            self.planner.uav1.plot_position(self.state_n,name='drone_actual')
-            self.planner.uav1.plot_velocity(self.state_n)
-            self.planner.uav1.plot_quaternions(self.state_n)
-            self.planner.uav1.plot_scalar(self.wrp_list,scalar_name='path_position_error_weight')
+            if self.options['CLOSE_LOOP_MODEL']:
+                self.planner.uav1.plot_scalar(self.NN_T_tra, scalar_name='NN_traverse_time') # pure NN close loop traversal time
+            else:
+                self.planner.uav1.plot_scalar(self.T, scalar_name='NN_traverse_time')# Binary search traversal time
+        self.planner.uav1.plot_thrust(self.control_n)
+        self.planner.uav1.plot_angularrate(self.control_n)
+        self.planner.uav1.plot_position(self.state_n,name='drone_actual')
+        self.planner.uav1.plot_velocity(self.state_n)
+        self.planner.uav1.plot_quaternions(self.state_n)
+        self.planner.uav1.plot_scalar(self.wrp_list,scalar_name='path_position_error_weight')
+        self.planner.uav1.plot_scalar(self.wrt_list,scalar_name='traverse_position_weight')
+        self.planner.uav1.plot_scalar(self.wqt_list,scalar_name='traverse_attitude_weight')
 
-            # self.planner.uav1.plot_quaternions_norm(self.state_n)
-            # self.planner.uav1.plot_quaternions_norm(self.pos_vel_att_cmd_n)
-            # self.planner.uav1.plot_trav_weight(self.tra_weight_list)
+        # self.planner.uav1.plot_quaternions_norm(self.state_n)
+        # self.planner.uav1.plot_quaternions_norm(self.pos_vel_att_cmd_n)
+        # self.planner.uav1.plot_trav_weight(self.tra_weight_list)
 
-            self.planner.uav1.plot_scalar(self.solving_time,scalar_name='MPC_solving_time')
-            python_sim_npy_parser(uav_traj=self.state_n,
-                                nn_output_list=self.nn_output_list,
-                                des_tra_R_list=self.des_tra_R_list,
-                                gate_pitch=self.Pitch)
-            self.planner.uav1.plot_3D_traj(wing_len=self.planner.wing_len,
-                                        uav_height=self.planner.uav_height/2,
-                                        state_traj=self.state_n[::50,:],
-                                        gate_traj=self.gate_points_list[::50,:,:])
-            
-        if self.options['SUCCESS_EVAL']:
-            return FAILED
-        else:
-            return None
-        
-       
+        self.planner.uav1.plot_scalar(self.solving_time,scalar_name='MPC_solving_time')
+        self.euler_nn=rotation_vis(uav_traj=self.state_n,
+                            nn_output_list=self.nn_output_list,
+                            des_tra_R_list=self.des_tra_R_list,
+                            gate_pitch=self.Pitch)
+        self.planner.uav1.plot_3D_traj(wing_len=self.planner.wing_len,
+                                    uav_height=self.planner.uav_height/2,
+                                    state_traj=self.state_n[::50,:],
+                                    gate_traj=self.gate_points_list[::50,:,:])
+    
+
     def save(self,python_sim_data_dir):
         """
         save the data
         """
-        # save_state_csv(self.Time,self.state_n,python_sim_data_dir)
-        # save_mpc_ctl_csv(self.Time,self.control_n,python_sim_data_dir)
+
+        if self.options['SAVE_CSV']:
+            from misc.misc import save_mpc_ctl_csv, save_state_csv,save_nn_decision_csv
+            save_state_csv(self.Time,self.state_n,python_sim_data_dir)
+            save_mpc_ctl_csv(self.Time,self.control_n,python_sim_data_dir)
+            nn_decision=np.concatenate((self.nn_output_list[:,:3],self.euler_nn,self.nn_output_list[:,-2:]),axis=1)
+            save_nn_decision_csv(self.Time,nn_decision,python_sim_data_dir)
+
         np.save(os.path.join(python_sim_data_dir,'gate_points_list_traj'),self.gate_points_list)
         np.save(os.path.join(python_sim_data_dir,'uav_traj'),self.state_n)
         np.save(os.path.join(python_sim_data_dir,'uav_ctrl'),self.control_n)
@@ -559,8 +566,8 @@ def parse_options():
     parser.add_argument('--CLOSE_LOOP_TRAINING', type=str2bool, default=False, help='Enable or disable CLOSE_LOOP_TRAINING.')
     parser.add_argument('--VISUALIZE', type=str2bool, default=True, help='Enable or disable VISUALIZE.')
     parser.add_argument('--STATE_2_MOVING_GATE', type=str2bool, default=False, help='Enable or disable STATE_2_MOVING_GATE.')
-    parser.add_argument('--SUCCESS_EVAL', type=str2bool, default=True, help='Enable or disable SUCCESS_EVAL.')
     parser.add_argument('--SAVE_SIM', type=str2bool, default=True, help='Enable or disable SAVE_SIM.')
+    parser.add_argument('--SAVE_CSV', type=str2bool, default=True, help='Enable or disable save sim data in the csv format.')
     args = parser.parse_args()
     return vars(args)  # Return options as a dictionary  
 

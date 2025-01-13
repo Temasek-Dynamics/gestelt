@@ -58,7 +58,8 @@ def input_cal():
     gate_width  = mission_cfg['gate']['width']
     gate_length = mission_cfg['gate']['length']
     gate_center = mission_cfg['mission']['gate_position']
-    inputs[13:25] = get_gate_points(gate_center,gate_length,gate_width).flatten()
+    relative_gate_points=get_gate_points(gate_center,gate_length,gate_width)-inputs[0:3]
+    inputs[13:25] = relative_gate_points.flatten() # gate points
     
     # inputs[25:28] = gate_center # gate position
     # inputs[28:38] = static_env[7:17] # gate width and gate orientation

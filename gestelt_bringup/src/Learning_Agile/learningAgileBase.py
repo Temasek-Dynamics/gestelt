@@ -52,6 +52,7 @@ class LearningAgileBase:
         self.input_size = train_cfg['model']['input_size']
         self.output_size = train_cfg['model']['output_size']
         self.history_obs = deque(maxlen=5)
+        self.control=np.zeros(4)
         
     def load_model(self,model_folder):
         ##== load the pre-trained model ==##
@@ -60,7 +61,7 @@ class LearningAgileBase:
 
     def reset(self,cur_epoch: int=0):
         #== random generate the env and set to the mpc solver
-        self.learning_agile_sim.generate_mission(cur_epoch,TEST=True)
+        self.learning_agile_sim.generate_mission(cur_epoch,TEST=False)
         
         self.state = self.planner.ini_state
 
@@ -154,7 +155,7 @@ class LearningAgileBase:
 
         ## === state update === ##
         self.state = cmd_solution['state_traj_opt'][1,:]
-        self.u = cmd_solution['control_traj_opt'][0,:].tolist()
+        self.control = cmd_solution['control_traj_opt'][0,:]
 
         ## === actual trajectory === ##
         self.state_traj.append(self.state)

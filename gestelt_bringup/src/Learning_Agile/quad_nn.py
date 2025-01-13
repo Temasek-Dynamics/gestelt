@@ -148,11 +148,17 @@ def t_output(inputs):
     if inputs[1]>0:
         raw_time = round(magni(inputs[0:3]-outputs[0:3])/desired_average_vel,1) #3
         ## wrp
-        outputs[-2]=mission_cfg['learning_agile']['wrp_before_gate']
+        outputs[-4]=mission_cfg['learning_agile']['wrp_before_gate']
     else:
         raw_time = -round(magni(inputs[0:3]-outputs[0:3])/desired_average_vel_after_gate,1) #4
         ## wrp
-        outputs[-2]=mission_cfg['learning_agile']['wrp_after_gate']
+        outputs[-4]=mission_cfg['learning_agile']['wrp_after_gate']
+
+    ## wrt
+    outputs[-3]=mission_cfg['learning_agile']['wrt']
+
+    ## wqt
+    outputs[-2]=mission_cfg['learning_agile']['wqt']
     outputs[-1] = raw_time #np.clip(raw_time,3,3)
 
     print('desired_traversing_time',outputs[-1])
@@ -291,7 +297,13 @@ class network_with_GRU(nn.Module):
         out [:,2] = torch.sigmoid(out[:,2])*2+0.5
 
         # wrp
-        out [:,-2]=torch.sigmoid(out[:,-2])*50+10
+        out [:,-4]=torch.sigmoid(out[:,-4])*50+10
+
+        # wrt
+        out [:,-3]=torch.sigmoid(out[:,-3])*50
+
+        # wqt
+        out [:,-2]=torch.sigmoid(out[:,-2])*50
 
 
         ## if pretrained, do not use this

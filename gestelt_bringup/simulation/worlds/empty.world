@@ -19,7 +19,7 @@
           <use_dynamic_moi_rescaling>1</use_dynamic_moi_rescaling>
         </solver>
         <constraints>
-          <cfm>0.2</cfm>
+          <cfm>0.2</cfm> <!--0.2-->
           <erp>0.8</erp>
           <contact_max_correcting_vel>0.1</contact_max_correcting_vel>
           <contact_surface_layer>0.001</contact_surface_layer>

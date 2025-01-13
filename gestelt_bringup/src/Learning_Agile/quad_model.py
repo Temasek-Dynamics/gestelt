@@ -55,7 +55,7 @@ class Quadrotor:
         self.des_tra_q = vertcat(SX.sym('des_tra_q0'), SX.sym('des_tra_q1'), SX.sym('des_tra_q2'), SX.sym('des_tra_q3'))
         self.des_t_tra = SX.sym('des_t_tra')
         self.t_node = SX.sym('t_node')
-        # self.gamma = SX.sym('gamma')
+        # self.traverse_weight_span = SX.sym('traverse_weight_span ')
         # define desired goal state
         self.goal_r_I  = vertcat(SX.sym('des_goal_rx'), SX.sym('des_goal_ry'), SX.sym('des_goal_rz'))
         self.goal_v_I = vertcat(SX.sym('des_goal_vx'), SX.sym('des_goal_vy'), SX.sym('des_goal_vz'))
@@ -168,7 +168,15 @@ class Quadrotor:
         # dynamics
         self.f = vertcat(dr_I, dv_I, dq)#, dw)
 
-    def initCost(self, wrt=None, wqt=None,max_tra_w=None,gamma=None,
+    def initConstraint(self, max_thrust=None, min_thrust=None, pos_lb_z=None,pos_ub_z=None):
+        thrust_ub_inequ=self.thrust_mag-max_thrust
+        thrust_lb_inequ=min_thrust-self.thrust_mag
+        pos_ub_z_inequ=self.r_I[2]-pos_ub_z
+        pos_lb_z_inequ=pos_lb_z-self.r_I[2]
+        self.path_inequ_cstr=vcat([thrust_ub_inequ,thrust_lb_inequ,pos_ub_z_inequ,pos_lb_z_inequ])
+        self.final_inequ_cstr=vcat([pos_ub_z_inequ,pos_lb_z_inequ])
+
+    def initCost(self, wrt=None, wqt=None,max_tra_w=None,traverse_weight_span=None,
                  wrp=None, wvp=None, wqp=None,
                 wrf=None, wvf=None, wqf=None, 
                 wwt=None, wwt_z=None,wthrust=None):
@@ -244,11 +252,11 @@ class Quadrotor:
         else:
             self.max_tra_w = max_tra_w
         
-        if gamma is None:
-            self.gamma = SX.sym('gamma')
-            parameter += [self.gamma]
+        if traverse_weight_span is None:
+            self.traverse_weight_span = SX.sym('gamma')
+            parameter += [self.traverse_weight_span]
         else:
-            self.gamma = gamma
+            self.traverse_weight_span = traverse_weight_span
         
         
         self.cost_auxvar = vcat(parameter)
@@ -282,14 +290,14 @@ class Quadrotor:
         self.cost_thrust = dot(self.thrust_mag, self.thrust_mag) 
 
 
-        self.input_cost = self.wthrust * self.cost_thrust \
-                        + self.wwt * self.cost_ang_rate_B \
-                        + self.wwt_z * self.cost_ang_rate_B_z
         
         ## the path cost to the goal
         self.path_cost = self.wrp * self.cost_r_I_g \
                        + self.wvp * self.cost_v_I_g \
                        + self.wqp * self.cost_q_g \
+                       + self.wthrust * self.cost_thrust \
+                       + self.wwt * self.cost_ang_rate_B \
+                       + self.wwt_z * self.cost_ang_rate_B_z
 
         
         # the final cost
@@ -323,7 +331,7 @@ class Quadrotor:
             tra_R_B_I = casadi.reshape(self.des_tra_R,3,3)
         else:   
             svd= SVD()
-            self.trav_auxvar = vertcat(self.des_tra_r_I, self.des_tra_m,self.wrp, self.des_t_tra) #self.wrp,  self.max_tra_w, self.wrt, self.wqt, 
+            self.trav_auxvar = vertcat(self.des_tra_r_I, self.des_tra_m,self.wrp, self.wrt, self.wqt, self.des_t_tra) #self.wrp,  self.max_tra_w, 
             tra_R_B_I= svd.SVD_M_to_SO3_casadi(self.des_tra_m)
        
         
@@ -352,7 +360,7 @@ class Quadrotor:
 
 
         # weight = max_tra_w*casadi.exp(-gamma*(dt*i-t_tra)**2) #gamma should increase as the flight duration decreases
-        self.tra_cost = self.max_tra_w * casadi.exp(-self.gamma*(self.t_node-self.des_t_tra)**2) * (self.wrt * self.cost_r_I_t + self.wqt * self.cost_q_t)
+        self.tra_cost = self.max_tra_w * casadi.exp(-self.traverse_weight_span*(self.t_node-self.des_t_tra)**2) * (self.wrt * self.cost_r_I_t + self.wqt * self.cost_q_t)
          
                     
         

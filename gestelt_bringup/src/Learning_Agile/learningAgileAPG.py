@@ -175,7 +175,7 @@ class LearningAgileAPG:
                     self.episodes[k].backward_per_step(train_cfg['training']['dyn_decay'])   
 
             ##== record NN obs and output per episode step
-            log_drone_state(writer,obs_batch[0,-1,:],self.global_step)
+            log_drone_state(writer,obs_batch[0,-1,:],self.episodes[0].control,self.global_step)
             euler_nn,gate_pitch = log_train_IO(writer,obs_batch[0,-1,:],outputs_batch[0,:].data.numpy().reshape(self.episodes[0].output_size),self.global_step)
             writer.add_scalar('penalty_single_step', self.episodes[0].reward, self.global_step)
             

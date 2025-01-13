@@ -231,7 +231,7 @@ class Obstacle():
                 ## after the gate traversing
                 goal_check_start_id = -5
                 goal_check_end_id = -1
-                goal_x_axis_w=config['reward']['goal_x_axis_w']*20
+                # goal_x_axis_w=config['reward']['goal_x_axis_w']*20
                 
             for i in range(goal_check_end_id,goal_check_start_id,-1): 
                 

@@ -1,7 +1,7 @@
 
 # flight mission
 MANUAL_SET_POSE_TEST: false     # only works for ROS nodes
-FIX_GATE_PITCH_TEST: true 
+FIX_GATE_PITCH_TEST: true
 gate_pitch: 1 # 0.6rad = 34.38 degree, 1.3rad = 74.4 degree
 mission_period: 5.0 #s
 
@@ -93,7 +93,7 @@ learning_agile:
   wqt: 10.0   #be the learnable variable
   wthrust: 1.0
   wwt: 15.0
-  wwt_z: 5
+  wwt_z: 15
   
   # path cost
   wrp_before_gate: 10        ## too small, large deviation to the goal
@@ -107,8 +107,12 @@ learning_agile:
   wqf: 100.0
   ##------ traversing parameters ---##
   max_tra_w: 100 #100 be the learnable variable
-  traverse_weight_span: 10 #gamma, could be a learning variable
+  traverse_weight_span: 10 
   traverse_time: 1.5 # only for MANUAL_SET_POSE_TEST
+
+
+  ## Safe PDP
+  barrier_gamma: 1
 
   ##------ safety parameters  ------##
   no_solution_flag_t_thresh: 0.1
@@ -141,6 +145,8 @@ learning_agile:
 
   # position constraints
   pos_bound: 15 #m (-b,b)
+  pos_lb_z: 0.6 #m
+  pos_ub_z: 2.2 #m
 
   # velocity constraints
   linear_vel_bound: 15 #m/s
@@ -163,12 +169,12 @@ pretrain_param:
 # NN_model_name: 'training_results/new_format/2024-12-22/13-38-00/trained_model/NN_close_1350.pth'
 # NN_model_name: 'training_results/new_format/2024-12-22/16-30-11/trained_model/NN_close_1300.pth'
 # NN_model_name: 'training_results/new_format/2024-12-30/09-42-13/trained_model/NN_close_940.pth' #**#
-NN_model_name: 'training_results/new_format/2025-01-07/09-17-00/trained_model/NN_close_400.pth'
+NN_model_name: 'training_results/new_format/2025-01-13/18-41-04/trained_model/NN_close_200.pth'
 # NN_model_name: 'training_results/new_format/2025-01-02/10-11-02/trained_model/NN_close_490.pth'
-NN_deploy_model_name: 'deployed_model/2025-01-07/09-17-00/trained_model/NN_close_400.pth' # used in the sitl
+NN_deploy_model_name: 'deployed_model/2025-01-13/18-41-04/trained_model/NN_close_200.pth' # used in the sitl
 NN_freq: 20
 
 reward:
   goal_x_axis_w: 5
-  goal_yz_axis_w: 500 #12.0 for last 5 nodes, 240 for last 3 nodes (xz axis)
+  goal_yz_axis_w: 200 #12.0 for last 5 nodes, 240 for last 3 nodes (xz axis)
   scaling_w: 100

@@ -101,8 +101,8 @@ class mpcRosWrapper{
     double t_tra_abs_=10;
     double t_tra_rel_=10;
 
-    // running_cost weight
-    double wrp_=30;
+    // weight vector [wrp,wrt,wqt]
+    Eigen::Vector3d weight_vector_={30,30,30};
 
     std::chrono::high_resolution_clock::time_point mission_start_time_;
     std::chrono::high_resolution_clock::time_point last_request_time_;

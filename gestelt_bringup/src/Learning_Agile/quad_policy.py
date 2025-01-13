@@ -33,7 +33,23 @@ class PlanFwdBwdWrapper():
 
         # c is the force constant, l is the arm length
         self.uav1.initDyn(Jx=0.000392,Jy=0.000405,Jz=0.000639,mass=0.248,l=0.1650,c=3.383e-07 ) # NUSWARM quadrotor
+        
+        self.thrust_ub = config['learning_agile']['single_motor_max_thrust']*4*config['learning_agile']['throttle_upper_bound']
+        self.thrust_lb = config['learning_agile']['single_motor_max_thrust']*4*config['learning_agile']['throttle_lower_bound']
+        ang_rate_b_xy = config['learning_agile']['angular_vel_bound_xy']
+        ang_rate_b_z = config['learning_agile']['angular_vel_bound_z']
 
+        sc= 1 #1e2
+        pos_b   = config['learning_agile']['pos_bound'] # in each axis
+        pos_lb_z = config['learning_agile']['pos_lb_z']
+        pos_ub_z = config['learning_agile']['pos_ub_z']
+        vel_b   = config['learning_agile']['linear_vel_bound'] #0.5 # in each axis
+
+        ## for the safe PDP backward
+        self.uav1.initConstraint(max_thrust=self.thrust_ub,
+                                 min_thrust=self.thrust_lb,
+                                 pos_ub_z=pos_ub_z,
+                                 pos_lb_z=pos_lb_z)
         ######################################################
         #######------------ MPC PARAM----------------#########
         ######################################################
@@ -49,30 +65,25 @@ class PlanFwdBwdWrapper():
         # create a pdp object
         self.uavoc1 = OCSys(config)
        
-        sc= 1 #1e2
-        pos_b   = config['learning_agile']['pos_bound'] # in each axis
-        vel_b   = config['learning_agile']['linear_vel_bound'] #0.5 # in each axis
+        
      
         # set symbolic functions for the MPC solver
-        self.uavoc1.setStateVariable(self.uav1.X,state_lb=[-pos_b,-pos_b,-pos_b,
+        self.uavoc1.setStateVariable(self.uav1.X,state_lb=[-pos_b,-pos_b,pos_lb_z,
                                                            -vel_b,-vel_b,-vel_b,
                                                            -sc,-sc,-sc,-sc],\
-                                     state_ub=[pos_b,pos_b,pos_b,
+                                     state_ub=[pos_b,pos_b,pos_ub_z,
                                                vel_b,vel_b,vel_b,
                                                sc,sc,sc,sc]) 
         
-        self.thrust_ub = config['learning_agile']['single_motor_max_thrust']*4*config['learning_agile']['throttle_upper_bound']
-        self.thrust_lb = config['learning_agile']['single_motor_max_thrust']*4*config['learning_agile']['throttle_lower_bound']
-        ang_rate_b_xy = config['learning_agile']['angular_vel_bound_xy']
-        ang_rate_b_z = config['learning_agile']['angular_vel_bound_z']
+      
         self.uavoc1.setAuxvarVariable()
         self.uavoc1.setControlVariable(self.uav1.U,
                                        control_lb=[self.thrust_lb ,-ang_rate_b_xy,-ang_rate_b_xy,-ang_rate_b_z],\
                                        control_ub= [self.thrust_ub,ang_rate_b_xy,ang_rate_b_xy,ang_rate_b_z]) # thrust-to-weight = 4:1
 
         self.uavoc1.setDyn(self.uav1.f,self.dt)
-      
 
+       
         # wrt: ,gate traverse position cost
         # wqt: gate traverse attitude cost
         # wthrust: input thrust cost
@@ -83,8 +94,8 @@ class PlanFwdBwdWrapper():
         # wwf: final angular velocity cost
 
         ## initialize the cost function
-        self.uav1.initCost(wrt=config['learning_agile']['wrt'],
-                           wqt=config['learning_agile']['wqt'],
+        self.uav1.initCost(#wrt=config['learning_agile']['wrt'],
+                           #wqt=config['learning_agile']['wqt'],
                            wthrust=config['learning_agile']['wthrust'],
                            wwt=config['learning_agile']['wwt'],
                            wwt_z=config['learning_agile']['wwt_z'], 
@@ -97,7 +108,7 @@ class PlanFwdBwdWrapper():
                            wvf=config['learning_agile']['wvf'],
                            wqf=config['learning_agile']['wqf'],
                            max_tra_w=config['learning_agile']['max_tra_w'],
-                           gamma=config['learning_agile']['traverse_weight_span']
+                           traverse_weight_span=config['learning_agile']['traverse_weight_span']
                            ) 
         self.uav1.init_TraCost()
 
@@ -107,10 +118,14 @@ class PlanFwdBwdWrapper():
                                self.uav1.t_node
                               )
         
-        self.uavoc1.setInputCost(self.uav1.input_cost)
+
         self.uavoc1.setPathCost(self.uav1.path_cost,goal_state=self.uav1.goal_state)
         self.uavoc1.setFinalCost(self.uav1.final_cost,goal_state=self.uav1.goal_state)
-
+    
+        ## for the safe PDP backward
+        self.uavoc1.setInequCstr(self.uav1.path_inequ_cstr,self.uav1.final_inequ_cstr)
+        self.uavoc1.convert2BarrierOC(gamma=config['learning_agile']['barrier_gamma'])
+        
         # initialize the mpc solver
         # self.uavoc1.ocSolverInit(horizon=self.horizon,dt=self.dt)
         self.uavoc1.AcadosModelInit()
@@ -159,7 +174,7 @@ class PlanFwdBwdWrapper():
     # initialize the narrow window
     def init_obstacle(self,gate_t_i):
 
-        gate_pitch = pitch_from_gate(gate_t_i)
+        gate_pitch = pitch_from_gate(gate_t_i.gate_point)
         
         self.gate_corners = gate_t_i.gate_point[:,:].reshape(12)
         self.gate_quat = toQuaternion(gate_pitch,[0,1,0])

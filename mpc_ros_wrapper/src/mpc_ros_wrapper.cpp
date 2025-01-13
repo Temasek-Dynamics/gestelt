@@ -216,7 +216,7 @@ void mpcRosWrapper::close_loop_solver_request(){
         }
         
         // ROS_INFO("t_tra is %f", t_tra);
-        int NP=25;
+        int NP=27;
         for (int i = 0; i < n_nodes_; i++)
         {
             // current_input_=last_input_;
@@ -228,9 +228,9 @@ void mpcRosWrapper::close_loop_solver_request(){
             solver_extern_param.segment(0,10) = des_goal_state_;
             solver_extern_param.segment(10,3) = des_trav_point_;
             solver_extern_param.segment(13,9) = des_trav_9d_;
-            solver_extern_param(22) = wrp_;
-            solver_extern_param(23) = t_tra_rel_; 
-            solver_extern_param(24) = i * dt_; //current node relative time
+            solver_extern_param.segment(22,3) = weight_vector_;
+            solver_extern_param(25) = t_tra_rel_; 
+            solver_extern_param(26) = i * dt_; //current node relative time
 
             
             double *solver_extern_param_ptr = solver_extern_param.data();
@@ -251,9 +251,9 @@ void mpcRosWrapper::close_loop_solver_request(){
         solver_extern_param.segment(0,10) = des_goal_state_;
         solver_extern_param.segment(10,3) = des_trav_point_;
         solver_extern_param.segment(13,9) = des_trav_9d_;
-        solver_extern_param(22) = wrp_;
-        solver_extern_param(23) = t_tra_rel_;
-        solver_extern_param(24) = n_nodes_ * dt_; //current node relative time
+        solver_extern_param.segment(22,3) = weight_vector_;
+        solver_extern_param(25) = t_tra_rel_;
+        solver_extern_param(26) = n_nodes_ * dt_; //current node relative time
         
         double *solver_extern_param_ptr = solver_extern_param.data();
     
@@ -365,7 +365,7 @@ void mpcRosWrapper::close_loop_NN_trav_pose_cb(const gestelt_msgs::close_loop_NN
 {
     des_trav_point_ = Eigen::Map<const Eigen::VectorXd>(msg->position.data(), msg->position.size());
     des_trav_9d_ = Eigen::Map<const Eigen::VectorXd>(msg->vector_9D_orientation.data(), msg->vector_9D_orientation.size());
-    wrp_ = msg->running_cost_weight;
+    weight_vector_ = Eigen::Map<const Eigen::VectorXd>(msg->weight_vector.data(), msg->weight_vector.size());
 }
 
 

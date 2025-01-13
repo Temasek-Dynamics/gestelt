@@ -7,22 +7,22 @@ from scipy.spatial.transform import Rotation as R
 # acquire the current directory
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
-def python_sim_npy_parser(uav_traj=None,
-                          nn_output_list=None,
-                          des_tra_R_list=None,
-                          gate_pitch=None,
-                          seprate_plot=False):
+def rotation_vis(uav_traj=None,
+                nn_output_list=None,
+                des_tra_R_list=None,
+                gate_pitch=None,
+                seprate_plot=False):
 
-    # if uav_traj is None:
-    sim_file = os.path.join(current_dir, 'python_sim_result/uav_traj.npy')
-    nn_output_file = os.path.join(current_dir, 'python_sim_result/nn_output_list.npy')
-    des_tra_R_file = os.path.join(current_dir, 'python_sim_result/des_tra_R_list.npy')
-    gate_pitch_file = os.path.join(current_dir, 'python_sim_result/Pitch.npy')
-    
-    uav_traj = np.load(sim_file)
-    nn_output_list = np.load( nn_output_file)
-    des_tra_R_list = np.load(des_tra_R_file)
-    gate_pitch = np.load(gate_pitch_file)
+    if uav_traj is None:
+        sim_file = os.path.join(current_dir, 'python_sim_result/uav_traj.npy')
+        nn_output_file = os.path.join(current_dir, 'python_sim_result/nn_output_list.npy')
+        des_tra_R_file = os.path.join(current_dir, 'python_sim_result/des_tra_R_list.npy')
+        gate_pitch_file = os.path.join(current_dir, 'python_sim_result/Pitch.npy')
+        
+        uav_traj = np.load(sim_file)
+        nn_output_list = np.load( nn_output_file)
+        des_tra_R_list = np.load(des_tra_R_file)
+        gate_pitch = np.load(gate_pitch_file)
     
     nn_output_list[0][3]=1
     # == convert drone state from quaternion to euler angles == ##
@@ -96,7 +96,7 @@ def python_sim_npy_parser(uav_traj=None,
     if seprate_plot: 
         plt.show()    
     
-    
+    return euler_nn
 
 def plot_reward():
     reward_file = os.path.join(current_dir, 'training_data/mean_reward.npy')
@@ -114,4 +114,4 @@ def plot_reward():
     plt.show()
 
 if __name__ == '__main__':
-    python_sim_npy_parser(seprate_plot=True)
+    rotation_vis(seprate_plot=True)

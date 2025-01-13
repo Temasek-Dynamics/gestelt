@@ -8,9 +8,9 @@ import multiprocessing
 
 from scipy.spatial.transform import Rotation as R
 from learning_agile_sim import success_eval,parse_options
-from solid_geometry import verify_SVD_casadi
+from solid_geometry import verify_SVD_casadi,pitch_from_gate
 from config import mission_cfg,train_cfg
-# import pandas as pd
+
 class LoggerConfig:
     def __init__(self, log_dir="logs"):
         # 创建日志目录，如果不存在的话
@@ -54,8 +54,9 @@ def log_train_IO(writer,inputs,outputs,global_step):
     quat_nn=R.from_matrix(R_nn.reshape(3,3))
     euler_nn=quat_nn.as_euler('zyx', degrees=True)
     
-    gate_euler=R.from_matrix(inputs[-9:].reshape(3,3)).as_euler('zyx')
-    gate_pitch=gate_euler[1]*180/np.pi
+    abs_gate_point=inputs[13:25].reshape(-1,3)+inputs[0:3]
+    gate_pitch = pitch_from_gate(abs_gate_point)
+    gate_pitch = gate_pitch*180/np.pi
     writer.add_scalar('env/gate_pitch', gate_pitch, global_step)
   
     writer.add_scalar('NN_output/x_tra', outputs[0], global_step)
@@ -64,10 +65,10 @@ def log_train_IO(writer,inputs,outputs,global_step):
     writer.add_scalar('NN_output/roll_tra', euler_nn[0], global_step)
     writer.add_scalar('NN_output/pitch_tra', euler_nn[1], global_step)
     writer.add_scalar('NN_output/yaw_tra', euler_nn[2], global_step)
-    writer.add_scalar('NN_output/wrp', outputs[-2], global_step)
+    writer.add_scalar('NN_output/wrp', outputs[-4], global_step)
+    writer.add_scalar('NN_output/wrt', outputs[-3], global_step)
+    writer.add_scalar('NN_output/wqt', outputs[-2], global_step)
     # writer.add_scalar('max_tra_w', outputs[-4], global_step)
-    # writer.add_scalar('wrt', outputs[-3], global_step)
-    # writer.add_scalar('wqt', outputs[-2], global_step)
     writer.add_scalar('NN_output/t_tra', outputs[-1], global_step)
 
 
@@ -82,50 +83,22 @@ def log_gradient(writer,gra,reward,global_step):
     writer.add_scalar('gradient/drdz', gra[2], global_step)
     drd9D_norm = np.linalg.norm(gra[3:12])
     writer.add_scalar('gradient/drd9D_norm', drd9D_norm, global_step)
-    writer.add_scalar('gradient/drdwrp',gra[-3], global_step)
+    writer.add_scalar('gradient/drdwrp',gra[-5], global_step)
     # writer.add_scalar('drdmax_tra_w',gra[-5], global_step)
-    # writer.add_scalar('drdwrt',gra[-4], global_step)
-    # writer.add_scalar('drdwqt',gra[-3], global_step)
+    writer.add_scalar('gradient/drdwrt',gra[-4], global_step)
+    writer.add_scalar('gradient/drdwqt',gra[-3], global_step)
     writer.add_scalar('gradient/drdt', gra[-2], global_step)
     writer.add_scalar('mean_penalty_pre_batch',reward, global_step)
 
 
-def log_drone_state(writer,drone_state, global_step):
+def log_drone_state(writer,drone_state,control, global_step):
     writer.add_scalar('drone_state/actual_x', drone_state[0], global_step)
     writer.add_scalar('drone_state/actual_y', drone_state[1], global_step)
-    writer.add_scalar('drone_state/actual_z', drone_state[2], global_step)
-
-# def save_state_csv(time,drone_state,python_sim_data_folder):
-#     data={
-#         "Time":time.transpose(),
-#         "Position_x":drone_state[:,0].transpose(),
-#         "Position_y":drone_state[:,1].transpose(),
-#         "Position_z":drone_state[:,2].transpose(),
-#         "Velocity_x":drone_state[:,3].transpose(),
-#         "Velocity_y":drone_state[:,4].transpose(),
-#         "Velocity_z":drone_state[:,5].transpose(),
-#         "quat_w":drone_state[:,6].transpose(),
-#         "quat_x":drone_state[:,7].transpose(),
-#         "quat_y":drone_state[:,8].transpose(),
-#         "quat_z":drone_state[:,9].transpose(),
-#     }
-#     df=pd.DataFrame(data)
-#     output_file=os.path.join(python_sim_data_folder,"python_sim_drone_state.csv")
-#     df.to_csv(output_file,index=False)
-
-# def save_mpc_ctl_csv(time,ctl,python_sim_data_folder):
-#     data={
-#         "Time":time.transpose(),
-#         "thrust":ctl[:,0].transpose(),
-#         "body_rate_x":ctl[:,1].transpose(),
-#         "body_rate_y":ctl[:,2].transpose(),
-#         "body_rate_z":ctl[:,3].transpose(),
-#     }
-#     df=pd.DataFrame(data)
-#     output_file=os.path.join(python_sim_data_folder,"python_sim_mpc_ctl.csv")
-#     df.to_csv(output_file,index=False)
-    
-    
+    writer.add_scalar('drone_state/actual_z', drone_state[2], global_step)    
+    writer.add_scalar('drone_state/thrust', control[0], global_step)
+    writer.add_scalar('drone_state/body_rate_x', control[1], global_step)
+    writer.add_scalar('drone_state/body_rate_y', control[2], global_step)
+    writer.add_scalar('drone_state/body_rate_z', control[3], global_step)
 
 
 def evaluation(writer,model_file,global_step):

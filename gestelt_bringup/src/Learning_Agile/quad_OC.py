@@ -1,5 +1,8 @@
 ##this file is to obtain the optimal solution
+import warnings
 
+# 将 RuntimeWarning 升级为错误（异常）
+warnings.simplefilter('error', RuntimeWarning)
 from casadi import *
 import numpy as np
 from scipy import interpolate
@@ -104,16 +107,6 @@ class OCSys:
         ## Fold
         #self.dyn_fn = casadi.Function('dyn', [X0, U], [X])
         self.dyn_fn_acados.save("dyn_fn_acados.casadi")
-
-    def setInputCost(self,input_cost):
-        if not hasattr(self, 'auxvar'):
-            self.setAuxvarVariable()
-
-        assert input_cost.numel() == 1, "input_cost must be a scalar function"        
-        
-        self.input_cost = input_cost
-        self.input_cost_fn = casadi.Function('input_cost',[self.control, self.auxvar], [self.input_cost])
-
    
     # def setInputDiffCost(self, Ulast,input_diff_cost):
     #     if not hasattr(self, 'auxvar'):
@@ -129,7 +122,10 @@ class OCSys:
                     path_cost,
                     goal_state):
         
-        " all symbolic path cost function, means the goal state is also a symbolic variable"
+        """ 
+        all symbolic path cost function, means the goal state is also a symbolic variable,
+        no barrier version is used for the MPC forward
+        """
 
         self.goal_state = goal_state
         if not hasattr(self, 'auxvar'):
@@ -138,7 +134,7 @@ class OCSys:
         assert path_cost.numel() == 1, "path_cost must be a scalar function"
 
         self.path_cost = path_cost
-        self.path_cost_fn = casadi.Function('path_cost', [self.state,self.goal_state,self.trav_auxvar], [self.path_cost])
+        self.path_cost_fn = casadi.Function('path_cost', [self.state,self.control,self.goal_state,self.trav_auxvar], [self.path_cost])
 
 
     def setFinalCost(self, 
@@ -167,7 +163,40 @@ class OCSys:
         self.t_node = t_node
         self.trav_cost_fn = casadi.Function('trav_cost', [self.state,self.trav_auxvar,self.t_node], [self.trav_cost])
 
+    def setInequCstr(self, path_inequ_cstr, final_inequ_cstr):
+        """ 
+        this path inequality constraint is set for the MPC backward, 
+        where the path inequality constraint is added as a barrier function
+        """
 
+        self.path_inequ_cstr = path_inequ_cstr
+        self.final_inequ_cstr = final_inequ_cstr
+        self.path_inequ_cstr_fn = casadi.Function('path_inequ_cstr', [self.state,self.control,self.trav_auxvar], [self.path_inequ_cstr])
+        self.final_inequ_cstr_fn = casadi.Function('final_inequ_cstr', [self.state,self.trav_auxvar], [self.final_inequ_cstr])
+        self.n_path_inequ_cstr = self.path_inequ_cstr_fn.numel_out()
+        self.n_final_inequ_cstr = self.final_inequ_cstr_fn.numel_out()
+
+    def convert2BarrierOC(self, gamma=1e-2):
+        """barrier version path cost function only for the MPC backward
+
+        Args:
+            gamma (_type_, optional): _description_. Defaults to 1e-2.
+        """
+        # natural log barrier for the inequality path constraints
+        path_inequ_barrier = 0
+        final_inequ_barrier = 0
+        
+        for i in range(self.n_path_inequ_cstr):
+            path_inequ_barrier += -log(-self.path_inequ_cstr[i])
+            
+        for i in range(self.n_final_inequ_cstr):
+            final_inequ_barrier += -log(-self.final_inequ_cstr[i])
+        
+        self.path_cost_barrier = self.path_cost + gamma * path_inequ_barrier
+        self.final_cost_barrier = self.final_cost + gamma * final_inequ_barrier
+        
+        self.path_cost_barrier_fn = casadi.Function('path_cost_barrier', [self.state,self.control,self.goal_state,self.trav_auxvar], [self.path_cost_barrier])
+        self.final_cost_barrier_fn = casadi.Function('final_cost_barrier', [self.state,self.goal_state, self.auxvar], [self.final_cost_barrier])
 
     def ocSolverInit(self, horizon=None, auxvar_value=1, print_level=0, dt = 0.1,costate_option=0):
         assert hasattr(self, 'state'), "Define the state variable first!"
@@ -488,9 +517,8 @@ class OCSys:
 
         # # setting the cost function
         # ocp.model.cost_expr_ext_cost_custom_hess/cost_expr_ext_cost
-        ocp.model.cost_expr_ext_cost = self.path_cost_fn(ocp.model.x, goal_state_value, trav_auxvar_value)\
+        ocp.model.cost_expr_ext_cost = self.path_cost_fn(ocp.model.x, ocp.model.u, goal_state_value, trav_auxvar_value)\
                                      + self.trav_cost_fn(ocp.model.x, trav_auxvar_value, t_node_value)\
-                                     + self.input_cost_fn(ocp.model.u,self.auxvar)
         
         # end cost
         ocp.model.cost_expr_ext_cost_e = self.final_cost_fn(ocp.model.x,goal_state_value,self.auxvar)
@@ -507,15 +535,24 @@ class OCSys:
         ocp.constraints.x0 = x_init
 
         # 4x1
-        ocp.constraints.lbu = np.array(self.control_lb) 
-        ocp.constraints.ubu = np.array(self.control_ub)
+        control_lb_shrink=np.array(self.control_lb)
+        control_up_shrink=np.array(self.control_ub)
+        state_lb_shrink=np.array(self.state_lb)
+        state_up_shrink=np.array(self.state_ub)
+        # margin for the safe PDP, since the acados will violate the constraints a little bit
+        control_lb_shrink[0]+=0.01
+        control_up_shrink[0]-=0.01
+        state_lb_shrink[2]+=0.05
+        state_up_shrink[2]-=0.05
+        ocp.constraints.lbu = control_lb_shrink
+        ocp.constraints.ubu = control_up_shrink
         ocp.constraints.idxbu = np.array([i for i in range(self.n_control)])
         
         
         ##------------------ state constraints ----------------------##
-        # # constraint for position ( no constraints for the state)
-        ocp.constraints.lbx = np.array(self.state_lb) #([])#
-        ocp.constraints.ubx = np.array(self.state_ub) #([])#
+        # # constraint for position
+        ocp.constraints.lbx = state_lb_shrink #([])#
+        ocp.constraints.ubx = state_up_shrink #([])#
         ocp.constraints.idxbx = np.array([i for i in range(self.n_state)]) #([])#i for i in range(self.n_state)]
         
 
@@ -583,7 +620,8 @@ class OCSys:
         self.state_traj_opt = np.zeros((self.n_nodes+1,self.n_state))
         self.control_traj_opt = np.zeros((self.n_nodes,self.n_control))
         self.costate_traj_opt = np.zeros((self.n_nodes,self.n_state))
-
+        # self.lb_v_control_traj_opt = np.zeros((self.n_nodes,self.n_control))
+        # self.ub_v_control_traj_opt = np.zeros((self.n_nodes,self.n_control))
         # #---------------------for linear cost---------------------##
         # # #set desired ref state
         desired_goal_vel=np.array([0, 0, 0])
@@ -632,6 +670,8 @@ class OCSys:
             self.state_traj_opt[i,:]=self.acados_solver.get(i, "x")
             self.control_traj_opt[i,:]=self.acados_solver.get(i, "u")
             self.costate_traj_opt[i,:]=self.acados_solver.get(i, "pi")
+            # self.lb_v_control_traj_opt[i,:]=self.acados_solver.get(i, "lam")[0]# inequality multiplier lower bound
+            # self.ub_v_control_traj_opt[i,:]=self.acados_solver.get(i, "lam")[5]# inequality multiplier upper bound
 
         self.state_traj_opt[-1,:]=self.acados_solver.get(self.n_nodes, "x")
         
@@ -661,12 +701,11 @@ class OCSys:
 
         # Define the Hamiltonian function
         self.costate = casadi.SX.sym('lambda', self.state.numel())
-        self.path_Hamil = self.path_cost \
+        self.path_Hamil = self.path_cost_barrier \
                         + self.trav_cost\
-                        + self.input_cost \
                         + dot(self.dyn, self.costate)  # path Hamiltonian
         
-        self.final_Hamil = self.final_cost  # final Hamiltonian
+        self.final_Hamil = self.final_cost_barrier  # final Hamiltonian
 
         # Differentiating dynamics; notations here are consistent with the PDP paper
         self.dfx = jacobian(self.dyn, self.state)
@@ -1020,9 +1059,13 @@ class LQR:
             # W_curr = N_t + np.matmul(temp_mat, W_next + np.matmul(P_next, M_t))
 
             ## Updated one
-            middle_mat = A_t.T @ P_next @ np.linalg.inv(I + R_t @ P_next)
-            P_curr = Q_t + middle_mat @ A_t
-            W_curr = middle_mat @ (M_t - R_t @ W_next) + A_t.T @ W_next + N_t
+            try:
+                middle_mat = A_t.T @ P_next @ np.linalg.inv(I + R_t @ P_next+1e-6*np.eye(self.n_state))
+                P_curr = Q_t + middle_mat @ A_t
+                W_curr = middle_mat @ (M_t - R_t @ W_next) + A_t.T @ W_next + N_t
+            except RuntimeWarning:
+                print('P_next is :',P_next)
+                print('R_t is :',R_t)
 
             PP[t - 1] = P_curr
             WW[t - 1] = W_curr
@@ -1043,11 +1086,13 @@ class LQR:
             R_t = np.matmul(GinvHuu, np.transpose(G[t]))
 
             x_t = state_traj_opt[t]
-            u_t = -np.matmul(invHuu, np.matmul(np.transpose(Hxu[t]), x_t) + Hue[t]) \
-                  - np.linalg.multi_dot([invHuu, np.transpose(G[t]), np.linalg.inv(I + np.dot(P_next, R_t)),
-                                            (np.matmul(np.matmul(P_next, A_t), x_t) + np.matmul(P_next,
-                                                                                                         M_t) + W_next)])
-
+            try:
+                u_t = -np.matmul(invHuu, np.matmul(np.transpose(Hxu[t]), x_t) + Hue[t]) \
+                    - np.linalg.multi_dot([invHuu, np.transpose(G[t]), np.linalg.inv(I + np.dot(P_next, R_t)+1e-6*np.eye(self.n_state)),
+                                                (np.matmul(np.matmul(P_next, A_t), x_t) + np.matmul(P_next,M_t) + W_next)])
+            except RuntimeWarning:
+                print('P_next is :',P_next)
+                print('R_t is :',R_t)
             x_next = np.matmul(F[t], x_t) + np.matmul(G[t], u_t) + E[t]
             lambda_next = np.matmul(P_next, x_next) + W_next
 
