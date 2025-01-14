@@ -82,8 +82,8 @@ def nn_sample(init_pos=None,
         else:
             gate_pitch = mission_cfg['gate_pitch'] 
     else:
-        des_pitch_mean_min = 1*pi/6
-        des_pitch_mean_max = 1*pi/6
+        des_pitch_mean_min = 1*pi/4
+        des_pitch_mean_max = 1*pi/4
         des_pitch_mean = des_pitch_mean_min - (des_pitch_mean_min - des_pitch_mean_max) * (cur_epoch / 100) 
 
         # truncated normal distribution
@@ -130,35 +130,14 @@ def t_output(inputs):
     # outputs[3:12]=R_gate.T.flatten()
     outputs[3:12]=np.eye(3).flatten()
 
-    
-    
-    ## wrp
-    # outputs[-5]=10
-
-    # ## max_tra_w
-    # outputs[-4]=100
-
-    # ## wrt
-    # outputs[-3]=5
-
-    # ## wqt
-    # outputs[-2]=10
 
     ## traversal time is proportional to the distance of the centroids
     if inputs[1]>0:
         raw_time = round(magni(inputs[0:3]-outputs[0:3])/desired_average_vel,1) #3
-        ## wrp
-        outputs[-4]=mission_cfg['learning_agile']['wrp_before_gate']
+       
     else:
         raw_time = -round(magni(inputs[0:3]-outputs[0:3])/desired_average_vel_after_gate,1) #4
-        ## wrp
-        outputs[-4]=mission_cfg['learning_agile']['wrp_after_gate']
-
-    ## wrt
-    outputs[-3]=mission_cfg['learning_agile']['wrt']
-
-    ## wqt
-    outputs[-2]=mission_cfg['learning_agile']['wqt']
+   
     outputs[-1] = raw_time #np.clip(raw_time,3,3)
 
     print('desired_traversing_time',outputs[-1])
@@ -300,10 +279,10 @@ class network_with_GRU(nn.Module):
         out [:,-4]=torch.sigmoid(out[:,-4])*50+10
 
         # wrt
-        out [:,-3]=torch.sigmoid(out[:,-3])*50
+        out [:,-3]=torch.sigmoid(out[:,-3])*20
 
         # wqt
-        out [:,-2]=torch.sigmoid(out[:,-2])*50
+        out [:,-2]=torch.sigmoid(out[:,-2])*20
 
 
         ## if pretrained, do not use this

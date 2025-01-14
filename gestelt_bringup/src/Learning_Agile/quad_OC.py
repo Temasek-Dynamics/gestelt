@@ -540,8 +540,8 @@ class OCSys:
         state_lb_shrink=np.array(self.state_lb)
         state_up_shrink=np.array(self.state_ub)
         # margin for the safe PDP, since the acados will violate the constraints a little bit
-        control_lb_shrink[0]+=0.01
-        control_up_shrink[0]-=0.01
+        control_lb_shrink[0]+=0.05
+        control_up_shrink[0]-=0.05
         state_lb_shrink[2]+=0.05
         state_up_shrink[2]-=0.05
         ocp.constraints.lbu = control_lb_shrink
