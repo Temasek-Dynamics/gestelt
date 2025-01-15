@@ -121,3 +121,4 @@ def evaluation(writer,model_file,global_step):
             count+=1
     success_rate=1-count/test_num
     writer.add_scalar('success_rate', success_rate, global_step)
+    return success_rate

@@ -11,15 +11,13 @@ import scipy.stats as stats
 from solid_geometry import magni
 
 
-
-
-
 pre_ini_pos=np.array(mission_cfg['mission']['initial_position'])
 pre_end_pos=np.array(mission_cfg['mission']['goal_position'])
 desired_average_vel=mission_cfg['pretrain_param']['desired_average_vel']
 desired_average_vel_after_gate=mission_cfg['pretrain_param']['desired_average_vel_after_gate']
 gate_width = mission_cfg['gate']['width']
-init_gate_width = mission_cfg['gate']['init_width']
+init_std_dev=mission_cfg['gate']['init_std_dev']
+final_std_dev=mission_cfg['gate']['final_std_dev']
 input_size = train_cfg['model']['input_size'] 
 hidden_size = train_cfg['model']['hidden_size']
 output_size = train_cfg['model']['output_size']  
@@ -29,7 +27,7 @@ output_size = train_cfg['model']['output_size']
 def nn_sample(init_pos=None,
               final_pos=None,
               init_angle=None,
-              cur_epoch=train_cfg['training']['num_epochs'],
+              cur_epoch=train_cfg['training']['num_epochs'], # default is the last epoch
               PRTRAIN=False,
               TEST=False):
     env_init_set = np.zeros(17)
@@ -55,7 +53,7 @@ def nn_sample(init_pos=None,
     
     ## === random width of the gate  =========##
     # env_init_set[7] = np.clip(np.random.normal(0.6,0.2),gate_width,gate_width) #(0.9,0.3),0.5,1.25 
-    env_init_set[7] = init_gate_width - (init_gate_width - gate_width) * (cur_epoch / train_cfg['training']['num_epochs'])
+    env_init_set[7] = gate_width
   
     ## === random pitch angle of the gate ====##
     # angle = np.clip(1.3*(1.2-env_init_set[7]),0,pi/3)
@@ -87,14 +85,14 @@ def nn_sample(init_pos=None,
         des_pitch_mean = des_pitch_mean_min - (des_pitch_mean_min - des_pitch_mean_max) * (cur_epoch / 100) 
 
         # truncated normal distribution
-        mu,sigma = 0,pi/18
+        mu,sigma = 0,init_std_dev+(final_std_dev-init_std_dev)*(cur_epoch/train_cfg['training']['num_epochs'])
         lower,upper = -pi/3,pi/3
         X = stats.truncnorm((lower - mu) / sigma, (upper - mu) / sigma, loc=mu, scale=sigma)
         gate_pitch = X.rvs(1)[0]
         
         judge = np.random.normal(0,1)
-        if gate_pitch>0:
-        # if judge > 0:
+        # if gate_pitch>0:
+        if judge > 0:
             gate_pitch=gate_pitch+des_pitch_mean
         else:
             gate_pitch=gate_pitch-des_pitch_mean

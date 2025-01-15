@@ -224,7 +224,7 @@ class LearningAgileBase:
 
     # def run_single_step(self,nn_output):
     #     self.step(nn_output)
-    #     self.get_reward()
+    #     self.get_penalty()
     #     if options['BACKWARD']:
     #         self.backward_per_step()
 
@@ -242,12 +242,12 @@ class LearningAgileBase:
         return p_R_p_z
 
    
-def get_reward(base):
+def get_penalty(base):
     """
     calculate the reward of MPC solution
     """
-    R_i = np.array(base.planner.get_reward(base.pred_st_traj)[0])
-    p_R_i_p_X_traj_i = (base.planner.get_reward(base.pred_st_traj)[1])
+    R_i = np.array(base.planner.get_penalty(base.pred_st_traj)[0])
+    p_R_i_p_X_traj_i = (base.planner.get_penalty(base.pred_st_traj)[1])
 
     return [R_i, p_R_i_p_X_traj_i]
 
@@ -262,7 +262,7 @@ def run_single_episode(base,nn_out=None):
 
         if i > 0: 
             # skip the first step since the first prediction of the SQP_RTI is initial guess
-            reward_and_gradient=get_reward(base)
+            reward_and_gradient=get_penalty(base)
             base.R_i.append(reward_and_gradient[0])
             base.p_R_i_p_X_traj_i.append(reward_and_gradient[1])
 

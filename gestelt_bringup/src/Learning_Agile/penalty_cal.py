@@ -141,7 +141,8 @@ class Obstacle():
                                     vert_traj, 
                                     goal_pos,
                                     PENALTY_HELPER = False,
-                                    real_state_i=None):   
+                                    real_state_i=0,
+                                    success_rate=0):   
         
         t_tra_seq_list=[]
 
@@ -219,7 +220,9 @@ class Obstacle():
             
             # goal_yz_axis_w=config['reward']['goal_yz_axis_w']*10*np.exp(0.1*(real_state_i-50))+config['reward']['goal_yz_axis_w'] # 50 is the close loop horizon
             goal_x_axis_w=config['reward']['goal_x_axis_w']
-            goal_yz_axis_w=config['reward']['goal_yz_axis_w']
+            
+            goal_yz_axis_w=config['reward']['goal_yz_axis_w']*max((1-2*success_rate),0.1)
+
             # if real_state_i == 49:
             #     goal_yz_axis_w*=100
             # for last four nodes

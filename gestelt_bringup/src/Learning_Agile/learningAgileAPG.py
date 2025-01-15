@@ -53,7 +53,7 @@ class LearningAgileAPG:
         self.batch_size = train_cfg['training']['batch_size']
         self.reward_batch=torch.zeros(1)
         self.gradient_batch=torch.zeros(1)
-
+        self.success_rate=0
         self.episodes = []
         for _ in range(self.batch_size):
             self.episodes.append(LearningAgileBase(mission_cfg=self.mission_cfg,
@@ -84,11 +84,11 @@ class LearningAgileAPG:
         self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=lr_decay_num_epochs, gamma=lr_gamma)
         # self.scheduler=torch.optim.lr_scheduler.CosineAnnealingLR(self.optimizer,T_max=50,eta_min=self.train_cfg['training']['eta_min'])
 
-    def get_reward_episodes(self, i:int,
+    def get_penalty_episodes(self, i:int,
                             episode:LearningAgileBase,
                             R_Grad_queue:Queue):
-        R_i = np.array(episode.planner.get_reward(episode.pred_st_traj,real_state_i=i)[0])
-        p_R_i_p_X_traj_i = (episode.planner.get_reward(episode.pred_st_traj,real_state_i=i)[1])
+        R_i = np.array(episode.planner.get_penalty(episode.pred_st_traj,real_state_i=i,success_rate=self.success_rate)[0])
+        p_R_i_p_X_traj_i = (episode.planner.get_penalty(episode.pred_st_traj,success_rate=self.success_rate,real_state_i=i)[1])
 
         R_Grad_queue.put([R_i, p_R_i_p_X_traj_i])
 
@@ -150,7 +150,7 @@ class LearningAgileAPG:
                 if self.batch_size!=1:
                     ### multi-process
                     for k in range(self.batch_size):
-                        p = Process(target=self.get_reward_episodes, args=(i,
+                        p = Process(target=self.get_penalty_episodes, args=(i,
                                                             self.episodes[k],
                                                             R_Grad_queue))
                         processes.append(p)
@@ -161,7 +161,7 @@ class LearningAgileAPG:
                 else:
                 ##== single-process
                     for k in range(self.batch_size):
-                        self.get_reward_episodes(i,self.episodes[k],R_Grad_queue)
+                        self.get_penalty_episodes(i,self.episodes[k],R_Grad_queue)
 
 
                 ##== collect the reward and gradient from each episode
@@ -227,7 +227,7 @@ class LearningAgileAPG:
                     torch.save(self.model, model_file)
 
                 if (epoch+1) % 100 == 0:
-                    evaluation(writer,model_file,self.global_step)
+                    self.success_rate=evaluation(writer,model_file,self.global_step)
 
 if __name__ == "__main__":
 

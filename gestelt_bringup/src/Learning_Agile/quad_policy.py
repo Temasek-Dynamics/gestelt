@@ -244,7 +244,7 @@ class PlanFwdBwdWrapper():
             
             return reward #+ self.roll_reward + self.yaw_reward#+ pitch_reward
 
-    def get_reward(self,state_traj,real_state_i=None):
+    def get_penalty(self,state_traj,real_state_i=None,success_rate=None):
         self.vert_traj = self.uav1.get_quad_vert_pos(wing_len = self.wing_len, state_traj = state_traj)
         reward,self.d_R_d_st_traj,_=self.obstacle.penalty_cal_diff_collision(self.config,
                                                                             state_traj=state_traj,
@@ -252,7 +252,8 @@ class PlanFwdBwdWrapper():
                                                                             gate_quat=self.gate_quat,
                                                                             vert_traj=self.vert_traj[:,0:3],
                                                                             goal_pos=self.goal_pos,
-                                                                            real_state_i=real_state_i)
+                                                                            real_state_i=real_state_i,
+                                                                            success_rate=success_rate)
             
         self.d_R_d_st_traj = self.d_R_d_st_traj.reshape(self.horizon+1,1,self.uavoc1.n_state)
         return [reward,self.d_R_d_st_traj]
