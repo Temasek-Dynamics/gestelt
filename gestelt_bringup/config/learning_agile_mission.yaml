@@ -145,8 +145,8 @@ learning_agile:
 
   # position constraints
   pos_bound: 15 #m (-b,b)
-  pos_lb_z: 0.6 #m
-  pos_ub_z: 2.2 #m
+  pos_lb_z: 0.45 #m
+  pos_ub_z: 2.45 #m
 
   # velocity constraints
   linear_vel_bound: 15 #m/s
@@ -169,12 +169,12 @@ pretrain_param:
 # NN_model_name: 'training_results/new_format/2024-12-22/13-38-00/trained_model/NN_close_1350.pth'
 # NN_model_name: 'training_results/new_format/2024-12-22/16-30-11/trained_model/NN_close_1300.pth'
 # NN_model_name: 'training_results/new_format/2024-12-30/09-42-13/trained_model/NN_close_940.pth' #**#
-NN_model_name: 'training_results/new_format/2025-01-15/15-50-22/trained_model/NN_close_800.pth'
+NN_model_name: 'training_results/new_format/2025-01-16/09-59-31/trained_model/NN_close_3200.pth'
 # NN_model_name: 'training_results/new_format/2025-01-02/10-11-02/trained_model/NN_close_490.pth'
 NN_deploy_model_name: 'deployed_model/2025-01-13/18-41-04/trained_model/NN_close_200.pth' # used in the sitl
 NN_freq: 20
 
 reward:
-  goal_x_axis_w: 5
+  goal_x_axis_w: 2
   goal_yz_axis_w: 100 #12.0 for last 5 nodes, 240 for last 3 nodes (yz axis)
   scaling_w: 100

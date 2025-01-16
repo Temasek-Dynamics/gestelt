@@ -573,8 +573,8 @@ void ACADOS_model_acados_create_5_set_nlp_in(ACADOS_model_solver_capsule* capsul
     ubx[0] = 15;
     lbx[1] = -15;
     ubx[1] = 15;
-    lbx[2] = 0.65;
-    ubx[2] = 2.1500000000000004;
+    lbx[2] = 0.5;
+    ubx[2] = 2.4000000000000004;
     lbx[3] = -15;
     ubx[3] = 15;
     lbx[4] = -15;
