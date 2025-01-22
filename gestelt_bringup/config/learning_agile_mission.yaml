@@ -169,7 +169,8 @@ pretrain_param:
 # NN_model_name: 'training_results/new_format/2024-12-22/13-38-00/trained_model/NN_close_1350.pth'
 # NN_model_name: 'training_results/new_format/2024-12-22/16-30-11/trained_model/NN_close_1300.pth'
 # NN_model_name: 'training_results/new_format/2024-12-30/09-42-13/trained_model/NN_close_940.pth' #**#
-NN_model_name: 'training_results/new_format/2025-01-16/09-59-31/trained_model/NN_close_3200.pth'
+NN_model_name: 'training_results/new_format/2025-01-16/09-59-31/trained_model/NN_close_3200.pth' #**#
+# NN_model_name: 'training_results/new_format/2025-01-22/10-26-33/trained_model/NN_close_120.pth' # train for the moving gate
 # NN_model_name: 'training_results/new_format/2025-01-02/10-11-02/trained_model/NN_close_490.pth'
 NN_deploy_model_name: 'deployed_model/2025-01-13/18-41-04/trained_model/NN_close_200.pth' # used in the sitl
 NN_freq: 20
