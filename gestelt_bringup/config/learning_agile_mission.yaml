@@ -1,8 +1,8 @@
 
 # flight mission
 MANUAL_SET_POSE_TEST: false     # only works for ROS nodes
-FIX_GATE_PITCH_TEST: false
-gate_pitch: 1 # 0.6rad = 34.38 degree, 1.3rad = 74.4 degree
+FIX_GATE_PITCH_TEST: true
+gate_pitch: -0.6 # 0.6rad = 34.38 degree,, 1 rad=57.2958 degree,  1.3rad = 74.4 degree
 mission_period: 5.0 #s
 
 drone:
@@ -172,8 +172,8 @@ pretrain_param:
 NN_model_name: 'training_results/new_format/2025-01-16/09-59-31/trained_model/NN_close_3200.pth' #**#
 # NN_model_name: 'training_results/new_format/2025-01-22/10-26-33/trained_model/NN_close_120.pth' # train for the moving gate
 # NN_model_name: 'training_results/new_format/2025-01-02/10-11-02/trained_model/NN_close_490.pth'
-NN_deploy_model_name: 'deployed_model/2025-01-13/18-41-04/trained_model/NN_close_200.pth' # used in the sitl
-NN_freq: 20
+NN_deploy_model_name: 'deployed_model/2025-01-16/09-59-31/trained_model/NN_close_3200.pth' # used in the sitl
+NN_freq: 50
 
 reward:
   goal_x_axis_w: 2
