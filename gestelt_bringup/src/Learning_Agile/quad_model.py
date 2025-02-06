@@ -3,76 +3,50 @@
 from casadi import *
 import casadi
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.animation as animation
 import math
 from scipy.spatial.transform import Rotation as R
 from solid_geometry import norm
 from math import sqrt
 from solid_geometry import dir_cosine, SVD, magni, magni_casadi
 # quadrotor (UAV) environment
-class Quadrotor:
-    def __init__(self,options, project_name='my UAV'):
-        self.project_name = 'my uav'
-        self.options = options
+class QuadrotorDynamic:
+    """Only the dynamics, support different state and input dimension.
+
+    Returns:
+        
+    """
+    def __init__(self,ctl_mode:int=0,config=None):
+        self.dt=config['learning_agile']['dt']
+        self.ctl_mode=ctl_mode
         # define the state of the quadrotor
         rx, ry, rz = SX.sym('rx'), SX.sym('ry'), SX.sym('rz')
         self.r_I = vertcat(rx, ry, rz)
         vx, vy, vz = SX.sym('vx'), SX.sym('vy'), SX.sym('vz')
         self.v_I = vertcat(vx, vy, vz)
+
         # quaternions attitude of B w.r.t. I
         q0, q1, q2, q3 = SX.sym('q0'), SX.sym('q1'), SX.sym('q2'), SX.sym('q3')
         self.q = vertcat(q0, q1, q2, q3)
-       
-        # quad state
-        self.quad_state=vertcat(self.r_I,self.v_I,self.q)
-        
-        # define the quadrotor input
-        f1, f2, f3, f4 = SX.sym('f1'), SX.sym('f2'), SX.sym('f3'), SX.sym('f4')
-        self.T_B = vertcat(f1, f2, f3, f4)
+
+        # body rate
         wx, wy, wz = SX.sym('wx'), SX.sym('wy'), SX.sym('wz')
-        wx_last, wy_last, wz_last = SX.sym('wx_last'), SX.sym('wy_last'), SX.sym('wz_last')
         self.ang_rate_B = vertcat(wx, wy, wz)
-        self.ang_rate_B_last = vertcat(wx_last, wy_last, wz_last)
-   
-        # total thrust in body frame
-        self.thrust_mag=SX.sym('thrust')
-        self.thrust_mag_last=SX.sym('thrust_last')
- 
 
-        # define desire traverse pose and time
-        self.des_tra_r_I = vertcat(SX.sym('des_tra_rx'), SX.sym('des_tra_ry'), SX.sym('des_tra_rz'))
-        self.des_tra_rodi_param=vertcat(SX.sym('des_tra_rodi_param0'),SX.sym('des_tra_rodi_param1'),SX.sym('des_tra_rodi_param2'))
+        if self.ctl_mode==0 or self.ctl_mode==2:
+            # collective thrust in body frame 
+            self.col_thrust_mag=SX.sym('thrust')
+        elif self.ctl_mode==1 or self.ctl_mode==3:   
+            # single motor thrust
+            f1, f2, f3, f4 = SX.sym('f1'), SX.sym('f2'), SX.sym('f3'), SX.sym('f4')
+            self.T_B = vertcat(f1, f2, f3, f4)
+            df1, df2, df3, df4 = SX.sym('df1'), SX.sym('df2'), SX.sym('df3'), SX.sym('df4')
+            self.delta_T_B = vertcat(df1, df2, df3, df4)
+            
+        # body torque
+        Mx, My, Mz = SX.sym('Mx'), SX.sym('My'), SX.sym('Mz')
+        self.M_B = vertcat(Mx, My, Mz)
 
-        ##==traverse pose 9D vector == ##
-        self.des_tra_m = vertcat(SX.sym('des_tra_m0'),SX.sym('des_tra_m1'),SX.sym('des_tra_m2'),\
-                                SX.sym('des_tra_m3'),SX.sym('des_tra_m4'),SX.sym('des_tra_m5'),\
-                                SX.sym('des_tra_m6'),SX.sym('des_tra_m7'),SX.sym('des_tra_m8'))
-        
-        self.des_tra_R=vertcat(SX.sym('des_tra_R0'),SX.sym('des_tra_R1'),SX.sym('des_tra_R2'),\
-                              SX.sym('des_tra_R3'),SX.sym('des_tra_R4'),SX.sym('des_tra_R5'),\
-                              SX.sym('des_tra_R6'),SX.sym('des_tra_R7'),SX.sym('des_tra_R8'))
-        self.des_tra_q = vertcat(SX.sym('des_tra_q0'), SX.sym('des_tra_q1'), SX.sym('des_tra_q2'), SX.sym('des_tra_q3'))
-        self.des_t_tra = SX.sym('des_t_tra')
-        self.t_node = SX.sym('t_node')
-        # self.traverse_weight_span = SX.sym('traverse_weight_span ')
-        # define desired goal state
-        self.goal_r_I  = vertcat(SX.sym('des_goal_rx'), SX.sym('des_goal_ry'), SX.sym('des_goal_rz'))
-        self.goal_v_I = vertcat(SX.sym('des_goal_vx'), SX.sym('des_goal_vy'), SX.sym('des_goal_vz'))
-        self.goal_q = vertcat(SX.sym('des_goal_q0'), SX.sym('des_goal_q1'), SX.sym('des_goal_q2'), SX.sym('des_goal_q3'))
-        self.goal_w_B= vertcat(SX.sym('des_goal_wx'), SX.sym('des_goal_wy'), SX.sym('des_goal_wz'))
-        
-        self.goal_state=vertcat(self.goal_r_I,self.goal_v_I,self.goal_q)#,self.goal_w_B)
 
-        ###################################################################
-        ###-----------ellipse drone collision detection-----------------###
-        ###################################################################
-        self.uav_radius = casadi.SX.sym('uav_radius',1)
-        self.uav_height = casadi.SX.sym('uav_height',1)
-        
-        
-        
-    
     def initDyn(self, Jx=None, Jy=None, Jz=None, mass=None, l=None, c=None):
         # global parameter
         g = 9.81
@@ -120,66 +94,99 @@ class Quadrotor:
         self.J_B = diag(vertcat(self.Jx, self.Jy, self.Jz))
         # Gravity
         self.g_I = vertcat(0, 0, -g)
-        # Mass of rocket, assume is little changed during the landing process
+       
         self.m = self.mass
 
         
-        # thrust = self.T_B[0] + self.T_B[1] + self.T_B[2] + self.T_B[3]
-        self.thrust_B_vec = vertcat(0, 0, self.thrust_mag)
-        # total moment M in body frame
-        Mx = -self.T_B[1] * self.l / 2 + self.T_B[3] * self.l / 2
-        My = -self.T_B[0] * self.l / 2 + self.T_B[2] * self.l / 2
-        Mz = (self.T_B[0] - self.T_B[1] + self.T_B[2] - self.T_B[3]) * self.c
+    
+        if self.ctl_mode==0 or self.ctl_mode==2:   
+            self.thrust_B_vec = vertcat(0, 0, self.col_thrust_mag)
+        elif self.ctl_mode==1 or self.ctl_mode==3:
+            self.thrust_B_vec = vertcat(0, 0, self.T_B[0] + self.T_B[1] + self.T_B[2] + self.T_B[3])
 
-        self.u_m = np.array([
-            [1,1,1,1],
-            [0,-self.l/2,0,self.l/2],
-            [-self.l/2,0,self.l/2,0],
-            [self.c,-self.c,self.c,-self.c]
-        ])
-        self.M_B = vertcat(Mx, My, Mz)
+            ###############################
+            ###############################
+            #^                             ^
+            #| 2 G###################### 0 | Y
+            #   \          X          /   # 
+            #     \        ^        /     #
+            #       \      |      /       #
+            #         \    |    /         #
+            #           \  |  /           #
+            #             \ /             #
+            # Y <--------- O              #                 
+            #             / \             #
+            #           /     \           #
+            #         /         \         #
+            #       /             \       #
+            #     /                 \     #
+            #|   /                     \   |
+            #v 1 ####################### 3 v B
+            #R
+            # total moment M in body frame
 
-        Mx = self.T_B[0] * sqrt(2)*self.l / 4 -self.T_B[1] * sqrt(2)*self.l / 4 - self.T_B[2] * sqrt(2)*self.l / 4 + self.T_B[3] * sqrt(2)*self.l / 4
-        My = self.T_B[0] * sqrt(2)*self.l / 4 +self.T_B[1] * sqrt(2)*self.l / 4 - self.T_B[2] * sqrt(2)*self.l / 4 - self.T_B[3] * sqrt(2)*self.l / 4
-        Mz = (self.T_B[0] + self.T_B[1] - self.T_B[2] - self.T_B[3]) * self.c
-
-
+            Mx = -self.T_B[0] * sqrt(2)*self.l / 4 +self.T_B[1] * sqrt(2)*self.l / 4 + self.T_B[2] * sqrt(2)*self.l / 4 - self.T_B[3] * sqrt(2)*self.l / 4
+            My = -self.T_B[0] * sqrt(2)*self.l / 4 -self.T_B[1] * sqrt(2)*self.l / 4 + self.T_B[2] * sqrt(2)*self.l / 4 + self.T_B[3] * sqrt(2)*self.l / 4
+            Mz = (-self.T_B[0] - self.T_B[1] + self.T_B[2] + self.T_B[3]) * self.c
+            self.M_B = vertcat(Mx, My, Mz)
+        # else:
+        
+        
         # cosine directional matrix
         C_B_I = dir_cosine(self.q)  # inertial to body
         C_I_B = transpose(C_B_I)  # body to inertial
 
         # Newton's law
-        dr_I = self.v_I
-        dv_I = 1 / self.m * mtimes(C_I_B, self.thrust_B_vec) + self.g_I
+        self.dr_I = self.v_I
+        self.dv_I = 1 / self.m * mtimes(C_I_B, self.thrust_B_vec) + self.g_I
         
         # Euler's law
-        dq = 1 / 2 * mtimes(self.omega(self.ang_rate_B), self.q)
-        
-        # dw = mtimes(inv(self.J_B), self.M_B - mtimes(mtimes(self.skew(self.ang_rate_B), self.J_B), self.ang_rate_B))
-        
-        # state
-        self.X = vertcat(self.r_I, self.v_I, self.q)#, self.ang_rate_B)
-        
-        # input
-        # self.U = self.T_B
-        self.U=vertcat(self.thrust_mag,self.ang_rate_B)
-        self.Ulast = vertcat(self.thrust_mag_last,self.ang_rate_B_last)
+        self.dq = 1 / 2 * mtimes(omega(self.ang_rate_B), self.q)
+        self.dw = mtimes(inv(self.J_B), self.M_B - mtimes(mtimes(skew(self.ang_rate_B), self.J_B), self.ang_rate_B))
 
-        # dynamics
-        self.f = vertcat(dr_I, dv_I, dq)#, dw)
+        if self.ctl_mode==3:
+            self.dT_B = self.T_B + self.delta_T_B*self.dt
+        
+        # self.u_m = np.array([
+        #     [1,1,1,1],
+        #     [0,-self.l/2,0,self.l/2],
+        #     [-self.l/2,0,self.l/2,0],
+        #     [self.c,-self.c,self.c,-self.c]
+        # ])
 
-    def initConstraint(self, max_thrust=None, min_thrust=None, pos_lb_z=None,pos_ub_z=None):
-        thrust_ub_inequ=self.thrust_mag-max_thrust
-        thrust_lb_inequ=min_thrust-self.thrust_mag
-        pos_ub_z_inequ=self.r_I[2]-pos_ub_z
-        pos_lb_z_inequ=pos_lb_z-self.r_I[2]
-        self.path_inequ_cstr=vcat([thrust_ub_inequ,thrust_lb_inequ,pos_ub_z_inequ,pos_lb_z_inequ])
-        self.final_inequ_cstr=vcat([pos_ub_z_inequ,pos_lb_z_inequ])
+class CostBase:
+    """the Base cost definition for the MPC,only declare the symbolic reference and weight of the cost function.
+    """
 
-    def initCost(self, wrt=None, wqt=None,max_tra_w=None,traverse_weight_span=None,
+    def __init__(self,ctl_mode:int=0,config=None):
+        self.ctl_mode=ctl_mode
+        self.drone_mass=config['drone']['mass']
+        # define desire traverse pose and time
+        self.des_tra_r_I = vertcat(SX.sym('des_tra_rx'), SX.sym('des_tra_ry'), SX.sym('des_tra_rz'))
+        self.des_tra_rodi_param=vertcat(SX.sym('des_tra_rodi_param0'),SX.sym('des_tra_rodi_param1'),SX.sym('des_tra_rodi_param2'))
+
+        ##==traverse pose 9D vector == ##
+        self.des_tra_m = vertcat(SX.sym('des_tra_m0'),SX.sym('des_tra_m1'),SX.sym('des_tra_m2'),\
+                                SX.sym('des_tra_m3'),SX.sym('des_tra_m4'),SX.sym('des_tra_m5'),\
+                                SX.sym('des_tra_m6'),SX.sym('des_tra_m7'),SX.sym('des_tra_m8'))
+        
+        self.des_tra_R=vertcat(SX.sym('des_tra_R0'),SX.sym('des_tra_R1'),SX.sym('des_tra_R2'),\
+                              SX.sym('des_tra_R3'),SX.sym('des_tra_R4'),SX.sym('des_tra_R5'),\
+                              SX.sym('des_tra_R6'),SX.sym('des_tra_R7'),SX.sym('des_tra_R8'))
+        self.des_tra_q = vertcat(SX.sym('des_tra_q0'), SX.sym('des_tra_q1'), SX.sym('des_tra_q2'), SX.sym('des_tra_q3'))
+        self.des_t_tra = SX.sym('des_t_tra')
+        self.t_node = SX.sym('t_node')
+        # self.traverse_weight_span = SX.sym('traverse_weight_span ')
+        # define desired goal state
+        self.goal_r_I  = vertcat(SX.sym('des_goal_rx'), SX.sym('des_goal_ry'), SX.sym('des_goal_rz'))
+        self.goal_v_I = vertcat(SX.sym('des_goal_vx'), SX.sym('des_goal_vy'), SX.sym('des_goal_vz'))
+        self.goal_q = vertcat(SX.sym('des_goal_q0'), SX.sym('des_goal_q1'), SX.sym('des_goal_q2'), SX.sym('des_goal_q3'))
+        self.goal_w_B= vertcat(SX.sym('des_goal_wx'), SX.sym('des_goal_wy'), SX.sym('des_goal_wz'))
+        self.goal_T_B= vertcat(SX.sym('des_goal_T0'), SX.sym('des_goal_T1'), SX.sym('des_goal_T2'), SX.sym('des_goal_T3'))
+    def init_weight(self, wrt=None, wqt=None,max_tra_w=None,traverse_weight_span=None,
                  wrp=None, wvp=None, wqp=None,
                 wrf=None, wvf=None, wqf=None, 
-                wwt=None, wwt_z=None,wthrust=None):
+                wwt=None, wwt_z=None,wthrust=None,wdthrust=None,wm=None):
         
         """
         If the weight value is None, it means this value is a learnable parameter
@@ -243,7 +250,19 @@ class Quadrotor:
             parameter += [self.wthrust]
         else:
             self.wthrust = wthrust
+        #thrust
+        if wdthrust is None:
+            self.wdthrust = SX.sym('wdthrust')
+            parameter += [self.wdthrust]
+        else:
+            self.wdthrust = wdthrust
 
+        # torque weight
+        if wm is None:
+            self.wm = SX.sym('wthrust')
+            parameter += [self.wm]
+        else:
+            self.wm = wm
 
         # traversing manually set params
         if max_tra_w is None:
@@ -257,58 +276,48 @@ class Quadrotor:
             parameter += [self.traverse_weight_span]
         else:
             self.traverse_weight_span = traverse_weight_span
-        
-        
+          
         self.cost_auxvar = vcat(parameter)
-
+    
+    def path_error(self,quad_dyn:QuadrotorDynamic=None):
         ## goal cost
         # goal position in the world frame
         # self.goal_r_I is the external variable of the acados
-        self.cost_r_I_g = dot(self.r_I - self.goal_r_I, self.r_I - self.goal_r_I)
+        self.cost_r_I_g = dot(quad_dyn.r_I - self.goal_r_I, quad_dyn.r_I - self.goal_r_I)
 
         # goal velocity
         # self.goal_v_I is the external variable of the acados
-        self.cost_v_I_g = dot(self.v_I - self.goal_v_I, self.v_I - self.goal_v_I)
+        self.cost_v_I_g = dot(quad_dyn.v_I - self.goal_v_I, quad_dyn.v_I - self.goal_v_I)
 
         # final attitude error
         # self.goal_q = toQuaternion(goal_atti[0],goal_atti[1])
         goal_R_B_I = dir_cosine(self.goal_q)
-        R_B_I = dir_cosine(self.q)
+        R_B_I = dir_cosine(quad_dyn.q)
         # self.cost_q_g = trace(np.identity(3) - mtimes(transpose(goal_R_B_I), R_B_I))
         # self.cost_q_g = 2-sqrt(1+trace(mtimes(transpose(goal_R_B_I), R_B_I)))
 
         self.cost_q_g = 0
-        ## squared Chordal distance
-        for i in range(3):
-            self.cost_q_g += dot(R_B_I[i, :] - goal_R_B_I[i, :], R_B_I[i, :] - goal_R_B_I[i, :])
 
+        ## squared Chordal distance
+        self.cost_q_g = casadi.norm_fro(goal_R_B_I-R_B_I)**2
 
         ## angular velocity cost
-        self.goal_w_B = [0, 0, 0]
-        self.cost_ang_rate_B = dot(self.ang_rate_B[0:2] - self.goal_w_B[0:2], self.ang_rate_B[0:2] - self.goal_w_B[0:2])
-        self.cost_ang_rate_B_z = dot(self.ang_rate_B[2] - self.goal_w_B[2], self.ang_rate_B[2] - self.goal_w_B[2])
-        self.cost_thrust = dot(self.thrust_mag, self.thrust_mag) 
+        if self.ctl_mode==0:
+            self.goal_w_B = [0, 0, 0]
+            weight = self.drone_mass*9.81
+            self.cost_col_thrust = dot(quad_dyn.col_thrust_mag-weight,quad_dyn.col_thrust_mag-weight)
+        elif self.ctl_mode==1 or self.ctl_mode==3:
+            self.cost_SRT = dot(quad_dyn.T_B ,quad_dyn.T_B)
+            self.cost_dSRT=dot(quad_dyn.delta_T_B,quad_dyn.delta_T_B)
+        elif self.ctl_mode==2:
+            self.cost_col_thrust = dot(quad_dyn.col_thrust_mag,quad_dyn.col_thrust_mag)
+            self.cost_torque = dot(quad_dyn.M_B,quad_dyn.M_B)
+        self.cost_ang_rate_B = dot(quad_dyn.ang_rate_B[0:2] - self.goal_w_B[0:2], quad_dyn.ang_rate_B[0:2] - self.goal_w_B[0:2])
+        self.cost_ang_rate_B_z = dot(quad_dyn.ang_rate_B[2] - self.goal_w_B[2], quad_dyn.ang_rate_B[2] - self.goal_w_B[2])
+       
 
-
-        
-        ## the path cost to the goal
-        self.path_cost = self.wrp * self.cost_r_I_g \
-                       + self.wvp * self.cost_v_I_g \
-                       + self.wqp * self.cost_q_g \
-                       + self.wthrust * self.cost_thrust \
-                       + self.wwt * self.cost_ang_rate_B \
-                       + self.wwt_z * self.cost_ang_rate_B_z
-
-        
-        # the final cost
-        self.final_cost = self.wrf * self.cost_r_I_g\
-                        + self.wvf * self.cost_v_I_g\
-                        + self.wqf * self.cost_q_g \
-
-  
-    
-    def init_TraCost(self): # transforming Rodrigues to Quaternion is shown in mpc_update function
-        ## traverse cost
+    def traverse_error(self,quad_dyn:QuadrotorDynamic=None, options=None):
+         ## traverse cost
         # traverse position in the world frame
         """   
         acados solver external variables:   
@@ -325,7 +334,7 @@ class Quadrotor:
         """
         
         ## set traverse pose as the auxiliary variables (hyperparameters)
-        if self.options['JAX_SVD']: 
+        if options['JAX_SVD']: 
             ## SVD conducted before CasADi
             self.trav_auxvar = vertcat(self.des_tra_r_I, self.des_tra_R, self.wrp, self.max_tra_w, self.wrt, self.wqt, self.des_t_tra) 
             tra_R_B_I = casadi.reshape(self.des_tra_R,3,3)
@@ -347,10 +356,10 @@ class Quadrotor:
 
         ## =========== traverse cost =========##
         # posotion error
-        self.cost_r_I_t = dot(self.r_I - self.des_tra_r_I, self.r_I - self.des_tra_r_I)
+        self.cost_r_I_t = dot(quad_dyn.r_I - self.des_tra_r_I, quad_dyn.r_I - self.des_tra_r_I)
 
         # attitude error
-        R_B_I = dir_cosine(self.q)
+        R_B_I = dir_cosine(quad_dyn.q)
 
         ## Traditional rotation distance
         # self.cost_q_t = trace(np.identity(3) - mtimes(transpose(tra_R_B_I), R_B_I))
@@ -358,643 +367,326 @@ class Quadrotor:
         ## squared Chordal distance
         self.cost_q_t = casadi.norm_fro(tra_R_B_I-R_B_I)**2
 
-
-        # weight = max_tra_w*casadi.exp(-gamma*(dt*i-t_tra)**2) #gamma should increase as the flight duration decreases
-        self.tra_cost = self.max_tra_w * casadi.exp(-self.traverse_weight_span*(self.t_node-self.des_t_tra)**2) * (self.wrt * self.cost_r_I_t + self.wqt * self.cost_q_t)
-         
-                    
-        
        
+class QuadrotorCTBRCtl:
+    """
+    quadrotor model andd cost for Collective Thrust and Body Rate (CTBR) MPC
+    """
+    def __init__(self,options,config):
+        self.options=options
+        self.quad_dyn = QuadrotorDynamic(ctl_mode=0,config=config)
+        self.cost_base = CostBase(ctl_mode=0,config=config)
 
-    def setDyn(self, dt):       
 
-        ##============Explict Euler============##
-        # self.dyn = self.X + dt * self.f
-        # self.dyn_fn = casadi.Function('dynamics', [self.X, self.U], [self.dyn])
-
-
-        ##============  ERK4 =====================##
-        self.dyn = casadi.Function('f',[self.X, self.U],[self.f])
-        M = 4
-        DT = dt/4
-        X0 = casadi.SX.sym("X", self.X.numel())
-        U = casadi.SX.sym("U", self.U.numel())
+    def init_model(self):    
+        # state
+        self.X = vertcat(self.quad_dyn.r_I, self.quad_dyn.v_I, self.quad_dyn.q)
         
-        X = X0
-        for _ in range(M):
-            # --------- RK4------------
-           k1 =DT*self.dyn(X, U)
-           k2 =DT*self.dyn(X+0.5*k1, U)
-           k3 =DT*self.dyn(X+0.5*k2, U)
-           k4 =DT*self.dyn(X+k3, U)
-            
-           X = X + (k1 + 2*k2 + 2*k3 + k4)/6        
-        # Fold
-        self.dyn_fn = casadi.Function('dyn', [X0, U], [X])
+        # input
+        self.U=vertcat(self.quad_dyn.col_thrust_mag,self.quad_dyn.ang_rate_B)
 
-    ## below is for animation (demo)
-    def get_quad_vert_pos(self, wing_len, state_traj):
+        # dynamics
+        self.f = vertcat(self.quad_dyn.dr_I, self.quad_dyn.dv_I, self.quad_dyn.dq)
 
-        # thrust_position in body frame
-        r1 = vertcat(wing_len*0.5/ sqrt(2) , wing_len*0.5/ sqrt(2) , 0)
-        r2 = vertcat(-wing_len*0.5 / sqrt(2), wing_len*0.5 / sqrt(2), 0)
-        r3 = vertcat(-wing_len*0.5 / sqrt(2), -wing_len*0.5 / sqrt(2), 0)
-        r4 = vertcat(wing_len*0.5 / sqrt(2), -wing_len*0.5 / sqrt(2), 0)
-
-        # r1 = vertcat(wing_len*0.5, 0, 0)
-        # r2 = vertcat(0,-wing_len*0.5, 0)
-        # r3 = vertcat(-wing_len*0.5,0, 0)
-        # r4 = vertcat(0, wing_len*0.5, 0)
-        # horizon
-        horizon = np.size(state_traj, 0)
-        position = np.zeros((horizon, 15))
-        for t in range(horizon):
-            # position of COM
-            # state_traj [x,y,z,vx,vy,vz,qw,qx,qy,qz...]
-            rc = state_traj[t, 0:3]
-            # altitude of quaternion
-            q = state_traj[t, 6:10]
-
-            # direction cosine matrix from body to inertial
-            CIB = np.transpose(dir_cosine(q).full())
-
-            # position of each rotor in inertial frame
-            r1_pos = rc + mtimes(CIB, r1).full().flatten()
-            r2_pos = rc + mtimes(CIB, r2).full().flatten()
-            r3_pos = rc + mtimes(CIB, r3).full().flatten()
-            r4_pos = rc + mtimes(CIB, r4).full().flatten()
-
-            # store
-            position[t, 0:3] = rc
-            position[t, 3:6] = r1_pos
-            position[t, 6:9] = r2_pos
-            position[t, 9:12] = r3_pos
-            position[t, 12:15] = r4_pos
-
-        return position
+    def init_cost(self): 
+        self.cost_base.path_error(self.quad_dyn)
+        self.goal_state=vertcat(self.cost_base.goal_r_I,self.cost_base.goal_v_I,self.cost_base.goal_q)
+        ## the path cost to the goal
+        self.path_cost = self.cost_base.wrp * self.cost_base.cost_r_I_g \
+                       + self.cost_base.wvp * self.cost_base.cost_v_I_g \
+                       + self.cost_base.wqp * self.cost_base.cost_q_g \
+                       + self.cost_base.wwt * self.cost_base.cost_ang_rate_B \
+                       + self.cost_base.wwt_z * self.cost_base.cost_ang_rate_B_z \
+                       + self.cost_base.wthrust* self.cost_base.cost_col_thrust
+        
+        # the final cost
+        self.final_cost = self.cost_base.wrf * self.cost_base.cost_r_I_g\
+                        + self.cost_base.wvf * self.cost_base.cost_v_I_g\
+                        + self.cost_base.wqf * self.cost_base.cost_q_g        
+  
     
+    def init_traCost(self): # transforming Rodrigues to Quaternion is shown in mpc_update function
+        self.cost_base.traverse_error(self.quad_dyn,self.options)
+        self.tra_cost = self.cost_base.max_tra_w * \
+                        casadi.exp(-self.cost_base.traverse_weight_span*(self.cost_base.t_node-self.cost_base.des_t_tra)**2) \
+                        * (self.cost_base.wrt * self.cost_base.cost_r_I_t + self.cost_base.wqt * self.cost_base.cost_q_t)
+         
+    def set_bound_value(self, config):
+        self.col_thrust_ub = config['learning_agile']['single_motor_max_thrust']*4*config['learning_agile']['throttle_upper_bound']
+        self.col_thrust_lb = config['learning_agile']['single_motor_max_thrust']*4*config['learning_agile']['throttle_lower_bound']
 
-    def get_final_position(self,wing_len, p= None,q = None):
-        p = self.tra_r_I
-        q = self.tra_q
-        r1 = vertcat(wing_len*0.5 / sqrt(2), wing_len*0.5 / sqrt(2), 0)
-        r2 = vertcat(-wing_len*0.5 / sqrt(2), wing_len*0.5 / sqrt(2), 0)
-        r3 = vertcat(-wing_len*0.5 / sqrt(2), -wing_len*0.5 / sqrt(2), 0)
-        r4 = vertcat(wing_len*0.5 / sqrt(2), -wing_len*0.5 / sqrt(2), 0)
+        self.ang_rate_b_xy = config['learning_agile']['angular_vel_bound_xy']
+        self.ang_rate_b_z = config['learning_agile']['angular_vel_bound_z']
 
-        # r1 = vertcat(wing_len*0.5, 0, 0)
-        # r2 = vertcat(0,-wing_len*0.5, 0)
-        # r3 = vertcat(-wing_len*0.5,0, 0)
-        # r4 = vertcat(0, wing_len*0.5, 0)
+        sc= 1 #1e2
+        self.pos_b   = config['learning_agile']['pos_bound'] # in each axis
+        self.pos_lb_z = config['learning_agile']['pos_lb_z']
+        self.pos_ub_z = config['learning_agile']['pos_ub_z']
+        self.vel_b   = config['learning_agile']['linear_vel_bound'] #0.5 # in each axis
 
-        CIB = np.transpose(dir_cosine(q).full())
- 
-        r1_pos = p + mtimes(CIB, r1).full().flatten()   
-        r2_pos = p + mtimes(CIB, r2).full().flatten()
-        r3_pos = p + mtimes(CIB, r3).full().flatten()
-        r4_pos = p + mtimes(CIB, r4).full().flatten()
+        self.state_lb = [-self.pos_b,-self.pos_b,-self.pos_b,-self.vel_b,-self.vel_b,-self.vel_b,-sc,-sc,-sc,-sc]
+        self.state_ub = [self.pos_b,self.pos_b,self.pos_b,self.vel_b,self.vel_b,self.vel_b,sc,sc,sc,sc]
+        self.control_lb = [self.col_thrust_lb,-self.ang_rate_b_xy,-self.ang_rate_b_xy,-self.ang_rate_b_z]
+        self.control_ub = [self.col_thrust_ub,self.ang_rate_b_xy,self.ang_rate_b_xy,self.ang_rate_b_z]
+        
+    def init_constraint(self):
+        thrust_ub_inequ=self.quad_dyn.col_thrust_mag-self.col_thrust_ub
+        thrust_lb_inequ=self.col_thrust_lb-self.quad_dyn.col_thrust_mag
+        pos_ub_z_inequ=self.quad_dyn.r_I[2]-self.pos_ub_z
+        pos_lb_z_inequ=self.pos_lb_z-self.quad_dyn.r_I[2]
+        self.path_inequ_cstr=vcat([thrust_ub_inequ,thrust_lb_inequ,pos_ub_z_inequ,pos_lb_z_inequ])
+        self.final_inequ_cstr=vcat([pos_ub_z_inequ,pos_lb_z_inequ])
+        
+class QuadrotorSRTCtl:
+    """
+    quadrotor model andd cost for Single rotor thrust MPC
+    """
+    def __init__(self,options,config):
+        self.options=options
+        self.quad_dyn = QuadrotorDynamic(ctl_mode=1,config=config)
+        self.cost_base = CostBase(ctl_mode=1,config=config)
 
-        position = np.zeros(15)
-        position[0:3] = p
-        position[3:6] = r1_pos
-        position[6:9] = r2_pos
-        position[9:12] = r3_pos
-        position[12:15] = r4_pos
 
-        return position
+    def init_model(self):    
+        # state
+        self.X = vertcat(self.quad_dyn.r_I, self.quad_dyn.v_I, self.quad_dyn.q, self.quad_dyn.ang_rate_B)  
+        
+        # input
+        self.U=self.quad_dyn.T_B
 
+        # dynamics
+        self.f = vertcat(self.quad_dyn.dr_I, self.quad_dyn.dv_I, self.quad_dyn.dq, self.quad_dyn.dw)
+
+    def init_cost(self): 
+        self.cost_base.path_error(self.quad_dyn)
+        self.goal_state=vertcat(self.cost_base.goal_r_I,self.cost_base.goal_v_I,self.cost_base.goal_q,self.cost_base.goal_w_B)
+        ## the path cost to the goal
+        self.path_cost = self.cost_base.wrp * self.cost_base.cost_r_I_g \
+                       + self.cost_base.wvp * self.cost_base.cost_v_I_g \
+                       + self.cost_base.wqp * self.cost_base.cost_q_g \
+                       + self.cost_base.wwt * self.cost_base.cost_ang_rate_B \
+                       + self.cost_base.wwt_z * self.cost_base.cost_ang_rate_B_z\
+                       + self.cost_base.wthrust* self.cost_base.cost_SRT
+
+        
+        # the final cost
+        self.final_cost = self.cost_base.wrf * self.cost_base.cost_r_I_g\
+                        + self.cost_base.wvf * self.cost_base.cost_v_I_g\
+                        + self.cost_base.wqf * self.cost_base.cost_q_g\
+                        + self.cost_base.wwt * self.cost_base.cost_ang_rate_B \
+                        + self.cost_base.wwt_z * self.cost_base.cost_ang_rate_B_z       
+  
     
-    def get_NN_pose(self,NN_pos,NN_R):
-        """the pose is the NN decided pose coordinate
+    def init_traCost(self): # transforming Rodrigues to Quaternion is shown in mpc_update function
+        self.cost_base.traverse_error(self.quad_dyn,self.options)
+        self.tra_cost = self.cost_base.max_tra_w * \
+                        casadi.exp(-self.cost_base.traverse_weight_span*(self.cost_base.t_node-self.cost_base.des_t_tra)**2) \
+                        * (self.cost_base.wrt * self.cost_base.cost_r_I_t + self.cost_base.wqt * self.cost_base.cost_q_t)
+         
+    def set_bound_value(self, config):
+        self.sing_thrust_ub = config['learning_agile']['single_motor_max_thrust']*config['learning_agile']['throttle_upper_bound']
+        self.sing_thrust_lb = config['learning_agile']['single_motor_max_thrust']*config['learning_agile']['throttle_lower_bound']
 
-        Args:
-            NN_pos (_type_): a list of NN decided position
-            NN_R (_type_): a list of NN decided rotation matrix
-        """ 
-        #1 create unit coordinate array, with the shape of (N,3)
-        X=np.tile(np.array([1,0,0]),(np.size(NN_pos,0),1)) # shape is (N,3)
-        Y=np.tile(np.array([0,1,0]),(np.size(NN_pos,0),1))
-        Z=np.tile(np.array([0,0,1]),(np.size(NN_pos,0),1))
+        self.ang_rate_b_xy = config['learning_agile']['angular_vel_bound_xy']
+        self.ang_rate_b_z = config['learning_agile']['angular_vel_bound_z']
 
-        # NN_pose shape is (N,3,3)
-        NN_pose=np.stack((X,Y,Z),axis=1)
-        #2 rotate the unit coordinate array by the rotation matrix
-        NN_pose=np.matmul(NN_pose,NN_R.reshape(-1,3,3).transpose(0,2,1))
+        sc= 1 #1e2
+        self.pos_b   = config['learning_agile']['pos_bound'] # in each axis
+        self.pos_lb_z = config['learning_agile']['pos_lb_z']
+        self.pos_ub_z = config['learning_agile']['pos_ub_z']
+        self.vel_b   = config['learning_agile']['linear_vel_bound'] #0.5 # in each axis
 
-        #3. translate the rotated unit coordinate array by the position 
-        NN_pose+=NN_pos.reshape(-1,1,3)
+        self.state_lb = [-self.pos_b,-self.pos_b,self.pos_lb_z ,-self.vel_b,-self.vel_b,-self.vel_b,-sc,-sc,-sc,-sc,-self.ang_rate_b_xy,-self.ang_rate_b_xy,-self.ang_rate_b_z]
+        self.state_ub = [self.pos_b,self.pos_b,self.pos_ub_z,self.vel_b,self.vel_b,self.vel_b,sc,sc,sc,sc,self.ang_rate_b_xy,self.ang_rate_b_xy,self.ang_rate_b_z]
+        self.control_lb = [self.sing_thrust_lb]*4
+        self.control_ub = [self.sing_thrust_ub]*4
         
+    def init_constraint(self):
+        thrust_ub_inequ=self.quad_dyn.T_B-self.control_ub
+        thrust_lb_inequ=self.control_lb-self.quad_dyn.T_B
+        pos_ub_z_inequ=self.quad_dyn.r_I[2]-self.pos_ub_z
+        pos_lb_z_inequ=self.pos_lb_z-self.quad_dyn.r_I[2]
+        self.path_inequ_cstr=vcat([thrust_ub_inequ,thrust_lb_inequ,pos_ub_z_inequ,pos_lb_z_inequ])
+        self.final_inequ_cstr=vcat([pos_ub_z_inequ,pos_lb_z_inequ])
+
+class QuadrotorWrenchCtl:
+    """
+    quadrotor model andd cost for force and torque (Wrench) MPC
+    """
+    def __init__(self,options,config):
+        self.options=options
+        self.quad_dyn = QuadrotorDynamic(ctl_mode=2,config=config)
+        self.cost_base = CostBase(ctl_mode=2,config=config)
+
+
+    def init_model(self):    
+        # state
+        self.X = vertcat(self.quad_dyn.r_I, self.quad_dyn.v_I, self.quad_dyn.q, self.quad_dyn.ang_rate_B)  
         
+        # input
+        self.U=vertcat(self.quad_dyn.col_thrust_mag,self.quad_dyn.M_B)
+
+        # dynamics
+        self.f = vertcat(self.quad_dyn.dr_I, self.quad_dyn.dv_I, self.quad_dyn.dq, self.quad_dyn.dw)
+
+    def init_cost(self): 
+        self.cost_base.path_error(self.quad_dyn)
+        self.goal_state=vertcat(self.cost_base.goal_r_I,self.cost_base.goal_v_I,self.cost_base.goal_q,self.cost_base.goal_w_B,self.cost_base.goal_w_B)
+        ## the path cost to the goal
+        self.path_cost = self.cost_base.wrp * self.cost_base.cost_r_I_g \
+                       + self.cost_base.wvp * self.cost_base.cost_v_I_g \
+                       + self.cost_base.wqp * self.cost_base.cost_q_g \
+                       + self.cost_base.wwt * self.cost_base.cost_ang_rate_B \
+                       + self.cost_base.wwt_z * self.cost_base.cost_ang_rate_B_z\
+                       + self.cost_base.wthrust * self.cost_base.cost_col_thrust \
+                       + self.cost_base.wm * self.cost_base.cost_torque
+
+        
+        # the final cost
+        self.final_cost = self.cost_base.wrf * self.cost_base.cost_r_I_g\
+                        + self.cost_base.wvf * self.cost_base.cost_v_I_g\
+                        + self.cost_base.wqf * self.cost_base.cost_q_g\
+                        + self.cost_base.wwt * self.cost_base.cost_ang_rate_B \
+                        + self.cost_base.wwt_z * self.cost_base.cost_ang_rate_B_z       
+  
     
-        return NN_pose
+    def init_traCost(self): # transforming Rodrigues to Quaternion is shown in mpc_update function
+        self.cost_base.traverse_error(self.quad_dyn,self.options)
+        self.tra_cost = self.cost_base.max_tra_w * \
+                        casadi.exp(-self.cost_base.traverse_weight_span*(self.cost_base.t_node-self.cost_base.des_t_tra)**2) \
+                        * (self.cost_base.wrt * self.cost_base.cost_r_I_t + self.cost_base.wqt * self.cost_base.cost_q_t)
+         
+    def set_bound_value(self, config):
+        self.col_thrust_ub = config['learning_agile']['single_motor_max_thrust']*4*config['learning_agile']['throttle_upper_bound']
+        self.col_thrust_lb = config['learning_agile']['single_motor_max_thrust']*4*config['learning_agile']['throttle_lower_bound']
+        self.sing_axis_torque_ub = self.col_thrust_ub*config['drone']['diagonal_axis_dist']/4
 
+        self.ang_rate_b_xy = config['learning_agile']['angular_vel_bound_xy']
+        self.ang_rate_b_z = config['learning_agile']['angular_vel_bound_z']
 
-    def play_animation(self, wing_len, state_traj, gate_traj1=None, gate_traj2=None,state_traj_ref=None,NN_pos=None,NN_R=None, dt=0.01, \
-            point1 = None,point2 = None,point3 = None,point4 = None,save_option=0, title='UAV Maneuvering',\
-                goal_pos=[0,0,0]):
-        font1 = {'family':'Times New Roman',
-         'weight':'normal',
-         'style':'normal', 'size':7}
-        cm_2_inch = 2.54
-        fig = plt.figure(figsize=(8/cm_2_inch,8*0.65/cm_2_inch),dpi=400)
-        ax = fig.add_subplot(111, projection='3d')
-        ax.set_xlabel('X (m)', labelpad=-13,**font1)
-        ax.set_ylabel('Y (m)', labelpad=-13,**font1)
-        ax.set_zlabel('Z (m)', labelpad=-13,**font1)
-        ax.tick_params(axis='x',which='major',pad=-5)
-        ax.tick_params(axis='y',which='major',pad=-5)
-        ax.tick_params(axis='z',which='major',pad=-5)
-        ax.set_zlim(-1, 3)
-        ax.set_ylim(-2, 2)#9
-        ax.set_xlim(-2, 2)#6
-        # ax.set_title(title, pad=20, fontsize=15)
-        # for t in ax.xaxis.get_major_ticks(): 
-        #     t.label.set_font('Times New Roman') 
-        #     t.label.set_fontsize(7)
-        # for t in ax.yaxis.get_major_ticks(): 
-        #     t.label.set_font('Times New Roman') 
-        #     t.label.set_fontsize(7)
-        # for t in ax.zaxis.get_major_ticks(): 
-        #     t.label.set_font('Times New Roman') 
-        #     t.label.set_fontsize(7)
+        sc= 1 #1e2
+        self.pos_b   = config['learning_agile']['pos_bound'] # in each axis
+        self.pos_lb_z = config['learning_agile']['pos_lb_z']
+        self.pos_ub_z = config['learning_agile']['pos_ub_z']
+        self.vel_b   = config['learning_agile']['linear_vel_bound'] #0.5 # in each axis
 
-        # target landing point
-        ax.plot([goal_pos[0]], [goal_pos[1]], [goal_pos[2]], c="r", marker="o",markersize=2)
-        ax.view_init(25,-150)
-        #plot the final state
-        #final_position = self.get_final_position(wing_len=wing_len)
-        #c_x, c_y, c_z = final_position[0:3]
-        #r1_x, r1_y, r1_z = final_position[3:6]
-        #r2_x, r2_y, r2_z = final_position[6:9]
-        #r3_x, r3_y, r3_z = final_position[9:12]
-        #r4_x, r4_y, r4_z = final_position[12:15]
-        #line_arm1, = ax.plot([c_x, r1_x], [c_y, r1_y], [c_z, r1_z], linewidth=2, color='grey', marker='o', markersize=3)
-        #line_arm2, = ax.plot([c_x, r2_x], [c_y, r2_y], [c_z, r2_z], linewidth=2, color='grey', marker='o', markersize=3)
-        #line_arm3, = ax.plot([c_x, r3_x], [c_y, r3_y], [c_z, r3_z], linewidth=2, color='grey', marker='o', markersize=3)
-        #line_arm4, = ax.plot([c_x, r4_x], [c_y, r4_y], [c_z, r4_z], linewidth=2, color='grey', marker='o', markersize=3)
-        # plot gate
-        if point1 is not None:
-            ax.plot([point1[0],point2[0]],[point1[1],point2[1]],[point1[2],point2[2]],linewidth=1,color='red',linestyle='-')
-            ax.plot([point2[0],point3[0]],[point2[1],point3[1]],[point2[2],point3[2]],linewidth=1,color='red',linestyle='-')
-            ax.plot([point3[0],point4[0]],[point3[1],point4[1]],[point3[2],point4[2]],linewidth=1,color='red',linestyle='-')
-            ax.plot([point4[0],point1[0]],[point4[1],point1[1]],[point4[2],point1[2]],linewidth=1,color='red',linestyle='-')
-        # data
-        position = self.get_quad_vert_pos(wing_len, state_traj)
-        sim_horizon = np.size(position, 0)
-        NN_pose = self.get_NN_pose(NN_pos,NN_R)
-        if state_traj_ref is None:
-            position_ref = self.get_quad_vert_pos(0, numpy.zeros_like(position))
-        else:
-            position_ref = self.get_quad_vert_pos(wing_len, state_traj_ref)
+        self.state_lb = [-self.pos_b,-self.pos_b,self.pos_lb_z ,-self.vel_b,-self.vel_b,-self.vel_b,-sc,-sc,-sc,-sc,-self.ang_rate_b_xy,-self.ang_rate_b_xy,-self.ang_rate_b_z]
+        self.state_ub = [self.pos_b,self.pos_b,self.pos_ub_z,self.vel_b,self.vel_b,self.vel_b,sc,sc,sc,sc,self.ang_rate_b_xy,self.ang_rate_b_xy,self.ang_rate_b_z]
+        self.control_lb = [self.col_thrust_lb,-10,-10,-10]
+        self.control_ub = [self.col_thrust_ub, 10, 10, 10] 
 
-        ## plot the process of moving window and quadrotor
-        #for i in range(10):
-        #    a = i*6
-        #    b = 0.9-0.1*i
-        #    c = (b,b,b)
-        #    c_x, c_y, c_z = position[a,0:3]
-        #    r1_x, r1_y, r1_z = position[a,3:6]
-        #    r2_x, r2_y, r2_z = position[a,6:9]
-        #    r3_x, r3_y, r3_z = position[a,9:12]
-        #    r4_x, r4_y, r4_z = position[a,12:15]
-        #    line_arm1, = ax.plot([c_x, r1_x], [c_y, r1_y], [c_z, r1_z], linewidth=2, color=c, marker='o', markersize=3)
-        #    line_arm2, = ax.plot([c_x, r2_x], [c_y, r2_y], [c_z, r2_z], linewidth=2, color=c, marker='o', markersize=3)
-        #    line_arm3, = ax.plot([c_x, r3_x], [c_y, r3_y], [c_z, r3_z], linewidth=2, color=c, marker='o', markersize=3)
-        #    line_arm4, = ax.plot([c_x, r4_x], [c_y, r4_y], [c_z, r4_z], linewidth=2, color=c, marker='o', markersize=3)
-
-        #    p1_x, p1_y, p1_z = gate_traj1[a, 0,:]
-        #    p2_x, p2_y, p2_z = gate_traj1[a, 1,:]
-        #    p3_x, p3_y, p3_z = gate_traj1[a, 2,:]
-        #    p4_x, p4_y, p4_z = gate_traj1[a, 3,:]
-        #    gate_l1, = ax.plot([p1_x,p2_x],[p1_y,p2_y],[p1_z,p2_z],linewidth=1,color=c,linestyle='--')
-        #    gate_l2, = ax.plot([p2_x,p3_x],[p2_y,p3_y],[p2_z,p3_z],linewidth=1,color=c,linestyle='--')
-        #    gate_l3, = ax.plot([p3_x,p4_x],[p3_y,p4_y],[p3_z,p4_z],linewidth=1,color=c,linestyle='--')
-        #    gate_l4, = ax.plot([p4_x,p1_x],[p4_y,p1_y],[p4_z,p1_z],linewidth=1,color=c,linestyle='--')
         
-
-        ## animation
-        # gate
-        if gate_traj1 is not None:
-            p1_x, p1_y, p1_z = gate_traj1[0, 0,:]
-            p2_x, p2_y, p2_z = gate_traj1[0, 1,:]
-            p3_x, p3_y, p3_z = gate_traj1[0, 2,:]
-            p4_x, p4_y, p4_z = gate_traj1[0, 3,:]
-            gate_l1, = ax.plot([p1_x,p2_x],[p1_y,p2_y],[p1_z,p2_z],linewidth=1,color='red',linestyle='-')
-            gate_l2, = ax.plot([p2_x,p3_x],[p2_y,p3_y],[p2_z,p3_z],linewidth=1,color='red',linestyle='-')
-            gate_l3, = ax.plot([p3_x,p4_x],[p3_y,p4_y],[p3_z,p4_z],linewidth=1,color='red',linestyle='-')
-            gate_l4, = ax.plot([p4_x,p1_x],[p4_y,p1_y],[p4_z,p1_z],linewidth=1,color='red',linestyle='-')
-
-            #p1_xa, p1_ya, p1_za = gate_traj2[0, 0,:]
-            #p2_xa, p2_ya, p2_za = gate_traj2[0, 1,:]
-            #p3_xa, p3_ya, p3_za = gate_traj2[0, 2,:]
-            #p4_xa, p4_ya, p4_za = gate_traj2[0, 3,:]
-            #gate_l1a, = ax.plot([p1_xa,p2_xa],[p1_ya,p2_ya],[p1_za,p2_za],linewidth=1,color='red',linestyle='--')
-            #gate_l2a, = ax.plot([p2_xa,p3_xa],[p2_ya,p3_ya],[p2_za,p3_za],linewidth=1,color='red',linestyle='--')
-            #gate_l3a, = ax.plot([p3_xa,p4_xa],[p3_ya,p4_ya],[p3_za,p4_za],linewidth=1,color='red',linestyle='--')
-            #gate_l4a, = ax.plot([p4_xa,p1_xa],[p4_ya,p1_ya],[p4_za,p1_za],linewidth=1,color='red',linestyle='--')    
-
-        # quadrotor
-        line_traj, = ax.plot(position[:1, 0], position[:1, 1], position[:1, 2],linewidth=0.5)
-        c_x, c_y, c_z = position[0, 0:3]
-        r1_x, r1_y, r1_z = position[0, 3:6]
-        r2_x, r2_y, r2_z = position[0, 6:9]
-        r3_x, r3_y, r3_z = position[0, 9:12]
-        r4_x, r4_y, r4_z = position[0, 12:15]
-        line_arm1, = ax.plot([c_x, r1_x], [c_y, r1_y], [c_z, r1_z], linewidth=1, color='red', marker='o', markersize=1)
-        line_arm2, = ax.plot([c_x, r2_x], [c_y, r2_y], [c_z, r2_z], linewidth=1, color='blue', marker='o', markersize=1)
-        line_arm3, = ax.plot([c_x, r3_x], [c_y, r3_y], [c_z, r3_z], linewidth=1, color='orange', marker='o', markersize=1)
-        line_arm4, = ax.plot([c_x, r4_x], [c_y, r4_y], [c_z, r4_z], linewidth=1, color='green', marker='o', markersize=1)
-
-        line_traj_ref, = ax.plot(position_ref[:1, 0], position_ref[:1, 1], position_ref[:1, 2], color='green', alpha=0.5)
-        c_x_ref, c_y_ref, c_z_ref = position_ref[0, 0:3]
-        r1_x_ref, r1_y_ref, r1_z_ref = position_ref[0, 3:6]
-        r2_x_ref, r2_y_ref, r2_z_ref = position_ref[0, 6:9]
-        r3_x_ref, r3_y_ref, r3_z_ref = position_ref[0, 9:12]
-        r4_x_ref, r4_y_ref, r4_z_ref = position_ref[0, 12:15]
-        # line_arm1_ref, = ax.plot([c_x_ref, r1_x_ref], [c_y_ref, r1_y_ref], [c_z_ref, r1_z_ref], linewidth=2,
-        #                          color='green', marker='o', markersize=3, alpha=0.7)
-        # line_arm2_ref, = ax.plot([c_x_ref, r2_x_ref], [c_y_ref, r2_y_ref], [c_z_ref, r2_z_ref], linewidth=2,
-        #                          color='green', marker='o', markersize=3, alpha=0.7)
-        # line_arm3_ref, = ax.plot([c_x_ref, r3_x_ref], [c_y_ref, r3_y_ref], [c_z_ref, r3_z_ref], linewidth=2,
-        #                          color='green', marker='o', markersize=3, alpha=0.7)
-        # line_arm4_ref, = ax.plot([c_x_ref, r4_x_ref], [c_y_ref, r4_y_ref], [c_z_ref, r4_z_ref], linewidth=2,
-        #                          color='green', marker='o', markersize=3, alpha=0.7)
-
-        ## NN pose
-        NN_c_x,NN_c_y,NN_c_z=NN_pos[0,:]
-        NN_x_axis_x,NN_x_axis_y,NN_x_axis_z=NN_pose[0,0,:]
-        NN_y_axis_x,NN_y_axis_y,NN_y_axis_z=NN_pose[0,1,:]
-        NN_z_axis_x,NN_z_axis_y,NN_z_axis_z=NN_pose[0,2,:]
-        NN_pose_x_traj, = ax.plot([NN_c_x,NN_x_axis_x],[NN_c_y,NN_x_axis_y],[NN_c_z,NN_x_axis_z],linewidth=1,color='red',linestyle='--')
-        NN_pose_y_traj, = ax.plot([NN_c_x,NN_y_axis_x],[NN_c_y,NN_y_axis_y],[NN_c_z,NN_y_axis_z],linewidth=1,color='blue',linestyle='--')
-        NN_pose_z_traj, = ax.plot([NN_c_x,NN_z_axis_x],[NN_c_y,NN_z_axis_y],[NN_c_z,NN_z_axis_z],linewidth=1,color='green',linestyle='--')
-
-        # time label
-        time_template = 'time = %.2fs'
-        time_text = ax.text2D(0.2, 0.7, "time", transform=ax.transAxes,**font1)
-
-        # customize
-        if state_traj_ref is not None:
-            plt.legend([line_traj, line_traj_ref], ['learned', 'OC solver'], ncol=1, loc='best',
-                       bbox_to_anchor=(0.35, 0.25, 0.5, 0.5))
-
-        def update_traj(num):
-            # customize
-            time_text.set_text(time_template % (num * dt))
-
-            # trajectory
-            line_traj.set_data(position[:num, 0], position[:num, 1])
-            line_traj.set_3d_properties(position[:num, 2])
+    def init_constraint(self):
+        thrust_ub_inequ=self.U-self.control_ub
+        thrust_lb_inequ=self.control_lb-self.U
+        pos_ub_z_inequ=self.quad_dyn.r_I[2]-self.pos_ub_z
+        pos_lb_z_inequ=self.pos_lb_z-self.quad_dyn.r_I[2]
+        self.path_inequ_cstr=vcat([thrust_ub_inequ,thrust_lb_inequ,pos_ub_z_inequ,pos_lb_z_inequ])
+        self.final_inequ_cstr=vcat([pos_ub_z_inequ,pos_lb_z_inequ])
 
 
-            # uav
-            c_x, c_y, c_z = position[num, 0:3]
-            r1_x, r1_y, r1_z = position[num, 3:6]
-            r2_x, r2_y, r2_z = position[num, 6:9]
-            r3_x, r3_y, r3_z = position[num, 9:12]
-            r4_x, r4_y, r4_z = position[num, 12:15]
-
-            # NN output pose
-            NN_c_x,NN_c_y,NN_c_z=NN_pos[num,:]
-            NN_x_axis_x,NN_x_axis_y,NN_x_axis_z=NN_pose[num,0,:]
-            NN_y_axis_x,NN_y_axis_y,NN_y_axis_z=NN_pose[num,1,:]
-            NN_z_axis_x,NN_z_axis_y,NN_z_axis_z=NN_pose[num,2,:]
-            
-            NN_pose_x_traj.set_data_3d([NN_c_x,NN_x_axis_x],[NN_c_y,NN_x_axis_y],[NN_c_z,NN_x_axis_z])
-            NN_pose_y_traj.set_data_3d([NN_c_x,NN_y_axis_x],[NN_c_y,NN_y_axis_y],[NN_c_z,NN_y_axis_z])
-            NN_pose_z_traj.set_data_3d([NN_c_x,NN_z_axis_x],[NN_c_y,NN_z_axis_y],[NN_c_z,NN_z_axis_z])
+class QuadrotorAugmentedSRTCtl:
+    """
+    Augmented quadrotor model andd cost for Single rotor thrust MPC, 
+    the control input is the df1,df2,df3,df4
+    following the paper: "Model Predictive Contouring Control for  Time-Optimal Quadrotor Flight"
+    """
+    def __init__(self,options,config):
+        self.options=options
+        self.quad_dyn = QuadrotorDynamic(ctl_mode=3,config=config)
+        self.cost_base = CostBase(ctl_mode=3,config=config)
 
 
-
-            line_arm1.set_data_3d([c_x, r1_x], [c_y, r1_y],[c_z, r1_z])
-            #line_arm1.set_3d_properties()
-
-            line_arm2.set_data_3d([c_x, r2_x], [c_y, r2_y],[c_z, r2_z])
-            #line_arm2.set_3d_properties()
-
-            line_arm3.set_data_3d([c_x, r3_x], [c_y, r3_y],[c_z, r3_z])
-            #line_arm3.set_3d_properties()
-
-            line_arm4.set_data_3d([c_x, r4_x], [c_y, r4_y],[c_z, r4_z])
-            #line_arm4.set_3d_properties()
-
-            # trajectory ref
-            nu=sim_horizon-1
-            line_traj_ref.set_data_3d(position_ref[:nu, 0], position_ref[:nu, 1],position_ref[:nu, 2])
-            #line_traj_ref.set_3d_properties()
-
-            # uav ref
-            c_x_ref, c_y_ref, c_z_ref = position_ref[nu, 0:3]
-            r1_x_ref, r1_y_ref, r1_z_ref = position_ref[nu, 3:6]
-            r2_x_ref, r2_y_ref, r2_z_ref = position_ref[nu, 6:9]
-            r3_x_ref, r3_y_ref, r3_z_ref = position_ref[nu, 9:12]
-            r4_x_ref, r4_y_ref, r4_z_ref = position_ref[nu, 12:15]
-
-            # line_arm1_ref.set_data_3d([c_x_ref, r1_x_ref], [c_y_ref, r1_y_ref],[c_z_ref, r1_z_ref])
-            # #line_arm1_ref.set_3d_properties()
-
-            # line_arm2_ref.set_data_3d([c_x_ref, r2_x_ref], [c_y_ref, r2_y_ref],[c_z_ref, r2_z_ref])
-            # #line_arm2_ref.set_3d_properties()
-
-            # line_arm3_ref.set_data_3d([c_x_ref, r3_x_ref], [c_y_ref, r3_y_ref],[c_z_ref, r3_z_ref])
-            # #line_arm3_ref.set_3d_properties()
-
-            # line_arm4_ref.set_data_3d([c_x_ref, r4_x_ref], [c_y_ref, r4_y_ref],[c_z_ref, r4_z_ref])
-            #line_arm4_ref.set_3d_properties()
-
-            ## plot moving gate
-            if gate_traj1 is not None:
-                p1_x, p1_y, p1_z = gate_traj1[num, 0,:]
-                p2_x, p2_y, p2_z = gate_traj1[num, 1,:]
-                p3_x, p3_y, p3_z = gate_traj1[num, 2,:]
-                p4_x, p4_y, p4_z = gate_traj1[num, 3,:]       
-
-                gate_l1.set_data_3d([p1_x,p2_x],[p1_y,p2_y],[p1_z,p2_z])
-                gate_l2.set_data_3d([p2_x,p3_x],[p2_y,p3_y],[p2_z,p3_z]) 
-                gate_l3.set_data_3d([p3_x,p4_x],[p3_y,p4_y],[p3_z,p4_z]) 
-                gate_l4.set_data_3d([p4_x,p1_x],[p4_y,p1_y],[p4_z,p1_z])
-
-
-                #p1_xa, p1_ya, p1_za = gate_traj2[num, 0,:]
-                #p2_xa, p2_ya, p2_za = gate_traj2[num, 1,:]
-                #p3_xa, p3_ya, p3_za = gate_traj2[num, 2,:]
-                #p4_xa, p4_ya, p4_za = gate_traj2[num, 3,:]       
-
-                #gate_l1a.set_data_3d([p1_xa,p2_xa],[p1_ya,p2_ya],[p1_za,p2_za])
-                #gate_l2a.set_data_3d([p2_xa,p3_xa],[p2_ya,p3_ya],[p2_za,p3_za]) 
-                #gate_l3a.set_data_3d([p3_xa,p4_xa],[p3_ya,p4_ya],[p3_za,p4_za]) 
-                #gate_l4a.set_data_3d([p4_xa,p1_xa],[p4_ya,p1_ya],[p4_za,p1_za])
-
-
-
-
-                return line_traj,gate_l1,gate_l2,gate_l3,gate_l4,line_arm1, line_arm2, line_arm3, line_arm4, \
-                        NN_pose_x_traj,NN_pose_y_traj,NN_pose_z_traj,\
-                    line_traj_ref, time_text
-                                            #, line_arm1_ref, line_arm2_ref, line_arm3_ref, line_arm4_ref
-            return line_traj, line_arm1, line_arm2, line_arm3, line_arm4, \
-                NN_pose_x_traj,NN_pose_y_traj,NN_pose_z_traj,\
-                line_traj_ref, time_text #, line_arm1_ref, line_arm2_ref, line_arm3_ref, line_arm4_ref, time_text
-     
-
-        frames=np.arange(0,500)
-        ani = animation.FuncAnimation(fig,update_traj,frames, interval=1, blit=True)
-
-        if save_option != 0:
-            Writer = animation.writers['ffmpeg']
-            writer = Writer(fps=10, metadata=dict(artist='Me'), bitrate=-1)
-            ani.save('case2'+title + '.mp4', writer=writer, dpi=300)
-            print('save_success')
-
-        plt.show()
-
-    def plot_position(self,state_traj,name,dt = 0.1):
-        fig, axs = plt.subplots(3)
-        fig.suptitle(f'{name}+position vs t')
-        N = len(state_traj[:,0])
-        x = np.arange(0,N*dt,dt)
-        axs[0].plot(x,state_traj[:,0])
-        axs[1].plot(x,state_traj[:,1])
-        axs[2].plot(x,state_traj[:,2])
-        plt.savefig(f'./python_sim_result/{name}+position.png')
-        # plt.show()
+    def init_model(self):    
+        # state
+        self.X = vertcat(self.quad_dyn.r_I, self.quad_dyn.v_I, self.quad_dyn.q, self.quad_dyn.ang_rate_B,self.quad_dyn.T_B)
         
-    def plot_velocity(self,state_traj,dt = 0.1):
-        fig, axs = plt.subplots(3)
-        fig.suptitle('velocity vs t')
-        N = len(state_traj[:,0])
-        x = np.arange(0,N*dt,dt)
-        axs[0].plot(x,state_traj[:,3])
-        axs[1].plot(x,state_traj[:,4])
-        axs[2].plot(x,state_traj[:,5])
-        plt.savefig('./python_sim_result/velocity.png')
-        # plt.show()
+        # input
+        self.U=self.quad_dyn.delta_T_B
 
-    def plot_quaternions(self,state_traj,dt = 0.1,save=True):
-        fig, axs = plt.subplots(4)
-        fig.suptitle('quaternions vs t')
-        N = len(state_traj[:,0])
-        x = np.arange(0,N*dt,dt)
-        axs[0].plot(x,state_traj[:,6])
-        axs[1].plot(x,state_traj[:,7])
-        axs[2].plot(x,state_traj[:,8])
-        axs[3].plot(x,state_traj[:,9])
-        
-        if save:
-            plt.savefig('./python_sim_result/quaternions.png')
-        # plt.show()
-    def plot_quaternions_norm(self,state_traj,dt = 0.1,save=True):
-        fig, axs = plt.subplots(1)
-        fig.suptitle('MPC last predicted status quaternions norm vs each MPC t')
-        N = len(state_traj[:,0])
-        x = np.arange(0,N*dt,dt)
-        norm = np.linalg.norm(state_traj[:,6:10],axis=1)
-        axs.plot(x,norm)
-        if save:
-            plt.savefig('./python_sim_result/quaternions_norm.png')
-        # plt.show()
-    def plot_angularrate(self,state_traj,dt = 0.01):
-        plt.figure() 
-        plt.title('angularrate vs time')
-        N = len(state_traj[:,0])
-        x = np.arange(0,N*dt,dt)
-        plt.plot(x,state_traj[:,1],color = 'b', label = 'w1')
-        plt.plot(x,state_traj[:,2],color = 'r', label = 'w2')
-        plt.plot(x,state_traj[:,3],color = 'y', label = 'w3')
-        plt.xlabel('t')
-        plt.ylabel('w')
-        plt.grid(True,color='0.6',dashes=(2,2,1,1))
-        plt.legend()
-        plt.savefig('./python_sim_result/angularrate.png')
-        # plt.show()
-        
+        # dynamics
+        self.f = vertcat(self.quad_dyn.dr_I, self.quad_dyn.dv_I, self.quad_dyn.dq, self.quad_dyn.dw,self.quad_dyn.dT_B)
 
-    def plot_thrust(self,control_traj,dt = 0.1):
-        plt.figure() 
-        N = int(len(control_traj[:,0]))
-        x = np.arange(0,round(N*dt,1),dt)
-        plt.plot(x,control_traj[:,0],color = 'b', label = 'u1')
-        # plt.plot(x,control_traj[:,1],color = 'r', label = 'u2')
-        # plt.plot(x,control_traj[:,2],color = 'y', label = 'u3')
-        # plt.plot(x,control_traj[:,3],color = 'g', label = 'u4')
-        plt.title('collective thrust vs time (N)')
-        plt.ylim([0,10])
-        plt.xlabel('t')
-        plt.ylabel('u')
-        plt.grid(True,color='0.6',dashes=(2,2,1,1))
-        plt.legend()
-        plt.savefig('./python_sim_result/thrust.png')
-        # plt.show()
+    def init_cost(self): 
+        self.cost_base.path_error(self.quad_dyn)
+        self.goal_state=vertcat(self.cost_base.goal_r_I,self.cost_base.goal_v_I,self.cost_base.goal_q,self.cost_base.goal_w_B,self.cost_base.goal_T_B)
+        ## the path cost to the goal
+        self.path_cost = self.cost_base.wrp * self.cost_base.cost_r_I_g \
+                       + self.cost_base.wvp * self.cost_base.cost_v_I_g \
+                       + self.cost_base.wqp * self.cost_base.cost_q_g \
+                       + self.cost_base.wwt * self.cost_base.cost_ang_rate_B \
+                       + self.cost_base.wwt_z * self.cost_base.cost_ang_rate_B_z\
+                       + self.cost_base.wthrust* self.cost_base.cost_SRT\
+                       + self.cost_base.wdthrust* self.cost_base.cost_dSRT
+
         
-               
-    def plot_T(self,control_traj,dt = 0.1):
-        N = int(len(control_traj[:,0]))
-        x = np.arange(0,round(N*dt,1),dt)
-        plt.plot(x,control_traj[:,0],color = 'b', label = 'T')
-        plt.title('input vs time')
-        plt.ylim([0,20])
-        plt.xlabel('t')
-        plt.ylabel('T')
-        plt.grid(True,color='0.6',dashes=(2,2,1,1))
-        plt.legend()
-        plt.savefig('./python_sim_result/input_T.png')
-        # plt.show()
-        
+        # the final cost
+        self.final_cost = self.cost_base.wrf * self.cost_base.cost_r_I_g\
+                        + self.cost_base.wvf * self.cost_base.cost_v_I_g\
+                        + self.cost_base.wqf * self.cost_base.cost_q_g\
+                        + self.cost_base.wwt * self.cost_base.cost_ang_rate_B \
+                        + self.cost_base.wwt_z * self.cost_base.cost_ang_rate_B_z \
+                        + self.cost_base.wthrust* self.cost_base.cost_SRT       
+  
     
-    def plot_M(self,control_traj,dt = 0.1):
-        N = int(len(control_traj[:,0]))
-        x = np.arange(0,round(N*dt,1),dt)
-        plt.plot(x,control_traj[:,1],color = 'r', label = 'Mx')
-        plt.plot(x,control_traj[:,2],color = 'y', label = 'My')
-        plt.plot(x,control_traj[:,3],color = 'g', label = 'Mz')
-        plt.title('input vs time')
-        plt.ylim([0,1])
-        plt.xlabel('t')
-        plt.ylabel('T')
-        plt.grid(True,color='0.6',dashes=(2,2,1,1))
-        plt.legend()
-        plt.savefig('./input_M.png')
-        plt.show()
+    def init_traCost(self): # transforming Rodrigues to Quaternion is shown in mpc_update function
+        self.cost_base.traverse_error(self.quad_dyn,self.options)
+        self.tra_cost = self.cost_base.max_tra_w * \
+                        casadi.exp(-self.cost_base.traverse_weight_span*(self.cost_base.t_node-self.cost_base.des_t_tra)**2) \
+                        * (self.cost_base.wrt * self.cost_base.cost_r_I_t + self.cost_base.wqt * self.cost_base.cost_q_t)
+         
+    def set_bound_value(self, config):
+        self.sing_thrust_ub = config['learning_agile']['single_motor_max_thrust']*config['learning_agile']['throttle_upper_bound']
+        self.sing_thrust_lb = config['learning_agile']['single_motor_max_thrust']*config['learning_agile']['throttle_lower_bound']
+
+        self.ang_rate_b_xy = config['learning_agile']['angular_vel_bound_xy']
+        self.ang_rate_b_z = config['learning_agile']['angular_vel_bound_z']
+
+        sc= 1 #1e2
+        self.pos_b   = config['learning_agile']['pos_bound'] # in each axis
+        self.pos_lb_z = config['learning_agile']['pos_lb_z']
+        self.pos_ub_z = config['learning_agile']['pos_ub_z']
+        self.vel_b   = config['learning_agile']['linear_vel_bound'] #0.5 # in each axis
+
+        self.state_lb = [-self.pos_b,-self.pos_b,self.pos_lb_z ,-self.vel_b,-self.vel_b,-self.vel_b,-sc,-sc,-sc,-sc,-self.ang_rate_b_xy,-self.ang_rate_b_xy,-self.ang_rate_b_z\
+                         ,self.sing_thrust_lb,self.sing_thrust_lb,self.sing_thrust_lb,self.sing_thrust_lb]
+        self.state_ub = [self.pos_b,self.pos_b,self.pos_ub_z,self.vel_b,self.vel_b,self.vel_b,sc,sc,sc,sc,self.ang_rate_b_xy,self.ang_rate_b_xy,self.ang_rate_b_z\
+                         ,self.sing_thrust_ub,self.sing_thrust_ub,self.sing_thrust_ub,self.sing_thrust_ub]
+
+        self.control_lb = [-30,-30,-30,-30]
+        self.control_ub = [30, 30, 30, 30]
         
-
-    def plot_scalar(self,scalar, scalar_name):
-        plt.figure() 
-        plt.plot(scalar)
-        plt.title(f'{scalar_name} vs time')
-        plt.xlabel('t')
-        plt.ylabel(scalar_name)
-        plt.grid(True,color='0.6',dashes=(2,2,1,1))
-        plt.legend()
-        plt.savefig(f'./python_sim_result/{scalar_name}.png')
-        # plt.show()
-
-        
-    def plot_3D_traj(self,
-                     wing_len,
-                     uav_height,
-                     state_traj,
-                     gate_traj,
-                     TRAIN_VIS=False,
-                     tra_node=None):
-        fig = plt.figure()
-        ax = fig.add_subplot(111, projection='3d')
-        position = self.get_quad_vert_pos(wing_len, state_traj)
-
-        
-
-        for i in range(np.size(state_traj,0)):
-
-            if TRAIN_VIS:
-                p1_x, p1_y, p1_z = gate_traj[0,:]
-                p2_x, p2_y, p2_z = gate_traj[1,:]
-                p3_x, p3_y, p3_z = gate_traj[2,:]
-                p4_x, p4_y, p4_z = gate_traj[3,:]
-
-            else:
-                p1_x, p1_y, p1_z = gate_traj[i, 0,:]
-                p2_x, p2_y, p2_z = gate_traj[i, 1,:]
-                p3_x, p3_y, p3_z = gate_traj[i, 2,:]
-                p4_x, p4_y, p4_z = gate_traj[i, 3,:]
-            
-            c_x, c_y, c_z = position[i,0:3]
-            r1_x, r1_y, r1_z = position[i,3:6]
-            r2_x, r2_y, r2_z = position[i,6:9]
-            r3_x, r3_y, r3_z = position[i,9:12]
-            r4_x, r4_y, r4_z = position[i,12:15]
-            
-            #  calculate the distance between the quadrotor and the gate
-            gate_center = np.array([(p1_x+p2_x+p3_x+p4_x)/4,(p1_y+p2_y+p3_y+p4_y)/4,(p1_z+p2_z+p3_z+p4_z)/4])
-            quadrotor_center = np.array([c_x,c_y,c_z])
-
-            distance = np.linalg.norm(gate_center-quadrotor_center)
-            
-            condition_test=distance <= 0.5
-            condition_train=i==tra_node
-            condition=condition_test
-            if TRAIN_VIS:
-                condition=condition_train
-            if condition:
-                plot_alpha = 1
-                
-
-                ## plot the drone ellipsoid
-                
-                # rotation of the drone
-                q = state_traj[i,6:10]
-                R = transpose(dir_cosine(q)) # body frame to world frame
-                
-                # Create a grid of u, v values (parametric angles)
-                u = np.linspace(0, 2 * np.pi, 10)
-                v = np.linspace(0, np.pi, 10)
-
-                # Parametric equations for the ellipsoid
-                x = wing_len/2 * np.outer(np.cos(u), np.sin(v))
-                y = (wing_len/2) * np.outer(np.sin(u), np.sin(v))
-                z = uav_height * np.outer(np.ones(np.size(u)), np.cos(v))
-
-                points_3d = np.array([x.flatten(), y.flatten(), z.flatten()])
-                # Apply rotation matrix
-                rotated_points = np.dot(R, points_3d)
-                x = np.reshape(rotated_points[0, :], x.shape)
-                y = np.reshape(rotated_points[1, :], y.shape)
-                z = np.reshape(rotated_points[2, :], z.shape)
-                
-                ax.plot_surface(x + c_x, y + c_y, z + c_z, color='b', alpha=0.05)
-            else:
-                plot_alpha = 0.1
-            gate_l1, = ax.plot([p1_x,p2_x],[p1_y,p2_y],[p1_z,p2_z],linewidth=1,color='red',linestyle='-',alpha=plot_alpha)
-            gate_l2, = ax.plot([p2_x,p3_x],[p2_y,p3_y],[p2_z,p3_z],linewidth=1,color='red',linestyle='-',alpha=plot_alpha)
-            gate_l3, = ax.plot([p3_x,p4_x],[p3_y,p4_y],[p3_z,p4_z],linewidth=1,color='red',linestyle='-',alpha=plot_alpha)
-            gate_l4, = ax.plot([p4_x,p1_x],[p4_y,p1_y],[p4_z,p1_z],linewidth=1,color='red',linestyle='-',alpha=plot_alpha)
-            
-            # if TRAIN_VIS:
-            #     for i in range(4):
-            #         ax.scatter(gate_traj[i+4,0],gate_traj[i+4,1],gate_traj[i+4,2],c='b',marker='o',s=10)
-
-            line_arm1, = ax.plot([c_x, r1_x], [c_y, r1_y], [c_z, r1_z], linewidth=1, color='red', marker='o', markersize=1,alpha=plot_alpha)
-            line_arm2, = ax.plot([c_x, r2_x], [c_y, r2_y], [c_z, r2_z], linewidth=1, color='blue', marker='o', markersize=1,alpha=plot_alpha)
-            line_arm3, = ax.plot([c_x, r3_x], [c_y, r3_y], [c_z, r3_z], linewidth=1, color='orange', marker='o', markersize=1,alpha=plot_alpha)
-            line_arm4, = ax.plot([c_x, r4_x], [c_y, r4_y], [c_z, r4_z], linewidth=1, color='green', marker='o', markersize=1,alpha=plot_alpha)
-            
-            # set the axes limits
-            ax.set_xlim([-2, 2])
-            ax.set_ylim([-2, 2])
-            ax.set_zlim([-2, 2])
-        plt.show()    
+    def init_constraint(self):
+        thrust_ub_inequ=self.quad_dyn.T_B-self.control_ub
+        thrust_lb_inequ=self.control_lb-self.quad_dyn.T_B
+        pos_ub_z_inequ=self.quad_dyn.r_I[2]-self.pos_ub_z
+        pos_lb_z_inequ=self.pos_lb_z-self.quad_dyn.r_I[2]
+        self.path_inequ_cstr=vcat([thrust_ub_inequ,thrust_lb_inequ,pos_ub_z_inequ,pos_lb_z_inequ])
+        self.final_inequ_cstr=vcat([pos_ub_z_inequ,pos_lb_z_inequ])
     
-    
-    # def dir_cosine(self, q): # world frame to body frame
-    #     C_B_I = vertcat(
-    #         horzcat(1 - 2 * (q[2] ** 2 + q[3] ** 2), 2 * (q[1] * q[2] + q[0] * q[3]), 2 * (q[1] * q[3] - q[0] * q[2])),
-    #         horzcat(2 * (q[1] * q[2] - q[0] * q[3]), 1 - 2 * (q[1] ** 2 + q[3] ** 2), 2 * (q[2] * q[3] + q[0] * q[1])),
-    #         horzcat(2 * (q[1] * q[3] + q[0] * q[2]), 2 * (q[2] * q[3] - q[0] * q[1]), 1 - 2 * (q[1] ** 2 + q[2] ** 2))
-    #     )
-    #     return C_B_I
+# def skew(v):
+#     v_cross = vertcat(
+#         horzcat(0, -v[2], v[1]),
+#         horzcat(v[2], 0, -v[0]),
+#         horzcat(-v[1], v[0], 0)
+#     )
+#     return v_cross
 
+def omega(w):
+    omeg = vertcat(
+        horzcat(0, -w[0], -w[1], -w[2]),
+        horzcat(w[0], 0, w[2], -w[1]),
+        horzcat(w[1], -w[2], 0, w[0]),
+        horzcat(w[2], w[1], -w[0], 0)
+    )
+    return omeg
 
-    def skew(self, v):
-        v_cross = vertcat(
-            horzcat(0, -v[2], v[1]),
-            horzcat(v[2], 0, -v[0]),
-            horzcat(-v[1], v[0], 0)
-        )
-        return v_cross
-
-    def omega(self, w):
-        omeg = vertcat(
-            horzcat(0, -w[0], -w[1], -w[2]),
-            horzcat(w[0], 0, w[2], -w[1]),
-            horzcat(w[1], -w[2], 0, w[0]),
-            horzcat(w[2], w[1], -w[0], 0)
-        )
-        return omeg
-
-    def quaternion_mul(self, p, q):
-        return vertcat(p[0] * q[0] - p[1] * q[1] - p[2] * q[2] - p[3] * q[3],
-                       p[0] * q[1] + p[1] * q[0] + p[2] * q[3] - p[3] * q[2],
-                       p[0] * q[2] - p[1] * q[3] + p[2] * q[0] + p[3] * q[1],
-                       p[0] * q[3] + p[1] * q[2] - p[2] * q[1] + p[3] * q[0]
-                       )
+# def quaternion_mul(p, q):
+#     return vertcat(p[0] * q[0] - p[1] * q[1] - p[2] * q[2] - p[3] * q[3],
+#                     p[0] * q[1] + p[1] * q[0] + p[2] * q[3] - p[3] * q[2],
+#                     p[0] * q[2] - p[1] * q[3] + p[2] * q[0] + p[3] * q[1],
+#                     p[0] * q[3] + p[1] * q[2] - p[2] * q[1] + p[3] * q[0]
+#                     )
 
 ## define the class of the gate (kinematics)
 class Gate:

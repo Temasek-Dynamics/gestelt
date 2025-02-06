@@ -6,7 +6,7 @@ from quad_OC import OCSys,LQR
 # the sequence of importing solid_geometry
 # with juliacall is import
 from solid_geometry import pitch_from_gate
-from quad_model import Quadrotor, toQuaternion,Gate
+from quad_model import QuadrotorCTBRCtl, QuadrotorSRTCtl,QuadrotorWrenchCtl,QuadrotorAugmentedSRTCtl, toQuaternion,Gate
 
 
 class PlanFwdBwdWrapper():
@@ -27,29 +27,29 @@ class PlanFwdBwdWrapper():
             self.wing_len = config['drone']['wing_len'] 
             self.uav_height = config['drone']['height']
         # --------------------------- create model1 ----------------------------------------
-        self.uav1 = Quadrotor(options)
+        if config['ctl_mode']==0:
+            self.uav = QuadrotorCTBRCtl(options,config)
+        elif config['ctl_mode']==1:
+            self.uav = QuadrotorSRTCtl(options,config)
+        elif config['ctl_mode']==2:
+            self.uav = QuadrotorWrenchCtl(options,config)
+        elif config['ctl_mode']==3:
+            self.uav = QuadrotorAugmentedSRTCtl(options,config)
         # jx, jy, jz = 0.0023, 0.0023, 0.004
-        # self.uav1.initDyn(Jx=0.0023,Jy=0.0023,Jz=0.004,mass=0.5,l=0.35,c=0.0245) # hb quadrotor
+        # self.uav.initDyn(Jx=0.0023,Jy=0.0023,Jz=0.004,mass=0.5,l=0.35,c=0.0245) # hb quadrotor
 
-        # c is the force constant, l is the arm length
-        self.uav1.initDyn(Jx=0.000392,Jy=0.000405,Jz=0.000639,mass=0.248,l=0.1650,c=3.383e-07 ) # NUSWARM quadrotor
+        # c is the torque constant, l is the diagonal length of the quadrotor
+        self.uav.quad_dyn.initDyn(Jx=config['drone']['inertia'][0],
+                                  Jy=config['drone']['inertia'][1],
+                                  Jz=config['drone']['inertia'][2],
+                                  mass=config['drone']['mass'],
+                                  l=config['drone']['diagonal_axis_dist'],
+                                  c=config['drone']['moment_constant']) # NUSWARM quadrotor
+        self.uav.init_model()
+        self.uav.set_bound_value(config=config)
         
-        self.thrust_ub = config['learning_agile']['single_motor_max_thrust']*4*config['learning_agile']['throttle_upper_bound']
-        self.thrust_lb = config['learning_agile']['single_motor_max_thrust']*4*config['learning_agile']['throttle_lower_bound']
-        ang_rate_b_xy = config['learning_agile']['angular_vel_bound_xy']
-        ang_rate_b_z = config['learning_agile']['angular_vel_bound_z']
-
-        sc= 1 #1e2
-        pos_b   = config['learning_agile']['pos_bound'] # in each axis
-        pos_lb_z = config['learning_agile']['pos_lb_z']
-        pos_ub_z = config['learning_agile']['pos_ub_z']
-        vel_b   = config['learning_agile']['linear_vel_bound'] #0.5 # in each axis
-
         ## for the safe PDP backward
-        self.uav1.initConstraint(max_thrust=self.thrust_ub,
-                                 min_thrust=self.thrust_lb,
-                                 pos_ub_z=pos_ub_z,
-                                 pos_lb_z=pos_lb_z)
+        self.uav.init_constraint()
         ######################################################
         #######------------ MPC PARAM----------------#########
         ######################################################
@@ -63,25 +63,20 @@ class PlanFwdBwdWrapper():
     
         # --------------------------- create PDP object1 ----------------------------------------
         # create a pdp object
-        self.uavoc1 = OCSys(config)
+        self.uavoc = OCSys(config)
        
         
      
         # set symbolic functions for the MPC solver
-        self.uavoc1.setStateVariable(self.uav1.X,state_lb=[-pos_b,-pos_b,pos_lb_z,
-                                                           -vel_b,-vel_b,-vel_b,
-                                                           -sc,-sc,-sc,-sc],\
-                                     state_ub=[pos_b,pos_b,pos_ub_z,
-                                               vel_b,vel_b,vel_b,
-                                               sc,sc,sc,sc]) 
-        
+        self.uavoc.setStateVariable(self.uav.X,state_lb=self.uav.state_lb,state_ub=self.uav.state_ub)
+                                  
       
-        self.uavoc1.setAuxvarVariable()
-        self.uavoc1.setControlVariable(self.uav1.U,
-                                       control_lb=[self.thrust_lb ,-ang_rate_b_xy,-ang_rate_b_xy,-ang_rate_b_z],\
-                                       control_ub= [self.thrust_ub,ang_rate_b_xy,ang_rate_b_xy,ang_rate_b_z]) # thrust-to-weight = 4:1
-
-        self.uavoc1.setDyn(self.uav1.f,self.dt)
+        self.uavoc.setAuxvarVariable()
+        self.uavoc.setControlVariable(self.uav.U,
+                                       control_lb = self.uav.control_lb,
+                                       control_ub = self.uav.control_ub) # thrust-to-weight = 4:1
+       
+        self.uavoc.setDyn(self.uav.f,self.dt)
 
        
         # wrt: ,gate traverse position cost
@@ -94,9 +89,11 @@ class PlanFwdBwdWrapper():
         # wwf: final angular velocity cost
 
         ## initialize the cost function
-        self.uav1.initCost(#wrt=config['learning_agile']['wrt'],
+        self.uav.cost_base.init_weight(#wrt=config['learning_agile']['wrt'],
                            #wqt=config['learning_agile']['wqt'],
                            wthrust=config['learning_agile']['wthrust'],
+                           wdthrust=config['learning_agile']['wdthrust'],
+                           wm=config['learning_agile']['wm'],
                            wwt=config['learning_agile']['wwt'],
                            wwt_z=config['learning_agile']['wwt_z'], 
                              
@@ -110,26 +107,27 @@ class PlanFwdBwdWrapper():
                            max_tra_w=config['learning_agile']['max_tra_w'],
                            traverse_weight_span=config['learning_agile']['traverse_weight_span']
                            ) 
-        self.uav1.init_TraCost()
+        self.uav.init_cost()
+        self.uav.init_traCost()
 
         ## set the symbolic cost function to the solver
-        self.uavoc1.setTraCost(self.uav1.tra_cost,
-                               self.uav1.trav_auxvar,
-                               self.uav1.t_node
+        self.uavoc.setTraCost(self.uav.tra_cost,
+                               self.uav.cost_base.trav_auxvar,
+                               self.uav.cost_base.t_node
                               )
         
 
-        self.uavoc1.setPathCost(self.uav1.path_cost,goal_state=self.uav1.goal_state)
-        self.uavoc1.setFinalCost(self.uav1.final_cost,goal_state=self.uav1.goal_state)
+        self.uavoc.setPathCost(self.uav.path_cost,goal_state=self.uav.goal_state)
+        self.uavoc.setFinalCost(self.uav.final_cost,goal_state=self.uav.goal_state)
     
         ## for the safe PDP backward
-        self.uavoc1.setInequCstr(self.uav1.path_inequ_cstr,self.uav1.final_inequ_cstr)
-        self.uavoc1.convert2BarrierOC(gamma=config['learning_agile']['barrier_gamma'])
+        self.uavoc.setInequCstr(self.uav.path_inequ_cstr,self.uav.final_inequ_cstr)
+        self.uavoc.convert2BarrierOC(gamma=config['learning_agile']['barrier_gamma'])
         
         # initialize the mpc solver
-        # self.uavoc1.ocSolverInit(horizon=self.horizon,dt=self.dt)
-        self.uavoc1.AcadosModelInit()
-        self.uavoc1.AcadosOcSolverInit(horizon=self.horizon,
+        # self.uavoc.ocSolverInit(horizon=self.horizon,dt=self.dt)
+        self.uavoc.AcadosModelInit()
+        self.uavoc.AcadosOcSolverInit(horizon=self.horizon,
                                        dt=self.dt,
                                        SQP_RTI_OPTION=options['SQP_RTI_OPTION'],
                                        USE_PREV_SOLVER=options['USE_PREV_SOLVER'])
@@ -144,7 +142,7 @@ class PlanFwdBwdWrapper():
         if options['MPC_BACKWARD']:
             
             if self.options['PDP_GRADIENT']:
-                self.uavoc1.diffPMP()
+                self.uavoc.diffPMP()
                 self.lqr_solver = LQR()
 
        
@@ -158,6 +156,9 @@ class PlanFwdBwdWrapper():
         # goal
         self.goal_pos = goal_pos
         self.goal_ori = goal_ori
+        self.goal_w = [0.0, 0.0, 0.0]
+        hover_SRT=self.config['drone']['mass']*9.81/4
+        self.goal_SRT = [hover_SRT]*4
         # initial
         if type(ini_r) is not list:
             ini_r = ini_r.tolist()
@@ -165,8 +166,14 @@ class PlanFwdBwdWrapper():
         self.ini_v_I = ini_v_I 
         self.ini_q = ini_q
         self.ini_w =  [0.0, 0.0, 0.0]
-        self.ini_state = self.ini_r + self.ini_v_I + self.ini_q# + self.ini_w
-        
+        self.init_SRT=[self.config['drone']['mass']*9.81/4]*4
+        if self.config['ctl_mode']==0:
+            self.ini_state = self.ini_r + self.ini_v_I + self.ini_q
+        elif self.config['ctl_mode']==1 or self.config['ctl_mode']==2:
+            self.ini_state = self.ini_r + self.ini_v_I + self.ini_q + self.ini_w
+        elif self.config['ctl_mode']==3:
+            self.ini_state = self.ini_r + self.ini_v_I + self.ini_q + self.ini_w + self.init_SRT
+
     def update_goal_pos(self,goal_pos):
         self.goal_pos = goal_pos
     
@@ -199,7 +206,7 @@ class PlanFwdBwdWrapper():
         # state_traj [x,y,z,vx,vy,vz,qw,qx,qy,qz]
         state_traj = self.sol1['state_traj_opt']
         # get the quadrotor both center and edges position trajectory
-        self.vert_traj = self.uav1.get_quad_vert_pos(wing_len = self.wing_len, state_traj = state_traj)
+        self.vert_traj = self.uav.get_quad_vert_pos(wing_len = self.wing_len, state_traj = state_traj)
 
         
       
@@ -240,12 +247,12 @@ class PlanFwdBwdWrapper():
                                                                 vert_traj=self.vert_traj[:,0:3],
                                                                 goal_pos=self.goal_pos)
             
-            self.d_R_d_st_traj = self.d_R_d_st_traj.reshape(self.horizon+1,1,self.uavoc1.n_state)
+            self.d_R_d_st_traj = self.d_R_d_st_traj.reshape(self.horizon+1,1,self.uavoc.n_state)
             
             return reward #+ self.roll_reward + self.yaw_reward#+ pitch_reward
 
     def get_penalty(self,state_traj,real_state_i=None,success_rate=None):
-        self.vert_traj = self.uav1.get_quad_vert_pos(wing_len = self.wing_len, state_traj = state_traj)
+        self.vert_traj = self.uav.get_quad_vert_pos(wing_len = self.wing_len, state_traj = state_traj)
         reward,self.d_R_d_st_traj,_=self.obstacle.penalty_cal_diff_collision(self.config,
                                                                             state_traj=state_traj,
                                                                             gate_corners=self.gate_corners,
@@ -255,7 +262,7 @@ class PlanFwdBwdWrapper():
                                                                             real_state_i=real_state_i,
                                                                             success_rate=success_rate)
             
-        self.d_R_d_st_traj = self.d_R_d_st_traj.reshape(self.horizon+1,1,self.uavoc1.n_state)
+        self.d_R_d_st_traj = self.d_R_d_st_traj.reshape(self.horizon+1,1,self.uavoc.n_state)
         return [reward,self.d_R_d_st_traj]
     
     def get_failed(self,state_traj,gate_points_list):
@@ -269,7 +276,7 @@ class PlanFwdBwdWrapper():
             gate_real_t_tra= Gate(gate_points_list[int(real_t_tra)])
             self.init_obstacle(gate_real_t_tra)
             
-            self.vert_traj = self.uav1.get_quad_vert_pos(wing_len = self.wing_len, state_traj = state_traj)
+            self.vert_traj = self.uav.get_quad_vert_pos(wing_len = self.wing_len, state_traj = state_traj)
             _,_,FAILED=self.obstacle.penalty_cal_diff_collision(self.config,
                                                                 state_traj=state_traj,
                                                                 gate_corners=self.gate_corners,
@@ -383,7 +390,7 @@ class PlanFwdBwdWrapper():
         
         ## using LQR solver to solve the auxilary control system to get the analytical gradient
         # set values to the auxilary control system symbolic functions 
-        aux_sys = self.uavoc1.getAuxSys(state_traj_opt=self.sol1['state_traj_opt'],
+        aux_sys = self.uavoc.getAuxSys(state_traj_opt=self.sol1['state_traj_opt'],
                                         control_traj_opt=self.sol1['control_traj_opt'],
                                         costate_traj_opt=self.sol1['costate_traj_opt'],
                                         goal_state_value=goal_state_value,
@@ -397,7 +404,7 @@ class PlanFwdBwdWrapper():
 
 
         ## solve the auxilary control system and get the analytical gradient
-        aux_sol=self.lqr_solver.lqrSolver(np.zeros((self.uavoc1.n_state, self.uavoc1.n_trav_auxvar)), self.horizon)
+        aux_sol=self.lqr_solver.lqrSolver(np.zeros((self.uavoc.n_state, self.uavoc.n_trav_auxvar)), self.horizon)
         
 
         ## take solution of the auxiliary control system
@@ -414,10 +421,12 @@ class PlanFwdBwdWrapper():
     
         ## MPC requires both the goal state adn the traverse hyperparameters
        
-        # self.sol1 = self.uavoc1.ocSolver(current_state_control=current_state_control,t_tra=t)
-        self.sol1,NO_SOLUTION_FLAG = self.uavoc1.AcadosOcSolver(current_state=current_state,
+        # self.sol1 = self.uavoc.ocSolver(current_state_control=current_state_control,t_tra=t)
+        self.sol1,NO_SOLUTION_FLAG = self.uavoc.AcadosOcSolver(current_state=current_state,
                                                 goal_pos=self.goal_pos,
                                                 goal_ori=self.goal_ori,
+                                                goal_w=self.goal_w,
+                                                goal_SRT=self.goal_SRT,
                                                 dt=self.dt,
                                                 trav_auxvar_value=trav_auxvar_value)
         # print('goal_pos:',self.goal_pos)
@@ -434,7 +443,7 @@ class PlanFwdBwdWrapper():
 ##-----------------ellipse collision check-----------------##
 #############################################################
 # initialize the drone ellipse
-# self.obstacle.reward_calc_sym(self.uav1,
+# self.obstacle.reward_calc_sym(self.uav,
 #                                 quad_height=self.uav_height/2,
 #                                 quad_radius=self.wing_len/2,
 #                                 alpha=5,
@@ -532,14 +541,14 @@ class PlanFwdBwdWrapper():
     ## play the animation for one set of high-level paramters of such a scenario
     # def play_ani(self, tra_pos=None,tra_ang=None, t = 3,Ulast = None):
     #     tra_atti = Rd2Rp(tra_ang)
-    #     self.uav1.init_TraCost(tra_pos,tra_atti)
-    #     self.uavoc1.setTraCost(self.uav1.tra_cost,t)
+    #     self.uav.init_TraCost(tra_pos,tra_atti)
+    #     self.uavoc.setTraCost(self.uav.tra_cost,t)
     #     ## obtain the trajectory
-    #     self.sol1 = self.uavoc1.ocSolver(horizon=self.horizon,dt=self.dt,Ulast=Ulast)
+    #     self.sol1 = self.uavoc.ocSolver(horizon=self.horizon,dt=self.dt,Ulast=Ulast)
     #     state_traj1 = self.sol1['state_traj_opt']
-    #     traj = self.uav1.get_quad_vert_pos(wing_len = self.wing_len, state_traj = state_traj1)
+    #     traj = self.uav.get_quad_vert_pos(wing_len = self.wing_len, state_traj = state_traj1)
     #     ## plot the animation
-    #     self.uav1.play_animation(wing_len = self.wing_len, state_traj = state_traj1,dt=self.dt, point1 = self.point1,\
+    #     self.uav.play_animation(wing_len = self.wing_len, state_traj = state_traj1,dt=self.dt, point1 = self.point1,\
     #         point2 = self.point2, point3 = self.point3, point4 = self.point4)
 
 

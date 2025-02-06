@@ -59,7 +59,7 @@ def input_cal():
     gate_length = mission_cfg['gate']['length']
     gate_center = mission_cfg['mission']['gate_position']
     relative_gate_points=get_gate_points(gate_center,gate_length,gate_width)-inputs[0:3]
-    inputs[13:25] = relative_gate_points.flatten() # gate points
+    inputs[13:input_size] = relative_gate_points.flatten() # gate points
     
     # inputs[25:28] = gate_center # gate position
     # inputs[28:38] = static_env[7:17] # gate width and gate orientation
@@ -77,7 +77,7 @@ for epoch in range(num_epochs):
         
         # Forward pass
         pre_outputs = model(torch.tensor(full_input, dtype=torch.float).unsqueeze(0).to(device),deterministic=False)[0]
-        print("desired_traversing_time",pre_outputs[-1])
+        # print("desired_traversing_time",pre_outputs[-1])
         #print(inputs,' ',pre_outputs)
 
         loss = criterion(pre_outputs[3:12]+pre_outputs[-1], outputs[3:12]+outputs[-1])

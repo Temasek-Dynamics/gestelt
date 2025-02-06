@@ -1,17 +1,24 @@
 
 # flight mission
 MANUAL_SET_POSE_TEST: false     # only works for ROS nodes
-FIX_GATE_PITCH_TEST: true
-gate_pitch: -0.6 # 0.6rad = 34.38 degree,, 1 rad=57.2958 degree,  1.3rad = 74.4 degree
+FIX_GATE_PITCH_TEST: false      # only works for ROS nodes
+gate_pitch: 1.0 # 0.6rad = 34.38 degree,, 1 rad=57.2958 degree,  1.3rad = 74.4 degree
 mission_period: 5.0 #s
-
+ctl_mode: 1 
+# 0 collective thrust & body rate. 
+# 1 single rotor thrust control. 
+# 2 force and torque control. 
+# 3.force difference control ALL types the command to the mavros is CTBR
 drone:
   wing_len: 0.8
   height: 0.3
   ## in the training, the drone size should be the same as with the gate size
   wing_len_train: 1.25
   height_train: 0.55
-
+  mass: 0.248
+  inertia: [0.000392,0.000405,0.000639] # [Ixx, Iyy, Izz] kg.m^2
+  diagonal_axis_dist: 0.165 #m
+  moment_constant: 8.8e-3
 # gate parameters  
 gate:
   length: 1.2 #1.2
@@ -38,7 +45,7 @@ mission:
   # only feasible for MANUAL_SET_POSE_TEST
   gate_position: [0.0, -0.0, 1.8]
   # gate_ori_RP: [-0.0, -1.055, 0.0]
-  gate_ori_euler: [0.0, -1.0,0.0] # 1.0 radian is 57.2958 degree, 1.5 radian is 85.9437 degree
+  gate_ori_euler: [0.0, -1.5,0.0] # 1.0 radian is 57.2958 degree, 1.5 radian is 85.9437 degree
   
   ##------ goal pose ----##
   goal_position: [0.0, -1.8, 1.5]
@@ -68,34 +75,15 @@ mission:
   
 # MPC parameters
 learning_agile:
-
-  ##------ fix weight parameters ----##
-  # wrt: ,gate traverse position cost
-  # wqt: gate traverse attitude cost
-  # wthrust: input thrust cost
-  # wwt: input angular velocity cost
-  # wrf: final position cost
-  # wvf: final velocity cost
-  # wqf: final attitude cost
-  # wwf: final angular velocity cost
-  
-  ##-----parameters for testing ------##
-  # wrt: 5.0
-  # wqt: 80.0
-  # wthrust: 1.0
-  # wwt: 10.0
-  # wrf: 5.0
-  # wvf: 1.0
-  # wqf: 1.0
-
   ##-----parameters for training ------## 
   # #### for a stabler training,######## 
   wrt: 5.0    #be the learnable variable
   wqt: 10.0   #be the learnable variable
-  wthrust: 1.0
-  wwt: 15.0
+  wthrust: 1
+  wdthrust: 0.1
+  wwt: 0.2
   wwt_z: 15
-  
+  wm: 50
   # path cost
   wrp: 10        ## too small, large deviation to the goal
   wvp: 0.01
@@ -108,7 +96,7 @@ learning_agile:
   ##------ traversing parameters ---##
   max_tra_w: 100 #100 be the learnable variable
   traverse_weight_span: 10 
-  traverse_time: 1.5 # only for MANUAL_SET_POSE_TEST
+  traverse_time: 1.0 # only for MANUAL_SET_POSE_TEST
 
 
   ## Safe PDP
@@ -140,7 +128,7 @@ learning_agile:
 
   # throttle constraints
   throttle_upper_bound: 0.8
-  throttle_lower_bound: 0.2
+  throttle_lower_bound: 0.15
 
 
   # position constraints
@@ -164,6 +152,7 @@ learning_agile:
 pretrain_param:
   desired_average_vel: 4
   desired_average_vel_after_gate: 2
+  desired_tra_vel: 2
 
 ## ------NN configuration ----##
 # NN_model_name: 'training_results/new_format/2024-12-22/13-38-00/trained_model/NN_close_1350.pth'
@@ -176,6 +165,7 @@ NN_deploy_model_name: 'deployed_model/2025-01-16/09-59-31/trained_model/NN_close
 NN_freq: 50
 
 reward:
+  vel_w: 1
   goal_x_axis_w: 2
-  goal_yz_axis_w: 100 #12.0 for last 5 nodes, 240 for last 3 nodes (yz axis)
+  goal_yz_axis_w: 2 #12.0 for last 5 nodes, 240 for last 3 nodes (yz axis)
   scaling_w: 100

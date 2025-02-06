@@ -33,7 +33,7 @@ class LearningAgileBase:
     include forward, reward, backward, 
     return the Reward and Gradient of this episode
     Reward: [R_0, R_1, R_2, ..., R_H] for each step's prediction
-    Gradient: [p_R_0_p_w, p_R_1_p_w, p_R_2_p_w, ..., p_R_H_p_w] for each step's prediction
+    Gradient: [p_L_0_p_w, p_L_1_p_w, p_L_2_p_w, ..., p_L_H_p_w] for each step's prediction
     """
     def __init__(self,
                  mission_cfg:dict,
@@ -113,15 +113,15 @@ class LearningAgileBase:
     
     def init_gradient(self):
         self.R_i = []
-        self.p_R_i_p_X_traj_i = []
+        self.p_L_i_p_X_traj_i = []
         self.p_X_traj_i_p_x_i = []
         self.p_X_traj_i_p_z_i = []
-        self.p_R_i_p_z_i = []
+        self.p_L_i_p_z_i = []
         self.p_z_i_p_w = []
-        self.p_R_i_p_w = []
+        self.p_L_i_p_w = []
 
-        self.p_R_i_p_x_i={}
-        self.p_R_i_p_z_last={}
+        self.p_L_i_p_x_i={}
+        self.p_L_i_p_z_last={}
     
     
     def step(self,nn_out=None):
@@ -189,37 +189,38 @@ class LearningAgileBase:
 
        
         ## 13 * 1
-        # self.p_R_i_p_z_i.append(np.einsum('bij,bjk->ik',self.p_R_i_p_X_traj_i[self.i-2],self.p_X_traj_i_p_z_i[self.i-2]))
+        # self.p_L_i_p_z_i.append(np.einsum('bij,bjk->ik',self.p_L_i_p_X_traj_i[self.i-2],self.p_X_traj_i_p_z_i[self.i-2]))
         ## z_i:
-        self.p_R_i_p_z_i.append(np.einsum('bij,bjk->ik',self.p_R_i_p_X_traj_i[self.i-2],self.p_X_traj_i_p_z_i[self.i-2]))
+        self.p_L_i_p_z_i.append(np.einsum('bij,bjk->ik',self.p_L_i_p_X_traj_i[self.i-2],self.p_X_traj_i_p_z_i[self.i-2]))
         
         
-        ## Backpropagate through the last one time-step
+        # Backpropagate through the last one time-step
         if self.i > 2:
-            self.p_R_i_p_x_i[f'{self.i}-2'] = np.einsum('bij,bjk->ik', self.p_R_i_p_X_traj_i[self.i-2],self.p_X_traj_i_p_x_i[self.i-2])
-            self.p_R_i_p_z_last[f'{self.i}-3'] = self.p_R_i_p_x_i[f'{self.i}-2'] @ self.p_X_traj_i_p_z_i[self.i-3][1, :, :]
+            self.p_L_i_p_x_i[f'{self.i}-2'] = np.einsum('bij,bjk->ik', self.p_L_i_p_X_traj_i[self.i-2],self.p_X_traj_i_p_x_i[self.i-2])
+            self.p_L_i_p_z_last[f'{self.i}-3'] = self.p_L_i_p_x_i[f'{self.i}-2'] @ self.p_X_traj_i_p_z_i[self.i-3][1, :, :]
 
-            self.p_R_i_p_z_i[self.i-3] += self.p_R_i_p_z_last[f'{self.i}-3']
+            self.p_L_i_p_z_i[self.i-3] += self.p_L_i_p_z_last[f'{self.i}-3']
         
         
 
         if self.i > 3:       
             # Backpropagate through the last second time-step     
-            self.p_R_i_p_x_i[f'{self.i}-3'] = dyn_decay * self.p_R_i_p_x_i[f'{self.i}-2'] @ self.p_X_traj_i_p_x_i[self.i-3][1, :, :]
-            self.p_R_i_p_z_last[f'{self.i}-4'] =  self.p_R_i_p_x_i[f'{self.i}-3'] @ self.p_X_traj_i_p_z_i[self.i-4][1, :, :]
+            self.p_L_i_p_x_i[f'{self.i}-3'] = dyn_decay * self.p_L_i_p_x_i[f'{self.i}-2'] @ self.p_X_traj_i_p_x_i[self.i-3][1, :, :]
+            self.p_L_i_p_z_last[f'{self.i}-4'] =  self.p_L_i_p_x_i[f'{self.i}-3'] @ self.p_X_traj_i_p_z_i[self.i-4][1, :, :]
 
-            self.p_R_i_p_z_i[self.i-4] += self.p_R_i_p_z_last[f'{self.i}-4']
+            self.p_L_i_p_z_i[self.i-4] += self.p_L_i_p_z_last[f'{self.i}-4']
 
-            # Backpropagate through all last time-steps
-            # for k in range(4, self.i):
-            #     self.p_R_i_p_x_i[f'{self.i}-{k}'] = dyn_decay * self.p_R_i_p_x_i[f'{self.i}-{k-1}'] @ self.p_X_traj_i_p_x_i[self.i-k][1, :, :]
-            #     self.p_R_i_p_z_last[f'{self.i}-{k+1}'] = self.p_R_i_p_x_i[f'{self.i}-{k}'] @ self.p_X_traj_i_p_z_i[self.i-k-1][1, :, :]
+            # # Backpropagate through all last time-steps
+            for k in range(4, self.i):
+                self.p_L_i_p_x_i[f'{self.i}-{k}'] = dyn_decay * self.p_L_i_p_x_i[f'{self.i}-{k-1}'] @ self.p_X_traj_i_p_x_i[self.i-k][1, :, :]
+                self.p_L_i_p_z_last[f'{self.i}-{k+1}'] = self.p_L_i_p_x_i[f'{self.i}-{k}'] @ self.p_X_traj_i_p_z_i[self.i-k-1][1, :, :]
 
-            #     self.p_R_i_p_z_i[self.i-k-1] += self.p_R_i_p_z_last[f'{self.i}-{k+1}']
+                self.p_L_i_p_z_i[self.i-k-1] += self.p_L_i_p_z_last[f'{self.i}-{k+1}']
                 
 
-            #     if k == 6:
-            #         break
+                # if k == 5:
+                #     # BPTT last four time-steps
+                #     break
 
 
     # def run_single_step(self,nn_output):
@@ -237,9 +238,9 @@ class LearningAgileBase:
         return np.array([sum(self.R_i)])
     
     @property
-    def p_R_p_z(self):
-        p_R_p_z = np.array(self.p_R_i_p_z_i)
-        return p_R_p_z
+    def p_L_p_z(self):
+        p_L_p_z = np.array(self.p_L_i_p_z_i)
+        return p_L_p_z
 
    
 def get_penalty(base):
@@ -247,9 +248,9 @@ def get_penalty(base):
     calculate the reward of MPC solution
     """
     R_i = np.array(base.planner.get_penalty(base.pred_st_traj)[0])
-    p_R_i_p_X_traj_i = (base.planner.get_penalty(base.pred_st_traj)[1])
+    p_L_i_p_X_traj_i = (base.planner.get_penalty(base.pred_st_traj)[1])
 
-    return [R_i, p_R_i_p_X_traj_i]
+    return [R_i, p_L_i_p_X_traj_i]
 
 def run_single_episode(base,nn_out=None):
     base.reset()
@@ -264,7 +265,7 @@ def run_single_episode(base,nn_out=None):
             # skip the first step since the first prediction of the SQP_RTI is initial guess
             reward_and_gradient=get_penalty(base)
             base.R_i.append(reward_and_gradient[0])
-            base.p_R_i_p_X_traj_i.append(reward_and_gradient[1])
+            base.p_L_i_p_X_traj_i.append(reward_and_gradient[1])
 
             if options['BACKWARD']:
                 base.backward_per_step()    
@@ -278,13 +279,13 @@ def run_debug(planner,state_n,final_point,gate_points_list):
                                 goal_pos=final_point.tolist(),
                                 dt=0.1)
     
-def vis_gradient_norm(p_R_p_z:list):
-    p_R_p_z=np.array(p_R_p_z)
-    p_R_p_z_norm = np.linalg.norm(p_R_p_z,axis=2)
-    p_R_p_z_norm = p_R_p_z_norm.reshape(p_R_p_z_norm.shape[0],-1)
+def vis_gradient_norm(p_L_p_z_batch:np.array):
+    p_L_p_z_norm = np.linalg.norm(p_L_p_z_batch,axis=2)
+    p_L_p_z_norm = p_L_p_z_norm.mean(axis=0)
     ## plot the gradient norm
     fig, ax = plt.subplots()
-    ax.plot(p_R_p_z_norm)
+    t=range(len(p_L_p_z_norm))
+    ax.plot(t,p_L_p_z_norm)
     ax.set(xlabel='time step', ylabel='gradient norm',
            title='Gradient Norm')
     ax.grid()
@@ -302,9 +303,9 @@ if __name__ == "__main__":
     base.load_model(model_folder)
     run_single_episode(base)
     print(base.reward)
-    print(base.p_R_p_z)
+    print(base.p_L_p_z)
 
-    vis_gradient_norm(base.p_R_p_z)
+    vis_gradient_norm(base.p_L_p_z)
     # run_debug(base.learning_agile_sim.planner,
     #               base.state_n,
     #               base.learning_agile_sim.final_point,

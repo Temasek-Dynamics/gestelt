@@ -205,14 +205,15 @@ class Obstacle():
         
         if not PENALTY_HELPER:
             # # velocity penalty, encourage the drone to fly through the gate, instead of hovering in front of the gate
-            # vel_penalty = 0
-            # vel_w = -5
-            # for i in range(state_traj.shape[0]):
-            #     if i in t_tra_seq_list:
-            #         vel_penalty += vel_w * np.dot(state_traj[i,4],state_traj[i,4])
-            #         drdstate_traj[i,3:6] += vel_w * 2 * state_traj[i,4]
+            vel_penalty = 0
+            vel_w=config['reward']['vel_w']
+            des_tra_vel = config['pretrain_param']['desired_tra_vel']
+            for i in range(state_traj.shape[0]):
+                if i in t_tra_seq_list:
+                    vel_penalty += vel_w * np.dot(-state_traj[i,4]-des_tra_vel,-state_traj[i,4]-des_tra_vel)
+                    drdstate_traj[i,4] += vel_w * 2 * (-state_traj[i,4]-des_tra_vel)
             
-            # penalty_traj += vel_penalty
+            penalty_traj += vel_penalty
 
 
             ## goal score
@@ -221,7 +222,7 @@ class Obstacle():
             # goal_yz_axis_w=config['reward']['goal_yz_axis_w']*10*np.exp(0.1*(real_state_i-50))+config['reward']['goal_yz_axis_w'] # 50 is the close loop horizon
             goal_x_axis_w=config['reward']['goal_x_axis_w']
             
-            goal_yz_axis_w=config['reward']['goal_yz_axis_w']*max((1-2.5*success_rate),0.02)
+            goal_yz_axis_w=config['reward']['goal_yz_axis_w']*max((1-1.5*success_rate),0.02)
 
             # if real_state_i == 49:
             #     goal_yz_axis_w*=100

@@ -45,6 +45,7 @@ class OCSys:
     def __init__(self,config_dict, project_name="my optimal control system"):
         self.project_name = project_name
         self.config_dict=config_dict
+        self.ctl_mode=config_dict['ctl_mode']
     def setAuxvarVariable(self, auxvar=None):
         if auxvar is None or auxvar.numel() == 0:
             self.auxvar = SX.sym('auxvar')
@@ -86,7 +87,7 @@ class OCSys:
         # self.dyn = casadi.Function('f',[self.state, self.control],[f])
         ## ================== for casADi ================== ##
         self.dyn = self.state + dt * f
-        self.dyn_fn = casadi.Function('dynamics', [self.state, self.control], [self.dyn],['x','u'],['x_next'])
+        # self.dyn_fn = casadi.Function('dynamics', [self.state, self.control], [self.dyn],['x','u'],['x_next'])
 
         ## ================== for acados ================== ##
         self.dyn_fn_acados = casadi.Function('dynamics', [self.state, self.control], [f],['x','u'],['rhs'])
@@ -540,8 +541,9 @@ class OCSys:
         state_lb_shrink=np.array(self.state_lb)
         state_up_shrink=np.array(self.state_ub)
         # margin for the safe PDP, since the acados will violate the constraints a little bit
-        control_lb_shrink[0]+=0.05
-        control_up_shrink[0]-=0.05
+        if self.ctl_mode==0 or self.ctl_mode==2:
+            control_lb_shrink[0]+=0.05
+            control_up_shrink[0]-=0.05
         state_lb_shrink[2]+=0.05
         state_up_shrink[2]-=0.05
         ocp.constraints.lbu = control_lb_shrink
@@ -612,6 +614,8 @@ class OCSys:
                     current_state, 
                     goal_pos,
                     goal_ori,
+                    goal_w,
+                    goal_SRT,
                     dt=0.1,
                     trav_auxvar_value=None):
         """
@@ -624,11 +628,17 @@ class OCSys:
         # self.ub_v_control_traj_opt = np.zeros((self.n_nodes,self.n_control))
         # #---------------------for linear cost---------------------##
         # # #set desired ref state
-        desired_goal_vel=np.array([0, 0, 0])
-        desired_goal_ori = np.array(goal_ori)
+        goal_vel=np.array([0, 0, 0])
+        goal_w=np.array(goal_w)
+        goal_SRT=np.array(goal_SRT)
+        goal_ori = np.array(goal_ori)
 
-        goal_state_value=np.concatenate((np.array(goal_pos),desired_goal_vel,desired_goal_ori))#,desired_goal_w))
-        
+        if self.ctl_mode==0:
+            goal_state_value=np.concatenate((np.array(goal_pos),goal_vel,goal_ori))
+        elif self.ctl_mode==1 or self.ctl_mode==2:
+            goal_state_value=np.concatenate((np.array(goal_pos),goal_vel,goal_ori,goal_w))
+        elif self.ctl_mode==3:
+            goal_state_value=np.concatenate((np.array(goal_pos),goal_vel,goal_ori,goal_w,goal_SRT))
         # set the desired state-control at 0->N-1 nodes
         for i in range(self.n_nodes):
             
@@ -663,6 +673,7 @@ class OCSys:
 
         if status != 0:
             NO_SOLUTION_FLAG=True
+            self.acados_solver.print_statistics()
             # raise Exception(f'acados returned status {status}.')
         #-------------take the optimal control and state sequences
         #self.n_nodes

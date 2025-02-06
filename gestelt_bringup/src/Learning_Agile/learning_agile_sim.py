@@ -13,10 +13,11 @@ from scipy.spatial.transform import Rotation as R
 import torch 
 
 from quad_model import toQuaternion, Gate, Rd2Rp, get_gate_points
+from visualization.python_sim_vis import play_animation, plot_position, plot_velocity, plot_quaternions, plot_scalar, plot_thrust, plot_angularrate, plot_3D_traj,plot_M,plot_T
 from quad_policy import PlanFwdBwdWrapper
 from quad_nn import nn_sample
 from quad_moving import binary_search_solver,input_cal
-from result_analysis import rotation_vis
+from visualization.result_analysis import rotation_vis
 from solid_geometry import magni, pitch_from_gate, verify_SVD_casadi#,SVD_M_to_SO3
 from misc.misc import str2bool 
 
@@ -46,7 +47,7 @@ def get_obs(history_obs = None,
     rot=R.from_euler('zyx',[0,gate_pitch,0])
     
     immed_obs=np.zeros(input_size)
-    immed_obs[0:10]=drone_state
+    immed_obs[0:10]=drone_state[0:10]
     immed_obs[10:13]=final_point
     
     ## gate points
@@ -124,8 +125,12 @@ class LearningAgileSim():
         self.sim_time=python_sim_time
     
         # drone state
-        self.state = np.zeros(10)
-
+        if mission_cfg["ctl_mode"] == 0:
+            self.state = np.zeros(10)
+        elif mission_cfg["ctl_mode"] == 1 or mission_cfg["ctl_mode"] == 2:
+            self.state = np.zeros(13)
+        elif mission_cfg["ctl_mode"] == 3:
+            self.state = np.zeros(17)
 
         # load the configuration file
         self.config_dict = mission_cfg
@@ -153,9 +158,8 @@ class LearningAgileSim():
  
         # set the dynamics step of the python sim (Explict Euler, ERK4)
         self.dyn_step=dyn_step
-        self.planner.uav1.setDyn(self.dyn_step)
-        self.planner.uavoc1.AcadosSimIntegratorInit(self.dyn_step,options['USE_PREV_SOLVER'])
-        self.integrator=self.planner.uavoc1.acados_integrator
+        self.planner.uavoc.AcadosSimIntegratorInit(self.dyn_step,options['USE_PREV_SOLVER'])
+        self.integrator=self.planner.uavoc.acados_integrator
 
         self.Ttra    = []
         self.T       = []
@@ -166,7 +170,7 @@ class LearningAgileSim():
         self.solving_time = []
         self.tra_weight_list = []   
         # trajectory pos_vel_att_cmd
-        self.pos_vel_att_cmd=np.zeros(10)
+        self.pos_vel_att_cmd=np.zeros(len(self.state))
         self.pos_vel_att_cmd[6:10] = [1,0,0,0]
         self.pos_vel_att_cmd_n = [self.pos_vel_att_cmd]
         self.history_obs= deque(maxlen=5)
@@ -383,7 +387,7 @@ class LearningAgileSim():
                 if self.options['MANUAL_SET_POSE_TEST']:
                     self.gate_state_search()
                     nn2_inputs = np.zeros(23)
-                    nn2_inputs[0:10] = self.state 
+                    nn2_inputs[0:10] = self.state[0:10] 
                     nn2_inputs[10:13] = self.final_point
                     
 
@@ -392,7 +396,7 @@ class LearningAgileSim():
                     out[0:3]=self.gate_center
                     # out[3:6]=self.gate_ori_RP # Rodrigues parameters
                     out[3:12]=self.gate_ori_9d # manual set 9D vector (is rotation matrix directly)
-                    print("="*50)
+                    # print("="*50)
                     # print("NN pose det before SVD",np.linalg.det(out[3:12].reshape(3,3)))
 
                     # if self.options['JAX_SVD']:
@@ -404,12 +408,15 @@ class LearningAgileSim():
                     #     gate_pitch=0
                     #     self.log_NN_IO_for_RM(gate_pitch,out,des_tra_R) 
                     # else:
+                    out[-4]=40
+                    out[-3]=10
+                    out[-2]=10
                     out[-1]=self.t_tra_rel
                     ### SVD through CasADi
                     verify_tra_R=verify_SVD_casadi(out[3:12])
                     gate_pitch=0
                     self.log_NN_IO_for_RM(gate_pitch,out,verify_tra_R.flatten())  
-
+                    trav_auxvar_value = out
                             
                 else:
                     
@@ -442,7 +449,7 @@ class LearningAgileSim():
             ########################################################
 
             ###===================Explict Euler(obsolete) or ERK4====================###
-            # self.state = np.array(self.planner.uav1.dyn_fn(self.state, test_u)).reshape(10) # Yixiao's simulation environment ('uav1.dyn_fn'), replaced by pybullet
+            # self.state = np.array(self.planner.uav.dyn_fn(self.state, test_u)).reshape(10) # Yixiao's simulation environment ('uav.dyn_fn'), replaced by pybullet
             
             
             ##================= acados integrator IRK========================###
@@ -466,12 +473,7 @@ class LearningAgileSim():
             self.state_n = np.concatenate((self.state_n,[self.state]),axis = 0)
             self.control_n = np.concatenate((self.control_n,[self.u]),axis = 0)
             self.pos_vel_att_cmd_n = np.concatenate((self.pos_vel_att_cmd_n,[self.pos_vel_att_cmd]),axis = 0)
-            u_m = self.planner.uav1.u_m
-            u1 = np.reshape(self.u,(4,1))
-            tm = np.matmul(u_m,u1)
-            tm = np.reshape(tm,4)
-            # control_tm = np.concatenate((control_tm,[tm]),axis = 0)
-            # self.hl_variable = np.concatenate((self.hl_variable,[out]),axis=0)       
+    
             
         print('MPC finished')   
         
@@ -489,41 +491,52 @@ class LearningAgileSim():
 
         
     def visualize(self):
-        self.planner.uav1.play_animation(wing_len=self.planner.wing_len,
+        play_animation(wing_len=self.planner.wing_len,
                                         gate_traj1=self.gate_points_list[::5,:,:],
                                         state_traj=self.state_n[::5,:],
                                         goal_pos=self.final_point.tolist(),
                                         NN_pos=self.nn_output_list[:,0:3],
                                         NN_R=self.des_tra_R_list,
-                                        dt=0.01)
+                                        dt=0.01,
+                                        save_option=0)
             
         # save the data, not show it
         if not self.options['MANUAL_SET_POSE_TEST']:
-            self.planner.uav1.plot_position(self.nn_output_list,name='NN2_output')
+            plot_position(self.nn_output_list,name='NN2_output')
 
             if self.options['CLOSE_LOOP_MODEL']:
-                self.planner.uav1.plot_scalar(self.NN_T_tra, scalar_name='NN_traverse_time') # pure NN close loop traversal time
+                plot_scalar(self.NN_T_tra, scalar_name='NN_traverse_time') # pure NN close loop traversal time
             else:
-                self.planner.uav1.plot_scalar(self.T, scalar_name='NN_traverse_time')# Binary search traversal time
-        self.planner.uav1.plot_thrust(self.control_n)
-        self.planner.uav1.plot_angularrate(self.control_n)
-        self.planner.uav1.plot_position(self.state_n,name='drone_actual')
-        self.planner.uav1.plot_velocity(self.state_n)
-        self.planner.uav1.plot_quaternions(self.state_n)
-        self.planner.uav1.plot_scalar(self.wrp_list,scalar_name='path_position_error_weight')
-        self.planner.uav1.plot_scalar(self.wrt_list,scalar_name='traverse_position_weight')
-        self.planner.uav1.plot_scalar(self.wqt_list,scalar_name='traverse_attitude_weight')
+                plot_scalar(self.T, scalar_name='NN_traverse_time')# Binary search traversal time
+        plot_thrust(self.control_n)
+        if self.config_dict['ctl_mode'] == 0:
+            plot_angularrate(self.control_n[:,1:])
+        elif self.config_dict['ctl_mode'] == 1:
+            plot_T(self.control_n)
+        elif self.config_dict['ctl_mode'] == 2:
+            plot_M(self.control_n)
+        elif self.config_dict['ctl_mode'] == 3:
+            plot_angularrate(self.state_n[:,10:13])
+            plot_T(self.state_n[:,13:17],name='single_rotor_thrust')
+            plot_T(self.control_n,name='single_rotor_thrust_differencce')
 
-        # self.planner.uav1.plot_quaternions_norm(self.state_n)
-        # self.planner.uav1.plot_quaternions_norm(self.pos_vel_att_cmd_n)
-        # self.planner.uav1.plot_trav_weight(self.tra_weight_list)
+        plot_position(self.state_n,name='drone_actual')
+        plot_velocity(self.state_n)
+        plot_quaternions(self.state_n)
+        plot_scalar(self.wrp_list,scalar_name='path_position_error_weight')
+        plot_scalar(self.wrt_list,scalar_name='traverse_position_weight')
+        plot_scalar(self.wqt_list,scalar_name='traverse_attitude_weight')
 
-        self.planner.uav1.plot_scalar(self.solving_time,scalar_name='MPC_solving_time')
+        # plot_quaternions_norm(self.state_n)
+        # plot_quaternions_norm(self.pos_vel_att_cmd_n)
+        # plot_trav_weight(self.tra_weight_list)
+
+        plot_scalar(self.solving_time,scalar_name='MPC_solving_time')
         self.euler_nn=rotation_vis(uav_traj=self.state_n,
                             nn_output_list=self.nn_output_list,
                             des_tra_R_list=self.des_tra_R_list,
                             gate_pitch=self.Pitch)
-        self.planner.uav1.plot_3D_traj(wing_len=self.planner.wing_len,
+        plot_3D_traj(wing_len=self.planner.wing_len,
                                     uav_height=self.planner.uav_height/2,
                                     state_traj=self.state_n[::50,:],
                                     gate_traj=self.gate_points_list[::50,:,:])
@@ -560,7 +573,7 @@ def parse_options():
     parser.add_argument('--USE_PREV_SOLVER', type=str2bool, default=False, help='Enable or disable USE_PREV_SOLVER.')
     parser.add_argument('--PDP_GRADIENT', type=str2bool, default=False, help='Enable or disable PDP_GRADIENT.')
     parser.add_argument('--SQP_RTI_OPTION', type=str2bool, default=True, help='Enable or disable SQP_RTI_OPTION.')
-    parser.add_argument('--MANUAL_SET_POSE_TEST', type=str2bool, default=False, help='Enable or disable MANUAL_SET_POSE_TEST.')
+    parser.add_argument('--MANUAL_SET_POSE_TEST', type=str2bool, default=True, help='Enable or disable MANUAL_SET_POSE_TEST.')
     parser.add_argument('--CLOSE_LOOP_MODEL', type=str2bool, default=True, help='Enable or disable CLOSE_LOOP_MODEL.')
     parser.add_argument('--JAX_SVD', type=str2bool, default=False, help='Enable or disable JAX_SVD.')
     parser.add_argument('--CLOSE_LOOP_TRAINING', type=str2bool, default=False, help='Enable or disable CLOSE_LOOP_TRAINING.')

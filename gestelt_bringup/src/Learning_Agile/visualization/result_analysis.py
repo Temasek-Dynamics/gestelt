@@ -1,7 +1,6 @@
 import numpy as np
 import os
 import matplotlib.pyplot as plt
-from quad_model import Quadrotor
 from scipy.spatial.transform import Rotation as R
 # Load the data
 # acquire the current directory
@@ -26,7 +25,7 @@ def rotation_vis(uav_traj=None,
     
     nn_output_list[0][3]=1
     # == convert drone state from quaternion to euler angles == ##
-    quat = R.from_quat(uav_traj[::5, 6:])
+    quat = R.from_quat(uav_traj[::5, 6:10])
     euler_drone = quat.as_euler('zyx', degrees=True)
     rot_vec = quat.as_rotvec()
     
