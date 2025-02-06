@@ -237,7 +237,7 @@ ocp_nlp_dims* ACADOS_model_acados_create_2_create_and_set_dimensions(ACADOS_mode
     nbx[0] = NBX0;
     nsbx[0] = 0;
     ns[0] = NS0;
-    nbxe[0] = 13;
+    nbxe[0] = 17;
     ny[0] = NY0;
     nh[0] = NH0;
     nsh[0] = NSH0;
@@ -320,7 +320,7 @@ void ACADOS_model_acados_create_3_create_and_set_functions(ACADOS_model_solver_c
         capsule->__CAPSULE_FNC__.casadi_sparsity_in = & __MODEL_BASE_FNC__ ## _sparsity_in; \
         capsule->__CAPSULE_FNC__.casadi_sparsity_out = & __MODEL_BASE_FNC__ ## _sparsity_out; \
         capsule->__CAPSULE_FNC__.casadi_work = & __MODEL_BASE_FNC__ ## _work; \
-        external_function_param_casadi_create(&capsule->__CAPSULE_FNC__ , 30); \
+        external_function_param_casadi_create(&capsule->__CAPSULE_FNC__ , 34); \
     } while(false)
 
 
@@ -482,6 +482,10 @@ void ACADOS_model_acados_create_5_set_nlp_in(ACADOS_model_solver_capsule* capsul
     idxbx0[10] = 10;
     idxbx0[11] = 11;
     idxbx0[12] = 12;
+    idxbx0[13] = 13;
+    idxbx0[14] = 14;
+    idxbx0[15] = 15;
+    idxbx0[16] = 16;
 
     double* lubx0 = calloc(2*NBX0, sizeof(double));
     double* lbx0 = lubx0;
@@ -496,7 +500,7 @@ void ACADOS_model_acados_create_5_set_nlp_in(ACADOS_model_solver_capsule* capsul
     free(idxbx0);
     free(lubx0);
     // idxbxe_0
-    int* idxbxe_0 = malloc(13 * sizeof(int));
+    int* idxbxe_0 = malloc(17 * sizeof(int));
     
     idxbxe_0[0] = 0;
     idxbxe_0[1] = 1;
@@ -511,6 +515,10 @@ void ACADOS_model_acados_create_5_set_nlp_in(ACADOS_model_solver_capsule* capsul
     idxbxe_0[10] = 10;
     idxbxe_0[11] = 11;
     idxbxe_0[12] = 12;
+    idxbxe_0[13] = 13;
+    idxbxe_0[14] = 14;
+    idxbxe_0[15] = 15;
+    idxbxe_0[16] = 16;
     ocp_nlp_constraints_model_set(nlp_config, nlp_dims, nlp_in, 0, "idxbxe", idxbxe_0);
     free(idxbxe_0);
 
@@ -533,14 +541,14 @@ void ACADOS_model_acados_create_5_set_nlp_in(ACADOS_model_solver_capsule* capsul
     double* lbu = lubu;
     double* ubu = lubu + NBU;
     
-    lbu[0] = 0.3;
-    ubu[0] = 1.6;
-    lbu[1] = 0.3;
-    ubu[1] = 1.6;
-    lbu[2] = 0.3;
-    ubu[2] = 1.6;
-    lbu[3] = 0.3;
-    ubu[3] = 1.6;
+    lbu[0] = -100;
+    ubu[0] = 100;
+    lbu[1] = -100;
+    ubu[1] = 100;
+    lbu[2] = -100;
+    ubu[2] = 100;
+    lbu[3] = -100;
+    ubu[3] = 100;
 
     for (int i = 0; i < N; i++)
     {
@@ -574,6 +582,10 @@ void ACADOS_model_acados_create_5_set_nlp_in(ACADOS_model_solver_capsule* capsul
     idxbx[10] = 10;
     idxbx[11] = 11;
     idxbx[12] = 12;
+    idxbx[13] = 13;
+    idxbx[14] = 14;
+    idxbx[15] = 15;
+    idxbx[16] = 16;
     double* lubx = calloc(2*NBX, sizeof(double));
     double* lbx = lubx;
     double* ubx = lubx + NBX;
@@ -604,6 +616,14 @@ void ACADOS_model_acados_create_5_set_nlp_in(ACADOS_model_solver_capsule* capsul
     ubx[11] = 15.57;
     lbx[12] = -15.57;
     ubx[12] = 15.57;
+    lbx[13] = 0.3;
+    ubx[13] = 1.6;
+    lbx[14] = 0.3;
+    ubx[14] = 1.6;
+    lbx[15] = 0.3;
+    ubx[15] = 1.6;
+    lbx[16] = 0.3;
+    ubx[16] = 1.6;
 
     for (int i = 1; i < N; i++)
     {
@@ -884,7 +904,7 @@ int ACADOS_model_acados_update_params(ACADOS_model_solver_capsule* capsule, int 
 {
     int solver_status = 0;
 
-    int casadi_np = 30;
+    int casadi_np = 34;
     if (casadi_np != np) {
         printf("acados_update_params: trying to set %i parameters for external functions."
             " External function has %i parameters. Exiting.\n", np, casadi_np);
@@ -944,7 +964,7 @@ int ACADOS_model_acados_update_params_sparse(ACADOS_model_solver_capsule * capsu
 {
     int solver_status = 0;
 
-    int casadi_np = 30;
+    int casadi_np = 34;
     if (casadi_np < n_update) {
         printf("ACADOS_model_acados_update_params_sparse: trying to set %d parameters for external functions."
             " External function has %d parameters. Exiting.\n", n_update, casadi_np);

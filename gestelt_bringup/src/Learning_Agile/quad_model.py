@@ -653,8 +653,8 @@ class QuadrotorAugmentedSRTCtl:
         self.state_ub = [self.pos_b,self.pos_b,self.pos_ub_z,self.vel_b,self.vel_b,self.vel_b,sc,sc,sc,sc,self.ang_rate_b_xy,self.ang_rate_b_xy,self.ang_rate_b_z\
                          ,self.sing_thrust_ub,self.sing_thrust_ub,self.sing_thrust_ub,self.sing_thrust_ub]
 
-        self.control_lb = [-30,-30,-30,-30]
-        self.control_ub = [30, 30, 30, 30]
+        self.control_lb = [-100,-100,-100,-100]
+        self.control_ub = [100, 100, 100, 100]
         
     def init_constraint(self):
         thrust_ub_inequ=self.quad_dyn.T_B-self.control_ub

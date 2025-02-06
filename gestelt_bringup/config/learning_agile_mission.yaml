@@ -4,7 +4,7 @@ MANUAL_SET_POSE_TEST: false     # only works for ROS nodes
 FIX_GATE_PITCH_TEST: false      # only works for ROS nodes
 gate_pitch: 1.0 # 0.6rad = 34.38 degree,, 1 rad=57.2958 degree,  1.3rad = 74.4 degree
 mission_period: 5.0 #s
-ctl_mode: 1 
+ctl_mode: 3 
 # 0 collective thrust & body rate. 
 # 1 single rotor thrust control. 
 # 2 force and torque control. 
@@ -77,21 +77,21 @@ mission:
 learning_agile:
   ##-----parameters for training ------## 
   # #### for a stabler training,######## 
-  wrt: 5.0    #be the learnable variable
+  wrt: 10.0    #be the learnable variable
   wqt: 10.0   #be the learnable variable
-  wthrust: 1
-  wdthrust: 0.1
-  wwt: 0.2
+  wthrust: 0.01
+  wdthrust: 0.01
+  wwt: 0.01
   wwt_z: 15
   wm: 50
   # path cost
-  wrp: 10        ## too small, large deviation to the goal
-  wvp: 0.01
+  wrp: 50        ## too small, large deviation to the goal
+  wvp: 10
   wqp: 0.01
 
   # terminal cost
   wrf: 500.0     ## large, unstable
-  wvf: 100.0
+  wvf: 500.0
   wqf: 100.0
   ##------ traversing parameters ---##
   max_tra_w: 100 #100 be the learnable variable

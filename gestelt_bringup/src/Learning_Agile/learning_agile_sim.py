@@ -508,13 +508,15 @@ class LearningAgileSim():
                 plot_scalar(self.NN_T_tra, scalar_name='NN_traverse_time') # pure NN close loop traversal time
             else:
                 plot_scalar(self.T, scalar_name='NN_traverse_time')# Binary search traversal time
-        plot_thrust(self.control_n)
+       
         if self.config_dict['ctl_mode'] == 0:
             plot_angularrate(self.control_n[:,1:])
+            plot_thrust(self.control_n)
         elif self.config_dict['ctl_mode'] == 1:
             plot_T(self.control_n)
         elif self.config_dict['ctl_mode'] == 2:
             plot_M(self.control_n)
+            plot_thrust(self.control_n)
         elif self.config_dict['ctl_mode'] == 3:
             plot_angularrate(self.state_n[:,10:13])
             plot_T(self.state_n[:,13:17],name='single_rotor_thrust')

@@ -76,6 +76,10 @@ int main()
     x_current[10] = 0.0;
     x_current[11] = 0.0;
     x_current[12] = 0.0;
+    x_current[13] = 0.0;
+    x_current[14] = 0.0;
+    x_current[15] = 0.0;
+    x_current[16] = 0.0;
 
   
     printf("main_sim: initial state not defined, should be in lbx_0, using zero vector.");
@@ -119,6 +123,10 @@ int main()
     p[27] = 0;
     p[28] = 0;
     p[29] = 0;
+    p[30] = 0;
+    p[31] = 0;
+    p[32] = 0;
+    p[33] = 0;
 
     ACADOS_model_acados_sim_update_params(capsule, p, NP);
   
