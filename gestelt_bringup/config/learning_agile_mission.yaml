@@ -1,10 +1,10 @@
 
 # flight mission
-MANUAL_SET_POSE_TEST: false     # only works for ROS nodes
-FIX_GATE_PITCH_TEST: false      # only works for ROS nodes
+MANUAL_SET_POSE_TEST: true  # only works for ROS nodes
+FIX_GATE_PITCH_TEST: true      # for success rate test and python sim
 gate_pitch: 1.0 # 0.6rad = 34.38 degree,, 1 rad=57.2958 degree,  1.3rad = 74.4 degree
 mission_period: 5.0 #s
-ctl_mode: 3 
+ctl_mode: 3
 # 0 collective thrust & body rate. 
 # 1 single rotor thrust control. 
 # 2 force and torque control. 
@@ -45,7 +45,7 @@ mission:
   # only feasible for MANUAL_SET_POSE_TEST
   gate_position: [0.0, -0.0, 1.8]
   # gate_ori_RP: [-0.0, -1.055, 0.0]
-  gate_ori_euler: [0.0, -1.5,0.0] # 1.0 radian is 57.2958 degree, 1.5 radian is 85.9437 degree
+  gate_ori_euler: [0.0, -0.0,0.0] # 1.0 radian is 57.2958 degree, 1.5 radian is 85.9437 degree
   
   ##------ goal pose ----##
   goal_position: [0.0, -1.8, 1.5]
@@ -79,9 +79,9 @@ learning_agile:
   # #### for a stabler training,######## 
   wrt: 10.0    #be the learnable variable
   wqt: 10.0   #be the learnable variable
-  wthrust: 0.01
+  wthrust: 0.001
   wdthrust: 0.01
-  wwt: 0.01
+  wwt: 0.001
   wwt_z: 15
   wm: 50
   # path cost
@@ -90,7 +90,7 @@ learning_agile:
   wqp: 0.01
 
   # terminal cost
-  wrf: 500.0     ## large, unstable
+  wrf: 500.0     
   wvf: 500.0
   wqf: 100.0
   ##------ traversing parameters ---##
@@ -152,13 +152,14 @@ learning_agile:
 pretrain_param:
   desired_average_vel: 4
   desired_average_vel_after_gate: 2
-  desired_tra_vel: 2
+  desired_tra_vel: 3
 
 ## ------NN configuration ----##
 # NN_model_name: 'training_results/new_format/2024-12-22/13-38-00/trained_model/NN_close_1350.pth'
 # NN_model_name: 'training_results/new_format/2024-12-22/16-30-11/trained_model/NN_close_1300.pth'
 # NN_model_name: 'training_results/new_format/2024-12-30/09-42-13/trained_model/NN_close_940.pth' #**#
-NN_model_name: 'training_results/new_format/2025-01-16/09-59-31/trained_model/NN_close_3200.pth' #**#
+# NN_model_name: 'training_results/new_format/2025-01-16/09-59-31/trained_model/NN_close_3200.pth' #**#
+NN_model_name: 'training_results/new_format/2025-02-06/15-18-27/trained_model/NN_close_400.pth' #**#
 # NN_model_name: 'training_results/new_format/2025-01-22/10-26-33/trained_model/NN_close_120.pth' # train for the moving gate
 # NN_model_name: 'training_results/new_format/2025-01-02/10-11-02/trained_model/NN_close_490.pth'
 NN_deploy_model_name: 'deployed_model/2025-01-16/09-59-31/trained_model/NN_close_3200.pth' # used in the sitl
@@ -167,5 +168,5 @@ NN_freq: 50
 reward:
   vel_w: 1
   goal_x_axis_w: 2
-  goal_yz_axis_w: 2 #12.0 for last 5 nodes, 240 for last 3 nodes (yz axis)
+  goal_yz_axis_w: 20 #12.0 for last 5 nodes, 240 for last 3 nodes (yz axis)
   scaling_w: 100

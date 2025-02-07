@@ -112,7 +112,7 @@ def DiffCollisionWrapper(line_centers,
 
 
     # return min scaling α and gradient of α wrt configurations 
-    dalpha_dstate_drone=np.zeros(10) # p,v,q
+    dalpha_dstate_drone=np.zeros(drone_state.shape[0]) # p,v,q
     penalty=0
     HIT=False
     for i in range(4): # P_obs[1],P_obs[3] (left and right walls)

@@ -175,10 +175,10 @@ class LearningAgileBase:
         """
         
         ## acquire p_X_traj_i/p_x_i
-        cur_p_X_traj_i_p_x_i = np.ones([self.planner.horizon+1,10,10])
+        cur_p_X_traj_i_p_x_i = np.ones([self.planner.horizon+1,len(self.state),len(self.state)])
         
         for j in range(1,self.planner.horizon+1):
-            cur_p_X_traj_i_p_x_i[j,:,:] = self.planner.uavoc1.dfx_fn(self.pred_st_traj[j-1],self.control_traj[j-1]).toarray() * cur_p_X_traj_i_p_x_i[j-1,:,:]
+            cur_p_X_traj_i_p_x_i[j,:,:] = self.planner.uavoc.dfx_fn(self.pred_st_traj[j-1],self.control_traj[j-1]).toarray() * cur_p_X_traj_i_p_x_i[j-1,:,:]
         
         self.p_X_traj_i_p_x_i.append(cur_p_X_traj_i_p_x_i)
         

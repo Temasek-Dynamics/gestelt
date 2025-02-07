@@ -612,10 +612,7 @@ class OCSys:
 
     def AcadosOcSolver(self, 
                     current_state, 
-                    goal_pos,
-                    goal_ori,
-                    goal_w,
-                    goal_SRT,
+                    goal_state_value,
                     dt=0.1,
                     trav_auxvar_value=None):
         """
@@ -627,19 +624,7 @@ class OCSys:
         # self.lb_v_control_traj_opt = np.zeros((self.n_nodes,self.n_control))
         # self.ub_v_control_traj_opt = np.zeros((self.n_nodes,self.n_control))
         # #---------------------for linear cost---------------------##
-        # # #set desired ref state
-        goal_vel=np.array([0, 0, 0])
-        goal_w=np.array(goal_w)
-        goal_SRT=np.array(goal_SRT)
-        goal_ori = np.array(goal_ori)
-
-        if self.ctl_mode==0:
-            goal_state_value=np.concatenate((np.array(goal_pos),goal_vel,goal_ori))
-        elif self.ctl_mode==1 or self.ctl_mode==2:
-            goal_state_value=np.concatenate((np.array(goal_pos),goal_vel,goal_ori,goal_w))
-        elif self.ctl_mode==3:
-            goal_state_value=np.concatenate((np.array(goal_pos),goal_vel,goal_ori,goal_w,goal_SRT))
-        # set the desired state-control at 0->N-1 nodes
+       
         for i in range(self.n_nodes):
             
             # weight = max_tra_w*casadi.exp(-gamma*(dt*i-t_tra)**2) #gamma should increase as the flight duration decreases

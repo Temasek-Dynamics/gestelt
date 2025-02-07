@@ -5,6 +5,8 @@ void mpcRosWrapper::init(ros::NodeHandle& nh)
     /////////////////
     /*parameters*/
     /////////////////
+    nh.param("ctl_mode", ctl_mode_, 3);
+    nh.param("drone/mass",drone_mass_,0.248);
     nh.param("learning_agile/max_tra_w", max_tra_w_, 0.0);
     nh.param("learning_agile/traverse_weight_span", tra_w_span_, 0.0);
     nh.param("learning_agile/traverse_time", t_tra_abs_, 10.0);
@@ -17,7 +19,7 @@ void mpcRosWrapper::init(ros::NodeHandle& nh)
     /* Subscribers */
     /////////////////
     drone_pose_sub_= nh.subscribe("/mavros/local_position/pose", 1, &mpcRosWrapper::drone_state_pose_cb, this);
-    drone_twist_sub_= nh.subscribe("/mavros/local_position/velocity_local", 1, &mpcRosWrapper::drone_state_twist_cb, this);
+    drone_twist_sub_= nh.subscribe("/mavros/local_position/velocity_body", 1, &mpcRosWrapper::drone_state_twist_cb, this);
     waypoint_sub_ = nh.subscribe("/planner/goals_learning_agile", 1, &mpcRosWrapper::mission_start_cb, this);
 
     if (!MANUAL_SET_POSE_TEST_)
@@ -74,6 +76,8 @@ void mpcRosWrapper::init(ros::NodeHandle& nh)
     int n = 3;
     Eigen::MatrixXd identityMatrix = Eigen::MatrixXd::Identity(n, n);
     des_trav_9d_ = Eigen::Map<Eigen::VectorXd>(identityMatrix.data(), identityMatrix.size());
+
+    drone_state_.segment(13,4) << drone_mass_*9.81/4,drone_mass_*9.81/4,drone_mass_*9.81/4,drone_mass_*9.81/4;
 }
 
 void mpcRosWrapper::solver_request(){
@@ -216,7 +220,7 @@ void mpcRosWrapper::close_loop_solver_request(){
         }
         
         // ROS_INFO("t_tra is %f", t_tra);
-        int NP=27;
+        int NP=34;
         for (int i = 0; i < n_nodes_; i++)
         {
             // current_input_=last_input_;
@@ -225,12 +229,12 @@ void mpcRosWrapper::close_loop_solver_request(){
             // set the external parameters for the solver
             // desired goal state, current input, desired traverse pose, varying traverse weight
             Eigen::VectorXd solver_extern_param(NP);
-            solver_extern_param.segment(0,10) = des_goal_state_;
-            solver_extern_param.segment(10,3) = des_trav_point_;
-            solver_extern_param.segment(13,9) = des_trav_9d_;
-            solver_extern_param.segment(22,3) = weight_vector_;
-            solver_extern_param(25) = t_tra_rel_; 
-            solver_extern_param(26) = i * dt_; //current node relative time
+            solver_extern_param.segment(0,17) = des_goal_state_;
+            solver_extern_param.segment(17,3) = des_trav_point_;
+            solver_extern_param.segment(20,9) = des_trav_9d_;
+            solver_extern_param.segment(29,3) = weight_vector_;
+            solver_extern_param(32) = t_tra_rel_; 
+            solver_extern_param(33) = i * dt_; //current node relative time
 
             
             double *solver_extern_param_ptr = solver_extern_param.data();
@@ -248,12 +252,12 @@ void mpcRosWrapper::close_loop_solver_request(){
 
         // set the end desired state
         Eigen::VectorXd solver_extern_param(NP);
-        solver_extern_param.segment(0,10) = des_goal_state_;
-        solver_extern_param.segment(10,3) = des_trav_point_;
-        solver_extern_param.segment(13,9) = des_trav_9d_;
-        solver_extern_param.segment(22,3) = weight_vector_;
-        solver_extern_param(25) = t_tra_rel_;
-        solver_extern_param(26) = n_nodes_ * dt_; //current node relative time
+        solver_extern_param.segment(0,17) = des_goal_state_;
+        solver_extern_param.segment(17,3) = des_trav_point_;
+        solver_extern_param.segment(20,9) = des_trav_9d_;
+        solver_extern_param.segment(29,3) = weight_vector_;
+        solver_extern_param(32) = t_tra_rel_;
+        solver_extern_param(33) = n_nodes_ * dt_; //current node relative time
         
         double *solver_extern_param_ptr = solver_extern_param.data();
     
@@ -319,6 +323,9 @@ void mpcRosWrapper::drone_state_twist_cb(const geometry_msgs::TwistStamped::Cons
     drone_vel_ << msg->twist.linear.x, msg->twist.linear.y, msg->twist.linear.z;
     drone_ang_vel_ << msg->twist.angular.x, msg->twist.angular.y, msg->twist.angular.z;
     drone_state_.segment(3,3) = drone_vel_;
+    // drone_state_.segment(10,3) << state_traj_opt_[17+10], state_traj_opt_[17+11], state_traj_opt_[17+12];
+    drone_state_.segment(10,3) = drone_ang_vel_;
+    drone_state_.segment(13,4) << state_traj_opt_[17+13], state_traj_opt_[17+14], state_traj_opt_[17+15], state_traj_opt_[17+16];
     // drone_state_.tail(3) = drone_ang_vel_;
 }
 
@@ -335,12 +342,23 @@ void mpcRosWrapper::mission_start_cb(const gestelt_msgs::GoalsPtr &msg)
     des_goal_point_ << msg->waypoints[msg->waypoints.size()-1].position.x, msg ->waypoints[msg->waypoints.size()-1].position.y, msg ->waypoints[msg->waypoints.size()-1].position.z;
     // des_goal_quat_ << msg->waypoints[-1].orientation.w, msg->waypoints[-1].orientation.x, msg->waypoints[-1].orientation.y, msg->waypoints[-1].orientation.z;
     des_goal_quat_ << msg->waypoints[msg->waypoints.size()-1].orientation.w, msg->waypoints[msg->waypoints.size()-1].orientation.x, msg->waypoints[msg->waypoints.size()-1].orientation.y, msg->waypoints[msg->waypoints.size()-1].orientation.z;
-    
+    des_goal_ang_vel_ <<0,0,0;
+    des_goal_f_<<drone_mass_*9.81/4,drone_mass_*9.81/4,drone_mass_*9.81/4,drone_mass_*9.81/4;
     //set the goal state
     des_goal_state_.segment(0,3) = des_goal_point_;
     des_goal_state_.segment(3,3) = des_goal_vel_;
     des_goal_state_.segment(6,4) = des_goal_quat_;
 
+    if (ctl_mode_==1 || ctl_mode_==2)
+    {
+        des_goal_state_.segment(10,3) = des_goal_ang_vel_;
+    }
+    else if (ctl_mode_==3)
+    {
+        des_goal_state_.segment(10,3) = des_goal_ang_vel_;
+        des_goal_state_.segment(13,4) = des_goal_f_;
+    }
+    
     // // wait for the NN to publish the traverse time
     // ROS_INFO("Mission loaded, will sleep 1s for the NN to publish the traverse time");
     // ros::Duration(1).sleep();
@@ -402,10 +420,30 @@ void mpcRosWrapper::Update()
             mpc_cmd.header.stamp = ros::Time::now();
             mpc_cmd.header.frame_id = origin_frame_;
             mpc_cmd.type_mask = mavros_msgs::AttitudeTarget::IGNORE_ATTITUDE; // Ignore orientation
+            if (ctl_mode_==0){
             mpc_cmd.thrust = control_opt_[0]/(single_motor_max_thrust_*4);
             mpc_cmd.body_rate.x = control_opt_[1];
             mpc_cmd.body_rate.y = control_opt_[2];
             mpc_cmd.body_rate.z = control_opt_[3];
+            }
+            else if (ctl_mode_==1){ // SRT
+            mpc_cmd.thrust = std::accumulate(control_opt_, control_opt_ + 4, 0.0)/(single_motor_max_thrust_*4);
+            mpc_cmd.body_rate.x = state_traj_opt_[13+10];
+            mpc_cmd.body_rate.y = state_traj_opt_[13+11];
+            mpc_cmd.body_rate.z = state_traj_opt_[13+12];
+            }
+            else if (ctl_mode_==2){ // Wrench
+            mpc_cmd.thrust = control_opt_[0]/(single_motor_max_thrust_*4);
+            mpc_cmd.body_rate.x = state_traj_opt_[13+10];
+            mpc_cmd.body_rate.y = state_traj_opt_[13+11];
+            mpc_cmd.body_rate.z = state_traj_opt_[13+12];
+            }
+            else{ // AugmentedSRT
+            mpc_cmd.thrust = std::accumulate(state_traj_opt_ + 17 + 13, state_traj_opt_ + 17+ 17, 0.0)/(single_motor_max_thrust_*4);
+            mpc_cmd.body_rate.x = state_traj_opt_[17+10];
+            mpc_cmd.body_rate.y = state_traj_opt_[17+11];
+            mpc_cmd.body_rate.z = state_traj_opt_[17+12];
+            }
             next_attitude_setpoint_pub_.publish(mpc_cmd);
 
             auto end = std::chrono::high_resolution_clock::now();

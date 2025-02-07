@@ -7,7 +7,7 @@ from quad_OC import OCSys,LQR
 # with juliacall is import
 from solid_geometry import pitch_from_gate
 from quad_model import QuadrotorCTBRCtl, QuadrotorSRTCtl,QuadrotorWrenchCtl,QuadrotorAugmentedSRTCtl, toQuaternion,Gate
-
+from visualization.python_sim_vis import get_quad_vert_pos
 
 class PlanFwdBwdWrapper():
     """
@@ -155,10 +155,12 @@ class PlanFwdBwdWrapper():
                              ini_q):  
         # goal
         self.goal_pos = goal_pos
-        self.goal_ori = goal_ori
-        self.goal_w = [0.0, 0.0, 0.0]
+        goal_ori = np.array(goal_ori)
+        goal_vel=np.array([0, 0, 0])
+        goal_w = np.array([0.0, 0.0, 0.0])
         hover_SRT=self.config['drone']['mass']*9.81/4
-        self.goal_SRT = [hover_SRT]*4
+        goal_SRT =  np.array([hover_SRT]*4)
+            
         # initial
         if type(ini_r) is not list:
             ini_r = ini_r.tolist()
@@ -169,10 +171,13 @@ class PlanFwdBwdWrapper():
         self.init_SRT=[self.config['drone']['mass']*9.81/4]*4
         if self.config['ctl_mode']==0:
             self.ini_state = self.ini_r + self.ini_v_I + self.ini_q
+            self.goal_state_value=np.concatenate((goal_pos,goal_vel,goal_ori))
         elif self.config['ctl_mode']==1 or self.config['ctl_mode']==2:
             self.ini_state = self.ini_r + self.ini_v_I + self.ini_q + self.ini_w
+            self.goal_state_value=np.concatenate((goal_pos,goal_vel,goal_ori,goal_w))
         elif self.config['ctl_mode']==3:
             self.ini_state = self.ini_r + self.ini_v_I + self.ini_q + self.ini_w + self.init_SRT
+            self.goal_state_value=np.concatenate((goal_pos,goal_vel,goal_ori,goal_w,goal_SRT))
 
     def update_goal_pos(self,goal_pos):
         self.goal_pos = goal_pos
@@ -206,7 +211,7 @@ class PlanFwdBwdWrapper():
         # state_traj [x,y,z,vx,vy,vz,qw,qx,qy,qz]
         state_traj = self.sol1['state_traj_opt']
         # get the quadrotor both center and edges position trajectory
-        self.vert_traj = self.uav.get_quad_vert_pos(wing_len = self.wing_len, state_traj = state_traj)
+        self.vert_traj = get_quad_vert_pos(wing_len = self.wing_len, state_traj = state_traj)
 
         
       
@@ -252,7 +257,7 @@ class PlanFwdBwdWrapper():
             return reward #+ self.roll_reward + self.yaw_reward#+ pitch_reward
 
     def get_penalty(self,state_traj,real_state_i=None,success_rate=None):
-        self.vert_traj = self.uav.get_quad_vert_pos(wing_len = self.wing_len, state_traj = state_traj)
+        self.vert_traj = get_quad_vert_pos(wing_len = self.wing_len, state_traj = state_traj)
         reward,self.d_R_d_st_traj,_=self.obstacle.penalty_cal_diff_collision(self.config,
                                                                             state_traj=state_traj,
                                                                             gate_corners=self.gate_corners,
@@ -276,7 +281,7 @@ class PlanFwdBwdWrapper():
             gate_real_t_tra= Gate(gate_points_list[int(real_t_tra)])
             self.init_obstacle(gate_real_t_tra)
             
-            self.vert_traj = self.uav.get_quad_vert_pos(wing_len = self.wing_len, state_traj = state_traj)
+            self.vert_traj = get_quad_vert_pos(wing_len = self.wing_len, state_traj = state_traj)
             _,_,FAILED=self.obstacle.penalty_cal_diff_collision(self.config,
                                                                 state_traj=state_traj,
                                                                 gate_corners=self.gate_corners,
@@ -381,19 +386,14 @@ class PlanFwdBwdWrapper():
         ###################################################################
         ###----- Set mpc external variables VALUE to diffPMP--------#######
         ###################################################################
-        ## goal state, t_node is set in the mpc_update function,
-        ## need to be given here
-    
-    
-        goal_state_value=np.concatenate((self.goal_pos,np.zeros(3),self.goal_ori))  
 
-        
+    
         ## using LQR solver to solve the auxilary control system to get the analytical gradient
         # set values to the auxilary control system symbolic functions 
         aux_sys = self.uavoc.getAuxSys(state_traj_opt=self.sol1['state_traj_opt'],
                                         control_traj_opt=self.sol1['control_traj_opt'],
                                         costate_traj_opt=self.sol1['costate_traj_opt'],
-                                        goal_state_value=goal_state_value,
+                                        goal_state_value=self.goal_state_value,
                                         auxvar_value=trav_auxvar_value)
         
         # set values to the LQR solver
@@ -423,10 +423,7 @@ class PlanFwdBwdWrapper():
        
         # self.sol1 = self.uavoc.ocSolver(current_state_control=current_state_control,t_tra=t)
         self.sol1,NO_SOLUTION_FLAG = self.uavoc.AcadosOcSolver(current_state=current_state,
-                                                goal_pos=self.goal_pos,
-                                                goal_ori=self.goal_ori,
-                                                goal_w=self.goal_w,
-                                                goal_SRT=self.goal_SRT,
+                                                goal_state_value=self.goal_state_value,
                                                 dt=self.dt,
                                                 trav_auxvar_value=trav_auxvar_value)
         # print('goal_pos:',self.goal_pos)
@@ -546,7 +543,7 @@ class PlanFwdBwdWrapper():
     #     ## obtain the trajectory
     #     self.sol1 = self.uavoc.ocSolver(horizon=self.horizon,dt=self.dt,Ulast=Ulast)
     #     state_traj1 = self.sol1['state_traj_opt']
-    #     traj = self.uav.get_quad_vert_pos(wing_len = self.wing_len, state_traj = state_traj1)
+    #     traj = get_quad_vert_pos(wing_len = self.wing_len, state_traj = state_traj1)
     #     ## plot the animation
     #     self.uav.play_animation(wing_len = self.wing_len, state_traj = state_traj1,dt=self.dt, point1 = self.point1,\
     #         point2 = self.point2, point3 = self.point3, point4 = self.point4)

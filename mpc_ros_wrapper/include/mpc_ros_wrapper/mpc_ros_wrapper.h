@@ -91,6 +91,9 @@ class mpcRosWrapper{
     //environment setting
     std::string origin_frame_="world";
 
+    int ctl_mode_=0;
+    double drone_mass_=0.248;
+
     // desired traverse state
     Eigen::Vector3d des_trav_point_={0,0,0};
     Eigen::Vector3d des_trav_rodrigues_={0,0,0};
@@ -112,17 +115,12 @@ class mpcRosWrapper{
     Eigen::Vector3d start_point_={0,0,0};
     
     // desired goal state
-    Eigen::VectorXd des_goal_state_=Eigen::VectorXd::Zero(10);
-    Eigen::Vector3d des_goal_point_={0,0,0};
-    Eigen::Vector4d des_goal_quat_={1,0,0,0};
-    Eigen::Vector3d des_goal_vel_={0,0,0};
-
-    //current drone state
-    Eigen::VectorXd drone_state_=Eigen::VectorXd::Zero(10);
-    Eigen::Vector3d drone_pos_= {0,0,0};
-    Eigen::Vector3d drone_vel_= {0,0,0};
-    Eigen::Vector4d drone_quat_= {1,0,0,0};
-    Eigen::Vector3d drone_ang_vel_= {0,0,0};
+    Eigen::VectorXd des_goal_state_=Eigen::VectorXd::Zero(17),drone_state_=Eigen::VectorXd::Zero(17);
+    Eigen::Vector3d des_goal_point_={0,0,0},drone_pos_= {0,0,0};
+    Eigen::Vector4d des_goal_quat_={1,0,0,0},drone_quat_= {1,0,0,0};
+    Eigen::Vector3d des_goal_vel_={0,0,0},drone_vel_= {0,0,0};
+    Eigen::Vector3d des_goal_ang_vel_={0,0,0},drone_ang_vel_= {0,0,0};
+    Eigen::Vector4d des_goal_f_={0,0,0,0}, drone_f_= {0,0,0,0};
 
     //MPC parameters
     double max_tra_w_=0;

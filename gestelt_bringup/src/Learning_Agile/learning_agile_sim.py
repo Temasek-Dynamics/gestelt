@@ -221,9 +221,8 @@ class LearningAgileSim():
         final_q=toQuaternion(self.goal_yaw,[0,0,1])
           
 
-        self.planner.init_state_and_mission(goal_pos=self.env_init_set[3:6].tolist(),
+        self.planner.init_state_and_mission(goal_pos=self.env_init_set[3:6],
                               goal_ori=final_q,
-                              
                               ini_r=self.env_init_set[0:3].tolist(),
                               ini_v_I = [0.0, 0.0, 0.0], # initial velocity
                               ini_q=ini_q,)
@@ -368,9 +367,9 @@ class LearningAgileSim():
         self.Time = [0]
         self.nn_output_list = [np.zeros(output_size)] # 3 position, 4 quaternion, 1 traversal time
         self.des_tra_R_list = [np.zeros(9)] # 3x3 rotation matrix(in flat form)
-        self.wrp_list = [0]
-        self.wrt_list = [0]
-        self.wqt_list = [0]
+        self.wrp_list = [30]
+        self.wrt_list = [10]
+        self.wqt_list = [10]
         trav_auxvar_value = np.zeros(output_size)
         for self.i in range(self.sim_time*(int(1/self.dyn_step))): # 5s, 500 Hz
             
