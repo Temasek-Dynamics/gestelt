@@ -1,6 +1,6 @@
 <launch>
     <!-- Drone id -->
-    <arg name="drone_id"/>
+    <arg name="drone_id" value="0"/>
     <arg name="drone_id_ns" value="drone$(arg drone_id)"/>
     <param name="/use_sim_time" value="false" />
 

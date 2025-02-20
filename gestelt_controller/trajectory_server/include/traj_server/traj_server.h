@@ -16,11 +16,16 @@
 #include <mavros_msgs/CommandBool.h>
 #include <mavros_msgs/State.h>
 #include <mavros_msgs/SetMode.h>
+#include <mavros_msgs/AttitudeTarget.h>
 #include <std_msgs/Empty.h>
 #include <std_msgs/Int8.h>
 #include <std_msgs/Float32.h>
 #include <std_msgs/String.h>
 #include <trajectory_msgs/MultiDOFJointTrajectory.h>
+#include <tf2_ros/transform_broadcaster.h>
+#include <tf2_ros/transform_listener.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <geometry_msgs/Vector3Stamped.h>
 
 #include <gestelt_msgs/Command.h>
 #include <gestelt_msgs/CommanderState.h>
@@ -51,6 +56,13 @@ enum ServerEvent
   HOVER_E,          // 3
   E_STOP_E,         // 4
   EMPTY_E,          // 5
+};
+
+enum MissionCmdMode
+{
+  PVA,
+  CT_OMEGA,
+  UNKNOWN,
 };
 
 enum TrajMode
@@ -89,6 +101,12 @@ private: // Class Methods
    * @brief Callback for trajectory points from mav_trajectory_generation  
    */
   void execTrajCb(const gestelt_msgs::ExecTrajectory::ConstPtr &msg);
+
+    /**
+   * @brief Callback for thrust and body rates from policy 
+   */
+  void execLowLvlCmdCb(const gestelt_msgs::ExecTrajectory::ConstPtr &msg);
+
 
   /**
    * @brief Callback for Mavros state 
@@ -206,6 +224,16 @@ private: // Class Methods
     Vector3d j, double yaw, double yaw_rate, 
     uint16_t type_mask = 0);
 
+  /**
+  * @brief Publish PVA (Position, Velocity, Acceleration) commands
+  * 
+  * @param omega Eigen Vec3 body rates in body frame
+  * @param collective_thrust Total thrust in N
+  */
+
+  void publishLowLvlCmd(
+  Vector3d omega, Vector3d collective_thrust_vector, Vector3d p, int ct_omega_mode_);
+
   /* Helper methods */
 
   /**
@@ -292,6 +320,30 @@ private: // Class Methods
       }
   }
 
+  /** @brief MissionToString interprets the input server event **/
+  inline const std::string MissionToString(MissionCmdMode cmd_mode)
+  {
+      switch (cmd_mode)
+      {
+          case MissionCmdMode::PVA:  return "POSVELACC";
+          case MissionCmdMode::CT_OMEGA:     return "THRUSTOMEGA";
+          default:                      return "[Unknown Event]";
+      }
+  }
+
+  /** @brief IntToMission interprets the input server event **/
+inline const MissionCmdMode IntToMission(int cmd_mode_num)
+{
+    switch (cmd_mode_num)
+    {
+        case 1:  return MissionCmdMode::PVA;
+        case 2:  return MissionCmdMode::CT_OMEGA;
+        default: return MissionCmdMode::UNKNOWN; // Replace with an appropriate default.
+    }
+}
+
+
+
   /* Send a server event to be processed by the state machine*/
   inline void setServerEvent(ServerEvent event)
   {
@@ -308,6 +360,23 @@ private: // Class Methods
     server_event_ = ServerEvent::EMPTY_E;  // Reset to empty
 
     return event;
+  }
+
+  /** Transition state machine to desired state.
+   * This should ONLY be called within tickServerStateTimerCb.
+   */
+  void setMissionCmd(MissionCmdMode cmd_mode)
+  {
+    logInfo(str_fmt("Setting Mission Cmd State: %s -> %s", 
+      MissionToString(getMissionCmd()).c_str(), MissionToString(cmd_mode).c_str()));
+
+    mission_cmd_mode_ = cmd_mode;
+  }
+
+  /** get current server state */
+  MissionCmdMode getMissionCmd()
+  {
+    return mission_cmd_mode_;
   }
 
   /** Transition state machine to desired state.
@@ -335,9 +404,12 @@ private: // Member variables
   ros::Publisher pos_cmd_raw_pub_; // Publisher of commands for PX4 
   ros::Publisher server_state_pub_; // Publisher of current uav and server state
   ros::Publisher vel_magnitude_pub_; // Publish velocity vector magnitude 
+  ros::Publisher low_lvl_cmd_raw_pub_;
+  ros::Publisher angular_rates_pub_;
   
   /* Subscriber */
   ros::Subscriber exec_traj_sub_; // Subscriber for planner trajectory
+  ros::Subscriber exec_lowlvl_cmd_sub_;
 
   ros::Subscriber planner_hb_sub_; // Subscriber to planner heartbeat
   ros::Subscriber uav_state_sub_; // Subscriber to UAV State (MavROS)
@@ -358,6 +430,8 @@ private: // Member variables
   /* Stored data*/
   ServerEvent server_event_{ServerEvent::EMPTY_E};
   ServerState server_state_{ServerState::INIT};
+  MissionCmdMode mission_cmd_mode_{MissionCmdMode::PVA};
+  int cmd_mode_num;
   mavros_msgs::State uav_current_state_;
 
   geometry_msgs::PoseStamped uav_pose_; // Current pose of UAV
@@ -366,6 +440,9 @@ private: // Member variables
   // Last received mission PVAJ (position, velocity, acceleration, Jerk)
   Eigen::Vector3d last_mission_pos_{0.0, 0.0, 0.0}, last_mission_vel_{0.0, 0.0, 0.0};
   Eigen::Vector3d last_mission_acc_{0.0, 0.0, 0.0}, last_mission_jerk_{0.0, 0.0, 0.0};
+  // Last received mission Collective Thrust and Omega
+  Eigen::Vector3d last_mission_thrust_vector_{0.0, 0.0, 0.0}, last_mission_body_rates_{0.0, 0.0, 0.0};
+  double last_mission_thrust_;
   // Last received mission yaw and yaw rate
   double last_mission_yaw_{0.0}, last_mission_yaw_dot_{0.0};
 
@@ -373,11 +450,13 @@ private: // Member variables
   ros::Time last_traj_msg_time_{0}; // Time of last trajectory message
 
   bool first_pose_{true};
+  bool mission_hover_set_state{false};
 
   // Values set from mavros_msgs/PositionTarget message constants
   uint16_t IGNORE_POS; // Ignore position in typemask
   uint16_t IGNORE_VEL; // Ignore velocity in typemask
   uint16_t IGNORE_ACC; // Ignore acceleration in typemask
+  uint16_t ATTITUDE_CTRL;
   uint16_t USE_FORCE; // Use force in typemask
   uint16_t IGNORE_YAW; // Ignore yaw in typemask
   uint16_t IGNORE_YAW_RATE; // Ignore yaw rate in typemask
@@ -385,6 +464,10 @@ private: // Member variables
   uint16_t mission_type_mask_{0}; // Current type mask
 
   std::mutex cmd_mutex_; // mutex for PVA Commands
+
+
+  /*Drone params*/
+  double single_motor_max_thrust_=2.1334185;
 
   /* Params */ 
   std::string node_name_{"traj_server"};
@@ -397,8 +480,12 @@ private: // Member variables
   double take_off_landing_tol_{0.1}; // tolerance within desired take off or landing 
 
   double traj_msg_timeout_{0.2}; 
+  int ct_omega_mode_{0};
 
   int num_pose_msgs_{0};
+
+  tf2_ros::Buffer tfBuffer;
+  tf2_ros::TransformListener tfListener{tfBuffer};
 
   bool enable_safety_box_{true}; // Enables a safety bounding box and prevents quadrotor from exceeding this box. 
   SafetyLimits safety_box_;

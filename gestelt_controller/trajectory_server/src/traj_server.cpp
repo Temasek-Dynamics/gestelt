@@ -17,6 +17,9 @@ void TrajectoryServer::init(ros::NodeHandle& nh, ros::NodeHandle& pnh)
   pnh.param("takeoff_height", takeoff_height_, 1.0);
   pnh.param("minimum_hover_height", min_hover_height_, 0.25);
 
+  //mission params
+  pnh.param("mission_command_mode", cmd_mode_num, 1);
+
   // Safety bounding box params
   pnh.param("enable_safety_box", enable_safety_box_, true);
   pnh.param("safety_box/max_x", safety_box_.max_x, -1.0);
@@ -33,6 +36,9 @@ void TrajectoryServer::init(ros::NodeHandle& nh, ros::NodeHandle& pnh)
   double debug_freq; // Frequency to publish debug information
   pnh.param("debug_freq", debug_freq, 10.0);
 
+  //Set mission_command_mode
+  setMissionCmd(MissionCmdMode(IntToMission(cmd_mode_num)));
+
   /////////////////
   /* Subscribers */
   /////////////////
@@ -42,6 +48,7 @@ void TrajectoryServer::init(ros::NodeHandle& nh, ros::NodeHandle& pnh)
 
   // Subscription to planner adaptor
   exec_traj_sub_ = nh.subscribe<gestelt_msgs::ExecTrajectory>("planner_adaptor/exec_trajectory", 5, &TrajectoryServer::execTrajCb, this);
+  // exec_lowlvl_cmd_sub_ = nh.subscribe<gestelt_msgs::ExecTrajectory>("planner_adaptor/exec_low_level_cmd", 5, &TrajectoryServer::execLowLvlCmdCb, this);
 
   // Subscription to UAV (via MavROS)
   uav_state_sub_ = nh.subscribe<mavros_msgs::State>("mavros/state", 5, &TrajectoryServer::UAVStateCb, this);
@@ -54,6 +61,8 @@ void TrajectoryServer::init(ros::NodeHandle& nh, ros::NodeHandle& pnh)
   pos_cmd_raw_pub_ = nh.advertise<mavros_msgs::PositionTarget>("mavros/setpoint_raw/local", 50);
   server_state_pub_ = nh.advertise<gestelt_msgs::CommanderState>("traj_server/state", 50);
   vel_magnitude_pub_ = nh.advertise<std_msgs::Float32>("vel_magnitude", 50);
+  low_lvl_cmd_raw_pub_ = nh.advertise<mavros_msgs::AttitudeTarget>("mavros/setpoint_raw/attitude", 1);
+  angular_rates_pub_ = nh.advertise<nav_msgs::Odometry>("warp/local_position/odom", 1);
 
   ////////////////////
   /* Service clients */
@@ -72,6 +81,7 @@ void TrajectoryServer::init(ros::NodeHandle& nh, ros::NodeHandle& pnh)
   IGNORE_POS = mavros_msgs::PositionTarget::IGNORE_PX | mavros_msgs::PositionTarget::IGNORE_PY | mavros_msgs::PositionTarget::IGNORE_PZ;
   IGNORE_VEL = mavros_msgs::PositionTarget::IGNORE_VX | mavros_msgs::PositionTarget::IGNORE_VY | mavros_msgs::PositionTarget::IGNORE_VZ;
   IGNORE_ACC = mavros_msgs::PositionTarget::IGNORE_AFX | mavros_msgs::PositionTarget::IGNORE_AFY | mavros_msgs::PositionTarget::IGNORE_AFZ;
+  ATTITUDE_CTRL = mavros_msgs::AttitudeTarget::IGNORE_ROLL_RATE | mavros_msgs::AttitudeTarget::IGNORE_PITCH_RATE | mavros_msgs::AttitudeTarget::IGNORE_YAW_RATE;
   USE_FORCE = mavros_msgs::PositionTarget::FORCE;
   IGNORE_YAW = mavros_msgs::PositionTarget::IGNORE_YAW;
   IGNORE_YAW_RATE = mavros_msgs::PositionTarget::IGNORE_YAW_RATE;
@@ -94,6 +104,7 @@ void TrajectoryServer::execTrajCb(const gestelt_msgs::ExecTrajectory::ConstPtr &
   
   mission_type_mask_ = msg->type_mask; 
 
+  if (getMissionCmd() == MissionCmdMode::PVA){
   geomMsgsVector3ToEigenVector3(msg->transform.translation, last_mission_pos_);
   last_mission_yaw_ = quaternionToRPY(msg->transform.rotation)(2); // yaw
 
@@ -105,6 +116,14 @@ void TrajectoryServer::execTrajCb(const gestelt_msgs::ExecTrajectory::ConstPtr &
 
   geomMsgsVector3ToEigenVector3(msg->acceleration.linear, last_mission_acc_);
   // ROS_INFO("received acceleration: %f, %f, %f", last_mission_acc_(0), last_mission_acc_(1), last_mission_acc_(2));
+  }
+
+  if (getMissionCmd() == MissionCmdMode::CT_OMEGA){
+    geomMsgsVector3ToEigenVector3(msg->acceleration.linear, last_mission_thrust_vector_);
+    geomMsgsVector3ToEigenVector3(msg->velocity.linear, last_mission_body_rates_);
+    ct_omega_mode_ = msg->acceleration.linear.z;
+    // last_mission_thrust_= last_mission_thrust_vector_[0];
+  }
 
 }
 
@@ -127,6 +146,22 @@ void TrajectoryServer::UAVPoseCB(const geometry_msgs::PoseStamped::ConstPtr &msg
   }
 
   uav_pose_ = *msg; 
+
+  static tf2_ros::TransformBroadcaster br;
+  geometry_msgs::TransformStamped transformStamped;
+
+  transformStamped.header.stamp = ros::Time::now();
+  transformStamped.header.frame_id = "map";
+  transformStamped.child_frame_id = "body" + drone_id_;
+  transformStamped.transform.translation.x = msg->pose.position.x;
+  transformStamped.transform.translation.y = msg->pose.position.y;
+  transformStamped.transform.translation.z = msg->pose.position.z;
+  transformStamped.transform.rotation.x = msg->pose.orientation.x;
+  transformStamped.transform.rotation.y = msg->pose.orientation.y;
+  transformStamped.transform.rotation.z = msg->pose.orientation.z;
+  transformStamped.transform.rotation.w = msg->pose.orientation.w;
+
+  br.sendTransform(transformStamped);   
 }
 
 void TrajectoryServer::UAVOdomCB(const nav_msgs::Odometry::ConstPtr &msg)
@@ -143,6 +178,45 @@ void TrajectoryServer::UAVOdomCB(const nav_msgs::Odometry::ConstPtr &msg)
   vel_mag_msg.data = vel_vect.norm();
 
   vel_magnitude_pub_.publish(vel_mag_msg);
+
+  geometry_msgs::Vector3Stamped input_vector;
+  input_vector.vector.x = msg->twist.twist.angular.x;
+  input_vector.vector.y = msg->twist.twist.angular.y;
+  input_vector.vector.z = msg->twist.twist.angular.z;
+
+  geometry_msgs::Vector3Stamped input_linearvel_vector;
+  input_linearvel_vector.vector.x = msg->twist.twist.linear.x;
+  input_linearvel_vector.vector.y = msg->twist.twist.linear.y;
+  input_linearvel_vector.vector.z = msg->twist.twist.linear.z;
+
+
+  try {
+      // Lookup the transformation from input frame to target frame
+      geometry_msgs::TransformStamped transformStamped;
+      transformStamped = tfBuffer.lookupTransform("warp", "body", ros::Time(0));
+
+      // Transform the vector
+      geometry_msgs::Vector3Stamped transformed_vector;
+      geometry_msgs::Vector3Stamped transformed_linearvel_vector;
+      tf2::doTransform(input_vector, transformed_vector, transformStamped);
+      tf2::doTransform(input_linearvel_vector, transformed_linearvel_vector, transformStamped);
+      // ROS_INFO("Transformed Vector: x=%.2f, y=%.2f, z=%.2f", 
+      //          transformed_vector.vector.x, transformed_vector.vector.y, transformed_vector.vector.z);
+      nav_msgs::Odometry transformed_odom;
+      transformed_odom.twist.twist.angular.x = transformed_vector.vector.x; 
+      transformed_odom.twist.twist.angular.y = transformed_vector.vector.y; 
+      transformed_odom.twist.twist.angular.z = transformed_vector.vector.z; 
+      transformed_odom.twist.twist.linear.x = transformed_linearvel_vector.vector.x;
+      transformed_odom.twist.twist.linear.y = transformed_linearvel_vector.vector.y;
+      transformed_odom.twist.twist.linear.z = transformed_linearvel_vector.vector.z;
+      angular_rates_pub_.publish(transformed_odom);
+
+  } 
+  catch (tf2::TransformException &ex) {
+      ROS_WARN("Could not transform vector: %s", ex.what());
+  }
+
+
 }
 
 void TrajectoryServer::swarmServerCommandCb(const std_msgs::Int8::ConstPtr & msg)
@@ -379,6 +453,13 @@ void TrajectoryServer::tickServerStateTimerCb(const ros::TimerEvent &e)
           break;
         case HOVER_E:
           logWarn("[MISSION] Mission cancelled! Hovering...");
+          if (mission_hover_set_state == false){
+            last_mission_pos_[0] = uav_pose_.pose.position.x;
+            last_mission_pos_[1] = uav_pose_.pose.position.y;
+            last_mission_pos_[2] = uav_pose_.pose.position.z;
+            mission_hover_set_state = true;
+          }
+          
           setServerState(ServerState::HOVER);
           break;
         case E_STOP_E:
@@ -457,9 +538,15 @@ void TrajectoryServer::execHover()
 void TrajectoryServer::execMission()
 {
   std::lock_guard<std::mutex> cmd_guard(cmd_mutex_);
+
+  if (getMissionCmd() == MissionCmdMode::PVA){
   publishCmd( last_mission_pos_, last_mission_vel_, last_mission_acc_, last_mission_jerk_, 
               last_mission_yaw_, last_mission_yaw_dot_, 
               mission_type_mask_);
+  }
+  else if(getMissionCmd() == MissionCmdMode::CT_OMEGA){
+  publishLowLvlCmd( last_mission_body_rates_, last_mission_thrust_vector_, last_mission_pos_, ct_omega_mode_);
+  }
 }
 
 /* Publisher methods */
@@ -494,6 +581,39 @@ void TrajectoryServer::publishCmd(
   // ROS_INFO("Acceleration for final command: %f, %f, %f", a(0), a(1), a(2));
   pos_cmd_raw_pub_.publish(pos_cmd);
 }
+
+void TrajectoryServer::publishLowLvlCmd(
+  Vector3d omega, Vector3d collective_thrust_vector, Vector3d p, int ct_omega_mode_)
+{
+  if (enable_safety_box_ && !checkPositionLimits(safety_box_, p)) {
+    // If position safety limit check failed, switch to hovering mode
+    setServerEvent(ServerEvent::HOVER_E);
+  }
+  mavros_msgs::AttitudeTarget low_lvl_cmd;
+  low_lvl_cmd.header.stamp = ros::Time::now();
+  low_lvl_cmd.header.frame_id = origin_frame_;
+  if (ct_omega_mode_ == 0){
+    low_lvl_cmd.type_mask = ATTITUDE_CTRL;
+    double collective_thrust = collective_thrust_vector[0];
+    low_lvl_cmd.thrust = collective_thrust/(single_motor_max_thrust_*4);
+    low_lvl_cmd.orientation.x = omega[0];
+    low_lvl_cmd.orientation.y = omega[1];
+    low_lvl_cmd.orientation.z = omega[2];
+    low_lvl_cmd.orientation.w = collective_thrust_vector[1];
+  }
+  else if (ct_omega_mode_ == 1){
+    low_lvl_cmd.type_mask = mavros_msgs::AttitudeTarget::IGNORE_ATTITUDE; // Ignore orientation
+    double collective_thrust = collective_thrust_vector[0];
+    low_lvl_cmd.thrust = collective_thrust/(single_motor_max_thrust_*4);
+    low_lvl_cmd.body_rate.x = omega[0];
+    low_lvl_cmd.body_rate.y = omega[1];
+    low_lvl_cmd.body_rate.z = omega[2];
+  }
+  
+  low_lvl_cmd_raw_pub_.publish(low_lvl_cmd);
+
+}
+
 
 /* Helper methods */
 

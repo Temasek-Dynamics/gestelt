@@ -15,9 +15,9 @@
     <arg name="est" default="ekf2"/>
     <arg name="interactive" default="false"/>
     <!-- PX4 1.14.0 -->
-    <env name="PX4_SIM_MODEL" value="gazebo-classic_$(arg vehicle)" />
+    <!-- <env name="PX4_SIM_MODEL" value="gazebo-classic_$(arg vehicle)" /> -->
     <!-- PX4 1.13.0 -->
-    <!-- <env name="PX4_SIM_MODEL" value="$(arg vehicle)" /> -->
+    <env name="PX4_SIM_MODEL" value="$(arg vehicle)" />
 
     <!-- Add static transform from drone to it's origin -->
     <node pkg="tf" type="static_transform_publisher" 

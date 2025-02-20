@@ -20,11 +20,15 @@ set(ROS_LIBRARIES
 find_package(Eigen3 REQUIRED)
 find_package(catkin REQUIRED COMPONENTS
   ${ROS_LIBRARIES}
+  tf2
+  tf2_ros
+  tf2_geometry_msgs
 )
 
 catkin_package(
  INCLUDE_DIRS include
  LIBRARIES trajectory_server
+ CATKIN_DEPENDS geometry_msgs mavros_msgs roscpp std_msgs tf2 tf2_ros tf2_geometry_msgs
 #  CATKIN_DEPENDS ${ROS_DEPENDS}
 #  DEPENDS system_lib
 )
