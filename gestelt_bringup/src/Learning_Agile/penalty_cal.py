@@ -179,9 +179,9 @@ class Obstacle():
         ### take more care of the real_state_i that is close to t_tra_seq_list
         # if len(t_tra_seq_list)>0:
         #     # if t_tra_seq_list is not empty
-        #     scaling_w = config['reward']['scaling_w'] * np.exp(-2*(real_state_i-t_tra_seq_list[0])**2)
+        #     scaling_w = config['penalty']['scaling_w'] * np.exp(-2*(real_state_i-t_tra_seq_list[0])**2)
         # else:
-        scaling_w = config['reward']['scaling_w']
+        scaling_w = config['penalty']['scaling_w']
         for node_tra in t_tra_seq_list:
         
             HIT,penalty_single,dalpha_dstate_drone=DiffCollisionWrapper(line_centers,
@@ -195,7 +195,8 @@ class Obstacle():
                                                                     state_traj[node_tra,:],
                                                                     node_tra,
                                                                     scaling_w,
-                                                                    PENALTY_HELPER)
+                                                                    PENALTY_HELPER,
+                                                                    QUADRATIC_LOSS=config['penalty']['QUADRATIC_LOSS'])
             
             penalty_traj += penalty_single
             drdstate_traj[node_tra,:] = dalpha_dstate_drone
@@ -205,24 +206,24 @@ class Obstacle():
         
         if not PENALTY_HELPER:
             # # velocity penalty, encourage the drone to fly through the gate, instead of hovering in front of the gate
-            vel_penalty = 0
-            vel_w=config['reward']['vel_w']
-            des_tra_vel = config['pretrain_param']['desired_tra_vel']
-            for i in range(state_traj.shape[0]):
-                if i in t_tra_seq_list:
-                    vel_penalty += vel_w * np.dot(-state_traj[i,4]-des_tra_vel,-state_traj[i,4]-des_tra_vel)
-                    drdstate_traj[i,4] += vel_w * 2 * (-state_traj[i,4]-des_tra_vel)
+            # vel_penalty = -10
+            # vel_w=config['penalty']['vel_w']
+            # des_tra_vel = config['pretrain_param']['desired_tra_vel']
+            # for i in range(state_traj.shape[0]):
+            #     if i in t_tra_seq_list:
+            #         vel_penalty += vel_w * np.dot(-state_traj[i,4]-des_tra_vel,-state_traj[i,4]-des_tra_vel)
+            #         drdstate_traj[i,4] += vel_w * 2 * (-state_traj[i,4]-des_tra_vel)
             
-            penalty_traj += vel_penalty
+            # penalty_traj += vel_penalty
 
 
             ## goal score
             goal_penalty = 0
             
-            # goal_yz_axis_w=config['reward']['goal_yz_axis_w']*10*np.exp(0.1*(real_state_i-50))+config['reward']['goal_yz_axis_w'] # 50 is the close loop horizon
-            goal_x_axis_w=config['reward']['goal_x_axis_w']
+            # goal_yz_axis_w=config['penalty']['goal_yz_axis_w']*10*np.exp(0.1*(real_state_i-50))+config['penalty']['goal_yz_axis_w'] # 50 is the close loop horizon
+            goal_x_axis_w=config['penalty']['goal_x_axis_w']
             
-            goal_yz_axis_w=config['reward']['goal_yz_axis_w']*max((1-1.5*success_rate),0.02)
+            goal_yz_axis_w=config['penalty']['goal_yz_axis_w']*max((1-1.5*success_rate),0.02)
 
             # if real_state_i == 49:
             #     goal_yz_axis_w*=100
@@ -237,7 +238,7 @@ class Obstacle():
                 ## after the gate traversing
                 goal_check_start_id = -5
                 goal_check_end_id = -1
-                # goal_x_axis_w=config['reward']['goal_x_axis_w']*20
+                # goal_x_axis_w=config['penalty']['goal_x_axis_w']*20
                 
             for i in range(goal_check_end_id,goal_check_start_id,-1): 
                 

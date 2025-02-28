@@ -78,7 +78,7 @@ def nn_sample(init_pos=None,
         if not mission_cfg['FIX_GATE_PITCH_TEST']:
            gate_pitch =  np.random.uniform(-pi/2,pi/2)
         else:
-            gate_pitch = mission_cfg['gate_pitch'] 
+            gate_pitch = mission_cfg['mission']['gate_ori_euler'][1] 
     else:
         des_pitch_mean_min = 1*pi/4
         des_pitch_mean_max = 1*pi/4
@@ -120,7 +120,7 @@ def t_output(inputs):
     Returns:
         _type_: _description_
     """
-    inputs = np.array(inputs[0])
+    inputs = np.array(inputs[-1])
     
     outputs = np.zeros(output_size)
     outputs[0:3]=mission_cfg['mission']['gate_position']
@@ -256,10 +256,9 @@ class network_with_GRU(nn.Module):
 
         
     def forward(self, input,deterministic=True):
-        # convert state s to tensor
-        S = input # column 2D tensor
-        out,hidden = self.GRU(S)
+        out,hidden = self.GRU(input)
         out = out [:,-1,:]
+        # out = hidden[-1,:,:]
         out = self.l1(out) # linear function requires the input to be a row tensor
         out = self.F1(out)
         out = self.l2(out)
@@ -277,7 +276,7 @@ class network_with_GRU(nn.Module):
         out [:,-4]=torch.sigmoid(out[:,-4])*50+10
 
         # wrt
-        out [:,-3]=torch.sigmoid(out[:,-3])*20
+        out [:,-3]=torch.sigmoid(out[:,-3])*10
 
         # wqt
         out [:,-2]=torch.sigmoid(out[:,-2])*20

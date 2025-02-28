@@ -13,7 +13,7 @@ from config import current_dir,train_cfg
 from quad_model import Rd2Rp,toQuaternion,Gate
 from quad_nn import nn_sample
 from quad_moving import binary_search_solver
-from solid_geometry import pitch_from_gate,magni,verify_SVD_casadi
+from solid_geometry import pitch_from_gate,magni,verify_SVD_ca
 
 from gestelt_msgs.msg import Goals,  CommanderState, close_loop_NN_output
 from geometry_msgs.msg import  PoseStamped, TwistStamped, Point
@@ -288,7 +288,7 @@ class NN2_ROS_wrapper:
                 nn_output = self.model(torch.tensor(full_input, dtype=torch.float).to(device))[0]
                 NN_forward_time=time.time()-t_comp
                 out = nn_output.to('cpu').data.numpy()
-                verify_tra_R=verify_SVD_casadi(out[3:12])
+                verify_tra_R,_=verify_SVD_ca(out[3:12])
 
                 quat=np.roll(R.from_matrix(verify_tra_R).as_quat(),1)
 

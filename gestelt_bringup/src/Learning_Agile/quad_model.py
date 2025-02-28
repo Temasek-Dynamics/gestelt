@@ -341,7 +341,7 @@ class CostBase:
         else:   
             svd= SVD()
             self.trav_auxvar = vertcat(self.des_tra_r_I, self.des_tra_m,self.wrp, self.wrt, self.wqt, self.des_t_tra) #self.wrp,  self.max_tra_w, 
-            tra_R_B_I= svd.SVD_M_to_SO3_casadi(self.des_tra_m)
+            tra_R_B_I= svd.SVD_M_to_SO3_ca(self.des_tra_m)
        
         
         ##=== Rodrigues parameters version ===##
@@ -409,8 +409,9 @@ class QuadrotorCTBRCtl:
         self.cost_base.traverse_error(self.quad_dyn,self.options)
         self.tra_cost = self.cost_base.max_tra_w * \
                         casadi.exp(-self.cost_base.traverse_weight_span*(self.cost_base.t_node-self.cost_base.des_t_tra)**2) \
-                        * (self.cost_base.wrt * self.cost_base.cost_r_I_t + self.cost_base.wqt * self.cost_base.cost_q_t)
-         
+                        * (self.cost_base.wrt * self.cost_base.cost_r_I_t \
+                         + self.cost_base.wqt * self.cost_base.cost_q_t)
+        
     def set_bound_value(self, config):
         self.col_thrust_ub = config['learning_agile']['single_motor_max_thrust']*4*config['learning_agile']['throttle_upper_bound']
         self.col_thrust_lb = config['learning_agile']['single_motor_max_thrust']*4*config['learning_agile']['throttle_lower_bound']
@@ -430,11 +431,22 @@ class QuadrotorCTBRCtl:
         self.control_ub = [self.col_thrust_ub,self.ang_rate_b_xy,self.ang_rate_b_xy,self.ang_rate_b_z]
         
     def init_constraint(self):
+        """
+        this function constructs the constraints for the safe PDP
+        """
         thrust_ub_inequ=self.quad_dyn.col_thrust_mag-self.col_thrust_ub
         thrust_lb_inequ=self.col_thrust_lb-self.quad_dyn.col_thrust_mag
+        ang_rate_ub_inequ=self.quad_dyn.ang_rate_B[0:2]-self.ang_rate_b_xy
+        ang_rate_lb_inequ=self.ang_rate_b_xy-self.quad_dyn.ang_rate_B[0:2]
+        ang_rate_ub_z_inequ=self.quad_dyn.ang_rate_B[2]-self.ang_rate_b_z
+        ang_rate_lb_z_inequ=self.ang_rate_b_z-self.quad_dyn.ang_rate_B[2]
+        
         pos_ub_z_inequ=self.quad_dyn.r_I[2]-self.pos_ub_z
         pos_lb_z_inequ=self.pos_lb_z-self.quad_dyn.r_I[2]
-        self.path_inequ_cstr=vcat([thrust_ub_inequ,thrust_lb_inequ,pos_ub_z_inequ,pos_lb_z_inequ])
+        self.path_inequ_cstr=vcat([thrust_ub_inequ,thrust_lb_inequ, \
+                                   ang_rate_ub_inequ, ang_rate_lb_inequ,\
+                                   ang_rate_ub_z_inequ,ang_rate_lb_z_inequ,\
+                                   pos_ub_z_inequ,pos_lb_z_inequ])
         self.final_inequ_cstr=vcat([pos_ub_z_inequ,pos_lb_z_inequ])
         
 class QuadrotorSRTCtl:
@@ -531,7 +543,7 @@ class QuadrotorWrenchCtl:
 
     def init_cost(self): 
         self.cost_base.path_error(self.quad_dyn)
-        self.goal_state=vertcat(self.cost_base.goal_r_I,self.cost_base.goal_v_I,self.cost_base.goal_q,self.cost_base.goal_w_B,self.cost_base.goal_w_B)
+        self.goal_state=vertcat(self.cost_base.goal_r_I,self.cost_base.goal_v_I,self.cost_base.goal_q,self.cost_base.goal_w_B)
         ## the path cost to the goal
         self.path_cost = self.cost_base.wrp * self.cost_base.cost_r_I_g \
                        + self.cost_base.wvp * self.cost_base.cost_v_I_g \

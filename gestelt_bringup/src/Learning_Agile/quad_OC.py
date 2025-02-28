@@ -84,40 +84,30 @@ class OCSys:
         if not hasattr(self, 'auxvar'):
             self.setAuxvarVariable()
 
-        # self.dyn = casadi.Function('f',[self.state, self.control],[f])
-        ## ================== for casADi ================== ##
-        self.dyn = self.state + dt * f
-        # self.dyn_fn = casadi.Function('dynamics', [self.state, self.control], [self.dyn],['x','u'],['x_next'])
+        ## ================== for acados Continuous Dynamics ================== ##
+        self.dyn_cont=f
+        self.dyn_fn_cont = casadi.Function('dynamics', [self.state, self.control], [self.dyn_cont],['x','u'],['rhs'])
+        self.dyn_fn_cont.save("dyn_fn_cont.casadi")
 
-        ## ================== for acados ================== ##
-        self.dyn_fn_acados = casadi.Function('dynamics', [self.state, self.control], [f],['x','u'],['rhs'])
-        #M = 4
-        #DT = dt/4
-        #X0 = casadi.SX.sym("X", self.n_state)
-        #U = casadi.SX.sym("U", self.n_control)
-        # #
-        #X = X0
-        #for _ in range(M):
+        ## ================== Discrete Dynamics ================== ##
+        self.discretizeDyn(dt)
+       
+    def discretizeDyn(self, dt):
+        M = 4
+        DT = dt/4
+       
+    
+        self.dyn_disc = self.state
+        for _ in range(M):
             # --------- RK4------------
-        #    k1 =DT*self.dyn(X, U)
-        #    k2 =DT*self.dyn(X+0.5*k1, U)
-        #    k3 =DT*self.dyn(X+0.5*k2, U)
-        #    k4 =DT*self.dyn(X+k3, U)
-            #
-        #    X = X + (k1 + 2*k2 + 2*k3 + k4)/6        
-        ## Fold
-        #self.dyn_fn = casadi.Function('dyn', [X0, U], [X])
-        self.dyn_fn_acados.save("dyn_fn_acados.casadi")
-   
-    # def setInputDiffCost(self, Ulast,input_diff_cost):
-    #     if not hasattr(self, 'auxvar'):
-    #         self.setAuxvarVariable()
-
-    #     assert input_diff_cost.numel() == 1, "input_diff_cost must be a scalar function"
-
-    #     self.Ulast = Ulast
-    #     self.input_diff_cost = input_diff_cost
-    #     self.input_diff_cost_fn = casadi.Function('input_diff_cost', [self.control,self.Ulast, self.auxvar], [self.input_diff_cost])
+           k1 =DT*self.dyn_fn_cont(self.dyn_disc, self.control)
+           k2 =DT*self.dyn_fn_cont(self.dyn_disc+0.5*k1, self.control)
+           k3 =DT*self.dyn_fn_cont(self.dyn_disc+0.5*k2, self.control)
+           k4 =DT*self.dyn_fn_cont(self.dyn_disc+k3, self.control)
+            
+           self.dyn_disc = self.dyn_disc + (k1 + 2*k2 + 2*k3 + k4)/6        
+        
+        self.dyn_fn_disc = casadi.Function('dyn', [self.state, self.control], [self.dyn_disc])
 
     def setPathCost(self, 
                     path_cost,
@@ -254,7 +244,7 @@ class OCSys:
             # control constraints
             self.lbw += self.control_lb
             self.ubw += self.control_ub
-            self.w0 += [0.5 * (x + y) for x, y in zip(self.control_lb, self.control_ub)]
+            self.w0 += [0.5 * (x + y) for x, y in zip(self.control_lb, self.control_ub)] # initial guess of the control
 
             #calculate weight
             # self.t: traverse time
@@ -274,7 +264,7 @@ class OCSys:
             w += [X[:,k+1]]
             self.lbw += self.state_lb
             self.ubw += self.state_ub
-            self.w0 += [0.5 * (x + y) for x, y in zip(self.state_lb, self.state_ub)]
+            self.w0 += [0.5 * (x + y) for x, y in zip(self.state_lb, self.state_ub)] # initial guess of the state
             Ulast = U[:,k]
 
             # Add equality constraint, multiple shooting
@@ -316,7 +306,7 @@ class OCSys:
         
         
     def ocSolver(self,
-                current_state_control, 
+                cur_state_control, 
                 auxvar_value=1, 
                 costate_option=0,
                 t_tra=1.0):
@@ -328,7 +318,7 @@ class OCSys:
         sol = self.solver(x0=self.w0,
                      lbx=self.lbw, 
                      ubx=self.ubw, 
-                     p=current_state_control+ [t_tra], 
+                     p=cur_state_control+ [t_tra], 
                      lbg=self.lbg, 
                      ubg=self.ubg)
         
@@ -348,7 +338,7 @@ class OCSys:
         else:
             # Another option, which solve the costates by the Pontryagin's Maximum Principle
             # The variable name is consistent with the notations used in the PDP paper
-            dfx_fun = casadi.Function('dfx', [self.state, self.control, self.auxvar], [jacobian(self.dyn, self.state)])
+            dfx_fun = casadi.Function('dfx', [self.state, self.control, self.auxvar], [jacobian(self.dyn_disc, self.state)])
             dhx_fun = casadi.Function('dhx', [self.state, self.auxvar], [jacobian(self.final_cost, self.state)])
             dcx_fun = casadi.Function('dcx', [self.state, self.control, self.auxvar],
                                       [jacobian(self.path_cost, self.state)])
@@ -413,11 +403,11 @@ class OCSys:
 
         """
         # explicit model
-        self.model.f_expl_expr=self.dyn_fn_acados(self.state,self.control)
+        self.model.f_expl_expr=self.dyn_fn_cont(self.state,self.control)
 
         # implicit model
         x_dot=casadi.SX.sym('x_dot',self.n_state)
-        self.model.f_impl_expr=x_dot-self.dyn_fn_acados(self.state,self.control)
+        self.model.f_impl_expr=x_dot-self.dyn_fn_cont(self.state,self.control)
 
         # self.state = vertcat(self.r_I, self.v_I, self.q, self.w_B)
         self.model.x=self.state
@@ -518,12 +508,17 @@ class OCSys:
 
         # # setting the cost function
         # ocp.model.cost_expr_ext_cost_custom_hess/cost_expr_ext_cost
+        # if self.SQP_RTI_OPTION:
         ocp.model.cost_expr_ext_cost = self.path_cost_fn(ocp.model.x, ocp.model.u, goal_state_value, trav_auxvar_value)\
-                                     + self.trav_cost_fn(ocp.model.x, trav_auxvar_value, t_node_value)\
-        
+                                    + self.trav_cost_fn(ocp.model.x, trav_auxvar_value, t_node_value)\
         # end cost
         ocp.model.cost_expr_ext_cost_e = self.final_cost_fn(ocp.model.x,goal_state_value,self.auxvar)
 
+        # else:
+        #     ocp.model.cost_expr_ext_cost = self.path_cost_barrier_fn(ocp.model.x, ocp.model.u, goal_state_value, trav_auxvar_value)\
+        #                                 + self.trav_cost_fn(ocp.model.x, trav_auxvar_value, t_node_value)
+        #     # end cost
+        #     ocp.model.cost_expr_ext_cost_e = self.final_cost_barrier_fn(ocp.model.x,goal_state_value,self.auxvar)
         ############################################################### 
         ##----------------- setting the constraints -----------------##
         ###############################################################  
@@ -544,11 +539,15 @@ class OCSys:
         if self.ctl_mode==0 or self.ctl_mode==2:
             control_lb_shrink[0]+=0.05
             control_up_shrink[0]-=0.05
+            control_lb_shrink[1:3]+=1
+            control_up_shrink[1:3]-=1
+            
         state_lb_shrink[2]+=0.05
         state_up_shrink[2]-=0.05
         ocp.constraints.lbu = control_lb_shrink
         ocp.constraints.ubu = control_up_shrink
         ocp.constraints.idxbu = np.array([i for i in range(self.n_control)])
+        # ocp.constraints.idsbu = np.array([i for i in range(self.n_control)])
         
         
         ##------------------ state constraints ----------------------##
@@ -557,25 +556,45 @@ class OCSys:
         ocp.constraints.ubx = state_up_shrink #([])#
         ocp.constraints.idxbx = np.array([i for i in range(self.n_state)]) #([])#i for i in range(self.n_state)]
         
-
+        ##------------------ terminal constraints ----------------------##
+        # # constraint for position
+        ocp.constraints.lbx_e = state_lb_shrink #([])#
+        ocp.constraints.ubx_e = state_up_shrink #([])#
+        ocp.constraints.idxbx_e = np.array([i for i in range(self.n_state)]) #([])#i for i in range(self.n_state)]
 
 
         ##------------------ setting the solver ------------------##
-        ocp.solver_options.qp_solver = 'FULL_CONDENSING_QPOASES'# FULL_CONDENSING_HPIPM PARTIAL_CONDENSING_HPIPM  FULL_CONDENSING_QPOASES PARTIAL_CONDENSING_OSQP
-        ocp.solver_options.hessian_approx = 'GAUSS_NEWTON' # GAUSS_NEWTON, EXACT
-        ocp.solver_options.regularize_method = 'CONVEXIFY'#'CONVEXIFY', PROJECT_REDUC_HESS
+        """
+        Gauss-Newton approximations are limited to sum-of-squares objectives,[FATROP]
+        """
+        ocp.solver_options.hessian_approx = 'EXACT' 
+        ocp.solver_options.exact_hess_dyn = 0 # GAUSS_NEWTON, 
+        ocp.solver_options.qp_solver_cond_N = self.n_nodes   #new number of condensing stages for the solver
         ocp.solver_options.integrator_type = 'ERK' # fast ERK (explicit Runge-Kutta integrator) or IRK (Implicit Runge-Kutta integrator)
-        ocp.solver_options.sim_method_num_steps =1 #Default 1
-        ocp.solver_options.sim_method_num_stages = 4 # default 4
-        ocp.solver_options.sim_method_newton_iter = 3 # default 3
+        # ocp.solver_options.sim_method_num_steps =1 #Default 1
+        # ocp.solver_options.sim_method_num_stages = 4 # default 4
         ocp.solver_options.print_level = 0
-        ocp.solver_options.levenberg_marquardt = 1e-10 # small value for gauss newton method, large value for gradient descent method
-        
+       
         if SQP_RTI_OPTION: 
-            # for deployment
+            ocp.solver_options.qp_solver = 'FULL_CONDENSING_QPOASES'# FULL_CONDENSING_HPIPM PARTIAL_CONDENSING_HPIPM  FULL_CONDENSING_QPOASES PARTIAL_CONDENSING_OSQP
+            ocp.solver_options.sim_method_newton_iter = 3 # default 3
+            ocp.solver_options.regularize_method = 'CONVEXIFY'#'CONVEXIFY', PROJECT_REDUC_HESS
             ocp.solver_options.nlp_solver_type = 'SQP_RTI'
+            ocp.solver_options.levenberg_marquardt = 1e-3 # small value for gauss newton method, large value for gradient descent method
+            ocp.solver_options.qp_solver_iter_max = 100
+            ocp.solver_options.qp_solver_warm_start = 1 # 0:no warm start(default) 1:  warm start
         else:
-            ocp.solver_options.nlp_solver_type = 'SQP' # SQP_RTI or SQP
+            ocp.model.cost_y_expr = casadi.vertcat(ocp.model.x, ocp.model.u) # critical
+            ocp.model.cost_y_expr_e = ocp.model.x
+            ocp.solver_options.qp_solver = 'PARTIAL_CONDENSING_HPIPM'
+            ocp.solver_options.nlp_solver_type = 'DDP' # SQP_RTI or SQP
+            ocp.solver_options.nlp_solver_max_iter = 1000 # larger, stabler
+            ocp.solver_options.print_level = 0
+            ocp.translate_to_feasibility_problem(keep_x0=True, keep_cost=True) # critical
+            ocp.solver_options.globalization = 'MERIT_BACKTRACKING'
+            ocp.solver_options.with_adaptive_levenberg_marquardt = True
+            ocp.solver_options.qp_solver_warm_start = 1 # 0:no warm start(default) 1:  warm start
+
         # ocp.solver_options.qp_solver_warm_start=2
         # ocp.solver_options.nlp_solver_max_iter = 100
         ##------------------ setting the code generation ------------------##
@@ -611,24 +630,22 @@ class OCSys:
 
 
     def AcadosOcSolver(self, 
-                    current_state, 
+                    cur_state, 
                     goal_state_value,
                     dt=0.1,
-                    trav_auxvar_value=None):
+                    last_u=None,
+                    trav_auxvar_value=None,
+                    init_guess=None):
         """
         This function is to solve the optimal control problem using ACADOS
         """
         self.state_traj_opt = np.zeros((self.n_nodes+1,self.n_state))
         self.control_traj_opt = np.zeros((self.n_nodes,self.n_control))
         self.costate_traj_opt = np.zeros((self.n_nodes,self.n_state))
-        # self.lb_v_control_traj_opt = np.zeros((self.n_nodes,self.n_control))
-        # self.ub_v_control_traj_opt = np.zeros((self.n_nodes,self.n_control))
+
         # #---------------------for linear cost---------------------##
        
         for i in range(self.n_nodes):
-            
-            # weight = max_tra_w*casadi.exp(-gamma*(dt*i-t_tra)**2) #gamma should increase as the flight duration decreases
-            # weight=max_tra_w*np.exp(-gamma*(dt*i-t_tra)**2) #gamma should increase as the flight duration decreases
             
             self.acados_solver.set(i, 'p',np.concatenate((goal_state_value,
                                                           trav_auxvar_value, 
@@ -641,19 +658,29 @@ class OCSys:
         self.acados_solver.set(self.n_nodes, "x", self.state_traj_opt[-1,:])
 
         # set the end desired goal
-        # weight = 0.0*casadi.exp(-10*(dt*self.n_nodes-t_tra)**2) #gamma should increase as the flight duration decreases
         self.acados_solver.set(self.n_nodes, "p",np.concatenate((goal_state_value,
                                                                  trav_auxvar_value, 
                                                                  np.array([self.n_nodes*dt]))))
 
         # set initial condition aligned with the current state
-        self.acados_solver.set(0, "lbx", np.array(current_state))
-        self.acados_solver.set(0, "ubx", np.array(current_state))
+        # if self.SQP_RTI_OPTION:
+        self.acados_solver.set(0, "lbx", np.array(cur_state))
+        self.acados_solver.set(0, "ubx", np.array(cur_state))
+        # else:
+        #     self.acados_solver.set(0, "x", np.array(cur_state))
+
+        ## set the initial guess
+        if init_guess is not None:
+            for i in range(self.n_nodes-1):
+                self.acados_solver.set(i, "x", np.array(init_guess['state_traj_opt'])[i])
+                self.acados_solver.set(i, "u", np.array(init_guess['control_traj_opt'])[i])
+            self.acados_solver.set(self.n_nodes, "x", np.array(init_guess['state_traj_opt'])[-1])
+      
+        self.acados_solver.set(self.n_nodes, "x", np.array(cur_state))
         
-       
         NO_SOLUTION_FLAG=False
+        
         # solve ocp
-       
         status = self.acados_solver.solve()
 
         if status != 0:
@@ -661,7 +688,7 @@ class OCSys:
             self.acados_solver.print_statistics()
             # raise Exception(f'acados returned status {status}.')
         #-------------take the optimal control and state sequences
-        #self.n_nodes
+
         for i in range(self.n_nodes):
             self.state_traj_opt[i,:]=self.acados_solver.get(i, "x")
             self.control_traj_opt[i,:]=self.acados_solver.get(i, "u")
@@ -691,7 +718,7 @@ class OCSys:
     def diffPMP(self):
         assert hasattr(self, 'state'), "Define the state variable first!"
         assert hasattr(self, 'control'), "Define the control variable first!"
-        assert hasattr(self, 'dyn'), "Define the system dynamics first!"
+        assert hasattr(self, 'dyn_disc'), "Define the system dynamics first!"
         assert hasattr(self, 'path_cost'), "Define the running cost/reward function first!"
         assert hasattr(self, 'final_cost'), "Define the final cost/reward function first!"
 
@@ -699,16 +726,16 @@ class OCSys:
         self.costate = casadi.SX.sym('lambda', self.state.numel())
         self.path_Hamil = self.path_cost_barrier \
                         + self.trav_cost\
-                        + dot(self.dyn, self.costate)  # path Hamiltonian
+                        + dot(self.dyn_disc, self.costate)  # path Hamiltonian
         
         self.final_Hamil = self.final_cost_barrier  # final Hamiltonian
 
         # Differentiating dynamics; notations here are consistent with the PDP paper
-        self.dfx = jacobian(self.dyn, self.state)
+        self.dfx = jacobian(self.dyn_disc, self.state)
         self.dfx_fn = casadi.Function('dfx', [self.state, self.control], [self.dfx])
-        self.dfu = jacobian(self.dyn, self.control)
+        self.dfu = jacobian(self.dyn_disc, self.control)
         self.dfu_fn = casadi.Function('dfu', [self.state, self.control], [self.dfu])
-        self.dfe = jacobian(self.dyn, self.trav_auxvar)
+        self.dfe = jacobian(self.dyn_disc, self.trav_auxvar)
         self.dfe_fn = casadi.Function('dfe', [self.state, self.control, self.trav_auxvar], [self.dfe])
 
         # First-order derivative of path Hamiltonian 
@@ -791,6 +818,12 @@ class OCSys:
                   "hxe": mathxe}
         return auxSys
     
+    def diffContinuDyn(self):
+        # Differentiating dynamics; notations here are consistent with the PDP paper
+        self.dfx_cont = jacobian(self.dyn_cont, self.state)
+        self.dfx_cont_fn = casadi.Function('dfx', [self.state, self.control], [self.dfx_cont])
+        self.dfu_cont = jacobian(self.dyn_cont, self.control)
+        self.dfu_cont_fn = casadi.Function('dfu', [self.state, self.control], [self.dfu_cont])
 
 '''
 # =============================================================================================================

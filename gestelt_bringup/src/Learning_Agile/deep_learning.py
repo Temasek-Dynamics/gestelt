@@ -7,7 +7,7 @@ from quad_policy import *
 import os
 from quad_model import *
 
-from learning_agile_sim import MovingGate,verify_SVD_casadi
+from learning_agile_sim import MovingGate,verify_SVD_ca
 from quad_nn import *
 from multiprocessing import Process, Array
 import yaml

@@ -53,15 +53,15 @@ extern "C" {
 
 casadi_real casadi_sq(casadi_real x) { return x*x;}
 
-static const casadi_int casadi_s0[21] = {17, 1, 0, 17, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
+static const casadi_int casadi_s0[14] = {10, 1, 0, 10, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
 static const casadi_int casadi_s1[3] = {0, 0, 0};
-static const casadi_int casadi_s2[38] = {34, 1, 0, 34, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33};
+static const casadi_int casadi_s2[31] = {27, 1, 0, 27, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26};
 static const casadi_int casadi_s3[5] = {1, 1, 0, 1, 0};
 
-/* ACADOS_model_cost_ext_cost_e_fun:(i0[17],i1[],i2[],i3[34])->(o0) */
+/* ACADOS_model_cost_ext_cost_e_fun:(i0[10],i1[],i2[],i3[27])->(o0) */
 static int casadi_f0(const casadi_real** arg, casadi_real** res, casadi_int* iw, casadi_real* w, int mem) {
   casadi_real a0, a1, a10, a11, a12, a13, a14, a15, a2, a3, a4, a5, a6, a7, a8, a9;
-  a0=500.;
+  a0=1200.;
   a1=arg[0]? arg[0][0] : 0;
   a2=arg[3]? arg[3][0] : 0;
   a1=(a1-a2);
@@ -76,7 +76,8 @@ static int casadi_f0(const casadi_real** arg, casadi_real** res, casadi_int* iw,
   a2=(a2-a3);
   a2=casadi_sq(a2);
   a1=(a1+a2);
-  a1=(a0*a1);
+  a0=(a0*a1);
+  a1=400.;
   a2=arg[0]? arg[0][3] : 0;
   a3=arg[3]? arg[3][3] : 0;
   a2=(a2-a3);
@@ -91,9 +92,9 @@ static int casadi_f0(const casadi_real** arg, casadi_real** res, casadi_int* iw,
   a3=(a3-a4);
   a3=casadi_sq(a3);
   a2=(a2+a3);
-  a0=(a0*a2);
-  a1=(a1+a0);
-  a0=100.;
+  a1=(a1*a2);
+  a0=(a0+a1);
+  a1=4.;
   a2=1.;
   a3=2.;
   a4=arg[3]? arg[3][8] : 0;
@@ -208,41 +209,9 @@ static int casadi_f0(const casadi_real** arg, casadi_real** res, casadi_int* iw,
   a8=(a8-a2);
   a8=casadi_sq(a8);
   a5=(a5+a8);
-  a0=(a0*a5);
-  a1=(a1+a0);
-  a0=1.0000000000000000e-03;
-  a5=arg[0]? arg[0][10] : 0;
-  a8=arg[3]? arg[3][10] : 0;
-  a5=(a5-a8);
-  a5=casadi_sq(a5);
-  a8=arg[0]? arg[0][11] : 0;
-  a2=arg[3]? arg[3][11] : 0;
-  a8=(a8-a2);
-  a8=casadi_sq(a8);
-  a5=(a5+a8);
-  a5=(a0*a5);
-  a1=(a1+a5);
-  a5=15.;
-  a8=arg[0]? arg[0][12] : 0;
-  a2=arg[3]? arg[3][12] : 0;
-  a8=(a8-a2);
-  a8=casadi_sq(a8);
-  a5=(a5*a8);
-  a1=(a1+a5);
-  a5=arg[0]? arg[0][13] : 0;
-  a5=casadi_sq(a5);
-  a8=arg[0]? arg[0][14] : 0;
-  a8=casadi_sq(a8);
-  a5=(a5+a8);
-  a8=arg[0]? arg[0][15] : 0;
-  a8=casadi_sq(a8);
-  a5=(a5+a8);
-  a8=arg[0]? arg[0][16] : 0;
-  a8=casadi_sq(a8);
-  a5=(a5+a8);
-  a0=(a0*a5);
-  a1=(a1+a0);
-  if (res[0]!=0) res[0][0]=a1;
+  a1=(a1*a5);
+  a0=(a0+a1);
+  if (res[0]!=0) res[0][0]=a0;
   return 0;
 }
 

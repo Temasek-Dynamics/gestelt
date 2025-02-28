@@ -4,12 +4,9 @@ from datetime import datetime
 import os
 import yaml
 import numpy as np
-import multiprocessing
 
 from scipy.spatial.transform import Rotation as R
-from learning_agile_sim import success_eval,parse_options
-from solid_geometry import verify_SVD_casadi,pitch_from_gate
-from config import mission_cfg,train_cfg
+from solid_geometry import pitch_from_gate,recover_euler_from_9d
 
 class LoggerConfig:
     def __init__(self, log_dir="logs"):
@@ -50,9 +47,8 @@ class LoggerConfig:
 
 def log_train_IO(writer,inputs,outputs,global_step):
 
-    R_nn=verify_SVD_casadi(outputs[3:12])
-    quat_nn=R.from_matrix(R_nn.reshape(3,3))
-    euler_nn=quat_nn.as_euler('zyx', degrees=True)
+
+    euler_nn,_=recover_euler_from_9d(outputs,deg_unit=True)
     
     abs_gate_point=inputs[13:25].reshape(-1,3)+inputs[0:3]
     gate_pitch = pitch_from_gate(abs_gate_point)
@@ -101,24 +97,4 @@ def log_drone_state(writer,drone_state,control, global_step):
     writer.add_scalar('drone_state/body_rate_z', control[3], global_step)
 
 
-def evaluation(writer,model_file,global_step):
-    """evaluate the success rate every 20 epsiodes, by running the trained model 32 times
-    Args:
-        model_file (str): the path to the model file
-    """
-    
-    ## run the success evaluation 32 times and return the success rate
-    count=0
-    options=parse_options()
-    test_num=24
-    for _ in range(test_num):
-        FAILED = success_eval(mission_cfg,
-                                train_cfg,
-                                options,
-                                model_file,
-                                INTRAIN=True)
-        if FAILED:
-            count+=1
-    success_rate=1-count/test_num
-    writer.add_scalar('success_rate', success_rate, global_step)
-    return success_rate
+

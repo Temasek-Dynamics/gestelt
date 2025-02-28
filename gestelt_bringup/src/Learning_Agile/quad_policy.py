@@ -1,17 +1,19 @@
 ## this file is a package for policy search for quadrotor
 import numpy as np
 
+import scipy
 
 from quad_OC import OCSys,LQR
 # the sequence of importing solid_geometry
 # with juliacall is import
 from solid_geometry import pitch_from_gate
 from quad_model import QuadrotorCTBRCtl, QuadrotorSRTCtl,QuadrotorWrenchCtl,QuadrotorAugmentedSRTCtl, toQuaternion,Gate
-from visualization.python_sim_vis import get_quad_vert_pos
+from visualization.python_sim_vis import get_quad_vert_pos,plot_position,plot_angularrate,plot_thrust
 
 class PlanFwdBwdWrapper():
     """
-    Wrapper the MPC forward and backward process
+    this class is responsible for wrap the single MPC prediction traj for training
+    Wrapper the MPC single prediction forward and backward process
     """
 
     def __init__(self,config:dict,options: dict):
@@ -35,8 +37,9 @@ class PlanFwdBwdWrapper():
             self.uav = QuadrotorWrenchCtl(options,config)
         elif config['ctl_mode']==3:
             self.uav = QuadrotorAugmentedSRTCtl(options,config)
-        # jx, jy, jz = 0.0023, 0.0023, 0.004
-        # self.uav.initDyn(Jx=0.0023,Jy=0.0023,Jz=0.004,mass=0.5,l=0.35,c=0.0245) # hb quadrotor
+      
+        self.options = options
+        self.config = config
 
         # c is the torque constant, l is the diagonal length of the quadrotor
         self.uav.quad_dyn.initDyn(Jx=config['drone']['inertia'][0],
@@ -76,9 +79,10 @@ class PlanFwdBwdWrapper():
                                        control_lb = self.uav.control_lb,
                                        control_ub = self.uav.control_ub) # thrust-to-weight = 4:1
        
-        self.uavoc.setDyn(self.uav.f,self.dt)
-
-       
+        self.uavoc.setDyn(self.uav.f,0.005)
+        
+        # P=self.lqrAsTerminalCost()
+        # diag_P = np.diag(P)   
         # wrt: ,gate traverse position cost
         # wqt: gate traverse attitude cost
         # wthrust: input thrust cost
@@ -87,7 +91,7 @@ class PlanFwdBwdWrapper():
         # wvf: final velocity cost
         # wqf: final attitude cost
         # wwf: final angular velocity cost
-
+      
         ## initialize the cost function
         self.uav.cost_base.init_weight(#wrt=config['learning_agile']['wrt'],
                            #wqt=config['learning_agile']['wqt'],
@@ -116,6 +120,9 @@ class PlanFwdBwdWrapper():
                                self.uav.cost_base.t_node
                               )
         
+        
+
+
 
         self.uavoc.setPathCost(self.uav.path_cost,goal_state=self.uav.goal_state)
         self.uavoc.setFinalCost(self.uav.final_cost,goal_state=self.uav.goal_state)
@@ -131,20 +138,19 @@ class PlanFwdBwdWrapper():
                                        dt=self.dt,
                                        SQP_RTI_OPTION=options['SQP_RTI_OPTION'],
                                        USE_PREV_SOLVER=options['USE_PREV_SOLVER'])
-        self.options = options
-        self.config = config
+       
         ###################################################################
         ###------------ PDP auxiliary control system----------------#######
         ###################################################################
         # define the auxilary control system symbolic functions
     
        
-        if options['MPC_BACKWARD']:
+        # if options['MPC_BACKWARD']:
             
-            if self.options['PDP_GRADIENT']:
-                self.uavoc.diffPMP()
-                self.lqr_solver = LQR()
-
+        #     if self.options['PDP_GRADIENT']:
+        self.uavoc.diffPMP()
+        self.lqr_solver = LQR()
+        
        
         
     def init_state_and_mission(self,
@@ -156,10 +162,13 @@ class PlanFwdBwdWrapper():
         # goal
         self.goal_pos = goal_pos
         goal_ori = np.array(goal_ori)
-        goal_vel=np.array([0, 0, 0])
+        goal_vel = np.array([0, 0, 0])
         goal_w = np.array([0.0, 0.0, 0.0])
-        hover_SRT=self.config['drone']['mass']*9.81/4
-        goal_SRT =  np.array([hover_SRT]*4)
+        if self.config['ctl_mode']==0 or self.config['ctl_mode']==2:
+            self.hover_u = np.array([self.config['drone']['mass']*9.81,0.0,0.0,0.0])
+        elif self.config['ctl_mode']==1: 
+            self.hover_u = np.array([self.config['drone']['mass']*9.81/4]*4)
+   
             
         # initial
         if type(ini_r) is not list:
@@ -169,6 +178,7 @@ class PlanFwdBwdWrapper():
         self.ini_q = ini_q
         self.ini_w =  [0.0, 0.0, 0.0]
         self.init_SRT=[self.config['drone']['mass']*9.81/4]*4
+        goal_SRT=self.init_SRT
         if self.config['ctl_mode']==0:
             self.ini_state = self.ini_r + self.ini_v_I + self.ini_q
             self.goal_state_value=np.concatenate((goal_pos,goal_vel,goal_ori))
@@ -206,7 +216,7 @@ class PlanFwdBwdWrapper():
             NO_SOLUTION_FLAG = False
             ## set the traverse hyperparameters value (auxvar) here
             trav_auxvar_value = np.concatenate((tra_pos,tra_ang,np.array([t_tra]))) #np.array([gamma]),
-            self.sol1,NO_SOLUTION_FLAG =self.mpc_update(current_state=self.ini_state, 
+            self.sol1,NO_SOLUTION_FLAG =self.mpc_update(cur_state=self.ini_state, 
                                                         trav_auxvar_value=trav_auxvar_value)
         # state_traj [x,y,z,vx,vy,vz,qw,qx,qy,qz]
         state_traj = self.sol1['state_traj_opt']
@@ -215,7 +225,7 @@ class PlanFwdBwdWrapper():
 
         
       
-        # calculate trajectory reward
+        # calculate trajectory penalty
         self.collision = 0
         self.path = 0
         ## detect whether there is collision
@@ -223,7 +233,7 @@ class PlanFwdBwdWrapper():
 
         
 
-        if self.options['ORIGIN_REWARD']:   
+        if self.options['ORIGIN_penalty']:   
             for c in range(4):
                 self.collision += self.obstacle.collis_det(self.vert_traj[:,3*(c+1):3*(c+2)],self.horizon)
                 self.co += self.obstacle.co 
@@ -234,17 +244,17 @@ class PlanFwdBwdWrapper():
                 self.path += np.dot(self.vert_traj[self.horizon-1-p,0:3]-self.goal_pos, self.vert_traj[self.horizon-1-p,0:3]-self.goal_pos)
             
             # the sign of the collision is already negative
-            # pitch angle reward temproally be here
-            # pitch_reward =  0 * 0.5 * tra_ang[1]**2
+            # pitch angle penalty temproally be here
+            # pitch_penalty =  0 * 0.5 * tra_ang[1]**2
             # self.drdpitch = 0 * tra_ang[1]
             
  
-            return 1000 * self.collision - 0.5 * self.path + 100 #+ 10 * pitch_reward
+            return 1000 * self.collision - 0.5 * self.path + 100 #+ 10 * pitch_penalty
 
         else:
-            # self.tra_ang_direct_reward(tra_ang)
+            # self.tra_ang_direct_penalty(tra_ang)
 
-            reward,self.d_R_d_st_traj=self.obstacle.penalty_cal_diff_collision(
+            penalty,self.d_L_d_st_traj=self.obstacle.penalty_cal_diff_collision(
                                                                 self.config,
                                                                 state_traj=state_traj,
                                                                 gate_corners=self.gate_corners,
@@ -252,13 +262,13 @@ class PlanFwdBwdWrapper():
                                                                 vert_traj=self.vert_traj[:,0:3],
                                                                 goal_pos=self.goal_pos)
             
-            self.d_R_d_st_traj = self.d_R_d_st_traj.reshape(self.horizon+1,1,self.uavoc.n_state)
+            self.d_L_d_st_traj = self.d_L_d_st_traj.reshape(self.horizon+1,1,self.uavoc.n_state)
             
-            return reward #+ self.roll_reward + self.yaw_reward#+ pitch_reward
+            return penalty #+ self.roll_penalty + self.yaw_penalty#+ pitch_penalty
 
     def get_penalty(self,state_traj,real_state_i=None,success_rate=None):
         self.vert_traj = get_quad_vert_pos(wing_len = self.wing_len, state_traj = state_traj)
-        reward,self.d_R_d_st_traj,_=self.obstacle.penalty_cal_diff_collision(self.config,
+        penalty,self.d_L_d_st_traj,_=self.obstacle.penalty_cal_diff_collision(self.config,
                                                                             state_traj=state_traj,
                                                                             gate_corners=self.gate_corners,
                                                                             gate_quat=self.gate_quat,
@@ -267,8 +277,8 @@ class PlanFwdBwdWrapper():
                                                                             real_state_i=real_state_i,
                                                                             success_rate=success_rate)
             
-        self.d_R_d_st_traj = self.d_R_d_st_traj.reshape(self.horizon+1,1,self.uavoc.n_state)
-        return [reward,self.d_R_d_st_traj]
+        self.d_L_d_st_traj = self.d_L_d_st_traj.reshape(self.horizon+1,1,self.uavoc.n_state)
+        return [penalty,self.d_L_d_st_traj]
     
     def get_failed(self,state_traj,gate_points_list):
         
@@ -296,7 +306,7 @@ class PlanFwdBwdWrapper():
     def sol_gradient(self,tra_pos =None,tra_ang=None,t_tra=None):
         """
         deprecated in the close loop training
-        receive the decision variables from DNN1, do the MPC, then calculate d_reward/d_z
+        receive the decision variables from DNN1, do the MPC, then calculate d_penalty/d_z
         """
 
         tra_ang = np.array(tra_ang)
@@ -307,11 +317,11 @@ class PlanFwdBwdWrapper():
         if self.options['PDP_GRADIENT']:
             NO_SOLUTION_FLAG = False
             trav_auxvar_value = np.concatenate((tra_pos,tra_ang,np.array([t_tra])))
-            self.sol1,NO_SOLUTION_FLAG =self.mpc_update(current_state=self.ini_state, 
+            self.sol1,NO_SOLUTION_FLAG =self.mpc_update(cur_state=self.ini_state, 
                                                         trav_auxvar_value=trav_auxvar_value)
         
         
-        # R is the Reward
+        # R is the penalty
         R = self.MPC_and_R(tra_pos,tra_ang,t_tra)
         
         ############==================finite difference===========================############
@@ -347,9 +357,9 @@ class PlanFwdBwdWrapper():
             
             drdp=np.zeros(13)
             for i in range(self.horizon):
-                drdp += np.matmul(self.d_R_d_st_traj[i,:,:],self.d_st_traj_d_z[i,:,:]).reshape(len(drdp))
+                drdp += np.matmul(self.d_L_d_st_traj[i,:,:],self.d_st_traj_d_z[i,:,:]).reshape(len(drdp))
 
-            drdp += np.matmul(self.d_R_d_st_traj[self.horizon,:,:],self.d_st_traj_d_z[self.horizon,:,:]).reshape(len(drdp))   
+            drdp += np.matmul(self.d_L_d_st_traj[self.horizon,:,:],self.d_st_traj_d_z[self.horizon,:,:]).reshape(len(drdp))   
             
             # clip the traverse time gradient
             # drdp[:]=np.clip(drdp[:],-0.1,0.1)
@@ -411,24 +421,118 @@ class PlanFwdBwdWrapper():
         # which is the dtrajectory/dtraverse_auxvar 
         self.d_st_traj_d_z = np.array(aux_sol['state_traj_opt']) #(n_node,n_state,n_trav_auxvar)
         self.d_input_traj_d_z = np.array(aux_sol['control_traj_opt'])
+    
+    def lqrAsTerminalCost(self):
+        """
+        Generate the MPC terminal cost with only the goal cost and the linearized dynamics at the hovering state,
+        by using the infinite horizon LQR solver
+
+        Returns:
+            np.array: P matrix
+        """
+        ## linearized dynamics and the K matrix
+        self.uavoc.diffContinuDyn()
+        hover_state=np.zeros(self.uavoc.n_state)
+        hover_state[6]=1
+        hover_u = np.zeros(self.uavoc.n_control)
+        hover_u[0] = self.config['drone']['mass']*9.81
+        A = self.uavoc.dfx_cont_fn(hover_state, hover_u).full()
+        B = self.uavoc.dfu_cont_fn(hover_state, hover_u).full()
+
+        # A_disc=np.exp(A*self.dt)
+        # B_disc=np.matmul(np.linalg.inv(A),A_disc-np.eye(A.shape[0]))@B
+        
+        ## check the controllability 
+        rank=checkControllability(A,B)
+        path_diag_vals=[30]*3+[self.config['learning_agile']['wvp']]*3+[self.config['learning_agile']['wqp']]*4
+        control_diag_vals=[self.config['learning_agile']['wthrust']]+[self.config['learning_agile']['wwt']]*2+[self.config['learning_agile']['wwt_z']]
+        Q=np.diag(path_diag_vals)
+        R=np.diag(control_diag_vals)
+
+        ## Calculate the optimal LQR P based on A,B,Q,R, with the discrete-time algebraic Riccati equation
+        P = np.matrix(scipy.linalg.solve_discrete_are(A, B, Q, R))
+        np.set_printoptions(suppress=True, precision=2)
+        print('terminal cost weight:',P)
+        return P
+    
+
+    def lqrAsInitGuess(self,trav_auxvar_value,cur_state,cur_u):
+        """ 
+        Generating an initial trajectory with only the goal cost and the linearized dynamics at the hovering state,
+        using the Finite Horizon LQR solver, where the terminal cost is the MPC terminal cost
+        """
+        path_diag_vals=[trav_auxvar_value[-4]]*3+[self.config['learning_agile']['wvp']]*3+[self.config['learning_agile']['wqp']]*4
+        ter_diag_vals=[self.config['learning_agile']['wrf']]*3+[self.config['learning_agile']['wvf']]*3+[self.config['learning_agile']['wqf']]*4
+        control_diag_vals=[self.config['learning_agile']['wthrust']]+[self.config['learning_agile']['wwt']]*2+[self.config['learning_agile']['wwt_z']]
+        Q=np.diag(path_diag_vals)
+        R=np.diag(control_diag_vals)
+        Qf=np.diag(ter_diag_vals)
+        ## linearized dynamics and the K matrix
+        A = self.uavoc.dfx_fn(cur_state, cur_u).full()
+        B = self.uavoc.dfu_fn(cur_state, cur_u).full()
+        
+        # set values to the LQR solver
+        self.lqr_solver.setDyn(dynF=A, dynG=B)
+        self.lqr_solver.setPathCost(Hxx=Q, Huu=R, Hxu=np.zeros([Q.shape[0],R.shape[1]]), \
+                                    Hux=np.zeros([R.shape[0],Q.shape[1]]), Hxe=-np.matmul(Q,self.goal_state_value).reshape(-1,1), \
+                                    Hue=-np.matmul(R,cur_u).reshape(-1,1))
+        self.lqr_solver.setFinalCost(hxx=Qf,hxe=-np.matmul(Qf,self.goal_state_value).reshape(-1,1))
 
 
+        ## solve the auxilary control system and get the analytical gradient
+        init_guess_sol=self.lqr_solver.lqrSolver(cur_state, self.horizon)
+        # plot_position(np.array(init_guess_sol['state_traj_opt']),name='lqr_initial guess',SHOW=True)
+        # plot_angularrate(np.array(init_guess_sol['control_traj_opt'])[:,1:],SHOW=True)
+        # plot_thrust(np.array(init_guess_sol['control_traj_opt']),SHOW=True)
+        
+        return init_guess_sol
     
     ## given initial state, control command, high-level parameters, obtain the first control command of the quadrotor
     def mpc_update(self, 
-                   current_state,
-                   trav_auxvar_value):
-    
+                   cur_state,
+                   trav_auxvar_value,
+                   last_u=None,
+                   first_iter=False):
+        """ collect goal and traverse auxvar value, then ask the MPC to solve the optimal control problem
+        Args:
+            cur_state (_type_): _description_
+            trav_auxvar_value (_type_): _description_
+            last_u (_type_): _description_
+
+        Returns:
+            _type_: _description_
+        """
+        init_guess=None
+        if self.config['lqr_init_guess'] and first_iter:
+            init_guess = self.lqrAsInitGuess(trav_auxvar_value,cur_state=cur_state,cur_u=last_u)
         ## MPC requires both the goal state adn the traverse hyperparameters
-       
-        # self.sol1 = self.uavoc.ocSolver(current_state_control=current_state_control,t_tra=t)
-        self.sol1,NO_SOLUTION_FLAG = self.uavoc.AcadosOcSolver(current_state=current_state,
+        
+        # self.sol1 = self.uavoc.ocSolver(cur_state_control=cur_state_control,t_tra=t)
+        self.sol1,NO_SOLUTION_FLAG = self.uavoc.AcadosOcSolver(cur_state=cur_state,
                                                 goal_state_value=self.goal_state_value,
                                                 dt=self.dt,
-                                                trav_auxvar_value=trav_auxvar_value)
+                                                trav_auxvar_value=trav_auxvar_value,
+                                                last_u=last_u,
+                                                init_guess=init_guess)
         # print('goal_pos:',self.goal_pos)
         # return control, pos_vel_cmd
         return self.sol1,NO_SOLUTION_FLAG
+
+def checkControllability(A,B):
+    """
+    check the controllability of the system
+    """
+    n = A.shape[0]
+    m = B.shape[1]
+    c_matrix = np.zeros((n,n*m))
+    for i in range(n):
+        c_matrix[:,i*m:(i+1)*m] = np.linalg.matrix_power(A,i)@B
+    rank = np.linalg.matrix_rank(c_matrix)
+    return rank
+
+
+
+
 
 # ## sample the perturbation (only for random perturbations)
 # def sample(deviation):
@@ -440,7 +544,7 @@ class PlanFwdBwdWrapper():
 ##-----------------ellipse collision check-----------------##
 #############################################################
 # initialize the drone ellipse
-# self.obstacle.reward_calc_sym(self.uav,
+# self.obstacle.penalty_calc_sym(self.uav,
 #                                 quad_height=self.uav_height/2,
 #                                 quad_radius=self.wing_len/2,
 #                                 alpha=5,
@@ -455,7 +559,7 @@ class PlanFwdBwdWrapper():
 #                                 # w_goal=0.1)    
 
 
-# reward,self.d_R_d_st_traj,gate_check_points=self.obstacle.reward_calc_value(state_traj,
+# penalty,self.d_L_d_st_traj,gate_check_points=self.obstacle.penalty_calc_value(state_traj,
 #                                     self.gate_corners,
 #                                     goal_pos=self.goal_pos,
 #                                     vert_traj=self.vert_traj[:,0:3],
@@ -549,9 +653,9 @@ class PlanFwdBwdWrapper():
     #         point2 = self.point2, point3 = self.point3, point4 = self.point4)
 
 
-        # def tra_ang_direct_reward(self,tra_ang):
-        # self.roll_reward = - 1000 * 0.5 * tra_ang[0]**2
+        # def tra_ang_direct_penalty(self,tra_ang):
+        # self.roll_penalty = - 1000 * 0.5 * tra_ang[0]**2
         # self.drdroll = - 1000 * tra_ang[0]
 
-        # self.yaw_reward = - 1000 * 0.5 * tra_ang[2]**2
+        # self.yaw_penalty = - 1000 * 0.5 * tra_ang[2]**2
         # self.drdyaw = - 1000 * tra_ang[2]

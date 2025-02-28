@@ -81,7 +81,8 @@ file(GLOB ocp_solver
     
 file(GLOB casadi_fun
         ../gestelt_bringup/src/Learning_Agile/c_generated_code/ACADOS_model_model/ACADOS_model_expl_ode_fun.c
-        ../gestelt_bringup/src/Learning_Agile/c_generated_code/ACADOS_model_model/ACADOS_model_expl_adj.c
+        ../gestelt_bringup/src/Learning_Agile/c_generated_code/ACADOS_model_model/ACADOS_model_expl_ode_hess.c
+        ../gestelt_bringup/src/Learning_Agile/c_generated_code/ACADOS_model_model/ACADOS_model_expl_vde_adj.c
         ../gestelt_bringup/src/Learning_Agile/c_generated_code/ACADOS_model_model/ACADOS_model_expl_vde_forw.c)
 
         # ../gestelt_bringup/src/Learning_Agile/c_generated_code/ACADOS_model_model/ACADOS_model_impl_dae_fun.c

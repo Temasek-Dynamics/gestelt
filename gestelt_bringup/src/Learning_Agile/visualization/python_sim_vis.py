@@ -347,7 +347,7 @@ def play_animation( wing_len, state_traj, gate_traj1=None, gate_traj2=None,state
         plt.tight_layout()
         plt.show()
 
-def plot_position(state_traj,name,dt = 0.1):
+def plot_position(state_traj,name,dt = 0.1,SHOW=False):
     fig, axs = plt.subplots(3)
     fig.suptitle(f'{name}+position vs t')
     N = len(state_traj[:,0])
@@ -356,7 +356,8 @@ def plot_position(state_traj,name,dt = 0.1):
     axs[1].plot(x,state_traj[:,1])
     axs[2].plot(x,state_traj[:,2])
     plt.savefig(f'./python_sim_result/{name}+position.png')
-    # plt.show()
+    if SHOW:
+        plt.show()  
     
 def plot_velocity(state_traj,dt = 0.1):
     fig, axs = plt.subplots(3)
@@ -392,7 +393,7 @@ def plot_quaternions_norm(state_traj,dt = 0.1,save=True):
     if save:
         plt.savefig('./python_sim_result/quaternions_norm.png')
     # plt.show()
-def plot_angularrate(control_traj,dt = 0.01):
+def plot_angularrate(control_traj,dt = 0.01,SHOW=True):
     plt.figure() 
     plt.title('angularrate vs time')
     N = len(control_traj[:,0])
@@ -405,10 +406,11 @@ def plot_angularrate(control_traj,dt = 0.01):
     plt.grid(True,color='0.6',dashes=(2,2,1,1))
     plt.legend()
     plt.savefig('./python_sim_result/angularrate.png')
-    # plt.show()
+    if SHOW:
+        plt.show()
     
 
-def plot_thrust(control_traj,dt = 0.1):
+def plot_thrust(control_traj,dt = 0.1,SHOW=True):
     plt.figure() 
     N = int(len(control_traj[:,0]))
     x = np.arange(0,round(N*dt,1),dt)
@@ -422,8 +424,9 @@ def plot_thrust(control_traj,dt = 0.1):
     plt.ylabel('u')
     plt.grid(True,color='0.6',dashes=(2,2,1,1))
     plt.legend()
-    plt.savefig('./python_sim_result/thrust.png')
-    # plt.show()
+    plt.savefig('./python_sim_result/thrust.png') 
+    if SHOW:
+        plt.show()
     
             
 def plot_T(control_traj,dt = 0.1,name="Single rotor thrust"):

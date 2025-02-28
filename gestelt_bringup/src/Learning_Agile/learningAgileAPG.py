@@ -7,11 +7,10 @@ from tqdm import tqdm
 
 from torch.utils.tensorboard import SummaryWriter
 
-from solid_geometry import magni
 from learningAgileBase import LearningAgileBase,vis_gradient_norm
 from config import mission_cfg,train_cfg,current_dir,setup_training_directories
-from logger_misc import log_drone_state,log_train_IO,log_gradient,evaluation
-import logging
+from logger_misc import log_drone_state,log_train_IO,log_gradient,mc_evaluation
+
 
 folder_dict=setup_training_directories()
 trained_model_folder=folder_dict['trained_model_folder']
@@ -29,7 +28,7 @@ options['PDP_GRADIENT']= True
 options['SQP_RTI_OPTION']=True
 options['JAX_SVD']=False
 options['MANUAL_SET_POSE_TEST']=False
-options['ORIGIN_REWARD']=False
+options['ORIGIN_penalty']=False
 options['CLOSE_LOOP_TRAINING']=True
 options['TRAINING']=True
 options['DEBUG']=False
@@ -51,7 +50,7 @@ class LearningAgileAPG:
         self.mission_cfg = mission_cfg
         self.train_cfg = train_cfg
         self.batch_size = train_cfg['training']['batch_size']
-        self.reward_batch=torch.zeros(1)
+        self.penalty_batch=torch.zeros(1)
         self.gradient_batch=torch.zeros(1)
         self.success_rate=0
         self.global_step = 0
@@ -88,10 +87,10 @@ class LearningAgileAPG:
     def get_penalty_episodes(self, i:int,
                             episode:LearningAgileBase,
                             R_Grad_queue:Queue):
-        R_i = np.array(episode.planner.get_penalty(episode.pred_st_traj,real_state_i=i,success_rate=self.success_rate)[0])
-        p_L_i_p_X_traj_i = (episode.planner.get_penalty(episode.pred_st_traj,success_rate=self.success_rate,real_state_i=i)[1])
+        L_i = np.array(episode.planner.get_penalty(episode.pred_st_traj,real_state_i=i,success_rate=self.success_rate)[0])
+        p_L_i_p_X_traj_i = (episode.planner.get_penalty(episode.pred_st_traj,real_state_i=i,success_rate=self.success_rate)[1])
 
-        R_Grad_queue.put([R_i, p_L_i_p_X_traj_i])
+        R_Grad_queue.put([L_i, p_L_i_p_X_traj_i])
 
     def update_network(self):
         self.optimizer.zero_grad()
@@ -101,7 +100,7 @@ class LearningAgileAPG:
 
     def train_one_epoch(self,cur_epoch:int,GRAD_VIS:bool=False):
         """
-        run the episodes in parallel, collect the reward and gradient and update the network
+        run the episodes in parallel, collect the penalty and gradient and update the network
         0. reset all the episodes
         for i in range(close_loop_horizon):
             1. get observations for every episode[i]
@@ -119,7 +118,7 @@ class LearningAgileAPG:
    
 
         
-        reward_list = []
+        penalty_list = []
         outputs_list = []
         p_L_p_z_list = []
        
@@ -138,7 +137,6 @@ class LearningAgileAPG:
             obs_batch=np.array(obs_batch_list)
             outputs_batch = self.model(torch.tensor(obs_batch,dtype=torch.float32).to(self.device),deterministic=True).to('cpu')
             
-            
             ##== 3. step for every episode
             for k in range(self.batch_size):
                 self.episodes[k].step(outputs_batch[k])
@@ -146,7 +144,7 @@ class LearningAgileAPG:
             ## since the SQP_RTI first solution is not feasible
             if i > 1:
                 outputs_list.append(outputs_batch)
-                ##== 4. Multi-process calculate each episode's reward and gradient p_L_i_p_X_traj_i
+                ##== 4. Multi-process calculate each episode's penalty and gradient p_L_i_p_X_traj_i
 
                 if self.batch_size!=1:
                     ### multi-process
@@ -165,10 +163,14 @@ class LearningAgileAPG:
                         self.get_penalty_episodes(i,self.episodes[k],R_Grad_queue)
 
 
-                ##== collect the reward and gradient from each episode
+                ##== collect the penalty and gradient from each episode
                 for k in range(self.batch_size):
+
+                    if self.mission_cfg['penalty']['control_reg_w']!=0:
+                        self.episodes[k].get_reg_control()
+                    # self.episodes[k].get_reg_euler()
                     single_episode_r_grad = R_Grad_queue.get()
-                    self.episodes[k].R_i.append(single_episode_r_grad[0])
+                    self.episodes[k].L_i.append(single_episode_r_grad[0])#+self.episodes[k].reg_control)
                     self.episodes[k].p_L_i_p_X_traj_i.append(single_episode_r_grad[1])
 
                 ##== 5. backward the gradient to get the p_L_p_z
@@ -178,37 +180,36 @@ class LearningAgileAPG:
             ##== record NN obs and output per episode step
             log_drone_state(writer,obs_batch[0,-1,:],self.episodes[0].control,self.global_step)
             euler_nn,gate_pitch = log_train_IO(writer,obs_batch[0,-1,:],outputs_batch[0,:].data.numpy().reshape(self.episodes[0].output_size),self.global_step)
-            writer.add_scalar('penalty_single_step', self.episodes[0].reward, self.global_step)
+            writer.add_scalar('penalty_single_step', self.episodes[0].penalty, self.global_step)
             
             self.global_step  += 1
         
-        ##== collect the reward and gradient from each episode
+        ##== collect the penalty and gradient from each episode
         for k in range(self.batch_size):
-            reward_list.append(self.episodes[k].reward)
+            penalty_list.append(self.episodes[k].penalty)
             p_L_p_z_list.append(self.episodes[k].p_L_p_z) 
         
         if not GRAD_VIS: 
             ## assemble *(0.05*magni(euler_nn))
-            p_L_p_z_batch = np.array(p_L_p_z_list)/(20000*(0.05*magni(euler_nn)))#*((10*euler_nn[1]))(batch_size, close_loop_horizon, 1, 13)
-            # p_L_p_z_list = np.array(p_L_p_z_list)*0.005*magni(euler_nn[1]-gate_pitch)/(10000)
-            p_L_p_z_batch = np.clip(p_L_p_z_batch, -0.02, 0.02)
-            
+            p_L_p_z_batch = np.array(p_L_p_z_list)/(10000)
+     
             # (close_loop_horizon, batch_size, 13)->(batch_size, close_loop_horizon, 13)
             outputs_stack = torch.stack(outputs_list).permute(1,0,2) 
         
             # ->(batch_size, close_loop_horizon, 13, 1)
             outputs_stack = outputs_stack.unsqueeze(-1) 
             
-            self.reward_batch = sum(reward_list)/self.batch_size
-            p_L_p_z_batch = p_L_p_z_batch.squeeze(2)
+            self.penalty_batch = sum(penalty_list)/self.batch_size
+            
 
            
             ##== 4. model backward in a batch
-            self.loss=self.model.loss_close_loop(outputs_stack.to(self.device), p_L_p_z_list, self.device)
+            self.loss=self.model.loss_close_loop(outputs_stack.to(self.device), p_L_p_z_batch, self.device)
             self.update_network()
 
-            ##== record the gradient and the reward
-            log_gradient(writer,p_L_p_z_batch[0,0,:],self.reward_batch[0],self.global_step)
+            p_L_p_z_batch = p_L_p_z_batch.squeeze(2)
+            ##== record the gradient and the penalty
+            log_gradient(writer,p_L_p_z_batch[0,0,:],self.penalty_batch[0],self.global_step)
 
         else:
             return np.array(p_L_p_z_list).squeeze(2)
@@ -224,13 +225,13 @@ class LearningAgileAPG:
             for epoch in range(num_epochs):
                 self.train_one_epoch(epoch)
                 pbar.update(1)
-                pbar.set_description(f"epoch:{epoch}, reward:{self.reward_batch[0]}")
+                pbar.set_description(f"epoch:{epoch}, penalty:{self.penalty_batch[0]}")
                 if epoch % 10 == 0:
                     model_file=os.path.join(trained_model_folder, f"NN_close_{epoch}.pth")
                     torch.save(self.model, model_file)
 
                 if (epoch+1) % 100 == 0:
-                    self.success_rate=evaluation(writer,model_file,self.global_step)
+                    self.success_rate=mc_evaluation(writer,model_file,self.global_step)
     
     def batch_gradient_visual(self):
         p_L_p_z_batch=self.train_one_epoch(0,GRAD_VIS=True)
@@ -266,7 +267,7 @@ if __name__ == "__main__":
     #                       nn_output:torch.tensor, 
     #                       R_Grad_queue:Queue):
     #     """
-    #     run the episode and put the reward and gradient into the queue
+    #     run the episode and put the penalty and gradient into the queue
 
     #     Args:
     #         index (int): _description_
@@ -274,12 +275,12 @@ if __name__ == "__main__":
     #         R_Grad_queue (Queue): _description_
         
     #     Returns:
-    #         each episode's reward and gradient
+    #         each episode's penalty and gradient
     #     """
     #     episode.step(nn_output)
 
 
     #     ## at the end of the close loop,
-    #     ## return the reward and gradient
+    #     ## return the penalty and gradient
     #     if i==train_cfg['training']['close_loop_horizon']-1:
-    #         R_Grad_queue.put([episode.reward, episode.p_L_p_z])
+    #         R_Grad_queue.put([episode.penalty, episode.p_L_p_z])

@@ -35,6 +35,7 @@ class PenaltyDesignHelper():
 
         ## choose the roll, pitch, or yaw
         self.euler_table={0:'yaw',1:'pitch',2:'roll'}
+        self.trans_table={0:'x',1:'y',2:'z'}
         self.euler_choice=euler_choice
         euler_angle[:,self.euler_choice]=self.axis_angle_range
         self.quad_quat=R.from_euler('zyx', euler_angle).as_quat()
@@ -104,13 +105,15 @@ class PenaltyDesignHelper():
         for i in range(len(self.quad_quat)):
             if self.ROT_VIS:
                 state_traj[:,6:10]=self.quad_quat[i]
+                plt.xlabel(f'{self.euler_table[self.euler_choice]} angle')
             else:
                 state_traj[:,6:10]=np.array([1,0,0,0])
                 state_traj[:,self.trans_choice]=self.trans_range[i]
+                plt.xlabel(f'{self.trans_table[self.trans_choice]} axis')
             penalty[i]=self.penalty_cal(state_traj)
         print("--- %s seconds ---" % (time.time() - start_time))
         plt.plot(self.axis_angle_range,penalty)
-        plt.xlabel(f'{self.euler_table[self.euler_choice]} angle')
+        
         plt.grid()
         plt.show()
     
@@ -139,7 +142,8 @@ class PenaltyDesignHelper():
         plt.show()
         
 if __name__ == '__main__':
-    helper=PenaltyDesignHelper(trans_choice=1,euler_choice=1,ROT_VIS=False)
+    # if ROT_VIS is True, the penalty will be calculated w.r.t the quadrotor's euler angle change
+    helper=PenaltyDesignHelper(trans_choice=0,euler_choice=2,ROT_VIS=True) 
     helper.load_config(mission_config=mission_cfg)
     helper.init_env()
     helper.plot_penalty_seq()

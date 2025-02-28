@@ -51,6 +51,7 @@ class mpcRosWrapper{
         void setpoint_timer_cb(const ros::TimerEvent &e);
         void drone_state_pose_cb(const geometry_msgs::PoseStamped::ConstPtr& msg);
         void drone_state_twist_cb(const geometry_msgs::TwistStamped::ConstPtr& msg);
+        void drone_state_body_rate_cb(const geometry_msgs::TwistStamped::ConstPtr& msg);
         void NN_trav_pose_cb(const geometry_msgs::PoseStamped::ConstPtr& msg);
         void close_loop_NN_trav_pose_cb(const gestelt_msgs::close_loop_NN_output::ConstPtr& msg);
         void NN_trav_time_cb(const std_msgs::Float32::ConstPtr& msg);
@@ -76,6 +77,7 @@ class mpcRosWrapper{
     private:
     ros::Subscriber drone_pose_sub_;
     ros::Subscriber drone_twist_sub_;
+    ros::Subscriber drone_body_rate_sub_;
     ros::Subscriber waypoint_sub_;
     ros::Subscriber NN_trav_pose_sub_;
     ros::Subscriber NN_trav_time_sub_;
@@ -115,7 +117,8 @@ class mpcRosWrapper{
     Eigen::Vector3d start_point_={0,0,0};
     
     // desired goal state
-    Eigen::VectorXd des_goal_state_=Eigen::VectorXd::Zero(17),drone_state_=Eigen::VectorXd::Zero(17);
+    int state_size_=10;
+    Eigen::VectorXd des_goal_state_,drone_state_;
     Eigen::Vector3d des_goal_point_={0,0,0},drone_pos_= {0,0,0};
     Eigen::Vector4d des_goal_quat_={1,0,0,0},drone_quat_= {1,0,0,0};
     Eigen::Vector3d des_goal_vel_={0,0,0},drone_vel_= {0,0,0};

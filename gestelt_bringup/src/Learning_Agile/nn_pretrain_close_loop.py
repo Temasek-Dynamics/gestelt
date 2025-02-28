@@ -77,11 +77,8 @@ for epoch in range(num_epochs):
         
         # Forward pass
         pre_outputs = model(torch.tensor(full_input, dtype=torch.float).unsqueeze(0).to(device),deterministic=False)[0]
-        # print("desired_traversing_time",pre_outputs[-1])
-        #print(inputs,' ',pre_outputs)
-
-        loss = criterion(pre_outputs[3:12]+pre_outputs[-1], outputs[3:12]+outputs[-1])
-        # loss = criterion(pre_outputs[3:12], outputs[3:12])
+        loss = criterion(pre_outputs[3:12], outputs[3:12])+criterion(pre_outputs[-1],outputs[-1])
+        
         # Backward and optimize
         optimizer.zero_grad()
         loss.backward()

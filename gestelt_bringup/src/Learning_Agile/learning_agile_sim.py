@@ -18,7 +18,7 @@ from quad_policy import PlanFwdBwdWrapper
 from quad_nn import nn_sample
 from quad_moving import binary_search_solver,input_cal
 from visualization.result_analysis import rotation_vis
-from solid_geometry import magni, pitch_from_gate, verify_SVD_casadi#,SVD_M_to_SO3
+from solid_geometry import magni, pitch_from_gate, verify_SVD_ca#,SVD_M_to_SO3
 from misc.misc import str2bool 
 
 device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -142,13 +142,22 @@ class LearningAgileSim():
     
 
         ##-------------------- planning variables --------------------------##
-
-        self.u = np.array([2,0.0,0.0,0.0])
-        self.tm = [0,0,0,0]
+        self.planner = PlanFwdBwdWrapper(self.config_dict,self.options)
+        self.tm=[0,0,0,0]
+        self.u=np.zeros(4)
+        self.last_u=np.zeros(4)
         self.state_n = []
         self.control_n = [self.u.tolist()]
         self.control_tm = [self.tm]
         
+        
+        self.hl_para = [0,0,0,0,0,0,0]
+        self.hl_variable = [self.hl_para]
+        
+
+        self.planner = PlanFwdBwdWrapper(self.config_dict,self.options)
+        
+    
         self.hl_para = [0,0,0,0,0,0,0]
         self.hl_variable = [self.hl_para]
         
@@ -226,9 +235,12 @@ class LearningAgileSim():
                               ini_r=self.env_init_set[0:3].tolist(),
                               ini_v_I = [0.0, 0.0, 0.0], # initial velocity
                               ini_q=ini_q,)
-
         
-       
+        if self.config_dict['ctl_mode'] != 3:
+            self.u=self.planner.hover_u
+            self.last_u=self.u
+            
+        
 
     def prepare_gate(self):
         
@@ -270,7 +282,7 @@ class LearningAgileSim():
 
 
         
-        if self.options['MANUAL_SET_POSE_TEST']:
+        if self.options['MANUAL_SET_POSE_TEST'] or self.options['COMPARISON']:
             self.gate_t_i = Gate(self.gate_points_list[0])
 
             # self.t_tra_abs is manually set
@@ -339,7 +351,10 @@ class LearningAgileSim():
         nn_output = self.model(torch.tensor(obs.reshape([1,5,-1]), dtype=torch.float).to(device))[0]
         out = nn_output.to('cpu').data.numpy()
 
-        verify_tra_R=verify_SVD_casadi(out[3:12])
+        if self.options['COMPARISON']:
+            out[0:3]=self.gate_center
+            out[3:12]=self.gate_ori_9d
+        verify_tra_R,_=verify_SVD_ca(out[3:12])
         self.log_NN_IO_for_RM(self.gate_pitch,out,verify_tra_R.flatten()) 
         return out 
     
@@ -351,12 +366,13 @@ class LearningAgileSim():
         out = self.model(torch.tensor(nn2_inputs, dtype=torch.float).to(device)).to('cpu')
         out = out.data.numpy()
         
-        verify_tra_R=verify_SVD_casadi(out[3:12])
+        verify_tra_R=verify_SVD_ca(out[3:12])
         self.log_NN_IO_for_RM(gate_pitch,out,verify_tra_R.flatten())       
         return out
     
 
-    def forward(self,python_sim_data_dir=None):
+    def forward(self,python_sim_data_dir=None, \
+                STAB_TEST=False):
         """
         python simulation
 
@@ -371,6 +387,8 @@ class LearningAgileSim():
         self.wrt_list = [10]
         self.wqt_list = [10]
         trav_auxvar_value = np.zeros(output_size)
+
+        STAB_FAILED = False
         for self.i in range(self.sim_time*(int(1/self.dyn_step))): # 5s, 500 Hz
             
             self.Time = np.concatenate((self.Time,[self.i*self.dyn_step]),axis = 0)
@@ -395,6 +413,7 @@ class LearningAgileSim():
                     out[0:3]=self.gate_center
                     # out[3:6]=self.gate_ori_RP # Rodrigues parameters
                     out[3:12]=self.gate_ori_9d # manual set 9D vector (is rotation matrix directly)
+                    # out[12:15]=[0,-5,0] # velocity
                     # print("="*50)
                     # print("NN pose det before SVD",np.linalg.det(out[3:12].reshape(3,3)))
 
@@ -407,19 +426,18 @@ class LearningAgileSim():
                     #     gate_pitch=0
                     #     self.log_NN_IO_for_RM(gate_pitch,out,des_tra_R) 
                     # else:
-                    out[-4]=40
-                    out[-3]=10
-                    out[-2]=10
+                    out[-4]=self.config_dict['learning_agile']['wrp']
+                    out[-3]=self.config_dict['learning_agile']['wrt']
+                    out[-2]=self.config_dict['learning_agile']['wqt']
                     out[-1]=self.t_tra_rel
                     ### SVD through CasADi
-                    verify_tra_R=verify_SVD_casadi(out[3:12])
+                    verify_tra_R,_=verify_SVD_ca(out[3:12])
                     gate_pitch=0
                     self.log_NN_IO_for_RM(gate_pitch,out,verify_tra_R.flatten())  
                     trav_auxvar_value = out
                             
                 else:
                     
-                    # if (self.i%25)==0:
                     if self.options['CLOSE_LOOP_MODEL']:
                         self.gate_t_i = Gate(self.gate_points_list[self.i])
                         trav_auxvar_value = self.close_loop_NN_forward()
@@ -429,15 +447,22 @@ class LearningAgileSim():
                         out[0:3]=self.gate_t_i.centroid+out[0:3]
                         trav_auxvar_value = out
                     
-    
+
                 
                 t_comp = time.time()
-                cmd_solution,NO_SOLUTION_FLAG  = self.planner.mpc_update(current_state=self.state,
-                                                        trav_auxvar_value=trav_auxvar_value)
-                
+                cmd_solution,NO_SOLUTION_FLAG  = self.planner.mpc_update(cur_state=self.state,
+                                                        trav_auxvar_value=trav_auxvar_value,
+                                                        last_u=self.last_u,
+                                                        first_iter=(self.i==0))
+                if NO_SOLUTION_FLAG:
+                    STAB_FAILED = True
+                    print('No solution found')
+                    print('traverse_auxvar_value=',trav_auxvar_value)
+                    
                 # print('solving time at main=',time.time()-t_comp)
                 self.solving_time.append(time.time()- t_comp)
                 self.u=cmd_solution['control_traj_opt'][0,:].tolist()
+                self.last_u = cmd_solution['control_traj_opt'][0,:]
                 self.pos_vel_att_cmd=cmd_solution['state_traj_opt'][1,:] #self.config_dict['learning_agile']['horizon']
                 # self.tra_weight_list.append(weight_vis)
            
@@ -448,7 +473,7 @@ class LearningAgileSim():
             ########################################################
 
             ###===================Explict Euler(obsolete) or ERK4====================###
-            # self.state = np.array(self.planner.uav.dyn_fn(self.state, test_u)).reshape(10) # Yixiao's simulation environment ('uav.dyn_fn'), replaced by pybullet
+            # self.state = np.array(self.planner.uavoc.dyn_fn_disc(self.state, self.u)).reshape(10) # Yixiao's simulation environment ('uav.dyn_fn'), replaced by pybullet
             
             
             ##================= acados integrator IRK========================###
@@ -465,9 +490,7 @@ class LearningAgileSim():
             self.state = self.integrator.get('x')
 
 
-            # re-normalize the quaternion
-            # self.state[6:10] = self.state[6:10]jnp.linalg.det(U),jnp.linalg.det(Vh))/np.linalg.norm(self.state[6:10])
-
+         
 
             self.state_n = np.concatenate((self.state_n,[self.state]),axis = 0)
             self.control_n = np.concatenate((self.control_n,[self.u]),axis = 0)
@@ -476,15 +499,17 @@ class LearningAgileSim():
             
         print('MPC finished')   
         
-                    
-        FAILED=self.planner.get_failed(self.state_n[::10,:],self.gate_points_list[::10,:,:])
-        print('FAILED=',FAILED)
+        if STAB_TEST:
+            FAILED=STAB_FAILED
+        else:               
+            FAILED=self.planner.get_failed(self.state_n[::10,:],self.gate_points_list[::10,:,:])
+            print('FAILED=',FAILED)
 
-        if self.options['VISUALIZE']:
-            self.visualize()
+            if self.options['VISUALIZE']:
+                self.visualize()
 
-        if self.options['SAVE_SIM']:
-            self.save(python_sim_data_dir)
+            if self.options['SAVE_SIM']:
+                self.save(python_sim_data_dir)
 
         return FAILED
 
@@ -511,9 +536,11 @@ class LearningAgileSim():
         if self.config_dict['ctl_mode'] == 0:
             plot_angularrate(self.control_n[:,1:])
             plot_thrust(self.control_n)
-        elif self.config_dict['ctl_mode'] == 1:
+        elif self.config_dict['ctl_mode'] == 1:# SRT
+            plot_angularrate(self.state_n[:,10:13])
             plot_T(self.control_n)
-        elif self.config_dict['ctl_mode'] == 2:
+        elif self.config_dict['ctl_mode'] == 2:#wrench
+            plot_angularrate(self.state_n[:,10:13])
             plot_M(self.control_n)
             plot_thrust(self.control_n)
         elif self.config_dict['ctl_mode'] == 3:
@@ -528,9 +555,6 @@ class LearningAgileSim():
         plot_scalar(self.wrt_list,scalar_name='traverse_position_weight')
         plot_scalar(self.wqt_list,scalar_name='traverse_attitude_weight')
 
-        # plot_quaternions_norm(self.state_n)
-        # plot_quaternions_norm(self.pos_vel_att_cmd_n)
-        # plot_trav_weight(self.tra_weight_list)
 
         plot_scalar(self.solving_time,scalar_name='MPC_solving_time')
         self.euler_nn=rotation_vis(uav_traj=self.state_n,
@@ -539,8 +563,8 @@ class LearningAgileSim():
                             gate_pitch=self.Pitch)
         plot_3D_traj(wing_len=self.planner.wing_len,
                                     uav_height=self.planner.uav_height/2,
-                                    state_traj=self.state_n[::50,:],
-                                    gate_traj=self.gate_points_list[::50,:,:])
+                                    state_traj=self.state_n[::30,:],
+                                    gate_traj=self.gate_points_list[::30,:,:])
     
 
     def save(self,python_sim_data_dir):
@@ -573,8 +597,8 @@ def parse_options():
     parser.add_argument('--MPC_BACKWARD', type=str2bool, default=False, help='Enable or disable MPC_BACKWARD.')
     parser.add_argument('--USE_PREV_SOLVER', type=str2bool, default=False, help='Enable or disable USE_PREV_SOLVER.')
     parser.add_argument('--PDP_GRADIENT', type=str2bool, default=False, help='Enable or disable PDP_GRADIENT.')
-    parser.add_argument('--SQP_RTI_OPTION', type=str2bool, default=True, help='Enable or disable SQP_RTI_OPTION.')
-    parser.add_argument('--MANUAL_SET_POSE_TEST', type=str2bool, default=True, help='Enable or disable MANUAL_SET_POSE_TEST.')
+    parser.add_argument('--SQP_RTI_OPTION', type=str2bool, default=True, help='SQP or the DDP')
+    parser.add_argument('--MANUAL_SET_POSE_TEST', type=str2bool, default=False, help='Enable or disable MANUAL_SET_POSE_TEST.')
     parser.add_argument('--CLOSE_LOOP_MODEL', type=str2bool, default=True, help='Enable or disable CLOSE_LOOP_MODEL.')
     parser.add_argument('--JAX_SVD', type=str2bool, default=False, help='Enable or disable JAX_SVD.')
     parser.add_argument('--CLOSE_LOOP_TRAINING', type=str2bool, default=False, help='Enable or disable CLOSE_LOOP_TRAINING.')
@@ -582,16 +606,18 @@ def parse_options():
     parser.add_argument('--STATE_2_MOVING_GATE', type=str2bool, default=False, help='Enable or disable STATE_2_MOVING_GATE.')
     parser.add_argument('--SAVE_SIM', type=str2bool, default=True, help='Enable or disable SAVE_SIM.')
     parser.add_argument('--SAVE_CSV', type=str2bool, default=True, help='Enable or disable save sim data in the csv format.')
+    parser.add_argument('--COMPARISON',  type=str2bool, default=False, help='Compare the training results with other methods')
     args = parser.parse_args()
     return vars(args)  # Return options as a dictionary  
 
         
-def success_eval(mission_cfg=None,
+def eval_sim_interface(mission_cfg=None,
                  train_cfg=None,
                  options=None,
                  model_file=None,
                  python_sim_data_dir=None,
-                 INTRAIN=False):
+                 INTRAIN=False,
+                 STAB_TEST=False):
     """
     test the success rate, evaluate the real executed trajectory
     """
@@ -622,9 +648,9 @@ def success_eval(mission_cfg=None,
     
     #####============== Solve the problem ====================#######
     # solve the problem
-    return learning_agile_sim.forward(python_sim_data_dir)
-    
-          
+    return learning_agile_sim.forward(python_sim_data_dir,
+                                      STAB_TEST=STAB_TEST)
+
 def main():
 
     python_sim_data_dir = os.path.join(current_dir, 'python_sim_result')
@@ -632,14 +658,13 @@ def main():
     print("Parsed Options:", options)
 
     if options['CLOSE_LOOP_MODEL']:
-        # good : 'training_results/2024-11-22/12-56-50/trained_model/NN_close_500.pth
         model_name = mission_cfg['NN_model_name']#'NN2_imitate_1.pth' #'NN_close_2.pth'
         model_file=os.path.join(current_dir,model_name)
     else:   
         model_name = '20241031-142733-PDP-Trial 1, shrink the gate from [1.2,0.56] to [1.0, 0.4]/NN2_imitate_1.pth' 
         model_file=os.path.join(current_dir, f'training_data/NN_model/',model_name)
     
-    success_eval(mission_cfg,
+    eval_sim_interface(mission_cfg,
                  train_cfg,
                  options,
                  model_file,

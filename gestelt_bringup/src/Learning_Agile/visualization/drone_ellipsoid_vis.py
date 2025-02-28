@@ -14,8 +14,8 @@ sys.path.append("../")
 sys.path.append(subdirectory_path)
 
 import rospy
-from geometry_msgs.msg import  PoseStamped
-from visualization_msgs.msg import Marker
+from geometry_msgs.msg import  PoseStamped, Point
+from visualization_msgs.msg import Marker, MarkerArray
 class DroneEllipsoidVisualizer:
     def __init__(self):
         # Initialize the ROS node
@@ -29,6 +29,9 @@ class DroneEllipsoidVisualizer:
         # Subscriber for the drone state
         self.drone_state_sub = rospy.Subscriber(
             '/mavros/local_position/pose', PoseStamped, self.drone_state_callback
+        )
+        self.drone_model_pub = rospy.Publisher(
+            '/learning_agile_sim/drone_model', Marker, queue_size=10
         )
         self.drone_wing_len=rospy.get_param('/drone/wing_len')
         self.drone_height=rospy.get_param('/drone/height')
@@ -49,13 +52,33 @@ class DroneEllipsoidVisualizer:
         drone_ellipsoid.scale.y = self.drone_wing_len
         drone_ellipsoid.scale.z = self.drone_height
 
-        drone_ellipsoid.color.a = 0.5
+        drone_ellipsoid.color.a = 0.4
         drone_ellipsoid.color.r = 0.0
         drone_ellipsoid.color.g = 1.0
         drone_ellipsoid.color.b = 0.0
 
+        ## create the model maker
+        drone_model = Marker()
+        drone_model.header.frame_id = "world"
+        drone_model.header.stamp = rospy.Time.now()
+        drone_model.ns = "drone_model"
+        drone_model.id = 0
+        drone_model.type = Marker.MESH_RESOURCE
+        drone_model.action = Marker.ADD
+        drone_model.pose.position = msg.pose.position
+        drone_model.pose.orientation = msg.pose.orientation
+        drone_model.scale.x = 0.5
+        drone_model.scale.y = 0.5
+        drone_model.scale.z = 2
+        drone_model.color.a = 1
+        drone_model.color.r = 0
+        drone_model.color.g = 1
+        drone_model.color.b = 0
+        drone_model.mesh_resource = "package://gestelt_bringup/simulation/models/raynor/meshes/fake_drone.dae"
+
         # Publish the marker
         self.drone_ellipsoid_pub.publish(drone_ellipsoid)
+        self.drone_model_pub.publish(drone_model)
 
     def spin(self):
         # Keep the node running
