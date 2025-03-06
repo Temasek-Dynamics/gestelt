@@ -63,6 +63,7 @@ void TrajectoryServer::init(ros::NodeHandle& nh, ros::NodeHandle& pnh)
   vel_magnitude_pub_ = nh.advertise<std_msgs::Float32>("vel_magnitude", 50);
   low_lvl_cmd_raw_pub_ = nh.advertise<mavros_msgs::AttitudeTarget>("mavros/setpoint_raw/attitude", 1);
   angular_rates_pub_ = nh.advertise<nav_msgs::Odometry>("warp/local_position/odom", 1);
+  warp_pose_pub_ = nh.advertise<geometry_msgs::PoseStamped>("warp/local_position/pose", 1);
 
   ////////////////////
   /* Service clients */
@@ -118,11 +119,46 @@ void TrajectoryServer::execTrajCb(const gestelt_msgs::ExecTrajectory::ConstPtr &
   // ROS_INFO("received acceleration: %f, %f, %f", last_mission_acc_(0), last_mission_acc_(1), last_mission_acc_(2));
   }
 
-  if (getMissionCmd() == MissionCmdMode::CT_OMEGA){
-    geomMsgsVector3ToEigenVector3(msg->acceleration.linear, last_mission_thrust_vector_);
-    geomMsgsVector3ToEigenVector3(msg->velocity.linear, last_mission_body_rates_);
-    ct_omega_mode_ = msg->acceleration.linear.z;
-    // last_mission_thrust_= last_mission_thrust_vector_[0];
+  if (getMissionCmd() == MissionCmdMode::ATTITUDE){
+    last_mission_thrust_vector_ = msg->throttle;
+    geomMsgsVector3ToEigenVector3(msg->angular_rates.angular, last_mission_warp_body_rates_);
+    geomMsgsVector4ToEigenVector4(msg->transform.rotation, last_mission_quaternion_);
+
+    ct_omega_mode_ = msg->type_mask; 
+
+    if (ct_omega_mode_ == 1) //means it is in the body rates mode. Need to transform the body rates mode from warp back to map frame
+    {
+
+        geometry_msgs::Vector3Stamped output_bodyrates_vector;
+        output_bodyrates_vector.vector.x = last_mission_warp_body_rates_(0);
+        output_bodyrates_vector.vector.y = last_mission_warp_body_rates_(1);
+        output_bodyrates_vector.vector.z = last_mission_warp_body_rates_(2);
+
+        try {
+            // Lookup the transformation from input frame to target frame
+            geometry_msgs::TransformStamped transformStamped;
+            transformStamped = tfBuffer.lookupTransform("map", "warp", ros::Time(0));
+
+            // Transform the vector
+            geometry_msgs::Vector3Stamped transformed_output_bodyrates_vector;
+            tf2::doTransform(output_bodyrates_vector, transformed_output_bodyrates_vector, transformStamped);
+            // ROS_INFO("Transformed Vector: x=%.2f, y=%.2f, z=%.2f", 
+            //          transformed_vector.vector.x, transformed_vector.vector.y, transformed_vector.vector.z);
+            
+            last_mission_body_rates_(0) = transformed_output_bodyrates_vector.vector.x;
+            last_mission_body_rates_(1) = transformed_output_bodyrates_vector.vector.y;
+            last_mission_body_rates_(2) = transformed_output_bodyrates_vector.vector.z;
+
+            std::cout << "This is x: " << last_mission_body_rates_(0) << "\n";
+            std::cout << "This is y: " << last_mission_body_rates_(1) << "\n";
+            std::cout << "This is z: " << last_mission_body_rates_(2) << "\n";
+           } 
+        catch (tf2::TransformException &ex)
+        {
+            ROS_WARN("Could not transform vector: %s", ex.what());
+        }
+    }
+
   }
 
 }
@@ -162,6 +198,7 @@ void TrajectoryServer::UAVPoseCB(const geometry_msgs::PoseStamped::ConstPtr &msg
   transformStamped.transform.rotation.w = msg->pose.orientation.w;
 
   br.sendTransform(transformStamped);   
+
 }
 
 void TrajectoryServer::UAVOdomCB(const nav_msgs::Odometry::ConstPtr &msg)
@@ -193,7 +230,7 @@ void TrajectoryServer::UAVOdomCB(const nav_msgs::Odometry::ConstPtr &msg)
   try {
       // Lookup the transformation from input frame to target frame
       geometry_msgs::TransformStamped transformStamped;
-      transformStamped = tfBuffer.lookupTransform("warp", "body", ros::Time(0));
+      transformStamped = tfBuffer.lookupTransform("warp", "map", ros::Time(0));
 
       // Transform the vector
       geometry_msgs::Vector3Stamped transformed_vector;
@@ -210,6 +247,31 @@ void TrajectoryServer::UAVOdomCB(const nav_msgs::Odometry::ConstPtr &msg)
       transformed_odom.twist.twist.linear.y = transformed_linearvel_vector.vector.y;
       transformed_odom.twist.twist.linear.z = transformed_linearvel_vector.vector.z;
       angular_rates_pub_.publish(transformed_odom);
+
+      Eigen::Vector4d map_frame_quat(uav_pose_.pose.orientation.x, uav_pose_.pose.orientation.y, uav_pose_.pose.orientation.z, uav_pose_.pose.orientation.w);
+      Eigen::Vector4d map2warp_transform_quat(transformStamped.transform.rotation.x, transformStamped.transform.rotation.y, transformStamped.transform.rotation.z, transformStamped.transform.rotation.w);
+      Eigen::Vector4d final_quat;
+
+
+      quaternion_multiplication(map_frame_quat, map2warp_transform_quat, final_quat);
+      // std::cout << "Matrix values for final_quat:\n" << final_quat << std::endl;
+      geometry_msgs::PoseStamped warp_pose;
+      // std::cout << "printing x value: " << final_quat(0);
+      // std::cout << "printing y value: " << final_quat(1);
+      // std::cout << "printing z value: " << final_quat(2);
+      // std::cout << "printing w value: " << final_quat(3);
+      warp_pose.pose.position.x = transformStamped.transform.translation.x;
+      warp_pose.pose.position.y = transformStamped.transform.translation.y;
+      warp_pose.pose.position.z = transformStamped.transform.translation.z;
+      warp_pose.pose.orientation.x = final_quat(0);
+      warp_pose.pose.orientation.y = final_quat(1);
+      warp_pose.pose.orientation.z = final_quat(2);
+      warp_pose.pose.orientation.w = final_quat(3);
+
+      warp_pose_pub_.publish(warp_pose);
+
+
+
 
   } 
   catch (tf2::TransformException &ex) {
@@ -544,8 +606,8 @@ void TrajectoryServer::execMission()
               last_mission_yaw_, last_mission_yaw_dot_, 
               mission_type_mask_);
   }
-  else if(getMissionCmd() == MissionCmdMode::CT_OMEGA){
-  publishLowLvlCmd( last_mission_body_rates_, last_mission_thrust_vector_, last_mission_pos_, ct_omega_mode_);
+  else if(getMissionCmd() == MissionCmdMode::ATTITUDE){
+  publishLowLvlCmd( last_mission_body_rates_, last_mission_thrust_vector_, last_mission_quaternion_, last_mission_pos_, ct_omega_mode_);
   }
 }
 
@@ -564,7 +626,7 @@ void TrajectoryServer::publishCmd(
   pos_cmd.header.stamp = ros::Time::now();
   pos_cmd.header.frame_id = origin_frame_;
   pos_cmd.coordinate_frame = mavros_msgs::PositionTarget::FRAME_LOCAL_NED;
-  pos_cmd.type_mask = type_mask;
+  pos_cmd.type_mask = 2048;
 
   pos_cmd.position.x = p(0);
   pos_cmd.position.y = p(1);
@@ -583,7 +645,7 @@ void TrajectoryServer::publishCmd(
 }
 
 void TrajectoryServer::publishLowLvlCmd(
-  Vector3d omega, Vector3d collective_thrust_vector, Vector3d p, int ct_omega_mode_)
+  Vector3d omega, double collective_thrust_vector, Vector4d quaternion, Vector3d p, uint16_t ct_omega_mode_)
 {
   if (enable_safety_box_ && !checkPositionLimits(safety_box_, p)) {
     // If position safety limit check failed, switch to hovering mode
@@ -594,16 +656,17 @@ void TrajectoryServer::publishLowLvlCmd(
   low_lvl_cmd.header.frame_id = origin_frame_;
   if (ct_omega_mode_ == 0){
     low_lvl_cmd.type_mask = ATTITUDE_CTRL;
-    double collective_thrust = collective_thrust_vector[0];
+    double collective_thrust = collective_thrust_vector;
     low_lvl_cmd.thrust = collective_thrust/(single_motor_max_thrust_*4);
-    low_lvl_cmd.orientation.x = omega[0];
-    low_lvl_cmd.orientation.y = omega[1];
-    low_lvl_cmd.orientation.z = omega[2];
-    low_lvl_cmd.orientation.w = collective_thrust_vector[1];
+    low_lvl_cmd.orientation.x = quaternion[0];
+    low_lvl_cmd.orientation.y = quaternion[1];
+    low_lvl_cmd.orientation.z = quaternion[2];
+    low_lvl_cmd.orientation.w = quaternion[3];
+    //  std::cout << "Matrix values for R1:\n" << quaternion << std::endl;
   }
   else if (ct_omega_mode_ == 1){
     low_lvl_cmd.type_mask = mavros_msgs::AttitudeTarget::IGNORE_ATTITUDE; // Ignore orientation
-    double collective_thrust = collective_thrust_vector[0];
+    double collective_thrust = collective_thrust_vector;
     low_lvl_cmd.thrust = collective_thrust/(single_motor_max_thrust_*4);
     low_lvl_cmd.body_rate.x = omega[0];
     low_lvl_cmd.body_rate.y = omega[1];
@@ -728,6 +791,13 @@ void TrajectoryServer::geomMsgsVector3ToEigenVector3(const geometry_msgs::Vector
   eigen_vect(2) = geom_vect.z;
 }
 
+void TrajectoryServer::geomMsgsVector4ToEigenVector4(const geometry_msgs::Quaternion& geom_vect, Eigen::Vector4d& eigen_vect){
+  eigen_vect(0) = geom_vect.x;
+  eigen_vect(1) = geom_vect.y;
+  eigen_vect(2) = geom_vect.z;
+  eigen_vect(3) = geom_vect.w;
+}
+
 Eigen::Vector3d TrajectoryServer::quaternionToRPY(const geometry_msgs::Quaternion& quat){
   // Quaternionf q << quat.x, quat.y, quat.z, quat.w;
   Eigen::Quaterniond q(quat.w, quat.x, quat.y, quat.z);
@@ -736,4 +806,35 @@ Eigen::Vector3d TrajectoryServer::quaternionToRPY(const geometry_msgs::Quaternio
 
   return euler;
 }
+
+void TrajectoryServer::quaternion_multiplication(const Eigen::Vector4d& q1, Eigen::Vector4d& q2, Eigen::Vector4d& q_f){
+  Eigen::Quaterniond q1_e(q1(3), q1(0), q1(1), q1(2));
+  Eigen::Quaterniond q2_e(q2(3), q2(0), q2(1), q2(2));
+
+  Eigen::Matrix3d R1 = q1_e.toRotationMatrix();
+  Eigen::Matrix3d R2 = q2_e.toRotationMatrix();
+  Eigen::Matrix3d R3 = R2.transpose();
+
+  // std::cout << "Matrix values for R1:\n" << R1 << std::endl;
+  // std::cout << "Matrix values for R3:\n" << R3 << std::endl;
+  // std::cout << "Matrix values for R2:\n" << R2 << std::endl;
+
+  Eigen::Matrix3d R_combined = R2 * R1 * R3;
+  Eigen::Matrix3d R_combined2 = R2 * R3;
+
+  // std::cout << "Matrix values for Rcombined:\n" << R_combined << std::endl;
+
+  Eigen::Quaterniond q_combined(R_combined);
+
+  // std::cout << "Quaternion (w, x, y, z): " 
+  //         << q_combined.w() << ", " 
+  //         << q_combined.x() << ", " 
+  //         << q_combined.y() << ", " 
+  //         << q_combined.z() << std::endl;
+
+
+  q_f = Eigen::Vector4d(q_combined.x(), q_combined.y(), q_combined.z(), q_combined.w());
+
+}
+
 

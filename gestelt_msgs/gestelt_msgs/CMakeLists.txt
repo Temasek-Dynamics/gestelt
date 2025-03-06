@@ -6,6 +6,7 @@ add_compile_options(-std=c++17)
 set(MSG_DEP
   std_msgs
   geometry_msgs
+  nav_msgs
 )
 
 find_package(catkin REQUIRED COMPONENTS
@@ -26,6 +27,7 @@ add_message_files(
   ExecTrajectory.msg
   Sphere.msg
   SphericalSFCTrajectory.msg
+  WarpCommands.msg
 )
 
 ## Generate services in the 'srv' folder

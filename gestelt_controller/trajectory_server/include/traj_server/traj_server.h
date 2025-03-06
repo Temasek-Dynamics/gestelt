@@ -30,6 +30,7 @@
 #include <gestelt_msgs/Command.h>
 #include <gestelt_msgs/CommanderState.h>
 #include <gestelt_msgs/ExecTrajectory.h>
+#include <gestelt_msgs/WarpCommands.h>
 
 #include <visualization_msgs/Marker.h>
 
@@ -61,7 +62,7 @@ enum ServerEvent
 enum MissionCmdMode
 {
   PVA,
-  CT_OMEGA,
+  ATTITUDE,
   UNKNOWN,
 };
 
@@ -232,7 +233,7 @@ private: // Class Methods
   */
 
   void publishLowLvlCmd(
-  Vector3d omega, Vector3d collective_thrust_vector, Vector3d p, int ct_omega_mode_);
+  Vector3d omega, double collective_thrust_vector, Vector4d quaternion, Vector3d p, uint16_t ct_omega_mode_);
 
   /* Helper methods */
 
@@ -278,6 +279,16 @@ private: // Class Methods
    * @param eigen_vect 
    */
   void geomMsgsVector3ToEigenVector3(const geometry_msgs::Vector3& geom_vect, Eigen::Vector3d& eigen_vect);
+
+
+  /**
+   * @brief Convert geometry_msgs/Quaternion to Eigen::Vector4d
+   * 
+   * @param geom_vect 
+   * @param eigen_vect 
+   */
+
+  void geomMsgsVector4ToEigenVector4(const geometry_msgs::Quaternion& geom_vect, Eigen::Vector4d& eigen_vect);
 
   /**
    * @brief Convert from quaternion to Euler angles (roll, pitch, yaw)
@@ -326,7 +337,7 @@ private: // Class Methods
       switch (cmd_mode)
       {
           case MissionCmdMode::PVA:  return "POSVELACC";
-          case MissionCmdMode::CT_OMEGA:     return "THRUSTOMEGA";
+          case MissionCmdMode::ATTITUDE:     return "ATTITUDECTRL";
           default:                      return "[Unknown Event]";
       }
   }
@@ -337,7 +348,7 @@ inline const MissionCmdMode IntToMission(int cmd_mode_num)
     switch (cmd_mode_num)
     {
         case 1:  return MissionCmdMode::PVA;
-        case 2:  return MissionCmdMode::CT_OMEGA;
+        case 2:  return MissionCmdMode::ATTITUDE;
         default: return MissionCmdMode::UNKNOWN; // Replace with an appropriate default.
     }
 }
@@ -396,6 +407,8 @@ inline const MissionCmdMode IntToMission(int cmd_mode_num)
     return server_state_;
   }
 
+  void quaternion_multiplication(const Eigen::Vector4d& q1, Eigen::Vector4d& q2, Eigen::Vector4d& q_f);
+
 private: // Member variables
   int drone_id_{0}; // ID of drone being commanded by trajectory server instance
   std::string origin_frame_; // frame that the drone originated from i.e. it's local pose is (0,0,0) w.r.t to this frame.
@@ -406,6 +419,7 @@ private: // Member variables
   ros::Publisher vel_magnitude_pub_; // Publish velocity vector magnitude 
   ros::Publisher low_lvl_cmd_raw_pub_;
   ros::Publisher angular_rates_pub_;
+  ros::Publisher warp_pose_pub_;
   
   /* Subscriber */
   ros::Subscriber exec_traj_sub_; // Subscriber for planner trajectory
@@ -441,7 +455,9 @@ private: // Member variables
   Eigen::Vector3d last_mission_pos_{0.0, 0.0, 0.0}, last_mission_vel_{0.0, 0.0, 0.0};
   Eigen::Vector3d last_mission_acc_{0.0, 0.0, 0.0}, last_mission_jerk_{0.0, 0.0, 0.0};
   // Last received mission Collective Thrust and Omega
-  Eigen::Vector3d last_mission_thrust_vector_{0.0, 0.0, 0.0}, last_mission_body_rates_{0.0, 0.0, 0.0};
+  Eigen::Vector3d last_mission_body_rates_{0.0, 0.0, 0.0}, last_mission_warp_body_rates_{0.0,0.0,0.0};
+  double last_mission_thrust_vector_{0.0};
+  Eigen::Vector4d last_mission_quaternion_{0.0,0.0,0.0,1.0};
   double last_mission_thrust_;
   // Last received mission yaw and yaw rate
   double last_mission_yaw_{0.0}, last_mission_yaw_dot_{0.0};
@@ -480,7 +496,7 @@ private: // Member variables
   double take_off_landing_tol_{0.1}; // tolerance within desired take off or landing 
 
   double traj_msg_timeout_{0.2}; 
-  int ct_omega_mode_{0};
+  uint16_t ct_omega_mode_{0};
 
   int num_pose_msgs_{0};
 

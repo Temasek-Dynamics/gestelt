@@ -82,7 +82,7 @@ class NN_POLICY_PLANNER(object):
         self.drone_pose_sub_ = rospy.Subscriber("/drone0/mavros/local_position/odom",Odometry, self.odomCb, queue_size = 10)
         self.drone_pose_sub_ = rospy.Subscriber("/mode_change", Bool, self.modeChgCb, queue_size = 10)
 
-        self.warp_drone_pose_pub_ = rospy.Publisher('/drone0/warp/local_position/pose', PoseStamped, queue_size=5)
+        self.warp_drone_pose_pub_ = rospy.Subscriber('/drone0/warp/local_position/pose', PoseStamped, self.warpPoseCB, queue_size=5)
         self.warp_drone_odom_sub_ = rospy.Subscriber('/drone0/warp/local_position/odom', Odometry, self.warpOdomCB, queue_size=5)
         
         #PVA controller trajectory Publisher
@@ -106,8 +106,9 @@ class NN_POLICY_PLANNER(object):
         self.warp_qd = np.zeros((3,1))
         
 
-        self.mission_command_mode = 2 # mission_command_mode
-        self.action = np.zeros((4,1))
+        self.mission_command_mode = mission_command_mode
+        self.attitude_mode_toggle = 0
+        self.action = np.zeros((1,4))
         self.policy_evaluation_timer = rospy.Timer(rospy.Duration(0.05), self.nn_evaluation)
         
 
@@ -131,6 +132,9 @@ class NN_POLICY_PLANNER(object):
     def warpOdomCB(self,msg):
         self.warp_qd = np.array([msg.twist.twist.angular.x, msg.twist.twist.angular.y, msg.twist.twist.angular.z, msg.twist.twist.linear.x, msg.twist.twist.linear.y, msg.twist.twist.linear.z ])
 
+    def warpPoseCB(self,msg):
+        self.warp_q = np.array([msg.pose.position.x, msg.pose.position.y,msg.pose.position.z, msg.pose.orientation.x, msg.pose.orientation.y, msg.pose.orientation.z, msg.pose.orientation.w])
+
     def eventCB(self, event):
         if self.drone_state == DRONESTATE["IDLE"].value:
             self.publish_mission(ServerEvent["TAKEOFF_E"].value)
@@ -153,27 +157,38 @@ class NN_POLICY_PLANNER(object):
                 pva_traj_msg.type_mask = 2048
 
                 self.pva_traj_pub_.publish(pva_traj_msg)
-            elif self.mission_command_mode == 2:
+            elif self.mission_command_mode == 2:  #This controls the orientation. Attitude and thrust
                 pva_traj_msg = ExecTrajectory()
-                pva_traj_msg.acceleration.linear.x = 5.33952
-                pva_traj_msg.acceleration.linear.y = 1 #0.707
-                pva_traj_msg.acceleration.linear.z = 0
-                pva_traj_msg.velocity.linear.z = 0 #0.707
-                self.pva_traj_pub_.publish(pva_traj_msg)
+                
+                if self.attitude_mode_toggle == 0:
+                    pva_traj_msg.type_mask = self.attitude_mode_toggle
+                    pva_traj_msg.throttle = 5.33952
+                    pva_traj_msg.transform.rotation.x = 0.0
+                    pva_traj_msg.transform.rotation.y = 0.0
+                    pva_traj_msg.transform.rotation.z = 0.707 
+                    pva_traj_msg.transform.rotation.w = 0.707
 
-            elif self.mission_command_mode == 3:
-                pva_traj_msg = ExecTrajectory()
-                pva_traj_msg.acceleration.linear.x = 5.33952
-                pva_traj_msg.acceleration.linear.y = 0
-                pva_traj_msg.acceleration.linear.z = 1
-                pva_traj_msg.velocity.linear.x = 1.0
-                pva_traj_msg.velocity.linear.x = 1.0
-                pva_traj_msg.velocity.linear.x = 1.0
-                self.pva_traj_pub_.publish(pva_traj_msg)
+                    pva_traj_msg.angular_rates.angular.x = self.action[0,1]   #body rate x
+                    pva_traj_msg.angular_rates.angular.y = self.action[0,2]     #body rate y
+                    pva_traj_msg.angular_rates.angular.z = self.action[0,3] 
+
+
+                    self.pva_traj_pub_.publish(pva_traj_msg)
+
+                elif self.attitude_mode_toggle == 1:  #This controls the body rates nd thrust
+                    pva_traj_msg.type_mask = self.attitude_mode_toggle
+                    pva_traj_msg.throttle = 5.33952 #self.action[0,0]
+                    pva_traj_msg.angular_rates.angular.x = self.action[0,1]   #body rate x
+                    pva_traj_msg.angular_rates.angular.y = self.action[0,2]     #body rate y
+                    pva_traj_msg.angular_rates.angular.z = self.action[0,3]     #body rate z
+                    print("me in here")
+                    self.pva_traj_pub_.publish(pva_traj_msg)
 
     def modeChgCb(self, msg):
         if msg.data == True:
-            self.mission_command_mode = 3
+            self.attitude_mode_toggle = 1
+        elif msg.data == False:
+            self.attitude_mode_toggle = 0
 
     def _pose_odom_pub_callback(self):
         with self.bullet_sim_mutex:
@@ -196,14 +211,16 @@ class NN_POLICY_PLANNER(object):
             self.warp_pose_msg.pose.orientation.z = trans.transform.rotation.z
             self.warp_pose_msg.pose.orientation.w = trans.transform.rotation.w
             self.warp_quat = np.array([trans.transform.rotation.x, trans.transform.rotation.y, trans.transform.rotation.z, trans.transform.rotation.w])
-            self.warp_drone_pose_pub_.publish(self.warp_pose_msg)
+            # self.warp_drone_pose_pub_.publish(self.warp_pose_msg)
+            # print(trans.transform.translation)
 
 
     def nn_evaluation(self, event):
-        warp_quat = torch.Tensor(self.warp_quat).unsqueeze(0)
+        warp_q = self.warp_q[3:]
+        warp_q = torch.Tensor(warp_q).unsqueeze(0)
         warp_qd = torch.Tensor(self.warp_qd).unsqueeze(0)
-        action = self.policy.evaluate_(warp_quat, warp_qd)
-        print(action)
+        self.action = self.policy.evaluate_(warp_q, warp_qd)
+
 
 
 

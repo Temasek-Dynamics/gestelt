@@ -19,6 +19,7 @@
   <exec_depend>std_msgs</exec_depend>
 
   <depend>geometry_msgs</depend>
+  <depend>nav_msgs</depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>
