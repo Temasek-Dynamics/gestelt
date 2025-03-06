@@ -242,3 +242,5 @@ if __name__=="__main__":
 
     rospy.spin()
 
+    print("done")
+
