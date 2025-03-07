@@ -9,7 +9,7 @@ from quad_OC import OCSys,LQR
 from solid_geometry import pitch_from_gate
 from quad_model import QuadrotorCTBRCtl, QuadrotorSRTCtl,QuadrotorWrenchCtl,QuadrotorAugmentedSRTCtl, toQuaternion,Gate
 from visualization.python_sim_vis import get_quad_vert_pos,plot_position,plot_angularrate,plot_thrust
-
+from config import train_cfg
 class PlanFwdBwdWrapper():
     """
     this class is responsible for wrap the single MPC prediction traj for training
@@ -79,7 +79,7 @@ class PlanFwdBwdWrapper():
                                        control_lb = self.uav.control_lb,
                                        control_ub = self.uav.control_ub) # thrust-to-weight = 4:1
        
-        self.uavoc.setDyn(self.uav.f,0.005)
+        self.uavoc.setDyn(self.uav.f,self.dt)
         
         # P=self.lqrAsTerminalCost()
         # diag_P = np.diag(P)   
@@ -151,6 +151,9 @@ class PlanFwdBwdWrapper():
         self.uavoc.diffPMP()
         self.lqr_solver = LQR()
         
+        self.d_st_traj_d_z=np.zeros((self.horizon+1,1,train_cfg['model']['output_size']))
+        self.d_input_traj_d_z=np.zeros((self.horizon,1,train_cfg['model']['output_size']))
+        
        
         
     def init_state_and_mission(self,
@@ -199,7 +202,7 @@ class PlanFwdBwdWrapper():
         gate_pitch = pitch_from_gate(gate_t_i.gate_point)
         
         self.gate_corners = gate_t_i.gate_point[:,:].reshape(12)
-        self.gate_quat = toQuaternion(gate_pitch,[0,1,0])
+        self.gate_quat = toQuaternion(gate_pitch,[0,1,0]) # world frame to the body frame?
         self.point1 = self.gate_corners[0:3]
         self.point2 = self.gate_corners[3:6]
         self.point3 = self.gate_corners[6:9]
@@ -216,7 +219,7 @@ class PlanFwdBwdWrapper():
             NO_SOLUTION_FLAG = False
             ## set the traverse hyperparameters value (auxvar) here
             trav_auxvar_value = np.concatenate((tra_pos,tra_ang,np.array([t_tra]))) #np.array([gamma]),
-            self.sol1,NO_SOLUTION_FLAG =self.mpc_update(cur_state=self.ini_state, 
+            self.sol1,NO_SOLUTION_FLAG =self.mpcUpdate(cur_state=self.ini_state, 
                                                         trav_auxvar_value=trav_auxvar_value)
         # state_traj [x,y,z,vx,vy,vz,qw,qx,qy,qz]
         state_traj = self.sol1['state_traj_opt']
@@ -317,7 +320,7 @@ class PlanFwdBwdWrapper():
         if self.options['PDP_GRADIENT']:
             NO_SOLUTION_FLAG = False
             trav_auxvar_value = np.concatenate((tra_pos,tra_ang,np.array([t_tra])))
-            self.sol1,NO_SOLUTION_FLAG =self.mpc_update(cur_state=self.ini_state, 
+            self.sol1,NO_SOLUTION_FLAG =self.mpcUpdate(cur_state=self.ini_state, 
                                                         trav_auxvar_value=trav_auxvar_value)
         
         
@@ -393,6 +396,14 @@ class PlanFwdBwdWrapper():
             return np.concatenate((drdp,np.array([R])))
     
     def PDP_grad(self, trav_auxvar_value):
+        """
+        calculate the analytical gradient of the penalty with respect to the traverse hyperparameters
+        
+        Args:
+            trav_auxvar_value (np.array): the traverse hyperparameters value
+        
+        """
+        
         ###################################################################
         ###----- Set mpc external variables VALUE to diffPMP--------#######
         ###################################################################
@@ -488,12 +499,13 @@ class PlanFwdBwdWrapper():
         return init_guess_sol
     
     ## given initial state, control command, high-level parameters, obtain the first control command of the quadrotor
-    def mpc_update(self, 
+    def mpcUpdate(self, 
                    cur_state,
                    trav_auxvar_value,
                    last_u=None,
                    first_iter=False):
-        """ collect goal and traverse auxvar value, then ask the MPC to solve the optimal control problem
+        """ 
+        collect goal, curren state, and traverse auxvar value, then ask the MPC to solve the optimal control problem
         Args:
             cur_state (_type_): _description_
             trav_auxvar_value (_type_): _description_

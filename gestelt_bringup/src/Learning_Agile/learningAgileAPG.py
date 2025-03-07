@@ -4,13 +4,13 @@ import os
 from multiprocessing import Process, Queue
 from tqdm import tqdm
 
-
 from torch.utils.tensorboard import SummaryWriter
 
 from learningAgileBase import LearningAgileBase,vis_gradient_norm
 from config import mission_cfg,train_cfg,current_dir,setup_training_directories
-from logger_misc import log_drone_state,log_train_IO,log_gradient,mc_evaluation
-
+from logger_misc import log_drone_state,log_train_IO,log_gradient
+from mc_evaluation import mc_evaluation
+from solid_geometry import magni
 
 folder_dict=setup_training_directories()
 trained_model_folder=folder_dict['trained_model_folder']
@@ -55,6 +55,7 @@ class LearningAgileAPG:
         self.success_rate=0
         self.global_step = 0
         self.episodes = []
+        self.reg=0
         for _ in range(self.batch_size):
             self.episodes.append(LearningAgileBase(mission_cfg=self.mission_cfg,
                                                  train_cfg=self.train_cfg,
@@ -79,7 +80,11 @@ class LearningAgileAPG:
         lr_decay_num_epochs = self.train_cfg['training']['lr_decay_num_epochs']
 
         # Loss and optimizer
-        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate)  #,weight_decay=0.01
+        self.optimizer = torch.optim.Adam([{'params': self.model.position_head.parameters(), 'weight_decay': 0.00},  
+                                           {'params': self.model.orientation_head.parameters(), 'weight_decay': 0.00}, 
+                                           {'params': self.model.traverse_time_head.parameters(), 'weight_decay': 0.00},
+                                           {'params': self.model.weights_head.parameters(), 'weight_decay': 0.00} ],\
+                                          lr=self.learning_rate)  #,weight_decay=0.01
         # learning rate scheduler
         self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=lr_decay_num_epochs, gamma=lr_gamma)
         # self.scheduler=torch.optim.lr_scheduler.CosineAnnealingLR(self.optimizer,T_max=50,eta_min=self.train_cfg['training']['eta_min'])
@@ -91,7 +96,9 @@ class LearningAgileAPG:
         p_L_i_p_X_traj_i = (episode.planner.get_penalty(episode.pred_st_traj,real_state_i=i,success_rate=self.success_rate)[1])
 
         R_Grad_queue.put([L_i, p_L_i_p_X_traj_i])
-
+    def smooth_loss(self,outputs_batch,prev_outputs_batch):
+        return 1 * torch.norm(outputs_batch - prev_outputs_batch, p=2)
+    
     def update_network(self):
         self.optimizer.zero_grad()
         self.loss.backward()
@@ -121,6 +128,8 @@ class LearningAgileAPG:
         penalty_list = []
         outputs_list = []
         p_L_p_z_list = []
+        outputs_batch = np.zeros((self.batch_size, self.episodes[0].output_size))
+        prev_outputs_batch = np.zeros((self.batch_size, self.episodes[0].output_size))
        
         ##==0. reset all the episodes
         for episode in self.episodes:
@@ -168,19 +177,25 @@ class LearningAgileAPG:
 
                     if self.mission_cfg['penalty']['control_reg_w']!=0:
                         self.episodes[k].get_reg_control()
-                    # self.episodes[k].get_reg_euler()
+                        self.reg+=self.episodes[k].reg_control
+                    if self.mission_cfg['penalty']['m_reg_w']!=0:
+                        self.episodes[k].get_reg_m()
+                        self.reg+=self.episodes[k].reg_m
                     single_episode_r_grad = R_Grad_queue.get()
-                    self.episodes[k].L_i.append(single_episode_r_grad[0])#+self.episodes[k].reg_control)
+                    self.episodes[k].L_i.append(single_episode_r_grad[0]+self.reg)
                     self.episodes[k].p_L_i_p_X_traj_i.append(single_episode_r_grad[1])
 
                 ##== 5. backward the gradient to get the p_L_p_z
                 for k in range(self.batch_size):
                     self.episodes[k].backward_per_step(train_cfg['training']['dyn_decay'])   
 
+                prev_outputs_batch = outputs_batch
+
             ##== record NN obs and output per episode step
             log_drone_state(writer,obs_batch[0,-1,:],self.episodes[0].control,self.global_step)
             euler_nn,gate_pitch = log_train_IO(writer,obs_batch[0,-1,:],outputs_batch[0,:].data.numpy().reshape(self.episodes[0].output_size),self.global_step)
             writer.add_scalar('penalty_single_step', self.episodes[0].penalty, self.global_step)
+
             
             self.global_step  += 1
         
@@ -204,9 +219,15 @@ class LearningAgileAPG:
 
            
             ##== 4. model backward in a batch
-            self.loss=self.model.loss_close_loop(outputs_stack.to(self.device), p_L_p_z_batch, self.device)
-            self.update_network()
-
+            new=False
+            if new:
+                self.optimizer.zero_grad()
+                outputs_stack = outputs_stack.to(self.device)
+                outputs_stack.backward(gradient=torch.tensor(p_L_p_z_batch,dtype=torch.float32).transpose(2,3).to(self.device))
+                self.optimizer.step()
+            else:
+                self.loss=self.model.loss_close_loop(outputs_stack.to(self.device), p_L_p_z_batch, self.device)
+                self.update_network()
             p_L_p_z_batch = p_L_p_z_batch.squeeze(2)
             ##== record the gradient and the penalty
             log_gradient(writer,p_L_p_z_batch[0,0,:],self.penalty_batch[0],self.global_step)
@@ -231,7 +252,7 @@ class LearningAgileAPG:
                     torch.save(self.model, model_file)
 
                 if (epoch+1) % 100 == 0:
-                    self.success_rate=mc_evaluation(writer,model_file,self.global_step)
+                    self.success_rate=mc_evaluation(writer=writer,model_file=model_file,global_step=self.global_step)
     
     def batch_gradient_visual(self):
         p_L_p_z_batch=self.train_one_epoch(0,GRAD_VIS=True)

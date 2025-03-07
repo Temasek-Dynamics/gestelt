@@ -245,14 +245,15 @@ class network_with_GRU(nn.Module):
         # D_h  : dimension of hidden layer
         # D_out: dimension of output layer
         self.GRU = nn.GRU(input_size=D_in, hidden_size=D_h2,num_layers=1,batch_first=True)
+        self.input_norm=nn.LayerNorm(D_in)
+        self.out_norm = nn.LayerNorm(D_h2)
         self.l1 = nn.Linear(D_h1, D_h1)
         self.F1 = nn.ReLU()
         self.l2 = nn.Linear(D_h1, D_h2)
         self.F2 = nn.ReLU()
         self.l3 = nn.Linear(D_h2, D_out)
 
-        # logstd = -3
-        # self.logstd = nn.Parameter(torch.ones(D_out, dtype=torch.float32) * logstd)
+ 
 
         
     def forward(self, input,deterministic=True):
@@ -276,14 +277,14 @@ class network_with_GRU(nn.Module):
         out [:,-4]=torch.sigmoid(out[:,-4])*50+10
 
         # wrt
-        out [:,-3]=torch.sigmoid(out[:,-3])*10
+        out [:,-3]=torch.sigmoid(out[:,-3])*20
 
         # wqt
         out [:,-2]=torch.sigmoid(out[:,-2])*20
 
 
         ## if pretrained, do not use this
-        # out [:,-1]=torch.tanh(out[:,-1])*10
+        # out [:,-1]=torch.tanh(out[:,-1])*5
 
         return out
 
@@ -307,6 +308,92 @@ class network_with_GRU(nn.Module):
 
         return loss_nn # size is 1
 
+
+class network_with_GRU_heads(nn.Module):
+    def __init__(self, D_in, D_h1, D_h2, D_out):
+        super(network_with_GRU_heads, self).__init__()        
+        # D_in : dimension of input layer
+        # D_h  : dimension of hidden layer
+        # D_out: dimension of output layer
+        self.GRU = nn.GRU(input_size=D_in, hidden_size=D_h2,num_layers=1,batch_first=True)
+        self.input_norm=nn.LayerNorm(D_in)
+        self.out_norm = nn.LayerNorm(D_h2)
+        self.l1 = nn.Linear(D_h1, D_h1)
+        self.F1 = nn.ReLU()
+        self.l2 = nn.Linear(D_h1, D_h2)
+        self.F2 = nn.ReLU()
+        # self.l3 = nn.Linear(D_h2, D_out)
+        
+        # replace l3 with heads
+        self.position_head = nn.Linear(D_h2, 3)
+        self.orientation_head = nn.Linear(D_h2, 9)
+        self.traverse_time_head = nn.Linear(D_h2, 1)
+        self.weights_head = nn.Linear(D_h2, 3)  
+
+    def forward(self, input,deterministic=True):
+        out,hidden = self.GRU(input)
+        out = out [:,-1,:]
+        # out = hidden[-1,:,:]
+        out = self.l1(out) # linear function requires the input to be a row tensor
+        out = self.F1(out)
+        out = self.l2(out)
+        out = self.F2(out)
+        out = out.squeeze(1)
+        
+        # position head
+        position = self.position_head(out)
+        # orientation head
+        orientation = self.orientation_head(out)
+        # traverse time head
+        traverse_time = self.traverse_time_head(out)
+        # weights head
+        weights = self.weights_head(out)
+
+        final_out = torch.zeros(input.shape[0],output_size)
+    
+        # traverse position x,y
+        final_out[:,0:2]=torch.tanh(position[:,0:2])*3
+        
+        # traverse position z
+        final_out[:,2] = torch.sigmoid(position[:,2])*2+0.5
+        
+        # orientation
+        final_out[:,3:12]=orientation
+
+        # wrp
+        final_out[:,-4]=torch.sigmoid(weights[:,-3])*50+10
+
+        # wrt
+        final_out[:,-3]=torch.sigmoid(weights[:,-2])*20
+
+        # wqt
+        final_out[:,-2]=torch.sigmoid(weights[:,-1])*20
+
+        ## t_tra
+        final_out[:,-1]=traverse_time
+
+        return final_out
+
+    
+    def myloss(self, para, dp, device='cpu'):
+        # convert np.array to tensor
+        Dp = torch.tensor(dp, dtype=torch.float).to(device) # row 2D tensor
+        # loss_nn = torch.matmul(Dp, para)
+        para=para.to(device)
+        loss_nn =torch.trace(torch.matmul(Dp, para.t()))/(Dp.shape[0])
+        return loss_nn # size is 1
+
+    def loss_close_loop(self, para, dp, device='cpu'):
+        # convert np.array to tensor
+        Dp = torch.tensor(dp, dtype=torch.float).to(device) 
+        para=para.to(device)
+        
+
+        # bxHx1x13 x bxHx13x1 -> 1
+        loss_nn = torch.sum(torch.einsum('bijk,bikj -> b',para,Dp))/(Dp.shape[0]*Dp.shape[1])
+
+        return loss_nn # size is 1
+    
 ## run the above code
 if __name__ == "__main__":
     # sample 1000 nn_sample() and plot the gate_pitch

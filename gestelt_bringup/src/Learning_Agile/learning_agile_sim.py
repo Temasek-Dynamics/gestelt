@@ -11,9 +11,10 @@ import numpy as np
 from collections import deque
 from scipy.spatial.transform import Rotation as R
 import torch 
+import matplotlib.pyplot as plt
 
 from quad_model import toQuaternion, Gate, Rd2Rp, get_gate_points
-from visualization.python_sim_vis import play_animation, plot_position, plot_velocity, plot_quaternions, plot_scalar, plot_thrust, plot_angularrate, plot_3D_traj,plot_M,plot_T
+from visualization.python_sim_vis import play_animation, plot_position, plot_velocity, plot_quaternions, plot_scalar, plot_thrust, plot_angularrate, plot_3D_traj,plot_M,plot_T,plot_weights
 from quad_policy import PlanFwdBwdWrapper
 from quad_nn import nn_sample
 from quad_moving import binary_search_solver,input_cal
@@ -36,8 +37,13 @@ def get_obs(history_obs = None,
     get both immediate and past observation from the environment
     
     Args:
-        gate_t_i: the current gate state
+        history_obs: the past observation
+        i: the current time step
+        input_size: the size of the input
         drone_state: the current drone state
+        final_point: the final point of the drone
+        gate_t_i: the current gate state
+        
         
     Returns:
         obs: the observation for the NN input
@@ -77,7 +83,7 @@ class MovingGate():
         
         # initialize the gate1, with the initial gate position
         # env_init_set[7]: gate width
-        gate_width = env_init_set[7]
+        
         ###############################################
         ###############################################
         ##################gate length##################    z
@@ -88,6 +94,7 @@ class MovingGate():
         # 3------------------------------------------2
         ###############################################
         ###############################################
+        gate_width = env_init_set[7]
         gate_point_no_pitch = get_gate_points(gate_center,gate_length,gate_width)
         
         self.gate = Gate(gate_point_no_pitch)
@@ -114,7 +121,8 @@ class MovingGate():
 
     
 class LearningAgileSim():
-    def __init__(self,python_sim_time,
+    def __init__(self,
+                 python_sim_time,
                  mission_cfg:dict=None,
                  train_cfg:dict=None,
                  model_file=None,
@@ -143,28 +151,11 @@ class LearningAgileSim():
 
         ##-------------------- planning variables --------------------------##
         self.planner = PlanFwdBwdWrapper(self.config_dict,self.options)
-        self.tm=[0,0,0,0]
         self.u=np.zeros(4)
         self.last_u=np.zeros(4)
         self.state_n = []
         self.control_n = [self.u.tolist()]
-        self.control_tm = [self.tm]
         
-        
-        self.hl_para = [0,0,0,0,0,0,0]
-        self.hl_variable = [self.hl_para]
-        
-
-        self.planner = PlanFwdBwdWrapper(self.config_dict,self.options)
-        
-    
-        self.hl_para = [0,0,0,0,0,0,0]
-        self.hl_variable = [self.hl_para]
-        
-
-        self.planner = PlanFwdBwdWrapper(self.config_dict,self.options)
-        
- 
         # set the dynamics step of the python sim (Explict Euler, ERK4)
         self.dyn_step=dyn_step
         self.planner.uavoc.AcadosSimIntegratorInit(self.dyn_step,options['USE_PREV_SOLVER'])
@@ -178,6 +169,7 @@ class LearningAgileSim():
         self.i       = 0
         self.solving_time = []
         self.tra_weight_list = []   
+        self.verify_tra_R_list = []
         # trajectory pos_vel_att_cmd
         self.pos_vel_att_cmd=np.zeros(len(self.state))
         self.pos_vel_att_cmd[6:10] = [1,0,0,0]
@@ -201,11 +193,10 @@ class LearningAgileSim():
         # env_init_set[7]: gate width (randomly set)
         # env_init_set[8]: gate pitch angle (randomly set)
       
-        ini_pos=self.config_dict['mission']['initial_position']
-        end_pos=np.array(self.config_dict['mission']['goal_position'])
+    
         
-        ini_yaw=np.array(self.config_dict['mission']['initial_ori_euler'])[2]
-        self.goal_yaw=np.array(self.config_dict['mission']['goal_ori_euler'])[2]
+        ini_yaw=np.array(self.config_dict['mission']['initial_ori_euler'])[0]
+        self.goal_yaw=np.array(self.config_dict['mission']['goal_ori_euler'])[0]
         
         self.gate_center=np.array(self.config_dict['mission']['gate_position'])
         # self.gate_ori_RP=np.array(self.config_dict['mission']['gate_ori_RP'])
@@ -215,15 +206,14 @@ class LearningAgileSim():
         self.t_tra_abs=self.config_dict['learning_agile']['traverse_time']
         
         self.env_init_set = nn_sample(cur_epoch=i,TEST=TEST)
-        if self.options['MANUAL_SET_POSE_TEST']:
-            self.env_init_set[0:3]=ini_pos
-            self.env_init_set[3:6]=end_pos
+        # if self.options['MANUAL_SET_POSE_TEST']:
+            # ini_pos=self.config_dict['mission']['initial_position']
+            # end_pos=np.array(self.config_dict['mission']['goal_position'])
+        #     self.env_init_set[0:3]=ini_pos
+        #     self.env_init_set[3:6]=end_pos
         self.env_init_set[6]=ini_yaw # drone_init_yaw
         self.final_point = self.env_init_set[3:6]
     
-
-        # print('start_point=',self.env_init_set[0:3])
-        # print('final_point=',self.env_init_set[3:6])
 
         ## ===== send mission to the quadrotor mpc solver ======== ##
         ini_q=toQuaternion(self.env_init_set[6],[0,0,1])
@@ -356,6 +346,7 @@ class LearningAgileSim():
             out[3:12]=self.gate_ori_9d
         verify_tra_R,_=verify_SVD_ca(out[3:12])
         self.log_NN_IO_for_RM(self.gate_pitch,out,verify_tra_R.flatten()) 
+        self.verify_tra_R_list.append(verify_tra_R)
         return out 
     
     def imiate_NN_forward(self):
@@ -450,7 +441,7 @@ class LearningAgileSim():
 
                 
                 t_comp = time.time()
-                cmd_solution,NO_SOLUTION_FLAG  = self.planner.mpc_update(cur_state=self.state,
+                cmd_solution,NO_SOLUTION_FLAG  = self.planner.mpcUpdate(cur_state=self.state,
                                                         trav_auxvar_value=trav_auxvar_value,
                                                         last_u=self.last_u,
                                                         first_iter=(self.i==0))
@@ -466,6 +457,10 @@ class LearningAgileSim():
                 self.pos_vel_att_cmd=cmd_solution['state_traj_opt'][1,:] #self.config_dict['learning_agile']['horizon']
                 # self.tra_weight_list.append(weight_vis)
            
+                # plot_3D_traj(wing_len=self.planner.wing_len,
+                #             uav_height=self.planner.uav_height/2,
+                #             state_traj=cmd_solution['state_traj_opt'][::30,:],
+                #             gate_traj=self.gate_points_list[::30,:,:])
                 
 
             ########################################################
@@ -516,55 +511,62 @@ class LearningAgileSim():
         
     def visualize(self):
         play_animation(wing_len=self.planner.wing_len,
-                                        gate_traj1=self.gate_points_list[::5,:,:],
-                                        state_traj=self.state_n[::5,:],
-                                        goal_pos=self.final_point.tolist(),
-                                        NN_pos=self.nn_output_list[:,0:3],
-                                        NN_R=self.des_tra_R_list,
-                                        dt=0.01,
-                                        save_option=0)
+                                gate_traj1=self.gate_points_list[::5,:,:],
+                                state_traj=self.state_n[::5,:],
+                                goal_pos=self.final_point.tolist(),
+                                NN_pos=self.nn_output_list[:,0:3],
+                                NN_R=self.des_tra_R_list,
+                                dt=0.01,
+                                save_option=0)
             
         # save the data, not show it
+        fig, axes = plt.subplots(5, 3, figsize=(12, 8),dpi=100)  
+        plot_position([axes[0,0], axes[0,1], axes[0,2]], self.state_n, dt=0.1, label_prefix='drone_actual_position')
+        plot_velocity([axes[1,0], axes[1,1], axes[1,2]],self.state_n)
         if not self.options['MANUAL_SET_POSE_TEST']:
-            plot_position(self.nn_output_list,name='NN2_output')
-
+            plot_position([axes[4,0], axes[4,1], axes[4,2]], self.nn_output_list, dt=0.1, label_prefix='NN2_output_position')
             if self.options['CLOSE_LOOP_MODEL']:
-                plot_scalar(self.NN_T_tra, scalar_name='NN_traverse_time') # pure NN close loop traversal time
+                plot_scalar(axes[2,2], self.NN_T_tra, scalar_name='NN_traverse_time') # pure NN close loop traversal time
+
             else:
-                plot_scalar(self.T, scalar_name='NN_traverse_time')# Binary search traversal time
+                plot_scalar(axes[2,2], self.T, scalar_name='NN_traverse_time')# Binary search traversal time
        
         if self.config_dict['ctl_mode'] == 0:
-            plot_angularrate(self.control_n[:,1:])
-            plot_thrust(self.control_n)
+            plot_angularrate(axes[2,0], self.control_n[:,1:])
+            plot_thrust(axes[2,1], self.control_n)
+            
         elif self.config_dict['ctl_mode'] == 1:# SRT
-            plot_angularrate(self.state_n[:,10:13])
-            plot_T(self.control_n)
+            plot_angularrate(axes[2,0], self.state_n[:,10:13])
+            plot_T(axes[2,1], self.control_n)
         elif self.config_dict['ctl_mode'] == 2:#wrench
-            plot_angularrate(self.state_n[:,10:13])
-            plot_M(self.control_n)
-            plot_thrust(self.control_n)
+            plot_angularrate(axes[2,0],self.state_n[:,10:13])
+            plot_M(axes[2,1], self.control_n)
+            plot_thrust(axes[2,2],self.control_n)
         elif self.config_dict['ctl_mode'] == 3:
-            plot_angularrate(self.state_n[:,10:13])
-            plot_T(self.state_n[:,13:17],name='single_rotor_thrust')
-            plot_T(self.control_n,name='single_rotor_thrust_differencce')
+            plot_angularrate(axes[2,0],self.state_n[:,10:13])
+            plot_T(axes[2,1], self.state_n[:,13:17],name='single_rotor_thrust')
+            plot_T(axes[2,2],self.control_n,name='single_rotor_thrust_differencce')
 
-        plot_position(self.state_n,name='drone_actual')
-        plot_velocity(self.state_n)
-        plot_quaternions(self.state_n)
-        plot_scalar(self.wrp_list,scalar_name='path_position_error_weight')
-        plot_scalar(self.wrt_list,scalar_name='traverse_position_weight')
-        plot_scalar(self.wqt_list,scalar_name='traverse_attitude_weight')
+        # plot_quaternions([axes[5,0], axes[5,1], axes[5,2], axes[5,3]],self.state_n)
+        plot_scalar(axes[3,0],self.wrp_list,scalar_name='path_position_error_weight')
+        plot_weights(axes[3,1],self.wrt_list,self.wqt_list)
+        plot_scalar(axes[3,2],self.solving_time,scalar_name='MPC_solving_time')
+        
+        
+        fig.tight_layout()
+        plt.savefig("./python_sim_result/combined_results.png")
+        plt.show()
 
-
-        plot_scalar(self.solving_time,scalar_name='MPC_solving_time')
         self.euler_nn=rotation_vis(uav_traj=self.state_n,
                             nn_output_list=self.nn_output_list,
                             des_tra_R_list=self.des_tra_R_list,
-                            gate_pitch=self.Pitch)
+                            gate_pitch=self.Pitch)  
         plot_3D_traj(wing_len=self.planner.wing_len,
-                                    uav_height=self.planner.uav_height/2,
-                                    state_traj=self.state_n[::30,:],
-                                    gate_traj=self.gate_points_list[::30,:,:])
+                    uav_height=self.planner.uav_height/2,
+                    state_traj=self.state_n[::30,:],
+                    gate_traj=self.gate_points_list[::30,:,:],
+                    NN_pos=self.nn_output_list[:,0:3],
+                    NN_R=self.des_tra_R_list[:,:])
     
 
     def save(self,python_sim_data_dir):
@@ -586,7 +588,6 @@ class LearningAgileSim():
         np.save(os.path.join(python_sim_data_dir,'tra_time'),self.NN_T_tra)
         np.save(os.path.join(python_sim_data_dir,'Time'),self.Time)
         np.save(os.path.join(python_sim_data_dir,'Pitch'),self.Pitch)
-        np.save(os.path.join(python_sim_data_dir,'HL_Variable'),self.hl_variable)
         np.save(os.path.join(python_sim_data_dir,'solving_time'),self.solving_time)
         np.save(os.path.join(python_sim_data_dir,'nn_output_list'),self.nn_output_list)
         np.save(os.path.join(python_sim_data_dir,'des_tra_R_list'),self.des_tra_R_list)
@@ -648,8 +649,11 @@ def eval_sim_interface(mission_cfg=None,
     
     #####============== Solve the problem ====================#######
     # solve the problem
-    return learning_agile_sim.forward(python_sim_data_dir,
-                                      STAB_TEST=STAB_TEST)
+    out={'FAILED':learning_agile_sim.forward(python_sim_data_dir,STAB_TEST=STAB_TEST),
+        'state_traj':learning_agile_sim.state_n,
+        'gate_traj':learning_agile_sim.gate_points_list
+        }
+    return out
 
 def main():
 

@@ -40,18 +40,7 @@
             8,
             9
         ],
-        "idxbx_e": [
-            0,
-            1,
-            2,
-            3,
-            4,
-            5,
-            6,
-            7,
-            8,
-            9
-        ],
+        "idxbx_e": [],
         "idxbxe_0": [
             0,
             1,
@@ -77,8 +66,8 @@
         "idxsphi_e": [],
         "lbu": [
             1.25,
-            -14.57,
-            -14.57,
+            -15.57,
+            -15.57,
             -15.57
         ],
         "lbx": [
@@ -105,18 +94,7 @@
             0.0,
             0.0
         ],
-        "lbx_e": [
-            -15,
-            -15,
-            -14,
-            -15,
-            -15,
-            -15,
-            -1,
-            -1,
-            -1,
-            -1
-        ],
+        "lbx_e": [],
         "lg": [],
         "lg_e": [],
         "lh": [],
@@ -138,8 +116,8 @@
         "lsphi_e": [],
         "ubu": [
             6.3500000000000005,
-            14.57,
-            14.57,
+            15.57,
+            15.57,
             15.57
         ],
         "ubx": [
@@ -166,18 +144,7 @@
             0.0,
             0.0
         ],
-        "ubx_e": [
-            15,
-            15,
-            14,
-            15,
-            15,
-            15,
-            1,
-            1,
-            1,
-            1
-        ],
+        "ubx_e": [],
         "ug": [],
         "ug_e": [],
         "uh": [],
@@ -246,7 +213,7 @@
         "nbu": 4,
         "nbx": 10,
         "nbx_0": 10,
-        "nbx_e": 10,
+        "nbx_e": 0,
         "nbxe_0": 10,
         "ng": 0,
         "ng_e": 0,
@@ -303,7 +270,7 @@
         "cost_expr_ext_cost_custom_hess": null,
         "cost_expr_ext_cost_custom_hess_0": null,
         "cost_expr_ext_cost_custom_hess_e": null,
-        "cost_expr_ext_cost_e": "jhpnnagiieahaaaadaaaaaaaaaaaaaaaaaegfaaaaaaaaaaaaaaabaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaegbaaaaaaaaaaaaaaaegbaaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaaegmcaaaaaaaaaaaaaajgaleaaaaaegbaaaaaaaaaaaaaaaegbaaaaaaaaaaaaaaaeglaaaaaaaaaaaaaaaegcaaaaaaaaaaaaaaaegpcaaaaaaaaaaaaaacaaaaaaachihegpcaaaaaaaaaaaaaadaaaaaaaahpfadeglaaaaaaaaaaaaaaaegcaaaaaaaaaaaaaaaegpcaaaaaaaaaaaaaacaaaaaaachjhegpcaaaaaaaaaaaaaadaaaaaaaahpfbdeglaaaaaaaaaaaaaaaegcaaaaaaaaaaaaaaaegpcaaaaaaaaaaaaaacaaaaaaachkhegpcaaaaaaaaaaaaaadaaaaaaaahpfcdegdaaaaaaaaaaaaaaaegmcaaaaaaaaaaaaaajgajbaaaaaegbaaaaaaaaaaaaaaaegbaaaaaaaaaaaaaaaeglaaaaaaaaaaaaaaaegcaaaaaaaaaaaaaaaegpcaaaaaaaaaaaaaacaaaaaaaghihegpcaaaaaaaaaaaaaadaaaaaaaahpfddeglaaaaaaaaaaaaaaaegcaaaaaaaaaaaaaaaegpcaaaaaaaaaaaaaacaaaaaaaghjhegpcaaaaaaaaaaaaaadaaaaaaaahpfedeglaaaaaaaaaaaaaaaegcaaaaaaaaaaaaaaaegpcaaaaaaaaaaaaaacaaaaaaaghkhegpcaaaaaaaaaaaaaadaaaaaaaahpffdegdaaaaaaaaaaaaaaaegmcaaaaaaaaaaaaaajgeaaaaaaaegbaaaaaaaaaaaaaaaegbaaaaaaaaaaaaaaaegbaaaaaaaaaaaaaaaegbaaaaaaaaaaaaaaaegbaaaaaaaaaaaaaaaegbaaaaaaaaaaaaaaaegbaaaaaaaaaaaaaaaegbaaaaaaaaaaaaaaaeglaaaaaaaaaaaaaaaegcaaaaaaaaaaaaaaaegcaaaaaaaaaaaaaaaegmcaaaaaaaaaaaaaabdegdaaaaaaaaaaaaaaaegmcaaaaaaaaaaaaaajgcaaaaaaaegbaaaaaaaaaaaaaaaeglaaaaaaaaaaaaaaaegpcaaaaaaaaaaaaaadaaaaaaaahpfideglaaaaaaaaaaaaaaaegpcaaaaaaaaaaaaaadaaaaaaaahpfjdegcaaaaaaaaaaaaaaachdcaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachecaaaaaaaaaaaaaaegbaaaaaaaaaaaaaaaeglaaaaaaaaaaaaaaaegpcaaaaaaaaaaaaaacaaaaaaabhcdeglaaaaaaaaaaaaaaaegpcaaaaaaaaaaaaaacaaaaaaabhddeglaaaaaaaaaaaaaaaegcaaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachecaaaaaaaaaaaaaaegcaaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaaegpcaaaaaaaaaaaaaadaaaaaaaahpfhdchfcaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaaegpcaaaaaaaaaaaaaadaaaaaaaahpfgdchhcaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachecaaaaaaaaaaaaaaegcaaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaaegpcaaaaaaaaaaaaaacaaaaaaabhbdchmcaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaaegpcaaaaaaaaaaaaaacaaaaaaabhadchocaaaaaaaaaaaaaaeglaaaaaaaaaaaaaaaegcaaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachecaaaaaaaaaaaaaaegbaaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachfdaaaaaaaaaaaaaachhcaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachhdaaaaaaaaaaaaaachfcaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachecaaaaaaaaaaaaaaegbaaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachldaaaaaaaaaaaaaachocaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachndaaaaaaaaaaaaaachmcaaaaaaaaaaaaaaeglaaaaaaaaaaaaaaaegcaaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachecaaaaaaaaaaaaaaegbaaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachfdaaaaaaaaaaaaaachfcaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachhdaaaaaaaaaaaaaachhcaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachecaaaaaaaaaaaaaaegbaaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachldaaaaaaaaaaaaaachmcaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachndaaaaaaaaaaaaaachocaaaaaaaaaaaaaaeglaaaaaaaaaaaaaaaegcaaaaaaaaaaaaaaaegcaaaaaaaaaaaaaaachdcaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachecaaaaaaaaaaaaaaegbaaaaaaaaaaaaaaaeglaaaaaaaaaaaaaaachfdaaaaaaaaaaaaaaeglaaaaaaaaaaaaaaachhcaaaaaaaaaaaaaaegcaaaaaaaaaaaaaaachdcaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachecaaaaaaaaaaaaaaegbaaaaaaaaaaaaaaaeglaaaaaaaaaaaaaaachldaaaaaaaaaaaaaaeglaaaaaaaaaaaaaaachocaaaaaaaaaaaaaaeglaaaaaaaaaaaaaaaegcaaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachecaaaaaaaaaaaaaaegcaaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachfcaaaaaaaaaaaaaachhcaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachhdaaaaaaaaaaaaaachfdaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachecaaaaaaaaaaaaaaegcaaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachmcaaaaaaaaaaaaaachocaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachndaaaaaaaaaaaaaachldaaaaaaaaaaaaaaeglaaaaaaaaaaaaaaaegcaaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachecaaaaaaaaaaaaaaegcaaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachfdaaaaaaaaaaaaaachhcaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachhdaaaaaaaaaaaaaachfcaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachecaaaaaaaaaaaaaaegcaaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachldaaaaaaaaaaaaaachocaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachndaaaaaaaaaaaaaachmcaaaaaaaaaaaaaaeglaaaaaaaaaaaaaaaegcaaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachecaaaaaaaaaaaaaaegbaaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachfcaaaaaaaaaaaaaachhcaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachhdaaaaaaaaaaaaaachfdaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachecaaaaaaaaaaaaaaegbaaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachmcaaaaaaaaaaaaaachocaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachndaaaaaaaaaaaaaachldaaaaaaaaaaaaaaeglaaaaaaaaaaaaaaaegcaaaaaaaaaaaaaaaegcaaaaaaaaaaaaaaachdcaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachecaaaaaaaaaaaaaaegbaaaaaaaaaaaaaaaeglaaaaaaaaaaaaaaachfdaaaaaaaaaaaaaaeglaaaaaaaaaaaaaaachfcaaaaaaaaaaaaaaegcaaaaaaaaaaaaaaachdcaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachecaaaaaaaaaaaaaaegbaaaaaaaaaaaaaaaeglaaaaaaaaaaaaaaachldaaaaaaaaaaaaaaeglaaaaaaaaaaaaaaachmcaaaaaaaaaaaaaa",
+        "cost_expr_ext_cost_e": "jhpnnagiieahaaaadaaaaaaaaaaaaaaaaaegfaaaaaaaaaaaaaaabaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaegbaaaaaaaaaaaaaaaegbaaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaaegmcaaaaaaaaaaaaaajgepbaaaaaegbaaaaaaaaaaaaaaaegbaaaaaaaaaaaaaaaeglaaaaaaaaaaaaaaaegcaaaaaaaaaaaaaaaegpcaaaaaaaaaaaaaacaaaaaaachihegpcaaaaaaaaaaaaaadaaaaaaaahpfadeglaaaaaaaaaaaaaaaegcaaaaaaaaaaaaaaaegpcaaaaaaaaaaaaaacaaaaaaachjhegpcaaaaaaaaaaaaaadaaaaaaaahpfbdeglaaaaaaaaaaaaaaaegcaaaaaaaaaaaaaaaegpcaaaaaaaaaaaaaacaaaaaaachkhegpcaaaaaaaaaaaaaadaaaaaaaahpfcdegdaaaaaaaaaaaaaaachbaaaaaaaaaaaaaaaegbaaaaaaaaaaaaaaaegbaaaaaaaaaaaaaaaeglaaaaaaaaaaaaaaaegcaaaaaaaaaaaaaaaegpcaaaaaaaaaaaaaacaaaaaaaghihegpcaaaaaaaaaaaaaadaaaaaaaahpfddeglaaaaaaaaaaaaaaaegcaaaaaaaaaaaaaaaegpcaaaaaaaaaaaaaacaaaaaaaghjhegpcaaaaaaaaaaaaaadaaaaaaaahpfedeglaaaaaaaaaaaaaaaegcaaaaaaaaaaaaaaaegpcaaaaaaaaaaaaaacaaaaaaaghkhegpcaaaaaaaaaaaaaadaaaaaaaahpffdegdaaaaaaaaaaaaaaaegmcaaaaaaaaaaaaaajgegaaaaaaegbaaaaaaaaaaaaaaaegbaaaaaaaaaaaaaaaegbaaaaaaaaaaaaaaaegbaaaaaaaaaaaaaaaegbaaaaaaaaaaaaaaaegbaaaaaaaaaaaaaaaegbaaaaaaaaaaaaaaaegbaaaaaaaaaaaaaaaeglaaaaaaaaaaaaaaaegcaaaaaaaaaaaaaaaegcaaaaaaaaaaaaaaaegmcaaaaaaaaaaaaaabdegdaaaaaaaaaaaaaaaegmcaaaaaaaaaaaaaajgcaaaaaaaegbaaaaaaaaaaaaaaaeglaaaaaaaaaaaaaaaegpcaaaaaaaaaaaaaadaaaaaaaahpfideglaaaaaaaaaaaaaaaegpcaaaaaaaaaaaaaadaaaaaaaahpfjdegcaaaaaaaaaaaaaaachccaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachdcaaaaaaaaaaaaaaegbaaaaaaaaaaaaaaaeglaaaaaaaaaaaaaaaegpcaaaaaaaaaaaaaacaaaaaaabhcdeglaaaaaaaaaaaaaaaegpcaaaaaaaaaaaaaacaaaaaaabhddeglaaaaaaaaaaaaaaaegcaaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachdcaaaaaaaaaaaaaaegcaaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaaegpcaaaaaaaaaaaaaadaaaaaaaahpfhdchecaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaaegpcaaaaaaaaaaaaaadaaaaaaaahpfgdchgcaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachdcaaaaaaaaaaaaaaegcaaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaaegpcaaaaaaaaaaaaaacaaaaaaabhbdchlcaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaaegpcaaaaaaaaaaaaaacaaaaaaabhadchncaaaaaaaaaaaaaaeglaaaaaaaaaaaaaaaegcaaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachdcaaaaaaaaaaaaaaegbaaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachedaaaaaaaaaaaaaachgcaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachgdaaaaaaaaaaaaaachecaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachdcaaaaaaaaaaaaaaegbaaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachkdaaaaaaaaaaaaaachncaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachmdaaaaaaaaaaaaaachlcaaaaaaaaaaaaaaeglaaaaaaaaaaaaaaaegcaaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachdcaaaaaaaaaaaaaaegbaaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachedaaaaaaaaaaaaaachecaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachgdaaaaaaaaaaaaaachgcaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachdcaaaaaaaaaaaaaaegbaaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachkdaaaaaaaaaaaaaachlcaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachmdaaaaaaaaaaaaaachncaaaaaaaaaaaaaaeglaaaaaaaaaaaaaaaegcaaaaaaaaaaaaaaaegcaaaaaaaaaaaaaaachccaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachdcaaaaaaaaaaaaaaegbaaaaaaaaaaaaaaaeglaaaaaaaaaaaaaaachedaaaaaaaaaaaaaaeglaaaaaaaaaaaaaaachgcaaaaaaaaaaaaaaegcaaaaaaaaaaaaaaachccaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachdcaaaaaaaaaaaaaaegbaaaaaaaaaaaaaaaeglaaaaaaaaaaaaaaachkdaaaaaaaaaaaaaaeglaaaaaaaaaaaaaaachncaaaaaaaaaaaaaaeglaaaaaaaaaaaaaaaegcaaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachdcaaaaaaaaaaaaaaegcaaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachecaaaaaaaaaaaaaachgcaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachgdaaaaaaaaaaaaaachedaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachdcaaaaaaaaaaaaaaegcaaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachlcaaaaaaaaaaaaaachncaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachmdaaaaaaaaaaaaaachkdaaaaaaaaaaaaaaeglaaaaaaaaaaaaaaaegcaaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachdcaaaaaaaaaaaaaaegcaaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachedaaaaaaaaaaaaaachgcaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachgdaaaaaaaaaaaaaachecaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachdcaaaaaaaaaaaaaaegcaaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachkdaaaaaaaaaaaaaachncaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachmdaaaaaaaaaaaaaachlcaaaaaaaaaaaaaaeglaaaaaaaaaaaaaaaegcaaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachdcaaaaaaaaaaaaaaegbaaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachecaaaaaaaaaaaaaachgcaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachgdaaaaaaaaaaaaaachedaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachdcaaaaaaaaaaaaaaegbaaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachlcaaaaaaaaaaaaaachncaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachmdaaaaaaaaaaaaaachkdaaaaaaaaaaaaaaeglaaaaaaaaaaaaaaaegcaaaaaaaaaaaaaaaegcaaaaaaaaaaaaaaachccaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachdcaaaaaaaaaaaaaaegbaaaaaaaaaaaaaaaeglaaaaaaaaaaaaaaachedaaaaaaaaaaaaaaeglaaaaaaaaaaaaaaachecaaaaaaaaaaaaaaegcaaaaaaaaaaaaaaachccaaaaaaaaaaaaaaegdaaaaaaaaaaaaaaachdcaaaaaaaaaaaaaaegbaaaaaaaaaaaaaaaeglaaaaaaaaaaaaaaachkdaaaaaaaaaaaaaaeglaaaaaaaaaaaaaaachlcaaaaaaaaaaaaaa",
         "cost_psi_expr": null,
         "cost_psi_expr_0": null,
         "cost_psi_expr_e": null,
@@ -393,7 +360,7 @@
         "eval_residual_at_max_iter": false,
         "exact_hess_constr": 1,
         "exact_hess_cost": 1,
-        "exact_hess_dyn": 0,
+        "exact_hess_dyn": 1,
         "ext_cost_num_hess": 0,
         "ext_fun_compile_flags": "-O2",
         "fixed_hess": 0,
@@ -406,10 +373,10 @@
         "funnel_sufficient_decrease_factor": 0.9,
         "globalization": "FIXED_STEP",
         "globalization_use_SOC": 0,
-        "hessian_approx": "EXACT",
+        "hessian_approx": "GAUSS_NEWTON",
         "hpipm_mode": "BALANCE",
         "integrator_type": "ERK",
-        "levenberg_marquardt": 0.001,
+        "levenberg_marquardt": 1e-10,
         "line_search_use_sufficient_descent": 0,
         "log_primal_step_norm": false,
         "model_external_shared_lib_dir": null,
@@ -436,7 +403,7 @@
         "qp_solver_tol_eq": null,
         "qp_solver_tol_ineq": null,
         "qp_solver_tol_stat": null,
-        "qp_solver_warm_start": 1,
+        "qp_solver_warm_start": 0,
         "reg_epsilon": 0.0001,
         "regularize_method": "CONVEXIFY",
         "rti_log_residuals": 0,

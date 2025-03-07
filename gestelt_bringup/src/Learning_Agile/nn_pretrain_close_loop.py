@@ -8,7 +8,7 @@ from scipy.spatial.transform import Rotation as R
 from config import mission_cfg, train_cfg
 
 from quad_model import get_gate_points
-from quad_nn import network_with_GRU, nn_sample, t_output
+from quad_nn import network_with_GRU,network_with_GRU_heads, nn_sample, t_output
 # Device configuration
 device = torch.device('cpu')#torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -23,7 +23,7 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 training_data_folder=os.path.abspath(os.path.join(current_dir, 'training_data'))
 model_folder=os.path.abspath(os.path.join(training_data_folder, 'NN_model'))
 FILE = model_folder+"/NN_close_pretrain.pth"
-model = network_with_GRU(input_size, hidden_size, hidden_size,output_size).to(device)
+model = network_with_GRU_heads(input_size, hidden_size, hidden_size,output_size).to(device)
 
 # Loss and optimizer
 criterion = nn.MSELoss()

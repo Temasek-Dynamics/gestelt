@@ -88,7 +88,7 @@ class PenaltyDesignHelper():
         
 
     def penalty_cal(self,state_traj):
-        penalty,_,_=self.planner.obstacle.penalty_cal_diff_collision(self.config_dict,
+        penalty,drdstate_traj,_=self.planner.obstacle.penalty_cal_diff_collision(self.config_dict,
                                                                 state_traj=state_traj,
                                                                 gate_corners=self.planner.gate_corners,
                                                                 gate_quat=self.planner.gate_quat,
@@ -143,7 +143,7 @@ class PenaltyDesignHelper():
         
 if __name__ == '__main__':
     # if ROT_VIS is True, the penalty will be calculated w.r.t the quadrotor's euler angle change
-    helper=PenaltyDesignHelper(trans_choice=0,euler_choice=2,ROT_VIS=True) 
+    helper=PenaltyDesignHelper(trans_choice=0,euler_choice=0,ROT_VIS=True) 
     helper.load_config(mission_config=mission_cfg)
     helper.init_env()
     helper.plot_penalty_seq()

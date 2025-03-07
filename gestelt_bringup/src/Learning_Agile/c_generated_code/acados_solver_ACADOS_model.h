@@ -58,7 +58,7 @@
 #define ACADOS_MODEL_NS0    0
 #define ACADOS_MODEL_NSN    0
 #define ACADOS_MODEL_NG     0
-#define ACADOS_MODEL_NBXN   10
+#define ACADOS_MODEL_NBXN   0
 #define ACADOS_MODEL_NGN    0
 #define ACADOS_MODEL_NY0    0
 #define ACADOS_MODEL_NY     0
@@ -99,7 +99,6 @@ typedef struct ACADOS_model_solver_capsule
     external_function_param_casadi *forw_vde_casadi;
     external_function_param_casadi *expl_ode_fun;
 
-    external_function_param_casadi *hess_vde_casadi;
 
 
 

@@ -142,7 +142,6 @@ def create_close_loop_trav_pose(position,gate_ori_euler):
     pose.position.z = position[2]+trans[2]
 
     quat=quaternion_from_euler(gate_ori_euler[0],gate_ori_euler[1],gate_ori_euler[2])
-    # quat=R.from_euler('xyz', gate_ori_euler).as_quat()
     pose.orientation.x = quat[0]
     pose.orientation.y = quat[1]
     pose.orientation.z = quat[2]

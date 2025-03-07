@@ -25,6 +25,8 @@ def rotation_vis(uav_traj=None,
     
     nn_output_list[0][3]=1
     # == convert drone state from quaternion to euler angles == ##
+    # shaft quat from qw first to qx first
+    uav_traj[:, 6:10] = uav_traj[:, [7, 8, 9, 6]]
     quat = R.from_quat(uav_traj[::5, 6:10])
     euler_drone = quat.as_euler('zyx', degrees=True)
     rot_vec = quat.as_rotvec()
@@ -37,9 +39,8 @@ def rotation_vis(uav_traj=None,
     
 
     ## == covert nn output rotation matrix to euler angles == ##
-    quat_nn=R.from_matrix(des_tra_R_list[:, 0:9].reshape(-1,3,3))
-    euler_nn=quat_nn.as_euler('zyx', degrees=True)
-    rot_vec_nn = quat_nn.as_rotvec()
+    r=R.from_matrix(des_tra_R_list[:, 0:9].reshape(-1,3,3))
+    euler_nn=r.as_euler('zyx', degrees=True)
     
     ## == convert the gate pitch start from horizontal == ##
     gate_pitch[:] = np.degrees(gate_pitch[:])
@@ -52,13 +53,13 @@ def rotation_vis(uav_traj=None,
     plt.figure(figsize=(10, 5))
     plt.axvline(x=t_tra, color='r', linestyle='--', label='traverse time')
 
-    plt.plot(euler_drone[:, 0], label='drone_Roll')
+    plt.plot(euler_drone[:, 0], label='drone_Yaw')
     plt.plot(euler_drone[:, 1], label='drone_Pitch')
-    plt.plot(euler_drone[:, 2], label='drone_Yaw')
+    plt.plot(euler_drone[:, 2], label='drone_Roll')
 
-    plt.plot(euler_nn[:, 0], label='NN_Roll')
+    plt.plot(euler_nn[:, 0], label='NN_Yaw')
     plt.plot(euler_nn[:, 1], label='NN_Pitch')
-    plt.plot(euler_nn[:, 2], label='NN_Yaw')
+    plt.plot(euler_nn[:, 2], label='NN_Roll')
     
 
     plt.plot(gate_pitch[:] , label='Gate_Pitch')

@@ -7,7 +7,7 @@ from collections import deque
 from scipy.spatial.transform import Rotation as R
 import matplotlib.pyplot as plt
 
-from solid_geometry import magni,pitch_from_gate,recover_euler_from_9d
+from solid_geometry import magni,pitch_from_gate,recover_euler_from_9d,verify_SVD_ca
 from learning_agile_sim import LearningAgileSim, Gate,get_obs
 
 from config import mission_cfg, train_cfg,current_dir
@@ -56,6 +56,8 @@ class LearningAgileBase:
         self.reg_control=0
         self.dreg_dz = np.zeros([1,self.output_size])
         self.last_u=np.zeros(4)
+        self.np_nn_out=np.zeros(self.output_size)
+        self.i=0
         
     def load_model(self,model_folder):
         ##== load the pre-trained model ==##
@@ -64,26 +66,26 @@ class LearningAgileBase:
 
     def reset(self,cur_epoch: int=0):
         #== random generate the env and set to the mpc solver
-        self.learning_agile_sim.generate_mission(cur_epoch,TEST=self.mission_cfg['FIX_GATE_PITCH_TEST'])
+        self.learning_agile_sim.generate_mission(cur_epoch,
+                                                 TEST=self.mission_cfg['FIX_GATE_PITCH_TEST'])
         
-        self.state = self.planner.ini_state
+        
 
         #== reset the gate
         self.learning_agile_sim.prepare_gate()
         self.gate_points_list = self.learning_agile_sim.gate_points_list
         
-        #== reset the obs
-        
-        
+        #== reset the gradient
         self.init_gradient()
+        
+        #== reset the state
         self.state_traj=[]
+        self.state = self.planner.ini_state
         self.state_n = np.array([self.state])
 
+        #== reset the obs
         self.gate_step_and_obs(0)
-        
  
-
-
 
     def gate_step_and_obs(self,i):
         self.i = i
@@ -131,23 +133,20 @@ class LearningAgileBase:
 
     
         if nn_out is None:
-            ## if training, self.nn_out comes from the model for a batch of episodes
+            ## if training, nn_out comes from the model for a batch of episodes
             if options['DEBUG']:
-                self.nn_out = self.get_NN_decision_debug()
+                nn_out = self.get_NN_decision_debug()
             else:  
-                self.nn_out = self.get_NN_decision(self.obs)       
-        else:
-            ## from the model for a batch of episodes
-            self.nn_out = nn_out
+                nn_out = self.get_NN_decision(self.obs)       
 
-        self.np_nn_out = self.nn_out.to('cpu').data.numpy()
+        self.np_nn_out = nn_out.to('cpu').data.numpy()
         self.t_tra_rel = self.np_nn_out[-1]
-        ## == MPC forward === ##
-                
-        cmd_solution,NO_SOLUTION_FLAG = self.planner.mpc_update(cur_state=self.state,
+        
+        ## == MPC forward === ##        
+        cmd_solution,NO_SOLUTION_FLAG = self.planner.mpcUpdate(cur_state=self.state,
                                                                 trav_auxvar_value=self.np_nn_out,
                                                                 last_u=self.last_u,
-                                                                first_iter=(self.i==0)) # control input 4-by-1 thrusts to pybullet
+                                                                first_iter=(self.i==0))
         if NO_SOLUTION_FLAG:
             print('No solution found')
             print('traverse_auxvar_value=',self.np_nn_out)
@@ -170,6 +169,7 @@ class LearningAgileBase:
         gate_t_pred = Gate(self.gate_points_list[int(pred_t_i)])
         self.planner.init_obstacle(gate_t_pred)
 
+        ## === MPC backward === ##
         self.planner.PDP_grad(self.np_nn_out)
     
     # def get_reg_euler(self):
@@ -180,6 +180,23 @@ class LearningAgileBase:
     #     reg_euler=self.mission_cfg['penalty']['euler_reg_w']*np.linalg.norm(euler_nn)
     #     dreg_deuler = self.mission_cfg['penalty']['euler_reg_w']*(euler_nn/reg_euler).reshape(1,-1)
     #     self.dreg_dz[:,3:12]=np.matmul(dreg_deuler,deuler_dm).flatten()
+    def get_reg_m(self):
+        """
+        regularize the output of the neural network, 
+        The NN output reference should be as close as the current drone state
+
+        """
+        # the NN output R
+        des_tra_R,dR_dm=verify_SVD_ca(self.np_nn_out[3:12])
+
+        # the current drone R
+        r=R.from_quat(np.roll(self.state[6:10],-1)) # w,x,y,z -> x,y,z,w
+        cur_drone_R=r.as_matrix()
+
+        self.reg_m=self.mission_cfg['penalty']['m_reg_w']*np.trace(np.eye(3)-np.dot(des_tra_R,cur_drone_R.T))
+        dreg_dR = self.mission_cfg['penalty']['m_reg_w']*(des_tra_R.T)
+        self.dreg_dz[:,3:12]=np.matmul(dreg_dR.flatten(),dR_dm).flatten()
+
         
 
     def get_reg_control(self):

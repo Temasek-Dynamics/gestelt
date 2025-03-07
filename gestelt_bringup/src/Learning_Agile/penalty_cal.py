@@ -4,7 +4,7 @@ import jax.numpy as jnp
 
 from jax_differentiable_collision_call import DiffCollisionWrapper, Polytope
 from solid_geometry import plane, line, magni,dir_cosine_np
-
+from config import mission_cfg
 ## define the narrow window which is also the obstacle for the quadrotor
 class Obstacle():
     def __init__(self, point1, point2, point3, point4,wing_len,uav_height):
@@ -43,11 +43,12 @@ class Obstacle():
         # width_gap=jnp.abs(line_centers_G[0,2]-line_centers_G[2,2])
         length_gap = jnp.array(magni(point1-point2))  # 1.2
         self.width_gap = jnp.array(magni(point1-point4))  # 0.56
-    
-        self.P_obs[0].create_rect_prism(length_gap, 2.0, self.quad_half_height*2)
-        self.P_obs[1].create_rect_prism(self.quad_radius*2, 2.0, self.width_gap)
-        self.P_obs[2].create_rect_prism(length_gap, 2.0, self.quad_half_height*2)
-        self.P_obs[3].create_rect_prism(self.quad_radius*2, 2.0, self.width_gap)
+
+        thick=mission_cfg['gate']['thickness']
+        self.P_obs[0].create_rect_prism(length_gap, thick, self.quad_half_height*2)
+        self.P_obs[1].create_rect_prism(self.quad_radius*2, thick, self.width_gap)
+        self.P_obs[2].create_rect_prism(length_gap, thick, self.quad_half_height*2)
+        self.P_obs[3].create_rect_prism(self.quad_radius*2, thick, self.width_gap)
 
         ##==quadrotor ellipsoid==##
         A=jnp.diag(np.array([self.quad_radius,self.quad_radius,self.quad_half_height]))
@@ -161,7 +162,7 @@ class Obstacle():
         ## init gate check points: four corners and twelve middle point
         drdstate_traj = np.zeros((state_traj.shape[0],state_traj.shape[1]))
         
-        R_gate=dir_cosine_np(gate_quat) # world frame to gate frame
+        R_gate=dir_cosine_np(gate_quat) # from body frame to world frame
         penalty_traj = 0
 
         line_centers = np.zeros([4,3])

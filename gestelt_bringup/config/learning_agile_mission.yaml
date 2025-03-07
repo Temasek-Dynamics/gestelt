@@ -23,6 +23,7 @@ drone:
 gate:
   length: 1.2 #1.2
   width: 0.5 # 0.5
+  thickness: 2 # along quadrotor forward direction
   init_std_dev: 0.087 #pi/36=
   final_std_dev: 0.2618 #pi/12
   linear_vel: [0.0, 0.0, 0.0]
@@ -39,17 +40,17 @@ mission:
   ##------ MPC initial pose ----##
   # ##initial pose only works for python sim
   initial_position: [0.0, 1.8, 1.2]
-  initial_ori_euler: [0.0, 0.0, 0.0] # RPY, only yaw is active
+  initial_ori_euler: [0.0, 0.0, 0.0] # YPR, only yaw is active
 
   ##------ gate pose ----##
   # only feasible for MANUAL_SET_POSE_TEST
   gate_position: [0.0, -0.0, 1.8]
   # gate_ori_RP: [-0.0, -1.055, 0.0]
-  gate_ori_euler: [0.0, -1.3,0.0] # 1.0 radian is 57.2958 degree, 1.5 radian is 85.9437 degree 
+  gate_ori_euler: [-1.57, -1.3,-0.0] # zyx 1.0 radian is 57.2958 degree,1.3 radian is 1.5 radian is 85.9437 degree 
   
   ##------ goal pose ----##
   goal_position: [0.0, -1.8, 1.5]
-  goal_ori_euler: [0.0, 0.0, 0.0] # RPY, only yaw is active
+  goal_ori_euler: [0.0, 0.0, 0.0] # YPR, only yaw is active
 
   #################################################
   ######-----end of for testing --------------#####
@@ -91,9 +92,9 @@ learning_agile:
   wqp: 0.01
 
   # terminal cost
-  wrf: 1200.0     #2 X 20(N) X wrp
-  wvf: 400.0
-  wqf: 4
+  wrf: 500 #1200.0     #2 X 20(N) X wrp
+  wvf: 500 #400.0
+  wqf: 100
   ##------ traversing parameters ---##
   max_tra_w: 100 #100 be the learnable variable
   traverse_weight_span: 10 
@@ -157,9 +158,9 @@ pretrain_param:
 
 ## ------NN configuration ----##
 
-# NN_model_name: 'training_results/new_format/2025-01-16/09-59-31/trained_model/NN_close_3200.pth' #**#
-NN_model_name: 'training_results/new_format/2025-02-24/16-45-20/trained_model/NN_close_100.pth' #**#
-# NN_model_name: 'training_results/new_format/2025-02-27/17-08-08/trained_model/NN_close_50.pth' #**#
+NN_model_name: 'training_results/new_format/2025-01-16/09-59-31/trained_model/NN_close_3200.pth' #**#
+# NN_model_name: 'training_results/new_format/2025-02-24/16-45-20/trained_model/NN_close_100.pth' #**#
+# NN_model_name: 'training_results/new_format/2025-03-07/10-35-44/trained_model/NN_close_40.pth' #**#
 # NN_model_name: 'training_results/new_format/2025-01-22/10-26-33/trained_model/NN_close_120.pth' # train for the moving gate
 
 NN_deploy_model_name: 'deployed_model/2025-01-16/09-59-31/trained_model/NN_close_3200.pth' # used in the sitl
@@ -170,6 +171,6 @@ penalty:
   vel_w: 1
   goal_x_axis_w: 2
   goal_yz_axis_w: 2 #12.0 for last 5 nodes, 240 for last 3 nodes (yz axis)
-  scaling_w: 20 #100 for quadratic loss
-  euler_reg_w: 1
+  scaling_w: 50 #100 for quadratic loss
+  m_reg_w: 0
   control_reg_w: 0

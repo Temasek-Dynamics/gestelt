@@ -405,7 +405,7 @@ class QuadrotorCTBRCtl:
                         + self.cost_base.wqf * self.cost_base.cost_q_g        
   
     
-    def init_traCost(self): # transforming Rodrigues to Quaternion is shown in mpc_update function
+    def init_traCost(self): # transforming Rodrigues to Quaternion is shown in mpcUpdate function
         self.cost_base.traverse_error(self.quad_dyn,self.options)
         self.tra_cost = self.cost_base.max_tra_w * \
                         casadi.exp(-self.cost_base.traverse_weight_span*(self.cost_base.t_node-self.cost_base.des_t_tra)**2) \
@@ -436,17 +436,17 @@ class QuadrotorCTBRCtl:
         """
         thrust_ub_inequ=self.quad_dyn.col_thrust_mag-self.col_thrust_ub
         thrust_lb_inequ=self.col_thrust_lb-self.quad_dyn.col_thrust_mag
-        ang_rate_ub_inequ=self.quad_dyn.ang_rate_B[0:2]-self.ang_rate_b_xy
-        ang_rate_lb_inequ=self.ang_rate_b_xy-self.quad_dyn.ang_rate_B[0:2]
-        ang_rate_ub_z_inequ=self.quad_dyn.ang_rate_B[2]-self.ang_rate_b_z
-        ang_rate_lb_z_inequ=self.ang_rate_b_z-self.quad_dyn.ang_rate_B[2]
+        # ang_rate_ub_inequ=self.quad_dyn.ang_rate_B[0:2]-self.ang_rate_b_xy
+        # ang_rate_lb_inequ=self.ang_rate_b_xy-self.quad_dyn.ang_rate_B[0:2]
+        # ang_rate_ub_z_inequ=self.quad_dyn.ang_rate_B[2]-self.ang_rate_b_z
+        # ang_rate_lb_z_inequ=self.ang_rate_b_z-self.quad_dyn.ang_rate_B[2]
         
         pos_ub_z_inequ=self.quad_dyn.r_I[2]-self.pos_ub_z
         pos_lb_z_inequ=self.pos_lb_z-self.quad_dyn.r_I[2]
         self.path_inequ_cstr=vcat([thrust_ub_inequ,thrust_lb_inequ, \
-                                   ang_rate_ub_inequ, ang_rate_lb_inequ,\
-                                   ang_rate_ub_z_inequ,ang_rate_lb_z_inequ,\
                                    pos_ub_z_inequ,pos_lb_z_inequ])
+                        #   ang_rate_ub_inequ, ang_rate_lb_inequ,\
+                        #   ang_rate_ub_z_inequ,ang_rate_lb_z_inequ,\
         self.final_inequ_cstr=vcat([pos_ub_z_inequ,pos_lb_z_inequ])
         
 class QuadrotorSRTCtl:
@@ -489,7 +489,7 @@ class QuadrotorSRTCtl:
                         + self.cost_base.wwt_z * self.cost_base.cost_ang_rate_B_z       
   
     
-    def init_traCost(self): # transforming Rodrigues to Quaternion is shown in mpc_update function
+    def init_traCost(self): # transforming Rodrigues to Quaternion is shown in mpcUpdate function
         self.cost_base.traverse_error(self.quad_dyn,self.options)
         self.tra_cost = self.cost_base.max_tra_w * \
                         casadi.exp(-self.cost_base.traverse_weight_span*(self.cost_base.t_node-self.cost_base.des_t_tra)**2) \
@@ -562,7 +562,7 @@ class QuadrotorWrenchCtl:
                         + self.cost_base.wwt_z * self.cost_base.cost_ang_rate_B_z       
   
     
-    def init_traCost(self): # transforming Rodrigues to Quaternion is shown in mpc_update function
+    def init_traCost(self): # transforming Rodrigues to Quaternion is shown in mpcUpdate function
         self.cost_base.traverse_error(self.quad_dyn,self.options)
         self.tra_cost = self.cost_base.max_tra_w * \
                         casadi.exp(-self.cost_base.traverse_weight_span*(self.cost_base.t_node-self.cost_base.des_t_tra)**2) \
@@ -641,7 +641,7 @@ class QuadrotorAugmentedSRTCtl:
                         + self.cost_base.wthrust* self.cost_base.cost_SRT       
   
     
-    def init_traCost(self): # transforming Rodrigues to Quaternion is shown in mpc_update function
+    def init_traCost(self): # transforming Rodrigues to Quaternion is shown in mpcUpdate function
         self.cost_base.traverse_error(self.quad_dyn,self.options)
         self.tra_cost = self.cost_base.max_tra_w * \
                         casadi.exp(-self.cost_base.traverse_weight_span*(self.cost_base.t_node-self.cost_base.des_t_tra)**2) \
@@ -807,6 +807,7 @@ class Gate:
         V    = [velo]
         
         # define the rotation matrix
+        # from the body frame to the world frame
         rotation = np.array([[math.cos(dt*w),-math.sin(dt*w)],[math.sin(dt*w),math.cos(dt*w)]])
         for i in range(int(T/dt)):
             v_noise = np.clip(np.random.normal(0,0.1,3),-0.1,0.1)

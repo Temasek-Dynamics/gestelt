@@ -347,146 +347,248 @@ def play_animation( wing_len, state_traj, gate_traj1=None, gate_traj2=None,state
         plt.tight_layout()
         plt.show()
 
-def plot_position(state_traj,name,dt = 0.1,SHOW=False):
-    fig, axs = plt.subplots(3)
-    fig.suptitle(f'{name}+position vs t')
-    N = len(state_traj[:,0])
-    x = np.arange(0,N*dt,dt)
-    axs[0].plot(x,state_traj[:,0])
-    axs[1].plot(x,state_traj[:,1])
-    axs[2].plot(x,state_traj[:,2])
-    plt.savefig(f'./python_sim_result/{name}+position.png')
-    if SHOW:
-        plt.show()  
-    
-def plot_velocity(state_traj,dt = 0.1):
-    fig, axs = plt.subplots(3)
-    fig.suptitle('velocity vs t')
-    N = len(state_traj[:,0])
-    x = np.arange(0,N*dt,dt)
-    axs[0].plot(x,state_traj[:,3])
-    axs[1].plot(x,state_traj[:,4])
-    axs[2].plot(x,state_traj[:,5])
-    plt.savefig('./python_sim_result/velocity.png')
-    # plt.show()
+def plot_position(axs, state_traj, dt=0.1, label_prefix=""):
+    """
+    axs: a list (or array) of 3 Axes objects
+    state_traj: your state trajectory array
+    dt: time step
+    label_prefix: optional string to label these subplots, e.g. name
+    """
+    N = len(state_traj[:, 0])
+    x = np.arange(0, N * dt, dt)
 
-def plot_quaternions(state_traj,dt = 0.1,save=True):
-    fig, axs = plt.subplots(4)
-    fig.suptitle('quaternions vs t')
-    N = len(state_traj[:,0])
-    x = np.arange(0,N*dt,dt)
-    axs[0].plot(x,state_traj[:,6])
-    axs[1].plot(x,state_traj[:,7])
-    axs[2].plot(x,state_traj[:,8])
-    axs[3].plot(x,state_traj[:,9])
-    
-    if save:
-        plt.savefig('./python_sim_result/quaternions.png')
-    # plt.show()
-def plot_quaternions_norm(state_traj,dt = 0.1,save=True):
-    fig, axs = plt.subplots(1)
-    fig.suptitle('MPC last predicted status quaternions norm vs each MPC t')
-    N = len(state_traj[:,0])
-    x = np.arange(0,N*dt,dt)
-    norm = np.linalg.norm(state_traj[:,6:10],axis=1)
-    axs.plot(x,norm)
-    if save:
-        plt.savefig('./python_sim_result/quaternions_norm.png')
-    # plt.show()
-def plot_angularrate(control_traj,dt = 0.01,SHOW=True):
-    plt.figure() 
-    plt.title('angularrate vs time')
-    N = len(control_traj[:,0])
-    x = np.arange(0,N*dt,dt)
-    plt.plot(x,control_traj[:,0],color = 'b', label = 'w1')
-    plt.plot(x,control_traj[:,1],color = 'r', label = 'w2')
-    plt.plot(x,control_traj[:,2],color = 'y', label = 'w3')
-    plt.xlabel('t')
-    plt.ylabel('w')
-    plt.grid(True,color='0.6',dashes=(2,2,1,1))
-    plt.legend()
-    plt.savefig('./python_sim_result/angularrate.png')
-    if SHOW:
-        plt.show()
-    
+    axs[0].plot(x, state_traj[:, 0])
+    axs[0].set_title(f"{label_prefix} x-position")
 
-def plot_thrust(control_traj,dt = 0.1,SHOW=True):
-    plt.figure() 
-    N = int(len(control_traj[:,0]))
-    x = np.arange(0,round(N*dt,1),dt)
-    plt.plot(x,control_traj[:,0],color = 'b', label = 'u1')
-    # plt.plot(x,control_traj[:,1],color = 'r', label = 'u2')
-    # plt.plot(x,control_traj[:,2],color = 'y', label = 'u3')
-    # plt.plot(x,control_traj[:,3],color = 'g', label = 'u4')
-    plt.title('collective thrust vs time (N)')
-    plt.ylim([0,10])
-    plt.xlabel('t')
-    plt.ylabel('u')
-    plt.grid(True,color='0.6',dashes=(2,2,1,1))
-    plt.legend()
-    plt.savefig('./python_sim_result/thrust.png') 
-    if SHOW:
-        plt.show()
-    
-            
-def plot_T(control_traj,dt = 0.1,name="Single rotor thrust"):
-    plt.figure()
-    N = int(len(control_traj[:,0]))
-    x = np.arange(0,N*dt,dt)
-    plt.plot(x,control_traj[:,0],color = 'b', label = 'T0')  
-    plt.plot(x,control_traj[:,1],color = 'g', label = 'T1')   
-    plt.plot(x,control_traj[:,2],color = 'r', label = 'T2')   
-    plt.plot(x,control_traj[:,3],color = 'y', label = 'T3')   
-    plt.title(f'{name} vs time')
-    # plt.ylim([0,20])
-    plt.xlabel('t')
-    plt.ylabel(name)
-    plt.grid(True,color='0.6',dashes=(2,2,1,1))
-    plt.legend()
-    plt.savefig(f'./python_sim_result/{name}.png')
-    # plt.show()
-    
+    axs[1].plot(x, state_traj[:, 1])
+    axs[1].set_title(f"{label_prefix} y-position")
 
-def plot_M(control_traj,dt = 0.1):
-    plt.figure() 
-    N = int(len(control_traj[:,0]))
-    x = np.arange(0,round(N*dt,1),dt)
-    plt.plot(x,control_traj[:,1],color = 'r', label = 'Mx')
-    plt.plot(x,control_traj[:,2],color = 'y', label = 'My')
-    plt.plot(x,control_traj[:,3],color = 'g', label = 'Mz')
-    plt.title('torque vs time')
-    plt.xlabel('t')
-    plt.ylabel('Torque')
-    plt.grid(True,color='0.6',dashes=(2,2,1,1))
-    plt.legend()
-    plt.savefig('./python_sim_result/input_M.png')
-    # plt.show()
-    
+    axs[2].plot(x, state_traj[:, 2])
+    axs[2].set_title(f"{label_prefix} z-position")
 
-def plot_scalar(scalar, scalar_name):
-    plt.figure() 
-    plt.plot(scalar)
-    plt.title(f'{scalar_name} vs time')
-    plt.xlabel('t')
-    plt.ylabel(scalar_name)
-    plt.grid(True,color='0.6',dashes=(2,2,1,1))
-    plt.legend()
-    plt.savefig(f'./python_sim_result/{scalar_name}.png')
-    # plt.show()
-
+    for ax in axs:
+        ax.grid(True, linestyle="--", alpha=0.6)
     
+def plot_velocity(axs, state_traj, dt=0.1):
+    """
+    axs: a list (or array) of 3 Axes objects
+    state_traj: your state trajectory array
+    dt: time step
+    """
+    N = len(state_traj[:, 0])
+    x = np.arange(0, N * dt, dt)
+
+    axs[0].plot(x, state_traj[:, 3])
+    axs[0].set_title("x-velocity")
+
+    axs[1].plot(x, state_traj[:, 4])
+    axs[1].set_title("y-velocity")
+
+    axs[2].plot(x, state_traj[:, 5])
+    axs[2].set_title("z-velocity")
+
+    for ax in axs:
+        ax.grid(True, linestyle="--", alpha=0.6)
+
+def plot_quaternions(
+    axs,                # a list or array of 4 Axes objects
+    state_traj, 
+    dt=0.1, 
+    label_prefix=""
+):
+    """
+    Plots q0, q1, q2, q3 vs time on the provided 4 Axes:
+        axs[0] -> q0
+        axs[1] -> q1
+        axs[2] -> q2
+        axs[3] -> q3
+    """
+    N = len(state_traj[:, 0])
+    t = np.arange(0, N * dt, dt)
+
+    axs[0].plot(t, state_traj[:, 6])
+    axs[0].set_title(f"{label_prefix} q0")
+    axs[0].set_xlabel("Time (s)")
+    axs[0].set_ylabel("q0")
+
+    axs[1].plot(t, state_traj[:, 7])
+    axs[1].set_title(f"{label_prefix} q1")
+    axs[1].set_xlabel("Time (s)")
+    axs[1].set_ylabel("q1")
+
+    axs[2].plot(t, state_traj[:, 8])
+    axs[2].set_title(f"{label_prefix} q2")
+    axs[2].set_xlabel("Time (s)")
+    axs[2].set_ylabel("q2")
+
+    axs[3].plot(t, state_traj[:, 9])
+    axs[3].set_title(f"{label_prefix} q3")
+    axs[3].set_xlabel("Time (s)")
+    axs[3].set_ylabel("q3")
+
+    for ax in axs:
+        ax.grid(True, linestyle='--', alpha=0.6)
+
+def plot_quaternions_norm(
+    ax,              # a single Axes object
+    state_traj, 
+    dt=0.1, 
+    label_prefix=""
+):
+    """
+    Plots the norm of (q0, q1, q2, q3) vs time on a single Axis.
+    """
+    N = len(state_traj[:, 0])
+    t = np.arange(0, N * dt, dt)
+    q_norm = np.linalg.norm(state_traj[:, 6:10], axis=1)
+
+    ax.plot(t, q_norm)
+    ax.set_title(f"{label_prefix} Quaternion Norm")
+    ax.set_xlabel("Time (s)")
+    ax.set_ylabel("|q|")
+    ax.grid(True, linestyle='--', alpha=0.6)
+
+def plot_angularrate(
+    ax,               # a single Axes object
+    control_traj, 
+    dt=0.01, 
+    label_prefix=""
+):
+    """
+    Plots angular rates (w1, w2, w3) vs time on a single Axis.
+    """
+    N = len(control_traj[:, 0])
+    t = np.arange(0, N * dt, dt)
+
+    ax.plot(t, control_traj[:, 0], label="w1",color='red')
+    ax.plot(t, control_traj[:, 1], label="w2",color='blue')
+    ax.plot(t, control_traj[:, 2], label="w3",color='green')
+
+    ax.set_title(f"{label_prefix} Angular Rates")
+    ax.set_xlabel("Time (s)")
+    ax.set_ylabel("Angular Rate (rad/s)")
+    ax.grid(True, linestyle='--', alpha=0.6)
+    ax.legend()
+
+def plot_thrust(
+    ax,               # a single Axes object
+    control_traj, 
+    dt=0.1, 
+    label_prefix=""
+):
+    """
+    Plots collective thrust (control_traj[:,0]) vs time on a single Axis.
+    """
+    N = len(control_traj[:, 0])
+    t = np.arange(0, N * dt, dt)
+
+    ax.plot(t, control_traj[:, 0], label="u1")
+    ax.set_title(f"{label_prefix} Collective Thrust")
+    ax.set_xlabel("Time (s)")
+    ax.set_ylabel("Thrust (N)")
+    ax.grid(True, linestyle='--', alpha=0.6)
+    ax.legend()
+
+def plot_T(
+    ax,               # a single Axes object
+    control_traj, 
+    dt=0.1, 
+    label_prefix="Single Rotor Thrust"
+):
+    """
+    Plots T0, T1, T2, T3 (4 lines) vs time on a single Axis.
+    """
+    N = len(control_traj[:, 0])
+    t = np.arange(0, N * dt, dt)
+
+    ax.plot(t, control_traj[:, 0], label="T0")
+    ax.plot(t, control_traj[:, 1], label="T1")
+    ax.plot(t, control_traj[:, 2], label="T2")
+    ax.plot(t, control_traj[:, 3], label="T3")
+
+    ax.set_title(f"{label_prefix} vs Time")
+    ax.set_xlabel("Time (s)")
+    ax.set_ylabel("Thrust (N)")
+    ax.grid(True, linestyle='--', alpha=0.6)
+    ax.legend()
+
+def plot_M(
+    ax,               # a single Axes object
+    control_traj, 
+    dt=0.1, 
+    label_prefix="Torque"
+):
+    """
+    Plots Mx, My, Mz (columns 1,2,3) vs time on a single Axis.
+    Note: The code suggests control_traj[:,0] might be something else (like T0?), 
+    so torque could be columns 1..3.
+    """
+    N = len(control_traj[:, 0])
+    t = np.arange(0, N * dt, dt)
+
+    # The original code used control_traj[:,1], control_traj[:,2], control_traj[:,3]
+    ax.plot(t, control_traj[:, 1], label="Mx")
+    ax.plot(t, control_traj[:, 2], label="My")
+    ax.plot(t, control_traj[:, 3], label="Mz")
+
+    ax.set_title(f"{label_prefix} vs Time")
+    ax.set_xlabel("Time (s)")
+    ax.set_ylabel("Torque (Nm)")
+    ax.grid(True, linestyle='--', alpha=0.6)
+    ax.legend()
+
+def plot_scalar(
+    ax, 
+    scalar, 
+    scalar_name="scalar", 
+    label_prefix=""
+):
+    """
+    Plots a scalar (1D array) vs its index or time on a single Axis.
+    """
+    # If you have a known dt, you can do t = np.arange(len(scalar)) * dt
+    ax.plot(scalar, label=scalar_name)
+    ax.set_title(f"{label_prefix} {scalar_name} vs Time")
+    ax.set_xlabel("Time Index")
+    ax.set_ylabel(scalar_name)
+    ax.grid(True, linestyle='--', alpha=0.6)
+    ax.legend()
+
+def plot_weights(
+    ax, 
+    tra_pos_weights,
+    tra_att_weights, 
+    dt=0.1, 
+    label_prefix=""
+):
+    """
+    Plots the weights of the neural network vs time on a single Axis.
+    """
+
+
+    ax.plot(tra_pos_weights, label="traverse_position_weight")
+    ax.plot(tra_att_weights, label="traverse_attitude_weight")
+
+    ax.set_title(f"{label_prefix} Weights vs Time")
+    ax.set_xlabel("Time (s)")
+    ax.set_ylabel("Weight Value")
+    ax.grid(True, linestyle='--', alpha=0.6)
+    ax.legend()
+
 def plot_3D_traj(
-                    wing_len,
-                    uav_height,
-                    state_traj,
-                    gate_traj,
-                    TRAIN_VIS=False,
-                    tra_node=None):
+                wing_len,
+                uav_height,
+                state_traj,
+                gate_traj,
+                TRAIN_VIS=False,
+                tra_node=None,
+                NN_pos=None,
+                NN_R=None):
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
     position = get_quad_vert_pos(wing_len, state_traj)
 
-    
+    NN_pose = get_NN_pose(NN_pos,NN_R)
 
     for i in range(np.size(state_traj,0)):
 
@@ -548,23 +650,118 @@ def plot_3D_traj(
             ax.plot_surface(x + c_x, y + c_y, z + c_z, color='b', alpha=0.05)
         else:
             plot_alpha = 0.1
-        gate_l1, = ax.plot([p1_x,p2_x],[p1_y,p2_y],[p1_z,p2_z],linewidth=1,color='red',linestyle='-',alpha=plot_alpha)
-        gate_l2, = ax.plot([p2_x,p3_x],[p2_y,p3_y],[p2_z,p3_z],linewidth=1,color='red',linestyle='-',alpha=plot_alpha)
-        gate_l3, = ax.plot([p3_x,p4_x],[p3_y,p4_y],[p3_z,p4_z],linewidth=1,color='red',linestyle='-',alpha=plot_alpha)
-        gate_l4, = ax.plot([p4_x,p1_x],[p4_y,p1_y],[p4_z,p1_z],linewidth=1,color='red',linestyle='-',alpha=plot_alpha)
+        gate_l1, = ax.plot([p1_x,p2_x],[p1_y,p2_y],[p1_z,p2_z],linewidth=1,color='orangered',linestyle='-',alpha=plot_alpha)
+        gate_l2, = ax.plot([p2_x,p3_x],[p2_y,p3_y],[p2_z,p3_z],linewidth=1,color='orangered',linestyle='-',alpha=plot_alpha)
+        gate_l3, = ax.plot([p3_x,p4_x],[p3_y,p4_y],[p3_z,p4_z],linewidth=1,color='orangered',linestyle='-',alpha=plot_alpha)
+        gate_l4, = ax.plot([p4_x,p1_x],[p4_y,p1_y],[p4_z,p1_z],linewidth=1,color='orangered',linestyle='-',alpha=plot_alpha)
         
+        ## NN pose
+        NN_c_x,NN_c_y,NN_c_z=NN_pos[i,:]
+        NN_x_axis_x,NN_x_axis_y,NN_x_axis_z=NN_pose[i,0,:]
+        NN_y_axis_x,NN_y_axis_y,NN_y_axis_z=NN_pose[i,1,:]
+        NN_z_axis_x,NN_z_axis_y,NN_z_axis_z=NN_pose[i,2,:]
+        NN_pose_x_traj, = ax.plot([NN_c_x,NN_x_axis_x],[NN_c_y,NN_x_axis_y],[NN_c_z,NN_x_axis_z],linewidth=1,color='red',linestyle='--',alpha=plot_alpha)
+        NN_pose_y_traj, = ax.plot([NN_c_x,NN_y_axis_x],[NN_c_y,NN_y_axis_y],[NN_c_z,NN_y_axis_z],linewidth=1,color='blue',linestyle='--',alpha=plot_alpha)
+        NN_pose_z_traj, = ax.plot([NN_c_x,NN_z_axis_x],[NN_c_y,NN_z_axis_y],[NN_c_z,NN_z_axis_z],linewidth=1,color='green',linestyle='--',alpha=plot_alpha)
+
         # if TRAIN_VIS:
         #     for i in range(4):
         #         ax.scatter(gate_traj[i+4,0],gate_traj[i+4,1],gate_traj[i+4,2],c='b',marker='o',s=10)
 
-        line_arm1, = ax.plot([c_x, r1_x], [c_y, r1_y], [c_z, r1_z], linewidth=1, color='red', marker='o', markersize=1,alpha=plot_alpha)
-        line_arm2, = ax.plot([c_x, r2_x], [c_y, r2_y], [c_z, r2_z], linewidth=1, color='blue', marker='o', markersize=1,alpha=plot_alpha)
-        line_arm3, = ax.plot([c_x, r3_x], [c_y, r3_y], [c_z, r3_z], linewidth=1, color='orange', marker='o', markersize=1,alpha=plot_alpha)
-        line_arm4, = ax.plot([c_x, r4_x], [c_y, r4_y], [c_z, r4_z], linewidth=1, color='green', marker='o', markersize=1,alpha=plot_alpha)
+        line_arm1, = ax.plot([c_x, r1_x], [c_y, r1_y], [c_z, r1_z], linewidth=1, color='deeppink', marker='o', markersize=1,alpha=plot_alpha)
+        line_arm2, = ax.plot([c_x, r2_x], [c_y, r2_y], [c_z, r2_z], linewidth=1, color='lightskyblue', marker='o', markersize=1,alpha=plot_alpha)
+        line_arm3, = ax.plot([c_x, r3_x], [c_y, r3_y], [c_z, r3_z], linewidth=1, color='peru', marker='o', markersize=1,alpha=plot_alpha)
+        line_arm4, = ax.plot([c_x, r4_x], [c_y, r4_y], [c_z, r4_z], linewidth=1, color='yellowgreen', marker='o', markersize=1,alpha=plot_alpha)
         
         # set the axes limits
         ax.set_xlim([-2, 2])
         ax.set_ylim([-2, 2])
         ax.set_zlim([-2, 2])
+    plt.tight_layout()   
     plt.show()    
 
+def plot_mc_traj(state_traj_batch:list,
+                 gate_traj_batch:list,
+                 failed_batch:list):
+    """plot the position trajectory of the states in the batch,
+    with the failed states marked in red"""
+    """
+    Args:
+    state_traj_batch: list of numpy arrays, each of shape (N, 16)
+    failed_batch: list of bool
+    """
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    for i, state_traj in enumerate(state_traj_batch):
+        if failed_batch[i]:
+            color = 'r'
+        else:
+            color = 'b'
+        ax.plot(state_traj[:,0], state_traj[:,1], state_traj[:,2], color=color)
+        
+        ## plot the gate
+        gate_traj = gate_traj_batch[i]
+        p1_x, p1_y, p1_z = gate_traj[i, 0,:]
+        p2_x, p2_y, p2_z = gate_traj[i, 1,:]
+        p3_x, p3_y, p3_z = gate_traj[i, 2,:]
+        p4_x, p4_y, p4_z = gate_traj[i, 3,:]
+        plot_alpha = 0.5
+        gate_l1, = ax.plot([p1_x,p2_x],[p1_y,p2_y],[p1_z,p2_z],linewidth=1,color='green',linestyle='-',alpha=plot_alpha)
+        gate_l2, = ax.plot([p2_x,p3_x],[p2_y,p3_y],[p2_z,p3_z],linewidth=1,color='green',linestyle='-',alpha=plot_alpha)
+        gate_l3, = ax.plot([p3_x,p4_x],[p3_y,p4_y],[p3_z,p4_z],linewidth=1,color='green',linestyle='-',alpha=plot_alpha)
+        gate_l4, = ax.plot([p4_x,p1_x],[p4_y,p1_y],[p4_z,p1_z],linewidth=1,color='green',linestyle='-',alpha=plot_alpha)
+    # set the axes limits
+    ax.set_xlim([-2, 2])
+    ax.set_ylim([-2, 2])
+    ax.set_zlim([-2, 2])
+
+    plt.tight_layout()    
+    plt.show()
+
+
+# 生成一个单位球
+def plot_unit_sphere(ax):
+    u = np.linspace(0, 2 * np.pi, 100)
+    v = np.linspace(0, np.pi, 50)
+    x = np.outer(np.cos(u), np.sin(v))
+    y = np.outer(np.sin(u), np.sin(v))
+    z = np.outer(np.ones(np.size(u)), np.cos(v))
+    ax.plot_surface(x, y, z, color='c', alpha=0.1, edgecolor='k')
+
+# 生成一个随机 3x3 旋转矩阵（正交矩阵）
+def random_rotation_matrix():
+    U, _, Vt = np.linalg.svd(np.random.randn(3, 3))  # SVD 保证正交
+    return U @ Vt  # 确保行列式为 1（即纯旋转）
+
+# 画旋转矩阵
+def plot_rotation_matrix(ax, R):
+    origin = np.array([[0, 0, 0]]).T  # 原点
+    colors = ['r', 'g', 'b']  # x, y, z 轴的颜色
+    labels = ['X', 'Y', 'Z']
+
+    for i in range(3):  # 画 3 个基向量
+        ax.quiver(*origin, *R[:, i], color=colors[i], label=f'{labels[i]}-axis')
+
+def show_rotation_matrix():
+    # 创建 3D 图像
+    fig = plt.figure(figsize=(8, 8))
+    ax = fig.add_subplot(111, projection='3d')
+
+    # 画单位球
+    plot_unit_sphere(ax)
+
+    # 生成并绘制旋转矩阵
+    R = random_rotation_matrix()
+    plot_rotation_matrix(ax, R)
+
+    # 设定坐标轴范围
+    ax.set_xlim([-1, 1])
+    ax.set_ylim([-1, 1])
+    ax.set_zlim([-1, 1])
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+    ax.set_title('3×3 Rotation Matrix on Unit Sphere')
+    ax.legend()
+
+    plt.show()

@@ -90,8 +90,11 @@ class OCSys:
         self.dyn_fn_cont.save("dyn_fn_cont.casadi")
 
         ## ================== Discrete Dynamics ================== ##
-        self.discretizeDyn(dt)
-       
+        self.discretizeDynEuler(dt)
+    
+    def discretizeDynEuler(self, dt):
+        self.dyn_disc = self.state+dt*self.dyn_cont
+
     def discretizeDyn(self, dt):
         M = 4
         DT = dt/4
@@ -539,8 +542,8 @@ class OCSys:
         if self.ctl_mode==0 or self.ctl_mode==2:
             control_lb_shrink[0]+=0.05
             control_up_shrink[0]-=0.05
-            control_lb_shrink[1:3]+=1
-            control_up_shrink[1:3]-=1
+            # control_lb_shrink[1:3]+=1
+            # control_up_shrink[1:3]-=1
             
         state_lb_shrink[2]+=0.05
         state_up_shrink[2]-=0.05
@@ -555,45 +558,53 @@ class OCSys:
         ocp.constraints.lbx = state_lb_shrink #([])#
         ocp.constraints.ubx = state_up_shrink #([])#
         ocp.constraints.idxbx = np.array([i for i in range(self.n_state)]) #([])#i for i in range(self.n_state)]
-        
-        ##------------------ terminal constraints ----------------------##
-        # # constraint for position
-        ocp.constraints.lbx_e = state_lb_shrink #([])#
-        ocp.constraints.ubx_e = state_up_shrink #([])#
-        ocp.constraints.idxbx_e = np.array([i for i in range(self.n_state)]) #([])#i for i in range(self.n_state)]
+        # # ocp.constraints.idsbx = np.array([i for i in range(self.n_state)]) #([])#i for i in range(self.n_state)]
+        # ##------------------ terminal constraints ----------------------##
+        # # # constraint for position
+        # ocp.constraints.lbx_e = state_lb_shrink #([])#
+        # ocp.constraints.ubx_e = state_up_shrink #([])#
+        # ocp.constraints.idxbx_e = np.array([i for i in range(self.n_state)]) #([])#i for i in range(self.n_state)]
 
 
         ##------------------ setting the solver ------------------##
         """
         Gauss-Newton approximations are limited to sum-of-squares objectives,[FATROP]
         """
-        ocp.solver_options.hessian_approx = 'EXACT' 
-        ocp.solver_options.exact_hess_dyn = 0 # GAUSS_NEWTON, 
+        ocp.solver_options.hessian_approx = 'GAUSS_NEWTON'  # 'EXACT'GAUSS_NEWTON,
+        # ocp.solver_options.exact_hess_dyn = 0 # GAUSS_NEWTON, 
         ocp.solver_options.qp_solver_cond_N = self.n_nodes   #new number of condensing stages for the solver
         ocp.solver_options.integrator_type = 'ERK' # fast ERK (explicit Runge-Kutta integrator) or IRK (Implicit Runge-Kutta integrator)
         # ocp.solver_options.sim_method_num_steps =1 #Default 1
         # ocp.solver_options.sim_method_num_stages = 4 # default 4
-        ocp.solver_options.print_level = 0
        
+        
         if SQP_RTI_OPTION: 
             ocp.solver_options.qp_solver = 'FULL_CONDENSING_QPOASES'# FULL_CONDENSING_HPIPM PARTIAL_CONDENSING_HPIPM  FULL_CONDENSING_QPOASES PARTIAL_CONDENSING_OSQP
             ocp.solver_options.sim_method_newton_iter = 3 # default 3
             ocp.solver_options.regularize_method = 'CONVEXIFY'#'CONVEXIFY', PROJECT_REDUC_HESS
             ocp.solver_options.nlp_solver_type = 'SQP_RTI'
-            ocp.solver_options.levenberg_marquardt = 1e-3 # small value for gauss newton method, large value for gradient descent method
             ocp.solver_options.qp_solver_iter_max = 100
-            ocp.solver_options.qp_solver_warm_start = 1 # 0:no warm start(default) 1:  warm start
+            ocp.solver_options.levenberg_marquardt = 1e-10 # small value for gauss newton method, large value for gradient descent method
+            ocp.solver_options.print_level = 0
+            # ocp.solver_options.globalization = 'MERIT_BACKTRACKING' # LINESEARCH gobalization
         else:
+            # ocp.solver_options.qp_solver_warm_start = 1 # 0:no warm start(default) 1:  warm start
             ocp.model.cost_y_expr = casadi.vertcat(ocp.model.x, ocp.model.u) # critical
             ocp.model.cost_y_expr_e = ocp.model.x
-            ocp.solver_options.qp_solver = 'PARTIAL_CONDENSING_HPIPM'
+        
+            # ocp.solver_options.levenberg_marquardt = 1e+2 # small value for gauss newton method, large value for gradient descent method
             ocp.solver_options.nlp_solver_type = 'DDP' # SQP_RTI or SQP
-            ocp.solver_options.nlp_solver_max_iter = 1000 # larger, stabler
-            ocp.solver_options.print_level = 0
+            ocp.solver_options.nlp_solver_max_iter = 10 # larger, stabler
+            ocp.solver_options.nlp_solver_tol_comp = 5e+3
+            ocp.solver_options.qp_solver = 'PARTIAL_CONDENSING_HPIPM'
+            ocp.solver_options.qp_solver_tol_comp = 5e+3
+            ocp.solver_options.qp_solver_iter_max = 10
+            ocp.solver_options.nlp_solver_tol_min_step_norm = 5e+3
+            ocp.solver_options.print_level = 1
             ocp.translate_to_feasibility_problem(keep_x0=True, keep_cost=True) # critical
-            ocp.solver_options.globalization = 'MERIT_BACKTRACKING'
+            ocp.solver_options.globalization = 'MERIT_BACKTRACKING' # LINESEARCH gobalization
             ocp.solver_options.with_adaptive_levenberg_marquardt = True
-            ocp.solver_options.qp_solver_warm_start = 1 # 0:no warm start(default) 1:  warm start
+
 
         # ocp.solver_options.qp_solver_warm_start=2
         # ocp.solver_options.nlp_solver_max_iter = 100
@@ -663,11 +674,10 @@ class OCSys:
                                                                  np.array([self.n_nodes*dt]))))
 
         # set initial condition aligned with the current state
-        # if self.SQP_RTI_OPTION:
+    
         self.acados_solver.set(0, "lbx", np.array(cur_state))
         self.acados_solver.set(0, "ubx", np.array(cur_state))
-        # else:
-        #     self.acados_solver.set(0, "x", np.array(cur_state))
+
 
         ## set the initial guess
         if init_guess is not None:
@@ -685,7 +695,7 @@ class OCSys:
 
         if status != 0:
             NO_SOLUTION_FLAG=True
-            self.acados_solver.print_statistics()
+            # self.acados_solver.print_statistics()
             # raise Exception(f'acados returned status {status}.')
         #-------------take the optimal control and state sequences
 
@@ -693,6 +703,7 @@ class OCSys:
             self.state_traj_opt[i,:]=self.acados_solver.get(i, "x")
             self.control_traj_opt[i,:]=self.acados_solver.get(i, "u")
             self.costate_traj_opt[i,:]=self.acados_solver.get(i, "pi")
+
             # self.lb_v_control_traj_opt[i,:]=self.acados_solver.get(i, "lam")[0]# inequality multiplier lower bound
             # self.ub_v_control_traj_opt[i,:]=self.acados_solver.get(i, "lam")[5]# inequality multiplier upper bound
 

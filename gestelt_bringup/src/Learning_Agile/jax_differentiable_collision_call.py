@@ -137,7 +137,6 @@ def DiffCollisionWrapper(line_centers,
         
       
         
-        
         # if PENALTY_HELPER:
         #     ## To find the optimal scale
         #     penalty +=alpha_i*alpha_importance 
