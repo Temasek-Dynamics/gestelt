@@ -4,11 +4,12 @@ MANUAL_SET_POSE_TEST: false  # only works for ROS nodes
 FIX_GATE_PITCH_TEST: true   # for success rate test and python sim
 mission_period: 5.0 #s
 ctl_mode: 0
-lqr_init_guess: true
 # 0 collective thrust & body rate. 
 # 1 single rotor thrust control. 
 # 2 force and torque control. 
 # 3.force difference control ALL types the command to the mavros is CTBR
+lqr_init_guess: true
+PR_MATRIX_LEARN: false #PITCH ROLL MATRIX LEARNING
 drone:
   wing_len: 0.8
   height: 0.3
@@ -158,9 +159,10 @@ pretrain_param:
 
 ## ------NN configuration ----##
 
-NN_model_name: 'training_results/new_format/2025-01-16/09-59-31/trained_model/NN_close_3200.pth' #**#
-# NN_model_name: 'training_results/new_format/2025-02-24/16-45-20/trained_model/NN_close_100.pth' #**#
-# NN_model_name: 'training_results/new_format/2025-03-07/10-35-44/trained_model/NN_close_40.pth' #**#
+# NN_model_name: 'training_results/new_format/2025-01-16/09-59-31/trained_model/NN_close_3200.pth' #**#
+NN_model_name: 'training_results/new_format/2025-02-24/16-45-20/trained_model/NN_close_100.pth' #**#
+# NN_model_name: 'training_results/new_format/2025-03-08/18-10-37/trained_model/NN_close_900.pth' #**# without BPTT
+# NN_model_name: 'training_results/new_format/2025-03-08/16-38-13/trained_model/NN_close_60.pth' #with BPTT
 # NN_model_name: 'training_results/new_format/2025-01-22/10-26-33/trained_model/NN_close_120.pth' # train for the moving gate
 
 NN_deploy_model_name: 'deployed_model/2025-01-16/09-59-31/trained_model/NN_close_3200.pth' # used in the sitl
@@ -168,9 +170,9 @@ NN_freq: 50
 
 penalty:
   QUADRATIC_LOSS: false #or Linear loss
-  vel_w: 1
+  vel_w: -100
   goal_x_axis_w: 2
   goal_yz_axis_w: 2 #12.0 for last 5 nodes, 240 for last 3 nodes (yz axis)
   scaling_w: 50 #100 for quadratic loss
-  m_reg_w: 0
+  det_reg_w: 0
   control_reg_w: 0

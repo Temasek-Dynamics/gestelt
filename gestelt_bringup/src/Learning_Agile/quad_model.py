@@ -7,6 +7,8 @@ import math
 from scipy.spatial.transform import Rotation as R
 from solid_geometry import norm
 from math import sqrt
+
+from config import mission_cfg
 from solid_geometry import dir_cosine, SVD, magni, magni_casadi
 # quadrotor (UAV) environment
 class QuadrotorDynamic:
@@ -173,6 +175,13 @@ class CostBase:
         self.des_tra_R=vertcat(SX.sym('des_tra_R0'),SX.sym('des_tra_R1'),SX.sym('des_tra_R2'),\
                               SX.sym('des_tra_R3'),SX.sym('des_tra_R4'),SX.sym('des_tra_R5'),\
                               SX.sym('des_tra_R6'),SX.sym('des_tra_R7'),SX.sym('des_tra_R8'))
+        
+        self.des_tra_roll_m = vertcat(SX.sym('des_tra_roll_m0'),SX.sym('des_tra_roll_m1'),\
+                                      SX.sym('des_tra_roll_m2'),SX.sym('des_tra_roll_m3'))
+        
+        self.des_tra_pitch_m = vertcat(SX.sym('des_tra_pitch_m0'),SX.sym('des_tra_pitch_m1'),\
+                                        SX.sym('des_tra_pitch_m2'),SX.sym('des_tra_pitch_m3'))
+        
         self.des_tra_q = vertcat(SX.sym('des_tra_q0'), SX.sym('des_tra_q1'), SX.sym('des_tra_q2'), SX.sym('des_tra_q3'))
         self.des_t_tra = SX.sym('des_t_tra')
         self.t_node = SX.sym('t_node')
@@ -339,9 +348,36 @@ class CostBase:
             self.trav_auxvar = vertcat(self.des_tra_r_I, self.des_tra_R, self.wrp, self.max_tra_w, self.wrt, self.wqt, self.des_t_tra) 
             tra_R_B_I = casadi.reshape(self.des_tra_R,3,3)
         else:   
-            svd= SVD()
-            self.trav_auxvar = vertcat(self.des_tra_r_I, self.des_tra_m,self.wrp, self.wrt, self.wqt, self.des_t_tra) #self.wrp,  self.max_tra_w, 
-            tra_R_B_I= svd.SVD_M_to_SO3_ca(self.des_tra_m)
+            
+            if mission_cfg['PR_MATRIX_LEARN']:
+                svd= SVD(dim=2)
+                self.trav_auxvar = vertcat(self.des_tra_r_I, self.des_tra_pitch_m, self.des_tra_roll_m, self.wrp, self.wrt, self.wqt, self.des_t_tra) #self.wrp,  self.max_tra_w, 
+                
+                tra_yaw_B_I = casadi.DM_eye(3)
+                tra_pitch_B_I = casadi.SX.eye(3)
+                tra_roll_B_I= casadi.SX.eye(3)
+
+                tra_pitch_2d=svd.SVD_M_to_SO3_ca(self.des_tra_pitch_m)
+                tra_roll_2d=svd.SVD_M_to_SO3_ca(self.des_tra_roll_m)
+
+                tra_pitch_B_I[0,0]=tra_pitch_2d[0,0]
+                tra_pitch_B_I[0,2]=tra_pitch_2d[0,1]
+                tra_pitch_B_I[2,0]=tra_pitch_2d[1,0]
+                tra_pitch_B_I[2,2]=tra_pitch_2d[1,1]
+
+                tra_roll_B_I[1,1]=tra_roll_2d[0,0]
+                tra_roll_B_I[1,2]=tra_roll_2d[0,1]
+                tra_roll_B_I[2,1]=tra_roll_2d[1,0]
+                tra_roll_B_I[2,2]=tra_roll_2d[1,1]
+
+                ## follow the zyx order
+                # tra_R_B_I = tra_yaw_B_I @ tra_pitch_B_I @ tra_roll_B_I
+                tra_R_B_I= tra_roll_B_I @ tra_pitch_B_I @ tra_yaw_B_I
+
+            else:
+                svd= SVD()
+                self.trav_auxvar = vertcat(self.des_tra_r_I, self.des_tra_m,self.wrp, self.wrt, self.wqt, self.des_t_tra) #self.wrp,  self.max_tra_w, 
+                tra_R_B_I= svd.SVD_M_to_SO3_ca(self.des_tra_m)
        
         
         ##=== Rodrigues parameters version ===##

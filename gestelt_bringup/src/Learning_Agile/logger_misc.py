@@ -49,7 +49,7 @@ def log_train_IO(writer,inputs,outputs,global_step):
 
 
     euler_nn,_=recover_euler_from_9d(outputs,deg_unit=True)
-    
+    det_m = np.linalg.det(outputs[3:12].reshape(3,3))
     abs_gate_point=inputs[13:25].reshape(-1,3)+inputs[0:3]
     gate_pitch = pitch_from_gate(abs_gate_point)
     gate_pitch = gate_pitch*180/np.pi
@@ -61,6 +61,7 @@ def log_train_IO(writer,inputs,outputs,global_step):
     writer.add_scalar('NN_output/yaw_tra', euler_nn[0], global_step)
     writer.add_scalar('NN_output/pitch_tra', euler_nn[1], global_step)
     writer.add_scalar('NN_output/roll_tra', euler_nn[2], global_step)
+    writer.add_scalar('NN_output/determinant_m', det_m, global_step)
     writer.add_scalar('NN_output/wrp', outputs[-4], global_step)
     writer.add_scalar('NN_output/wrt', outputs[-3], global_step)
     writer.add_scalar('NN_output/wqt', outputs[-2], global_step)

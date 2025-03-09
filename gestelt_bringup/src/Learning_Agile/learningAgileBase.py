@@ -26,6 +26,7 @@ options['CLOSE_LOOP_TRAINING']=True
 options['TRAINING']=False
 options['DEBUG']=False
 options['BACKWARD']=True
+options['STATE_2_MOVING_GATE']=False
 class LearningAgileBase:
     """
     this class is responsible for wrap the single episode for training,
@@ -54,6 +55,7 @@ class LearningAgileBase:
         self.history_obs = deque(maxlen=5)
         self.control=np.zeros(4)
         self.reg_control=0
+        self.reg_det=0
         self.dreg_dz = np.zeros([1,self.output_size])
         self.last_u=np.zeros(4)
         self.np_nn_out=np.zeros(self.output_size)
@@ -180,24 +182,35 @@ class LearningAgileBase:
     #     reg_euler=self.mission_cfg['penalty']['euler_reg_w']*np.linalg.norm(euler_nn)
     #     dreg_deuler = self.mission_cfg['penalty']['euler_reg_w']*(euler_nn/reg_euler).reshape(1,-1)
     #     self.dreg_dz[:,3:12]=np.matmul(dreg_deuler,deuler_dm).flatten()
-    def get_reg_m(self):
-        """
-        regularize the output of the neural network, 
-        The NN output reference should be as close as the current drone state
+    # def get_reg_m(self):
+    #     """
+    #     regularize the output of the neural network, 
+    #     The NN output reference should be as close as the current drone state
 
-        """
-        # the NN output R
-        des_tra_R,dR_dm=verify_SVD_ca(self.np_nn_out[3:12])
+    #     """
+    #     # the NN output R
+    #     des_tra_R,dR_dm=verify_SVD_ca(self.np_nn_out[3:12])
 
-        # the current drone R
-        r=R.from_quat(np.roll(self.state[6:10],-1)) # w,x,y,z -> x,y,z,w
-        cur_drone_R=r.as_matrix()
+    #     # the current drone R
+    #     r=R.from_quat(np.roll(self.state[6:10],-1)) # w,x,y,z -> x,y,z,w
+    #     cur_drone_R=r.as_matrix()
 
-        self.reg_m=self.mission_cfg['penalty']['m_reg_w']*np.trace(np.eye(3)-np.dot(des_tra_R,cur_drone_R.T))
-        dreg_dR = self.mission_cfg['penalty']['m_reg_w']*(des_tra_R.T)
-        self.dreg_dz[:,3:12]=np.matmul(dreg_dR.flatten(),dR_dm).flatten()
+    #     self.reg_m=self.mission_cfg['penalty']['m_reg_w']*np.trace(np.eye(3)-np.dot(des_tra_R,cur_drone_R.T))
+    #     dreg_dR = self.mission_cfg['penalty']['m_reg_w']*(des_tra_R.T)
+    #     self.dreg_dz[:,3:12]=np.matmul(dreg_dR.flatten(),dR_dm).flatten()
 
         
+    def get_reg_det(self):
+        """
+        regularize the output of the neural network m, the determinant of the m should be close to 1
+
+        """
+        m=self.np_nn_out[3:12].reshape(3,3)
+        self.reg_det=self.mission_cfg['penalty']['det_reg_w']*(np.linalg.det(m)-1)**2
+        adj_m_T = np.linalg.det(m)*np.linalg.inv(m).T
+        dreg_det_dm = self.mission_cfg['penalty']['det_reg_w']*2*(np.linalg.det(m)-1)*adj_m_T
+        self.dreg_dz[:,3:12]=dreg_det_dm.flatten()
+        print('det_reg:',self.dreg_dz[:,3:12])
 
     def get_reg_control(self):
         ## acquire p_X_traj_i/p_z_i
@@ -229,8 +242,10 @@ class LearningAgileBase:
         ## 13 * 1
         # self.p_L_i_p_z_i.append(np.einsum('bij,bjk->ik',self.p_L_i_p_X_traj_i[self.i-2],self.p_X_traj_i_p_z_i[self.i-2]))
         ## z_i:
-        self.p_L_i_p_z_i.append(np.einsum('bij,bjk->ik',self.p_L_i_p_X_traj_i[self.i-2],self.p_X_traj_i_p_z_i[self.i-2])+self.dreg_dz)
+        self.p_L_i_p_z_i.append(np.einsum('bij,bjk->ik',self.p_L_i_p_X_traj_i[self.i-2],self.p_X_traj_i_p_z_i[self.i-2])) #+self.dreg_dz
         
+        # if self.i > 10:
+        #     print('debug')
         
         # Backpropagate through the last one time-step
         if self.i > 2:
@@ -268,12 +283,12 @@ class LearningAgileBase:
     
     @property
     def penalty(self):
-        return np.array([sum(self.L_i)])
+        return np.array([sum(self.L_i)])/self.planner.horizon
     
     @property
     def p_L_p_z(self):
         p_L_p_z = np.array(self.p_L_i_p_z_i)
-        return p_L_p_z
+        return p_L_p_z/self.planner.horizon
 
    
 # def get_penalty(base:LearningAgileBase):

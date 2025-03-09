@@ -66,7 +66,7 @@ class LearningAgileAPG:
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
         if options['TRAIN_FROM_CHECKPOINT'] or options['STATE_2_MOVING_GATE']:
-            FILE = os.path.join(checkpoint_trained_model_folder, "new_format/2025-01-16/09-59-31/trained_model/NN_close_3200.pth")
+            FILE = os.path.join(checkpoint_trained_model_folder, "new_format/2025-03-08/15-31-54/trained_model/NN_close_90.pth")
 
             self.learning_rate = self.train_cfg['training']['learning_rate']#*0.9**(300/self.train_cfg['training']['lr_decay_num_epochs'])
         else:
@@ -80,11 +80,13 @@ class LearningAgileAPG:
         lr_decay_num_epochs = self.train_cfg['training']['lr_decay_num_epochs']
 
         # Loss and optimizer
-        self.optimizer = torch.optim.Adam([{'params': self.model.position_head.parameters(), 'weight_decay': 0.00},  
-                                           {'params': self.model.orientation_head.parameters(), 'weight_decay': 0.00}, 
-                                           {'params': self.model.traverse_time_head.parameters(), 'weight_decay': 0.00},
-                                           {'params': self.model.weights_head.parameters(), 'weight_decay': 0.00} ],\
-                                          lr=self.learning_rate)  #,weight_decay=0.01
+        # self.optimizer = torch.optim.Adam([{'params': self.model.position_head.parameters(), 'weight_decay': 0.00},  
+        #                                    {'params': self.model.orientation_head.parameters(), 'weight_decay': 0.00}, 
+        #                                    {'params': self.model.traverse_time_head.parameters(), 'weight_decay': 0.00},
+        #                                    {'params': self.model.weights_head.parameters(), 'weight_decay': 0.00} ],\
+        #                                   lr=self.learning_rate)  #,weight_decay=0.01
+        
+        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate)  
         # learning rate scheduler
         self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=lr_decay_num_epochs, gamma=lr_gamma)
         # self.scheduler=torch.optim.lr_scheduler.CosineAnnealingLR(self.optimizer,T_max=50,eta_min=self.train_cfg['training']['eta_min'])
@@ -135,7 +137,7 @@ class LearningAgileAPG:
         for episode in self.episodes:
             episode.reset(cur_epoch)
 
-        for i in range(1,train_cfg['training']['close_loop_horizon']+1):
+        for i in range(0,train_cfg['training']['close_loop_horizon']+1):
             obs_batch_list = []
             ##== 1. get observations for every episode
             for k in range(self.batch_size):
@@ -178,9 +180,9 @@ class LearningAgileAPG:
                     if self.mission_cfg['penalty']['control_reg_w']!=0:
                         self.episodes[k].get_reg_control()
                         self.reg+=self.episodes[k].reg_control
-                    if self.mission_cfg['penalty']['m_reg_w']!=0:
-                        self.episodes[k].get_reg_m()
-                        self.reg+=self.episodes[k].reg_m
+                    if self.mission_cfg['penalty']['det_reg_w']!=0:
+                        self.episodes[k].get_reg_det()
+                        self.reg+=self.episodes[k].reg_det
                     single_episode_r_grad = R_Grad_queue.get()
                     self.episodes[k].L_i.append(single_episode_r_grad[0]+self.reg)
                     self.episodes[k].p_L_i_p_X_traj_i.append(single_episode_r_grad[1])
@@ -252,7 +254,7 @@ class LearningAgileAPG:
                     torch.save(self.model, model_file)
 
                 if (epoch+1) % 100 == 0:
-                    self.success_rate=mc_evaluation(writer=writer,model_file=model_file,global_step=self.global_step)
+                    self.success_rate=mc_evaluation(writer=writer,options=options,model_file=model_file,global_step=self.global_step)
     
     def batch_gradient_visual(self):
         p_L_p_z_batch=self.train_one_epoch(0,GRAD_VIS=True)
@@ -261,8 +263,8 @@ if __name__ == "__main__":
 
     apg = LearningAgileAPG(mission_cfg,train_cfg,options)
     apg.init_train(model_folder,checkpoint_trained_model_folder)
-    apg.train()
-    # apg.batch_gradient_visual()
+    # apg.train()
+    apg.batch_gradient_visual()
 
 
     # def get_observations(self, i:int,  

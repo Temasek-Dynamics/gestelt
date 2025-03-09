@@ -5,6 +5,7 @@ from config import mission_cfg,train_cfg,current_dir
 
 def mc_evaluation(test_num=24,\
                  writer=None,\
+                 options=None,\
                model_file=os.path.join(current_dir,mission_cfg['NN_model_name']),\
                global_step=None,
                STAB_TEST=False,

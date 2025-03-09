@@ -11,6 +11,7 @@ import numpy as np
 from collections import deque
 from scipy.spatial.transform import Rotation as R
 import torch 
+import math
 import matplotlib.pyplot as plt
 
 from quad_model import toQuaternion, Gate, Rd2Rp, get_gate_points
@@ -19,7 +20,7 @@ from quad_policy import PlanFwdBwdWrapper
 from quad_nn import nn_sample
 from quad_moving import binary_search_solver,input_cal
 from visualization.result_analysis import rotation_vis
-from solid_geometry import magni, pitch_from_gate, verify_SVD_ca#,SVD_M_to_SO3
+from solid_geometry import magni, pitch_from_gate, verify_SVD_ca,verify_SVD_PR_ca#,SVD_M_to_SO3
 from misc.misc import str2bool 
 
 device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -344,7 +345,10 @@ class LearningAgileSim():
         if self.options['COMPARISON']:
             out[0:3]=self.gate_center
             out[3:12]=self.gate_ori_9d
-        verify_tra_R,_=verify_SVD_ca(out[3:12])
+        if self.config_dict['PR_MATRIX_LEARN']:
+            verify_tra_R,_=verify_SVD_PR_ca(out[3:7],out[7:11])
+        else:
+            verify_tra_R,_=verify_SVD_ca(out[3:12])
         self.log_NN_IO_for_RM(self.gate_pitch,out,verify_tra_R.flatten()) 
         self.verify_tra_R_list.append(verify_tra_R)
         return out 
@@ -403,7 +407,14 @@ class LearningAgileSim():
                     out=np.zeros(output_size)
                     out[0:3]=self.gate_center
                     # out[3:6]=self.gate_ori_RP # Rodrigues parameters
-                    out[3:12]=self.gate_ori_9d # manual set 9D vector (is rotation matrix directly)
+                    if self.config_dict['PR_MATRIX_LEARN']:
+                        # 90 degree rotation around y axis,rotation matrix,2x2
+                        pitch=np.pi/2
+                        roll=np.pi/4
+                        out[3:7]= np.array([[math.cos(pitch),math.sin(pitch)],[-math.sin(pitch),math.cos(pitch)]]).flatten()
+                        out[7:11]=np.array([[math.cos(roll),-math.sin(roll)],[math.sin(roll),math.cos(roll)]]).flatten()
+                    else:
+                        out[3:12]=self.gate_ori_9d # manual set 9D vector (is rotation matrix directly)
                     # out[12:15]=[0,-5,0] # velocity
                     # print("="*50)
                     # print("NN pose det before SVD",np.linalg.det(out[3:12].reshape(3,3)))
@@ -422,7 +433,10 @@ class LearningAgileSim():
                     out[-2]=self.config_dict['learning_agile']['wqt']
                     out[-1]=self.t_tra_rel
                     ### SVD through CasADi
-                    verify_tra_R,_=verify_SVD_ca(out[3:12])
+                    if self.config_dict['PR_MATRIX_LEARN']:
+                        verify_tra_R,_=verify_SVD_PR_ca(out[3:7],out[7:11])
+                    else:
+                        verify_tra_R,_=verify_SVD_ca(out[3:12])
                     gate_pitch=0
                     self.log_NN_IO_for_RM(gate_pitch,out,verify_tra_R.flatten())  
                     trav_auxvar_value = out

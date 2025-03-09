@@ -23,7 +23,7 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 training_data_folder=os.path.abspath(os.path.join(current_dir, 'training_data'))
 model_folder=os.path.abspath(os.path.join(training_data_folder, 'NN_model'))
 FILE = model_folder+"/NN_close_pretrain.pth"
-model = network_with_GRU_heads(input_size, hidden_size, hidden_size,output_size).to(device)
+model = network_with_GRU(input_size, hidden_size, hidden_size,output_size).to(device)
 
 # Loss and optimizer
 criterion = nn.MSELoss()
@@ -77,7 +77,10 @@ for epoch in range(num_epochs):
         
         # Forward pass
         pre_outputs = model(torch.tensor(full_input, dtype=torch.float).unsqueeze(0).to(device),deterministic=False)[0]
-        loss = criterion(pre_outputs[3:12], outputs[3:12])+criterion(pre_outputs[-1],outputs[-1])
+        if mission_cfg['PR_MATRIX_LEARN']:
+            loss = criterion(pre_outputs[3:11], outputs[3:11])+criterion(pre_outputs[-1],outputs[-1])
+        else:
+            loss = criterion(pre_outputs[3:12], outputs[3:12])+criterion(pre_outputs[-1],outputs[-1])
         
         # Backward and optimize
         optimizer.zero_grad()

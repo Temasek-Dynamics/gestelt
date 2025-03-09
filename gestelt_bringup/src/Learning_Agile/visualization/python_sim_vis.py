@@ -649,7 +649,7 @@ def plot_3D_traj(
             
             ax.plot_surface(x + c_x, y + c_y, z + c_z, color='b', alpha=0.05)
         else:
-            plot_alpha = 0.1
+            plot_alpha = 0.1*(i/np.size(state_traj,0))+0.2
         gate_l1, = ax.plot([p1_x,p2_x],[p1_y,p2_y],[p1_z,p2_z],linewidth=1,color='orangered',linestyle='-',alpha=plot_alpha)
         gate_l2, = ax.plot([p2_x,p3_x],[p2_y,p3_y],[p2_z,p3_z],linewidth=1,color='orangered',linestyle='-',alpha=plot_alpha)
         gate_l3, = ax.plot([p3_x,p4_x],[p3_y,p4_y],[p3_z,p4_z],linewidth=1,color='orangered',linestyle='-',alpha=plot_alpha)

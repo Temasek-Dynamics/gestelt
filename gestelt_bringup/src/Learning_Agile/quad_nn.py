@@ -124,10 +124,14 @@ def t_output(inputs):
     
     outputs = np.zeros(output_size)
     outputs[0:3]=mission_cfg['mission']['gate_position']
-    # R_gate=inputs[-9:].reshape(3,3)
-    # outputs[3:12]=R_gate.T.flatten()
-    outputs[3:12]=np.eye(3).flatten()
-
+    
+    if mission_cfg['PR_MATRIX_LEARN']:
+        outputs[3:7]=np.eye(2).flatten()
+        outputs[7:11]=np.eye(2).flatten()
+    else:
+        # R_gate=inputs[-9:].reshape(3,3)
+        # outputs[3:12]=R_gate.T.flatten()
+        outputs[3:12]=np.eye(3).flatten()
 
     ## traversal time is proportional to the distance of the centroids
     if inputs[1]>0:

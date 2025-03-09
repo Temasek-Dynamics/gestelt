@@ -6,7 +6,7 @@ import casadi as ca
 import os
 
 from scipy.spatial.transform import Rotation as R
-
+from config import mission_cfg, train_cfg
 os.environ["JAX_PLATFORM_NAME"] = "cpu" 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 # import jax
@@ -50,13 +50,14 @@ def qr_eigen(A, iterations=10):
 #     return R
 
 class SVD():
-    def __init__(self):
-        self.m_flatten = ca.SX.sym('m_flatten',9)
-        self.sigma = ca.SX.sym('sigma',3,3)
+    def __init__(self,dim=3):
+        self.dim=dim
+        self.m_flatten = ca.SX.sym('m_flatten',dim*dim)
+        self.sigma = ca.SX.sym('sigma',dim,dim)
 
     def SVD_M_to_SO3_ca(self,m_flatten):
         self.m_flatten = m_flatten
-        m=ca.reshape(m_flatten,3,3)
+        m=ca.reshape(m_flatten,self.dim,self.dim)
         """Maps 3x3 matrices onto SO(3) via symmetric orthogonalization using CasADi with symbolic matrix."""
         # Perform singular value decomposition using CasADi
         mTm = ca.mtimes(m.T, m)
@@ -104,6 +105,40 @@ def verify_SVD_ca(des_tra_m):
     # print("NN pose det after SVD",np.linalg.det(verify_tra_R))
     return verify_tra_R,dR_dm.T
 
+
+def verify_SVD_PR_ca(des_tra_pitch_m,des_tra_roll_m):
+    ## call the SVD casADi function separately, to verify the SVD result
+    svd= SVD(dim=2)
+    SVD_func=svd.SVD_M_to_SO3_ca_func()
+    
+    tra_yaw_B_I = np.eye(3)
+    tra_pitch_B_I = np.eye(3)
+    tra_roll_B_I= np.eye(3)
+
+    tra_pitch_2d,_=SVD_func(des_tra_pitch_m)
+    tra_roll_2d,_=SVD_func(des_tra_roll_m)
+
+    tra_pitch_2d = tra_pitch_2d.toarray()
+    tra_roll_2d = tra_roll_2d.toarray()
+
+    tra_pitch_B_I[0,0]=tra_pitch_2d[0,0]
+    tra_pitch_B_I[0,2]=tra_pitch_2d[0,1]
+    tra_pitch_B_I[2,0]=tra_pitch_2d[1,0]
+    tra_pitch_B_I[2,2]=tra_pitch_2d[1,1]
+
+    tra_roll_B_I[1,1]=tra_roll_2d[0,0]
+    tra_roll_B_I[1,2]=tra_roll_2d[0,1]
+    tra_roll_B_I[2,1]=tra_roll_2d[1,0]
+    tra_roll_B_I[2,2]=tra_roll_2d[1,1]
+
+    ## follow the zyx order
+    verify_tra_R = tra_yaw_B_I @ tra_pitch_B_I @ tra_roll_B_I
+    verify_tra_R= tra_roll_B_I @ tra_pitch_B_I @ tra_yaw_B_I
+    verify_tra_R=verify_tra_R.T
+    # print("sigma=",sigma)
+    # print("NN pose det after SVD",np.linalg.det(verify_tra_R))
+    return verify_tra_R,_
+
 def pitch_from_gate(gate_point):
     """
     Calculate the pitch angle of the gate from the gate points
@@ -112,14 +147,18 @@ def pitch_from_gate(gate_point):
     return gate_pitch
 
 def recover_euler_from_9d(outputs,deg_unit=False):
-    R_nn,dR_dm=verify_SVD_ca(outputs[3:12])
+    # R_nn,dR_dm=verify_SVD_ca(outputs[3:12])
+    if mission_cfg['PR_MATRIX_LEARN']:
+        R_nn,_=verify_SVD_PR_ca(outputs[3:7],outputs[7:11])
+    else:
+        R_nn,_=verify_SVD_ca(outputs[3:12])
     quat_nn=R.from_matrix(R_nn.reshape(3,3))
     euler_nn=quat_nn.as_euler('zyx', degrees=deg_unit)
     
     #backward
-    deuler_dR=dEulerZYX_dR(R_nn)
-    deuler_dm=ca.mtimes(deuler_dR,dR_dm)
-    return euler_nn,deuler_dm.toarray()
+    # deuler_dR=dEulerZYX_dR(R_nn)
+    # deuler_dm=ca.mtimes(deuler_dR,dR_dm)
+    return euler_nn,_ #deuler_dm.toarray()
 
 ## return the maginitude of a vector
 def magni(vector):

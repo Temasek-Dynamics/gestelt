@@ -152,7 +152,9 @@ class Obstacle():
             for t in range(state_traj.shape[0]):
                 
                 # if the current state is already behind the gate, then break
-                if len(t_tra_seq_list)==3 or np.dot(self.plane1.nor_vec(),vert_traj[0]-self.centroid)>0:
+                if len(t_tra_seq_list)==3 or \
+                    (np.dot(self.plane1.nor_vec(),vert_traj[0]-self.centroid)>0 \
+                    and self.centroid[1]-vert_traj[0][1]>0.2):
                     break
                 if(np.dot(self.plane1.nor_vec(),vert_traj[t]-self.centroid)>0):
                     t_tra_seq_list.append(t-1)
@@ -207,15 +209,15 @@ class Obstacle():
         
         if not PENALTY_HELPER:
             # # velocity penalty, encourage the drone to fly through the gate, instead of hovering in front of the gate
-            # vel_penalty = -10
-            # vel_w=config['penalty']['vel_w']
-            # des_tra_vel = config['pretrain_param']['desired_tra_vel']
-            # for i in range(state_traj.shape[0]):
-            #     if i in t_tra_seq_list:
-            #         vel_penalty += vel_w * np.dot(-state_traj[i,4]-des_tra_vel,-state_traj[i,4]-des_tra_vel)
-            #         drdstate_traj[i,4] += vel_w * 2 * (-state_traj[i,4]-des_tra_vel)
+            vel_penalty = 0
+            vel_w=config['penalty']['vel_w']
+            des_tra_vel = 0
+            for i in range(state_traj.shape[0]):
+                if i in t_tra_seq_list:
+                    vel_penalty += vel_w * np.dot(state_traj[i,5]-des_tra_vel,state_traj[i,5]-des_tra_vel)
+                    drdstate_traj[i,5] += vel_w * 2 * (state_traj[i,5]-des_tra_vel)
             
-            # penalty_traj += vel_penalty
+            penalty_traj += vel_penalty
 
 
             ## goal score

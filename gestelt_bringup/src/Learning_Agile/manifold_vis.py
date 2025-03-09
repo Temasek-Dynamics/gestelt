@@ -43,6 +43,8 @@ def plot_transformation(A, R):
 def main():
     A = generate_random_matrix()
     R = closest_rotation_matrix(A)
+    print("the A 's determinant is ",np.linalg.det(A))
+    print("the R 's determinant is ",np.linalg.det(R))    
     print("Original Matrix A:")
     print(A)
     print("Closest Rotation Matrix R:")
