@@ -8,7 +8,7 @@ import math
 
 
 from math import sqrt
-from solid_geometry import dir_cosine
+from geometry.solid_geometry import dir_cosine
 
 def get_quad_vert_pos(wing_len, state_traj):
 

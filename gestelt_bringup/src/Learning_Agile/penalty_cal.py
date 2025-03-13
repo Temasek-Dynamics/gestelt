@@ -2,8 +2,8 @@ import numpy as np
 import jax.numpy as jnp
 # from differentiable_collision_wrapper import *
 
-from jax_differentiable_collision_call import DiffCollisionWrapper, Polytope
-from solid_geometry import plane, line, magni,dir_cosine_np
+from diff_collision.jax_differentiable_collision_call import DiffCollisionWrapper, Polytope
+from geometry.solid_geometry import plane, line, magni,dir_cosine_np
 from config import mission_cfg
 ## define the narrow window which is also the obstacle for the quadrotor
 class Obstacle():
@@ -209,15 +209,17 @@ class Obstacle():
         
         if not PENALTY_HELPER:
             # # velocity penalty, encourage the drone to fly through the gate, instead of hovering in front of the gate
-            vel_penalty = 0
             vel_w=config['penalty']['vel_w']
-            des_tra_vel = 0
-            for i in range(state_traj.shape[0]):
-                if i in t_tra_seq_list:
-                    vel_penalty += vel_w * np.dot(state_traj[i,5]-des_tra_vel,state_traj[i,5]-des_tra_vel)
-                    drdstate_traj[i,5] += vel_w * 2 * (state_traj[i,5]-des_tra_vel)
-            
-            penalty_traj += vel_penalty
+            if vel_w !=0:
+                vel_penalty = 0
+                
+                des_tra_vel = 0
+                for i in range(state_traj.shape[0]):
+                    if i in t_tra_seq_list:
+                        vel_penalty += vel_w * np.dot(state_traj[i,5]-des_tra_vel,state_traj[i,5]-des_tra_vel)
+                        drdstate_traj[i,5] += vel_w * 2 * (state_traj[i,5]-des_tra_vel)
+                
+                penalty_traj += vel_penalty
 
 
             ## goal score

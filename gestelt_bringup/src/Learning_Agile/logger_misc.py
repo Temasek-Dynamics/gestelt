@@ -6,7 +6,7 @@ import yaml
 import numpy as np
 
 from scipy.spatial.transform import Rotation as R
-from solid_geometry import pitch_from_gate,recover_euler_from_9d
+from geometry.solid_geometry import pitch_from_gate,recover_euler_from_9d
 
 class LoggerConfig:
     def __init__(self, log_dir="logs"):
@@ -62,6 +62,7 @@ def log_train_IO(writer,inputs,outputs,global_step):
     writer.add_scalar('NN_output/pitch_tra', euler_nn[1], global_step)
     writer.add_scalar('NN_output/roll_tra', euler_nn[2], global_step)
     writer.add_scalar('NN_output/determinant_m', det_m, global_step)
+    writer.add_scalar('NN_output/tra_throttle', outputs[-5], global_step)
     writer.add_scalar('NN_output/wrp', outputs[-4], global_step)
     writer.add_scalar('NN_output/wrt', outputs[-3], global_step)
     writer.add_scalar('NN_output/wqt', outputs[-2], global_step)
@@ -80,6 +81,7 @@ def log_gradient(writer,gra,reward,global_step):
     writer.add_scalar('gradient/drdz', gra[2], global_step)
     drd9D_norm = np.linalg.norm(gra[3:12])
     writer.add_scalar('gradient/drd9D_norm', drd9D_norm, global_step)
+    writer.add_scalar('gradient/drdwthrottle',gra[-6], global_step)
     writer.add_scalar('gradient/drdwrp',gra[-5], global_step)
     # writer.add_scalar('drdmax_tra_w',gra[-5], global_step)
     writer.add_scalar('gradient/drdwrt',gra[-4], global_step)

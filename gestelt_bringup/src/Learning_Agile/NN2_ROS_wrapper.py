@@ -9,17 +9,17 @@ from collections import deque
 import torch
 import numpy as np
 
-from config import current_dir,train_cfg
+from config import current_dir,train_cfg, mission_cfg
 from quad_model import Rd2Rp,toQuaternion,Gate
 from quad_nn import nn_sample
 from quad_moving import binary_search_solver
-from solid_geometry import pitch_from_gate,magni,verify_SVD_ca
+from geometry.solid_geometry import pitch_from_gate,magni,verify_SVD_ca
 
 from gestelt_msgs.msg import Goals,  CommanderState, close_loop_NN_output
 from geometry_msgs.msg import  PoseStamped, TwistStamped, Point
 from std_msgs.msg import Float32
 from visualization_msgs.msg import Marker
-from learning_agile_sim import MovingGate, get_obs
+from learning_agile_sim import MovingGate, get_obs, manual_set_z_forward
 from learning_agile_ROS_mission import transform_map_to_world
 
 
@@ -60,7 +60,8 @@ class NN2_ROS_wrapper:
         self.mission_period = rospy.get_param('mission/period', 5)
         NN_model_name=rospy.get_param('NN_deploy_model_name', 'NN2_imitate_1.pth')
         self.NN_freq = rospy.get_param('NN_freq', 100)
-        MANUAL_SET_POSE_TEST = rospy.get_param('MANUAL_SET_POSE_TEST', False)
+        self.MANUAL_SET_POSE_TEST = rospy.get_param('MANUAL_SET_POSE_TEST', False)
+
         ## ==========================initialize ==========================-##
         
         self.state = np.zeros(10)
@@ -86,7 +87,7 @@ class NN2_ROS_wrapper:
         self.gate_vis_pub = rospy.Publisher("/learning_agile_sim/gate_vis", Marker, queue_size=1)
         self.gate_pitch_pub = rospy.Publisher("/learning_agile_sim/gate_pitch", Float32, queue_size=1)
 
-        if not MANUAL_SET_POSE_TEST:
+        if not self.MANUAL_SET_POSE_TEST:
             self.gate_vis_timer = rospy.Timer(rospy.Duration(1/self.NN_freq), self.gate_vis)
             self.NN2_output_timer = rospy.Timer(rospy.Duration(1/self.NN_freq), self.close_loop_NN_forward)
         
@@ -101,9 +102,9 @@ class NN2_ROS_wrapper:
         ## random gate initialization
         self.env_init_set = nn_sample(TEST=True)
         gate_length = rospy.get_param('gate/length', 1.2)
-        gate_center = rospy.get_param('mission/gate_position', [0,0,1.5])
+        self.gate_center = rospy.get_param('mission/gate_position', [0,0,1.5])
         self.moving_gate = MovingGate(self.env_init_set,
-                                      gate_center=gate_center,
+                                      gate_center=self.gate_center,
                                       gate_length=gate_length)
         self.moving_gate.set_vel(dt=self.gate_step,gate_v=gate_v,gate_w=gate_w,python_sim_time=self.mission_period)
         self.gate_points_list = self.moving_gate.gate_points_list
@@ -284,15 +285,24 @@ class NN2_ROS_wrapper:
                 
                 full_input=np.array(obs).reshape([1,5,-1])
                 # NN output the traversal time and pose
-                t_comp = time.time()
-                nn_output = self.model(torch.tensor(full_input, dtype=torch.float).to(device))[0]
-                NN_forward_time=time.time()-t_comp
-                out = nn_output.to('cpu').data.numpy()
-                verify_tra_R,_=verify_SVD_ca(out[3:12])
+                if not self.MANUAL_SET_POSE_TEST:
+                    t_comp = time.time()
+                    nn_output = self.model(torch.tensor(full_input, dtype=torch.float).to(device))[0]
+                    NN_forward_time=time.time()-t_comp
+                    out = nn_output.to('cpu').data.numpy()
+                    verify_tra_R,_=verify_SVD_ca(out[3:12])
 
-                quat=np.roll(R.from_matrix(verify_tra_R).as_quat(),1)
+                    quat=np.roll(R.from_matrix(verify_tra_R).as_quat(),1)
 
-
+                else:
+                    gate_ori_euler=np.array(mission_cfg['mission']['gate_ori_euler'])
+                    self.gate_ori_9d=R.from_euler('zyx',gate_ori_euler).as_matrix().flatten()
+                    self.t_tra_rel=mission_cfg['learning_agile']['traverse_time']-self.i*(1/self.NN_freq)
+                    gate_pitch,out,verify_tra_R = manual_set_z_forward(gate_center=self.gate_center,
+                                                                                    gate_ori_9d=self.gate_ori_9d,
+                                                                                    t_tra_rel=self.t_tra_rel)
+                    quat=np.roll(R.from_matrix(verify_tra_R).as_quat(),1)
+                    
                 # wrap the NN output as the message
                 NN_trav_pose_msg = close_loop_NN_output()
                 NN_trav_pose_msg.header.stamp = rospy.Time.now()

@@ -4,9 +4,9 @@ import numpy as np
 import scipy
 
 from quad_OC import OCSys,LQR
-# the sequence of importing solid_geometry
+# the sequence of importing geometry.solid_geometry
 # with juliacall is import
-from solid_geometry import pitch_from_gate
+from geometry.solid_geometry import pitch_from_gate
 from quad_model import QuadrotorCTBRCtl, QuadrotorSRTCtl,QuadrotorWrenchCtl,QuadrotorAugmentedSRTCtl, toQuaternion,Gate
 from visualization.python_sim_vis import get_quad_vert_pos,plot_position,plot_angularrate,plot_thrust
 from config import train_cfg
@@ -97,6 +97,7 @@ class PlanFwdBwdWrapper():
                            #wqt=config['learning_agile']['wqt'],
                            wthrust=config['learning_agile']['wthrust'],
                            wdthrust=config['learning_agile']['wdthrust'],
+                           w_tra_throttle=config['learning_agile']['w_tra_throttle'],
                            wm=config['learning_agile']['wm'],
                            wwt=config['learning_agile']['wwt'],
                            wwt_z=config['learning_agile']['wwt_z'], 

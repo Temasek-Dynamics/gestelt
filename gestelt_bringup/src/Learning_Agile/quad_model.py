@@ -5,11 +5,11 @@ import casadi
 import numpy as np
 import math
 from scipy.spatial.transform import Rotation as R
-from solid_geometry import norm
+from geometry.solid_geometry import norm
 from math import sqrt
 
 from config import mission_cfg
-from solid_geometry import dir_cosine, SVD, magni, magni_casadi
+from geometry.solid_geometry import dir_cosine, SVD, magni, magni_casadi
 # quadrotor (UAV) environment
 class QuadrotorDynamic:
     """Only the dynamics, support different state and input dimension.
@@ -185,6 +185,7 @@ class CostBase:
         self.des_tra_q = vertcat(SX.sym('des_tra_q0'), SX.sym('des_tra_q1'), SX.sym('des_tra_q2'), SX.sym('des_tra_q3'))
         self.des_t_tra = SX.sym('des_t_tra')
         self.t_node = SX.sym('t_node')
+        self.tra_throttle = SX.sym('tra_throttle')
         # self.traverse_weight_span = SX.sym('traverse_weight_span ')
         # define desired goal state
         self.goal_r_I  = vertcat(SX.sym('des_goal_rx'), SX.sym('des_goal_ry'), SX.sym('des_goal_rz'))
@@ -195,7 +196,7 @@ class CostBase:
     def init_weight(self, wrt=None, wqt=None,max_tra_w=None,traverse_weight_span=None,
                  wrp=None, wvp=None, wqp=None,
                 wrf=None, wvf=None, wqf=None, 
-                wwt=None, wwt_z=None,wthrust=None,wdthrust=None,wm=None):
+                wwt=None, wwt_z=None,w_tra_throttle=None, wthrust=None,wdthrust=None,wm=None):
         
         """
         If the weight value is None, it means this value is a learnable parameter
@@ -266,6 +267,11 @@ class CostBase:
         else:
             self.wdthrust = wdthrust
 
+        if w_tra_throttle is None:
+            self.w_tra_throttle = SX.sym('tra_throttle')
+            parameter += [self.w_tra_throttle]
+        else:
+            self.w_tra_throttle = w_tra_throttle
         # torque weight
         if wm is None:
             self.wm = SX.sym('wthrust')
@@ -376,7 +382,8 @@ class CostBase:
 
             else:
                 svd= SVD()
-                self.trav_auxvar = vertcat(self.des_tra_r_I, self.des_tra_m,self.wrp, self.wrt, self.wqt, self.des_t_tra) #self.wrp,  self.max_tra_w, 
+                self.trav_auxvar = vertcat(self.des_tra_r_I, self.des_tra_m, self.wrp, self.wrt, self.wqt, self.des_t_tra) #self.wrp,  self.max_tra_w, 
+                # self.trav_auxvar = vertcat(self.des_tra_r_I, self.des_tra_m,self.tra_throttle, self.wrp, self.wrt, self.wqt, self.des_t_tra) #self.wrp,  self.max_tra_w, 
                 tra_R_B_I= svd.SVD_M_to_SO3_ca(self.des_tra_m)
        
         
@@ -403,6 +410,9 @@ class CostBase:
         ## squared Chordal distance
         self.cost_q_t = casadi.norm_fro(tra_R_B_I-R_B_I)**2
 
+        ## traverse thrust cost
+        self.cost_tra_throttle = dot(quad_dyn.col_thrust_mag-self.tra_throttle*mission_cfg['learning_agile']['single_motor_max_thrust']*4,\
+                                     quad_dyn.col_thrust_mag-self.tra_throttle*mission_cfg['learning_agile']['single_motor_max_thrust']*4)
        
 class QuadrotorCTBRCtl:
     """
@@ -446,7 +456,8 @@ class QuadrotorCTBRCtl:
         self.tra_cost = self.cost_base.max_tra_w * \
                         casadi.exp(-self.cost_base.traverse_weight_span*(self.cost_base.t_node-self.cost_base.des_t_tra)**2) \
                         * (self.cost_base.wrt * self.cost_base.cost_r_I_t \
-                         + self.cost_base.wqt * self.cost_base.cost_q_t)
+                         + self.cost_base.wqt * self.cost_base.cost_q_t) #\
+                        #  + self.cost_base.w_tra_throttle * self.cost_base.cost_tra_throttle)
         
     def set_bound_value(self, config):
         self.col_thrust_ub = config['learning_agile']['single_motor_max_thrust']*4*config['learning_agile']['throttle_upper_bound']
@@ -472,17 +483,18 @@ class QuadrotorCTBRCtl:
         """
         thrust_ub_inequ=self.quad_dyn.col_thrust_mag-self.col_thrust_ub
         thrust_lb_inequ=self.col_thrust_lb-self.quad_dyn.col_thrust_mag
-        # ang_rate_ub_inequ=self.quad_dyn.ang_rate_B[0:2]-self.ang_rate_b_xy
-        # ang_rate_lb_inequ=self.ang_rate_b_xy-self.quad_dyn.ang_rate_B[0:2]
-        # ang_rate_ub_z_inequ=self.quad_dyn.ang_rate_B[2]-self.ang_rate_b_z
-        # ang_rate_lb_z_inequ=self.ang_rate_b_z-self.quad_dyn.ang_rate_B[2]
+        ang_rate_ub_inequ=self.quad_dyn.ang_rate_B[0:2]-self.ang_rate_b_xy
+        ang_rate_lb_inequ=self.ang_rate_b_xy-self.quad_dyn.ang_rate_B[0:2]
+        ang_rate_ub_z_inequ=self.quad_dyn.ang_rate_B[2]-self.ang_rate_b_z
+        ang_rate_lb_z_inequ=self.ang_rate_b_z-self.quad_dyn.ang_rate_B[2]
         
         pos_ub_z_inequ=self.quad_dyn.r_I[2]-self.pos_ub_z
         pos_lb_z_inequ=self.pos_lb_z-self.quad_dyn.r_I[2]
         self.path_inequ_cstr=vcat([thrust_ub_inequ,thrust_lb_inequ, \
-                                   pos_ub_z_inequ,pos_lb_z_inequ])
-                        #   ang_rate_ub_inequ, ang_rate_lb_inequ,\
-                        #   ang_rate_ub_z_inequ,ang_rate_lb_z_inequ,\
+                                   pos_ub_z_inequ,pos_lb_z_inequ,\
+                                   ang_rate_ub_inequ, ang_rate_lb_inequ,\
+                                   ang_rate_ub_z_inequ,ang_rate_lb_z_inequ])
+    
         self.final_inequ_cstr=vcat([pos_ub_z_inequ,pos_lb_z_inequ])
         
 class QuadrotorSRTCtl:

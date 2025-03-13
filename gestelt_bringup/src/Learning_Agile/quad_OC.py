@@ -155,7 +155,7 @@ class OCSys:
         self.trav_auxvar = trav_auxvar
         self.n_trav_auxvar = self.trav_auxvar.numel()
         self.t_node = t_node
-        self.trav_cost_fn = casadi.Function('trav_cost', [self.state,self.trav_auxvar,self.t_node], [self.trav_cost])
+        self.trav_cost_fn = casadi.Function('trav_cost', [self.state,self.control,self.trav_auxvar,self.t_node], [self.trav_cost])
 
     def setInequCstr(self, path_inequ_cstr, final_inequ_cstr):
         """ 
@@ -513,7 +513,7 @@ class OCSys:
         # ocp.model.cost_expr_ext_cost_custom_hess/cost_expr_ext_cost
         # if self.SQP_RTI_OPTION:
         ocp.model.cost_expr_ext_cost = self.path_cost_fn(ocp.model.x, ocp.model.u, goal_state_value, trav_auxvar_value)\
-                                    + self.trav_cost_fn(ocp.model.x, trav_auxvar_value, t_node_value)\
+                                    + self.trav_cost_fn(ocp.model.x, ocp.model.u, trav_auxvar_value, t_node_value)\
         # end cost
         ocp.model.cost_expr_ext_cost_e = self.final_cost_fn(ocp.model.x,goal_state_value,self.auxvar)
 

@@ -3,7 +3,7 @@
 import sys
 sys.path.append('../')
 import numpy as np
-from solid_geometry import *
+from geometry.solid_geometry import *
 from quad_model import*
 import torch
 class kalman:

@@ -20,10 +20,12 @@ from quad_policy import PlanFwdBwdWrapper
 from quad_nn import nn_sample
 from quad_moving import binary_search_solver,input_cal
 from visualization.result_analysis import rotation_vis
-from solid_geometry import magni, pitch_from_gate, verify_SVD_ca,verify_SVD_PR_ca#,SVD_M_to_SO3
+from geometry.solid_geometry import magni, pitch_from_gate, verify_SVD_ca,verify_SVD_PR_ca#,SVD_M_to_SO3
 from misc.misc import str2bool 
+from config import mission_cfg, train_cfg
 
-device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+# device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device=torch.device('cpu')
 # device=torch.device('cpu')
 input_size = train_cfg['model']['input_size'] 
 hidden_size = train_cfg['model']['hidden_size']
@@ -76,7 +78,48 @@ def get_obs(history_obs = None,
     
 
     return obs,gate_pitch
-        
+
+def manual_set_z_forward(gate_center:np.array=None,
+                         gate_ori_9d:np.array=None,
+                         t_tra_rel:float=None):
+    # manually set the traversal time and pose
+    out=np.zeros(output_size)
+    out[0:3]=gate_center
+    # out[3:6]=self.gate_ori_RP # Rodrigues parameters
+    if mission_cfg['PR_MATRIX_LEARN']:
+        # 90 degree rotation around y axis,rotation matrix,2x2
+        pitch=np.pi/2
+        roll=np.pi/4
+        out[3:7]= np.array([[math.cos(pitch),math.sin(pitch)],[-math.sin(pitch),math.cos(pitch)]]).flatten()
+        out[7:11]=np.array([[math.cos(roll),-math.sin(roll)],[math.sin(roll),math.cos(roll)]]).flatten()
+    else:
+        out[3:12]=gate_ori_9d # manual set 9D vector (is rotation matrix directly)
+    # out[12:15]=[0,-5,0] # velocity
+    # print("="*50)
+    # print("NN pose det before SVD",np.linalg.det(out[3:12].reshape(3,3)))
+
+    # if self.options['JAX_SVD']:
+    #     ### SVD through JAX
+    #     des_tra_R=SVD_M_to_SO3(out[3:12]).flatten() # 9D vector to 3x3 rotation matrix(in flat form)
+    #     print("NN pose det after SVD",np.linalg.det(des_tra_R.reshape(3,3)))
+    #     # relative traversal time
+    #     out[-1]=self.t_tra_rel
+    #     gate_pitch=0
+    #     self.log_NN_IO_for_RM(gate_pitch,out,des_tra_R) 
+    # else:
+    out[-4]=mission_cfg['learning_agile']['wrp']
+    out[-3]=mission_cfg['learning_agile']['wrt']
+    out[-2]=mission_cfg['learning_agile']['wqt']
+    out[-1]=t_tra_rel
+    ### SVD through CasADi
+    if mission_cfg['PR_MATRIX_LEARN']:
+        verify_tra_R,_=verify_SVD_PR_ca(out[3:7],out[7:11])
+    else:
+        verify_tra_R,_=verify_SVD_ca(out[3:12])
+
+    gate_pitch=mission_cfg['mission']['gate_ori_euler'][1]
+    return gate_pitch,out,verify_tra_R
+
 class MovingGate():
     def __init__(self, env_init_set,
                         gate_center,
@@ -398,51 +441,18 @@ class LearningAgileSim():
                 
                 if self.options['MANUAL_SET_POSE_TEST']:
                     self.gate_state_search()
-                    nn2_inputs = np.zeros(23)
-                    nn2_inputs[0:10] = self.state[0:10] 
-                    nn2_inputs[10:13] = self.final_point
+                    # nn2_inputs = np.zeros(23)
+                    # nn2_inputs[0:10] = self.state[0:10] 
+                    # nn2_inputs[10:13] = self.final_point
                     
+                    gate_pitch,trav_auxvar_value,verify_tra_R = manual_set_z_forward(gate_center=self.gate_center,
+                                                                                    gate_ori_9d=self.gate_ori_9d,
+                                                                                    t_tra_rel=self.t_tra_rel)
+                    self.log_NN_IO_for_RM(gate_pitch,trav_auxvar_value,verify_tra_R.flatten()) 
 
-                    # manually set the traversal time and pose
-                    out=np.zeros(output_size)
-                    out[0:3]=self.gate_center
-                    # out[3:6]=self.gate_ori_RP # Rodrigues parameters
-                    if self.config_dict['PR_MATRIX_LEARN']:
-                        # 90 degree rotation around y axis,rotation matrix,2x2
-                        pitch=np.pi/2
-                        roll=np.pi/4
-                        out[3:7]= np.array([[math.cos(pitch),math.sin(pitch)],[-math.sin(pitch),math.cos(pitch)]]).flatten()
-                        out[7:11]=np.array([[math.cos(roll),-math.sin(roll)],[math.sin(roll),math.cos(roll)]]).flatten()
-                    else:
-                        out[3:12]=self.gate_ori_9d # manual set 9D vector (is rotation matrix directly)
-                    # out[12:15]=[0,-5,0] # velocity
-                    # print("="*50)
-                    # print("NN pose det before SVD",np.linalg.det(out[3:12].reshape(3,3)))
 
-                    # if self.options['JAX_SVD']:
-                    #     ### SVD through JAX
-                    #     des_tra_R=SVD_M_to_SO3(out[3:12]).flatten() # 9D vector to 3x3 rotation matrix(in flat form)
-                    #     print("NN pose det after SVD",np.linalg.det(des_tra_R.reshape(3,3)))
-                    #     # relative traversal time
-                    #     out[-1]=self.t_tra_rel
-                    #     gate_pitch=0
-                    #     self.log_NN_IO_for_RM(gate_pitch,out,des_tra_R) 
-                    # else:
-                    out[-4]=self.config_dict['learning_agile']['wrp']
-                    out[-3]=self.config_dict['learning_agile']['wrt']
-                    out[-2]=self.config_dict['learning_agile']['wqt']
-                    out[-1]=self.t_tra_rel
-                    ### SVD through CasADi
-                    if self.config_dict['PR_MATRIX_LEARN']:
-                        verify_tra_R,_=verify_SVD_PR_ca(out[3:7],out[7:11])
-                    else:
-                        verify_tra_R,_=verify_SVD_ca(out[3:12])
-                    gate_pitch=0
-                    self.log_NN_IO_for_RM(gate_pitch,out,verify_tra_R.flatten())  
-                    trav_auxvar_value = out
-                            
                 else:
-                    
+                    ## NN decision
                     if self.options['CLOSE_LOOP_MODEL']:
                         self.gate_t_i = Gate(self.gate_points_list[self.i])
                         trav_auxvar_value = self.close_loop_NN_forward()
@@ -497,10 +507,6 @@ class LearningAgileSim():
 
             
             self.state = self.integrator.get('x')
-
-
-         
-
             self.state_n = np.concatenate((self.state_n,[self.state]),axis = 0)
             self.control_n = np.concatenate((self.control_n,[self.u]),axis = 0)
             self.pos_vel_att_cmd_n = np.concatenate((self.pos_vel_att_cmd_n,[self.pos_vel_att_cmd]),axis = 0)
@@ -613,7 +619,7 @@ def parse_options():
     parser.add_argument('--USE_PREV_SOLVER', type=str2bool, default=False, help='Enable or disable USE_PREV_SOLVER.')
     parser.add_argument('--PDP_GRADIENT', type=str2bool, default=False, help='Enable or disable PDP_GRADIENT.')
     parser.add_argument('--SQP_RTI_OPTION', type=str2bool, default=True, help='SQP or the DDP')
-    parser.add_argument('--MANUAL_SET_POSE_TEST', type=str2bool, default=False, help='Enable or disable MANUAL_SET_POSE_TEST.')
+    parser.add_argument('--MANUAL_SET_POSE_TEST', type=str2bool, default=True, help='Enable or disable MANUAL_SET_POSE_TEST.')
     parser.add_argument('--CLOSE_LOOP_MODEL', type=str2bool, default=True, help='Enable or disable CLOSE_LOOP_MODEL.')
     parser.add_argument('--JAX_SVD', type=str2bool, default=False, help='Enable or disable JAX_SVD.')
     parser.add_argument('--CLOSE_LOOP_TRAINING', type=str2bool, default=False, help='Enable or disable CLOSE_LOOP_TRAINING.')

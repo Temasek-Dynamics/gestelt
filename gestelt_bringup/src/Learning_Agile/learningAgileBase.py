@@ -7,7 +7,7 @@ from collections import deque
 from scipy.spatial.transform import Rotation as R
 import matplotlib.pyplot as plt
 
-from solid_geometry import magni,pitch_from_gate,recover_euler_from_9d,verify_SVD_ca
+from geometry.solid_geometry import magni,pitch_from_gate,recover_euler_from_9d,verify_SVD_ca
 from learning_agile_sim import LearningAgileSim, Gate,get_obs
 
 from config import mission_cfg, train_cfg,current_dir
@@ -33,7 +33,7 @@ class LearningAgileBase:
     take the MPC predicted first state as the drone real state to update,
     include forward, penalty, backward, 
     return the penalty and Gradient of this episode
-    penalty: [R_0, R_1, R_2, ..., R_H] for each step's prediction
+    penalty: [L_0, L_1, L_2, ..., L_H] for each step's prediction
     Gradient: [p_L_0_p_w, p_L_1_p_w, p_L_2_p_w, ..., p_L_H_p_w] for each step's prediction
     """
     def __init__(self,
@@ -210,7 +210,7 @@ class LearningAgileBase:
         adj_m_T = np.linalg.det(m)*np.linalg.inv(m).T
         dreg_det_dm = self.mission_cfg['penalty']['det_reg_w']*2*(np.linalg.det(m)-1)*adj_m_T
         self.dreg_dz[:,3:12]=dreg_det_dm.flatten()
-        print('det_reg:',self.dreg_dz[:,3:12])
+
 
     def get_reg_control(self):
         ## acquire p_X_traj_i/p_z_i
@@ -247,28 +247,28 @@ class LearningAgileBase:
         # if self.i > 10:
         #     print('debug')
         
-        # Backpropagate through the last one time-step
-        if self.i > 2:
-            self.p_L_i_p_x_i[f'{self.i}-2'] = np.einsum('bij,bjk->ik', self.p_L_i_p_X_traj_i[self.i-2],self.p_X_traj_i_p_x_i[self.i-2])
-            self.p_L_i_p_z_last[f'{self.i}-3'] = self.p_L_i_p_x_i[f'{self.i}-2'] @ self.p_X_traj_i_p_z_i[self.i-3][1, :, :]
+        # # Backpropagate through the last one time-step
+        # if self.i > 2:
+        #     self.p_L_i_p_x_i[f'{self.i}-2'] = np.einsum('bij,bjk->ik', self.p_L_i_p_X_traj_i[self.i-2],self.p_X_traj_i_p_x_i[self.i-2])
+        #     self.p_L_i_p_z_last[f'{self.i}-3'] = self.p_L_i_p_x_i[f'{self.i}-2'] @ self.p_X_traj_i_p_z_i[self.i-3][1, :, :]
 
-            self.p_L_i_p_z_i[self.i-3] += self.p_L_i_p_z_last[f'{self.i}-3']
+        #     self.p_L_i_p_z_i[self.i-3] += self.p_L_i_p_z_last[f'{self.i}-3']
         
         
 
-        if self.i > 3:       
-            # Backpropagate through the last second time-step     
-            self.p_L_i_p_x_i[f'{self.i}-3'] = dyn_decay * self.p_L_i_p_x_i[f'{self.i}-2'] @ self.p_X_traj_i_p_x_i[self.i-3][1, :, :]
-            self.p_L_i_p_z_last[f'{self.i}-4'] =  self.p_L_i_p_x_i[f'{self.i}-3'] @ self.p_X_traj_i_p_z_i[self.i-4][1, :, :]
+        # if self.i > 3:       
+        #     # Backpropagate through the last second time-step     
+        #     self.p_L_i_p_x_i[f'{self.i}-3'] = dyn_decay * self.p_L_i_p_x_i[f'{self.i}-2'] @ self.p_X_traj_i_p_x_i[self.i-3][1, :, :]
+        #     self.p_L_i_p_z_last[f'{self.i}-4'] =  self.p_L_i_p_x_i[f'{self.i}-3'] @ self.p_X_traj_i_p_z_i[self.i-4][1, :, :]
 
-            self.p_L_i_p_z_i[self.i-4] += self.p_L_i_p_z_last[f'{self.i}-4']
+        #     self.p_L_i_p_z_i[self.i-4] += self.p_L_i_p_z_last[f'{self.i}-4']
 
-            # # # Backpropagate through all last time-steps
-            for k in range(4, self.i):
-                self.p_L_i_p_x_i[f'{self.i}-{k}'] = dyn_decay * self.p_L_i_p_x_i[f'{self.i}-{k-1}'] @ self.p_X_traj_i_p_x_i[self.i-k][1, :, :]
-                self.p_L_i_p_z_last[f'{self.i}-{k+1}'] = self.p_L_i_p_x_i[f'{self.i}-{k}'] @ self.p_X_traj_i_p_z_i[self.i-k-1][1, :, :]
+        #     # # # Backpropagate through all last time-steps
+        #     for k in range(4, self.i):
+        #         self.p_L_i_p_x_i[f'{self.i}-{k}'] = dyn_decay * self.p_L_i_p_x_i[f'{self.i}-{k-1}'] @ self.p_X_traj_i_p_x_i[self.i-k][1, :, :]
+        #         self.p_L_i_p_z_last[f'{self.i}-{k+1}'] = self.p_L_i_p_x_i[f'{self.i}-{k}'] @ self.p_X_traj_i_p_z_i[self.i-k-1][1, :, :]
 
-                self.p_L_i_p_z_i[self.i-k-1] += self.p_L_i_p_z_last[f'{self.i}-{k+1}']
+        #         self.p_L_i_p_z_i[self.i-k-1] += self.p_L_i_p_z_last[f'{self.i}-{k+1}']
                 
 
         #         if k == 10:
