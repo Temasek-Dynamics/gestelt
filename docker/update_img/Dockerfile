@@ -11,6 +11,10 @@ SHELL ["/bin/bash", "-c"]
 #     && rm -rf /var/lib/apt/lists/*
 
 # WORKDIR /gestelt_ws/src/
+# RUN apt-get update && apt-get install --no-install-recommends -y \
+#     ros-noetic-vrpn-client-ros\
+#     ros-noetic-roslint\ 
+#     && rm -rf /var/lib/apt/lists/*
 # RUN git clone https://github.com/ros-drivers/vrpn_client_ros.git
 
 # Make directory and clone repository
@@ -37,6 +41,7 @@ RUN export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/root/acados/lib \
     && export ACADOS_SOURCE_DIR=/root/acados \
     && source /opt/ros/noetic/setup.bash \
     && catkin config --skiplist trajectory_planner se3_controller\
+    && catkin config --skiplist mppi_py_interface\
     && catkin build \
     && rm -rf /var/lib/apt/lists/* 
 
