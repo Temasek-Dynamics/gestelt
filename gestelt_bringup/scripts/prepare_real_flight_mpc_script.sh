@@ -61,7 +61,7 @@ source devel/setup.bash
 
 #################################################################################################################################
 # -1 vectornav & gprmc
-screen -d -m -S vicon_bridge bash -c "$EXPORT_SELF_IP source devel/setup.bash; roslaunch vicon_bridge vicon.launch drone_name_vicon:=$DRONE_NAME_VICON ; exec bash -i"
+screen -d -m -S vicon_bridge bash -c "$EXPORT_SELF_IP source devel/setup.bash; roslaunch gestelt_bringup vicon_client.launch drone_name_vicon:=$DRONE_NAME_VICON ; exec bash -i"
 sleep ${module_delay}
 sleep ${module_delay}
 sleep ${module_delay}
