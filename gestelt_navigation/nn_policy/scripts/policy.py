@@ -61,7 +61,8 @@ class TEST_RENDER(object):
 
 
     def evaluate_(self, att, qd):
-        return self.policy(att, qd, self.t_vel)
+        x = torch.cat((att, qd, self.t_vel), dim=1)
+        return self.policy(x)
     
 
 class NN_POLICY_PLANNER(object):
@@ -109,7 +110,8 @@ class NN_POLICY_PLANNER(object):
         self.mission_command_mode = mission_command_mode
         self.attitude_mode_toggle = 0
         self.action = np.zeros((1,4))
-        self.policy_evaluation_timer = rospy.Timer(rospy.Duration(0.05), self.nn_evaluation)
+        time.sleep(1)
+        self.policy_evaluation_timer = rospy.Timer(rospy.Duration(0.01), self.nn_evaluation)
         
 
     def commStateCb(self,msg):
@@ -162,7 +164,7 @@ class NN_POLICY_PLANNER(object):
                 
                 if self.attitude_mode_toggle == 0:
                     pva_traj_msg.type_mask = self.attitude_mode_toggle
-                    pva_traj_msg.throttle = 5.33952
+                    pva_traj_msg.throttle = 0.321
                     pva_traj_msg.transform.rotation.x = 0.0
                     pva_traj_msg.transform.rotation.y = 0.0
                     pva_traj_msg.transform.rotation.z = 0.707 
@@ -177,7 +179,7 @@ class NN_POLICY_PLANNER(object):
 
                 elif self.attitude_mode_toggle == 1:  #This controls the body rates nd thrust
                     pva_traj_msg.type_mask = self.attitude_mode_toggle
-                    pva_traj_msg.throttle = 5.33952 #self.action[0,0]
+                    pva_traj_msg.throttle = self.action[0,0]
                     pva_traj_msg.angular_rates.angular.x = self.action[0,1]   #body rate x
                     pva_traj_msg.angular_rates.angular.y = self.action[0,2]     #body rate y
                     pva_traj_msg.angular_rates.angular.z = self.action[0,3]     #body rate z
@@ -220,6 +222,7 @@ class NN_POLICY_PLANNER(object):
         warp_q = torch.Tensor(warp_q).unsqueeze(0)
         warp_qd = torch.Tensor(self.warp_qd).unsqueeze(0)
         self.action = self.policy.evaluate_(warp_q, warp_qd)
+        print(self.action)
 
 
 
@@ -235,7 +238,7 @@ if __name__=="__main__":
     mission_command_mode = loaded_params["mission_command_mode"]
 
     full_path = "/home/yanrui/storage/gestelt_ws/src/gestelt/gestelt_navigation/nn_policy/logs/vel_zero"
-    full_policy_path = os.path.join(full_path, "20250210-115632/policy.pth")
+    full_policy_path = os.path.join(full_path, "20250313-190627/policy.pth")
     nn_policy = TEST_RENDER(full_policy_path) 
 
     nn_policy_planner = NN_POLICY_PLANNER(int(mission_command_mode), nn_policy)

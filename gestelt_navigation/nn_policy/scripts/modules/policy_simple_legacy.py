@@ -15,7 +15,8 @@ class TrackVel(nn.Module):
         self.output_layer = nn.Linear(32, output_dim)
         
         
-    def forward(self, x):
+    def forward(self, att, qd, t_vel):
+        x = torch.cat((att, qd, t_vel), dim=1)
 
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))     

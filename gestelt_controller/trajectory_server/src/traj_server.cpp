@@ -657,7 +657,7 @@ void TrajectoryServer::publishLowLvlCmd(
   if (ct_omega_mode_ == 0){
     low_lvl_cmd.type_mask = ATTITUDE_CTRL;
     double collective_thrust = collective_thrust_vector;
-    low_lvl_cmd.thrust = collective_thrust/(single_motor_max_thrust_*4);
+    low_lvl_cmd.thrust = collective_thrust; //(single_motor_max_thrust_*4);
     low_lvl_cmd.orientation.x = quaternion[0];
     low_lvl_cmd.orientation.y = quaternion[1];
     low_lvl_cmd.orientation.z = quaternion[2];
@@ -667,7 +667,7 @@ void TrajectoryServer::publishLowLvlCmd(
   else if (ct_omega_mode_ == 1){
     low_lvl_cmd.type_mask = mavros_msgs::AttitudeTarget::IGNORE_ATTITUDE; // Ignore orientation
     double collective_thrust = collective_thrust_vector;
-    low_lvl_cmd.thrust = collective_thrust/(single_motor_max_thrust_*4);
+    low_lvl_cmd.thrust = collective_thrust; ///(single_motor_max_thrust_*4);
     low_lvl_cmd.body_rate.x = omega[0];
     low_lvl_cmd.body_rate.y = omega[1];
     low_lvl_cmd.body_rate.z = omega[2];
