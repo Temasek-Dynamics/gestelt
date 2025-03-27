@@ -1,0 +1,10 @@
+<launch>
+    <!-- Drone id -->
+    <arg name="drone_id" value="0"/>
+    <arg name="drone_id_ns" value="drone$(arg drone_id)"/>
+    <param name="/use_sim_time" value="false" />
+
+  <node pkg="tf2_ros" type="static_transform_publisher" name="map2warp" args="0.0 0.0 0.0 0.7071067811865476 0.0 0.0 0.7071067811865476 /map /warp"/>
+  <node pkg="tf2_ros" type="static_transform_publisher" name="map2local" args="0.0 0.0 0.0 0.0 0.0 0.7071067811865476 -0.7071067811865476 /map /local_frame"/>
+
+</launch>

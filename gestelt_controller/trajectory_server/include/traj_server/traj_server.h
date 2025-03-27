@@ -134,6 +134,12 @@ private: // Class Methods
    */
   void swarmServerCommandCb(const std_msgs::Int8::ConstPtr & msg);
 
+    /**
+   * @brief Callback for externally triggered server events
+   */
+  void missionServerCommandCb(const std_msgs::Int8::ConstPtr & msg);
+
+
   /**
    * Timer callback to extract PVA commands from subscribed plan for executing trajectory.
    * It will determine what sort of trajectory to execute (takeoff, landing, hover, mission etc.)
@@ -432,6 +438,7 @@ private: // Member variables
   // TODO: make this a service server
   ros::Subscriber command_server_sub_; // Subscriber to trajectory server commands
   ros::Subscriber swarm_command_server_sub_; // Subscriber to swarm server commands
+  ros::Subscriber mission_command_server_sub_; 
 
   /* Timer */
   ros::Timer exec_traj_timer_; // Timer to generate PVA commands for trajectory execution

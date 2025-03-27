@@ -17,6 +17,7 @@ import roslib.packages
 from std_msgs.msg import Bool
 import tf2_ros
 import threading
+from std_msgs.msg import Int8
 # import tf2_geometry_msgs
 # from geometry_msgs.msg import Vector3Stamped
 # from geometry_msgs import Posestamped
@@ -51,17 +52,32 @@ class ServerEvent(Enum):
 
 class TEST_RENDER(object):
 
-    def __init__(self, policy_path):
-        self.policy = TrackVel()
+    def __init__(self, policy_path, pc):
+        self.pc = pc
+        if self.pc == True:
+            self.policy = TrackVel(input_dim=16)
+        else:
+            self.policy = TrackVel()
         self.policy.load_state_dict(torch.load(policy_path))
         self.policy.eval()
 
         target_vel = np.zeros((1, 3))
+        # target_vel[:,0] = 1
+        # target_vel[:,2] = 1
+        # target_vel = np.random.randn(1, 3)
+        print(target_vel)
         self.t_vel = torch.tensor(target_vel, dtype=torch.float32)
+        target_pos = np.array([0,1,0]).reshape(1,3)
+        self.t_pos = torch.tensor(target_pos, dtype=torch.float32)
+        
 
 
-    def evaluate_(self, att, qd):
-        x = torch.cat((att, qd, self.t_vel), dim=1)
+    def evaluate_(self, pos, att, qd):
+        if self.pc == True:
+            diff_pos = self.t_pos - pos
+            x = torch.cat((diff_pos, att, qd, self.t_vel), dim=1)
+        else:
+            x = torch.cat((att, qd, self.t_vel), dim=1)
         return self.policy(x)
     
 
@@ -77,21 +93,23 @@ class NN_POLICY_PLANNER(object):
 
         self.policy = policy
 
-        self.mission_mode_pub_ = rospy.Publisher('/traj_server/swarm_command', Int8, queue_size=5)
+        self.swarm_mode_pub_ = rospy.Publisher('/traj_server/swarm_command', Int8, queue_size=5)
         self.commander_state_sub_ = rospy.Subscriber("/drone0/traj_server/state",CommanderState, self.commStateCb, queue_size = 10)
         self.drone_pose_sub_ = rospy.Subscriber("/drone0/mavros/local_position/pose",PoseStamped, self.poseCb, queue_size = 10)
         self.drone_pose_sub_ = rospy.Subscriber("/drone0/mavros/local_position/odom",Odometry, self.odomCb, queue_size = 10)
         self.drone_pose_sub_ = rospy.Subscriber("/mode_change", Bool, self.modeChgCb, queue_size = 10)
+        self.mission_mode_sub_ = rospy.Subscriber("/traj_server/warp_mission_command", Int8, self.missionModeCb, queue_size = 5)
 
         self.warp_drone_pose_pub_ = rospy.Subscriber('/drone0/warp/local_position/pose', PoseStamped, self.warpPoseCB, queue_size=5)
         self.warp_drone_odom_sub_ = rospy.Subscriber('/drone0/warp/local_position/odom', Odometry, self.warpOdomCB, queue_size=5)
         
         #PVA controller trajectory Publisher
         self.pva_traj_pub_ = rospy.Publisher("/drone0/planner_adaptor/exec_trajectory", ExecTrajectory, queue_size = 5)
-        self.pva_traj_pub_ = rospy.Publisher("/drone0/planner_adaptor/exec_trajectory", ExecTrajectory, queue_size = 5)
+        self.mission_mode_pub_ = rospy.Publisher("/traj_server/mission_command", Int8, queue_size = 5, latch=False)
+        
 
         self.rate = rospy.Rate(0.02)
-        self.event_manager = rospy.Timer(rospy.Duration(0.02), self.eventCB)
+        self.event_manager = rospy.Timer(rospy.Duration(0.01), self.eventCB)
 
         #DRONE STATE MACHINE
         self.drone_state = 0
@@ -106,8 +124,8 @@ class NN_POLICY_PLANNER(object):
         self.warp_quat = np.zeros((4,1))
         self.warp_qd = np.zeros((3,1))
         
-
-        self.mission_command_mode = mission_command_mode
+        self.mission_command_mode = 1
+        self.warp_mission_command_mode = mission_command_mode
         self.attitude_mode_toggle = 0
         self.action = np.zeros((1,4))
         time.sleep(1)
@@ -117,10 +135,14 @@ class NN_POLICY_PLANNER(object):
     def commStateCb(self,msg):
         self.drone_state = DRONESTATE[msg.traj_server_state].value
 
+    def missionModeCb(self,msg):
+        self.warp_mission_command_mode = msg.data
+        print(f"Mission Mode changed to {self.warp_mission_command_mode}")
+
     def publish_mission(self, mission_num):
         mission_idx = Int8()
         mission_idx.data = int(mission_num)
-        self.mission_mode_pub_.publish(mission_idx)
+        self.swarm_mode_pub_.publish(mission_idx)
 
     def poseCb(self, msg):
         self.drone_pos = np.array([msg.pose.position.x, msg.pose.position.y, msg.pose.position.z])
@@ -145,46 +167,82 @@ class NN_POLICY_PLANNER(object):
         elif self.drone_state == DRONESTATE["MISSION"].value:
             self.executeMission()
 
+    def publishPVA(self):
+        pva_traj_msg = ExecTrajectory()
+        pva_traj_msg.transform.translation.x = 0.0
+        pva_traj_msg.transform.translation.y = 0.0
+        pva_traj_msg.transform.translation.z = 1.0
+        pva_traj_msg.transform.rotation.x = 0.0
+        pva_traj_msg.transform.rotation.y = 0.0
+        pva_traj_msg.transform.rotation.z = 0.0 #0.707
+        pva_traj_msg.transform.rotation.w = 1.0 #0.707
+        pva_traj_msg.type_mask = 2048
+
+
+        #This part is non essential. Merely for debugging purposes
+        pva_traj_msg.type_mask = self.attitude_mode_toggle
+        pva_traj_msg.throttle = self.action[0,0]
+        pva_traj_msg.angular_rates.angular.x = self.action[0,1]   #body rate x
+        pva_traj_msg.angular_rates.angular.y = self.action[0,2]     #body rate y
+        pva_traj_msg.angular_rates.angular.z = self.action[0,3]     #body rate z
+
+        #Publish the PVA
+        self.pva_traj_pub_.publish(pva_traj_msg)
+
+    def publishATT(self, type_mask, nn_action):
+        pva_traj_msg = ExecTrajectory()
+
+        pva_traj_msg.type_mask = type_mask
+        # print(self.action)
+        pva_traj_msg.throttle = nn_action[0,0] + 0.2  #0.321
+
+        ### This part will only be taken in by trajectory server if type_mask == 0
+        pva_traj_msg.transform.rotation.x = 0.0
+        pva_traj_msg.transform.rotation.y = 0.0
+        pva_traj_msg.transform.rotation.z = 0.707 
+        pva_traj_msg.transform.rotation.w = 0.707
+
+        ### This part will only be taken in by trajectory server if type_mask == 1
+        pva_traj_msg.angular_rates.angular.x = nn_action[0,1]   #body rate x
+        pva_traj_msg.angular_rates.angular.y = nn_action[0,2]    #body rate y
+        pva_traj_msg.angular_rates.angular.z = nn_action[0,3]
+
+        self.pva_traj_pub_.publish(pva_traj_msg)
+
+
+    def checkNNReadiness(self):
+        return not (self.action == 0).all()
+    
+    def publishMissionCmdMode(self, mode):
+        mission_pub_msg = Int8()
+        mission_pub_msg.data = mode
+        self.mission_mode_pub_.publish(mission_pub_msg)
+        if mode == 2:
+            print("switched to mission mode 2: ATTITUDE CONTROL")
+        else:
+            print("switched to mission mode 1: PVA CONTROL")
+
     def executeMission(self):
         if self.drone_state == DRONESTATE["MISSION"].value:
             if self.mission_command_mode == 1:
-                pva_traj_msg = ExecTrajectory()
-                pva_traj_msg.transform.translation.x = 5.0
-                pva_traj_msg.transform.translation.y = 5.0
-                pva_traj_msg.transform.translation.z = 5.0
-                pva_traj_msg.transform.rotation.x = 0.0
-                pva_traj_msg.transform.rotation.y = 0.0
-                pva_traj_msg.transform.rotation.z = 0.0
-                pva_traj_msg.transform.rotation.w = 1.0
-                pva_traj_msg.type_mask = 2048
-
-                self.pva_traj_pub_.publish(pva_traj_msg)
+                self.publishPVA()
+                if self.warp_mission_command_mode == 2:
+                    #Check if ready to switch
+                    if self.checkNNReadiness():
+                        print("me here")
+                        self.publishMissionCmdMode(2)
+                        self.mission_command_mode = 2
+                        
             elif self.mission_command_mode == 2:  #This controls the orientation. Attitude and thrust
-                pva_traj_msg = ExecTrajectory()
+                if self.checkNNReadiness():
+                    self.publishATT(self.attitude_mode_toggle, self.action)
+
+
+                if self.warp_mission_command_mode == 1:
+                    #Check if ready to switch
+                    self.publishMissionCmdMode(1)
+                    self.mission_command_mode = 1
                 
-                if self.attitude_mode_toggle == 0:
-                    pva_traj_msg.type_mask = self.attitude_mode_toggle
-                    pva_traj_msg.throttle = 0.321
-                    pva_traj_msg.transform.rotation.x = 0.0
-                    pva_traj_msg.transform.rotation.y = 0.0
-                    pva_traj_msg.transform.rotation.z = 0.707 
-                    pva_traj_msg.transform.rotation.w = 0.707
-
-                    pva_traj_msg.angular_rates.angular.x = self.action[0,1]   #body rate x
-                    pva_traj_msg.angular_rates.angular.y = self.action[0,2]     #body rate y
-                    pva_traj_msg.angular_rates.angular.z = self.action[0,3] 
-
-
-                    self.pva_traj_pub_.publish(pva_traj_msg)
-
-                elif self.attitude_mode_toggle == 1:  #This controls the body rates nd thrust
-                    pva_traj_msg.type_mask = self.attitude_mode_toggle
-                    pva_traj_msg.throttle = self.action[0,0]
-                    pva_traj_msg.angular_rates.angular.x = self.action[0,1]   #body rate x
-                    pva_traj_msg.angular_rates.angular.y = self.action[0,2]     #body rate y
-                    pva_traj_msg.angular_rates.angular.z = self.action[0,3]     #body rate z
-                    print("me in here")
-                    self.pva_traj_pub_.publish(pva_traj_msg)
 
     def modeChgCb(self, msg):
         if msg.data == True:
@@ -219,10 +277,11 @@ class NN_POLICY_PLANNER(object):
 
     def nn_evaluation(self, event):
         warp_q = self.warp_q[3:]
+        warp_pos = torch.Tensor(self.warp_q[:3]).unsqueeze(0)
         warp_q = torch.Tensor(warp_q).unsqueeze(0)
         warp_qd = torch.Tensor(self.warp_qd).unsqueeze(0)
-        self.action = self.policy.evaluate_(warp_q, warp_qd)
-        print(self.action)
+        self.action = self.policy.evaluate_(warp_pos, warp_q, warp_qd)
+        # print(self.action)
 
 
 
@@ -236,10 +295,11 @@ if __name__=="__main__":
     with open(full_config_path, 'r') as file:
         loaded_params = yaml.safe_load(file)
     mission_command_mode = loaded_params["mission_command_mode"]
+    position_control = loaded_params["position_control"]
 
     full_path = "/home/yanrui/storage/gestelt_ws/src/gestelt/gestelt_navigation/nn_policy/logs/vel_zero"
-    full_policy_path = os.path.join(full_path, "20250313-190627/policy.pth")
-    nn_policy = TEST_RENDER(full_policy_path) 
+    full_policy_path = os.path.join(full_path, "20250326-151411/policy.pth")
+    nn_policy = TEST_RENDER(full_policy_path, position_control) 
 
     nn_policy_planner = NN_POLICY_PLANNER(int(mission_command_mode), nn_policy)
 

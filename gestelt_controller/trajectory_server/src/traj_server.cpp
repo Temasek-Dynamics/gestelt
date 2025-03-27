@@ -37,7 +37,7 @@ void TrajectoryServer::init(ros::NodeHandle& nh, ros::NodeHandle& pnh)
   pnh.param("debug_freq", debug_freq, 10.0);
 
   //Set mission_command_mode
-  setMissionCmd(MissionCmdMode(IntToMission(cmd_mode_num)));
+  setMissionCmd(MissionCmdMode(IntToMission(int(1))));
 
   /////////////////
   /* Subscribers */
@@ -45,6 +45,7 @@ void TrajectoryServer::init(ros::NodeHandle& nh, ros::NodeHandle& pnh)
   // Subscription to commands
   command_server_sub_ = nh.subscribe<gestelt_msgs::Command>("traj_server/command", 5, &TrajectoryServer::serverCommandCb, this);
   swarm_command_server_sub_ = nh.subscribe<std_msgs::Int8>("/traj_server/swarm_command", 5, &TrajectoryServer::swarmServerCommandCb, this);
+  mission_command_server_sub_ = nh.subscribe<std_msgs::Int8>("/traj_server/mission_command", 5, &TrajectoryServer::missionServerCommandCb, this);
 
   // Subscription to planner adaptor
   exec_traj_sub_ = nh.subscribe<gestelt_msgs::ExecTrajectory>("planner_adaptor/exec_trajectory", 5, &TrajectoryServer::execTrajCb, this);
@@ -149,9 +150,9 @@ void TrajectoryServer::execTrajCb(const gestelt_msgs::ExecTrajectory::ConstPtr &
             last_mission_body_rates_(1) = transformed_output_bodyrates_vector.vector.y;
             last_mission_body_rates_(2) = transformed_output_bodyrates_vector.vector.z;
 
-            std::cout << "This is x: " << last_mission_body_rates_(0) << "\n";
-            std::cout << "This is y: " << last_mission_body_rates_(1) << "\n";
-            std::cout << "This is z: " << last_mission_body_rates_(2) << "\n";
+            // std::cout << "This is x: " << last_mission_body_rates_(0) << "\n";
+            // std::cout << "This is y: " << last_mission_body_rates_(1) << "\n";
+            // std::cout << "This is z: " << last_mission_body_rates_(2) << "\n";
            } 
         catch (tf2::TransformException &ex)
         {
@@ -260,9 +261,12 @@ void TrajectoryServer::UAVOdomCB(const nav_msgs::Odometry::ConstPtr &msg)
       // std::cout << "printing y value: " << final_quat(1);
       // std::cout << "printing z value: " << final_quat(2);
       // std::cout << "printing w value: " << final_quat(3);
-      warp_pose.pose.position.x = transformStamped.transform.translation.x;
-      warp_pose.pose.position.y = transformStamped.transform.translation.y;
-      warp_pose.pose.position.z = transformStamped.transform.translation.z;
+      geometry_msgs::TransformStamped transformStamped_wb;
+      transformStamped_wb = tfBuffer.lookupTransform("warp", "body", ros::Time(0));
+
+      warp_pose.pose.position.x = transformStamped_wb.transform.translation.x;
+      warp_pose.pose.position.y = transformStamped_wb.transform.translation.y;
+      warp_pose.pose.position.z = transformStamped_wb.transform.translation.z;
       warp_pose.pose.orientation.x = final_quat(0);
       warp_pose.pose.orientation.y = final_quat(1);
       warp_pose.pose.orientation.z = final_quat(2);
@@ -297,6 +301,19 @@ void TrajectoryServer::serverCommandCb(const gestelt_msgs::Command::ConstPtr & m
   }
 
   setServerEvent(ServerEvent(msg->command));
+}
+
+void TrajectoryServer::missionServerCommandCb(const std_msgs::Int8::ConstPtr & msg)
+{
+  if (msg->data < 0){
+    logError("Invalid server command, ignoring...");
+  }
+  std::cout<< "Me here....\n";
+  std::cout << "current mission command is here" << getMissionCmd() << "\n";
+  setMissionCmd(MissionCmdMode(IntToMission(msg->data)));
+  // std::cout << "Mission Mode Changed to" << cmd_mode_num;
+  // std::cout << "Mission Mode Changed to" << cmd_mode_num;
+  
 }
 
 /* Timer Callbacks */
@@ -577,7 +594,7 @@ void TrajectoryServer::execTakeOff()
   last_mission_pos_(2) = takeoff_height_;
   pos(2) = takeoff_height_;
 
-  logInfoThrottled(str_fmt("[TAKEOFF] Taking off to position (%f, %f, %f)", pos(0), pos(1), pos(2)), takeoff_height_);
+  logInfo(str_fmt("[TAKEOFF] Taking off to position (%f, %f, %f)", pos(0), pos(1), pos(2)));
 
   publishCmd( pos, Vector3d::Zero(), Vector3d::Zero(), Vector3d::Zero(), 
               last_mission_yaw_, 0, 
@@ -595,6 +612,12 @@ void TrajectoryServer::execHover()
   publishCmd( last_mission_pos_, Vector3d::Zero(), Vector3d::Zero(), Vector3d::Zero(), 
               last_mission_yaw_, 0, 
               type_mask);
+
+  if (getMissionCmd() != MissionCmdMode::PVA){
+    std::cout << "Setting....\n";
+    setMissionCmd(MissionCmdMode(IntToMission(int(1))));
+  }
+  
 }
 
 void TrajectoryServer::execMission()
