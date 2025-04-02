@@ -74,7 +74,7 @@ screen -d -m -S mavros bash -c "$EXPORT_SELF_IP source devel/setup.bash; taskset
 sleep ${module_delay}
 sleep ${module_delay}
 sleep ${module_delay}
-echo "mavros ready."
+echo "NN ros wrapper ready."
 
 #################################################################################################################################
 # -1 mavros

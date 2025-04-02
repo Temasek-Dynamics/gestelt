@@ -169,11 +169,13 @@ class NN2_ROS_wrapper:
         gate_vis_msg.type = Marker.LINE_STRIP
         gate_vis_msg.action = Marker.ADD
         for k in range(len(self.gate_t_i.gate_point)):
-            p = self.gate_t_i[k,:]
-            gate_vis_msg.points.append(Point(x=p[0]+ self.trans[0],y=p[1]+ self.trans[1],z=p[2]+ self.trans[2]))
-        gate_vis_msg.points.append(Point(x=self.gate_t_i[0,0] + self.trans[0],
-                                         y=self.gate_t_i[0,1] + self.trans[1],
-                                         z=self.gate_t_i[0,2]))
+            p = self.gate_t_i.gate_point[k,:]
+            gate_vis_msg.points.append(Point(x=p[0] + self.trans[0],
+                                             y=p[1] + self.trans[1],
+                                             z=p[2] + self.trans[2]))
+        gate_vis_msg.points.append(Point(x=self.gate_t_i.gate_point[0,0] + self.trans[0],
+                                         y=self.gate_t_i.gate_point[0,1] + self.trans[1],
+                                         z=self.gate_t_i.gate_point[0,2]))
         gate_vis_msg.color.a = 1.0
         gate_vis_msg.color.r = 1.0
         gate_vis_msg.color.g = 0.0
