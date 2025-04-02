@@ -47,7 +47,7 @@ roslaunch gestelt_bringup sitl_drone.launch
 "
 
 # Start up drone commander (Handles taking off, execution of mission and landing etc.)
-CMD_1="roslaunch trajectory_server trajectory_server_node.launch rviz_config:=gz_sim"
+CMD_1="roslaunch trajectory_server trajectory_server_node.launch"
 
 
 
