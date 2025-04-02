@@ -61,7 +61,7 @@ class NN2_ROS_wrapper:
         NN_model_name=rospy.get_param('NN_deploy_model_name', 'NN2_imitate_1.pth')
         self.NN_freq = rospy.get_param('NN_freq', 100)
         self.MANUAL_SET_POSE_TEST = rospy.get_param('MANUAL_SET_POSE_TEST', False)
-        self.PHYSICAL_GATE = rospy.get_param('gate/PHYSICAL_GATE', False)
+        self.PHYSICAL_GATE = rospy.get_param('gate/PHYSICAL_GATE', True)
 
         ## ==========================initialize ==========================-##
         
