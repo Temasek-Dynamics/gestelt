@@ -11,19 +11,19 @@ ctl_mode: 0
 lqr_init_guess: false
 PR_MATRIX_LEARN: false #PITCH ROLL MATRIX LEARNING
 drone:
-  wing_len: 0.8
-  height: 0.3
+  wing_len: 0.3
+  height: 0.2
   ## in the training, the drone size should be the same as with the gate size
-  wing_len_train: 1.25
-  height_train: 0.55
+  wing_len_train: 0.65
+  height_train: 0.5
   mass: 0.248
   inertia: [0.000392,0.000405,0.000639] # [Ixx, Iyy, Izz] kg.m^2
   diagonal_axis_dist: 0.165 #m
   moment_constant: 8.8e-3
 # gate parameters  
 gate:
-  length: 1.2 #1.2
-  width: 0.5 # 0.5
+  length: 0.6 #1.2
+  width: 0.45 # 0.5
   thickness: 2 # along quadrotor forward direction
   init_std_dev: 0.087 #pi/36=
   final_std_dev: 0.2618 #pi/12
@@ -47,7 +47,7 @@ mission:
   # only feasible for MANUAL_SET_POSE_TEST
   gate_position: [0.0, -0.0, 1.8]
   # gate_ori_RP: [-0.0, -1.055, 0.0]
-  gate_ori_euler: [0.0, 3.14,-0.0] # zyx 1.0 radian is 57.2958 degree,1.3 radian is 1.5 radian is 85.9437 degree 
+  gate_ori_euler: [0.0, -1.0,-0.0] # zyx 1.0 radian is 57.2958 degree,1.3 radian is 1.5 radian is 85.9437 degree 
   
   ##------ goal pose ----##
   goal_position: [0.0, -1.8, 1.5]
@@ -85,7 +85,7 @@ learning_agile:
   wthrust: 1
   wdthrust: 0.1
   w_tra_throttle: 5
-  wwt: 5
+  wwt: 15
   wwt_z: 15
   wm: 50
   # path cost
@@ -95,11 +95,11 @@ learning_agile:
 
   # terminal cost
   wrf: 500 #1200.0     #2 X 20(N) X wrp
-  wvf: 500 #400.0
+  wvf: 100 #400.0
   wqf: 100
   ##------ traversing parameters ---##
-  max_tra_w: 5000 #100 be the learnable variable
-  traverse_weight_span: 400 
+  max_tra_w: 100 #100 be the learnable variable
+  traverse_weight_span: 10 
   traverse_time: 1.5 # only for MANUAL_SET_POSE_TEST
 
 
@@ -160,13 +160,13 @@ pretrain_param:
 
 ## ------NN configuration ----##
 
-# NN_model_name: 'training_results/new_format/2025-01-16/09-59-31/trained_model/NN_close_3200.pth' #**# 75% success rate
+NN_model_name: 'training_results/new_format/2025-01-16/09-59-31/trained_model/NN_close_3200.pth' #**# 75% success rate
 # NN_model_name: 'training_results/new_format/2025-01-31/11-40-49/trained_model/NN_close_1900.pth' # 80% success rate
 # NN_model_name: 'training_results/new_format/2025-02-13/15-25-09/trained_model/NN_close_200.pth' # BPTT effect comparison
 # NN_model_name: 'training_results/new_format/2025-02-13/15-48-00/trained_model/NN_close_100.pth'
 # NN_model_name: 'training_results/new_format/2025-02-24/16-45-20/trained_model/NN_close_100.pth' #**#
 # NN_model_name: 'training_results/new_format/2025-03-11/09-58-34/trained_model/NN_close_200.pth' #**# without BPTT
-NN_model_name: 'training_results/new_format/2025-03-11/20-45-18/trained_model/NN_close_80.pth' #with BPTT
+# NN_model_name: 'training_results/new_format/2025-03-11/20-45-18/trained_model/NN_close_80.pth' #with BPTT
 # NN_model_name: 'training_results/new_format/2025-01-22/10-26-33/trained_model/NN_close_120.pth' # train for the moving gate
 
 NN_deploy_model_name: 'deployed_model/2025-01-16/09-59-31/trained_model/NN_close_3200.pth' # used in the sitl

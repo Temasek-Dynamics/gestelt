@@ -190,7 +190,7 @@ class LearningAgileSim():
         if not self.options['MANUAL_SET_POSE_TEST']:
             # load trained DNN2 model
             if model_file is not None:
-                self.model = torch.load(model_file)
+                self.model = torch.load(model_file, map_location=torch.device('cpu'))
     
 
         ##-------------------- planning variables --------------------------##
@@ -619,7 +619,7 @@ def parse_options():
     parser.add_argument('--USE_PREV_SOLVER', type=str2bool, default=False, help='Enable or disable USE_PREV_SOLVER.')
     parser.add_argument('--PDP_GRADIENT', type=str2bool, default=False, help='Enable or disable PDP_GRADIENT.')
     parser.add_argument('--SQP_RTI_OPTION', type=str2bool, default=True, help='SQP or the DDP')
-    parser.add_argument('--MANUAL_SET_POSE_TEST', type=str2bool, default=True, help='Enable or disable MANUAL_SET_POSE_TEST.')
+    parser.add_argument('--MANUAL_SET_POSE_TEST', type=str2bool, default=False, help='Enable or disable MANUAL_SET_POSE_TEST.')
     parser.add_argument('--CLOSE_LOOP_MODEL', type=str2bool, default=True, help='Enable or disable CLOSE_LOOP_MODEL.')
     parser.add_argument('--JAX_SVD', type=str2bool, default=False, help='Enable or disable JAX_SVD.')
     parser.add_argument('--CLOSE_LOOP_TRAINING', type=str2bool, default=False, help='Enable or disable CLOSE_LOOP_TRAINING.')

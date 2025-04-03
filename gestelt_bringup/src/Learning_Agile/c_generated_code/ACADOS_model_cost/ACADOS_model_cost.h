@@ -45,6 +45,7 @@ const int *ACADOS_model_cost_ext_cost_0_fun_sparsity_in(int);
 const int *ACADOS_model_cost_ext_cost_0_fun_sparsity_out(int);
 int ACADOS_model_cost_ext_cost_0_fun_n_in(void);
 int ACADOS_model_cost_ext_cost_0_fun_n_out(void);
+real_t* ACADOS_model_cost_ext_cost_0_fun_get_pool_double(const char*);
 
 int ACADOS_model_cost_ext_cost_0_fun_jac_hess(const real_t** arg, real_t** res, int* iw, real_t* w, void *mem);
 int ACADOS_model_cost_ext_cost_0_fun_jac_hess_work(int *, int *, int *, int *);
@@ -52,6 +53,7 @@ const int *ACADOS_model_cost_ext_cost_0_fun_jac_hess_sparsity_in(int);
 const int *ACADOS_model_cost_ext_cost_0_fun_jac_hess_sparsity_out(int);
 int ACADOS_model_cost_ext_cost_0_fun_jac_hess_n_in(void);
 int ACADOS_model_cost_ext_cost_0_fun_jac_hess_n_out(void);
+real_t* ACADOS_model_cost_ext_cost_0_fun_jac_hess_get_pool_double(const char*);
 
 int ACADOS_model_cost_ext_cost_0_fun_jac(const real_t** arg, real_t** res, int* iw, real_t* w, void *mem);
 int ACADOS_model_cost_ext_cost_0_fun_jac_work(int *, int *, int *, int *);
@@ -59,6 +61,7 @@ const int *ACADOS_model_cost_ext_cost_0_fun_jac_sparsity_in(int);
 const int *ACADOS_model_cost_ext_cost_0_fun_jac_sparsity_out(int);
 int ACADOS_model_cost_ext_cost_0_fun_jac_n_in(void);
 int ACADOS_model_cost_ext_cost_0_fun_jac_n_out(void);
+real_t* ACADOS_model_cost_ext_cost_0_fun_jac_get_pool_double(const char*);
 
 
 
@@ -74,6 +77,7 @@ const int *ACADOS_model_cost_ext_cost_fun_sparsity_in(int);
 const int *ACADOS_model_cost_ext_cost_fun_sparsity_out(int);
 int ACADOS_model_cost_ext_cost_fun_n_in(void);
 int ACADOS_model_cost_ext_cost_fun_n_out(void);
+real_t* ACADOS_model_cost_ext_cost_fun_get_pool_double(const char*);
 
 int ACADOS_model_cost_ext_cost_fun_jac_hess(const real_t** arg, real_t** res, int* iw, real_t* w, void *mem);
 int ACADOS_model_cost_ext_cost_fun_jac_hess_work(int *, int *, int *, int *);
@@ -81,6 +85,7 @@ const int *ACADOS_model_cost_ext_cost_fun_jac_hess_sparsity_in(int);
 const int *ACADOS_model_cost_ext_cost_fun_jac_hess_sparsity_out(int);
 int ACADOS_model_cost_ext_cost_fun_jac_hess_n_in(void);
 int ACADOS_model_cost_ext_cost_fun_jac_hess_n_out(void);
+real_t* ACADOS_model_cost_ext_cost_fun_jac_hess_get_pool_double(const char*);
 
 int ACADOS_model_cost_ext_cost_fun_jac(const real_t** arg, real_t** res, int* iw, real_t* w, void *mem);
 int ACADOS_model_cost_ext_cost_fun_jac_work(int *, int *, int *, int *);
@@ -88,6 +93,7 @@ const int *ACADOS_model_cost_ext_cost_fun_jac_sparsity_in(int);
 const int *ACADOS_model_cost_ext_cost_fun_jac_sparsity_out(int);
 int ACADOS_model_cost_ext_cost_fun_jac_n_in(void);
 int ACADOS_model_cost_ext_cost_fun_jac_n_out(void);
+real_t* ACADOS_model_ost_ext_cost_fun_jac_get_pool_double(const char*);
 
 
 
@@ -102,6 +108,7 @@ const int *ACADOS_model_cost_ext_cost_e_fun_sparsity_in(int);
 const int *ACADOS_model_cost_ext_cost_e_fun_sparsity_out(int);
 int ACADOS_model_cost_ext_cost_e_fun_n_in(void);
 int ACADOS_model_cost_ext_cost_e_fun_n_out(void);
+real_t* ACADOS_model_cost_ext_cost_e_fun_get_pool_double(const char*);
 
 int ACADOS_model_cost_ext_cost_e_fun_jac_hess(const real_t** arg, real_t** res, int* iw, real_t* w, void *mem);
 int ACADOS_model_cost_ext_cost_e_fun_jac_hess_work(int *, int *, int *, int *);
@@ -109,6 +116,7 @@ const int *ACADOS_model_cost_ext_cost_e_fun_jac_hess_sparsity_in(int);
 const int *ACADOS_model_cost_ext_cost_e_fun_jac_hess_sparsity_out(int);
 int ACADOS_model_cost_ext_cost_e_fun_jac_hess_n_in(void);
 int ACADOS_model_cost_ext_cost_e_fun_jac_hess_n_out(void);
+real_t* ACADOS_model_cost_ext_cost_e_fun_jac_hess_get_pool_double(const char*);
 
 int ACADOS_model_cost_ext_cost_e_fun_jac(const real_t** arg, real_t** res, int* iw, real_t* w, void *mem);
 int ACADOS_model_cost_ext_cost_e_fun_jac_work(int *, int *, int *, int *);
@@ -116,6 +124,7 @@ const int *ACADOS_model_cost_ext_cost_e_fun_jac_sparsity_in(int);
 const int *ACADOS_model_cost_ext_cost_e_fun_jac_sparsity_out(int);
 int ACADOS_model_cost_ext_cost_e_fun_jac_n_in(void);
 int ACADOS_model_cost_ext_cost_e_fun_jac_n_out(void);
+real_t* ACADOS_model_cost_ext_cost_e_fun_jac_get_pool_double(const char*);
 
 
 
