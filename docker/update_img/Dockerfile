@@ -19,8 +19,8 @@ SHELL ["/bin/bash", "-c"]
 
 # Make directory and clone repository
 WORKDIR /gestelt_ws/src/gestelt
-RUN git pull
-RUN git checkout tianchensun_learning_agile
+RUN git fetch origin
+RUN git checkout origin/with_gate_model_16_Jan
 
 
 ## if the c_generated_code is git ignored, than this script is required to generate the c code
