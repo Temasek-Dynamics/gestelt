@@ -5,5 +5,6 @@
     <node pkg="gestelt_bringup" name="NN_wrapper" type="NN2_ROS_wrapper.py" output="screen">
         <param name="is_simulation" value="$(arg is_simulation)"/>
     </node>
-  
+    <node unless ="$(arg is_simulation)" pkg="tf" type="static_transform_publisher" name="map_to_world_broadcaster" 
+        args="0 0 0 0 0 0 map world 100"/>
 </launch>

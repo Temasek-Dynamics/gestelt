@@ -16,7 +16,7 @@ from quad_moving import binary_search_solver
 from geometry.solid_geometry import pitch_from_gate,magni,verify_SVD_ca
 
 from gestelt_msgs.msg import Goals,  CommanderState, close_loop_NN_output
-from geometry_msgs.msg import  PoseStamped, TwistStamped, Point
+from geometry_msgs.msg import  PoseStamped, TwistStamped, Point, PoseArray, Pose
 from std_msgs.msg import Float32
 from visualization_msgs.msg import Marker
 from learning_agile_sim import MovingGate, get_obs, manual_set_z_forward
@@ -80,7 +80,7 @@ class NN2_ROS_wrapper:
         rospy.Subscriber("/mavros/local_position/velocity_local", TwistStamped, self.drone_twist_cb)
         rospy.Subscriber("/planner/goals_learning_agile", Goals, self.mission_start_cb)
         if self.PHYSICAL_GATE:
-            rospy.Subscriber("vrpn_client_node/gate_tianchensun/pose", PoseStamped, self.physical_gate_pose_cb)
+            rospy.Subscriber("/vrpn_client_node/gate_tianchensun/pose", PoseStamped, self.physical_gate_pose_cb)
 
         self.NN_trav_pose_pub = rospy.Publisher("/learning_agile_sim/NN_trav_pose", close_loop_NN_output, queue_size=1)
         self.vis_NN_trav_pose_pub = rospy.Publisher("/learning_agile_sim/vis_NN_trav_pose", PoseStamped, queue_size=1)
@@ -88,11 +88,15 @@ class NN2_ROS_wrapper:
 
         self.B_S_time_pub = rospy.Publisher("/learning_agile_sim/B_S_time", Float32, queue_size=1)
         self.NN_forward_time_pub = rospy.Publisher("/learning_agile_sim/NN_forward_time", Float32, queue_size=1)
-        self.gate_vis_pub = rospy.Publisher("/learning_agile_sim/gate_vis", Marker, queue_size=1)
+        
         self.gate_pitch_pub = rospy.Publisher("/learning_agile_sim/gate_pitch", Float32, queue_size=1)
-
+        self.gate_points_pub = rospy.Publisher("/visual/gate_points", PoseArray, queue_size=1)
+        self.physical_gate_points_rotated = get_gate_points(gate_center=[0,0,1.8],
+                                    gate_length=rospy.get_param('gate/length', 0.6),
+                                    gate_width=rospy.get_param('gate/width', 0.45))
+        self.gate_state_acquire_timer = rospy.Timer(rospy.Duration(1/self.NN_freq), self.gate_state_acquire)
         if not self.MANUAL_SET_POSE_TEST:
-            self.gate_vis_timer = rospy.Timer(rospy.Duration(1/self.NN_freq), self.gate_vis)
+            
             self.NN2_output_timer = rospy.Timer(rospy.Duration(1/self.NN_freq), self.close_loop_NN_forward)
         
             ##================- load trained DNN2 model ======================-##
@@ -114,7 +118,7 @@ class NN2_ROS_wrapper:
         self.gate_points_list = self.moving_gate.gate_points_list
         self.gate_t_i = Gate(self.gate_points_list[0]) 
         self.history_obs = deque(maxlen=5)
-        self.physical_gate_points_rotated = np.zeros((4,3))
+        
         ##=======================misc ====================================##
         """
         callback function for the drone pose, under the world frame,
@@ -136,7 +140,8 @@ class NN2_ROS_wrapper:
         Args:
             msg (pose_stamped): the pose of the gate
         """
-        gate_points_no_pitch=get_gate_points(gate_center=[msg.pose.position.x,msg.pose.position.y,msg.pose.position.z],
+        gate_center = [msg.pose.position.x,msg.pose.position.y,msg.pose.position.z]
+        gate_points_no_pitch=get_gate_points(gate_center=[0,0,0],
                                     gate_length=rospy.get_param('gate/length', 1.2),
                                     gate_width=rospy.get_param('gate/width', 0.5))
         
@@ -144,10 +149,10 @@ class NN2_ROS_wrapper:
         gate_rot_mat = R.from_quat(gate_rot).as_matrix()
 
         # rotate the gate points with the gate rotation
-        self.physical_gate_points_rotated = gate_points_no_pitch @ gate_rot_mat.T #V^T @ R^T
+        self.physical_gate_points_rotated = gate_points_no_pitch @ gate_rot_mat.T + gate_center #V^T @ R^T
 
     
-    def gate_vis(self,event):
+    def gate_state_acquire(self,event):
         ##====frequency of the gate state estimation is the same as the NN2 ========##
         curr_time = rospy.Time.now().to_sec()
 
@@ -159,36 +164,25 @@ class NN2_ROS_wrapper:
         if self.PHYSICAL_GATE:
             self.gate_t_i = Gate(self.physical_gate_points_rotated)
         else:
-            self.gate_t_i = Gate(self.gate_points_list[self.i])   
-        ##============================ gate visualization =========================##
-        gate_vis_msg = Marker()
-        gate_vis_msg.header.frame_id = "world"
-        gate_vis_msg.header.stamp = rospy.Time.now()
-        gate_vis_msg.ns = "gate"
-        gate_vis_msg.id = 0
-        gate_vis_msg.type = Marker.LINE_STRIP
-        gate_vis_msg.action = Marker.ADD
+            self.gate_t_i = Gate(self.gate_points_list[self.i]) 
+
+        ##============================ gate points publisher =========================##
+        gate_points_msg = PoseArray()
+        gate_points_msg.header.frame_id = "world"
+        gate_points_msg.header.stamp = rospy.Time.now()
+        gate_points_msg.poses = []
         for k in range(len(self.gate_t_i.gate_point)):
-            p = self.gate_t_i.gate_point[k,:]
-            gate_vis_msg.points.append(Point(x=p[0] + self.trans[0],
-                                             y=p[1] + self.trans[1],
-                                             z=p[2] + self.trans[2]))
-        gate_vis_msg.points.append(Point(x=self.gate_t_i.gate_point[0,0] + self.trans[0],
-                                         y=self.gate_t_i.gate_point[0,1] + self.trans[1],
-                                         z=self.gate_t_i.gate_point[0,2]))
-        gate_vis_msg.color.a = 1.0
-        gate_vis_msg.color.r = 1.0
-        gate_vis_msg.color.g = 0.0
-        gate_vis_msg.color.b = 0.0
-        gate_vis_msg.scale.x = 0.05   # control the width of the line
-        gate_vis_msg.pose.orientation.w = 1.0
-        gate_vis_msg.pose.orientation.x = 0.0
-        gate_vis_msg.pose.orientation.y = 0.0
-        gate_vis_msg.pose.orientation.z = 0.0
-        gate_vis_msg.pose.position.x = 0 
-        gate_vis_msg.pose.position.y = 0 
-        gate_vis_msg.pose.position.z = 0 
-        self.gate_vis_pub.publish(gate_vis_msg)
+            single_gate_point = Pose()
+            single_gate_point.pose.position.x=self.gate_t_i.gate_point[k,0] + self.trans[0]
+            single_gate_point.pose.position.y=self.gate_t_i.gate_point[k,1] + self.trans[1]
+            single_gate_point.pose.position.z=self.gate_t_i.gate_point[k,2] + self.trans[2]
+            single_gate_point.pose.orientation.x = 0.0
+            single_gate_point.pose.orientation.y = 0.0
+            single_gate_point.pose.orientation.z = 0.0
+            single_gate_point.pose.orientation.w = 1.0
+            gate_points_msg.poses.append(single_gate_point)
+        self.gate_points_pub.publish(gate_points_msg)
+              
 
    
     def close_loop_NN_forward(self,event):
@@ -203,7 +197,7 @@ class NN2_ROS_wrapper:
             
             
             if self.i>=self.mission_period*self.NN_freq-1:
-                self.gate_vis_timer.shutdown()
+                self.gate_state_acquire_timer.shutdown()
                 
                 print("Reach Maximum Time, stop the NN forward, set -5s as the traversing time")
                 NN_trav_time_msg = Float32()
@@ -329,7 +323,7 @@ if __name__ == '__main__':
         
         
 #         if self.i>=self.mission_period*self.NN_freq:
-#             self.gate_vis_timer.shutdown()
+#             self.gate_state_acquire_timer.shutdown()
             
 #             print("Reach Maximum Time, stop the NN forward, set -5s as the traversing time")
 #             NN_trav_time_msg = Float32()

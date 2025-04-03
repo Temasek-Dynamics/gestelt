@@ -37,7 +37,7 @@ export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:$gestelt_bringup_DIR:$PX4_AUTOPILOT_RE
 # "
 
 CMD_2="
-roslaunch gestelt_bringup rviz.launch rviz_config:= rviz_config:=gz_sim 
+roslaunch gestelt_bringup rviz.launch rviz_config:= rviz_config:=gz_real 
 "
 
 CMD_3="
