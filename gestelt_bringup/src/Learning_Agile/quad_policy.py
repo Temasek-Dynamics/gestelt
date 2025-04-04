@@ -81,7 +81,7 @@ class PlanFwdBwdWrapper():
        
         self.uavoc.setDyn(self.uav.f,self.dt)
         
-        # P=self.lqrAsTerminalCost()
+        # P=self.LQR_as_terminal_cost()
         # diag_P = np.diag(P)   
         # wrt: ,gate traverse position cost
         # wqt: gate traverse attitude cost
@@ -125,7 +125,8 @@ class PlanFwdBwdWrapper():
 
 
 
-        self.uavoc.setPathCost(self.uav.path_cost,goal_state=self.uav.goal_state)
+        self.uavoc.setPathCost(self.uav.path_cost,
+                               goal_state=self.uav.goal_state)
         self.uavoc.setFinalCost(self.uav.final_cost,goal_state=self.uav.goal_state)
     
         ## for the safe PDP backward
@@ -220,7 +221,7 @@ class PlanFwdBwdWrapper():
             NO_SOLUTION_FLAG = False
             ## set the traverse hyperparameters value (auxvar) here
             trav_auxvar_value = np.concatenate((tra_pos,tra_ang,np.array([t_tra]))) #np.array([gamma]),
-            self.sol1,NO_SOLUTION_FLAG =self.mpcUpdate(cur_state=self.ini_state, 
+            self.sol1,NO_SOLUTION_FLAG =self.mpc_update(cur_state=self.ini_state, 
                                                         trav_auxvar_value=trav_auxvar_value)
         # state_traj [x,y,z,vx,vy,vz,qw,qx,qy,qz]
         state_traj = self.sol1['state_traj_opt']
@@ -284,6 +285,17 @@ class PlanFwdBwdWrapper():
         self.d_L_d_st_traj = self.d_L_d_st_traj.reshape(self.horizon+1,1,self.uavoc.n_state)
         return [penalty,self.d_L_d_st_traj]
     
+    def get_penalty_demo(self, demo_state_traj, state_traj):
+        """
+        For learning from demonstration, the penalty MSE between the demo trajectory and the current trajectory
+        """
+        # compute the MSE loss between the demo trajectory and the current trajectory
+        mse_loss= np.mean((demo_state_traj - state_traj)**2)
+        # compute the derivative of the loss with respect to the current trajectory
+        d_L_d_st_traj = 2 * (state_traj - demo_state_traj) / len(state_traj)
+        d_L_d_st_traj = d_L_d_st_traj.reshape(self.horizon+1,1,self.uavoc.n_state)
+        return [mse_loss,d_L_d_st_traj]
+    
     def get_failed(self,state_traj,gate_points_list):
         
         """
@@ -321,7 +333,7 @@ class PlanFwdBwdWrapper():
         if self.options['PDP_GRADIENT']:
             NO_SOLUTION_FLAG = False
             trav_auxvar_value = np.concatenate((tra_pos,tra_ang,np.array([t_tra])))
-            self.sol1,NO_SOLUTION_FLAG =self.mpcUpdate(cur_state=self.ini_state, 
+            self.sol1,NO_SOLUTION_FLAG =self.mpc_update(cur_state=self.ini_state, 
                                                         trav_auxvar_value=trav_auxvar_value)
         
         
@@ -408,7 +420,7 @@ class PlanFwdBwdWrapper():
         ###################################################################
         ###----- Set mpc external variables VALUE to diffPMP--------#######
         ###################################################################
-
+        # self.horizon = self.sol1['control_traj_opt'].shape[0]
     
         ## using LQR solver to solve the auxilary control system to get the analytical gradient
         # set values to the auxilary control system symbolic functions 
@@ -434,7 +446,7 @@ class PlanFwdBwdWrapper():
         self.d_st_traj_d_z = np.array(aux_sol['state_traj_opt']) #(n_node,n_state,n_trav_auxvar)
         self.d_input_traj_d_z = np.array(aux_sol['control_traj_opt'])
     
-    def lqrAsTerminalCost(self):
+    def LQR_as_terminal_cost(self):
         """
         Generate the MPC terminal cost with only the goal cost and the linearized dynamics at the hovering state,
         by using the infinite horizon LQR solver
@@ -455,7 +467,7 @@ class PlanFwdBwdWrapper():
         # B_disc=np.matmul(np.linalg.inv(A),A_disc-np.eye(A.shape[0]))@B
         
         ## check the controllability 
-        rank=checkControllability(A,B)
+        rank=check_controllability(A,B)
         path_diag_vals=[30]*3+[self.config['learning_agile']['wvp']]*3+[self.config['learning_agile']['wqp']]*4
         control_diag_vals=[self.config['learning_agile']['wthrust']]+[self.config['learning_agile']['wwt']]*2+[self.config['learning_agile']['wwt_z']]
         Q=np.diag(path_diag_vals)
@@ -468,7 +480,7 @@ class PlanFwdBwdWrapper():
         return P
     
 
-    def lqrAsInitGuess(self,trav_auxvar_value,cur_state,cur_u):
+    def LQR_as_init_guess(self,trav_auxvar_value,cur_state,cur_u):
         """ 
         Generating an initial trajectory with only the goal cost and the linearized dynamics at the hovering state,
         using the Finite Horizon LQR solver, where the terminal cost is the MPC terminal cost
@@ -500,7 +512,7 @@ class PlanFwdBwdWrapper():
         return init_guess_sol
     
     ## given initial state, control command, high-level parameters, obtain the first control command of the quadrotor
-    def mpcUpdate(self, 
+    def mpc_update(self, 
                    cur_state,
                    trav_auxvar_value,
                    last_u=None,
@@ -517,7 +529,7 @@ class PlanFwdBwdWrapper():
         """
         init_guess=None
         if self.config['lqr_init_guess'] and first_iter:
-            init_guess = self.lqrAsInitGuess(trav_auxvar_value,cur_state=cur_state,cur_u=last_u)
+            init_guess = self.LQR_as_init_guess(trav_auxvar_value,cur_state=cur_state,cur_u=last_u)
         ## MPC requires both the goal state adn the traverse hyperparameters
         
         # self.sol1 = self.uavoc.ocSolver(cur_state_control=cur_state_control,t_tra=t)
@@ -531,7 +543,7 @@ class PlanFwdBwdWrapper():
         # return control, pos_vel_cmd
         return self.sol1,NO_SOLUTION_FLAG
 
-def checkControllability(A,B):
+def check_controllability(A,B):
     """
     check the controllability of the system
     """

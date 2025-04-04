@@ -145,7 +145,7 @@ class LearningAgileBase:
         self.t_tra_rel = self.np_nn_out[-1]
         
         ## == MPC forward === ##        
-        cmd_solution,NO_SOLUTION_FLAG = self.planner.mpcUpdate(cur_state=self.state,
+        cmd_solution,NO_SOLUTION_FLAG = self.planner.mpc_update(cur_state=self.state,
                                                                 trav_auxvar_value=self.np_nn_out,
                                                                 last_u=self.last_u,
                                                                 first_iter=(self.i==0))
@@ -283,12 +283,12 @@ class LearningAgileBase:
     
     @property
     def penalty(self):
-        return np.array([sum(self.L_i)])/self.planner.horizon
+        return np.array([sum(self.L_i)])/mission_cfg['learning_agile']['horizon']
     
     @property
     def p_L_p_z(self):
         p_L_p_z = np.array(self.p_L_i_p_z_i)
-        return p_L_p_z/self.planner.horizon
+        return p_L_p_z/mission_cfg['learning_agile']['horizon']
 
    
 # def get_penalty(base:LearningAgileBase):
@@ -339,21 +339,21 @@ def vis_gradient_norm(p_L_p_z_batch:np.array):
     ax.grid()
     plt.show()
 
-if __name__ == "__main__":
-    training_data_folder=os.path.abspath(os.path.join(current_dir, 'training_data'))
-    model_folder=os.path.abspath(os.path.join(training_data_folder, 'NN_model'))
+# if __name__ == "__main__":
+#     training_data_folder=os.path.abspath(os.path.join(current_dir, 'training_data'))
+#     model_folder=os.path.abspath(os.path.join(training_data_folder, 'NN_model'))
 
 
-    # cProfile.run("base=LearningAgileBase(mission_cfg,train_cfg,options)")
-    # cProfile.run("base.load_model(model_folder)")
-    # cProfile.run("base.run_single_episode(DEBUG=True,BACKWARD=False)")
-    base=LearningAgileBase(mission_cfg,train_cfg,options)
-    base.load_model(model_folder)
-    run_single_episode(base)
-    print(base.penalty)
-    print(base.p_L_p_z)
+#     # cProfile.run("base=LearningAgileBase(mission_cfg,train_cfg,options)")
+#     # cProfile.run("base.load_model(model_folder)")
+#     # cProfile.run("base.run_single_episode(DEBUG=True,BACKWARD=False)")
+#     base=LearningAgileBase(mission_cfg,train_cfg,options)
+#     base.load_model(model_folder)
+#     run_single_episode(base)
+#     print(base.penalty)
+#     print(base.p_L_p_z)
 
-    vis_gradient_norm(base.p_L_p_z)
+#     vis_gradient_norm(base.p_L_p_z)
     # run_debug(base.learning_agile_sim.planner,
     #               base.state_n,
     #               base.learning_agile_sim.final_point,

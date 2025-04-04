@@ -4,6 +4,7 @@ from datetime import datetime
 import os
 import yaml
 import numpy as np
+import wandb
 
 from scipy.spatial.transform import Rotation as R
 from geometry.solid_geometry import pitch_from_gate,recover_euler_from_9d
@@ -101,3 +102,44 @@ def log_drone_state(writer,drone_state,control, global_step):
 
 
 
+def log_train_IO_wandb(inputs,outputs,global_step):
+    euler_nn,_=recover_euler_from_9d(outputs,deg_unit=True)
+    det_m = np.linalg.det(outputs[3:12].reshape(3,3))
+    abs_gate_point=inputs[13:25].reshape(-1,3)+inputs[0:3]
+    gate_pitch = pitch_from_gate(abs_gate_point)
+    gate_pitch = gate_pitch*180/np.pi
+    wandb.log({"env/gate_pitch":gate_pitch},step=global_step)
+    wandb.log({"NN_output/x_tra":outputs[0],"NN_output/y_tra":outputs[1],"NN_output/z_tra":outputs[2],
+                "NN_output/yaw_tra":euler_nn[0],"NN_output/pitch_tra":euler_nn[1],"NN_output/roll_tra":euler_nn[2],
+                "NN_output/determinant_m":det_m,
+                # "NN_output/tra_throttle":outputs[-5],
+                "NN_output/wrpx":outputs[-8],
+                "NN_output/wrpy":outputs[-7],
+                "NN_output/wrpz":outputs[-6],
+                "NN_output/wrtx":outputs[-5],
+                "NN_output/wrty":outputs[-4],
+                "NN_output/wrtz":outputs[-3],
+                "NN_output/wqt":outputs[-2],
+                "NN_output/t_tra":outputs[-1]},step=global_step)
+    return euler_nn,gate_pitch
+
+def log_gradient_wandb(gra,reward,global_step):
+    wandb.log({"gradient/drdx":gra[0],"gradient/drdy":gra[1],"gradient/drdz":gra[2],
+                "gradient/drd9D_norm":np.linalg.norm(gra[3:12]),
+                # "gradient/drdwthrottle":gra[-6],
+                "gradient/drdwrpx":gra[-9],
+                "gradient/drdwrpy":gra[-8],
+                "gradient/drdwrpz":gra[-7],
+                "gradient/drdwrtx":gra[-6],
+                "gradient/drdwrty":gra[-5],
+                "gradient/drdwrtz":gra[-4],
+                "gradient/drdwqt":gra[-3],
+                "gradient/drdt":gra[-2],
+                "mean_penalty_pre_batch":reward},step=global_step)
+    
+def log_drone_state_wandb(drone_state,control, global_step):
+    wandb.log({"drone_state/actual_x":drone_state[0],"drone_state/actual_y":drone_state[1],"drone_state/actual_z":drone_state[2],
+                "drone_state/thrust":control[0],
+                "drone_state/body_rate_x":control[1],
+                "drone_state/body_rate_y":control[2],
+                "drone_state/body_rate_z":control[3]},step=global_step)

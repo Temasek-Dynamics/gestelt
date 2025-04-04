@@ -24,9 +24,9 @@ from geometry.solid_geometry import magni, pitch_from_gate, verify_SVD_ca,verify
 from misc.misc import str2bool 
 from config import mission_cfg, train_cfg
 
-# device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-device=torch.device('cpu')
+device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 # device=torch.device('cpu')
+
 input_size = train_cfg['model']['input_size'] 
 hidden_size = train_cfg['model']['hidden_size']
 output_size = train_cfg['model']['output_size']  
@@ -62,11 +62,7 @@ def get_obs(history_obs = None,
     ## gate points
     relative_gate_points = gate_t_i.gate_point-drone_state[0:3]
     immed_obs[13:25]=relative_gate_points.flatten() # gate points
-    
-    # position of the gate,# width of the gate,# pitch angle of the gate
-    # immed_obs[25:28] = gate_t_i.centroid
-    # immed_obs[28] = magni(gate_t_i.gate_point[0,:]-gate_t_i.gate_point[3,:]) # gate width
-    # immed_obs[29:38]=rot.as_matrix().flatten()
+
     
     if i == 0:
         for _ in range(5):
@@ -85,37 +81,14 @@ def manual_set_z_forward(gate_center:np.array=None,
     # manually set the traversal time and pose
     out=np.zeros(output_size)
     out[0:3]=gate_center
-    # out[3:6]=self.gate_ori_RP # Rodrigues parameters
-    if mission_cfg['PR_MATRIX_LEARN']:
-        # 90 degree rotation around y axis,rotation matrix,2x2
-        pitch=np.pi/2
-        roll=np.pi/4
-        out[3:7]= np.array([[math.cos(pitch),math.sin(pitch)],[-math.sin(pitch),math.cos(pitch)]]).flatten()
-        out[7:11]=np.array([[math.cos(roll),-math.sin(roll)],[math.sin(roll),math.cos(roll)]]).flatten()
-    else:
-        out[3:12]=gate_ori_9d # manual set 9D vector (is rotation matrix directly)
-    # out[12:15]=[0,-5,0] # velocity
-    # print("="*50)
-    # print("NN pose det before SVD",np.linalg.det(out[3:12].reshape(3,3)))
-
-    # if self.options['JAX_SVD']:
-    #     ### SVD through JAX
-    #     des_tra_R=SVD_M_to_SO3(out[3:12]).flatten() # 9D vector to 3x3 rotation matrix(in flat form)
-    #     print("NN pose det after SVD",np.linalg.det(des_tra_R.reshape(3,3)))
-    #     # relative traversal time
-    #     out[-1]=self.t_tra_rel
-    #     gate_pitch=0
-    #     self.log_NN_IO_for_RM(gate_pitch,out,des_tra_R) 
-    # else:
-    out[-4]=mission_cfg['learning_agile']['wrp']
-    out[-3]=mission_cfg['learning_agile']['wrt']
+    out[3:12]=gate_ori_9d # manual set 9D vector (is rotation matrix directly)
+    out[-8:-5]=mission_cfg['learning_agile']['wrp']
+    out[-5:-2]=mission_cfg['learning_agile']['wrt']
     out[-2]=mission_cfg['learning_agile']['wqt']
     out[-1]=t_tra_rel
+    
     ### SVD through CasADi
-    if mission_cfg['PR_MATRIX_LEARN']:
-        verify_tra_R,_=verify_SVD_PR_ca(out[3:7],out[7:11])
-    else:
-        verify_tra_R,_=verify_SVD_ca(out[3:12])
+    verify_tra_R,_=verify_SVD_ca(out[3:12])
 
     gate_pitch=mission_cfg['mission']['gate_ori_euler'][1]
     return gate_pitch,out,verify_tra_R
@@ -214,6 +187,7 @@ class LearningAgileSim():
         self.solving_time = []
         self.tra_weight_list = []   
         self.verify_tra_R_list = []
+        self.pred_traj_list = []
         # trajectory pos_vel_att_cmd
         self.pos_vel_att_cmd=np.zeros(len(self.state))
         self.pos_vel_att_cmd[6:10] = [1,0,0,0]
@@ -388,10 +362,8 @@ class LearningAgileSim():
         if self.options['COMPARISON']:
             out[0:3]=self.gate_center
             out[3:12]=self.gate_ori_9d
-        if self.config_dict['PR_MATRIX_LEARN']:
-            verify_tra_R,_=verify_SVD_PR_ca(out[3:7],out[7:11])
-        else:
-            verify_tra_R,_=verify_SVD_ca(out[3:12])
+        
+        verify_tra_R,_=verify_SVD_ca(out[3:12])
         self.log_NN_IO_for_RM(self.gate_pitch,out,verify_tra_R.flatten()) 
         self.verify_tra_R_list.append(verify_tra_R)
         return out 
@@ -418,6 +390,7 @@ class LearningAgileSim():
         
         self.state = self.planner.ini_state # state= feedback from pybullet, 13-by-1, 3 position, 3 velocity (world frame), 4 quaternion, 3 angular rate
         self.state_n = [self.state]
+        self.failed_state = []
         self.Time = [0]
         self.nn_output_list = [np.zeros(output_size)] # 3 position, 4 quaternion, 1 traversal time
         self.des_tra_R_list = [np.zeros(9)] # 3x3 rotation matrix(in flat form)
@@ -465,12 +438,13 @@ class LearningAgileSim():
 
                 
                 t_comp = time.time()
-                cmd_solution,NO_SOLUTION_FLAG  = self.planner.mpcUpdate(cur_state=self.state,
+                cmd_solution,NO_SOLUTION_FLAG  = self.planner.mpc_update(cur_state=self.state,
                                                         trav_auxvar_value=trav_auxvar_value,
                                                         last_u=self.last_u,
                                                         first_iter=(self.i==0))
                 if NO_SOLUTION_FLAG:
                     STAB_FAILED = True
+                    self.failed_state.append(self.state)
                     print('No solution found')
                     print('traverse_auxvar_value=',trav_auxvar_value)
                     
@@ -479,13 +453,9 @@ class LearningAgileSim():
                 self.u=cmd_solution['control_traj_opt'][0,:].tolist()
                 self.last_u = cmd_solution['control_traj_opt'][0,:]
                 self.pos_vel_att_cmd=cmd_solution['state_traj_opt'][1,:] #self.config_dict['learning_agile']['horizon']
+                self.pred_traj_list.append(cmd_solution['state_traj_opt'][:,:])
                 # self.tra_weight_list.append(weight_vis)
            
-                # plot_3D_traj(wing_len=self.planner.wing_len,
-                #             uav_height=self.planner.uav_height/2,
-                #             state_traj=cmd_solution['state_traj_opt'][::30,:],
-                #             gate_traj=self.gate_points_list[::30,:,:])
-                
 
             ########################################################
             ###================= state update====================###
@@ -526,18 +496,21 @@ class LearningAgileSim():
             if self.options['SAVE_SIM']:
                 self.save(python_sim_data_dir)
 
-        return FAILED
+
+        return {'FAILED':FAILED,
+                'failed_state':self.failed_state}
 
         
     def visualize(self):
         play_animation(wing_len=self.planner.wing_len,
-                                gate_traj1=self.gate_points_list[::5,:,:],
-                                state_traj=self.state_n[::5,:],
-                                goal_pos=self.final_point.tolist(),
-                                NN_pos=self.nn_output_list[:,0:3],
-                                NN_R=self.des_tra_R_list,
-                                dt=0.01,
-                                save_option=0)
+                        gate_traj1=self.gate_points_list[::5,:,:],
+                        state_traj=self.state_n[::5,:],
+                        pred_traj_list=self.pred_traj_list,
+                        goal_pos=self.final_point.tolist(),
+                        NN_pos=self.nn_output_list[:,0:3],
+                        NN_R=self.des_tra_R_list,
+                        dt=0.01,
+                        save_option=0)
             
         # save the data, not show it
         fig, axes = plt.subplots(5, 3, figsize=(12, 8),dpi=100)  
@@ -577,16 +550,18 @@ class LearningAgileSim():
         plt.savefig("./python_sim_result/combined_results.png")
         plt.show()
 
+        
+        plot_3D_traj(wing_len=self.planner.wing_len,
+                    uav_height=self.planner.uav_height/2,
+                    state_traj=self.state_n[::20,:],
+                    gate_traj=self.gate_points_list[::20,:,:],
+                    NN_pos=self.nn_output_list[:,0:3],
+                    NN_R=self.des_tra_R_list[:,:])
+        
         self.euler_nn=rotation_vis(uav_traj=self.state_n,
                             nn_output_list=self.nn_output_list,
                             des_tra_R_list=self.des_tra_R_list,
                             gate_pitch=self.Pitch)  
-        plot_3D_traj(wing_len=self.planner.wing_len,
-                    uav_height=self.planner.uav_height/2,
-                    state_traj=self.state_n[::30,:],
-                    gate_traj=self.gate_points_list[::30,:,:],
-                    NN_pos=self.nn_output_list[:,0:3],
-                    NN_R=self.des_tra_R_list[:,:])
     
 
     def save(self,python_sim_data_dir):
@@ -619,7 +594,7 @@ def parse_options():
     parser.add_argument('--USE_PREV_SOLVER', type=str2bool, default=False, help='Enable or disable USE_PREV_SOLVER.')
     parser.add_argument('--PDP_GRADIENT', type=str2bool, default=False, help='Enable or disable PDP_GRADIENT.')
     parser.add_argument('--SQP_RTI_OPTION', type=str2bool, default=True, help='SQP or the DDP')
-    parser.add_argument('--MANUAL_SET_POSE_TEST', type=str2bool, default=True, help='Enable or disable MANUAL_SET_POSE_TEST.')
+    parser.add_argument('--MANUAL_SET_POSE_TEST', type=str2bool, default=False, help='Enable or disable MANUAL_SET_POSE_TEST.')
     parser.add_argument('--CLOSE_LOOP_MODEL', type=str2bool, default=True, help='Enable or disable CLOSE_LOOP_MODEL.')
     parser.add_argument('--JAX_SVD', type=str2bool, default=False, help='Enable or disable JAX_SVD.')
     parser.add_argument('--CLOSE_LOOP_TRAINING', type=str2bool, default=False, help='Enable or disable CLOSE_LOOP_TRAINING.')
@@ -669,7 +644,9 @@ def eval_sim_interface(mission_cfg=None,
     
     #####============== Solve the problem ====================#######
     # solve the problem
-    out={'FAILED':learning_agile_sim.forward(python_sim_data_dir,STAB_TEST=STAB_TEST),
+    forward_return=learning_agile_sim.forward(python_sim_data_dir,STAB_TEST=STAB_TEST)
+    out={'FAILED':forward_return['FAILED'],
+        'failed_state':forward_return['failed_state'],         
         'state_traj':learning_agile_sim.state_n,
         'gate_traj':learning_agile_sim.gate_points_list
         }

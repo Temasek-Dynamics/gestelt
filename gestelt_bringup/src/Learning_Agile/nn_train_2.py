@@ -68,7 +68,7 @@ def traj(inputs, outputs, state_traj):
                 ini_q=toQuaternion(inputs[6],[0,0,1]))
     
 
-    quad1.mpcUpdate(quad1.ini_state,
+    quad1.mpc_update(quad1.ini_state,
                      outputs)
     
     state_t = np.reshape(quad1.sol1['state_traj_opt'],(batch_size+1)*10)

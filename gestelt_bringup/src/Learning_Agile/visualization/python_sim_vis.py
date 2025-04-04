@@ -73,11 +73,33 @@ def get_NN_pose(NN_pos,NN_R):
     
 
     return NN_pose
+def traj_ani(ax, single_traj, predicted=False):
+    
+    cmap = plt.cm.get_cmap("coolwarm")  # blue to the red
+    
+    lines= []
+    for i in range(len(single_traj) - 1):
 
-def play_animation( wing_len, state_traj, gate_traj1=None, gate_traj2=None,state_traj_ref=None,NN_pos=None,NN_R=None, dt=0.01, \
+        velocity = np.linalg.norm(single_traj[:, 3:6], axis=1)  
+        norm_velocity = (velocity - np.min(velocity)) / (np.max(velocity) - np.min(velocity))  
+        line,=ax.plot(single_traj[i:i+2, 0], single_traj[i:i+2, 1], single_traj[i:i+2, 2],
+                color=cmap(norm_velocity[i]), 
+                linewidth=1.0, 
+                alpha=0.2 if predicted else 1.0,
+                )
+        lines.append(line)
+    
+    return lines
+    
+        
+
+    
+pred_lines = []
+actual_lines = []
+def play_animation(wing_len, state_traj, pred_traj_list, gate_traj1=None, gate_traj2=None,state_traj_ref=None,NN_pos=None,NN_R=None, dt=0.01, \
             point1 = None,point2 = None,point3 = None,point4 = None,save_option=0, title='UAV Maneuvering',\
                 goal_pos=[0,0,0]):
-        font1 = {'family':'Times New Roman',
+        font1 = {
          'weight':'normal',
          'style':'normal', 'size':4}
         cm_2_inch = 2.54
@@ -92,31 +114,12 @@ def play_animation( wing_len, state_traj, gate_traj1=None, gate_traj2=None,state
         ax.set_zlim(-0, 3)
         ax.set_ylim(-1.5, 1.5)#9
         ax.set_xlim(-1.5, 1.5)#6
-        # ax.set_title(title, pad=20, fontsize=15)
-        # for t in ax.xaxis.get_major_ticks(): 
-        #     t.label.set_font('Times New Roman') 
-        #     t.label.set_fontsize(7)
-        # for t in ax.yaxis.get_major_ticks(): 
-        #     t.label.set_font('Times New Roman') 
-        #     t.label.set_fontsize(7)
-        # for t in ax.zaxis.get_major_ticks(): 
-        #     t.label.set_font('Times New Roman') 
-        #     t.label.set_fontsize(7)
+
 
         # target landing point
         ax.plot([goal_pos[0]], [goal_pos[1]], [goal_pos[2]], c="r", marker="o",markersize=2)
         ax.view_init(2,-120)
-        #plot the final state
-        #final_position = get_final_position(wing_len=wing_len)
-        #c_x, c_y, c_z = final_position[0:3]
-        #r1_x, r1_y, r1_z = final_position[3:6]
-        #r2_x, r2_y, r2_z = final_position[6:9]
-        #r3_x, r3_y, r3_z = final_position[9:12]
-        #r4_x, r4_y, r4_z = final_position[12:15]
-        #line_arm1, = ax.plot([c_x, r1_x], [c_y, r1_y], [c_z, r1_z], linewidth=2, color='grey', marker='o', markersize=3)
-        #line_arm2, = ax.plot([c_x, r2_x], [c_y, r2_y], [c_z, r2_z], linewidth=2, color='grey', marker='o', markersize=3)
-        #line_arm3, = ax.plot([c_x, r3_x], [c_y, r3_y], [c_z, r3_z], linewidth=2, color='grey', marker='o', markersize=3)
-        #line_arm4, = ax.plot([c_x, r4_x], [c_y, r4_y], [c_z, r4_z], linewidth=2, color='grey', marker='o', markersize=3)
+        
         # plot gate
         if point1 is not None:
             ax.plot([point1[0],point2[0]],[point1[1],point2[1]],[point1[2],point2[2]],linewidth=1,color='red',linestyle='-')
@@ -132,30 +135,18 @@ def play_animation( wing_len, state_traj, gate_traj1=None, gate_traj2=None,state
         else:
             position_ref = get_quad_vert_pos(wing_len, state_traj_ref)
 
-        ## plot the process of moving window and quadrotor
-        #for i in range(10):
-        #    a = i*6
-        #    b = 0.9-0.1*i
-        #    c = (b,b,b)
-        #    c_x, c_y, c_z = position[a,0:3]
-        #    r1_x, r1_y, r1_z = position[a,3:6]
-        #    r2_x, r2_y, r2_z = position[a,6:9]
-        #    r3_x, r3_y, r3_z = position[a,9:12]
-        #    r4_x, r4_y, r4_z = position[a,12:15]
-        #    line_arm1, = ax.plot([c_x, r1_x], [c_y, r1_y], [c_z, r1_z], linewidth=2, color=c, marker='o', markersize=3)
-        #    line_arm2, = ax.plot([c_x, r2_x], [c_y, r2_y], [c_z, r2_z], linewidth=2, color=c, marker='o', markersize=3)
-        #    line_arm3, = ax.plot([c_x, r3_x], [c_y, r3_y], [c_z, r3_z], linewidth=2, color=c, marker='o', markersize=3)
-        #    line_arm4, = ax.plot([c_x, r4_x], [c_y, r4_y], [c_z, r4_z], linewidth=2, color=c, marker='o', markersize=3)
-
-        #    p1_x, p1_y, p1_z = gate_traj1[a, 0,:]
-        #    p2_x, p2_y, p2_z = gate_traj1[a, 1,:]
-        #    p3_x, p3_y, p3_z = gate_traj1[a, 2,:]
-        #    p4_x, p4_y, p4_z = gate_traj1[a, 3,:]
-        #    gate_l1, = ax.plot([p1_x,p2_x],[p1_y,p2_y],[p1_z,p2_z],linewidth=1,color=c,linestyle='--')
-        #    gate_l2, = ax.plot([p2_x,p3_x],[p2_y,p3_y],[p2_z,p3_z],linewidth=1,color=c,linestyle='--')
-        #    gate_l3, = ax.plot([p3_x,p4_x],[p3_y,p4_y],[p3_z,p4_z],linewidth=1,color=c,linestyle='--')
-        #    gate_l4, = ax.plot([p4_x,p1_x],[p4_y,p1_y],[p4_z,p1_z],linewidth=1,color=c,linestyle='--')
         
+        velocity = np.linalg.norm(state_traj[:, 3:6], axis=1)  
+        norm_velocity = (velocity - np.min(velocity)) / (np.max(velocity) - np.min(velocity))  # 归一化
+        cmap = plt.cm.get_cmap("coolwarm")
+
+        
+        # add color bar
+        sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin=np.min(velocity), vmax=np.max(velocity)))
+        sm.set_array([])
+        cbar = plt.colorbar(sm, ax=ax, pad=0.1)
+        cbar.set_label('Speed', rotation=270, labelpad=15)
+       
 
         ## animation
         # gate
@@ -169,14 +160,6 @@ def play_animation( wing_len, state_traj, gate_traj1=None, gate_traj2=None,state
             gate_l3, = ax.plot([p3_x,p4_x],[p3_y,p4_y],[p3_z,p4_z],linewidth=1,color='red',linestyle='-')
             gate_l4, = ax.plot([p4_x,p1_x],[p4_y,p1_y],[p4_z,p1_z],linewidth=1,color='red',linestyle='-')
 
-            #p1_xa, p1_ya, p1_za = gate_traj2[0, 0,:]
-            #p2_xa, p2_ya, p2_za = gate_traj2[0, 1,:]
-            #p3_xa, p3_ya, p3_za = gate_traj2[0, 2,:]
-            #p4_xa, p4_ya, p4_za = gate_traj2[0, 3,:]
-            #gate_l1a, = ax.plot([p1_xa,p2_xa],[p1_ya,p2_ya],[p1_za,p2_za],linewidth=1,color='red',linestyle='--')
-            #gate_l2a, = ax.plot([p2_xa,p3_xa],[p2_ya,p3_ya],[p2_za,p3_za],linewidth=1,color='red',linestyle='--')
-            #gate_l3a, = ax.plot([p3_xa,p4_xa],[p3_ya,p4_ya],[p3_za,p4_za],linewidth=1,color='red',linestyle='--')
-            #gate_l4a, = ax.plot([p4_xa,p1_xa],[p4_ya,p1_ya],[p4_za,p1_za],linewidth=1,color='red',linestyle='--')    
 
         # quadrotor
         line_traj, = ax.plot(position[:1, 0], position[:1, 1], position[:1, 2],linewidth=0.5)
@@ -196,14 +179,6 @@ def play_animation( wing_len, state_traj, gate_traj1=None, gate_traj2=None,state
         r2_x_ref, r2_y_ref, r2_z_ref = position_ref[0, 6:9]
         r3_x_ref, r3_y_ref, r3_z_ref = position_ref[0, 9:12]
         r4_x_ref, r4_y_ref, r4_z_ref = position_ref[0, 12:15]
-        # line_arm1_ref, = ax.plot([c_x_ref, r1_x_ref], [c_y_ref, r1_y_ref], [c_z_ref, r1_z_ref], linewidth=2,
-        #                          color='green', marker='o', markersize=3, alpha=0.7)
-        # line_arm2_ref, = ax.plot([c_x_ref, r2_x_ref], [c_y_ref, r2_y_ref], [c_z_ref, r2_z_ref], linewidth=2,
-        #                          color='green', marker='o', markersize=3, alpha=0.7)
-        # line_arm3_ref, = ax.plot([c_x_ref, r3_x_ref], [c_y_ref, r3_y_ref], [c_z_ref, r3_z_ref], linewidth=2,
-        #                          color='green', marker='o', markersize=3, alpha=0.7)
-        # line_arm4_ref, = ax.plot([c_x_ref, r4_x_ref], [c_y_ref, r4_y_ref], [c_z_ref, r4_z_ref], linewidth=2,
-        #                          color='green', marker='o', markersize=3, alpha=0.7)
 
         ## NN pose
         NN_c_x,NN_c_y,NN_c_z=NN_pos[0,:]
@@ -223,15 +198,32 @@ def play_animation( wing_len, state_traj, gate_traj1=None, gate_traj2=None,state
             plt.legend([line_traj, line_traj_ref], ['learned', 'OC solver'], ncol=1, loc='best',
                        bbox_to_anchor=(0.35, 0.25, 0.5, 0.5))
 
+        # pred_lines=traj_ani(ax, pred_traj_list[0])
+        
         def update_traj(num):
-            # customize
+            global pred_lines,actual_lines
+            
             time_text.set_text(time_template % (num * dt))
 
             # trajectory
-            line_traj.set_data(position[:num, 0], position[:num, 1])
-            line_traj.set_3d_properties(position[:num, 2])
+            # line_traj.set_data(position[:num, 0], position[:num, 1])
+            # line_traj.set_3d_properties(position[:num, 2])
+            # line_traj.set_color(colors[:num])
 
-
+            # plot the predicted trajectory
+            
+            for line in pred_lines:
+                line.remove()
+            for line in actual_lines:
+                line.remove()
+                
+            pred_lines = []
+            actual_lines = []
+        
+            pred_lines = traj_ani(ax, pred_traj_list[num],predicted=True)
+            if num >=1:
+                actual_lines = traj_ani(ax, state_traj[:num])
+            
             # uav
             c_x, c_y, c_z = position[num, 0:3]
             r1_x, r1_y, r1_z = position[num, 3:6]
@@ -275,18 +267,6 @@ def play_animation( wing_len, state_traj, gate_traj1=None, gate_traj2=None,state
             r3_x_ref, r3_y_ref, r3_z_ref = position_ref[nu, 9:12]
             r4_x_ref, r4_y_ref, r4_z_ref = position_ref[nu, 12:15]
 
-            # line_arm1_ref.set_data_3d([c_x_ref, r1_x_ref], [c_y_ref, r1_y_ref],[c_z_ref, r1_z_ref])
-            # #line_arm1_ref.set_3d_properties()
-
-            # line_arm2_ref.set_data_3d([c_x_ref, r2_x_ref], [c_y_ref, r2_y_ref],[c_z_ref, r2_z_ref])
-            # #line_arm2_ref.set_3d_properties()
-
-            # line_arm3_ref.set_data_3d([c_x_ref, r3_x_ref], [c_y_ref, r3_y_ref],[c_z_ref, r3_z_ref])
-            # #line_arm3_ref.set_3d_properties()
-
-            # line_arm4_ref.set_data_3d([c_x_ref, r4_x_ref], [c_y_ref, r4_y_ref],[c_z_ref, r4_z_ref])
-            #line_arm4_ref.set_3d_properties()
-
             ## plot moving gate
             if gate_traj1 is not None:
                 p1_x, p1_y, p1_z = gate_traj1[num, 0,:]
@@ -298,17 +278,6 @@ def play_animation( wing_len, state_traj, gate_traj1=None, gate_traj2=None,state
                 gate_l2.set_data_3d([p2_x,p3_x],[p2_y,p3_y],[p2_z,p3_z]) 
                 gate_l3.set_data_3d([p3_x,p4_x],[p3_y,p4_y],[p3_z,p4_z]) 
                 gate_l4.set_data_3d([p4_x,p1_x],[p4_y,p1_y],[p4_z,p1_z])
-
-
-                #p1_xa, p1_ya, p1_za = gate_traj2[num, 0,:]
-                #p2_xa, p2_ya, p2_za = gate_traj2[num, 1,:]
-                #p3_xa, p3_ya, p3_za = gate_traj2[num, 2,:]
-                #p4_xa, p4_ya, p4_za = gate_traj2[num, 3,:]       
-
-                #gate_l1a.set_data_3d([p1_xa,p2_xa],[p1_ya,p2_ya],[p1_za,p2_za])
-                #gate_l2a.set_data_3d([p2_xa,p3_xa],[p2_ya,p3_ya],[p2_za,p3_za]) 
-                #gate_l3a.set_data_3d([p3_xa,p4_xa],[p3_ya,p4_ya],[p3_za,p4_za]) 
-                #gate_l4a.set_data_3d([p4_xa,p1_xa],[p4_ya,p1_ya],[p4_za,p1_za])
 
 
 
@@ -323,7 +292,7 @@ def play_animation( wing_len, state_traj, gate_traj1=None, gate_traj2=None,state
      
 
         frames=np.arange(0,500)
-        ani = animation.FuncAnimation(fig,update_traj,frames, interval=1, blit=True)
+        ani = animation.FuncAnimation(fig,update_traj,frames, interval=1, blit=True, repeat=True)
         # # 在图上添加一个按钮
         ax_button = plt.axes([0.1, 0.9, 0.1, 0.05])  # 按钮位置 ([left, bottom, width, height])
         button = Button(ax_button, 'Pause/Start')
@@ -649,7 +618,7 @@ def plot_3D_traj(
             
             ax.plot_surface(x + c_x, y + c_y, z + c_z, color='b', alpha=0.05)
         else:
-            plot_alpha = 0.1*(i/np.size(state_traj,0))+0.2
+            plot_alpha = 0.1*(i/np.size(state_traj,0))+0.1
         gate_l1, = ax.plot([p1_x,p2_x],[p1_y,p2_y],[p1_z,p2_z],linewidth=1,color='orangered',linestyle='-',alpha=plot_alpha)
         gate_l2, = ax.plot([p2_x,p3_x],[p2_y,p3_y],[p2_z,p3_z],linewidth=1,color='orangered',linestyle='-',alpha=plot_alpha)
         gate_l3, = ax.plot([p3_x,p4_x],[p3_y,p4_y],[p3_z,p4_z],linewidth=1,color='orangered',linestyle='-',alpha=plot_alpha)
@@ -668,21 +637,22 @@ def plot_3D_traj(
         #     for i in range(4):
         #         ax.scatter(gate_traj[i+4,0],gate_traj[i+4,1],gate_traj[i+4,2],c='b',marker='o',s=10)
 
-        line_arm1, = ax.plot([c_x, r1_x], [c_y, r1_y], [c_z, r1_z], linewidth=1, color='deeppink', marker='o', markersize=1,alpha=plot_alpha)
-        line_arm2, = ax.plot([c_x, r2_x], [c_y, r2_y], [c_z, r2_z], linewidth=1, color='lightskyblue', marker='o', markersize=1,alpha=plot_alpha)
-        line_arm3, = ax.plot([c_x, r3_x], [c_y, r3_y], [c_z, r3_z], linewidth=1, color='peru', marker='o', markersize=1,alpha=plot_alpha)
-        line_arm4, = ax.plot([c_x, r4_x], [c_y, r4_y], [c_z, r4_z], linewidth=1, color='yellowgreen', marker='o', markersize=1,alpha=plot_alpha)
+        line_arm1, = ax.plot([c_x, r1_x], [c_y, r1_y], [c_z, r1_z], linewidth=4, color='crimson', marker='o', markersize=1,alpha=plot_alpha)
+        line_arm2, = ax.plot([c_x, r2_x], [c_y, r2_y], [c_z, r2_z], linewidth=4, color='lightskyblue', marker='o', markersize=1,alpha=plot_alpha)
+        line_arm3, = ax.plot([c_x, r3_x], [c_y, r3_y], [c_z, r3_z], linewidth=4, color='peachpuff', marker='o', markersize=1,alpha=plot_alpha)
+        line_arm4, = ax.plot([c_x, r4_x], [c_y, r4_y], [c_z, r4_z], linewidth=4, color='darkseagreen', marker='o', markersize=1,alpha=plot_alpha)
         
         # set the axes limits
         ax.set_xlim([-2, 2])
         ax.set_ylim([-2, 2])
         ax.set_zlim([-2, 2])
     plt.tight_layout()   
-    plt.show()    
+
 
 def plot_mc_traj(state_traj_batch:list,
                  gate_traj_batch:list,
-                 failed_batch:list):
+                 failed_batch:list,
+                 failed_state_batch:list):
     """plot the position trajectory of the states in the batch,
     with the failed states marked in red"""
     """
@@ -710,6 +680,8 @@ def plot_mc_traj(state_traj_batch:list,
         gate_l2, = ax.plot([p2_x,p3_x],[p2_y,p3_y],[p2_z,p3_z],linewidth=1,color='green',linestyle='-',alpha=plot_alpha)
         gate_l3, = ax.plot([p3_x,p4_x],[p3_y,p4_y],[p3_z,p4_z],linewidth=1,color='green',linestyle='-',alpha=plot_alpha)
         gate_l4, = ax.plot([p4_x,p1_x],[p4_y,p1_y],[p4_z,p1_z],linewidth=1,color='green',linestyle='-',alpha=plot_alpha)
+    for i, failed_state in enumerate(failed_state_batch):
+        ax.scatter(failed_state[0], failed_state[1], failed_state[2], color='r')
     # set the axes limits
     ax.set_xlim([-2, 2])
     ax.set_ylim([-2, 2])

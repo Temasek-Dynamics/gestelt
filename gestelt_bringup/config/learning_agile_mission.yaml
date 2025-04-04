@@ -1,5 +1,6 @@
 
 # flight mission
+LEARNING_FROM_DEMO: false  # demonstration from the minimum snap
 MANUAL_SET_POSE_TEST: true  # only works for ROS nodes
 FIX_GATE_PITCH_TEST: true  # for success rate test and python sim
 mission_period: 5.0 #s
@@ -9,7 +10,6 @@ ctl_mode: 0
 # 2 force and torque control. 
 # 3.force difference control ALL types the command to the mavros is CTBR
 lqr_init_guess: false
-PR_MATRIX_LEARN: false #PITCH ROLL MATRIX LEARNING
 drone:
   wing_len: 0.8
   height: 0.3
@@ -45,9 +45,9 @@ mission:
 
   ##------ gate pose ----##
   # only feasible for MANUAL_SET_POSE_TEST
-  gate_position: [0.0, -0.0, 1.8]
+  gate_position: [-0.0, -0.0, 1.8]
   # gate_ori_RP: [-0.0, -1.055, 0.0]
-  gate_ori_euler: [0.0, 3.14,-0.0] # zyx 1.0 radian is 57.2958 degree,1.3 radian is 1.5 radian is 85.9437 degree 
+  gate_ori_euler: [0.0, 1.0,-0.0] # zyx 1.0 radian is 57.2958 degree,1.3 radian is 1.5 radian is 85.9437 degree 
   
   ##------ goal pose ----##
   goal_position: [0.0, -1.8, 1.5]
@@ -79,7 +79,7 @@ mission:
 learning_agile:
   ##-----parameters for training ------## 
   # #### for a stabler training,######## 
-  wrt: 10.0    #be the learnable variable
+  wrt: [10,10,30]    #be the learnable variable
   wqt: 10.0   #be the learnable variable
   # wvt: 1.0   #be the learnable variable
   wthrust: 1
@@ -89,7 +89,7 @@ learning_agile:
   wwt_z: 15
   wm: 50
   # path cost
-  wrp: 30        ## too small, large deviation to the goal 30 sqp, 
+  wrp: [30,30,30]        ## too small, large deviation to the goal 30 sqp, 
   wvp: 10
   wqp: 0.01
 
@@ -100,7 +100,7 @@ learning_agile:
   ##------ traversing parameters ---##
   max_tra_w: 5000 #100 be the learnable variable
   traverse_weight_span: 400 
-  traverse_time: 1.5 # only for MANUAL_SET_POSE_TEST
+  traverse_time: 0.5 # only for MANUAL_SET_POSE_TEST
 
 
   ## Safe PDP
@@ -114,6 +114,9 @@ learning_agile:
   ## modify this required recompilation of the solver
   horizon: 20
   dt: 0.1
+  varying_horizon: false
+  # horizon: 80
+  # dt: 0.025
     
   ##------ model parameters --------##
   ## ---- hard coded in the solver ----##
@@ -166,7 +169,7 @@ pretrain_param:
 # NN_model_name: 'training_results/new_format/2025-02-13/15-48-00/trained_model/NN_close_100.pth'
 # NN_model_name: 'training_results/new_format/2025-02-24/16-45-20/trained_model/NN_close_100.pth' #**#
 # NN_model_name: 'training_results/new_format/2025-03-11/09-58-34/trained_model/NN_close_200.pth' #**# without BPTT
-NN_model_name: 'training_results/new_format/2025-03-11/20-45-18/trained_model/NN_close_80.pth' #with BPTT
+NN_model_name: 'training_results/new_format/2025-04-04/13-07-40/trained_model/NN_close_80.pth' 
 # NN_model_name: 'training_results/new_format/2025-01-22/10-26-33/trained_model/NN_close_120.pth' # train for the moving gate
 
 NN_deploy_model_name: 'deployed_model/2025-01-16/09-59-31/trained_model/NN_close_3200.pth' # used in the sitl
@@ -181,4 +184,4 @@ penalty:
   det_reg_w: 0.0
   control_reg_w: 0
 
-LBFGS: true
+LBFGS: false

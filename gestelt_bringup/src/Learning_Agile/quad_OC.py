@@ -12,6 +12,7 @@ import time
 import scipy
 from os import system
 
+from config import mission_cfg
 '''
 # =============================================================================================================
 # The OCSys class has multiple functionaries: 1) define an optimal control system, 2) solve the optimal control
@@ -46,6 +47,7 @@ class OCSys:
         self.project_name = project_name
         self.config_dict=config_dict
         self.ctl_mode=config_dict['ctl_mode']
+        self.new_horizon = 20
     def setAuxvarVariable(self, auxvar=None):
         if auxvar is None or auxvar.numel() == 0:
             self.auxvar = SX.sym('auxvar')
@@ -128,7 +130,7 @@ class OCSys:
         assert path_cost.numel() == 1, "path_cost must be a scalar function"
 
         self.path_cost = path_cost
-        self.path_cost_fn = casadi.Function('path_cost', [self.state,self.control,self.goal_state,self.trav_auxvar], [self.path_cost])
+        self.path_cost_fn = casadi.Function('path_cost', [self.state,self.control,self.goal_state,self.trav_auxvar,self.t_node], [self.path_cost])
 
 
     def setFinalCost(self, 
@@ -189,7 +191,7 @@ class OCSys:
         self.path_cost_barrier = self.path_cost + gamma * path_inequ_barrier
         self.final_cost_barrier = self.final_cost + gamma * final_inequ_barrier
         
-        self.path_cost_barrier_fn = casadi.Function('path_cost_barrier', [self.state,self.control,self.goal_state,self.trav_auxvar], [self.path_cost_barrier])
+        self.path_cost_barrier_fn = casadi.Function('path_cost_barrier', [self.state,self.control,self.goal_state,self.trav_auxvar,self.t_node], [self.path_cost_barrier])
         self.final_cost_barrier_fn = casadi.Function('final_cost_barrier', [self.state,self.goal_state, self.auxvar], [self.final_cost_barrier])
 
     def ocSolverInit(self, horizon=None, auxvar_value=1, print_level=0, dt = 0.1,costate_option=0):
@@ -443,6 +445,7 @@ class OCSys:
         # predict horizon in seconds
         T=horizon*dt
         self.n_nodes = horizon
+        self.new_horizon = horizon
 
         w = []
         self.w0 = []
@@ -512,7 +515,7 @@ class OCSys:
         # # setting the cost function
         # ocp.model.cost_expr_ext_cost_custom_hess/cost_expr_ext_cost
         # if self.SQP_RTI_OPTION:
-        ocp.model.cost_expr_ext_cost = self.path_cost_fn(ocp.model.x, ocp.model.u, goal_state_value, trav_auxvar_value)\
+        ocp.model.cost_expr_ext_cost = self.path_cost_fn(ocp.model.x, ocp.model.u, goal_state_value, trav_auxvar_value, t_node_value)\
                                     + self.trav_cost_fn(ocp.model.x, ocp.model.u, trav_auxvar_value, t_node_value)\
         # end cost
         ocp.model.cost_expr_ext_cost_e = self.final_cost_fn(ocp.model.x,goal_state_value,self.auxvar)
@@ -650,13 +653,13 @@ class OCSys:
         """
         This function is to solve the optimal control problem using ACADOS
         """
-        self.state_traj_opt = np.zeros((self.n_nodes+1,self.n_state))
-        self.control_traj_opt = np.zeros((self.n_nodes,self.n_control))
-        self.costate_traj_opt = np.zeros((self.n_nodes,self.n_state))
+        self.state_traj_opt = np.zeros((self.new_horizon+1,self.n_state))
+        self.control_traj_opt = np.zeros((self.new_horizon,self.n_control))
+        self.costate_traj_opt = np.zeros((self.new_horizon,self.n_state))
 
         # #---------------------for linear cost---------------------##
        
-        for i in range(self.n_nodes):
+        for i in range(self.new_horizon):
             
             self.acados_solver.set(i, 'p',np.concatenate((goal_state_value,
                                                           trav_auxvar_value, 
@@ -666,10 +669,10 @@ class OCSys:
             
 
         # set the last state-control as the initial guess for the last node
-        self.acados_solver.set(self.n_nodes, "x", self.state_traj_opt[-1,:])
+        self.acados_solver.set(self.new_horizon, "x", self.state_traj_opt[-1,:])
 
         # set the end desired goal
-        self.acados_solver.set(self.n_nodes, "p",np.concatenate((goal_state_value,
+        self.acados_solver.set(self.new_horizon, "p",np.concatenate((goal_state_value,
                                                                  trav_auxvar_value, 
                                                                  np.array([self.n_nodes*dt]))))
 
@@ -681,12 +684,12 @@ class OCSys:
 
         ## set the initial guess
         if init_guess is not None:
-            for i in range(self.n_nodes-1):
+            for i in range(self.new_horizon):
                 self.acados_solver.set(i, "x", np.array(init_guess['state_traj_opt'])[i])
                 self.acados_solver.set(i, "u", np.array(init_guess['control_traj_opt'])[i])
-            self.acados_solver.set(self.n_nodes, "x", np.array(init_guess['state_traj_opt'])[-1])
+            self.acados_solver.set(self.new_horizon, "x", np.array(init_guess['state_traj_opt'])[-1])
       
-        self.acados_solver.set(self.n_nodes, "x", np.array(cur_state))
+        self.acados_solver.set(self.new_horizon, "x", np.array(cur_state))
         
         NO_SOLUTION_FLAG=False
         
@@ -695,11 +698,11 @@ class OCSys:
 
         if status != 0:
             NO_SOLUTION_FLAG=True
-            # self.acados_solver.print_statistics()
+            self.acados_solver.print_statistics()
             # raise Exception(f'acados returned status {status}.')
         #-------------take the optimal control and state sequences
 
-        for i in range(self.n_nodes):
+        for i in range(self.new_horizon):
             self.state_traj_opt[i,:]=self.acados_solver.get(i, "x")
             self.control_traj_opt[i,:]=self.acados_solver.get(i, "u")
             self.costate_traj_opt[i,:]=self.acados_solver.get(i, "pi")
@@ -707,7 +710,7 @@ class OCSys:
             # self.lb_v_control_traj_opt[i,:]=self.acados_solver.get(i, "lam")[0]# inequality multiplier lower bound
             # self.ub_v_control_traj_opt[i,:]=self.acados_solver.get(i, "lam")[5]# inequality multiplier upper bound
 
-        self.state_traj_opt[-1,:]=self.acados_solver.get(self.n_nodes, "x")
+        self.state_traj_opt[-1,:]=self.acados_solver.get(self.new_horizon, "x")
         
        
             
@@ -719,7 +722,21 @@ class OCSys:
                 "time": time,
                 "horizon": self.horizon}
                 #"cost": sol['f'].full()}
-    
+
+        if mission_cfg['learning_agile']['varying_horizon']:
+            # update the mpc prediction horizon
+            # based on the distance to the goal, reset the mpc horizon
+            self.new_horizon = (np.linalg.norm(cur_state[0:3]-goal_state_value[0:3])*5).astype(int).item()
+            # limit the horizon to be within 2 to 20 steps
+            if self.new_horizon<5:
+                self.new_horizon=5
+            elif self.new_horizon>20:
+                self.new_horizon=20
+            print("new horizon=",self.new_horizon)
+            # create an array with 0.1 increments
+            new_ts = np.arange(0, (self.new_horizon)*dt, dt)
+            
+            # self.acados_solver.set_new_time_steps(new_ts)
 
         return opt_sol,NO_SOLUTION_FLAG   
     

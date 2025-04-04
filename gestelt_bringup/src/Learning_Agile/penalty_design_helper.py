@@ -143,7 +143,7 @@ class PenaltyDesignHelper():
         
 if __name__ == '__main__':
     # if ROT_VIS is True, the penalty will be calculated w.r.t the quadrotor's euler angle change
-    helper=PenaltyDesignHelper(trans_choice=0,euler_choice=0,ROT_VIS=True) 
+    helper=PenaltyDesignHelper(trans_choice=2,euler_choice=0,ROT_VIS=False) 
     helper.load_config(mission_config=mission_cfg)
     helper.init_env()
     helper.plot_penalty_seq()

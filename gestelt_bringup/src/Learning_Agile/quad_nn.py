@@ -73,6 +73,7 @@ def nn_sample(init_pos=None,
     # pi/2 -> gate is vertical
     if PRTRAIN:
         # gate_pitch = np.random.uniform(-pi/2,pi/2)
+        # gate_pitch=mission_cfg['mission']['gate_ori_euler'][1] 
         gate_pitch = 0
     elif TEST:
         if not mission_cfg['FIX_GATE_PITCH_TEST']:
@@ -111,7 +112,7 @@ def nn_sample(init_pos=None,
     return env_init_set
 
 ## define the expected output of an input (for pretraining)
-def t_output(inputs):
+def t_output(inputs,gate_rot_matrix):
     """the traverse time is calculated based on the signed distance between the drone position and the gate position.
 
     Args:
@@ -123,15 +124,13 @@ def t_output(inputs):
     inputs = np.array(inputs[-1])
     
     outputs = np.zeros(output_size)
-    outputs[0:3]=mission_cfg['mission']['gate_position']
+    outputs[0:3]=mission_cfg['mission']['gate_position']# gate position
     
-    if mission_cfg['PR_MATRIX_LEARN']:
-        outputs[3:7]=np.eye(2).flatten()
-        outputs[7:11]=np.eye(2).flatten()
-    else:
-        # R_gate=inputs[-9:].reshape(3,3)
-        # outputs[3:12]=R_gate.T.flatten()
-        outputs[3:12]=np.eye(3).flatten()
+
+    # outputs[3:12]=gate_rot_matrix
+        
+    # or
+    outputs[3:12]=np.eye(3).flatten()
 
     ## traversal time is proportional to the distance of the centroids
     if inputs[1]>0:
@@ -164,46 +163,6 @@ def gene_gate():
     return np.array([point1,point2,point3,point4])
 
 
-## sample any initial state, final point and 12 elements window (not necessary in our method) (not important)
-# def con_sample():
-    # inputs = np.zeros(25)
-    # # generate first three inouts
-    # scaling = np.random.uniform(3,16)
-    # phi = np.random.uniform(0,2*pi)
-    # theta = np.clip(np.random.normal(pi/2,pi/8,size=1), pi/4, 3*pi/4)
-    # #transformation
-    # inputs[0] = scaling*sin(theta)*cos(phi)
-    # inputs[1] = scaling*sin(theta)*sin(phi)
-    # inputs[2] = scaling*cos(theta)
-    # beta = np.random.uniform(0,2*pi)
-    # rotation1 = np.array([[cos(beta),0,sin(beta)],[0,1,0],[-sin(beta),0,cos(beta)]])
-    # rotation2 = np.array([[cos(phi-pi/2),-sin(phi-pi/2),0],[sin(phi-pi/2),cos(phi-pi/2),0],[0,0,1]])
-    # rotation  = np.matmul(rotation2,rotation1)
-    # # generate rotation pair
-    # l = norm(np.random.normal(0,1,size=3))
-    # a = np.random.normal(0,pi/16)
-    # r = R.from_rotvec(a * l)
-    # rotation = np.matmul(r.as_matrix(),rotation)
-    # # generate translation
-    # length = np.random.uniform(2,scaling-1) 
-    # tranlation1 = np.array([length*sin(theta)*cos(phi),length*sin(theta)*sin(phi),length*cos(theta)])
-    # tranlation = tranlation1 + np.random.normal(0,1,size=3)
-    # # generate real obstacle
-    # gate = gene_gate()
-    # for i in range(4):
-    #     gate[i] = np.matmul(rotation,gate[i]) + tranlation
-    # inputs[3:15] = gate.reshape(12)
-    #     #generate velocity
-    # inputs[15:18] = np.random.normal(0,3,size=3)
-    # #generate quaternions
-    # Rd = np.random.normal(0,0.5,size=3)
-    # rp = Rd2Rp(Rd)
-    # inputs[18:22] = toQuaternion(rp[0],rp[1])
-    # distance = np.random.uniform(0,scaling)
-    # inputs[22] = distance*sin(theta)*cos(phi)+np.random.normal(0,1)
-    # inputs[23] = distance*sin(theta)*sin(phi)+np.random.normal(0,1)
-    # inputs[24] = distance*cos(theta)+np.random.normal(0,1)
-    # return inputs
 
 
 ## define the class of neural network (2 hidden layers, unit = ReLU)
@@ -252,15 +211,21 @@ class network_with_GRU(nn.Module):
         self.input_norm=nn.LayerNorm(D_in)
         self.out_norm = nn.LayerNorm(D_h2)
         self.l1 = nn.Linear(D_h1, D_h1)
-        self.F1 = nn.ReLU()
+        if train_cfg['model']['activation'] == 'tanh':
+            self.F1 = nn.Tanh()
+            self.F2 = nn.Tanh()
+        elif train_cfg['model']['activation'] == 'silu':
+            self.F1 = nn.SiLU()
+            self.F2 = nn.SiLU()
         self.l2 = nn.Linear(D_h1, D_h2)
-        self.F2 = nn.ReLU()
         self.l3 = nn.Linear(D_h2, D_out)
 
  
 
         
     def forward(self, input,deterministic=True):
+        #add layer norm
+        # input = self.input_norm(input)
         out,hidden = self.GRU(input)
         out = out [:,-1,:]
         # out = hidden[-1,:,:]
@@ -278,20 +243,17 @@ class network_with_GRU(nn.Module):
         out [:,2] = torch.sigmoid(out[:,2])*2+0.5
         
         # tra_throttle
-        out [:,-5] = torch.sigmoid(out[:,-5])*0.4+0.1
+        # out [:,-5] = torch.sigmoid(out[:,-5])*0.4+0.1
 
         # wrp
-        out [:,-4]=torch.sigmoid(out[:,-4])*50+10
+        out [:,-8:-5]=torch.sigmoid(out[:,-8:-5])*50+10
 
         # wrt
-        out [:,-3]=torch.sigmoid(out[:,-3])*20
+        out [:,-5:-2]=torch.sigmoid(out[:,-5:-2])*20
 
         # wqt
         out [:,-2]=torch.sigmoid(out[:,-2])*20
 
-
-        ## if pretrained, do not use this
-        # out [:,-1]=torch.tanh(out[:,-1])*5
 
         return out
 

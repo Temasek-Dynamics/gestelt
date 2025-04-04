@@ -2,7 +2,7 @@ import os
 from learning_agile_sim import eval_sim_interface,parse_options
 from visualization.python_sim_vis import plot_mc_traj
 from config import mission_cfg,train_cfg,current_dir
-
+import wandb
 def mc_evaluation(test_num=24,\
                  writer=None,\
                  options=None,\
@@ -22,6 +22,7 @@ def mc_evaluation(test_num=24,\
     gate_traj_batch=[]
     state_traj_batch=[]
     failed_batch=[]
+    failed_state_batch=[]
     for _ in range(test_num):
         out = eval_sim_interface(mission_cfg,
                                 train_cfg,
@@ -31,6 +32,7 @@ def mc_evaluation(test_num=24,\
                                 STAB_TEST=STAB_TEST)
         FAILED=out['FAILED']
         state_traj_batch.append(out['state_traj'])
+        failed_state_batch.extend(out['failed_state'])
         gate_traj_batch.append(out['gate_traj'])
         failed_batch.append(out['FAILED'])
         if FAILED:
@@ -42,14 +44,16 @@ def mc_evaluation(test_num=24,\
             print(f"SUCC_TEST_FAILED: {FAILED}")
     success_rate=1-count/test_num
 
-    if writer is not None:
-        writer.add_scalar('success_rate', success_rate, global_step)
+    # if writer is not None:
+    #     writer.add_scalar('success_rate', success_rate, global_step)
+    if global_step is not None:
+        wandb.log({"success_rate":success_rate})
     print(f"Success rate: {success_rate}")
 
     if VIS_BATCH:
         print("Visualizing the batch")
-        plot_mc_traj(state_traj_batch,gate_traj_batch,failed_batch)
+        plot_mc_traj(state_traj_batch,gate_traj_batch,failed_batch,failed_state_batch)
     return success_rate
 
 if __name__ == "__main__":
-    mc_evaluation(test_num=24,STAB_TEST=True,VIS_BATCH=True)
+    mc_evaluation(test_num=24,STAB_TEST=False,VIS_BATCH=True)

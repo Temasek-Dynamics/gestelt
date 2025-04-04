@@ -1,17 +1,19 @@
 import numpy as np
 import torch
 import os
+import datetime
 from multiprocessing import Process, Queue
 from tqdm import tqdm
 
 from torch.utils.tensorboard import SummaryWriter
+import wandb
 
 from learningAgileBase import LearningAgileBase,vis_gradient_norm
-from config import mission_cfg,train_cfg,current_dir,setup_training_directories
-from logger_misc import log_drone_state,log_train_IO,log_gradient
+from config import mission_cfg,train_cfg,current_dir,setup_training_directories, get_time_name
+from logger_misc import log_drone_state_wandb,log_train_IO_wandb,log_gradient_wandb
 from mc_evaluation import mc_evaluation
 from geometry.solid_geometry import magni
-
+from misc.misc import load_demo_traj
 folder_dict=setup_training_directories()
 trained_model_folder=folder_dict['trained_model_folder']
 log_folder=folder_dict['log_folder']
@@ -19,7 +21,7 @@ log_folder=folder_dict['log_folder']
 ## this options is for close loop training
 training_data_folder=os.path.abspath(os.path.join(current_dir, 'training_data'))
 model_folder=os.path.abspath(os.path.join(training_data_folder, 'NN_model'))
-writer = SummaryWriter(log_dir=log_folder)
+
 checkpoint_trained_model_folder=os.path.abspath(os.path.join(current_dir,'training_results/'))
 options = {}
 options['MPC_BACKWARD']=True
@@ -36,7 +38,20 @@ options['BACKWARD']=True
 options['MULTI_PROCESSES']=True
 options['TRAIN_FROM_CHECKPOINT']=False
 options['STATE_2_MOVING_GATE']=False
+# writer = SummaryWriter(log_dir=log_folder)
 
+run=wandb.init(project='Learning Agile',
+            name= get_time_name(),
+            config={
+                    "mission_cfg":mission_cfg,
+                    "train_cfg":train_cfg,
+                    "options":options
+                    },
+            dir=log_folder)
+
+if mission_cfg['LEARNING_FROM_DEMO']:
+    demo_traj_file = os.path.join(current_dir, 'MinimumSnapDemo/demo_traj.npy')
+    demo_state_traj=load_demo_traj(demo_traj_file)
 class LearningAgileAPG:
     """
     APG: Analytical Policy Gradient
@@ -63,15 +78,15 @@ class LearningAgileAPG:
 
         
     def init_train(self,model_folder,checkpoint_trained_model_folder):
-        # self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        self.device = torch.device('cpu')
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        # self.device = torch.device('cpu')
 
         if options['TRAIN_FROM_CHECKPOINT'] or options['STATE_2_MOVING_GATE']:
             FILE = os.path.join(checkpoint_trained_model_folder, "new_format/2025-01-31/11-40-49/trained_model/NN_close_1900.pth")
 
             self.learning_rate = self.train_cfg['training']['learning_rate']#*0.9**(300/self.train_cfg['training']['lr_decay_num_epochs'])
         else:
-            FILE = os.path.join(model_folder, "NN_close_pretrain.pth")
+            FILE = os.path.join(checkpoint_trained_model_folder, "new_format/2025-03-29/13-30-40/trained_model/NN_close_0.pth")
         self.model = torch.load(FILE).to(self.device)
 
         
@@ -99,8 +114,12 @@ class LearningAgileAPG:
     def get_penalty_episodes(self, i:int,
                             episode:LearningAgileBase,
                             R_Grad_queue:Queue):
-        L_i = np.array(episode.planner.get_penalty(episode.pred_st_traj,real_state_i=i,success_rate=self.success_rate)[0])
-        p_L_i_p_X_traj_i = (episode.planner.get_penalty(episode.pred_st_traj,real_state_i=i,success_rate=self.success_rate)[1])
+        if self.mission_cfg['LEARNING_FROM_DEMO']:
+            L_dL=episode.planner.get_penalty_demo(demo_state_traj,episode.pred_st_traj)
+        else:
+            L_dL=episode.planner.get_penalty(episode.pred_st_traj,real_state_i=i,success_rate=self.success_rate)
+        L_i = np.array(L_dL[0])
+        p_L_i_p_X_traj_i = (L_dL[1])
 
         R_Grad_queue.put([L_i, p_L_i_p_X_traj_i])
     def smooth_loss(self,outputs_batch,prev_outputs_batch):
@@ -211,9 +230,14 @@ class LearningAgileAPG:
                 prev_outputs_batch = outputs_batch
 
             ##== record NN obs and output per episode step
-            log_drone_state(writer,obs_batch[0,-1,:],self.episodes[0].control,self.global_step)
-            euler_nn,gate_pitch = log_train_IO(writer,obs_batch[0,-1,:],outputs_batch[0,:].data.numpy().reshape(self.episodes[0].output_size),self.global_step)
-            writer.add_scalar('penalty_single_step', self.episodes[0].penalty, self.global_step)
+            # log_drone_state(writer,obs_batch[0,-1,:],self.episodes[0].control,self.global_step)
+            log_drone_state_wandb(obs_batch[0,-1,:],self.episodes[0].control,self.global_step)
+            # euler_nn,gate_pitch = log_train_IO(writer,obs_batch[0,-1,:],outputs_batch[0,:].data.numpy().reshape(self.episodes[0].output_size),self.global_step)
+            # wandb.log({"NN_output/t_tra_rel":self.episodes[0].t_tra_rel}, step=self.global_step)
+            euler_nn,gate_pitch = log_train_IO_wandb(obs_batch[0,-1,:],outputs_batch[0,:].data.numpy().reshape(self.episodes[0].output_size),self.global_step)
+            
+            # writer.add_scalar('penalty_single_step', self.episodes[0].penalty, self.global_step)
+            wandb.log({"penalty_single_step":self.episodes[0].penalty},step=self.global_step)
 
             
             self.global_step  += 1
@@ -254,7 +278,7 @@ class LearningAgileAPG:
                 self.update_network()
             self.p_L_p_z_batch = self.p_L_p_z_batch.squeeze(2)
             ##== record the gradient and the penalty
-            log_gradient(writer,self.p_L_p_z_batch[0,0,:],self.penalty_batch[0],self.global_step)
+            log_gradient_wandb(self.p_L_p_z_batch[0,0,:],self.penalty_batch[0],self.global_step)
 
         else:
             return np.array(p_L_p_z_list).squeeze(2)
@@ -276,8 +300,8 @@ class LearningAgileAPG:
                     torch.save(self.model, model_file)
 
                 if (epoch+1) % 100 == 0:
-                    self.success_rate=mc_evaluation(writer=writer,options=options,model_file=model_file,global_step=self.global_step)
-    
+                    self.success_rate=mc_evaluation(options=options,model_file=model_file,global_step=self.global_step)
+        wandb.finish()
     def batch_gradient_visual(self):
         p_L_p_z_batch=self.train_one_epoch(0,GRAD_VIS=True)
         vis_gradient_norm(p_L_p_z_batch)

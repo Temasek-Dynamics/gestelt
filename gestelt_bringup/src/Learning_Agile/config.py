@@ -72,3 +72,8 @@ def setup_training_directories(base_dir='training_results/new_format'):
         "trained_model_folder": trained_model_folder,
         "log_folder": log_folder,
     }
+    
+def get_time_name():
+
+    now = datetime.datetime.now()
+    return now.strftime("%Y-%m-%d/%H-%M-%S")

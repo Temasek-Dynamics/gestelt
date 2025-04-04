@@ -15,4 +15,7 @@ training:
 model:
   input_size: 25 # current drone state (10), goal position (3),gate points (8x3)    #, gate position(3),  gate width(1) and orientation(9)
   hidden_size: 256
-  output_size: 16 # tra_pos(3), tra_9D_orientation(9),wrp, wrt, wqt, traversing_time(1) #
+  output_size: 20 # tra_pos(3), tra_9D_orientation(9), [wrpx, wrpy, wrpz], [wrtx, wrty, wrtz], wqt, traversing_time #
+  activation: "silu"
+  # activation: "relu"
+  

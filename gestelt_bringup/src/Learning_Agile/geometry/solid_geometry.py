@@ -147,11 +147,8 @@ def pitch_from_gate(gate_point):
     return gate_pitch
 
 def recover_euler_from_9d(outputs,deg_unit=False):
-    # R_nn,dR_dm=verify_SVD_ca(outputs[3:12])
-    if mission_cfg['PR_MATRIX_LEARN']:
-        R_nn,_=verify_SVD_PR_ca(outputs[3:7],outputs[7:11])
-    else:
-        R_nn,_=verify_SVD_ca(outputs[3:12])
+    
+    R_nn,_=verify_SVD_ca(outputs[3:12])
     quat_nn=R.from_matrix(R_nn.reshape(3,3))
     euler_nn=quat_nn.as_euler('zyx', degrees=deg_unit)
     

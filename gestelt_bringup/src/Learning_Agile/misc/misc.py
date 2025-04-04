@@ -1,7 +1,6 @@
 import argparse
 import os
 
-
 def str2bool(value):
     if isinstance(value, bool):
         return value
@@ -62,3 +61,26 @@ def save_nn_decision_csv(time,nn_decision,python_sim_data_folder):
     df=pd.DataFrame(data)
     output_file=os.path.join(python_sim_data_folder,"python_sim_nn_decision.csv")
     df.to_csv(output_file,index=False)
+
+def load_demo_traj(file_path):
+    import numpy as np
+    data = np.load(file_path, allow_pickle=True).item()
+    t_list = data['t_list']
+    p = data['p']
+    v = data['v']
+    a = data['a']
+    q = data['q']
+    R = data['R']
+    
+   
+    demo_traj=np.concatenate((p,v,q),axis=1)
+    
+    # gap 10 points
+    demo_traj = demo_traj[::10, :]
+    if demo_traj.shape[0]<=21:
+        # copy the last row to fill the rest of the array
+        last_row = demo_traj[-1, :]
+        while demo_traj.shape[0] < 21:
+            demo_traj = np.vstack((demo_traj, last_row))
+    return demo_traj
+        

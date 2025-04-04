@@ -93,8 +93,8 @@ def rotation_vis(uav_traj=None,
     plt.grid(True)
 
     
-    if seprate_plot: 
-        plt.show()    
+    # if seprate_plot: 
+    plt.show()    
     
     return euler_nn
 

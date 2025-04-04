@@ -55,6 +55,8 @@ class NN2_ROS_wrapper:
     def __init__(self):
         ## =================load parameters from yaml======================##
         is_simulation=rospy.get_param('mission/is_simulation', False)
+        self.gate_length=rospy.get_param('gate/length', 0.6)
+        self.gate_width=rospy.get_param('gate/width', 0.45)
         gate_v = rospy.get_param('gate/linear_vel', [0,0,0])
         gate_w = rospy.get_param('gate/angular_vel', 0)
         self.mission_period = rospy.get_param('mission/period', 5)
@@ -92,8 +94,8 @@ class NN2_ROS_wrapper:
         self.gate_pitch_pub = rospy.Publisher("/learning_agile_sim/gate_pitch", Float32, queue_size=1)
         self.gate_points_pub = rospy.Publisher("/visual/gate_points", PoseArray, queue_size=1)
         self.physical_gate_points_rotated = get_gate_points(gate_center=[0,0,1.8],
-                                    gate_length=rospy.get_param('gate/length', 0.6),
-                                    gate_width=rospy.get_param('gate/width', 0.45))
+                                    gate_length=self.gate_length,
+                                    gate_width=self.gate_width)
         self.gate_state_acquire_timer = rospy.Timer(rospy.Duration(1/self.NN_freq), self.gate_state_acquire)
         if not self.MANUAL_SET_POSE_TEST:
             
@@ -142,8 +144,8 @@ class NN2_ROS_wrapper:
         """
         gate_center = [msg.pose.position.x,msg.pose.position.y,msg.pose.position.z]
         gate_points_no_pitch=get_gate_points(gate_center=[0,0,0],
-                                    gate_length=rospy.get_param('gate/length', 1.2),
-                                    gate_width=rospy.get_param('gate/width', 0.5))
+                                            gate_length=self.gate_length,
+                                            gate_width=self.gate_width)
         
         gate_rot = [msg.pose.orientation.x, msg.pose.orientation.y, msg.pose.orientation.z, msg.pose.orientation.w]
         gate_rot_mat = R.from_quat(gate_rot).as_matrix()
