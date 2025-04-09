@@ -81,7 +81,7 @@ def traj_ani(ax, single_traj, predicted=False):
     for i in range(len(single_traj) - 1):
 
         velocity = np.linalg.norm(single_traj[:, 3:6], axis=1)  
-        norm_velocity = (velocity - np.min(velocity)) / (np.max(velocity) - np.min(velocity))  
+        norm_velocity = (velocity - np.min(velocity)) / (np.max(velocity) - np.min(velocity)+1e-5)  
         line,=ax.plot(single_traj[i:i+2, 0], single_traj[i:i+2, 1], single_traj[i:i+2, 2],
                 color=cmap(norm_velocity[i]), 
                 linewidth=1.0, 

@@ -185,13 +185,13 @@ class PlanFwdBwdWrapper():
         self.init_SRT=[self.config['drone']['mass']*9.81/4]*4
         goal_SRT=self.init_SRT
         if self.config['ctl_mode']==0:
-            self.ini_state = self.ini_r + self.ini_v_I + self.ini_q
+            self.ini_state = np.array(self.ini_r + self.ini_v_I + self.ini_q)
             self.goal_state_value=np.concatenate((goal_pos,goal_vel,goal_ori))
         elif self.config['ctl_mode']==1 or self.config['ctl_mode']==2:
-            self.ini_state = self.ini_r + self.ini_v_I + self.ini_q + self.ini_w
+            self.ini_state = np.array(self.ini_r + self.ini_v_I + self.ini_q + self.ini_w)
             self.goal_state_value=np.concatenate((goal_pos,goal_vel,goal_ori,goal_w))
         elif self.config['ctl_mode']==3:
-            self.ini_state = self.ini_r + self.ini_v_I + self.ini_q + self.ini_w + self.init_SRT
+            self.ini_state = np.array(self.ini_r + self.ini_v_I + self.ini_q + self.ini_w + self.init_SRT)
             self.goal_state_value=np.concatenate((goal_pos,goal_vel,goal_ori,goal_w,goal_SRT))
 
     def update_goal_pos(self,goal_pos):

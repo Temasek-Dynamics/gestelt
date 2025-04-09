@@ -53,7 +53,7 @@ class PenaltyDesignHelper():
     def init_env(self):
         options={
             
-        'SQP_RTI_OPTION' : False,
+        'SQP_RTI_OPTION' : True,
         'USE_PREV_SOLVER'  : False,
         'JAX_SVD' : False, # JAX_SVD or CasADi_SVD
 
@@ -143,7 +143,7 @@ class PenaltyDesignHelper():
         
 if __name__ == '__main__':
     # if ROT_VIS is True, the penalty will be calculated w.r.t the quadrotor's euler angle change
-    helper=PenaltyDesignHelper(trans_choice=2,euler_choice=0,ROT_VIS=False) 
+    helper=PenaltyDesignHelper(trans_choice=2,euler_choice=1,ROT_VIS=False) 
     helper.load_config(mission_config=mission_cfg)
     helper.init_env()
     helper.plot_penalty_seq()

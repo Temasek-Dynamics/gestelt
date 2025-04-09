@@ -1,15 +1,15 @@
 import os
+import ray
 from learning_agile_sim import eval_sim_interface,parse_options
 from visualization.python_sim_vis import plot_mc_traj
 from config import mission_cfg,train_cfg,current_dir
 import wandb
-def mc_evaluation(test_num=24,\
-                 writer=None,\
-                 options=None,\
-               model_file=os.path.join(current_dir,mission_cfg['NN_model_name']),\
-               global_step=None,
-               STAB_TEST=False,
-               VIS_BATCH=False):
+
+def mc_evaluation(test_num=24,
+                model_file=os.path.join(current_dir,mission_cfg['NN_model_name']),\
+                global_step=None,
+                STAB_TEST=False,
+                VIS_BATCH=False):
     """evaluate the success rate every 20 epsiodes, by running the trained model 24 times
     Args:
         model_file (str): the path to the model file
@@ -18,26 +18,26 @@ def mc_evaluation(test_num=24,\
     ## run the success evaluation 32 times and return the success rate
     count=0
     options=parse_options()
-    
+    options['USE_PREV_SOLVER']=True
     gate_traj_batch=[]
     state_traj_batch=[]
     failed_batch=[]
     failed_state_batch=[]
-    for _ in range(test_num):
-        out = eval_sim_interface(mission_cfg,
-                                train_cfg,
-                                options,
-                                model_file,
-                                INTRAIN=True,
-                                STAB_TEST=STAB_TEST)
+    
+    outs=ray.get([eval_sim_interface.remote(mission_cfg,
+                                        train_cfg,
+                                        options,
+                                        model_file,
+                                        INTRAIN=True,
+                                        STAB_TEST=STAB_TEST) for _ in range(test_num)])
+    for out in outs:
         FAILED=out['FAILED']
         state_traj_batch.append(out['state_traj'])
-        failed_state_batch.extend(out['failed_state'])
         gate_traj_batch.append(out['gate_traj'])
         failed_batch.append(out['FAILED'])
+        
         if FAILED:
             count+=1
-        
         if STAB_TEST:
             print(f"STAB_TEST_FAILED: {FAILED}")
         else:
@@ -56,4 +56,5 @@ def mc_evaluation(test_num=24,\
     return success_rate
 
 if __name__ == "__main__":
-    mc_evaluation(test_num=24,STAB_TEST=False,VIS_BATCH=True)
+    ray.init()
+    mc_evaluation(test_num=48,STAB_TEST=False,VIS_BATCH=True)

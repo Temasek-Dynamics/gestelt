@@ -8,23 +8,27 @@ from scipy.spatial.transform import Rotation as R
 from config import mission_cfg, train_cfg
 
 from quad_model import get_gate_points
-from quad_nn import network_with_GRU,network_with_GRU_heads, nn_sample, t_output
+from quad_nn import network_with_GRU,nn_sample, t_output
 # Device configuration
-device = torch.device('cpu')#torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
+device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+# device = torch.device('cpu')#
 # Hyper-parameters 
 input_size = train_cfg['model']['input_size'] 
 hidden_size = train_cfg['model']['hidden_size']
 output_size = train_cfg['model']['output_size']
 num_epochs = 3  
-batch_size = 10000
+batch_size = 5000
 learning_rate = 2e-5
 current_dir = os.path.dirname(os.path.abspath(__file__))
 training_data_folder=os.path.abspath(os.path.join(current_dir, 'training_data'))
 model_folder=os.path.abspath(os.path.join(training_data_folder, 'NN_model'))
-FILE = model_folder+"/NN_close_pretrain.pth"
+
+if mission_cfg['POSITION_ENCODING']:
+    FILE = model_folder+"/NN_close_pretrain_position_encode.pth"
+else:
+    FILE = model_folder+"/NN_close_pretrain_position.pth"
 # select the seed
-torch.manual_seed(24)
+torch.manual_seed(train_cfg['model']['seed'])
 model = network_with_GRU(input_size, hidden_size, hidden_size,output_size).to(device)
 
 # Loss and optimizer
@@ -42,17 +46,17 @@ def input_cal():
     static_env = nn_sample(PRTRAIN=True)
     
     ## drone initial position
-    inputs[0:3] = static_env[0:3]
+    inputs[0:3] = static_env[0:3]/2 # normalize the position to [-1,1]
     
     ## drone initial velocity
-    inputs[3:6] = np.array([0,0,0])
+    inputs[3:6] = np.array([0,0,0])/5 # static env[3:6] # normalize the velocity to [-1,1]
 
     ## drone initial orientation: yaw to quaternion
     r = R.from_euler('zyx', np.array([static_env[6],0,0]), degrees=True)
     inputs[6:10]= r.as_quat()
     inputs[6:10]=np.roll(inputs[6:10],1)
 
-    inputs[10:13] = static_env[3:6] # goal position
+    inputs[10:13] = static_env[3:6]/2 # goal position
     
 
 
@@ -61,7 +65,7 @@ def input_cal():
     gate_length = mission_cfg['gate']['length']
     gate_center = mission_cfg['mission']['gate_position']
     relative_gate_points=get_gate_points(gate_center,gate_length,gate_width)-inputs[0:3]
-    inputs[13:input_size] = relative_gate_points.flatten() # gate points
+    inputs[13:input_size] = relative_gate_points.flatten()/2 # gate points
     
     # inputs[25:28] = gate_center # gate position
     # inputs[28:38] = static_env[7:17] # gate width and gate orientation

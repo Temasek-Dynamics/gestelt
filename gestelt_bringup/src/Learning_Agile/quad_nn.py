@@ -102,7 +102,7 @@ def nn_sample(init_pos=None,
         # gate_pitch = mission_cfg['mission']['gate_ori_euler'][1] #1.2rad = 68.754 degrees, 0.8rad = 45.729 degrees 
 
         ## or 
-        # gate_pitch = np.random.uniform(-pi/6,pi/6)
+        # gate_pitch = np.random.uniform(-pi/2,pi/2)
         
         
 
@@ -134,10 +134,10 @@ def t_output(inputs,gate_rot_matrix):
 
     ## traversal time is proportional to the distance of the centroids
     if inputs[1]>0:
-        raw_time = round(magni(inputs[0:3]-outputs[0:3])/desired_average_vel,1) #3
+        raw_time = round(magni(inputs[0:3]*2-outputs[0:3])/desired_average_vel,1) #3
        
     else:
-        raw_time = -round(magni(inputs[0:3]-outputs[0:3])/desired_average_vel_after_gate,1) #4
+        raw_time = -round(magni(inputs[0:3]*2-outputs[0:3])/desired_average_vel_after_gate,1) #4
    
     outputs[-1] = raw_time #np.clip(raw_time,3,3)
 
@@ -166,40 +166,40 @@ def gene_gate():
 
 
 ## define the class of neural network (2 hidden layers, unit = ReLU)
-class network(nn.Module):
-    def __init__(self, D_in, D_h1, D_h2, D_out):
-        super(network, self).__init__()        
-        # D_in : dimension of input layer
-        # D_h  : dimension of hidden layer
-        # D_out: dimension of output layer
-        self.l1 = nn.Linear(D_in, D_h1)
-        self.F1 = nn.ReLU()
-        self.l2 = nn.Linear(D_h1, D_h2)
-        self.F2 = nn.ReLU()
-        self.l3 = nn.Linear(D_h2, D_out)
+# class network(nn.Module):
+#     def __init__(self, D_in, D_h1, D_h2, D_out):
+#         super(network, self).__init__()        
+#         # D_in : dimension of input layer
+#         # D_h  : dimension of hidden layer
+#         # D_out: dimension of output layer
+#         self.l1 = nn.Linear(D_in, D_h1)
+#         self.F1 = nn.ReLU()
+#         self.l2 = nn.Linear(D_h1, D_h2)
+#         self.F2 = nn.ReLU()
+#         self.l3 = nn.Linear(D_h2, D_out)
 
-    def forward(self, input):
-        # convert state s to tensor
-        S = input # column 2D tensor
-        out = self.l1(S) # linear function requires the input to be a row tensor
-        out = self.F1(out)
-        out = self.l2(out)
-        out = self.F2(out)
-        out = self.l3(out)
-        return out
+#     def forward(self, input):
+#         # convert state s to tensor
+#         S = input # column 2D tensor
+#         out = self.l1(S) # linear function requires the input to be a row tensor
+#         out = self.F1(out)
+#         out = self.l2(out)
+#         out = self.F2(out)
+#         out = self.l3(out)
+#         return out
 
-    def myloss_original(self, para, dp):
-        # convert np.array to tensor
-        Dp = torch.tensor(dp, dtype=torch.float) # row 2D tensor
-        loss_nn = torch.matmul(Dp, para)
-        return loss_nn
+#     def myloss_original(self, para, dp):
+#         # convert np.array to tensor
+#         Dp = torch.tensor(dp, dtype=torch.float) # row 2D tensor
+#         loss_nn = torch.matmul(Dp, para)
+#         return loss_nn
 
-    def myloss(self, para, dp, device='cpu'):
-        # convert np.array to tensor
-        Dp = torch.tensor(dp, dtype=torch.float).to(device) # row 2D tensor
-        # loss_nn = torch.matmul(Dp, para)
-        loss_nn =torch.trace(torch.matmul(Dp, para.t()))/(Dp.shape[0])
-        return loss_nn # size is 1
+#     def myloss(self, para, dp, device='cpu'):
+#         # convert np.array to tensor
+#         Dp = torch.tensor(dp, dtype=torch.float).to(device) # row 2D tensor
+#         # loss_nn = torch.matmul(Dp, para)
+#         loss_nn =torch.trace(torch.matmul(Dp, para.t()))/(Dp.shape[0])
+#         return loss_nn # size is 1
 
 class network_with_GRU(nn.Module):
     def __init__(self, D_in, D_h1, D_h2, D_out):
@@ -218,9 +218,29 @@ class network_with_GRU(nn.Module):
             self.F1 = nn.SiLU()
             self.F2 = nn.SiLU()
         self.l2 = nn.Linear(D_h1, D_h2)
-        self.l3 = nn.Linear(D_h2, D_out)
+        # self.l3 = nn.Linear(D_h2, D_out)
 
- 
+
+        # positional head
+        if mission_cfg['POSITION_ENCODING']:
+            self.sing_axis_K=4
+            self.positional_head = nn.Linear(D_h2, 3*self.sing_axis_K)
+            self.xy_bins=torch.linspace(-1, 1, self.sing_axis_K+1)
+            self.z_bins=torch.linspace(1.2, 2, self.sing_axis_K+1)
+
+            self.register_buffer('xy_centers',0.5*(self.xy_bins[1:]+self.xy_bins[:-1]).reshape(1,-1))
+            self.register_buffer('z_centers',0.5*(self.z_bins[1:]+self.z_bins[:-1]).reshape(1,-1))
+        else:
+            self.positional_head = nn.Linear(D_h2, 3)
+
+        # rotation head
+        self.rotation_head = nn.Linear(D_h2, 9)
+
+        # weights vector head
+        self.weights_head = nn.Linear(D_h2, 7)
+
+        # traverse time head
+        self.traverse_time_head = nn.Linear(D_h2, 1)
 
         
     def forward(self, input,deterministic=True):
@@ -234,114 +254,46 @@ class network_with_GRU(nn.Module):
         out = self.l2(out)
         out = self.F2(out)
         out = out.squeeze(1)
-        out = self.l3(out)
 
-        # traverse position x,y
-        out [:,0:2]=torch.tanh(out[:,0:2])*3
-        
-        # traverse position z
-        out [:,2] = torch.sigmoid(out[:,2])*2+0.5
-        
-        # tra_throttle
-        # out [:,-5] = torch.sigmoid(out[:,-5])*0.4+0.1
+        # position head   
+        if mission_cfg['POSITION_ENCODING']:     
+            position_logit=self.positional_head(out)
 
-        # wrp
-        out [:,-8:-5]=torch.sigmoid(out[:,-8:-5])*50+10
+            # # traverse position x, y, z
+            x_logit = position_logit[:,:self.sing_axis_K]
+            y_logit = position_logit[:,self.sing_axis_K:2*self.sing_axis_K]
+            z_logit = position_logit[:,2*self.sing_axis_K:3*self.sing_axis_K]
 
-        # wrt
-        out [:,-5:-2]=torch.sigmoid(out[:,-5:-2])*20
+            x_probs = torch.softmax(x_logit, dim=-1)
+            y_probs = torch.softmax(y_logit, dim=-1)
+            z_probs = torch.softmax(z_logit, dim=-1)
 
-        # wqt
-        out [:,-2]=torch.sigmoid(out[:,-2])*20
+            x_hat = x_probs @ self.xy_centers.T
+            y_hat = y_probs @ self.xy_centers.T
+            z_hat = z_probs @ self.z_centers.T
+        else:
+            # Keep the batch dimension
+            x_hat = torch.zeros((out.shape[0], 1),device=out.device)
+            y_hat = torch.zeros((out.shape[0], 1),device=out.device)
+            z_hat = torch.zeros((out.shape[0], 1),device=out.device)
+            x_hat[:,0] = torch.tanh(self.positional_head(out)[:,0])*2
+            y_hat[:,0] = torch.tanh(self.positional_head(out)[:,1])*2
+            z_hat[:,0] = torch.sigmoid(self.positional_head(out)[:,2])*2+0.5
+            
+        # orientation 
+        orientation = self.rotation_head(out)
 
+        # vector head
+        weights = self.weights_head(out)
+        weights[:,0:3]=torch.sigmoid(weights[:,0:3])*50+10
+        weights[:,3:6]=torch.sigmoid(weights[:,3:6])*20
+        weights[:,6]=torch.sigmoid(weights[:,6])*20
 
-        return out
-
-    
-    def myloss(self, para, dp, device='cpu'):
-        # convert np.array to tensor
-        Dp = torch.tensor(dp, dtype=torch.float).to(device) # row 2D tensor
-        # loss_nn = torch.matmul(Dp, para)
-        para=para.to(device)
-        loss_nn =torch.trace(torch.matmul(Dp, para.t()))/(Dp.shape[0])
-        return loss_nn # size is 1
-
-    def loss_close_loop(self, para, dp, device='cpu'):
-        # convert np.array to tensor
-        Dp = torch.tensor(dp, dtype=torch.float).to(device) 
-        para=para.to(device)
-        
-
-        # bxHx1x13 x bxHx13x1 -> 1
-        loss_nn = torch.sum(torch.einsum('bijk,bikj -> b',para,Dp))/(Dp.shape[0]*Dp.shape[1])
-
-        return loss_nn # size is 1
-
-
-class network_with_GRU_heads(nn.Module):
-    def __init__(self, D_in, D_h1, D_h2, D_out):
-        super(network_with_GRU_heads, self).__init__()        
-        # D_in : dimension of input layer
-        # D_h  : dimension of hidden layer
-        # D_out: dimension of output layer
-        self.GRU = nn.GRU(input_size=D_in, hidden_size=D_h2,num_layers=1,batch_first=True)
-        self.input_norm=nn.LayerNorm(D_in)
-        self.out_norm = nn.LayerNorm(D_h2)
-        self.l1 = nn.Linear(D_h1, D_h1)
-        self.F1 = nn.ReLU()
-        self.l2 = nn.Linear(D_h1, D_h2)
-        self.F2 = nn.ReLU()
-        # self.l3 = nn.Linear(D_h2, D_out)
-        
-        # replace l3 with heads
-        self.position_head = nn.Linear(D_h2, 3)
-        self.orientation_head = nn.Linear(D_h2, 9)
-        self.traverse_time_head = nn.Linear(D_h2, 1)
-        self.weights_head = nn.Linear(D_h2, 3)  
-
-    def forward(self, input,deterministic=True):
-        out,hidden = self.GRU(input)
-        out = out [:,-1,:]
-        # out = hidden[-1,:,:]
-        out = self.l1(out) # linear function requires the input to be a row tensor
-        out = self.F1(out)
-        out = self.l2(out)
-        out = self.F2(out)
-        out = out.squeeze(1)
-        
-        # position head
-        position = self.position_head(out)
-        # orientation head
-        orientation = self.orientation_head(out)
         # traverse time head
         traverse_time = self.traverse_time_head(out)
-        # weights head
-        weights = self.weights_head(out)
 
-        final_out = torch.zeros(input.shape[0],output_size)
-    
-        # traverse position x,y
-        final_out[:,0:2]=torch.tanh(position[:,0:2])*3
-        
-        # traverse position z
-        final_out[:,2] = torch.sigmoid(position[:,2])*2+0.5
-        
-        # orientation
-        final_out[:,3:12]=orientation
 
-        # wrp
-        final_out[:,-4]=torch.sigmoid(weights[:,-3])*50+10
-
-        # wrt
-        final_out[:,-3]=torch.sigmoid(weights[:,-2])*20
-
-        # wqt
-        final_out[:,-2]=torch.sigmoid(weights[:,-1])*20
-
-        ## t_tra
-        final_out[:,-1]=traverse_time
-
-        return final_out
+        return torch.hstack([x_hat, y_hat, z_hat,orientation, weights, traverse_time])
 
     
     def myloss(self, para, dp, device='cpu'):
@@ -362,6 +314,92 @@ class network_with_GRU_heads(nn.Module):
         loss_nn = torch.sum(torch.einsum('bijk,bikj -> b',para,Dp))/(Dp.shape[0]*Dp.shape[1])
 
         return loss_nn # size is 1
+
+
+# class network_with_GRU_heads(nn.Module):
+#     def __init__(self, D_in, D_h1, D_h2, D_out):
+#         super(network_with_GRU_heads, self).__init__()        
+#         # D_in : dimension of input layer
+#         # D_h  : dimension of hidden layer
+#         # D_out: dimension of output layer
+#         self.GRU = nn.GRU(input_size=D_in, hidden_size=D_h2,num_layers=1,batch_first=True)
+#         self.input_norm=nn.LayerNorm(D_in)
+#         self.out_norm = nn.LayerNorm(D_h2)
+#         self.l1 = nn.Linear(D_h1, D_h1)
+#         self.F1 = nn.ReLU()
+#         self.l2 = nn.Linear(D_h1, D_h2)
+#         self.F2 = nn.ReLU()
+#         # self.l3 = nn.Linear(D_h2, D_out)
+        
+#         # replace l3 with heads
+#         self.position_head = nn.Linear(D_h2, 3)
+#         self.orientation_head = nn.Linear(D_h2, 9)
+#         self.traverse_time_head = nn.Linear(D_h2, 1)
+#         self.weights_head = nn.Linear(D_h2, 3)  
+
+#     def forward(self, input,deterministic=True):
+#         out,hidden = self.GRU(input)
+#         out = out [:,-1,:]
+#         # out = hidden[-1,:,:]
+#         out = self.l1(out) # linear function requires the input to be a row tensor
+#         out = self.F1(out)
+#         out = self.l2(out)
+#         out = self.F2(out)
+#         out = out.squeeze(1)
+        
+#         # position head
+#         position = self.position_head(out)
+#         # orientation head
+#         orientation = self.orientation_head(out)
+#         # traverse time head
+#         traverse_time = self.traverse_time_head(out)
+#         # weights head
+#         weights = self.weights_head(out)
+
+#         final_out = torch.zeros(input.shape[0],output_size)
+    
+#         # traverse position x,y
+#         final_out[:,0:2]=torch.tanh(position[:,0:2])*3
+        
+#         # traverse position z
+#         final_out[:,2] = torch.sigmoid(position[:,2])*2+0.5
+        
+#         # orientation
+#         final_out[:,3:12]=orientation
+
+#         # wrp
+#         final_out[:,-4]=torch.sigmoid(weights[:,-3])*50+10
+
+#         # wrt
+#         final_out[:,-3]=torch.sigmoid(weights[:,-2])*20
+
+#         # wqt
+#         final_out[:,-2]=torch.sigmoid(weights[:,-1])*20
+
+#         ## t_tra
+#         final_out[:,-1]=traverse_time
+
+#         return final_out
+
+    
+#     def myloss(self, para, dp, device='cpu'):
+#         # convert np.array to tensor
+#         Dp = torch.tensor(dp, dtype=torch.float).to(device) # row 2D tensor
+#         # loss_nn = torch.matmul(Dp, para)
+#         para=para.to(device)
+#         loss_nn =torch.trace(torch.matmul(Dp, para.t()))/(Dp.shape[0])
+#         return loss_nn # size is 1
+
+#     def loss_close_loop(self, para, dp, device='cpu'):
+#         # convert np.array to tensor
+#         Dp = torch.tensor(dp, dtype=torch.float).to(device) 
+#         para=para.to(device)
+        
+
+#         # bxHx1x13 x bxHx13x1 -> 1
+#         loss_nn = torch.sum(torch.einsum('bijk,bikj -> b',para,Dp))/(Dp.shape[0]*Dp.shape[1])
+
+#         return loss_nn # size is 1
     
 ## run the above code
 if __name__ == "__main__":

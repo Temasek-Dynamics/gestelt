@@ -5,8 +5,9 @@ import os
 import subprocess
 import time
 import argparse
+import ray
 
-from config import train_cfg, mission_cfg, current_dir
+
 import numpy as np
 from collections import deque
 from scipy.spatial.transform import Rotation as R
@@ -22,7 +23,7 @@ from quad_moving import binary_search_solver,input_cal
 from visualization.result_analysis import rotation_vis
 from geometry.solid_geometry import magni, pitch_from_gate, verify_SVD_ca,verify_SVD_PR_ca#,SVD_M_to_SO3
 from misc.misc import str2bool 
-from config import mission_cfg, train_cfg
+from config import train_cfg, mission_cfg, current_dir
 
 device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 # device=torch.device('cpu')
@@ -56,12 +57,14 @@ def get_obs(history_obs = None,
     rot=R.from_euler('zyx',[0,gate_pitch,0])
     
     immed_obs=np.zeros(input_size)
-    immed_obs[0:10]=drone_state[0:10]
-    immed_obs[10:13]=final_point
+    immed_obs[0:3]=drone_state[0:3]/2
+    immed_obs[3:6]=drone_state[3:6]/5
+    immed_obs[6:10]=drone_state[6:10] # quaternion
+    immed_obs[10:13]=final_point/2
     
     ## gate points
     relative_gate_points = gate_t_i.gate_point-drone_state[0:3]
-    immed_obs[13:25]=relative_gate_points.flatten() # gate points
+    immed_obs[13:25]=relative_gate_points.flatten()/2 # gate points
 
     
     if i == 0:
@@ -136,7 +139,6 @@ class MovingGate():
         self.gate_points_list, self.V = self.gate.move(T = python_sim_time, v = gate_v ,w = gate_w ,dt = dt)
 
 
-    
 class LearningAgileSim():
     def __init__(self,
                  python_sim_time,
@@ -163,7 +165,7 @@ class LearningAgileSim():
         if not self.options['MANUAL_SET_POSE_TEST']:
             # load trained DNN2 model
             if model_file is not None:
-                self.model = torch.load(model_file)
+                self.model = torch.load(model_file,map_location='cpu')
     
 
         ##-------------------- planning variables --------------------------##
@@ -217,6 +219,7 @@ class LearningAgileSim():
         self.goal_yaw=np.array(self.config_dict['mission']['goal_ori_euler'])[0]
         
         self.gate_center=np.array(self.config_dict['mission']['gate_position'])
+        # self.gate_center += np.random.uniform(-0.1,0.1,3)
         # self.gate_ori_RP=np.array(self.config_dict['mission']['gate_ori_RP'])
         gate_ori_euler=np.array(self.config_dict['mission']['gate_ori_euler'])
         self.gate_ori_9d=R.from_euler('zyx',gate_ori_euler).as_matrix().flatten()
@@ -606,7 +609,7 @@ def parse_options():
     args = parser.parse_args()
     return vars(args)  # Return options as a dictionary  
 
-        
+@ray.remote        
 def eval_sim_interface(mission_cfg=None,
                  train_cfg=None,
                  options=None,
@@ -653,7 +656,7 @@ def eval_sim_interface(mission_cfg=None,
     return out
 
 def main():
-
+    ray.init()
     python_sim_data_dir = os.path.join(current_dir, 'python_sim_result')
     options=parse_options()
     print("Parsed Options:", options)
@@ -665,12 +668,13 @@ def main():
         model_name = '20241031-142733-PDP-Trial 1, shrink the gate from [1.2,0.56] to [1.0, 0.4]/NN2_imitate_1.pth' 
         model_file=os.path.join(current_dir, f'training_data/NN_model/',model_name)
     
-    eval_sim_interface(mission_cfg,
+    eval_sim_interface.remote(mission_cfg,
                  train_cfg,
                  options,
                  model_file,
                  python_sim_data_dir,
                  INTRAIN=False)
+   
     
     
 

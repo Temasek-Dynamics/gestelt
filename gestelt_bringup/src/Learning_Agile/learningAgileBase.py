@@ -3,6 +3,7 @@ import torch
 import os
 # import cProfile
 from collections import deque
+import ray
 
 from scipy.spatial.transform import Rotation as R
 import matplotlib.pyplot as plt
@@ -27,6 +28,7 @@ options['TRAINING']=False
 options['DEBUG']=False
 options['BACKWARD']=True
 options['STATE_2_MOVING_GATE']=False
+@ray.remote
 class LearningAgileBase:
     """
     this class is responsible for wrap the single episode for training,
@@ -276,17 +278,40 @@ class LearningAgileBase:
                     # break
 
 
-
-    @property
-    def drone_state(self):
+    def get_control(self):
+        """
+        get the control command
+        """
+        return self.control
+    
+    
+    def get_drone_state(self):
+        """
+        get the drone state
+        """
         return self.state
     
-    @property
-    def penalty(self):
+    
+    def get_immed_penalty(self,real_state_i,success_rate):
+        """
+        get the penalty of the current MPC prediction, used under the RAY
+        """
+        L_d_L_i = self.planner.get_penalty(self.pred_st_traj,real_state_i,success_rate)
+        self.L_i.append(L_d_L_i[0])
+        self.p_L_i_p_X_traj_i.append(L_d_L_i[1])
+        
+    
+    def get_penalty(self):
+        """
+        get the penalty of the whole episode
+        """
         return np.array([sum(self.L_i)])/mission_cfg['learning_agile']['horizon']
     
-    @property
-    def p_L_p_z(self):
+    
+    def get_p_L_p_z(self):
+        """
+        get the gradient of the penalty w.r.t. the NN output, over the whole episode
+        """
         p_L_p_z = np.array(self.p_L_i_p_z_i)
         return p_L_p_z/mission_cfg['learning_agile']['horizon']
 

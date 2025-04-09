@@ -603,7 +603,7 @@ class OCSys:
             ocp.solver_options.qp_solver_tol_comp = 5e+3
             ocp.solver_options.qp_solver_iter_max = 10
             ocp.solver_options.nlp_solver_tol_min_step_norm = 5e+3
-            ocp.solver_options.print_level = 1
+            ocp.solver_options.print_level = 2
             ocp.translate_to_feasibility_problem(keep_x0=True, keep_cost=True) # critical
             ocp.solver_options.globalization = 'MERIT_BACKTRACKING' # LINESEARCH gobalization
             ocp.solver_options.with_adaptive_levenberg_marquardt = True
@@ -695,7 +695,8 @@ class OCSys:
         
         # solve ocp
         status = self.acados_solver.solve()
-
+        self.acados_solver.print_statistics()
+        
         if status != 0:
             NO_SOLUTION_FLAG=True
             self.acados_solver.print_statistics()
