@@ -1,7 +1,7 @@
 # Trajectory Server parameters
 
 # takeoff_height: take off height in meters
-takeoff_height: 1.0
+takeoff_height: 5.0
 # Minimum height at which the quadrotor will HOVER
 minimum_hover_height: 0.5
 
@@ -24,4 +24,4 @@ pub_cmd_freq: 100.0
 state_machine_tick_freq: 50.0
 
 #policy params
-position_control: True
+position_control: False

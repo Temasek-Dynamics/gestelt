@@ -62,8 +62,8 @@ class TEST_RENDER(object):
         self.policy.eval()
 
         target_vel = np.zeros((1, 3))
-        # target_vel[:,0] = 1
-        # target_vel[:,2] = 1
+        target_vel[:,0] = 1
+        target_vel[:,2] = 1
         # target_vel = np.random.randn(1, 3)
         print(target_vel)
         self.t_vel = torch.tensor(target_vel, dtype=torch.float32)
@@ -171,7 +171,7 @@ class NN_POLICY_PLANNER(object):
         pva_traj_msg = ExecTrajectory()
         pva_traj_msg.transform.translation.x = 0.0
         pva_traj_msg.transform.translation.y = 0.0
-        pva_traj_msg.transform.translation.z = 1.0
+        pva_traj_msg.transform.translation.z = 5.0
         pva_traj_msg.transform.rotation.x = 0.0
         pva_traj_msg.transform.rotation.y = 0.0
         pva_traj_msg.transform.rotation.z = 0.0 #0.707
@@ -203,7 +203,7 @@ class NN_POLICY_PLANNER(object):
         pva_traj_msg.transform.rotation.w = 0.707
 
         ### This part will only be taken in by trajectory server if type_mask == 1
-        pva_traj_msg.angular_rates.angular.x = nn_action[0,1] * 3    #body rate x
+        pva_traj_msg.angular_rates.angular.x = nn_action[0,1] * 3     #body rate x
         pva_traj_msg.angular_rates.angular.y = nn_action[0,2] * 3   #body rate y
         pva_traj_msg.angular_rates.angular.z = nn_action[0,3] * 3
 
@@ -291,14 +291,14 @@ if __name__=="__main__":
     print("STARTING NODE")
     rospy.init_node("nn_policy_planner")
     ros_lib = roslib.packages.get_pkg_dir("gestelt_bringup")
-    full_config_path = os.path.join(ros_lib, "config/traj_server_default.yaml")
+    full_config_path = os.path.join(ros_lib, "config/traj_server_vel.yaml")
     with open(full_config_path, 'r') as file:
         loaded_params = yaml.safe_load(file)
     mission_command_mode = loaded_params["mission_command_mode"]
     position_control = loaded_params["position_control"]
 
     full_path = "/home/yanrui/storage/gestelt_ws/src/gestelt/gestelt_navigation/nn_policy/logs/vel_zero"
-    full_policy_path = os.path.join(full_path, "20250411-091900/policy.pth")
+    full_policy_path = os.path.join(full_path, "20250409-163006/policy.pth")
     nn_policy = TEST_RENDER(full_policy_path, position_control) 
 
     nn_policy_planner = NN_POLICY_PLANNER(int(mission_command_mode), nn_policy)
