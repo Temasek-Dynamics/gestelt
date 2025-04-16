@@ -7,3 +7,7 @@ Things to take note:
 3. For position control, make sure the position and the target set during testing is the same as that with training.
 3. For velocity control, make sure that the target velocity set during testing is the same as that with training.
 4. For training, it is important that the max single thrust and the max attitude rate is the same as that with training. Perhaps there should be a common config file.
+
+
+
+5. Real drone weight is 242.5g. nominal collective thrust is 0.33 during hover. Diff sim drone weight is currently 234g. action_ref is currently 0.286. Need to increase it.

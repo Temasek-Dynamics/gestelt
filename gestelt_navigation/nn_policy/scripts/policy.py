@@ -83,7 +83,9 @@ class TEST_RENDER(object):
 
 class NN_POLICY_PLANNER(object):
 
-    def __init__(self, mission_command_mode, policy):
+    def __init__(self, mission_command_mode, policy, inference_timestep):
+        self.q_counter = 0
+        self.qd_counter = 0
         #Creating subscribers and Publishers
         self.bullet_sim_mutex = threading.Lock()
         self.tfBuffer =  tf2_ros.Buffer(rospy.Duration(10))
@@ -108,8 +110,7 @@ class NN_POLICY_PLANNER(object):
         self.mission_mode_pub_ = rospy.Publisher("/traj_server/mission_command", Int8, queue_size = 5, latch=False)
         
 
-        self.rate = rospy.Rate(0.02)
-        self.event_manager = rospy.Timer(rospy.Duration(0.01), self.eventCB)
+        self.event_manager = rospy.Timer(rospy.Duration(inference_timestep), self.eventCB)
 
         #DRONE STATE MACHINE
         self.drone_state = 0
@@ -128,6 +129,7 @@ class NN_POLICY_PLANNER(object):
         self.warp_mission_command_mode = mission_command_mode
         self.attitude_mode_toggle = 0
         self.action = np.zeros((1,4))
+        
         time.sleep(1)
         self.policy_evaluation_timer = rospy.Timer(rospy.Duration(0.01), self.nn_evaluation)
         
@@ -154,11 +156,18 @@ class NN_POLICY_PLANNER(object):
         self.drone_qd = np.array([msg.twist.twist.angular.x, msg.twist.twist.angular.y, msg.twist.twist.angular.z])
 
     def warpOdomCB(self,msg):
+        # if self.qd_counter %3 == 0:
         self.warp_qd = np.array([msg.twist.twist.angular.x, msg.twist.twist.angular.y, msg.twist.twist.angular.z, msg.twist.twist.linear.x, msg.twist.twist.linear.y, msg.twist.twist.linear.z ])
+        #     self.qd_counter+=1
+        # else:
+        #     self.qd_counter += 1
 
     def warpPoseCB(self,msg):
+        # if self.q_counter %3 == 0:
         self.warp_q = np.array([msg.pose.position.x, msg.pose.position.y,msg.pose.position.z, msg.pose.orientation.x, msg.pose.orientation.y, msg.pose.orientation.z, msg.pose.orientation.w])
-
+        #     self.q_counter += 1
+        # else:
+        #     self.q_counter += 1
     def eventCB(self, event):
         if self.drone_state == DRONESTATE["IDLE"].value:
             self.publish_mission(ServerEvent["TAKEOFF_E"].value)
@@ -169,6 +178,7 @@ class NN_POLICY_PLANNER(object):
 
     def publishPVA(self):
         pva_traj_msg = ExecTrajectory()
+        pva_traj_msg.header.stamp = rospy.Time.now()
         pva_traj_msg.transform.translation.x = 0.0
         pva_traj_msg.transform.translation.y = 0.0
         pva_traj_msg.transform.translation.z = 1.0
@@ -191,6 +201,7 @@ class NN_POLICY_PLANNER(object):
 
     def publishATT(self, type_mask, nn_action):
         pva_traj_msg = ExecTrajectory()
+        pva_traj_msg.header.stamp = rospy.Time.now()
 
         pva_traj_msg.type_mask = type_mask
         # print(self.action)
@@ -296,12 +307,14 @@ if __name__=="__main__":
         loaded_params = yaml.safe_load(file)
     mission_command_mode = loaded_params["mission_command_mode"]
     position_control = loaded_params["position_control"]
+    delta_time = float(loaded_params["training"]["delta_time"])
 
     full_path = "/home/yanrui/storage/gestelt_ws/src/gestelt/gestelt_navigation/nn_policy/logs/vel_zero"
-    full_policy_path = os.path.join(full_path, "20250411-091900/policy.pth")
+    full_policy_path = os.path.join(full_path, "20250415-171646/policy.pth")
     nn_policy = TEST_RENDER(full_policy_path, position_control) 
 
-    nn_policy_planner = NN_POLICY_PLANNER(int(mission_command_mode), nn_policy)
+    nn_policy_planner = NN_POLICY_PLANNER(mission_command_mode=int(mission_command_mode), policy=nn_policy, 
+                                          inference_timestep = delta_time)
 
     rospy.spin()
 
