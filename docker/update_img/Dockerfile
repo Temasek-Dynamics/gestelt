@@ -19,8 +19,9 @@ SHELL ["/bin/bash", "-c"]
 
 # Make directory and clone repository
 WORKDIR /gestelt_ws/src/gestelt
-RUN git fetch origin
-RUN git checkout origin/with_gate_model_16_Jan
+# RUN git fetch origin
+RUN git pull
+RUN git checkout with_gate_model_16_Jan
 
 
 ## if the c_generated_code is git ignored, than this script is required to generate the c code
@@ -49,6 +50,6 @@ RUN export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/root/acados/lib \
 # DRONE_ID environment variable can be overriden on docker image startup
 ENV MASTER_IP=localhost
 ENV SELF_IP=localhost
-
+ENV TZ=Asia/Singapore
 ENTRYPOINT ["/ros_entrypoint.sh"]
 CMD ["bash"]
