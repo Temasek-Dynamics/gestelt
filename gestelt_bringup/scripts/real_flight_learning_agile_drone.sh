@@ -39,7 +39,7 @@ export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:$gestelt_bringup_DIR:$PX4_AUTOPILOT_RE
 CMD_2="roslaunch gestelt_bringup mission_realflight.launch"
 
 
-# start up the NN wrapper
+# start up the NN wrapper 
 # CMD_3="taskset -c 3 roslaunch gestelt_bringup NN2_ROS_wrapper.launch"
 
 

@@ -61,7 +61,7 @@ class NN2_ROS_wrapper:
         NN_model_name=rospy.get_param('NN_deploy_model_name', 'NN2_imitate_1.pth')
         self.NN_freq = rospy.get_param('NN_freq', 100)
         self.MANUAL_SET_POSE_TEST = rospy.get_param('MANUAL_SET_POSE_TEST', False)
-        self.PHYSICAL_GATE = rospy.get_param('gate/PHYSICAL_GATE', True)
+        self.PHYSICAL_GATE = rospy.get_param('gate/PHYSICAL_GATE', False)
 
         ## ==========================initialize ==========================-##
         
@@ -82,19 +82,6 @@ class NN2_ROS_wrapper:
         if self.PHYSICAL_GATE:
             rospy.Subscriber("/vrpn_client_node/gate_tianchensun/pose", PoseStamped, self.physical_gate_pose_cb)
 
-        self.NN_trav_pose_pub = rospy.Publisher("/learning_agile_sim/NN_trav_pose", close_loop_NN_output, queue_size=1)
-        self.vis_NN_trav_pose_pub = rospy.Publisher("/learning_agile_sim/vis_NN_trav_pose", PoseStamped, queue_size=1)
-        self.NN_trav_time_pub = rospy.Publisher("/learning_agile_sim/NN_trav_time", Float32, queue_size=1)
-
-        self.B_S_time_pub = rospy.Publisher("/learning_agile_sim/B_S_time", Float32, queue_size=1)
-        self.NN_forward_time_pub = rospy.Publisher("/learning_agile_sim/NN_forward_time", Float32, queue_size=1)
-        
-        self.gate_pitch_pub = rospy.Publisher("/learning_agile_sim/gate_pitch", Float32, queue_size=1)
-        self.gate_points_pub = rospy.Publisher("/visual/gate_points", PoseArray, queue_size=1)
-        self.physical_gate_points_rotated = get_gate_points(gate_center=[0,0,1.8],
-                                    gate_length=rospy.get_param('gate/length', 0.6),
-                                    gate_width=rospy.get_param('gate/width', 0.45))
-        self.gate_state_acquire_timer = rospy.Timer(rospy.Duration(1/self.NN_freq), self.gate_state_acquire)
         if not self.MANUAL_SET_POSE_TEST:
             
             self.NN2_output_timer = rospy.Timer(rospy.Duration(1/self.NN_freq), self.close_loop_NN_forward)
@@ -119,6 +106,19 @@ class NN2_ROS_wrapper:
         self.gate_t_i = Gate(self.gate_points_list[0]) 
         self.history_obs = deque(maxlen=5)
         
+        self.NN_trav_pose_pub = rospy.Publisher("/learning_agile_sim/NN_trav_pose", close_loop_NN_output, queue_size=1)
+        self.vis_NN_trav_pose_pub = rospy.Publisher("/learning_agile_sim/vis_NN_trav_pose", PoseStamped, queue_size=1)
+        self.NN_trav_time_pub = rospy.Publisher("/learning_agile_sim/NN_trav_time", Float32, queue_size=1)
+
+        self.B_S_time_pub = rospy.Publisher("/learning_agile_sim/B_S_time", Float32, queue_size=1)
+        self.NN_forward_time_pub = rospy.Publisher("/learning_agile_sim/NN_forward_time", Float32, queue_size=1)
+        
+        self.gate_pitch_pub = rospy.Publisher("/learning_agile_sim/gate_pitch", Float32, queue_size=1)
+        self.gate_points_pub = rospy.Publisher("/visual/gate_points", PoseArray, queue_size=1)
+        self.physical_gate_points_rotated = get_gate_points(gate_center=[0,0,1.8],
+                                    gate_length=rospy.get_param('gate/length', 0.6),
+                                    gate_width=rospy.get_param('gate/width', 0.45))
+        self.gate_state_acquire_timer = rospy.Timer(rospy.Duration(1/self.NN_freq), self.gate_state_acquire)
         ##=======================misc ====================================##
         """
         callback function for the drone pose, under the world frame,
@@ -173,13 +173,13 @@ class NN2_ROS_wrapper:
         gate_points_msg.poses = []
         for k in range(len(self.gate_t_i.gate_point)):
             single_gate_point = Pose()
-            single_gate_point.pose.position.x=self.gate_t_i.gate_point[k,0] + self.trans[0]
-            single_gate_point.pose.position.y=self.gate_t_i.gate_point[k,1] + self.trans[1]
-            single_gate_point.pose.position.z=self.gate_t_i.gate_point[k,2] + self.trans[2]
-            single_gate_point.pose.orientation.x = 0.0
-            single_gate_point.pose.orientation.y = 0.0
-            single_gate_point.pose.orientation.z = 0.0
-            single_gate_point.pose.orientation.w = 1.0
+            single_gate_point.position.x=self.gate_t_i.gate_point[k,0] + self.trans[0]
+            single_gate_point.position.y=self.gate_t_i.gate_point[k,1] + self.trans[1]
+            single_gate_point.position.z=self.gate_t_i.gate_point[k,2] + self.trans[2]
+            single_gate_point.orientation.x = 0.0
+            single_gate_point.orientation.y = 0.0
+            single_gate_point.orientation.z = 0.0
+            single_gate_point.orientation.w = 1.0
             gate_points_msg.poses.append(single_gate_point)
         self.gate_points_pub.publish(gate_points_msg)
               
@@ -215,6 +215,7 @@ class NN2_ROS_wrapper:
                                 self.gate_t_i)
                 
                 full_input=np.array(obs).reshape([1,5,-1])
+                NN_forward_time=0
                 # NN output the traversal time and pose
                 if not self.MANUAL_SET_POSE_TEST:
                     t_comp = time.time()

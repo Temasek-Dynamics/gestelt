@@ -6,6 +6,7 @@
   (.*)mavros(.*)
   (.*)traj_server(.*)
   (.*)learning_agile_sim(.*)
+  (.*)visual(.*)
   (.*)planner(.*)
   (.*)tf(.*)
   (.*)tf_static(.*)
@@ -22,9 +23,4 @@
   <node if="$(arg launch_rviz)" name="rviz" pkg="rviz" type="rviz" required="true" 
     args="-d $(find gestelt_bringup)/launch/rviz/gz_sim.rviz"/>
 
-  <node pkg="gestelt_bringup" name = "drone_ellipsoid_vis" type = "drone_ellipsoid_vis.py" output="screen" ></node>
   </launch>
-
-
-    <!-- /learning_agile_sim/traverse_time /planner/sample_trajectory   /learning_agile_sim/solver_input_state 
-  /learning_agile_sim/gate_centroid    -->

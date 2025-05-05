@@ -1,0 +1,3 @@
+<launch>
+    <node pkg="gestelt_bringup" name = "object_visualizer" type = "object_visualizer.py" output="screen" ></node>
+</launch>

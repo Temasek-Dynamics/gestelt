@@ -1,6 +1,6 @@
 
 # flight mission
-MANUAL_SET_POSE_TEST: true  # only works for ROS nodes
+MANUAL_SET_POSE_TEST: false  # only works for ROS nodes
 FIX_GATE_PITCH_TEST: true  # for success rate test and python sim
 mission_period: 5.0 #s
 ctl_mode: 0
@@ -22,6 +22,7 @@ drone:
   moment_constant: 8.8e-3
 # gate parameters  
 gate:
+  PHYSICAL_GATE: false
   length: 0.6 #1.2
   width: 0.35 # 0.5
   thickness: 2 # along quadrotor forward direction

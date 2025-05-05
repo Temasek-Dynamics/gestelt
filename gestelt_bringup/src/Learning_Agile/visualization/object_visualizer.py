@@ -17,10 +17,10 @@ sys.path.append(subdirectory_path)
 import rospy
 from geometry_msgs.msg import  PoseStamped, Point, PoseArray
 from visualization_msgs.msg import Marker, MarkerArray
-class DroneEllipsoidVisualizer:
+class ObjectVisualizer:
     def __init__(self):
         # Initialize the ROS node
-        rospy.init_node('drone_ellipsoid_vis', anonymous=True)
+        rospy.init_node('object_visualizer', anonymous=True)
 
         # Publisher for the ellipsoid marker
         self.drone_ellipsoid_pub = rospy.Publisher(
@@ -78,8 +78,8 @@ class DroneEllipsoidVisualizer:
         drone_model.action = Marker.ADD
         drone_model.pose.position = msg.pose.position
         drone_model.pose.orientation = msg.pose.orientation
-        drone_model.scale.x = 0.5
-        drone_model.scale.y = 0.5
+        drone_model.scale.x = 0.2
+        drone_model.scale.y = 0.2
         drone_model.scale.z = 2
         drone_model.color.a = 1
         drone_model.color.r = 0
@@ -133,5 +133,5 @@ class DroneEllipsoidVisualizer:
 
 if __name__ == '__main__':
     # Instantiate and run the visualizer class
-    visualizer = DroneEllipsoidVisualizer()
+    visualizer = ObjectVisualizer()
     visualizer.spin()
