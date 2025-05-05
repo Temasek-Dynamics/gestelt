@@ -23,7 +23,7 @@ drone:
 # gate parameters  
 gate:
   length: 0.6 #1.2
-  width: 0.45 # 0.5
+  width: 0.35 # 0.5
   thickness: 2 # along quadrotor forward direction
   init_std_dev: 0.087 #pi/36=
   final_std_dev: 0.2618 #pi/12

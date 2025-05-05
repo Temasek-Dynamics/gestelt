@@ -277,9 +277,6 @@ class network_with_GRU(nn.Module):
         # traverse position z
         out [:,2] = torch.sigmoid(out[:,2])*2+0.5
         
-        # tra_throttle
-        out [:,-5] = torch.sigmoid(out[:,-5])*0.4+0.1
-
         # wrp
         out [:,-4]=torch.sigmoid(out[:,-4])*50+10
 
