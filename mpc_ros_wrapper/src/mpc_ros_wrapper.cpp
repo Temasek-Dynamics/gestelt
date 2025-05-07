@@ -30,7 +30,7 @@ void mpcRosWrapper::init(ros::NodeHandle& nh)
 
     if (!MANUAL_SET_POSE_TEST_)
     {
-        NN_trav_pose_sub_ = nh.subscribe("/learning_agile_sim/NN_trav_pose", 1, &mpcRosWrapper::close_loop_NN_trav_pose_cb, this);
+        NN_output_sub_ = nh.subscribe("/learning_agile_sim/NN_output", 1, &mpcRosWrapper::close_loop_NN_output_cb, this);
     }
     
 
@@ -407,7 +407,7 @@ void mpcRosWrapper::NN_trav_pose_cb(const geometry_msgs::PoseStamped::ConstPtr& 
     quat_to_rodrigues();
 }
 
-void mpcRosWrapper::close_loop_NN_trav_pose_cb(const gestelt_msgs::close_loop_NN_output::ConstPtr& msg)
+void mpcRosWrapper::close_loop_NN_output_cb(const gestelt_msgs::close_loop_NN_output::ConstPtr& msg)
 {
     des_trav_point_ = Eigen::Map<const Eigen::VectorXd>(msg->position.data(), msg->position.size());
     des_trav_9d_ = Eigen::Map<const Eigen::VectorXd>(msg->vector_9D_orientation.data(), msg->vector_9D_orientation.size());
