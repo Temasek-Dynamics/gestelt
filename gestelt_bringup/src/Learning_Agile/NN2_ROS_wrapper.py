@@ -113,7 +113,6 @@ class NN2_ROS_wrapper:
         self.B_S_time_pub = rospy.Publisher("/learning_agile_sim/B_S_time", Float32, queue_size=1)
         self.NN_forward_time_pub = rospy.Publisher("/learning_agile_sim/NN_forward_time", Float32, queue_size=1)
         
-        self.gate_pitch_pub = rospy.Publisher("/learning_agile_sim/gate_pitch", Float32, queue_size=1)
         self.gate_points_pub = rospy.Publisher("/visual/gate_points", PoseArray, queue_size=1)
         self.physical_gate_points_rotated = get_gate_points(gate_center=[0,0,1.8],
                                     gate_length=rospy.get_param('gate/length', 0.6),
@@ -149,7 +148,7 @@ class NN2_ROS_wrapper:
         gate_rot_mat = R.from_quat(gate_rot).as_matrix()
 
         # rotate the gate points with the gate rotation
-        self.physical_gate_points_rotated = gate_points_no_pitch @ gate_rot_mat.T + gate_center #V^T @ R^T
+        self.physical_gate_points_rotated = gate_points_no_pitch @ gate_rot_mat + gate_center #V^T @ R^T
 
     
     def gate_state_acquire(self,event):
@@ -207,7 +206,7 @@ class NN2_ROS_wrapper:
                 self.NN2_output_timer.shutdown()
 
             else: 
-                obs,gate_pitch = get_obs(self.history_obs,
+                obs,_ = get_obs(self.history_obs,
                                 self.i,
                                 self.input_size,
                                 self.state,
@@ -244,11 +243,9 @@ class NN2_ROS_wrapper:
                 NN_trav_pose_msg.weight_vector[:]=out[12:15]
                 NN_trav_time_msg = Float32()
                 NN_forward_time_msg = Float32()
-                gate_pitch_msg = Float32()
-
+            
                 NN_trav_time_msg.data = out[-1]
                 NN_forward_time_msg.data = NN_forward_time
-                gate_pitch_msg.data = gate_pitch
 
                 ##= visualize the traversing pose
                 vis_NN_trav_pose_msg = PoseStamped()
@@ -266,8 +263,6 @@ class NN2_ROS_wrapper:
                 self.NN_trav_pose_pub.publish(NN_trav_pose_msg)
                 self.NN_trav_time_pub.publish(NN_trav_time_msg)
                 self.NN_forward_time_pub.publish(NN_forward_time_msg)
-                self.vis_NN_trav_pose_pub.publish(vis_NN_trav_pose_msg)
-                self.gate_pitch_pub.publish(gate_pitch_msg)
 
     def mission_start_cb(self,msg):
         """

@@ -15,6 +15,12 @@ SHELL ["/bin/bash", "-c"]
 #     ros-noetic-vrpn-client-ros\
 #     ros-noetic-roslint\ 
 #     && rm -rf /var/lib/apt/lists/*
+# RUN apt-get update && apt-get install --no-install-recommends -y \
+#     netbase\
+#     tcpdump \
+#     ufw \
+#     && rm -rf /var/lib/apt/lists/*
+
 # RUN git clone https://github.com/ros-drivers/vrpn_client_ros.git
 
 # Make directory and clone repository

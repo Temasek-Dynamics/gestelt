@@ -22,7 +22,7 @@ drone:
   moment_constant: 8.8e-3
 # gate parameters  
 gate:
-  PHYSICAL_GATE: false
+  PHYSICAL_GATE: true
   length: 0.6 #1.2
   width: 0.35 # 0.5
   thickness: 2 # along quadrotor forward direction
@@ -171,7 +171,7 @@ NN_model_name: 'training_results/new_format/2025-01-16/09-59-31/trained_model/NN
 # NN_model_name: 'training_results/new_format/2025-01-22/10-26-33/trained_model/NN_close_120.pth' # train for the moving gate
 
 NN_deploy_model_name: 'deployed_model/2025-01-16/09-59-31/trained_model/NN_close_3200.pth' # used in the sitl
-NN_freq: 100
+NN_freq: 50
 
 penalty:
   QUADRATIC_LOSS: true #or Linear loss

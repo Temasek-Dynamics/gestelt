@@ -38,10 +38,6 @@ CMD_2="
 roslaunch gestelt_bringup rviz.launch rviz_config:= rviz_config:=gz_real 
 "
 
-CMD_3="
-roslaunch gestelt_bringup vicon_client.launch drone_name_vicon:=FTC3
-"
-
 CMD_4="
 roslaunch gestelt_bringup object_visualizer.launch
 "
@@ -62,7 +58,7 @@ then
     sleep 1
     tmux send-keys -t $SESSION:0.1 "$SOURCE_WS $EXPORT_ROS_MASTER_URI $CMD_2" C-m 
     sleep 1
-    tmux send-keys -t $SESSION:0.2 "$SOURCE_WS $EXPORT_ROS_MASTER_URI $CMD_3" C-m 
+    tmux send-keys -t $SESSION:0.2 "$SOURCE_WS $EXPORT_ROS_MASTER_URI " C-m 
     sleep 1
     tmux send-keys -t $SESSION:0.3 "$SOURCE_WS $EXPORT_ROS_MASTER_URI $CMD_4" C-m 
 fi

@@ -66,11 +66,11 @@ screen -d -m -S vicon_bridge bash -c "$EXPORT_SELF_IP source devel/setup.bash; r
 sleep ${module_delay}
 # sleep ${module_delay}
 # sleep ${module_delay}
-echo "vrpn_client should run on the remote"
+echo "vrpn_client ready"
 
 #################################################################################################################################
 # -1 NN gate vis ros wrapper
-screen -d -m -S mavros bash -c "$EXPORT_SELF_IP source devel/setup.bash; taskset -c 3 roslaunch gestelt_bringup NN2_ROS_wrapper.launch ; exec bash -i"
+screen -d -m -S mavros bash -c "$EXPORT_SELF_IP source devel/setup.bash; roslaunch gestelt_bringup NN2_ROS_wrapper.launch ; exec bash -i"
 sleep ${module_delay}
 sleep ${module_delay}
 sleep ${module_delay}

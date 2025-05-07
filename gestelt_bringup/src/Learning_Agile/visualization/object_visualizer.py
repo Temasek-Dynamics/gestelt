@@ -30,6 +30,11 @@ class ObjectVisualizer:
         self.gate_vis_pub = rospy.Publisher(
             "/visual/gate_vis", Marker, queue_size=1
         )
+
+        self.drone_model_pub = rospy.Publisher(
+            '/visual/drone_model', Marker, queue_size=10
+        )
+
         # Subscriber for the drone state
         self.drone_state_sub = rospy.Subscriber(
             '/mavros/local_position/pose', PoseStamped, self.drone_state_callback
@@ -40,9 +45,6 @@ class ObjectVisualizer:
             '/visual/gate_points', PoseArray, self.gate_points_callback
         )
 
-        self.drone_model_pub = rospy.Publisher(
-            '/visual/drone_model', Marker, queue_size=10
-        )
 
         self.drone_wing_len=rospy.get_param('/drone/wing_len')
         self.drone_height=rospy.get_param('/drone/height')
