@@ -22,7 +22,7 @@ drone:
   moment_constant: 8.8e-3
 # gate parameters  
 gate:
-  PHYSICAL_GATE: true
+  PHYSICAL_GATE: false
   length: 0.6 #1.2
   width: 0.35 # 0.5
   thickness: 2 # along quadrotor forward direction
