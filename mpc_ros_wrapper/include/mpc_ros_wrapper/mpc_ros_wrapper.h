@@ -79,7 +79,7 @@ class mpcRosWrapper{
     ros::Subscriber drone_twist_sub_;
     ros::Subscriber drone_body_rate_sub_;
     ros::Subscriber waypoint_sub_;
-    ros::Subscriber NN_trav_pose_sub_;
+    ros::Subscriber NN_output_sub_;
     ros::Subscriber NN_trav_time_sub_;
 
     ros::Publisher next_attitude_setpoint_pub_;
