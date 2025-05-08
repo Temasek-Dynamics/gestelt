@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D 
 import numpy as np
-from minsnap_traj import minimum_snap_traj, minimum_snap_traj_p2p, get_traj
+from .minsnap_traj import minimum_snap_traj, minimum_snap_traj_p2p, get_traj
 from scipy.spatial.transform import Rotation
 
 

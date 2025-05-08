@@ -21,7 +21,7 @@ from quad_policy import PlanFwdBwdWrapper
 from quad_nn import nn_sample
 from quad_moving import binary_search_solver,input_cal
 from visualization.result_analysis import rotation_vis
-from geometry.solid_geometry import magni, pitch_from_gate, verify_SVD_ca,verify_SVD_PR_ca#,SVD_M_to_SO3
+from geometry.solid_geometry import magni, pitch_from_gate, verify_SVD_ca,verify_SVD_PR_ca, tra_time_cal#,SVD_M_to_SO3
 from misc.misc import str2bool 
 from config import train_cfg, mission_cfg, current_dir
 
@@ -31,7 +31,7 @@ device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 input_size = train_cfg['model']['input_size'] 
 hidden_size = train_cfg['model']['hidden_size']
 output_size = train_cfg['model']['output_size']  
-def get_obs(history_obs = None,    
+def get_obs(last_gate_points = None,    
             i = None,
             input_size= None,
             drone_state = None,
@@ -41,7 +41,7 @@ def get_obs(history_obs = None,
     get both immediate and past observation from the environment
     
     Args:
-        history_obs: the past observation
+        last_gate_points: the past observation
         i: the current time step
         input_size: the size of the input
         drone_state: the current drone state
@@ -65,30 +65,26 @@ def get_obs(history_obs = None,
     ## gate points
     relative_gate_points = gate_t_i.gate_point-drone_state[0:3]
     immed_obs[13:25]=relative_gate_points.flatten()/2 # gate points
+    immed_obs[25:37]=last_gate_points.flatten()/2 # last gate points
 
-    
-    if i == 0:
-        for _ in range(5):
-            history_obs.append(immed_obs)
-    else:
-        history_obs.append(immed_obs)
-    
-    obs=np.array(history_obs)
-    
+    ## update the last gate points
+    last_gate_points = relative_gate_points
 
-    return obs,gate_pitch
 
-def manual_set_z_forward(gate_center:np.array=None,
+    return immed_obs, gate_pitch, last_gate_points
+
+def manual_set_z_forward(cur_pos:np.array=None,
+                         gate_center:np.array=None,
                          gate_ori_9d:np.array=None,
                          t_tra_rel:float=None):
     # manually set the traversal time and pose
     out=np.zeros(output_size)
-    out[0:3]=gate_center
+    out[0:3]=gate_center-cur_pos # gate center - drone position
     out[3:12]=gate_ori_9d # manual set 9D vector (is rotation matrix directly)
     out[-8:-5]=mission_cfg['learning_agile']['wrp']
     out[-5:-2]=mission_cfg['learning_agile']['wrt']
     out[-2]=mission_cfg['learning_agile']['wqt']
-    out[-1]=t_tra_rel
+    out[-1]=mission_cfg['learning_agile']['traverse_weight_span']
     
     ### SVD through CasADi
     verify_tra_R,_=verify_SVD_ca(out[3:12])
@@ -165,7 +161,10 @@ class LearningAgileSim():
         if not self.options['MANUAL_SET_POSE_TEST']:
             # load trained DNN2 model
             if model_file is not None:
-                self.model = torch.load(model_file,map_location='cpu')
+                if options['MC_EVALUATION']:
+                    self.model = torch.load(model_file,map_location='cpu')
+                else:
+                    self.model = torch.load(model_file)#,map_location='cpu')
     
 
         ##-------------------- planning variables --------------------------##
@@ -194,7 +193,7 @@ class LearningAgileSim():
         self.pos_vel_att_cmd=np.zeros(len(self.state))
         self.pos_vel_att_cmd[6:10] = [1,0,0,0]
         self.pos_vel_att_cmd_n = [self.pos_vel_att_cmd]
-        self.history_obs= deque(maxlen=5)
+        self.last_gate_points = np.zeros((4,3))
         
         ##==================NN params=======================##
         self.input_size = train_cfg['model']['input_size']
@@ -342,7 +341,7 @@ class LearningAgileSim():
         """
         record the NN output raw 9D vector and converted Rotation Matrix
         """
-        self.NN_T_tra = np.concatenate((self.NN_T_tra,[out[-1]]),axis = 0)
+        # self.NN_T_tra = np.concatenate((self.NN_T_tra,[out[-1]]),axis = 0)
         self.nn_output_list=np.concatenate((self.nn_output_list,[out]),axis = 0)
         self.des_tra_R_list = np.concatenate((self.des_tra_R_list,[des_tra_R]),axis = 0)
         self.wrp_list = np.concatenate((self.wrp_list,[out[-4]]),axis = 0)
@@ -353,13 +352,13 @@ class LearningAgileSim():
 
     def close_loop_NN_forward(self):
         
-        obs, self.gate_pitch = get_obs(self.history_obs,
-                                       self.i,
-                                       self.input_size,
-                                       self.state,
-                                       self.final_point,
-                                       self.gate_t_i)
-        nn_output = self.model(torch.tensor(obs.reshape([1,5,-1]), dtype=torch.float).to(device))[0]
+        obs, self.gate_pitch, self.last_gate_points  = get_obs( self.last_gate_points ,
+                                                                self.i,
+                                                                self.input_size,
+                                                                self.state,
+                                                                self.final_point,
+                                                                self.gate_t_i)
+        nn_output = self.model(torch.tensor(obs.reshape([1,-1]), dtype=torch.float).to(device))[0]
         out = nn_output.to('cpu').data.numpy()
 
         if self.options['COMPARISON']:
@@ -401,6 +400,7 @@ class LearningAgileSim():
         self.wrt_list = [10]
         self.wqt_list = [10]
         trav_auxvar_value = np.zeros(output_size)
+        self.last_gate_points = self.gate_points_list[0]-self.state[0:3]
 
         STAB_FAILED = False
         for self.i in range(self.sim_time*(int(1/self.dyn_step))): # 5s, 500 Hz
@@ -421,7 +421,8 @@ class LearningAgileSim():
                     # nn2_inputs[0:10] = self.state[0:10] 
                     # nn2_inputs[10:13] = self.final_point
                     
-                    gate_pitch,trav_auxvar_value,verify_tra_R = manual_set_z_forward(gate_center=self.gate_center,
+                    gate_pitch,trav_auxvar_value,verify_tra_R = manual_set_z_forward(cur_pos=self.state[0:3],
+                                                                                    gate_center=self.gate_center,
                                                                                     gate_ori_9d=self.gate_ori_9d,
                                                                                     t_tra_rel=self.t_tra_rel)
                     self.log_NN_IO_for_RM(gate_pitch,trav_auxvar_value,verify_tra_R.flatten()) 
@@ -432,18 +433,24 @@ class LearningAgileSim():
                     if self.options['CLOSE_LOOP_MODEL']:
                         self.gate_t_i = Gate(self.gate_points_list[self.i])
                         trav_auxvar_value = self.close_loop_NN_forward()
+
+                        
                     
                     else:
                         out = self.imiate_NN_forward()
                         out[0:3]=self.gate_t_i.centroid+out[0:3]
                         trav_auxvar_value = out
-                    
-
+                
+                # des_t_tra = tra_time_cal(self.gate_t_i.centroid,self.state[0:3])
+                des_t_tra= 1.0-self.i * self.dyn_step
+                self.NN_T_tra = np.concatenate((self.NN_T_tra,[des_t_tra]),axis = 0)
+                # print('des_t_tra=',des_t_tra)
                 
                 t_comp = time.time()
                 cmd_solution,NO_SOLUTION_FLAG  = self.planner.mpc_update(cur_state=self.state,
                                                         trav_auxvar_value=trav_auxvar_value,
                                                         last_u=self.last_u,
+                                                        des_t_tra=des_t_tra, 
                                                         first_iter=(self.i==0))
                 if NO_SOLUTION_FLAG:
                     STAB_FAILED = True
@@ -564,6 +571,7 @@ class LearningAgileSim():
         self.euler_nn=rotation_vis(uav_traj=self.state_n,
                             nn_output_list=self.nn_output_list,
                             des_tra_R_list=self.des_tra_R_list,
+                            t_tra_list=self.NN_T_tra,
                             gate_pitch=self.Pitch)  
     
 
@@ -606,10 +614,11 @@ def parse_options():
     parser.add_argument('--SAVE_SIM', type=str2bool, default=True, help='Enable or disable SAVE_SIM.')
     parser.add_argument('--SAVE_CSV', type=str2bool, default=True, help='Enable or disable save sim data in the csv format.')
     parser.add_argument('--COMPARISON',  type=str2bool, default=False, help='Compare the training results with other methods')
+    parser.add_argument('--MC_EVALUATION',  type=str2bool, default=False, help='Compare the training results with other methods')
     args = parser.parse_args()
     return vars(args)  # Return options as a dictionary  
 
-@ray.remote        
+# @ray.remote     
 def eval_sim_interface(mission_cfg=None,
                  train_cfg=None,
                  options=None,
@@ -668,13 +677,20 @@ def main():
         model_name = '20241031-142733-PDP-Trial 1, shrink the gate from [1.2,0.56] to [1.0, 0.4]/NN2_imitate_1.pth' 
         model_file=os.path.join(current_dir, f'training_data/NN_model/',model_name)
     
-    eval_sim_interface.remote(mission_cfg,
-                 train_cfg,
-                 options,
-                 model_file,
-                 python_sim_data_dir,
-                 INTRAIN=False)
-   
+    if options['MC_EVALUATION']:
+        eval_sim_interface.remote(mission_cfg,
+                    train_cfg,
+                    options,
+                    model_file,
+                    python_sim_data_dir,
+                    INTRAIN=False)
+    else:
+        eval_sim_interface(mission_cfg,
+                    train_cfg,
+                    options,
+                    model_file,
+                    python_sim_data_dir,
+                    INTRAIN=False)
     
     
 

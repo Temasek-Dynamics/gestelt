@@ -181,10 +181,10 @@ def play_animation(wing_len, state_traj, pred_traj_list, gate_traj1=None, gate_t
         r4_x_ref, r4_y_ref, r4_z_ref = position_ref[0, 12:15]
 
         ## NN pose
-        NN_c_x,NN_c_y,NN_c_z=NN_pos[0,:]
-        NN_x_axis_x,NN_x_axis_y,NN_x_axis_z=NN_pose[0,0,:]
-        NN_y_axis_x,NN_y_axis_y,NN_y_axis_z=NN_pose[0,1,:]
-        NN_z_axis_x,NN_z_axis_y,NN_z_axis_z=NN_pose[0,2,:]
+        NN_c_x,NN_c_y,NN_c_z=NN_pos[0,:]-position[0,0:3]
+        NN_x_axis_x,NN_x_axis_y,NN_x_axis_z=NN_pose[0,0,:] + position[0,0:3]
+        NN_y_axis_x,NN_y_axis_y,NN_y_axis_z=NN_pose[0,1,:] + position[0,0:3]
+        NN_z_axis_x,NN_z_axis_y,NN_z_axis_z=NN_pose[0,2,:] + position[0,0:3]
         NN_pose_x_traj, = ax.plot([NN_c_x,NN_x_axis_x],[NN_c_y,NN_x_axis_y],[NN_c_z,NN_x_axis_z],linewidth=1,color='red',linestyle='--')
         NN_pose_y_traj, = ax.plot([NN_c_x,NN_y_axis_x],[NN_c_y,NN_y_axis_y],[NN_c_z,NN_y_axis_z],linewidth=1,color='blue',linestyle='--')
         NN_pose_z_traj, = ax.plot([NN_c_x,NN_z_axis_x],[NN_c_y,NN_z_axis_y],[NN_c_z,NN_z_axis_z],linewidth=1,color='green',linestyle='--')
@@ -232,10 +232,10 @@ def play_animation(wing_len, state_traj, pred_traj_list, gate_traj1=None, gate_t
             r4_x, r4_y, r4_z = position[num, 12:15]
 
             # NN output pose
-            NN_c_x,NN_c_y,NN_c_z=NN_pos[num,:]
-            NN_x_axis_x,NN_x_axis_y,NN_x_axis_z=NN_pose[num,0,:]
-            NN_y_axis_x,NN_y_axis_y,NN_y_axis_z=NN_pose[num,1,:]
-            NN_z_axis_x,NN_z_axis_y,NN_z_axis_z=NN_pose[num,2,:]
+            NN_c_x,NN_c_y,NN_c_z=NN_pos[num,:] + position[num,0:3]
+            NN_x_axis_x,NN_x_axis_y,NN_x_axis_z=NN_pose[num,0,:] + position[num,0:3]
+            NN_y_axis_x,NN_y_axis_y,NN_y_axis_z=NN_pose[num,1,:] + position[num,0:3]
+            NN_z_axis_x,NN_z_axis_y,NN_z_axis_z=NN_pose[num,2,:] + position[num,0:3]
             
             NN_pose_x_traj.set_data_3d([NN_c_x,NN_x_axis_x],[NN_c_y,NN_x_axis_y],[NN_c_z,NN_x_axis_z])
             NN_pose_y_traj.set_data_3d([NN_c_x,NN_y_axis_x],[NN_c_y,NN_y_axis_y],[NN_c_z,NN_y_axis_z])
@@ -625,10 +625,10 @@ def plot_3D_traj(
         gate_l4, = ax.plot([p4_x,p1_x],[p4_y,p1_y],[p4_z,p1_z],linewidth=1,color='orangered',linestyle='-',alpha=plot_alpha)
         
         ## NN pose
-        NN_c_x,NN_c_y,NN_c_z=NN_pos[i,:]
-        NN_x_axis_x,NN_x_axis_y,NN_x_axis_z=NN_pose[i,0,:]
-        NN_y_axis_x,NN_y_axis_y,NN_y_axis_z=NN_pose[i,1,:]
-        NN_z_axis_x,NN_z_axis_y,NN_z_axis_z=NN_pose[i,2,:]
+        NN_c_x,NN_c_y,NN_c_z=NN_pos[i,:]+position[i,0:3]
+        NN_x_axis_x,NN_x_axis_y,NN_x_axis_z=NN_pose[i,0,:]+position[i,0:3]
+        NN_y_axis_x,NN_y_axis_y,NN_y_axis_z=NN_pose[i,1,:]+position[i,0:3]
+        NN_z_axis_x,NN_z_axis_y,NN_z_axis_z=NN_pose[i,2,:]+position[i,0:3]
         NN_pose_x_traj, = ax.plot([NN_c_x,NN_x_axis_x],[NN_c_y,NN_x_axis_y],[NN_c_z,NN_x_axis_z],linewidth=1,color='red',linestyle='--',alpha=plot_alpha)
         NN_pose_y_traj, = ax.plot([NN_c_x,NN_y_axis_x],[NN_c_y,NN_y_axis_y],[NN_c_z,NN_y_axis_z],linewidth=1,color='blue',linestyle='--',alpha=plot_alpha)
         NN_pose_z_traj, = ax.plot([NN_c_x,NN_z_axis_x],[NN_c_y,NN_z_axis_y],[NN_c_z,NN_z_axis_z],linewidth=1,color='green',linestyle='--',alpha=plot_alpha)

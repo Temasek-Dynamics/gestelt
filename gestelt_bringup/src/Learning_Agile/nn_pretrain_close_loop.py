@@ -17,7 +17,7 @@ input_size = train_cfg['model']['input_size']
 hidden_size = train_cfg['model']['hidden_size']
 output_size = train_cfg['model']['output_size']
 num_epochs = 3  
-batch_size = 5000
+batch_size = 1000
 learning_rate = 2e-5
 current_dir = os.path.dirname(os.path.abspath(__file__))
 training_data_folder=os.path.abspath(os.path.join(current_dir, 'training_data'))
@@ -26,7 +26,7 @@ model_folder=os.path.abspath(os.path.join(training_data_folder, 'NN_model'))
 if mission_cfg['POSITION_ENCODING']:
     FILE = model_folder+"/NN_close_pretrain_position_encode.pth"
 else:
-    FILE = model_folder+"/NN_close_pretrain_position.pth"
+    FILE = model_folder+"/NN_close_pretrain.pth"
 # select the seed
 torch.manual_seed(train_cfg['model']['seed'])
 model = network_with_GRU(input_size, hidden_size, hidden_size,output_size).to(device)
@@ -64,26 +64,21 @@ def input_cal():
     gate_width  = mission_cfg['gate']['width']
     gate_length = mission_cfg['gate']['length']
     gate_center = mission_cfg['mission']['gate_position']
-    relative_gate_points=get_gate_points(gate_center,gate_length,gate_width)-inputs[0:3]
-    inputs[13:input_size] = relative_gate_points.flatten()/2 # gate points
+    relative_gate_points=get_gate_points(gate_center,gate_length,gate_width)-static_env[0:3]
+    inputs[13:25] = relative_gate_points.flatten()/2 # gate points
+    inputs[25:37] = relative_gate_points.flatten()/2 # gate position
     
-    # inputs[25:28] = gate_center # gate position
-    # inputs[28:38] = static_env[7:17] # gate width and gate orientation
     return inputs,static_env[8:17]
 
-history_state=deque(maxlen=5)
 for epoch in range(num_epochs):
     for i in range(batch_size):  
         
         inputs,gate_rot_matrix=input_cal()
-        for i in range(5):
-            history_state.append(inputs)
-        full_input=np.array(history_state)
-        outputs  = torch.tensor(t_output(full_input,gate_rot_matrix), dtype=torch.float).to(device)
+        outputs  = torch.tensor(t_output(inputs, gate_rot_matrix), dtype=torch.float).to(device)
         
         # Forward pass
-        pre_outputs = model(torch.tensor(full_input, dtype=torch.float).unsqueeze(0).to(device),deterministic=False)[0]
-        loss = criterion(pre_outputs[3:12], outputs[3:12])+criterion(pre_outputs[-1],outputs[-1])
+        pre_outputs = model(torch.tensor(inputs, dtype=torch.float).unsqueeze(0).to(device),deterministic=False)[0]
+        loss = criterion(pre_outputs[:12], outputs[:12])#+criterion(pre_outputs[-1],outputs[-1])
         
         # Backward and optimize
         optimizer.zero_grad()

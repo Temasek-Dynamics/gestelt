@@ -110,22 +110,14 @@ class LearningAgileAPG:
             self.optimizer = torch.optim.LBFGS(self.model.parameters(), lr=self.learning_rate)
         else:
             self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate)  
+            # SGD
+            # self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.learning_rate, momentum=0.9)
 
         # learning rate scheduler
         self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=lr_decay_num_epochs, gamma=lr_gamma)
         # self.scheduler=torch.optim.lr_scheduler.CosineAnnealingLR(self.optimizer,T_max=50,eta_min=self.train_cfg['training']['eta_min'])
 
-    # def get_penalty_episodes(self, i:int,
-    #                         episode:LearningAgileBase,
-    #                         R_Grad_queue:Queue):
-    #     if self.mission_cfg['LEARNING_FROM_DEMO']:
-    #         L_dL=episode.planner.get_penalty_demo(demo_state_traj,episode.pred_st_traj)
-    #     else:
-    #         L_dL=episode.planner.get_penalty(episode.pred_st_traj,real_state_i=i,success_rate=self.success_rate)
-    #     L_i = np.array(L_dL[0])
-    #     p_L_i_p_X_traj_i = (L_dL[1])
 
-    #     R_Grad_queue.put([L_i, p_L_i_p_X_traj_i])
     def smooth_loss(self,outputs_batch,prev_outputs_batch):
         return 1 * torch.norm(outputs_batch - prev_outputs_batch, p=2)
     
@@ -182,31 +174,38 @@ class LearningAgileAPG:
             ##== 3. step for every episode
             [episode.step.remote(outputs_batch[k]) for k, episode in enumerate(self.episodes)]
             
+            solution_flags = ray.get([episode.get_solution_flag.remote() for episode in self.episodes])
+            
+            
             ## since the SQP_RTI first solution is not feasible
             if i > 1:
                 outputs_list.append(outputs_batch)
-                
+            
                 ##== 4. Multi-process calculate each episode's penalty and gradient p_L_i_p_X_traj_i
-                [episode.get_immed_penalty.remote(i, self.success_rate) for episode in self.episodes]
-                
+                for k, episode in enumerate(self.episodes):
+                    if not solution_flags[k]:  # NO_SOLUTION_FLAG == False
+                        episode.get_immed_penalty.remote(i, self.success_rate)
 
                 ##== 5. backward the gradient to get the p_L_p_z
-                [episode.backward_per_step.remote(train_cfg['training']['dyn_decay']) for episode in self.episodes]
-
+                for k, episode in enumerate(self.episodes):
+                    if not solution_flags[k]:  # NO_SOLUTION_FLAG == False
+                        episode.backward_per_step.remote()
                 prev_outputs_batch = outputs_batch
 
             ##== record NN obs and output per episode step
-            log_drone_state_wandb(obs_batch[0,-1,:],ray.get(self.episodes[0].get_control.remote()),self.global_step)
-            euler_nn,gate_pitch = log_train_IO_wandb(obs_batch[0,-1,:],outputs_batch[0,:].data.numpy().reshape(train_cfg['model']['output_size']),self.global_step)
-            wandb.log({"penalty_single_step":ray.get(self.episodes[0].get_penalty.remote())},step=self.global_step)
+            if not solution_flags[0]:  # NO_SOLUTION_FLAG == False
+                log_drone_state_wandb(obs_batch[0,:],ray.get(self.episodes[0].get_control.remote()),self.global_step)
+                euler_nn,gate_pitch = log_train_IO_wandb(obs_batch[0,:],outputs_batch[0,:].data.numpy().reshape(train_cfg['model']['output_size']),self.global_step)
+                wandb.log({"penalty_single_step":ray.get(self.episodes[0].get_penalty.remote())},step=self.global_step)
 
             
             self.global_step  += 1
         
         ##== collect the penalty and gradient from each episode
         for k in range(self.batch_size):
-            penalty_list.append(ray.get(self.episodes[k].get_penalty.remote()))
-            p_L_p_z_list.append(ray.get(self.episodes[k].get_p_L_p_z.remote())) 
+            if not solution_flags[k]:  # NO_SOLUTION_FLAG == False
+                penalty_list.append(ray.get(self.episodes[k].get_penalty.remote()))
+                p_L_p_z_list.append(ray.get(self.episodes[k].get_p_L_p_z.remote())) 
         
         if not GRAD_VIS: 
             ## assemble *(0.05*magni(euler_nn))
@@ -267,7 +266,7 @@ class LearningAgileAPG:
                     torch.save(self.model, model_file)
 
                 if epoch % 100 == 0:
-                    self.success_rate=mc_evaluation(model_file=model_file,global_step=self.global_step)
+                    self.success_rate=mc_evaluation(test_num=48,model_file=model_file,global_step=self.global_step)
         wandb.finish()
     def batch_gradient_visual(self):
         p_L_p_z_batch=self.train_one_epoch(0,GRAD_VIS=True)

@@ -112,7 +112,6 @@ def log_train_IO_wandb(inputs,outputs,global_step):
     wandb.log({"NN_output/x_tra":outputs[0],"NN_output/y_tra":outputs[1],"NN_output/z_tra":outputs[2],
                 "NN_output/yaw_tra":euler_nn[0],"NN_output/pitch_tra":euler_nn[1],"NN_output/roll_tra":euler_nn[2],
                 "NN_output/determinant_m":det_m,
-                # "NN_output/tra_throttle":outputs[-5],
                 "NN_output/wrpx":outputs[-8],
                 "NN_output/wrpy":outputs[-7],
                 "NN_output/wrpz":outputs[-6],
@@ -120,7 +119,7 @@ def log_train_IO_wandb(inputs,outputs,global_step):
                 "NN_output/wrty":outputs[-4],
                 "NN_output/wrtz":outputs[-3],
                 "NN_output/wqt":outputs[-2],
-                "NN_output/t_tra":outputs[-1]},step=global_step)
+                "NN_output/gamma":outputs[-1]},step=global_step)
     return euler_nn,gate_pitch
 
 def log_gradient_wandb(gra,reward,global_step):
@@ -134,7 +133,7 @@ def log_gradient_wandb(gra,reward,global_step):
                 "gradient/drdwrty":gra[-5],
                 "gradient/drdwrtz":gra[-4],
                 "gradient/drdwqt":gra[-3],
-                "gradient/drdt":gra[-2],
+                "gradient/drdgamma":gra[-2],
                 "mean_penalty_pre_batch":reward},step=global_step)
     
 def log_drone_state_wandb(drone_state,control, global_step):

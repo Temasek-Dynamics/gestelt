@@ -55,7 +55,7 @@ class OCSys:
             self.auxvar = auxvar
         self.n_auxvar = self.auxvar.numel()
 
-    def setStateVariable(self, state, state_lb=[], state_ub=[]):
+    def setStateVariable(self, state, cur_r_I, state_lb=[], state_ub=[]):
         self.state = state
         self.n_state = self.state.numel()
         if len(state_lb) == self.n_state:
@@ -67,6 +67,8 @@ class OCSys:
             self.state_ub = state_ub
         else:
             self.state_ub = self.n_state * [1e20]
+        
+        self.cur_r_I = cur_r_I
 
     def setControlVariable(self, control, control_lb=[], control_ub=[]):
         self.control = control
@@ -130,7 +132,7 @@ class OCSys:
         assert path_cost.numel() == 1, "path_cost must be a scalar function"
 
         self.path_cost = path_cost
-        self.path_cost_fn = casadi.Function('path_cost', [self.state,self.control,self.goal_state,self.trav_auxvar,self.t_node], [self.path_cost])
+        self.path_cost_fn = casadi.Function('path_cost', [self.state,self.control,self.goal_state,self.cur_r_I, self.trav_auxvar,self.des_t_tra,self.t_node], [self.path_cost])
 
 
     def setFinalCost(self, 
@@ -145,19 +147,21 @@ class OCSys:
         assert final_cost.numel() == 1, "final_cost must be a scalar function"
 
         self.final_cost = final_cost
-        self.final_cost_fn = casadi.Function('final_cost', [self.state,self.goal_state, self.auxvar], [self.final_cost])
+        self.final_cost_fn = casadi.Function('final_cost', [self.state,self.goal_state,self.cur_r_I, self.auxvar], [self.final_cost])
     
     def setTraCost(self, 
                 trav_cost, 
                 trav_auxvar,
-                t_node):
+                t_node,
+                des_t_tra):
                 
 
         self.trav_cost = trav_cost
         self.trav_auxvar = trav_auxvar
         self.n_trav_auxvar = self.trav_auxvar.numel()
         self.t_node = t_node
-        self.trav_cost_fn = casadi.Function('trav_cost', [self.state,self.control,self.trav_auxvar,self.t_node], [self.trav_cost])
+        self.des_t_tra = des_t_tra
+        self.trav_cost_fn = casadi.Function('trav_cost', [self.state,self.control,self.cur_r_I,self.trav_auxvar,self.des_t_tra,self.t_node], [self.trav_cost])
 
     def setInequCstr(self, path_inequ_cstr, final_inequ_cstr):
         """ 
@@ -191,8 +195,8 @@ class OCSys:
         self.path_cost_barrier = self.path_cost + gamma * path_inequ_barrier
         self.final_cost_barrier = self.final_cost + gamma * final_inequ_barrier
         
-        self.path_cost_barrier_fn = casadi.Function('path_cost_barrier', [self.state,self.control,self.goal_state,self.trav_auxvar,self.t_node], [self.path_cost_barrier])
-        self.final_cost_barrier_fn = casadi.Function('final_cost_barrier', [self.state,self.goal_state, self.auxvar], [self.final_cost_barrier])
+        self.path_cost_barrier_fn = casadi.Function('path_cost_barrier', [self.state,self.control,self.goal_state,self.cur_r_I,self.trav_auxvar, self.des_t_tra, self.t_node], [self.path_cost_barrier])
+        self.final_cost_barrier_fn = casadi.Function('final_cost_barrier', [self.state,self.goal_state, self.cur_r_I,self.auxvar], [self.final_cost_barrier])
 
     def ocSolverInit(self, horizon=None, auxvar_value=1, print_level=0, dt = 0.1,costate_option=0):
         assert hasattr(self, 'state'), "Define the state variable first!"
@@ -422,8 +426,8 @@ class OCSys:
         self.model.u=self.control
     
        
-        P=casadi.SX.sym('p',self.n_state+\
-                        self.trav_auxvar.numel()+1) # the last one is the current node time
+        P=casadi.SX.sym('p',3 + self.n_state+\
+                        self.trav_auxvar.numel()+2) # the last one is the current node time
         self.model.p=P
 
     def AcadosOcSolverInit(self, horizon=20, auxvar_value=1,
@@ -489,8 +493,8 @@ class OCSys:
         ocp.model = self.model
         ocp.dims.N = self.n_nodes    # number of nodes 
         ocp.solver_options.tf = T # horizon length T in seconds
-        ocp.dims.np = self.n_state+self.trav_auxvar.numel()+1    # number of parameters for solver input, here is the current state and control
-        ocp.parameter_values = np.zeros(self.n_state+self.trav_auxvar.numel()+1) 
+        ocp.dims.np = 3+self.n_state+self.trav_auxvar.numel()+2    # number of parameters for solver input, here is the current state and control
+        ocp.parameter_values = np.zeros(3+self.n_state+self.trav_auxvar.numel()+2) 
 
 
 
@@ -503,22 +507,23 @@ class OCSys:
         ocp.cost.cost_type = 'EXTERNAL'
         ocp.cost.cost_type_e = 'EXTERNAL'
 
-        goal_state_value=ocp.model.p[0:self.n_state]  
+        goal_state_value=ocp.model.p[3:self.n_state+3]  
+        cur_pos_value=ocp.model.p[0:3] # current position
        
     
-        trav_auxvar_value=ocp.model.p[self.n_state:self.n_state+self.trav_auxvar.numel()]
+        trav_auxvar_value=ocp.model.p[3+self.n_state:3+self.n_state+self.trav_auxvar.numel()]
 
         # current node time
         t_node_value=ocp.model.p[-1]
-
+        des_t_tra_value=ocp.model.p[-2]
 
         # # setting the cost function
         # ocp.model.cost_expr_ext_cost_custom_hess/cost_expr_ext_cost
         # if self.SQP_RTI_OPTION:
-        ocp.model.cost_expr_ext_cost = self.path_cost_fn(ocp.model.x, ocp.model.u, goal_state_value, trav_auxvar_value, t_node_value)\
-                                    + self.trav_cost_fn(ocp.model.x, ocp.model.u, trav_auxvar_value, t_node_value)\
+        ocp.model.cost_expr_ext_cost = self.path_cost_fn(ocp.model.x, ocp.model.u, goal_state_value, cur_pos_value, trav_auxvar_value,des_t_tra_value, t_node_value)\
+                                     + self.trav_cost_fn(ocp.model.x, ocp.model.u, cur_pos_value,  trav_auxvar_value,des_t_tra_value, t_node_value)\
         # end cost
-        ocp.model.cost_expr_ext_cost_e = self.final_cost_fn(ocp.model.x,goal_state_value,self.auxvar)
+        ocp.model.cost_expr_ext_cost_e = self.final_cost_fn(ocp.model.x,goal_state_value,cur_pos_value, self.auxvar)
 
         # else:
         #     ocp.model.cost_expr_ext_cost = self.path_cost_barrier_fn(ocp.model.x, ocp.model.u, goal_state_value, trav_auxvar_value)\
@@ -579,7 +584,7 @@ class OCSys:
         ocp.solver_options.integrator_type = 'ERK' # fast ERK (explicit Runge-Kutta integrator) or IRK (Implicit Runge-Kutta integrator)
         # ocp.solver_options.sim_method_num_steps =1 #Default 1
         # ocp.solver_options.sim_method_num_stages = 4 # default 4
-       
+        ocp.solver_options.nlp_solver_ext_qp_res = 1 
         
         if SQP_RTI_OPTION: 
             ocp.solver_options.qp_solver = 'FULL_CONDENSING_QPOASES'# FULL_CONDENSING_HPIPM PARTIAL_CONDENSING_HPIPM  FULL_CONDENSING_QPOASES PARTIAL_CONDENSING_OSQP
@@ -587,7 +592,7 @@ class OCSys:
             ocp.solver_options.regularize_method = 'CONVEXIFY'#'CONVEXIFY', PROJECT_REDUC_HESS
             ocp.solver_options.nlp_solver_type = 'SQP_RTI'
             ocp.solver_options.qp_solver_iter_max = 100
-            ocp.solver_options.levenberg_marquardt = 1e-10 # small value for gauss newton method, large value for gradient descent method
+            ocp.solver_options.levenberg_marquardt = 1e-3 # small value for gauss newton method, large value for gradient descent method
             ocp.solver_options.print_level = 0
             # ocp.solver_options.globalization = 'MERIT_BACKTRACKING' # LINESEARCH gobalization
         else:
@@ -633,7 +638,7 @@ class OCSys:
         sim.solver_options.num_stages = 4
         sim.solver_options.num_steps = 4
         sim.solver_options.newton_iter = 3 # for implicit integrator
-        sim.parameter_values = np.zeros(self.n_state+self.trav_auxvar.numel()+1) 
+        sim.parameter_values = np.zeros(3+self.n_state+self.trav_auxvar.numel()+2) 
         if USE_PREV_SOLVER:
             build=False
             generate=False
@@ -647,6 +652,7 @@ class OCSys:
                     cur_state, 
                     goal_state_value,
                     dt=0.1,
+                    des_t_tra=None,
                     last_u=None,
                     trav_auxvar_value=None,
                     init_guess=None):
@@ -656,13 +662,16 @@ class OCSys:
         self.state_traj_opt = np.zeros((self.new_horizon+1,self.n_state))
         self.control_traj_opt = np.zeros((self.new_horizon,self.n_control))
         self.costate_traj_opt = np.zeros((self.new_horizon,self.n_state))
-
+        rel_goal_state_value=goal_state_value.copy()
+        rel_goal_state_value[0:3]=goal_state_value[0:3]-cur_state[0:3]
         # #---------------------for linear cost---------------------##
        
         for i in range(self.new_horizon):
             
-            self.acados_solver.set(i, 'p',np.concatenate((goal_state_value,
+            self.acados_solver.set(i, 'p',np.concatenate((cur_state[0:3],
+                                                          rel_goal_state_value,
                                                           trav_auxvar_value, 
+                                                          np.array([des_t_tra]),
                                                           np.array([dt*i]))))
             # if i==10:
             #     weight_vis=weight
@@ -672,9 +681,11 @@ class OCSys:
         self.acados_solver.set(self.new_horizon, "x", self.state_traj_opt[-1,:])
 
         # set the end desired goal
-        self.acados_solver.set(self.new_horizon, "p",np.concatenate((goal_state_value,
-                                                                 trav_auxvar_value, 
-                                                                 np.array([self.n_nodes*dt]))))
+        self.acados_solver.set(self.new_horizon, "p",np.concatenate((cur_state[0:3],
+                                                                     rel_goal_state_value,
+                                                                     trav_auxvar_value, 
+                                                                     np.array([des_t_tra]),
+                                                                     np.array([self.n_nodes*dt]))))
 
         # set initial condition aligned with the current state
     
@@ -695,8 +706,8 @@ class OCSys:
         
         # solve ocp
         status = self.acados_solver.solve()
-        self.acados_solver.print_statistics()
-        
+ 
+     
         if status != 0:
             NO_SOLUTION_FLAG=True
             self.acados_solver.print_statistics()
@@ -769,38 +780,39 @@ class OCSys:
 
         # First-order derivative of path Hamiltonian 
         self.dHx = jacobian(self.path_Hamil, self.state).T
-        self.dHx_fn = casadi.Function('dHx', [self.state, self.control, self.costate, self.t_node, self.goal_state, self.trav_auxvar], [self.dHx])
+        self.dHx_fn = casadi.Function('dHx', [self.state, self.control, self.costate, self.des_t_tra, self.t_node, self.goal_state, self.cur_r_I, self.trav_auxvar], [self.dHx])
         self.dHu = jacobian(self.path_Hamil, self.control).T
-        self.dHu_fn = casadi.Function('dHu', [self.state, self.control, self.costate, self.t_node, self.goal_state, self.trav_auxvar], [self.dHu])
+        self.dHu_fn = casadi.Function('dHu', [self.state, self.control, self.costate, self.des_t_tra, self.t_node, self.goal_state, self.cur_r_I, self.trav_auxvar], [self.dHu])
 
         # Second-order derivative of path Hamiltonian
         self.ddHxx = jacobian(self.dHx, self.state)
-        self.ddHxx_fn = casadi.Function('ddHxx', [self.state, self.control, self.costate, self.t_node, self.goal_state, self.trav_auxvar], [self.ddHxx])
+        self.ddHxx_fn = casadi.Function('ddHxx', [self.state, self.control, self.costate, self.des_t_tra, self.t_node, self.goal_state, self.cur_r_I, self.trav_auxvar], [self.ddHxx])
         self.ddHxu = jacobian(self.dHx, self.control)
-        self.ddHxu_fn = casadi.Function('ddHxu', [self.state, self.control, self.costate, self.t_node, self.goal_state, self.trav_auxvar], [self.ddHxu])
+        self.ddHxu_fn = casadi.Function('ddHxu', [self.state, self.control, self.costate, self.des_t_tra, self.t_node, self.goal_state, self.cur_r_I, self.trav_auxvar], [self.ddHxu])
         self.ddHxe = jacobian(self.dHx, self.trav_auxvar)
-        self.ddHxe_fn = casadi.Function('ddHxe', [self.state, self.control, self.costate, self.t_node, self.goal_state, self.trav_auxvar], [self.ddHxe])
+        self.ddHxe_fn = casadi.Function('ddHxe', [self.state, self.control, self.costate, self.des_t_tra, self.t_node, self.goal_state, self.cur_r_I,  self.trav_auxvar], [self.ddHxe])
         self.ddHux = jacobian(self.dHu, self.state)
-        self.ddHux_fn = casadi.Function('ddHux', [self.state, self.control, self.costate, self.t_node, self.goal_state, self.trav_auxvar], [self.ddHux])
+        self.ddHux_fn = casadi.Function('ddHux', [self.state, self.control, self.costate, self.des_t_tra, self.t_node, self.goal_state, self.cur_r_I, self.trav_auxvar], [self.ddHux])
         self.ddHuu = jacobian(self.dHu, self.control)
-        self.ddHuu_fn = casadi.Function('ddHuu', [self.state, self.control, self.costate, self.t_node, self.goal_state, self.trav_auxvar], [self.ddHuu])
+        self.ddHuu_fn = casadi.Function('ddHuu', [self.state, self.control, self.costate, self.des_t_tra, self.t_node, self.goal_state, self.cur_r_I, self.trav_auxvar], [self.ddHuu])
         self.ddHue = jacobian(self.dHu, self.trav_auxvar)
-        self.ddHue_fn = casadi.Function('ddHue', [self.state, self.control, self.costate, self.t_node, self.goal_state, self.trav_auxvar], [self.ddHue])
+        self.ddHue_fn = casadi.Function('ddHue', [self.state, self.control, self.costate, self.des_t_tra, self.t_node, self.goal_state, self.cur_r_I, self.trav_auxvar], [self.ddHue])
 
         # First-order derivative of final Hamiltonian
         self.dhx = jacobian(self.final_Hamil, self.state).T
-        self.dhx_fn = casadi.Function('dhx', [self.state, self.trav_auxvar, self.goal_state], [self.dhx])
+        self.dhx_fn = casadi.Function('dhx', [self.state, self.cur_r_I, self.trav_auxvar, self.goal_state], [self.dhx])
 
         # second order differential of path Hamiltonian
         self.ddhxx = jacobian(self.dhx, self.state)
-        self.ddhxx_fn = casadi.Function('ddhxx', [self.state, self.trav_auxvar, self.goal_state], [self.ddhxx])
+        self.ddhxx_fn = casadi.Function('ddhxx', [self.state, self.cur_r_I, self.trav_auxvar, self.goal_state], [self.ddhxx])
         self.ddhxe = jacobian(self.dhx, self.trav_auxvar)
-        self.ddhxe_fn = casadi.Function('ddhxe', [self.state, self.trav_auxvar, self.goal_state], [self.ddhxe])
+        self.ddhxe_fn = casadi.Function('ddhxe', [self.state, self.cur_r_I, self.trav_auxvar, self.goal_state], [self.ddhxe])
 
     def getAuxSys(self,state_traj_opt, 
                    control_traj_opt, 
                    costate_traj_opt,
                    goal_state_value,
+                   des_t_tra_value,
                    auxvar_value=1):
         
         statement = [hasattr(self, 'dfx_fn'), hasattr(self, 'dfu_fn'), hasattr(self, 'dfe_fn'),
@@ -818,6 +830,7 @@ class OCSys:
 
         # Solve the above coefficient matrices
         dt=0.1
+        cur_pos_value=state_traj_opt[0,0:3]
         for t in range(np.size(control_traj_opt, 0)):
             curr_x = state_traj_opt[t, :]
             curr_u = control_traj_opt[t, :]
@@ -825,14 +838,14 @@ class OCSys:
             dynF += [self.dfx_fn(curr_x, curr_u).full()]
             dynG += [self.dfu_fn(curr_x, curr_u).full()]
             dynE += [self.dfe_fn(curr_x, curr_u, auxvar_value).full()]
-            matHxx += [self.ddHxx_fn(curr_x, curr_u, next_lambda, t*dt, goal_state_value, auxvar_value).full()]
-            matHxu += [self.ddHxu_fn(curr_x, curr_u, next_lambda, t*dt, goal_state_value, auxvar_value).full()]
-            matHxe += [self.ddHxe_fn(curr_x, curr_u, next_lambda, t*dt, goal_state_value, auxvar_value).full()]
-            matHux += [self.ddHux_fn(curr_x, curr_u, next_lambda, t*dt, goal_state_value, auxvar_value).full()]
-            matHuu += [self.ddHuu_fn(curr_x, curr_u, next_lambda, t*dt, goal_state_value, auxvar_value).full()]
-            matHue += [self.ddHue_fn(curr_x, curr_u, next_lambda, t*dt, goal_state_value, auxvar_value).full()]
-        mathxx = [self.ddhxx_fn(state_traj_opt[-1, :], auxvar_value, goal_state_value).full()]
-        mathxe = [self.ddhxe_fn(state_traj_opt[-1, :], auxvar_value, goal_state_value).full()]
+            matHxx += [self.ddHxx_fn(curr_x, curr_u, next_lambda, des_t_tra_value, t*dt, goal_state_value, cur_pos_value, auxvar_value).full()]
+            matHxu += [self.ddHxu_fn(curr_x, curr_u, next_lambda, des_t_tra_value, t*dt, goal_state_value, cur_pos_value, auxvar_value).full()]
+            matHxe += [self.ddHxe_fn(curr_x, curr_u, next_lambda, des_t_tra_value, t*dt, goal_state_value, cur_pos_value, auxvar_value).full()]
+            matHux += [self.ddHux_fn(curr_x, curr_u, next_lambda, des_t_tra_value, t*dt, goal_state_value, cur_pos_value, auxvar_value).full()]
+            matHuu += [self.ddHuu_fn(curr_x, curr_u, next_lambda, des_t_tra_value, t*dt, goal_state_value, cur_pos_value, auxvar_value).full()]
+            matHue += [self.ddHue_fn(curr_x, curr_u, next_lambda, des_t_tra_value, t*dt, goal_state_value, cur_pos_value, auxvar_value).full()]
+        mathxx = [self.ddhxx_fn(state_traj_opt[-1, :], cur_pos_value, auxvar_value, goal_state_value).full()]
+        mathxe = [self.ddhxe_fn(state_traj_opt[-1, :], cur_pos_value, auxvar_value, goal_state_value).full()]
 
         auxSys = {"dynF": dynF,
                   "dynG": dynG,

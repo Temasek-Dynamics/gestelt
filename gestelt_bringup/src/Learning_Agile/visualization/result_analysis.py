@@ -10,6 +10,7 @@ def rotation_vis(uav_traj=None,
                 nn_output_list=None,
                 des_tra_R_list=None,
                 gate_pitch=None,
+                t_tra_list=None,
                 seprate_plot=False):
 
     if uav_traj is None:
@@ -46,7 +47,7 @@ def rotation_vis(uav_traj=None,
     gate_pitch[:] = np.degrees(gate_pitch[:])
   
     ## == traversing time == ##
-    t_tra = np.where(nn_output_list[:, -1] < 0)[0][0]
+    t_tra = np.where(t_tra_list < 0)[0][0]
     
     
     ## ==== plot nn and actual euler angles ==##

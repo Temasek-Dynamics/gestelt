@@ -19,6 +19,7 @@ def mc_evaluation(test_num=24,
     count=0
     options=parse_options()
     options['USE_PREV_SOLVER']=True
+    options['MC_EVALUATION']=True
     gate_traj_batch=[]
     state_traj_batch=[]
     failed_batch=[]

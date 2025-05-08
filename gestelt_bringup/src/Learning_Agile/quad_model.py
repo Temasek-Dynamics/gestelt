@@ -22,7 +22,9 @@ class QuadrotorDynamic:
         self.ctl_mode=ctl_mode
         # define the state of the quadrotor
         rx, ry, rz = SX.sym('rx'), SX.sym('ry'), SX.sym('rz')
+        cur_rx, cur_ry, cur_rz = SX.sym('cur_rx'), SX.sym('cur_ry'), SX.sym('cur_rz')
         self.r_I = vertcat(rx, ry, rz)
+        self.cur_r_I = vertcat(cur_rx, cur_ry, cur_rz)
         vx, vy, vz = SX.sym('vx'), SX.sym('vy'), SX.sym('vz')
         self.v_I = vertcat(vx, vy, vz)
 
@@ -165,6 +167,7 @@ class CostBase:
         self.drone_mass=config['drone']['mass']
         # define desire traverse pose and time
         self.des_tra_r_I = vertcat(SX.sym('des_tra_rx'), SX.sym('des_tra_ry'), SX.sym('des_tra_rz'))
+        self.des_tra_r_B = vertcat(SX.sym('des_tra_rx_B'), SX.sym('des_tra_ry_B'), SX.sym('des_tra_rz_B'))
         self.des_tra_rodi_param=vertcat(SX.sym('des_tra_rodi_param0'),SX.sym('des_tra_rodi_param1'),SX.sym('des_tra_rodi_param2'))
 
         ##==traverse pose 9D vector == ##
@@ -189,6 +192,7 @@ class CostBase:
         # self.traverse_weight_span = SX.sym('traverse_weight_span ')
         # define desired goal state
         self.goal_r_I  = vertcat(SX.sym('des_goal_rx'), SX.sym('des_goal_ry'), SX.sym('des_goal_rz'))
+        self.goal_r_B  = vertcat(SX.sym('des_goal_rx_B'), SX.sym('des_goal_ry_B'), SX.sym('des_goal_rz_B'))
         self.goal_v_I = vertcat(SX.sym('des_goal_vx'), SX.sym('des_goal_vy'), SX.sym('des_goal_vz'))
         self.goal_q = vertcat(SX.sym('des_goal_q0'), SX.sym('des_goal_q1'), SX.sym('des_goal_q2'), SX.sym('des_goal_q3'))
         self.goal_w_B= vertcat(SX.sym('des_goal_wx'), SX.sym('des_goal_wy'), SX.sym('des_goal_wz'))
@@ -218,6 +222,7 @@ class CostBase:
             self.wrp = vertcat(SX.sym('wrpx'),SX.sym('wrpy'),SX.sym('wrpz'))
         else:
             self.wrp = wrp
+
         
         if wvp is None:
             self.wvp = SX.sym('wvp')
@@ -295,12 +300,20 @@ class CostBase:
         self.cost_auxvar = vcat(parameter)
     
     def path_error(self,quad_dyn:QuadrotorDynamic=None):
+        """path error includes:
+        1   before passing, the position error to the gate
+            
+        2.  after passing, the full state error is to the goal"""
+        # traverse position error 
+        self.des_tra_r_I = self.des_tra_r_B + quad_dyn.cur_r_I
+        self.e_r_I_t = quad_dyn.r_I - self.des_tra_r_I
+       
         ## goal cost
         # goal position in the world frame
+        self.goal_r_I = self.goal_r_B + quad_dyn.cur_r_I
         self.e_r_I= quad_dyn.r_I - self.goal_r_I
         self.dot_e_r_I = dot(self.e_r_I,self.e_r_I)
        
-        
         # goal velocity
         self.e_v_I = quad_dyn.v_I - self.goal_v_I
         self.dot_e_v_I = dot(quad_dyn.v_I - self.goal_v_I, quad_dyn.v_I - self.goal_v_I)
@@ -344,39 +357,18 @@ class CostBase:
 
         """
         
-        ## set traverse pose as the auxiliary variables (hyperparameters)
-        if options['JAX_SVD']: 
-            ## SVD conducted before CasADi
-            self.trav_auxvar = vertcat(self.des_tra_r_I, self.des_tra_R, self.wrp, self.max_tra_w, self.wrt, self.wqt, self.des_t_tra) 
-            tra_R_B_I = casadi.reshape(self.des_tra_R,3,3)
-        else:   
-            
-            svd= SVD()
-            self.trav_auxvar = vertcat(self.des_tra_r_I, self.des_tra_m, self.wrp, self.wrt, self.wqt, self.des_t_tra) #self.wrp,  self.max_tra_w, 
-            # self.trav_auxvar = vertcat(self.des_tra_r_I, self.des_tra_m,self.tra_throttle, self.wrp, self.wrt, self.wqt, self.des_t_tra) #self.wrp,  self.max_tra_w, 
-            tra_R_B_I= svd.SVD_M_to_SO3_ca(self.des_tra_m)
+        svd= SVD()
+        self.trav_auxvar = vertcat(self.des_tra_r_B, self.des_tra_m, self.wrp, self.wrt, self.wqt, self.traverse_weight_span) 
+        self.tra_R_B_I= svd.SVD_M_to_SO3_ca(self.des_tra_m)
        
-        
-        ##=== Rodrigues parameters version ===##
-        # self.trav_auxvar = vertcat(self.des_tra_r_I, self.des_tra_rodi_param,self.des_t_tra)
-        # replaced by symbolic variables: des_tra_r_I, des_tra_q
-        # tra_atti = Rd2Rp_casadi(self.des_tra_rodi_param)
-        # self.des_tra_q=toQuaternion_casadi(tra_atti[0],tra_atti[1])
-        # tra_R_B_I = dir_cosine(self.des_tra_q)
-        
-        
-        
-
         ## =========== traverse cost =========##
-        # posotion error
-        self.e_r_I_t = quad_dyn.r_I - self.des_tra_r_I
-        self.cost_r_I_t = self.e_r_I_t.T @ casadi.diag(self.wrt) @ self.e_r_I_t
+        
 
         # attitude error
         R_B_I = dir_cosine(quad_dyn.q)
 
         ## squared Chordal distance
-        self.cost_q_t = casadi.norm_fro(tra_R_B_I-R_B_I)**2
+        self.cost_q_t = casadi.norm_fro(self.tra_R_B_I-R_B_I)**2
 
         ## traverse thrust cost
         self.cost_tra_throttle = dot(quad_dyn.col_thrust_mag-self.tra_throttle*mission_cfg['learning_agile']['single_motor_max_thrust']*4,\
@@ -390,39 +382,51 @@ class QuadrotorCTBRCtl:
         self.options=options
         self.quad_dyn = QuadrotorDynamic(ctl_mode=0,config=config)
         self.cost_base = CostBase(ctl_mode=0,config=config)
-
+        
 
     def init_model(self):    
         # state
         self.X = vertcat(self.quad_dyn.r_I, self.quad_dyn.v_I, self.quad_dyn.q)
         
         # input
-        self.U=vertcat(self.quad_dyn.col_thrust_mag,self.quad_dyn.ang_rate_B)
+        self.U = vertcat(self.quad_dyn.col_thrust_mag,self.quad_dyn.ang_rate_B)
 
         # dynamics
         self.f = vertcat(self.quad_dyn.dr_I, self.quad_dyn.dv_I, self.quad_dyn.dq)
 
+
     def init_cost(self): 
+        self.cost_base.traverse_error(self.quad_dyn,self.options)
         self.cost_base.path_error(self.quad_dyn)
-        self.goal_state=vertcat(self.cost_base.goal_r_I,self.cost_base.goal_v_I,self.cost_base.goal_q)
+        self.goal_state=vertcat(self.cost_base.goal_r_B,self.cost_base.goal_v_I,self.cost_base.goal_q)
 
-        soft_relu_wrp = self.cost_base.wrp*casadi.log(1+casadi.exp(self.cost_base.des_t_tra-self.cost_base.t_node))
-        soft_relu_wvp = self.cost_base.wvp*casadi.log(1+casadi.exp(self.cost_base.des_t_tra-self.cost_base.t_node))
-        soft_relu_wqp = self.cost_base.wqp*casadi.log(1+casadi.exp(self.cost_base.des_t_tra-self.cost_base.t_node))
-
-        cost_r_I_g = self.cost_base.e_r_I.T @ casadi.diag(soft_relu_wrp) @ self.cost_base.e_r_I
-        cost_v_I_g = self.cost_base.e_v_I.T @ casadi.diag(soft_relu_wvp) @ self.cost_base.e_v_I
-        cost_q_g   = self.cost_base.e_q_g.T @ casadi.diag(soft_relu_wqp) @ self.cost_base.e_q_g
-
-        ## the path cost to the goal
-        self.path_cost = cost_r_I_g\
-                        + cost_v_I_g \
-                        + cost_q_g \
-                        + self.cost_base.wwt * self.cost_base.cost_ang_rate_B \
-                        + self.cost_base.wwt_z * self.cost_base.cost_ang_rate_B_z \
-                        + self.cost_base.wthrust* self.cost_base.cost_col_thrust
-
+        # soft_relu_wrp = self.cost_base.wrp * casadi.log(1+casadi.exp(self.cost_base.des_t_tra-self.cost_base.t_node))
+        # soft_relu_wvp = self.cost_base.wvp * casadi.log(1+casadi.exp(self.cost_base.des_t_tra-self.cost_base.t_node))
+        # soft_relu_wqp = self.cost_base.wqp * casadi.log(1+casadi.exp(self.cost_base.des_t_tra-self.cost_base.t_node))
+        tanh_wrt = self.cost_base.wrt * (0.5 * (1+casadi.tanh(1000*(self.cost_base.des_t_tra + 0.3 - self.cost_base.t_node))))
+        tanh_wrp = self.cost_base.wrp * (0.5 * (1+casadi.tanh(1000*(self.cost_base.t_node + 0.3 - self.cost_base.des_t_tra))))
+        tanh_wvp = self.cost_base.wvp * (0.5 * (1+casadi.tanh(1000*(self.cost_base.t_node + 0.3 - self.cost_base.des_t_tra))))
+        tanh_wqp = self.cost_base.wqp * (0.5 * (1+casadi.tanh(1000*(self.cost_base.t_node + 0.3 - self.cost_base.des_t_tra))))
         
+        cost_r_I_t = self.cost_base.e_r_I_t.T @ casadi.diag(tanh_wrt) @ self.cost_base.e_r_I_t
+        cost_r_I_g =   self.cost_base.e_r_I.T @ casadi.diag(tanh_wrp) @ self.cost_base.e_r_I
+        cost_v_I_g =   self.cost_base.e_v_I.T @ casadi.diag(tanh_wvp) @ self.cost_base.e_v_I
+        cost_q_g   =   self.cost_base.e_q_g.T @ casadi.diag(tanh_wqp) @ self.cost_base.e_q_g
+        
+        # cost_r_I_g =   self.cost_base.e_r_I.T @ casadi.diag(self.cost_base.wrp) @ self.cost_base.e_r_I
+        # cost_v_I_g =   self.cost_base.e_v_I.T @ casadi.diag(self.cost_base.wvp) @ self.cost_base.e_v_I
+        # cost_q_g   =   self.cost_base.e_q_g.T @ casadi.diag(self.cost_base.wqp) @ self.cost_base.e_q_g
+        
+
+        ## the path cost to the first to the gate, then to the goal
+        self.path_cost = self.cost_base.wwt * self.cost_base.cost_ang_rate_B +  \
+                         self.cost_base.wwt_z * self.cost_base.cost_ang_rate_B_z +  \
+                         self.cost_base.wthrust* self.cost_base.cost_col_thrust + \
+                         cost_r_I_g  + \
+                         cost_v_I_g  + \
+                         cost_q_g    + \
+                         cost_r_I_t 
+                        
         # the final cost
         self.final_cost = self.cost_base.wrf * self.cost_base.dot_e_r_I\
                         + self.cost_base.wvf * self.cost_base.dot_e_v_I\
@@ -430,11 +434,10 @@ class QuadrotorCTBRCtl:
   
     
     def init_traCost(self): # transforming Rodrigues to Quaternion is shown in mpc_update function
-        self.cost_base.traverse_error(self.quad_dyn,self.options)
+        # cost_r_I_t = self.cost_base.e_r_I_t.T @ casadi.diag(self.cost_base.wrt) @ self.cost_base.e_r_I_t
         self.tra_cost = self.cost_base.max_tra_w * \
                         casadi.exp(-self.cost_base.traverse_weight_span*(self.cost_base.t_node-self.cost_base.des_t_tra)**2) \
-                        * (self.cost_base.cost_r_I_t \
-                         + self.cost_base.wqt * self.cost_base.cost_q_t) #\
+                        * (self.cost_base.wqt * self.cost_base.cost_q_t) # + cost_r_I_t)
                         #  + self.cost_base.w_tra_throttle * self.cost_base.cost_tra_throttle)
         
     def set_bound_value(self, config):

@@ -4,11 +4,12 @@ import os
 # import cProfile
 from collections import deque
 import ray
+import wandb
 
 from scipy.spatial.transform import Rotation as R
 import matplotlib.pyplot as plt
 
-from geometry.solid_geometry import magni,pitch_from_gate,recover_euler_from_9d,verify_SVD_ca
+from geometry.solid_geometry import magni,pitch_from_gate,recover_euler_from_9d,verify_SVD_ca, tra_time_cal
 from learning_agile_sim import LearningAgileSim, Gate,get_obs
 
 from config import mission_cfg, train_cfg,current_dir
@@ -54,7 +55,7 @@ class LearningAgileBase:
       
         self.input_size = train_cfg['model']['input_size']
         self.output_size = train_cfg['model']['output_size']
-        self.history_obs = deque(maxlen=5)
+        self.last_gate_points = np.zeros(12)
         self.control=np.zeros(4)
         self.reg_control=0
         self.reg_det=0
@@ -62,6 +63,8 @@ class LearningAgileBase:
         self.last_u=np.zeros(4)
         self.np_nn_out=np.zeros(self.output_size)
         self.i=0
+        self.NO_SOLUTION_FLAG=False
+        self.t_tra_abs = 1.0
         
     def load_model(self,model_folder):
         ##== load the pre-trained model ==##
@@ -79,6 +82,7 @@ class LearningAgileBase:
         self.learning_agile_sim.prepare_gate()
         self.gate_points_list = self.learning_agile_sim.gate_points_list
         
+        
         #== reset the gradient
         self.init_gradient()
         
@@ -86,22 +90,28 @@ class LearningAgileBase:
         self.state_traj=[]
         self.state = self.planner.ini_state
         self.state_n = np.array([self.state])
-
+        
         #== reset the obs
+        self.last_gate_points = self.gate_points_list[0]-self.state[0:3]
         self.gate_step_and_obs(0)
+        
+        #== reset flags
+        self.NO_SOLUTION_FLAG=False
  
 
     def gate_step_and_obs(self,i):
         self.i = i
         ## == gate forward === ##
-        gate_t_i = Gate(self.gate_points_list[i])
+        self.gate_t_i = Gate(self.gate_points_list[i])
 
-        self.obs,_ = get_obs(self.history_obs,
-                            self.i,
-                            self.input_size,
-                            self.state,
-                            self.learning_agile_sim.final_point,
-                            gate_t_i)
+        self.obs, _, self.last_gate_points = get_obs(   
+                                                    self.last_gate_points,
+                                                    self.i,
+                                                    self.input_size,
+                                                    self.state,
+                                                    self.learning_agile_sim.final_point,
+                                                    self.gate_t_i
+                                                    )
         return self.obs
 
     def get_NN_decision(self,obs):
@@ -142,16 +152,19 @@ class LearningAgileBase:
                 nn_out = self.get_NN_decision_debug()
             else:  
                 nn_out = self.get_NN_decision(self.obs)       
-
-        self.np_nn_out = nn_out.to('cpu').data.numpy()
-        self.t_tra_rel = self.np_nn_out[-1]
         
+        self.np_nn_out = nn_out.to('cpu').data.numpy()
+        
+        # self.t_tra_rel = tra_time_cal(self.gate_t_i.centroid,self.state[0:3])
+        self.t_tra_rel = self.t_tra_abs-self.i*self.mission_cfg['learning_agile']['dt']
+        # wandb.log({"t_tra_rel": self.t_tra_rel})
         ## == MPC forward === ##        
-        cmd_solution,NO_SOLUTION_FLAG = self.planner.mpc_update(cur_state=self.state,
-                                                                trav_auxvar_value=self.np_nn_out,
+        cmd_solution,self.NO_SOLUTION_FLAG = self.planner.mpc_update(cur_state=self.state,
+                                                                trav_auxvar_value=self.np_nn_out ,
+                                                                des_t_tra= self.t_tra_rel,
                                                                 last_u=self.last_u,
                                                                 first_iter=(self.i==0))
-        if NO_SOLUTION_FLAG:
+        if self.NO_SOLUTION_FLAG:
             print('No solution found')
             print('traverse_auxvar_value=',self.np_nn_out)
             
@@ -221,7 +234,7 @@ class LearningAgileBase:
         dreg_dcontrol = self.mission_cfg['penalty']['control_reg_w']*2*(self.control-self.planner.hover_u)
         self.dreg_dz[:,:]=np.matmul(dreg_dcontrol,self.planner.d_input_traj_d_z[0,:,:]).flatten()
            
-    def backward_per_step(self,dyn_decay=0.9):
+    def backward_per_step(self):
         """
         get the gradient of the penalty w.r.t. the NN output, 
         store the gradient per step in a list
@@ -284,6 +297,11 @@ class LearningAgileBase:
         """
         return self.control
     
+    def get_solution_flag(self):
+        """
+        get the solution flag
+        """
+        return self.NO_SOLUTION_FLAG
     
     def get_drone_state(self):
         """

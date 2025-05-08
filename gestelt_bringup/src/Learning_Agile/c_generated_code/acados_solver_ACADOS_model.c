@@ -320,7 +320,7 @@ void ACADOS_model_acados_create_3_create_and_set_functions(ACADOS_model_solver_c
         capsule->__CAPSULE_FNC__.casadi_sparsity_in = & __MODEL_BASE_FNC__ ## _sparsity_in; \
         capsule->__CAPSULE_FNC__.casadi_sparsity_out = & __MODEL_BASE_FNC__ ## _sparsity_out; \
         capsule->__CAPSULE_FNC__.casadi_work = & __MODEL_BASE_FNC__ ## _work; \
-        external_function_param_casadi_create(&capsule->__CAPSULE_FNC__ , 31); \
+        external_function_param_casadi_create(&capsule->__CAPSULE_FNC__ , 35); \
     } while(false)
 
 
@@ -675,14 +675,14 @@ int fixed_hess = 0;
     double nlp_solver_step_length = 1;
     ocp_nlp_solver_opts_set(nlp_config, nlp_opts, "step_length", &nlp_solver_step_length);
 
-    double levenberg_marquardt = 0.0000000001;
+    double levenberg_marquardt = 0.001;
     ocp_nlp_solver_opts_set(nlp_config, nlp_opts, "levenberg_marquardt", &levenberg_marquardt);
 
     /* options QP solver */
     double reg_epsilon = 0.0001;
     ocp_nlp_solver_opts_set(nlp_config, nlp_opts, "reg_epsilon", &reg_epsilon);
 
-    int nlp_solver_ext_qp_res = 0;
+    int nlp_solver_ext_qp_res = 1;
     ocp_nlp_solver_opts_set(nlp_config, nlp_opts, "ext_qp_res", &nlp_solver_ext_qp_res);
 
 
@@ -869,7 +869,7 @@ int ACADOS_model_acados_update_params(ACADOS_model_solver_capsule* capsule, int 
 {
     int solver_status = 0;
 
-    int casadi_np = 31;
+    int casadi_np = 35;
     if (casadi_np != np) {
         printf("acados_update_params: trying to set %i parameters for external functions."
             " External function has %i parameters. Exiting.\n", np, casadi_np);
@@ -929,7 +929,7 @@ int ACADOS_model_acados_update_params_sparse(ACADOS_model_solver_capsule * capsu
 {
     int solver_status = 0;
 
-    int casadi_np = 31;
+    int casadi_np = 35;
     if (casadi_np < n_update) {
         printf("ACADOS_model_acados_update_params_sparse: trying to set %d parameters for external functions."
             " External function has %d parameters. Exiting.\n", n_update, casadi_np);

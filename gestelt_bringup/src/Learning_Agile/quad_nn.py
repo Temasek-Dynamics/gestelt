@@ -3,6 +3,7 @@ from config import mission_cfg, train_cfg
 from math import pi
 import torch
 import torch.nn as nn
+from torch.nn.utils import spectral_norm
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 import scipy.stats as stats
@@ -32,18 +33,19 @@ def nn_sample(init_pos=None,
               TEST=False):
     env_init_set = np.zeros(17)
     if init_pos is None:
-        env_init_set[0:3] =  np.random.uniform(-0.5,0.5,3) + pre_ini_pos #-5~5, -9 
+        env_init_set[0:3] =  np.random.uniform(-0.2,0.2,3) + pre_ini_pos #-5~5, -9 
         env_init_set[1] = np.random.uniform(-0.2,0.2) + pre_ini_pos[1]
         if PRTRAIN:
             env_init_set[1] = np.random.uniform(-5,5) #+ pre_ini_pos[1]
+            env_init_set[2] = np.random.uniform(0,2.5) #+ pre_ini_pos[0]
 
     else:
         env_init_set[0:3] = init_pos
     ## random final position 
     if final_pos is None:
        
-        env_init_set[3:6]=np.random.uniform(-0.5,0.5,3) + pre_end_pos
-        env_init_set[4]=np.random.uniform(-0.2,0.2) + pre_end_pos[1]
+        env_init_set[3:6]=np.random.uniform(-0.1,0.1,3) + pre_end_pos
+        env_init_set[4]=np.random.uniform(-0.1,0.1) + pre_end_pos[1]
     else:
         env_init_set[3:6] = final_pos
 
@@ -116,15 +118,14 @@ def t_output(inputs,gate_rot_matrix):
     """the traverse time is calculated based on the signed distance between the drone position and the gate position.
 
     Args:
-        inputs (_type_): _description_
+        inputs (array): the NN input
 
     Returns:
-        _type_: _description_
+        array: preset output of the NN
     """
-    inputs = np.array(inputs[-1])
     
     outputs = np.zeros(output_size)
-    outputs[0:3]=mission_cfg['mission']['gate_position']# gate position
+    outputs[0:3]=mission_cfg['mission']['gate_position']-inputs[0:3]*2# gate position
     
 
     # outputs[3:12]=gate_rot_matrix
@@ -139,9 +140,7 @@ def t_output(inputs,gate_rot_matrix):
     else:
         raw_time = -round(magni(inputs[0:3]*2-outputs[0:3])/desired_average_vel_after_gate,1) #4
    
-    outputs[-1] = raw_time #np.clip(raw_time,3,3)
-
-    print('desired_traversing_time',outputs[-1])
+    # outputs[-1] = raw_time #np.clip(raw_time,3,3)
 
     
     return outputs
@@ -207,17 +206,17 @@ class network_with_GRU(nn.Module):
         # D_in : dimension of input layer
         # D_h  : dimension of hidden layer
         # D_out: dimension of output layer
-        self.GRU = nn.GRU(input_size=D_in, hidden_size=D_h2,num_layers=1,batch_first=True)
-        self.input_norm=nn.LayerNorm(D_in)
-        self.out_norm = nn.LayerNorm(D_h2)
-        self.l1 = nn.Linear(D_h1, D_h1)
+        # self.GRU = nn.GRU(input_size=D_in, hidden_size=D_h2,num_layers=1,batch_first=True)
+        # self.input_norm=nn.LayerNorm(D_in)
+        # self.out_norm = nn.LayerNorm(D_h2)
+        self.l1 = nn.Linear(D_in, D_h1)
         if train_cfg['model']['activation'] == 'tanh':
             self.F1 = nn.Tanh()
             self.F2 = nn.Tanh()
         elif train_cfg['model']['activation'] == 'silu':
             self.F1 = nn.SiLU()
             self.F2 = nn.SiLU()
-        self.l2 = nn.Linear(D_h1, D_h2)
+        self.l2 = spectral_norm(nn.Linear(D_h1, D_h2))
         # self.l3 = nn.Linear(D_h2, D_out)
 
 
@@ -237,19 +236,19 @@ class network_with_GRU(nn.Module):
         self.rotation_head = nn.Linear(D_h2, 9)
 
         # weights vector head
-        self.weights_head = nn.Linear(D_h2, 7)
+        self.weights_head = nn.Linear(D_h2, 8)
 
         # traverse time head
-        self.traverse_time_head = nn.Linear(D_h2, 1)
+        # self.traverse_time_head = nn.Linear(D_h2, 1)
 
         
     def forward(self, input,deterministic=True):
         #add layer norm
         # input = self.input_norm(input)
-        out,hidden = self.GRU(input)
-        out = out [:,-1,:]
+        # out,hidden = self.GRU(input)
+        # out = out [:,-1,:]
         # out = hidden[-1,:,:]
-        out = self.l1(out) # linear function requires the input to be a row tensor
+        out = self.l1(input) # linear function requires the input to be a row tensor
         out = self.F1(out)
         out = self.l2(out)
         out = self.F2(out)
@@ -278,22 +277,24 @@ class network_with_GRU(nn.Module):
             z_hat = torch.zeros((out.shape[0], 1),device=out.device)
             x_hat[:,0] = torch.tanh(self.positional_head(out)[:,0])*2
             y_hat[:,0] = torch.tanh(self.positional_head(out)[:,1])*2
-            z_hat[:,0] = torch.sigmoid(self.positional_head(out)[:,2])*2+0.5
+            z_hat[:,0] = torch.tanh(self.positional_head(out)[:,2])*2
             
         # orientation 
         orientation = self.rotation_head(out)
 
         # vector head
         weights = self.weights_head(out)
-        weights[:,0:3]=torch.sigmoid(weights[:,0:3])*50+10
-        weights[:,3:6]=torch.sigmoid(weights[:,3:6])*20
-        weights[:,6]=torch.sigmoid(weights[:,6])*20
+        weights[:,0:3]=torch.sigmoid(weights[:,0:3])*200+10 # wrp
+        weights[:,3:6]=torch.sigmoid(weights[:,3:6])*200+10 # wrt
+        weights[:,6]=torch.sigmoid(weights[:,6])*50+10
+        # gamma
+        weights[:,7]=torch.sigmoid(weights[:,7])*100+5
 
         # traverse time head
-        traverse_time = self.traverse_time_head(out)
+        # traverse_time = self.traverse_time_head(out)
 
 
-        return torch.hstack([x_hat, y_hat, z_hat,orientation, weights, traverse_time])
+        return torch.hstack([x_hat, y_hat, z_hat,orientation, weights]) #, traverse_time
 
     
     def myloss(self, para, dp, device='cpu'):

@@ -2,11 +2,10 @@
 import numpy as np
 
 import scipy
-
 from quad_OC import OCSys,LQR
-# the sequence of importing geometry.solid_geometry
-# with juliacall is import
 from geometry.solid_geometry import pitch_from_gate
+from MinimumSnapDemo.minsnap_traj import minimum_snap_traj_p2p, get_traj
+from MinimumSnapDemo.dft_traj import differential_flatness_transform,R_to_quat
 from quad_model import QuadrotorCTBRCtl, QuadrotorSRTCtl,QuadrotorWrenchCtl,QuadrotorAugmentedSRTCtl, toQuaternion,Gate
 from visualization.python_sim_vis import get_quad_vert_pos,plot_position,plot_angularrate,plot_thrust
 from config import train_cfg
@@ -71,7 +70,7 @@ class PlanFwdBwdWrapper():
         
      
         # set symbolic functions for the MPC solver
-        self.uavoc.setStateVariable(self.uav.X,state_lb=self.uav.state_lb,state_ub=self.uav.state_ub)
+        self.uavoc.setStateVariable(self.uav.X,state_lb=self.uav.state_lb,state_ub=self.uav.state_ub, cur_r_I=self.uav.quad_dyn.cur_r_I)
                                   
       
         self.uavoc.setAuxvarVariable()
@@ -110,7 +109,7 @@ class PlanFwdBwdWrapper():
                            wvf=config['learning_agile']['wvf'],
                            wqf=config['learning_agile']['wqf'],
                            max_tra_w=config['learning_agile']['max_tra_w'],
-                           traverse_weight_span=config['learning_agile']['traverse_weight_span']
+                        #    traverse_weight_span=config['learning_agile']['traverse_weight_span']
                            ) 
         self.uav.init_cost()
         self.uav.init_traCost()
@@ -118,7 +117,8 @@ class PlanFwdBwdWrapper():
         ## set the symbolic cost function to the solver
         self.uavoc.setTraCost(self.uav.tra_cost,
                                self.uav.cost_base.trav_auxvar,
-                               self.uav.cost_base.t_node
+                               self.uav.cost_base.t_node,
+                               self.uav.cost_base.des_t_tra
                               )
         
         
@@ -420,7 +420,7 @@ class PlanFwdBwdWrapper():
         ###################################################################
         ###----- Set mpc external variables VALUE to diffPMP--------#######
         ###################################################################
-        # self.horizon = self.sol1['control_traj_opt'].shape[0]
+        self.horizon = self.sol1['control_traj_opt'].shape[0]
     
         ## using LQR solver to solve the auxilary control system to get the analytical gradient
         # set values to the auxilary control system symbolic functions 
@@ -428,6 +428,7 @@ class PlanFwdBwdWrapper():
                                         control_traj_opt=self.sol1['control_traj_opt'],
                                         costate_traj_opt=self.sol1['costate_traj_opt'],
                                         goal_state_value=self.goal_state_value,
+                                        des_t_tra_value = self.des_t_tra,
                                         auxvar_value=trav_auxvar_value)
         
         # set values to the LQR solver
@@ -511,10 +512,36 @@ class PlanFwdBwdWrapper():
         
         return init_guess_sol
     
+    def minsnap_as_init_guess(self):
+        """ generating an initial trajectory by using the minimum snap trajectory generation method
+        """
+        way_points = np.array([[self.ini_r[0],self.ini_r[1],self.ini_r[2],0.0],
+                               [self.goal_pos[0],self.goal_pos[1],self.goal_pos[2],0.0]])
+        final_time = np.linalg.norm(self.goal_pos-self.ini_r)/self.config['pretrain_param']['desired_average_vel']
+        time_set = np.array([0,final_time])
+        n_order = 5
+        n_obj = 3
+        sample_rate = self.horizon
+        v_i = [0,0,0,0]
+        a_i = [0,0,0,0]
+        v_e = [0,0,0,0]
+        a_e = [0,0,0,0]
+        Matrix_x, Matrix_y, Matrix_z = minimum_snap_traj_p2p(way_points, time_set, n_order, n_obj, v_i, a_i, v_e, a_e)
+        p, v, a, t_list= get_traj(Matrix_x, Matrix_y, Matrix_z, time_set, sample_rate)
+        R = differential_flatness_transform(np.array(p), np.array(v), np.array(a))
+        q = R_to_quat(R)
+
+        # assemble the trajectory
+        state_traj = np.zeros((len(t_list),self.uavoc.n_state))
+        state_traj[:,0:3] = p
+        state_traj[:,3:6] = v
+        state_traj[:,6:10] = q
+        return state_traj
     ## given initial state, control command, high-level parameters, obtain the first control command of the quadrotor
     def mpc_update(self, 
                    cur_state,
                    trav_auxvar_value,
+                   des_t_tra=None,
                    last_u=None,
                    first_iter=False):
         """ 
@@ -528,15 +555,18 @@ class PlanFwdBwdWrapper():
             _type_: _description_
         """
         init_guess=None
-        if self.config['lqr_init_guess'] and first_iter:
-            init_guess = self.LQR_as_init_guess(trav_auxvar_value,cur_state=cur_state,cur_u=last_u)
+        if self.config['manual_init_guess'] and first_iter:
+            # init_guess = self.LQR_as_init_guess(trav_auxvar_value,cur_state=cur_state,cur_u=last_u)
+            init_guess = self.minsnap_as_init_guess()
         ## MPC requires both the goal state adn the traverse hyperparameters
+        self.des_t_tra = des_t_tra
         
         # self.sol1 = self.uavoc.ocSolver(cur_state_control=cur_state_control,t_tra=t)
         self.sol1,NO_SOLUTION_FLAG = self.uavoc.AcadosOcSolver(cur_state=cur_state,
                                                 goal_state_value=self.goal_state_value,
                                                 dt=self.dt,
                                                 trav_auxvar_value=trav_auxvar_value,
+                                                des_t_tra=self.des_t_tra,
                                                 last_u=last_u,
                                                 init_guess=init_guess)
         # print('goal_pos:',self.goal_pos)

@@ -152,12 +152,12 @@ class Obstacle():
             for t in range(state_traj.shape[0]):
                 
                 # if the current state is already behind the gate, then break
-                if len(t_tra_seq_list)==3 or \
+                if len(t_tra_seq_list)==5 or \
                     (np.dot(self.plane1.nor_vec(),vert_traj[0]-self.centroid)>0 \
-                    and self.centroid[1]-vert_traj[0][1]>0.2):
+                    and self.centroid[1]-vert_traj[0][1]>0.5):
                     break
                 if(np.dot(self.plane1.nor_vec(),vert_traj[t]-self.centroid)>0):
-                    t_tra_seq_list.append(t-1)
+                    t_tra_seq_list.append(t-3)
                 
         else:
             t_tra_seq_list = [0]
