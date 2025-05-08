@@ -284,8 +284,8 @@ class network_with_GRU(nn.Module):
 
         # vector head
         weights = self.weights_head(out)
-        weights[:,0:3]=torch.sigmoid(weights[:,0:3])*200+10 # wrp
-        weights[:,3:6]=torch.sigmoid(weights[:,3:6])*200+10 # wrt
+        weights[:,0:3]=torch.sigmoid(weights[:,0:3])*300+10 # wrp
+        weights[:,3:6]=torch.sigmoid(weights[:,3:6])*300+10 # wrt
         weights[:,6]=torch.sigmoid(weights[:,6])*50+10
         # gamma
         weights[:,7]=torch.sigmoid(weights[:,7])*100+5
