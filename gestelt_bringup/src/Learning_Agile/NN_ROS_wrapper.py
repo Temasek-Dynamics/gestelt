@@ -84,7 +84,7 @@ class NN2_ROS_wrapper:
 
         if not self.MANUAL_SET_POSE_TEST:
             
-            self.NN2_output_timer = rospy.Timer(rospy.Duration(1/self.NN_freq), self.close_loop_NN_forward)
+            self.NN_output_timer = rospy.Timer(rospy.Duration(1/self.NN_freq), self.close_loop_NN_forward)
         
             ##================- load trained DNN2 model ======================-##
             # model_file=os.path.join(current_dir, 'training_data/NN_model',NN2_model_name)
@@ -203,7 +203,7 @@ class NN2_ROS_wrapper:
                 # NN_trav_time_msg.data = -5 # set a constant minus traversing time to indicate the mission is done
                 # self.NN_trav_time_pub.publish(NN_trav_time_msg)
                 print("shutdown the NN forward timer")
-                self.NN2_output_timer.shutdown()
+                self.NN_output_timer.shutdown()
 
             else: 
                 obs,_ = get_obs(self.history_obs,
@@ -328,7 +328,7 @@ if __name__ == '__main__':
 #             NN_trav_time_msg.data = -5 # set a constant minus traversing time to indicate the mission is done
 #             self.NN_trav_time_pub.publish(NN_trav_time_msg)
 #             print("shutdown the NN forward timer")
-#             self.NN2_output_timer.shutdown()
+#             self.NN_output_timer.shutdown()
 
 #         else:
 #             t_comp = time.time()

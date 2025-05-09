@@ -40,7 +40,7 @@ CMD_2="roslaunch gestelt_bringup mission_realflight.launch"
 
 
 # start up the NN wrapper 
-# CMD_3="taskset -c 3 roslaunch gestelt_bringup NN2_ROS_wrapper.launch"
+# CMD_3="taskset -c 3 roslaunch gestelt_bringup NN_ROS_wrapper.launch"
 
 
 CMD_4="

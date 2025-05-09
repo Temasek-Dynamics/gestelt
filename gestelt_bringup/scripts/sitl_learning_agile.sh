@@ -56,7 +56,7 @@ CMD_2="taskset -c 1 roslaunch gestelt_bringup learning_agile_mission.launch plat
 
 
 # start up the NN wrapper
-CMD_3="roslaunch gestelt_bringup NN2_ROS_wrapper.launch is_simulation:=true"
+CMD_3="roslaunch gestelt_bringup NN_ROS_wrapper.launch is_simulation:=true"
 
 
 CMD_4="roslaunch gestelt_bringup record.launch test_mode:=SITL recorded_platform:=laptop"
