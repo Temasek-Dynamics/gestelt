@@ -14,8 +14,6 @@ from geometry.solid_geometry import magni
 
 pre_ini_pos=np.array(mission_cfg['mission']['initial_position'])
 pre_end_pos=np.array(mission_cfg['mission']['goal_position'])
-desired_average_vel=mission_cfg['pretrain_param']['desired_average_vel']
-desired_average_vel_after_gate=mission_cfg['pretrain_param']['desired_average_vel_after_gate']
 gate_width = mission_cfg['gate']['width']
 init_std_dev=mission_cfg['gate']['init_std_dev']
 final_std_dev=mission_cfg['gate']['final_std_dev']
@@ -224,10 +222,7 @@ class network_with_GRU(nn.Module):
         self.rotation_head = nn.Linear(D_h2, 9)
 
         # weights vector head
-        self.weights_head = nn.Linear(D_h2, 8)
-
-        # traverse time head
-        # self.traverse_time_head = nn.Linear(D_h2, 1)
+        self.weights_head = nn.Linear(D_h2, train_cfg["model"]["weights_vector_length"])
 
         
     def forward(self, input,deterministic=True):
@@ -278,11 +273,9 @@ class network_with_GRU(nn.Module):
         # gamma
         weights[:,7]=torch.sigmoid(weights[:,7])*100+5
 
-        # traverse time head
-        # traverse_time = self.traverse_time_head(out)
 
 
-        return torch.hstack([x_hat, y_hat, z_hat,orientation, weights]) #, traverse_time
+        return torch.hstack([x_hat, y_hat, z_hat,orientation, weights])
 
     
     def myloss(self, para, dp, device='cpu'):

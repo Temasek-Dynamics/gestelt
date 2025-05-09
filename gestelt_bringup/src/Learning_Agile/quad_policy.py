@@ -512,31 +512,31 @@ class PlanFwdBwdWrapper():
         
         return init_guess_sol
     
-    def minsnap_as_init_guess(self):
-        """ generating an initial trajectory by using the minimum snap trajectory generation method
-        """
-        way_points = np.array([[self.ini_r[0],self.ini_r[1],self.ini_r[2],0.0],
-                               [self.goal_pos[0],self.goal_pos[1],self.goal_pos[2],0.0]])
-        final_time = np.linalg.norm(self.goal_pos-self.ini_r)/self.config['pretrain_param']['desired_average_vel']
-        time_set = np.array([0,final_time])
-        n_order = 5
-        n_obj = 3
-        sample_rate = self.horizon
-        v_i = [0,0,0,0]
-        a_i = [0,0,0,0]
-        v_e = [0,0,0,0]
-        a_e = [0,0,0,0]
-        Matrix_x, Matrix_y, Matrix_z = minimum_snap_traj_p2p(way_points, time_set, n_order, n_obj, v_i, a_i, v_e, a_e)
-        p, v, a, t_list= get_traj(Matrix_x, Matrix_y, Matrix_z, time_set, sample_rate)
-        R = differential_flatness_transform(np.array(p), np.array(v), np.array(a))
-        q = R_to_quat(R)
+    # def minsnap_as_init_guess(self):
+    #     """ generating an initial trajectory by using the minimum snap trajectory generation method
+    #     """
+    #     way_points = np.array([[self.ini_r[0],self.ini_r[1],self.ini_r[2],0.0],
+    #                            [self.goal_pos[0],self.goal_pos[1],self.goal_pos[2],0.0]])
+    #     final_time = np.linalg.norm(self.goal_pos-self.ini_r)/self.config['pretrain_param']['desired_average_vel']
+    #     time_set = np.array([0,final_time])
+    #     n_order = 5
+    #     n_obj = 3
+    #     sample_rate = self.horizon
+    #     v_i = [0,0,0,0]
+    #     a_i = [0,0,0,0]
+    #     v_e = [0,0,0,0]
+    #     a_e = [0,0,0,0]
+    #     Matrix_x, Matrix_y, Matrix_z = minimum_snap_traj_p2p(way_points, time_set, n_order, n_obj, v_i, a_i, v_e, a_e)
+    #     p, v, a, t_list= get_traj(Matrix_x, Matrix_y, Matrix_z, time_set, sample_rate)
+    #     R = differential_flatness_transform(np.array(p), np.array(v), np.array(a))
+    #     q = R_to_quat(R)
 
-        # assemble the trajectory
-        state_traj = np.zeros((len(t_list),self.uavoc.n_state))
-        state_traj[:,0:3] = p
-        state_traj[:,3:6] = v
-        state_traj[:,6:10] = q
-        return state_traj
+    #     # assemble the trajectory
+    #     state_traj = np.zeros((len(t_list),self.uavoc.n_state))
+    #     state_traj[:,0:3] = p
+    #     state_traj[:,3:6] = v
+    #     state_traj[:,6:10] = q
+    #     return state_traj
     ## given initial state, control command, high-level parameters, obtain the first control command of the quadrotor
     def mpc_update(self, 
                    cur_state,

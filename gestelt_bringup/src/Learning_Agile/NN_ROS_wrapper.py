@@ -161,9 +161,10 @@ class NN2_ROS_wrapper:
         # print("i",self.i)
         if self.PHYSICAL_GATE:
             self.gate_t_i = Gate(self.physical_gate_points_rotated)
+            self.last_gate_points =(self.physical_gate_points_rotated-self.state[0:3])
         else:
             self.gate_t_i = Gate(self.gate_points_list[self.i]) 
-
+            self.last_gate_points =(self.gate_points_list[0]-self.state[0:3])
         ##============================ gate points publisher =========================##
         gate_points_msg = PoseArray()
         gate_points_msg.header.frame_id = "world"
@@ -180,7 +181,7 @@ class NN2_ROS_wrapper:
             single_gate_point.orientation.w = 1.0
             gate_points_msg.poses.append(single_gate_point)
 
-        # self.gate_points_pub.publish(gate_points_msg)
+        self.gate_points_pub.publish(gate_points_msg)
               
 
    
@@ -206,14 +207,15 @@ class NN2_ROS_wrapper:
                 self.NN_output_timer.shutdown()
 
             else: 
-                obs,_ = get_obs(self.history_obs,
+                obs,_ ,self.last_gate_points = get_obs(
+                                self.last_gate_points,
                                 self.i,
                                 self.input_size,
                                 self.state,
                                 self.final_point,
                                 self.gate_t_i)
                 
-                full_input=np.array(obs).reshape([1,5,-1])
+                full_input=np.array(obs).reshape([1,-1])
                 NN_forward_time=0
                 # NN output the traversal time and pose
                 if not self.MANUAL_SET_POSE_TEST:
@@ -228,10 +230,9 @@ class NN2_ROS_wrapper:
                 else:
                     gate_ori_euler=np.array(mission_cfg['mission']['gate_ori_euler'])
                     self.gate_ori_9d=R.from_euler('zyx',gate_ori_euler).as_matrix().flatten()
-                    self.t_tra_rel=mission_cfg['learning_agile']['traverse_time']-self.i*(1/self.NN_freq)
-                    gate_pitch,out,verify_tra_R = manual_set_z_forward(gate_center=self.gate_center,
-                                                                                    gate_ori_9d=self.gate_ori_9d,
-                                                                                    t_tra_rel=self.t_tra_rel)
+                    gate_pitch,out,verify_tra_R = manual_set_z_forward( cur_pos=self.state[0:3],
+                                                                        gate_center=self.gate_center,
+                                                                        gate_ori_9d=self.gate_ori_9d)
                     quat=np.roll(R.from_matrix(verify_tra_R).as_quat(),1)
                     
                 # wrap the NN output as the message
@@ -240,13 +241,11 @@ class NN2_ROS_wrapper:
                 NN_output.header.frame_id = "world"
                 NN_output.position[0:3] = out[0:3]+self.trans
                 NN_output.vector_9D_orientation[0:9] = out[3:12]
-                NN_output.weight_vector[:]=out[12:15]
-                NN_output.tra_time = out[-1]
+                NN_output.weight_vector[:]=out[12:12+train_cfg["model"]["weights_vector_length"]]
+                NN_output.tra_time = mission_cfg["t_tra_abs"] - self.i*(1/self.NN_freq)
 
-                NN_trav_time_msg = Float32()
+               
                 NN_forward_time_msg = Float32()
-            
-                NN_trav_time_msg.data = out[-1]
                 NN_forward_time_msg.data = NN_forward_time
 
                 ##= visualize the traversing pose

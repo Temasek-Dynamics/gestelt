@@ -17,6 +17,7 @@ model:
   input_size: 37 # current drone state (10), goal position (3),gate points (8x3), last gate points (8x3)     
   hidden_size: 256
   output_size: 20 # tra_pos(3), tra_9D_orientation(9), [wrpx, wrpy, wrpz], [wrtx, wrty, wrtz], wqt, gamma#
+  weights_vector_length: 8
   activation: "silu"
   # activation: "relu"
   

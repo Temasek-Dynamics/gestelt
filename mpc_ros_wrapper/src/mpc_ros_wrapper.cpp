@@ -9,7 +9,7 @@ void mpcRosWrapper::init(ros::NodeHandle& nh)
     nh.param("drone/mass",drone_mass_,0.248);
     nh.param("learning_agile/max_tra_w", max_tra_w_, 0.0);
     nh.param("learning_agile/traverse_weight_span", tra_w_span_, 0.0);
-    nh.param("learning_agile/traverse_time", t_tra_abs_, 10.0);
+    nh.param("t_tra_abs", t_tra_abs_, 10.0);
     nh.param("learning_agile/no_solution_flag_t_thresh", no_solution_flag_t_thresh_, 0.02);
     nh.param("learning_agile/single_motor_max_thrust", single_motor_max_thrust_, 2.1334185);
     nh.param("learning_agile/pred_traj_vis", PRED_TRAJ_VIS_FLAG_, false);
@@ -105,118 +105,7 @@ void mpcRosWrapper::init(ros::NodeHandle& nh)
     }
 }
 
-void mpcRosWrapper::solver_request(){
-    
-    ocp_nlp_out_set(nlp_config, nlp_dims, nlp_out, n_nodes_,"x", des_goal_state_.data());
-    
-    
-    auto current_time = std::chrono::high_resolution_clock::now();
-    double request_gap = std::chrono::duration_cast<std::chrono::duration<double>>(current_time - last_request_time_).count();
-    // ROS_INFO("request gap is %f", request_gap);
-    
-    // if two requests gap is too long, emergency stop
-    if (request_gap > no_solution_flag_t_thresh_)
-    {
-        NO_SOLUTION_FLAG_=true;
-        ROS_INFO("the request period is too long, emergency stop");
-    }
-    else
-    {   
-        //t_tra: time to the traverse point relative to the current time
-        //t_tra_abs_: absolute time to the traverse point, w.r.t the mission start time
 
-        double mission_t_progress= std::chrono::duration_cast<std::chrono::duration<double>>(current_time - mission_start_time_).count();
-        
-        if (MANUAL_SET_POSE_TEST_)
-        {
-            t_tra_rel_=t_tra_abs_-mission_t_progress; 
-        }
-        
-        // ROS_INFO("t_tra is %f", t_tra);
-        for (int i = 0; i < n_nodes_; i++)
-        {
-            // current_input_=last_input_;
-            // double varying_trav_weight = max_tra_w_ * std::exp(-tra_w_span_ * std::pow(dt_ * i - t_tra, 2));
-            // ROS_INFO("dt_ is %f, i is %d, t_tra is %f, varying_trav_weight is %f", dt_, i, t_tra, varying_trav_weight);
-            // set the external parameters for the solver
-            // desired goal state, current input, desired traverse pose, varying traverse weight
-            Eigen::VectorXd solver_extern_param(18);
-            solver_extern_param.segment(0,10) = des_goal_state_;
-            solver_extern_param.segment(10,3) = des_trav_point_;
-            solver_extern_param.segment(13,3) = des_trav_rodrigues_;
-            solver_extern_param(16) = t_tra_rel_; 
-            solver_extern_param(17) = i * dt_; //current node relative time
-
-            int NP=18;
-            double *solver_extern_param_ptr = solver_extern_param.data();
-        
-            ACADOS_model_acados_update_params(acados_ocp_capsule, i,solver_extern_param_ptr,NP);
-            
-            // if (i==10)
-            // {
-            //     weight_vis_ = varying_trav_weight;
-            // }
-        }
-        //TODO
-        // set the initial GUESS
-        // ocp_nlp_out_set(nlp_config, nlp_dims, nlp_out, n_nodes_ , "x", &state_traj_opt_[n_nodes_*n_x_]);
-
-        // set the end desired state
-        Eigen::VectorXd solver_extern_param(18);
-        solver_extern_param.segment(0,10) = des_goal_state_;
-        solver_extern_param.segment(10,3) = des_trav_point_;
-        solver_extern_param.segment(13,3) = des_trav_rodrigues_;
-        solver_extern_param(16) = t_tra_rel_;
-        solver_extern_param(17) = n_nodes_ * dt_; //current node relative time
-        
-        double *solver_extern_param_ptr = solver_extern_param.data();
-    
-        int NP=18;
-        ACADOS_model_acados_update_params(acados_ocp_capsule, n_nodes_, solver_extern_param_ptr, NP);
-        //set initial condition aligned with the current state
-        double *drone_state_ptr = drone_state_.data();
-        ocp_nlp_constraints_model_set(nlp_config, nlp_dims, nlp_in, 0, "lbx",drone_state_ptr);
-        ocp_nlp_constraints_model_set(nlp_config, nlp_dims, nlp_in, 0, "ubx",drone_state_ptr);
-
-
-        // solve the problem
-        status = ACADOS_model_acados_solve(acados_ocp_capsule);
-        if (status != 0){
-            NO_SOLUTION_FLAG_=true;
-            ROS_INFO("acados no solution");
-        }
-        else
-        {
-            // // get the state solution for visualization
-
-            if (PRED_TRAJ_VIS_FLAG_){
-                
-                
-                
-                for (int i = 0; i < n_nodes_; i++)
-                {   
-                    ocp_nlp_out_get(nlp_config, nlp_dims, nlp_out, i, "x", &state_traj_opt_[i*n_x_]);
-                }
-
-
-                // get the last state
-                ocp_nlp_out_get(nlp_config, nlp_dims, nlp_out, n_nodes_, "x",  &state_traj_opt_[n_nodes_*n_x_]);
-                
-            pred_traj_vis();
-
-                
-            }
-            
-        
-            // get the control input
-            ocp_nlp_out_get(nlp_config, nlp_dims, nlp_out, 0, "u", &control_opt_);
-        
-
-        }
-    }
-    last_request_time_=current_time;
-    
-}
 void mpcRosWrapper::close_loop_solver_request(){
     
     ocp_nlp_out_set(nlp_config, nlp_dims, nlp_out, n_nodes_,"x", des_goal_state_.data());
@@ -245,18 +134,21 @@ void mpcRosWrapper::close_loop_solver_request(){
         }
         
         // ROS_INFO("t_tra is %f", t_tra);
-        int NP=des_goal_state_.size()+des_trav_point_.size()+des_trav_9d_.size()+weight_vector_.size()+2;
+        int NP=drone_pos_.size()+des_goal_state_.size()+des_trav_point_.size()+des_trav_9d_.size()+weight_vector_.size()+2;
+        relative_des_goal_state_ = des_goal_state_;
+        relative_des_goal_state_.segment(0,3) = des_goal_state_.segment(0,3) - drone_pos_;
         for (int i = 0; i < n_nodes_; i++)
         {
             // set the external parameters for the solver
             // desired goal state, current input, desired traverse pose, varying traverse weight
             Eigen::VectorXd solver_extern_param(NP);
-            solver_extern_param.segment(0,state_size_) = des_goal_state_;
-            solver_extern_param.segment(state_size_,3) = des_trav_point_;
-            solver_extern_param.segment(state_size_+3,9) = des_trav_9d_;
-            solver_extern_param.segment(state_size_+12,3) = weight_vector_;
-            solver_extern_param(state_size_+15) = t_tra_rel_; 
-            solver_extern_param(state_size_+16) = i * dt_; //current node relative time
+            solver_extern_param.segment(0,3) = drone_pos_;
+            solver_extern_param.segment(3,state_size_) = relative_des_goal_state_;
+            solver_extern_param.segment(state_size_+3,3) = des_trav_point_;
+            solver_extern_param.segment(state_size_+6,9) = des_trav_9d_;
+            solver_extern_param.segment(state_size_+15,8) = weight_vector_;
+            solver_extern_param(state_size_+23) = t_tra_rel_; 
+            solver_extern_param(state_size_+24) = i * dt_; //current node relative time
 
             
             double *solver_extern_param_ptr = solver_extern_param.data();
@@ -274,12 +166,13 @@ void mpcRosWrapper::close_loop_solver_request(){
 
         // set the end desired state
         Eigen::VectorXd solver_extern_param(NP);
-        solver_extern_param.segment(0,state_size_) = des_goal_state_;
-        solver_extern_param.segment(state_size_,3) = des_trav_point_;
-        solver_extern_param.segment(state_size_+3,9) = des_trav_9d_;
-        solver_extern_param.segment(state_size_+12,3) = weight_vector_;
-        solver_extern_param(state_size_+15) = t_tra_rel_; 
-        solver_extern_param(state_size_+16) = n_nodes_ * dt_; //current node relative time
+        solver_extern_param.segment(0,3) = drone_pos_;
+        solver_extern_param.segment(3,state_size_) = relative_des_goal_state_;
+        solver_extern_param.segment(state_size_+3,3) = des_trav_point_;
+        solver_extern_param.segment(state_size_+6,9) = des_trav_9d_;
+        solver_extern_param.segment(state_size_+15,8) = weight_vector_;
+        solver_extern_param(state_size_+23) = t_tra_rel_; 
+        solver_extern_param(state_size_+24) = n_nodes_ * dt_; //current node relative time
         double *solver_extern_param_ptr = solver_extern_param.data();
     
        

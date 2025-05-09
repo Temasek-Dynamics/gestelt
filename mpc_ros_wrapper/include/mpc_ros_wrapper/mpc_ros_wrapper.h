@@ -107,7 +107,7 @@ class mpcRosWrapper{
     double t_tra_rel_=10;
 
     // weight vector [wrp,wrt,wqt]
-    Eigen::Vector3d weight_vector_={30,30,30};
+    Eigen::VectorXd weight_vector_=Eigen::VectorXd::Ones(8);    
 
     std::chrono::high_resolution_clock::time_point mission_start_time_;
     std::chrono::high_resolution_clock::time_point last_request_time_;
@@ -118,7 +118,7 @@ class mpcRosWrapper{
     
     // desired goal state
     int state_size_=10;
-    Eigen::VectorXd des_goal_state_,drone_state_;
+    Eigen::VectorXd des_goal_state_,relative_des_goal_state_, drone_state_;
     Eigen::Vector3d des_goal_point_={0,0,0},drone_pos_= {0,0,0};
     Eigen::Vector4d des_goal_quat_={1,0,0,0},drone_quat_= {1,0,0,0};
     Eigen::Vector3d des_goal_vel_={0,0,0},drone_vel_= {0,0,0};

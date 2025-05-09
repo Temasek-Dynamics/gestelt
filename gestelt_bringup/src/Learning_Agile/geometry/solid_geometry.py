@@ -162,20 +162,6 @@ def magni(vector):
     return np.sqrt(np.dot(np.array(vector),np.array(vector)))
 
 
-def tra_time_cal(gate_center, quad_pos):
-    """
-    Calculate the time to reach the gate center from the quadrotor position
-    """
-    desired_average_vel = mission_cfg['pretrain_param']['desired_average_vel']
-    desired_average_vel_after_gate = mission_cfg['pretrain_param']['desired_average_vel_after_gate']
-    ## traversal time is proportional to the distance of the centroids
-    if quad_pos[1]>gate_center[1]:
-        tra_time = round(magni(quad_pos[1]*2-gate_center[1])/desired_average_vel,1) #2
-       
-    else:
-        tra_time = -round(magni(quad_pos[1]*2-gate_center[1])/desired_average_vel_after_gate,1) #2
-
-    return tra_time
 
 def magni_casadi(vector):
     return ca.norm_2(vector)

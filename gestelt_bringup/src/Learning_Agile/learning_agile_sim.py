@@ -222,7 +222,7 @@ class LearningAgileSim():
         gate_ori_euler=np.array(self.config_dict['mission']['gate_ori_euler'])
         self.gate_ori_9d=R.from_euler('zyx',gate_ori_euler).as_matrix().flatten()
 
-        self.t_tra_abs=self.config_dict['learning_agile']['traverse_time']
+        self.t_tra_abs=self.config_dict['t_tra_abs']
         
         self.env_init_set = nn_sample(cur_epoch=i,TEST=TEST)
         # if self.options['MANUAL_SET_POSE_TEST']:
@@ -442,7 +442,7 @@ class LearningAgileSim():
                         trav_auxvar_value = out
                 
                 # des_t_tra = tra_time_cal(self.gate_t_i.centroid,self.state[0:3])
-                des_t_tra= 1.0-self.i * self.dyn_step
+                des_t_tra= mission_cfg["t_tra_abs"] - self.i * self.dyn_step
                 self.NN_T_tra = np.concatenate((self.NN_T_tra,[des_t_tra]),axis = 0)
                 # print('des_t_tra=',des_t_tra)
                 
@@ -615,11 +615,11 @@ def parse_options():
     parser.add_argument('--SAVE_SIM', type=str2bool, default=True, help='Enable or disable SAVE_SIM.')
     parser.add_argument('--SAVE_CSV', type=str2bool, default=True, help='Enable or disable save sim data in the csv format.')
     parser.add_argument('--COMPARISON',  type=str2bool, default=False, help='Compare the training results with other methods')
-    parser.add_argument('--MC_EVALUATION',  type=str2bool, default=True, help='Compare the training results with other methods')
+    parser.add_argument('--MC_EVALUATION',  type=str2bool, default=False, help='Compare the training results with other methods')
     args = parser.parse_args()
     return vars(args)  # Return options as a dictionary  
 
-@ray.remote     
+# @ray.remote     
 def eval_sim_interface(mission_cfg=None,
                  train_cfg=None,
                  options=None,
