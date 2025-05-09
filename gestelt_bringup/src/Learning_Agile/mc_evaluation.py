@@ -5,7 +5,7 @@ from visualization.python_sim_vis import plot_mc_traj
 from config import mission_cfg,train_cfg,current_dir
 import wandb
 
-def mc_evaluation(test_num=24,
+def mc_evaluation(test_num=48,
                 model_file=os.path.join(current_dir,mission_cfg['NN_model_name']),\
                 global_step=None,
                 STAB_TEST=False,

@@ -16,7 +16,7 @@ import math
 import matplotlib.pyplot as plt
 
 from quad_model import toQuaternion, Gate, Rd2Rp, get_gate_points
-from visualization.python_sim_vis import play_animation, plot_position, plot_velocity, plot_quaternions, plot_scalar, plot_thrust, plot_angularrate, plot_3D_traj,plot_M,plot_T,plot_weights
+from visualization.python_sim_vis import play_animation, plot_position, plot_velocity, plot_quaternions, plot_scalar, plot_thrust, plot_angularrate, plot_3D_traj,plot_M,plot_T,plot_weights,plot_3axis_weights
 from quad_policy import PlanFwdBwdWrapper
 from quad_nn import nn_sample
 from quad_moving import binary_search_solver,input_cal
@@ -57,15 +57,15 @@ def get_obs(last_gate_points = None,
     rot=R.from_euler('zyx',[0,gate_pitch,0])
     
     immed_obs=np.zeros(input_size)
-    immed_obs[0:3]=drone_state[0:3]/2
-    immed_obs[3:6]=drone_state[3:6]/5
+    immed_obs[0:3]=drone_state[0:3]/mission_cfg['pos_norm_factor']
+    immed_obs[3:6]=drone_state[3:6]/mission_cfg['vel_norm_factor']
     immed_obs[6:10]=drone_state[6:10] # quaternion
-    immed_obs[10:13]=final_point/2
+    immed_obs[10:13]=final_point/mission_cfg['pos_norm_factor']
     
     ## gate points
     relative_gate_points = gate_t_i.gate_point-drone_state[0:3]
-    immed_obs[13:25]=relative_gate_points.flatten()/2 # gate points
-    immed_obs[25:37]=last_gate_points.flatten()/2 # last gate points
+    immed_obs[13:25]=relative_gate_points.flatten()/mission_cfg['pos_norm_factor'] # gate points
+    immed_obs[25:37]=last_gate_points.flatten()/mission_cfg['pos_norm_factor'] # last gate points
 
     ## update the last gate points
     last_gate_points = relative_gate_points
@@ -75,8 +75,7 @@ def get_obs(last_gate_points = None,
 
 def manual_set_z_forward(cur_pos:np.array=None,
                          gate_center:np.array=None,
-                         gate_ori_9d:np.array=None,
-                         t_tra_rel:float=None):
+                         gate_ori_9d:np.array=None):
     # manually set the traversal time and pose
     out=np.zeros(output_size)
     out[0:3]=gate_center-cur_pos # gate center - drone position
@@ -341,18 +340,19 @@ class LearningAgileSim():
         """
         record the NN output raw 9D vector and converted Rotation Matrix
         """
-        # self.NN_T_tra = np.concatenate((self.NN_T_tra,[out[-1]]),axis = 0)
+        self.NN_T_tra = np.concatenate((self.NN_T_tra,[out[-1]]),axis = 0)
         self.nn_output_list=np.concatenate((self.nn_output_list,[out]),axis = 0)
         self.des_tra_R_list = np.concatenate((self.des_tra_R_list,[des_tra_R]),axis = 0)
-        self.wrp_list = np.concatenate((self.wrp_list,[out[-4]]),axis = 0)
-        self.wrt_list = np.concatenate((self.wrt_list,[out[-3]]),axis = 0)
+        self.wrp_list = np.concatenate((self.wrp_list, out[-8:-5].reshape(1, 3)), axis=0)
+        self.wrt_list = np.concatenate((self.wrt_list, out[-5:-2].reshape(1, 3)), axis=0)
         self.wqt_list = np.concatenate((self.wqt_list,[out[-2]]),axis = 0)
+        self.gamma_list = np.concatenate((self.gamma_list,[out[-1]]),axis = 0)
         self.Pitch = np.concatenate((self.Pitch,[gate_pitch]),axis = 0) 
 
 
     def close_loop_NN_forward(self):
         
-        obs, self.gate_pitch, self.last_gate_points  = get_obs( self.last_gate_points ,
+        obs, self.gate_pitch, self.last_gate_points  = get_obs( self.last_gate_points,
                                                                 self.i,
                                                                 self.input_size,
                                                                 self.state,
@@ -396,11 +396,12 @@ class LearningAgileSim():
         self.Time = [0]
         self.nn_output_list = [np.zeros(output_size)] # 3 position, 4 quaternion, 1 traversal time
         self.des_tra_R_list = [np.zeros(9)] # 3x3 rotation matrix(in flat form)
-        self.wrp_list = [30]
-        self.wrt_list = [10]
-        self.wqt_list = [10]
+        self.wrp_list = np.empty((0, 3))  # 3×0 矩阵，以便沿 axis=1 连接
+        self.wrt_list = np.empty((0, 3))
+        self.wqt_list = []
+        self.gamma_list = []
         trav_auxvar_value = np.zeros(output_size)
-        self.last_gate_points = self.gate_points_list[0]-self.state[0:3]
+        self.last_gate_points =(self.gate_points_list[0]-self.state[0:3])
 
         STAB_FAILED = False
         for self.i in range(self.sim_time*(int(1/self.dyn_step))): # 5s, 500 Hz
@@ -423,8 +424,7 @@ class LearningAgileSim():
                     
                     gate_pitch,trav_auxvar_value,verify_tra_R = manual_set_z_forward(cur_pos=self.state[0:3],
                                                                                     gate_center=self.gate_center,
-                                                                                    gate_ori_9d=self.gate_ori_9d,
-                                                                                    t_tra_rel=self.t_tra_rel)
+                                                                                    gate_ori_9d=self.gate_ori_9d)
                     self.log_NN_IO_for_RM(gate_pitch,trav_auxvar_value,verify_tra_R.flatten()) 
 
 
@@ -527,12 +527,12 @@ class LearningAgileSim():
         plot_position([axes[0,0], axes[0,1], axes[0,2]], self.state_n, dt=0.1, label_prefix='drone_actual_position')
         plot_velocity([axes[1,0], axes[1,1], axes[1,2]],self.state_n)
         if not self.options['MANUAL_SET_POSE_TEST']:
-            plot_position([axes[4,0], axes[4,1], axes[4,2]], self.nn_output_list, dt=0.1, label_prefix='NN2_output_position')
-            if self.options['CLOSE_LOOP_MODEL']:
-                plot_scalar(axes[2,2], self.NN_T_tra, scalar_name='NN_traverse_time') # pure NN close loop traversal time
+            plot_scalar(axes[2,2],self.solving_time,scalar_name='MPC_solving_time')
+            # if self.options['CLOSE_LOOP_MODEL']:
+            #     plot_scalar(axes[2,2], self.NN_T_tra, scalar_name='NN_traverse_time') # pure NN close loop traversal time
 
-            else:
-                plot_scalar(axes[2,2], self.T, scalar_name='NN_traverse_time')# Binary search traversal time
+            # else:
+            #     plot_scalar(axes[2,2], self.T, scalar_name='NN_traverse_time')# Binary search traversal time
        
         if self.config_dict['ctl_mode'] == 0:
             plot_angularrate(axes[2,0], self.control_n[:,1:])
@@ -551,10 +551,11 @@ class LearningAgileSim():
             plot_T(axes[2,2],self.control_n,name='single_rotor_thrust_differencce')
 
         # plot_quaternions([axes[5,0], axes[5,1], axes[5,2], axes[5,3]],self.state_n)
-        plot_scalar(axes[3,0],self.wrp_list,scalar_name='path_position_error_weight')
-        plot_weights(axes[3,1],self.wrt_list,self.wqt_list)
-        plot_scalar(axes[3,2],self.solving_time,scalar_name='MPC_solving_time')
-        
+        # plot_scalar(axes[3,0],self.wrp_list,scalar_name='path_position_error_weight')
+        plot_3axis_weights(axes[3,0],self.wrp_list,name='wrp')
+        plot_3axis_weights(axes[3,1],self.wrt_list, name='wrt')
+        plot_scalar(axes[3,2],self.gamma_list,scalar_name='traverse_weight_span')
+        plot_position([axes[4,0], axes[4,1], axes[4,2]], self.nn_output_list, dt=0.1, label_prefix='NN2_output_position')
         
         fig.tight_layout()
         plt.savefig("./python_sim_result/combined_results.png")
@@ -614,11 +615,11 @@ def parse_options():
     parser.add_argument('--SAVE_SIM', type=str2bool, default=True, help='Enable or disable SAVE_SIM.')
     parser.add_argument('--SAVE_CSV', type=str2bool, default=True, help='Enable or disable save sim data in the csv format.')
     parser.add_argument('--COMPARISON',  type=str2bool, default=False, help='Compare the training results with other methods')
-    parser.add_argument('--MC_EVALUATION',  type=str2bool, default=False, help='Compare the training results with other methods')
+    parser.add_argument('--MC_EVALUATION',  type=str2bool, default=True, help='Compare the training results with other methods')
     args = parser.parse_args()
     return vars(args)  # Return options as a dictionary  
 
-# @ray.remote     
+@ray.remote     
 def eval_sim_interface(mission_cfg=None,
                  train_cfg=None,
                  options=None,

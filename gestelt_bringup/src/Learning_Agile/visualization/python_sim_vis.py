@@ -523,6 +523,28 @@ def plot_scalar(
     ax.grid(True, linestyle='--', alpha=0.6)
     ax.legend()
 
+def plot_3axis_weights(
+    ax,
+    weights,
+    name="weights",
+):
+    """
+    Plots 3D weights (3D array) vs time on a single Axis.
+    """
+    # Assuming weights is a 3D array with shape (N, 3)
+    N = len(weights[:, 0])
+    t = np.arange(0, N)
+
+    ax.plot(t, weights[:, 0], label=f"{name}_x")
+    ax.plot(t, weights[:, 1], label=f"{name}_y")
+    ax.plot(t, weights[:, 2], label=f"{name}_z")
+
+    ax.set_title(f"{name} vs Time")
+    ax.set_xlabel("Time Index")
+    ax.set_ylabel("Weight Value")
+    ax.grid(True, linestyle='--', alpha=0.6)
+    ax.legend()
+    
 def plot_weights(
     ax, 
     tra_pos_weights,

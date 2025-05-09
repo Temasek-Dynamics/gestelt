@@ -125,24 +125,12 @@ def t_output(inputs,gate_rot_matrix):
     """
     
     outputs = np.zeros(output_size)
-    outputs[0:3]=mission_cfg['mission']['gate_position']-inputs[0:3]*2# gate position
+    outputs[0:3]=mission_cfg['mission']['gate_position']-inputs[0:3]*mission_cfg['pos_norm_factor']# gate position
     
-
     # outputs[3:12]=gate_rot_matrix
-        
     # or
     outputs[3:12]=np.eye(3).flatten()
 
-    ## traversal time is proportional to the distance of the centroids
-    if inputs[1]>0:
-        raw_time = round(magni(inputs[0:3]*2-outputs[0:3])/desired_average_vel,1) #3
-       
-    else:
-        raw_time = -round(magni(inputs[0:3]*2-outputs[0:3])/desired_average_vel_after_gate,1) #4
-   
-    # outputs[-1] = raw_time #np.clip(raw_time,3,3)
-
-    
     return outputs
 
 ## sample a random gate (not necessary in our method) (not important)
