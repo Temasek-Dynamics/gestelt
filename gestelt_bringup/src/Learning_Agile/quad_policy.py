@@ -4,8 +4,6 @@ import numpy as np
 import scipy
 from quad_OC import OCSys,LQR
 from geometry.solid_geometry import pitch_from_gate
-from MinimumSnapDemo.minsnap_traj import minimum_snap_traj_p2p, get_traj
-from MinimumSnapDemo.dft_traj import differential_flatness_transform,R_to_quat
 from quad_model import QuadrotorCTBRCtl, QuadrotorSRTCtl,QuadrotorWrenchCtl,QuadrotorAugmentedSRTCtl, toQuaternion,Gate
 from visualization.python_sim_vis import get_quad_vert_pos,plot_position,plot_angularrate,plot_thrust
 from config import train_cfg

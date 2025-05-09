@@ -16,11 +16,12 @@ SHELL ["/bin/bash", "-c"]
 #     ros-noetic-roslint\ 
 #     && rm -rf /var/lib/apt/lists/*
 # RUN apt-get update && apt-get install --no-install-recommends -y \
-#     netbase\
-#     tcpdump \
-#     ufw \
+#     pip install ray\
 #     && rm -rf /var/lib/apt/lists/*
 
+# RUN pip install --no-cache-dir \
+#     ray\
+#     && rm -rf /var/lib/apt/lists/*
 # RUN git clone https://github.com/ros-drivers/vrpn_client_ros.git
 
 # Make directory and clone repository
@@ -49,6 +50,7 @@ RUN export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/root/acados/lib \
     && source /opt/ros/noetic/setup.bash \
     && catkin config --skiplist trajectory_planner se3_controller\
     && catkin config --skiplist mppi_py_interface\
+    # && catkin config --skiplist vicon_bridge\
     && catkin build \
     && rm -rf /var/lib/apt/lists/* 
 
