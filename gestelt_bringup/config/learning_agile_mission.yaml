@@ -48,7 +48,7 @@ mission:
   # only feasible for MANUAL_SET_POSE_TEST
   gate_position: [-0.0, -0.0, 1.8]
   # gate_ori_RP: [-0.0, -1.055, 0.0]
-  gate_ori_euler: [0.0, -1.0,-0.0] # zyx 1.0 radian is 57.2958 degree,1.3 radian is 1.5 radian is 85.9437 degree 
+  gate_ori_euler: [0.0, 1.0,-0.0] # zyx 1.0 radian is 57.2958 degree,1.3 radian is 1.5 radian is 85.9437 degree 
   
   ##------ goal pose ----##
   goal_position: [0.0, -1.8, 1.5]

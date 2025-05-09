@@ -252,9 +252,9 @@ class NN2_ROS_wrapper:
                 vis_NN_trav_pose_msg = PoseStamped()
                 vis_NN_trav_pose_msg.header.stamp = rospy.Time.now()
                 vis_NN_trav_pose_msg.header.frame_id = "world"
-                vis_NN_trav_pose_msg.pose.position.x = NN_output.position[0]
-                vis_NN_trav_pose_msg.pose.position.y = NN_output.position[1]
-                vis_NN_trav_pose_msg.pose.position.z = NN_output.position[2]
+                vis_NN_trav_pose_msg.pose.position.x = NN_output.position[0]+self.state[0]
+                vis_NN_trav_pose_msg.pose.position.y = NN_output.position[1]+self.state[1]
+                vis_NN_trav_pose_msg.pose.position.z = NN_output.position[2]+self.state[2]
                 vis_NN_trav_pose_msg.pose.orientation.w = quat[0]
                 vis_NN_trav_pose_msg.pose.orientation.x = quat[1]
                 vis_NN_trav_pose_msg.pose.orientation.y = quat[2]
