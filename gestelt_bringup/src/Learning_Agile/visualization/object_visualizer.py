@@ -17,10 +17,10 @@ sys.path.append(subdirectory_path)
 import rospy
 from geometry_msgs.msg import  PoseStamped, Point, PoseArray
 from visualization_msgs.msg import Marker, MarkerArray
-class DroneEllipsoidVisualizer:
+class ObjectVisualizer:
     def __init__(self):
         # Initialize the ROS node
-        rospy.init_node('drone_ellipsoid_vis', anonymous=True)
+        rospy.init_node('object_visualizer', anonymous=True)
 
         # Publisher for the ellipsoid marker
         self.drone_ellipsoid_pub = rospy.Publisher(
@@ -30,6 +30,11 @@ class DroneEllipsoidVisualizer:
         self.gate_vis_pub = rospy.Publisher(
             "/visual/gate_vis", Marker, queue_size=1
         )
+
+        self.drone_model_pub = rospy.Publisher(
+            '/visual/drone_model', Marker, queue_size=10
+        )
+
         # Subscriber for the drone state
         self.drone_state_sub = rospy.Subscriber(
             '/mavros/local_position/pose', PoseStamped, self.drone_state_callback
@@ -40,9 +45,6 @@ class DroneEllipsoidVisualizer:
             '/visual/gate_points', PoseArray, self.gate_points_callback
         )
 
-        self.drone_model_pub = rospy.Publisher(
-            '/visual/drone_model', Marker, queue_size=10
-        )
 
         self.drone_wing_len=rospy.get_param('/drone/wing_len')
         self.drone_height=rospy.get_param('/drone/height')
@@ -78,8 +80,8 @@ class DroneEllipsoidVisualizer:
         drone_model.action = Marker.ADD
         drone_model.pose.position = msg.pose.position
         drone_model.pose.orientation = msg.pose.orientation
-        drone_model.scale.x = 0.5
-        drone_model.scale.y = 0.5
+        drone_model.scale.x = 0.2
+        drone_model.scale.y = 0.2
         drone_model.scale.z = 2
         drone_model.color.a = 1
         drone_model.color.r = 0
@@ -133,5 +135,5 @@ class DroneEllipsoidVisualizer:
 
 if __name__ == '__main__':
     # Instantiate and run the visualizer class
-    visualizer = DroneEllipsoidVisualizer()
+    visualizer = ObjectVisualizer()
     visualizer.spin()

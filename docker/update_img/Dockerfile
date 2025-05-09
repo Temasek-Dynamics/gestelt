@@ -15,10 +15,17 @@ SHELL ["/bin/bash", "-c"]
 #     ros-noetic-vrpn-client-ros\
 #     ros-noetic-roslint\ 
 #     && rm -rf /var/lib/apt/lists/*
+# RUN apt-get update && apt-get install --no-install-recommends -y \
+#     netbase\
+#     tcpdump \
+#     ufw \
+#     && rm -rf /var/lib/apt/lists/*
+
 # RUN git clone https://github.com/ros-drivers/vrpn_client_ros.git
 
 # Make directory and clone repository
 WORKDIR /gestelt_ws/src/gestelt
+# RUN git fetch origin
 RUN git pull
 RUN git checkout tianchensun_learning_agile
 
@@ -49,6 +56,6 @@ RUN export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/root/acados/lib \
 # DRONE_ID environment variable can be overriden on docker image startup
 ENV MASTER_IP=localhost
 ENV SELF_IP=localhost
-
+ENV TZ=Asia/Singapore
 ENTRYPOINT ["/ros_entrypoint.sh"]
 CMD ["bash"]

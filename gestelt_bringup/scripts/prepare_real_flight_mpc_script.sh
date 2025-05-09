@@ -61,16 +61,16 @@ source devel/setup.bash
 
 #################################################################################################################################
 # -1 vectornav & gprmc
-# screen -d -m -S vicon_bridge bash -c "$EXPORT_SELF_IP source devel/setup.bash; roslaunch gestelt_bringup vicon_client.launch drone_name_vicon:=$DRONE_NAME_VICON ; exec bash -i"
-screen -d -m -S vrpn_client bash -c "$EXPORT_SELF_IP source devel/setup.bash; exec bash -i"
+screen -d -m -S vicon_bridge bash -c "$EXPORT_SELF_IP source devel/setup.bash; roslaunch gestelt_bringup vicon_client.launch drone_name_vicon:=$DRONE_NAME_VICON ; exec bash -i"
+# screen -d -m -S vicon_bridge bash -c "$EXPORT_SELF_IP source devel/setup.bash; exec bash -i"
 sleep ${module_delay}
 # sleep ${module_delay}
 # sleep ${module_delay}
-echo "vrpn_client should run on the remote"
+echo "vrpn_client ready"
 
 #################################################################################################################################
 # -1 NN gate vis ros wrapper
-screen -d -m -S mavros bash -c "$EXPORT_SELF_IP source devel/setup.bash; taskset -c 3 roslaunch gestelt_bringup NN2_ROS_wrapper.launch ; exec bash -i"
+screen -d -m -S mavros bash -c "$EXPORT_SELF_IP source devel/setup.bash; roslaunch gestelt_bringup NN2_ROS_wrapper.launch ; exec bash -i"
 sleep ${module_delay}
 sleep ${module_delay}
 sleep ${module_delay}

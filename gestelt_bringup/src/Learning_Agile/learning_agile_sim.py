@@ -16,12 +16,12 @@ import math
 import matplotlib.pyplot as plt
 
 from quad_model import toQuaternion, Gate, Rd2Rp, get_gate_points
-from visualization.python_sim_vis import play_animation, plot_position, plot_velocity, plot_quaternions, plot_scalar, plot_thrust, plot_angularrate, plot_3D_traj,plot_M,plot_T,plot_weights,plot_3axis_weights
+from visualization.python_sim_vis import play_animation, plot_position, plot_velocity, plot_scalar, plot_thrust, plot_angularrate, plot_3D_traj,plot_M,plot_T,plot_3axis_weights
 from quad_policy import PlanFwdBwdWrapper
 from quad_nn import nn_sample
 from quad_moving import binary_search_solver,input_cal
 from visualization.result_analysis import rotation_vis
-from geometry.solid_geometry import magni, pitch_from_gate, verify_SVD_ca,verify_SVD_PR_ca, tra_time_cal#,SVD_M_to_SO3
+from geometry.solid_geometry import magni, pitch_from_gate, verify_SVD_ca
 from misc.misc import str2bool 
 from config import train_cfg, mission_cfg, current_dir
 

@@ -53,7 +53,7 @@ class mpcRosWrapper{
         void drone_state_twist_cb(const geometry_msgs::TwistStamped::ConstPtr& msg);
         void drone_state_body_rate_cb(const geometry_msgs::TwistStamped::ConstPtr& msg);
         void NN_trav_pose_cb(const geometry_msgs::PoseStamped::ConstPtr& msg);
-        void close_loop_NN_trav_pose_cb(const gestelt_msgs::close_loop_NN_output::ConstPtr& msg);
+        void close_loop_NN_output_cb(const gestelt_msgs::close_loop_NN_output::ConstPtr& msg);
         void NN_trav_time_cb(const std_msgs::Float32::ConstPtr& msg);
 
         //------------------acados solver-------------------
@@ -79,7 +79,7 @@ class mpcRosWrapper{
     ros::Subscriber drone_twist_sub_;
     ros::Subscriber drone_body_rate_sub_;
     ros::Subscriber waypoint_sub_;
-    ros::Subscriber NN_trav_pose_sub_;
+    ros::Subscriber NN_output_sub_;
     ros::Subscriber NN_trav_time_sub_;
 
     ros::Publisher next_attitude_setpoint_pub_;

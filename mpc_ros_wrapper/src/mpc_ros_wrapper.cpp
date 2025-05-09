@@ -30,8 +30,7 @@ void mpcRosWrapper::init(ros::NodeHandle& nh)
 
     if (!MANUAL_SET_POSE_TEST_)
     {
-        NN_trav_pose_sub_ = nh.subscribe("/learning_agile_sim/NN_trav_pose", 1, &mpcRosWrapper::close_loop_NN_trav_pose_cb, this);
-        NN_trav_time_sub_ = nh.subscribe("/learning_agile_sim/NN_trav_time", 1, &mpcRosWrapper::NN_trav_time_cb, this);
+        NN_output_sub_ = nh.subscribe("/learning_agile_sim/NN_output", 1, &mpcRosWrapper::close_loop_NN_output_cb, this);
     }
     
 
@@ -408,17 +407,12 @@ void mpcRosWrapper::NN_trav_pose_cb(const geometry_msgs::PoseStamped::ConstPtr& 
     quat_to_rodrigues();
 }
 
-void mpcRosWrapper::close_loop_NN_trav_pose_cb(const gestelt_msgs::close_loop_NN_output::ConstPtr& msg)
+void mpcRosWrapper::close_loop_NN_output_cb(const gestelt_msgs::close_loop_NN_output::ConstPtr& msg)
 {
     des_trav_point_ = Eigen::Map<const Eigen::VectorXd>(msg->position.data(), msg->position.size());
     des_trav_9d_ = Eigen::Map<const Eigen::VectorXd>(msg->vector_9D_orientation.data(), msg->vector_9D_orientation.size());
     weight_vector_ = Eigen::Map<const Eigen::VectorXd>(msg->weight_vector.data(), msg->weight_vector.size());
-}
-
-
-void mpcRosWrapper::NN_trav_time_cb(const std_msgs::Float32::ConstPtr& msg)
-{
-    t_tra_rel_ = msg->data;
+    t_tra_rel_ = msg->tra_time;
     MISSION_LOADED_FLAG_=true;
     mission_start_time_= std::chrono::high_resolution_clock::now();
     last_request_time_=mission_start_time_;

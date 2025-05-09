@@ -6,6 +6,7 @@
   (.*)mavros(.*)
   (.*)traj_server(.*)
   (.*)learning_agile_sim(.*)
+  (.*)visual(.*)
   (.*)planner(.*)
   (.*)tf(.*)
   (.*)tf_static(.*)
