@@ -9,7 +9,6 @@ import wandb
 from scipy.spatial.transform import Rotation as R
 import matplotlib.pyplot as plt
 
-from geometry.solid_geometry import magni,pitch_from_gate,recover_euler_from_9d,verify_SVD_ca, tra_time_cal
 from learning_agile_sim import LearningAgileSim, Gate,get_obs
 
 from config import mission_cfg, train_cfg,current_dir

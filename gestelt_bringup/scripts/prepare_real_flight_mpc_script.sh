@@ -70,11 +70,11 @@ echo "vrpn_client ready"
 
 #################################################################################################################################
 # -1 NN gate vis ros wrapper
-screen -d -m -S mavros bash -c "$EXPORT_SELF_IP source devel/setup.bash; roslaunch gestelt_bringup NN_ROS_wrapper.launch ; exec bash -i"
-sleep ${module_delay}
-sleep ${module_delay}
-sleep ${module_delay}
-echo "NN ros wrapper ready, you can visualize the gate now."
+# screen -d -m -S mavros bash -c "$EXPORT_SELF_IP source devel/setup.bash; roslaunch gestelt_bringup NN_ROS_wrapper.launch ; exec bash -i"
+# sleep ${module_delay}
+# sleep ${module_delay}
+# sleep ${module_delay}
+# echo "NN ros wrapper ready, you can visualize the gate now."
 
 #################################################################################################################################
 # -1 mavros

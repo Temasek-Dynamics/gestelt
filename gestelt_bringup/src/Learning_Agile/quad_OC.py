@@ -11,7 +11,6 @@ from acados_template import AcadosOcp, AcadosOcpSolver, AcadosSimSolver,AcadosSi
 import time
 import scipy
 from os import system
-
 from config import mission_cfg
 '''
 # =============================================================================================================
@@ -585,6 +584,8 @@ class OCSys:
         # ocp.solver_options.sim_method_num_steps =1 #Default 1
         # ocp.solver_options.sim_method_num_stages = 4 # default 4
         ocp.solver_options.nlp_solver_ext_qp_res = 1 
+        ocp.solver_options.qp_solver_warm_start = 1 # 0:no warm start(default) 1:  warm start
+        # ocp.solver_options.alpha_min = 1e-3 # default 1e-3
         
         if SQP_RTI_OPTION: 
             ocp.solver_options.qp_solver = 'FULL_CONDENSING_QPOASES'# FULL_CONDENSING_HPIPM PARTIAL_CONDENSING_HPIPM  FULL_CONDENSING_QPOASES PARTIAL_CONDENSING_OSQP
@@ -706,11 +707,19 @@ class OCSys:
         
         # solve ocp
         status = self.acados_solver.solve()
- 
+        residuals=self.acados_solver.get_residuals()
+        print("stationary residuals= ",residuals[0])
+        print("dynamics_eq_residual= ",residuals[1])
+        print("inequality_residual= ",residuals[2])
+        # print("complement_residual=",residuals[3])
      
         if status != 0:
             NO_SOLUTION_FLAG=True
-            self.acados_solver.print_statistics()
+            # self.acados_solver.print_statistics()
+            # residuals=self.acados_solver.get_residuals()
+            # print("stationary residuals= ",residuals[0])
+            # print("dynamics_eq_residual= ",residuals[1])
+            # print("inequality_residual= ",residuals[2])
             # raise Exception(f'acados returned status {status}.')
         #-------------take the optimal control and state sequences
 

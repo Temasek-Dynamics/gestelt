@@ -15,9 +15,12 @@ SHELL ["/bin/bash", "-c"]
 #     ros-noetic-vrpn-client-ros\
 #     ros-noetic-roslint\ 
 #     && rm -rf /var/lib/apt/lists/*
-# RUN apt-get update && apt-get install --no-install-recommends -y \
-#     pip install ray\
-#     && rm -rf /var/lib/apt/lists/*
+# RUN pip install --no-cache-dir "networkx<3.2"
+# RUN pip install --no-cache-dir \
+#         torch==2.4.1\
+#         # torchvision==0.19.1 \
+#         # torchaudio==2.4.1 \
+#         --index-url https://download.pytorch.org/whl/cpu
 
 # RUN pip install --no-cache-dir \
 #     ray\

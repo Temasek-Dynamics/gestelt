@@ -2,7 +2,10 @@ import numpy as np
 import torch
 import os
 from tqdm import tqdm
+
+os.environ["RAY_DEDUP_LOGS"]="0"
 import ray
+
 import wandb
 
 from learningAgileBase import LearningAgileBase,vis_gradient_norm

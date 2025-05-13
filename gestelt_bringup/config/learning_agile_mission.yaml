@@ -48,7 +48,7 @@ mission:
   # only feasible for MANUAL_SET_POSE_TEST
   gate_position: [-0.0, -0.0, 1.8]
   # gate_ori_RP: [-0.0, -1.055, 0.0]
-  gate_ori_euler: [0.0, 1.0,-0.0] # zyx 1.0 radian is 57.2958 degree,1.3 radian is 1.5 radian is 85.9437 degree 
+  gate_ori_euler: [0.0, 1.2,-0.0] # zyx 1.0 radian is 57.2958 degree,1.3 radian is 1.5 radian is 85.9437 degree 
   
   ##------ goal pose ----##
   goal_position: [0.0, -1.8, 1.5]
@@ -164,6 +164,7 @@ t_tra_abs: 1 #s
 # NN_model_name: 'training_results/new_format/2025-01-31/11-40-49/trained_model/NN_close_1900.pth' # 80% success rate
 # NN_model_name: 'training_results/new_format/2025-05-08/16-10-43/trained_model/NN_close_130.pth' 
 NN_model_name: 'training_results/new_format/2025-05-08/19-28-20/trained_model/NN_close_600.pth' 
+# NN_model_name: 'training_results/new_format/2025-05-12/15-10-25/trained_model/NN_close_0.pth' 
 # NN_model_name: 'training_results/new_format/2025-01-22/10-26-33/trained_model/NN_close_120.pth' # train for the moving gate
 
 NN_deploy_model_name: 'deployed_model/2025-05-08/19-28-20/trained_model/NN_close_600.pth' # used in the sitl

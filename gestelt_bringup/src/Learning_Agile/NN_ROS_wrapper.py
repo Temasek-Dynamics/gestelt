@@ -208,12 +208,13 @@ class NN2_ROS_wrapper:
 
             else: 
                 obs,_ ,self.last_gate_points = get_obs(
-                                self.last_gate_points,
-                                self.i,
-                                self.input_size,
-                                self.state,
-                                self.final_point,
-                                self.gate_t_i)
+                    self.last_gate_points,
+                    self.i,
+                    self.input_size,
+                    self.state,
+                    self.final_point,
+                    self.gate_t_i
+                )
                 
                 full_input=np.array(obs).reshape([1,-1])
                 NN_forward_time=0

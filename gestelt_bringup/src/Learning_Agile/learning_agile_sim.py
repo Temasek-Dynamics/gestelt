@@ -92,9 +92,10 @@ def manual_set_z_forward(cur_pos:np.array=None,
     return gate_pitch,out,verify_tra_R
 
 class MovingGate():
-    def __init__(self, env_init_set,
-                        gate_center,
-                        gate_length):
+    def __init__(self, 
+                env_init_set,
+                gate_center,
+                gate_length):
         
         # initialize the gate1, with the initial gate position
         # env_init_set[7]: gate width
