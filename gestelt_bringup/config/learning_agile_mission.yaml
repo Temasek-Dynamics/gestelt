@@ -2,7 +2,7 @@
 # flight mission
 LEARNING_FROM_DEMO: false  # demonstration from the minimum snap
 MANUAL_SET_POSE_TEST: false  # only works for ROS nodes
-FIX_GATE_PITCH_TEST: true  # for success rate test and python sim
+FIX_GATE_PITCH_TEST: false  # for success rate test and python sim
 mission_period: 5.0 #s
 ctl_mode: 0
 # 0 collective thrust & body rate. 
@@ -163,7 +163,8 @@ t_tra_abs: 1 #s
 # NN_model_name: 'training_results/new_format/2025-01-16/09-59-31/trained_model/NN_close_3200.pth' #**# 75% success rate
 # NN_model_name: 'training_results/new_format/2025-01-31/11-40-49/trained_model/NN_close_1900.pth' # 80% success rate
 # NN_model_name: 'training_results/new_format/2025-05-08/16-10-43/trained_model/NN_close_130.pth' 
-NN_model_name: 'training_results/new_format/2025-05-08/19-28-20/trained_model/NN_close_600.pth' 
+# NN_model_name: 'training_results/new_format/2025-05-08/19-28-20/trained_model/NN_close_600.pth' 
+NN_model_name: 'training_results/new_format/2025-05-08/19-28-20/trained_model/converted_model/model.onnx' 
 # NN_model_name: 'training_results/new_format/2025-05-12/15-10-25/trained_model/NN_close_0.pth' 
 # NN_model_name: 'training_results/new_format/2025-01-22/10-26-33/trained_model/NN_close_120.pth' # train for the moving gate
 

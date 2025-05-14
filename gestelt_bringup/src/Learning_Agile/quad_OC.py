@@ -708,18 +708,18 @@ class OCSys:
         # solve ocp
         status = self.acados_solver.solve()
         residuals=self.acados_solver.get_residuals()
-        print("stationary residuals= ",residuals[0])
-        print("dynamics_eq_residual= ",residuals[1])
-        print("inequality_residual= ",residuals[2])
+        # print("stationary residuals= ",residuals[0])
+        # print("dynamics_eq_residual= ",residuals[1])
+        # print("inequality_residual= ",residuals[2])
         # print("complement_residual=",residuals[3])
      
         if status != 0:
             NO_SOLUTION_FLAG=True
             # self.acados_solver.print_statistics()
-            # residuals=self.acados_solver.get_residuals()
-            # print("stationary residuals= ",residuals[0])
-            # print("dynamics_eq_residual= ",residuals[1])
-            # print("inequality_residual= ",residuals[2])
+            residuals=self.acados_solver.get_residuals()
+            print("stationary residuals= ",residuals[0])
+            print("dynamics_eq_residual= ",residuals[1])
+            print("inequality_residual= ",residuals[2])
             # raise Exception(f'acados returned status {status}.')
         #-------------take the optimal control and state sequences
 
