@@ -298,6 +298,63 @@ class network_with_GRU(nn.Module):
         return loss_nn # size is 1
 
 
+class network(nn.Module):
+    def __init__(self, D_in, D_h1, D_h2, weights_vector_length, activation='silu'):
+        super(network, self).__init__()        
+        # D_in : dimension of input layer
+        # D_h  : dimension of hidden layer
+        # D_out: dimension of output layer
+        self.D_out = 3 + 9 + weights_vector_length # 3 for position, 9 for orientation, and weights_vector_length
+        self.l1 = nn.Linear(D_in, D_h1)
+        self.act1 = nn.SiLU() if activation == "silu" else nn.Tanh()
+        self.l2 = nn.Linear(D_h1, D_h2)           # 不再加 spectral_norm
+        self.act2 = nn.SiLU() if activation == "silu" else nn.Tanh()
+        self.l3 = nn.Linear(D_h2, self.D_out)
+
+    def forward(self, input,deterministic=True):
+        out = self.l1(input) # linear function requires the input to be a row tensor
+        out = self.act1(out)
+        out = self.l2(out)
+        out = self.act2(out)
+        out = out.squeeze(1)
+        y   = self.l3(out)
+
+        pos      = y[..., 0:3]      # (B,3)
+        rot      = y[..., 3:12]     # (B,9)
+        w_raw    = y[..., 12:]      # (B, D_out-12)
+
+        pos_final = torch.tanh(pos) * 2                             # (B,3)
+        rot_final = rot                                             # (B,9)
+
+        wrp   = torch.sigmoid(w_raw[:, 0:3]) * 300 + 10
+        wrt   = torch.sigmoid(w_raw[:, 3:6]) * 300 + 10
+        wvp   = torch.sigmoid(w_raw[:, 6:7]) *  50 + 10
+        gamma = torch.sigmoid(w_raw[:, 7:8]) * 100 + 5
+        weights_final = torch.cat([wrp, wrt, wvp, gamma], dim=-1)   # (B,W)
+
+        return torch.cat([pos_final, rot_final, weights_final], dim=-1)
+
+    
+    def myloss(self, para, dp, device='cpu'):
+        # convert np.array to tensor
+        Dp = torch.tensor(dp, dtype=torch.float).to(device) # row 2D tensor
+        # loss_nn = torch.matmul(Dp, para)
+        para=para.to(device)
+        loss_nn =torch.trace(torch.matmul(Dp, para.t()))/(Dp.shape[0])
+        return loss_nn # size is 1
+
+    def loss_close_loop(self, para, dp, device='cpu'):
+        # convert np.array to tensor
+        Dp = torch.tensor(dp, dtype=torch.float).to(device) 
+        para=para.to(device)
+        
+
+        # bxHx1x13 x bxHx13x1 -> 1
+        loss_nn = torch.sum(torch.einsum('bijk,bikj -> b',para,Dp))/(Dp.shape[0]*Dp.shape[1])
+
+        return loss_nn # size is 1
+    
+
 # class network_with_GRU_heads(nn.Module):
 #     def __init__(self, D_in, D_h1, D_h2, D_out):
 #         super(network_with_GRU_heads, self).__init__()        

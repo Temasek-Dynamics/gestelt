@@ -19,8 +19,8 @@ trained_model_folder=folder_dict['trained_model_folder']
 log_folder=folder_dict['log_folder']
 
 ## this options is for close loop training
-training_data_folder=os.path.abspath(os.path.join(current_dir, 'training_data'))
-model_folder=os.path.abspath(os.path.join(training_data_folder, 'NN_model'))
+training_data_folder=os.path.abspath(os.path.join(current_dir, 'training_results'))
+model_folder=os.path.abspath(os.path.join(training_data_folder, 'pretrain_model'))
 
 checkpoint_trained_model_folder=os.path.abspath(os.path.join(current_dir,'training_results/'))
 options = {}

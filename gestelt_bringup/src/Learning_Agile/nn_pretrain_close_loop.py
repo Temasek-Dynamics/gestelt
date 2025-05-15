@@ -8,7 +8,7 @@ from scipy.spatial.transform import Rotation as R
 from config import mission_cfg, train_cfg
 
 from quad_model import get_gate_points
-from quad_nn import network_with_GRU,nn_sample, t_output
+from quad_nn import network,nn_sample, t_output
 # Device configuration
 device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 # device = torch.device('cpu')#
@@ -20,8 +20,8 @@ num_epochs = 3
 batch_size = 1000
 learning_rate = 2e-5
 current_dir = os.path.dirname(os.path.abspath(__file__))
-training_data_folder=os.path.abspath(os.path.join(current_dir, 'training_data'))
-model_folder=os.path.abspath(os.path.join(training_data_folder, 'NN_model'))
+training_data_folder=os.path.abspath(os.path.join(current_dir, 'training_results'))
+model_folder=os.path.abspath(os.path.join(training_data_folder, 'pretrain_model'))
 
 if mission_cfg['POSITION_ENCODING']:
     FILE = model_folder+"/NN_close_pretrain_position_encode.pth"
@@ -29,7 +29,9 @@ else:
     FILE = model_folder+"/NN_close_pretrain.pth"
 # select the seed
 torch.manual_seed(train_cfg['model']['seed'])
-model = network_with_GRU(input_size, hidden_size, hidden_size,output_size).to(device)
+model = network(input_size, hidden_size, hidden_size,
+                weights_vector_length=train_cfg['model']['weights_vector_length'],
+                activation=train_cfg['model']['activation']).to(device)
 
 # Loss and optimizer
 criterion = nn.MSELoss()
@@ -89,7 +91,7 @@ for epoch in range(num_epochs):
             print (f'Epoch [{epoch+1}/{num_epochs}], Step [{i+1}/{batch_size}], Loss: {loss.item():.4f}')
 
 #save model
-torch.save(model, FILE)
+torch.save(model.state_dict(), FILE)
 
 # Test the model
 # In test phase, we don't need to compute gradients (for memory efficiency)
