@@ -178,7 +178,7 @@ class LearningAgileSim():
                     
                 else:
                     self.model.load_state_dict(torch.load(model_file))
-    
+        # self.model.eval()   
 
         ##-------------------- planning variables --------------------------##
         self.planner = PlanFwdBwdWrapper(self.config_dict,self.options)

@@ -307,7 +307,7 @@ class network(nn.Module):
         self.D_out = 3 + 9 + weights_vector_length # 3 for position, 9 for orientation, and weights_vector_length
         self.l1 = nn.Linear(D_in, D_h1)
         self.act1 = nn.SiLU() if activation == "silu" else nn.Tanh()
-        self.l2 = nn.Linear(D_h1, D_h2)           # 不再加 spectral_norm
+        self.l2 = spectral_norm(nn.Linear(D_h1, D_h2))           
         self.act2 = nn.SiLU() if activation == "silu" else nn.Tanh()
         self.l3 = nn.Linear(D_h2, self.D_out)
 
