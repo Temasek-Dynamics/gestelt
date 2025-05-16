@@ -80,12 +80,21 @@ def manual_set_z_forward(cur_pos:np.array=None,
                          gate_ori_9d:np.array=None):
     # manually set the traversal time and pose
     out=np.zeros(output_size)
-    out[0:3]=gate_center-cur_pos # gate center - drone position
-    out[3:12]=gate_ori_9d # manual set 9D vector (is rotation matrix directly)
-    out[-8:-5]=mission_cfg['learning_agile']['wrp']
-    out[-5:-2]=mission_cfg['learning_agile']['wrt']
-    out[-2]=mission_cfg['learning_agile']['wqt']
-    out[-1]=mission_cfg['learning_agile']['traverse_weight_span']
+    # out[0:3]=gate_center-cur_pos # gate center - drone position
+    # out[3:12]=gate_ori_9d # manual set 9D vector (is rotation matrix directly)
+    # out[-8:-5]=mission_cfg['learning_agile']['wrp']
+    # out[-5:-2]=mission_cfg['learning_agile']['wrt']
+    # out[-2]=mission_cfg['learning_agile']['wqt']
+    # out[-1]=mission_cfg['learning_agile']['traverse_weight_span']
+
+    out[0:3]=np.array([1.6307370e-01, -1.1879361e+00,  2.3646435e-01])
+    out[3:12]= np.array([-1.6918890e-02,  1.9469048e-01,  3.6082739e-01, \
+                          3.6829162e-02,  6.1634600e-01, -1.8477699e-01,\
+                          5.4425687e-01, -7.5466178e-02,  2.5479184e-02])
+    out[-8:-5]=np.array([1.0600287e+02,  1.7199979e+02,  1.3278973e+02])
+    out[-5:-2]=np.array([1.5756940e+02, 1.7169960e+02,  1.6217084e+02])  
+    out[-2]=np.array([3.5511166e+01])
+    out[-1]=np.array([4.9806870e+01])
     
     ### SVD through CasADi
     verify_tra_R,_=verify_SVD_ca(out[3:12])
@@ -171,14 +180,14 @@ class LearningAgileSim():
                     train_cfg['model']['hidden_size'],
                     weights_vector_length=train_cfg['model']['weights_vector_length'],
                     activation=train_cfg['model']['activation']
-                )
+                ).to(device)
 
                 if options['MC_EVALUATION']:
                     self.model.load_state_dict(torch.load(model_file,map_location='cpu'))
                     
                 else:
                     self.model.load_state_dict(torch.load(model_file))
-        # self.model.eval()   
+                self.model.eval()   
 
         ##-------------------- planning variables --------------------------##
         self.planner = PlanFwdBwdWrapper(self.config_dict,self.options)
@@ -540,7 +549,7 @@ def parse_options():
     parser.add_argument('--USE_PREV_SOLVER', type=str2bool, default=False, help='Enable or disable USE_PREV_SOLVER.')
     parser.add_argument('--PDP_GRADIENT', type=str2bool, default=False, help='Enable or disable PDP_GRADIENT.')
     parser.add_argument('--SQP_RTI_OPTION', type=str2bool, default=True, help='SQP or the DDP')
-    parser.add_argument('--MANUAL_SET_POSE_TEST', type=str2bool, default=True, help='Enable or disable MANUAL_SET_POSE_TEST.')
+    parser.add_argument('--MANUAL_SET_POSE_TEST', type=str2bool, default=False, help='Enable or disable MANUAL_SET_POSE_TEST.')
     parser.add_argument('--CLOSE_LOOP_MODEL', type=str2bool, default=True, help='Enable or disable CLOSE_LOOP_MODEL.')
     parser.add_argument('--JAX_SVD', type=str2bool, default=False, help='Enable or disable JAX_SVD.')
     parser.add_argument('--CLOSE_LOOP_TRAINING', type=str2bool, default=False, help='Enable or disable CLOSE_LOOP_TRAINING.')

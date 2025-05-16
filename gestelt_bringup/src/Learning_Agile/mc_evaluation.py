@@ -20,6 +20,7 @@ def mc_evaluation(test_num=48,
     options=parse_options()
     options['USE_PREV_SOLVER']=True
     options['MC_EVALUATION']=True
+    options['MANUAL_SET_POSE_TEST']=False
     options['MULTI_COLLISION_POINT_CHECK']=False
     gate_traj_batch=[]
     state_traj_batch=[]
@@ -59,4 +60,4 @@ def mc_evaluation(test_num=48,
 
 if __name__ == "__main__":
     ray.init()
-    mc_evaluation(test_num=48,STAB_TEST=False,VIS_BATCH=True)
+    mc_evaluation(test_num=128,STAB_TEST=False,VIS_BATCH=True)

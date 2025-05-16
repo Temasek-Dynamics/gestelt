@@ -140,8 +140,8 @@ learning_agile:
 
   # position constraints
   pos_bound: 15 #m (-b,b)
-  pos_lb_z: 0.45 #m
-  pos_ub_z: 2.45 #m
+  pos_lb_z: 0.25 #m
+  pos_ub_z: 12.45 #m
 
   # velocity constraints
   linear_vel_bound: 15 #m/s
@@ -164,7 +164,7 @@ t_tra_abs: 1 #s
 # NN_model_name: 'training_results/new_format/2025-01-31/11-40-49/trained_model/NN_close_1900.pth' # 80% success rate
 # NN_model_name: 'training_results/new_format/2025-05-08/16-10-43/trained_model/NN_close_130.pth' 
 # NN_model_name: 'training_results/new_format/2025-05-08/19-28-20/trained_model/NN_close_600.pth' 
-NN_model_name: 'training_results/new_format/2025-05-16/13-59-11/trained_model/NN_close_150.pth' 
+NN_model_name: 'training_results/new_format/2025-05-16/17-48-22/trained_model/NN_close_leads_solver_failed_110_batch_num_13.pth' 
 # NN_model_name: 'training_results/new_format/2025-05-12/15-10-25/trained_model/NN_close_0.pth' 
 # NN_model_name: 'training_results/new_format/2025-01-22/10-26-33/trained_model/NN_close_120.pth' # train for the moving gate
 

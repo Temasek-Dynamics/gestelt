@@ -565,11 +565,11 @@ class OCSys:
         ocp.constraints.lsbu = np.zeros((1))
         ocp.constraints.usbu = np.zeros((1))
         ocp.constraints.idxsbu = np.array([0]) # only slack thrust
-        ocp.cost.zl=10e3 * np.ones((1))
-        ocp.cost.Zl=1*np.ones((1))
+        # ocp.cost.zl=10e3 * np.ones((1))
+        # ocp.cost.Zl=1*np.ones((1))
 
-        ocp.cost.zu= 0 * np.ones((1))
-        ocp.cost.Zu=1*np.ones((1))
+        # ocp.cost.zu= 0 * np.ones((1))
+        # ocp.cost.Zu=1*np.ones((1))
 
         
         
@@ -579,6 +579,21 @@ class OCSys:
         ocp.constraints.ubx = state_up_shrink #([])#
         ocp.constraints.idxbx = np.array([i for i in range(self.n_state)]) #([])#i for i in range(self.n_state)]
         # # ocp.constraints.idsbx = np.array([i for i in range(self.n_state)]) #([])#i for i in range(self.n_state)]
+
+        # slack variables for the state
+        ocp.constraints.lsbx = np.zeros((1))
+        ocp.constraints.usbx = np.zeros((1))
+        ocp.constraints.idxsbx = np.array([2]) # only slack z
+        ocp.cost.zl=10e3 * np.ones((2,))
+        ocp.cost.Zl=1*np.ones((2,))
+        ocp.cost.zu= 0 * np.ones((2,))
+        ocp.cost.Zu=1*np.ones((2,))
+
+        ocp.cost.Zl_0 = 1 * np.ones((1,))
+        ocp.cost.zl_0 = 10e3 * np.ones((1,))
+        
+        ocp.cost.zu_0 = 0 * np.ones((1,))
+        ocp.cost.Zu_0 = 1* np.ones((1,))
         # ##------------------ terminal constraints ----------------------##
         # # # constraint for position
         # ocp.constraints.lbx_e = state_lb_shrink #([])#

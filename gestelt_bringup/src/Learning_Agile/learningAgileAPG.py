@@ -41,14 +41,16 @@ options['TRAIN_FROM_CHECKPOINT']=False
 options['STATE_2_MOVING_GATE']=False
 options['MULTI_COLLISION_POINT_CHECK']=True
 
-run=wandb.init(project='Learning Agile',
-            name= get_time_name(),
-            config={
-                    "mission_cfg":mission_cfg,
-                    "train_cfg":train_cfg,
-                    "options":options
-                    },
-            dir=log_folder)
+run=wandb.init(
+    project='Learning Agile',
+    name= get_time_name(),
+    config={
+            "mission_cfg":mission_cfg,
+            "train_cfg":train_cfg,
+            "options":options
+            },
+    dir=log_folder
+)
 
 if mission_cfg['LEARNING_FROM_DEMO']:
     demo_traj_file = os.path.join(current_dir, 'MinimumSnapDemo/demo_traj.npy')
@@ -87,7 +89,7 @@ class LearningAgileAPG:
         # self.device = torch.device('cpu')
 
         if options['TRAIN_FROM_CHECKPOINT'] or options['STATE_2_MOVING_GATE']:
-            FILE = os.path.join(checkpoint_trained_model_folder, "new_format/2025-01-31/11-40-49/trained_model/NN_close_1900.pth")
+            FILE = os.path.join(checkpoint_trained_model_folder, "new_format/2025-05-16/17-48-22/trained_model/NN_close_leads_solver_failed_110_batch_num_13.pth")
 
             self.learning_rate = self.train_cfg['training']['learning_rate']#*0.9**(300/self.train_cfg['training']['lr_decay_num_epochs'])
         else:
@@ -154,6 +156,21 @@ class LearningAgileAPG:
             3. step for every episode
             4. model backward in a batch
 
+        variables:
+            obs_batch_list: list element is the obs of each episode at each step
+            obs_batch: array of the obs of each episode at each step. shape (batch_size, input_size)
+
+            outputs_batch: array of the Neural Network output (batch_size, output_size)
+            outputs_list: list element is the Neural Network batch output at each step
+                          shape (close_loop_horizon, batch_size, output_size)
+
+            penalty_list: list element is the penalty for each episode
+            p_L_p_z_list: list element is the gradient for each episode
+            
+            epoch_solution_flags: list of solution flags for each episode. 
+                                  One step of the episode failed, skip this episode 
+            
+            
         Args:
             episodes (list): list of episodes
         """
@@ -166,7 +183,7 @@ class LearningAgileAPG:
        
         ##==0. reset all the episodes
         [episode.reset.remote(cur_epoch) for episode in self.episodes]
-
+        epoch_solution_flags =[False for _ in range(self.batch_size)]
         for i in range(1,train_cfg['training']['close_loop_horizon']+1):
             obs_batch_list = []
             ##== 1. get observations for every episode
@@ -179,8 +196,11 @@ class LearningAgileAPG:
             ##== 3. step for every episode
             [episode.step.remote(outputs_batch[k]) for k, episode in enumerate(self.episodes)]
             
-            solution_flags = ray.get([episode.get_solution_flag.remote() for episode in self.episodes])
-            
+            for k, episode in enumerate(self.episodes):
+                if ray.get(episode.get_solution_flag.remote()):
+                    epoch_solution_flags[k] = True
+                    model_file=os.path.join(trained_model_folder, f"NN_close_leads_solver_failed_{cur_epoch}_batch_num_{k}.pth")
+                    torch.save(self.model.state_dict(), model_file)
             
             ## since the SQP_RTI first solution is not feasible
             if i > 1:
@@ -188,16 +208,13 @@ class LearningAgileAPG:
             
                 ##== 4. Multi-process calculate each episode's penalty and gradient p_L_i_p_X_traj_i
                 for k, episode in enumerate(self.episodes):
-                    if not solution_flags[k]:  # NO_SOLUTION_FLAG == False
+                    if not epoch_solution_flags[k]:  # NO_SOLUTION_FLAG == False
                         episode.get_immed_penalty.remote(i, self.success_rate)
-
-                ##== 5. backward the gradient to get the p_L_p_z
-                for k, episode in enumerate(self.episodes):
-                    if not solution_flags[k]:  # NO_SOLUTION_FLAG == False
+                         ##== 5. backward the gradient to get the p_L_p_z
                         episode.backward_per_step.remote()
 
             ##== record NN obs and output per episode step
-            if not solution_flags[0]:  # NO_SOLUTION_FLAG == False
+            if not epoch_solution_flags[0]:  # NO_SOLUTION_FLAG == False
                 log_drone_state_wandb(obs_batch[0,:],ray.get(self.episodes[0].get_control.remote()),self.global_step)
                 euler_nn,_= log_train_IO_wandb(obs_batch[0,:],outputs_batch[0,:].data.numpy().reshape(train_cfg['model']['output_size']),self.global_step)
                 wandb.log({"penalty_single_step":ray.get(self.episodes[0].get_penalty.remote())},step=self.global_step)
@@ -207,21 +224,18 @@ class LearningAgileAPG:
         
         ##== collect the penalty and gradient from each episode
         for k in range(self.batch_size):
-            if not solution_flags[k]:  # NO_SOLUTION_FLAG == False
+            if not epoch_solution_flags[k]:  # NO_SOLUTION_FLAG == False
                 penalty_list.append(ray.get(self.episodes[k].get_penalty.remote()))
                 p_L_p_z_list.append(ray.get(self.episodes[k].get_p_L_p_z.remote())) 
+            else:
+                penalty_list.append(np.array([0.0]))
+                p_L_p_z_list.append(np.zeros((train_cfg['training']['close_loop_horizon']-1,1,train_cfg['model']['output_size'])))
         
         if not GRAD_VIS: 
             ## assemble *(0.05*magni(euler_nn))
             ## if BPTT all, /10000 0
-            self.p_L_p_z_batch = np.array(p_L_p_z_list)/(10000*(0.05*magni(euler_nn)))
+            self.p_L_p_z_batch = np.array(p_L_p_z_list)/(10000)
                 
-            # for the position, amplify the gradient
-            if mission_cfg['POSITION_ENCODING']:
-                self.p_L_p_z_batch[:,:,:,0:3]=self.p_L_p_z_batch[:,:,:,0:3]*20
-            else:
-                self.p_L_p_z_batch[:,:,:,0:3]=self.p_L_p_z_batch[:,:,:,0:3]
-     
             # (close_loop_horizon, batch_size, 13)->(batch_size, close_loop_horizon, 13)
             self.outputs_stack = torch.stack(outputs_list).permute(1,0,2) 
         
