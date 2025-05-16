@@ -211,74 +211,24 @@ class PlanFwdBwdWrapper():
         self.obstacle = Obstacle(self.point1,self.point2,self.point3,self.point4,self.wing_len,self.uav_height)
 
 
-    def MPC_and_R(self,tra_pos=None,tra_ang=None,t_tra = 3):
-        """
-        deprecated in the close loop training
-        """
-        if not self.options['PDP_GRADIENT']:
-            NO_SOLUTION_FLAG = False
-            ## set the traverse hyperparameters value (auxvar) here
-            trav_auxvar_value = np.concatenate((tra_pos,tra_ang,np.array([t_tra]))) #np.array([gamma]),
-            self.sol1,NO_SOLUTION_FLAG =self.mpc_update(cur_state=self.ini_state, 
-                                                        trav_auxvar_value=trav_auxvar_value)
-        # state_traj [x,y,z,vx,vy,vz,qw,qx,qy,qz]
-        state_traj = self.sol1['state_traj_opt']
-        # get the quadrotor both center and edges position trajectory
-        self.vert_traj = get_quad_vert_pos(wing_len = self.wing_len, state_traj = state_traj)
-
-        
-      
-        # calculate trajectory penalty
-        self.collision = 0
-        self.path = 0
-        ## detect whether there is collision
-        self.co = 0
-
-        
-
-        if self.options['ORIGIN_penalty']:   
-            for c in range(4):
-                self.collision += self.obstacle.collis_det(self.vert_traj[:,3*(c+1):3*(c+2)],self.horizon)
-                self.co += self.obstacle.co 
-
-            ## calculate the path cost
-            # check the drone centroid position error with the goal position
-            for p in range(4):
-                self.path += np.dot(self.vert_traj[self.horizon-1-p,0:3]-self.goal_pos, self.vert_traj[self.horizon-1-p,0:3]-self.goal_pos)
-            
-            # the sign of the collision is already negative
-            # pitch angle penalty temproally be here
-            # pitch_penalty =  0 * 0.5 * tra_ang[1]**2
-            # self.drdpitch = 0 * tra_ang[1]
-            
- 
-            return 1000 * self.collision - 0.5 * self.path + 100 #+ 10 * pitch_penalty
-
-        else:
-            # self.tra_ang_direct_penalty(tra_ang)
-
-            penalty,self.d_L_d_st_traj=self.obstacle.penalty_cal_diff_collision(
-                                                                self.config,
-                                                                state_traj=state_traj,
-                                                                gate_corners=self.gate_corners,
-                                                                gate_quat=self.gate_quat,
-                                                                vert_traj=self.vert_traj[:,0:3],
-                                                                goal_pos=self.goal_pos)
-            
-            self.d_L_d_st_traj = self.d_L_d_st_traj.reshape(self.horizon+1,1,self.uavoc.n_state)
-            
-            return penalty #+ self.roll_penalty + self.yaw_penalty#+ pitch_penalty
 
     def get_penalty(self,state_traj,real_state_i=None,success_rate=None):
+        """
+        for the predicted trajectory check
+        """
+
         self.vert_traj = get_quad_vert_pos(wing_len = self.wing_len, state_traj = state_traj)
-        penalty,self.d_L_d_st_traj,_=self.obstacle.penalty_cal_diff_collision(self.config,
-                                                                            state_traj=state_traj,
-                                                                            gate_corners=self.gate_corners,
-                                                                            gate_quat=self.gate_quat,
-                                                                            vert_traj=self.vert_traj[:,0:3],
-                                                                            goal_pos=self.goal_pos,
-                                                                            real_state_i=real_state_i,
-                                                                            success_rate=success_rate)
+        penalty,self.d_L_d_st_traj,_=self.obstacle.penalty_cal_diff_collision(
+            self.config,
+            self.options,
+            state_traj=state_traj,
+            gate_corners=self.gate_corners,
+            gate_quat=self.gate_quat,
+            vert_traj=self.vert_traj[:,0:3],
+            goal_pos=self.goal_pos,
+            real_state_i=real_state_i,
+            success_rate=success_rate
+            )
             
         self.d_L_d_st_traj = self.d_L_d_st_traj.reshape(self.horizon+1,1,self.uavoc.n_state)
         return [penalty,self.d_L_d_st_traj]
@@ -294,117 +244,36 @@ class PlanFwdBwdWrapper():
         d_L_d_st_traj = d_L_d_st_traj.reshape(self.horizon+1,1,self.uavoc.n_state)
         return [mse_loss,d_L_d_st_traj]
     
-    def get_failed(self,state_traj,gate_points_list):
-        
+    def final_traj_eval(self,state_traj,gate_points_list):
         """
+        for the finial trajectory check.
         generate the gate obstacle when the real drone trajectory is close to the gate (real drone trajectory y=0)
         since the gate could move
         """
-        try:
-            real_t_tra = np.where(np.abs(state_traj[:,1])<0.1)[0][0]
-            gate_real_t_tra= Gate(gate_points_list[int(real_t_tra)])
-            self.init_obstacle(gate_real_t_tra)
-            
-            self.vert_traj = get_quad_vert_pos(wing_len = self.wing_len, state_traj = state_traj)
-            _,_,FAILED=self.obstacle.penalty_cal_diff_collision(self.config,
-                                                                state_traj=state_traj,
-                                                                gate_corners=self.gate_corners,
-                                                                gate_quat=self.gate_quat,
-                                                                vert_traj=self.vert_traj[:,0:3],
-                                                                goal_pos=self.goal_pos)
-        except: 
-            FAILED = True
+        # try:
+        real_t_tra = np.where(np.abs(state_traj[:,1])<0.1)[0][0]
+        gate_real_t_tra= Gate(gate_points_list[int(real_t_tra)])
+        self.init_obstacle(gate_real_t_tra)
+        
+        self.vert_traj = get_quad_vert_pos(
+              wing_len = self.wing_len, 
+            state_traj = state_traj
+            )
+        
+        _,_,FAILED=self.obstacle.penalty_cal_diff_collision(
+            self.config,
+            options=self.options,
+            state_traj=state_traj,
+            gate_corners=self.gate_corners,
+            gate_quat=self.gate_quat,
+            vert_traj=self.vert_traj[:,0:3],
+            goal_pos=self.goal_pos
+            )
+        # except: 
+        #     FAILED = True
         
         return FAILED
-    # --------------------------- solution and learning---------------------------------------
-    def sol_gradient(self,tra_pos =None,tra_ang=None,t_tra=None):
-        """
-        deprecated in the close loop training
-        receive the decision variables from DNN1, do the MPC, then calculate d_penalty/d_z
-        """
-
-        tra_ang = np.array(tra_ang)
-        tra_pos = np.array(tra_pos)
-
-        # run the MPC to execute plan and execute based on the high-level variables
-        # obtain solution of trajectory
-        if self.options['PDP_GRADIENT']:
-            NO_SOLUTION_FLAG = False
-            trav_auxvar_value = np.concatenate((tra_pos,tra_ang,np.array([t_tra])))
-            self.sol1,NO_SOLUTION_FLAG =self.mpc_update(cur_state=self.ini_state, 
-                                                        trav_auxvar_value=trav_auxvar_value)
-        
-        
-        # R is the penalty
-        R = self.MPC_and_R(tra_pos,tra_ang,t_tra)
-        
-        ############==================finite difference===========================############
-        if not self.options['PDP_GRADIENT']:
-            # fixed perturbation to calculate the gradient
-            delta = 1e-3
-            drdx = np.clip(self.MPC_and_R(tra_pos+[delta,0,0],tra_ang, t_tra) - R,-0.5,0.5)*0.1
-            drdy = np.clip(self.MPC_and_R(tra_pos+[0,delta,0],tra_ang, t_tra) - R,-0.5,0.5)*0.1
-            drdz = np.clip(self.MPC_and_R(tra_pos+[0,0,delta],tra_ang, t_tra) - R,-0.5,0.5)*0.1
-            drda = np.clip(self.MPC_and_R(tra_pos,tra_ang+[delta,0,0], t_tra) - R,-0.5,0.5)*(1/(500*tra_ang[0]**2+5))
-            drdb = np.clip(self.MPC_and_R(tra_pos,tra_ang+[0,delta,0], t_tra) - R,-0.5,0.5)*(1/(500*tra_ang[1]**2+5))
-            drdc = np.clip(self.MPC_and_R(tra_pos,tra_ang+[0,0,delta], t_tra) - R,-0.5,0.5)*(1/(500*tra_ang[2]**2+5))
-            drdt =0
-            if((self.MPC_and_R(tra_pos,tra_ang,t_tra-0.1)-R)>2):
-                drdt = -0.05
-            if((self.MPC_and_R(tra_pos,tra_ang,t_tra+0.1)-R)>2):
-                drdt = 0.05
-
-            # print("finite diff:",np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,j]))
-            return np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,R])
-        
-        ############==============end of finite difference===========================############
-        
-        ########################################################################
-        #=======================SYMBOLIC GRADIENT+PDP===========================
-        ########################################################################
-        else:
-
-            ## solve the PDP
-            trav_auxvar_value = np.concatenate(tra_pos,tra_ang,np.array([t_tra]))
-            self.PDP_grad(trav_auxvar_value)                
     
-            
-            drdp=np.zeros(13)
-            for i in range(self.horizon):
-                drdp += np.matmul(self.d_L_d_st_traj[i,:,:],self.d_st_traj_d_z[i,:,:]).reshape(len(drdp))
-
-            drdp += np.matmul(self.d_L_d_st_traj[self.horizon,:,:],self.d_st_traj_d_z[self.horizon,:,:]).reshape(len(drdp))   
-            
-            # clip the traverse time gradient
-            # drdp[:]=np.clip(drdp[:],-0.1,0.1)
-            
-            # drdp[3] = drdp[3]+self.drdroll
-            # drdp[5] = drdp[5]+self.drdyaw
-
-            drdp[-1] = np.clip(drdp[-1],-0.1,0.1)
-
-            drdp = drdp/20000
-            # drdx = np.clip(drdp[0],-0.02,0.02)
-            # drdy = np.clip(drdp[1],-0.01,0.01)
-            # drdz = np.clip(drdp[2],-0.02,0.02)
-            # drda = np.clip(drdp[3],-0.02,0.02)
-            # drdb = np.clip(drdp[4],-0.15,0.15)
-            # drdc = np.clip(drdp[5],-0.02,0.02)
-            # drdx = drdp[0]
-            # drdy = drdp[1]
-            # drdz = drdp[2]
-            # drda = drdp[3]
-            # drdb = drdp[4]
-            # drdc = drdp[5]
-            
-            # drdt = drdp[6]
-          
-
-        
-            # print("analytic grad:",np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,j]))
-            # print(drdp)
-            # return np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,R])
-            return np.concatenate((drdp,np.array([R])))
     
     def PDP_grad(self, trav_auxvar_value):
         """
@@ -712,3 +581,151 @@ def check_controllability(A,B):
 
         # self.yaw_penalty = - 1000 * 0.5 * tra_ang[2]**2
         # self.drdyaw = - 1000 * tra_ang[2]
+
+# --------------------------- solution and learning---------------------------------------
+    # def sol_gradient(self,tra_pos =None,tra_ang=None,t_tra=None):
+    #     """
+    #     deprecated in the close loop training
+    #     receive the decision variables from DNN1, do the MPC, then calculate d_penalty/d_z
+    #     """
+
+    #     tra_ang = np.array(tra_ang)
+    #     tra_pos = np.array(tra_pos)
+
+    #     # run the MPC to execute plan and execute based on the high-level variables
+    #     # obtain solution of trajectory
+    #     if self.options['PDP_GRADIENT']:
+    #         NO_SOLUTION_FLAG = False
+    #         trav_auxvar_value = np.concatenate((tra_pos,tra_ang,np.array([t_tra])))
+    #         self.sol1,NO_SOLUTION_FLAG =self.mpc_update(cur_state=self.ini_state, 
+    #                                                     trav_auxvar_value=trav_auxvar_value)
+        
+        
+    #     # R is the penalty
+    #     R = self.MPC_and_R(tra_pos,tra_ang,t_tra)
+        
+    #     ############==================finite difference===========================############
+    #     if not self.options['PDP_GRADIENT']:
+    #         # fixed perturbation to calculate the gradient
+    #         delta = 1e-3
+    #         drdx = np.clip(self.MPC_and_R(tra_pos+[delta,0,0],tra_ang, t_tra) - R,-0.5,0.5)*0.1
+    #         drdy = np.clip(self.MPC_and_R(tra_pos+[0,delta,0],tra_ang, t_tra) - R,-0.5,0.5)*0.1
+    #         drdz = np.clip(self.MPC_and_R(tra_pos+[0,0,delta],tra_ang, t_tra) - R,-0.5,0.5)*0.1
+    #         drda = np.clip(self.MPC_and_R(tra_pos,tra_ang+[delta,0,0], t_tra) - R,-0.5,0.5)*(1/(500*tra_ang[0]**2+5))
+    #         drdb = np.clip(self.MPC_and_R(tra_pos,tra_ang+[0,delta,0], t_tra) - R,-0.5,0.5)*(1/(500*tra_ang[1]**2+5))
+    #         drdc = np.clip(self.MPC_and_R(tra_pos,tra_ang+[0,0,delta], t_tra) - R,-0.5,0.5)*(1/(500*tra_ang[2]**2+5))
+    #         drdt =0
+    #         if((self.MPC_and_R(tra_pos,tra_ang,t_tra-0.1)-R)>2):
+    #             drdt = -0.05
+    #         if((self.MPC_and_R(tra_pos,tra_ang,t_tra+0.1)-R)>2):
+    #             drdt = 0.05
+
+    #         # print("finite diff:",np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,j]))
+    #         return np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,R])
+        
+    #     ############==============end of finite difference===========================############
+        
+    #     ########################################################################
+    #     #=======================SYMBOLIC GRADIENT+PDP===========================
+    #     ########################################################################
+    #     else:
+
+    #         ## solve the PDP
+    #         trav_auxvar_value = np.concatenate(tra_pos,tra_ang,np.array([t_tra]))
+    #         self.PDP_grad(trav_auxvar_value)                
+    
+            
+    #         drdp=np.zeros(13)
+    #         for i in range(self.horizon):
+    #             drdp += np.matmul(self.d_L_d_st_traj[i,:,:],self.d_st_traj_d_z[i,:,:]).reshape(len(drdp))
+
+    #         drdp += np.matmul(self.d_L_d_st_traj[self.horizon,:,:],self.d_st_traj_d_z[self.horizon,:,:]).reshape(len(drdp))   
+            
+    #         # clip the traverse time gradient
+    #         # drdp[:]=np.clip(drdp[:],-0.1,0.1)
+            
+    #         # drdp[3] = drdp[3]+self.drdroll
+    #         # drdp[5] = drdp[5]+self.drdyaw
+
+    #         drdp[-1] = np.clip(drdp[-1],-0.1,0.1)
+
+    #         drdp = drdp/20000
+    #         # drdx = np.clip(drdp[0],-0.02,0.02)
+    #         # drdy = np.clip(drdp[1],-0.01,0.01)
+    #         # drdz = np.clip(drdp[2],-0.02,0.02)
+    #         # drda = np.clip(drdp[3],-0.02,0.02)
+    #         # drdb = np.clip(drdp[4],-0.15,0.15)
+    #         # drdc = np.clip(drdp[5],-0.02,0.02)
+    #         # drdx = drdp[0]
+    #         # drdy = drdp[1]
+    #         # drdz = drdp[2]
+    #         # drda = drdp[3]
+    #         # drdb = drdp[4]
+    #         # drdc = drdp[5]
+            
+    #         # drdt = drdp[6]
+          
+
+        
+    #         # print("analytic grad:",np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,j]))
+    #         # print(drdp)
+    #         # return np.array([-drdx,-drdy,-drdz,-drda,-drdb,-drdc,-drdt,R])
+    #         return np.concatenate((drdp,np.array([R])))
+
+# def MPC_and_R(self,tra_pos=None,tra_ang=None,t_tra = 3):
+    #     """
+    #     deprecated in the close loop training
+    #     """
+    #     if not self.options['PDP_GRADIENT']:
+    #         NO_SOLUTION_FLAG = False
+    #         ## set the traverse hyperparameters value (auxvar) here
+    #         trav_auxvar_value = np.concatenate((tra_pos,tra_ang,np.array([t_tra]))) #np.array([gamma]),
+    #         self.sol1,NO_SOLUTION_FLAG =self.mpc_update(cur_state=self.ini_state, 
+    #                                                     trav_auxvar_value=trav_auxvar_value)
+    #     # state_traj [x,y,z,vx,vy,vz,qw,qx,qy,qz]
+    #     state_traj = self.sol1['state_traj_opt']
+    #     # get the quadrotor both center and edges position trajectory
+    #     self.vert_traj = get_quad_vert_pos(wing_len = self.wing_len, state_traj = state_traj)
+
+        
+      
+    #     # calculate trajectory penalty
+    #     self.collision = 0
+    #     self.path = 0
+    #     ## detect whether there is collision
+    #     self.co = 0
+
+        
+
+    #     if self.options['ORIGIN_penalty']:   
+    #         for c in range(4):
+    #             self.collision += self.obstacle.collis_det(self.vert_traj[:,3*(c+1):3*(c+2)],self.horizon)
+    #             self.co += self.obstacle.co 
+
+    #         ## calculate the path cost
+    #         # check the drone centroid position error with the goal position
+    #         for p in range(4):
+    #             self.path += np.dot(self.vert_traj[self.horizon-1-p,0:3]-self.goal_pos, self.vert_traj[self.horizon-1-p,0:3]-self.goal_pos)
+            
+    #         # the sign of the collision is already negative
+    #         # pitch angle penalty temproally be here
+    #         # pitch_penalty =  0 * 0.5 * tra_ang[1]**2
+    #         # self.drdpitch = 0 * tra_ang[1]
+            
+ 
+    #         return 1000 * self.collision - 0.5 * self.path + 100 #+ 10 * pitch_penalty
+
+    #     else:
+    #         # self.tra_ang_direct_penalty(tra_ang)
+
+    #         penalty,self.d_L_d_st_traj=self.obstacle.penalty_cal_diff_collision(
+    #                                                             self.config,
+    #                                                             state_traj=state_traj,
+    #                                                             gate_corners=self.gate_corners,
+    #                                                             gate_quat=self.gate_quat,
+    #                                                             vert_traj=self.vert_traj[:,0:3],
+    #                                                             goal_pos=self.goal_pos)
+            
+    #         self.d_L_d_st_traj = self.d_L_d_st_traj.reshape(self.horizon+1,1,self.uavoc.n_state)
+            
+    #         return penalty #+ self.roll_penalty + self.yaw_penalty#+ pitch_penalty

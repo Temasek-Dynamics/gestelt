@@ -136,6 +136,7 @@ class Obstacle():
 
     def penalty_cal_diff_collision(self, 
                                     config,
+                                    options,
                                     state_traj, 
                                     gate_corners,
                                     gate_quat,
@@ -152,12 +153,16 @@ class Obstacle():
             for t in range(state_traj.shape[0]):
                 
                 # if the current state is already behind the gate, then break
-                if len(t_tra_seq_list)==5 or \
+                if options['MULTI_COLLISION_POINT_CHECK']:
+                    check_num = 5
+                else:
+                    check_num = 2
+                if len(t_tra_seq_list)==check_num or \
                     (np.dot(self.plane1.nor_vec(),vert_traj[0]-self.centroid)>0 \
                     and self.centroid[1]-vert_traj[0][1]>0.5):
                     break
                 if(np.dot(self.plane1.nor_vec(),vert_traj[t]-self.centroid)>0):
-                    t_tra_seq_list.append(t-3)
+                    t_tra_seq_list.append(t-(check_num-2))
                 
         else:
             t_tra_seq_list = [0]
@@ -187,23 +192,28 @@ class Obstacle():
         scaling_w = config['penalty']['scaling_w']
         for node_tra in t_tra_seq_list:
         
-            HIT,penalty_single,dalpha_dstate_drone=DiffCollisionWrapper(line_centers,
-                                                                    R_gate,
-                                                                    self.width_gap,
-                                                                    gate_quat,
-                                                                    self.quad_radius,
-                                                                    self.quad_half_height,
-                                                                    self.P_obs,
-                                                                    self.P,
-                                                                    state_traj[node_tra,:],
-                                                                    node_tra,
-                                                                    scaling_w,
-                                                                    PENALTY_HELPER,
-                                                                    QUADRATIC_LOSS=config['penalty']['QUADRATIC_LOSS'])
+            HIT,penalty_single,dalpha_dstate_drone=DiffCollisionWrapper(
+                line_centers,
+                R_gate,
+                self.width_gap,
+                gate_quat,
+                self.quad_radius,
+                self.quad_half_height,
+                self.P_obs,
+                self.P,
+                state_traj[node_tra,:],
+                node_tra,
+                scaling_w,
+                PENALTY_HELPER,
+                QUADRATIC_LOSS=config['penalty']['QUADRATIC_LOSS']\
+            )
             
             penalty_traj += penalty_single
             drdstate_traj[node_tra,:] = dalpha_dstate_drone
-            if HIT:
+
+            # compare the distance between the drone and the gate on the first and last axis
+            if HIT or magni(state_traj[node_tra,0]-self.centroid[0])>0.3 or \
+                      magni(state_traj[node_tra,2]-self.centroid[2])>0.3:
                 FAILED=True
         
         
@@ -255,8 +265,8 @@ class Obstacle():
                 drdstate_traj[i,1] = goal_yz_axis_w * 2 * (state_traj[i,1]-goal_pos[1])
                 
                 # This is for success rate evaluation on the real trajectory
-                if i ==-1 and np.dot(state_traj[i,:3]-goal_pos,state_traj[i,:3]-goal_pos)>0.1:
-                    FAILED=True
+                # if i ==-1 and np.dot(state_traj[i,:3]-goal_pos,state_traj[i,:3]-goal_pos)>0.1:
+                #     FAILED=True
             
             penalty_traj += goal_penalty    
         return penalty_traj, drdstate_traj, FAILED

@@ -461,6 +461,49 @@ void ACADOS_model_acados_create_5_set_nlp_in(ACADOS_model_solver_capsule* capsul
 
 
 
+    // slacks initial
+    double* zlu0_mem = calloc(4*NS0, sizeof(double));
+    double* Zl_0 = zlu0_mem+NS0*0;
+    double* Zu_0 = zlu0_mem+NS0*1;
+    double* zl_0 = zlu0_mem+NS0*2;
+    double* zu_0 = zlu0_mem+NS0*3;
+
+    // change only the non-zero elements:
+    
+    Zl_0[0] = 1;
+
+    
+    Zu_0[0] = 1;
+
+    
+    zl_0[0] = 10000;
+
+    
+
+    ocp_nlp_cost_model_set(nlp_config, nlp_dims, nlp_in, 0, "Zl", Zl_0);
+    ocp_nlp_cost_model_set(nlp_config, nlp_dims, nlp_in, 0, "Zu", Zu_0);
+    ocp_nlp_cost_model_set(nlp_config, nlp_dims, nlp_in, 0, "zl", zl_0);
+    ocp_nlp_cost_model_set(nlp_config, nlp_dims, nlp_in, 0, "zu", zu_0);
+    free(zlu0_mem);
+    // slacks
+    double* zlumem = calloc(4*NS, sizeof(double));
+    double* Zl = zlumem+NS*0;
+    double* Zu = zlumem+NS*1;
+    double* zl = zlumem+NS*2;
+    double* zu = zlumem+NS*3;
+    // change only the non-zero elements:
+    Zl[0] = 1;
+    Zu[0] = 1;
+    zl[0] = 10000;
+
+    for (int i = 1; i < N; i++)
+    {
+        ocp_nlp_cost_model_set(nlp_config, nlp_dims, nlp_in, i, "Zl", Zl);
+        ocp_nlp_cost_model_set(nlp_config, nlp_dims, nlp_in, i, "Zu", Zu);
+        ocp_nlp_cost_model_set(nlp_config, nlp_dims, nlp_in, i, "zl", zl);
+        ocp_nlp_cost_model_set(nlp_config, nlp_dims, nlp_in, i, "zu", zu);
+    }
+    free(zlumem);
 
 
 
@@ -544,6 +587,22 @@ void ACADOS_model_acados_create_5_set_nlp_in(ACADOS_model_solver_capsule* capsul
     }
     free(idxbu);
     free(lubu);
+    // set up soft bounds for u
+    int* idxsbu = malloc(NSBU * sizeof(int));
+    
+    idxsbu[0] = 0;
+    double* lusbu = calloc(2*NSBU, sizeof(double));
+    double* lsbu = lusbu;
+    double* usbu = lusbu + NSBU;
+    
+    for (int i = 0; i < N; i++)
+    {
+        ocp_nlp_constraints_model_set(nlp_config, nlp_dims, nlp_in, i, "idxsbu", idxsbu);
+        ocp_nlp_constraints_model_set(nlp_config, nlp_dims, nlp_in, i, "lsbu", lsbu);
+        ocp_nlp_constraints_model_set(nlp_config, nlp_dims, nlp_in, i, "usbu", usbu);
+    }
+    free(idxsbu);
+    free(lusbu);
 
 
 
@@ -699,6 +758,8 @@ int fixed_hess = 0;
     ocp_nlp_solver_opts_set(nlp_config, nlp_opts, "qp_iter_max", &qp_solver_iter_max);
 
 
+    int qp_solver_warm_start = 1;
+    ocp_nlp_solver_opts_set(nlp_config, nlp_opts, "qp_warm_start", &qp_solver_warm_start);
 
     int print_level = 0;
     ocp_nlp_solver_opts_set(nlp_config, nlp_opts, "print_level", &print_level);

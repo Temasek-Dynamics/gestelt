@@ -10,16 +10,17 @@ def mc_evaluation(test_num=48,
                 global_step=None,
                 STAB_TEST=False,
                 VIS_BATCH=False):
-    """evaluate the success rate every 20 epsiodes, by running the trained model 24 times
+    """evaluate the success rate every 100 epsiodes, by running the trained model 24 times
     Args:
         model_file (str): the path to the model file
     """
-    
+     
     ## run the success evaluation 32 times and return the success rate
     count=0
     options=parse_options()
     options['USE_PREV_SOLVER']=True
     options['MC_EVALUATION']=True
+    options['MULTI_COLLISION_POINT_CHECK']=False
     gate_traj_batch=[]
     state_traj_batch=[]
     failed_batch=[]

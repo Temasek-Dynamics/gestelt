@@ -316,7 +316,12 @@ def play_animation(wing_len, state_traj, pred_traj_list, gate_traj1=None, gate_t
         plt.tight_layout()
         plt.show()
 
-def plot_position(axs, state_traj, dt=0.1, label_prefix=""):
+def plot_position(
+    ax, 
+    state_traj,
+    dt=0.1, 
+    label_prefix=""
+):
     """
     axs: a list (or array) of 3 Axes objects
     state_traj: your state trajectory array
@@ -325,19 +330,19 @@ def plot_position(axs, state_traj, dt=0.1, label_prefix=""):
     """
     N = len(state_traj[:, 0])
     x = np.arange(0, N * dt, dt)
+    ax.plot(x, state_traj[:, 0], label="x")
+    ax.plot(x, state_traj[:, 1], label="y")
+    ax.plot(x, state_traj[:, 2], label="z")
 
-    axs[0].plot(x, state_traj[:, 0])
-    axs[0].set_title(f"{label_prefix} x-position")
+    ax.set_title(f"{label_prefix} Position vs Time")
+    ax.set_xlabel("Time (s)")
+    ax.set_ylabel("Position (m)")
 
-    axs[1].plot(x, state_traj[:, 1])
-    axs[1].set_title(f"{label_prefix} y-position")
+    ax.grid(True, linestyle='--', alpha=0.6)
+    ax.legend()
 
-    axs[2].plot(x, state_traj[:, 2])
-    axs[2].set_title(f"{label_prefix} z-position")
 
-    for ax in axs:
-        ax.grid(True, linestyle="--", alpha=0.6)
-    
+
 def plot_velocity(axs, state_traj, dt=0.1):
     """
     axs: a list (or array) of 3 Axes objects

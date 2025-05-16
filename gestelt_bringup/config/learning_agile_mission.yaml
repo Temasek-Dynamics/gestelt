@@ -80,8 +80,8 @@ mission:
 learning_agile:
   ##-----parameters for training ------## 
   # #### for a stabler training,######## 
-  wrt: [100,100,100]    #be the learnable variable
-  wqt: 10.0   #be the learnable variable
+  wrt: [150,150,150]    #be the learnable variable
+  wqt: 30.0   #be the learnable variable
   # wvt: 1.0   #be the learnable variable
   wthrust: 5
   wdthrust: 0.1
@@ -90,7 +90,7 @@ learning_agile:
   wwt_z: 15
   wm: 50
   # path cost
-  wrp: [10,30,30]        ## too small, large deviation to the goal 30 sqp, 
+  wrp: [150,150,150]        ## too small, large deviation to the goal 30 sqp, 
   wvp: 10
   wqp: 0.01
 
@@ -163,8 +163,8 @@ t_tra_abs: 1 #s
 # NN_model_name: 'training_results/new_format/2025-01-16/09-59-31/trained_model/NN_close_3200.pth' #**# 75% success rate
 # NN_model_name: 'training_results/new_format/2025-01-31/11-40-49/trained_model/NN_close_1900.pth' # 80% success rate
 # NN_model_name: 'training_results/new_format/2025-05-08/16-10-43/trained_model/NN_close_130.pth' 
-# NN_model_name: 'training_results/new_format/2025-05-08/19-28-20/trained_model/NN_close_600.pth' 
-NN_model_name: 'training_results/new_format/2025-05-08/19-28-20/trained_model/converted_model/model.onnx' 
+NN_model_name: 'training_results/new_format/2025-05-08/19-28-20/trained_model/NN_close_600.pth' 
+# NN_model_name: 'training_results/new_format/2025-05-15/20-49-19/trained_model/NN_close_150.pth' 
 # NN_model_name: 'training_results/new_format/2025-05-12/15-10-25/trained_model/NN_close_0.pth' 
 # NN_model_name: 'training_results/new_format/2025-01-22/10-26-33/trained_model/NN_close_120.pth' # train for the moving gate
 

@@ -14,6 +14,7 @@ from logger_misc import log_drone_state_wandb,log_train_IO_wandb,log_gradient_wa
 from mc_evaluation import mc_evaluation
 from geometry.solid_geometry import magni
 from misc.misc import load_demo_traj
+from quad_nn import network
 folder_dict=setup_training_directories()
 trained_model_folder=folder_dict['trained_model_folder']
 log_folder=folder_dict['log_folder']
@@ -38,6 +39,7 @@ options['BACKWARD']=True
 options['MULTI_PROCESSES']=True
 options['TRAIN_FROM_CHECKPOINT']=False
 options['STATE_2_MOVING_GATE']=False
+options['MULTI_COLLISION_POINT_CHECK']=True
 
 run=wandb.init(project='Learning Agile',
             name= get_time_name(),
@@ -89,25 +91,25 @@ class LearningAgileAPG:
 
             self.learning_rate = self.train_cfg['training']['learning_rate']#*0.9**(300/self.train_cfg['training']['lr_decay_num_epochs'])
         else:
-            # FILE = os.path.join(checkpoint_trained_model_folder, "new_format/2025-03-29/13-30-40/trained_model/NN_close_0.pth")
             if mission_cfg['POSITION_ENCODING']:
                 FILE = os.path.join(model_folder, "NN_close_pretrain_position_encode.pth")
             else:
-                FILE = os.path.join(model_folder, "NN_close_pretrain.pth")
+                FILE = os.path.join(model_folder, "NN_close_pretrain_05_08.pth")
         self.model = torch.load(FILE).to(self.device)
+        # self.model = network(
+        #     train_cfg['model']['input_size'], 
+        #     train_cfg['model']['hidden_size'], 
+        #     train_cfg['model']['hidden_size'],
+        #     weights_vector_length=train_cfg['model']['weights_vector_length'],
+        #     activation=train_cfg['model']['activation']
+        # ).to(self.device)
 
+        # self.model.load_state_dict(torch.load(FILE,map_location=self.device))
         
         self.learning_rate = self.train_cfg['training']['learning_rate']
         self.dyn_decay = self.train_cfg['training']['dyn_decay']
         lr_gamma = self.train_cfg['training']['lr_gamma']
         lr_decay_num_epochs = self.train_cfg['training']['lr_decay_num_epochs']
-
-        # Loss and optimizer
-        # self.optimizer = torch.optim.Adam([{'params': self.model.position_head.parameters(), 'weight_decay': 0.00},  
-        #                                    {'params': self.model.orientation_head.parameters(), 'weight_decay': 0.00}, 
-        #                                    {'params': self.model.traverse_time_head.parameters(), 'weight_decay': 0.00},
-        #                                    {'params': self.model.weights_head.parameters(), 'weight_decay': 0.00} ],\
-        #                                   lr=self.learning_rate)  #,weight_decay=0.01
         
         if mission_cfg['LBFGS']:
             self.optimizer = torch.optim.LBFGS(self.model.parameters(), lr=self.learning_rate)
@@ -193,12 +195,11 @@ class LearningAgileAPG:
                 for k, episode in enumerate(self.episodes):
                     if not solution_flags[k]:  # NO_SOLUTION_FLAG == False
                         episode.backward_per_step.remote()
-                prev_outputs_batch = outputs_batch
 
             ##== record NN obs and output per episode step
             if not solution_flags[0]:  # NO_SOLUTION_FLAG == False
                 log_drone_state_wandb(obs_batch[0,:],ray.get(self.episodes[0].get_control.remote()),self.global_step)
-                euler_nn,gate_pitch = log_train_IO_wandb(obs_batch[0,:],outputs_batch[0,:].data.numpy().reshape(train_cfg['model']['output_size']),self.global_step)
+                euler_nn,_= log_train_IO_wandb(obs_batch[0,:],outputs_batch[0,:].data.numpy().reshape(train_cfg['model']['output_size']),self.global_step)
                 wandb.log({"penalty_single_step":ray.get(self.episodes[0].get_penalty.remote())},step=self.global_step)
 
             

@@ -554,10 +554,23 @@ class OCSys:
             
         state_lb_shrink[2]+=0.05
         state_up_shrink[2]-=0.05
+
         ocp.constraints.lbu = control_lb_shrink
         ocp.constraints.ubu = control_up_shrink
         ocp.constraints.idxbu = np.array([i for i in range(self.n_control)])
         # ocp.constraints.idsbu = np.array([i for i in range(self.n_control)])
+        
+        # slack variables for the control
+        
+        ocp.constraints.lsbu = np.zeros((1))
+        ocp.constraints.usbu = np.zeros((1))
+        ocp.constraints.idxsbu = np.array([0]) # only slack thrust
+        ocp.cost.zl=10e3 * np.ones((1))
+        ocp.cost.Zl=1*np.ones((1))
+
+        ocp.cost.zu= 0 * np.ones((1))
+        ocp.cost.Zu=1*np.ones((1))
+
         
         
         ##------------------ state constraints ----------------------##
@@ -584,7 +597,7 @@ class OCSys:
         # ocp.solver_options.sim_method_num_steps =1 #Default 1
         # ocp.solver_options.sim_method_num_stages = 4 # default 4
         ocp.solver_options.nlp_solver_ext_qp_res = 1 
-        ocp.solver_options.qp_solver_warm_start = 1 # 0:no warm start(default) 1:  warm start
+        # ocp.solver_options.qp_solver_warm_start = 1 # 0:no warm start(default) 1:  warm start
         # ocp.solver_options.alpha_min = 1e-3 # default 1e-3
         
         if SQP_RTI_OPTION: 

@@ -48,17 +48,17 @@ def input_cal():
     static_env = nn_sample(PRTRAIN=True)
     
     ## drone initial position
-    inputs[0:3] = static_env[0:3]/2 # normalize the position to [-1,1]
+    inputs[0:3] = static_env[0:3]/mission_cfg['pos_norm_factor'] # normalize the position to [-1,1]
     
     ## drone initial velocity
-    inputs[3:6] = np.array([0,0,0])/5 # static env[3:6] # normalize the velocity to [-1,1]
+    inputs[3:6] = np.array([0,0,0])/mission_cfg['vel_norm_factor']  # static env[3:6] # normalize the velocity to [-1,1]
 
     ## drone initial orientation: yaw to quaternion
     r = R.from_euler('zyx', np.array([static_env[6],0,0]), degrees=True)
     inputs[6:10]= r.as_quat()
     inputs[6:10]=np.roll(inputs[6:10],1)
 
-    inputs[10:13] = static_env[3:6]/2 # goal position
+    inputs[10:13] = static_env[3:6]/mission_cfg['pos_norm_factor'] # goal position
     
 
 
@@ -67,8 +67,8 @@ def input_cal():
     gate_length = mission_cfg['gate']['length']
     gate_center = mission_cfg['mission']['gate_position']
     relative_gate_points=get_gate_points(gate_center,gate_length,gate_width)-static_env[0:3]
-    inputs[13:25] = relative_gate_points.flatten()/2 # gate points
-    inputs[25:37] = relative_gate_points.flatten()/2 # gate position
+    inputs[13:25] = relative_gate_points.flatten()/mission_cfg['pos_norm_factor'] # gate points
+    inputs[25:37] = relative_gate_points.flatten()/mission_cfg['pos_norm_factor'] # gate position
     
     return inputs,static_env[8:17]
 

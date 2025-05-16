@@ -31,12 +31,14 @@ device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 input_size = train_cfg['model']['input_size'] 
 hidden_size = train_cfg['model']['hidden_size']
 output_size = train_cfg['model']['output_size']  
-def get_obs(last_gate_points = None,    
-            i = None,
-            input_size= None,
-            drone_state = None,
-            final_point = None,
-            gate_t_i= None):
+def get_obs(
+    last_gate_points = None,    
+    i = None,
+    input_size= None,
+    drone_state = None,
+    final_point = None,
+    gate_t_i= None
+    ):
     """
     get both immediate and past observation from the environment
     
@@ -122,11 +124,13 @@ class MovingGate():
 
 
     
-    def set_vel(self,
-                dt,
-                gate_v,
-                gate_w,
-                python_sim_time):
+    def set_vel(
+        self,
+        dt,
+        gate_v,
+        gate_w,
+        python_sim_time
+        ):
         
         self.v=gate_v
         self.w=gate_w
@@ -498,7 +502,7 @@ class LearningAgileSim():
         if STAB_TEST:
             FAILED=STAB_FAILED
         else:               
-            FAILED=self.planner.get_failed(self.state_n[::10,:],self.gate_points_list[::10,:,:])
+            FAILED=self.planner.final_traj_eval(self.state_n[::10,:],self.gate_points_list[::10,:,:])
             print('FAILED=',FAILED)
 
             if self.options['VISUALIZE']:
@@ -524,16 +528,14 @@ class LearningAgileSim():
                         save_option=0)
             
         # save the data, not show it
-        fig, axes = plt.subplots(5, 3, figsize=(12, 8),dpi=100)  
-        plot_position([axes[0,0], axes[0,1], axes[0,2]], self.state_n, dt=0.1, label_prefix='drone_actual_position')
+        fig, axes = plt.subplots(4, 3, figsize=(12, 8),dpi=100)  
+        plot_position(axes[0,0], self.state_n, dt=0.1, label_prefix='drone_actual_position')
+        plot_position(axes[0,1], self.nn_output_list, dt=0.1, label_prefix='NN2_output_position')
+        plot_scalar(axes[0,2],self.solving_time,scalar_name='MPC_solving_time')
+        plot_scalar(axes[2,2],self.wqt_list,scalar_name='traverse_orientation_weight')
+        
         plot_velocity([axes[1,0], axes[1,1], axes[1,2]],self.state_n)
-        if not self.options['MANUAL_SET_POSE_TEST']:
-            plot_scalar(axes[2,2],self.solving_time,scalar_name='MPC_solving_time')
-            # if self.options['CLOSE_LOOP_MODEL']:
-            #     plot_scalar(axes[2,2], self.NN_T_tra, scalar_name='NN_traverse_time') # pure NN close loop traversal time
-
-            # else:
-            #     plot_scalar(axes[2,2], self.T, scalar_name='NN_traverse_time')# Binary search traversal time
+       
        
         if self.config_dict['ctl_mode'] == 0:
             plot_angularrate(axes[2,0], self.control_n[:,1:])
@@ -551,30 +553,34 @@ class LearningAgileSim():
             plot_T(axes[2,1], self.state_n[:,13:17],name='single_rotor_thrust')
             plot_T(axes[2,2],self.control_n,name='single_rotor_thrust_differencce')
 
-        # plot_quaternions([axes[5,0], axes[5,1], axes[5,2], axes[5,3]],self.state_n)
-        # plot_scalar(axes[3,0],self.wrp_list,scalar_name='path_position_error_weight')
+        
         plot_3axis_weights(axes[3,0],self.wrp_list,name='wrp')
         plot_3axis_weights(axes[3,1],self.wrt_list, name='wrt')
         plot_scalar(axes[3,2],self.gamma_list,scalar_name='traverse_weight_span')
-        plot_position([axes[4,0], axes[4,1], axes[4,2]], self.nn_output_list, dt=0.1, label_prefix='NN2_output_position')
+        
+        
         
         fig.tight_layout()
         plt.savefig("./python_sim_result/combined_results.png")
         plt.show()
 
         
-        plot_3D_traj(wing_len=self.planner.wing_len,
-                    uav_height=self.planner.uav_height/2,
-                    state_traj=self.state_n[::20,:],
-                    gate_traj=self.gate_points_list[::20,:,:],
-                    NN_pos=self.nn_output_list[:,0:3],
-                    NN_R=self.des_tra_R_list[:,:])
+        plot_3D_traj(
+            wing_len=self.planner.wing_len,
+            uav_height=self.planner.uav_height/2,
+            state_traj=self.state_n[::20,:],
+            gate_traj=self.gate_points_list[::20,:,:],
+            NN_pos=self.nn_output_list[:,0:3],
+            NN_R=self.des_tra_R_list[:,:]
+        )
         
-        self.euler_nn=rotation_vis(uav_traj=self.state_n,
-                            nn_output_list=self.nn_output_list,
-                            des_tra_R_list=self.des_tra_R_list,
-                            t_tra_list=self.NN_T_tra,
-                            gate_pitch=self.Pitch)  
+        self.euler_nn=rotation_vis(
+            uav_traj=self.state_n,
+            nn_output_list=self.nn_output_list,
+            des_tra_R_list=self.des_tra_R_list,
+            t_tra_list=self.NN_T_tra,
+            gate_pitch=self.Pitch
+        )  
     
 
     def save(self,python_sim_data_dir):
@@ -616,11 +622,12 @@ def parse_options():
     parser.add_argument('--SAVE_SIM', type=str2bool, default=True, help='Enable or disable SAVE_SIM.')
     parser.add_argument('--SAVE_CSV', type=str2bool, default=True, help='Enable or disable save sim data in the csv format.')
     parser.add_argument('--COMPARISON',  type=str2bool, default=False, help='Compare the training results with other methods')
-    parser.add_argument('--MC_EVALUATION',  type=str2bool, default=False, help='Compare the training results with other methods')
+    parser.add_argument('--MC_EVALUATION',  type=str2bool, default=True, help='Compare the training results with other methods')
+    parser.add_argument('--MULTI_COLLISION_POINT_CHECK',  type=str2bool, default=False, help='multiple collision point check for the training')
     args = parser.parse_args()
     return vars(args)  # Return options as a dictionary  
 
-# @ray.remote     
+@ray.remote     
 def eval_sim_interface(mission_cfg=None,
                  train_cfg=None,
                  options=None,

@@ -53,7 +53,9 @@
             8,
             9
         ],
-        "idxsbu": [],
+        "idxsbu": [
+            0
+        ],
         "idxsbx": [],
         "idxsbx_e": [],
         "idxsg": [],
@@ -103,7 +105,9 @@
         "lphi": [],
         "lphi_0": [],
         "lphi_e": [],
-        "lsbu": [],
+        "lsbu": [
+            0.0
+        ],
         "lsbx": [],
         "lsbx_e": [],
         "lsg": [],
@@ -153,7 +157,9 @@
         "uphi": [],
         "uphi_0": [],
         "uphi_e": [],
-        "usbu": [],
+        "usbu": [
+            0.0
+        ],
         "usbx": [],
         "usbx_e": [],
         "usg": [],
@@ -176,11 +182,19 @@
         "W": [],
         "W_0": [],
         "W_e": [],
-        "Zl": [],
-        "Zl_0": [],
+        "Zl": [
+            1.0
+        ],
+        "Zl_0": [
+            1.0
+        ],
         "Zl_e": [],
-        "Zu": [],
-        "Zu_0": [],
+        "Zu": [
+            1.0
+        ],
+        "Zu_0": [
+            1.0
+        ],
         "Zu_e": [],
         "cost_ext_fun_type": "casadi",
         "cost_ext_fun_type_0": "casadi",
@@ -197,11 +211,19 @@
         "yref": [],
         "yref_0": [],
         "yref_e": [],
-        "zl": [],
-        "zl_0": [],
+        "zl": [
+            10000.0
+        ],
+        "zl_0": [
+            10000.0
+        ],
         "zl_e": [],
-        "zu": [],
-        "zu_0": [],
+        "zu": [
+            0.0
+        ],
+        "zu_0": [
+            0.0
+        ],
         "zu_e": []
     },
     "cython_include_dirs": [
@@ -227,10 +249,10 @@
         "nr": 0,
         "nr_0": 0,
         "nr_e": 0,
-        "ns": 0,
-        "ns_0": 0,
+        "ns": 1,
+        "ns_0": 1,
         "ns_e": 0,
-        "nsbu": 0,
+        "nsbu": 1,
         "nsbx": 0,
         "nsbx_e": 0,
         "nsg": 0,
@@ -411,7 +433,7 @@
         "qp_solver_tol_eq": null,
         "qp_solver_tol_ineq": null,
         "qp_solver_tol_stat": null,
-        "qp_solver_warm_start": 0,
+        "qp_solver_warm_start": 1,
         "reg_epsilon": 0.0001,
         "regularize_method": "CONVEXIFY",
         "rti_log_residuals": 0,

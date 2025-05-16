@@ -44,7 +44,7 @@
 #define ACADOS_MODEL_NBX0   10
 #define ACADOS_MODEL_NBU    4
 #define ACADOS_MODEL_NSBX   0
-#define ACADOS_MODEL_NSBU   0
+#define ACADOS_MODEL_NSBU   1
 #define ACADOS_MODEL_NSH    0
 #define ACADOS_MODEL_NSH0   0
 #define ACADOS_MODEL_NSG    0
@@ -54,8 +54,8 @@
 #define ACADOS_MODEL_NSPHIN 0
 #define ACADOS_MODEL_NSPHI0 0
 #define ACADOS_MODEL_NSBXN  0
-#define ACADOS_MODEL_NS     0
-#define ACADOS_MODEL_NS0    0
+#define ACADOS_MODEL_NS     1
+#define ACADOS_MODEL_NS0    1
 #define ACADOS_MODEL_NSN    0
 #define ACADOS_MODEL_NG     0
 #define ACADOS_MODEL_NBXN   0
