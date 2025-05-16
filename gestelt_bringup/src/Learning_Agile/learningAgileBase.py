@@ -117,17 +117,6 @@ class LearningAgileBase:
         # NN output the traversal time and pose
         return self.model(torch.tensor(obs, dtype=torch.float).unsqueeze(0).to(device))[0]
     
-    # def get_NN_decision_debug(self):
-    #     # manually set the traversal time and pose
-    #     np_nn_out=np.zeros(self.output_size)
-    #     np_nn_out[0:3]=[0,0,0]
-    #     np_nn_out[3:12]=np.array([[0.0007963,  0.0000000, -0.9999997],
-    #                               [0.0000000,  1.0000000,  0.0000000],
-    #                               [0.9999997,  0.0000000,  0.0007963]]).flatten()
-    #     # np_nn_out[3:12]=np.eye(3).flatten()
-    #     t_tra_abs=1.5
-    #     np_nn_out[12]=t_tra_abs-self.i*0.1
-    #     return np_nn_out
     
     def init_gradient(self):
         self.L_i = []

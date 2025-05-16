@@ -94,17 +94,17 @@ class LearningAgileAPG:
             if mission_cfg['POSITION_ENCODING']:
                 FILE = os.path.join(model_folder, "NN_close_pretrain_position_encode.pth")
             else:
-                FILE = os.path.join(model_folder, "NN_close_pretrain_05_08.pth")
-        self.model = torch.load(FILE).to(self.device)
-        # self.model = network(
-        #     train_cfg['model']['input_size'], 
-        #     train_cfg['model']['hidden_size'], 
-        #     train_cfg['model']['hidden_size'],
-        #     weights_vector_length=train_cfg['model']['weights_vector_length'],
-        #     activation=train_cfg['model']['activation']
-        # ).to(self.device)
+                FILE = os.path.join(model_folder, "NN_close_pretrain.pth")
+        # self.model = torch.load(FILE).to(self.device)
+        self.model = network(
+            train_cfg['model']['input_size'], 
+            train_cfg['model']['hidden_size'], 
+            train_cfg['model']['hidden_size'],
+            weights_vector_length=train_cfg['model']['weights_vector_length'],
+            activation=train_cfg['model']['activation']
+        ).to(self.device)
 
-        # self.model.load_state_dict(torch.load(FILE,map_location=self.device))
+        self.model.load_state_dict(torch.load(FILE,map_location=self.device))
         
         self.learning_rate = self.train_cfg['training']['learning_rate']
         self.dyn_decay = self.train_cfg['training']['dyn_decay']
@@ -267,7 +267,7 @@ class LearningAgileAPG:
                 pbar.set_description(f"epoch:{epoch}, penalty:{self.penalty_batch[0]}")
                 if epoch % 10 == 0:
                     model_file=os.path.join(trained_model_folder, f"NN_close_{epoch}.pth")
-                    torch.save(self.model, model_file)
+                    torch.save(self.model.state_dict(), model_file)
 
                 if epoch % 100 == 0:
                     self.success_rate=mc_evaluation(test_num=48,model_file=model_file,global_step=self.global_step)

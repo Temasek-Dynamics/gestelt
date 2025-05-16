@@ -18,7 +18,7 @@ import matplotlib.pyplot as plt
 from quad_model import toQuaternion, Gate, Rd2Rp, get_gate_points
 from visualization.python_sim_vis import play_animation, plot_position, plot_velocity, plot_scalar, plot_thrust, plot_angularrate, plot_3D_traj,plot_M,plot_T,plot_3axis_weights
 from quad_policy import PlanFwdBwdWrapper
-from quad_nn import nn_sample
+from quad_nn import nn_sample, network
 from quad_moving import binary_search_solver,input_cal
 from visualization.result_analysis import rotation_vis
 from geometry.solid_geometry import magni, pitch_from_gate, verify_SVD_ca
@@ -165,10 +165,19 @@ class LearningAgileSim():
         if not self.options['MANUAL_SET_POSE_TEST']:
             # load trained DNN2 model
             if model_file is not None:
+                self.model = network(
+                    train_cfg['model']['input_size'], 
+                    train_cfg['model']['hidden_size'], 
+                    train_cfg['model']['hidden_size'],
+                    weights_vector_length=train_cfg['model']['weights_vector_length'],
+                    activation=train_cfg['model']['activation']
+                )
+
                 if options['MC_EVALUATION']:
-                    self.model = torch.load(model_file,map_location='cpu')
+                    self.model.load_state_dict(torch.load(model_file,map_location='cpu'))
+                    
                 else:
-                    self.model = torch.load(model_file)#,map_location='cpu')
+                    self.model.load_state_dict(torch.load(model_file))
     
 
         ##-------------------- planning variables --------------------------##
@@ -274,72 +283,15 @@ class LearningAgileSim():
                 gate_w = -gate_w
            
         ## ================ gate initialization ================== ##
-        self.moving_gate = MovingGate(self.env_init_set,
-                                      gate_center=self.gate_center,
-                                      gate_length=gate_length)
+        self.moving_gate = MovingGate(
+            self.env_init_set,
+            gate_center=self.gate_center,
+            gate_length=gate_length
+        )
 
         self.moving_gate.set_vel(dt=self.dyn_step,gate_v=gate_v,gate_w=gate_w,python_sim_time=self.sim_time)
         self.gate_points_list = self.moving_gate.gate_points_list
         self.gate_t_i = Gate(self.gate_points_list[0])
-
-        
-    
-    def gate_state_search(self):
-
-        """
-        depricated.
-        estimate the gate pose, using binary search
-        t_tra_abs: the absolute traversal time w.r.t the mission start time
-        t_tra_rel: the relative traversal time w.r.t the current time
-
-        """
-
-
-        
-        if self.options['MANUAL_SET_POSE_TEST'] or self.options['COMPARISON']:
-            self.gate_t_i = Gate(self.gate_points_list[0])
-
-            # self.t_tra_abs is manually set
-            self.t_tra_rel=self.t_tra_abs-self.i*self.dyn_step
-
-        else:
-
-            self.gate_t_i = Gate(self.gate_points_list[self.i])
-            # print('gate_t_i.centroid=',self.gate_t_i.centroid)
-            ## binary search for the traversal time
-            ## to set the drone state under the gate frame, for the NN2 input
-            self.t_tra_rel = binary_search_solver(self.model,device,self.state,self.final_point,self.gate_t_i,self.moving_gate.V[self.i],self.moving_gate.w)
-            self.t_tra_abs = self.t_tra_rel+self.i*self.dyn_step
-
-    
-            
-            # print('step',self.i,'tranversal time W.R.T current=',t,'gap_pitch=',gap_pitch*180/pi)
-            # print('step',self.i,'abs_tranversal time W.R.T mission=',t_tra)
-            
-        
-
-            ## obtain the future traversal window state w.r.t current time-step gate_t_i
-            self.gate_t_i.translate(self.t_tra_rel*self.moving_gate.V[self.i])
-            self.gate_t_i.rotate_y(self.t_tra_rel*self.moving_gate.w)
-            # print('rotation matrix I_G=',gate_t_i.I_G)
-            
-        self.Ttra= np.concatenate((self.Ttra,[self.t_tra_abs]),axis = 0)
-        self.T = np.concatenate((self.T,[self.t_tra_rel]),axis = 0)
-        
-        
-       
-    def log_NN_IO_for_RP(self,nn2_inputs,out):
-        """
-        record the NN output Rodrigues parameters, convert it to quaternion
-        """
-        atti = Rd2Rp(out[3:6])
-        quat_nn=toQuaternion(atti[0],atti[1])
-        
-        out_as_quat=np.concatenate((out[0:3],np.array(quat_nn),out[6].reshape([1,])),axis = 0)
-        
-        self.NN_T_tra = np.concatenate((self.NN_T_tra,[out[6]]),axis = 0)
-        self.nn_output_list=np.concatenate((self.nn_output_list,[out_as_quat]),axis = 0)
-        self.Pitch = np.concatenate((self.Pitch,[nn2_inputs[output_size]]),axis = 0) 
 
     def log_NN_IO_for_RM(self,gate_pitch,out,des_tra_R):
         """
@@ -357,12 +309,14 @@ class LearningAgileSim():
 
     def close_loop_NN_forward(self):
         
-        obs, self.gate_pitch, self.last_gate_points  = get_obs( self.last_gate_points,
-                                                                self.i,
-                                                                self.input_size,
-                                                                self.state,
-                                                                self.final_point,
-                                                                self.gate_t_i)
+        obs, self.gate_pitch, self.last_gate_points  = get_obs( 
+                self.last_gate_points,
+                self.i,
+                self.input_size,
+                self.state,
+                self.final_point,
+                self.gate_t_i
+        )
         nn_output = self.model(torch.tensor(obs.reshape([1,-1]), dtype=torch.float).to(device))[0]
         out = nn_output.to('cpu').data.numpy()
 
@@ -375,18 +329,7 @@ class LearningAgileSim():
         self.verify_tra_R_list.append(verify_tra_R)
         return out 
     
-    def imiate_NN_forward(self):
-        
-        nn2_inputs,gate_pitch = input_cal(self.state,self.final_point,self.gate_t_i)
-       
-        # NN2 OUTPUT the traversal time and pose
-        out = self.model(torch.tensor(nn2_inputs, dtype=torch.float).to(device)).to('cpu')
-        out = out.data.numpy()
-        
-        verify_tra_R=verify_SVD_ca(out[3:12])
-        self.log_NN_IO_for_RM(gate_pitch,out,verify_tra_R.flatten())       
-        return out
-    
+
 
     def forward(self,python_sim_data_dir=None, \
                 STAB_TEST=False):
@@ -412,51 +355,35 @@ class LearningAgileSim():
         for self.i in range(self.sim_time*(int(1/self.dyn_step))): # 5s, 500 Hz
             
             self.Time = np.concatenate((self.Time,[self.i*self.dyn_step]),axis = 0)
-            
-            
-            if not self.options['CLOSE_LOOP_MODEL']:
-                if (self.i%5)==0: # estimation frequency = 20 hz 
-                    # decision variable is updated in 20 hz
-                    self.gate_state_search()
-
             if (self.i%5)==0: # control frequency = 100 hz  
                 
                 if self.options['MANUAL_SET_POSE_TEST']:
-                    self.gate_state_search()
-                    # nn2_inputs = np.zeros(23)
-                    # nn2_inputs[0:10] = self.state[0:10] 
-                    # nn2_inputs[10:13] = self.final_point
-                    
-                    gate_pitch,trav_auxvar_value,verify_tra_R = manual_set_z_forward(cur_pos=self.state[0:3],
-                                                                                    gate_center=self.gate_center,
-                                                                                    gate_ori_9d=self.gate_ori_9d)
+                    gate_pitch,trav_auxvar_value,verify_tra_R = manual_set_z_forward(
+                        cur_pos=self.state[0:3],
+                        gate_center=self.gate_center,
+                        gate_ori_9d=self.gate_ori_9d
+                    )
                     self.log_NN_IO_for_RM(gate_pitch,trav_auxvar_value,verify_tra_R.flatten()) 
 
 
                 else:
                     ## NN decision
-                    if self.options['CLOSE_LOOP_MODEL']:
-                        self.gate_t_i = Gate(self.gate_points_list[self.i])
-                        trav_auxvar_value = self.close_loop_NN_forward()
+                    self.gate_t_i = Gate(self.gate_points_list[self.i])
+                    trav_auxvar_value = self.close_loop_NN_forward()
 
-                        
-                    
-                    else:
-                        out = self.imiate_NN_forward()
-                        out[0:3]=self.gate_t_i.centroid+out[0:3]
-                        trav_auxvar_value = out
                 
-                # des_t_tra = tra_time_cal(self.gate_t_i.centroid,self.state[0:3])
-                des_t_tra= mission_cfg["t_tra_abs"] - self.i * self.dyn_step
+                des_t_tra= self.t_tra_abs - self.i * self.dyn_step
                 self.NN_T_tra = np.concatenate((self.NN_T_tra,[des_t_tra]),axis = 0)
                 # print('des_t_tra=',des_t_tra)
                 
                 t_comp = time.time()
-                cmd_solution,NO_SOLUTION_FLAG  = self.planner.mpc_update(cur_state=self.state,
-                                                        trav_auxvar_value=trav_auxvar_value,
-                                                        last_u=self.last_u,
-                                                        des_t_tra=des_t_tra, 
-                                                        first_iter=(self.i==0))
+                cmd_solution,NO_SOLUTION_FLAG  = self.planner.mpc_update(
+                    cur_state=self.state,
+                    trav_auxvar_value=trav_auxvar_value,
+                    last_u=self.last_u,
+                    des_t_tra=des_t_tra, 
+                    first_iter=(self.i==0)
+                )
                 if NO_SOLUTION_FLAG:
                     STAB_FAILED = True
                     self.failed_state.append(self.state)
@@ -613,7 +540,7 @@ def parse_options():
     parser.add_argument('--USE_PREV_SOLVER', type=str2bool, default=False, help='Enable or disable USE_PREV_SOLVER.')
     parser.add_argument('--PDP_GRADIENT', type=str2bool, default=False, help='Enable or disable PDP_GRADIENT.')
     parser.add_argument('--SQP_RTI_OPTION', type=str2bool, default=True, help='SQP or the DDP')
-    parser.add_argument('--MANUAL_SET_POSE_TEST', type=str2bool, default=False, help='Enable or disable MANUAL_SET_POSE_TEST.')
+    parser.add_argument('--MANUAL_SET_POSE_TEST', type=str2bool, default=True, help='Enable or disable MANUAL_SET_POSE_TEST.')
     parser.add_argument('--CLOSE_LOOP_MODEL', type=str2bool, default=True, help='Enable or disable CLOSE_LOOP_MODEL.')
     parser.add_argument('--JAX_SVD', type=str2bool, default=False, help='Enable or disable JAX_SVD.')
     parser.add_argument('--CLOSE_LOOP_TRAINING', type=str2bool, default=False, help='Enable or disable CLOSE_LOOP_TRAINING.')
@@ -713,3 +640,70 @@ def main():
 if __name__ == '__main__':
     main()
    
+
+   # def gate_state_search(self):
+
+    #     """
+    #     depricated.
+    #     estimate the gate pose, using binary search
+    #     t_tra_abs: the absolute traversal time w.r.t the mission start time
+    #     t_tra_rel: the relative traversal time w.r.t the current time
+
+    #     """
+
+
+        
+    #     if self.options['MANUAL_SET_POSE_TEST'] or self.options['COMPARISON']:
+    #         self.gate_t_i = Gate(self.gate_points_list[0])
+
+    #         # self.t_tra_abs is manually set
+    #         self.t_tra_rel=self.t_tra_abs-self.i*self.dyn_step
+
+    #     else:
+
+    #         self.gate_t_i = Gate(self.gate_points_list[self.i])
+    #         # print('gate_t_i.centroid=',self.gate_t_i.centroid)
+    #         ## binary search for the traversal time
+    #         ## to set the drone state under the gate frame, for the NN2 input
+    #         self.t_tra_rel = binary_search_solver(self.model,device,self.state,self.final_point,self.gate_t_i,self.moving_gate.V[self.i],self.moving_gate.w)
+    #         self.t_tra_abs = self.t_tra_rel+self.i*self.dyn_step
+
+    
+            
+    #         # print('step',self.i,'tranversal time W.R.T current=',t,'gap_pitch=',gap_pitch*180/pi)
+    #         # print('step',self.i,'abs_tranversal time W.R.T mission=',t_tra)
+            
+        
+
+    #         ## obtain the future traversal window state w.r.t current time-step gate_t_i
+    #         self.gate_t_i.translate(self.t_tra_rel*self.moving_gate.V[self.i])
+    #         self.gate_t_i.rotate_y(self.t_tra_rel*self.moving_gate.w)
+    #         # print('rotation matrix I_G=',gate_t_i.I_G)
+            
+    #     self.Ttra= np.concatenate((self.Ttra,[self.t_tra_abs]),axis = 0)
+    #     self.T = np.concatenate((self.T,[self.t_tra_rel]),axis = 0)
+    # def log_NN_IO_for_RP(self,nn2_inputs,out):
+    #     """
+    #     record the NN output Rodrigues parameters, convert it to quaternion
+    #     """
+    #     atti = Rd2Rp(out[3:6])
+    #     quat_nn=toQuaternion(atti[0],atti[1])
+        
+    #     out_as_quat=np.concatenate((out[0:3],np.array(quat_nn),out[6].reshape([1,])),axis = 0)
+        
+    #     self.NN_T_tra = np.concatenate((self.NN_T_tra,[out[6]]),axis = 0)
+    #     self.nn_output_list=np.concatenate((self.nn_output_list,[out_as_quat]),axis = 0)
+    #     self.Pitch = np.concatenate((self.Pitch,[nn2_inputs[output_size]]),axis = 0) 
+
+    # def imiate_NN_forward(self):
+        
+    #     nn2_inputs,gate_pitch = input_cal(self.state,self.final_point,self.gate_t_i)
+       
+    #     # NN2 OUTPUT the traversal time and pose
+    #     out = self.model(torch.tensor(nn2_inputs, dtype=torch.float).to(device)).to('cpu')
+    #     out = out.data.numpy()
+        
+    #     verify_tra_R=verify_SVD_ca(out[3:12])
+    #     self.log_NN_IO_for_RM(gate_pitch,out,verify_tra_R.flatten())       
+    #     return out
+    

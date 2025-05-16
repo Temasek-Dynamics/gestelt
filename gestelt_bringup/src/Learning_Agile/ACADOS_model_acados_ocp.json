@@ -433,7 +433,7 @@
         "qp_solver_tol_eq": null,
         "qp_solver_tol_ineq": null,
         "qp_solver_tol_stat": null,
-        "qp_solver_warm_start": 1,
+        "qp_solver_warm_start": 0,
         "reg_epsilon": 0.0001,
         "regularize_method": "CONVEXIFY",
         "rti_log_residuals": 0,
