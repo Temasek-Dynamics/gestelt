@@ -7,6 +7,84 @@ from geometry.solid_geometry import pitch_from_gate
 from quad_model import QuadrotorCTBRCtl, QuadrotorSRTCtl,QuadrotorWrenchCtl,QuadrotorAugmentedSRTCtl, toQuaternion,Gate
 from visualization.python_sim_vis import get_quad_vert_pos,plot_position,plot_angularrate,plot_thrust
 from config import train_cfg
+from geometry.solid_geometry import magni, pitch_from_gate, verify_SVD_ca
+from config import mission_cfg, train_cfg
+from scipy.spatial.transform import Rotation as R
+input_size = train_cfg['model']['input_size'] 
+hidden_size = train_cfg['model']['hidden_size']
+output_size = train_cfg['model']['output_size']  
+
+def get_obs(
+    last_gate_points = None,    
+    i = None,
+    input_size= None,
+    drone_state = None,
+    final_point = None,
+    gate_t_i= None
+    ):
+    """
+    get both immediate and past observation from the environment
+    
+    Args:
+        last_gate_points: the past observation
+        i: the current time step
+        input_size: the size of the input
+        drone_state: the current drone state
+        final_point: the final point of the drone
+        gate_t_i: the current gate state
+        
+        
+    Returns:
+        obs: the observation for the NN input
+    """
+    ##==calculate the gate RM
+    gate_pitch = pitch_from_gate(gate_t_i.gate_point)
+    rot=R.from_euler('zyx',[0,gate_pitch,0])
+    
+    immed_obs=np.zeros(input_size)
+    immed_obs[0:3]=drone_state[0:3]/mission_cfg['pos_norm_factor']
+    immed_obs[3:6]=drone_state[3:6]/mission_cfg['vel_norm_factor']
+    immed_obs[6:10]=drone_state[6:10] # quaternion
+    immed_obs[10:13]=final_point/mission_cfg['pos_norm_factor']
+    
+    ## gate points
+    relative_gate_points = gate_t_i.gate_point-drone_state[0:3]
+    immed_obs[13:25]=relative_gate_points.flatten()/mission_cfg['pos_norm_factor'] # gate points
+    immed_obs[25:37]=last_gate_points.flatten()/mission_cfg['pos_norm_factor'] # last gate points
+
+    ## update the last gate points
+    last_gate_points = relative_gate_points
+
+
+    return immed_obs, gate_pitch, last_gate_points
+
+def manual_set_z_forward(cur_pos:np.array=None,
+                         gate_center:np.array=None,
+                         gate_ori_9d:np.array=None):
+    # manually set the traversal time and pose
+    out=np.zeros(output_size)
+    out[0:3]=gate_center-cur_pos # gate center - drone position
+    out[3:12]=gate_ori_9d # manual set 9D vector (is rotation matrix directly)
+    out[-8:-5]=mission_cfg['learning_agile']['wrp']
+    out[-5:-2]=mission_cfg['learning_agile']['wrt']
+    out[-2]=mission_cfg['learning_agile']['wqt']
+    out[-1]=mission_cfg['learning_agile']['traverse_weight_span']
+
+    # out[0:3]=np.array([1.6307370e-01, -1.1879361e+00,  2.3646435e-01])
+    # out[3:12]= np.array([-1.6918890e-02,  1.9469048e-01,  3.6082739e-01, \
+    #                       3.6829162e-02,  6.1634600e-01, -1.8477699e-01,\
+    #                       5.4425687e-01, -7.5466178e-02,  2.5479184e-02])
+    # out[-8:-5]=np.array([1.0600287e+02,  1.7199979e+02,  1.3278973e+02])
+    # out[-5:-2]=np.array([1.5756940e+02, 1.7169960e+02,  1.6217084e+02])  
+    # out[-2]=np.array([3.5511166e+01])
+    # out[-1]=np.array([4.9806870e+01])
+    
+    ### SVD through CasADi
+    verify_tra_R,_=verify_SVD_ca(out[3:12])
+
+    gate_pitch=mission_cfg['mission']['gate_ori_euler'][1]
+    return gate_pitch,out,verify_tra_R
+
 class PlanFwdBwdWrapper():
     """
     this class is responsible for wrap the single MPC prediction traj for training
@@ -405,12 +483,42 @@ class PlanFwdBwdWrapper():
     #     state_traj[:,6:10] = q
     #     return state_traj
     ## given initial state, control command, high-level parameters, obtain the first control command of the quadrotor
-    def mpc_update(self, 
-                   cur_state,
-                   trav_auxvar_value,
-                   des_t_tra=None,
-                   last_u=None,
-                   first_iter=False):
+    
+    def conser_mpc_as_init_guess(
+        self,
+        cur_state,
+        trav_auxvar_value,
+        des_t_tra=None,
+        last_u=None,
+        first_iter=False
+    ):
+        """use the mannual set traverse hyperparameters to generate the initial guess for the MPC solver
+
+        Args:
+            trav_auxvar_value (_type_): _description_
+        """
+        self.des_t_tra = des_t_tra
+        self.sol1,NO_SOLUTION_FLAG = self.uavoc.AcadosOcSolver(
+            cur_state=cur_state,
+            goal_state_value=self.goal_state_value,
+            dt=self.dt,
+            trav_auxvar_value=trav_auxvar_value,
+            des_t_tra=self.des_t_tra,
+            last_u=last_u
+        )
+        
+        return self.sol1,NO_SOLUTION_FLAG
+        
+        
+    def mpc_update(
+        self, 
+        cur_state,
+        trav_auxvar_value,
+        des_t_tra=None,
+        last_u=None,
+        first_iter=False,
+        init_guess=None,
+    ):
         """ 
         collect goal, curren state, and traverse auxvar value, then ask the MPC to solve the optimal control problem
         Args:
@@ -421,21 +529,22 @@ class PlanFwdBwdWrapper():
         Returns:
             _type_: _description_
         """
-        init_guess=None
-        if self.config['manual_init_guess'] and first_iter:
-            # init_guess = self.LQR_as_init_guess(trav_auxvar_value,cur_state=cur_state,cur_u=last_u)
-            init_guess = self.minsnap_as_init_guess()
+        # if self.config['manual_init_guess'] and first_iter:
+        #     # init_guess = self.LQR_as_init_guess(trav_auxvar_value,cur_state=cur_state,cur_u=last_u)
+        #     init_guess = self.minsnap_as_init_guess()
         ## MPC requires both the goal state adn the traverse hyperparameters
         self.des_t_tra = des_t_tra
         
         # self.sol1 = self.uavoc.ocSolver(cur_state_control=cur_state_control,t_tra=t)
-        self.sol1,NO_SOLUTION_FLAG = self.uavoc.AcadosOcSolver(cur_state=cur_state,
-                                                goal_state_value=self.goal_state_value,
-                                                dt=self.dt,
-                                                trav_auxvar_value=trav_auxvar_value,
-                                                des_t_tra=self.des_t_tra,
-                                                last_u=last_u,
-                                                init_guess=init_guess)
+        self.sol1,NO_SOLUTION_FLAG = self.uavoc.AcadosOcSolver(
+            cur_state=cur_state,
+            goal_state_value=self.goal_state_value,
+            dt=self.dt,
+            trav_auxvar_value=trav_auxvar_value,
+            des_t_tra=self.des_t_tra,
+            last_u=last_u,
+            init_guess=init_guess
+        )
         # print('goal_pos:',self.goal_pos)
         # return control, pos_vel_cmd
         return self.sol1,NO_SOLUTION_FLAG

@@ -696,12 +696,16 @@ class OCSys:
         # #---------------------for linear cost---------------------##
        
         for i in range(self.new_horizon):
-            
-            self.acados_solver.set(i, 'p',np.concatenate((cur_state[0:3],
-                                                          rel_goal_state_value,
-                                                          trav_auxvar_value, 
-                                                          np.array([des_t_tra]),
-                                                          np.array([dt*i]))))
+            p=np.concatenate(
+                (
+                    cur_state[0:3],
+                    rel_goal_state_value,
+                    trav_auxvar_value, 
+                    np.array([des_t_tra]),
+                    np.array([dt*i])
+                )
+            )
+            self.acados_solver.set(i, 'p',p)
             # if i==10:
             #     weight_vis=weight
             
@@ -710,11 +714,16 @@ class OCSys:
         self.acados_solver.set(self.new_horizon, "x", self.state_traj_opt[-1,:])
 
         # set the end desired goal
-        self.acados_solver.set(self.new_horizon, "p",np.concatenate((cur_state[0:3],
-                                                                     rel_goal_state_value,
-                                                                     trav_auxvar_value, 
-                                                                     np.array([des_t_tra]),
-                                                                     np.array([self.n_nodes*dt]))))
+        p=np.concatenate(
+            (
+                cur_state[0:3],
+                rel_goal_state_value,
+                trav_auxvar_value, 
+                np.array([des_t_tra]),
+                np.array([self.n_nodes*dt])
+            )
+        )    
+        self.acados_solver.set(self.new_horizon, "p", p)
 
         # set initial condition aligned with the current state
     
@@ -723,7 +732,7 @@ class OCSys:
 
 
         ## set the initial guess
-        if init_guess is not None:
+        if init_guess is not None and mission_cfg['manual_init_guess']:
             for i in range(self.new_horizon):
                 self.acados_solver.set(i, "x", np.array(init_guess['state_traj_opt'])[i])
                 self.acados_solver.set(i, "u", np.array(init_guess['control_traj_opt'])[i])
@@ -764,12 +773,14 @@ class OCSys:
        
             
         # output
-        opt_sol = {"state_traj_opt": self.state_traj_opt,
-                "control_traj_opt": self.control_traj_opt,
-                "costate_traj_opt": self.costate_traj_opt,
-                'auxvar_value': trav_auxvar_value,
-                "time": time,
-                "horizon": self.horizon}
+        opt_sol = {
+        "state_traj_opt": self.state_traj_opt,
+        "control_traj_opt": self.control_traj_opt,
+        "costate_traj_opt": self.costate_traj_opt,
+        'auxvar_value': trav_auxvar_value,
+        "time": time,
+        "horizon": self.horizon
+        }
                 #"cost": sol['f'].full()}
 
         if mission_cfg['learning_agile']['varying_horizon']:

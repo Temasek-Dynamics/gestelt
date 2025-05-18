@@ -19,9 +19,9 @@ from gestelt_msgs.msg import Goals,  CommanderState, close_loop_NN_output
 from geometry_msgs.msg import  PoseStamped, TwistStamped, Point, PoseArray, Pose
 from std_msgs.msg import Float32
 from visualization_msgs.msg import Marker
-from learning_agile_sim import MovingGate, get_obs, manual_set_z_forward
+from learning_agile_sim import MovingGate
 from learning_agile_ROS_mission import transform_map_to_world
-
+from quad_policy import get_obs, manual_set_z_forward
 
 ##=================Load the model and configuration file=================##
 # acquire the current directory

@@ -6,14 +6,10 @@ import casadi as ca
 import os
 
 from scipy.spatial.transform import Rotation as R
-from config import mission_cfg, train_cfg
 os.environ["JAX_PLATFORM_NAME"] = "cpu" 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
-# import jax
-# import jax.numpy as jnp
-# from einops import rearrange
 import copy
-# from casadi import Opti
+
 
 
 def qr_eigen(A, iterations=10):

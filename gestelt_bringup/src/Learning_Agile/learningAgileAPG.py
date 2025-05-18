@@ -74,10 +74,6 @@ class LearningAgileAPG:
         self.global_step = 0
         self.episodes = []
         self.reg=0
-        # for _ in range(self.batch_size):
-        #     self.episodes.append(LearningAgileBase(mission_cfg=self.mission_cfg,
-        #                                          train_cfg=self.train_cfg,
-        #                                          options=options))
         # RAY
         self.episodes=[LearningAgileBase.remote(mission_cfg=self.mission_cfg,
                                          train_cfg=self.train_cfg,
@@ -89,7 +85,7 @@ class LearningAgileAPG:
         # self.device = torch.device('cpu')
 
         if options['TRAIN_FROM_CHECKPOINT'] or options['STATE_2_MOVING_GATE']:
-            FILE = os.path.join(checkpoint_trained_model_folder, "new_format/2025-05-16/17-48-22/trained_model/NN_close_leads_solver_failed_110_batch_num_13.pth")
+            FILE = os.path.join(checkpoint_trained_model_folder, "new_format/2025-05-16/21-02-51/trained_model/NN_close_100.pth")
 
             self.learning_rate = self.train_cfg['training']['learning_rate']#*0.9**(300/self.train_cfg['training']['lr_decay_num_epochs'])
         else:
@@ -163,6 +159,8 @@ class LearningAgileAPG:
             outputs_batch: array of the Neural Network output (batch_size, output_size)
             outputs_list: list element is the Neural Network batch output at each step
                           shape (close_loop_horizon, batch_size, output_size)
+            euler_nn_list: list element is the Euler NN output for each episode
+                           shape (close_loop_horizon, batch_size, 3)
 
             penalty_list: list element is the penalty for each episode
             p_L_p_z_list: list element is the gradient for each episode
@@ -176,6 +174,7 @@ class LearningAgileAPG:
         """
         
         penalty_list = []
+        euler_nn_list = []
         outputs_list = []
         p_L_p_z_list = []
         outputs_batch = np.zeros((self.batch_size, train_cfg['model']['output_size']))
@@ -196,6 +195,8 @@ class LearningAgileAPG:
             ##== 3. step for every episode
             [episode.step.remote(outputs_batch[k]) for k, episode in enumerate(self.episodes)]
             
+            
+            euler_nn_list.append(ray.get([episode.get_euler_nn.remote() for episode in self.episodes]))
             for k, episode in enumerate(self.episodes):
                 if ray.get(episode.get_solution_flag.remote()):
                     epoch_solution_flags[k] = True
@@ -232,9 +233,12 @@ class LearningAgileAPG:
                 p_L_p_z_list.append(np.zeros((train_cfg['training']['close_loop_horizon']-1,1,train_cfg['model']['output_size'])))
         
         if not GRAD_VIS: 
-            ## assemble *(0.05*magni(euler_nn))
             ## if BPTT all, /10000 0
-            self.p_L_p_z_batch = np.array(p_L_p_z_list)/(10000)
+            
+            # the larger the neural network angle output, the smaller the gradient
+            euler_scaler = np.array([(0.05*max(np.linalg.norm(np.array(euler_nn_list)[:,k,:],axis=1,keepdims=True))) for k in range(self.batch_size)])
+            self.p_L_p_z_batch = np.array(p_L_p_z_list)
+            self.p_L_p_z_batch[:,:,:,3:12] /= 10000*euler_scaler.reshape(self.batch_size,1,1,1)
                 
             # (close_loop_horizon, batch_size, 13)->(batch_size, close_loop_horizon, 13)
             self.outputs_stack = torch.stack(outputs_list).permute(1,0,2) 

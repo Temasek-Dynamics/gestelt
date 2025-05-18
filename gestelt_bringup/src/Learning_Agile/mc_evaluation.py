@@ -60,4 +60,4 @@ def mc_evaluation(test_num=48,
 
 if __name__ == "__main__":
     ray.init()
-    mc_evaluation(test_num=128,STAB_TEST=False,VIS_BATCH=True)
+    mc_evaluation(test_num=48,STAB_TEST=False,VIS_BATCH=True)

@@ -102,7 +102,7 @@ def nn_sample(init_pos=None,
         # gate_pitch = mission_cfg['mission']['gate_ori_euler'][1] #1.2rad = 68.754 degrees, 0.8rad = 45.729 degrees 
 
         ## or 
-        # gate_pitch = np.random.uniform(-pi/2,pi/2)
+        gate_pitch = np.random.uniform(-pi/2,pi/2)
         
         
 

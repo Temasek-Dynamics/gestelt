@@ -9,10 +9,10 @@ import wandb
 from scipy.spatial.transform import Rotation as R
 import matplotlib.pyplot as plt
 
-from learning_agile_sim import LearningAgileSim, Gate,get_obs
-
+from learning_agile_sim import LearningAgileSim, Gate
+from quad_policy import get_obs,manual_set_z_forward
 from config import mission_cfg, train_cfg,current_dir
-
+from geometry.solid_geometry import recover_euler_from_9d
 ## this options is for debugging
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 options = {}
@@ -95,7 +95,11 @@ class LearningAgileBase:
         self.gate_step_and_obs(0)
         
         #== reset flags
-        self.NO_SOLUTION_FLAG=False
+        
+        if self.NO_SOLUTION_FLAG:
+            self.NO_SOLUTION_FLAG=False
+            self.planner.uavoc.acados_solver.reset()
+            print('reset the solver')
  
 
     def gate_step_and_obs(self,i):
@@ -103,7 +107,7 @@ class LearningAgileBase:
         ## == gate forward === ##
         self.gate_t_i = Gate(self.gate_points_list[i])
 
-        self.obs, _, self.last_gate_points = get_obs(   
+        self.obs, self.gate_pitch, self.last_gate_points = get_obs(   
             self.last_gate_points,
             self.i,
             self.input_size,
@@ -147,11 +151,36 @@ class LearningAgileBase:
         self.t_tra_rel = self.t_tra_abs-self.i*self.mission_cfg['learning_agile']['dt']
         # wandb.log({"t_tra_rel": self.t_tra_rel})
         ## == MPC forward === ##        
+        if self.i == 1:
+            
+            # 45 degree rotation as initial guess
+           
+            gate_ori_euler=np.array([0,np.sign(self.gate_pitch)*0.7,0])
+            gate_center = mission_cfg['mission']['gate_position']
+            zero_gate_ori_9d=R.from_euler('zyx',gate_ori_euler).as_matrix().flatten()
+            _,manual_auxvar_value,_ = manual_set_z_forward(
+                cur_pos=self.state[0:3],
+                gate_center=gate_center,
+                gate_ori_9d=zero_gate_ori_9d
+            )
+            for i in range(2):
+                init_solution, NO_SOLUTION_FLAG  = self.planner.conser_mpc_as_init_guess(
+                cur_state=self.state,
+                trav_auxvar_value=manual_auxvar_value,
+                last_u=self.last_u,
+                des_t_tra=self.t_tra_abs, 
+                first_iter=(self.i==0)
+                )
+        else:
+            init_solution =None
+            
         cmd_solution,self.NO_SOLUTION_FLAG = self.planner.mpc_update(cur_state=self.state,
                                                                 trav_auxvar_value=self.np_nn_out ,
                                                                 des_t_tra= self.t_tra_rel,
                                                                 last_u=self.last_u,
-                                                                first_iter=(self.i==0))
+                                                                first_iter=(self.i==0),
+                                                                init_guess=init_solution,
+                                                                )
         if self.NO_SOLUTION_FLAG:
             print('No solution found')
             print('traverse_auxvar_value=',self.np_nn_out)
@@ -297,6 +326,12 @@ class LearningAgileBase:
         """
         return self.state
     
+    def get_euler_nn(self):
+        """
+        get euler angle from the NN output
+        """
+        euler_nn,_=recover_euler_from_9d(self.np_nn_out,deg_unit=True)
+        return euler_nn
     
     def get_immed_penalty(self,real_state_i,success_rate):
         """

@@ -17,7 +17,7 @@ import matplotlib.pyplot as plt
 
 from quad_model import toQuaternion, Gate, Rd2Rp, get_gate_points
 from visualization.python_sim_vis import play_animation, plot_position, plot_velocity, plot_scalar, plot_thrust, plot_angularrate, plot_3D_traj,plot_M,plot_T,plot_3axis_weights
-from quad_policy import PlanFwdBwdWrapper
+from quad_policy import PlanFwdBwdWrapper, get_obs, manual_set_z_forward
 from quad_nn import nn_sample, network
 from quad_moving import binary_search_solver,input_cal
 from visualization.result_analysis import rotation_vis
@@ -30,78 +30,7 @@ device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 input_size = train_cfg['model']['input_size'] 
 hidden_size = train_cfg['model']['hidden_size']
-output_size = train_cfg['model']['output_size']  
-def get_obs(
-    last_gate_points = None,    
-    i = None,
-    input_size= None,
-    drone_state = None,
-    final_point = None,
-    gate_t_i= None
-    ):
-    """
-    get both immediate and past observation from the environment
-    
-    Args:
-        last_gate_points: the past observation
-        i: the current time step
-        input_size: the size of the input
-        drone_state: the current drone state
-        final_point: the final point of the drone
-        gate_t_i: the current gate state
-        
-        
-    Returns:
-        obs: the observation for the NN input
-    """
-    ##==calculate the gate RM
-    gate_pitch = pitch_from_gate(gate_t_i.gate_point)
-    rot=R.from_euler('zyx',[0,gate_pitch,0])
-    
-    immed_obs=np.zeros(input_size)
-    immed_obs[0:3]=drone_state[0:3]/mission_cfg['pos_norm_factor']
-    immed_obs[3:6]=drone_state[3:6]/mission_cfg['vel_norm_factor']
-    immed_obs[6:10]=drone_state[6:10] # quaternion
-    immed_obs[10:13]=final_point/mission_cfg['pos_norm_factor']
-    
-    ## gate points
-    relative_gate_points = gate_t_i.gate_point-drone_state[0:3]
-    immed_obs[13:25]=relative_gate_points.flatten()/mission_cfg['pos_norm_factor'] # gate points
-    immed_obs[25:37]=last_gate_points.flatten()/mission_cfg['pos_norm_factor'] # last gate points
-
-    ## update the last gate points
-    last_gate_points = relative_gate_points
-
-
-    return immed_obs, gate_pitch, last_gate_points
-
-def manual_set_z_forward(cur_pos:np.array=None,
-                         gate_center:np.array=None,
-                         gate_ori_9d:np.array=None):
-    # manually set the traversal time and pose
-    out=np.zeros(output_size)
-    # out[0:3]=gate_center-cur_pos # gate center - drone position
-    # out[3:12]=gate_ori_9d # manual set 9D vector (is rotation matrix directly)
-    # out[-8:-5]=mission_cfg['learning_agile']['wrp']
-    # out[-5:-2]=mission_cfg['learning_agile']['wrt']
-    # out[-2]=mission_cfg['learning_agile']['wqt']
-    # out[-1]=mission_cfg['learning_agile']['traverse_weight_span']
-
-    out[0:3]=np.array([1.6307370e-01, -1.1879361e+00,  2.3646435e-01])
-    out[3:12]= np.array([-1.6918890e-02,  1.9469048e-01,  3.6082739e-01, \
-                          3.6829162e-02,  6.1634600e-01, -1.8477699e-01,\
-                          5.4425687e-01, -7.5466178e-02,  2.5479184e-02])
-    out[-8:-5]=np.array([1.0600287e+02,  1.7199979e+02,  1.3278973e+02])
-    out[-5:-2]=np.array([1.5756940e+02, 1.7169960e+02,  1.6217084e+02])  
-    out[-2]=np.array([3.5511166e+01])
-    out[-1]=np.array([4.9806870e+01])
-    
-    ### SVD through CasADi
-    verify_tra_R,_=verify_SVD_ca(out[3:12])
-
-    gate_pitch=mission_cfg['mission']['gate_ori_euler'][1]
-    return gate_pitch,out,verify_tra_R
-
+output_size = train_cfg['model']['output_size'] 
 class MovingGate():
     def __init__(self, 
                 env_init_set,
@@ -182,11 +111,13 @@ class LearningAgileSim():
                     activation=train_cfg['model']['activation']
                 ).to(device)
 
+
                 if options['MC_EVALUATION']:
                     self.model.load_state_dict(torch.load(model_file,map_location='cpu'))
                     
                 else:
                     self.model.load_state_dict(torch.load(model_file))
+                # self.model = torch.load(model_file, map_location=device)
                 self.model.eval()   
 
         ##-------------------- planning variables --------------------------##
@@ -385,13 +316,34 @@ class LearningAgileSim():
                 self.NN_T_tra = np.concatenate((self.NN_T_tra,[des_t_tra]),axis = 0)
                 # print('des_t_tra=',des_t_tra)
                 
+                
+                if self.i == 0:
+                    gate_ori_euler=np.array([0,1.2,0])
+                    zero_gate_ori_9d=R.from_euler('zyx',gate_ori_euler).as_matrix().flatten()
+                    _,manual_auxvar_value,_ = manual_set_z_forward(
+                        cur_pos=self.state[0:3],
+                        gate_center=self.gate_center,
+                        gate_ori_9d=zero_gate_ori_9d
+                    )
+                    for i in range(2):
+                        init_solution, NO_SOLUTION_FLAG  = self.planner.conser_mpc_as_init_guess(
+                        cur_state=self.state,
+                        trav_auxvar_value=manual_auxvar_value,
+                        last_u=self.last_u,
+                        des_t_tra=des_t_tra, 
+                        first_iter=(self.i==0)
+                        )
+                else:
+                    init_solution = None
+                    
                 t_comp = time.time()
                 cmd_solution,NO_SOLUTION_FLAG  = self.planner.mpc_update(
                     cur_state=self.state,
                     trav_auxvar_value=trav_auxvar_value,
                     last_u=self.last_u,
                     des_t_tra=des_t_tra, 
-                    first_iter=(self.i==0)
+                    first_iter=(self.i==0),
+                    init_guess=init_solution,
                 )
                 if NO_SOLUTION_FLAG:
                     STAB_FAILED = True
