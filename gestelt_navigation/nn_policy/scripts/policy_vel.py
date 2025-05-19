@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-
+import sys
+print("Running with Python:", sys.executable)
 import time
 import numpy as np
 import rospy
@@ -30,6 +31,7 @@ import random
 def handler(signal_received, frame):
     # Handle any cleanup here
     print('SIGINT or CTRL-C detected. Exiting gracefully')
+
     exit(0)
 
 class DRONESTATE(Enum):
@@ -57,33 +59,76 @@ class TEST_RENDER(object):
         if self.pc == True:
             self.policy = TrackVel(input_dim=16)
         else:
-            self.policy = TrackVel()
+            self.policy = TrackVel(input_dim = 10)
         self.policy.load_state_dict(torch.load(policy_path))
         self.policy.eval()
+        self.init_a = np.zeros((1,4))
 
         target_vel = np.zeros((1, 3))
-        target_vel[:,0] = 1
-        target_vel[:,2] = 1
+        # target_vel[:,0]=1
+        # target_vel[:,2]=1
+        target_vel_pos = np.zeros((1, 3))
+        target_vel_pos[:,0] = -1.0
+        target_vel_pos[:,1] = 0.0
+        target_vel_pos[:,2] = 1.0
         # target_vel = np.random.randn(1, 3)
-        print(target_vel)
+        
+
+        target_unit_vel_pos = target_vel_pos / np.linalg.norm(target_vel_pos, axis = 1).reshape(-1,1)
+        self.target_unit_vel_tensor = torch.tensor(target_unit_vel_pos, dtype=torch.float32)
+
+        target_pos = np.array([0, 1,0.0]).reshape(1,3)
+        # target_pos = 2 * target_unit_vel_pos + target_pos
+        
+        print(f"Target position is: {target_pos}")
+
+        
+        # target_pos = target_unit_vel + target_pos
         self.t_vel = torch.tensor(target_vel, dtype=torch.float32)
-        target_pos = np.array([0,1,0]).reshape(1,3)
         self.t_pos = torch.tensor(target_pos, dtype=torch.float32)
+        self.init_pos = torch.tensor(target_pos, dtype=torch.float32)
+        self.previous_action = torch.tensor(self.init_a, dtype=torch.float32)
         
 
 
     def evaluate_(self, pos, att, qd):
+        # if torch.norm(pos - self.t_pos) < 0.3:
+        #     print("switching new target")
+        #     new_point = self.vector_to_line(pos, self.init_pos, self.target_unit_vel_tensor)
+        #     self.t_pos = new_point + self.target_unit_vel_tensor
+        #     print(self.t_pos)
         if self.pc == True:
+            # delta_vect = self.vector_to_line(pos, self.init_pos , self.target_unit_vel_tensor)
             diff_pos = self.t_pos - pos
+            # print(diff_pos)
             x = torch.cat((diff_pos, att, qd, self.t_vel), dim=1)
+            # x = torch.cat((diff_pos, att, qd, self.t_vel), dim=1)
         else:
-            x = torch.cat((att, qd, self.t_vel), dim=1)
-        return self.policy(x)
+            vel = qd[:,3:]
+            angvel = qd[:,:3]
+            diff_vel = self.t_vel - vel
+            x = torch.cat((att, angvel, diff_vel), dim=1)
+        a = self.policy(x)
+        
+        self.previous_action = a
+        return a
+    
+    def vector_to_line(self,P, A, d):
+        d_unit = d / torch.norm(d, dim=-1, keepdim=True)  # Normalize direction
+        AP = P - A
+        proj_len = torch.sum(AP * d_unit, dim=-1, keepdim=True)  # scalar projection
+        proj = proj_len * d_unit  # vector projection
+        Q = A + proj  # Closest point on the line
+        return Q - P  # Vector from P to closest point
+    
+    def update_target_pos(self,P):
+        target_pos = P
+        self.t_pos = torch.tensor(target_pos, dtype=torch.float32)
     
 
 class NN_POLICY_PLANNER(object):
 
-    def __init__(self, mission_command_mode, policy):
+    def __init__(self, mission_command_mode, policy, inference_timestep, max_angular_rates):
         #Creating subscribers and Publishers
         self.bullet_sim_mutex = threading.Lock()
         self.tfBuffer =  tf2_ros.Buffer(rospy.Duration(10))
@@ -91,7 +136,10 @@ class NN_POLICY_PLANNER(object):
         self.warp_pose_msg = PoseStamped()
         rospy.sleep(1)
 
+        self.max_angular_rates = max_angular_rates
         self.policy = policy
+        self.last_pos_time = None
+        
 
         self.swarm_mode_pub_ = rospy.Publisher('/traj_server/swarm_command', Int8, queue_size=5)
         self.commander_state_sub_ = rospy.Subscriber("/drone0/traj_server/state",CommanderState, self.commStateCb, queue_size = 10)
@@ -99,6 +147,7 @@ class NN_POLICY_PLANNER(object):
         self.drone_pose_sub_ = rospy.Subscriber("/drone0/mavros/local_position/odom",Odometry, self.odomCb, queue_size = 10)
         self.drone_pose_sub_ = rospy.Subscriber("/mode_change", Bool, self.modeChgCb, queue_size = 10)
         self.mission_mode_sub_ = rospy.Subscriber("/traj_server/warp_mission_command", Int8, self.missionModeCb, queue_size = 5)
+        self.target_position_sub_ = rospy.Subscriber("/drone0/warp/local_position/target_position", PoseStamped, self.targetPosCb, queue_size = 5)
 
         self.warp_drone_pose_pub_ = rospy.Subscriber('/drone0/warp/local_position/pose', PoseStamped, self.warpPoseCB, queue_size=5)
         self.warp_drone_odom_sub_ = rospy.Subscriber('/drone0/warp/local_position/odom', Odometry, self.warpOdomCB, queue_size=5)
@@ -109,7 +158,7 @@ class NN_POLICY_PLANNER(object):
         
 
         self.rate = rospy.Rate(0.02)
-        self.event_manager = rospy.Timer(rospy.Duration(0.01), self.eventCB)
+        self.event_manager = rospy.Timer(rospy.Duration(inference_timestep), self.eventCB)
 
         #DRONE STATE MACHINE
         self.drone_state = 0
@@ -147,6 +196,11 @@ class NN_POLICY_PLANNER(object):
     def poseCb(self, msg):
         self.drone_pos = np.array([msg.pose.position.x, msg.pose.position.y, msg.pose.position.z])
         self.drone_quat = np.array([msg.pose.orientation.x, msg.pose.orientation.y, msg.pose.orientation.z, msg.pose.orientation.w])
+        if self.last_pos_time is not None:
+            time_diff = (msg.header.stamp- self.last_pos_time).to_sec() 
+            if time_diff > 0.05:
+                print(f"TIME DIFFERENCE EXCEEDED!!! {time_diff} at {msg.header.stamp}")
+        self.last_pos_time = msg.header.stamp
 
         self._pose_odom_pub_callback()
 
@@ -158,6 +212,10 @@ class NN_POLICY_PLANNER(object):
 
     def warpPoseCB(self,msg):
         self.warp_q = np.array([msg.pose.position.x, msg.pose.position.y,msg.pose.position.z, msg.pose.orientation.x, msg.pose.orientation.y, msg.pose.orientation.z, msg.pose.orientation.w])
+
+    def targetPosCb(self,msg):
+        self.warp_target_pos = np.array([msg.pose.position.x, msg.pose.position.y,msg.pose.position.z])
+        self.policy.update_target_pos(self.warp_target_pos)
 
     def eventCB(self, event):
         if self.drone_state == DRONESTATE["IDLE"].value:
@@ -171,7 +229,7 @@ class NN_POLICY_PLANNER(object):
         pva_traj_msg = ExecTrajectory()
         pva_traj_msg.transform.translation.x = 0.0
         pva_traj_msg.transform.translation.y = 0.0
-        pva_traj_msg.transform.translation.z = 5.0
+        pva_traj_msg.transform.translation.z = 1.0
         pva_traj_msg.transform.rotation.x = 0.0
         pva_traj_msg.transform.rotation.y = 0.0
         pva_traj_msg.transform.rotation.z = 0.0 #0.707
@@ -185,6 +243,23 @@ class NN_POLICY_PLANNER(object):
         pva_traj_msg.angular_rates.angular.x = self.action[0,1]   #body rate x
         pva_traj_msg.angular_rates.angular.y = self.action[0,2]     #body rate y
         pva_traj_msg.angular_rates.angular.z = self.action[0,3]     #body rate z
+
+        #Publish the PVA
+        self.pva_traj_pub_.publish(pva_traj_msg)
+
+    def publishVEL(self):
+        pva_traj_msg = ExecTrajectory()
+        pva_traj_msg.transform.translation.x = 0.0
+        pva_traj_msg.transform.translation.y = 0.0
+        pva_traj_msg.transform.translation.z = 1.0
+        pva_traj_msg.transform.rotation.x = 0.0
+        pva_traj_msg.transform.rotation.y = 0.0
+        pva_traj_msg.transform.rotation.z = 0.0 #0.707
+        pva_traj_msg.transform.rotation.w = 1.0 #0.707
+        pva_traj_msg.velocity.linear.x = 1.0
+        pva_traj_msg.velocity.linear.y = 0.0
+        pva_traj_msg.velocity.linear.z = 0.0
+        pva_traj_msg.type_mask = 2048
 
         #Publish the PVA
         self.pva_traj_pub_.publish(pva_traj_msg)
@@ -203,9 +278,9 @@ class NN_POLICY_PLANNER(object):
         pva_traj_msg.transform.rotation.w = 0.707
 
         ### This part will only be taken in by trajectory server if type_mask == 1
-        pva_traj_msg.angular_rates.angular.x = nn_action[0,1] * 3     #body rate x
-        pva_traj_msg.angular_rates.angular.y = nn_action[0,2] * 3   #body rate y
-        pva_traj_msg.angular_rates.angular.z = nn_action[0,3] * 3
+        pva_traj_msg.angular_rates.angular.x = nn_action[0,1] * self.max_angular_rates     #body rate x
+        pva_traj_msg.angular_rates.angular.y = nn_action[0,2] * self.max_angular_rates   #body rate y
+        pva_traj_msg.angular_rates.angular.z = nn_action[0,3] * self.max_angular_rates
 
         self.pva_traj_pub_.publish(pva_traj_msg)
 
@@ -232,6 +307,10 @@ class NN_POLICY_PLANNER(object):
                         print("me here")
                         self.publishMissionCmdMode(2)
                         self.mission_command_mode = 2
+                if self.warp_mission_command_mode == 3:
+                    self.publishMissionCmdMode(3)
+                    self.mission_command_mode = 3
+
                         
             elif self.mission_command_mode == 2:  #This controls the orientation. Attitude and thrust
                 if self.checkNNReadiness():
@@ -242,6 +321,9 @@ class NN_POLICY_PLANNER(object):
                     #Check if ready to switch
                     self.publishMissionCmdMode(1)
                     self.mission_command_mode = 1
+
+            elif self.mission_command_mode == 3:
+                self.publishVEL()
                 
 
     def modeChgCb(self, msg):
@@ -289,19 +371,33 @@ class NN_POLICY_PLANNER(object):
 if __name__=="__main__":
     signal(SIGINT, handler)
     print("STARTING NODE")
+    policy_file = "20250519-112851" #"20250507-083934" #20250507-084042
+    full_path = "/home/yanrui/storage/gestelt_ws/src/gestelt/gestelt_navigation/nn_policy/logs/vel_tracking"
+    actual_full_path = os.path.join(full_path, policy_file)
+    config_path = os.path.join(actual_full_path,"training_config.yaml")
+    full_policy_path = os.path.join(actual_full_path, "policy.pth")
+
     rospy.init_node("nn_policy_planner")
     ros_lib = roslib.packages.get_pkg_dir("gestelt_bringup")
     full_config_path = os.path.join(ros_lib, "config/traj_server_vel.yaml")
     with open(full_config_path, 'r') as file:
         loaded_params = yaml.safe_load(file)
-    mission_command_mode = loaded_params["mission_command_mode"]
-    position_control = loaded_params["position_control"]
 
-    full_path = "/home/yanrui/storage/gestelt_ws/src/gestelt/gestelt_navigation/nn_policy/logs/vel_zero"
-    full_policy_path = os.path.join(full_path, "20250409-163006/policy.pth")
+    # with open(config_path, 'r') as file:
+    #     config_params = yaml.safe_load(file)
+
+    mission_command_mode = loaded_params["mission_command_mode"]
+
+    position_control = True #config_params["position_control"]
+    delta_time = 0.05 #float(config_params["delta_time"])
+    max_angular_rate = 3.0 #float(config_params["max_angular_rates"])
+
+    
+      #vel 20250424-161234 #position 20250424-131220, 20250424-161345
     nn_policy = TEST_RENDER(full_policy_path, position_control) 
 
-    nn_policy_planner = NN_POLICY_PLANNER(int(mission_command_mode), nn_policy)
+    nn_policy_planner = NN_POLICY_PLANNER(mission_command_mode=int(mission_command_mode), policy=nn_policy,
+                                          inference_timestep=delta_time, max_angular_rates = max_angular_rate)
 
     rospy.spin()
 

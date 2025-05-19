@@ -24,4 +24,10 @@ pub_cmd_freq: 100.0
 state_machine_tick_freq: 50.0
 
 #policy params
-position_control: False
+position_control: True
+
+training:
+  learning_rate: 0.001
+  epochs: 8000
+  delta_time: 0.02 #20Hz for slow speed
+  sim_steps: 20  #Train only for 1seconds

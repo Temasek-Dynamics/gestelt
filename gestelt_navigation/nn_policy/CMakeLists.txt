@@ -16,19 +16,19 @@ find_package(catkin REQUIRED COMPONENTS
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
 
-set(ROS_LIBRARIES
-  roscpp
-  std_msgs
-  geometry_msgs
-  nav_msgs
-  gestelt_msgs
-  global_planner
-  sfc_generation
-  traj_utils
-  traj_opt
-  gestelt_debug_msgs
-  ego_planner_fsm
-) 
+# set(ROS_LIBRARIES
+#   roscpp
+#   std_msgs
+#   geometry_msgs
+#   nav_msgs
+#   gestelt_msgs
+#   global_planner
+#   sfc_generation
+#   traj_utils
+#   traj_opt
+#   gestelt_debug_msgs
+#   ego_planner_fsm
+# ) 
 
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
@@ -116,10 +116,10 @@ set(ROS_LIBRARIES
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-  INCLUDE_DIRS include
-  LIBRARIES nn_policy gestelt_msgs
-  CATKIN_DEPENDS roscpp rospy std_msgs
-  DEPENDS system_lib
+#   INCLUDE_DIRS include
+#   LIBRARIES nn_policy gestelt_msgs
+#   CATKIN_DEPENDS roscpp rospy std_msgs
+#   DEPENDS system_lib
 )
 
 ###########
@@ -172,10 +172,12 @@ include_directories(
 
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
-catkin_install_python(PROGRAMS
-  scripts/policy.py
-  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-)
+# catkin_install_python(PROGRAMS
+#   scripts/policy.py
+#   scripts/policy_vel.py
+#   scripts/test.py
+#   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+# )
 
 ## Mark executables for installation
 ## See http://docs.ros.org/melodic/api/catkin/html/howto/format1/building_executables.html

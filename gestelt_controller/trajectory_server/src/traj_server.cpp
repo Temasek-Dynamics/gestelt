@@ -60,6 +60,7 @@ void TrajectoryServer::init(ros::NodeHandle& nh, ros::NodeHandle& pnh)
   /* Publishers */
   /////////////////
   pos_cmd_raw_pub_ = nh.advertise<mavros_msgs::PositionTarget>("mavros/setpoint_raw/local", 50);
+  vel_cmd_raw_pub_ = nh.advertise<geometry_msgs::TwistStamped>("mavros/setpoint_velocity/cmd_vel", 50);
   server_state_pub_ = nh.advertise<gestelt_msgs::CommanderState>("traj_server/state", 50);
   vel_magnitude_pub_ = nh.advertise<std_msgs::Float32>("vel_magnitude", 50);
   low_lvl_cmd_raw_pub_ = nh.advertise<mavros_msgs::AttitudeTarget>("mavros/setpoint_raw/attitude", 1);
@@ -118,6 +119,14 @@ void TrajectoryServer::execTrajCb(const gestelt_msgs::ExecTrajectory::ConstPtr &
 
   geomMsgsVector3ToEigenVector3(msg->acceleration.linear, last_mission_acc_);
   // ROS_INFO("received acceleration: %f, %f, %f", last_mission_acc_(0), last_mission_acc_(1), last_mission_acc_(2));
+  }
+
+  if (getMissionCmd() == MissionCmdMode::VEL){
+  // ROS_INFO("Last mission yaw: %f", last_mission_yaw_);
+
+  geomMsgsVector3ToEigenVector3(msg->velocity.linear, last_mission_vel_);
+  last_mission_yaw_dot_ = msg->velocity.angular.z; //yaw rate
+  // ROS_INFO("received velocity: %f, %f, %f", last_mission_vel_(0), last_mission_vel_(1), last_mission_vel_(2));
   }
 
   if (getMissionCmd() == MissionCmdMode::ATTITUDE){
@@ -632,6 +641,9 @@ void TrajectoryServer::execMission()
   else if(getMissionCmd() == MissionCmdMode::ATTITUDE){
   publishLowLvlCmd( last_mission_body_rates_, last_mission_thrust_vector_, last_mission_quaternion_, last_mission_pos_, ct_omega_mode_);
   }
+  else if(getMissionCmd() == MissionCmdMode::VEL){
+  publishVelCmd( last_mission_vel_, last_mission_pos_, ct_omega_mode_);
+  }
 }
 
 /* Publisher methods */
@@ -665,6 +677,24 @@ void TrajectoryServer::publishCmd(
   // ROS_INFO("Velocity for final command: %f, %f, %f", v(0), v(1), v(2));
   // ROS_INFO("Acceleration for final command: %f, %f, %f", a(0), a(1), a(2));
   pos_cmd_raw_pub_.publish(pos_cmd);
+}
+
+void TrajectoryServer::publishVelCmd(
+  Vector3d v, Vector3d p, uint16_t ct_omega_mode_)
+{
+  if (enable_safety_box_ && !checkPositionLimits(safety_box_, p)) {
+    // If position safety limit check failed, switch to hovering mode
+    setServerEvent(ServerEvent::HOVER_E);
+  }
+  geometry_msgs::TwistStamped vel_cmd;
+  vel_cmd.header.stamp = ros::Time::now();
+  vel_cmd.header.frame_id = origin_frame_;
+  vel_cmd.twist.linear.x = v(0);
+  vel_cmd.twist.linear.y = v(1);
+  vel_cmd.twist.linear.z = v(2);
+
+  vel_cmd_raw_pub_.publish(vel_cmd);
+
 }
 
 void TrajectoryServer::publishLowLvlCmd(

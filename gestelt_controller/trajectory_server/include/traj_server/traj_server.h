@@ -9,6 +9,7 @@
 #include <ros/ros.h>
 
 #include <geometry_msgs/PoseStamped.h>
+#include <geometry_msgs/TwistStamped.h>
 #include <geometry_msgs/Vector3.h>
 #include <nav_msgs/Odometry.h>
 #include <nav_msgs/Path.h>
@@ -63,6 +64,7 @@ enum MissionCmdMode
 {
   PVA,
   ATTITUDE,
+  VEL,
   UNKNOWN,
 };
 
@@ -138,6 +140,8 @@ private: // Class Methods
    * @brief Callback for externally triggered server events
    */
   void missionServerCommandCb(const std_msgs::Int8::ConstPtr & msg);
+
+  void velCommandCb(const std_msgs::Int8::ConstPtr & msg);
 
 
   /**
@@ -240,6 +244,9 @@ private: // Class Methods
 
   void publishLowLvlCmd(
   Vector3d omega, double collective_thrust_vector, Vector4d quaternion, Vector3d p, uint16_t ct_omega_mode_);
+
+  void publishVelCmd(
+  Vector3d v, Vector3d p, uint16_t ct_omega_mode_);
 
   /* Helper methods */
 
@@ -344,6 +351,7 @@ private: // Class Methods
       {
           case MissionCmdMode::PVA:  return "POSVELACC";
           case MissionCmdMode::ATTITUDE:     return "ATTITUDECTRL";
+          case MissionCmdMode::VEL: return "VELMODE";
           default:                      return "[Unknown Event]";
       }
   }
@@ -355,6 +363,7 @@ inline const MissionCmdMode IntToMission(int cmd_mode_num)
     {
         case 1:  return MissionCmdMode::PVA;
         case 2:  return MissionCmdMode::ATTITUDE;
+        case 3: return MissionCmdMode::VEL;
         default: return MissionCmdMode::UNKNOWN; // Replace with an appropriate default.
     }
 }
@@ -421,6 +430,7 @@ private: // Member variables
 
   /* Publisher  */
   ros::Publisher pos_cmd_raw_pub_; // Publisher of commands for PX4 
+  ros::Publisher vel_cmd_raw_pub_; // Publisher of commands for PX4 
   ros::Publisher server_state_pub_; // Publisher of current uav and server state
   ros::Publisher vel_magnitude_pub_; // Publish velocity vector magnitude 
   ros::Publisher low_lvl_cmd_raw_pub_;
@@ -439,6 +449,7 @@ private: // Member variables
   ros::Subscriber command_server_sub_; // Subscriber to trajectory server commands
   ros::Subscriber swarm_command_server_sub_; // Subscriber to swarm server commands
   ros::Subscriber mission_command_server_sub_; 
+  ros::Subscriber vel_cmd_sub_;
 
   /* Timer */
   ros::Timer exec_traj_timer_; // Timer to generate PVA commands for trajectory execution

@@ -1,0 +1,21 @@
+<!-- Spawns Gazebo model and PX4 SITL instances -->
+
+<launch>
+  <arg name="drone_id" default="0"/>
+  <arg name="cloud_topic" default="camera/depth/points"/>
+  <arg name="odometry_topic" default="mavros/local_position/odom" />
+  <arg name="pose_topic" default="mavros/local_position/pose" />
+
+
+  <!-- Planning module -->
+  <include file="$(find gestelt_bringup)/launch/navigator/include/nav_diff_module.xml">
+      <arg name="drone_id" value="$(arg drone_id)"/>
+      <arg name="cloud_topic" value="$(arg cloud_topic)"/>
+      <arg name="odometry_topic" value="$(arg odometry_topic)"/>
+      <arg name="pose_topic" value="$(arg pose_topic)"/>
+
+  </include>
+
+  <node pkg="tf2_ros" type="static_transform_publisher" name="map2warp" args="0.0 0.0 0.0 0.7071067811865476 0.0 0.0 0.7071067811865476 /map /warp"/>
+  <node pkg="tf2_ros" type="static_transform_publisher" name="map2local" args="0.0 0.0 0.0 0.0 0.0 0.7071067811865476 -0.7071067811865476 /map /local_frame"/>
+</launch>
