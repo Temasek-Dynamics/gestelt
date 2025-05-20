@@ -53,7 +53,7 @@ RUN export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/root/acados/lib \
     && export ACADOS_SOURCE_DIR=/root/acados \
     && source /opt/ros/noetic/setup.bash \
     && catkin config --skiplist trajectory_planner se3_controller\
-    && catkin config --skiplist mppi_py_interface\
+    # && catkin config --skiplist mppi_py_interface\
     && catkin config --skiplist model_inference\
     # && catkin config --skiplist vicon_bridge\
     && catkin build \
