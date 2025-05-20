@@ -328,9 +328,9 @@ class network(nn.Module):
 
         wrp   = torch.sigmoid(w_raw[:, 0:3]) * 300 + 10
         wrt   = torch.sigmoid(w_raw[:, 3:6]) * 300 + 10
-        wvp   = torch.sigmoid(w_raw[:, 6:7]) *  50 + 10
-        gamma = torch.sigmoid(w_raw[:, 7:8]) * 100 + 5
-        weights_final = torch.cat([wrp, wrt, wvp, gamma], dim=-1)   # (B,W)
+        wqt   = torch.sigmoid(w_raw[:, 6:7]) *  50 + 10
+        gamma = torch.sigmoid(w_raw[:, 7:8]) * 300 + 30
+        weights_final = torch.cat([wrp, wrt, wqt, gamma], dim=-1)   # (B,W)
 
         return torch.cat([pos_final, rot_final, weights_final], dim=-1)
 

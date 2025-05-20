@@ -44,7 +44,8 @@ RUN git checkout tianchensun_learning_agile
 
 # copy the deployed model in the image
 WORKDIR /gestelt_ws/src/gestelt/gestelt_bringup/src/Learning_Agile/
-# COPY deployed_model /gestelt_ws/src/gestelt/gestelt_bringup/src/Learning_Agile/deployed_model
+COPY deployed_model /gestelt_ws/src/gestelt/gestelt_bringup/src/Learning_Agile/deployed_model
+COPY /opt/libtorch /opt/
 # compile the workspace
 WORKDIR /gestelt_ws/
 # RUN python3 ./src/gestelt/gestelt_bringup/src/Learning_Agile/learning_agile_sim.py

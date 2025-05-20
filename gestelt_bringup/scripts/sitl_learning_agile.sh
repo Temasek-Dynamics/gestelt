@@ -63,6 +63,8 @@ CMD_4="roslaunch gestelt_bringup record.launch test_mode:=SITL recorded_platform
 
 CMD_5="roslaunch gestelt_bringup object_visualizer.launch"
 
+CMD_6="roslaunch model_inference model_inference.launch"
+
 if [ "$SESSIONEXISTS" = "" ]
 then 
 
@@ -71,9 +73,11 @@ then
     tmux split-window -t $SESSION:0.0 -v
     tmux split-window -t $SESSION:0.1 -h
     tmux split-window -t $SESSION:0.0 -h
-    tmux split-window -t $SESSION:0.3 -h
-    tmux split-window -t $SESSION:0.4 -h
+    tmux split-window -t $SESSION:0.0 -h
+    tmux split-window -t $SESSION:0.1 -h
+    tmux split-window -t $SESSION:0.2 -v
 
+    tmux select-layout -t $SESSION:0 tiled    
     tmux send-keys -t $SESSION:0.0 "$SOURCE_PX4_AUTOPILOT $CMD_0" C-m 
     sleep 2
     tmux send-keys -t $SESSION:0.1 "$SOURCE_WS $CMD_1" C-m 
@@ -83,6 +87,8 @@ then
     tmux send-keys -t $SESSION:0.3 "$SOURCE_WS $CMD_3" C-m
     tmux send-keys -t $SESSION:0.4 "$SOURCE_WS $CMD_4" C-m
     tmux send-keys -t $SESSION:0.5 "$SOURCE_WS $CMD_5" C-m
+    sleep 2
+    tmux send-keys -t $SESSION:0.6 "$SOURCE_WS $CMD_6" C-m
 fi
 
 # Attach session on the first window

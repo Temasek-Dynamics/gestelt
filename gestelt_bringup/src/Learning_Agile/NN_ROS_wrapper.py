@@ -79,6 +79,7 @@ class NN2_ROS_wrapper:
         rospy.Subscriber("/mavros/local_position/pose", PoseStamped, self.drone_pose_cb)
         rospy.Subscriber("/mavros/local_position/velocity_local", TwistStamped, self.drone_twist_cb)
         rospy.Subscriber("/planner/goals_learning_agile", Goals, self.mission_start_cb)
+        rospy.Subscriber("//learning_agile_sim/NN_output", close_loop_NN_output, self.NN_output_cb)
         if self.PHYSICAL_GATE:
             rospy.Subscriber("/vrpn_client_node/gate_tianchensun/pose", PoseStamped, self.physical_gate_pose_cb)
 
@@ -106,7 +107,7 @@ class NN2_ROS_wrapper:
         self.gate_t_i = Gate(self.gate_points_list[0]) 
         self.history_obs = deque(maxlen=5)
         
-        self.NN_output = rospy.Publisher("/learning_agile_sim/NN_output", close_loop_NN_output, queue_size=1)
+        # self.NN_output = rospy.Publisher("/learning_agile_sim/NN_output", close_loop_NN_output, queue_size=1)
         self.vis_NN_trav_pose_pub = rospy.Publisher("/learning_agile_sim/vis_NN_trav_pose", PoseStamped, queue_size=1)
 
         self.NN_forward_time_pub = rospy.Publisher("/learning_agile_sim/NN_forward_time", Float32, queue_size=1)
@@ -265,6 +266,36 @@ class NN2_ROS_wrapper:
                 self.NN_output.publish(NN_output)
                 self.vis_NN_trav_pose_pub.publish(vis_NN_trav_pose_msg)
                 self.NN_forward_time_pub.publish(NN_forward_time_msg)
+
+    def NN_output_cb(self,msg):
+        """receive the model inference node output, and convert
+        it into the vis NN traversing pose
+
+        Args:
+            msg (close_loop_NN_output): the output of the NN
+        """
+        if self.MISSION_START:
+            out=np.zeros(train_cfg['model']['output_size'])
+            out[0:3] = msg.position
+            out[3:12] = msg.vector_9D_orientation
+            out[12:12+train_cfg["model"]["weights_vector_length"]] = msg.weight_vector
+            verify_tra_R,_=verify_SVD_ca(out[3:12])
+            quat=np.roll(R.from_matrix(verify_tra_R).as_quat(),1)
+            ##= visualize the traversing pose
+            vis_NN_trav_pose_msg = PoseStamped()
+            vis_NN_trav_pose_msg.header.stamp = rospy.Time.now()
+            vis_NN_trav_pose_msg.header.frame_id = "world"
+            vis_NN_trav_pose_msg.pose.position.x = msg.position[0]+self.state[0]
+            vis_NN_trav_pose_msg.pose.position.y = msg.position[1]+self.state[1]
+            vis_NN_trav_pose_msg.pose.position.z = msg.position[2]+self.state[2]
+            vis_NN_trav_pose_msg.pose.orientation.w = quat[0]
+            vis_NN_trav_pose_msg.pose.orientation.x = quat[1]
+            vis_NN_trav_pose_msg.pose.orientation.y = quat[2]
+            vis_NN_trav_pose_msg.pose.orientation.z = quat[3]
+
+            self.vis_NN_trav_pose_pub.publish(vis_NN_trav_pose_msg)
+
+
 
     def mission_start_cb(self,msg):
         """

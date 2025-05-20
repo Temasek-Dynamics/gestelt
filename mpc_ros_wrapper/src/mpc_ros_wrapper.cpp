@@ -259,9 +259,8 @@ void mpcRosWrapper::mission_start_cb(const gestelt_msgs::GoalsPtr &msg)
         quat_to_rotation_matrix();
 
     }
-    // des_goal_point_ << msg->waypoints[-1].position.x, msg->waypoints[-1].position.y, msg->waypoints[-1].position.z;
+
     des_goal_point_ << msg->waypoints[msg->waypoints.size()-1].position.x, msg ->waypoints[msg->waypoints.size()-1].position.y, msg ->waypoints[msg->waypoints.size()-1].position.z;
-    // des_goal_quat_ << msg->waypoints[-1].orientation.w, msg->waypoints[-1].orientation.x, msg->waypoints[-1].orientation.y, msg->waypoints[-1].orientation.z;
     des_goal_quat_ << msg->waypoints[msg->waypoints.size()-1].orientation.w, msg->waypoints[msg->waypoints.size()-1].orientation.x, msg->waypoints[msg->waypoints.size()-1].orientation.y, msg->waypoints[msg->waypoints.size()-1].orientation.z;
     des_goal_ang_vel_ <<0,0,0;
     des_goal_f_<<drone_mass_*9.81/4,drone_mass_*9.81/4,drone_mass_*9.81/4,drone_mass_*9.81/4;

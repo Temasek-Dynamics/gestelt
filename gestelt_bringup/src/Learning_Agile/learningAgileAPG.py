@@ -236,7 +236,7 @@ class LearningAgileAPG:
             ## if BPTT all, /10000 0
             
             # the larger the neural network angle output, the smaller the gradient
-            euler_scaler = np.array([(0.05*max(np.linalg.norm(np.array(euler_nn_list)[:,k,:],axis=1,keepdims=True))) for k in range(self.batch_size)])
+            euler_scaler = np.array([(max(np.linalg.norm(np.array(euler_nn_list)[:,k,:],axis=1,keepdims=True))) for k in range(self.batch_size)])
             self.p_L_p_z_batch = np.array(p_L_p_z_list)
             self.p_L_p_z_batch[:,:,:,3:12] /= 10000*euler_scaler.reshape(self.batch_size,1,1,1)
                 

@@ -15,12 +15,12 @@ hidden_size = train_cfg['model']['hidden_size']
 output_size = train_cfg['model']['output_size']  
 
 def get_obs(
-    last_gate_points = None,    
-    i = None,
-    input_size= None,
-    drone_state = None,
-    final_point = None,
-    gate_t_i= None
+        last_gate_points = None,    
+        i = None,
+        input_size= None,
+        drone_state = None,
+        final_point = None,
+        gate_t_i= None
     ):
     """
     get both immediate and past observation from the environment

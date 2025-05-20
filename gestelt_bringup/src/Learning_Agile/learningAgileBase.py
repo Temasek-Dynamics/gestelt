@@ -45,11 +45,13 @@ class LearningAgileBase:
         self.mission_cfg = mission_cfg
         self.train_cfg = train_cfg
 
-        self.learning_agile_sim = LearningAgileSim(python_sim_time=self.mission_cfg['mission_period'],
-                                                    mission_cfg=self.mission_cfg,
-                                                    train_cfg=self.train_cfg,
-                                                    dyn_step=0.002,
-                                                    options=options)
+        self.learning_agile_sim = LearningAgileSim(
+            python_sim_time=self.mission_cfg['mission_period'],
+            mission_cfg=self.mission_cfg,
+            train_cfg=self.train_cfg,
+            dyn_step=0.002,
+            options=options
+        )
         self.planner = self.learning_agile_sim.planner
       
         self.input_size = train_cfg['model']['input_size']
@@ -72,8 +74,10 @@ class LearningAgileBase:
 
     def reset(self,cur_epoch: int=0):
         #== random generate the env and set to the mpc solver
-        self.learning_agile_sim.generate_mission(cur_epoch,
-                                                 TEST=self.mission_cfg['FIX_GATE_PITCH_TEST'])
+        self.learning_agile_sim.generate_mission(
+            cur_epoch,
+            TEST=self.mission_cfg['FIX_GATE_PITCH_TEST']
+        )
         
         
 
@@ -114,7 +118,7 @@ class LearningAgileBase:
             self.state,
             self.learning_agile_sim.final_point,
             self.gate_t_i
-            )
+        )
         return self.obs
 
     def get_NN_decision(self,obs):
@@ -165,22 +169,23 @@ class LearningAgileBase:
             )
             for i in range(2):
                 init_solution, NO_SOLUTION_FLAG  = self.planner.conser_mpc_as_init_guess(
-                cur_state=self.state,
-                trav_auxvar_value=manual_auxvar_value,
-                last_u=self.last_u,
-                des_t_tra=self.t_tra_abs, 
-                first_iter=(self.i==0)
+                    cur_state=self.state,
+                    trav_auxvar_value=manual_auxvar_value,
+                    last_u=self.last_u,
+                    des_t_tra=self.t_tra_abs, 
+                    first_iter=(self.i==0)
                 )
         else:
             init_solution =None
             
-        cmd_solution,self.NO_SOLUTION_FLAG = self.planner.mpc_update(cur_state=self.state,
-                                                                trav_auxvar_value=self.np_nn_out ,
-                                                                des_t_tra= self.t_tra_rel,
-                                                                last_u=self.last_u,
-                                                                first_iter=(self.i==0),
-                                                                init_guess=init_solution,
-                                                                )
+        cmd_solution,self.NO_SOLUTION_FLAG = self.planner.mpc_update(
+            cur_state=self.state,
+            trav_auxvar_value=self.np_nn_out ,
+            des_t_tra= self.t_tra_rel,
+            last_u=self.last_u,
+            first_iter=(self.i==0),
+            init_guess=init_solution,
+        )
         if self.NO_SOLUTION_FLAG:
             print('No solution found')
             print('traverse_auxvar_value=',self.np_nn_out)
