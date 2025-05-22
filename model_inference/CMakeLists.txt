@@ -39,7 +39,6 @@ find_package(
 catkin_package(
   CATKIN_DEPENDS 
     ${ROS_DEPENDS}
-    include
     roscpp 
     std_msgs 
     geometry_msgs 
