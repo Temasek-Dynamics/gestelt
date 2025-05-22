@@ -43,20 +43,18 @@ RUN git checkout tianchensun_learning_agile
 #     && rm -rf /var/lib/apt/lists/*
 
 # copy the deployed model in the image
-WORKDIR /gestelt_ws/src/gestelt/gestelt_bringup/src/Learning_Agile/
+# WORKDIR /gestelt_ws/src/gestelt/gestelt_bringup/src/Learning_Agile/
 # COPY deployed_model /gestelt_ws/src/gestelt/gestelt_bringup/src/Learning_Agile/deployed_model
-# COPY libtorch /opt/libtorch
+# COPY pytorch-install-arm64 /opt/libtorch
 # compile the workspace
 WORKDIR /gestelt_ws/
-# RUN python3 ./src/gestelt/gestelt_bringup/src/Learning_Agile/learning_agile_sim.py
+
 RUN export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/root/acados/lib \
     && export ACADOS_SOURCE_DIR=/root/acados \
     && source /opt/ros/noetic/setup.bash \
     && catkin config --skiplist trajectory_planner se3_controller\
-    # && catkin config --skiplist mppi_py_interface\
-    && catkin config --skiplist model_inference\
-    # && catkin config --skiplist vicon_bridge\
-    && catkin build \
+    # && catkin config --skiplist model_inference\
+    && catkin build model_inference\ 
     && rm -rf /var/lib/apt/lists/* 
 
 

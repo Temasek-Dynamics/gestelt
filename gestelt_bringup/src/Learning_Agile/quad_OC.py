@@ -774,12 +774,11 @@ class OCSys:
             
         # output
         opt_sol = {
-        "state_traj_opt": self.state_traj_opt,
-        "control_traj_opt": self.control_traj_opt,
-        "costate_traj_opt": self.costate_traj_opt,
-        'auxvar_value': trav_auxvar_value,
-        "time": time,
-        "horizon": self.horizon
+            "state_traj_opt": self.state_traj_opt,
+            "control_traj_opt": self.control_traj_opt,
+            "costate_traj_opt": self.costate_traj_opt,
+            'auxvar_value': trav_auxvar_value,
+            "horizon": self.horizon
         }
                 #"cost": sol['f'].full()}
 

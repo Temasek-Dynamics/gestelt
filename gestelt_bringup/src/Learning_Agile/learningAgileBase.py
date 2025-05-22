@@ -6,6 +6,7 @@ from collections import deque
 import ray
 import wandb
 
+import pickle
 from scipy.spatial.transform import Rotation as R
 import matplotlib.pyplot as plt
 
@@ -101,9 +102,15 @@ class LearningAgileBase:
         #== reset flags
         
         if self.NO_SOLUTION_FLAG:
-            self.NO_SOLUTION_FLAG=False
-            self.planner.uavoc.acados_solver.reset()
+
+            # reset the solver by using the pre-saved initial guess
+            self.load_init_solution()
+            for i in range(self.new_horizon):
+                self.planner.uavoc.acados_solver.set(i, "x", np.array(self.saved_init_solution['state_traj_opt'])[i])
+                self.planner.uavoc.acados_solver.set(i, "u", np.array(self.saved_init_solution['control_traj_opt'])[i])
+            self.planner.uavoc.acados_solver.set(self.new_horizon, "x", np.array(self.saved_init_solution['state_traj_opt'])[-1])
             print('reset the solver')
+            self.NO_SOLUTION_FLAG=False
  
 
     def gate_step_and_obs(self,i):
@@ -361,7 +368,15 @@ class LearningAgileBase:
         p_L_p_z = np.array(self.p_L_i_p_z_i)
         return p_L_p_z/mission_cfg['learning_agile']['horizon']
 
-   
+    def load_init_solution(self):
+        """
+        load the initial solution for the MPC, as the solver reset target
+        """
+        
+        python_sim_data_dir = os.path.join(current_dir, 'python_sim_result')
+        # load the initial guess
+        with open(os.path.join(python_sim_data_dir,'init_solution.pkl'), 'rb') as f:
+            self.saved_init_solution = pickle.load(f)
 # def get_penalty(base:LearningAgileBase):
 #     """
 #     calculate the penalty of MPC solution

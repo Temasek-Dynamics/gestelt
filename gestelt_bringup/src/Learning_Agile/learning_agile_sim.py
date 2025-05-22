@@ -14,6 +14,7 @@ from scipy.spatial.transform import Rotation as R
 import torch 
 import math
 import matplotlib.pyplot as plt
+import pickle
 
 from quad_model import toQuaternion, Gate, Rd2Rp, get_gate_points
 from visualization.python_sim_vis import play_animation, plot_position, plot_velocity, plot_scalar, plot_thrust, plot_angularrate, plot_3D_traj,plot_M,plot_T,plot_3axis_weights
@@ -171,7 +172,7 @@ class LearningAgileSim():
         self.goal_yaw=np.array(self.config_dict['mission']['goal_ori_euler'])[0]
         
         self.gate_center=np.array(self.config_dict['mission']['gate_position'])
-        # self.gate_center += np.random.uniform(-0.1,0.1,3)
+        self.gate_center += np.random.uniform(-0.1,0.1,3)
         # self.gate_ori_RP=np.array(self.config_dict['mission']['gate_ori_RP'])
         gate_ori_euler=np.array(self.config_dict['mission']['gate_ori_euler'])
         self.gate_ori_9d=R.from_euler('zyx',gate_ori_euler).as_matrix().flatten()
@@ -193,11 +194,13 @@ class LearningAgileSim():
         final_q=toQuaternion(self.goal_yaw,[0,0,1])
           
 
-        self.planner.init_state_and_mission(goal_pos=self.env_init_set[3:6],
-                              goal_ori=final_q,
-                              ini_r=self.env_init_set[0:3].tolist(),
-                              ini_v_I = [0.0, 0.0, 0.0], # initial velocity
-                              ini_q=ini_q,)
+        self.planner.init_state_and_mission(
+            goal_pos=self.env_init_set[3:6],
+            goal_ori=final_q,
+            ini_r=self.env_init_set[0:3].tolist(),
+            ini_v_I = [0.0, 0.0, 0.0], # initial velocity
+            ini_q=ini_q
+        )
         
         if self.config_dict['ctl_mode'] != 3:
             self.u=self.planner.hover_u
@@ -333,6 +336,13 @@ class LearningAgileSim():
                         des_t_tra=des_t_tra, 
                         first_iter=(self.i==0)
                         )
+                    
+                    # save the initial guess
+                    if not NO_SOLUTION_FLAG and not self.options["MC_EVALUATION"]:
+                        with open(os.path.join(python_sim_data_dir,'init_solution.pkl'), 'wb') as f:
+                            pickle.dump(init_solution, f)
+                            
+                        
                 else:
                     init_solution = None
                     
@@ -405,15 +415,17 @@ class LearningAgileSim():
 
         
     def visualize(self):
-        play_animation(wing_len=self.planner.wing_len,
-                        gate_traj1=self.gate_points_list[::5,:,:],
-                        state_traj=self.state_n[::5,:],
-                        pred_traj_list=self.pred_traj_list,
-                        goal_pos=self.final_point.tolist(),
-                        NN_pos=self.nn_output_list[:,0:3],
-                        NN_R=self.des_tra_R_list,
-                        dt=0.01,
-                        save_option=0)
+        play_animation(
+            wing_len=self.planner.wing_len,
+            gate_traj1=self.gate_points_list[::5,:,:],
+            state_traj=self.state_n[::5,:],
+            pred_traj_list=self.pred_traj_list,
+            goal_pos=self.final_point.tolist(),
+            NN_pos=self.nn_output_list[:,0:3],
+            NN_R=self.des_tra_R_list,
+            dt=0.01,
+            save_option=0
+        )
             
         # save the data, not show it
         fig, axes = plt.subplots(4, 3, figsize=(12, 8),dpi=100)  
@@ -510,19 +522,21 @@ def parse_options():
     parser.add_argument('--SAVE_SIM', type=str2bool, default=True, help='Enable or disable SAVE_SIM.')
     parser.add_argument('--SAVE_CSV', type=str2bool, default=True, help='Enable or disable save sim data in the csv format.')
     parser.add_argument('--COMPARISON',  type=str2bool, default=False, help='Compare the training results with other methods')
-    parser.add_argument('--MC_EVALUATION',  type=str2bool, default=False, help='Compare the training results with other methods')
+    parser.add_argument('--MC_EVALUATION',  type=str2bool, default=True, help='Compare the training results with other methods')
     parser.add_argument('--MULTI_COLLISION_POINT_CHECK',  type=str2bool, default=False, help='multiple collision point check for the training')
     args = parser.parse_args()
     return vars(args)  # Return options as a dictionary  
 
-# @ray.remote     
-def eval_sim_interface(mission_cfg=None,
-                 train_cfg=None,
-                 options=None,
-                 model_file=None,
-                 python_sim_data_dir=None,
-                 INTRAIN=False,
-                 STAB_TEST=False):
+@ray.remote     
+def eval_sim_interface(
+    mission_cfg=None,
+    train_cfg=None,
+    options=None,
+    model_file=None,
+    python_sim_data_dir=None,
+    INTRAIN=False,
+    STAB_TEST=False
+):
     """
     test the success rate, evaluate the real executed trajectory
     """
@@ -537,12 +551,14 @@ def eval_sim_interface(mission_cfg=None,
     # problem definition
     # the dyn_step is the simulation step in the simulation environment
     # for the acados ERK integrator, the step is (integral step)/4 =0.025s
-    learning_agile_sim=LearningAgileSim(python_sim_time=5,
-                                        mission_cfg=mission_cfg,
-                                        train_cfg=train_cfg,
-                                        model_file=model_file,
-                                        dyn_step=0.002,
-                                        options=options)
+    learning_agile_sim=LearningAgileSim(
+        python_sim_time=5,
+        mission_cfg=mission_cfg,
+        train_cfg=train_cfg,
+        model_file=model_file,
+        dyn_step=0.002,
+        options=options
+    )
     
     
 
@@ -554,7 +570,8 @@ def eval_sim_interface(mission_cfg=None,
     #####============== Solve the problem ====================#######
     # solve the problem
     forward_return=learning_agile_sim.forward(python_sim_data_dir,STAB_TEST=STAB_TEST)
-    out={'FAILED':forward_return['FAILED'],
+    out={
+        'FAILED':forward_return['FAILED'],
         'failed_state':forward_return['failed_state'],         
         'state_traj':learning_agile_sim.state_n,
         'gate_traj':learning_agile_sim.gate_points_list
@@ -575,19 +592,23 @@ def main():
         model_file=os.path.join(current_dir, f'training_data/NN_model/',model_name)
     
     if options['MC_EVALUATION']:
-        eval_sim_interface.remote(mission_cfg,
-                    train_cfg,
-                    options,
-                    model_file,
-                    python_sim_data_dir,
-                    INTRAIN=False)
+        eval_sim_interface.remote(
+            mission_cfg,
+            train_cfg,
+            options,
+            model_file,
+            python_sim_data_dir,
+            INTRAIN=False
+        )
     else:
-        eval_sim_interface(mission_cfg,
-                    train_cfg,
-                    options,
-                    model_file,
-                    python_sim_data_dir,
-                    INTRAIN=False)
+        eval_sim_interface(
+            mission_cfg,
+            train_cfg,
+            options,
+            model_file,
+            python_sim_data_dir,
+            INTRAIN=False
+        )
     
     
 

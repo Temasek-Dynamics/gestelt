@@ -212,10 +212,12 @@ class PlanFwdBwdWrapper():
         # initialize the mpc solver
         # self.uavoc.ocSolverInit(horizon=self.horizon,dt=self.dt)
         self.uavoc.AcadosModelInit()
-        self.uavoc.AcadosOcSolverInit(horizon=self.horizon,
-                                       dt=self.dt,
-                                       SQP_RTI_OPTION=options['SQP_RTI_OPTION'],
-                                       USE_PREV_SOLVER=options['USE_PREV_SOLVER'])
+        self.uavoc.AcadosOcSolverInit(
+            horizon=self.horizon,
+            dt=self.dt,
+            SQP_RTI_OPTION=options['SQP_RTI_OPTION'],
+            USE_PREV_SOLVER=options['USE_PREV_SOLVER']
+        )
        
         ###################################################################
         ###------------ PDP auxiliary control system----------------#######
@@ -234,12 +236,14 @@ class PlanFwdBwdWrapper():
         
        
         
-    def init_state_and_mission(self,
-                             goal_pos, 
-                             goal_ori,
-                             ini_r,
-                             ini_v_I, 
-                             ini_q):  
+    def init_state_and_mission(
+        self,
+        goal_pos, 
+        goal_ori,
+        ini_r,
+        ini_v_I, 
+        ini_q
+        ):  
         # goal
         self.goal_pos = goal_pos
         goal_ori = np.array(goal_ori)
@@ -328,27 +332,29 @@ class PlanFwdBwdWrapper():
         generate the gate obstacle when the real drone trajectory is close to the gate (real drone trajectory y=0)
         since the gate could move
         """
-        # try:
-        real_t_tra = np.where(np.abs(state_traj[:,1])<0.1)[0][0]
-        gate_real_t_tra= Gate(gate_points_list[int(real_t_tra)])
-        self.init_obstacle(gate_real_t_tra)
-        
-        self.vert_traj = get_quad_vert_pos(
-              wing_len = self.wing_len, 
-            state_traj = state_traj
+        try:
+            real_t_tra = np.where(np.abs(state_traj[:,1])<0.1)[0][0]
+        except IndexError: 
+            FAILED = True
+        else:
+            gate_real_t_tra= Gate(gate_points_list[int(real_t_tra)])
+            self.init_obstacle(gate_real_t_tra)
+            
+            self.vert_traj = get_quad_vert_pos(
+                wing_len = self.wing_len, 
+                state_traj = state_traj
+            )
+            
+            _,_,FAILED=self.obstacle.penalty_cal_diff_collision(
+                self.config,
+                options=self.options,
+                state_traj=state_traj,
+                gate_corners=self.gate_corners,
+                gate_quat=self.gate_quat,
+                vert_traj=self.vert_traj[:,0:3],
+                goal_pos=self.goal_pos
             )
         
-        _,_,FAILED=self.obstacle.penalty_cal_diff_collision(
-            self.config,
-            options=self.options,
-            state_traj=state_traj,
-            gate_corners=self.gate_corners,
-            gate_quat=self.gate_quat,
-            vert_traj=self.vert_traj[:,0:3],
-            goal_pos=self.goal_pos
-            )
-        # except: 
-        #     FAILED = True
         
         return FAILED
     
