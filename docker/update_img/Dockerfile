@@ -48,7 +48,6 @@ RUN git checkout tianchensun_learning_agile
 # COPY pytorch-install-arm64 /opt/libtorch
 # compile the workspace
 WORKDIR /gestelt_ws/
-
 RUN export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/root/acados/lib \
     && export ACADOS_SOURCE_DIR=/root/acados \
     && source /opt/ros/noetic/setup.bash \
