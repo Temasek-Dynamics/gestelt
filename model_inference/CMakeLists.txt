@@ -11,7 +11,8 @@ set(TORCH_DIR /opt/libtorch/share/cmake/Torch)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED COMPONENTS
+find_package(catkin REQUIRED 
+COMPONENTS
   roscpp
   std_msgs
   gestelt_msgs
@@ -26,26 +27,31 @@ find_package(Eigen3 REQUIRED)
 
 catkin_package(
   CATKIN_DEPENDS 
-  roscpp 
-  std_msgs 
-  geometry_msgs 
-  tf2 
-  tf2_ros
+    roscpp 
+    std_msgs 
+    geometry_msgs 
+    tf2 
+    tf2_ros
+    gestelt_msgs
 )
 
 message(STATUS "catkin_LIBRARIES: ${catkin_LIBRARIES}")
 message(STATUS "TORCH_LIBRARIES: ${TORCH_LIBRARIES}")
 include_directories(
-  INCLUDE_DIRS include
+  include
   ${catkin_INCLUDE_DIRS}
   ${EIGEN3_INCLUDE_DIR}
   ${TORCH_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
-file(GLOB SRC_FILES src/*.cpp) 
-add_library(${PROJECT_NAME}_core ${SRC_FILES})
-
+file(GLOB SRC_FILES 
+    src/torch_engine.cpp) 
+add_library(${PROJECT_NAME}_shared_lib ${SRC_FILES})
+target_link_libraries(${PROJECT_NAME}_shared_lib
+  ${catkin_LIBRARIES}
+  ${TORCH_LIBRARIES}
+)
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
 ## either from message generation or dynamic reconfigure
@@ -57,13 +63,16 @@ add_executable(${PROJECT_NAME}_node
   src/main.cpp
   src/inference_node.cpp
 )
-add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(${PROJECT_NAME}_node 
+                 ${${PROJECT_NAME}_EXPORTED_TARGETS} 
+                ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(${PROJECT_NAME}_node
   ${catkin_LIBRARIES}
+  Threads::Threads
   ${TORCH_LIBRARIES}
-  ${PROJECT_NAME}_core
+  ${PROJECT_NAME}_shared_lib
 )
 
 #############
