@@ -7,7 +7,7 @@ SHELL ["/bin/bash", "-c"]
 # Copy .bashrc file
 # COPY .bashrc /root/
 # RUN apt-get update && apt-get install --no-install-recommends -y \
-#     jax \
+#     libstdc++6 \
 #     && rm -rf /var/lib/apt/lists/*
 
 # WORKDIR /gestelt_ws/src/
@@ -53,8 +53,9 @@ RUN export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/root/acados/lib \
     && export ACADOS_SOURCE_DIR=/root/acados \
     && source /opt/ros/noetic/setup.bash \
     && catkin config --skiplist trajectory_planner se3_controller\
-    # && catkin config --skiplist model_inference\
-    && catkin build model_inference\ 
+    && catkin config --skiplist vicon_bridge\
+    && catkin config --skiplist fake_drone\
+    && catkin build\ 
     && rm -rf /var/lib/apt/lists/* 
 
 

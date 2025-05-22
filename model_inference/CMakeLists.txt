@@ -22,9 +22,7 @@ find_package(catkin REQUIRED COMPONENTS
  
 find_package(Torch PATHS ${TORCH_DIR} REQUIRED)
 find_package(Eigen3 REQUIRED)
-# find_library(onnxruntime_LIBRARY onnxruntime
-#     PATHS "${ONNXRUNTIME_DIR}/lib"
-# )
+
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -135,7 +133,6 @@ include_directories(
   ${EIGEN3_INCLUDE_DIR}
   /opt/libtorch/include
   /opt/libtorch/include/torch/csrc/api/include
-  /opt/onnxruntime/include
 )
 
 ## Declare a C++ library
@@ -169,7 +166,6 @@ add_executable(${PROJECT_NAME}_node
 target_link_libraries(${PROJECT_NAME}_node
   ${catkin_LIBRARIES}
   ${TORCH_LIBRARIES}
-  ${ONNXRUNTIME_LIB}
   ${PROJECT_NAME}_core
 )
 
