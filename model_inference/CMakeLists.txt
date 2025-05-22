@@ -11,6 +11,14 @@ set(TORCH_DIR /opt/libtorch/share/cmake/Torch)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
+set(ROS_LIBRARIES
+  roscpp
+  std_msgs
+  gestelt_msgs
+  tf2
+  tf2_ros
+  geometry_msgs
+)
 find_package(catkin REQUIRED 
 COMPONENTS
   roscpp
@@ -22,11 +30,16 @@ COMPONENTS
 )
  
 find_package(Torch PATHS ${TORCH_DIR} REQUIRED)
-find_package(Eigen3 REQUIRED)
+find_package(
+  Eigen3 REQUIRED  
+  ${ROS_LIBRARIES}
+)
 
 
 catkin_package(
   CATKIN_DEPENDS 
+    ${ROS_DEPENDS}
+    include
     roscpp 
     std_msgs 
     geometry_msgs 
