@@ -11,14 +11,6 @@ set(TORCH_DIR /opt/libtorch/share/cmake/Torch)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-set(ROS_LIBRARIES
-  roscpp
-  std_msgs
-  gestelt_msgs
-  tf2
-  tf2_ros
-  geometry_msgs
-)
 find_package(catkin REQUIRED 
 COMPONENTS
   roscpp
@@ -29,16 +21,22 @@ COMPONENTS
   geometry_msgs
 )
  
-find_package(Torch PATHS ${TORCH_DIR} REQUIRED)
+find_package(
+  Torch PATHS ${TORCH_DIR} REQUIRED
+)
 find_package(
   Eigen3 REQUIRED  
-  ${ROS_LIBRARIES}
 )
 
-
+# declare the current package's exported and dependencies, 
+# to make it as a standard catkin package
 catkin_package(
   CATKIN_DEPENDS 
-    ${ROS_DEPENDS}
+  INCLUDE_DIR include
+  DEPENDS
+  LIBRARIES
+  ${PROJECT_NAME}_shared_lib
+  CATKIN_DEPENDS
     roscpp 
     std_msgs 
     geometry_msgs 
@@ -49,6 +47,8 @@ catkin_package(
 
 message(STATUS "catkin_LIBRARIES: ${catkin_LIBRARIES}")
 message(STATUS "TORCH_LIBRARIES: ${TORCH_LIBRARIES}")
+
+# find the directories include
 include_directories(
   include
   ${catkin_INCLUDE_DIRS}
@@ -56,10 +56,20 @@ include_directories(
   ${TORCH_INCLUDE_DIRS}
 )
 
+# based on the target_link_libraries() command,
+# link the specified libraries directories
+link_directories(
+  ${catkin_LIBRARY_DIRS}
+  ${TORCH_LIBRARY_DIRS}
+)
 ## Declare a C++ library
 file(GLOB SRC_FILES 
     src/torch_engine.cpp) 
+
+# specify the generated library name
 add_library(${PROJECT_NAME}_shared_lib ${SRC_FILES})
+
+# link the libraries to the executable
 target_link_libraries(${PROJECT_NAME}_shared_lib
   ${catkin_LIBRARIES}
   ${TORCH_LIBRARIES}
