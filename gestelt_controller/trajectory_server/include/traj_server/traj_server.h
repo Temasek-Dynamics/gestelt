@@ -515,6 +515,8 @@ private: // Member variables
 
   double traj_msg_timeout_{0.2}; 
   uint16_t ct_omega_mode_{0};
+  ros::Time last_odom_time;
+  ros::Time last_pose_time;
 
   int num_pose_msgs_{0};
 

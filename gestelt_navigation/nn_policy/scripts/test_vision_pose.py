@@ -187,7 +187,7 @@ class NN_POLICY_PLANNER(object):
         self.mission_mode_sub_ = rospy.Subscriber("/traj_server/warp_mission_command", Int8, self.missionModeCb, queue_size = 5)
         self.target_position_sub_ = rospy.Subscriber("/drone0/warp/local_position/target_position", PoseStamped, self.targetPosCb, queue_size = 5)
 
-        self.warp_drone_pose_pub_ = rospy.Subscriber('/drone0/warp/local_position/pose', PoseStamped, self.warpPoseCB, queue_size=5)
+        self.warp_drone_pose_pub_ = rospy.Subscriber('/drone0/mavros/vision_pose/pose', PoseStamped, self.warpPoseCB, queue_size=5)
         self.warp_drone_odom_sub_ = rospy.Subscriber('/drone0/warp/local_position/odom', Odometry, self.warpOdomCB, queue_size=5)
         
         #PVA controller trajectory Publisher
@@ -241,23 +241,21 @@ class NN_POLICY_PLANNER(object):
         self.drone_qd = np.array([msg.twist.twist.angular.x, msg.twist.twist.angular.y, msg.twist.twist.angular.z])
 
     def warpOdomCB(self,msg):
-
         self.warp_qd = np.array([msg.twist.twist.angular.x, msg.twist.twist.angular.y, msg.twist.twist.angular.z, msg.twist.twist.linear.x, msg.twist.twist.linear.y, msg.twist.twist.linear.z ])
-        #print(msg.header.stamp)
-        #if self.last_odom_time is not None:
-        #    time_diff = (msg.header.stamp- self.last_odom_time).to_sec() 
-        #    if time_diff > 0.02:
-        #        print(f"TIME DIFFERENCE ODOM EXCEEDED!!! {time_diff} at {msg.header.stamp}")
+        if self.last_odom_time is not None:
+            time_diff = (msg.header.stamp- self.last_odom_time).to_sec() 
+            if time_diff > 0.05:
+                print(f"TIME DIFFERENCE ODOM EXCEEDED!!! {time_diff} at {msg.header.stamp}")
         self.last_odom_time = msg.header.stamp
 
     def warpPoseCB(self,msg):
         self.warp_q = np.array([msg.pose.position.x, msg.pose.position.y,msg.pose.position.z, msg.pose.orientation.x, msg.pose.orientation.y, msg.pose.orientation.z, msg.pose.orientation.w])
-        
+
         if self.last_pos_time is not None:
-           time_diff = (msg.header.stamp- self.last_pos_time).to_sec() 
-           print(time_diff)
-           if time_diff > 0.05:
-               print(f"TIME DIFFERENCE EXCEEDED!!! {time_diff} at {msg.header.stamp}")
+            time_diff = (msg.header.stamp- self.last_pos_time).to_sec() 
+            print(f"TIME DIFFERENCE EXCEEDED!!! {time_diff} at {msg.header.stamp}")
+            if time_diff > 0.05:
+                print(f"TIME DIFFERENCE EXCEEDED!!! {time_diff} at {msg.header.stamp}")
         self.last_pos_time = msg.header.stamp
 
     def targetPosCb(self,msg):
@@ -418,14 +416,14 @@ class NN_POLICY_PLANNER(object):
 if __name__=="__main__":
     signal(SIGINT, handler)
     print("STARTING NODE")
-    policy_file = "20250527-165841" #20250520-232722 - 0.05 20250521-092027 - 0.02 20250521-114910# 0.02 0.707  20250522-174445 - 0.05 (no orientation not too bad)- 20250523-084843 (0.05 -with orientation) 20250523-110509 (0.05 - no orientation. To test fly)
-    print(f"POLICY PATH IS {policy_file}")  # (with orientation)- 0.02 - to fly "20250523-155958 (with orientation and pos randomize) - 0.02" "20250523-170204 - 0.707 0.05" "20250523-170241 - 1,0.05"
-    full_path = "/home/yanrui/storage/gestelt_ws/src/gestelt/gestelt_navigation/nn_policy/logs/vel_tracking"  #0.05 good enough 20250525-162048  20250525-174947
+    policy_file = "20250519-112851"
+    print(f"POLICY PATH IS {policy_file}")
+    full_path = "/home/yanrui/storage/gestelt_ws/src/gestelt/gestelt_navigation/nn_policy/logs/vel_tracking"
     actual_full_path = os.path.join(full_path, policy_file)
     config_path = os.path.join(actual_full_path,"training_config.yaml")
     full_policy_path = os.path.join(actual_full_path, "policy.pth")
 
-    rospy.init_node("nn_policy_planner2")
+    rospy.init_node("nn_policy_planner")
     ros_lib = roslib.packages.get_pkg_dir("gestelt_bringup")
     full_config_path = os.path.join(ros_lib, "config/traj_server_vel.yaml")
     with open(full_config_path, 'r') as file:
@@ -437,7 +435,7 @@ if __name__=="__main__":
     mission_command_mode = loaded_params["mission_command_mode"]
 
     position_control = True #config_params["position_control"]
-    delta_time = 0.02 #float(config_params["delta_time"])
+    delta_time = 0.05 #float(config_params["delta_time"])
     max_angular_rate = 3.0 #float(config_params["max_angular_rates"])
 
     

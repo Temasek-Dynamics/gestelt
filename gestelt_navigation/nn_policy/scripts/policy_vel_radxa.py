@@ -60,7 +60,7 @@ class TEST_RENDER(object):
             self.policy = TrackVel(input_dim=16)
         else:
             self.policy = TrackVel(input_dim = 10)
-        self.policy.load_state_dict(torch.load(policy_path))
+        self.policy.load_state_dict(torch.load(policy_path,map_location=torch.device('cpu')))
         self.policy.eval()
         self.init_a = np.zeros((1,4))
 
@@ -72,10 +72,6 @@ class TEST_RENDER(object):
         target_vel_pos[:,1] = 0.0
         target_vel_pos[:,2] = 1.0
         # target_vel = np.random.randn(1, 3)
-
-        target_or = np.zeros((1, 4))
-        target_or[:,-1] = np.ones((1,)) * 1
-        target_or[:,-3] = np.ones((1,)) * 0
         
 
         target_unit_vel_pos = target_vel_pos / np.linalg.norm(target_vel_pos, axis = 1).reshape(-1,1)
@@ -84,7 +80,7 @@ class TEST_RENDER(object):
         target_pos = np.array([0, 1,0.0]).reshape(1,3)
         # target_pos = 2 * target_unit_vel_pos + target_pos
         
-        # print(f"Target position is: {target_pos}")
+        print(f"Target position is: {target_pos}")
 
         
         # target_pos = target_unit_vel + target_pos
@@ -92,12 +88,10 @@ class TEST_RENDER(object):
         self.t_pos = torch.tensor(target_pos, dtype=torch.float32)
         self.init_pos = torch.tensor(target_pos, dtype=torch.float32)
         self.previous_action = torch.tensor(self.init_a, dtype=torch.float32)
-        self.t_or = torch.tensor(target_or, dtype=torch.float32  )
         
 
 
     def evaluate_(self, pos, att, qd):
-        start_time = time.time()
         # if torch.norm(pos - self.t_pos) < 0.3:
         #     print("switching new target")
         #     new_point = self.vector_to_line(pos, self.init_pos, self.target_unit_vel_tensor)
@@ -106,10 +100,8 @@ class TEST_RENDER(object):
         if self.pc == True:
             # delta_vect = self.vector_to_line(pos, self.init_pos , self.target_unit_vel_tensor)
             diff_pos = self.t_pos - pos
-            # _, angular_diff = self.quaternion_loss(self.t_or, att)
             # print(diff_pos)
             x = torch.cat((diff_pos, att, qd, self.t_vel), dim=1)
-            # x[:,6] = -x[:,6]
             # x = torch.cat((diff_pos, att, qd, self.t_vel), dim=1)
         else:
             vel = qd[:,3:]
@@ -119,8 +111,6 @@ class TEST_RENDER(object):
         a = self.policy(x)
         
         self.previous_action = a
-        end_time = time.time()
-        # print(f"Time taken: {end_time - start_time:.4f} seconds")
         return a
     
     def vector_to_line(self,P, A, d):
@@ -134,33 +124,6 @@ class TEST_RENDER(object):
     def update_target_pos(self,P):
         target_pos = P
         self.t_pos = torch.tensor(target_pos, dtype=torch.float32)
-
-    def quaternion_loss(self,y_true, y_pred):
-        """
-        Computes the angular difference between two quaternions in radians.
-        Args:
-            y_true: Tensor of shape (batch_size, 4), ground truth quaternions.
-            y_pred: Tensor of shape (batch_size, 4), predicted quaternions.
-        Returns:
-            Scalar tensor: Mean angular difference across the batch.
-        """
-        # Normalize quaternions to ensure they are unit quaternions
-        y_true = F.normalize(y_true, dim=-1)
-        y_pred = F.normalize(y_pred, dim=-1)
-
-        # y_pred = y_pred[:,3:]
-
-        # Compute the dot product
-        dot_product = torch.sum(y_true * y_pred, dim=-1)  # Shape: (batch_size,)
-
-        # Clamp the dot product to avoid invalid values due to numerical errors
-        dot_product_clamped = torch.clamp(dot_product, -1.0 + 1e-6, 1.0 - 1e-6)
-
-        # Compute angular difference (in radians)
-        angular_diff = 2 * torch.acos(torch.abs(dot_product_clamped))
-
-        # Return the mean angular difference
-        return angular_diff.mean(), angular_diff
     
 
 class NN_POLICY_PLANNER(object):
@@ -176,7 +139,6 @@ class NN_POLICY_PLANNER(object):
         self.max_angular_rates = max_angular_rates
         self.policy = policy
         self.last_pos_time = None
-        self.last_odom_time = None
         
 
         self.swarm_mode_pub_ = rospy.Publisher('/traj_server/swarm_command', Int8, queue_size=5)
@@ -234,6 +196,11 @@ class NN_POLICY_PLANNER(object):
     def poseCb(self, msg):
         self.drone_pos = np.array([msg.pose.position.x, msg.pose.position.y, msg.pose.position.z])
         self.drone_quat = np.array([msg.pose.orientation.x, msg.pose.orientation.y, msg.pose.orientation.z, msg.pose.orientation.w])
+        if self.last_pos_time is not None:
+            time_diff = (msg.header.stamp- self.last_pos_time).to_sec() 
+            if time_diff > 0.02:
+                print(f"TIME DIFFERENCE EXCEEDED!!! {time_diff} at {msg.header.stamp}")
+        self.last_pos_time = msg.header.stamp
 
         self._pose_odom_pub_callback()
 
@@ -241,24 +208,10 @@ class NN_POLICY_PLANNER(object):
         self.drone_qd = np.array([msg.twist.twist.angular.x, msg.twist.twist.angular.y, msg.twist.twist.angular.z])
 
     def warpOdomCB(self,msg):
-
         self.warp_qd = np.array([msg.twist.twist.angular.x, msg.twist.twist.angular.y, msg.twist.twist.angular.z, msg.twist.twist.linear.x, msg.twist.twist.linear.y, msg.twist.twist.linear.z ])
-        #print(msg.header.stamp)
-        #if self.last_odom_time is not None:
-        #    time_diff = (msg.header.stamp- self.last_odom_time).to_sec() 
-        #    if time_diff > 0.02:
-        #        print(f"TIME DIFFERENCE ODOM EXCEEDED!!! {time_diff} at {msg.header.stamp}")
-        self.last_odom_time = msg.header.stamp
 
     def warpPoseCB(self,msg):
         self.warp_q = np.array([msg.pose.position.x, msg.pose.position.y,msg.pose.position.z, msg.pose.orientation.x, msg.pose.orientation.y, msg.pose.orientation.z, msg.pose.orientation.w])
-        
-        if self.last_pos_time is not None:
-           time_diff = (msg.header.stamp- self.last_pos_time).to_sec() 
-           print(time_diff)
-           if time_diff > 0.05:
-               print(f"TIME DIFFERENCE EXCEEDED!!! {time_diff} at {msg.header.stamp}")
-        self.last_pos_time = msg.header.stamp
 
     def targetPosCb(self,msg):
         self.warp_target_pos = np.array([msg.pose.position.x, msg.pose.position.y,msg.pose.position.z])
@@ -279,8 +232,8 @@ class NN_POLICY_PLANNER(object):
         pva_traj_msg.transform.translation.z = 1.0
         pva_traj_msg.transform.rotation.x = 0.0
         pva_traj_msg.transform.rotation.y = 0.0
-        pva_traj_msg.transform.rotation.z = 0.0
-        pva_traj_msg.transform.rotation.w = 1.0
+        pva_traj_msg.transform.rotation.z = 0.0 #0.707
+        pva_traj_msg.transform.rotation.w = 1.0 #0.707
         pva_traj_msg.type_mask = 2048
 
 
@@ -418,14 +371,14 @@ class NN_POLICY_PLANNER(object):
 if __name__=="__main__":
     signal(SIGINT, handler)
     print("STARTING NODE")
-    policy_file = "20250527-165841" #20250520-232722 - 0.05 20250521-092027 - 0.02 20250521-114910# 0.02 0.707  20250522-174445 - 0.05 (no orientation not too bad)- 20250523-084843 (0.05 -with orientation) 20250523-110509 (0.05 - no orientation. To test fly)
-    print(f"POLICY PATH IS {policy_file}")  # (with orientation)- 0.02 - to fly "20250523-155958 (with orientation and pos randomize) - 0.02" "20250523-170204 - 0.707 0.05" "20250523-170241 - 1,0.05"
-    full_path = "/home/yanrui/storage/gestelt_ws/src/gestelt/gestelt_navigation/nn_policy/logs/vel_tracking"  #0.05 good enough 20250525-162048  20250525-174947
+    policy_file = "20250515-182824" #"20250507-083934" #20250507-084042
+    print(f"POLICY PATH IS {policy_file}")
+    full_path = "/home/rock/gestelt_ws/src/gestelt/gestelt_navigation/nn_policy/logs/vel_tracking"
     actual_full_path = os.path.join(full_path, policy_file)
     config_path = os.path.join(actual_full_path,"training_config.yaml")
     full_policy_path = os.path.join(actual_full_path, "policy.pth")
 
-    rospy.init_node("nn_policy_planner2")
+    rospy.init_node("nn_policy_planner")
     ros_lib = roslib.packages.get_pkg_dir("gestelt_bringup")
     full_config_path = os.path.join(ros_lib, "config/traj_server_vel.yaml")
     with open(full_config_path, 'r') as file:

@@ -38,9 +38,6 @@ void TrajectoryServer::init(ros::NodeHandle& nh, ros::NodeHandle& pnh)
 
   //Set mission_command_mode
   setMissionCmd(MissionCmdMode(IntToMission(int(1))));
-  std::cout <<"I AM IN THE NEW SCRIPTTTTTTTTTTTTTTTTTTTTTTTTTT\n";
-  last_odom_time = ros::Time(0);
-  last_pose_time = ros::Time(0);
 
   /////////////////
   /* Subscribers */
@@ -150,7 +147,7 @@ void TrajectoryServer::execTrajCb(const gestelt_msgs::ExecTrajectory::ConstPtr &
         try {
             // Lookup the transformation from input frame to target frame
             geometry_msgs::TransformStamped transformStamped;
-            transformStamped = tfBuffer.lookupTransform("body", "warp", ros::Time(0));
+            transformStamped = tfBuffer.lookupTransform("map", "warp", ros::Time(0));
 
             // Transform the vector
             geometry_msgs::Vector3Stamped transformed_output_bodyrates_vector;
@@ -196,16 +193,6 @@ void TrajectoryServer::UAVPoseCB(const geometry_msgs::PoseStamped::ConstPtr &msg
 
   uav_pose_ = *msg; 
 
-  ros::Time stamp = msg->header.stamp;
-  ros::Duration latency = stamp - last_pose_time;
-  if (latency.toSec() > 0.02)  // 0.1 seconds = 100 ms
-  {
-    ROS_WARN("Pose timestamp is delayed by %.3f ms!", latency.toSec() * 1000.0);
-  }
-
-
-  last_pose_time = stamp;
-
   static tf2_ros::TransformBroadcaster br;
   geometry_msgs::TransformStamped transformStamped;
 
@@ -227,15 +214,7 @@ void TrajectoryServer::UAVPoseCB(const geometry_msgs::PoseStamped::ConstPtr &msg
 void TrajectoryServer::UAVOdomCB(const nav_msgs::Odometry::ConstPtr &msg)
 {
   uav_odom_ = *msg;
-  ros::Time stamp = msg->header.stamp;
-  ros::Duration latency = stamp - last_odom_time;
-  if (latency.toSec() > 0.01)  // 0.1 seconds = 100 ms
-  {
-    ROS_WARN("Odometry timestamp is delayed by %.3f ms!", latency.toSec() * 1000.0);
-  }
 
-
-  last_odom_time = stamp;
   Eigen::Vector3d vel_vect = Eigen::Vector3d{
                                 msg->twist.twist.linear.x, 
                                 msg->twist.twist.linear.y, 
@@ -261,7 +240,7 @@ void TrajectoryServer::UAVOdomCB(const nav_msgs::Odometry::ConstPtr &msg)
   try {
       // Lookup the transformation from input frame to target frame
       geometry_msgs::TransformStamped transformStamped;
-      transformStamped = tfBuffer.lookupTransform("warp", "body", ros::Time(0));
+      transformStamped = tfBuffer.lookupTransform("warp", "map", ros::Time(0));
 
       // Transform the vector
       geometry_msgs::Vector3Stamped transformed_vector;
@@ -271,7 +250,6 @@ void TrajectoryServer::UAVOdomCB(const nav_msgs::Odometry::ConstPtr &msg)
       // ROS_INFO("Transformed Vector: x=%.2f, y=%.2f, z=%.2f", 
       //          transformed_vector.vector.x, transformed_vector.vector.y, transformed_vector.vector.z);
       nav_msgs::Odometry transformed_odom;
-      transformed_odom.header.stamp = ros::Time::now();
       transformed_odom.twist.twist.angular.x = transformed_vector.vector.x; 
       transformed_odom.twist.twist.angular.y = transformed_vector.vector.y; 
       transformed_odom.twist.twist.angular.z = transformed_vector.vector.z; 
@@ -294,8 +272,7 @@ void TrajectoryServer::UAVOdomCB(const nav_msgs::Odometry::ConstPtr &msg)
       // std::cout << "printing w value: " << final_quat(3);
       geometry_msgs::TransformStamped transformStamped_wb;
       transformStamped_wb = tfBuffer.lookupTransform("warp", "body", ros::Time(0));
-      warp_pose.header.frame_id = "warp";
-      warp_pose.header.stamp = ros::Time::now();
+
       warp_pose.pose.position.x = transformStamped_wb.transform.translation.x;
       warp_pose.pose.position.y = transformStamped_wb.transform.translation.y;
       warp_pose.pose.position.z = transformStamped_wb.transform.translation.z;
