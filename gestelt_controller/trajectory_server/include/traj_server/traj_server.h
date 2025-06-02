@@ -65,6 +65,7 @@ enum MissionCmdMode
   PVA,
   ATTITUDE,
   VEL,
+  GEOM,
   UNKNOWN,
 };
 
@@ -140,6 +141,8 @@ private: // Class Methods
    * @brief Callback for externally triggered server events
    */
   void missionServerCommandCb(const std_msgs::Int8::ConstPtr & msg);
+
+  void geomCb(const mavros_msgs::AttitudeTarget::ConstPtr & msg);
 
   void velCommandCb(const std_msgs::Int8::ConstPtr & msg);
 
@@ -244,6 +247,9 @@ private: // Class Methods
 
   void publishLowLvlCmd(
   Vector3d omega, double collective_thrust_vector, Vector4d quaternion, Vector3d p, uint16_t ct_omega_mode_);
+
+  void publishGeomCmd(
+    Vector3d geom_bodyrate, double geom_thrust);
 
   void publishVelCmd(
   Vector3d v, Vector3d p, uint16_t ct_omega_mode_);
@@ -352,6 +358,7 @@ private: // Class Methods
           case MissionCmdMode::PVA:  return "POSVELACC";
           case MissionCmdMode::ATTITUDE:     return "ATTITUDECTRL";
           case MissionCmdMode::VEL: return "VELMODE";
+          case MissionCmdMode::GEOM: return "GEOMETRIC";
           default:                      return "[Unknown Event]";
       }
   }
@@ -364,6 +371,7 @@ inline const MissionCmdMode IntToMission(int cmd_mode_num)
         case 1:  return MissionCmdMode::PVA;
         case 2:  return MissionCmdMode::ATTITUDE;
         case 3: return MissionCmdMode::VEL;
+        case 4: return MissionCmdMode::GEOM;
         default: return MissionCmdMode::UNKNOWN; // Replace with an appropriate default.
     }
 }
@@ -445,6 +453,7 @@ private: // Member variables
   ros::Subscriber uav_state_sub_; // Subscriber to UAV State (MavROS)
   ros::Subscriber pose_sub_; // Subscriber to UAV State (MavROS)
   ros::Subscriber odom_sub_; // Subscriber to UAV State (MavROS)
+  ros::Subscriber geom_ctrl_sub_;
   // TODO: make this a service server
   ros::Subscriber command_server_sub_; // Subscriber to trajectory server commands
   ros::Subscriber swarm_command_server_sub_; // Subscriber to swarm server commands
@@ -472,6 +481,8 @@ private: // Member variables
   // Last received mission PVAJ (position, velocity, acceleration, Jerk)
   Eigen::Vector3d last_mission_pos_{0.0, 0.0, 0.0}, last_mission_vel_{0.0, 0.0, 0.0};
   Eigen::Vector3d last_mission_acc_{0.0, 0.0, 0.0}, last_mission_jerk_{0.0, 0.0, 0.0};
+  Eigen::Vector3d geom_body_rate{0.0, 0.0, 0.0};
+  double geom_thrust{0.0};
   // Last received mission Collective Thrust and Omega
   Eigen::Vector3d last_mission_body_rates_{0.0, 0.0, 0.0}, last_mission_warp_body_rates_{0.0,0.0,0.0};
   double last_mission_thrust_vector_{0.0};

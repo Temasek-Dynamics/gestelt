@@ -19,6 +19,7 @@ from std_msgs.msg import Bool
 import tf2_ros
 import threading
 from std_msgs.msg import Int8
+from mavros_msgs.msg import AttitudeTarget
 # import tf2_geometry_msgs
 # from geometry_msgs.msg import Vector3Stamped
 # from geometry_msgs import Posestamped
@@ -189,6 +190,8 @@ class NN_POLICY_PLANNER(object):
 
         self.warp_drone_pose_pub_ = rospy.Subscriber('/drone0/warp/local_position/pose', PoseStamped, self.warpPoseCB, queue_size=5)
         self.warp_drone_odom_sub_ = rospy.Subscriber('/drone0/warp/local_position/odom', Odometry, self.warpOdomCB, queue_size=5)
+        self.geom_controller_sub_ = rospy.Subscriber('/drone0/setpoint_raw/attitude', AttitudeTarget, self.geomCB, queue_size=5)
+        self.geom_controller_pub_ = rospy.Publisher("/drone0/geom_ctrl", AttitudeTarget, queue_size = 5)
         
         #PVA controller trajectory Publisher
         self.pva_traj_pub_ = rospy.Publisher("/drone0/planner_adaptor/exec_trajectory", ExecTrajectory, queue_size = 5)
@@ -250,12 +253,15 @@ class NN_POLICY_PLANNER(object):
         #        print(f"TIME DIFFERENCE ODOM EXCEEDED!!! {time_diff} at {msg.header.stamp}")
         self.last_odom_time = msg.header.stamp
 
+    def geomCB(self, msg):
+        self.geom_body_rate = np.array([msg.body_rate.x, msg.body_rate.y, msg.body_rate.z])
+        self.geom_thrust = msg.thrust
+
     def warpPoseCB(self,msg):
         self.warp_q = np.array([msg.pose.position.x, msg.pose.position.y,msg.pose.position.z, msg.pose.orientation.x, msg.pose.orientation.y, msg.pose.orientation.z, msg.pose.orientation.w])
         
         if self.last_pos_time is not None:
            time_diff = (msg.header.stamp- self.last_pos_time).to_sec() 
-           print(time_diff)
            if time_diff > 0.05:
                print(f"TIME DIFFERENCE EXCEEDED!!! {time_diff} at {msg.header.stamp}")
         self.last_pos_time = msg.header.stamp
@@ -311,6 +317,17 @@ class NN_POLICY_PLANNER(object):
         #Publish the PVA
         self.pva_traj_pub_.publish(pva_traj_msg)
 
+    def publishGeomCtrl(self):
+        pva_traj_msg = AttitudeTarget()
+        pva_traj_msg.body_rate.x = self.geom_body_rate[0]
+        pva_traj_msg.body_rate.y = self.geom_body_rate[1]
+        pva_traj_msg.body_rate.z = self.geom_body_rate[2]
+        pva_traj_msg.thrust = self.geom_thrust
+
+        #Publish the PVA
+        self.geom_controller_pub_.publish(pva_traj_msg)
+
+
     def publishATT(self, type_mask, nn_action):
         pva_traj_msg = ExecTrajectory()
 
@@ -341,6 +358,8 @@ class NN_POLICY_PLANNER(object):
         self.mission_mode_pub_.publish(mission_pub_msg)
         if mode == 2:
             print("switched to mission mode 2: ATTITUDE CONTROL")
+        elif mode == 4:
+            print("switched to mission mode 2: Geom CONTROL")
         else:
             print("switched to mission mode 1: PVA CONTROL")
 
@@ -357,6 +376,9 @@ class NN_POLICY_PLANNER(object):
                 if self.warp_mission_command_mode == 3:
                     self.publishMissionCmdMode(3)
                     self.mission_command_mode = 3
+                if self.warp_mission_command_mode == 4:
+                    self.publishMissionCmdMode(4)
+                    self.mission_command_mode = 4
 
                         
             elif self.mission_command_mode == 2:  #This controls the orientation. Attitude and thrust
@@ -371,6 +393,9 @@ class NN_POLICY_PLANNER(object):
 
             elif self.mission_command_mode == 3:
                 self.publishVEL()
+
+            elif self.mission_command_mode == 4:
+                self.publishGeomCtrl()
                 
 
     def modeChgCb(self, msg):
@@ -437,7 +462,7 @@ if __name__=="__main__":
     mission_command_mode = loaded_params["mission_command_mode"]
 
     position_control = True #config_params["position_control"]
-    delta_time = 0.02 #float(config_params["delta_time"])
+    delta_time = 0.05 #float(config_params["delta_time"])
     max_angular_rate = 3.0 #float(config_params["max_angular_rates"])
 
     

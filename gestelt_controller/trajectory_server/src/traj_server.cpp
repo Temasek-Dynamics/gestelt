@@ -58,6 +58,7 @@ void TrajectoryServer::init(ros::NodeHandle& nh, ros::NodeHandle& pnh)
   uav_state_sub_ = nh.subscribe<mavros_msgs::State>("mavros/state", 5, &TrajectoryServer::UAVStateCb, this);
   pose_sub_ = nh.subscribe<geometry_msgs::PoseStamped>("mavros/local_position/pose", 5, &TrajectoryServer::UAVPoseCB, this);
   odom_sub_ = nh.subscribe<nav_msgs::Odometry>("mavros/local_position/odom", 5, &TrajectoryServer::UAVOdomCB, this);
+  geom_ctrl_sub_ = nh.subscribe<mavros_msgs::AttitudeTarget>("geom_ctrl", 5, &TrajectoryServer::geomCb, this);
 
   /////////////////
   /* Publishers */
@@ -198,10 +199,10 @@ void TrajectoryServer::UAVPoseCB(const geometry_msgs::PoseStamped::ConstPtr &msg
 
   ros::Time stamp = msg->header.stamp;
   ros::Duration latency = stamp - last_pose_time;
-  if (latency.toSec() > 0.02)  // 0.1 seconds = 100 ms
-  {
-    ROS_WARN("Pose timestamp is delayed by %.3f ms!", latency.toSec() * 1000.0);
-  }
+  // if (latency.toSec() > 0.02)  // 0.1 seconds = 100 ms
+  // {
+  //   ROS_WARN("Pose timestamp is delayed by %.3f ms!", latency.toSec() * 1000.0);
+  // }
 
 
   last_pose_time = stamp;
@@ -229,10 +230,10 @@ void TrajectoryServer::UAVOdomCB(const nav_msgs::Odometry::ConstPtr &msg)
   uav_odom_ = *msg;
   ros::Time stamp = msg->header.stamp;
   ros::Duration latency = stamp - last_odom_time;
-  if (latency.toSec() > 0.01)  // 0.1 seconds = 100 ms
-  {
-    ROS_WARN("Odometry timestamp is delayed by %.3f ms!", latency.toSec() * 1000.0);
-  }
+  // if (latency.toSec() > 0.01)  // 0.1 seconds = 100 ms
+  // {
+  //   ROS_WARN("Odometry timestamp is delayed by %.3f ms!", latency.toSec() * 1000.0);
+  // }
 
 
   last_odom_time = stamp;
@@ -315,6 +316,16 @@ void TrajectoryServer::UAVOdomCB(const nav_msgs::Odometry::ConstPtr &msg)
   }
 
 
+}
+
+void TrajectoryServer::geomCb(const mavros_msgs::AttitudeTarget::ConstPtr & msg)
+{
+  // std::cout << "I am in here now\n";
+  geom_body_rate(0) = msg->body_rate.x;
+  geom_body_rate(1) = msg->body_rate.y;
+  geom_body_rate(2) = msg->body_rate.z;
+  geom_thrust = msg-> thrust;
+  last_traj_msg_time_ = ros::Time::now();
 }
 
 void TrajectoryServer::swarmServerCommandCb(const std_msgs::Int8::ConstPtr & msg)
@@ -667,6 +678,10 @@ void TrajectoryServer::execMission()
   else if(getMissionCmd() == MissionCmdMode::VEL){
   publishVelCmd( last_mission_vel_, last_mission_pos_, ct_omega_mode_);
   }
+  else if (getMissionCmd() == MissionCmdMode::GEOM){
+    std::cout << "IN HERE\n";
+    publishGeomCmd( geom_body_rate, geom_thrust);
+  }
 }
 
 /* Publisher methods */
@@ -719,6 +734,23 @@ void TrajectoryServer::publishVelCmd(
   vel_cmd_raw_pub_.publish(vel_cmd);
 
 }
+
+void TrajectoryServer::publishGeomCmd(
+  Vector3d geom_bodyrate, double geom_thrust){
+
+    mavros_msgs::AttitudeTarget low_lvl_cmd;
+    low_lvl_cmd.header.stamp = ros::Time::now();
+    low_lvl_cmd.header.frame_id = origin_frame_;
+    low_lvl_cmd.type_mask = mavros_msgs::AttitudeTarget::IGNORE_ATTITUDE; // Ignore orientation
+    double collective_thrust = geom_thrust;
+    low_lvl_cmd.thrust = collective_thrust; ///(single_motor_max_thrust_*4);
+    low_lvl_cmd.body_rate.x = geom_bodyrate[0];
+    low_lvl_cmd.body_rate.y = geom_bodyrate[1];
+    low_lvl_cmd.body_rate.z = geom_bodyrate[2];
+
+    low_lvl_cmd_raw_pub_.publish(low_lvl_cmd);
+
+  }
 
 void TrajectoryServer::publishLowLvlCmd(
   Vector3d omega, double collective_thrust_vector, Vector4d quaternion, Vector3d p, uint16_t ct_omega_mode_)
