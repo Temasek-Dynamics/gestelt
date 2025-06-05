@@ -27,12 +27,15 @@ def mc_evaluation(test_num=48,
     failed_batch=[]
     failed_state_batch=[]
     
-    outs=ray.get([eval_sim_interface.remote(mission_cfg,
-                                        train_cfg,
-                                        options,
-                                        model_file,
-                                        INTRAIN=True,
-                                        STAB_TEST=STAB_TEST) for _ in range(test_num)])
+    outs=ray.get([eval_sim_interface.remote(
+        mission_cfg,
+        train_cfg,
+        options,
+        model_file,
+        INTRAIN=True,
+        STAB_TEST=STAB_TEST
+    ) for _ in range(test_num)])
+    
     for out in outs:
         FAILED=out['FAILED']
         state_traj_batch.append(out['state_traj'])

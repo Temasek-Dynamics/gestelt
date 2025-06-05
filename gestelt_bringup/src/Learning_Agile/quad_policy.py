@@ -21,7 +21,7 @@ def get_obs(
         drone_state = None,
         final_point = None,
         gate_t_i= None
-    ):
+):
     """
     get both immediate and past observation from the environment
     
@@ -45,7 +45,7 @@ def get_obs(
     immed_obs[0:3]=drone_state[0:3]/mission_cfg['pos_norm_factor']
     immed_obs[3:6]=drone_state[3:6]/mission_cfg['vel_norm_factor']
     immed_obs[6:10]=drone_state[6:10] # quaternion
-    immed_obs[10:13]=final_point/mission_cfg['pos_norm_factor']
+    immed_obs[10:13]=(final_point-drone_state[0:3])/mission_cfg['pos_norm_factor']
     
     ## gate points
     relative_gate_points = gate_t_i.gate_point-drone_state[0:3]
@@ -168,25 +168,26 @@ class PlanFwdBwdWrapper():
         # wwf: final angular velocity cost
       
         ## initialize the cost function
-        self.uav.cost_base.init_weight(#wrt=config['learning_agile']['wrt'],
-                           #wqt=config['learning_agile']['wqt'],
-                           wthrust=config['learning_agile']['wthrust'],
-                           wdthrust=config['learning_agile']['wdthrust'],
-                           w_tra_throttle=config['learning_agile']['w_tra_throttle'],
-                           wm=config['learning_agile']['wm'],
-                           wwt=config['learning_agile']['wwt'],
-                           wwt_z=config['learning_agile']['wwt_z'], 
-                             
-                        #    wrp=config['learning_agile']['wrp'],
-                           wvp=config['learning_agile']['wvp'],
-                           wqp=config['learning_agile']['wqp'],
+        self.uav.cost_base.init_weight(
+            #wrt=config['learning_agile']['wrt'],
+            #wqt=config['learning_agile']['wqt'],
+            wthrust=config['learning_agile']['wthrust'],
+            wdthrust=config['learning_agile']['wdthrust'],
+            w_tra_throttle=config['learning_agile']['w_tra_throttle'],
+            wm=config['learning_agile']['wm'],
+            wwt=config['learning_agile']['wwt'],
+            wwt_z=config['learning_agile']['wwt_z'], 
+                
+        #    wrp=config['learning_agile']['wrp'],
+            wvp=config['learning_agile']['wvp'],
+            wqp=config['learning_agile']['wqp'],
 
-                           wrf=config['learning_agile']['wrf'],
-                           wvf=config['learning_agile']['wvf'],
-                           wqf=config['learning_agile']['wqf'],
-                           max_tra_w=config['learning_agile']['max_tra_w'],
-                        #    traverse_weight_span=config['learning_agile']['traverse_weight_span']
-                           ) 
+            wrf=config['learning_agile']['wrf'],
+            wvf=config['learning_agile']['wvf'],
+            wqf=config['learning_agile']['wqf'],
+            max_tra_w=config['learning_agile']['max_tra_w'],
+        #    traverse_weight_span=config['learning_agile']['traverse_weight_span']
+        ) 
         self.uav.init_cost()
         self.uav.init_traCost()
 

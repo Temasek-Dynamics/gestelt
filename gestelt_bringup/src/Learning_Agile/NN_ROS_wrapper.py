@@ -8,6 +8,7 @@ from scipy.spatial.transform import Rotation as R
 from collections import deque
 import torch
 import numpy as np
+from multiprocessing import Process, Queue
 
 from config import current_dir,train_cfg, mission_cfg
 from quad_model import Gate,get_gate_points
@@ -51,6 +52,21 @@ def get_server_state_callback():
     # print("==================")
     # print(msg)
     # print("==================")
+    
+def inference_worker(model, queue_in, queue_out):
+    obs = queue_in.get()
+    full_input=np.array(obs).reshape([1,-1])
+    NN_forward_time=0
+    # NN output the traversal time and pose
+    t_comp = time.time()
+    nn_output = model(torch.tensor(full_input, dtype=torch.float).to(device))[0]
+    NN_forward_time=time.time()-t_comp
+    out = nn_output.to('cpu').data.numpy()
+    verify_tra_R,_=verify_SVD_ca(out[3:12])
+
+    quat=np.roll(R.from_matrix(verify_tra_R).as_quat(),1)
+    queue_out.put((out, quat, NN_forward_time))
+    
 class NN2_ROS_wrapper:
     def __init__(self):
         ## =================load parameters from yaml======================##
@@ -107,7 +123,7 @@ class NN2_ROS_wrapper:
         self.gate_t_i = Gate(self.gate_points_list[0]) 
         self.history_obs = deque(maxlen=5)
         
-        # self.NN_output = rospy.Publisher("/learning_agile_sim/NN_output", close_loop_NN_output, queue_size=1)
+        self.NN_output = rospy.Publisher("/learning_agile_sim/NN_output", close_loop_NN_output, queue_size=1)
         self.vis_NN_trav_pose_pub = rospy.Publisher("/learning_agile_sim/vis_NN_trav_pose", PoseStamped, queue_size=1)
 
         self.NN_forward_time_pub = rospy.Publisher("/learning_agile_sim/NN_forward_time", Float32, queue_size=1)
@@ -130,6 +146,12 @@ class NN2_ROS_wrapper:
         self.trans,self.rot = transform_map_to_world(is_simulation)
         print("map to world translation",self.trans)
         print("map to world rotation",self.rot)
+        
+        # for multiple processes
+        self.queue_in = Queue()
+        self.queue_out = Queue()
+        self.process = Process(target=inference_worker, args=(self.model, self.queue_in, self.queue_out))
+        self.process.start()
     
     def physical_gate_pose_cb(self,msg):
         """
@@ -217,17 +239,15 @@ class NN2_ROS_wrapper:
                     self.gate_t_i
                 )
                 
-                full_input=np.array(obs).reshape([1,-1])
+                
                 NN_forward_time=0
                 # NN output the traversal time and pose
                 if not self.MANUAL_SET_POSE_TEST:
-                    t_comp = time.time()
-                    nn_output = self.model(torch.tensor(full_input, dtype=torch.float).to(device))[0]
-                    NN_forward_time=time.time()-t_comp
-                    out = nn_output.to('cpu').data.numpy()
-                    verify_tra_R,_=verify_SVD_ca(out[3:12])
-
-                    quat=np.roll(R.from_matrix(verify_tra_R).as_quat(),1)
+                    # print("obs",obs)
+                    self.queue_in.put(obs)
+                    out, quat, NN_forward_time = self.queue_out.get()
+                    # print("out",out)
+                    # print("quat",quat)
 
                 else:
                     gate_ori_euler=np.array(mission_cfg['mission']['gate_ori_euler'])

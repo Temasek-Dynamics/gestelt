@@ -105,10 +105,10 @@ class LearningAgileBase:
 
             # reset the solver by using the pre-saved initial guess
             self.load_init_solution()
-            for i in range(self.new_horizon):
+            for i in range(mission_cfg['learning_agile']['horizon']):
                 self.planner.uavoc.acados_solver.set(i, "x", np.array(self.saved_init_solution['state_traj_opt'])[i])
                 self.planner.uavoc.acados_solver.set(i, "u", np.array(self.saved_init_solution['control_traj_opt'])[i])
-            self.planner.uavoc.acados_solver.set(self.new_horizon, "x", np.array(self.saved_init_solution['state_traj_opt'])[-1])
+            self.planner.uavoc.acados_solver.set(mission_cfg['learning_agile']['horizon'], "x", np.array(self.saved_init_solution['state_traj_opt'])[-1])
             print('reset the solver')
             self.NO_SOLUTION_FLAG=False
  
@@ -162,7 +162,7 @@ class LearningAgileBase:
         self.t_tra_rel = self.t_tra_abs-self.i*self.mission_cfg['learning_agile']['dt']
         # wandb.log({"t_tra_rel": self.t_tra_rel})
         ## == MPC forward === ##        
-        if self.i == 1:
+        if self.i == 1 and mission_cfg['manual_init_guess']:
             
             # 45 degree rotation as initial guess
            
@@ -205,7 +205,7 @@ class LearningAgileBase:
         ## === state update === ##
         self.state = cmd_solution['state_traj_opt'][1,:]
         self.control = cmd_solution['control_traj_opt'][0,:]
-        self.last_u = cmd_solution['control_traj_opt'][0,:]
+        
         ## === actual trajectory === ##
         self.state_traj.append(self.state)
         self.state_n = np.concatenate((self.state_n,[self.state]),axis = 0)
@@ -218,6 +218,9 @@ class LearningAgileBase:
         ## === MPC backward === ##
         self.planner.PDP_grad(self.np_nn_out)
     
+    
+    def save_last_u(self):
+        self.last_u = self.control
     # def get_reg_euler(self):
     #     """regularize the output of the neural network
 
@@ -262,6 +265,14 @@ class LearningAgileBase:
         self.reg_control = self.mission_cfg['penalty']['control_reg_w']*np.dot(self.control-self.planner.hover_u,self.control-self.planner.hover_u)
         dreg_dcontrol = self.mission_cfg['penalty']['control_reg_w']*2*(self.control-self.planner.hover_u)
         self.dreg_dz[:,:]=np.matmul(dreg_dcontrol,self.planner.d_input_traj_d_z[0,:,:]).flatten()
+    
+    def get_reg_control_difference(self):
+        """
+        regulate the control difference, which is computational intensive for MPC 
+        """
+        self.reg_control_difference = self.mission_cfg['penalty']['control_difference_reg_w']*np.dot(self.control-self.last_u,self.control-self.last_u)
+        dreg_dcontrol_diff =  self.mission_cfg['penalty']['control_reg_w']*2*(self.control-self.last_u)
+        self.dreg_dz[:,:]=np.matmul(dreg_dcontrol_diff,self.planner.d_input_traj_d_z[0,:,:]).flatten()
            
     def backward_per_step(self):
         """
@@ -270,7 +281,7 @@ class LearningAgileBase:
         H: close loop horizon
         N: prediction horizon
         """
-        
+        self.get_reg_control_difference()
         ## acquire p_X_traj_i/p_x_i
         cur_p_X_traj_i_p_x_i = np.ones([self.planner.horizon+1,len(self.state),len(self.state)])
         
@@ -286,7 +297,7 @@ class LearningAgileBase:
         ## 13 * 1
         # self.p_L_i_p_z_i.append(np.einsum('bij,bjk->ik',self.p_L_i_p_X_traj_i[self.i-2],self.p_X_traj_i_p_z_i[self.i-2]))
         ## z_i:
-        self.p_L_i_p_z_i.append(np.einsum('bij,bjk->ik',self.p_L_i_p_X_traj_i[self.i-2],self.p_X_traj_i_p_z_i[self.i-2])) #+self.dreg_dz
+        self.p_L_i_p_z_i.append(np.einsum('bij,bjk->ik',self.p_L_i_p_X_traj_i[self.i-2],self.p_X_traj_i_p_z_i[self.i-2])+self.dreg_dz) #+self.dreg_dz
         
         # if self.i > 10:
         #     print('debug')
@@ -350,7 +361,7 @@ class LearningAgileBase:
         get the penalty of the current MPC prediction, used under the RAY
         """
         L_d_L_i = self.planner.get_penalty(self.pred_st_traj,real_state_i,success_rate)
-        self.L_i.append(L_d_L_i[0])
+        self.L_i.append(L_d_L_i[0]+self.reg_control)
         self.p_L_i_p_X_traj_i.append(L_d_L_i[1])
         
     

@@ -172,7 +172,7 @@ class LearningAgileSim():
         self.goal_yaw=np.array(self.config_dict['mission']['goal_ori_euler'])[0]
         
         self.gate_center=np.array(self.config_dict['mission']['gate_position'])
-        self.gate_center += np.random.uniform(-0.1,0.1,3)
+        # self.gate_center += np.random.uniform(-0.1,0.1,3)
         # self.gate_ori_RP=np.array(self.config_dict['mission']['gate_ori_RP'])
         gate_ori_euler=np.array(self.config_dict['mission']['gate_ori_euler'])
         self.gate_ori_9d=R.from_euler('zyx',gate_ori_euler).as_matrix().flatten()
@@ -320,7 +320,7 @@ class LearningAgileSim():
                 # print('des_t_tra=',des_t_tra)
                 
                 
-                if self.i == 0:
+                if self.i == 0 and self.config_dict['manual_init_guess']:
                     gate_ori_euler=np.array([0,1.2,0])
                     zero_gate_ori_9d=R.from_euler('zyx',gate_ori_euler).as_matrix().flatten()
                     _,manual_auxvar_value,_ = manual_set_z_forward(
@@ -527,7 +527,7 @@ def parse_options():
     args = parser.parse_args()
     return vars(args)  # Return options as a dictionary  
 
-@ray.remote     
+@ray.remote
 def eval_sim_interface(
     mission_cfg=None,
     train_cfg=None,

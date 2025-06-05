@@ -45,10 +45,10 @@ run=wandb.init(
     project='Learning Agile',
     name= get_time_name(),
     config={
-            "mission_cfg":mission_cfg,
-            "train_cfg":train_cfg,
-            "options":options
-            },
+        "mission_cfg":mission_cfg,
+        "train_cfg":train_cfg,
+        "options":options
+    },
     dir=log_folder
 )
 
@@ -193,13 +193,18 @@ class LearningAgileAPG:
             outputs_batch = self.model(torch.tensor(obs_batch,dtype=torch.float32).to(self.device),deterministic=True).to('cpu')
             
             ##== 3. step for every episode
-            [episode.step.remote(outputs_batch[k]) for k, episode in enumerate(self.episodes)]
+            for k, episode in enumerate(self.episodes):
+                if not epoch_solution_flags[k]: 
+                    # [episode.step.remote(outputs_batch[k]) for k, episode in enumerate(self.episodes)]
+                    episode.save_last_u.remote()
+                    episode.step.remote(outputs_batch[k])
             
             
             euler_nn_list.append(ray.get([episode.get_euler_nn.remote() for episode in self.episodes]))
             for k, episode in enumerate(self.episodes):
                 if ray.get(episode.get_solution_flag.remote()):
                     epoch_solution_flags[k] = True
+                    episode.reset.remote(cur_epoch)
                     model_file=os.path.join(trained_model_folder, f"NN_close_leads_solver_failed_{cur_epoch}_batch_num_{k}.pth")
                     torch.save(self.model.state_dict(), model_file)
             
@@ -236,9 +241,10 @@ class LearningAgileAPG:
             ## if BPTT all, /10000 0
             
             # the larger the neural network angle output, the smaller the gradient
-            euler_scaler = np.array([(max(np.linalg.norm(np.array(euler_nn_list)[:,k,:],axis=1,keepdims=True))) for k in range(self.batch_size)])
+            # euler_scaler = 0.05*np.array([(max(np.linalg.norm(np.array(euler_nn_list)[:,k,:],axis=1,keepdims=True))) for k in range(self.batch_size)])
             self.p_L_p_z_batch = np.array(p_L_p_z_list)
-            self.p_L_p_z_batch[:,:,:,3:12] /= 10000*euler_scaler.reshape(self.batch_size,1,1,1)
+            # self.p_L_p_z_batch[:,:,:,3:12] /= 10000#*euler_scaler.reshape(self.batch_size,1,1,1)
+            # self.p_L_p_z_batch[:,:,:,:3] /= 5
                 
             # (close_loop_horizon, batch_size, 13)->(batch_size, close_loop_horizon, 13)
             self.outputs_stack = torch.stack(outputs_list).permute(1,0,2) 

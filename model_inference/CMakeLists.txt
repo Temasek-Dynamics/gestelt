@@ -32,7 +32,6 @@ find_package(
 # to make it as a standard catkin package
 catkin_package(
   CATKIN_DEPENDS 
-  INCLUDE_DIR include
   DEPENDS
   LIBRARIES
   ${PROJECT_NAME}_shared_lib
@@ -92,7 +91,6 @@ add_dependencies(${PROJECT_NAME}_node
 ## Specify libraries to link a library or executable target against
 target_link_libraries(${PROJECT_NAME}_node
   ${catkin_LIBRARIES}
-  Threads::Threads
   ${TORCH_LIBRARIES}
   ${PROJECT_NAME}_shared_lib
 )

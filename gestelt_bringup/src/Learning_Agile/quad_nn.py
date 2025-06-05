@@ -17,24 +17,44 @@ pre_end_pos=np.array(mission_cfg['mission']['goal_position'])
 gate_width = mission_cfg['gate']['width']
 init_std_dev=mission_cfg['gate']['init_std_dev']
 final_std_dev=mission_cfg['gate']['final_std_dev']
+pos_range_max= mission_cfg['pos_norm_factor']
 input_size = train_cfg['model']['input_size'] 
 hidden_size = train_cfg['model']['hidden_size']
 output_size = train_cfg['model']['output_size']  
 # load the configuration file
 
 ## sample an input for the neural network 1
-def nn_sample(init_pos=None,
-              final_pos=None,
-              init_angle=None,
-              cur_epoch=train_cfg['training']['num_epochs'], # default is the last epoch
-              PRTRAIN=False,
-              TEST=False):
+def nn_sample(
+    init_pos=None,
+    final_pos=None,
+    init_angle=None,
+    cur_epoch=train_cfg['training']['num_epochs'], # default is the last epoch
+    PRTRAIN=False,
+    TEST=False
+):
+    """_summary_
+
+    Args:
+        init_pos (_type_, optional): _description_. Defaults to None.
+        final_pos (_type_, optional): _description_. Defaults to None.
+        init_angle (_type_, optional): _description_. Defaults to None.
+        cur_epoch (_type_, optional): _description_. Defaults to train_cfg['training']['num_epochs'].
+        TEST (bool, optional): _description_. Defaults to False.
+
+    Returns:
+        env_init_set:[0:3] drone position, 
+                     [3:6] goal position, 
+                     [6] drone yaw angle,
+                     [7] gate width, 
+                     [8] gate pitch angle, 
+                     [8:17] gate rotation matrix
+    """
     env_init_set = np.zeros(17)
     if init_pos is None:
         env_init_set[0:3] =  np.random.uniform(-0.2,0.2,3) + pre_ini_pos #-5~5, -9 
         env_init_set[1] = np.random.uniform(-0.2,0.2) + pre_ini_pos[1]
         if PRTRAIN:
-            env_init_set[1] = np.random.uniform(-5,5) #+ pre_ini_pos[1]
+            env_init_set[1] = np.random.uniform(-pos_range_max,pos_range_max) #+ pre_ini_pos[1]
             env_init_set[2] = np.random.uniform(0,2.5) #+ pre_ini_pos[0]
 
     else:
@@ -77,7 +97,8 @@ def nn_sample(init_pos=None,
         gate_pitch = 0
     elif TEST:
         if not mission_cfg['FIX_GATE_PITCH_TEST']:
-           gate_pitch =  np.random.uniform(-pi/2,pi/2)
+        #    gate_pitch =  np.random.uniform(-pi/2,pi/2)
+            gate_pitch = np.random.uniform(-2*pi/5,2*pi/5)
         else:
             gate_pitch = mission_cfg['mission']['gate_ori_euler'][1] 
     else:
@@ -102,7 +123,7 @@ def nn_sample(init_pos=None,
         # gate_pitch = mission_cfg['mission']['gate_ori_euler'][1] #1.2rad = 68.754 degrees, 0.8rad = 45.729 degrees 
 
         ## or 
-        gate_pitch = np.random.uniform(-pi/2,pi/2)
+        gate_pitch = np.random.uniform(-2*pi/5,2*pi/5)
         
         
 
@@ -255,12 +276,7 @@ class network_with_GRU(nn.Module):
             z_hat = z_probs @ self.z_centers.T
         else:
             # Keep the batch dimension
-            x_hat = torch.zeros((out.shape[0], 1),device=out.device)
-            y_hat = torch.zeros((out.shape[0], 1),device=out.device)
-            z_hat = torch.zeros((out.shape[0], 1),device=out.device)
-            x_hat[:,0] = torch.tanh(self.positional_head(out)[:,0])*2
-            y_hat[:,0] = torch.tanh(self.positional_head(out)[:,1])*2
-            z_hat[:,0] = torch.tanh(self.positional_head(out)[:,2])*2
+            pos_final = self.positional_head(out)*2
             
         # orientation 
         orientation = self.rotation_head(out)
@@ -275,7 +291,7 @@ class network_with_GRU(nn.Module):
 
 
 
-        return torch.hstack([x_hat, y_hat, z_hat,orientation, weights])
+        return torch.hstack([pos_final,orientation, weights])
 
     
     def myloss(self, para, dp, device='cpu'):
@@ -323,16 +339,16 @@ class network(nn.Module):
         rot      = y[..., 3:12]     # (B,9)
         w_raw    = y[..., 12:]      # (B, D_out-12)
 
-        pos_final = torch.tanh(pos) * 2                             # (B,3)
-        rot_final = rot                                             # (B,9)
-
-        wrp   = torch.sigmoid(w_raw[:, 0:3]) * 300 + 10
-        wrt   = torch.sigmoid(w_raw[:, 3:6]) * 300 + 10
-        wqt   = torch.sigmoid(w_raw[:, 6:7]) *  50 + 10
-        gamma = torch.sigmoid(w_raw[:, 7:8]) * 300 + 30
+        pos_final = torch.tanh(pos) * 2                             # (B,3)                                            # (B,9)
+        
+        weights_sigmoid = torch.sigmoid(w_raw)  # call once
+        wrp   = weights_sigmoid[:, 0:3] * 300 + 10
+        wrt   = weights_sigmoid[:, 3:6] * 300 + 10
+        wqt   = weights_sigmoid[:, 6:7] *  50 + 10
+        gamma = weights_sigmoid[:, 7:8] * 100 + 30
         weights_final = torch.cat([wrp, wrt, wqt, gamma], dim=-1)   # (B,W)
 
-        return torch.cat([pos_final, rot_final, weights_final], dim=-1)
+        return torch.cat([pos_final, rot, weights_final], dim=-1)
 
     
     def myloss(self, para, dp, device='cpu'):

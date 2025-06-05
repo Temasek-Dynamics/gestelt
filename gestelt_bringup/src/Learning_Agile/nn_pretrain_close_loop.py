@@ -16,8 +16,8 @@ device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 input_size = train_cfg['model']['input_size'] 
 hidden_size = train_cfg['model']['hidden_size']
 output_size = train_cfg['model']['output_size']
-num_epochs = 3  
-batch_size = 10000
+num_epochs = 1000 
+batch_size = 32
 learning_rate = 2e-5
 current_dir = os.path.dirname(os.path.abspath(__file__))
 training_data_folder=os.path.abspath(os.path.join(current_dir, 'training_results'))
@@ -41,24 +41,30 @@ def input_cal():
     """This function is used in pretrain, to calculate the input for the neural network 
        in the pretrain, the gate is in the preset position, with no pitch.
                         the drone position is rondomly generated, 
+    env_init_set:[0:3] drone position, 
+                    [3:6] goal position, 
+                    [6] drone yaw angle,
+                    [7] gate width, 
+                    [8] gate pitch angle, 
+                    [8:17] gate rotation matrix
     Returns:
         _type_: _description_
     """
     inputs=np.zeros(input_size)
-    static_env = nn_sample(PRTRAIN=True)
+    env_init_set = nn_sample(PRTRAIN=True)
     
     ## drone initial position
-    inputs[0:3] = static_env[0:3]/mission_cfg['pos_norm_factor'] # normalize the position to [-1,1]
+    inputs[0:3] = env_init_set[0:3]/mission_cfg['pos_norm_factor'] # normalize the position to [-1,1]
     
     ## drone initial velocity
     inputs[3:6] = np.array([0,0,0])/mission_cfg['vel_norm_factor']  # static env[3:6] # normalize the velocity to [-1,1]
 
     ## drone initial orientation: yaw to quaternion
-    r = R.from_euler('zyx', np.array([static_env[6],0,0]), degrees=True)
+    r = R.from_euler('zyx', np.array([env_init_set[6],0,0]), degrees=True)
     inputs[6:10]= r.as_quat()
     inputs[6:10]=np.roll(inputs[6:10],1)
 
-    inputs[10:13] = static_env[3:6]/mission_cfg['pos_norm_factor'] # goal position
+    inputs[10:13] = (env_init_set[3:6]-env_init_set[0:3])/mission_cfg['pos_norm_factor'] # goal position
     
 
 
@@ -66,45 +72,95 @@ def input_cal():
     gate_width  = mission_cfg['gate']['width']
     gate_length = mission_cfg['gate']['length']
     gate_center = mission_cfg['mission']['gate_position']
-    relative_gate_points=get_gate_points(gate_center,gate_length,gate_width)-static_env[0:3]
+    relative_gate_points=get_gate_points(gate_center,gate_length,gate_width)-env_init_set[0:3]
     inputs[13:25] = relative_gate_points.flatten()/mission_cfg['pos_norm_factor'] # gate points
     inputs[25:37] = relative_gate_points.flatten()/mission_cfg['pos_norm_factor'] # gate position
     
-    return inputs,static_env[8:17]
+    return inputs,env_init_set[8:17]
+
+def input_cal_batch(batch_size):
+    """
+    batch input_cal function
+    Returns:
+        inputs: [batch_size, input_size]
+        gate_rot_matrix: [batch_size, ...]
+    """
+    inputs = np.zeros((batch_size, input_size))
+
+    gate_rot_matrices = np.zeros((batch_size, 9)) # 假设 gate_rot_matrix 每个是9维, 你可按需调整
+
+    for i in range(batch_size):
+        _input, _gate_rot = input_cal()  # 单个样本
+        inputs[i] = _input
+        gate_rot_matrices[i] = _gate_rot  # 这里假设gate_rot_matrix shape为[9]
+    return inputs, gate_rot_matrices
+
+# for epoch in range(num_epochs):
+#     for i in range(batch_size):  
+        
+#         inputs,gate_rot_matrix=input_cal()
+#         outputs  = torch.tensor(t_output(inputs, gate_rot_matrix), dtype=torch.float).to(device)
+        
+#         # Forward pass
+#         pre_outputs = model(torch.tensor(inputs, dtype=torch.float).unsqueeze(0).to(device),deterministic=False)[0]
+#         # loss = criterion(pre_outputs[:12], outputs[:12])#+criterion(pre_outputs[-1],outputs[-1])
+#         weight = torch.tensor([100,100,100,1,1,1,1,1,1,1,1,1], dtype=torch.float).to(device)
+#         loss = ((pre_outputs[:12] - outputs[:12])**2 * weight).mean() 
+#         # Backward and optimize
+#         optimizer.zero_grad()
+#         loss.backward()
+#         optimizer.step()
+        
+#         if (i+1) % 100 == 0:
+#             print (f'Epoch [{epoch+1}/{num_epochs}], Step [{i+1}/{batch_size}], Loss: {loss.item():.4f}')
 
 for epoch in range(num_epochs):
-    for i in range(batch_size):  
-        
-        inputs,gate_rot_matrix=input_cal()
-        outputs  = torch.tensor(t_output(inputs, gate_rot_matrix), dtype=torch.float).to(device)
-        
-        # Forward pass
-        pre_outputs = model(torch.tensor(inputs, dtype=torch.float).unsqueeze(0).to(device),deterministic=False)[0]
-        loss = criterion(pre_outputs[:12], outputs[:12])#+criterion(pre_outputs[-1],outputs[-1])
-        
-        # Backward and optimize
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-        
-        if (i+1) % 100 == 0:
-            print (f'Epoch [{epoch+1}/{num_epochs}], Step [{i+1}/{batch_size}], Loss: {loss.item():.4f}')
+    # ===== 批量生成输入和目标 =====
+    inputs, gate_rot_matrix = input_cal_batch(batch_size)  # [batch, input_size], [batch, 9]
+
+    # 批量计算outputs
+    batch_outputs = []
+    for i in range(batch_size):
+        batch_outputs.append(t_output(inputs[i], gate_rot_matrix[i]))
+    batch_outputs = np.stack(batch_outputs, axis=0)  # [batch, output_dim]
+
+    # 转成torch tensor
+    inputs_tensor = torch.tensor(inputs, dtype=torch.float, device=device)            # [B, input_size]
+    outputs_tensor = torch.tensor(batch_outputs, dtype=torch.float, device=device)    # [B, output_dim]
+
+    # ==== 前向传播 ====
+    pre_outputs = model(inputs_tensor, deterministic=False)  # [B, output_dim]
+
+    # ==== loss ====
+    # 只用前12维和targets前12维，可以直接这样：
+    loss = criterion(pre_outputs[:, :12], outputs_tensor[:, :12])
+    # 如果 criterion 是 MSELoss/reduction='mean'，会自动按 batch 做平均。
+
+    # ==== 反向传播 ====
+    optimizer.zero_grad()
+    loss.backward()
+    optimizer.step()
+
+    # ==== 打印 ====
+    print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}')
+
 
 #save model
 torch.save(model.state_dict(), FILE)
 
 # Test the model
 # In test phase, we don't need to compute gradients (for memory efficiency)
+model.eval()
 with torch.no_grad():
     n_loss = 0
     for i in range(100):
         
-        inputs=input_cal()
+        inputs,gate_rot_matrix=input_cal()
         ## obtain the expected output
-        outputs  = torch.tensor(t_output(inputs), dtype=torch.float).to(device)
+        outputs  = torch.tensor(t_output(inputs, gate_rot_matrix), dtype=torch.float).to(device)
         
         # Forward pass
-        pre_outputs = model(torch.tensor(inputs, dtype=torch.float).unsqueeze(0).to(device))[0]
+        pre_outputs = model(torch.tensor(inputs, dtype=torch.float).unsqueeze(0).to(device),deterministic=False)[0]
         loss = criterion(pre_outputs, outputs).cpu().data.numpy()
         # max returns (value ,index)
         #_, predicted = torch.max(outputs.data, 1)
@@ -113,6 +169,9 @@ with torch.no_grad():
     
     print(n_loss/100)
 
-a=input_cal()
-print(a,' ',model(torch.tensor(a, dtype=torch.float).to(device)))
+input,_=input_cal()
+target = torch.tensor(t_output(input, _), dtype=torch.float).to(device)
+print('model input',input)
+print('model target',target)
+print('model output',model(torch.tensor(input, dtype=torch.float).unsqueeze(0).to(device),deterministic=False)[0])
 
