@@ -49,7 +49,7 @@ taskset -c 2 roslaunch trajectory_server trajectory_server_node.launch rviz_conf
 CMD_2="roslaunch gestelt_bringup learning_agile_mission.launch platform:='drone'  record:=false"
 
 # start up the NN wrapper
-CMD_3="taskset -c 3 roslaunch gestelt_bringup NN_ROS_wrapper.launch is_simulation:=true"
+CMD_3="roslaunch gestelt_bringup NN_ROS_wrapper.launch is_simulation:=true"
 
 CMD_4="
 roslaunch gestelt_bringup record.launch record_platform:=drone test_mode:=HITL

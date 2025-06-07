@@ -16,8 +16,10 @@ SHELL ["/bin/bash", "-c"]
 #     ros-noetic-roslint\ 
 #     && rm -rf /var/lib/apt/lists/*
 # RUN pip install --no-cache-dir "networkx<3.2"
+
 # RUN pip install --no-cache-dir \
-#         torch==2.4.1\
+#         onnxruntime
+
 #         # torchvision==0.19.1 \
 #         # torchaudio==2.4.1 \
 #         --index-url https://download.pytorch.org/whl/cpu
@@ -56,7 +58,7 @@ RUN export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/root/acados/lib \
     && catkin config --skiplist vicon_bridge\
     && catkin config --skiplist model_inference\
     && catkin config --skiplist fake_drone\
-    && catkin build\ 
+    # && catkin build vicon_bridge\ 
     && rm -rf /var/lib/apt/lists/* 
 
 

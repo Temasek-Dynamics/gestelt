@@ -69,12 +69,7 @@ def inference_worker(model, queue_in, queue_out):
         ort_inputs = {model.get_inputs()[0].name: full_input}
         out = model.run(None, ort_inputs)[0][0]
         
-        
-        NN_forward_time=time.time()-t_comp
-        verify_tra_R,_=verify_SVD_ca(out[3:12])
-
-        quat=np.roll(R.from_matrix(verify_tra_R).as_quat(),1)
-        queue_out.put((out, quat, NN_forward_time))
+        queue_out.put((out, NN_forward_time))
     
 class NN_ROS_wrapper:
     def __init__(self):
@@ -151,7 +146,6 @@ class NN_ROS_wrapper:
         self.history_obs = deque(maxlen=5)
         
         self.NN_output = rospy.Publisher("/learning_agile_sim/NN_output", close_loop_NN_output, queue_size=1)
-        self.vis_NN_trav_pose_pub = rospy.Publisher("/learning_agile_sim/vis_NN_trav_pose", PoseStamped, queue_size=1)
         self.NN_forward_time_pub = rospy.Publisher("/learning_agile_sim/NN_forward_time", Float32, queue_size=1)
         self.gate_points_pub = rospy.Publisher("/visual/gate_points", PoseArray, queue_size=1)
         self.gate_state_acquire_timer = rospy.Timer(rospy.Duration(1/self.NN_freq), self.gate_state_acquire)
@@ -275,7 +269,7 @@ class NN_ROS_wrapper:
                     
                     # call the model inference worker
                     self.queue_in.put(obs)
-                    out, quat, NN_forward_time = self.queue_out.get()
+                    out, NN_forward_time = self.queue_out.get()
 
                 else:
                     gate_ori_euler=np.array(mission_cfg['mission']['gate_ori_euler'])
@@ -297,19 +291,7 @@ class NN_ROS_wrapper:
                
                 NN_forward_time_msg = Float32()
                 NN_forward_time_msg.data = NN_forward_time
-
-                ##= visualize the traversing pose
-                vis_NN_trav_pose_msg = PoseStamped()
-                vis_NN_trav_pose_msg.header.stamp = rospy.Time.now()
-                vis_NN_trav_pose_msg.header.frame_id = "world"
-                vis_NN_trav_pose_msg.pose.position.x = NN_output.position[0]+self.state[0]
-                vis_NN_trav_pose_msg.pose.position.y = NN_output.position[1]+self.state[1]
-                vis_NN_trav_pose_msg.pose.position.z = NN_output.position[2]+self.state[2]
-                vis_NN_trav_pose_msg.pose.orientation.w = quat[0]
-                vis_NN_trav_pose_msg.pose.orientation.x = quat[1]
-                vis_NN_trav_pose_msg.pose.orientation.y = quat[2]
-                vis_NN_trav_pose_msg.pose.orientation.z = quat[3]
-               
+   
                 # publish the determinant of the rotation matrix
                 determinant_m = Float32()
                 determinant_m.data = np.linalg.det(out[3:12].reshape(3,3))
@@ -317,7 +299,6 @@ class NN_ROS_wrapper:
                 
 
                 self.NN_output.publish(NN_output)
-                self.vis_NN_trav_pose_pub.publish(vis_NN_trav_pose_msg)
                 self.NN_forward_time_pub.publish(NN_forward_time_msg)
 
     # def NN_output_cb(self,msg):

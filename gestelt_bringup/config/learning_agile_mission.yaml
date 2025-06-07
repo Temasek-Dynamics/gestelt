@@ -165,7 +165,7 @@ t_tra_abs: 1 #s
 NN_model_name: 'training_results/new_format/2025-06-07/11-52-25/trained_model/NN_close_300.pth'
 
 # NN_deploy_model_name: 'deployed_model/2025-06-05/11-06-23/trained_model/NN_close_300.pth' # used in the sitl
-NN_deploy_model_name: 'training_results/new_format/2025-06-07/11-52-25/compressed_model/NN_close_180/model.onnx'
+NN_deploy_model_name: 'deployed_model/2025-06-07/11-52-25/compressed_model/NN_close_180/model.onnx'
 NN_freq: 100
 pos_norm_factor: 2   # position normalization factor
 vel_norm_factor: 5    # velocity normalization factor

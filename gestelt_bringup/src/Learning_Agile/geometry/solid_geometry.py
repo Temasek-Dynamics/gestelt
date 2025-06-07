@@ -90,16 +90,16 @@ def verify_SVD_ca(des_tra_m):
     ## call the SVD casADi function separately, to verify the SVD result
     svd= SVD()
     SVD_func=svd.SVD_M_to_SO3_ca_func()
-    d_SVD_func=svd.d_SVD_M_to_SO3_ca_func()
+    #d_SVD_func=svd.d_SVD_M_to_SO3_ca_func()
     
     verify_tra_R,_ = SVD_func(des_tra_m)
-    dR_dm = d_SVD_func(des_tra_m)
+    #dR_dm = d_SVD_func(des_tra_m)
     
     verify_tra_R=verify_tra_R.toarray()
     verify_tra_R=verify_tra_R.T
     # print("sigma=",sigma)
     # print("NN pose det after SVD",np.linalg.det(verify_tra_R))
-    return verify_tra_R,dR_dm.T
+    return verify_tra_R#,dR_dm.T
 
 
 def verify_SVD_PR_ca(des_tra_pitch_m,des_tra_roll_m):

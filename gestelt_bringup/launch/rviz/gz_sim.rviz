@@ -322,7 +322,7 @@ Visualization Manager:
       Shaft Length: 1
       Shaft Radius: 0.05000000074505806
       Shape: Axes
-      Topic: /learning_agile_sim/vis_NN_trav_pose
+      Topic: /visual/vis_NN_trav_pose
       Unreliable: false
       Value: true
     - Class: rviz/Marker
@@ -330,7 +330,7 @@ Visualization Manager:
       Marker Topic: /visual/gate_vis
       Name: gate_vis
       Namespaces:
-        gate: true
+        {}
       Queue Size: 100
       Value: true
     - Class: rviz/Marker

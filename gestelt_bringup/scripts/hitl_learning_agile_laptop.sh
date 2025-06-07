@@ -43,6 +43,9 @@ roslaunch gestelt_bringup record.launch record_platform:=laptop test_mode:=HITL
 "
 
 
+CMD_3="
+roslaunch gestelt_bringup object_visualizer.launch
+"
 
 # disarm drone
 # CMD_4="rosservice call /drone_commander/disarm"
@@ -62,7 +65,7 @@ then
     sleep 1
     tmux send-keys -t $SESSION:0.2 "$SOURCE_WS $EXPORT_ROS_MASTER_URI $CMD_2" C-m 
     sleep 1
-    tmux send-keys -t $SESSION:0.3 "$SOURCE_WS $EXPORT_ROS_MASTER_URI " #C-m $CMD_3
+    tmux send-keys -t $SESSION:0.3 "$SOURCE_WS $EXPORT_ROS_MASTER_URI $CMD_3" #C-m $CMD_3
 fi
 
 # Attach session on the first window

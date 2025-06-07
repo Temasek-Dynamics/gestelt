@@ -9,14 +9,15 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 
 # build the path to the subdirectory
 subdirectory_path = os.path.join(current_dir, 'Learning_Agile')
-
 # add to sys.path
 sys.path.append("../")
 sys.path.append(subdirectory_path)
-
 import rospy
 from geometry_msgs.msg import  PoseStamped, Point, PoseArray
+from gestelt_msgs.msg import close_loop_NN_output
 from visualization_msgs.msg import Marker, MarkerArray
+from scipy.linalg import svd
+from scipy.spatial.transform import Rotation as R
 class ObjectVisualizer:
     def __init__(self):
         # Initialize the ROS node
@@ -35,6 +36,11 @@ class ObjectVisualizer:
             '/visual/drone_model', Marker, queue_size=10
         )
 
+        # 
+        self.vis_NN_trav_pose_pub = rospy.Publisher(
+            "/visual/vis_NN_trav_pose", PoseStamped, queue_size=1
+        )
+        
         # Subscriber for the drone state
         self.drone_state_sub = rospy.Subscriber(
             '/mavros/local_position/pose', PoseStamped, self.drone_state_callback
@@ -45,6 +51,10 @@ class ObjectVisualizer:
             '/visual/gate_points', PoseArray, self.gate_points_callback
         )
 
+        # Subscriber for the NN output
+        self.vis_NN_trav_pose_sub = rospy.Subscriber(
+            '/learning_agile_sim/NN_output', close_loop_NN_output, self.NN_output_callback
+        )
 
         self.drone_wing_len=rospy.get_param('/drone/wing_len')
         self.drone_height=rospy.get_param('/drone/height')
@@ -129,6 +139,23 @@ class ObjectVisualizer:
         gate_vis_msg.pose.position.y = 0 
         gate_vis_msg.pose.position.z = 0 
         self.gate_vis_pub.publish(gate_vis_msg)
+        
+    def NN_output_callback(self, msg):
+        verify_tra_R =svd(np.reshape(msg.vector_9D_orientation,(3,3)))
+        quat=np.roll(R.from_matrix(verify_tra_R).as_quat(),1)
+        ##= visualize the traversing pose
+        vis_NN_trav_pose_msg = PoseStamped()
+        vis_NN_trav_pose_msg.header.stamp = rospy.Time.now()
+        vis_NN_trav_pose_msg.header.frame_id = "world"
+        vis_NN_trav_pose_msg.pose.position.x = msg.position[0]+self.state[0]
+        vis_NN_trav_pose_msg.pose.position.y = msg.position[1]+self.state[1]
+        vis_NN_trav_pose_msg.pose.position.z = msg.position[2]+self.state[2]
+        vis_NN_trav_pose_msg.pose.orientation.w = quat[0]
+        vis_NN_trav_pose_msg.pose.orientation.x = quat[1]
+        vis_NN_trav_pose_msg.pose.orientation.y = quat[2]
+        vis_NN_trav_pose_msg.pose.orientation.z = quat[3]
+
+        self.vis_NN_trav_pose_pub.publish(vis_NN_trav_pose_msg)
     def spin(self):
         # Keep the node running
         rospy.spin()
