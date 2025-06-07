@@ -1,7 +1,0 @@
-<launch>
-    <node pkg="model_inference" name="model_inference" type="model_inference_node" output="screen">
-        <rosparam file="$(find gestelt_bringup)/config/learning_agile_mission.yaml" command="load"/>
-        <param name="is_simulation" value="True"/>
-        <param name="model_dir" value="$(find gestelt_bringup)/src/Learning_Agile/"/>
-    </node>
-</launch>
