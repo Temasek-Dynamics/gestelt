@@ -53,6 +53,7 @@ RUN export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/root/acados/lib \
     && source /opt/ros/noetic/setup.bash \
     && catkin config --skiplist trajectory_planner se3_controller\
     && catkin config --skiplist vicon_bridge\
+    && catkin config --skiplist model_inference\
     && catkin config --skiplist fake_drone\
     # && catkin build\ 
     && rm -rf /var/lib/apt/lists/* 

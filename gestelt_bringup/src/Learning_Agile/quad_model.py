@@ -400,22 +400,16 @@ class QuadrotorCTBRCtl:
         self.cost_base.path_error(self.quad_dyn)
         self.goal_state=vertcat(self.cost_base.goal_r_B,self.cost_base.goal_v_I,self.cost_base.goal_q)
 
-        # soft_relu_wrp = self.cost_base.wrp * casadi.log(1+casadi.exp(self.cost_base.des_t_tra-self.cost_base.t_node))
-        # soft_relu_wvp = self.cost_base.wvp * casadi.log(1+casadi.exp(self.cost_base.des_t_tra-self.cost_base.t_node))
-        # soft_relu_wqp = self.cost_base.wqp * casadi.log(1+casadi.exp(self.cost_base.des_t_tra-self.cost_base.t_node))
-        tanh_wrt = self.cost_base.wrt * (0.5 * (1+casadi.tanh(1000*(self.cost_base.des_t_tra + 0.3 - self.cost_base.t_node))))
-        tanh_wrp = self.cost_base.wrp * (0.5 * (1+casadi.tanh(1000*(self.cost_base.t_node + 0.3 - self.cost_base.des_t_tra))))
-        tanh_wvp = self.cost_base.wvp * (0.5 * (1+casadi.tanh(1000*(self.cost_base.t_node + 0.3 - self.cost_base.des_t_tra))))
-        tanh_wqp = self.cost_base.wqp * (0.5 * (1+casadi.tanh(1000*(self.cost_base.t_node + 0.3 - self.cost_base.des_t_tra))))
+        tanh_wrt = self.cost_base.wrt * (0.5 * (1+casadi.tanh(1000*(self.cost_base.des_t_tra - self.cost_base.t_node))))
+        tanh_wrp = self.cost_base.wrp * (0.5 * (1+casadi.tanh(1000*(self.cost_base.t_node - self.cost_base.des_t_tra))))
+        tanh_wvp = self.cost_base.wvp * (0.5 * (1+casadi.tanh(1000*(self.cost_base.t_node - self.cost_base.des_t_tra))))
+        tanh_wqp = self.cost_base.wqp * (0.5 * (1+casadi.tanh(1000*(self.cost_base.t_node - self.cost_base.des_t_tra))))
         
         cost_r_I_t = self.cost_base.e_r_I_t.T @ casadi.diag(tanh_wrt) @ self.cost_base.e_r_I_t
         cost_r_I_g =   self.cost_base.e_r_I.T @ casadi.diag(tanh_wrp) @ self.cost_base.e_r_I
         cost_v_I_g =   self.cost_base.e_v_I.T @ casadi.diag(tanh_wvp) @ self.cost_base.e_v_I
         cost_q_g   =   self.cost_base.e_q_g.T @ casadi.diag(tanh_wqp) @ self.cost_base.e_q_g
         
-        # cost_r_I_g =   self.cost_base.e_r_I.T @ casadi.diag(self.cost_base.wrp) @ self.cost_base.e_r_I
-        # cost_v_I_g =   self.cost_base.e_v_I.T @ casadi.diag(self.cost_base.wvp) @ self.cost_base.e_v_I
-        # cost_q_g   =   self.cost_base.e_q_g.T @ casadi.diag(self.cost_base.wqp) @ self.cost_base.e_q_g
         
 
         ## the path cost to the first to the gate, then to the goal

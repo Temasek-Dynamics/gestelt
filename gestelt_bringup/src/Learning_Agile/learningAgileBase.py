@@ -59,8 +59,10 @@ class LearningAgileBase:
         self.output_size = train_cfg['model']['output_size']
         self.last_gate_points = np.zeros(12)
         self.control=np.zeros(4)
-        self.reg_control=0
-        self.reg_det=0
+        self.reg_control = 0
+        self.reg_control_difference = 0
+        self.regularize = 0
+        self.reg_det = 0
         self.dreg_dz = np.zeros([1,self.output_size])
         self.last_u=np.zeros(4)
         self.np_nn_out=np.zeros(self.output_size)
@@ -80,7 +82,7 @@ class LearningAgileBase:
             TEST=self.mission_cfg['FIX_GATE_PITCH_TEST']
         )
         
-        
+        self.regularize = 0
 
         #== reset the gate
         self.learning_agile_sim.prepare_gate()
@@ -249,20 +251,22 @@ class LearningAgileBase:
         
     def get_reg_det(self):
         """
-        regularize the output of the neural network m, the determinant of the m should be close to 1
+        regularize the output of the neural network m, the determinant of the m should be larger than 0
 
         """
         m=self.np_nn_out[3:12].reshape(3,3)
-        self.reg_det=self.mission_cfg['penalty']['det_reg_w']*(np.linalg.det(m)-1)**2
+        self.reg_det=self.mission_cfg['penalty']['det_reg_w'] * np.log(1 + np.exp(-np.linalg.det(m)))
+        self.regularize += self.reg_det
         adj_m_T = np.linalg.det(m)*np.linalg.inv(m).T
-        dreg_det_dm = self.mission_cfg['penalty']['det_reg_w']*2*(np.linalg.det(m)-1)*adj_m_T
+        dreg_det_dm = self.mission_cfg['penalty']['det_reg_w']*(-np.exp(-np.linalg.det(m)))/ (1 + np.exp(-np.linalg.det(m))) * adj_m_T
         self.dreg_dz[:,3:12]=dreg_det_dm.flatten()
 
 
     def get_reg_control(self):
-        ## acquire p_X_traj_i/p_z_i
-        
+        """regularize the control magnitude
+        """
         self.reg_control = self.mission_cfg['penalty']['control_reg_w']*np.dot(self.control-self.planner.hover_u,self.control-self.planner.hover_u)
+        self.regularize += self.reg_control
         dreg_dcontrol = self.mission_cfg['penalty']['control_reg_w']*2*(self.control-self.planner.hover_u)
         self.dreg_dz[:,:]=np.matmul(dreg_dcontrol,self.planner.d_input_traj_d_z[0,:,:]).flatten()
     
@@ -271,6 +275,7 @@ class LearningAgileBase:
         regulate the control difference, which is computational intensive for MPC 
         """
         self.reg_control_difference = self.mission_cfg['penalty']['control_difference_reg_w']*np.dot(self.control-self.last_u,self.control-self.last_u)
+        self.regularize += self.reg_control_difference
         dreg_dcontrol_diff =  self.mission_cfg['penalty']['control_reg_w']*2*(self.control-self.last_u)
         self.dreg_dz[:,:]=np.matmul(dreg_dcontrol_diff,self.planner.d_input_traj_d_z[0,:,:]).flatten()
            
@@ -281,6 +286,7 @@ class LearningAgileBase:
         H: close loop horizon
         N: prediction horizon
         """
+        self.get_reg_det()
         self.get_reg_control_difference()
         ## acquire p_X_traj_i/p_x_i
         cur_p_X_traj_i_p_x_i = np.ones([self.planner.horizon+1,len(self.state),len(self.state)])
@@ -361,7 +367,7 @@ class LearningAgileBase:
         get the penalty of the current MPC prediction, used under the RAY
         """
         L_d_L_i = self.planner.get_penalty(self.pred_st_traj,real_state_i,success_rate)
-        self.L_i.append(L_d_L_i[0]+self.reg_control)
+        self.L_i.append(L_d_L_i[0]+self.regularize)
         self.p_L_i_p_X_traj_i.append(L_d_L_i[1])
         
     

@@ -74,7 +74,7 @@ def input_cal():
     gate_center = mission_cfg['mission']['gate_position']
     relative_gate_points=get_gate_points(gate_center,gate_length,gate_width)-env_init_set[0:3]
     inputs[13:25] = relative_gate_points.flatten()/mission_cfg['pos_norm_factor'] # gate points
-    inputs[25:37] = relative_gate_points.flatten()/mission_cfg['pos_norm_factor'] # gate position
+    # inputs[25:37] = relative_gate_points.flatten()/mission_cfg['pos_norm_factor'] # gate position
     
     return inputs,env_init_set[8:17]
 

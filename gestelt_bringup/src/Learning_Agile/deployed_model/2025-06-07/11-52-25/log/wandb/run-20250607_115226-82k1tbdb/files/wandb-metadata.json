@@ -1,0 +1,42 @@
+{
+  "os": "Linux-5.15.0-139-generic-x86_64-with-glibc2.29",
+  "python": "CPython 3.8.10",
+  "startedAt": "2025-06-07T03:52:26.725026Z",
+  "program": "./learningAgileAPG.py",
+  "codePath": "gestelt_bringup/src/Learning_Agile/learningAgileAPG.py",
+  "git": {
+    "remote": "git@github.com:Temasek-Dynamics/gestelt.git",
+    "commit": "bbef4ce148d5f04805c59b27b2fa8f63f24562a7"
+  },
+  "email": "tianchen.sun787@gmail.com",
+  "root": "/home/tlab-uav/gestelt_ws/src/gestelt/gestelt_bringup/src/Learning_Agile/training_results/new_format/2025-06-07/11-52-25/log",
+  "host": "tlabuav-ThinkStation-P3-Tower",
+  "executable": "/usr/bin/python3",
+  "codePathLocal": "learningAgileAPG.py",
+  "cpu_count": 16,
+  "cpu_count_logical": 24,
+  "gpu": "NVIDIA RTX A5000",
+  "gpu_count": 1,
+  "disk": {
+    "/": {
+      "total": "491001659392",
+      "used": "182830297088"
+    }
+  },
+  "memory": {
+    "total": "67032817664"
+  },
+  "cpu": {
+    "count": 16,
+    "countLogical": 24
+  },
+  "gpu_nvidia": [
+    {
+      "name": "NVIDIA RTX A5000",
+      "memoryTotal": "25757220864",
+      "cudaCores": 8192,
+      "architecture": "Ampere"
+    }
+  ],
+  "cudaVersion": "12.2"
+}

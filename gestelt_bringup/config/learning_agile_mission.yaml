@@ -48,7 +48,7 @@ mission:
   # only feasible for MANUAL_SET_POSE_TEST
   gate_position: [-0.0, -0.0, 1.8]
   # gate_ori_RP: [-0.0, -1.055, 0.0]
-  gate_ori_euler: [0.0, 0.0,-0.0] # zyx 1.0 radian is 57.2958 degree,1.3 radian is 1.5 radian is 85.9437 degree 
+  gate_ori_euler: [0.0, 1.0,-0.0] # zyx 1.0 radian is 57.2958 degree,1.3 radian is 1.5 radian is 85.9437 degree 
   
   ##------ goal pose ----##
   goal_position: [0.0, -1.8, 1.5]
@@ -162,15 +162,11 @@ t_tra_abs: 1 #s
 
 # NN_model_name: 'training_results/new_format/2025-01-16/09-59-31/trained_model/NN_close_3200.pth' #**# 75% success rate
 # NN_model_name: 'training_results/new_format/2025-01-31/11-40-49/trained_model/NN_close_1900.pth' # 80% success rate
-# NN_model_name: 'training_results/new_format/2025-05-08/16-10-43/trained_model/NN_close_130.pth' 
-# NN_model_name: 'training_results/new_format/2025-05-08/19-28-20/trained_model/NN_close_600.pth' 
-# NN_model_name: 'training_results/new_format/2025-05-16/16-08-41/trained_model/NN_close_200.pth' 
-NN_model_name: 'training_results/new_format/2025-05-23/18-49-36/trained_model/NN_close_30.pth'
-# NN_model_name: 'training_results/new_format/2025-05-12/15-10-25/trained_model/NN_close_0.pth' 
-# NN_model_name: 'training_results/new_format/2025-01-22/10-26-33/trained_model/NN_close_120.pth' # train for the moving gate
+NN_model_name: 'training_results/new_format/2025-06-07/11-52-25/trained_model/NN_close_300.pth'
 
-NN_deploy_model_name: 'deployed_model/2025-05-08/19-28-20/trained_model/NN_close_600.pt' # used in the sitl
-NN_freq: 50
+# NN_deploy_model_name: 'deployed_model/2025-06-05/11-06-23/trained_model/NN_close_300.pth' # used in the sitl
+NN_deploy_model_name: 'training_results/new_format/2025-06-07/11-52-25/compressed_model/NN_close_180/model.onnx'
+NN_freq: 100
 pos_norm_factor: 2   # position normalization factor
 vel_norm_factor: 5    # velocity normalization factor
 
@@ -180,9 +176,9 @@ penalty:
   goal_x_axis_w: 2
   goal_yz_axis_w: 2 #12.0 for last 5 nodes, 240 for last 3 nodes (yz axis)
   scaling_w: 100 #100 for quadratic loss
-  det_reg_w: 0.0
+  det_reg_w: 100.0
   control_reg_w: 0
-  control_difference_reg_w: 0
+  control_difference_reg_w: 500
 
 LBFGS: false
 POSITION_ENCODING: false
