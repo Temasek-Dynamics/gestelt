@@ -5,11 +5,10 @@ import casadi
 import numpy as np
 import math
 from scipy.spatial.transform import Rotation as R
-from geometry.solid_geometry import norm
 from math import sqrt
 
-from config import mission_cfg
-from geometry.solid_geometry import dir_cosine, SVD, magni, magni_casadi
+from Learning_Agile.config import mission_cfg
+from Learning_Agile.geometry.solid_geometry import dir_cosine, SVD, magni, magni_casadi, norm
 # quadrotor (UAV) environment
 class QuadrotorDynamic:
     """Only the dynamics, support different state and input dimension.

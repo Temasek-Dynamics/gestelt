@@ -16,7 +16,7 @@ import rospy
 from geometry_msgs.msg import  PoseStamped, Point, PoseArray
 from gestelt_msgs.msg import close_loop_NN_output
 from visualization_msgs.msg import Marker, MarkerArray
-from scipy.linalg import svd
+from Learning_Agile.geometry.solid_geometry import verify_SVD_ca
 from scipy.spatial.transform import Rotation as R
 class ObjectVisualizer:
     def __init__(self):
@@ -58,6 +58,7 @@ class ObjectVisualizer:
 
         self.drone_wing_len=rospy.get_param('/drone/wing_len')
         self.drone_height=rospy.get_param('/drone/height')
+        self.state = np.zeros(3)  # Initialize the state vector
     def drone_state_callback(self, msg):
         # Create and configure the ellipsoid marker
         drone_ellipsoid = Marker()
@@ -70,6 +71,9 @@ class ObjectVisualizer:
 
         drone_ellipsoid.pose.position = msg.pose.position
         drone_ellipsoid.pose.orientation = msg.pose.orientation
+        self.state[0] = msg.pose.position.x
+        self.state[1] = msg.pose.position.y
+        self.state[2] = msg.pose.position.z
 
         drone_ellipsoid.scale.x = self.drone_wing_len
         drone_ellipsoid.scale.y = self.drone_wing_len
@@ -141,7 +145,7 @@ class ObjectVisualizer:
         self.gate_vis_pub.publish(gate_vis_msg)
         
     def NN_output_callback(self, msg):
-        verify_tra_R =svd(np.reshape(msg.vector_9D_orientation,(3,3)))
+        verify_tra_R =verify_SVD_ca(msg.vector_9D_orientation)
         quat=np.roll(R.from_matrix(verify_tra_R).as_quat(),1)
         ##= visualize the traversing pose
         vis_NN_trav_pose_msg = PoseStamped()

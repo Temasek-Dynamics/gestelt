@@ -2,13 +2,11 @@
 import numpy as np
 
 import scipy
-from quad_OC import OCSys,LQR
-from geometry.solid_geometry import pitch_from_gate
-from quad_model import QuadrotorCTBRCtl, QuadrotorSRTCtl,QuadrotorWrenchCtl,QuadrotorAugmentedSRTCtl, toQuaternion,Gate
-from visualization.python_sim_vis import get_quad_vert_pos,plot_position,plot_angularrate,plot_thrust
-from config import train_cfg
-from geometry.solid_geometry import magni, pitch_from_gate, verify_SVD_ca
-from config import mission_cfg, train_cfg
+from Learning_Agile.quad_OC import OCSys,LQR
+from Learning_Agile.quad_model import QuadrotorCTBRCtl, QuadrotorSRTCtl,QuadrotorWrenchCtl,QuadrotorAugmentedSRTCtl, toQuaternion,Gate
+from Learning_Agile.visualization.python_sim_vis import get_quad_vert_pos,plot_position,plot_angularrate,plot_thrust
+from Learning_Agile.geometry.solid_geometry import magni, pitch_from_gate, verify_SVD_ca
+from Learning_Agile.config import mission_cfg, train_cfg
 from scipy.spatial.transform import Rotation as R
 input_size = train_cfg['model']['input_size'] 
 hidden_size = train_cfg['model']['hidden_size']

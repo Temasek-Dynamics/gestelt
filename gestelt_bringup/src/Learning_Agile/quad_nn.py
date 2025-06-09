@@ -1,5 +1,5 @@
 ##this file is the package about neural network
-from config import mission_cfg, train_cfg
+from Learning_Agile.config import mission_cfg, train_cfg
 from math import pi
 import torch
 import torch.nn as nn
@@ -9,7 +9,7 @@ from scipy.spatial.transform import Rotation as R
 import scipy.stats as stats
 
 
-from geometry.solid_geometry import magni
+from Learning_Agile.geometry.solid_geometry import magni
 
 
 pre_ini_pos=np.array(mission_cfg['mission']['initial_position'])

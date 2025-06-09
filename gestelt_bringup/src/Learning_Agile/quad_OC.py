@@ -9,9 +9,7 @@ from scipy import interpolate
 import casadi
 from acados_template import AcadosOcp, AcadosOcpSolver, AcadosSimSolver,AcadosSim,AcadosModel
 import time
-import scipy
-from os import system
-from config import mission_cfg
+from Learning_Agile.config import mission_cfg
 '''
 # =============================================================================================================
 # The OCSys class has multiple functionaries: 1) define an optimal control system, 2) solve the optimal control

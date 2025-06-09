@@ -16,15 +16,14 @@ import math
 import matplotlib.pyplot as plt
 import pickle
 
-from quad_model import toQuaternion, Gate, Rd2Rp, get_gate_points
-from visualization.python_sim_vis import play_animation, plot_position, plot_velocity, plot_scalar, plot_thrust, plot_angularrate, plot_3D_traj,plot_M,plot_T,plot_3axis_weights
-from quad_policy import PlanFwdBwdWrapper, get_obs, manual_set_z_forward
-from quad_nn import nn_sample, network
-from quad_moving import binary_search_solver,input_cal
-from visualization.result_analysis import rotation_vis
-from geometry.solid_geometry import magni, pitch_from_gate, verify_SVD_ca
-from misc.misc import str2bool 
-from config import train_cfg, mission_cfg, current_dir
+from Learning_Agile.quad_model import toQuaternion, Gate, Rd2Rp, get_gate_points
+from Learning_Agile.visualization.python_sim_vis import play_animation, plot_position, plot_velocity, plot_scalar, plot_thrust, plot_angularrate, plot_3D_traj,plot_M,plot_T,plot_3axis_weights
+from Learning_Agile.quad_policy import PlanFwdBwdWrapper, get_obs, manual_set_z_forward
+from Learning_Agile.quad_nn import nn_sample, network
+from Learning_Agile.visualization.result_analysis import rotation_vis
+from Learning_Agile.geometry.solid_geometry import magni, pitch_from_gate, verify_SVD_ca
+from Learning_Agile.misc.misc import str2bool 
+from Learning_Agile.config import train_cfg, mission_cfg, current_dir
 
 device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 # device=torch.device('cpu')

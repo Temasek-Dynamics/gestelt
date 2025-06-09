@@ -10,19 +10,17 @@ import torch
 import numpy as np
 from multiprocessing import Process, Queue
 
-from config import current_dir,train_cfg, mission_cfg
-from quad_model import Gate,get_gate_points
-from quad_nn import nn_sample, network
-from quad_moving import binary_search_solver
-from geometry.solid_geometry import pitch_from_gate,magni,verify_SVD_ca
+from Learning_Agile.config import current_dir,train_cfg, mission_cfg
+from Learning_Agile.quad_model import Gate,get_gate_points
+from Learning_Agile.quad_nn import nn_sample
 
 from gestelt_msgs.msg import Goals,  CommanderState, close_loop_NN_output
 from geometry_msgs.msg import  PoseStamped, TwistStamped, Point, PoseArray, Pose
 from std_msgs.msg import Float32
 from visualization_msgs.msg import Marker
-from learning_agile_sim import MovingGate
+from Learning_Agile.learning_agile_sim import MovingGate
 from learning_agile_ROS_mission import transform_map_to_world
-from quad_policy import get_obs, manual_set_z_forward
+from Learning_Agile.quad_policy import get_obs, manual_set_z_forward
 import onnxruntime
 ##=================Load the model and configuration file=================##
 # acquire the current directory
