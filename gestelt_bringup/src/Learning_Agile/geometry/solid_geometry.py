@@ -144,14 +144,14 @@ def pitch_from_gate(gate_point):
 
 def recover_euler_from_9d(outputs,deg_unit=False):
     
-    R_nn,_=verify_SVD_ca(outputs[3:12])
+    R_nn=verify_SVD_ca(outputs[3:12])
     quat_nn=R.from_matrix(R_nn.reshape(3,3))
     euler_nn=quat_nn.as_euler('zyx', degrees=deg_unit)
     
     #backward
     # deuler_dR=dEulerZYX_dR(R_nn)
     # deuler_dm=ca.mtimes(deuler_dR,dR_dm)
-    return euler_nn,_ #deuler_dm.toarray()
+    return euler_nn #deuler_dm.toarray()
 
 ## return the maginitude of a vector
 def magni(vector):

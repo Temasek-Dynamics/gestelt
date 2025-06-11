@@ -7,7 +7,7 @@ import numpy as np
 import wandb
 
 from scipy.spatial.transform import Rotation as R
-from geometry.solid_geometry import pitch_from_gate,recover_euler_from_9d
+from Learning_Agile.geometry.solid_geometry import pitch_from_gate,recover_euler_from_9d
 
 class LoggerConfig:
     def __init__(self, log_dir="logs"):
@@ -49,7 +49,7 @@ class LoggerConfig:
 def log_train_IO(writer,inputs,outputs,global_step):
 
 
-    euler_nn,_=recover_euler_from_9d(outputs,deg_unit=True)
+    euler_nn=recover_euler_from_9d(outputs,deg_unit=True)
     det_m = np.linalg.det(outputs[3:12].reshape(3,3))
     abs_gate_point=inputs[13:25].reshape(-1,3)+inputs[0:3]
     gate_pitch = pitch_from_gate(abs_gate_point)
@@ -103,7 +103,7 @@ def log_drone_state(writer,drone_state,control, global_step):
 
 
 def log_train_IO_wandb(inputs,outputs,global_step):
-    euler_nn,_=recover_euler_from_9d(outputs,deg_unit=True)
+    euler_nn=recover_euler_from_9d(outputs,deg_unit=True)
     det_m = np.linalg.det(outputs[3:12].reshape(3,3))
     abs_gate_point=inputs[13:25].reshape(-1,3)+inputs[0:3]
     gate_pitch = pitch_from_gate(abs_gate_point)

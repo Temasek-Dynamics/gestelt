@@ -10,7 +10,7 @@ from scipy.spatial.transform import Rotation as R
 
 
 from quad_policy import PlanFwdBwdWrapper
-from learning_agile_sim import MovingGate
+from quad_model import MovingGate
 from quad_nn import nn_sample
 from config import mission_cfg
 class PenaltyDesignHelper():

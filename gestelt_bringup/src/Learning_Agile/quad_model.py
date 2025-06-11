@@ -871,6 +871,52 @@ class Gate:
     def t_final(self, final_point):
         return np.matmul(self.I_G, final_point - self.centroid)
 
+
+class MovingGate():
+    def __init__(self, 
+                env_init_set,
+                gate_center,
+                gate_length):
+        
+        # initialize the gate1, with the initial gate position
+        # env_init_set[7]: gate width
+        
+        ###############################################
+        ###############################################
+        ##################gate length##################    z
+        # 0------------------------------------------1     ^     y
+        # |                   ^z                     |     |   /
+        # |<-gate width       |                      |     | /
+        # |                   *--> x                 |     *-------> x
+        # 3------------------------------------------2
+        ###############################################
+        ###############################################
+        gate_width = env_init_set[7]
+        gate_point_no_pitch = get_gate_points(gate_center,gate_length,gate_width)
+        
+        self.gate = Gate(gate_point_no_pitch)
+        
+        # add the pitch angle to the gate
+        gate_init_euler = R.from_matrix(env_init_set[8:17].reshape(3,3)).as_euler('zyx')
+        self.gate_init_pitch = gate_init_euler[1]
+        self.gate.rotate_y(self.gate_init_pitch)
+
+
+    
+    def set_vel(
+        self,
+        dt,
+        gate_v,
+        gate_w,
+        python_sim_time
+        ):
+        
+        self.v=gate_v
+        self.w=gate_w
+        
+        # pre calculate gate points for future T durations
+        self.gate_points_list, self.V = self.gate.move(T = python_sim_time, v = gate_v ,w = gate_w ,dt = dt)
+        
 def get_gate_points(gate_center,gate_length,gate_width):
     return np.array([[gate_center[0]-gate_length/2, gate_center[1], gate_center[2]+gate_width/2],
                      [gate_center[0]+gate_length/2, gate_center[1], gate_center[2]+gate_width/2],

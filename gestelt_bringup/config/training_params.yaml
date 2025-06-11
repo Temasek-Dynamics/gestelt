@@ -5,10 +5,10 @@ training:
   num_epochs: 40000
   # steps_per_epoch: 20
   close_loop_horizon: 50
-  learning_rate: 0.0006
+  learning_rate: 0.0004
   eta_min: 0.00002 #for cosine decay 1% of learning rate
   dyn_decay: 0.75 ## the BPTT decay
-  batch_size: 32
+  batch_size: 1
   lr_gamma: 0.98
   lr_decay_num_epochs: 200
 

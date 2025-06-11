@@ -2,9 +2,9 @@ import numpy as np
 import jax.numpy as jnp
 # from differentiable_collision_wrapper import *
 
-from diff_collision.jax_differentiable_collision_call import DiffCollisionWrapper, Polytope
-from geometry.solid_geometry import plane, line, magni,dir_cosine_np
-from config import mission_cfg
+from Learning_Agile.diff_collision.jax_differentiable_collision_call import DiffCollisionWrapper, Polytope
+from Learning_Agile.geometry.solid_geometry import plane, line, magni,dir_cosine_np
+from Learning_Agile.config import mission_cfg
 ## define the narrow window which is also the obstacle for the quadrotor
 class Obstacle():
     def __init__(self, point1, point2, point3, point4,wing_len,uav_height):

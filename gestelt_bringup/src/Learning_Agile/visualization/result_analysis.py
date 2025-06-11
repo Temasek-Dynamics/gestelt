@@ -2,6 +2,8 @@ import numpy as np
 import os
 import matplotlib.pyplot as plt
 from scipy.spatial.transform import Rotation as R
+from mpl_toolkits.mplot3d import Axes3D
+from matplotlib.animation import FuncAnimation
 # Load the data
 # acquire the current directory
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -92,12 +94,104 @@ def rotation_vis(uav_traj=None,
     plt.plot(np.linalg.det(des_tra_R_list[:, 0:9].reshape(-1,3,3)), label='SVD_result_determinant',color='b')
     plt.legend()
     plt.grid(True)
-
     
+    
+    # plt each element of nn_output_list[:,3:12]
+    plt.figure()
+    for i in range(9):
+        plt.plot(nn_output_list[:, 3 + i], label=f'NN_output_{i}')
+    plt.xlabel('Time')
+    plt.ylabel('m elements')
+    plt.title('NN Output m Elements')
+    plt.grid(True)
+    
+    
+   
     # if seprate_plot: 
     plt.show()    
     
+    # 3d matrix row vectors
+    animate_matrix_rows_3d(
+        nn_output_list[::5,3:12], 
+        des_tra_R_list[::5,0:9],
+        save_path=os.path.join(current_dir, '../python_sim_result/nn_output_animation.gif')
+    )
+    
     return euler_nn
+
+
+
+def animate_matrix_rows_3d(nn_outputs, des_Rs, interval=200, save_path=None):
+    """
+    Animate the row vectors of two sequences of 3x3 matrices in 3D.
+    Args:
+        nn_outputs: np.ndarray, shape (N, 9)
+        des_Rs: np.ndarray, shape (N, 9)
+        interval: int, delay between frames in ms
+        save_path: str or None, if set, save the animation as mp4
+    """
+    assert nn_outputs.shape == des_Rs.shape
+    N = nn_outputs.shape[0]
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    colors_m = ['r', 'g', 'b']
+    colors_R = ['m', 'c', 'y']
+    origin = np.zeros(3)
+
+    # Prepare lines for updating
+    lines = []
+    for i in range(3):
+        # NN output
+        line_m, = ax.plot([0, 0], [0, 0], [0, 0], color=colors_m[i], label=f'NN row {i}')
+        # SVD result
+        line_R, = ax.plot([0, 0], [0, 0], [0, 0], color=colors_R[i], linestyle='dashed', label=f'SVD row {i}')
+        lines.append((line_m, line_R))
+
+    ax.set_xlim([-1, 1])
+    ax.set_ylim([-1, 1])
+    ax.set_zlim([-1, 1])
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+    ax.set_title("NN Output vs SVD Result (Animated)")
+    ax.legend()
+
+    def update(frame):
+        m = nn_outputs[frame].reshape(3, 3)
+        R = des_Rs[frame].reshape(3, 3)
+        for i in range(3):
+            # NN output vector
+            vec_m = m[i]
+            xs = np.array([origin[0], vec_m[0]])
+            ys = np.array([origin[1], vec_m[1]])
+            zs = np.array([origin[2], vec_m[2]])
+            lines[i][0].set_data(xs, ys)
+            lines[i][0].set_3d_properties(zs)
+            # SVD result vector
+            vec_R = R[i]
+            xs_R = np.array([origin[0], vec_R[0]])
+            ys_R = np.array([origin[1], vec_R[1]])
+            zs_R = np.array([origin[2], vec_R[2]])
+            lines[i][1].set_data(xs_R, ys_R)
+            lines[i][1].set_3d_properties(zs_R)
+        ax.set_title(f"Frame {frame+1}/{N}")
+        return sum(lines, ())
+
+    ani = FuncAnimation(fig, update, frames=N, interval=interval, blit=False)
+    if save_path:
+        ani.save(save_path, writer='pillow', fps=60)
+    else:
+        plt.show()
+
+# Example usage:
+# m = np.eye(3)
+# R = np.array([[0,1,0],[1,0,0],[0,0,1]])
+# plot_two_matrix_rows_3d(m, R)
+
+# Example usage:
+# mat = np.eye(3)
+# plot_matrix_rows_3d(mat)
 
 def plot_reward():
     reward_file = os.path.join(current_dir, 'training_data/mean_reward.npy')

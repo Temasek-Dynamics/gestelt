@@ -8,6 +8,7 @@ from Learning_Agile.visualization.python_sim_vis import get_quad_vert_pos,plot_p
 from Learning_Agile.geometry.solid_geometry import magni, pitch_from_gate, verify_SVD_ca
 from Learning_Agile.config import mission_cfg, train_cfg
 from scipy.spatial.transform import Rotation as R
+from Learning_Agile.penalty_cal import Obstacle   
 input_size = train_cfg['model']['input_size'] 
 hidden_size = train_cfg['model']['hidden_size']
 output_size = train_cfg['model']['output_size']  
@@ -288,7 +289,6 @@ class PlanFwdBwdWrapper():
         self.point2 = self.gate_corners[3:6]
         self.point3 = self.gate_corners[6:9]
         self.point4 = self.gate_corners[9:12]     
-        from penalty_cal import Obstacle   
         self.obstacle = Obstacle(self.point1,self.point2,self.point3,self.point4,self.wing_len,self.uav_height)
 
 
