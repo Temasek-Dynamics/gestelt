@@ -16,7 +16,7 @@ sys.path.append(parent_dir)
 
 # 从当前项目导入模型定义
 from Learning_Agile.config import train_cfg
-from Learning_Agile.quad_nn import network
+from gestelt_bringup.src.quad_nn import network
 # Hyper-parameters 
 input_size = train_cfg['model']['input_size'] 
 hidden_size = train_cfg['model']['hidden_size']
@@ -53,13 +53,14 @@ def convert_pytorch_to_tflite(model_path, output_dir, input_size=37, output_size
     print("Step 1: PyTorch -> ONNX")
     
     # load PyTorch model
-    model = network(input_size, hidden_size, hidden_size,
-                weights_vector_length=train_cfg['model']['weights_vector_length'],
-                activation=train_cfg['model']['activation'])
+    # model = network(input_size, hidden_size, hidden_size,
+    #             weights_vector_length=train_cfg['model']['weights_vector_length'],
+    #             activation=train_cfg['model']['activation'])
     
-    model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')))
-    model.eval()
-    
+    # model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')))
+    # model.eval()
+    device = torch.device("cpu")
+    model = torch.load(model_path, map_location=device)
     # create dummy input
     dummy_input = torch.randn(1, input_size, dtype=torch.float32)
     
@@ -222,7 +223,7 @@ def verify_models(pytorch_model, onnx_path, tf_saved_model_path, tflite_path, in
 if __name__ == "__main__":
     # training_results_dir
     training_results_dir = "/home/tlab-uav/gestelt_ws/src/gestelt/gestelt_bringup/src/Learning_Agile/training_results/new_format/"
-    model_path = training_results_dir+"2025-06-07/11-52-25/trained_model/NN_close_180.pth"
-    output_dir = os.path.join(training_results_dir,"2025-06-07/11-52-25/compressed_model/NN_close_180")
+    model_path = training_results_dir+"2025-05-08/19-28-20/trained_model/NN_close_600.pth"
+    output_dir = os.path.join(training_results_dir,"2025-05-08/19-28-20/compressed_model/NN_close_600")
 
     convert_pytorch_to_tflite(model_path, output_dir, input_size, output_size)

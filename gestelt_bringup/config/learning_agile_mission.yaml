@@ -162,13 +162,14 @@ t_tra_abs: 1 #s
 
 # NN_model_name: 'training_results/new_format/2025-01-16/09-59-31/trained_model/NN_close_3200.pth' #**# 75% success rate
 # NN_model_name: 'training_results/new_format/2025-01-31/11-40-49/trained_model/NN_close_1900.pth' # 80% success rate
-NN_model_name: 'training_results/new_format/2025-06-07/14-23-49/trained_model/NN_close_180.pth'
+NN_model_name: 'training_results/new_format/2025-05-08/19-28-20/trained_model/NN_close_600.pth' # network with GRU
+# NN_model_name: 'training_results/new_format/2025-06-07/14-23-49/trained_model/NN_close_180.pth'
 # NN_model_name: 'training_results/new_format/2025-06-10/14-40-51/trained_model/NN_close_90.pth'
 # NN_model_name: 'training_results/new_format/2025-06-10/17-10-32/trained_model/NN_close_100.pth'
 
 
 # NN_deploy_model_name: 'deployed_model/2025-06-05/11-06-23/trained_model/NN_close_300.pth' # used in the sitl
-NN_deploy_model_name: 'deployed_model/2025-06-07/11-52-25/compressed_model/NN_close_180/model.onnx'
+NN_deploy_model_name: 'deployed_model/2025-05-08/19-28-20/compressed_model/NN_close_600/model.onnx'
 NN_freq: 100
 pos_norm_factor: 2   # position normalization factor
 vel_norm_factor: 5    # velocity normalization factor

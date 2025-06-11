@@ -11,7 +11,7 @@ from scipy.spatial.transform import Rotation as R
 
 from quad_policy import PlanFwdBwdWrapper
 from quad_model import MovingGate
-from quad_nn import nn_sample
+from gestelt_bringup.src.quad_nn import nn_sample
 from config import mission_cfg
 class PenaltyDesignHelper():
     '''

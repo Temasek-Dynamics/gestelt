@@ -49,7 +49,7 @@ def get_obs(
     ## gate points
     relative_gate_points = gate_t_i.gate_point-drone_state[0:3]
     immed_obs[13:25]=relative_gate_points.flatten()/mission_cfg['pos_norm_factor'] # gate points
-    # immed_obs[25:37]=last_gate_points.flatten()/mission_cfg['pos_norm_factor'] # last gate points
+    immed_obs[25:37]=last_gate_points.flatten()/mission_cfg['pos_norm_factor'] # last gate points
 
     ## update the last gate points
     last_gate_points = relative_gate_points

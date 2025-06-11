@@ -8,7 +8,7 @@ from scipy.spatial.transform import Rotation as R
 from Learning_Agile.config import mission_cfg, train_cfg
 
 from Learning_Agile.quad_model import get_gate_points
-from Learning_Agile.quad_nn import network,nn_sample, t_output
+from gestelt_bringup.src.quad_nn import network,nn_sample, t_output
 # Device configuration
 device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 # device = torch.device('cpu')#

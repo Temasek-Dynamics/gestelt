@@ -10,7 +10,7 @@ import pickle
 from scipy.spatial.transform import Rotation as R
 import matplotlib.pyplot as plt
 
-from learning_agile_sim import LearningAgileSim
+from gestelt_bringup.src.learning_agile_sim import LearningAgileSim
 from Learning_Agile.quad_model import Gate
 from Learning_Agile.quad_policy import get_obs,manual_set_z_forward
 from Learning_Agile.config import mission_cfg, train_cfg,current_dir

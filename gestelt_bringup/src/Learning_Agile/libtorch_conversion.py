@@ -1,7 +1,7 @@
 from config import mission_cfg, train_cfg
 import torch
 import os
-from quad_nn import network_with_GRU
+from gestelt_bringup.src.quad_nn import network_with_GRU
 
 def conversion(model_path):
     # create dummy input

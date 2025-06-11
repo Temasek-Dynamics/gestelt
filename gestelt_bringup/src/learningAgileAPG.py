@@ -14,7 +14,7 @@ from Learning_Agile.logger_misc import log_drone_state_wandb,log_train_IO_wandb,
 from mc_evaluation import mc_evaluation
 from Learning_Agile.geometry.solid_geometry import magni
 from Learning_Agile.misc.misc import load_demo_traj
-from Learning_Agile.quad_nn import network
+from gestelt_bringup.src.quad_nn import network
 folder_dict=setup_training_directories()
 trained_model_folder=folder_dict['trained_model_folder']
 log_folder=folder_dict['log_folder']

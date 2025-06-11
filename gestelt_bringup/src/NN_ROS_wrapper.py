@@ -12,7 +12,7 @@ from multiprocessing import Process, Queue
 
 from Learning_Agile.config import current_dir,train_cfg, mission_cfg
 from Learning_Agile.quad_model import Gate,get_gate_points
-from Learning_Agile.quad_nn import nn_sample
+from quad_nn import nn_sample
 
 from gestelt_msgs.msg import Goals,  CommanderState, close_loop_NN_output
 from geometry_msgs.msg import  PoseStamped, TwistStamped, Point, PoseArray, Pose
