@@ -66,7 +66,7 @@ def inference_worker(model, queue_in, queue_out):
         # onnx runtime inference
         ort_inputs = {model.get_inputs()[0].name: full_input}
         out = model.run(None, ort_inputs)[0][0]
-        
+        NN_forward_time = time.time() - t_comp
         queue_out.put((out, NN_forward_time))
     
 class NN_ROS_wrapper:
