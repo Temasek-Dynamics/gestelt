@@ -8,7 +8,7 @@ from Learning_Agile.visualization.python_sim_vis import get_quad_vert_pos,plot_p
 from Learning_Agile.geometry.solid_geometry import magni, pitch_from_gate, verify_SVD_ca
 from Learning_Agile.config import mission_cfg, train_cfg
 from scipy.spatial.transform import Rotation as R
-from Learning_Agile.penalty_cal import Obstacle   
+ 
 input_size = train_cfg['model']['input_size'] 
 hidden_size = train_cfg['model']['hidden_size']
 output_size = train_cfg['model']['output_size']  
@@ -280,7 +280,7 @@ class PlanFwdBwdWrapper():
 
     # initialize the narrow window
     def init_obstacle(self,gate_t_i):
-
+        from Learning_Agile.penalty_cal import Obstacle  
         gate_pitch = pitch_from_gate(gate_t_i.gate_point)
         
         self.gate_corners = gate_t_i.gate_point[:,:].reshape(12)
