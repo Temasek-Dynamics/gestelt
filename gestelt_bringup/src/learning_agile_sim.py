@@ -479,12 +479,12 @@ def parse_options():
     parser.add_argument('--SAVE_SIM', type=str2bool, default=True, help='Enable or disable SAVE_SIM.')
     parser.add_argument('--SAVE_CSV', type=str2bool, default=True, help='Enable or disable save sim data in the csv format.')
     parser.add_argument('--COMPARISON',  type=str2bool, default=False, help='Compare the training results with pose as gate pose')
-    parser.add_argument('--MC_EVALUATION',  type=str2bool, default=False, help='Compare the training results with other methods')
+    parser.add_argument('--MC_EVALUATION',  type=str2bool, default=True, help='Compare the training results with other methods')
     parser.add_argument('--MULTI_COLLISION_POINT_CHECK',  type=str2bool, default=False, help='multiple collision point check for the training')
     args = parser.parse_args()
     return vars(args)  # Return options as a dictionary  
 
-# @ray.remote
+@ray.remote
 def eval_sim_interface(
     mission_cfg=None,
     train_cfg=None,

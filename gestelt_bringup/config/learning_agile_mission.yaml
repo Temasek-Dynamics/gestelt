@@ -162,7 +162,7 @@ t_tra_abs: 1 #s
 
 # NN_model_name: 'training_results/new_format/2025-01-16/09-59-31/trained_model/NN_close_3200.pth' #**# 75% success rate
 # NN_model_name: 'training_results/new_format/2025-01-31/11-40-49/trained_model/NN_close_1900.pth' # 80% success rate
-NN_model_name: 'training_results/new_format/2025-06-07/14-23-49/trained_model/NN_close_180.pth'
+NN_model_name: 'training_results/new_format/2025-06-07/11-52-25/trained_model/NN_close_180.pth'
 # NN_model_name: 'training_results/new_format/2025-06-10/14-40-51/trained_model/NN_close_90.pth'
 # NN_model_name: 'training_results/new_format/2025-06-10/17-10-32/trained_model/NN_close_100.pth'
 
