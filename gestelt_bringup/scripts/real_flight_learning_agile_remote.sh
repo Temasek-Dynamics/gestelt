@@ -19,9 +19,9 @@ source $SCRIPT_DIR/../../../devel/setup.bash &&
 # export ROS_MASTER_URI (for distributed simulation)
 # drone's side ROS_MASTER_URI should be the laptop
 EXPORT_ROS_MASTER_URI="
-export ROS_IP=192.168.31.204 && 
-export ROS_HOSTNAME=192.168.31.204 &&
-export ROS_MASTER_URI=http://192.168.31.205:11311
+export ROS_IP=192.168.1.13 && 
+export ROS_HOSTNAME=192.168.1.13 &&
+export ROS_MASTER_URI=http://192.168.1.12:11311
 "
 # PX4 v1.13.0
 SOURCE_PX4_AUTOPILOT="
@@ -61,7 +61,7 @@ then
     sleep 1
     tmux send-keys -t $SESSION:0.1 "$SOURCE_WS $EXPORT_ROS_MASTER_URI $CMD_2" C-m 
     sleep 1
-    tmux send-keys -t $SESSION:0.2 "$SOURCE_WS $EXPORT_ROS_MASTER_URI $CMD_3" C-m 
+    tmux send-keys -t $SESSION:0.2 "$SOURCE_WS $EXPORT_ROS_MASTER_URI " C-m 
     sleep 1
     tmux send-keys -t $SESSION:0.3 "$SOURCE_WS $EXPORT_ROS_MASTER_URI $CMD_4" C-m 
 fi

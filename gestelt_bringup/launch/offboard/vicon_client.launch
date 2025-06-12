@@ -1,5 +1,5 @@
 <launch>
-  <arg name="server" default="192.168.31.248"/>
+  <arg name="server" default="192.168.1.2"/> <!-- or 192.168.31.248 -->
   <arg name="drone_name_vicon" default="FTC3"/>
   <!-- Vicon node -->
   <node pkg="vrpn_client_ros" type="vrpn_client_node" name="vrpn_client_node" output="screen">
