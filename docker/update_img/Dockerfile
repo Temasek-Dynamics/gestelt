@@ -33,7 +33,7 @@ SHELL ["/bin/bash", "-c"]
 WORKDIR /gestelt_ws/src/gestelt
 # RUN git fetch origin
 RUN git pull
-RUN git checkout tianchensun_learning_agile
+RUN git checkout use_2025-05-08_model
 
 
 ## if the c_generated_code is git ignored, than this script is required to generate the c code
@@ -47,7 +47,7 @@ RUN git checkout tianchensun_learning_agile
 # copy the deployed model in the image
 WORKDIR /gestelt_ws/src/gestelt/gestelt_bringup/src/Learning_Agile/
 # COPY deployed_model /gestelt_ws/src/gestelt/gestelt_bringup/src/Learning_Agile/deployed_model
-# COPY pytorch-install-arm64 /opt/libtorch
+
 # compile the workspace
 WORKDIR /gestelt_ws/
 RUN export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/root/acados/lib \
