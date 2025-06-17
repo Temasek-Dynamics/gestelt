@@ -14,7 +14,7 @@ from learning_agile_sim import LearningAgileSim
 from Learning_Agile.quad_model import Gate
 from Learning_Agile.quad_policy import get_obs,manual_set_z_forward
 from Learning_Agile.config import mission_cfg, train_cfg,current_dir
-from Learning_Agile.geometry.solid_geometry import recover_euler_from_9d
+from Learning_Agile.geometry.solid_geometry import recover_euler_from_9d,verify_SVD_ca
 ## this options is for debugging
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 options = {}
@@ -251,7 +251,22 @@ class LearningAgileBase:
     #     dreg_dR = self.mission_cfg['penalty']['m_reg_w']*(des_tra_R.T)
     #     self.dreg_dz[:,3:12]=np.matmul(dreg_dR.flatten(),dR_dm).flatten()
 
+    def get_reg_simga(self):
+        """regularize the SVD simga to an identity matrix
+        """
+        output = verify_SVD_ca(self.np_nn_out[3:12])
+        des_tra_R = output['verify_tra_R']
+        sigma = output['sigma']
+        dsigma_dm = output['dsigma_dm']
+
         
+        self.reg_sigma= self.mission_cfg['penalty']['sigma_reg_w'] * np.trace(sigma - np.eye(3)) ** 2
+        dreg_dsigma = self.mission_cfg['penalty']['sigma_reg_w'] * 2 * (np.trace(sigma) - 3) * np.eye(3)
+            
+        self.regularize += self.reg_sigma
+        self.dreg_dz[:,3:12] += np.matmul(dreg_dsigma.flatten(),dsigma_dm).flatten()
+        
+            
     def get_reg_det(self):
         """
         regularize the output of the neural network m, the determinant of the m should be larger than 0, close to 1
@@ -291,7 +306,7 @@ class LearningAgileBase:
         regulate the control difference, which is computational intensive for MPC 
         """
         self.reg_control_difference = self.mission_cfg['penalty']['control_difference_reg_w']*np.dot(self.control-self.last_u,self.control-self.last_u)
-        dreg_dcontrol_diff =  self.mission_cfg['penalty']['control_reg_w']*2*(self.control-self.last_u)
+        dreg_dcontrol_diff =  self.mission_cfg['penalty']['control_difference_reg_w']*2*(self.control-self.last_u)
         
         self.regularize += self.reg_control_difference
         self.dreg_dz[:,:]+=np.matmul(dreg_dcontrol_diff,self.planner.d_input_traj_d_z[0,:,:]).flatten()
@@ -307,6 +322,7 @@ class LearningAgileBase:
         self.get_reg_det()
         self.get_reg_control_difference()
         self.get_reg_orthogonal()
+        self.get_reg_simga()
         
         ## acquire p_X_traj_i/p_x_i
         cur_p_X_traj_i_p_x_i = np.ones([self.planner.horizon+1,len(self.state),len(self.state)])

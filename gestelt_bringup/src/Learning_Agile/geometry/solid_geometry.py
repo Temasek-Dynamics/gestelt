@@ -50,6 +50,8 @@ class SVD():
         self.dim=dim
         self.m_flatten = ca.SX.sym('m_flatten',dim*dim)
         self.sigma = ca.SX.sym('sigma',dim,dim)
+        
+
 
     def SVD_M_to_SO3_ca(self,m_flatten):
         self.m_flatten = m_flatten
@@ -59,9 +61,9 @@ class SVD():
         mTm = ca.mtimes(m.T, m)
         self.sigma, V = qr_eigen(mTm)
         
-
-        singular_val=ca.sqrt(self.sigma)
-        U=ca.mtimes(ca.mtimes(m,V),ca.diag(1/singular_val))
+        eps = 1e-8
+        singular_val=ca.sqrt(self.sigma+eps)
+        U=ca.mtimes(ca.mtimes(m,V),ca.diag(1/singular_val))  # U = m * V * diag(1/sigma + eps)
         
         # Calculate the determinant of the product of U and V.T
         det = ca.det(ca.mtimes(U, V.T))
@@ -72,34 +74,53 @@ class SVD():
         # Return the orthogonalized matrix
         return ca.mtimes(U, V.T)  # Return U * V^T (which is orthogonalized)
 
+    def get_sigma_expr(self,m_flatten):
+        """
+        this function return the sigma expression
+        """
+        m=ca.reshape(m_flatten,self.dim,self.dim)
+        mTm = ca.mtimes(m.T, m)
+        sigma, _ = qr_eigen(mTm)
+        return ca.diag(sigma)
+
     def SVD_M_to_SO3_ca_func(self):
         """
         this function wrap the symbolic SVD_M_to_SO3_ca function
         """
-        SVD_func = ca.Function('SVD_func', [self.m_flatten], [self.SVD_M_to_SO3_ca(self.m_flatten),self.sigma])
+        SVD_func = ca.Function('SVD_func', [self.m_flatten], [self.SVD_M_to_SO3_ca(self.m_flatten)])
+        sigma_func = ca.Function('sigma_func', [self.m_flatten], [self.get_sigma_expr(self.m_flatten)])
         
-        return SVD_func
-    
-    def d_SVD_M_to_SO3_ca_func(self):
-        d_SVD=ca.jacobian(self.SVD_M_to_SO3_ca(self.m_flatten),self.m_flatten)
-        d_SVD_func=ca.Function('d_SVD_func',[self.m_flatten],[d_SVD])
+        dsigma_dm = ca.jacobian(self.get_sigma_expr(self.m_flatten),self.m_flatten)
+        dsigma_dm_func = ca.Function('dsigma_dm_func', [self.m_flatten], [dsigma_dm])
+
+        return {'SVD_func': SVD_func, 
+                'sigma_func': sigma_func,
+                'dsigma_dm_func': dsigma_dm_func
+                }
         
-        return d_SVD_func
+
     
 def verify_SVD_ca(des_tra_m):
     ## call the SVD casADi function separately, to verify the SVD result
     svd= SVD()
-    SVD_func=svd.SVD_M_to_SO3_ca_func()
-    #d_SVD_func=svd.d_SVD_M_to_SO3_ca_func()
+    func = svd.SVD_M_to_SO3_ca_func()
+    SVD_func = func['SVD_func']
+    dsigma_dm_func = func['dsigma_dm_func']
+
+
     
-    verify_tra_R,_ = SVD_func(des_tra_m)
-    #dR_dm = d_SVD_func(des_tra_m)
-    
+    verify_tra_R = SVD_func(des_tra_m)
     verify_tra_R=verify_tra_R.toarray()
     verify_tra_R=verify_tra_R.T
-    # print("sigma=",sigma)
-    # print("NN pose det after SVD",np.linalg.det(verify_tra_R))
-    return verify_tra_R#,dR_dm.T
+    
+    sigma = func['sigma_func'](des_tra_m).toarray()
+    dsigma_dm = dsigma_dm_func(des_tra_m).toarray()
+
+
+    return {'verify_tra_R': verify_tra_R, 
+            'sigma': sigma, 
+            'dsigma_dm': dsigma_dm
+            } 
 
 
 def verify_SVD_PR_ca(des_tra_pitch_m,des_tra_roll_m):
@@ -144,7 +165,7 @@ def pitch_from_gate(gate_point):
 
 def recover_euler_from_9d(outputs,deg_unit=False):
     
-    R_nn=verify_SVD_ca(outputs[3:12])
+    R_nn=verify_SVD_ca(outputs[3:12])['verify_tra_R']
     quat_nn=R.from_matrix(R_nn.reshape(3,3))
     euler_nn=quat_nn.as_euler('zyx', degrees=deg_unit)
     

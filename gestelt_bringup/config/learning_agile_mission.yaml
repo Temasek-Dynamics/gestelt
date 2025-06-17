@@ -162,7 +162,7 @@ t_tra_abs: 1 #s
 
 # NN_model_name: 'training_results/new_format/2025-01-16/09-59-31/trained_model/NN_close_3200.pth' #**# 75% success rate
 # NN_model_name: 'training_results/new_format/2025-01-31/11-40-49/trained_model/NN_close_1900.pth' # 80% success rate
-NN_model_name: 'training_results/new_format/2025-06-07/11-52-25/trained_model/NN_close_180.pth'
+NN_model_name: 'training_results/new_format/2025-06-16/15-37-21/trained_model/NN_close_140.pth'
 # NN_model_name: 'training_results/new_format/2025-06-10/14-40-51/trained_model/NN_close_90.pth'
 # NN_model_name: 'training_results/new_format/2025-06-10/17-10-32/trained_model/NN_close_100.pth'
 
@@ -179,10 +179,11 @@ penalty:
   goal_x_axis_w: 2
   goal_yz_axis_w: 2 #12.0 for last 5 nodes, 240 for last 3 nodes (yz axis)
   scaling_w: 100 #100 for quadratic loss
-  det_reg_w: 0.00010
-  orthogonal_reg_w: 0.00000
-  control_reg_w: 0.0000
-  control_difference_reg_w: 500.0000
+  det_reg_w: 0.00
+  orthogonal_reg_w: 0.00
+  sigma_reg_w: 0.00001 # regularize the sigma in SVD = U \ Sigma V^T to be orthogonal and determinant 1
+  control_reg_w: 0.00
+  control_difference_reg_w: 0.00
 
 LBFGS: false
 POSITION_ENCODING: false

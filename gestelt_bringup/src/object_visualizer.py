@@ -145,7 +145,7 @@ class ObjectVisualizer:
         self.gate_vis_pub.publish(gate_vis_msg)
         
     def NN_output_callback(self, msg):
-        verify_tra_R =verify_SVD_ca(msg.vector_9D_orientation)
+        verify_tra_R =verify_SVD_ca(msg.vector_9D_orientation)['verify_tra_R']
         quat=np.roll(R.from_matrix(verify_tra_R).as_quat(),1)
         ##= visualize the traversing pose
         vis_NN_trav_pose_msg = PoseStamped()

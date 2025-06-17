@@ -224,7 +224,7 @@ class LearningAgileSim():
             out[0:3]=self.gate_center
             out[3:12]=self.gate_ori_9d
         
-        verify_tra_R=verify_SVD_ca(out[3:12])
+        verify_tra_R=verify_SVD_ca(out[3:12])['verify_tra_R']
         self.log_NN_IO_for_RM(self.gate_pitch,out,verify_tra_R.flatten()) 
         self.verify_tra_R_list.append(verify_tra_R)
         return out 
@@ -479,12 +479,12 @@ def parse_options():
     parser.add_argument('--SAVE_SIM', type=str2bool, default=True, help='Enable or disable SAVE_SIM.')
     parser.add_argument('--SAVE_CSV', type=str2bool, default=True, help='Enable or disable save sim data in the csv format.')
     parser.add_argument('--COMPARISON',  type=str2bool, default=False, help='Compare the training results with pose as gate pose')
-    parser.add_argument('--MC_EVALUATION',  type=str2bool, default=True, help='Compare the training results with other methods')
+    parser.add_argument('--MC_EVALUATION',  type=str2bool, default=False, help='Compare the training results with other methods')
     parser.add_argument('--MULTI_COLLISION_POINT_CHECK',  type=str2bool, default=False, help='multiple collision point check for the training')
     args = parser.parse_args()
     return vars(args)  # Return options as a dictionary  
 
-@ray.remote
+# @ray.remote
 def eval_sim_interface(
     mission_cfg=None,
     train_cfg=None,
