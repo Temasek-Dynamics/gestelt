@@ -79,7 +79,7 @@ def manual_set_z_forward(cur_pos:np.array=None,
     # out[-1]=np.array([4.9806870e+01])
     
     ### SVD through CasADi
-    verify_tra_R,_=verify_SVD_ca(out[3:12])
+    verify_tra_R=verify_SVD_ca(out[3:12])
 
     gate_pitch=mission_cfg['mission']['gate_ori_euler'][1]
     return gate_pitch,out,verify_tra_R

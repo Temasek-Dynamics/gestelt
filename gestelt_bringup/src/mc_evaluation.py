@@ -1,6 +1,6 @@
 import os
 import ray
-from gestelt_bringup.src.learning_agile_sim import eval_sim_interface,parse_options
+from learning_agile_sim import eval_sim_interface,parse_options
 from Learning_Agile.visualization.python_sim_vis import plot_mc_traj
 from Learning_Agile.config import mission_cfg,train_cfg,current_dir
 import wandb
