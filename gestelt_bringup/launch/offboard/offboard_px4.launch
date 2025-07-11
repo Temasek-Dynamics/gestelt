@@ -5,9 +5,9 @@
     <param name="/use_sim_time" value="false" />
 
     <group ns="$(arg drone_id_ns)">
-      <arg name="fcu_url" value="/dev/ttyAML1:230400" />
+      <arg name="fcu_url" value="/dev/ttyAML1:500000" />
       <!-- GCS: laptop-->
-      <arg name="gcs_url" value="udp://@192.168.31.22" />
+      <arg name="gcs_url" value="udp://@192.168.1.4" />
       <!-- GCS: Vicon Desktop-->
       <!-- <arg name="gcs_url" value="udp://@192.168.31.61" /> -->
 
