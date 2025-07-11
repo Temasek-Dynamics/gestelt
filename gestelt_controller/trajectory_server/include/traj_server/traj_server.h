@@ -476,6 +476,8 @@ private: // Member variables
   mavros_msgs::State uav_current_state_;
 
   geometry_msgs::PoseStamped uav_pose_; // Current pose of UAV
+  geometry_msgs::TransformStamped transformStamped_map_to_warp;
+  Eigen::Vector4d map2warp_transform_quat;
   nav_msgs::Odometry uav_odom_; // Current odometry of UAV
 
   // Last received mission PVAJ (position, velocity, acceleration, Jerk)
@@ -490,6 +492,7 @@ private: // Member variables
   double last_mission_thrust_;
   // Last received mission yaw and yaw rate
   double last_mission_yaw_{0.0}, last_mission_yaw_dot_{0.0};
+  double warp_jax{0.0};
 
   /* Flags */ 
   ros::Time last_traj_msg_time_{0}; // Time of last trajectory message
@@ -518,6 +521,7 @@ private: // Member variables
   std::string node_name_{"traj_server"};
   double pub_cmd_freq_; // Frequency to publish PVA commands
   double sm_tick_freq_; // Frequency of state machine ticks
+  double initial_map_to_warp;
 
   double takeoff_height_{0.0}; // Default height to take off to 
   double min_hover_height_{0.25};

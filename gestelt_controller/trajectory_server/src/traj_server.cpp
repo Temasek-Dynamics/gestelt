@@ -35,12 +35,14 @@ void TrajectoryServer::init(ros::NodeHandle& nh, ros::NodeHandle& pnh)
   pnh.param("state_machine_tick_freq", state_machine_tick_freq, 50.0);
   double debug_freq; // Frequency to publish debug information
   pnh.param("debug_freq", debug_freq, 10.0);
+  pnh.param("warp_jax", warp_jax, 0.0);
 
   //Set mission_command_mode
   setMissionCmd(MissionCmdMode(IntToMission(int(1))));
   std::cout <<"I AM IN THE NEW SCRIPTTTTTTTTTTTTTTTTTTTTTTTTTT\n";
   last_odom_time = ros::Time(0);
   last_pose_time = ros::Time(0);
+  initial_map_to_warp = 0;
 
   /////////////////
   /* Subscribers */
@@ -142,7 +144,10 @@ void TrajectoryServer::execTrajCb(const gestelt_msgs::ExecTrajectory::ConstPtr &
 
     if (ct_omega_mode_ == 1) //means it is in the body rates mode. Need to transform the body rates mode from warp back to map frame
     {
-
+        // If warp_jax == 0, this means we are using policy trained in warp. So we have to change the output from warp global frame to body nwu frame
+        // if warp_jax == 1, this means we are using policy trained in jax. So it is already in body nwu frame.
+        if (warp_jax == 0.0){
+        
         geometry_msgs::Vector3Stamped output_bodyrates_vector;
         output_bodyrates_vector.vector.x = last_mission_warp_body_rates_(0);
         output_bodyrates_vector.vector.y = last_mission_warp_body_rates_(1);
@@ -171,6 +176,10 @@ void TrajectoryServer::execTrajCb(const gestelt_msgs::ExecTrajectory::ConstPtr &
         {
             ROS_WARN("Could not transform vector: %s", ex.what());
         }
+        }
+      else if (warp_jax == 1.0){
+        geomMsgsVector3ToEigenVector3(msg->angular_rates.angular, last_mission_body_rates_);
+      }
     }
 
   }
@@ -258,11 +267,32 @@ void TrajectoryServer::UAVOdomCB(const nav_msgs::Odometry::ConstPtr &msg)
   input_linearvel_vector.vector.y = msg->twist.twist.linear.y;
   input_linearvel_vector.vector.z = msg->twist.twist.linear.z;
 
+  if (initial_map_to_warp == 0){
+      try{
+        transformStamped_map_to_warp = tfBuffer.lookupTransform("warp", "map", ros::Time(0));
+        map2warp_transform_quat(0) = transformStamped_map_to_warp.transform.rotation.x;
+        map2warp_transform_quat(1) = transformStamped_map_to_warp.transform.rotation.y;
+        map2warp_transform_quat(2) = transformStamped_map_to_warp.transform.rotation.z;
+        map2warp_transform_quat(3) = transformStamped_map_to_warp.transform.rotation.w;
+        initial_map_to_warp = 1;
+      }
+      catch (tf2::TransformException &ex) {
+      ROS_WARN("Could not transform vector: %s", ex.what());
+      }
+      }
 
   try {
       // Lookup the transformation from input frame to target frame
       geometry_msgs::TransformStamped transformStamped;
-      transformStamped = tfBuffer.lookupTransform("warp", "body", ros::Time(0));
+      // Note that if warp_jax = 0, we are assuming that we are transforming directly to warp frame. If we use jax policy, then we transform to global map nwu frame. This doesnt affect
+      // the pose because we will just take the pose from map directly if we using jax.
+      if (warp_jax == 0.0){
+        transformStamped = tfBuffer.lookupTransform("warp", "body", ros::Time(0));
+      }
+      else if (warp_jax==1.0){
+        transformStamped = tfBuffer.lookupTransform("map", "body", ros::Time(0));
+      }
+      
 
       // Transform the vector
       geometry_msgs::Vector3Stamped transformed_vector;
@@ -282,10 +312,8 @@ void TrajectoryServer::UAVOdomCB(const nav_msgs::Odometry::ConstPtr &msg)
       angular_rates_pub_.publish(transformed_odom);
 
       Eigen::Vector4d map_frame_quat(uav_pose_.pose.orientation.x, uav_pose_.pose.orientation.y, uav_pose_.pose.orientation.z, uav_pose_.pose.orientation.w);
-      Eigen::Vector4d map2warp_transform_quat(transformStamped.transform.rotation.x, transformStamped.transform.rotation.y, transformStamped.transform.rotation.z, transformStamped.transform.rotation.w);
+      // Eigen::Vector4d map_frame_quat(0.0,0.707,0.0,0.707);
       Eigen::Vector4d final_quat;
-
-
       quaternion_multiplication(map_frame_quat, map2warp_transform_quat, final_quat);
       // std::cout << "Matrix values for final_quat:\n" << final_quat << std::endl;
       geometry_msgs::PoseStamped warp_pose;

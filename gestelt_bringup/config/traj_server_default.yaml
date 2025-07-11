@@ -23,6 +23,9 @@ pub_cmd_freq: 100.0
 # state_machine_tick_freq: Frequency at state machine is being refreshed
 state_machine_tick_freq: 50.0
 
+#warp_jax: Choose between using warp frame of jax frame. 0.0 for warp and 1.0 for jax
+warp_jax: 0.0
+
 #policy params
 position_control: True
 
