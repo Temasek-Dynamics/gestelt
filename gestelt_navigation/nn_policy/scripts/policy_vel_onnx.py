@@ -123,7 +123,7 @@ class TEST_RENDER(object):
             diff_vel = self.t_vel - vel
             x = torch.cat((att, angvel, diff_vel), dim=1)
         a = self.policy(x)
-        outputs = self.session.run(None, {self.input_name: x})
+        outputs = self.session.run(None, {self.input_name: x.detach().cpu().numpy()})
 
         
         self.previous_action = a
@@ -254,10 +254,10 @@ class NN_POLICY_PLANNER(object):
 
         self.warp_qd = np.array([msg.twist.twist.angular.x, msg.twist.twist.angular.y, msg.twist.twist.angular.z, msg.twist.twist.linear.x, msg.twist.twist.linear.y, msg.twist.twist.linear.z ])
         #print(msg.header.stamp)
-        #if self.last_odom_time is not None:
-        #    time_diff = (msg.header.stamp- self.last_odom_time).to_sec() 
-        #    if time_diff > 0.02:
-        #        print(f"TIME DIFFERENCE ODOM EXCEEDED!!! {time_diff} at {msg.header.stamp}")
+        if self.last_odom_time is not None:
+           time_diff = (msg.header.stamp- self.last_odom_time).to_sec() 
+           if time_diff > 0.02:
+               print(f"TIME DIFFERENCE ODOM EXCEEDED!!! {time_diff} at {msg.header.stamp}")
         self.last_odom_time = msg.header.stamp
 
     def geomCB(self, msg):
@@ -441,7 +441,7 @@ class NN_POLICY_PLANNER(object):
         warp_pos = torch.Tensor(self.warp_q[:3]).unsqueeze(0)
         warp_q = torch.Tensor(warp_q).unsqueeze(0)
         warp_qd = torch.Tensor(self.warp_qd).unsqueeze(0)
-        self.action = self.policy.evaluate_(warp_pos, warp_q, warp_qd)
+        self.action = self.policy.evaluate_(warp_pos, warp_q, warp_qd)[0]
         # print(self.action)
 
 
@@ -450,15 +450,19 @@ class NN_POLICY_PLANNER(object):
 if __name__=="__main__":
     signal(SIGINT, handler)
     print("STARTING NODE")
-    policy_file = "20250526-223948" #20250520-232722 - 0.05 20250521-092027 - 0.02 20250521-114910# 0.02 0.707  20250522-174445 - 0.05 (no orientation not too bad)- 20250523-084843 (0.05 -with orientation) 20250523-110509 (0.05 - no orientation. To test fly)
+    policy_file = "20250527-122703" #20250520-232722 - 0.05 20250521-092027 - 0.02 20250521-114910# 0.02 0.707  20250522-174445 - 0.05 (no orientation not too bad)- 20250523-084843 (0.05 -with orientation) 20250523-110509 (0.05 - no orientation. To test fly)
     print(f"POLICY PATH IS {policy_file}")  # (with orientation)- 0.02 - to fly "20250523-155958 (with orientation and pos randomize) - 0.02" "20250523-170204 - 0.707 0.05" "20250523-170241 - 1,0.05"
-    full_path = "/home/rock/gestelt_ws/src/gestelt/gestelt_navigation/nn_policy/logs/vel_tracking"  #0.05 good enough 20250525-162048  20250525-174947
+
+    rospack = rospkg.RosPack()
+    path = rospack.get_path('nn_policy')
+    full_path = os.path.join(path, "logs/vel_tracking")
+    print(f"The full path is {full_path}")
     actual_full_path = os.path.join(full_path, policy_file)
     config_path = os.path.join(actual_full_path,"training_config.yaml")
     full_policy_path = os.path.join(actual_full_path, "policy.pth")
     full_onnx_path = os.path.join(actual_full_path, "policy.onnx")
 
-    rospy.init_node("nn_policy_planner2")
+    rospy.init_node("nn_policy_planner3")
     ros_lib = roslib.packages.get_pkg_dir("gestelt_bringup")
     full_config_path = os.path.join(ros_lib, "config/traj_server_vel.yaml")
     with open(full_config_path, 'r') as file:
@@ -470,7 +474,7 @@ if __name__=="__main__":
     mission_command_mode = loaded_params["mission_command_mode"]
 
     position_control = True #config_params["position_control"]
-    delta_time = 0.05 #float(config_params["delta_time"])
+    delta_time = 0.02 #float(config_params["delta_time"])
     max_angular_rate = 3.0 #float(config_params["max_angular_rates"])
 
     

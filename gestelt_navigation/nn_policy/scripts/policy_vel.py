@@ -237,21 +237,31 @@ class NN_POLICY_PLANNER(object):
     def poseCb(self, msg):
         self.drone_pos = np.array([msg.pose.position.x, msg.pose.position.y, msg.pose.position.z])
         self.drone_quat = np.array([msg.pose.orientation.x, msg.pose.orientation.y, msg.pose.orientation.z, msg.pose.orientation.w])
+        if self.last_pos_time is not None:
+           time_diff = (msg.header.stamp- self.last_pos_time).to_sec() 
+           if time_diff > 0.03:
+               print(f"TIME DIFFERENCE EXCEEDED!!! {time_diff} at {msg.header.stamp}")
+        self.last_pos_time = msg.header.stamp
 
         self._pose_odom_pub_callback()
 
     def odomCb(self, msg):
         self.drone_qd = np.array([msg.twist.twist.angular.x, msg.twist.twist.angular.y, msg.twist.twist.angular.z])
+        if self.last_odom_time is not None:
+           time_diff = (msg.header.stamp- self.last_odom_time).to_sec() 
+           if time_diff > 0.03:
+               print(f"TIME DIFFERENCE ODOM EXCEEDED!!! {time_diff} at {msg.header.stamp}")
+        self.last_odom_time = msg.header.stamp
 
     def warpOdomCB(self,msg):
 
         self.warp_qd = np.array([msg.twist.twist.angular.x, msg.twist.twist.angular.y, msg.twist.twist.angular.z, msg.twist.twist.linear.x, msg.twist.twist.linear.y, msg.twist.twist.linear.z ])
         #print(msg.header.stamp)
-        #if self.last_odom_time is not None:
+        # if self.last_odom_time is not None:
         #    time_diff = (msg.header.stamp- self.last_odom_time).to_sec() 
-        #    if time_diff > 0.02:
+        #    if time_diff > 0.03:
         #        print(f"TIME DIFFERENCE ODOM EXCEEDED!!! {time_diff} at {msg.header.stamp}")
-        self.last_odom_time = msg.header.stamp
+        # self.last_odom_time = msg.header.stamp
 
     def geomCB(self, msg):
         self.geom_body_rate = np.array([msg.body_rate.x, msg.body_rate.y, msg.body_rate.z])
@@ -260,11 +270,11 @@ class NN_POLICY_PLANNER(object):
     def warpPoseCB(self,msg):
         self.warp_q = np.array([msg.pose.position.x, msg.pose.position.y,msg.pose.position.z, msg.pose.orientation.x, msg.pose.orientation.y, msg.pose.orientation.z, msg.pose.orientation.w])
         
-        if self.last_pos_time is not None:
-           time_diff = (msg.header.stamp- self.last_pos_time).to_sec() 
-           if time_diff > 0.05:
-               print(f"TIME DIFFERENCE EXCEEDED!!! {time_diff} at {msg.header.stamp}")
-        self.last_pos_time = msg.header.stamp
+        # if self.last_pos_time is not None:
+        #    time_diff = (msg.header.stamp- self.last_pos_time).to_sec() 
+        #    if time_diff > 0.03:
+        #        print(f"TIME DIFFERENCE EXCEEDED!!! {time_diff} at {msg.header.stamp}")
+        # self.last_pos_time = msg.header.stamp
 
     def targetPosCb(self,msg):
         self.warp_target_pos = np.array([msg.pose.position.x, msg.pose.position.y,msg.pose.position.z])
@@ -333,7 +343,7 @@ class NN_POLICY_PLANNER(object):
 
         pva_traj_msg.type_mask = type_mask
         # print(self.action)
-        pva_traj_msg.throttle = nn_action[0,0]   #0.321
+        pva_traj_msg.throttle = nn_action[0,0]  #0.321
 
         ### This part will only be taken in by trajectory server if type_mask == 0
         pva_traj_msg.transform.rotation.x = 0.0
@@ -443,9 +453,13 @@ class NN_POLICY_PLANNER(object):
 if __name__=="__main__":
     signal(SIGINT, handler)
     print("STARTING NODE")
-    policy_file = "20250527-165841" #20250520-232722 - 0.05 20250521-092027 - 0.02 20250521-114910# 0.02 0.707  20250522-174445 - 0.05 (no orientation not too bad)- 20250523-084843 (0.05 -with orientation) 20250523-110509 (0.05 - no orientation. To test fly)
-    print(f"POLICY PATH IS {policy_file}")  # (with orientation)- 0.02 - to fly "20250523-155958 (with orientation and pos randomize) - 0.02" "20250523-170204 - 0.707 0.05" "20250523-170241 - 1,0.05"
-    full_path = "/home/yanrui/storage/gestelt_ws/src/gestelt/gestelt_navigation/nn_policy/logs/vel_tracking"  #0.05 good enough 20250525-162048  20250525-174947
+    policy_file = "20250710-154609" #0.02 good enough for real drone 20250527-122703   0.05-to test 20250624-181715
+    print(f"POLICY PATH IS {policy_file}") 
+
+    rospack = rospkg.RosPack()
+    path = rospack.get_path('nn_policy')
+    full_path = os.path.join(path, "logs/vel_tracking")
+    print(f"The full path is {full_path}")
     actual_full_path = os.path.join(full_path, policy_file)
     config_path = os.path.join(actual_full_path,"training_config.yaml")
     full_policy_path = os.path.join(actual_full_path, "policy.pth")
