@@ -35,6 +35,8 @@ void TrajectoryServer::init(ros::NodeHandle& nh, ros::NodeHandle& pnh)
   pnh.param("state_machine_tick_freq", state_machine_tick_freq, 50.0);
   double debug_freq; // Frequency to publish debug information
   pnh.param("debug_freq", debug_freq, 10.0);
+  pnh.param("to_transform_odom", to_transform_odom, 0.0);
+  pnh.param("to_transform_policy", to_transform_policy, 0.0);
   pnh.param("warp_jax", warp_jax, 0.0);
 
   //Set mission_command_mode
@@ -114,73 +116,85 @@ void TrajectoryServer::execTrajCb(const gestelt_msgs::ExecTrajectory::ConstPtr &
   mission_type_mask_ = msg->type_mask; 
 
   if (getMissionCmd() == MissionCmdMode::PVA){
-  geomMsgsVector3ToEigenVector3(msg->transform.translation, last_mission_pos_);
-  last_mission_yaw_ = quaternionToRPY(msg->transform.rotation)(2); // yaw
+      geomMsgsVector3ToEigenVector3(msg->transform.translation, last_mission_pos_);
+      last_mission_yaw_ = quaternionToRPY(msg->transform.rotation)(2); // yaw
 
-  // ROS_INFO("Last mission yaw: %f", last_mission_yaw_);
+      // ROS_INFO("Last mission yaw: %f", last_mission_yaw_);
 
-  geomMsgsVector3ToEigenVector3(msg->velocity.linear, last_mission_vel_);
-  last_mission_yaw_dot_ = msg->velocity.angular.z; //yaw rate
-  // ROS_INFO("received velocity: %f, %f, %f", last_mission_vel_(0), last_mission_vel_(1), last_mission_vel_(2));
+      geomMsgsVector3ToEigenVector3(msg->velocity.linear, last_mission_vel_);
+      last_mission_yaw_dot_ = msg->velocity.angular.z; //yaw rate
+      // ROS_INFO("received velocity: %f, %f, %f", last_mission_vel_(0), last_mission_vel_(1), last_mission_vel_(2));
 
-  geomMsgsVector3ToEigenVector3(msg->acceleration.linear, last_mission_acc_);
-  // ROS_INFO("received acceleration: %f, %f, %f", last_mission_acc_(0), last_mission_acc_(1), last_mission_acc_(2));
+      geomMsgsVector3ToEigenVector3(msg->acceleration.linear, last_mission_acc_);
+      // ROS_INFO("received acceleration: %f, %f, %f", last_mission_acc_(0), last_mission_acc_(1), last_mission_acc_(2));
   }
 
   if (getMissionCmd() == MissionCmdMode::VEL){
-  // ROS_INFO("Last mission yaw: %f", last_mission_yaw_);
+      // ROS_INFO("Last mission yaw: %f", last_mission_yaw_);
 
-  geomMsgsVector3ToEigenVector3(msg->velocity.linear, last_mission_vel_);
-  last_mission_yaw_dot_ = msg->velocity.angular.z; //yaw rate
-  // ROS_INFO("received velocity: %f, %f, %f", last_mission_vel_(0), last_mission_vel_(1), last_mission_vel_(2));
+      geomMsgsVector3ToEigenVector3(msg->velocity.linear, last_mission_vel_);
+      last_mission_yaw_dot_ = msg->velocity.angular.z; //yaw rate
+      // ROS_INFO("received velocity: %f, %f, %f", last_mission_vel_(0), last_mission_vel_(1), last_mission_vel_(2));
   }
 
   if (getMissionCmd() == MissionCmdMode::ATTITUDE){
-    last_mission_thrust_vector_ = msg->throttle;
-    geomMsgsVector3ToEigenVector3(msg->angular_rates.angular, last_mission_warp_body_rates_);
-    geomMsgsVector4ToEigenVector4(msg->transform.rotation, last_mission_quaternion_);
+      last_mission_thrust_vector_ = msg->throttle;
+      geomMsgsVector3ToEigenVector3(msg->angular_rates.angular, last_mission_warp_body_rates_);
+      geomMsgsVector4ToEigenVector4(msg->transform.rotation, last_mission_quaternion_);
 
-    ct_omega_mode_ = msg->type_mask; 
+      ct_omega_mode_ = msg->type_mask; 
 
-    if (ct_omega_mode_ == 1) //means it is in the body rates mode. Need to transform the body rates mode from warp back to map frame
-    {
-        // If warp_jax == 0, this means we are using policy trained in warp. So we have to change the output from warp global frame to body nwu frame
-        // if warp_jax == 1, this means we are using policy trained in jax. So it is already in body nwu frame.
-        if (warp_jax == 0.0){
-        
-        geometry_msgs::Vector3Stamped output_bodyrates_vector;
-        output_bodyrates_vector.vector.x = last_mission_warp_body_rates_(0);
-        output_bodyrates_vector.vector.y = last_mission_warp_body_rates_(1);
-        output_bodyrates_vector.vector.z = last_mission_warp_body_rates_(2);
+      if (ct_omega_mode_ == 1) //means it is in the body rates mode. Need to transform the body rates mode from warp back to map frame
+      {
+          // If to_transform_policy == 0, this means no need to do transformation. Policy output already in px4 nwu frame. But if ==1, then need to do transformation and currently is transform only to warp frame.
+          // If warp_jax == 0, this means we are using policy trained in warp. So we have to change the output from warp global frame to body nwu frame
+          // if warp_jax == 1, this means we are using policy trained in jax. So it is already in body nwu frame.
+          
+          if (to_transform_policy == 0.0){
+              geomMsgsVector3ToEigenVector3(msg->angular_rates.angular, last_mission_body_rates_);
+          } 
 
-        try {
-            // Lookup the transformation from input frame to target frame
-            geometry_msgs::TransformStamped transformStamped;
-            transformStamped = tfBuffer.lookupTransform("body", "warp", ros::Time(0));
+          else if (to_transform_policy == 1.0){
+              // To transform from warp global frame with y pointing up.
+              if (warp_jax == 0.0){
+                //Prepping vector to be transformed
+                geometry_msgs::Vector3Stamped output_bodyrates_vector;
+                output_bodyrates_vector.vector.x = last_mission_warp_body_rates_(0);
+                output_bodyrates_vector.vector.y = last_mission_warp_body_rates_(1);
+                output_bodyrates_vector.vector.z = last_mission_warp_body_rates_(2);
 
-            // Transform the vector
-            geometry_msgs::Vector3Stamped transformed_output_bodyrates_vector;
-            tf2::doTransform(output_bodyrates_vector, transformed_output_bodyrates_vector, transformStamped);
-            // ROS_INFO("Transformed Vector: x=%.2f, y=%.2f, z=%.2f", 
-            //          transformed_vector.vector.x, transformed_vector.vector.y, transformed_vector.vector.z);
-            
-            last_mission_body_rates_(0) = transformed_output_bodyrates_vector.vector.x;
-            last_mission_body_rates_(1) = transformed_output_bodyrates_vector.vector.y;
-            last_mission_body_rates_(2) = transformed_output_bodyrates_vector.vector.z;
+                try {
+                    // Lookup the transformation from warp to body frame
+                    geometry_msgs::TransformStamped transformStamped;
+                    transformStamped = tfBuffer.lookupTransform("body", "warp", ros::Time(0));
 
-            // std::cout << "This is x: " << last_mission_body_rates_(0) << "\n";
-            // std::cout << "This is y: " << last_mission_body_rates_(1) << "\n";
-            // std::cout << "This is z: " << last_mission_body_rates_(2) << "\n";
-           } 
-        catch (tf2::TransformException &ex)
-        {
-            ROS_WARN("Could not transform vector: %s", ex.what());
-        }
-        }
-      else if (warp_jax == 1.0){
-        geomMsgsVector3ToEigenVector3(msg->angular_rates.angular, last_mission_body_rates_);
+                    // Initializing the transformed vector
+                    geometry_msgs::Vector3Stamped transformed_output_bodyrates_vector;
+                    // Performing the transformation
+                    tf2::doTransform(output_bodyrates_vector, transformed_output_bodyrates_vector, transformStamped);
+                    // ROS_INFO("Transformed Vector: x=%.2f, y=%.2f, z=%.2f", 
+                    //          transformed_vector.vector.x, transformed_vector.vector.y, transformed_vector.vector.z);
+                    
+                    // Loading in the transformed rates and get ready to send it to PX4
+                    last_mission_body_rates_(0) = transformed_output_bodyrates_vector.vector.x;
+                    last_mission_body_rates_(1) = transformed_output_bodyrates_vector.vector.y;
+                    last_mission_body_rates_(2) = transformed_output_bodyrates_vector.vector.z;
+
+                    // std::cout << "This is x: " << last_mission_body_rates_(0) << "\n";
+                    // std::cout << "This is y: " << last_mission_body_rates_(1) << "\n";
+                    // std::cout << "This is z: " << last_mission_body_rates_(2) << "\n";
+                  } 
+                catch (tf2::TransformException &ex)
+                {
+                    ROS_WARN("Could not transform vector: %s", ex.what());
+                }
+              }
+              else if (warp_jax == 1.0){
+                // If to transform from jax policy, then don't need to transform, because the output is already in px4 body frame
+                geomMsgsVector3ToEigenVector3(msg->angular_rates.angular, last_mission_body_rates_);
+              }
+          }
       }
-    }
 
   }
 
@@ -257,93 +271,99 @@ void TrajectoryServer::UAVOdomCB(const nav_msgs::Odometry::ConstPtr &msg)
 
   vel_magnitude_pub_.publish(vel_mag_msg);
 
-  geometry_msgs::Vector3Stamped input_vector;
-  input_vector.vector.x = msg->twist.twist.angular.x;
-  input_vector.vector.y = msg->twist.twist.angular.y;
-  input_vector.vector.z = msg->twist.twist.angular.z;
+  if (to_transform_odom == 1.0){
+      //Prepping the px4 nwu body frame linear and angular velocities for transformation later
+      geometry_msgs::Vector3Stamped input_vector;
+      input_vector.vector.x = msg->twist.twist.angular.x;
+      input_vector.vector.y = msg->twist.twist.angular.y;
+      input_vector.vector.z = msg->twist.twist.angular.z;
 
-  geometry_msgs::Vector3Stamped input_linearvel_vector;
-  input_linearvel_vector.vector.x = msg->twist.twist.linear.x;
-  input_linearvel_vector.vector.y = msg->twist.twist.linear.y;
-  input_linearvel_vector.vector.z = msg->twist.twist.linear.z;
+      geometry_msgs::Vector3Stamped input_linearvel_vector;
+      input_linearvel_vector.vector.x = msg->twist.twist.linear.x;
+      input_linearvel_vector.vector.y = msg->twist.twist.linear.y;
+      input_linearvel_vector.vector.z = msg->twist.twist.linear.z;
 
-  if (initial_map_to_warp == 0){
-      try{
-        transformStamped_map_to_warp = tfBuffer.lookupTransform("warp", "map", ros::Time(0));
-        map2warp_transform_quat(0) = transformStamped_map_to_warp.transform.rotation.x;
-        map2warp_transform_quat(1) = transformStamped_map_to_warp.transform.rotation.y;
-        map2warp_transform_quat(2) = transformStamped_map_to_warp.transform.rotation.z;
-        map2warp_transform_quat(3) = transformStamped_map_to_warp.transform.rotation.w;
-        initial_map_to_warp = 1;
+      // warp to map frame transformation is fixed actually. Just need to do it once. 
+      if (initial_map_to_warp == 0){
+          try{
+            transformStamped_map_to_warp = tfBuffer.lookupTransform("warp", "map", ros::Time(0));
+            map2warp_transform_quat(0) = transformStamped_map_to_warp.transform.rotation.x;
+            map2warp_transform_quat(1) = transformStamped_map_to_warp.transform.rotation.y;
+            map2warp_transform_quat(2) = transformStamped_map_to_warp.transform.rotation.z;
+            map2warp_transform_quat(3) = transformStamped_map_to_warp.transform.rotation.w;
+            initial_map_to_warp = 1;
+          }
+          catch (tf2::TransformException &ex) {
+          ROS_WARN("Could not transform vector: %s", ex.what());
+          }
       }
+
+      try {
+          // Lookup the transformation from input frame to target frame
+          geometry_msgs::TransformStamped transformStamped;
+          // Note that if warp_jax = 0, we are assuming that we are transforming directly to warp frame. If we use jax policy, then we transform to global map nwu frame. This doesnt affect
+          // the pose because we will just take the pose from map directly if we using jax.
+          if (warp_jax == 0.0){
+            transformStamped = tfBuffer.lookupTransform("warp", "body", ros::Time(0));
+          }
+          else if (warp_jax==1.0){
+            transformStamped = tfBuffer.lookupTransform("map", "body", ros::Time(0));
+          }
+          
+
+          // Initializing the Transformed vector
+          geometry_msgs::Vector3Stamped transformed_vector;
+          geometry_msgs::Vector3Stamped transformed_linearvel_vector;
+
+          // Performing the transformation, be it is from body to warp (y is up) or body to jax (standard nwu global frame)
+          tf2::doTransform(input_vector, transformed_vector, transformStamped);
+          tf2::doTransform(input_linearvel_vector, transformed_linearvel_vector, transformStamped);
+          // ROS_INFO("Transformed Vector: x=%.2f, y=%.2f, z=%.2f", 
+          //          transformed_vector.vector.x, transformed_vector.vector.y, transformed_vector.vector.z);
+
+          // Publishing the odometry data
+          nav_msgs::Odometry transformed_odom;
+          transformed_odom.header.stamp = ros::Time::now();
+          transformed_odom.twist.twist.angular.x = transformed_vector.vector.x; 
+          transformed_odom.twist.twist.angular.y = transformed_vector.vector.y; 
+          transformed_odom.twist.twist.angular.z = transformed_vector.vector.z; 
+          transformed_odom.twist.twist.linear.x = transformed_linearvel_vector.vector.x;
+          transformed_odom.twist.twist.linear.y = transformed_linearvel_vector.vector.y;
+          transformed_odom.twist.twist.linear.z = transformed_linearvel_vector.vector.z;
+          angular_rates_pub_.publish(transformed_odom);
+
+          if (warp_jax == 0.0){
+              // The quaternion will be different if we are using warp frame where y axis is up. So have to find the equivalent quaternion in that warp frame
+              Eigen::Vector4d map_frame_quat(uav_pose_.pose.orientation.x, uav_pose_.pose.orientation.y, uav_pose_.pose.orientation.z, uav_pose_.pose.orientation.w);
+              Eigen::Vector4d final_quat;
+              quaternion_multiplication(map_frame_quat, map2warp_transform_quat, final_quat);
+
+              // Publishing the warp pose
+              geometry_msgs::PoseStamped warp_pose;
+              // std::cout << "printing x value: " << final_quat(0);
+              // std::cout << "printing y value: " << final_quat(1);
+              // std::cout << "printing z value: " << final_quat(2);
+              // std::cout << "printing w value: " << final_quat(3);
+              geometry_msgs::TransformStamped transformStamped_wb;
+              transformStamped_wb = tfBuffer.lookupTransform("warp", "body", ros::Time(0));
+              warp_pose.header.frame_id = "warp";
+              warp_pose.header.stamp = ros::Time::now();
+              warp_pose.pose.position.x = transformStamped_wb.transform.translation.x;
+              warp_pose.pose.position.y = transformStamped_wb.transform.translation.y;
+              warp_pose.pose.position.z = transformStamped_wb.transform.translation.z;
+              warp_pose.pose.orientation.x = final_quat(0);
+              warp_pose.pose.orientation.y = final_quat(1);
+              warp_pose.pose.orientation.z = final_quat(2);
+              warp_pose.pose.orientation.w = final_quat(3);
+
+              warp_pose_pub_.publish(warp_pose);
+          }
+      } 
       catch (tf2::TransformException &ex) {
-      ROS_WARN("Could not transform vector: %s", ex.what());
+          ROS_WARN("Could not transform vector: %s", ex.what());
       }
-      }
 
-  try {
-      // Lookup the transformation from input frame to target frame
-      geometry_msgs::TransformStamped transformStamped;
-      // Note that if warp_jax = 0, we are assuming that we are transforming directly to warp frame. If we use jax policy, then we transform to global map nwu frame. This doesnt affect
-      // the pose because we will just take the pose from map directly if we using jax.
-      if (warp_jax == 0.0){
-        transformStamped = tfBuffer.lookupTransform("warp", "body", ros::Time(0));
-      }
-      else if (warp_jax==1.0){
-        transformStamped = tfBuffer.lookupTransform("map", "body", ros::Time(0));
-      }
-      
-
-      // Transform the vector
-      geometry_msgs::Vector3Stamped transformed_vector;
-      geometry_msgs::Vector3Stamped transformed_linearvel_vector;
-      tf2::doTransform(input_vector, transformed_vector, transformStamped);
-      tf2::doTransform(input_linearvel_vector, transformed_linearvel_vector, transformStamped);
-      // ROS_INFO("Transformed Vector: x=%.2f, y=%.2f, z=%.2f", 
-      //          transformed_vector.vector.x, transformed_vector.vector.y, transformed_vector.vector.z);
-      nav_msgs::Odometry transformed_odom;
-      transformed_odom.header.stamp = ros::Time::now();
-      transformed_odom.twist.twist.angular.x = transformed_vector.vector.x; 
-      transformed_odom.twist.twist.angular.y = transformed_vector.vector.y; 
-      transformed_odom.twist.twist.angular.z = transformed_vector.vector.z; 
-      transformed_odom.twist.twist.linear.x = transformed_linearvel_vector.vector.x;
-      transformed_odom.twist.twist.linear.y = transformed_linearvel_vector.vector.y;
-      transformed_odom.twist.twist.linear.z = transformed_linearvel_vector.vector.z;
-      angular_rates_pub_.publish(transformed_odom);
-
-      Eigen::Vector4d map_frame_quat(uav_pose_.pose.orientation.x, uav_pose_.pose.orientation.y, uav_pose_.pose.orientation.z, uav_pose_.pose.orientation.w);
-      // Eigen::Vector4d map_frame_quat(0.0,0.707,0.0,0.707);
-      Eigen::Vector4d final_quat;
-      quaternion_multiplication(map_frame_quat, map2warp_transform_quat, final_quat);
-      // std::cout << "Matrix values for final_quat:\n" << final_quat << std::endl;
-      geometry_msgs::PoseStamped warp_pose;
-      // std::cout << "printing x value: " << final_quat(0);
-      // std::cout << "printing y value: " << final_quat(1);
-      // std::cout << "printing z value: " << final_quat(2);
-      // std::cout << "printing w value: " << final_quat(3);
-      geometry_msgs::TransformStamped transformStamped_wb;
-      transformStamped_wb = tfBuffer.lookupTransform("warp", "body", ros::Time(0));
-      warp_pose.header.frame_id = "warp";
-      warp_pose.header.stamp = ros::Time::now();
-      warp_pose.pose.position.x = transformStamped_wb.transform.translation.x;
-      warp_pose.pose.position.y = transformStamped_wb.transform.translation.y;
-      warp_pose.pose.position.z = transformStamped_wb.transform.translation.z;
-      warp_pose.pose.orientation.x = final_quat(0);
-      warp_pose.pose.orientation.y = final_quat(1);
-      warp_pose.pose.orientation.z = final_quat(2);
-      warp_pose.pose.orientation.w = final_quat(3);
-
-      warp_pose_pub_.publish(warp_pose);
-
-
-
-
-  } 
-  catch (tf2::TransformException &ex) {
-      ROS_WARN("Could not transform vector: %s", ex.what());
-  }
-
-
+    }
 }
 
 void TrajectoryServer::geomCb(const mavros_msgs::AttitudeTarget::ConstPtr & msg)

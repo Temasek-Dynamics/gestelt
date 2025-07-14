@@ -493,6 +493,8 @@ private: // Member variables
   // Last received mission yaw and yaw rate
   double last_mission_yaw_{0.0}, last_mission_yaw_dot_{0.0};
   double warp_jax{0.0};
+  double to_transform_policy{0.0};
+  double to_transform_odom{0.0};
 
   /* Flags */ 
   ros::Time last_traj_msg_time_{0}; // Time of last trajectory message

@@ -24,7 +24,11 @@ pub_cmd_freq: 100.0
 state_machine_tick_freq: 50.0
 
 #warp_jax: Choose between using warp frame of jax frame. 0.0 for warp and 1.0 for jax
-warp_jax: 0.0
+to_transform_odom: 0.0 #If to transform odom = 0.0, means that don't do any transformation (If train using train_velpos_simple_replicate_nwu.py, then the input to policy is body frame odom. Output also body frame odom in nwu frame). If =1.0, means to transform
+to_transform_policy: 0.0 #If to_transform_policy = 0.0, means don't transform (trained using train_velpos_simple_replicate_nwu.py). The policy is already in px4 body frame. If =1.0, means need to transform. The policy is in some global frame and needs to transformed to px4 body frame
+warp_jax: 0.0  #If to_transform_odom =1.0, then if warp_jax = 0.0, means to transform to warp global frame (If train using train_velpos_simple_replicate.py then it means it takes in warp global frame with gravity in -y axis and also output in the same global frame.) If warp_jax = 1.0, then means transform to jax global frame (also nwu). But for jax, the output policy is already in the px4 nwu body frame. So no need transform output policy if =1.0
+
+
 
 #policy params
 position_control: True
