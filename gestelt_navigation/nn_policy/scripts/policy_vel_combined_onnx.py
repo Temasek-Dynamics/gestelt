@@ -20,6 +20,7 @@ import tf2_ros
 import threading
 from std_msgs.msg import Int8
 from mavros_msgs.msg import AttitudeTarget
+import onnxruntime as ort
 # import tf2_geometry_msgs
 # from geometry_msgs.msg import Vector3Stamped
 # from geometry_msgs import Posestamped
@@ -55,15 +56,20 @@ class ServerEvent(Enum):
 
 class TEST_RENDER(object):
 
-    def __init__(self, policy_path, pc, warp_frame):
+    def __init__(self, policy_path, onnx_path, pc, warp_frame):
         self.pc = pc
         self.warp_frame = warp_frame
+        self.onnx_path = onnx_path
         if self.pc == True:
             self.policy = TrackVel(input_dim=16)
         else:
             self.policy = TrackVel(input_dim = 10)
         self.policy.load_state_dict(torch.load(policy_path))
         self.policy.eval()
+
+        self.session = ort.InferenceSession(full_onnx_path)
+        self.input_name = self.session.get_inputs()[0].name
+
         self.init_a = np.zeros((1,4))
 
         target_vel = np.zeros((1, 3))
@@ -121,12 +127,13 @@ class TEST_RENDER(object):
             angvel = qd[:,:3]
             diff_vel = self.t_vel - vel
             x = torch.cat((att, angvel, diff_vel), dim=1)
-        a = self.policy(x)
-        
-        self.previous_action = a
+        # a = self.policy(x)
+        outputs = self.session.run(None, {self.input_name: x.detach().cpu().numpy()})
+
+        # self.previous_action = a
         end_time = time.time()
         # print(f"Time taken: {end_time - start_time:.4f} seconds")
-        return a
+        return outputs
     
     def vector_to_line(self,P, A, d):
         d_unit = d / torch.norm(d, dim=-1, keepdim=True)  # Normalize direction
@@ -459,7 +466,7 @@ class NN_POLICY_PLANNER(object):
         warp_pos = torch.Tensor(self.warp_q[:3]).unsqueeze(0)
         warp_q = torch.Tensor(warp_q).unsqueeze(0)
         warp_qd = torch.Tensor(self.warp_qd).unsqueeze(0)
-        self.action = self.policy.evaluate_(warp_pos, warp_q, warp_qd)
+        self.action = self.policy.evaluate_(warp_pos, warp_q, warp_qd)[0]
         # print(self.action)
 
 
@@ -478,8 +485,9 @@ if __name__=="__main__":
     actual_full_path = os.path.join(full_path, policy_file)
     config_path = os.path.join(actual_full_path,"training_config.yaml")
     full_policy_path = os.path.join(actual_full_path, "policy.pth")
+    full_onnx_path = os.path.join(actual_full_path, "policy.onnx")
 
-    rospy.init_node("nn_policy_planner2")
+    rospy.init_node("nn_policy_planner5")
     ros_lib = roslib.packages.get_pkg_dir("gestelt_bringup")
     full_config_path = os.path.join(ros_lib, "config/traj_server_default.yaml")
     with open(full_config_path, 'r') as file:
@@ -522,7 +530,7 @@ if __name__=="__main__":
 
     
     #vel 20250424-161234 #position 20250424-131220, 20250424-161345
-    nn_policy = TEST_RENDER(full_policy_path, position_control, warp_frame) 
+    nn_policy = TEST_RENDER(full_policy_path, full_onnx_path, position_control, warp_frame) 
 
     nn_policy_planner = NN_POLICY_PLANNER(mission_command_mode=int(mission_command_mode), policy=nn_policy,
                                           inference_timestep=delta_time, max_angular_rates = max_angular_rate,
