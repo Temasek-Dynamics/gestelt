@@ -466,18 +466,41 @@ if __name__=="__main__":
 
     rospy.init_node("nn_policy_planner2")
     ros_lib = roslib.packages.get_pkg_dir("gestelt_bringup")
-    full_config_path = os.path.join(ros_lib, "config/traj_server_vel.yaml")
+    full_config_path = os.path.join(ros_lib, "config/traj_server_default.yaml")
     with open(full_config_path, 'r') as file:
         loaded_params = yaml.safe_load(file)
 
-    # with open(config_path, 'r') as file:
-    #     config_params = yaml.safe_load(file)
+    with open(config_path, 'r') as file:
+        config_params = yaml.safe_load(file)
 
     mission_command_mode = loaded_params["mission_command_mode"]
+    to_transform_odom = loaded_params["to_transform_odom"]
+    to_transform_policy = loaded_params["to_transform_policy"]
+    warp_jax = loaded_params["warp_jax"]
 
     position_control = True #config_params["position_control"]
     delta_time = 0.05 #float(config_params["delta_time"])
     max_angular_rate = 3.0 #float(config_params["max_angular_rates"])
+
+    #This code is primarily for warp policies. So warp_jax has to be 0.0
+    if warp_jax != 0.0:
+        raise ValueError("warp_jax should be 0.0")
+
+    if "warp_frame" in config_params:
+        warp_frame = config_params["warp_frame"]
+        if warp_frame == 0.0: #if warp_frame = 0.0 this means that this is the y-up frame. Then this means that everything needs to be transformed
+            if to_transform_odom != 1.0:
+                raise ValueError("to_transform_odom should be 1.0")
+            if to_transform_policy != 1.0:
+                raise ValueError("to_transform_policy should be 1.0")
+        if warp_frame == 1.0: #if warp_frame = 1.0, this means that this is the z-up frame. Then no need to transform anything
+            raise ValueError("This code can only work with y-axis up. warp_frame should be 0.0")
+    else:
+        #This is assumed to be pre warp_frame period. so should transform
+        if to_transform_odom != 1.0:
+            raise ValueError("to_transform_odom should be 1.0")
+        if to_transform_policy != 1.0:
+            raise ValueError("to_transform_policy should be 1.0")
 
     
       #vel 20250424-161234 #position 20250424-131220, 20250424-161345

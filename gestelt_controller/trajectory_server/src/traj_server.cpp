@@ -310,7 +310,6 @@ void TrajectoryServer::UAVOdomCB(const nav_msgs::Odometry::ConstPtr &msg)
             transformStamped = tfBuffer.lookupTransform("map", "body", ros::Time(0));
           }
           
-
           // Initializing the Transformed vector
           geometry_msgs::Vector3Stamped transformed_vector;
           geometry_msgs::Vector3Stamped transformed_linearvel_vector;

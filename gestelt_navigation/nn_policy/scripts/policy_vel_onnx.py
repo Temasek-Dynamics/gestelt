@@ -122,14 +122,14 @@ class TEST_RENDER(object):
             angvel = qd[:,:3]
             diff_vel = self.t_vel - vel
             x = torch.cat((att, angvel, diff_vel), dim=1)
-        a = self.policy(x)
+        # a = self.policy(x)
         outputs = self.session.run(None, {self.input_name: x.detach().cpu().numpy()})
 
         
-        self.previous_action = a
+        # self.previous_action = a
         end_time = time.time()
         # print(f"Time taken: {end_time - start_time:.4f} seconds")
-        return a, outputs
+        return outputs
     
     def vector_to_line(self,P, A, d):
         d_unit = d / torch.norm(d, dim=-1, keepdim=True)  # Normalize direction
@@ -450,7 +450,7 @@ class NN_POLICY_PLANNER(object):
 if __name__=="__main__":
     signal(SIGINT, handler)
     print("STARTING NODE")
-    policy_file = "20250527-122703" #20250520-232722 - 0.05 20250521-092027 - 0.02 20250521-114910# 0.02 0.707  20250522-174445 - 0.05 (no orientation not too bad)- 20250523-084843 (0.05 -with orientation) 20250523-110509 (0.05 - no orientation. To test fly)
+    policy_file = "20250710-154609" #20250520-232722 - 0.05 20250521-092027 - 0.02 20250521-114910# 0.02 0.707  20250522-174445 - 0.05 (no orientation not too bad)- 20250523-084843 (0.05 -with orientation) 20250523-110509 (0.05 - no orientation. To test fly)
     print(f"POLICY PATH IS {policy_file}")  # (with orientation)- 0.02 - to fly "20250523-155958 (with orientation and pos randomize) - 0.02" "20250523-170204 - 0.707 0.05" "20250523-170241 - 1,0.05"
 
     rospack = rospkg.RosPack()
@@ -462,20 +462,44 @@ if __name__=="__main__":
     full_policy_path = os.path.join(actual_full_path, "policy.pth")
     full_onnx_path = os.path.join(actual_full_path, "policy.onnx")
 
-    rospy.init_node("nn_policy_planner3")
+    rospy.init_node("nn_policy_planner4")
     ros_lib = roslib.packages.get_pkg_dir("gestelt_bringup")
-    full_config_path = os.path.join(ros_lib, "config/traj_server_vel.yaml")
+    full_config_path = os.path.join(ros_lib, "config/traj_server_default.yaml")
     with open(full_config_path, 'r') as file:
         loaded_params = yaml.safe_load(file)
 
-    # with open(config_path, 'r') as file:
-    #     config_params = yaml.safe_load(file)
+    with open(config_path, 'r') as file:
+        config_params = yaml.safe_load(file)
 
     mission_command_mode = loaded_params["mission_command_mode"]
+    to_transform_odom = loaded_params["to_transform_odom"]
+    to_transform_policy = loaded_params["to_transform_policy"]
+    warp_jax = loaded_params["warp_jax"]
 
     position_control = True #config_params["position_control"]
-    delta_time = 0.02 #float(config_params["delta_time"])
+    delta_time = 0.05 #float(config_params["delta_time"])
     max_angular_rate = 3.0 #float(config_params["max_angular_rates"])
+
+    #This code is primarily for warp policies. So warp_jax has to be 0.0
+    if warp_jax != 0.0:
+        raise ValueError("warp_jax should be 0.0")
+
+    if "warp_frame" in config_params:
+        warp_frame = config_params["warp_frame"]
+        if warp_frame == 0.0: #if warp_frame = 0.0 this means that this is the y-up frame. Then this means that everything needs to be transformed
+            if to_transform_odom != 1.0:
+                raise ValueError("to_transform_odom should be 1.0")
+            if to_transform_policy != 1.0:
+                raise ValueError("to_transform_policy should be 1.0")
+        if warp_frame == 1.0: #if warp_frame = 1.0, this means that this is the z-up frame. Then no need to transform anything
+            raise ValueError("This code can only work with y-axis up. warp_frame should be 0.0")
+    else:
+        #This is assumed to be pre warp_frame period. so should transform
+        if to_transform_odom != 1.0:
+            raise ValueError("to_transform_odom should be 1.0")
+        if to_transform_policy != 1.0:
+            raise ValueError("to_transform_policy should be 1.0")
+
 
     
       #vel 20250424-161234 #position 20250424-131220, 20250424-161345
