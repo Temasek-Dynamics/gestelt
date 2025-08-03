@@ -74,6 +74,7 @@ void TrajectoryServer::init(ros::NodeHandle& nh, ros::NodeHandle& pnh)
   low_lvl_cmd_raw_pub_ = nh.advertise<mavros_msgs::AttitudeTarget>("mavros/setpoint_raw/attitude", 1);
   angular_rates_pub_ = nh.advertise<nav_msgs::Odometry>("warp/local_position/odom", 1);
   warp_pose_pub_ = nh.advertise<geometry_msgs::PoseStamped>("warp/local_position/pose", 1);
+  global_nwu_pub_ = nh.advertise<geometry_msgs::PoseStamped>("/agent001/global/nwu_pose", 1);
 
   ////////////////////
   /* Service clients */
@@ -135,6 +136,39 @@ void TrajectoryServer::execTrajCb(const gestelt_msgs::ExecTrajectory::ConstPtr &
       geomMsgsVector3ToEigenVector3(msg->velocity.linear, last_mission_vel_);
       last_mission_yaw_dot_ = msg->velocity.angular.z; //yaw rate
       // ROS_INFO("received velocity: %f, %f, %f", last_mission_vel_(0), last_mission_vel_(1), last_mission_vel_(2));
+
+      geometry_msgs::Vector3Stamped output_bodyvel_vector;
+                output_bodyvel_vector.vector.x = last_mission_vel_(0);
+                output_bodyvel_vector.vector.y = last_mission_vel_(1);
+                output_bodyvel_vector.vector.z = last_mission_vel_(2);
+      
+      try {
+          // Lookup the transformation from warp to body frame
+          geometry_msgs::TransformStamped transformStamped;
+          transformStamped = tfBuffer.lookupTransform("map", "body", ros::Time(0));
+
+          // Initializing the transformed vector
+          geometry_msgs::Vector3Stamped transformed_output_mapvel_vector;
+          // Performing the transformation
+          tf2::doTransform(output_bodyvel_vector, transformed_output_mapvel_vector, transformStamped);
+          // ROS_INFO("Transformed Vector: x=%.2f, y=%.2f, z=%.2f", 
+          //          transformed_vector.vector.x, transformed_vector.vector.y, transformed_vector.vector.z);
+          
+          // Loading in the transformed rates and get ready to send it to PX4
+          last_mission_vel_(0) = transformed_output_mapvel_vector.vector.x;
+          last_mission_vel_(1) = transformed_output_mapvel_vector.vector.y;
+          last_mission_vel_(2) = transformed_output_mapvel_vector.vector.z;
+
+          // std::cout << "This is x: " << last_mission_body_rates_(0) << "\n";
+          // std::cout << "This is y: " << last_mission_body_rates_(1) << "\n";
+          // std::cout << "This is z: " << last_mission_body_rates_(2) << "\n";
+        } 
+      catch (tf2::TransformException &ex)
+      {
+          ROS_WARN("Could not transform vector: %s", ex.what());
+      }
+
+
   }
 
   if (getMissionCmd() == MissionCmdMode::ATTITUDE){
@@ -244,7 +278,9 @@ void TrajectoryServer::UAVPoseCB(const geometry_msgs::PoseStamped::ConstPtr &msg
   transformStamped.transform.rotation.z = msg->pose.orientation.z;
   transformStamped.transform.rotation.w = msg->pose.orientation.w;
 
-  br.sendTransform(transformStamped);   
+  br.sendTransform(transformStamped); 
+  
+  global_nwu_pub_.publish(*msg);
 
 }
 

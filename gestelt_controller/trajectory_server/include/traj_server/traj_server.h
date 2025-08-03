@@ -444,6 +444,7 @@ private: // Member variables
   ros::Publisher low_lvl_cmd_raw_pub_;
   ros::Publisher angular_rates_pub_;
   ros::Publisher warp_pose_pub_;
+  ros::Publisher global_nwu_pub_;
   
   /* Subscriber */
   ros::Subscriber exec_traj_sub_; // Subscriber for planner trajectory
