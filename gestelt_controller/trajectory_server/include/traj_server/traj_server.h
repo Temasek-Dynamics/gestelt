@@ -252,7 +252,7 @@ private: // Class Methods
     Vector3d geom_bodyrate, double geom_thrust);
 
   void publishVelCmd(
-  Vector3d v, Vector3d p, uint16_t ct_omega_mode_);
+  Vector3d v, Vector3d p, uint16_t ct_omega_mode_, double yaw_rate);
 
   /* Helper methods */
 

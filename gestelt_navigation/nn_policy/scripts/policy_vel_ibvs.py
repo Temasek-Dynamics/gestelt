@@ -194,8 +194,8 @@ class NN_POLICY_PLANNER(object):
         pva_traj_msg.transform.translation.z = 5.0
         pva_traj_msg.transform.rotation.x = 0.0
         pva_traj_msg.transform.rotation.y = 0.0
-        pva_traj_msg.transform.rotation.z = 0.707
-        pva_traj_msg.transform.rotation.w = -0.707
+        pva_traj_msg.transform.rotation.z = 0.819152
+        pva_traj_msg.transform.rotation.w = -0.5735764
         pva_traj_msg.type_mask = 2048
 
 
@@ -221,6 +221,7 @@ class NN_POLICY_PLANNER(object):
         pva_traj_msg.velocity.linear.x = self.ibvs_action_vel[0]
         pva_traj_msg.velocity.linear.y = -self.ibvs_action_vel[1]
         pva_traj_msg.velocity.linear.z = -self.ibvs_action_vel[2]
+        pva_traj_msg.velocity.angular.z = -self.ibvs_action_vel[3]
         pva_traj_msg.type_mask = 2048
 
         #Publish the PVA

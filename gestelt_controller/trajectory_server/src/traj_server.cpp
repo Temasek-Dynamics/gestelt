@@ -759,7 +759,7 @@ void TrajectoryServer::execMission()
   publishLowLvlCmd( last_mission_body_rates_, last_mission_thrust_vector_, last_mission_quaternion_, last_mission_pos_, ct_omega_mode_);
   }
   else if(getMissionCmd() == MissionCmdMode::VEL){
-  publishVelCmd( last_mission_vel_, last_mission_pos_, ct_omega_mode_);
+  publishVelCmd( last_mission_vel_, last_mission_pos_, ct_omega_mode_, last_mission_yaw_dot_);
   }
   else if (getMissionCmd() == MissionCmdMode::GEOM){
     std::cout << "IN HERE\n";
@@ -801,7 +801,7 @@ void TrajectoryServer::publishCmd(
 }
 
 void TrajectoryServer::publishVelCmd(
-  Vector3d v, Vector3d p, uint16_t ct_omega_mode_)
+  Vector3d v, Vector3d p, uint16_t ct_omega_mode_, double yaw_rate)
 {
   if (enable_safety_box_ && !checkPositionLimits(safety_box_, p)) {
     // If position safety limit check failed, switch to hovering mode
@@ -813,6 +813,7 @@ void TrajectoryServer::publishVelCmd(
   vel_cmd.twist.linear.x = v(0);
   vel_cmd.twist.linear.y = v(1);
   vel_cmd.twist.linear.z = v(2);
+  vel_cmd.twist.angular.z = yaw_rate;
 
   vel_cmd_raw_pub_.publish(vel_cmd);
 
