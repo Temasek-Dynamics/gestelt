@@ -40,11 +40,6 @@ CMD_1="
 roslaunch trajectory_server trajectory_server_node.launch rviz_config:=gz_sim
 "
 
-# Start up minimum snap trajectory planner and sampler 
-CMD_2="
-roslaunch trajectory_planner trajectory_planner_node.launch
-"
-
 # Start up script to send commands
 CMD_3="roslaunch gestelt_bringup circular_mission.launch simulation:=true"
 
@@ -64,7 +59,7 @@ then
     sleep 2
     tmux send-keys -t $SESSION:0.1 "$SOURCE_WS $CMD_1" C-m 
     sleep 1
-    tmux send-keys -t $SESSION:0.2 "$SOURCE_WS $CMD_2" C-m 
+    tmux send-keys -t $SESSION:0.2 "$SOURCE_WS" #C-m 
     sleep 1
     tmux send-keys -t $SESSION:0.3 "$SOURCE_WS $CMD_3" C-m
 fi

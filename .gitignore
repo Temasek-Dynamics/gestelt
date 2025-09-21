@@ -61,3 +61,4 @@ CATKIN_IGNORE
 *prof
 *.png
 /gestelt_bringup/src/Learning_Agile/
+.history
