@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8.3)
 project(standard_trajectory_publisher)
 
 add_definitions(-std=c++11)
-
+set(CMAKE_BUILD_TYPE Debug)
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
@@ -16,7 +16,7 @@ find_package(catkin REQUIRED COMPONENTS
 
 catkin_package(
   INCLUDE_DIRS include
-  CATKIN_DEPENDS roscpp rospy std_msgs nav_msgs geometry_msgs tf mav_planning_msgs controller_msgs mavros_msgs
+  CATKIN_DEPENDS roscpp rospy std_msgs std_srvs nav_msgs geometry_msgs tf mav_planning_msgs controller_msgs mavros_msgs
 )
 
 include_directories(

@@ -5,11 +5,15 @@ from gestelt_msgs.msg import CommanderState, Goals, CommanderCommand
 from geometry_msgs.msg import Pose, Accel,PoseArray,AccelStamped, Twist
 from mavros_msgs.msg import PositionTarget
 from std_msgs.msg import Int8, Bool
+from controller_msgs.msg import FlatTarget
 import math
 import time
-import tf
-# get ros params from rosparam server
-is_simulation=rospy.get_param('mission/is_simulation', False)
+from std_srvs.srv import SetBool
+# get ros params
+takeoff_height = rospy.get_param("mission/takeoff_height", 1.2)
+test_time = rospy.get_param("mission/test_time", 40.0)
+TIME_OUT = False
+
 
 # Publisher of server events to trigger change of states for trajectory server 
 server_event_pub = rospy.Publisher('/traj_server/command', CommanderCommand, queue_size=10)
@@ -18,6 +22,10 @@ waypoints_pub = rospy.Publisher('/planner/goals', Goals, queue_size=10)
 
 # Publisher for desired hover setpoint
 hover_position_pub = rospy.Publisher('/planner/hover_position', Pose, queue_size=10)
+
+# client for circular mission
+circular_client_=rospy.ServiceProxy('start',SetBool)
+
 
 # for visualization
 waypoints_pos_pub = rospy.Publisher('/planner/goals_pos', PoseArray, queue_size=10)
@@ -50,45 +58,11 @@ def get_server_state_callback():
     # print(msg)
     # print("==================")
 
-def transform_map_to_world():
-    """
-    this function calculates the transformation from map to world frame
-    world frame is the initial position of the drone
-    map frame is the origin of the map  
-    Returns:
-        trans: translation vector from map to world
-        rot: rotation vector from map to world
-    """
-    # tf listener, for transformation from map to world(initialize at the drone position)
-    tf_listener = tf.TransformListener()
-
-    # in the simulation, the map frame is used to represent the abs world frame
-    # in the real world, there is no map frame, the world frame is the abs world frame
-    if is_simulation:
-        while not rospy.is_shutdown():
-            try:
-        
-                if tf_listener.canTransform("world", "map", rospy.Time(0)):
-                    (trans, rot) = tf_listener.lookupTransform("world", "map", rospy.Time(0))
-                    break 
-                else:
-                    rospy.sleep(0.04)
-            except tf.TransformException as ex:
-                rospy.logwarn("TransformException: {}".format(ex))
-                rospy.sleep(0.04)
-    
-        return trans,rot
-    else:
-        return (0.0,0.0,0.0),(0.0,0.0,0.0,1.0)
-
 def create_pose(x, y, z):
     pose = Pose()
-
-    # transform waypoints from map to world
-    trans,rot=transform_map_to_world()
-    pose.position.x = x+trans[0]
-    pose.position.y = y+trans[1]
-    pose.position.z = z+trans[2]
+    pose.position.x = x
+    pose.position.y = y
+    pose.position.z = z
 
     pose.orientation.x = 0
     pose.orientation.y = 0
@@ -123,6 +97,7 @@ def pub_waypoints(waypoints,accels,vels):
     wp_msg = Goals()
     wp_pos_msg=PoseArray()
     wp_acc_msg=AccelStamped()
+  
 
     wp_msg.header.frame_id = "world"
     # wp_msg.waypoints.header.frame_id = "world"
@@ -143,99 +118,100 @@ def pub_waypoints(waypoints,accels,vels):
     if len(accels)>0:
         wp_acc_msg.accel=accels[1][0]
     
+    rospy.loginfo("accels: %s",wp_msg.accelerations)
+    rospy.loginfo("vels: %s",wp_msg.velocities)
+
+    rospy.loginfo("accels mask: %s",wp_msg.accelerations_mask)
+    rospy.loginfo("vels mask: %s",wp_msg.velocities_mask)
+
     waypoints_pub.publish(wp_msg)
     waypoints_pos_pub.publish(wp_pos_msg)
     waypoints_acc_pub.publish(wp_acc_msg)
 
-# def hover_position():
+def hover_position():
     
-#      # transform waypoints from map to world
-#     trans,rot=transform_map_to_world()
+    hover_position = Pose()
+    hover_position.position.x = 0.0
+    hover_position.position.y = 1.5
+    # z is the same as the takeoff height
 
-#     hover_position = Pose()
-#     hover_position.position.x = 0.0+trans[0]
-#     hover_position.position.y = 0.0+trans[1]
-#     # z is the same as the takeoff height
+    hover_position_pub.publish(hover_position)
 
-#     hover_position_pub.publish(hover_position)
+def requestCircularMission():
+    rospy.wait_for_service('start')
+    try:
+        # call the service
+        response = circular_client_(True) 
+        print("Service response:", response)
+        if response.success:
+            rospy.loginfo("Service call succeeded with message: %s", response.message)
+        else:
+            rospy.logwarn("Service call failed with message: %s", response.message)
 
+    except rospy.ServiceException as e:
+        rospy.logerr("Service call failed: %s", str(e))
+        
 
-def main():
+def main(TIME_OUT):
+    """      if (!isExecutingMission()){
+    logInfoThrottled("Waiting for mission", 5.0);
+    // ROS_INFO("in waiting for mission");
+    // execHover(); --> CLOSE THIS!!!, remember to open it for other missions
+    """
     rospy.init_node('mission_startup', anonymous=True)
     pub_freq = 25 # hz
     rate = rospy.Rate(pub_freq) # hz 20hz
 
     HOVER_MODE = False
     MISSION_MODE = False
-    
+    circular_traj_start = rospy.Time.now()
+   
+
     while not rospy.is_shutdown():
         get_server_state_callback()
 
-        if check_traj_server_states("MISSION"):
-            MISSION_MODE = True
-        if check_traj_server_states("HOVER"):
-            HOVER_MODE = True
+        # If the TIME_OUT flag is set, then the mission is over
+        if TIME_OUT==False:
+            if check_traj_server_states("MISSION"):
+                MISSION_MODE = True
+            if check_traj_server_states("HOVER"):
+                HOVER_MODE = True
         
+
         if (MISSION_MODE):
             # Already in MISSION 
-            time.sleep(5)
-            break
+            # time.sleep(5)
+            print(circular_traj_start)
+            print((rospy.Time.now()-circular_traj_start).to_sec())
+            if (rospy.Time.now()-circular_traj_start).to_sec() > test_time:
+                
+                print("circular trajectory timeout!")
+                MISSION_MODE = False
+                TIME_OUT = True
+
         elif (not HOVER_MODE):
             # IDLE -> TAKE OFF -> HOVER
-            # hover_position()
+            hover_position()
             print("Setting to HOVER mode!")
             publishCommand(CommanderCommand.TAKEOFF)
+        
+        elif (TIME_OUT):
+            print("Setting to TIMEOUT mode!")
+            publishCommand(CommanderCommand.HOVER)
+            break
         elif (HOVER_MODE):
             # HOVER -> desired position -> MISSION
             print("Setting to MISSION mode!")
+            circular_traj_start = rospy.Time.now()
+
+            # call the circular mission service, to start the mission from current position
+            requestCircularMission()
             publishCommand(CommanderCommand.MISSION)
 
 
         print("tick!")
         rate.sleep()
-
-    # Send waypoints to UAVs
-    # frame is ENU
-    print(f"Sending waypoints to UAVs")
-    waypoints = []
-
-    # side length 5m
-
-
-    # 1/4 test
-    # world frame is the initial position of the drone
-    # map frame is the origin of the map
-    # waypoints are under the map frame, will be transformed to world frame
-    waypoints.append(create_pose(1.2,-0.0,1.4)) # 1.2,-0.0,1.4
-    waypoints.append(create_pose(0.0,-1.8,1.4))# 0.0,-1.8,1.4
-    # waypoints.append(create_pose(0.0,0.0,1.2))# 5.0,2.0,3
-
-    
-    # the number of accelerations must be equal to the number of waypoints
-    accel_list = []
-    
-    g=-9.81 #m/s^2  # down force, negative
-    f=1*(-g) #N  # up force, positive
-    angle=60
-    angle_rad=math.radians(angle)
-
-    # accelerations constraint
-    # (0.0,0.0,0.0))
-    # (None,None,None)) means no constraint
-    accel_list.append(create_accel(-f*np.sin(angle_rad),0.0,g+f*np.cos(angle_rad)))
-    accel_list.append(create_vel(None,None,None))
-    # accel_list.append(create_vel(None,None,None))
-    # accel_list.append(create_vel(None,None,None)) 
-
-    # velocites constraint
-    vel_list = []
-    vel_list.append(create_vel(None,None,None))
-    vel_list.append(create_vel(0.0,0.0,0.0))
-    # vel_list.append(create_vel(0.0,0.0,0.0))
-    # vel_list.append(create_vel(0.0,0.0,0.0))
-
-
-    pub_waypoints(waypoints,accel_list,vel_list)
     rospy.spin()
 if __name__ == '__main__':
-    main()
+    TIME_OUT = False
+    main(TIME_OUT)

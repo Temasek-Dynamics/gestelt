@@ -1,0 +1,95 @@
+# Please run with sudo.
+# This bash will launch all the components of the system, in the order of:
+# 0. px4 (mavros & gcs_bridge) 
+
+
+init_path=/gestelt_ws
+
+
+# delay between launching various modules
+module_delay=1.0
+
+# check whether is running as sudo
+# if [ "$EUID" -eq 0 ]
+#     then echo "Please DO NOT run as root."
+#     exit
+# fi
+
+if [ "${STY}" != "" ]
+    then echo "You are running the script in a screen environment. Please quit the screen."
+    exit
+fi
+
+output="$(screen -ls)"
+if [[ $output != *"No Sockets found"* ]]; then
+    echo "There are some screen sessions alive. Please run 'pkill screen' before launching uavos."
+    exit
+fi
+
+echo "The system is booting..."
+
+cd ${init_path}
+
+# let the cpu run in the highest performance
+echo "Will let the CPU run in the highest frequency, need sudo"
+sudo cpufreq-set -g performance
+
+
+# export ip for remote rosbag rocord
+
+# SELF_IP="192.168.31.38" # should inside ~/.bashrc
+
+EXPORT_SELF_IP="export ROS_IP=$SELF_IP&&
+                export ROS_HOSTNAME=$SELF_IP&&
+                export ROS_MASTER_URI=http://$SELF_IP:11311;"
+
+# cpu highest performance
+
+#---------------------------------------------
+# roscore
+screen -d -m -S roscore bash -c "$EXPORT_SELF_IP source devel/setup.bash; roscore; exec bash -i"
+sleep ${module_delay}
+sleep ${module_delay}
+sleep ${module_delay}
+echo "roscore ready."
+
+
+# --------------------------------------------
+# prepareation
+cd ${init_path}
+source devel/setup.bash
+
+#################################################################################################################################
+# -1 mavros
+screen -d -m -S mavros bash -c "$EXPORT_SELF_IP source devel/setup.bash; roslaunch mavros px4.launch  ; exec bash -i"
+sleep ${module_delay}
+sleep ${module_delay}
+sleep ${module_delay}
+echo "mavros ready."
+
+#################################################################################################################################
+# -1 vectornav & gprmc
+screen -d -m -S vicon_bridge bash -c "$EXPORT_SELF_IP source devel/setup.bash; roslaunch gestelt_bringup vicon_client.launch drone_name_vicon:=$DRONE_NAME_VICON ; exec bash -i"
+# screen -d -m -S vicon_bridge bash -c "$EXPORT_SELF_IP source devel/setup.bash; exec bash -i"
+sleep ${module_delay}
+# sleep ${module_delay}
+# sleep ${module_delay}
+echo "vrpn_client ready"
+
+#################################################################################################################################
+# -2 trajectory server
+screen -d -m -S trajectory_server bash -c "$EXPORT_SELF_IP source devel/setup.bash; taskset -c 2 roslaunch trajectory_server trajectory_server_node.launch; exec bash -i"
+sleep ${module_delay}
+echo "trajectory_server ready."
+
+#################################################################################################################################
+sleep ${module_delay}
+sleep ${module_delay}
+sleep ${module_delay}
+
+
+
+
+echo "ALL GREEN ! System is started."
+
+

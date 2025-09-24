@@ -268,29 +268,7 @@ void TrajServer::execTrajTimerCb(const ros::TimerEvent &e)
       break;
   }
 }
-/* request for circular mission*/
-void TrajServer::requestCircularMission()
-{   
-  ros::service::waitForService("start");
-  std_srvs::SetBool srv;
-  srv.request.data = true;
-  start_circular_srv_ = srv;
-  try {
-      // call the service
-      if (circular_client_.call(srv)) {
-          if (srv.response.success) {
-              ROS_INFO("Service call succeeded with message: %s", start_circular_srv_.response.message.c_str());
-          } else {
-              ROS_WARN("Service call failed with message: %s", start_circular_srv_.response.message.c_str());
-          }
-      } else {
-          ROS_ERROR("Failed to call service");
-      }
-  } catch (const std::exception& e) {
-      ROS_ERROR("Service call failed: %s", e.what());        
-  }
 
-}
 void TrajServer::tickServerStateTimerCb(const ros::TimerEvent &e)
 {
   // logInfoThrottled(string_format("Current Server State: [%s]", StateToString(getServerState()).c_str()), 1.0);

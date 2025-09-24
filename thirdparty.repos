@@ -1,8 +1,4 @@
 repositories:
-  ../mav_trajectory_generation/mav_trajectory_generation:
-    type: git
-    url: https://github.com/ethz-asl/mav_trajectory_generation.git
-    version: master
   ../mav_trajectory_generation/catkin_simple:
     type: git
     url: https://github.com/catkin/catkin_simple.git
