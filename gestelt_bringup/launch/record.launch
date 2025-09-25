@@ -20,7 +20,6 @@
   <node if="$(arg launch_rviz)" name="rviz" pkg="rviz" type="rviz" required="true" 
     args="-d $(find gestelt_bringup)/launch/rviz/gz_sim.rviz"/>
 
-  <node pkg="gestelt_bringup" name = "drone_ellipsoid_vis" type = "drone_ellipsoid_vis.py" output="screen" ></node>
   </launch>
 
 
