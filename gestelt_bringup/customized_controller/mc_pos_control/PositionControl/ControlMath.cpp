@@ -75,80 +75,45 @@ void bodyzToAttitude(Vector3f body_z, const float yaw_sp, vehicle_attitude_setpo
 	}
 
 	body_z.normalize();
-        //------------------------original code------------------------------//
-	// //vector of desired yaw direction in XY plane, rotated by PI/2
-	// const Vector3f y_C{-sinf(yaw_sp), cosf(yaw_sp), 0.f};
 
-	// // desired body_x axis, orthogonal to body_z
-	// Vector3f body_x = y_C % body_z;
+	// vector of desired yaw direction in XY plane, rotated by PI/2
+	const Vector3f y_C{-sinf(yaw_sp), cosf(yaw_sp), 0.f};
 
-	// // keep nose to front while inverted upside down
-	// if (body_z(2) < 0.0f) {
-	// 	body_x = -body_x;
-	// }
+	// desired body_x axis, orthogonal to body_z
+	Vector3f body_x = y_C % body_z;
 
-	// if (fabsf(body_z(2)) < 0.000001f) {
-	// 	// desired thrust is in XY plane, set X downside to construct correct matrix,
-	// 	// but yaw component will not be used actually
-	// 	body_x.zero();
-	// 	body_x(2) = 1.0f;
-	// }
+	// keep nose to front while inverted upside down
+	if (body_z(2) < 0.0f) {
+		body_x = -body_x;
+	}
 
-	// body_x.normalize();
+	if (fabsf(body_z(2)) < 0.000001f) {
+		// desired thrust is in XY plane, set X downside to construct correct matrix,
+		// but yaw component will not be used actually
+		body_x.zero();
+		body_x(2) = 1.0f;
+	}
 
-	// // desired body_y axis
-	// const Vector3f body_y = body_z % body_x;
+	body_x.normalize();
 
-        //---------------------modified code-------------------------//
+	// desired body_y axis
+	const Vector3f body_y = body_z % body_x;
 
-	// firstly calculate the body_y, then calculate the body_x
-	// const Vector3f x_C{cosf(yaw_sp), sinf(yaw_sp), 0.f};
+	Dcmf R_sp;
 
-	// // desired body_y axis, orthogonal to body_z
-	// Vector3f body_y = body_z % x_C;
-	// body_y.normalize();
+	// fill rotation matrix
+	for (int i = 0; i < 3; i++) {
+		R_sp(i, 0) = body_x(i);
+		R_sp(i, 1) = body_y(i);
+		R_sp(i, 2) = body_z(i);
+	}
 
-	// // calculate the body_x
-	// Vector3f body_x = body_y % body_z;
-
-	// Dcmf R_sp;
-
-	// // fill rotation matrix
-	// for (int i = 0; i < 3; i++) {
-	// 	R_sp(i, 0) = body_x(i);
-	// 	R_sp(i, 1) = body_y(i);
-	// 	R_sp(i, 2) = body_z(i);
-	// }
-	// // copy quaternion setpoint to attitude setpoint topic
-	// const Quatf q_sp{R_sp};
-
-	// q_sp.copyTo(att_sp.q_d);
-
-	// // calculate euler angles, for logging only, must not be used for control
-	// const Eulerf euler{R_sp};
-	// att_sp.roll_body = euler.phi();
-	// att_sp.pitch_body = euler.theta();
-	// att_sp.yaw_body = euler.psi();
-	//------------------------------------------------------------//
-
-
-	//------------------------hopf fibration to avoid singularity-----------------------------//
-
-	float first_term=1/(sqrt(2*(1+body_z(2))));
-	float q0=first_term*((1+body_z(2))*cosf(yaw_sp/2));
-	float q1=first_term*(-body_z(1)*cosf(yaw_sp/2)+body_z(0)*sinf(yaw_sp/2));
-	float q2=first_term*(body_z(0)*cosf(yaw_sp/2)+body_z(1)*sinf(yaw_sp/2));
-	float q3=first_term*((1+body_z(2))*sinf(yaw_sp/2));
-
-
-	const Quatf q_sp(q0,q1,q2,q3);
-
-	//------------------------------------------------------------------------------------------//
-
+	// copy quaternion setpoint to attitude setpoint topic
+	const Quatf q_sp{R_sp};
 	q_sp.copyTo(att_sp.q_d);
 
 	// calculate euler angles, for logging only, must not be used for control
-	const Eulerf euler{q_sp};
+	const Eulerf euler{R_sp};
 	att_sp.roll_body = euler.phi();
 	att_sp.pitch_body = euler.theta();
 	att_sp.yaw_body = euler.psi();

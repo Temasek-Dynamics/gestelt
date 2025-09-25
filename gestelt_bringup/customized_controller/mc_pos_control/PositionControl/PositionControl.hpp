@@ -41,6 +41,7 @@
 
 #include <lib/mathlib/mathlib.h>
 #include <matrix/matrix/math.hpp>
+#include <uORB/topics/trajectory_setpoint.h>
 #include <uORB/topics/vehicle_attitude_setpoint.h>
 #include <uORB/topics/vehicle_local_position_setpoint.h>
 
@@ -112,7 +113,6 @@ public:
 
 	void setRPTGains(const matrix::Vector3f &wn, const matrix::Vector3f &sigma, const matrix::Vector3f &ki, const matrix::Vector3f &eps, const float max_i,const matrix::Vector3f &rotor_drag);
 
-
 	/**
 	 * Set the maximum velocity to execute with feed forward and position control
 	 * @param vel_horizontal horizontal velocity limit
@@ -142,9 +142,9 @@ public:
 
 	/**
 	 * Set the normalized hover thrust
-	 * @param thrust [0.1, 0.9] with which the vehicle hovers not acelerating down or up with level orientation
+	 * @param hover_thrust [HOVER_THRUST_MIN, HOVER_THRUST_MAX] with which the vehicle hovers not accelerating down or up with level orientation
 	 */
-	void setHoverThrust(const float hover_thrust) { _hover_thrust = math::constrain(hover_thrust, 0.1f, 0.9f); }
+	void setHoverThrust(const float hover_thrust) { _hover_thrust = math::constrain(hover_thrust, HOVER_THRUST_MIN, HOVER_THRUST_MAX); }
 
 	/**
 	 * Update the hover thrust without immediately affecting the output
@@ -162,9 +162,9 @@ public:
 	/**
 	 * Pass the desired setpoints
 	 * Note: NAN value means no feed forward/leave state uncontrolled if there's no higher order setpoint.
-	 * @param setpoint a vehicle_local_position_setpoint_s structure
+	 * @param setpoint setpoints including feed-forwards to execute in update()
 	 */
-	void setInputSetpoint(const vehicle_local_position_setpoint_s &setpoint);
+	void setInputSetpoint(const trajectory_setpoint_s &setpoint);
 
 	/**
 	 * Apply P-position and PID-velocity controller that updates the member
@@ -181,7 +181,9 @@ public:
 	 * Set the integral term in xy to 0.
 	 * @see _vel_int
 	 */
+	// void resetIntegral() { _vel_int.setZero(); }
 	void resetIntegral() { _vel_int.setZero(); _pos_int.setZero();_pos_int(2)=0;}
+
 
 	/**
 	 * Get the controllers output local position setpoint
@@ -199,10 +201,16 @@ public:
 	 */
 	void getAttitudeSetpoint(vehicle_attitude_setpoint_s &attitude_setpoint) const;
 
-
-
+	/**
+	 * All setpoints are set to NAN (uncontrolled). Timestampt zero.
+	 */
+	static const trajectory_setpoint_s empty_trajectory_setpoint;
 
 private:
+	// The range limits of the hover thrust configuration/estimate
+	static constexpr float HOVER_THRUST_MIN = 0.05f;
+	static constexpr float HOVER_THRUST_MAX = 0.9f;
+
 	bool _inputValid();
 
 	void _positionControl(); ///< Position proportional control
@@ -227,7 +235,6 @@ private:
 	matrix::Vector3f _gain_RPT_ki; //<RPT control pole placements
 	matrix::Vector3f _gain_RPT_eps; //<RPT control settling time
 	matrix::Vector3f _rotor_drag; //<rotor drag coefficient
-
 	// Limits
 	float _lim_vel_horizontal{}; ///< Horizontal velocity limit with feed forward and position control
 	float _lim_vel_up{}; ///< Upwards velocity limit with feed forward and position control
@@ -237,9 +244,8 @@ private:
 	float _lim_thr_xy_margin{}; ///< Margin to keep for horizontal control when saturating prioritized vertical thrust
 	float _lim_tilt{}; ///< Maximum tilt from level the output attitude is allowed to have
 
-	float _hover_thrust{}; ///< Thrust [0.1, 0.9] with which the vehicle hovers not accelerating down or up with level orientation
+	float _hover_thrust{}; ///< Thrust [HOVER_THRUST_MIN, HOVER_THRUST_MAX] with which the vehicle hovers not accelerating down or up with level orientation
 	float _max_xy_integration;
-
 	// States
 	matrix::Vector3f _pos; /**< current position */
 	matrix::Vector3f _vel; /**< current velocity */
@@ -255,8 +261,4 @@ private:
 	matrix::Vector3f _thr_sp; /**< desired thrust */
 	float _yaw_sp{}; /**< desired heading */
 	float _yawspeed_sp{}; /** desired yaw-speed */
-
-	// publisher
-	// uORB::Publication<rpt_integrator_s> _rpt_integrator_pub{ORB_ID(rpt_integrator)};
-	// rpt_integrator_s _rpt_integrator_msg{};
 };
