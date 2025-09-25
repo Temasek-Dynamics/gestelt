@@ -4,13 +4,4 @@
         <param name="mission/test_time" value="$(arg test_time)" />
   </node>
 
-  <!-- <arg name="record_topics" default="
-    (.*)mavros(.*)
-    (.*)traj_server(.*)
-    (.*)planner(.*)
-    (.*)trajectory_publisher(.*)
-  "
-  /> -->
-  <!-- <node pkg="rosbag" type="record" name="record" output="screen" args="-o $(find gestelt_bringup)/data/
-  -e $(arg record_topics)"/>  -->
 </launch>

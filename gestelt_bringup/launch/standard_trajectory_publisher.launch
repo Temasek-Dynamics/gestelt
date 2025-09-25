@@ -1,5 +1,5 @@
 <launch>
-    <arg name="simulation" default="true" />
+    <arg name="simulation" default="false" />
     <arg name="test_time" default="40" />
 
     <arg if="$(arg simulation)" name="circle_center_x" default="0.0" />

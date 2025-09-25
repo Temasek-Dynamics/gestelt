@@ -8,7 +8,7 @@ SESSIONEXISTS=$(tmux list-sessions | grep $SESSION)
 #####
 SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )/.."
 gestelt_bringup_DIR="$SCRIPT_DIR/.."
-PX4_AUTOPILOT_REPO_DIR="$SCRIPT_DIR/../../../PX4-Autopilot"
+PX4_AUTOPILOT_REPO_DIR="~/gestelt_ws/PX4-Autopilot"
 
 #####
 # Sourcing

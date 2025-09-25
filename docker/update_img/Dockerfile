@@ -1,4 +1,4 @@
-FROM tianchensun787/auto-multi-lift:latest
+FROM tianchensun787/tracking:latest
 LABEL maintainer="johntgz@nus.edu.sg"
 
 # Enable the use of `source` keyword
@@ -30,20 +30,25 @@ SHELL ["/bin/bash", "-c"]
 # RUN git clone https://github.com/ros-drivers/vrpn_client_ros.git
 
 # Make directory and clone repository
+# WORKDIR /gestelt_ws/src/
+# RUN set -e ; \
+#     git clone --depth 1 https://github.com/catkin/catkin_simple.git && \
+#     git clone --depth 1 https://github.com/ethz-asl/eigen_catkin.git && \
+#     git clone --depth 1 https://github.com/ethz-asl/mav_comm.git && \
+#     git clone --depth 1 https://github.com/Jaeyoung-Lim/mavros_controllers.git
+
 WORKDIR /gestelt_ws/src/gestelt
-# RUN git fetch origin
+RUN git fetch origin
 RUN git pull
 RUN git checkout TEST/RPT_control_tracking
-RUN vcs import < thirdparty.repos --recursive
 
 # compile the workspace
 WORKDIR /gestelt_ws/
-RUN export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/root/acados/lib \
-    && export ACADOS_SOURCE_DIR=/root/acados \
-    && source /opt/ros/noetic/setup.bash \
-    # && catkin clean -y \
-    # && catkin build vicon_bridge\ 
-    && rm -rf /var/lib/apt/lists/* 
+# RUN source /opt/ros/noetic/setup.bash \
+#     # && catkin clean -y \
+#     # && catkin config --merge-devel \
+#     && catkin build gestelt_bringup\ 
+#     && rm -rf /var/lib/apt/lists/* 
 
 
 # DRONE_ID environment variable can be overriden on docker image startup

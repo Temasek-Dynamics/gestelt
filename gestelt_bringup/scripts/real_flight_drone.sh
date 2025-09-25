@@ -27,7 +27,7 @@ export ROS_MASTER_URI=http://${SELF_IP}:11311
 CMD_1="roslaunch gestelt_bringup circular_mission.launch"
 
 # Start up script to send commands
-CMD_2="roslaunch gestelt_bringup standard_trajectory_publisher.launch simulation:=true"
+CMD_2="roslaunch gestelt_bringup standard_trajectory_publisher.launch simulation:=false"
 
 if [ "$SESSIONEXISTS" = "" ]
 then 
