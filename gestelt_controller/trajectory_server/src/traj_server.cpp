@@ -63,7 +63,7 @@ void TrajectoryServer::init(ros::NodeHandle& nh, ros::NodeHandle& pnh)
   pose_sub_ = nh.subscribe<geometry_msgs::PoseStamped>("mavros/local_position/pose", 5, &TrajectoryServer::UAVPoseCB, this);
   odom_sub_ = nh.subscribe<nav_msgs::Odometry>("mavros/local_position/odom", 5, &TrajectoryServer::UAVOdomCB, this);
   geom_ctrl_sub_ = nh.subscribe<mavros_msgs::AttitudeTarget>("geom_ctrl", 5, &TrajectoryServer::geomCb, this);
-
+  imu_sub_ = nh.subscribe<sensor_msgs::Imu>("mavros/imu/data", 5, &TrajectoryServer::imuCB, this);
   /////////////////
   /* Publishers */
   /////////////////
@@ -74,6 +74,7 @@ void TrajectoryServer::init(ros::NodeHandle& nh, ros::NodeHandle& pnh)
   low_lvl_cmd_raw_pub_ = nh.advertise<mavros_msgs::AttitudeTarget>("mavros/setpoint_raw/attitude", 1);
   angular_rates_pub_ = nh.advertise<nav_msgs::Odometry>("warp/local_position/odom", 1);
   warp_pose_pub_ = nh.advertise<geometry_msgs::PoseStamped>("warp/local_position/pose", 1);
+  jax_lin_acc_pub_ = nh.advertise<sensor_msgs::Imu>("jax/imu/data", 1);
 
   ////////////////////
   /* Service clients */
@@ -133,6 +134,7 @@ void TrajectoryServer::execTrajCb(const gestelt_msgs::ExecTrajectory::ConstPtr &
       // ROS_INFO("Last mission yaw: %f", last_mission_yaw_);
 
       geomMsgsVector3ToEigenVector3(msg->velocity.linear, last_mission_vel_);
+      // geomMsgsVector3ToEigenVector3(msg->velocity.angular, last_mission_vel_ang_);
       last_mission_yaw_dot_ = msg->velocity.angular.z; //yaw rate
       // ROS_INFO("received velocity: %f, %f, %f", last_mission_vel_(0), last_mission_vel_(1), last_mission_vel_(2));
   }
@@ -363,6 +365,36 @@ void TrajectoryServer::UAVOdomCB(const nav_msgs::Odometry::ConstPtr &msg)
       }
 
     }
+}
+
+void TrajectoryServer::imuCB(const sensor_msgs::Imu::ConstPtr &msg){
+  geometry_msgs::Vector3Stamped lin_acc;
+  lin_acc.vector.x = msg->linear_acceleration.x;
+  lin_acc.vector.y = msg->linear_acceleration.y;
+  lin_acc.vector.z = msg->linear_acceleration.z;
+
+  if (warp_jax==1.0){}
+  try {
+      // Lookup the transformation from input frame to target frame
+      geometry_msgs::TransformStamped transformStamped_lin_acc;
+      transformStamped_lin_acc = tfBuffer.lookupTransform("map", "body", ros::Time(0));
+
+      geometry_msgs::Vector3Stamped lin_acc_transformed_vector;
+      tf2::doTransform(lin_acc, lin_acc_transformed_vector, transformStamped_lin_acc);
+
+      sensor_msgs::Imu transformed_lin_acc_msg;
+      transformed_lin_acc_msg.header.frame_id = "map";
+      transformed_lin_acc_msg.header.stamp = msg->header.stamp;
+      transformed_lin_acc_msg.linear_acceleration.x = lin_acc_transformed_vector.vector.x;
+      transformed_lin_acc_msg.linear_acceleration.y = lin_acc_transformed_vector.vector.y;
+      transformed_lin_acc_msg.linear_acceleration.z = lin_acc_transformed_vector.vector.z - 9.81;
+      jax_lin_acc_pub_.publish(transformed_lin_acc_msg);
+
+    }
+  catch (tf2::TransformException &ex) {
+          ROS_WARN("Could not transform vector: %s", ex.what());
+      }
+
 }
 
 void TrajectoryServer::geomCb(const mavros_msgs::AttitudeTarget::ConstPtr & msg)
@@ -723,7 +755,7 @@ void TrajectoryServer::execMission()
   publishLowLvlCmd( last_mission_body_rates_, last_mission_thrust_vector_, last_mission_quaternion_, last_mission_pos_, ct_omega_mode_);
   }
   else if(getMissionCmd() == MissionCmdMode::VEL){
-  publishVelCmd( last_mission_vel_, last_mission_pos_, ct_omega_mode_);
+  publishVelCmd( last_mission_vel_, last_mission_pos_, ct_omega_mode_, last_mission_yaw_dot_);
   }
   else if (getMissionCmd() == MissionCmdMode::GEOM){
     std::cout << "IN HERE\n";
@@ -765,7 +797,7 @@ void TrajectoryServer::publishCmd(
 }
 
 void TrajectoryServer::publishVelCmd(
-  Vector3d v, Vector3d p, uint16_t ct_omega_mode_)
+  Vector3d v, Vector3d p, uint16_t ct_omega_mode_, double yaw_rate)
 {
   if (enable_safety_box_ && !checkPositionLimits(safety_box_, p)) {
     // If position safety limit check failed, switch to hovering mode
@@ -777,6 +809,7 @@ void TrajectoryServer::publishVelCmd(
   vel_cmd.twist.linear.x = v(0);
   vel_cmd.twist.linear.y = v(1);
   vel_cmd.twist.linear.z = v(2);
+  vel_cmd.twist.angular.z = yaw_rate;
 
   vel_cmd_raw_pub_.publish(vel_cmd);
 

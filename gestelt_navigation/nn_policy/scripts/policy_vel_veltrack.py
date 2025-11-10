@@ -55,11 +55,10 @@ class ServerEvent(Enum):
 
 class TEST_RENDER(object):
 
-    def __init__(self, policy_path, pc, warp_frame):
+    def __init__(self, policy_path, pc):
         self.pc = pc
-        self.warp_frame = warp_frame
         if self.pc == True:
-            self.policy = TrackVel(input_dim=16)
+            self.policy = TrackVel(input_dim=13)
         else:
             self.policy = TrackVel(input_dim = 10)
         self.policy.load_state_dict(torch.load(policy_path))
@@ -67,8 +66,8 @@ class TEST_RENDER(object):
         self.init_a = np.zeros((1,4))
 
         target_vel = np.zeros((1, 3))
-        # target_vel[:,0]=1
-        # target_vel[:,2]=1
+        target_vel[:,0]=0.5
+        target_vel[:,2]=0.0
         target_vel_pos = np.zeros((1, 3))
         target_vel_pos[:,0] = -1.0
         target_vel_pos[:,1] = 0.0
@@ -83,10 +82,7 @@ class TEST_RENDER(object):
         target_unit_vel_pos = target_vel_pos / np.linalg.norm(target_vel_pos, axis = 1).reshape(-1,1)
         self.target_unit_vel_tensor = torch.tensor(target_unit_vel_pos, dtype=torch.float32)
 
-        if self.warp_frame == 0.0:
-            target_pos = np.array([0, 1,0.0]).reshape(1,3)
-        elif self.warp_frame == 1.0:
-            target_pos = np.array([0, 0,1.0]).reshape(1,3)
+        target_pos = np.array([0, 1,0.0]).reshape(1,3)
         # target_pos = 2 * target_unit_vel_pos + target_pos
         
         # print(f"Target position is: {target_pos}")
@@ -110,10 +106,10 @@ class TEST_RENDER(object):
         #     print(self.t_pos)
         if self.pc == True:
             # delta_vect = self.vector_to_line(pos, self.init_pos , self.target_unit_vel_tensor)
-            diff_pos = self.t_pos - pos
+            # diff_pos = self.t_pos - pos
             # _, angular_diff = self.quaternion_loss(self.t_or, att)
             # print(diff_pos)
-            x = torch.cat((diff_pos, -att, qd, self.t_vel), dim=1)
+            x = torch.cat((att, qd, self.t_vel), dim=1)
             # x[:,6] = -x[:,6]
             # x = torch.cat((diff_pos, att, qd, self.t_vel), dim=1)
         else:
@@ -170,8 +166,7 @@ class TEST_RENDER(object):
 
 class NN_POLICY_PLANNER(object):
 
-    def __init__(self, mission_command_mode, policy, inference_timestep, max_angular_rates, warp_jax,
-                 to_transform_odom, to_transform_policy):
+    def __init__(self, mission_command_mode, policy, inference_timestep, max_angular_rates):
         #Creating subscribers and Publishers
         self.bullet_sim_mutex = threading.Lock()
         self.tfBuffer =  tf2_ros.Buffer(rospy.Duration(10))
@@ -183,10 +178,6 @@ class NN_POLICY_PLANNER(object):
         self.policy = policy
         self.last_pos_time = None
         self.last_odom_time = None
-
-        self.warp_jax = warp_jax
-        self.to_transform_odom = to_transform_odom
-        self.to_transform_policy = to_transform_policy
         
 
         self.swarm_mode_pub_ = rospy.Publisher('/traj_server/swarm_command', Int8, queue_size=5)
@@ -196,7 +187,7 @@ class NN_POLICY_PLANNER(object):
         self.drone_pose_sub_ = rospy.Subscriber("/mode_change", Bool, self.modeChgCb, queue_size = 10)
         self.mission_mode_sub_ = rospy.Subscriber("/traj_server/warp_mission_command", Int8, self.missionModeCb, queue_size = 5)
         self.target_position_sub_ = rospy.Subscriber("/drone0/warp/local_position/target_position", PoseStamped, self.targetPosCb, queue_size = 5)
-        
+
         self.warp_drone_pose_pub_ = rospy.Subscriber('/drone0/warp/local_position/pose', PoseStamped, self.warpPoseCB, queue_size=5)
         self.warp_drone_odom_sub_ = rospy.Subscriber('/drone0/warp/local_position/odom', Odometry, self.warpOdomCB, queue_size=5)
         self.geom_controller_sub_ = rospy.Subscriber('/drone0/setpoint_raw/attitude', AttitudeTarget, self.geomCB, queue_size=5)
@@ -246,21 +237,16 @@ class NN_POLICY_PLANNER(object):
     def poseCb(self, msg):
         self.drone_pos = np.array([msg.pose.position.x, msg.pose.position.y, msg.pose.position.z])
         self.drone_quat = np.array([msg.pose.orientation.x, msg.pose.orientation.y, msg.pose.orientation.z, msg.pose.orientation.w])
-        if self.to_transform_odom == 0.0:
-            self.warp_q = np.array([msg.pose.position.x, msg.pose.position.y,msg.pose.position.z, msg.pose.orientation.x, msg.pose.orientation.y, msg.pose.orientation.z, msg.pose.orientation.w])
-        # Checking timing 
         if self.last_pos_time is not None:
            time_diff = (msg.header.stamp- self.last_pos_time).to_sec() 
            if time_diff > 0.03:
                print(f"TIME DIFFERENCE EXCEEDED!!! {time_diff} at {msg.header.stamp}")
         self.last_pos_time = msg.header.stamp
 
-        # self._pose_odom_pub_callback()
+        self._pose_odom_pub_callback()
 
     def odomCb(self, msg):
         self.drone_qd = np.array([msg.twist.twist.angular.x, msg.twist.twist.angular.y, msg.twist.twist.angular.z])
-        if self.to_transform_odom == 0.0:
-            self.warp_qd = np.array([msg.twist.twist.angular.x, msg.twist.twist.angular.y, msg.twist.twist.angular.z, msg.twist.twist.linear.x, msg.twist.twist.linear.y, msg.twist.twist.linear.z ])
         if self.last_odom_time is not None:
            time_diff = (msg.header.stamp- self.last_odom_time).to_sec() 
            if time_diff > 0.03:
@@ -268,28 +254,27 @@ class NN_POLICY_PLANNER(object):
         self.last_odom_time = msg.header.stamp
 
     def warpOdomCB(self,msg):
-        if self.to_transform_odom == 1.0:
-            self.warp_qd = np.array([msg.twist.twist.angular.x, msg.twist.twist.angular.y, msg.twist.twist.angular.z, msg.twist.twist.linear.x, msg.twist.twist.linear.y, msg.twist.twist.linear.z ])
-            #print(msg.header.stamp)
-            # if self.last_odom_time is not None:
-            #    time_diff = (msg.header.stamp- self.last_odom_time).to_sec() 
-            #    if time_diff > 0.03:
-            #        print(f"TIME DIFFERENCE ODOM EXCEEDED!!! {time_diff} at {msg.header.stamp}")
-            # self.last_odom_time = msg.header.stamp
+
+        self.warp_qd = np.array([msg.twist.twist.angular.x, msg.twist.twist.angular.y, msg.twist.twist.angular.z, msg.twist.twist.linear.x, msg.twist.twist.linear.y, msg.twist.twist.linear.z ])
+        #print(msg.header.stamp)
+        # if self.last_odom_time is not None:
+        #    time_diff = (msg.header.stamp- self.last_odom_time).to_sec() 
+        #    if time_diff > 0.03:
+        #        print(f"TIME DIFFERENCE ODOM EXCEEDED!!! {time_diff} at {msg.header.stamp}")
+        # self.last_odom_time = msg.header.stamp
 
     def geomCB(self, msg):
         self.geom_body_rate = np.array([msg.body_rate.x, msg.body_rate.y, msg.body_rate.z])
         self.geom_thrust = msg.thrust
 
     def warpPoseCB(self,msg):
-        if self.to_transform_odom == 1.0:
-            self.warp_q = np.array([msg.pose.position.x, msg.pose.position.y,msg.pose.position.z, msg.pose.orientation.x, msg.pose.orientation.y, msg.pose.orientation.z, msg.pose.orientation.w])
-            
-            # if self.last_pos_time is not None:
-            #    time_diff = (msg.header.stamp- self.last_pos_time).to_sec() 
-            #    if time_diff > 0.03:
-            #        print(f"TIME DIFFERENCE EXCEEDED!!! {time_diff} at {msg.header.stamp}")
-            # self.last_pos_time = msg.header.stamp
+        self.warp_q = np.array([msg.pose.position.x, msg.pose.position.y,msg.pose.position.z, msg.pose.orientation.x, msg.pose.orientation.y, msg.pose.orientation.z, msg.pose.orientation.w])
+        
+        # if self.last_pos_time is not None:
+        #    time_diff = (msg.header.stamp- self.last_pos_time).to_sec() 
+        #    if time_diff > 0.03:
+        #        print(f"TIME DIFFERENCE EXCEEDED!!! {time_diff} at {msg.header.stamp}")
+        # self.last_pos_time = msg.header.stamp
 
     def targetPosCb(self,msg):
         self.warp_target_pos = np.array([msg.pose.position.x, msg.pose.position.y,msg.pose.position.z])
@@ -334,7 +319,7 @@ class NN_POLICY_PLANNER(object):
         pva_traj_msg.transform.rotation.y = 0.0
         pva_traj_msg.transform.rotation.z = 0.0 #0.707
         pva_traj_msg.transform.rotation.w = 1.0 #0.707
-        pva_traj_msg.velocity.linear.x = 1.0
+        pva_traj_msg.velocity.linear.x = 0.5
         pva_traj_msg.velocity.linear.y = 0.0
         pva_traj_msg.velocity.linear.z = 0.0
         pva_traj_msg.type_mask = 2048
@@ -468,7 +453,7 @@ class NN_POLICY_PLANNER(object):
 if __name__=="__main__":
     signal(SIGINT, handler)
     print("STARTING NODE")
-    policy_file = "20250527-122703" #0.02 good enough for real drone 20250527-122703   0.05-to test 20250624-181715
+    policy_file = "20250721-100029" #0.02 good enough for real drone 20250527-122703   0.05-to test 20250624-181715
     print(f"POLICY PATH IS {policy_file}") 
 
     rospack = rospkg.RosPack()
@@ -494,7 +479,7 @@ if __name__=="__main__":
     warp_jax = loaded_params["warp_jax"]
 
     position_control = True #config_params["position_control"]
-    delta_time = 0.02 #float(config_params["delta_time"])
+    delta_time = 0.01 #float(config_params["delta_time"])
     max_angular_rate = 3.0 #float(config_params["max_angular_rates"])
 
     #This code is primarily for warp policies. So warp_jax has to be 0.0
@@ -509,10 +494,7 @@ if __name__=="__main__":
             if to_transform_policy != 1.0:
                 raise ValueError("to_transform_policy should be 1.0")
         if warp_frame == 1.0: #if warp_frame = 1.0, this means that this is the z-up frame. Then no need to transform anything
-            if to_transform_odom != 0.0:
-                raise ValueError("to_transform_odom should be 0.0.")
-            if to_transform_policy != 0.0:
-                raise ValueError("to_transform_policy should be 0.0")
+            raise ValueError("This code can only work with y-axis up. warp_frame should be 0.0")
     else:
         #This is assumed to be pre warp_frame period. so should transform
         if to_transform_odom != 1.0:
@@ -521,12 +503,11 @@ if __name__=="__main__":
             raise ValueError("to_transform_policy should be 1.0")
 
     
-    #vel 20250424-161234 #position 20250424-131220, 20250424-161345
-    nn_policy = TEST_RENDER(full_policy_path, position_control, warp_frame) 
+      #vel 20250424-161234 #position 20250424-131220, 20250424-161345
+    nn_policy = TEST_RENDER(full_policy_path, position_control) 
 
     nn_policy_planner = NN_POLICY_PLANNER(mission_command_mode=int(mission_command_mode), policy=nn_policy,
-                                          inference_timestep=delta_time, max_angular_rates = max_angular_rate,
-                                          warp_jax=warp_jax, to_transform_odom=to_transform_odom, to_transform_policy=to_transform_policy)
+                                          inference_timestep=delta_time, max_angular_rates = max_angular_rate)
 
     rospy.spin()
 

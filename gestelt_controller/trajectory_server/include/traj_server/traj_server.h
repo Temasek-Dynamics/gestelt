@@ -27,6 +27,7 @@
 #include <tf2_ros/transform_listener.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <geometry_msgs/Vector3Stamped.h>
+#include <sensor_msgs/Imu.h>
 
 #include <gestelt_msgs/Command.h>
 #include <gestelt_msgs/CommanderState.h>
@@ -146,6 +147,8 @@ private: // Class Methods
 
   void velCommandCb(const std_msgs::Int8::ConstPtr & msg);
 
+  void imuCB(const sensor_msgs::Imu::ConstPtr &msg);
+
 
   /**
    * Timer callback to extract PVA commands from subscribed plan for executing trajectory.
@@ -252,7 +255,7 @@ private: // Class Methods
     Vector3d geom_bodyrate, double geom_thrust);
 
   void publishVelCmd(
-  Vector3d v, Vector3d p, uint16_t ct_omega_mode_);
+  Vector3d v, Vector3d p, uint16_t ct_omega_mode_, double yaw_rate);
 
   /* Helper methods */
 
@@ -444,10 +447,12 @@ private: // Member variables
   ros::Publisher low_lvl_cmd_raw_pub_;
   ros::Publisher angular_rates_pub_;
   ros::Publisher warp_pose_pub_;
+  ros::Publisher jax_lin_acc_pub_;
   
   /* Subscriber */
   ros::Subscriber exec_traj_sub_; // Subscriber for planner trajectory
   ros::Subscriber exec_lowlvl_cmd_sub_;
+  ros::Subscriber imu_sub_;
 
   ros::Subscriber planner_hb_sub_; // Subscriber to planner heartbeat
   ros::Subscriber uav_state_sub_; // Subscriber to UAV State (MavROS)

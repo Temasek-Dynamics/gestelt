@@ -20,6 +20,7 @@ import tf2_ros
 import threading
 from std_msgs.msg import Int8
 from mavros_msgs.msg import AttitudeTarget
+from scipy.spatial.transform import Rotation as R
 # import tf2_geometry_msgs
 # from geometry_msgs.msg import Vector3Stamped
 # from geometry_msgs import Posestamped
@@ -118,6 +119,7 @@ class TEST_RENDER(object):
             diff_vel = self.t_vel - vel
             x = torch.cat((att, angvel, diff_vel), dim=1)
         a = self.policy(x)
+        print(a)
         
         self.previous_action = a
         end_time = time.time()
@@ -242,6 +244,9 @@ class NN_POLICY_PLANNER(object):
            if time_diff > 0.03:
                print(f"TIME DIFFERENCE EXCEEDED!!! {time_diff} at {msg.header.stamp}")
         self.last_pos_time = msg.header.stamp
+        rot_obj = R.from_quat(self.drone_quat)
+        rpy_deg = rot_obj.as_euler('xyz', degrees=True)
+        print(rpy_deg)
 
         self._pose_odom_pub_callback()
 
@@ -319,9 +324,10 @@ class NN_POLICY_PLANNER(object):
         pva_traj_msg.transform.rotation.y = 0.0
         pva_traj_msg.transform.rotation.z = 0.0 #0.707
         pva_traj_msg.transform.rotation.w = 1.0 #0.707
-        pva_traj_msg.velocity.linear.x = 1.0
+        pva_traj_msg.velocity.linear.x = 3.0
         pva_traj_msg.velocity.linear.y = 0.0
         pva_traj_msg.velocity.linear.z = 0.0
+        pva_traj_msg.velocity.angular.z = 0.0
         pva_traj_msg.type_mask = 2048
 
         #Publish the PVA
@@ -445,6 +451,9 @@ class NN_POLICY_PLANNER(object):
         warp_q = torch.Tensor(warp_q).unsqueeze(0)
         warp_qd = torch.Tensor(self.warp_qd).unsqueeze(0)
         self.action = self.policy.evaluate_(warp_pos, warp_q, warp_qd)
+        # print(warp_pos)
+        # print(warp_q)
+        # print(warp_qd)
         # print(self.action)
 
 
@@ -453,7 +462,7 @@ class NN_POLICY_PLANNER(object):
 if __name__=="__main__":
     signal(SIGINT, handler)
     print("STARTING NODE")
-    policy_file = "20250710-154609" #0.02 good enough for real drone 20250527-122703   0.05-to test 20250624-181715
+    policy_file = "20251027-120342"#20251027-120342 good for 0.02. "20251009-113440" #"20251009-101903" This is good for 0.05  #0.02 good enough for real drone 20250527-122703   0.05-to test 20250624-181715
     print(f"POLICY PATH IS {policy_file}") 
 
     rospack = rospkg.RosPack()
@@ -464,7 +473,7 @@ if __name__=="__main__":
     config_path = os.path.join(actual_full_path,"training_config.yaml")
     full_policy_path = os.path.join(actual_full_path, "policy.pth")
 
-    rospy.init_node("nn_policy_planner2")
+    rospy.init_node("nn_policy_planner3")
     ros_lib = roslib.packages.get_pkg_dir("gestelt_bringup")
     full_config_path = os.path.join(ros_lib, "config/traj_server_default.yaml")
     with open(full_config_path, 'r') as file:
@@ -479,7 +488,7 @@ if __name__=="__main__":
     warp_jax = loaded_params["warp_jax"]
 
     position_control = True #config_params["position_control"]
-    delta_time = 0.05 #float(config_params["delta_time"])
+    delta_time = 0.02 #float(config_params["delta_time"])
     max_angular_rate = 3.0 #float(config_params["max_angular_rates"])
 
     #This code is primarily for warp policies. So warp_jax has to be 0.0
