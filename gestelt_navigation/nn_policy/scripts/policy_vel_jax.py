@@ -103,7 +103,7 @@ class TEST_RENDER(object):
         obs_dim = self.env.observation_space.shape[0]
 
         policy_net = MLP(
-            [obs_dim, 512, 512, action_dim],
+            [obs_dim, 512,512, 512, action_dim],
             initial_scale=0.01,
             action_bias=self.env.hovering_action,
         )
@@ -183,8 +183,9 @@ class NN_POLICY_PLANNER(object):
         self.last_pos_time = None
         self.last_odom_time = None
         self.init_pos = np.zeros((7))
-        self.init_pos[2] = 1.0
+        self.init_pos[2] = 0.5
         self.init_pos[1] = 0.0
+        self.init_pos[0] = 0.0
         
 
         self.swarm_mode_pub_ = rospy.Publisher('/traj_server/swarm_command', Int8, queue_size=5)
@@ -470,7 +471,7 @@ class NN_POLICY_PLANNER(object):
         r = R.from_quat(warp_q)
         rotation_matrix = r.as_matrix()
         self.action = self.policy.evaluate_(warp_pos, rotation_matrix, warp_qd, self.warp_mission_command_mode, self.init_pos[:3])
-        # print(self.action)
+        print(self.action)
 
 
 

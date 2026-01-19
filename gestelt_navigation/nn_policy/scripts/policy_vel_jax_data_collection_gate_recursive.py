@@ -107,7 +107,7 @@ class TEST_RENDER(object):
         obs_dim = self.env.observation_space.shape[0]
 
         policy_net = MLP(
-            [obs_dim, 512, 512, action_dim],
+            [obs_dim, 512, 512, 512, action_dim],
             initial_scale=0.01,
             action_bias=self.env.hovering_action,
         )
@@ -173,6 +173,8 @@ class NN_POLICY_PLANNER(object):
         self.tfBuffer =  tf2_ros.Buffer(rospy.Duration(10))
         self.listener = tf2_ros.TransformListener(self.tfBuffer)
         self.warp_pose_msg = PoseStamped()
+        # Drone Goal Point past gate
+        self.goal = np.array([3,0,0.5])
         rospy.sleep(1)
 
         self.max_angular_rates = max_angular_rates
@@ -180,7 +182,7 @@ class NN_POLICY_PLANNER(object):
         self.last_pos_time = None
         self.last_odom_time = None
         self.init_pos = np.zeros((7))
-        self.init_pos[2] = 0.5
+        self.init_pos[2] = 1.0
         self.init_pos[1] = 0.0
 
         self.swarm_mode_pub_ = rospy.Publisher('/traj_server/swarm_command', Int8, queue_size=5)
@@ -191,6 +193,11 @@ class NN_POLICY_PLANNER(object):
         self.mission_mode_sub_ = rospy.Subscriber("/traj_server/warp_mission_command", Int8, self.missionModeCb, queue_size = 5)
         self.init_pos_sub_ = rospy.Subscriber("/drone0/jax/init_pose", PoseStamped, self.initPosCb, queue_size = 5)
         self.target_position_sub_ = rospy.Subscriber("/drone0/warp/local_position/target_position", PoseStamped, self.targetPosCb, queue_size = 5)
+
+        self.data_collect_period_pub_ = rospy.Publisher("/traj_server/warp_mission_period_completed", Bool, queue_size=5,latch=False)
+        self.data_collect_global_completed_sub_ = rospy.Subscriber("/traj_server/warp_mission_global2local_completed", Bool, self.glob2local_completed, queue_size=5)
+        self.ready_to_start_pub_ = rospy.Publisher("/traj_server/ready_to_start", Bool, queue_size=5, latch=False)
+        self.glob2local_completed_msg = False
 
         if warp_jax == 0.0:
             self.warp_drone_pose_pub_ = rospy.Subscriber('/drone0/warp/local_position/pose', PoseStamped, self.warpPoseCB, queue_size=5)
@@ -212,6 +219,8 @@ class NN_POLICY_PLANNER(object):
         self.rate = rospy.Rate(0.02)
         self.event_manager = rospy.Timer(rospy.Duration(inference_timestep), self.eventCB)
 
+
+
         #DRONE STATE MACHINE
         self.drone_state = 0
         self.servent_event = 0
@@ -226,6 +235,8 @@ class NN_POLICY_PLANNER(object):
         self.warp_qd = np.zeros((3,1))
         self.lin_acc = np.zeros((3,1))
         self.data_store = {}
+        self.data_store_global = []
+        self.data_store_global_counter = 0
         self.record_counter = 0
         self.save_directory = os.path.join(os.path.dirname(FLIGHTNING_PATH), "data")
         files = [f for f in os.listdir(self.save_directory) if os.path.isfile(os.path.join(self.save_directory, f))]
@@ -245,21 +256,48 @@ class NN_POLICY_PLANNER(object):
     def initPosCb(self,msg):
         self.init_pos = np.array([msg.pose.position.x, msg.pose.position.y,msg.pose.position.z, msg.pose.orientation.x, msg.pose.orientation.y, msg.pose.orientation.z, msg.pose.orientation.w])
 
+    def glob2local_completed(self,msg):
+        self.glob2local_completed_msg = msg.data
+
     def recorderCB(self,msg):
         if self.record_now == True and msg == False:
             print("Completed data collection. Saving to file NOW")
+            self.record_now = msg
             self.saving_to_file()
         if self.record_now == False and msg == True:
             print("Starting data recording")
-        self.record_now = msg
+            self.record_now = msg
+        
+        # print(self.record_now)
         # if self.record_now == False:
         #     self.record_counter = 0
 
     def saving_to_file(self):
         with self.lock:
-            with open(self.full_save_path, "wb") as f:
-                pickle.dump(self.data_store, f)
-        
+            self.data_store[self.record_counter] = {
+                                                    "time": -1,
+                                                    "position": -1,
+                                                    "rotation_matrix": -1,
+                                                    "velocity": -1,
+                                                    "action": -1,
+                                                    "lin_acc": -1,
+                                                    "obs": -1,
+                                                    "obs_norm": -1
+                                                }
+            # with open(self.full_save_path, "wb") as f:
+            #     pickle.dump(self.data_store, f)
+            
+            self.data_store_global.append(self.data_store)
+            self.data_store = {}
+            self.record_counter = 0
+            self.data_store_global_counter += 1
+            print("saving completed")
+
+            if self.glob2local_completed_msg == True:
+                with open(self.full_save_path, "wb") as f:
+                    pickle.dump(self.data_store_global, f)
+
+
     def accCB(self,msg):
         with self.lock:
             self.lin_acc = np.array([msg.linear_acceleration.x, msg.linear_acceleration.y, msg.linear_acceleration.z])
@@ -270,7 +308,8 @@ class NN_POLICY_PLANNER(object):
     def missionModeCb(self,msg):
         self.warp_mission_command_mode = msg.data
         print(f"Mission Mode changed to {self.warp_mission_command_mode}")
-        if self.warp_mission_command_mode == 2:
+        if self.warp_mission_command_mode == 2:   
+            print("HELLPPPPPP")        
             self.recorderCB(True)
 
     def publish_mission(self, mission_num):
@@ -288,11 +327,21 @@ class NN_POLICY_PLANNER(object):
            if time_diff > 0.03:
                print(f"TIME DIFFERENCE EXCEEDED!!! {time_diff} at {msg.header.stamp}")
         self.last_pos_time = msg.header.stamp
-        dist_from_window = np.linalg.norm(self.drone_pos - np.array([3,0,0.5]))
-        if dist_from_window < 0.5:
+        dist_from_window = np.linalg.norm(self.drone_pos[0] - self.goal[0])
+        if np.abs(dist_from_window) < 0.5:
             self.recorderCB(False)
-        if dist_from_window<0.3:
+        if np.abs(dist_from_window)<0.3:
             self.warp_mission_command_mode = 1.0
+            ##Need to publish completed to the global manager
+            completed_msg = Bool()
+            completed_msg.data = True
+            self.data_collect_period_pub_.publish(completed_msg)
+
+        if np.linalg.norm(self.drone_pos - self.init_pos[:3]) < 0.1:
+            ##Ready to start data collection. Need to tell global manager that it is time to execute
+            ready_to_start_msg = Bool()
+            ready_to_start_msg.data = True
+            self.ready_to_start_pub_.publish(ready_to_start_msg)
 
 
 
@@ -499,9 +548,11 @@ class NN_POLICY_PLANNER(object):
         r = R.from_quat(warp_q)
         rotation_matrix = r.as_matrix()
         self.action, obs, obs_norm = self.policy.evaluate_(warp_pos, rotation_matrix, warp_qd, self.warp_mission_command_mode)
-        # print(self.action)
+
         if self.record_now == True:
-            print("loading data into list")
+            # print("loading data into list")
+            if self.record_counter == 0.02:
+                print("recording now")
             now_time = rospy.Time.now().to_sec() 
             with self.lock:
                 self.data_store[self.record_counter] = {
@@ -514,6 +565,9 @@ class NN_POLICY_PLANNER(object):
                                                             "obs": obs,
                                                             "obs_norm": obs_norm
                                                         }
+                # print(self.record_counter)
+                if self.record_counter == 0:
+                    print(warp_pos)
 
             self.record_counter += 0.02
 

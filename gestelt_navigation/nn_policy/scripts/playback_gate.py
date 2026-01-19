@@ -5,12 +5,12 @@ from tf.transformations import euler_from_quaternion, quaternion_matrix
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
 # === User inputs ===
-bag_path = "/home/yanrui/2025-09-25-15-52-40.bag"
+bag_path = "/home/yanrui/2025-11-24-18-23-42.bag"
 drone_topic = "/drone0/mavros/local_position/pose"     # or /mavros/local_position/pose
 
 # Window fixed pose
 window_position = np.array([1.5, 1.0, 0.5])   # [x, y, z]
-tilt_angle = np.deg2rad(60)                   # tilt about x-axis
+tilt_angle = np.deg2rad(10)                   # tilt about x-axis
 window_size = [0.8, 0.3]                      # width × height
 
 # === Drone trajectory ===

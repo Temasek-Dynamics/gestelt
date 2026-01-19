@@ -330,7 +330,7 @@ class NN_POLICY_PLANNER(object):
         pva_traj_msg = ExecTrajectory()
         pva_traj_msg.transform.translation.x = 0.0
         pva_traj_msg.transform.translation.y = 0.0
-        pva_traj_msg.transform.translation.z = 0.5
+        pva_traj_msg.transform.translation.z = 1.0
         pva_traj_msg.transform.rotation.x = 0.0
         pva_traj_msg.transform.rotation.y = 0.0
         pva_traj_msg.transform.rotation.z = 0.0
