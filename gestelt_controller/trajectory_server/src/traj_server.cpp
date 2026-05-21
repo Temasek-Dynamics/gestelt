@@ -56,6 +56,7 @@ void TrajectoryServer::init(ros::NodeHandle& nh, ros::NodeHandle& pnh)
 
   // Subscription to planner adaptor
   exec_traj_sub_ = nh.subscribe<gestelt_msgs::ExecTrajectory>("planner_adaptor/exec_trajectory", 5, &TrajectoryServer::execTrajCb, this);
+  pos_sub_ = nh.subscribe<gestelt_msgs::ExecTrajectory>("planner_adaptor/pos_update", 5, &TrajectoryServer::posUpdateCb, this);
   // exec_lowlvl_cmd_sub_ = nh.subscribe<gestelt_msgs::ExecTrajectory>("planner_adaptor/exec_low_level_cmd", 5, &TrajectoryServer::execLowLvlCmdCb, this);
 
   // Subscription to UAV (via MavROS)
@@ -100,6 +101,11 @@ void TrajectoryServer::init(ros::NodeHandle& nh, ros::NodeHandle& pnh)
 }
 
 /* Subscriber Callbacks */
+void TrajectoryServer::posUpdateCb(const gestelt_msgs::ExecTrajectory::ConstPtr &msg)
+{
+    geomMsgsVector3ToEigenVector3(msg->transform.translation, last_mission_pos_);
+    last_mission_yaw_ = quaternionToRPY(msg->transform.rotation)(2); // yaw
+}
 
 void TrajectoryServer::execTrajCb(const gestelt_msgs::ExecTrajectory::ConstPtr &msg)
 {

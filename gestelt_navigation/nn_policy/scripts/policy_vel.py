@@ -114,7 +114,7 @@ class TEST_RENDER(object):
                 diff_pos = self.t_pos - pos
             else:
                 t = rospy.Time.now().to_sec() - self.start_time
-                curr_t_pos, _, curr_done = self.straight_line_position_with_duration(t, self.start_point, self.t_pos_numpy, 0.8)
+                curr_t_pos, _, curr_done = self.straight_line_position_with_duration(t, self.start_point, self.t_pos_numpy, 0.5)
                 if curr_done == False:
                     curr_t_pos_tensor = torch.Tensor(curr_t_pos).unsqueeze(0)
                     diff_pos = curr_t_pos_tensor - pos

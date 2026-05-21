@@ -108,6 +108,11 @@ private: // Class Methods
   void execTrajCb(const gestelt_msgs::ExecTrajectory::ConstPtr &msg);
 
     /**
+   * @brief Callback for updating position info from planner adaptor
+   */
+  void posUpdateCb(const gestelt_msgs::ExecTrajectory::ConstPtr &msg);
+
+    /**
    * @brief Callback for thrust and body rates from policy 
    */
   void execLowLvlCmdCb(const gestelt_msgs::ExecTrajectory::ConstPtr &msg);
@@ -451,6 +456,7 @@ private: // Member variables
   
   /* Subscriber */
   ros::Subscriber exec_traj_sub_; // Subscriber for planner trajectory
+  ros::Subscriber pos_sub_; // Subscriber for planner position updates
   ros::Subscriber exec_lowlvl_cmd_sub_;
   ros::Subscriber imu_sub_;
 
