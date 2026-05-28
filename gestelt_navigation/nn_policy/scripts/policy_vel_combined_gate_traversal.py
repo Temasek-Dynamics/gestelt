@@ -789,7 +789,7 @@ class NN_POLICY_PLANNER(object):
             angle_deg = np.round((self.window_degrees_nominal[0] + random.uniform(-self.window_orientation_range, self.window_orientation_range)) / 10) * 10
             print(angle_deg)
             self.window_degrees = np.array([angle_deg])
-            self.window_degrees = np.array([30])
+            self.window_degrees = np.array([70])
             self.window_quaternion = self.convert_window_degrees_to_quaternion_vector(self.window_degrees)
             self.policy.update_window_info(self.window_position, self.window_velocity, self.window_quaternion)
             print(f"New init position: x={x:.2f}, y={y:.2f}, z={z:.2f}  |  window_orientation={angle_deg:.1f} deg")
@@ -868,7 +868,7 @@ class NN_POLICY_PLANNER(object):
 if __name__=="__main__":
     signal(SIGINT, handler)
     print("STARTING NODE")
-    policy_file = "20260518-213037" #"20260519-121802" #"20260513-185143" #"20260513-185035" #"20260402-204842 This is high fidelity forward model." #"20260306-154450 - with gru. more reasonable" #"20260304-161010" #"20260304-160736 - this reasonable"#"20260225-165700" #0.02 good enough for real drone 20250527-122703   0.05-to test 20250624-181715
+    policy_file = "20260526-115046" #"20260521-090040" #"20260518-213037 30 degrees demo" #"20260519-121802" #"20260513-185143" #"20260513-185035" #"20260402-204842 This is high fidelity forward model." #"20260306-154450 - with gru. more reasonable" #"20260304-161010" #"20260304-160736 - this reasonable"#"20260225-165700" #0.02 good enough for real drone 20250527-122703   0.05-to test 20250624-181715
     print(f"POLICY PATH IS {policy_file}") 
     recovery_mode = 2 #1 for position, 2 for velocity, 3 for attitude
 
@@ -954,7 +954,7 @@ if __name__=="__main__":
     #vel 20250424-161234 #position 20250424-131220, 20250424-161345
 
     include_gate_ori = config_params.get("include_gate_orientation_in_obs", False)
-    window_degrees = 30.0 #for now hardcoding this. can be changed later to config param
+    window_degrees = 70.0 #for now hardcoding this. can be changed later to config param
 
     nn_policy = TEST_RENDER(full_policy_path, position_control, warp_frame, use_gru=use_gru, include_actions=gru_include_prev_action, include_gate_ori=include_gate_ori)
 

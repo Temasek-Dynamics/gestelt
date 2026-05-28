@@ -15,7 +15,6 @@ from nav_msgs.msg import Odometry
 from enum import Enum
 import roslib.packages
 from std_msgs.msg import Bool
-from std_msgs.msg import String
 from sensor_msgs.msg import Image
 import tf2_ros
 import threading
@@ -33,7 +32,7 @@ NN_POLICY_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if NN_POLICY_DIR not in sys.path:
     sys.path.insert(0, NN_POLICY_DIR)
 
-from modules.policy_simple_nwu_global import PolicyNetwork
+from modules.policy_simple import PolicyNetwork
 
 from signal import signal, SIGINT
 
@@ -59,35 +58,6 @@ class ServerEvent(Enum):
     HOVER_E = 3          
     E_STOP_E = 4       
     EMPTY_E = 5      
-
-
-DEPTH_MODE_METRIC = "metric"
-DEPTH_MODE_MAX_RANGE = "max_range"
-DEPTH_MODE_NAN = "nan"
-DEPTH_MODE_INVERSE = "inverse"
-
-DEPTH_MODE_ALIASES = {
-    "metric": DEPTH_MODE_METRIC,
-    "raw": DEPTH_MODE_METRIC,
-    "normal": DEPTH_MODE_METRIC,
-    "max": DEPTH_MODE_MAX_RANGE,
-    "max_range": DEPTH_MODE_MAX_RANGE,
-    "constant_max": DEPTH_MODE_MAX_RANGE,
-    "all_20": DEPTH_MODE_MAX_RANGE,
-    "nan": DEPTH_MODE_NAN,
-    "all_nan": DEPTH_MODE_NAN,
-    "none": DEPTH_MODE_NAN,
-    "inverse": DEPTH_MODE_INVERSE,
-    "inv": DEPTH_MODE_INVERSE,
-}
-
-# Debug switch for the depth tensor sent to the policy.
-# Change this one line when testing:
-#   DEPTH_MODE_METRIC:    real metric depth
-#   DEPTH_MODE_MAX_RANGE: all pixels are max_depth, currently 20.0
-#   DEPTH_MODE_NAN:       no depth image; skip CNN and use 64-D zero feature
-#   DEPTH_MODE_INVERSE:   legacy 1/depth preprocessing
-DEFAULT_DEPTH_PROCESSING_MODE = DEPTH_MODE_MAX_RANGE
 
 
 class VisionObstacleAvoidancePolicy(object):
@@ -156,9 +126,7 @@ class VisionObstacleAvoidancePolicy(object):
             att: [1, 4] quaternion in xyzw order.
             qd:  [1, 6] body/state velocity vector. The convention inherited
                  from training is angular velocity first, then linear velocity.
-            depth_img: [1, H, W] metric depth tensor after ROS preprocessing,
-                       or None to skip the CNN and use the policy's 64-D zero
-                       depth feature.
+            depth_img: [1, H, W] metric depth tensor after ROS preprocessing.
 
         Returns:
             [1, 4] numpy action. action[:, 0] is normalized thrust in [0, 1],
@@ -244,17 +212,11 @@ class NN_POLICY_PLANNER(object):
         # callback run independently; nn_evaluation always consumes the newest
         # tensor stored here. This avoids coupling Unity's 30 Hz image stream to
         # the policy inference frequency.
-        self.depth_image = None
         self.max_depth = float(getattr(policy, "max_depth", 20.0))
         self.depth_width = int(getattr(policy, "image_width", 64))
         self.depth_height = int(getattr(policy, "image_height", 64))
-        self.depth_image = torch.full(
-            (1, self.depth_height, self.depth_width),
-            20.0,
-            dtype=torch.float32,
-        )
-        self.depth_processing_mode = DEPTH_MODE_METRIC
-        self.set_depth_processing_mode(DEFAULT_DEPTH_PROCESSING_MODE)
+        # self.depth_image = None
+        self.depth_image = torch.full((1, self.depth_height, self.depth_width), 20.0)
 
         # Unity publishes 640x360 depth. The trained CNN expects depth_width x
         # depth_height from training_config.yaml, currently 64x64. A mismatch in
@@ -268,7 +230,7 @@ class NN_POLICY_PLANNER(object):
         self.policy = policy
         self.last_pos_time = None
         self.last_odom_time = None
-        self.fixed_runtime_target_pos = np.array([2.0, 0.0, 0.5], dtype=np.float32)
+        self.fixed_runtime_target_pos = np.array([20.0, 0.0, 1.0], dtype=np.float32)
 
         self.warp_jax = warp_jax
         self.to_transform_odom = to_transform_odom
@@ -294,7 +256,6 @@ class NN_POLICY_PLANNER(object):
         # 20 Hz policy timer, larger queues would increase latency by letting
         # inference process stale frames.
         self.depth_sub = rospy.Subscriber('/agent001/mono_camera_depth', Image, self.depthCB, queue_size=1)
-        self.depth_mode_sub_ = rospy.Subscriber("~depth_processing_mode", String, self.depthProcessingModeCb, queue_size=1)
   
         # ExecTrajectory is used both for the initial PVA command and for the
         # NN attitude/body-rate command when mission mode switches to mode 2.
@@ -852,57 +813,6 @@ class NN_POLICY_PLANNER(object):
         elif msg.data == False:
             self.attitude_mode_toggle = 0
 
-    def set_depth_processing_mode(self, mode):
-        """Switch the depth tensor sent to the policy.
-
-        Modes:
-          metric:    current runtime path, metric depth clipped to [0, max_depth]
-          max_range: ignore the camera values and output all max_depth
-          nan:       ignore the camera values and output all NaN
-          inverse:   old policy_vision_based-style 1/depth image
-        """
-        canonical_mode = DEPTH_MODE_ALIASES.get(str(mode).strip().lower())
-        if canonical_mode is None:
-            rospy.logwarn(
-                "Unknown depth_processing_mode '%s'. Keeping '%s'. Valid modes: %s",
-                mode,
-                self.depth_processing_mode,
-                sorted(set(DEPTH_MODE_ALIASES.values())),
-            )
-            return False
-
-        if canonical_mode != self.depth_processing_mode:
-            rospy.logwarn(
-                "Switching depth_processing_mode from '%s' to '%s'",
-                self.depth_processing_mode,
-                canonical_mode,
-            )
-        self.depth_processing_mode = canonical_mode
-        return True
-
-    def depthProcessingModeCb(self, msg):
-        self.set_depth_processing_mode(msg.data)
-
-    def apply_depth_processing_mode(self, depth_resized):
-        """Apply the selected debug transform after unit conversion/resizing."""
-        if self.depth_processing_mode == DEPTH_MODE_METRIC:
-            return depth_resized
-        if self.depth_processing_mode == DEPTH_MODE_MAX_RANGE:
-            return np.full_like(depth_resized, self.max_depth, dtype=np.float32)
-        if self.depth_processing_mode == DEPTH_MODE_NAN:
-            return None
-        if self.depth_processing_mode == DEPTH_MODE_INVERSE:
-            depth_clipped = np.clip(depth_resized, 1e-3, None)
-            depth_clipped = np.where(depth_clipped > self.max_depth, 1e3, depth_clipped)
-            return (1.0 / depth_clipped).astype(np.float32)
-
-        rospy.logwarn_throttle(
-            5.0,
-            "Unexpected depth_processing_mode '%s'. Falling back to metric depth.",
-            self.depth_processing_mode,
-        )
-        return depth_resized
-
     def preprocess_depth_image(self, depth_image_raw, encoding):
         """Convert Unity/ROS depth images into the tensor expected by the CNN.
 
@@ -916,10 +826,7 @@ class NN_POLICY_PLANNER(object):
 
         Output shape is [1, depth_height, depth_width], with depth in meters.
         PolicyNetwork.forward accepts that 3-D shape and adds the channel
-        dimension internally before the CNN encoder. DEPTH_MODE_NAN returns
-        None so the policy bypasses the CNN and uses a 64-D zero depth feature.
-        Other depth_processing_mode values can override the final tensor for
-        debugging.
+        dimension internally before the CNN encoder.
         """
         depth_image = depth_image_raw.astype(np.float32)
 
@@ -971,9 +878,6 @@ class NN_POLICY_PLANNER(object):
             (self.depth_width, self.depth_height),
             interpolation=cv2.INTER_AREA,
         )
-        depth_resized = self.apply_depth_processing_mode(depth_resized)
-        if depth_resized is None:
-            return None
         return torch.from_numpy(depth_resized).float().unsqueeze(0)
 
     def depthCB(self, msg):
@@ -1034,12 +938,12 @@ if __name__=="__main__":
     # Single-network obstacle-avoidance checkpoint to run. The code below loads
     # both policy.pth and training_config.yaml from this directory so runtime
     # dimensions and scaling stay tied to the checkpoint.
-    policy_file = "20260521-132151"
+    policy_file = "20260517-151646"
     print(f"\nPOLICY PATH IS {policy_file}") 
 
     rospack = rospkg.RosPack()
     path = rospack.get_path('nn_policy')
-    full_path = os.path.join(path, "logs/vel_tracking")
+    full_path = os.path.join(path, "logs/obstacle_avoidance")
     print(f"The full path is {full_path}")
     policy_full_path = os.path.join(full_path, policy_file)
 
@@ -1119,6 +1023,3 @@ if __name__=="__main__":
     rospy.spin()
 
     print("done")
-
-
-

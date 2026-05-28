@@ -10,7 +10,7 @@ FOLDER_NAME="circular_trajectory"
 # === Transfer Command ===
 echo "Transferring '$SRC_PATH' to '$DEST_USER@$DEST_HOST:$DEST_PATH'..."
 # rsync -avz yanrui@$DEST_HOST:/home/yanrui/tempstorage/perceptive_diff_drone/examples/logs/$FOLDER_NAME/$1 /home/yanrui/storage/Difflying/examples/logs/$FOLDER_NAME
-rsync -avz tlabstaff@$DEST_HOST:/home/tlabstaff/storage/gestelt_ws/src/gestelt/gestelt_navigation/nn_policy/scripts/policy_vision_obstacle_avoidance_test.py /home/yanrui/storage/gestelt_ws/src/gestelt/gestelt_navigation/nn_policy/scripts/
+rsync -avz tlabstaff@$DEST_HOST:/home/tlabstaff/storage/gestelt_ws/src/gestelt/gestelt_navigation/nn_policy/logs/vel_tracking/20260521-132151 /home/yanrui/storage/gestelt_ws/src/gestelt/gestelt_navigation/nn_policy/logs/vel_tracking/20260521-132151
 
 
 
