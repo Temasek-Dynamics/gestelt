@@ -484,6 +484,16 @@ private: // Member variables
   ServerState server_state_{ServerState::INIT};
   MissionCmdMode mission_cmd_mode_{MissionCmdMode::PVA};
   int cmd_mode_num;
+  // Latched true when the body rate x-safety cutoff forces a switch to PVA.
+  // While true, incoming trajectory/pos data is ignored so it can't clobber
+  // the safety hold setpoint. Cleared only by an explicit operator mode change
+  // or when the mission is cancelled.
+  bool body_rate_safety_triggered_{false};
+  // x position beyond which body rate control (ATTITUDE in body rate mode, or
+  // GEOM) is force-cut to AUTO.LOITER. Single source of truth - used both to
+  // trigger the cutoff and to gate re-entry into body rate mode, so the two
+  // checks can't drift out of sync.
+  double body_rate_safety_x_limit_{1.5};
   mavros_msgs::State uav_current_state_;
 
   geometry_msgs::PoseStamped uav_pose_; // Current pose of UAV

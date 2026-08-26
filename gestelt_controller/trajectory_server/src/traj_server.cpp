@@ -22,6 +22,8 @@ void TrajectoryServer::init(ros::NodeHandle& nh, ros::NodeHandle& pnh)
 
   // Safety bounding box params
   pnh.param("enable_safety_box", enable_safety_box_, true);
+  pnh.param("body_rate_safety_x_limit", body_rate_safety_x_limit_, 1.5);
+  logInfo(str_fmt("body_rate_safety_x_limit: %.2f", body_rate_safety_x_limit_));
   pnh.param("safety_box/max_x", safety_box_.max_x, -1.0);
   pnh.param("safety_box/min_x", safety_box_.min_x, -1.0);
   pnh.param("safety_box/max_y", safety_box_.max_y, -1.0);
@@ -103,6 +105,12 @@ void TrajectoryServer::init(ros::NodeHandle& nh, ros::NodeHandle& pnh)
 /* Subscriber Callbacks */
 void TrajectoryServer::posUpdateCb(const gestelt_msgs::ExecTrajectory::ConstPtr &msg)
 {
+    if (body_rate_safety_triggered_){
+      // Ignore stale/placeholder position data from the upstream body rate
+      // controller while the safety hold is latched, so it can't overwrite
+      // the hold setpoint.
+      return;
+    }
     geomMsgsVector3ToEigenVector3(msg->transform.translation, last_mission_pos_);
     last_mission_yaw_ = quaternionToRPY(msg->transform.rotation)(2); // yaw
 }
@@ -122,7 +130,7 @@ void TrajectoryServer::execTrajCb(const gestelt_msgs::ExecTrajectory::ConstPtr &
   
   mission_type_mask_ = msg->type_mask; 
 
-  if (getMissionCmd() == MissionCmdMode::PVA){
+  if (getMissionCmd() == MissionCmdMode::PVA && !body_rate_safety_triggered_){
       geomMsgsVector3ToEigenVector3(msg->transform.translation, last_mission_pos_);
       last_mission_yaw_ = quaternionToRPY(msg->transform.rotation)(2); // yaw
 
@@ -435,13 +443,27 @@ void TrajectoryServer::missionServerCommandCb(const std_msgs::Int8::ConstPtr & m
 {
   if (msg->data < 0){
     logError("Invalid server command, ignoring...");
+    return;
   }
-  std::cout<< "Me here....\n";
-  std::cout << "current mission command is here" << getMissionCmd() << "\n";
-  setMissionCmd(MissionCmdMode(IntToMission(msg->data)));
-  // std::cout << "Mission Mode Changed to" << cmd_mode_num;
-  // std::cout << "Mission Mode Changed to" << cmd_mode_num;
-  
+  MissionCmdMode requested_mode = MissionCmdMode(IntToMission(msg->data));
+  bool requests_body_rate_mode = (requested_mode == MissionCmdMode::ATTITUDE || requested_mode == MissionCmdMode::GEOM);
+
+  if (body_rate_safety_triggered_){
+    if (requests_body_rate_mode && uav_pose_.pose.position.x > body_rate_safety_x_limit_){
+      // Still past the safety limit - refuse to hand control back to the body
+      // rate controller, otherwise a mode-change request (eg. from a mission
+      // node that doesn't know about the cutoff) would undo the safety switch
+      // before PVA ever gets a chance to take effect.
+      logWarnThrottled(str_fmt(
+        "[MISSION] Refusing to switch to %s: x (%.2f) still exceeds %.2fm safety limit. Staying in PVA.",
+        MissionToString(requested_mode).c_str(), uav_pose_.pose.position.x, body_rate_safety_x_limit_), 1.0);
+      return;
+    }
+    // Vehicle is back within bounds (or a non body-rate mode was requested) - safe to release the latch.
+    body_rate_safety_triggered_ = false;
+  }
+
+  setMissionCmd(requested_mode);
 }
 
 /* Timer Callbacks */
@@ -653,6 +675,7 @@ void TrajectoryServer::tickServerStateTimerCb(const ros::TimerEvent &e)
           break;
         case LAND_E:
           logWarn("[MISSION] Mission cancelled! Landing...");
+          body_rate_safety_triggered_ = false;
           setServerState(ServerState::LAND);
           break;
         case MISSION_E:
@@ -666,7 +689,7 @@ void TrajectoryServer::tickServerStateTimerCb(const ros::TimerEvent &e)
             last_mission_pos_[2] = uav_pose_.pose.position.z;
             mission_hover_set_state = true;
           }
-          
+          body_rate_safety_triggered_ = false;
           setServerState(ServerState::HOVER);
           break;
         case E_STOP_E:
@@ -752,6 +775,43 @@ void TrajectoryServer::execMission()
 {
   std::lock_guard<std::mutex> cmd_guard(cmd_mutex_);
 
+  // Safety check: while commanding raw body rates (ATTITUDE in body rate mode, or GEOM),
+  // force a switch to PVA if the UAV drifts past the x safety limit, since body rate
+  // commands have no direct position feedback loop to arrest the drift themselves.
+  bool in_body_rate_mode = (getMissionCmd() == MissionCmdMode::GEOM) ||
+                            (getMissionCmd() == MissionCmdMode::ATTITUDE && ct_omega_mode_ == 1);
+
+  if (in_body_rate_mode && uav_pose_.pose.position.x > body_rate_safety_x_limit_){
+    logWarn(str_fmt(
+      "[MISSION] UAV x position (%.2f) exceeded %.2fm safety limit while in body rate mode! Forcing AUTO.LOITER.",
+      uav_pose_.pose.position.x, body_rate_safety_x_limit_));
+
+    // Switching setpoint type while remaining in OFFBOARD is NOT reliably
+    // immediate: PX4's Commander only re-applies offboard_control_mode into
+    // vehicle_control_mode (which decides whether the position setpoint or
+    // the stale body rate setpoint is actually honored) on a <=500ms
+    // periodic fallback unless nav_state itself changes - see
+    // updateControlMode()'s gating in Commander.cpp. A genuine mode change
+    // is instead handled on Commander's ~10ms loop, so force PX4 out of
+    // OFFBOARD into its own native position hold immediately, the same
+    // mechanism toggleOffboardMode() already uses to leave OFFBOARD.
+    mavros_msgs::SetMode loiter_mode_srv;
+    loiter_mode_srv.request.custom_mode = "AUTO.LOITER";
+    if (!set_mode_client.call(loiter_mode_srv) || !loiter_mode_srv.response.mode_sent){
+      logError("[MISSION] Failed to force AUTO.LOITER on safety cutoff!");
+    }
+
+    last_mission_pos_(0) = uav_pose_.pose.position.x;
+    last_mission_pos_(1) = uav_pose_.pose.position.y;
+    last_mission_pos_(2) = uav_pose_.pose.position.z;
+    last_mission_vel_.setZero();
+    last_mission_acc_.setZero();
+    mission_type_mask_ = IGNORE_VEL | IGNORE_ACC | IGNORE_YAW_RATE;
+
+    body_rate_safety_triggered_ = true;
+    setMissionCmd(MissionCmdMode::PVA);
+  }
+
   if (getMissionCmd() == MissionCmdMode::PVA){
   publishCmd( last_mission_pos_, last_mission_vel_, last_mission_acc_, last_mission_jerk_, 
               last_mission_yaw_, last_mission_yaw_dot_, 
@@ -764,7 +824,6 @@ void TrajectoryServer::execMission()
   publishVelCmd( last_mission_vel_, last_mission_pos_, ct_omega_mode_, last_mission_yaw_dot_);
   }
   else if (getMissionCmd() == MissionCmdMode::GEOM){
-    std::cout << "IN HERE\n";
     publishGeomCmd( geom_body_rate, geom_thrust);
   }
 }
@@ -792,6 +851,7 @@ void TrajectoryServer::publishCmd(
   pos_cmd.velocity.x = v(0);
   pos_cmd.velocity.y = v(1);
   pos_cmd.velocity.z = v(2);
+  // std::cout << p(0) << " " << p(1) << " " << p(2) << "\n";
   pos_cmd.acceleration_or_force.x = a(0);
   pos_cmd.acceleration_or_force.y = a(1);
   pos_cmd.acceleration_or_force.z = a(2);

@@ -18,6 +18,10 @@ safety_box/max_x: 5.75
 safety_box/max_y: 5.75
 safety_box/max_z: 2.6
 
+# x position beyond which body rate control (ATTITUDE in body rate mode, or
+# GEOM) is force-cut to AUTO.LOITER
+body_rate_safety_x_limit: 1.5
+
 # pub_cmd_freq: Frequency at which commands are published
 pub_cmd_freq: 100.0
 # state_machine_tick_freq: Frequency at state machine is being refreshed
