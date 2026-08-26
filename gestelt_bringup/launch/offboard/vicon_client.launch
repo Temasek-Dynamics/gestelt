@@ -1,5 +1,5 @@
 <launch>
-  <arg name="server" default="192.168.31.248"/>
+  <arg name="server" default="192.168.1.10"/>
   
   <!-- Vicon node -->
   <node pkg="vrpn_client_ros" type="vrpn_client_node" name="vrpn_client_node" output="screen">
@@ -20,12 +20,7 @@
       #- FirstTracker
       #- SecondTracker
     </rosparam>
-    <remap from="/vrpn_client_node/drone0/pose" to="drone0/mavros/vision_pose/pose" /> 
-    <remap from="/vrpn_client_node/drone1/pose" to="drone1/mavros/vision_pose/pose" /> 
-    <remap from="/vrpn_client_node/drone2/pose" to="drone2/mavros/vision_pose/pose" /> 
-    <remap from="/vrpn_client_node/drone3/pose" to="drone3/mavros/vision_pose/pose" /> 
-    <remap from="/vrpn_client_node/drone4/pose" to="drone4/mavros/vision_pose/pose" /> 
-    <remap from="/vrpn_client_node/drone5/pose" to="drone5/mavros/vision_pose/pose" /> 
+    <remap from="/vrpn_client_node/ibvs3/pose" to="drone0/mavros/vision_pose/pose" /> 
   </node>
 
 </launch>
