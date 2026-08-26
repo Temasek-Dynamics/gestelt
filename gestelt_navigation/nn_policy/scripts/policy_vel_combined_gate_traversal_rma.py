@@ -27,6 +27,8 @@ import copy
 # from geometry_msgs import Posestamped
 from plotting_scripts import *
 from modules.policy_simple_nwu_global_gate_traversal import *
+import torch
+import torch.nn as nn
 import pickle
 from dataclasses import asdict, is_dataclass
 
@@ -91,9 +93,49 @@ def quat_rel_xyzw(q_a, q_b, eps=1e-8):
     return torch.stack([rx, ry, rz, rw], dim=-1)
 
 
+class AdaptationModule(nn.Module):
+    """RMA phase-2 adaptation module phi: (x, a) history -> z_hat.
+
+    Deployment copy (must match the trained class exactly): estimates the env
+    latent online from the last `history_len` (observation, action) pairs, no
+    privileged info. Per-step pairs embedded by a shared linear layer, temporal
+    structure via a 3-layer 1-D CNN, linear head to the latent.
+    """
+
+    def __init__(self, obs_action_dim, latent_dim=8, history_len=50, embed_dim=32):
+        super().__init__()
+        assert history_len >= 40, (
+            f"AdaptationModule needs history_len >= 40 for its conv stack (got {history_len})"
+        )
+        self.history_len = history_len
+        self.embed = nn.Sequential(
+            nn.Linear(obs_action_dim, embed_dim),
+            nn.ELU(),
+        )
+        self.conv = nn.Sequential(
+            nn.Conv1d(embed_dim, 32, kernel_size=8, stride=4),
+            nn.ELU(),
+            nn.Conv1d(32, 32, kernel_size=5, stride=1),
+            nn.ELU(),
+            nn.Conv1d(32, 32, kernel_size=5, stride=1),
+            nn.ELU(),
+        )
+        with torch.no_grad():
+            flat_dim = self.conv(torch.zeros(1, embed_dim, history_len)).numel()
+        self.head = nn.Linear(flat_dim, latent_dim)
+
+    def forward(self, hist):
+        # hist: (batch, history_len, obs_action_dim), oldest step first
+        e = self.embed(hist)          # (batch, history_len, embed_dim)
+        e = e.permute(0, 2, 1)        # (batch, embed_dim, history_len)
+        c = self.conv(e).flatten(1)   # (batch, flat_dim)
+        return self.head(c)
+
+
 class TEST_RENDER(object):
 
-    def __init__(self, policy_path, pc, warp_frame, use_gru=False, include_actions=False, include_gate_ori=False, use_rotmat_obs=False, use_so3_diff_obs=False):
+    def __init__(self, policy_path, pc, warp_frame, use_gru=False, include_actions=False, include_gate_ori=False, use_rotmat_obs=False, use_so3_diff_obs=False,
+                 use_rma=False, rma_latent_dim=8, rma_history_len=50, adaptation_path=None, rma_hist_stride=1):
         self.pc = pc
         self.use_gru = use_gru
         self.include_actions = include_actions
@@ -105,6 +147,17 @@ class TEST_RENDER(object):
         self.h = None
         self.start_msg = False
 
+        # ---- RMA settings ----
+        self.use_rma = use_rma
+        self.rma_latent_dim = rma_latent_dim if use_rma else 0
+        self.rma_history_len = rma_history_len
+        # The policy is evaluated at 100 Hz but training built the (obs, action)
+        # history at the sim step (delta_time, ~50 Hz). Push a new history pair only
+        # every rma_hist_stride evaluations so the buffer keeps the trained temporal
+        # spacing (else the AdaptationModule's conv receptive field is wrong).
+        self.rma_hist_stride = max(1, int(rma_hist_stride))
+        self._rma_step = 0
+
         gru_action_extra = 4 if (use_gru and include_actions) else 0
         ## Initializing task parameters
         self.init_a = np.zeros((1,4))
@@ -115,20 +168,39 @@ class TEST_RENDER(object):
 
         ## Loading Policy
         att_dim = 9 if use_rotmat_obs else 4
-        input_dims = 12 + att_dim + (4 if include_gate_ori else 0)
-        print(f"Policy input_dims: {input_dims} (use_rotmat_obs={use_rotmat_obs}, include_gate_ori={include_gate_ori})")
+        # pc_dim = base observation (the unit stored in the RMA history buffer);
+        # the policy input additionally carries the latent z appended on top.
+        self.pc_dim = 12 + att_dim + (4 if include_gate_ori else 0)
+        policy_input = self.pc_dim + self.rma_latent_dim
+        print(f"Policy input_dims: {policy_input} (base pc_dim={self.pc_dim}, rma_latent={self.rma_latent_dim}, "
+              f"use_rotmat_obs={use_rotmat_obs}, include_gate_ori={include_gate_ori}, use_rma={use_rma})")
         if self.pc == True:
             if use_gru == False:
-                self.policy = TrackVelGate(input_dim=input_dims)
+                self.policy = TrackVelGate(input_dim=policy_input)
             else:
                 print(f"LOADING POLICY WITH GRU and {gru_action_extra} extra actions")
-                self.policy = TrackVelGRU(input_dim=input_dims + gru_action_extra) if use_gru else TrackVelGate(input_dim=input_dims)
+                self.policy = TrackVelGRU(input_dim=policy_input + gru_action_extra) if use_gru else TrackVelGate(input_dim=policy_input)
         else:
             self.policy = TrackVelGate(input_dim = 10)
 
         print(self.policy)
         self.policy.load_state_dict(torch.load(policy_path, map_location='cpu'))
         self.policy.eval()
+
+        # ---- RMA adaptation module + rolling (obs, action) history ----
+        # z_hat = phi(history of [x_base, action]); history is oldest-first,
+        # zero-padded at episode start, obs_action_dim = pc_dim + 4.
+        self.adaptation_module = None
+        self.rma_hist = None
+        if self.use_rma:
+            self.adaptation_module = AdaptationModule(self.pc_dim + 4,
+                                                      latent_dim=self.rma_latent_dim,
+                                                      history_len=self.rma_history_len)
+            self.adaptation_module.load_state_dict(torch.load(adaptation_path, map_location='cpu'))
+            self.adaptation_module.eval()
+            self.rma_hist = torch.zeros(1, self.rma_history_len, self.pc_dim + 4)
+            print(f"[RMA] loaded adaptation module from {adaptation_path} "
+                  f"(latent={self.rma_latent_dim}, history_len={self.rma_history_len}, obs_action_dim={self.pc_dim + 4})")
 
         
 
@@ -153,6 +225,10 @@ class TEST_RENDER(object):
             self.init_a[0,0] = 0.30
             target_vel = np.zeros((1, 3))
             self.previous_action = torch.tensor(self.init_a, dtype=torch.float32)
+            # RMA: clear the (obs, action) history (zero-padded, oldest first)
+            if self.use_rma:
+                self.rma_hist = torch.zeros(1, self.rma_history_len, self.pc_dim + 4)
+                self._rma_step = 0
 
     def update_window_info(self, window_pose, window_velocity, window_orientation):
         self.window_position = torch.tensor(window_pose, dtype=torch.float32)
@@ -184,7 +260,15 @@ class TEST_RENDER(object):
             _gate_obs = (quat_rel_xyzw(att, self.window_quaternion),) \
                         if (self.include_gate_ori and self.use_so3_diff_obs) \
                         else ((self.window_quaternion,) if self.include_gate_ori else ())
-            x = torch.cat(base_obs + _gate_obs, dim=1)
+            # x_base is the base observation (pc_dim) — this is the unit stored in
+            # the RMA history buffer (before the latent / prev-action are appended).
+            x_base = torch.cat(base_obs + _gate_obs, dim=1)
+            x = x_base
+            # RMA: infer the env latent from the (obs, action) history and append it.
+            if self.use_rma:
+                with torch.no_grad():
+                    z_hat = self.adaptation_module(self.rma_hist)   # (1, latent)
+                x = torch.cat([x, z_hat], dim=1)
             if self.include_actions:
                 x = torch.cat([x, self.previous_action], dim=1)
 
@@ -193,7 +277,7 @@ class TEST_RENDER(object):
             angvel = qd[:,:3]
             diff_vel = self.t_vel - vel
             x = torch.cat((att, angvel, diff_vel), dim=1)
-        
+
         ## Evaluating policy
         if self.use_gru == False:
             a = self.policy(x)
@@ -205,7 +289,15 @@ class TEST_RENDER(object):
             else:
                 # print("false")
                 a, _ = self.policy(x, self.h)
-        
+
+        # RMA: roll the history at the training rate — push the current
+        # (x_base, action) pair as newest every rma_hist_stride evaluations.
+        if self.use_rma and self.pc == True:
+            self._rma_step += 1
+            if self._rma_step % self.rma_hist_stride == 0:
+                new_pair = torch.cat([x_base, a], dim=1).unsqueeze(1).detach()  # (1,1,pc_dim+4)
+                self.rma_hist = torch.cat([self.rma_hist[:, 1:], new_pair], dim=1)
+
         self.previous_action = a
         # print(a)
         end_time = time.time()
@@ -410,7 +502,7 @@ class NN_POLICY_PLANNER(object):
         self.action = np.zeros((1,4))
         self.recovery_vel_start_time = None
         time.sleep(1)
-        self.policy_evaluation_timer = rospy.Timer(rospy.Duration(0.02), self.nn_evaluation)
+        self.policy_evaluation_timer = rospy.Timer(rospy.Duration(0.01), self.nn_evaluation)
         
     def initPoseCB(self,msg):
         self.init_pos_numpy[:,0] = msg.pose.position.x 
@@ -631,7 +723,7 @@ class NN_POLICY_PLANNER(object):
             warp_q_t = torch.Tensor(warp_q).unsqueeze(0)
             now_time = rospy.Time.now().to_sec()
             with self.lock:
-                if warp_pos[0, 0] < self.window_position[0, 0] - 0.05:
+                if warp_pos[0, 0] < self.window_position[0, 0] + 0.05:
                 # if warp_pos[0, 2] < 5.0:
                     self.data_store[0]["time_stamp"].append(now_time)
                     self.data_store[0]["position"].append(warp_pos.squeeze(0).detach().cpu().numpy())
@@ -664,8 +756,8 @@ class NN_POLICY_PLANNER(object):
                     dist = np.linalg.norm(self.drone_pos - self.init_pos_numpy[0])
                     if dist < 0.1:
                         self.awaiting_restart = False
-                        print("Arrived at init. Settling for 3 s before starting NN.")
-                        rospy.Timer(rospy.Duration(5.0), self._settle_and_start_nn_cb, oneshot=True)
+                        print("Arrived at init. Settling for 2 s before starting NN.")
+                        rospy.Timer(rospy.Duration(2.0), self._settle_and_start_nn_cb, oneshot=True)
                 if self.warp_mission_command_mode == 2:
                     #Check if ready to switch
                     if self.checkNNReadiness():
@@ -739,7 +831,6 @@ class NN_POLICY_PLANNER(object):
                         for i in range(10):
                             print(f"RECOVERED (speed={speed:.2f} m/s): Switching back to POSITION CONTROL")
                             pva_traj_msg_update = ExecTrajectory()
-                            print(self.init_pos_numpy)
                             pva_traj_msg_update.transform.translation.x = self.init_pos_numpy[:,0]
                             pva_traj_msg_update.transform.translation.y = self.init_pos_numpy[:,1]
                             pva_traj_msg_update.transform.translation.z = self.init_pos_numpy[:,2]
@@ -841,9 +932,9 @@ class NN_POLICY_PLANNER(object):
         y = random.uniform(wy - 0.5, wy + 0.5)
         z = random.uniform(wz - 0.5, wz + 0.5)
 
-        x = -2.0
-        y = 0.0
-        z = 1.5
+        # x = -2.0
+        # y = 0.0
+        # z = 1.5
         new_pos = np.array([[x, y, z]])
         self.init_pos_numpy = new_pos
         # self.init_quat = self.update_init_orientation_drone(new_pos, self.window_position)
@@ -942,7 +1033,7 @@ class NN_POLICY_PLANNER(object):
 if __name__=="__main__":
     signal(SIGINT, handler)
     print("STARTING NODE")
-    policy_file = "20260715-150205" #Potential 20260728-135438 #20260723-180713#'20260705-155924' #"20260702-145013" To test fly real drone #"20260629-091116" This is another good 60 degrees demo #"20260626-204830" #"20260618-005845" very bad#"20260618-005738"also pretty good #"20260618-005702" a bit vibratory #"20260618-005626" bad #"20260617-201947" bad #"20260617-201914 best tracking reasonable in flight" #"20260617-201703 worse tracking" #"20260617-172533"# This likely to work #"20260616-174028" to test in real flight #"20260616-150838" #"20260608-230203" bad 60 degrees. To compare with 20260608-170520 #"20260608-233141" good 30 degrees for gazebo trained with thrust DR also #"20260608-170520 good demo for 60 degrees gazebo. max body rates of 4.0 "#"20260604-222931" #"20260604-201453 good 30 degrees demo" #"20260604-095607" #"20260603-121142" #"20260603-121213" another 60 degrees gazebo demo. To test in real #"20260529-113935 60 degrees gazebo demo" #"20260521-090040" #"20260518-213037 30 degrees demo" #"20260519-121802" #"20260513-185143" #"20260513-185035" #"20260402-204842 This is high fidelity forward model." #"20260306-154450 - with gru. more reasonable" #"20260304-161010" #"20260304-160736 - this reasonable"#"20260225-165700" #0.02 good enough for real drone 20250527-122703   0.05-to test 20250624-181715
+    policy_file = "20260716-122304" #"20260702-145013" To test fly real drone #"20260629-091116" This is another good 60 degrees demo #"20260626-204830" #"20260618-005845" very bad#"20260618-005738"also pretty good #"20260618-005702" a bit vibratory #"20260618-005626" bad #"20260617-201947" bad #"20260617-201914 best tracking reasonable in flight" #"20260617-201703 worse tracking" #"20260617-172533"# This likely to work #"20260616-174028" to test in real flight #"20260616-150838" #"20260608-230203" bad 60 degrees. To compare with 20260608-170520 #"20260608-233141" good 30 degrees for gazebo trained with thrust DR also #"20260608-170520 good demo for 60 degrees gazebo. max body rates of 4.0 "#"20260604-222931" #"20260604-201453 good 30 degrees demo" #"20260604-095607" #"20260603-121142" #"20260603-121213" another 60 degrees gazebo demo. To test in real #"20260529-113935 60 degrees gazebo demo" #"20260521-090040" #"20260518-213037 30 degrees demo" #"20260519-121802" #"20260513-185143" #"20260513-185035" #"20260402-204842 This is high fidelity forward model." #"20260306-154450 - with gru. more reasonable" #"20260304-161010" #"20260304-160736 - this reasonable"#"20260225-165700" #0.02 good enough for real drone 20250527-122703   0.05-to test 20250624-181715
     print(f"POLICY PATH IS {policy_file}") 
     recovery_mode = 2 #1 for position, 2 for velocity, 3 for attitude
 
@@ -970,7 +1061,7 @@ if __name__=="__main__":
 
     position_control = True #config_params["position_control"]
     delta_time = 0.02 #float(config_params["delta_time"])
-    max_angular_rate = float(config_params["max_angular_rates"])
+    max_angular_rate = 4.0 #float(config_params["max_angular_rates"])
 
     if "use_gru" in config_params:
         use_gru = config_params["use_gru"]
@@ -1032,7 +1123,25 @@ if __name__=="__main__":
     use_so3_diff_obs = config_params.get("use_so3_diff_obs", False)
     window_degrees = 60.0 #for now hardcoding this. can be changed later to config param
 
-    nn_policy = TEST_RENDER(full_policy_path, position_control, warp_frame, use_gru=use_gru, include_actions=gru_include_prev_action, include_gate_ori=include_gate_ori, use_rotmat_obs=use_rotmat_obs, use_so3_diff_obs=use_so3_diff_obs)
+    # ---- RMA: adaptation module weights live in the same run folder as policy.pth ----
+    use_rma = config_params.get("use_rma", False)
+    rma_latent_dim = int(config_params.get("rma_latent_dim", 8))
+    rma_history_len = int(config_params.get("rma_history_len", 50))
+    adaptation_path = os.path.join(actual_full_path, "adaptation.pth")
+    if use_rma and not os.path.exists(adaptation_path):
+        raise FileNotFoundError(f"use_rma is set but adaptation weights not found at {adaptation_path}")
+    # The policy is evaluated at 100 Hz (policy_evaluation_timer = 0.01 s) but training
+    # built the RMA history at the sim step (delta_time). Decimate the history push so it
+    # keeps the trained temporal spacing.
+    POLICY_EVAL_DT = 0.01
+    training_sim_dt = float(config_params.get("delta_time", delta_time))
+    rma_hist_stride = max(1, int(round(training_sim_dt / POLICY_EVAL_DT)))
+    if use_rma:
+        print(f"[RMA] history stride = {rma_hist_stride} "
+              f"(sim_dt={training_sim_dt}s pushed at 1/{rma_hist_stride} of the {1/POLICY_EVAL_DT:.0f}Hz eval)")
+
+    nn_policy = TEST_RENDER(full_policy_path, position_control, warp_frame, use_gru=use_gru, include_actions=gru_include_prev_action, include_gate_ori=include_gate_ori, use_rotmat_obs=use_rotmat_obs, use_so3_diff_obs=use_so3_diff_obs,
+                            use_rma=use_rma, rma_latent_dim=rma_latent_dim, rma_history_len=rma_history_len, adaptation_path=adaptation_path, rma_hist_stride=rma_hist_stride)
 
     nn_policy_planner = NN_POLICY_PLANNER(mission_command_mode=int(mission_command_mode), policy=nn_policy,
                                           inference_timestep=delta_time, max_angular_rates = max_angular_rate,

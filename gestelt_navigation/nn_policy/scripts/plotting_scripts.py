@@ -254,11 +254,15 @@ def compute_gate_metrics(position_array, velocity_array, attitude_array, window_
     """
     from scipy.spatial.transform import Rotation as ScipyR
 
-    dists = np.linalg.norm(position_array - gate_center, axis=1)
-    t_star = int(np.argmin(dists))
+    # Gate is only tilted about world-x, so the crossing plane is x = gate_center[0]
+    # regardless of tilt angle. Anchor t_star there rather than full 3D distance to
+    # gate_center, otherwise large roll/pitch excursions during recovery can make a
+    # different (off-plane) timestep look "closer" in 3D.
+    x_dists = np.abs(position_array[:, 0] - gate_center[0])
+    t_star = int(np.argmin(x_dists))
 
     pos_at_gate = position_array[t_star]
-    pos_err = dists[t_star]
+    pos_err = float(np.linalg.norm(pos_at_gate - gate_center))
 
     vel_at_gate = velocity_array[t_star, 3:6]
     if target_vel is not None:

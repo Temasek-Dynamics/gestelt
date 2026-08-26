@@ -409,6 +409,18 @@ class NN_POLICY_PLANNER(object):
         self.attitude_mode_toggle = 0
         self.action = np.zeros((1,4))
         self.recovery_vel_start_time = None
+
+        # The policy is a GRU trained at the sim step (config delta_time, 20 Hz for the
+        # vision runs) but this timer fires at 100 Hz. Stepping the GRU 5x too fast
+        # distorts its recurrent dynamics, so only evaluate every _eval_stride ticks and
+        # hold the last action in between.
+        POLICY_EVAL_DT = 0.01
+        train_dt = float(config_param.get("delta_time", POLICY_EVAL_DT)) if config_param else POLICY_EVAL_DT
+        self._eval_stride = max(1, int(round(train_dt / POLICY_EVAL_DT)))
+        self._eval_count = 0
+        print(f"[vision] policy eval stride = {self._eval_stride} "
+              f"(train dt={train_dt}s -> {1.0/train_dt:.0f}Hz, timer {1/POLICY_EVAL_DT:.0f}Hz)")
+        
         time.sleep(1)
         self.policy_evaluation_timer = rospy.Timer(rospy.Duration(0.02), self.nn_evaluation)
         
@@ -631,7 +643,7 @@ class NN_POLICY_PLANNER(object):
             warp_q_t = torch.Tensor(warp_q).unsqueeze(0)
             now_time = rospy.Time.now().to_sec()
             with self.lock:
-                if warp_pos[0, 0] < self.window_position[0, 0] - 0.05:
+                if warp_pos[0, 0] < self.window_position[0, 0] + 0.05:
                 # if warp_pos[0, 2] < 5.0:
                     self.data_store[0]["time_stamp"].append(now_time)
                     self.data_store[0]["position"].append(warp_pos.squeeze(0).detach().cpu().numpy())
@@ -664,8 +676,8 @@ class NN_POLICY_PLANNER(object):
                     dist = np.linalg.norm(self.drone_pos - self.init_pos_numpy[0])
                     if dist < 0.1:
                         self.awaiting_restart = False
-                        print("Arrived at init. Settling for 3 s before starting NN.")
-                        rospy.Timer(rospy.Duration(5.0), self._settle_and_start_nn_cb, oneshot=True)
+                        print("Arrived at init. Settling for 2 s before starting NN.")
+                        rospy.Timer(rospy.Duration(2.0), self._settle_and_start_nn_cb, oneshot=True)
                 if self.warp_mission_command_mode == 2:
                     #Check if ready to switch
                     if self.checkNNReadiness():
@@ -739,7 +751,6 @@ class NN_POLICY_PLANNER(object):
                         for i in range(10):
                             print(f"RECOVERED (speed={speed:.2f} m/s): Switching back to POSITION CONTROL")
                             pva_traj_msg_update = ExecTrajectory()
-                            print(self.init_pos_numpy)
                             pva_traj_msg_update.transform.translation.x = self.init_pos_numpy[:,0]
                             pva_traj_msg_update.transform.translation.y = self.init_pos_numpy[:,1]
                             pva_traj_msg_update.transform.translation.z = self.init_pos_numpy[:,2]
@@ -841,9 +852,9 @@ class NN_POLICY_PLANNER(object):
         y = random.uniform(wy - 0.5, wy + 0.5)
         z = random.uniform(wz - 0.5, wz + 0.5)
 
-        x = -2.0
-        y = 0.0
-        z = 1.5
+        # x = -2.0
+        # y = 0.0
+        # z = 1.5
         new_pos = np.array([[x, y, z]])
         self.init_pos_numpy = new_pos
         # self.init_quat = self.update_init_orientation_drone(new_pos, self.window_position)
@@ -942,7 +953,7 @@ class NN_POLICY_PLANNER(object):
 if __name__=="__main__":
     signal(SIGINT, handler)
     print("STARTING NODE")
-    policy_file = "20260715-150205" #Potential 20260728-135438 #20260723-180713#'20260705-155924' #"20260702-145013" To test fly real drone #"20260629-091116" This is another good 60 degrees demo #"20260626-204830" #"20260618-005845" very bad#"20260618-005738"also pretty good #"20260618-005702" a bit vibratory #"20260618-005626" bad #"20260617-201947" bad #"20260617-201914 best tracking reasonable in flight" #"20260617-201703 worse tracking" #"20260617-172533"# This likely to work #"20260616-174028" to test in real flight #"20260616-150838" #"20260608-230203" bad 60 degrees. To compare with 20260608-170520 #"20260608-233141" good 30 degrees for gazebo trained with thrust DR also #"20260608-170520 good demo for 60 degrees gazebo. max body rates of 4.0 "#"20260604-222931" #"20260604-201453 good 30 degrees demo" #"20260604-095607" #"20260603-121142" #"20260603-121213" another 60 degrees gazebo demo. To test in real #"20260529-113935 60 degrees gazebo demo" #"20260521-090040" #"20260518-213037 30 degrees demo" #"20260519-121802" #"20260513-185143" #"20260513-185035" #"20260402-204842 This is high fidelity forward model." #"20260306-154450 - with gru. more reasonable" #"20260304-161010" #"20260304-160736 - this reasonable"#"20260225-165700" #0.02 good enough for real drone 20250527-122703   0.05-to test 20250624-181715
+    policy_file = "20260629-213233" #"20260702-145013" To test fly real drone #"20260629-091116" This is another good 60 degrees demo #"20260626-204830" #"20260618-005845" very bad#"20260618-005738"also pretty good #"20260618-005702" a bit vibratory #"20260618-005626" bad #"20260617-201947" bad #"20260617-201914 best tracking reasonable in flight" #"20260617-201703 worse tracking" #"20260617-172533"# This likely to work #"20260616-174028" to test in real flight #"20260616-150838" #"20260608-230203" bad 60 degrees. To compare with 20260608-170520 #"20260608-233141" good 30 degrees for gazebo trained with thrust DR also #"20260608-170520 good demo for 60 degrees gazebo. max body rates of 4.0 "#"20260604-222931" #"20260604-201453 good 30 degrees demo" #"20260604-095607" #"20260603-121142" #"20260603-121213" another 60 degrees gazebo demo. To test in real #"20260529-113935 60 degrees gazebo demo" #"20260521-090040" #"20260518-213037 30 degrees demo" #"20260519-121802" #"20260513-185143" #"20260513-185035" #"20260402-204842 This is high fidelity forward model." #"20260306-154450 - with gru. more reasonable" #"20260304-161010" #"20260304-160736 - this reasonable"#"20260225-165700" #0.02 good enough for real drone 20250527-122703   0.05-to test 20250624-181715
     print(f"POLICY PATH IS {policy_file}") 
     recovery_mode = 2 #1 for position, 2 for velocity, 3 for attitude
 
@@ -970,7 +981,7 @@ if __name__=="__main__":
 
     position_control = True #config_params["position_control"]
     delta_time = 0.02 #float(config_params["delta_time"])
-    max_angular_rate = float(config_params["max_angular_rates"])
+    max_angular_rate = 4.0 #float(config_params["max_angular_rates"])
 
     if "use_gru" in config_params:
         use_gru = config_params["use_gru"]

@@ -176,6 +176,94 @@ def plot_orientations(episodes, save_dir=None):
 
 
 # ---------------------------------------------------------------------------
+# Aggregate metrics
+# ---------------------------------------------------------------------------
+
+def print_aggregate_metrics(episodes, pos_err_max=0.6, target_speed=None):
+    """Mean +/- std of the gate-crossing metrics (position error, velocity error,
+    orientation alignment) across all episodes.
+
+    Episodes with position error > pos_err_max [m] are treated as outliers
+    (e.g. missed/failed crossings) and excluded from the statistics.
+
+    If target_speed is given, also reports the velocity error against the gate
+    traversal target [target_speed, 0, 0] (full 3D deviation at the crossing).
+    """
+    pos_errs, vel_errs, xdots, zdots, eulers, vel_at_gates = [], [], [], [], [], []
+    for ep in episodes:
+        pos_n = episode_positions(ep)   # (T, 3)
+        att_n = episode_rotations(ep)   # (T, 4)
+        vel_n = episode_velocities(ep)  # (T, 3)
+        if len(pos_n) < 2:
+            continue
+        vel_6dof = np.concatenate([np.zeros_like(vel_n), vel_n], axis=1)  # (T, 6)
+        _, _, pos_err, vel_at_gate, vel_err, euler_at_gate, x_dot, z_dot = \
+            compute_gate_metrics(pos_n, vel_6dof, att_n, _Q_GATE,
+                                 gate_center=_GATE_CENTER, target_vel=None)
+        pos_errs.append(pos_err)
+        vel_errs.append(vel_err)
+        xdots.append(x_dot)
+        zdots.append(z_dot)
+        eulers.append(euler_at_gate)
+        vel_at_gates.append(np.asarray(vel_at_gate))  # [vx, vy, vz] at crossing
+
+    if not pos_errs:
+        print("No episodes with enough data for aggregate metrics.")
+        return
+
+    pos_errs = np.array(pos_errs)
+    vel_errs = np.array(vel_errs)
+    xdots = np.array(xdots)
+    zdots = np.array(zdots)
+    eulers = np.array(eulers)  # (N, 3) roll, pitch, yaw [deg]
+    vel_at_gates = np.array(vel_at_gates)  # (N, 3)
+
+    # Drop outliers (missed/failed crossings) with position error above threshold
+    n_total = len(pos_errs)
+    keep = pos_errs <= pos_err_max
+    n_excluded = int((~keep).sum())
+    pos_errs = pos_errs[keep]
+    vel_errs = vel_errs[keep]
+    xdots = xdots[keep]
+    zdots = zdots[keep]
+    eulers = eulers[keep]
+    vel_at_gates = vel_at_gates[keep]
+    if pos_errs.size == 0:
+        print(f"All {n_total} episodes exceeded pos_err_max={pos_err_max} m; "
+              f"nothing to aggregate.")
+        return
+    # alignment angle (deg) between drone axis and gate axis, from the dot products
+    x_ang = np.degrees(np.arccos(np.clip(xdots, -1.0, 1.0)))
+    z_ang = np.degrees(np.arccos(np.clip(zdots, -1.0, 1.0)))
+    n = len(pos_errs)
+
+    print(f"\n{'='*60}")
+    print(f"  Aggregate gate-crossing metrics over {n} episodes  (mean +/- std)")
+    print(f"  ({n_excluded} of {n_total} excluded as outliers: pos_err > {pos_err_max} m)")
+    print(f"{'-'*60}")
+    print(f"  Position error [m]    : {pos_errs.mean():.4f} +/- {pos_errs.std():.4f}")
+    print(f"  Velocity error [m/s]  : {vel_errs.mean():.4f} +/- {vel_errs.std():.4f}"
+          f"   (lateral vy,vz deviation at crossing)")
+    if target_speed is not None:
+        target_vec = np.array([float(target_speed), 0.0, 0.0])
+        vel_err_tgt = np.linalg.norm(vel_at_gates - target_vec, axis=1)   # 3D deviation
+        vx = vel_at_gates[:, 0]
+        print(f"  Velocity error vs target [{target_speed:.2f},0,0] [m/s]:"
+              f" {vel_err_tgt.mean():.4f} +/- {vel_err_tgt.std():.4f}   (full 3D)")
+        print(f"  Forward speed vx [m/s]: {vx.mean():.4f} +/- {vx.std():.4f}"
+              f"   (target {target_speed:.2f})")
+    print(f"  Orientation alignment (1.0 = perfectly aligned with gate):")
+    print(f"    bx.gx               : {xdots.mean():.4f} +/- {xdots.std():.4f}"
+          f"   -> angle {x_ang.mean():.2f} +/- {x_ang.std():.2f} deg")
+    print(f"    bz.gz               : {zdots.mean():.4f} +/- {zdots.std():.4f}"
+          f"   -> angle {z_ang.mean():.2f} +/- {z_ang.std():.2f} deg")
+    print(f"  Euler at crossing [deg] (roll, pitch, yaw):")
+    print(f"    mean = [{eulers[:,0].mean():7.2f}, {eulers[:,1].mean():7.2f}, {eulers[:,2].mean():7.2f}]")
+    print(f"    std  = [{eulers[:,0].std():7.2f}, {eulers[:,1].std():7.2f}, {eulers[:,2].std():7.2f}]")
+    print(f"{'='*60}\n")
+
+
+# ---------------------------------------------------------------------------
 # Plots
 # ---------------------------------------------------------------------------
 
@@ -350,5 +438,19 @@ if __name__ == "__main__":
         print("No episode data to plot.")
         sys.exit(0)
 
+    # Pull the gate traversal target speed from the run's training_config.yaml
+    target_speed = None
+    cfg_path = os.path.join(os.path.dirname(path), "training_config.yaml")
+    if os.path.isfile(cfg_path):
+        try:
+            import yaml
+            with open(cfg_path) as f:
+                cfg = yaml.safe_load(f) or {}
+            target_speed = float(cfg.get("target_traversal_speed", 2.0))
+            print(f"Using target_traversal_speed = {target_speed} m/s (from training_config.yaml)")
+        except Exception as e:
+            print(f"Could not read target_traversal_speed: {e}")
+
     plot_orientations(episodes, save_dir=os.path.dirname(path))
+    print_aggregate_metrics(episodes, target_speed=target_speed)
     plot_all(episodes)

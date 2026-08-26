@@ -115,8 +115,14 @@ class TEST_RENDER(object):
 
         ## Loading Policy
         att_dim = 9 if use_rotmat_obs else 4
-        input_dims = 12 + att_dim + (4 if include_gate_ori else 0)
-        print(f"Policy input_dims: {input_dims} (use_rotmat_obs={use_rotmat_obs}, include_gate_ori={include_gate_ori})")
+        # Gate term is a rotation matrix (9) only for the SO(3) difference with
+        # rotation-matrix obs; otherwise a quaternion (4), or absent (0).
+        if include_gate_ori:
+            gate_dim = 9 if (use_so3_diff_obs and use_rotmat_obs) else 4
+        else:
+            gate_dim = 0
+        input_dims = 12 + att_dim + gate_dim
+        print(f"Policy input_dims: {input_dims} (use_rotmat_obs={use_rotmat_obs}, include_gate_ori={include_gate_ori}, use_so3_diff_obs={use_so3_diff_obs})")
         if self.pc == True:
             if use_gru == False:
                 self.policy = TrackVelGate(input_dim=input_dims)
@@ -180,10 +186,14 @@ class TEST_RENDER(object):
             att_in = quat_to_rotmat_flat(att) if self.use_rotmat_obs else att
             base_obs = (diff_pos, pos, att_in, qd)
             # Gate orientation term: either the SO(3) difference q_drone^{-1} ⊗ q_gate
-            # (frame-invariant alignment error), the absolute gate quaternion, or nothing.
-            _gate_obs = (quat_rel_xyzw(att, self.window_quaternion),) \
-                        if (self.include_gate_ori and self.use_so3_diff_obs) \
-                        else ((self.window_quaternion,) if self.include_gate_ori else ())
+            # (frame-invariant alignment error) as a rotation matrix (inversion-safe,
+            # no double cover) when use_rotmat_obs else its quaternion; or the
+            # absolute gate quaternion; or nothing.
+            if self.include_gate_ori and self.use_so3_diff_obs:
+                _g_rel = quat_rel_xyzw(att, self.window_quaternion)
+                _gate_obs = (quat_to_rotmat_flat(_g_rel) if self.use_rotmat_obs else _g_rel,)
+            else:
+                _gate_obs = (self.window_quaternion,) if self.include_gate_ori else ()
             x = torch.cat(base_obs + _gate_obs, dim=1)
             if self.include_actions:
                 x = torch.cat([x, self.previous_action], dim=1)
@@ -410,7 +420,7 @@ class NN_POLICY_PLANNER(object):
         self.action = np.zeros((1,4))
         self.recovery_vel_start_time = None
         time.sleep(1)
-        self.policy_evaluation_timer = rospy.Timer(rospy.Duration(0.02), self.nn_evaluation)
+        self.policy_evaluation_timer = rospy.Timer(rospy.Duration(0.01), self.nn_evaluation)
         
     def initPoseCB(self,msg):
         self.init_pos_numpy[:,0] = msg.pose.position.x 
@@ -631,7 +641,7 @@ class NN_POLICY_PLANNER(object):
             warp_q_t = torch.Tensor(warp_q).unsqueeze(0)
             now_time = rospy.Time.now().to_sec()
             with self.lock:
-                if warp_pos[0, 0] < self.window_position[0, 0] - 0.05:
+                if warp_pos[0, 0] < self.window_position[0, 0] + 0.05:
                 # if warp_pos[0, 2] < 5.0:
                     self.data_store[0]["time_stamp"].append(now_time)
                     self.data_store[0]["position"].append(warp_pos.squeeze(0).detach().cpu().numpy())
@@ -664,8 +674,8 @@ class NN_POLICY_PLANNER(object):
                     dist = np.linalg.norm(self.drone_pos - self.init_pos_numpy[0])
                     if dist < 0.1:
                         self.awaiting_restart = False
-                        print("Arrived at init. Settling for 3 s before starting NN.")
-                        rospy.Timer(rospy.Duration(5.0), self._settle_and_start_nn_cb, oneshot=True)
+                        print("Arrived at init. Settling for 2 s before starting NN.")
+                        rospy.Timer(rospy.Duration(2.0), self._settle_and_start_nn_cb, oneshot=True)
                 if self.warp_mission_command_mode == 2:
                     #Check if ready to switch
                     if self.checkNNReadiness():
@@ -690,7 +700,7 @@ class NN_POLICY_PLANNER(object):
                     self.mission_command_mode = 1
                     ## Check if it has passed through the gate
                 
-                if (self.drone_pos[0] - self.window_position[:,0]) > 0.1:
+                if (self.drone_pos[0] - self.window_position[:,0]) > 10.1:
                 # if self.drone_pos[2] > 5.0:
                     #Means drone has passed gate. Switch back to position control.
                     print("in here for switching back")
@@ -739,7 +749,6 @@ class NN_POLICY_PLANNER(object):
                         for i in range(10):
                             print(f"RECOVERED (speed={speed:.2f} m/s): Switching back to POSITION CONTROL")
                             pva_traj_msg_update = ExecTrajectory()
-                            print(self.init_pos_numpy)
                             pva_traj_msg_update.transform.translation.x = self.init_pos_numpy[:,0]
                             pva_traj_msg_update.transform.translation.y = self.init_pos_numpy[:,1]
                             pva_traj_msg_update.transform.translation.z = self.init_pos_numpy[:,2]
@@ -841,9 +850,9 @@ class NN_POLICY_PLANNER(object):
         y = random.uniform(wy - 0.5, wy + 0.5)
         z = random.uniform(wz - 0.5, wz + 0.5)
 
-        x = -2.0
-        y = 0.0
-        z = 1.5
+        # x = -2.0
+        # y = 0.0
+        # z = 1.5
         new_pos = np.array([[x, y, z]])
         self.init_pos_numpy = new_pos
         # self.init_quat = self.update_init_orientation_drone(new_pos, self.window_position)
@@ -934,7 +943,6 @@ class NN_POLICY_PLANNER(object):
         warp_q = torch.Tensor(warp_q).unsqueeze(0)
         warp_qd = torch.Tensor(self.warp_qd).unsqueeze(0)
         self.action = self.policy.evaluate_(warp_pos, warp_q, warp_qd)
-        # print(self.action)
 
 
 
@@ -942,7 +950,7 @@ class NN_POLICY_PLANNER(object):
 if __name__=="__main__":
     signal(SIGINT, handler)
     print("STARTING NODE")
-    policy_file = "20260715-150205" #Potential 20260728-135438 #20260723-180713#'20260705-155924' #"20260702-145013" To test fly real drone #"20260629-091116" This is another good 60 degrees demo #"20260626-204830" #"20260618-005845" very bad#"20260618-005738"also pretty good #"20260618-005702" a bit vibratory #"20260618-005626" bad #"20260617-201947" bad #"20260617-201914 best tracking reasonable in flight" #"20260617-201703 worse tracking" #"20260617-172533"# This likely to work #"20260616-174028" to test in real flight #"20260616-150838" #"20260608-230203" bad 60 degrees. To compare with 20260608-170520 #"20260608-233141" good 30 degrees for gazebo trained with thrust DR also #"20260608-170520 good demo for 60 degrees gazebo. max body rates of 4.0 "#"20260604-222931" #"20260604-201453 good 30 degrees demo" #"20260604-095607" #"20260603-121142" #"20260603-121213" another 60 degrees gazebo demo. To test in real #"20260529-113935 60 degrees gazebo demo" #"20260521-090040" #"20260518-213037 30 degrees demo" #"20260519-121802" #"20260513-185143" #"20260513-185035" #"20260402-204842 This is high fidelity forward model." #"20260306-154450 - with gru. more reasonable" #"20260304-161010" #"20260304-160736 - this reasonable"#"20260225-165700" #0.02 good enough for real drone 20250527-122703   0.05-to test 20250624-181715
+    policy_file = "20260716-103753" #"20260702-145013" To test fly real drone #"20260629-091116" This is another good 60 degrees demo #"20260626-204830" #"20260618-005845" very bad#"20260618-005738"also pretty good #"20260618-005702" a bit vibratory #"20260618-005626" bad #"20260617-201947" bad #"20260617-201914 best tracking reasonable in flight" #"20260617-201703 worse tracking" #"20260617-172533"# This likely to work #"20260616-174028" to test in real flight #"20260616-150838" #"20260608-230203" bad 60 degrees. To compare with 20260608-170520 #"20260608-233141" good 30 degrees for gazebo trained with thrust DR also #"20260608-170520 good demo for 60 degrees gazebo. max body rates of 4.0 "#"20260604-222931" #"20260604-201453 good 30 degrees demo" #"20260604-095607" #"20260603-121142" #"20260603-121213" another 60 degrees gazebo demo. To test in real #"20260529-113935 60 degrees gazebo demo" #"20260521-090040" #"20260518-213037 30 degrees demo" #"20260519-121802" #"20260513-185143" #"20260513-185035" #"20260402-204842 This is high fidelity forward model." #"20260306-154450 - with gru. more reasonable" #"20260304-161010" #"20260304-160736 - this reasonable"#"20260225-165700" #0.02 good enough for real drone 20250527-122703   0.05-to test 20250624-181715
     print(f"POLICY PATH IS {policy_file}") 
     recovery_mode = 2 #1 for position, 2 for velocity, 3 for attitude
 
@@ -970,7 +978,7 @@ if __name__=="__main__":
 
     position_control = True #config_params["position_control"]
     delta_time = 0.02 #float(config_params["delta_time"])
-    max_angular_rate = float(config_params["max_angular_rates"])
+    max_angular_rate = 8.0 #float(config_params["max_angular_rates"])
 
     if "use_gru" in config_params:
         use_gru = config_params["use_gru"]
@@ -1030,7 +1038,7 @@ if __name__=="__main__":
     include_gate_ori = config_params.get("include_gate_orientation_in_obs", False)
     use_rotmat_obs = config_params.get("use_rotation_matrix_obs", False)
     use_so3_diff_obs = config_params.get("use_so3_diff_obs", False)
-    window_degrees = 60.0 #for now hardcoding this. can be changed later to config param
+    window_degrees = 0.0 #for now hardcoding this. can be changed later to config param
 
     nn_policy = TEST_RENDER(full_policy_path, position_control, warp_frame, use_gru=use_gru, include_actions=gru_include_prev_action, include_gate_ori=include_gate_ori, use_rotmat_obs=use_rotmat_obs, use_so3_diff_obs=use_so3_diff_obs)
 

@@ -1,0 +1,41 @@
+# Trajectory Server parameters
+
+# takeoff_height: take off height in meters
+takeoff_height: 1.0
+# Minimum height at which the quadrotor will HOVER
+minimum_hover_height: 0.5
+
+#Mission command mode
+mission_command_mode: 1   #1 is pva and 2 is thrust and angular rates
+
+# Safety bounding box, any command outside this bounding box will immediately
+# switch the drone state to HOVER
+enable_safety_box: false
+safety_box/min_x: -5.75
+safety_box/min_y: -5.75
+safety_box/min_z: -0.5
+safety_box/max_x: 5.75
+safety_box/max_y: 5.75
+safety_box/max_z: 2.6
+
+# pub_cmd_freq: Frequency at which commands are published
+pub_cmd_freq: 100.0
+# state_machine_tick_freq: Frequency at state machine is being refreshed
+state_machine_tick_freq: 50.0
+
+#warp_jax: Choose between using warp frame of jax frame. 0.0 for warp and 1.0 for jax [1,0,1] for jax and [1,1,0] for warp with y upwards
+to_transform_odom: 1.0 #If to transform odom = 0.0, means that don't do any transformation (If train using train_velpos_simple_replicate_nwu.py, then the input to policy is body frame odom. Output also body frame odom in nwu frame). If =1.0, means to transform
+to_transform_policy: 1.0 #If to_transform_policy = 0.0, means don't transform (trained using train_velpos_simple_replicate_nwu.py). The policy is already in px4 body frame. If =1.0, means need to transform. The policy is in some global frame and needs to transformed to px4 body frame
+warp_jax: 0.0  #If to_transform_odom =1.0, then if warp_jax = 0.0, means to transform to warp global frame (If train using train_velpos_simple_replicate.py then it means it takes in warp global frame with gravity in -y axis and also output in the same global frame.) If warp_jax = 1.0, then means transform to jax global frame (also nwu). But for jax, the output policy is already in the px4 nwu body frame. So no need transform output policy if =1.0
+
+
+
+#policy params
+position_control: True
+
+##### Training params:
+training:
+  learning_rate: 0.001
+  epochs: 8000
+  delta_time: 0.05 #20Hz for slow speed
+  sim_steps: 20  #Train only for 1seconds

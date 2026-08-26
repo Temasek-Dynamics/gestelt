@@ -12,7 +12,11 @@ import yaml
 from std_msgs.msg import Int8
 from gestelt_msgs.msg import CommanderState, ExecTrajectory
 from geometry_msgs.msg import PoseStamped
-from nav_msgs.msg import Odometry
+from nav_msgs.msg import Odometry, Path
+from visualization_msgs.msg import Marker, MarkerArray
+from sensor_msgs.msg import PointCloud2
+import sensor_msgs.point_cloud2 as pc2
+import std_msgs.msg
 from enum import Enum
 import roslib.packages
 from std_msgs.msg import Bool
@@ -26,7 +30,8 @@ import copy
 # from geometry_msgs.msg import Vector3Stamped
 # from geometry_msgs import Posestamped
 from plotting_scripts import *
-from modules.policy_simple_nwu_global_gate_traversal import *
+from modules.policy_simple_nwu_global import *
+from modules.scene_manager import *
 import pickle
 from dataclasses import asdict, is_dataclass
 
@@ -71,80 +76,223 @@ def quat_to_rotmat_flat(q_xyzw, eps=1e-8):
     return R
 
 
-def quat_rel_xyzw(q_a, q_b, eps=1e-8):
-    """SO(3) difference: q_a^{-1} ⊗ q_b, both (N,4) in (x,y,z,w) format.
+# def create_obs_vec(pos, obs_dict):
+#     """
+#     Create obstacle vector by stacking relative positions (x-y only) and radii for all obstacles.
+    
+#     Args:
+#         pos: Current drone positions [batch_size, 3]
+#         obs_dict: List of obstacle dictionaries with 'position' and 'radius'
+    
+#     Returns:
+#         Tensor of shape [batch_size, num_obstacles * 3] containing stacked
+#         relative positions (2D x-y) and radius (1D) for each obstacle
+#     """
+#     if not obs_dict:
+#         # Return zero vector if no obstacles
+#         return torch.zeros((pos.shape[0], 0), device=pos.device, dtype=pos.dtype)
+    
+#     batch_size = pos.shape[0]
+#     obs_vec_list = []
+    
+#     for obs in obs_dict:
+#         # Convert obstacle position to tensor
+#         obs_pos = torch.as_tensor(obs["position"], device=pos.device, dtype=pos.dtype)
+#         obs_radius = torch.tensor(obs["radius"], device=pos.device, dtype=pos.dtype)
+        
+#         # Handle different shapes of obs_pos (could be [3] or [1, 3])
+#         if obs_pos.dim() == 2:
+#             obs_pos = obs_pos.squeeze(0)  # [1, 3] -> [3]
+        
+#         # Compute relative position (x-y only): obstacle_pos - drone_pos [batch_size, 2]
+#         rel_pos = obs_pos[:2] - pos[:, :2]
+        
+#         # Expand radius for batch dimension [batch_size, 1]
+#         obs_radius_batch = obs_radius.unsqueeze(0).expand(batch_size, 1)
+        
+#         # Stack relative position (2D) and radius [batch_size, 3]
+#         obs_contribution = torch.cat([rel_pos, obs_radius_batch], dim=1)
+#         obs_vec_list.append(obs_contribution)
+    
+#     # Concatenate all obstacles along feature dimension [batch_size, num_obstacles * 3]
+#     obs_vec = torch.cat(obs_vec_list, dim=1)
+    
+#     return obs_vec
 
-    Returns the rotation that takes q_a's frame to q_b's frame.
-    Identity quaternion (0,0,0,1) when q_a == q_b (perfectly aligned).
-    Used to give the policy a frame-invariant alignment-error signal rather
-    than absolute gate orientation.
+
+def create_obs_vec(pos, obs_dict):
     """
-    q_a = q_a / q_a.norm(dim=-1, keepdim=True).clamp_min(eps)
-    q_b = q_b / q_b.norm(dim=-1, keepdim=True).clamp_min(eps)
-    ax, ay, az, aw = q_a.unbind(-1)
-    bx, by, bz, bw = q_b.unbind(-1)
-    # conjugate of q_a is (-ax, -ay, -az, aw); multiply by q_b
-    rx = aw * bx - bw * ax - ay * bz + az * by
-    ry = aw * by - bw * ay - az * bx + ax * bz
-    rz = aw * bz - bw * az - ax * by + ay * bx
-    rw = aw * bw + ax * bx + ay * by + az * bz
-    return torch.stack([rx, ry, rz, rw], dim=-1)
+    Create obstacle vector by stacking nearest-to-farthest relative obstacle
+    positions (x-y only) and radii for all obstacles.
+    
+    Args:
+        pos: Current drone positions [batch_size, 3]
+        obs_dict: List of obstacle dictionaries with 'position' and 'radius'
+    
+    Returns:
+        Tensor of shape [batch_size, num_obstacles * 3] containing stacked
+        relative positions (2D x-y) and radius (1D) for each obstacle
+    """
+    if not obs_dict:
+        # Return zero vector if no obstacles
+        return torch.zeros((pos.shape[0], 0), device=pos.device, dtype=pos.dtype)
+    
+    batch_size = pos.shape[0]
+    obs_positions = []
+    obs_radii = []
+    for obs in obs_dict:
+        obs_pos = torch.as_tensor(obs["position"], device=pos.device, dtype=pos.dtype)
+        if obs_pos.dim() == 2:
+            obs_pos = obs_pos.reshape(-1, 3)[0]
+        obs_positions.append(obs_pos[:3])
+        obs_radii.append(torch.as_tensor(obs["radius"], device=pos.device, dtype=pos.dtype))
+
+    obs_positions = torch.stack(obs_positions, dim=0)  # [num_obstacles, 3]
+    obs_radii = torch.stack(obs_radii, dim=0)  # [num_obstacles]
+
+    # Compute relative XY for every env/obstacle pair, then sort per env by
+    # center distance so each MLP slot has stable nearest-to-farthest meaning.
+    rel_xy = obs_positions[:, :2].unsqueeze(0) - pos[:, :2].unsqueeze(1)
+    sort_indices = torch.argsort(torch.norm(rel_xy, dim=-1), dim=1)
+    gather_indices = sort_indices.unsqueeze(-1).expand(batch_size, -1, 2)
+    sorted_rel_xy = torch.gather(rel_xy, dim=1, index=gather_indices)
+    sorted_radii = obs_radii[sort_indices].unsqueeze(-1)
+
+    obs_vec = torch.cat([sorted_rel_xy, sorted_radii], dim=-1).reshape(batch_size, -1)
+    
+    return obs_vec
 
 
 class TEST_RENDER(object):
 
-    def __init__(self, policy_path, pc, warp_frame, use_gru=False, include_actions=False, include_gate_ori=False, use_rotmat_obs=False, use_so3_diff_obs=False):
+    def __init__(self, policy_path, pc, warp_frame, config_params):
         self.pc = pc
-        self.use_gru = use_gru
-        self.include_actions = include_actions
-        self.include_gate_ori = include_gate_ori
-        self.use_rotmat_obs = use_rotmat_obs
-        self.use_so3_diff_obs = use_so3_diff_obs
+        self.config_params = config_params
+        self.max_speed = config_params["max_speed"]
+        
         self.warp_frame = warp_frame
-        self.height_offset = 1.0
         self.h = None
         self.start_msg = False
 
-        gru_action_extra = 4 if (use_gru and include_actions) else 0
+
         ## Initializing task parameters
         self.init_a = np.zeros((1,4))
         self.init_a[0,0] = 0.30
-        target_vel = np.zeros((1, 3))
+
         self.previous_action = torch.tensor(self.init_a, dtype=torch.float32)
-        print(gru_action_extra)
 
         ## Loading Policy
-        att_dim = 9 if use_rotmat_obs else 4
-        input_dims = 12 + att_dim + (4 if include_gate_ori else 0)
-        print(f"Policy input_dims: {input_dims} (use_rotmat_obs={use_rotmat_obs}, include_gate_ori={include_gate_ori})")
+        # att_dim = 9 if use_rotmat_obs else 4
+        # input_dims = 12 + att_dim + (4 if include_gate_ori else 0)
+        input_dims = 22
+        print(f"Policy input_dims: {input_dims}")# (use_rotmat_obs={use_rotmat_obs}, include_gate_ori={include_gate_ori})")
         if self.pc == True:
-            if use_gru == False:
-                self.policy = TrackVelGate(input_dim=input_dims)
-            else:
-                print(f"LOADING POLICY WITH GRU and {gru_action_extra} extra actions")
-                self.policy = TrackVelGRU(input_dim=input_dims + gru_action_extra) if use_gru else TrackVelGate(input_dim=input_dims)
+            raise ValueError("self.pc cannot be True")
         else:
-            self.policy = TrackVelGate(input_dim = 10)
+            print("LOADING VELOCITY TRACKING POLICY WITHOUT PC")
+            self.policy = TrackVel(input_dim = input_dims)
 
         print(self.policy)
         self.policy.load_state_dict(torch.load(policy_path, map_location='cpu'))
         self.policy.eval()
 
+        ### Loading scene (obstacles are built once here and stay fixed afterwards)
+        device = "cpu"
+        self.env_copy = 1  # test time: single environment
+        room_size = config_params["room_size"]
+        self.env_manager = SceneManager(batch_size=self.env_copy, device=device)
+        env_manager = self.env_manager
+        self.centers = None  # obstacle centers (poisson room only), reused when resampling
+        self.radii = None    # obstacle radii (poisson room only), reused when resampling
+        obstacles_cfg = config_params.get("obstacles", None)
+        if obstacles_cfg:
+            # Config records explicit obstacle locations/sizes -> reuse the exact
+            # scene the policy was trained/evaluated on instead of resampling one.
+            print(f"Building scene from {len(obstacles_cfg)} explicit obstacles in config")
+            centers, radii = env_manager.setup_room_from_obstacles(room_size=room_size,
+                                    obstacles=obstacles_cfg, obs_dim=config_params["obs_dim"])
+            self.centers = centers
+            self.radii = radii  # already the sphere-approx radius (no extra factor)
+        elif config_params["poisson_room"] == False:
+            env_manager.setup_room(room_size=room_size, num_objects=config_params["num_obstacles"], rand_obs=config_params["to_randomize_obs_location"],
+                                    obs_size=config_params["obs_size"], obs_type=config_params["obs_type"], obs_dim=config_params["obs_dim"])
+        else:
+            centers, radii = env_manager.setup_poisson_room(room_size=room_size, num_objects=config_params["num_obstacles"], rand_obs=config_params["to_randomize_obs_location"],
+                                    obs_size=config_params["obs_size"], obs_dim=config_params["obs_dim"], min_obs_gap=config_params["min_obs_gap"])
+            factor = np.sqrt(2)
+            self.centers = centers
+            self.radii = radii * factor
+
+        ## Sample the initial and target positions from the scene
+        self.resample_init_target()
         
 
-        
+    def resample_init_target(self):
+        """Sample a fresh (init, target) position pair from the existing scene.
 
+        The room and obstacles built in __init__ are left unchanged; only the
+        start and goal positions are redrawn. Updates self.init_pos and
+        self.t_pos, and returns both as numpy arrays of shape [1, 3].
+        """
+        env_manager = self.env_manager
+        room_size = self.config_params["room_size"]
 
-        if self.warp_frame == 0.0:
-            target_pos = np.array([0, 1,0.0]).reshape(1,3)
-        elif self.warp_frame == 1.0:
-            target_pos = np.array([0, 0,1.0]).reshape(1,3)
+        # --- Fixed initial and target locations ---
+        # When True, always use the hardcoded init/target below instead of
+        # sampling a fresh pair from the scene each episode. Positions are in the
+        # sim/room frame [x, y, z]; edit the two arrays to taste.
+        use_fixed_init_target = True
+        if use_fixed_init_target:
+            init_pos = np.array([[0.0, 8.0, 2.0]], dtype=np.float32)
+            target_pos = np.array([[6.0, 5.0, 1.0]], dtype=np.float32)
+            # init_pos = np.array([[0.0, 0.0, 2.0]], dtype=np.float32)
+            # target_pos = np.array([[3.0, 0.0, 1.0]], dtype=np.float32)
+            self.init_pos = torch.tensor(init_pos, dtype=torch.float32)
+            self.t_pos = torch.tensor(target_pos, dtype=torch.float32)
+            return init_pos, target_pos
 
-        ## Converting numpy to tensor
-        self.t_vel = torch.tensor(target_vel, dtype=torch.float32)
+        # self.centers is populated by both the poisson-room and explicit-obstacle
+        # paths; only the plain setup_room path leaves it None.
+        if self.centers is None:
+            init_pos = env_manager.sample_safe_points(n_points=self.env_copy)
+            target_pos = env_manager.sample_safe_points(n_points=self.env_copy)
+        else:
+            init_bounds_2D = [0, room_size/4, 0, room_size]  #(x_min, x_max, y_min, y_max) region to sample initial point
+            init_pos = env_manager.sample_safe_points_in_region(room_region=init_bounds_2D, obstacles_center=self.centers,
+                                                                obstacles_radius=self.radii, d_safe=0.0, n_points=self.env_copy)
+            target_bounds_2D = [(3*room_size)/4, room_size, 0, room_size]
+            target_pos = env_manager.sample_safe_points_in_region(room_region=target_bounds_2D, obstacles_center=self.centers,
+                                                                obstacles_radius=self.radii, d_safe=0.0, n_points=self.env_copy)
+
+        # Never let the drone height fall below 0.5 m
+        init_pos[:, 2] = np.maximum(init_pos[:, 2], 0.5)
+
+        # Push the target further out along the init->target direction so the
+        # task spans more distance than the raw sampled pair, then clamp back
+        # into the room bounds (obstacle clearance is not re-checked).
+        push_factor = self.config_params.get("target_push_factor", 1.0)
+        if push_factor and push_factor != 1.0:
+            direction = target_pos - init_pos
+            direction[:, 0] *= push_factor
+            direction[:, 1] *= push_factor
+            target_pos = init_pos + direction
+
+            if self.config_params["poisson_room"] == False:
+                x_min, x_max = -room_size, room_size
+                y_min, y_max = -room_size, room_size
+                z_min, z_max = 0.0, 3.0
+            else:
+                x_min, x_max = 0.0, room_size
+                y_min, y_max = 0.0, room_size
+                z_min, z_max = 1.0, 2.0
+
+            # target_pos[:, 0] = np.clip(target_pos[:, 0], x_min, x_max)
+            # target_pos[:, 1] = np.clip(target_pos[:, 1], y_min, y_max)
+            # target_pos[:, 2] = np.clip(target_pos[:, 2], z_min, z_max)
+
+        self.init_pos = torch.tensor(init_pos, dtype=torch.float32)
         self.t_pos = torch.tensor(target_pos, dtype=torch.float32)
-        self.init_pos = torch.tensor(target_pos, dtype=torch.float32)
-        
+        return init_pos, target_pos
 
     def reset_h(self, reset_msg):
         if reset_msg == True:
@@ -159,19 +307,13 @@ class TEST_RENDER(object):
         self.window_velocity = torch.tensor(window_velocity, dtype=torch.float32)
         self.window_quaternion = torch.tensor(window_orientation, dtype=torch.float32)
     
-    def update_init_pos_drone(self, init_pos):
-        init_pos = np.zeros((1,3))
-        init_pos[:,0] = -2
-        init_pos[:,1] = 0
-        init_pos[:,2] = 2.0
-        self.init_pos_numpy = init_pos
-        self.init_pos_t = torch.tensor(self.init_pos_numpy, dtype=torch.float32)
     
 
     def evaluate_(self, pos, att, qd):
         start_time = time.time()
         ## Concatenating observations
         if self.pc == True:
+            raise ValueError("self.pc cannot be True")
             # diff_pos = self.t_pos - pos
             # x = torch.cat((self.init_pos_t, pos, att, qd, self.window_velocity, self.window_quaternion), dim=1)
             diff_pos = self.window_position - pos
@@ -179,32 +321,27 @@ class TEST_RENDER(object):
             # pos[:,2] = pos[:,2] - self.height_offset
             att_in = quat_to_rotmat_flat(att) if self.use_rotmat_obs else att
             base_obs = (diff_pos, pos, att_in, qd)
-            # Gate orientation term: either the SO(3) difference q_drone^{-1} ⊗ q_gate
-            # (frame-invariant alignment error), the absolute gate quaternion, or nothing.
-            _gate_obs = (quat_rel_xyzw(att, self.window_quaternion),) \
-                        if (self.include_gate_ori and self.use_so3_diff_obs) \
-                        else ((self.window_quaternion,) if self.include_gate_ori else ())
-            x = torch.cat(base_obs + _gate_obs, dim=1)
+            x = torch.cat(base_obs
+                          + ((self.window_quaternion,) if self.include_gate_ori else ()),
+                          dim=1)
             if self.include_actions:
                 x = torch.cat([x, self.previous_action], dim=1)
 
         else:
             vel = qd[:,3:]
             angvel = qd[:,:3]
-            diff_vel = self.t_vel - vel
-            x = torch.cat((att, angvel, diff_vel), dim=1)
+            diff_velocity_norm = torch.norm(self.t_pos - pos, dim=1, keepdim=True)
+            # print(f"The target position is {self.t_pos}")
+            diff_velocity_vector = (self.t_pos - pos) / (diff_velocity_norm + 1e-8)
+            diff_velocity_vector = diff_velocity_vector * self.max_speed
+            # print(f"The diff_velocity_vector is {diff_velocity_vector}")
+            diff_vel = diff_velocity_vector - vel
+            obs_vec = create_obs_vec(pos, self.env_manager.objects)
+            x = torch.cat((att, angvel, diff_vel, obs_vec), dim=1)
         
         ## Evaluating policy
-        if self.use_gru == False:
-            a = self.policy(x)
-        else:
-            if self.start_msg == True:
-                # print("true")
-                a, self.h = self.policy(x, self.h)
-                self.prev_action = a
-            else:
-                # print("false")
-                a, _ = self.policy(x, self.h)
+
+        a = self.policy(x)
         
         self.previous_action = a
         # print(a)
@@ -256,8 +393,7 @@ class NN_POLICY_PLANNER(object):
 
     def __init__(self, mission_command_mode, policy, inference_timestep, max_angular_rates, warp_jax,
                  to_transform_odom, to_transform_policy, recovery_mode,
-                 window_position, window_velocity, window_degrees,
-                 config_param=None):
+                 config_param=None, scene_offset=(0.0, 0.0, 0.0)):
 
         self.recovery_mode = recovery_mode
         self.individual_recording = False
@@ -270,17 +406,16 @@ class NN_POLICY_PLANNER(object):
         self.policy = policy
         rospy.sleep(1)
 
+        # Sim<->world (Vicon) frame offset. The drone flies physically in the
+        # world/Vicon frame while the policy "imagines" the sim (room) frame:
+        #   pos_sim   = pos_world + scene_offset
+        #   pos_world = pos_sim   - scene_offset
+        # Zero vector => no transform (drone and policy share one frame).
+        self.scene_offset = np.asarray(scene_offset, dtype=float).reshape(1, 3)
+        self.scene_offset_t = torch.tensor(self.scene_offset, dtype=torch.float32)
+        print(f"Planner scene_offset (world -> sim): {self.scene_offset[0]}")
+
         ##Define initial window location
-        self.window_position = np.asarray(window_position, dtype=float).reshape(1, 3)
-        self.window_velocity = np.asarray(window_velocity, dtype=float).reshape(1, 3)
-        self.window_degrees_nominal = np.asarray(window_degrees, dtype=float).reshape(1)
-        self.window_orientation_range = float(config_param.get("window_orientation_range", 0.0)) if config_param else 0.0
-        self.window_degrees = self.window_degrees_nominal.copy()
-        self.window_quaternion = self.convert_window_degrees_to_quaternion_vector(self.window_degrees)
-        if self.window_orientation_range > 0:
-            print(f"Window orientation will be randomized ±{self.window_orientation_range} deg around {self.window_degrees_nominal[0]} deg per episode")
-        #Update policy with the window information
-        self.policy.update_window_info(self.window_position, self.window_velocity, self.window_quaternion)
 
         ## Saving list for plotting
         self.position_list = []
@@ -288,15 +423,12 @@ class NN_POLICY_PLANNER(object):
         self.attitude_list = []
 
 
-        ## End pose: where the drone flies to after passing the gate
-        self.end_pos_numpy = np.array([[3.0, 0.0, 2.0]])
-
-        ## Define initial starting location of the drone
-        init_pos = np.zeros((1,3))
-        init_pos[:,0] = -2
-        init_pos[:,1] = 0
-        init_pos[:,2] = 2.0
+        ## Define initial starting location of the drone (taken from the policy's sampled init position)
+        ## Policy positions are in sim frame -> convert to world frame for commanding/checking.
+        init_pos = self.policy.init_pos.detach().cpu().numpy() - self.scene_offset
         self.init_pos_numpy = init_pos
+        ## Target location (sampled goal), used for the episode-end proximity check
+        self.target_pos_numpy = self.policy.t_pos.detach().cpu().numpy() - self.scene_offset
         # self.init_quat = self.update_init_orientation_drone(self.init_pos_numpy, self.window_position)
         self.init_quat = np.array([[0.0, 0.0, 0.0, 1.0]])
         self.curr_init_pose = PoseStamped()
@@ -308,7 +440,7 @@ class NN_POLICY_PLANNER(object):
         self.curr_init_pose.pose.orientation.z = copy.deepcopy(self.init_quat[:,2])
         self.curr_init_pose.pose.orientation.w = copy.deepcopy(self.init_quat[:,3])
         #Update policy with initial starting location of the drone
-        self.policy.update_init_pos_drone(self.init_pos_numpy)
+
 
         self.max_angular_rates = max_angular_rates
         self.last_pos_time = None
@@ -319,21 +451,12 @@ class NN_POLICY_PLANNER(object):
         self.to_transform_policy = to_transform_policy
         
 
-        # Optionally use /drone0/mavros/vision_pose/pose (e.g. mocap) for gate metrics, if it's actually publishing
-        try:
-            rospy.wait_for_message("/drone0/mavros/vision_pose/pose", PoseStamped, timeout=2.0)
-            self.has_vision_pose = True
-            print("Detected active /drone0/mavros/vision_pose/pose - using it for gate metrics")
-        except rospy.ROSException:
-            self.has_vision_pose = False
-            print("/drone0/mavros/vision_pose/pose has no incoming messages - using local_position/pose for gate metrics")
-
-        self.vision_pos = np.zeros(3)
-        self.vision_quat = np.array([0.0, 0.0, 0.0, 1.0])
-        self.vision_position_list = []
-        self.vision_attitude_list = []
-        if self.has_vision_pose:
-            self.vision_pose_sub_ = rospy.Subscriber("/drone0/mavros/vision_pose/pose", PoseStamped, self.visionPoseCb, queue_size=10)
+        self.obstacle_pub_ = rospy.Publisher('/policy_viz/obstacles', PointCloud2, queue_size=1, latch=True)
+        self.start_target_pub_ = rospy.Publisher('/policy_viz/start_target', MarkerArray, queue_size=1, latch=True)
+        self.trajectory_pub_ = rospy.Publisher('/policy_viz/trajectory', Path, queue_size=1)
+        self.viz_frame_id = "map"
+        self.trajectory_path_msg = Path()
+        self.trajectory_path_msg.header.frame_id = self.viz_frame_id
 
         self.swarm_mode_pub_ = rospy.Publisher('/traj_server/swarm_command', Int8, queue_size=5)
         self.commander_state_sub_ = rospy.Subscriber("/drone0/traj_server/state",CommanderState, self.commStateCb, queue_size = 10)
@@ -410,7 +533,9 @@ class NN_POLICY_PLANNER(object):
         self.action = np.zeros((1,4))
         self.recovery_vel_start_time = None
         time.sleep(1)
-        self.policy_evaluation_timer = rospy.Timer(rospy.Duration(0.02), self.nn_evaluation)
+        self.publish_obstacle_cloud()
+        self.publish_start_target_markers()
+        self.policy_evaluation_timer = rospy.Timer(rospy.Duration(0.01), self.nn_evaluation)
         
     def initPoseCB(self,msg):
         self.init_pos_numpy[:,0] = msg.pose.position.x 
@@ -496,12 +621,9 @@ class NN_POLICY_PLANNER(object):
 
         # self._pose_odom_pub_callback()
 
-    def visionPoseCb(self, msg):
-        self.vision_pos = np.array([msg.pose.position.x, msg.pose.position.y, msg.pose.position.z])
-        self.vision_quat = np.array([msg.pose.orientation.x, msg.pose.orientation.y, msg.pose.orientation.z, msg.pose.orientation.w])
-
     def odomCb(self, msg):
         self.drone_qd = np.array([msg.twist.twist.angular.x, msg.twist.twist.angular.y, msg.twist.twist.angular.z])
+        print(self.to_transform_odom)
         if self.to_transform_odom == 0.0:
             self.warp_qd = np.array([msg.twist.twist.angular.x, msg.twist.twist.angular.y, msg.twist.twist.angular.z, msg.twist.twist.linear.x, msg.twist.twist.linear.y, msg.twist.twist.linear.z ])
         if self.last_odom_time is not None:
@@ -631,14 +753,14 @@ class NN_POLICY_PLANNER(object):
             warp_q_t = torch.Tensor(warp_q).unsqueeze(0)
             now_time = rospy.Time.now().to_sec()
             with self.lock:
-                if warp_pos[0, 0] < self.window_position[0, 0] - 0.05:
-                # if warp_pos[0, 2] < 5.0:
-                    self.data_store[0]["time_stamp"].append(now_time)
-                    self.data_store[0]["position"].append(warp_pos.squeeze(0).detach().cpu().numpy())
-                    self.data_store[0]["velocity"].append(self.nwu_odom[3:])
-                    self.data_store[0]["rotation"].append(warp_q_t.squeeze(0).detach().cpu().numpy())
-                    self.data_store[0]["omega"].append(self.nwu_odom[:3])
-                    self.data_store[0]["action"].append(nn_action.squeeze(0).detach().cpu().numpy())
+                # Record the whole trajectory while individual_recording is active
+                # (bounded by settle-start and the target-proximity episode end).
+                self.data_store[0]["time_stamp"].append(now_time)
+                self.data_store[0]["position"].append(warp_pos.squeeze(0).detach().cpu().numpy())
+                self.data_store[0]["velocity"].append(self.nwu_odom[3:])
+                self.data_store[0]["rotation"].append(warp_q_t.squeeze(0).detach().cpu().numpy())
+                self.data_store[0]["omega"].append(self.nwu_odom[:3])
+                self.data_store[0]["action"].append(nn_action.squeeze(0).detach().cpu().numpy())
                 self.record_counter += self.inference_timestep
 
 
@@ -664,8 +786,8 @@ class NN_POLICY_PLANNER(object):
                     dist = np.linalg.norm(self.drone_pos - self.init_pos_numpy[0])
                     if dist < 0.1:
                         self.awaiting_restart = False
-                        print("Arrived at init. Settling for 3 s before starting NN.")
-                        rospy.Timer(rospy.Duration(5.0), self._settle_and_start_nn_cb, oneshot=True)
+                        print("Arrived at init. Settling for 2 s before starting NN.")
+                        rospy.Timer(rospy.Duration(2.0), self._settle_and_start_nn_cb, oneshot=True)
                 if self.warp_mission_command_mode == 2:
                     #Check if ready to switch
                     if self.checkNNReadiness():
@@ -690,12 +812,11 @@ class NN_POLICY_PLANNER(object):
                     self.mission_command_mode = 1
                     ## Check if it has passed through the gate
                 
-                if (self.drone_pos[0] - self.window_position[:,0]) > 0.1:
-                # if self.drone_pos[2] > 5.0:
-                    #Means drone has passed gate. Switch back to position control.
-                    print("in here for switching back")
+                if np.linalg.norm(self.drone_pos - self.target_pos_numpy[0]) < 1.0:
+                    #Means drone has reached the target (within 0.3 m). Switch back to position control.
+                    print("Reached target (within 0.3 m). Switching back to position control.")
                     self.individual_recording = False
-                    self.init_pos_numpy = self.end_pos_numpy.copy()
+                    self.init_pos_numpy = self.target_pos_numpy.copy()
                     self.init_quat = np.array([[0.0, 0.0, 0.0, 1.0]])
 
                     if self.recovery_mode == 1:
@@ -724,9 +845,7 @@ class NN_POLICY_PLANNER(object):
                     self.position_list.append(self.drone_pos)
                     self.velocity_list.append(self.warp_qd)
                     self.attitude_list.append(self.drone_quat)
-                    if self.has_vision_pose:
-                        self.vision_position_list.append(self.vision_pos)
-                        self.vision_attitude_list.append(self.vision_quat)
+                    self.publish_trajectory_point()
 
             elif self.mission_command_mode == 3:
                 self.publishVEL()
@@ -739,7 +858,6 @@ class NN_POLICY_PLANNER(object):
                         for i in range(10):
                             print(f"RECOVERED (speed={speed:.2f} m/s): Switching back to POSITION CONTROL")
                             pva_traj_msg_update = ExecTrajectory()
-                            print(self.init_pos_numpy)
                             pva_traj_msg_update.transform.translation.x = self.init_pos_numpy[:,0]
                             pva_traj_msg_update.transform.translation.y = self.init_pos_numpy[:,1]
                             pva_traj_msg_update.transform.translation.z = self.init_pos_numpy[:,2]
@@ -753,28 +871,25 @@ class NN_POLICY_PLANNER(object):
                         self.publishMissionCmdMode(1)
                         self.warp_mission_command_mode = 1
                         self.recovery_vel_start_time = None
-                        if self.has_vision_pose:
-                            self.position_array = np.array(self.vision_position_list)
-                            self.attitude_array = np.array(self.vision_attitude_list)
-                        else:
-                            self.position_array = np.array(self.position_list)
-                            self.attitude_array = np.array(self.attitude_list)
-                        self.velocity_array = np.array(self.velocity_list)
-                        gate_center = self.window_position[0]       # (3,) [x, y, z]
-                        window_quat = self.window_quaternion[0]     # (4,) [x, y, z, w]
-                        target_vel  = self.window_velocity[0]       # (3,) desired velocity at crossing
-                        t_star, pos_at_gate, pos_err, vel_at_gate, vel_err, euler_at_gate, x_dot, z_dot = \
-                            compute_gate_metrics(self.position_array, self.velocity_array,
-                                                 self.attitude_array, window_quat,
-                                                 gate_center=gate_center, target_vel=target_vel)
-                        plot_spatial_plots(self.position_array[:,None,:])
-                        gate_world = gate_geometry(self.window_degrees[0], gate_center=gate_center)
-                        plot_gate_travesal(self.position_array[:,None,:], self.attitude_array[:,None,:],
-                                           gate_world, t_star, pos_at_gate, pos_err,
-                                           vel_at_gate, vel_err, euler_at_gate, x_dot, z_dot)
-                        plot_metrics_timeseries(self.position_array, self.velocity_array, self.attitude_array,
-                                                window_quat, t_star, pos_at_gate, pos_err,
-                                                vel_at_gate, vel_err, euler_at_gate, x_dot, z_dot)
+                        # --- Gate-specific metrics/plots disabled for the velocity task ---
+                        # self.position_array = np.array(self.position_list)
+                        # self.velocity_array = np.array(self.velocity_list)
+                        # self.attitude_array = np.array(self.attitude_list)
+                        # gate_center = self.window_position[0]       # (3,) [x, y, z]
+                        # window_quat = self.window_quaternion[0]     # (4,) [x, y, z, w]
+                        # target_vel  = self.window_velocity[0]       # (3,) desired velocity at crossing
+                        # t_star, pos_at_gate, pos_err, vel_at_gate, vel_err, euler_at_gate, x_dot, z_dot = \
+                        #     compute_gate_metrics(self.position_array, self.velocity_array,
+                        #                          self.attitude_array, window_quat,
+                        #                          gate_center=gate_center, target_vel=target_vel)
+                        # plot_spatial_plots(self.position_array[:,None,:])
+                        # gate_world = gate_geometry(self.window_degrees[0], gate_center=gate_center)
+                        # plot_gate_travesal(self.position_array[:,None,:], self.attitude_array[:,None,:],
+                        #                    gate_world, t_star, pos_at_gate, pos_err,
+                        #                    vel_at_gate, vel_err, euler_at_gate, x_dot, z_dot)
+                        # plot_metrics_timeseries(self.position_array, self.velocity_array, self.attitude_array,
+                        #                         window_quat, t_star, pos_at_gate, pos_err,
+                        #                         vel_at_gate, vel_err, euler_at_gate, x_dot, z_dot)
                         if self.record_now:
                             rospy.Timer(rospy.Duration(0.5), self._append_separator_and_restart_cb, oneshot=True)
                         elif self.pending_save:
@@ -782,9 +897,6 @@ class NN_POLICY_PLANNER(object):
                         self.position_list = []
                         self.velocity_list = []
                         self.attitude_list = []
-                        if self.has_vision_pose:
-                            self.vision_position_list = []
-                            self.vision_attitude_list = []
 
             elif self.mission_command_mode == 4:
                 self.publishGeomCtrl()
@@ -836,19 +948,16 @@ class NN_POLICY_PLANNER(object):
                 yaml.safe_dump(config, f, sort_keys=False, default_flow_style=False, allow_unicode=True)
 
     def randomize_init_pos(self):
-        wx, wy, wz = float(self.window_position[0, 0]), float(self.window_position[0, 1]), float(self.window_position[0, 2])
-        x = random.uniform(wx - 4.0, wx - 3.5)
-        y = random.uniform(wy - 0.5, wy + 0.5)
-        z = random.uniform(wz - 0.5, wz + 0.5)
-
-        x = -2.0
-        y = 0.0
-        z = 1.5
-        new_pos = np.array([[x, y, z]])
+        # Draw a fresh start + goal from the policy's scene manager (obstacles stay fixed).
+        # This also updates the policy's self.init_pos and self.t_pos.
+        new_pos, target_pos = self.policy.resample_init_target()
+        # Policy positions are in sim frame -> convert to world frame.
+        new_pos = new_pos - self.scene_offset
+        target_pos = target_pos - self.scene_offset
         self.init_pos_numpy = new_pos
+        self.target_pos_numpy = target_pos
         # self.init_quat = self.update_init_orientation_drone(new_pos, self.window_position)
         self.init_quat = np.array([[0.0, 0.0, 0.0, 1.0]])
-        self.policy.update_init_pos_drone(new_pos)
         self.curr_init_pose.pose.position.x = float(new_pos[0, 0])
         self.curr_init_pose.pose.position.y = float(new_pos[0, 1])
         self.curr_init_pose.pose.position.z = float(new_pos[0, 2])
@@ -856,19 +965,84 @@ class NN_POLICY_PLANNER(object):
         self.curr_init_pose.pose.orientation.y = float(self.init_quat[0, 1])
         self.curr_init_pose.pose.orientation.z = float(self.init_quat[0, 2])
         self.curr_init_pose.pose.orientation.w = float(self.init_quat[0, 3])
+        self.trajectory_path_msg.poses = []
+        self.publish_start_target_markers()
 
-        # Randomize window orientation per episode if trained with a range
-        if self.window_orientation_range > 0:
-            angle_deg = np.round((self.window_degrees_nominal[0] + random.uniform(-self.window_orientation_range, self.window_orientation_range)) / 10) * 10
-            print(f"windows_nominal: {self.window_degrees_nominal}")
-            print(angle_deg)
-            self.window_degrees = np.array([angle_deg])
-            self.window_degrees = np.array([60])
-            self.window_quaternion = self.convert_window_degrees_to_quaternion_vector(self.window_degrees)
-            self.policy.update_window_info(self.window_position, self.window_velocity, self.window_quaternion)
-            print(f"New init position: x={x:.2f}, y={y:.2f}, z={z:.2f}  |  window_orientation={angle_deg:.1f} deg")
-        else:
-            print(f"New init position: x={x:.2f}, y={y:.2f}, z={z:.2f}")
+    def publish_obstacle_cloud(self):
+        """Publish obstacle footprints as a PointCloud2 (filled vertical columns) for RViz.
+        Obstacles are fixed for the whole run, so this only needs to be published once
+        (latched so late-joining RViz subscribers still see it)."""
+        points = []
+        z_layers = np.linspace(0.0, 3.0, 6)
+        n_theta = 16
+        r_fracs = (0.33, 0.66, 1.0)
+        for obj in self.policy.env_manager.objects:
+            pos = np.asarray(obj["position"]).reshape(-1)
+            radius = float(obj["radius"])
+            for z in z_layers:
+                points.append([pos[0], pos[1], z])
+                for r_frac in r_fracs:
+                    for theta in np.linspace(0, 2 * np.pi, n_theta, endpoint=False):
+                        x = pos[0] + r_frac * radius * np.cos(theta)
+                        y = pos[1] + r_frac * radius * np.sin(theta)
+                        points.append([x, y, z])
+
+        header = std_msgs.msg.Header()
+        header.frame_id = self.viz_frame_id
+        header.stamp = rospy.Time.now()
+        cloud_msg = pc2.create_cloud_xyz32(header, points)
+        self.obstacle_pub_.publish(cloud_msg)
+
+    def publish_start_target_markers(self):
+        """Publish the current init (green) and target (red) positions as RViz markers."""
+        marker_array = MarkerArray()
+        now = rospy.Time.now()
+        # Markers are drawn in the room (sim) frame, same as the obstacle cloud,
+        # so convert the world-frame setpoints back into sim coords for display.
+        init_pos = np.asarray(self.init_pos_numpy).reshape(-1) + self.scene_offset.reshape(-1)
+        target_pos = np.asarray(self.target_pos_numpy).reshape(-1) + self.scene_offset.reshape(-1)
+
+        for marker_id, (pos, color) in enumerate([
+            (init_pos, (0.0, 1.0, 0.0)),    # green = init
+            (target_pos, (1.0, 0.0, 0.0)),  # red = target
+        ]):
+            m = Marker()
+            m.header.frame_id = self.viz_frame_id
+            m.header.stamp = now
+            m.ns = "start_target"
+            m.id = marker_id
+            m.type = Marker.SPHERE
+            m.action = Marker.ADD
+            m.pose.position.x = float(pos[0])
+            m.pose.position.y = float(pos[1])
+            m.pose.position.z = float(pos[2])
+            m.pose.orientation.w = 1.0
+            m.scale.x = m.scale.y = m.scale.z = 0.3
+            m.color.r, m.color.g, m.color.b = color
+            m.color.a = 1.0
+            marker_array.markers.append(m)
+
+        self.start_target_pub_.publish(marker_array)
+
+    def publish_trajectory_point(self):
+        """Append the drone's current position to the live trajectory Path and publish it."""
+        pose = PoseStamped()
+        pose.header.frame_id = self.viz_frame_id
+        pose.header.stamp = rospy.Time.now()
+        # Draw the drone in the room (sim) frame to match the obstacle cloud.
+        drone_pos_sim = np.asarray(self.drone_pos).reshape(-1) + self.scene_offset.reshape(-1)
+        pose.pose.position.x = float(drone_pos_sim[0])
+        pose.pose.position.y = float(drone_pos_sim[1])
+        pose.pose.position.z = float(drone_pos_sim[2])
+        pose.pose.orientation.x = float(self.drone_quat[0])
+        pose.pose.orientation.y = float(self.drone_quat[1])
+        pose.pose.orientation.z = float(self.drone_quat[2])
+        pose.pose.orientation.w = float(self.drone_quat[3])
+
+        self.trajectory_path_msg.header.stamp = pose.header.stamp
+        self.trajectory_path_msg.poses.append(pose)
+        self.trajectory_pub_.publish(self.trajectory_path_msg)
+
 
     def _settle_and_start_nn_cb(self, event):
         if not self.record_now:
@@ -930,11 +1104,13 @@ class NN_POLICY_PLANNER(object):
 
     def nn_evaluation(self, event):
         warp_q = self.warp_q[3:]
-        warp_pos = torch.Tensor(self.warp_q[:3]).unsqueeze(0)
+        # Drone position is in world/Vicon frame -> shift into sim frame so the
+        # policy "sees" itself in the sim scene (obstacles/target stay in sim).
+        warp_pos = torch.Tensor(self.warp_q[:3]).unsqueeze(0) + self.scene_offset_t
         warp_q = torch.Tensor(warp_q).unsqueeze(0)
         warp_qd = torch.Tensor(self.warp_qd).unsqueeze(0)
         self.action = self.policy.evaluate_(warp_pos, warp_q, warp_qd)
-        # print(self.action)
+        print(self.action)
 
 
 
@@ -942,13 +1118,13 @@ class NN_POLICY_PLANNER(object):
 if __name__=="__main__":
     signal(SIGINT, handler)
     print("STARTING NODE")
-    policy_file = "20260715-150205" #Potential 20260728-135438 #20260723-180713#'20260705-155924' #"20260702-145013" To test fly real drone #"20260629-091116" This is another good 60 degrees demo #"20260626-204830" #"20260618-005845" very bad#"20260618-005738"also pretty good #"20260618-005702" a bit vibratory #"20260618-005626" bad #"20260617-201947" bad #"20260617-201914 best tracking reasonable in flight" #"20260617-201703 worse tracking" #"20260617-172533"# This likely to work #"20260616-174028" to test in real flight #"20260616-150838" #"20260608-230203" bad 60 degrees. To compare with 20260608-170520 #"20260608-233141" good 30 degrees for gazebo trained with thrust DR also #"20260608-170520 good demo for 60 degrees gazebo. max body rates of 4.0 "#"20260604-222931" #"20260604-201453 good 30 degrees demo" #"20260604-095607" #"20260603-121142" #"20260603-121213" another 60 degrees gazebo demo. To test in real #"20260529-113935 60 degrees gazebo demo" #"20260521-090040" #"20260518-213037 30 degrees demo" #"20260519-121802" #"20260513-185143" #"20260513-185035" #"20260402-204842 This is high fidelity forward model." #"20260306-154450 - with gru. more reasonable" #"20260304-161010" #"20260304-160736 - this reasonable"#"20260225-165700" #0.02 good enough for real drone 20250527-122703   0.05-to test 20250624-181715
+    policy_file = "20260707-114255"# This likely to work #"20260616-174028" to test in real flight #"20260616-150838" #"20260608-230203" bad 60 degrees. To compare with 20260608-170520 #"20260608-233141" good 30 degrees for gazebo trained with thrust DR also #"20260608-170520 good demo for 60 degrees gazebo. max body rates of 4.0 "#"20260604-222931" #"20260604-201453 good 30 degrees demo" #"20260604-095607" #"20260603-121142" #"20260603-121213" another 60 degrees gazebo demo. To test in real #"20260529-113935 60 degrees gazebo demo" #"20260521-090040" #"20260518-213037 30 degrees demo" #"20260519-121802" #"20260513-185143" #"20260513-185035" #"20260402-204842 This is high fidelity forward model." #"20260306-154450 - with gru. more reasonable" #"20260304-161010" #"20260304-160736 - this reasonable"#"20260225-165700" #0.02 good enough for real drone 20250527-122703   0.05-to test 20250624-181715
     print(f"POLICY PATH IS {policy_file}") 
     recovery_mode = 2 #1 for position, 2 for velocity, 3 for attitude
 
     rospack = rospkg.RosPack()
     path = rospack.get_path('nn_policy')
-    full_path = os.path.join(path, "logs/gate_traversal")
+    full_path = os.path.join(path, "logs/cmdp")
     print(f"The full path is {full_path}")
     actual_full_path = os.path.join(full_path, policy_file)
     config_path = os.path.join(actual_full_path,"training_config.yaml")
@@ -968,8 +1144,8 @@ if __name__=="__main__":
     to_transform_policy = loaded_params["to_transform_policy"]
     warp_jax = loaded_params["warp_jax"]
 
-    position_control = True #config_params["position_control"]
-    delta_time = 0.02 #float(config_params["delta_time"])
+    position_control = config_params["position_control"]
+    delta_time = float(config_params["delta_time"])
     max_angular_rate = float(config_params["max_angular_rates"])
 
     if "use_gru" in config_params:
@@ -1019,26 +1195,27 @@ if __name__=="__main__":
         if to_transform_policy != 1.0:
             raise ValueError("to_transform_policy should be 1.0")
 
-    
-    window_position = config_params["window_location"]                              # [x, y, z]
-    window_speed = config_params.get("target_traversal_speed", 2.0)
-    window_velocity = np.array([window_speed, 0.0, 0.0])   # desired velocity at crossing, in the frame of the window
-    window_degrees  = config_params["window_orientation"]                           # rotation about X in degrees
-
-    #vel 20250424-161234 #position 20250424-131220, 20250424-161345
 
     include_gate_ori = config_params.get("include_gate_orientation_in_obs", False)
     use_rotmat_obs = config_params.get("use_rotation_matrix_obs", False)
-    use_so3_diff_obs = config_params.get("use_so3_diff_obs", False)
-    window_degrees = 60.0 #for now hardcoding this. can be changed later to config param
 
-    nn_policy = TEST_RENDER(full_policy_path, position_control, warp_frame, use_gru=use_gru, include_actions=gru_include_prev_action, include_gate_ori=include_gate_ori, use_rotmat_obs=use_rotmat_obs, use_so3_diff_obs=use_so3_diff_obs)
+    # ---- Sim <-> world (Vicon) frame offset ----
+    # When True, the drone flies physically in the Vicon room while the policy
+    # "imagines" the sim (room) frame. The scene (obstacles/target) stays in sim
+    # coords; the drone's Vicon position is shifted into sim coords for the
+    # policy, and commanded setpoints are shifted back. Default centers the sim
+    # room [0, room_size] onto a center-origin room.
+    use_scene_offset = True
+    room_size = float(config_params["room_size"])
+    scene_offset = [(room_size / 2.0) - 1, (room_size / 2.0) +3, 0.0] if use_scene_offset else [0.0, 0.0, 0.0]
+    
+
+    nn_policy = TEST_RENDER(full_policy_path, position_control, warp_frame, config_params)
 
     nn_policy_planner = NN_POLICY_PLANNER(mission_command_mode=int(mission_command_mode), policy=nn_policy,
                                           inference_timestep=delta_time, max_angular_rates = max_angular_rate,
                                           warp_jax=warp_jax, to_transform_odom=to_transform_odom, to_transform_policy=to_transform_policy, recovery_mode=recovery_mode,
-                                          window_position=window_position, window_velocity=window_velocity, window_degrees=window_degrees,
-                                          config_param=config_params)
+                                          config_param=config_params, scene_offset=scene_offset)
 
     rospy.spin()
 

@@ -52,3 +52,6 @@ qtcreator-*
 
 # Catkin custom files
 CATKIN_IGNORE
+
+gestelt_navigation/nn_policy/warp_data/
+gestelt_navigation/nn_policy/depth_debug/

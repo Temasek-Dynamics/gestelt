@@ -13,6 +13,8 @@ from std_msgs.msg import Int8
 from gestelt_msgs.msg import CommanderState, ExecTrajectory
 from geometry_msgs.msg import PoseStamped
 from nav_msgs.msg import Odometry
+from sensor_msgs.msg import Image
+from cv_bridge import CvBridge
 from enum import Enum
 import roslib.packages
 from std_msgs.msg import Bool
@@ -26,7 +28,11 @@ import copy
 # from geometry_msgs.msg import Vector3Stamped
 # from geometry_msgs import Posestamped
 from plotting_scripts import *
-from modules.policy_simple_nwu_global_gate_traversal import *
+from modules.policy_simple_nwu_global_gate_traversal_vision import *
+import torch
+import torch.nn.functional as F
+from types import SimpleNamespace
+import datetime
 import pickle
 from dataclasses import asdict, is_dataclass
 
@@ -93,7 +99,8 @@ def quat_rel_xyzw(q_a, q_b, eps=1e-8):
 
 class TEST_RENDER(object):
 
-    def __init__(self, policy_path, pc, warp_frame, use_gru=False, include_actions=False, include_gate_ori=False, use_rotmat_obs=False, use_so3_diff_obs=False):
+    def __init__(self, args, policy_path, pc, warp_frame, use_gru=False, include_actions=False, include_gate_ori=False, use_rotmat_obs=False, use_so3_diff_obs=False):
+        self.args = args
         self.pc = pc
         self.use_gru = use_gru
         self.include_actions = include_actions
@@ -104,6 +111,8 @@ class TEST_RENDER(object):
         self.height_offset = 1.0
         self.h = None
         self.start_msg = False
+        self.mar = float(getattr(self.args, "max_angular_rates", 4.5))
+        self.device = "cuda:0" if torch.cuda.is_available() else "cpu"
 
         gru_action_extra = 4 if (use_gru and include_actions) else 0
         ## Initializing task parameters
@@ -111,29 +120,34 @@ class TEST_RENDER(object):
         self.init_a[0,0] = 0.30
         target_vel = np.zeros((1, 3))
         self.previous_action = torch.tensor(self.init_a, dtype=torch.float32)
-        print(gru_action_extra)
+        # print(gru_action_extra)
 
         ## Loading Policy
-        att_dim = 9 if use_rotmat_obs else 4
-        input_dims = 12 + att_dim + (4 if include_gate_ori else 0)
-        print(f"Policy input_dims: {input_dims} (use_rotmat_obs={use_rotmat_obs}, include_gate_ori={include_gate_ori})")
-        if self.pc == True:
-            if use_gru == False:
-                self.policy = TrackVelGate(input_dim=input_dims)
-            else:
-                print(f"LOADING POLICY WITH GRU and {gru_action_extra} extra actions")
-                self.policy = TrackVelGRU(input_dim=input_dims + gru_action_extra) if use_gru else TrackVelGate(input_dim=input_dims)
-        else:
-            self.policy = TrackVelGate(input_dim = 10)
+        # Image size the CNN expects; the incoming depth is resized to this.
+        self.img_h = int(self.args.height)
+        self.img_w = int(self.args.width)
+        # State = base 16 (diff_pos, pos, att, qd) + 4 privileged gate-orientation slot
+        # (fed zeros at test) = 20. Aux orientation head (dim 4) must match training so
+        # the checkpoint keys line up, even though we only read the action output.
+        self.state_dim = 20
+        self.policy = StateVisionGRUNoCBAMPolicy(
+            state_dim=self.state_dim,
+            output_dim=4,
+            img_size=(self.img_h, self.img_w),
+            img_channels=1,
+            img_latent_dims=int(getattr(self.args, "image_latent_dims", 64)),
+            use_state_norm=False,
+            recurrent_detach=bool(getattr(self.args, "gru_recurrent_detach", True)),
+            aux_orientation_dim=4,
+        ).to(self.device)
 
         print(self.policy)
-        self.policy.load_state_dict(torch.load(policy_path, map_location='cpu'))
+        # checkpoint_latest.pth is a training checkpoint dict; weights are under
+        # 'policy_state_dict'. Support a bare state_dict too, just in case.
+        ckpt = torch.load(policy_path, map_location='cpu')
+        state_dict = ckpt["policy_state_dict"] if isinstance(ckpt, dict) and "policy_state_dict" in ckpt else ckpt
+        self.policy.load_state_dict(state_dict)
         self.policy.eval()
-
-        
-
-        
-
 
         if self.warp_frame == 0.0:
             target_pos = np.array([0, 1,0.0]).reshape(1,3)
@@ -144,7 +158,46 @@ class TEST_RENDER(object):
         self.t_vel = torch.tensor(target_vel, dtype=torch.float32)
         self.t_pos = torch.tensor(target_pos, dtype=torch.float32)
         self.init_pos = torch.tensor(target_pos, dtype=torch.float32)
-        
+
+        # ---- Debug: dump the exact HxW depth that is fed to the policy ----
+        # Saved AFTER resize + normalize + invert, i.e. byte-for-byte what the CNN sees.
+        self.save_depth = bool(getattr(self.args, "save_policy_depth", True))
+        self.depth_save_every = int(getattr(self.args, "save_policy_depth_every", 10))
+        self._depth_save_count = 0
+        self.depth_save_dir = None
+        if self.save_depth:
+            stamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+            self.depth_save_dir = os.path.join(rospkg.RosPack().get_path('nn_policy'),
+                                               "depth_debug", stamp)
+            os.makedirs(self.depth_save_dir, exist_ok=True)
+            print(f"[depth-debug] saving every {self.depth_save_every}th "
+                  f"{self.img_h}x{self.img_w} policy depth -> {self.depth_save_dir}")
+
+        # ---- Live topic: the exact HxW depth fed to the policy (post crop/resize/
+        # normalize/invert), published every evaluation for viewing in rqt/RViz.
+        self.publish_policy_depth = bool(getattr(self.args, "publish_policy_depth", True))
+        if self.publish_policy_depth:
+            self._depth_cv_bridge = CvBridge()
+            self.policy_depth_pub = rospy.Publisher("~policy_depth_view", Image, queue_size=1)
+
+        # ---- Debug: override the 20-dim state with a fixed vector ----
+        # Isolates the depth/CNN path from odometry/pose: state is replaced entirely
+        # (real depth still flows through), so any behavior change must come from vision.
+        # Fixed vector = [diff_pos(3), pos(3), att_xyzw(4), qd(6), privileged(4)]:
+        #   diff_pos=[0.583,0,0] pos=[-0.333,-0,0.4] att=[0,0,0,1](level) qd=0 privileged=0
+        # A runtime debug toggle, not a training-config value -- read directly from the
+        # ROS private param (rosrun ... _debug_override_state:=true), not self.args
+        # (which is populated only from the checkpoint's training_config.yaml).
+        self.debug_override_state = bool(rospy.get_param("~debug_override_state", False))
+        self.debug_state_vector = torch.tensor(
+            [[0.5833333, 0., 0., -0.33333334, -0., 0.4,
+              0., 0., 0., 1., 0., 0.,
+              0., 0., 0., 0., 0., 0.,
+              0., 0.]], dtype=torch.float32, device=self.device)
+        if self.debug_override_state:
+            print(f"[DEBUG] state override ACTIVE -- feeding fixed state every step:\n"
+                  f"        {self.debug_state_vector.cpu().numpy()}")
+
 
     def reset_h(self, reset_msg):
         if reset_msg == True:
@@ -153,6 +206,7 @@ class TEST_RENDER(object):
             self.init_a[0,0] = 0.30
             target_vel = np.zeros((1, 3))
             self.previous_action = torch.tensor(self.init_a, dtype=torch.float32)
+            self.policy.reset_hidden(batch_size=1, device=self.previous_action.device, dtype=self.previous_action.dtype)
 
     def update_window_info(self, window_pose, window_velocity, window_orientation):
         self.window_position = torch.tensor(window_pose, dtype=torch.float32)
@@ -167,50 +221,135 @@ class TEST_RENDER(object):
         self.init_pos_numpy = init_pos
         self.init_pos_t = torch.tensor(self.init_pos_numpy, dtype=torch.float32)
     
+    def depth_to_policy_input(self,depth, max_range, invert=True):
+        if isinstance(depth, np.ndarray):
+            depth = torch.from_numpy(depth).to(self.device)
+        if depth.dim() == 4:
+            if depth.shape[1] == 1:
+                depth = depth[:, 0]
+            elif depth.shape[0] == 1:
+                depth = depth[0]
+            else:
+                raise RuntimeError(f"Unsupported depth shape: {tuple(depth.shape)}")
+        if depth.dim() != 3:
+            raise RuntimeError(f"Expected [B,H,W] depth, got {tuple(depth.shape)}")
+        depth = torch.nan_to_num(depth.float(), nan=max_range, posinf=max_range, neginf=0.0)
+        depth = torch.clamp(depth, 0.0, float(max_range)) / float(max_range)
+        return 1.0 - depth if invert else depth
+    
+    def normalized_state(self,q, qd, gate_centers_t, cfg, mar):
+        pos = q[:, :3]
+        att = self.normalize_quat_xyzw(q[:, 3:])
+        diff_pos = gate_centers_t - pos
+        room = float(getattr(cfg, "room_size", 5.0))
+        pos_scale = torch.tensor(
+            getattr(cfg, "state_pos_scale", [room, room, room]),
+            device=q.device,
+            dtype=q.dtype,
+        ).reshape(1, 3)
+        vel_scale = float(getattr(cfg, "state_vel_scale", 4.5))
+        omega_scale = float(getattr(cfg, "state_angvel_scale", mar))
+        qd_n = torch.cat([qd[:, :3] / omega_scale, qd[:, 3:] / vel_scale], dim=1)
+        # print(f"pos_scale: {pos_scale}, vel_scale: {vel_scale}, omega_scale: {omega_scale}")
+        state = torch.cat([diff_pos / pos_scale, pos / pos_scale, att, qd_n], dim=1)
+        clip = float(getattr(cfg, "state_input_clip", 3.0))
+        return torch.clamp(state, -clip, clip) if clip > 0.0 else state
+    
+    def normalize_quat_xyzw(self,q, eps=1e-8):
+        return q / q.norm(dim=1, keepdim=True).clamp_min(eps)
 
-    def evaluate_(self, pos, att, qd):
+    def _publish_policy_depth(self, depth):
+        """Publish the exact (1, H, W) depth tensor handed to the policy as a
+        mono8 Image (0-255, near=bright since this is post-invert) for live
+        viewing in rqt_image_view / RViz. Cheap: no disk I/O, one image per eval."""
+        img = (torch.clamp(depth.detach().squeeze(0), 0.0, 1.0) * 255).to(torch.uint8).cpu().numpy()
+        msg = self._depth_cv_bridge.cv2_to_imgmsg(img, encoding="mono8")
+        msg.header.stamp = rospy.Time.now()
+        self.policy_depth_pub.publish(msg)
+
+    def _save_depth_frame(self, depth, raw=None):
+        """Save the exact (1, H, W) depth tensor handed to the policy (post
+        normalize/invert/resize), and optionally the raw full-resolution depth
+        (metres, before any processing). .npy keeps true values; .png is viewable.
+        Note: processed png has near=bright (inverted); raw png has near=dark."""
+        idx = self._depth_save_count
+        try:
+            from PIL import Image as PILImage
+        except Exception as e:
+            PILImage = None
+            rospy.logwarn_throttle(10.0, f"[depth-debug] png save skipped: {e}")
+
+        # processed policy input (H, W) float ~[0, 1]
+        img = depth.detach().squeeze(0).cpu().numpy()
+        np.save(os.path.join(self.depth_save_dir, f"depth_{idx:06d}.npy"), img)
+        if PILImage is not None:
+            PILImage.fromarray((np.clip(img, 0.0, 1.0) * 255).astype(np.uint8)).save(
+                os.path.join(self.depth_save_dir, f"depth_{idx:06d}.png"))
+
+        # raw full-resolution depth in metres, before invert/resize
+        if raw is not None:
+            raw_np = raw if isinstance(raw, np.ndarray) else raw.detach().cpu().numpy()
+            raw_np = np.asarray(raw_np).squeeze()          # (H, W) metres
+            np.save(os.path.join(self.depth_save_dir, f"depth_{idx:06d}_raw.npy"), raw_np)
+            if PILImage is not None:
+                mr = float(getattr(self.args, "max_range", 20.0))
+                render = np.clip(raw_np / mr, 0.0, 1.0) * 255   # far=bright, near=dark (like the topic)
+                PILImage.fromarray(render.astype(np.uint8)).save(
+                    os.path.join(self.depth_save_dir, f"depth_{idx:06d}_raw.png"))
+
+    def evaluate_(self, pos, att, qd, depth_img):
         start_time = time.time()
         ## Concatenating observations
-        if self.pc == True:
-            # diff_pos = self.t_pos - pos
-            # x = torch.cat((self.init_pos_t, pos, att, qd, self.window_velocity, self.window_quaternion), dim=1)
-            diff_pos = self.window_position - pos
-            pos_offset = pos
-            # pos[:,2] = pos[:,2] - self.height_offset
-            att_in = quat_to_rotmat_flat(att) if self.use_rotmat_obs else att
-            base_obs = (diff_pos, pos, att_in, qd)
-            # Gate orientation term: either the SO(3) difference q_drone^{-1} ⊗ q_gate
-            # (frame-invariant alignment error), the absolute gate quaternion, or nothing.
-            _gate_obs = (quat_rel_xyzw(att, self.window_quaternion),) \
-                        if (self.include_gate_ori and self.use_so3_diff_obs) \
-                        else ((self.window_quaternion,) if self.include_gate_ori else ())
-            x = torch.cat(base_obs + _gate_obs, dim=1)
-            if self.include_actions:
-                x = torch.cat([x, self.previous_action], dim=1)
+        # print("Depth image shape:", depth_img)
+        depth = self.depth_to_policy_input(
+            depth_img,
+            max_range=float(self.args.max_range),
+            invert=bool(getattr(self.args.cfg, "invert_depth", True)),
+        )
+        # Resize to the CNN's expected size (camera resolution != policy img_size).
+        # Training rendered SQUARE images (isotropic pixel scale); the real camera is
+        # 640x360 (16:9). A direct resize squashes width ~10x vs height ~5.6x, which
+        # distorts silhouette shape cues (e.g. a tilted gate's apparent roll) -- so
+        # center-crop to square (matching the vertical FOV) BEFORE resizing, instead
+        # of an anisotropic squash straight to img_h x img_w.
+        if depth.shape[-2:] != (self.img_h, self.img_w):
+            h, w = depth.shape[-2:]
+            side = min(h, w)
+            top = (h - side) // 2
+            left = (w - side) // 2
+            depth = depth[:, top:top + side, left:left + side]
+            depth = F.interpolate(depth.unsqueeze(1), size=(self.img_h, self.img_w),
+                                  mode="bilinear", align_corners=False).squeeze(1)
 
-        else:
-            vel = qd[:,3:]
-            angvel = qd[:,:3]
-            diff_vel = self.t_vel - vel
-            x = torch.cat((att, angvel, diff_vel), dim=1)
-        
-        ## Evaluating policy
-        if self.use_gru == False:
-            a = self.policy(x)
-        else:
-            if self.start_msg == True:
-                # print("true")
-                a, self.h = self.policy(x, self.h)
-                self.prev_action = a
-            else:
-                # print("false")
-                a, _ = self.policy(x, self.h)
-        
-        self.previous_action = a
+        # Dump exactly what the policy sees (post resize/normalize/invert), plus the
+        # raw full-resolution depth (depth_img) that came in before any processing.
+        if self.save_depth:
+            self._depth_save_count += 1
+            if self._depth_save_count % self.depth_save_every == 0:
+                self._save_depth_frame(depth, depth_img)
+
+        # Publish the exact CNN input live (every evaluation) for rqt/RViz viewing.
+        if self.publish_policy_depth:
+            self._publish_policy_depth(depth)
+
+        # Build the 7-DOF pose (pos + quat) and use the gate center for diff_pos.
+        q = torch.cat([pos, att], dim=1)
+        gate_centers_t = self.window_position
+        # print(gate_centers_t)
+        state16 = self.normalized_state(q, qd, gate_centers_t, self.args, self.mar)
+        # Privileged gate-orientation slot: fed zeros at test time (4 dims) -> 20.
+        priv_ori = torch.zeros(state16.shape[0], 4, dtype=state16.dtype, device=state16.device)
+        state = torch.cat([state16, priv_ori], dim=1).to(self.device)
+        # print(state)
+        if self.debug_override_state:
+            state = self.debug_state_vector
+            print("[DEBUG] state FED TO POLICY (overridden):", state)
+        # print(state)
+        action = self.policy(state, depth, update_norm=False)
         # print(a)
         end_time = time.time()
         # print(f"Time taken: {end_time - start_time:.4f} seconds")
-        return a
+        return action
     
     def vector_to_line(self,P, A, d):
         d_unit = d / torch.norm(d, dim=-1, keepdim=True)  # Normalize direction
@@ -351,6 +490,18 @@ class NN_POLICY_PLANNER(object):
         self.geom_controller_pub_ = rospy.Publisher("/drone0/geom_ctrl", AttitudeTarget, queue_size = 5)
         self.recorder_sub_ = rospy.Subscriber('/traj_server/warp_mission_recorder', Bool, self.recorderCB, queue_size=10)
 
+        # Depth camera for the vision policy. Latest frame (H, W) in metres, or None
+        # until the first image arrives.
+        self.latest_depth = None
+        self.depth_lock = threading.Lock()
+        self._cv_bridge = CvBridge()
+        self.depth_topic = rospy.get_param("~depth_topic", "/agent001/stereo_left_depth")
+        # mono8 -> metres, matching training's depth_norm: depth = (pixel/255) * far.
+        self.depth_cam_far = float(rospy.get_param("~depth_cam_far", 20.0))
+        self.depth_sub_ = rospy.Subscriber(self.depth_topic, Image, self.depthCb, queue_size=1)
+        rospy.loginfo("[vision] depth topic: %s | mono8 linear decode far=%.2f m",
+                      self.depth_topic, self.depth_cam_far)
+
         self.nwu_odom = np.zeros(6)
 
         #PVA controller trajectory Publisher
@@ -409,8 +560,20 @@ class NN_POLICY_PLANNER(object):
         self.attitude_mode_toggle = 0
         self.action = np.zeros((1,4))
         self.recovery_vel_start_time = None
+
+        # The policy is a GRU trained at the sim step (config delta_time, 20 Hz for the
+        # vision runs) but this timer fires at 100 Hz. Stepping the GRU 5x too fast
+        # distorts its recurrent dynamics, so only evaluate every _eval_stride ticks and
+        # hold the last action in between.
+        POLICY_EVAL_DT = 0.01
+        train_dt = float(config_param.get("delta_time", POLICY_EVAL_DT)) if config_param else POLICY_EVAL_DT
+        self._eval_stride = max(1, int(round(train_dt / POLICY_EVAL_DT)))
+        self._eval_count = 0
+        print(f"[vision] policy eval stride = {self._eval_stride} "
+              f"(train dt={train_dt}s -> {1.0/train_dt:.0f}Hz, timer {1/POLICY_EVAL_DT:.0f}Hz)")
+
         time.sleep(1)
-        self.policy_evaluation_timer = rospy.Timer(rospy.Duration(0.02), self.nn_evaluation)
+        self.policy_evaluation_timer = rospy.Timer(rospy.Duration(0.01), self.nn_evaluation)
         
     def initPoseCB(self,msg):
         self.init_pos_numpy[:,0] = msg.pose.position.x 
@@ -631,7 +794,7 @@ class NN_POLICY_PLANNER(object):
             warp_q_t = torch.Tensor(warp_q).unsqueeze(0)
             now_time = rospy.Time.now().to_sec()
             with self.lock:
-                if warp_pos[0, 0] < self.window_position[0, 0] - 0.05:
+                if warp_pos[0, 0] < self.window_position[0, 0] + 0.05:
                 # if warp_pos[0, 2] < 5.0:
                     self.data_store[0]["time_stamp"].append(now_time)
                     self.data_store[0]["position"].append(warp_pos.squeeze(0).detach().cpu().numpy())
@@ -664,8 +827,8 @@ class NN_POLICY_PLANNER(object):
                     dist = np.linalg.norm(self.drone_pos - self.init_pos_numpy[0])
                     if dist < 0.1:
                         self.awaiting_restart = False
-                        print("Arrived at init. Settling for 3 s before starting NN.")
-                        rospy.Timer(rospy.Duration(5.0), self._settle_and_start_nn_cb, oneshot=True)
+                        print("Arrived at init. Settling for 2 s before starting NN.")
+                        rospy.Timer(rospy.Duration(2.0), self._settle_and_start_nn_cb, oneshot=True)
                 if self.warp_mission_command_mode == 2:
                     #Check if ready to switch
                     if self.checkNNReadiness():
@@ -739,7 +902,6 @@ class NN_POLICY_PLANNER(object):
                         for i in range(10):
                             print(f"RECOVERED (speed={speed:.2f} m/s): Switching back to POSITION CONTROL")
                             pva_traj_msg_update = ExecTrajectory()
-                            print(self.init_pos_numpy)
                             pva_traj_msg_update.transform.translation.x = self.init_pos_numpy[:,0]
                             pva_traj_msg_update.transform.translation.y = self.init_pos_numpy[:,1]
                             pva_traj_msg_update.transform.translation.z = self.init_pos_numpy[:,2]
@@ -837,13 +999,13 @@ class NN_POLICY_PLANNER(object):
 
     def randomize_init_pos(self):
         wx, wy, wz = float(self.window_position[0, 0]), float(self.window_position[0, 1]), float(self.window_position[0, 2])
-        x = random.uniform(wx - 4.0, wx - 3.5)
+        x = random.uniform(wx - 4.0, wx - 3.0)
         y = random.uniform(wy - 0.5, wy + 0.5)
         z = random.uniform(wz - 0.5, wz + 0.5)
-
-        x = -2.0
-        y = 0.0
-        z = 1.5
+    
+        # x = -2.0
+        # y = 0.0
+        # z = 1.5
         new_pos = np.array([[x, y, z]])
         self.init_pos_numpy = new_pos
         # self.init_quat = self.update_init_orientation_drone(new_pos, self.window_position)
@@ -863,7 +1025,7 @@ class NN_POLICY_PLANNER(object):
             print(f"windows_nominal: {self.window_degrees_nominal}")
             print(angle_deg)
             self.window_degrees = np.array([angle_deg])
-            self.window_degrees = np.array([60])
+            # self.window_degrees = np.array([60])
             self.window_quaternion = self.convert_window_degrees_to_quaternion_vector(self.window_degrees)
             self.policy.update_window_info(self.window_position, self.window_velocity, self.window_quaternion)
             print(f"New init position: x={x:.2f}, y={y:.2f}, z={z:.2f}  |  window_orientation={angle_deg:.1f} deg")
@@ -928,12 +1090,39 @@ class NN_POLICY_PLANNER(object):
             # print(trans.transform.translation)
 
 
+    def depth_norm(self, depth):
+        """Verbatim training decode: depth = ((pixel - 0) / (255 - 0)) * far."""
+        return ((depth - 0) / (255 - 0)) * self.depth_cam_far
+
+    def depthCb(self, msg):
+        # passthrough: no cv_bridge re-encoding, native dtype (uint8 for mono8/8UC1).
+        depth_unnorm = self._cv_bridge.imgmsg_to_cv2(msg, desired_encoding="passthrough")
+        if msg.encoding in ('mono8', '8UC1'):
+            depth = self.depth_norm(depth_unnorm.astype(np.float32))
+        else:
+            # already metric (e.g. 32FC1 metres, 16UC1 mm -> metres)
+            depth = depth_unnorm.astype(np.float32)
+            if msg.encoding in ('16UC1', 'mono16'):
+                depth = depth * 0.001
+        with self.depth_lock:
+            self.latest_depth = depth
+
     def nn_evaluation(self, event):
+        # Only step the GRU policy at the training rate; hold self.action in between.
+        self._eval_count += 1
+        if self._eval_count % self._eval_stride != 0:
+            return
+        with self.depth_lock:
+            depth = self.latest_depth
+        if depth is None:
+            return  # no depth frame received yet
         warp_q = self.warp_q[3:]
         warp_pos = torch.Tensor(self.warp_q[:3]).unsqueeze(0)
         warp_q = torch.Tensor(warp_q).unsqueeze(0)
         warp_qd = torch.Tensor(self.warp_qd).unsqueeze(0)
-        self.action = self.policy.evaluate_(warp_pos, warp_q, warp_qd)
+        depth_batched = depth[None]  # (1, H, W) expected by depth_to_policy_input
+        self.action = self.policy.evaluate_(warp_pos, warp_q, warp_qd, depth_batched)
+        # print(np.min(depth_batched))
         # print(self.action)
 
 
@@ -942,17 +1131,17 @@ class NN_POLICY_PLANNER(object):
 if __name__=="__main__":
     signal(SIGINT, handler)
     print("STARTING NODE")
-    policy_file = "20260715-150205" #Potential 20260728-135438 #20260723-180713#'20260705-155924' #"20260702-145013" To test fly real drone #"20260629-091116" This is another good 60 degrees demo #"20260626-204830" #"20260618-005845" very bad#"20260618-005738"also pretty good #"20260618-005702" a bit vibratory #"20260618-005626" bad #"20260617-201947" bad #"20260617-201914 best tracking reasonable in flight" #"20260617-201703 worse tracking" #"20260617-172533"# This likely to work #"20260616-174028" to test in real flight #"20260616-150838" #"20260608-230203" bad 60 degrees. To compare with 20260608-170520 #"20260608-233141" good 30 degrees for gazebo trained with thrust DR also #"20260608-170520 good demo for 60 degrees gazebo. max body rates of 4.0 "#"20260604-222931" #"20260604-201453 good 30 degrees demo" #"20260604-095607" #"20260603-121142" #"20260603-121213" another 60 degrees gazebo demo. To test in real #"20260529-113935 60 degrees gazebo demo" #"20260521-090040" #"20260518-213037 30 degrees demo" #"20260519-121802" #"20260513-185143" #"20260513-185035" #"20260402-204842 This is high fidelity forward model." #"20260306-154450 - with gru. more reasonable" #"20260304-161010" #"20260304-160736 - this reasonable"#"20260225-165700" #0.02 good enough for real drone 20250527-122703   0.05-to test 20250624-181715
+    policy_file = "20260820-101309" #"20260820-101309" #"20260702-145013" To test fly real drone #"20260629-091116" This is another good 60 degrees demo #"20260626-204830" #"20260618-005845" very bad#"20260618-005738"also pretty good #"20260618-005702" a bit vibratory #"20260618-005626" bad #"20260617-201947" bad #"20260617-201914 best tracking reasonable in flight" #"20260617-201703 worse tracking" #"20260617-172533"# This likely to work #"20260616-174028" to test in real flight #"20260616-150838" #"20260608-230203" bad 60 degrees. To compare with 20260608-170520 #"20260608-233141" good 30 degrees for gazebo trained with thrust DR also #"20260608-170520 good demo for 60 degrees gazebo. max body rates of 4.0 "#"20260604-222931" #"20260604-201453 good 30 degrees demo" #"20260604-095607" #"20260603-121142" #"20260603-121213" another 60 degrees gazebo demo. To test in real #"20260529-113935 60 degrees gazebo demo" #"20260521-090040" #"20260518-213037 30 degrees demo" #"20260519-121802" #"20260513-185143" #"20260513-185035" #"20260402-204842 This is high fidelity forward model." #"20260306-154450 - with gru. more reasonable" #"20260304-161010" #"20260304-160736 - this reasonable"#"20260225-165700" #0.02 good enough for real drone 20250527-122703   0.05-to test 20250624-181715
     print(f"POLICY PATH IS {policy_file}") 
     recovery_mode = 2 #1 for position, 2 for velocity, 3 for attitude
 
     rospack = rospkg.RosPack()
     path = rospack.get_path('nn_policy')
-    full_path = os.path.join(path, "logs/gate_traversal")
+    full_path = os.path.join(path, "logs/vel_tracking_depth_cbam_gru_multi_env_full")
     print(f"The full path is {full_path}")
     actual_full_path = os.path.join(full_path, policy_file)
     config_path = os.path.join(actual_full_path,"training_config.yaml")
-    full_policy_path = os.path.join(actual_full_path, "policy.pth")
+    full_policy_path = os.path.join(actual_full_path, "checkpoint_latest.pth")
 
     rospy.init_node("nn_policy_planner2")
     ros_lib = roslib.packages.get_pkg_dir("gestelt_bringup")
@@ -969,7 +1158,7 @@ if __name__=="__main__":
     warp_jax = loaded_params["warp_jax"]
 
     position_control = True #config_params["position_control"]
-    delta_time = 0.02 #float(config_params["delta_time"])
+    delta_time = float(config_params["delta_time"])
     max_angular_rate = float(config_params["max_angular_rates"])
 
     if "use_gru" in config_params:
@@ -987,6 +1176,8 @@ if __name__=="__main__":
     if warp_jax != 0.0:
         raise ValueError("warp_jax should be 0.0")
 
+    config_params.setdefault("warp_frame", 1.0)  # vision configs may omit it; z-up warp default
+    config_params["policy_global"] = 1.0          # treat as a global policy
     if "warp_frame" in config_params:
         warp_frame = config_params["warp_frame"]
         if warp_frame == 0.0: #if warp_frame = 0.0 this means that this is the y-up frame. Then this means that everything needs to be transformed
@@ -1020,7 +1211,16 @@ if __name__=="__main__":
             raise ValueError("to_transform_policy should be 1.0")
 
     
-    window_position = config_params["window_location"]                              # [x, y, z]
+    # Prefer window_location_center_range (the actual per-axis [min,max] sampling range
+    # used to place the gate during training's domain randomization) over window_location,
+    # which can be stale/unused for some checkpoints. Take the midpoint per axis; when
+    # min==max (a fixed-gate run) this is just that fixed value.
+    if "window_location_center_range" in config_params:
+        _range = config_params["window_location_center_range"]                      # [[xmin,xmax],[ymin,ymax],[zmin,zmax]]
+        window_position = [(_lo + _hi) / 2.0 for _lo, _hi in _range]
+        print(f"window_position from window_location_center_range midpoint: {window_position}")
+    else:
+        window_position = config_params["window_location"]                          # [x, y, z]
     window_speed = config_params.get("target_traversal_speed", 2.0)
     window_velocity = np.array([window_speed, 0.0, 0.0])   # desired velocity at crossing, in the frame of the window
     window_degrees  = config_params["window_orientation"]                           # rotation about X in degrees
@@ -1030,9 +1230,15 @@ if __name__=="__main__":
     include_gate_ori = config_params.get("include_gate_orientation_in_obs", False)
     use_rotmat_obs = config_params.get("use_rotation_matrix_obs", False)
     use_so3_diff_obs = config_params.get("use_so3_diff_obs", False)
-    window_degrees = 60.0 #for now hardcoding this. can be changed later to config param
+    window_degrees = 40.0 #for now hardcoding this. can be changed later to config param
 
-    nn_policy = TEST_RENDER(full_policy_path, position_control, warp_frame, use_gru=use_gru, include_actions=gru_include_prev_action, include_gate_ori=include_gate_ori, use_rotmat_obs=use_rotmat_obs, use_so3_diff_obs=use_so3_diff_obs)
+    # Build the args object the vision policy needs (height/width/max_range/state scales/
+    # invert_depth). All training-config keys become attributes; args.cfg self-references
+    # so args.cfg.invert_depth resolves too.
+    args = SimpleNamespace(**config_params)
+    args.cfg = args
+
+    nn_policy = TEST_RENDER(args, full_policy_path, position_control, warp_frame, use_gru=use_gru, include_actions=gru_include_prev_action, include_gate_ori=include_gate_ori, use_rotmat_obs=use_rotmat_obs, use_so3_diff_obs=use_so3_diff_obs)
 
     nn_policy_planner = NN_POLICY_PLANNER(mission_command_mode=int(mission_command_mode), policy=nn_policy,
                                           inference_timestep=delta_time, max_angular_rates = max_angular_rate,

@@ -272,6 +272,24 @@ class NN_POLICY_PLANNER(object):
 
         ##Define initial window location
         self.window_position = np.asarray(window_position, dtype=float).reshape(1, 3)
+
+        # ---- Sim <-> world (physical) frame offset ----
+        # The policy "imagines" flying in the sim/training frame -- window_position,
+        # init_pos_numpy, end_pos_numpy below are all defined in that frame. The drone
+        # can physically fly from a DIFFERENT real-world origin: pos_sim = pos_world +
+        # scene_offset. Sim-frame setpoints are converted to world frame (- scene_offset)
+        # before ever being published to the real drone; the real drone's position is
+        # converted to sim frame (+ scene_offset) before being fed to the policy.
+        # Zero vector (the default) is a no-op -- drone and policy share one frame.
+        self.scene_offset = np.asarray(config_param.get("scene_offset", [3.0, 0.0, 0.0]), dtype=float).reshape(1, 3) \
+            if config_param else np.zeros((1, 3))
+        self.scene_offset_t = torch.tensor(self.scene_offset, dtype=torch.float32)
+        print(f"Planner scene_offset (world -> sim): {self.scene_offset[0]}")
+        # World-frame gate position, for comparisons against real (world-frame) drone data
+        # (recorded flight positions, gate-crossing detection) -- window_position itself
+        # stays in sim frame since that's what the policy's observation actually uses.
+        self.window_position_world = self.window_position - self.scene_offset
+
         self.window_velocity = np.asarray(window_velocity, dtype=float).reshape(1, 3)
         self.window_degrees_nominal = np.asarray(window_degrees, dtype=float).reshape(1)
         self.window_orientation_range = float(config_param.get("window_orientation_range", 0.0)) if config_param else 0.0
@@ -288,15 +306,16 @@ class NN_POLICY_PLANNER(object):
         self.attitude_list = []
 
 
-        ## End pose: where the drone flies to after passing the gate
-        self.end_pos_numpy = np.array([[3.0, 0.0, 2.0]])
+        ## End pose: where the drone flies to after passing the gate (sim frame -> world)
+        self.end_pos_numpy = np.array([[3.0, 0.0, 2.0]]) - self.scene_offset
 
-        ## Define initial starting location of the drone
+        ## Define initial starting location of the drone (sim frame -> world)
         init_pos = np.zeros((1,3))
         init_pos[:,0] = -2
         init_pos[:,1] = 0
         init_pos[:,2] = 2.0
-        self.init_pos_numpy = init_pos
+        self.init_pos_numpy = init_pos - self.scene_offset
+        init_pos = self.init_pos_numpy  # world-frame, used below for curr_init_pose
         # self.init_quat = self.update_init_orientation_drone(self.init_pos_numpy, self.window_position)
         self.init_quat = np.array([[0.0, 0.0, 0.0, 1.0]])
         self.curr_init_pose = PoseStamped()
@@ -410,7 +429,7 @@ class NN_POLICY_PLANNER(object):
         self.action = np.zeros((1,4))
         self.recovery_vel_start_time = None
         time.sleep(1)
-        self.policy_evaluation_timer = rospy.Timer(rospy.Duration(0.02), self.nn_evaluation)
+        self.policy_evaluation_timer = rospy.Timer(rospy.Duration(0.01), self.nn_evaluation)
         
     def initPoseCB(self,msg):
         self.init_pos_numpy[:,0] = msg.pose.position.x 
@@ -631,7 +650,7 @@ class NN_POLICY_PLANNER(object):
             warp_q_t = torch.Tensor(warp_q).unsqueeze(0)
             now_time = rospy.Time.now().to_sec()
             with self.lock:
-                if warp_pos[0, 0] < self.window_position[0, 0] - 0.05:
+                if warp_pos[0, 0] < self.window_position_world[0, 0] - 0.05:
                 # if warp_pos[0, 2] < 5.0:
                     self.data_store[0]["time_stamp"].append(now_time)
                     self.data_store[0]["position"].append(warp_pos.squeeze(0).detach().cpu().numpy())
@@ -655,6 +674,41 @@ class NN_POLICY_PLANNER(object):
             print("switched to mission mode 2: Geom CONTROL")
         else:
             print("switched to mission mode 1: PVA CONTROL")
+
+    def finalize_gate_metrics(self):
+        if self.has_vision_pose:
+            self.position_array = np.array(self.vision_position_list)
+            self.attitude_array = np.array(self.vision_attitude_list)
+        else:
+            self.position_array = np.array(self.position_list)
+            self.attitude_array = np.array(self.attitude_list)
+        self.velocity_array = np.array(self.velocity_list)
+        gate_center = self.window_position_world[0]  # (3,) [x,y,z], world frame
+                                                     # since position_array is recorded real (world-frame) flight data
+        window_quat = self.window_quaternion[0]     # (4,) [x, y, z, w]
+        target_vel  = self.window_velocity[0]       # (3,) desired velocity at crossing
+        t_star, pos_at_gate, pos_err, vel_at_gate, vel_err, euler_at_gate, x_dot, z_dot = \
+            compute_gate_metrics(self.position_array, self.velocity_array,
+                                 self.attitude_array, window_quat,
+                                 gate_center=gate_center, target_vel=target_vel)
+        plot_spatial_plots(self.position_array[:,None,:])
+        gate_world = gate_geometry(self.window_degrees[0], gate_center=gate_center)
+        plot_gate_travesal(self.position_array[:,None,:], self.attitude_array[:,None,:],
+                           gate_world, t_star, pos_at_gate, pos_err,
+                           vel_at_gate, vel_err, euler_at_gate, x_dot, z_dot)
+        plot_metrics_timeseries(self.position_array, self.velocity_array, self.attitude_array,
+                                window_quat, t_star, pos_at_gate, pos_err,
+                                vel_at_gate, vel_err, euler_at_gate, x_dot, z_dot)
+        if self.record_now:
+            rospy.Timer(rospy.Duration(0.5), self._append_separator_and_restart_cb, oneshot=True)
+        elif self.pending_save:
+            rospy.Timer(rospy.Duration(0.1), self._flush_and_save_cb, oneshot=True)
+        self.position_list = []
+        self.velocity_list = []
+        self.attitude_list = []
+        if self.has_vision_pose:
+            self.vision_position_list = []
+            self.vision_attitude_list = []
 
     def executeMission(self):
         if self.drone_state == DRONESTATE["MISSION"].value:
@@ -690,7 +744,7 @@ class NN_POLICY_PLANNER(object):
                     self.mission_command_mode = 1
                     ## Check if it has passed through the gate
                 
-                if (self.drone_pos[0] - self.window_position[:,0]) > 0.1:
+                if (self.drone_pos[0] - self.window_position_world[:,0]) > 0.1:
                 # if self.drone_pos[2] > 5.0:
                     #Means drone has passed gate. Switch back to position control.
                     print("in here for switching back")
@@ -704,6 +758,7 @@ class NN_POLICY_PLANNER(object):
                         self.mission_command_mode = 1
                         self.publishMissionCmdMode(1)
                         self.warp_mission_command_mode = 1
+                        self.finalize_gate_metrics()
                     elif self.recovery_mode == 2:
                         print("SWITCHING BACK TO VELOCITY!!")
                         self.mission_command_mode = 3
@@ -753,38 +808,7 @@ class NN_POLICY_PLANNER(object):
                         self.publishMissionCmdMode(1)
                         self.warp_mission_command_mode = 1
                         self.recovery_vel_start_time = None
-                        if self.has_vision_pose:
-                            self.position_array = np.array(self.vision_position_list)
-                            self.attitude_array = np.array(self.vision_attitude_list)
-                        else:
-                            self.position_array = np.array(self.position_list)
-                            self.attitude_array = np.array(self.attitude_list)
-                        self.velocity_array = np.array(self.velocity_list)
-                        gate_center = self.window_position[0]       # (3,) [x, y, z]
-                        window_quat = self.window_quaternion[0]     # (4,) [x, y, z, w]
-                        target_vel  = self.window_velocity[0]       # (3,) desired velocity at crossing
-                        t_star, pos_at_gate, pos_err, vel_at_gate, vel_err, euler_at_gate, x_dot, z_dot = \
-                            compute_gate_metrics(self.position_array, self.velocity_array,
-                                                 self.attitude_array, window_quat,
-                                                 gate_center=gate_center, target_vel=target_vel)
-                        plot_spatial_plots(self.position_array[:,None,:])
-                        gate_world = gate_geometry(self.window_degrees[0], gate_center=gate_center)
-                        plot_gate_travesal(self.position_array[:,None,:], self.attitude_array[:,None,:],
-                                           gate_world, t_star, pos_at_gate, pos_err,
-                                           vel_at_gate, vel_err, euler_at_gate, x_dot, z_dot)
-                        plot_metrics_timeseries(self.position_array, self.velocity_array, self.attitude_array,
-                                                window_quat, t_star, pos_at_gate, pos_err,
-                                                vel_at_gate, vel_err, euler_at_gate, x_dot, z_dot)
-                        if self.record_now:
-                            rospy.Timer(rospy.Duration(0.5), self._append_separator_and_restart_cb, oneshot=True)
-                        elif self.pending_save:
-                            rospy.Timer(rospy.Duration(0.1), self._flush_and_save_cb, oneshot=True)
-                        self.position_list = []
-                        self.velocity_list = []
-                        self.attitude_list = []
-                        if self.has_vision_pose:
-                            self.vision_position_list = []
-                            self.vision_attitude_list = []
+                        self.finalize_gate_metrics()
 
             elif self.mission_command_mode == 4:
                 self.publishGeomCtrl()
@@ -844,14 +868,14 @@ class NN_POLICY_PLANNER(object):
         x = -2.0
         y = 0.0
         z = 1.5
-        new_pos = np.array([[x, y, z]])
-        self.init_pos_numpy = new_pos
+        new_pos = np.array([[x, y, z]])          # sim frame
+        self.init_pos_numpy = new_pos - self.scene_offset   # world frame, for real commands
         # self.init_quat = self.update_init_orientation_drone(new_pos, self.window_position)
         self.init_quat = np.array([[0.0, 0.0, 0.0, 1.0]])
         self.policy.update_init_pos_drone(new_pos)
-        self.curr_init_pose.pose.position.x = float(new_pos[0, 0])
-        self.curr_init_pose.pose.position.y = float(new_pos[0, 1])
-        self.curr_init_pose.pose.position.z = float(new_pos[0, 2])
+        self.curr_init_pose.pose.position.x = float(self.init_pos_numpy[0, 0])
+        self.curr_init_pose.pose.position.y = float(self.init_pos_numpy[0, 1])
+        self.curr_init_pose.pose.position.z = float(self.init_pos_numpy[0, 2])
         self.curr_init_pose.pose.orientation.x = float(self.init_quat[0, 0])
         self.curr_init_pose.pose.orientation.y = float(self.init_quat[0, 1])
         self.curr_init_pose.pose.orientation.z = float(self.init_quat[0, 2])
@@ -930,7 +954,10 @@ class NN_POLICY_PLANNER(object):
 
     def nn_evaluation(self, event):
         warp_q = self.warp_q[3:]
-        warp_pos = torch.Tensor(self.warp_q[:3]).unsqueeze(0)
+        # Drone position is in world/physical frame -> shift into sim frame so the
+        # policy "sees" itself in the sim scene it was trained in (window_position
+        # etc. all stay in sim frame; only this conversion boundary changes).
+        warp_pos = torch.Tensor(self.warp_q[:3]).unsqueeze(0) + self.scene_offset_t
         warp_q = torch.Tensor(warp_q).unsqueeze(0)
         warp_qd = torch.Tensor(self.warp_qd).unsqueeze(0)
         self.action = self.policy.evaluate_(warp_pos, warp_q, warp_qd)
@@ -942,9 +969,9 @@ class NN_POLICY_PLANNER(object):
 if __name__=="__main__":
     signal(SIGINT, handler)
     print("STARTING NODE")
-    policy_file = "20260715-150205" #Potential 20260728-135438 #20260723-180713#'20260705-155924' #"20260702-145013" To test fly real drone #"20260629-091116" This is another good 60 degrees demo #"20260626-204830" #"20260618-005845" very bad#"20260618-005738"also pretty good #"20260618-005702" a bit vibratory #"20260618-005626" bad #"20260617-201947" bad #"20260617-201914 best tracking reasonable in flight" #"20260617-201703 worse tracking" #"20260617-172533"# This likely to work #"20260616-174028" to test in real flight #"20260616-150838" #"20260608-230203" bad 60 degrees. To compare with 20260608-170520 #"20260608-233141" good 30 degrees for gazebo trained with thrust DR also #"20260608-170520 good demo for 60 degrees gazebo. max body rates of 4.0 "#"20260604-222931" #"20260604-201453 good 30 degrees demo" #"20260604-095607" #"20260603-121142" #"20260603-121213" another 60 degrees gazebo demo. To test in real #"20260529-113935 60 degrees gazebo demo" #"20260521-090040" #"20260518-213037 30 degrees demo" #"20260519-121802" #"20260513-185143" #"20260513-185035" #"20260402-204842 This is high fidelity forward model." #"20260306-154450 - with gru. more reasonable" #"20260304-161010" #"20260304-160736 - this reasonable"#"20260225-165700" #0.02 good enough for real drone 20250527-122703   0.05-to test 20250624-181715
+    policy_file = "20260803-175537" # #20260731-122118 #Potential 20260728-135438 #20260723-180713#'20260705-155924' #"20260702-145013" To test fly real drone #"20260629-091116" This is another good 60 degrees demo #"20260626-204830" #"20260618-005845" very bad#"20260618-005738"also pretty good #"20260618-005702" a bit vibratory #"20260618-005626" bad #"20260617-201947" bad #"20260617-201914 best tracking reasonable in flight" #"20260617-201703 worse tracking" #"20260617-172533"# This likely to work #"20260616-174028" to test in real flight #"20260616-150838" #"20260608-230203" bad 60 degrees. To compare with 20260608-170520 #"20260608-233141" good 30 degrees for gazebo trained with thrust DR also #"20260608-170520 good demo for 60 degrees gazebo. max body rates of 4.0 "#"20260604-222931" #"20260604-201453 good 30 degrees demo" #"20260604-095607" #"20260603-121142" #"20260603-121213" another 60 degrees gazebo demo. To test in real #"20260529-113935 60 degrees gazebo demo" #"20260521-090040" #"20260518-213037 30 degrees demo" #"20260519-121802" #"20260513-185143" #"20260513-185035" #"20260402-204842 This is high fidelity forward model." #"20260306-154450 - with gru. more reasonable" #"20260304-161010" #"20260304-160736 - this reasonable"#"20260225-165700" #0.02 good enough for real drone 20250527-122703   0.05-to test 20250624-181715
     print(f"POLICY PATH IS {policy_file}") 
-    recovery_mode = 2 #1 for position, 2 for velocity, 3 for attitude
+    recovery_mode = 1 #1 for position, 2 for velocity, 3 for attitude
 
     rospack = rospkg.RosPack()
     path = rospack.get_path('nn_policy')
