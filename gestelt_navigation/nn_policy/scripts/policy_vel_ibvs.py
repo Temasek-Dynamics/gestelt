@@ -4,18 +4,16 @@ print("Running with Python:", sys.executable)
 import time
 import numpy as np
 import rospy
-import pkg_resources
 import yaml
 import os
 import rospkg
-import yaml
 from std_msgs.msg import Int8
 from gestelt_msgs.msg import CommanderState, ExecTrajectory
-from geometry_msgs.msg import PoseStamped, Twist
+from geometry_msgs.msg import PoseStamped, Twist, TwistStamped
 from nav_msgs.msg import Odometry
 from enum import Enum
 import roslib.packages
-from std_msgs.msg import Bool
+from std_msgs.msg import Bool, String
 import tf2_ros
 import threading
 from std_msgs.msg import Int8
@@ -28,6 +26,11 @@ from mavros_msgs.msg import AttitudeTarget
 
 from signal import signal, SIGINT
 import random
+
+# New by lyy
+from geometry_msgs.msg import PointStamped
+import math
+# end new
 
 def handler(signal_received, frame):
     # Handle any cleanup here
@@ -69,7 +72,44 @@ class NN_POLICY_PLANNER(object):
         self.last_pos_time = None
         self.last_odom_time = None
         self.ibvs_action_vel = np.zeros(4)
-        
+
+
+        # New by lyy
+        # forward
+        self.forward_speed = rospy.get_param('~forward_speed', 1.5)  # m/s
+        self.forward_duration = rospy.get_param('~forward_duration', 3.5)  # seconds
+        self._forward_until = rospy.Time(0)
+
+        # turn right/left
+        self.turn_left_rate   = rospy.get_param('~turn_left_rate',   0.5)   # rad/s（左转期望角速度，正数） 实际上在unity观测到是右转
+        self.turn_right_rate  = rospy.get_param('~turn_right_rate',  0.5)   # rad/s（右转期望角速度，正数）
+        self.turn_duration    = rospy.get_param('~turn_duration',    5.0)   # s   （转向脉冲时长）
+        self._turn_until      = rospy.Time(0)                               # 当前转向脉冲结束时间戳
+        self._turn_rate_ibvs  = 0.0                                         # 给 publishVEL 的机体系 w_z 指令（见下方“符号说明”）
+
+        # 订阅像素误差话题
+        self.px_err_topic     = rospy.get_param('~px_err_topic', '/square_center_px')
+        self.px_err_thr_px    = rospy.get_param('~px_err_thr_px', 20.0)  # 像素范数阈值，如 8~12 px
+        self.px_hold_time     = rospy.get_param('~px_hold_time', 0.3)    # 持续时间阈值(秒)
+        self.px_msg_timeout   = rospy.get_param('~px_msg_timeout', 0.3)  # 允许的数据新鲜度(秒)
+
+        self.ibvs_vx_hold_thr = rospy.get_param('~ibvs_vx_hold_thr', 0.08)
+        self.ibvs_vy_hold_thr = rospy.get_param('~ibvs_vy_hold_thr', 0.08)
+        self.ibvs_vz_hold_thr = rospy.get_param('~ibvs_vz_hold_thr', 0.08)
+        self.ibvs_wz_hold_thr = rospy.get_param('~ibvs_wz_hold_thr', 0.08)
+
+        self._px_err          = None
+        self._px_last_stamp   = rospy.Time(0)
+        self._align_ok_flag   = False
+        self._align_start_time= rospy.Time(0)
+
+        rospy.Subscriber(self.px_err_topic, PointStamped, self._px_err_cb, queue_size=20)
+
+        # ibvs超时
+        self.last_ibvs_time = rospy.Time(0)
+        self.ibvs_timeout = 0.5  # 设置超时时间，例如0.5秒
+        # end new
+
 
         self.swarm_mode_pub_ = rospy.Publisher('/traj_server/swarm_command', Int8, queue_size=5)
         self.commander_state_sub_ = rospy.Subscriber("/drone0/traj_server/state",CommanderState, self.commStateCb, queue_size = 10)
@@ -89,7 +129,20 @@ class NN_POLICY_PLANNER(object):
         #PVA controller trajectory Publisher
         self.pva_traj_pub_ = rospy.Publisher("/drone0/planner_adaptor/exec_trajectory", ExecTrajectory, queue_size = 5)
         self.mission_mode_pub_ = rospy.Publisher("/traj_server/mission_command", Int8, queue_size = 5, latch=False)
-        
+
+        # Experiment telemetry publishers
+        self.exp_cmd_vel_pub = rospy.Publisher('/exp/cmd_vel_final', TwistStamped, queue_size=20)
+        self.exp_alignment_hold_pub = rospy.Publisher('/exp/alignment_hold_active', Bool, queue_size=20)
+        self.exp_alignment_confirmed_pub = rospy.Publisher('/exp/alignment_confirmed', Bool, queue_size=20)
+        self.exp_forward_triggered_pub = rospy.Publisher('/exp/forward_triggered', Bool, queue_size=20)
+        self.exp_ibvs_timeout_pub = rospy.Publisher('/exp/ibvs_timeout_active', Bool, queue_size=20)
+        self.exp_trial_state_pub = rospy.Publisher('/exp/trial_state', String, queue_size=20)
+        self.exp_event_pub = rospy.Publisher('/exp/event_marker', String, queue_size=20)
+
+        self._alignment_confirmed_pulse = False
+        self._forward_trigger_active = False
+        self._ibvs_timeout_active = False
+        self._trial_state = "INIT"
 
         self.rate = rospy.Rate(0.02)
         self.event_manager = rospy.Timer(rospy.Duration(inference_timestep), self.eventCB)
@@ -113,14 +166,77 @@ class NN_POLICY_PLANNER(object):
         self.action = np.zeros((1,4))
         time.sleep(1)
         # self.policy_evaluation_timer = rospy.Timer(rospy.Duration(0.01), self.nn_evaluation)
-        
+
+    def _emit_exp_event(self, name: str):
+        if not name:
+            return
+        self.exp_event_pub.publish(String(data=name))
+
+    def _publish_exp_cmd_vel(self, vx: float, vy: float, vz: float, wz: float):
+        msg = TwistStamped()
+        msg.header.stamp = rospy.Time.now()
+        msg.header.frame_id = "body"
+        msg.twist.linear.x = vx
+        msg.twist.linear.y = vy
+        msg.twist.linear.z = vz
+        msg.twist.angular.z = wz
+        self.exp_cmd_vel_pub.publish(msg)
+
+    def _compute_trial_state(self):
+        now = rospy.Time.now()
+        if self.drone_state == DRONESTATE["INIT"].value:
+            return "INIT"
+        if self.drone_state == DRONESTATE["IDLE"].value:
+            return "IDLE"
+        if self.drone_state == DRONESTATE["TAKEOFF"].value:
+            return "TAKEOFF"
+        if self.drone_state == DRONESTATE["LAND"].value:
+            return "LAND"
+        if self.drone_state == DRONESTATE["HOVER"].value:
+            return "HOVER"
+        if self.drone_state == DRONESTATE["E_STOP"].value:
+            return "E_STOP"
+        if self.drone_state != DRONESTATE["MISSION"].value:
+            return "UNKNOWN"
+
+        if now < self._forward_until:
+            return "FORWARD"
+        if now < self._turn_until:
+            return "TURNING"
+        if self.mission_command_mode == 3:
+            if self._align_ok_flag:
+                return "HOLDING"
+            if self._ibvs_timeout_active:
+                return "SEARCHING"
+            return "ALIGNING"
+        if self.mission_command_mode == 1:
+            return "PVA_CONTROL"
+        if self.mission_command_mode == 2:
+            return "ATTITUDE_CONTROL"
+        if self.mission_command_mode == 4:
+            return "GEOM_CONTROL"
+        return f"MISSION_MODE_{self.mission_command_mode}"
+
+    def _publish_exp_status(self):
+        self._forward_trigger_active = rospy.Time.now() < self._forward_until
+        self._trial_state = self._compute_trial_state()
+
+        self.exp_alignment_hold_pub.publish(Bool(data=self._align_ok_flag))
+        self.exp_alignment_confirmed_pub.publish(Bool(data=self._alignment_confirmed_pulse))
+        self.exp_forward_triggered_pub.publish(Bool(data=self._forward_trigger_active))
+        self.exp_ibvs_timeout_pub.publish(Bool(data=self._ibvs_timeout_active))
+        self.exp_trial_state_pub.publish(String(data=self._trial_state))
+
+        # alignment_confirmed is a one-shot pulse for easier event extraction from rosbag
+        self._alignment_confirmed_pulse = False
 
     def commStateCb(self,msg):
         self.drone_state = DRONESTATE[msg.traj_server_state].value
 
     def missionModeCb(self,msg):
         self.warp_mission_command_mode = msg.data
-        print(f"Mission Mode changed to {self.warp_mission_command_mode}")
+        timestamp = time.time()
+        print(f"timestamp: {timestamp}", f"Mission Mode changed to {self.warp_mission_command_mode}")
 
     def publish_mission(self, mission_num):
         mission_idx = Int8()
@@ -174,6 +290,9 @@ class NN_POLICY_PLANNER(object):
         self.ibvs_action_vel[1] = msg.linear.y
         self.ibvs_action_vel[2] = msg.linear.z
         self.ibvs_action_vel[3] = msg.angular.z
+        # new by lyy 
+        self.last_ibvs_time = rospy.Time.now() # [新增] 记录收到数据的时间
+        # end new
 
     def targetPosCb(self,msg):
         self.warp_target_pos = np.array([msg.pose.position.x, msg.pose.position.y,msg.pose.position.z])
@@ -187,33 +306,41 @@ class NN_POLICY_PLANNER(object):
         elif self.drone_state == DRONESTATE["MISSION"].value:
             self.executeMission()
 
-    def publishPVA(self):
-        pva_traj_msg = ExecTrajectory()
-        pva_traj_msg.transform.translation.x = 0.0
-        pva_traj_msg.transform.translation.y = -9.0
-        pva_traj_msg.transform.translation.z = 5.0
-        pva_traj_msg.transform.rotation.x = 0.0
-        pva_traj_msg.transform.rotation.y = 0.0
-        pva_traj_msg.transform.rotation.z = 0.819152
-        pva_traj_msg.transform.rotation.w = -0.5735764
-        pva_traj_msg.type_mask = 2048
+        self._publish_exp_status()
 
+    def publishPVA(self):
+        yaw_deg = -125
+        yaw_rad = math.radians(yaw_deg)
+        qz = math.sin(yaw_rad / 2.0)
+        qw = math.cos(yaw_rad / 2.0)
+        # New by zzr
+
+        pva_traj_msg = ExecTrajectory()
+        pva_traj_msg.transform.translation.x = 2.0 #1.4258818626403809
+        pva_traj_msg.transform.translation.y = 3.5 #2.9743916034698486
+        pva_traj_msg.transform.translation.z = 1
+        pva_traj_msg.transform.rotation.x = 0
+        pva_traj_msg.transform.rotation.y = 0
+        pva_traj_msg.transform.rotation.z = qz
+        pva_traj_msg.transform.rotation.w = qw
+        pva_traj_msg.type_mask = 2048
 
         #This part is non essential. Merely for debugging purposes
         pva_traj_msg.type_mask = self.attitude_mode_toggle
         pva_traj_msg.throttle = self.action[0,0]
-        pva_traj_msg.angular_rates.angular.x = self.action[0,1]   #body rate x
+        pva_traj_msg.angular_rates.angular.x = self.action[0,1]     #body rate x
         pva_traj_msg.angular_rates.angular.y = self.action[0,2]     #body rate y
         pva_traj_msg.angular_rates.angular.z = self.action[0,3]     #body rate z
 
         #Publish the PVA
         self.pva_traj_pub_.publish(pva_traj_msg)
+        # print("publishing this")
 
     def publishVEL(self):
         pva_traj_msg = ExecTrajectory()
-        pva_traj_msg.transform.translation.x = 0.0
-        pva_traj_msg.transform.translation.y = 0.0
-        pva_traj_msg.transform.translation.z = 1.0
+        pva_traj_msg.transform.translation.x = 0
+        pva_traj_msg.transform.translation.y = 0
+        pva_traj_msg.transform.translation.z = 1
         pva_traj_msg.transform.rotation.x = 0.0
         pva_traj_msg.transform.rotation.y = 0.0
         pva_traj_msg.transform.rotation.z = 0.0 #0.707
@@ -224,8 +351,111 @@ class NN_POLICY_PLANNER(object):
         pva_traj_msg.velocity.angular.z = -self.ibvs_action_vel[3]
         pva_traj_msg.type_mask = 2048
 
+        # New by lyy
+       # now = rospy.Time.now()
+        # If a FORWARD pulse is active, override vx like ViSP demo's setForwardSpeed(speed)
+        
+    
+      #  if now < self._forward_until:
+      #      self._ibvs_timeout_active = False
+      #      vx = self.forward_speed
+      #      vy = 0.0
+      #      vz = 0.0
+      #      wz = 0.0
+      #  else:
+      #      # [IBVS模式] - 增加安全检查
+      #      time_diff = (rospy.Time.now() - self.last_ibvs_time).to_sec()
+      #      self._ibvs_timeout_active = time_diff > self.ibvs_timeout
+      #      # 如果超过0.5秒没收到IBVS指令（说明目标丢了，或者上游挂了）
+      #      if self._ibvs_timeout_active:
+      #          rospy.loginfo_once("Lost Target! Hovering...")
+
+     #           vx = 0.0
+      #          vy = 0.0
+      #          vz = 0.0
+      #          wz = 0.0 # 或者给一个很慢的旋转速度 wz = 0.1 来搜索目标
+      #      else:
+      #          # 只有数据新鲜时才执行 IBVS
+      #          vx = self.ibvs_action_vel[0]
+      #          vy = -self.ibvs_action_vel[1]
+      #          vz = -self.ibvs_action_vel[2]
+      #          wz = -self.ibvs_action_vel[3]
+
+            # TURN 覆盖：仅当不在 forward 窗口、且处于 turn 脉冲窗口时生效
+            # 规则：线速度清零，只发布 yaw 角速度（_turn_rate_ibvs 为最终下发到消息的角速度）
+       #     if now < self._turn_until:
+       #         vx, vy, vz = 0.0, 0.0, 0.0
+       #         wz = self._turn_rate_ibvs
+
+       # pva_traj_msg.velocity.linear.x = vx
+       # pva_traj_msg.velocity.linear.y = vy
+        #pva_traj_msg.velocity.linear.z = vz
+       # pva_traj_msg.velocity.angular.z = wz
+       # pva_traj_msg.type_mask = 2048        
+        # end new
+
         #Publish the PVA
         self.pva_traj_pub_.publish(pva_traj_msg)
+        #self._publish_exp_cmd_vel(vx, vy, vz, wz)
+
+    # New by lyy
+    def _px_err_cb(self, msg: PointStamped):
+        self._px_err = (msg.point.x, msg.point.y)               # (dx, dy) in pixels
+        self._px_last_stamp = msg.header.stamp or rospy.Time.now()
+
+    def _auto_trigger_data5_if_center_aligned(self):
+        # don't trigger during turn right/left
+        if rospy.Time.now() < self._turn_until:
+            self._align_ok_flag = False
+            return
+
+        now = rospy.Time.now()
+
+        # 如果当前处于 data5 前进脉冲期，直接不判
+        if now < getattr(self, "_forward_until", rospy.Time(0)):
+            self._align_ok_flag = False
+            return
+
+        # 没有新鲜的像素误差信号 => 不判定（防止“无目标”误触发）
+        if self._px_err is None or (now - self._px_last_stamp).to_sec() > self.px_msg_timeout:
+            if self._align_ok_flag:
+                self._emit_exp_event('alignment_hold_reset')
+            self._align_ok_flag = False
+            return
+
+        dx, dy = self._px_err
+        e = math.hypot(dx, dy)  # 像素范数
+
+        vx_ok = abs(self.ibvs_action_vel[0]) <= self.ibvs_vx_hold_thr
+        vy_ok = abs(self.ibvs_action_vel[1]) <= self.ibvs_vy_hold_thr
+        vz_ok = abs(self.ibvs_action_vel[2]) <= self.ibvs_vz_hold_thr
+        wz_ok = abs(self.ibvs_action_vel[3]) <= self.ibvs_wz_hold_thr
+
+        aligned_and_hovering = (e <= self.px_err_thr_px) and vx_ok and vy_ok and vz_ok and wz_ok
+        
+        if aligned_and_hovering:
+            if not self._align_ok_flag:
+                self._align_ok_flag = True
+                self._align_start_time = now
+                self._emit_exp_event('alignment_hold_start')
+            elif (now - self._align_start_time).to_sec() >= self.px_hold_time:
+                # 触发 data5
+                self.warp_mission_command_mode = 5
+                self._align_ok_flag = False
+                self._alignment_confirmed_pulse = True
+                self._emit_exp_event('alignment_confirmed')
+            rospy.loginfo(
+                f"[policy] CENTER+HOVER READY: |e_px|={e:.1f} <= {self.px_err_thr_px:.1f}, "
+                f"|v|=[{abs(self.ibvs_action_vel[0]):.3f}, {abs(self.ibvs_action_vel[1]):.3f}, "
+                f"{abs(self.ibvs_action_vel[2]):.3f}, {abs(self.ibvs_action_vel[3]):.3f}] "
+                f"for {self.px_hold_time:.1f}s -> data5"
+            )
+        else:
+            if self._align_ok_flag:
+                self._emit_exp_event('alignment_hold_reset')
+            self._align_ok_flag = False
+    # end new
+
 
     def publishGeomCtrl(self):
         pva_traj_msg = AttitudeTarget()
@@ -266,15 +496,67 @@ class NN_POLICY_PLANNER(object):
         mission_pub_msg = Int8()
         mission_pub_msg.data = mode
         self.mission_mode_pub_.publish(mission_pub_msg)
-        if mode == 2:
-            print("switched to mission mode 2: ATTITUDE CONTROL")
-        elif mode == 4:
-            print("switched to mission mode 2: Geom CONTROL")
-        else:
+        # New by lyy
+        if mode == 1:
             print("switched to mission mode 1: PVA CONTROL")
+        elif mode == 2:
+            print("switched to mission mode 2: ATTITUDE CONTROL")
+        elif mode == 3:
+            print("switched to mission mode 3: VELOCITY CONTROL")
+        elif mode == 4:
+            print("switched to mission mode 4: GEOM CONTROL")
+        else:
+            print(f"switched to mission mode {mode}")
+        # end new
+
+        # orgin
+        # if mode == 2:
+            # print("switched to mission mode 2: ATTITUDE CONTROL")
+        # elif mode == 4:
+            # print("switched to mission mode 2: Geom CONTROL")
+        # else:
+            # print("switched to mission mode 1: PVA CONTROL")
 
     def executeMission(self):
         if self.drone_state == DRONESTATE["MISSION"].value:
+            # New by lyy
+            if self.warp_mission_command_mode == 5:
+                # Trigger a simple FORWARD pulse
+                self._forward_until = rospy.Time.now() + rospy.Duration(self.forward_duration)
+                self.publishMissionCmdMode(3)  # ensure velocity mode
+                self.mission_command_mode = 3
+                self.warp_mission_command_mode = 3  # consume pulse to avoid retrigger loop
+                self._emit_exp_event('forward_triggered')
+                rospy.loginfo(f"[policy] FORWARD start: {self.forward_duration:.2f}s @ {self.forward_speed:.2f}m/s")
+
+            if self.warp_mission_command_mode == 6:
+                now = rospy.Time.now()
+                self._turn_until     = now + rospy.Duration(self.turn_duration)
+
+                self._turn_rate_ibvs = -abs(self.turn_left_rate)
+                self.warp_mission_command_mode = 0  # 消费掉
+                try:
+                    self.publishMissionCmdMode(3)   # 切到“速度控制”模式以便我们发速度
+                except:
+                    pass
+                self.mission_command_mode = 3
+                rospy.loginfo(f"[policy] TURN RIGHT start: rate={self.turn_left_rate:.2f} rad/s, dur={self.turn_duration:.2f}s")
+
+            if self.warp_mission_command_mode == 7:
+                now = rospy.Time.now()
+                self._turn_until     = now + rospy.Duration(self.turn_duration)
+
+                self._turn_rate_ibvs = +abs(self.turn_right_rate)
+                self.warp_mission_command_mode = 0
+                try:
+                    self.publishMissionCmdMode(3)
+                except:
+                    pass
+                self.mission_command_mode = 3
+                rospy.loginfo(f"[policy] TURN LEFT start: rate={self.turn_right_rate:.2f} rad/s, dur={self.turn_duration:.2f}s")
+                            
+            # end new
+
             if self.mission_command_mode == 1:
                 self.publishPVA()
                 if self.warp_mission_command_mode == 2:
@@ -302,7 +584,8 @@ class NN_POLICY_PLANNER(object):
                     self.mission_command_mode = 1
 
             elif self.mission_command_mode == 3:
-                self.publishVEL()
+                self._auto_trigger_data5_if_center_aligned()  # New by lyy
+                self.publishVEL()  
 
             elif self.mission_command_mode == 4:
                 self.publishGeomCtrl()
@@ -412,4 +695,3 @@ if __name__=="__main__":
     rospy.spin()
 
     print("done")
-
