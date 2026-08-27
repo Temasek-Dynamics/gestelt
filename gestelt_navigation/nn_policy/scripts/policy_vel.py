@@ -20,6 +20,9 @@ import tf2_ros
 import threading
 from std_msgs.msg import Int8
 from mavros_msgs.msg import AttitudeTarget
+from scipy.spatial.transform import Rotation as R
+from nav_msgs.msg import Path
+from collections import deque
 # import tf2_geometry_msgs
 # from geometry_msgs.msg import Vector3Stamped
 # from geometry_msgs import Posestamped
@@ -56,6 +59,7 @@ class ServerEvent(Enum):
 class TEST_RENDER(object):
 
     def __init__(self, policy_path, pc):
+        self.start_navigating = False
         self.pc = pc
         if self.pc == True:
             self.policy = TrackVel(input_dim=16)
@@ -106,7 +110,18 @@ class TEST_RENDER(object):
         #     print(self.t_pos)
         if self.pc == True:
             # delta_vect = self.vector_to_line(pos, self.init_pos , self.target_unit_vel_tensor)
-            diff_pos = self.t_pos - pos
+            if self.start_navigating == False:
+                diff_pos = self.t_pos - pos
+            else:
+                t = rospy.Time.now().to_sec() - self.start_time
+                curr_t_pos, _, curr_done = self.straight_line_position_with_duration(t, self.start_point, self.t_pos_numpy, 0.5)
+                if curr_done == False:
+                    curr_t_pos_tensor = torch.Tensor(curr_t_pos).unsqueeze(0)
+                    diff_pos = curr_t_pos_tensor - pos
+                else:
+                    curr_t_pos_tensor = torch.Tensor(curr_t_pos).unsqueeze(0)
+                    diff_pos = curr_t_pos_tensor - pos
+                    self.start_navigation = False
             # _, angular_diff = self.quaternion_loss(self.t_or, att)
             # print(diff_pos)
             x = torch.cat((diff_pos, att, qd, self.t_vel), dim=1)
@@ -118,6 +133,7 @@ class TEST_RENDER(object):
             diff_vel = self.t_vel - vel
             x = torch.cat((att, angvel, diff_vel), dim=1)
         a = self.policy(x)
+        # print(a)
         
         self.previous_action = a
         end_time = time.time()
@@ -132,9 +148,13 @@ class TEST_RENDER(object):
         Q = A + proj  # Closest point on the line
         return Q - P  # Vector from P to closest point
     
-    def update_target_pos(self,P):
+    def update_target_pos(self,P,warp_pos):
         target_pos = P
         self.t_pos = torch.tensor(target_pos, dtype=torch.float32)
+        self.t_pos_numpy = P
+        self.start_time = rospy.Time.now().to_sec()
+        self.start_point = warp_pos
+        self.start_navigating = True
 
     def quaternion_loss(self,y_true, y_pred):
         """
@@ -164,6 +184,39 @@ class TEST_RENDER(object):
         return angular_diff.mean(), angular_diff
     
 
+    def straight_line_position_with_duration(self,t, start, goal, velocity):
+        """
+        Evaluate straight-line position at time t and return total duration.
+
+        Args:
+            t (float): elapsed time since start (s)
+            start (array-like): [x, y, z]
+            goal (array-like): [x, y, z]
+            velocity (float): speed (m/s)
+
+        Returns:
+            pos (np.ndarray): current position
+            T (float): total time to reach the goal
+            done (bool): True if goal reached
+        """
+        start = np.asarray(start, dtype=np.float32)
+        goal = np.asarray(goal, dtype=np.float32)
+
+        direction = goal - start
+        distance = np.linalg.norm(direction)
+
+        if distance < 1e-6:
+            return start.copy(), 0.0, True
+
+        d_hat = direction / distance
+        T = distance / velocity
+
+        t_clamped = np.clip(t, 0.0, T)
+        pos = start + d_hat * velocity * t_clamped
+
+        done = t >= T
+        return pos, T, done
+
 class NN_POLICY_PLANNER(object):
 
     def __init__(self, mission_command_mode, policy, inference_timestep, max_angular_rates):
@@ -172,7 +225,11 @@ class NN_POLICY_PLANNER(object):
         self.tfBuffer =  tf2_ros.Buffer(rospy.Duration(10))
         self.listener = tf2_ros.TransformListener(self.tfBuffer)
         self.warp_pose_msg = PoseStamped()
+        ### drone path
+        MAX_POSES = 500   # keep latest 50 poses
+        self.path_buffer = deque(maxlen=MAX_POSES)
         rospy.sleep(1)
+
 
         self.max_angular_rates = max_angular_rates
         self.policy = policy
@@ -181,12 +238,14 @@ class NN_POLICY_PLANNER(object):
         
 
         self.swarm_mode_pub_ = rospy.Publisher('/traj_server/swarm_command', Int8, queue_size=5)
+        self.drone_path_pub_ = rospy.Publisher('/drone0/global/path', Path, queue_size=5)
         self.commander_state_sub_ = rospy.Subscriber("/drone0/traj_server/state",CommanderState, self.commStateCb, queue_size = 10)
         self.drone_pose_sub_ = rospy.Subscriber("/drone0/mavros/local_position/pose",PoseStamped, self.poseCb, queue_size = 10)
         self.drone_pose_sub_ = rospy.Subscriber("/drone0/mavros/local_position/odom",Odometry, self.odomCb, queue_size = 10)
         self.drone_pose_sub_ = rospy.Subscriber("/mode_change", Bool, self.modeChgCb, queue_size = 10)
         self.mission_mode_sub_ = rospy.Subscriber("/traj_server/warp_mission_command", Int8, self.missionModeCb, queue_size = 5)
         self.target_position_sub_ = rospy.Subscriber("/drone0/warp/local_position/target_position", PoseStamped, self.targetPosCb, queue_size = 5)
+        self.target_click_position_sub_ = rospy.Subscriber("/move_base_simple/goal", PoseStamped, self.targetclickPosCb, queue_size = 5)
 
         self.warp_drone_pose_pub_ = rospy.Subscriber('/drone0/warp/local_position/pose', PoseStamped, self.warpPoseCB, queue_size=5)
         self.warp_drone_odom_sub_ = rospy.Subscriber('/drone0/warp/local_position/odom', Odometry, self.warpOdomCB, queue_size=5)
@@ -235,6 +294,8 @@ class NN_POLICY_PLANNER(object):
         self.swarm_mode_pub_.publish(mission_idx)
 
     def poseCb(self, msg):
+        ## Load into path pose
+        self.path_buffer.append(msg)
         self.drone_pos = np.array([msg.pose.position.x, msg.pose.position.y, msg.pose.position.z])
         self.drone_quat = np.array([msg.pose.orientation.x, msg.pose.orientation.y, msg.pose.orientation.z, msg.pose.orientation.w])
         if self.last_pos_time is not None:
@@ -242,6 +303,9 @@ class NN_POLICY_PLANNER(object):
            if time_diff > 0.03:
                print(f"TIME DIFFERENCE EXCEEDED!!! {time_diff} at {msg.header.stamp}")
         self.last_pos_time = msg.header.stamp
+        rot_obj = R.from_quat(self.drone_quat)
+        rpy_deg = rot_obj.as_euler('xyz', degrees=True)
+        # print(rpy_deg)
 
         self._pose_odom_pub_callback()
 
@@ -278,7 +342,12 @@ class NN_POLICY_PLANNER(object):
 
     def targetPosCb(self,msg):
         self.warp_target_pos = np.array([msg.pose.position.x, msg.pose.position.y,msg.pose.position.z])
-        self.policy.update_target_pos(self.warp_target_pos)
+        self.policy.update_target_pos(self.warp_target_pos, self.warp_q[:3])
+
+    def targetclickPosCb(self,msg):
+        self.warp_target_pos = np.array([msg.pose.position.x, 1.0 ,-msg.pose.position.y])
+
+        self.policy.update_target_pos(self.warp_target_pos, self.warp_q[:3])
 
     def eventCB(self, event):
         if self.drone_state == DRONESTATE["IDLE"].value:
@@ -287,6 +356,14 @@ class NN_POLICY_PLANNER(object):
             self.publish_mission(ServerEvent["MISSION_E"].value)
         elif self.drone_state == DRONESTATE["MISSION"].value:
             self.executeMission()
+
+        ##Publish path
+        path = Path()
+        path.header.frame_id = "map"
+        path.header.stamp = rospy.Time.now()
+        path.poses = list(self.path_buffer)
+        self.drone_path_pub_.publish(path)
+
 
     def publishPVA(self):
         pva_traj_msg = ExecTrajectory()
@@ -319,9 +396,10 @@ class NN_POLICY_PLANNER(object):
         pva_traj_msg.transform.rotation.y = 0.0
         pva_traj_msg.transform.rotation.z = 0.0 #0.707
         pva_traj_msg.transform.rotation.w = 1.0 #0.707
-        pva_traj_msg.velocity.linear.x = 1.0
+        pva_traj_msg.velocity.linear.x = 3.0
         pva_traj_msg.velocity.linear.y = 0.0
         pva_traj_msg.velocity.linear.z = 0.0
+        pva_traj_msg.velocity.angular.z = 0.0
         pva_traj_msg.type_mask = 2048
 
         #Publish the PVA
@@ -357,6 +435,7 @@ class NN_POLICY_PLANNER(object):
         pva_traj_msg.angular_rates.angular.z = nn_action[0,3] * self.max_angular_rates
 
         self.pva_traj_pub_.publish(pva_traj_msg)
+        # print("Attitude control mode")
 
 
     def checkNNReadiness(self):
@@ -445,7 +524,12 @@ class NN_POLICY_PLANNER(object):
         warp_q = torch.Tensor(warp_q).unsqueeze(0)
         warp_qd = torch.Tensor(self.warp_qd).unsqueeze(0)
         self.action = self.policy.evaluate_(warp_pos, warp_q, warp_qd)
+        # print(warp_pos)
+        # print(warp_q)
+        # print(warp_qd)
         # print(self.action)
+
+
 
 
 
@@ -453,7 +537,7 @@ class NN_POLICY_PLANNER(object):
 if __name__=="__main__":
     signal(SIGINT, handler)
     print("STARTING NODE")
-    policy_file = "20250710-154609" #0.02 good enough for real drone 20250527-122703   0.05-to test 20250624-181715
+    policy_file = "20251027-120342"#20251027-120342 good for 0.02. "20251009-113440" #"20251009-101903" This is good for 0.05  #0.02 good enough for real drone 20250527-122703   0.05-to test 20250624-181715
     print(f"POLICY PATH IS {policy_file}") 
 
     rospack = rospkg.RosPack()
@@ -464,7 +548,7 @@ if __name__=="__main__":
     config_path = os.path.join(actual_full_path,"training_config.yaml")
     full_policy_path = os.path.join(actual_full_path, "policy.pth")
 
-    rospy.init_node("nn_policy_planner2")
+    rospy.init_node("nn_policy_planner3")
     ros_lib = roslib.packages.get_pkg_dir("gestelt_bringup")
     full_config_path = os.path.join(ros_lib, "config/traj_server_default.yaml")
     with open(full_config_path, 'r') as file:
@@ -479,7 +563,7 @@ if __name__=="__main__":
     warp_jax = loaded_params["warp_jax"]
 
     position_control = True #config_params["position_control"]
-    delta_time = 0.05 #float(config_params["delta_time"])
+    delta_time = 0.02 #float(config_params["delta_time"])
     max_angular_rate = 3.0 #float(config_params["max_angular_rates"])
 
     #This code is primarily for warp policies. So warp_jax has to be 0.0

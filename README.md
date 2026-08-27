@@ -274,3 +274,79 @@ Xin Zhou et al. ,Swarm of micro flying robots in the wild.Sci. Robot.7,eabm5954(
 
 <a id="5">[5]</a>
 Ren, Yunfan, et al. “Bubble Planner: Planning High-Speed Smooth Quadrotor Trajectories Using Receding Corridors.” 2022 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS), IEEE, 2022. Crossref, https://doi.org/10.1109/iros47612.2022.9981518.
+
+
+# Warp-PX4 Specific files
+
+## Introduction
+
+We have a couple of configurations right now that I hope to document such that we don't lose track of what we have done. Essentially, we started off with 1. NVIDIA Warp - trained hovering and point to point policy with the y-up configuration. In this case, I have to do a static transform from map (PX4 world) to warp (Warp world frame). The input to the policy is in world frame. So I have to first convert odom from body map to world warp. The output of policy is in the world warp frame. So I have to map it back to body map frame. 2. Jax - Explored Scaramuzza's code and amended from there. That is with the Z-up configuration. I think the input to the policy is in the world frame. So need to transform odom from body to world frame. However, the output of the policy is in the body frame. So no need to transform when send back to PX4. 3. Now we have the z up warp frame. In this case, there is no need to convert the PX4 world to Warp world frame because they are identical. Policy is still taking in global map and outputting global map frame. So still need to do conversion from PX4 body odom to the map world frame. And then policy output is from map world frame to body odom.
+
+In summary these are the following configurations:
+
+1. Y-Up Warp Global
+2. Z-up Jax
+3. Z-up Warp Body
+4. Z-up Warp Global
+
+### Y-up Warp launching files
+
+To launch the Y-up Warp there are few things to launch.
+
+We launch the following
+```bash
+roslaunch gestelt_bringup sitl_drone.launch
+roslaunch gestelt_bringup sitl_dif_planner.launch
+roscd nn_policy/scripts
+conda activate difflying
+python policy_vel.py
+```
+
+### Z-up Jax
+
+We launch the following
+```bash
+roslaunch gestelt_bringup sitl_drone.launch
+roslaunch gestelt_bringup sitl_dif_planner.launch
+roscd nn_policy/scripts
+conda activate difflying
+python policy_vel_jax.py
+```
+
+### Difference
+It seems that Y-up Warp and Z-up Jax are pretty much the same. That's because they are pretty similar. Only frame transformation need to be changed. So there is a file that we need to take note, because `sitl_dif_planner.launch` does the frame transformation. It reads a file called `traj_server_default.yaml` and in that file, you can see that there are parameters defined inside `to_transform_odom`, `to_transform_policy` and `warp_jax`. These define which configuration to use.
+
+In addition, I was also attempting training with the Z-up with outputs and inputs to policy using body frame. With that I combined this into the below script
+
+### Combined Warp and Jax launch script
+```bash
+roslaunch gestelt_bringup sitl_drone.launch
+roslaunch gestelt_bringup sitl_dif_planner.launch
+roscd nn_policy/scripts
+conda activate difflying
+python policy_vel_combined.py
+```
+
+Just change the `traj_server_default.yaml` accordingly.
+
+
+## Additional Introduction.
+4. Now I am training with the Z-up with global frame inputs and outputs from the policy. Note this is different from what was mentioned above. In this particular case, it is actually similar to the Y-up case, just that now there is no map to warp static global frame transformation. What we have to do is to switch off this static transformation and it should be good to go.
+
+In order to launch we run the following:
+
+```bash
+roslaunch gestelt_bringup sitl_drone.launch
+roslaunch gestelt_bringup sitl_dif_zup_planner.launch
+roscd nn_policy/scripts
+conda activate difflying
+python policy_vel_combined_gate_traversal.py
+```
+
+For this particular file, we keep the `traj_server_default.yaml` parameters the same as that for Y-up. 
+
+
+## Data collection scripts
+In order to run data collection scripts for residual dynamics learning, we can run the following
+
+

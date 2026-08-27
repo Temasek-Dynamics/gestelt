@@ -27,6 +27,7 @@
 #include <tf2_ros/transform_listener.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <geometry_msgs/Vector3Stamped.h>
+#include <sensor_msgs/Imu.h>
 
 #include <gestelt_msgs/Command.h>
 #include <gestelt_msgs/CommanderState.h>
@@ -107,6 +108,11 @@ private: // Class Methods
   void execTrajCb(const gestelt_msgs::ExecTrajectory::ConstPtr &msg);
 
     /**
+   * @brief Callback for updating position info from planner adaptor
+   */
+  void posUpdateCb(const gestelt_msgs::ExecTrajectory::ConstPtr &msg);
+
+    /**
    * @brief Callback for thrust and body rates from policy 
    */
   void execLowLvlCmdCb(const gestelt_msgs::ExecTrajectory::ConstPtr &msg);
@@ -145,6 +151,8 @@ private: // Class Methods
   void geomCb(const mavros_msgs::AttitudeTarget::ConstPtr & msg);
 
   void velCommandCb(const std_msgs::Int8::ConstPtr & msg);
+
+  void imuCB(const sensor_msgs::Imu::ConstPtr &msg);
 
 
   /**
@@ -448,7 +456,9 @@ private: // Member variables
   
   /* Subscriber */
   ros::Subscriber exec_traj_sub_; // Subscriber for planner trajectory
+  ros::Subscriber pos_sub_; // Subscriber for planner position updates
   ros::Subscriber exec_lowlvl_cmd_sub_;
+  ros::Subscriber imu_sub_;
 
   ros::Subscriber planner_hb_sub_; // Subscriber to planner heartbeat
   ros::Subscriber uav_state_sub_; // Subscriber to UAV State (MavROS)
@@ -474,6 +484,16 @@ private: // Member variables
   ServerState server_state_{ServerState::INIT};
   MissionCmdMode mission_cmd_mode_{MissionCmdMode::PVA};
   int cmd_mode_num;
+  // Latched true when the body rate x-safety cutoff forces a switch to PVA.
+  // While true, incoming trajectory/pos data is ignored so it can't clobber
+  // the safety hold setpoint. Cleared only by an explicit operator mode change
+  // or when the mission is cancelled.
+  bool body_rate_safety_triggered_{false};
+  // x position beyond which body rate control (ATTITUDE in body rate mode, or
+  // GEOM) is force-cut to AUTO.LOITER. Single source of truth - used both to
+  // trigger the cutoff and to gate re-entry into body rate mode, so the two
+  // checks can't drift out of sync.
+  double body_rate_safety_x_limit_{1.5};
   mavros_msgs::State uav_current_state_;
 
   geometry_msgs::PoseStamped uav_pose_; // Current pose of UAV

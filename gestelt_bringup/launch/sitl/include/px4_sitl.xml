@@ -11,13 +11,15 @@
     <!-- Gazebo parameters -->
     <arg name="vehicle"/>
     <arg name="model"/>
+    <!-- SDF filename within the model directory, defaults to the model name -->
+    <arg name="sdf_name" default="$(arg model)"/>
     <!-- PX4 configs -->
     <arg name="est" default="ekf2"/>
     <arg name="interactive" default="false"/>
     <!-- PX4 1.14.0 -->
     <!-- <env name="PX4_SIM_MODEL" value="gazebo-classic_$(arg vehicle)" /> -->
     <!-- PX4 1.13.0 -->
-    <env name="PX4_SIM_MODEL" value="$(arg vehicle)" />
+    <env name="PX4_SIM_MODEL" value="gazebo-classic_$(arg vehicle)" />
 
     <!-- Add static transform from drone to it's origin -->
     <node pkg="tf" type="static_transform_publisher" 
@@ -38,7 +40,7 @@
       <arg name="fcu_url" default="udp://:$(arg fcu_addr)@localhost:$(arg fcu_port)"/>
 
       <!-- generate sdf vehicle model -->
-      <arg name="cmd" default="xmlstarlet ed -u '//plugin[@name=&quot;mavlink_interface&quot;]/mavlink_tcp_port' -v $(arg mavlink_tcp_port) -u '//plugin[@name=&quot;camera_controller&quot;]/frameName' -v $(arg drone_id_ns)_cam_link $(find gestelt_bringup)/simulation/models/$(arg model)/$(arg model).sdf"/>
+      <arg name="cmd" default="xmlstarlet ed -u '//plugin[@name=&quot;mavlink_interface&quot;]/mavlink_tcp_port' -v $(arg mavlink_tcp_port) -u '//plugin[@name=&quot;camera_controller&quot;]/frameName' -v $(arg drone_id_ns)_cam_link $(find gestelt_bringup)/simulation/models/$(arg model)/$(arg sdf_name).sdf"/>
 
       <param command="$(arg cmd)" name="model_description"/>
       <!-- PX4 SITL -->

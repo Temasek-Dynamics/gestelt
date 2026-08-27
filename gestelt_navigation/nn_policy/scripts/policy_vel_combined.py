@@ -468,7 +468,7 @@ class NN_POLICY_PLANNER(object):
 if __name__=="__main__":
     signal(SIGINT, handler)
     print("STARTING NODE")
-    policy_file = "20250714-103646" #0.02 good enough for real drone 20250527-122703   0.05-to test 20250624-181715
+    policy_file = "20250527-122703" #0.02 good enough for real drone 20250527-122703   0.05-to test 20250624-181715
     print(f"POLICY PATH IS {policy_file}") 
 
     rospack = rospkg.RosPack()
@@ -494,7 +494,7 @@ if __name__=="__main__":
     warp_jax = loaded_params["warp_jax"]
 
     position_control = True #config_params["position_control"]
-    delta_time = 0.05 #float(config_params["delta_time"])
+    delta_time = 0.02 #float(config_params["delta_time"])
     max_angular_rate = 3.0 #float(config_params["max_angular_rates"])
 
     #This code is primarily for warp policies. So warp_jax has to be 0.0

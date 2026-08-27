@@ -9,6 +9,8 @@
   <arg name="world_filename_rel" default="empty.world" />
   <!-- world_filename_abs is absolute filepath -->
   <arg name="world_filename_abs" default="$(find gestelt_bringup)/simulation/worlds/$(arg world_filename_rel)" />
+  <!-- unused: mavlink_sitl_gazebo is not present in this workspace (PX4 ships it as sitl_gazebo-classic) -->
+  <!-- <arg name="world" default="$(find mavlink_sitl_gazebo)/worlds/empty.world"/> -->
 
   <!-- Gazebo simulation -->
   <include file="$(find gazebo_ros)/launch/empty_world.launch">
@@ -22,11 +24,20 @@
     <arg name="physics" value="ode"/>
   </include>
 
+  <!-- <include file="$(find gazebo_ros)/launch/empty_world.launch">
+        <arg name="gui" value="true"/>
+        <arg name="world_name" value="$(arg world)"/>
+        <arg name="debug" value="false"/>
+        <arg name="verbose" value="false"/>
+        <arg name="paused" value="false"/>
+        <arg name="respawn_gazebo" value="false"/> -->
+  <!-- </include> -->
   <!-- Spawn drone in gazebo with mavros plugin -->
   <include file="$(find gestelt_bringup)/launch/sitl/include/px4_sitl.xml">
     <arg name="drone_id"   value="$(arg drone_id)"/>
-    <arg name="vehicle" default="iris"/>
-    <arg name="model"   default="raynor"/>
+    <arg name="vehicle"  value="iris"/>
+    <arg name="model"    value="raynor"/>
+    <arg name="sdf_name" value="charpi"/>
     <arg name="init_x"  value="$(arg init_x)"/>
     <arg name="init_y"  value="$(arg init_y)"/>
     <arg name="init_z"  value="0.0"/>
