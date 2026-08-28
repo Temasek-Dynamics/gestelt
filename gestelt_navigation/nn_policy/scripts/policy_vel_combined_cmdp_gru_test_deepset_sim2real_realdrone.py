@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import os
 import sys
+import threading
 import time
 from enum import Enum
 from signal import SIGINT, signal
@@ -65,11 +66,73 @@ FIXED_OBSTACLE_RADII = np.array(
     dtype=np.float32,
 )
 
-# Manual test endpoints in the training/policy room frame. DEFAULT_SCENE_OFFSET
-# shifts them into Gazebo/map world coordinates for the PVA command.
-MANUAL_START_POS = np.array([2.0, 2.5, 1.0], dtype=np.float32)
-MANUAL_TARGET_POS = np.array([8.0, 2.5, 1.0], dtype=np.float32)
-DEFAULT_SCENE_OFFSET = np.array([4.0, 3.0, 0.0], dtype=np.float32)
+# The same layoutN/case_NNN test set recorded from the training environment
+# (see logs/docs/primal_dual2/figures for the reference plots). Obstacles are
+# never physically spawned in Gazebo -- they only ever go into the policy's
+# obstacle-avoidance input, exactly like the training-side evaluation.
+DEFAULT_TEST_CASES_DIR = os.path.join(NN_POLICY_DIR, "logs", "docs", "primal_dual2_blocked")
+
+
+def load_case_manifest(root_dir, fixed_start_xy=None, allowed_cases=None):
+    """Load every layoutN/case_NNN test case under root_dir, in the same format
+    as logs/docs/primal_dual2: start/target/quat/scene_offset from each case's
+    metadata.yaml, obstacle positions/radii from its obstacles.npz. Returned in
+    layout-then-case directory order, matching how they were recorded --
+    unless allowed_cases fixes the order (see below).
+
+    fixed_start_xy: if given (x, y), OVERRIDES each case's stored scene_offset
+    (which is 0 -- meaningless for a real room) with the offset that maps that
+    case's own start_pos_sim to this single physical (x, y) point. Every real
+    flight then launches from the same spot regardless of where its start was
+    placed in the training room.
+    allowed_cases: optional iterable of "layoutN/case_NNN" strings restricting
+    (and ordering) the returned cases to this subset -- e.g. a hand-picked list
+    of trajectories confirmed to fit the physical room.
+    """
+    cases = []
+    allowed_set = set(allowed_cases) if allowed_cases is not None else None
+    layout_names = sorted(
+        d for d in os.listdir(root_dir)
+        if d.startswith("layout") and os.path.isdir(os.path.join(root_dir, d))
+    )
+    for layout_name in layout_names:
+        layout_dir = os.path.join(root_dir, layout_name)
+        case_names = sorted(
+            d for d in os.listdir(layout_dir)
+            if d.startswith("case_") and os.path.isdir(os.path.join(layout_dir, d))
+        )
+        for case_name in case_names:
+            if allowed_set is not None and f"{layout_name}/{case_name}" not in allowed_set:
+                continue
+            case_dir = os.path.join(layout_dir, case_name)
+            with open(os.path.join(case_dir, "metadata.yaml"), "r") as f:
+                meta = yaml.safe_load(f)
+            obstacles = np.load(os.path.join(case_dir, "obstacles.npz"))
+            start_pos_sim = np.asarray(meta["start_pos_sim"], dtype=np.float32)
+            if fixed_start_xy is not None:
+                scene_offset = np.array([
+                    start_pos_sim[0] - fixed_start_xy[0],
+                    start_pos_sim[1] - fixed_start_xy[1],
+                    0.0,
+                ], dtype=np.float32)
+            else:
+                scene_offset = np.asarray(meta.get("scene_offset", [0.0, 0.0, 0.0]), dtype=np.float32)
+            cases.append({
+                "layout": layout_name,
+                "case": case_name,
+                "start_pos_sim": start_pos_sim,
+                "target_pos_sim": np.asarray(meta["target_pos_sim"], dtype=np.float32),
+                "start_quat_xyzw": np.asarray(meta["start_quat_xyzw"], dtype=np.float32),
+                "scene_offset": scene_offset,
+                "obstacle_positions": obstacles["positions"].astype(np.float32),
+                "obstacle_radii": obstacles["radii"].astype(np.float32),
+            })
+    if allowed_set is not None:
+        order = {key: i for i, key in enumerate(allowed_cases)}
+        cases.sort(key=lambda c: order[f"{c['layout']}/{c['case']}"])
+    if not cases:
+        raise RuntimeError(f"No layoutN/case_NNN test cases found under {root_dir}")
+    return cases
 
 
 def quaternion_facing_goal(start_pos, target_pos):
@@ -535,6 +598,17 @@ class VelocityPolicy:
         target_pos = np.asarray(target_pos, dtype=np.float32).reshape(1, 3)
         self.t_pos = torch.as_tensor(target_pos, dtype=torch.float32, device=self.device)
 
+    def update_obstacles(self, positions, radii, source="case_manifest"):
+        """Swap in a new (per-layout) obstacle set. Never touches Gazebo --
+        obstacles only ever exist as this policy's obstacle-avoidance input."""
+        positions = np.asarray(positions, dtype=np.float32).reshape(-1, 3)
+        radii = np.asarray(radii, dtype=np.float32).reshape(-1)
+        self.obstacle_source = source
+        self.obstacle_positions_np = positions
+        self.obstacle_radii_np = radii
+        self.obstacle_positions = torch.as_tensor(positions, dtype=torch.float32, device=self.device)
+        self.obstacle_radii = torch.as_tensor(radii, dtype=torch.float32, device=self.device)
+
     def evaluate(self, pos, att, qd, elapsed_time=None):
         pos = pos.to(self.device)
         att = att.to(self.device)
@@ -591,7 +665,7 @@ class VelocityPolicy:
 
 
 class GazeboPolicyTester:
-    def __init__(self, policy, config_params, loaded_params, max_angular_rates, inference_timestep):
+    def __init__(self, policy, config_params, loaded_params, max_angular_rates, inference_timestep, cases, output_root):
         self.policy = policy
         self.config_params = config_params
         self.max_angular_rates = max_angular_rates
@@ -601,41 +675,28 @@ class GazeboPolicyTester:
         self.to_transform_policy = loaded_params["to_transform_policy"]
         self.warp_jax = loaded_params["warp_jax"]
 
-        room_size = float(config_params["room_size"])
         # test.py trains/evaluates obstacles directly in the sim room frame
         # [0, room_size] x [0, room_size]. scene_offset maps Gazebo world
         # coordinates into that policy room frame: sim = world + scene_offset.
-        self.scene_offset = np.asarray(
-            config_params.get("scene_offset", DEFAULT_SCENE_OFFSET),
-            dtype=np.float32,
-        ).reshape(3)
-        self.start_pos_sim = np.asarray(MANUAL_START_POS, dtype=np.float32)
-        self.target_pos_sim = np.asarray(MANUAL_TARGET_POS, dtype=np.float32)
-        self.start_pos_world = self.start_pos_sim - self.scene_offset
-        self.target_pos_world = self.target_pos_sim - self.scene_offset
-        self.start_quat = quaternion_facing_goal(self.start_pos_sim, self.target_pos_sim)
-        self.policy.update_target_pos(self.target_pos_sim)
+        # (Set per-case in _load_case, from each case's own metadata.yaml.)
+        self.cases = cases
+        self.case_idx = 0
+        self.all_cases_done = False
+        self.output_root = output_root
+        os.makedirs(self.output_root, exist_ok=True)
 
         self.drone_state = DRONESTATE.INIT.value
         self.mission_command_mode = 1
         self.warp_mission_command_mode = 1
         self.attitude_mode_toggle = 1
         self.action = np.zeros((1, 4), dtype=np.float32)
-        self.has_nn_action = False
-        self.mission_start_time = None
-        self.nn_start_time = None
-        self.start_hold_start_time = None
-        self.test_finished = False
-        self.saved_outputs = False
-        self.max_nn_duration = float(config_params.get("test_max_duration", inference_timestep * int(config_params.get("sim_steps", 300))))
+        self.max_nn_duration = float(config_params.get("test_max_duration", inference_timestep * 500))
         self.start_reached_radius = float(config_params.get("start_reached_radius", 0.20))
         self.start_hold_max_speed = float(config_params.get("start_hold_max_speed", 0.15))
         self.start_hold_duration = float(config_params.get("start_hold_duration", 1.0))
         self.start_yaw_tolerance_deg = float(config_params.get("start_yaw_tolerance_deg", 5.0))
         self.start_yaw_tolerance = np.deg2rad(self.start_yaw_tolerance_deg)
         self.last_start_yaw = np.nan
-        self.last_start_target_yaw = quaternion_yaw_xyzw(self.start_quat)
-        self.last_start_yaw_error = np.nan
 
         self.drone_pos = np.zeros(3, dtype=np.float32)
         self.drone_quat = np.array([0.0, 0.0, 0.0, 1.0], dtype=np.float32)
@@ -645,36 +706,6 @@ class GazeboPolicyTester:
         self.received_warp_odom = False
         self.last_pos_time = None
         self.last_odom_time = None
-
-        timestamp = time.strftime("%Y%m%d-%H%M%S")
-        self.output_dir = os.path.join(DEFAULT_POLICY_DIR, f"gazebo_gru_test_{timestamp}")
-        os.makedirs(self.output_dir, exist_ok=True)
-        self.trajectory_world = []
-        self.trajectory_sim = []
-        self.action_log = []
-        self.body_rate_log = []
-        self.body_rate_time_log = []
-        self.runtime_log_path = os.path.join(self.output_dir, "policy_runtime_obs.csv")
-        self.runtime_log_file = open(self.runtime_log_path, "w", buffering=1)
-        log_columns = [
-            "stamp",
-            "pos_x", "pos_y", "pos_z",
-            "vel_x", "vel_y", "vel_z",
-            "desired_vel_x", "desired_vel_y", "desired_vel_z",
-            "diff_vel_x", "diff_vel_y", "diff_vel_z",
-            "nearest_clearance",
-            "yaw", "yaw_target", "yaw_error",
-        ]
-        for obs_id in range(len(self.policy.obstacle_positions_np)):
-            log_columns.extend([
-                f"obs{obs_id + 1}_rel_x",
-                f"obs{obs_id + 1}_rel_y",
-                f"obs{obs_id + 1}_radius",
-                f"obs{obs_id + 1}_distance_xy",
-                f"obs{obs_id + 1}_clearance",
-            ])
-        log_columns.extend(["action_throttle", "action_rate_x", "action_rate_y", "action_rate_z"])
-        self.runtime_log_file.write(",".join(log_columns) + "\n")
 
         self.swarm_mode_pub = rospy.Publisher("/traj_server/swarm_command", Int8, queue_size=5)
         self.pva_traj_pub = rospy.Publisher("/drone0/planner_adaptor/exec_trajectory", ExecTrajectory, queue_size=5)
@@ -693,13 +724,19 @@ class GazeboPolicyTester:
         rospy.on_shutdown(self.save_outputs)
         rospy.on_shutdown(self.close_runtime_log)
         rospy.sleep(1.0)
-        self.publish_start_target_markers()
+
+        # event_cb/execute_mission (event_timer thread) and nn_evaluation
+        # (policy_timer thread) are two independent rospy.Timer threads. The
+        # former closes/reopens runtime_log_file on every case transition
+        # (_load_case); the latter writes to it via log_policy_input. Without
+        # this lock a write can land mid-swap -> "I/O operation on closed file".
+        self.log_lock = threading.Lock()
+        self.runtime_log_file = None
+        self._load_case(0)
+
         self.event_timer = rospy.Timer(rospy.Duration(inference_timestep), self.event_cb)
         self.policy_timer = rospy.Timer(rospy.Duration(inference_timestep), self.nn_evaluation)
-        print(f"Gazebo policy test output dir: {self.output_dir}")
-        print(f"Start sim/world: {self.start_pos_sim} / {self.start_pos_world}")
-        print(f"Target sim/world: {self.target_pos_sim} / {self.target_pos_world}")
-        print(f"Start yaw-facing-goal quaternion xyzw: {self.start_quat.tolist()}")
+        print(f"Loaded {len(self.cases)} test cases; saving under {self.output_root}")
         print(
             "Start hold before NN: "
             f"radius={self.start_reached_radius:.2f} m, "
@@ -707,13 +744,96 @@ class GazeboPolicyTester:
             f"yaw_tolerance={self.start_yaw_tolerance_deg:.1f} deg, "
             f"duration={self.start_hold_duration:.2f} s"
         )
+
+    def _load_case(self, case_idx):
+        """Point the tester and policy at cases[case_idx]: new start/target/
+        quat/obstacles, a fresh per-case output dir + CSV log, and reset
+        per-case trajectory logs/state. Does not touch the policy's recurrent
+        hidden state -- that reset already happens right before NN control
+        starts, in execute_mission."""
+        case = self.cases[case_idx]
+        self.scene_offset = np.asarray(case["scene_offset"], dtype=np.float32).reshape(3)
+        self.start_pos_sim = np.asarray(case["start_pos_sim"], dtype=np.float32)
+        self.target_pos_sim = np.asarray(case["target_pos_sim"], dtype=np.float32)
+        self.start_pos_world = self.start_pos_sim - self.scene_offset
+        self.target_pos_world = self.target_pos_sim - self.scene_offset
+        self.start_quat = np.asarray(case["start_quat_xyzw"], dtype=np.float32)
+        self.policy.update_target_pos(self.target_pos_sim)
+        self.policy.update_obstacles(
+            case["obstacle_positions"], case["obstacle_radii"],
+            source=f"case_manifest:{case['layout']}/{case['case']}",
+        )
+
+        self.mission_command_mode = 1
+        self.warp_mission_command_mode = 1
+        self.has_nn_action = False
+        self.mission_start_time = None
+        self.nn_start_time = None
+        self.start_hold_start_time = None
+        self.case_finished = False
+        self.saved_outputs = False
+        self.last_start_target_yaw = quaternion_yaw_xyzw(self.start_quat)
+        self.last_start_yaw_error = np.nan
+
+        self.output_dir = os.path.join(self.output_root, case["layout"], case["case"])
+        os.makedirs(self.output_dir, exist_ok=True)
+        self.trajectory_world = []
+        self.trajectory_sim = []
+        self.action_log = []
+        self.body_rate_log = []
+        self.body_rate_time_log = []
+
+        log_columns = [
+            "stamp",
+            "pos_x", "pos_y", "pos_z",
+            "vel_x", "vel_y", "vel_z",
+            "desired_vel_x", "desired_vel_y", "desired_vel_z",
+            "diff_vel_x", "diff_vel_y", "diff_vel_z",
+            "nearest_clearance",
+            "yaw", "yaw_target", "yaw_error",
+        ]
+        for obs_id in range(len(self.policy.obstacle_positions_np)):
+            log_columns.extend([
+                f"obs{obs_id + 1}_rel_x",
+                f"obs{obs_id + 1}_rel_y",
+                f"obs{obs_id + 1}_radius",
+                f"obs{obs_id + 1}_distance_xy",
+                f"obs{obs_id + 1}_clearance",
+            ])
+        log_columns.extend(["action_throttle", "action_rate_x", "action_rate_y", "action_rate_z"])
+
+        # Close the old case's file and open the new one atomically w.r.t.
+        # log_policy_input, which takes the same lock before writing.
+        with self.log_lock:
+            old_log = getattr(self, "runtime_log_file", None)
+            if old_log is not None and not old_log.closed:
+                old_log.close()
+            self.runtime_log_path = os.path.join(self.output_dir, "policy_runtime_obs.csv")
+            self.runtime_log_file = open(self.runtime_log_path, "w", buffering=1)
+            self.runtime_log_file.write(",".join(log_columns) + "\n")
+
+        self.publish_start_target_markers()
         print(
-            "Obstacles: "
-            f"source={self.policy.obstacle_source}, "
-            f"count={len(self.policy.obstacle_positions_np)}, "
+            f"[case {case_idx + 1}/{len(self.cases)}] {case['layout']}/{case['case']} -> {self.output_dir}\n"
+            f"  start sim/world: {self.start_pos_sim} / {self.start_pos_world}\n"
+            f"  target sim/world: {self.target_pos_sim} / {self.target_pos_world}\n"
+            f"  obstacles: count={len(self.policy.obstacle_positions_np)}, "
             f"positions={self.policy.obstacle_positions_np.tolist()}, "
             f"radii={self.policy.obstacle_radii_np.tolist()}"
         )
+
+    def advance_to_next_case(self):
+        """Called once the current case's NN run has finished and been saved.
+        'Flies to the other initial point' by simply resetting mission state to
+        PVA-hold at the new case's start -- the existing start-hold/yaw-check
+        logic in execute_mission naturally carries the drone there and
+        re-triggers NN control, exactly like the first case."""
+        self.case_idx += 1
+        if self.case_idx >= len(self.cases):
+            self.all_cases_done = True
+            print("All test cases complete.")
+            return
+        self._load_case(self.case_idx)
 
     def comm_state_cb(self, msg):
         self.drone_state = DRONESTATE[msg.traj_server_state].value
@@ -807,12 +927,13 @@ class GazeboPolicyTester:
         ])
 
     def close_runtime_log(self):
-        log_file = getattr(self, "runtime_log_file", None)
-        if log_file is not None and not log_file.closed:
-            log_file.close()
+        with self.log_lock:
+            log_file = getattr(self, "runtime_log_file", None)
+            if log_file is not None and not log_file.closed:
+                log_file.close()
 
     def event_cb(self, event):
-        if self.test_finished:
+        if self.all_cases_done:
             if self.drone_state == DRONESTATE.MISSION.value:
                 self.publish_pva()
             return
@@ -825,7 +946,7 @@ class GazeboPolicyTester:
             self.execute_mission()
 
     def execute_mission(self):
-        if self.test_finished:
+        if self.all_cases_done:
             self.publish_pva()
             return
 
@@ -888,11 +1009,13 @@ class GazeboPolicyTester:
                 self.publish_att()
                 self.record_trajectory()
                 if self.reached_target() or self.nn_timed_out():
-                    print("Test finished; switching back to PVA hold and saving GIFs.")
-                    self.test_finished = True
+                    print(f"Case {self.case_idx + 1}/{len(self.cases)} finished; "
+                          "switching back to PVA hold and saving.")
+                    self.case_finished = True
                     self.publish_mission_cmd_mode(1)
                     self.mission_command_mode = 1
                     self.save_outputs()
+                    self.advance_to_next_case()
 
     def start_yaw_status(self):
         current_sim = np.asarray(self.warp_q[:3], dtype=np.float32) + self.scene_offset
@@ -916,10 +1039,10 @@ class GazeboPolicyTester:
 
     def reached_target(self):
         drone_sim = np.asarray(self.warp_q[:3], dtype=np.float32) + self.scene_offset
-        return np.linalg.norm(drone_sim - self.target_pos_sim) < 0.8
+        return np.linalg.norm(drone_sim - self.target_pos_sim) < 0.3
 
     def nn_evaluation(self, event):
-        if self.test_finished:
+        if self.all_cases_done:
             return
 
         pos_sim = torch.as_tensor(self.warp_q[:3] + self.scene_offset, dtype=torch.float32).unsqueeze(0)
@@ -954,7 +1077,10 @@ class GazeboPolicyTester:
         ]
         row.extend(f"{value:.9f}" for value in obs_vec)
         row.extend(f"{value:.9f}" for value in action)
-        self.runtime_log_file.write(",".join(row) + "\n")
+        with self.log_lock:
+            log_file = self.runtime_log_file
+            if log_file is not None and not log_file.closed:
+                log_file.write(",".join(row) + "\n")
 
     def record_trajectory(self):
         world = np.asarray(self.warp_q[:3], dtype=np.float32).copy()
@@ -1237,6 +1363,43 @@ if __name__ == "__main__":
     rospy.init_node("cmdp_gru_policy_gazebo_test")
     validate_frame_config(config_params, loaded_params)
 
+    # Real room: ~5m either side of y=0, ~6m in x with the drone always launched
+    # from the same physical point at x=-3 (the near wall) -- every case's
+    # scene_offset is recomputed (not read from metadata.yaml, which is 0 and
+    # meaningless here) to map its own start_pos_sim onto this fixed point.
+    REAL_ROOM_FIXED_START_XY = (-3.0, 0.0)
+    # Hand-picked from logs/docs/primal_dual2_blocked: the 10 shortest cases
+    # whose full recorded trajectory_sim.npy -- not just start/target -- stays
+    # inside x in [-3, 3], y in [-5, 5] (0.3m margin off the far/side walls;
+    # the near wall at x=-3 is the launch point itself, so no margin needed
+    # there), once translated to launch from REAL_ROOM_FIXED_START_XY.
+    SELECTED_REALDRONE_CASES = [
+        "layout2/case_006",
+        "layout2/case_014",
+        "layout1/case_019",
+        "layout4/case_015",
+        "layout2/case_007",
+        "layout3/case_002",
+        "layout3/case_014",
+        "layout3/case_004",
+        "layout4/case_000",
+        "layout0/case_018",
+    ]
+
+    test_cases_dir = rospy.get_param("~test_cases_dir", DEFAULT_TEST_CASES_DIR)
+    cases = load_case_manifest(
+        test_cases_dir,
+        fixed_start_xy=REAL_ROOM_FIXED_START_XY,
+        allowed_cases=SELECTED_REALDRONE_CASES,
+    )
+    timestamp = time.strftime("%Y%m%d-%H%M%S")
+    output_root = rospy.get_param(
+        "~output_root",
+        os.path.join(policy_dir, f"realdrone_sim2real_test_{timestamp}"),
+    )
+    print(f"Test cases: {len(cases)} loaded from {test_cases_dir}")
+    print(f"Output root: {output_root}")
+
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
     policy = VelocityPolicy(policy_path, config_params, device=device)
     tester = GazeboPolicyTester(
@@ -1245,5 +1408,7 @@ if __name__ == "__main__":
         loaded_params=loaded_params,
         max_angular_rates=float(config_params["max_angular_rates"]),
         inference_timestep=float(config_params["delta_time"]),
+        cases=cases,
+        output_root=output_root,
     )
     rospy.spin()
