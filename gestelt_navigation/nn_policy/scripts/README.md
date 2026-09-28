@@ -1,3 +1,5 @@
+For the CMDP obstacle-avoidance flights (Gazebo and real drone, the `policy_vel_combined_cmdp_gru_test_deepset_sim2real*.py` scripts), see [README_cmdp_flights.md](README_cmdp_flights.md) in this folder.
+
 Key learning points:
 Things to take note:
 1. The state and odom output from PX4 has to match the inference rate of the innerloop controller. It has to be at least 100Hz. The way the diff sim trains has to comensurate with the implementation. That means the time step used in the training has to be 1/100. 
