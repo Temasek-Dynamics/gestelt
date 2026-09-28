@@ -70,15 +70,29 @@ FIXED_OBSTACLE_RADII = np.array(
 # (see logs/docs/primal_dual2/figures for the reference plots). Obstacles are
 # never physically spawned in Gazebo -- they only ever go into the policy's
 # obstacle-avoidance input, exactly like the training-side evaluation.
-DEFAULT_TEST_CASES_DIR = os.path.join(NN_POLICY_DIR, "logs", "docs", "primal_dual2_blocked")
+DEFAULT_TEST_CASES_DIR = os.path.join(NN_POLICY_DIR, "logs", "docs", "primal_dual2_difficult")
 
 
-def load_case_manifest(root_dir):
+def load_case_manifest(root_dir, fixed_obstacle_center_xy=None, allowed_cases=None):
     """Load every layoutN/case_NNN test case under root_dir, in the same format
     as logs/docs/primal_dual2: start/target/quat/scene_offset from each case's
     metadata.yaml, obstacle positions/radii from its obstacles.npz. Returned in
-    layout-then-case directory order, matching how they were recorded."""
+    layout-then-case directory order, matching how they were recorded --
+    unless allowed_cases fixes the order (see below).
+
+    fixed_obstacle_center_xy: if given (x, y), OVERRIDES each case's stored
+    scene_offset (which is 0 -- meaningless for a real room) with the offset
+    that maps that case's own obstacle CENTROID (mean of all its obstacle
+    positions -- there is no single "the" obstacle per case, every case here
+    has 4) to this single physical (x, y) point, e.g. the Vicon room centre.
+    Start/target/flight-path then land wherever that puts them, unlike the
+    fixed-start-point variant of this script.
+    allowed_cases: optional iterable of "layoutN/case_NNN" strings restricting
+    (and ordering) the returned cases to this subset -- e.g. a hand-picked list
+    of trajectories confirmed to fit the physical room.
+    """
     cases = []
+    allowed_set = set(allowed_cases) if allowed_cases is not None else None
     layout_names = sorted(
         d for d in os.listdir(root_dir)
         if d.startswith("layout") and os.path.isdir(os.path.join(root_dir, d))
@@ -90,20 +104,36 @@ def load_case_manifest(root_dir):
             if d.startswith("case_") and os.path.isdir(os.path.join(layout_dir, d))
         )
         for case_name in case_names:
+            if allowed_set is not None and f"{layout_name}/{case_name}" not in allowed_set:
+                continue
             case_dir = os.path.join(layout_dir, case_name)
             with open(os.path.join(case_dir, "metadata.yaml"), "r") as f:
                 meta = yaml.safe_load(f)
             obstacles = np.load(os.path.join(case_dir, "obstacles.npz"))
+            obstacle_positions = obstacles["positions"].astype(np.float32)
+            start_pos_sim = np.asarray(meta["start_pos_sim"], dtype=np.float32)
+            if fixed_obstacle_center_xy is not None:
+                obstacle_centroid_xy = obstacle_positions[:, :2].mean(axis=0)
+                scene_offset = np.array([
+                    obstacle_centroid_xy[0] - fixed_obstacle_center_xy[0],
+                    obstacle_centroid_xy[1] - fixed_obstacle_center_xy[1],
+                    0.0,
+                ], dtype=np.float32)
+            else:
+                scene_offset = np.asarray(meta.get("scene_offset", [0.0, 0.0, 0.0]), dtype=np.float32)
             cases.append({
                 "layout": layout_name,
                 "case": case_name,
-                "start_pos_sim": np.asarray(meta["start_pos_sim"], dtype=np.float32),
+                "start_pos_sim": start_pos_sim,
                 "target_pos_sim": np.asarray(meta["target_pos_sim"], dtype=np.float32),
                 "start_quat_xyzw": np.asarray(meta["start_quat_xyzw"], dtype=np.float32),
-                "scene_offset": np.asarray(meta.get("scene_offset", [0.0, 0.0, 0.0]), dtype=np.float32),
-                "obstacle_positions": obstacles["positions"].astype(np.float32),
+                "scene_offset": scene_offset,
+                "obstacle_positions": obstacle_positions,
                 "obstacle_radii": obstacles["radii"].astype(np.float32),
             })
+    if allowed_set is not None:
+        order = {key: i for i, key in enumerate(allowed_cases)}
+        cases.sort(key=lambda c: order[f"{c['layout']}/{c['case']}"])
     if not cases:
         raise RuntimeError(f"No layoutN/case_NNN test cases found under {root_dir}")
     return cases
@@ -639,7 +669,7 @@ class VelocityPolicy:
 
 
 class GazeboPolicyTester:
-    def __init__(self, policy, config_params, loaded_params, max_angular_rates, inference_timestep, cases, output_root):
+    def __init__(self, policy, config_params, loaded_params, max_angular_rates, inference_timestep, cases, output_root, start_case_idx=0, end_case_idx=None):
         self.policy = policy
         self.config_params = config_params
         self.max_angular_rates = max_angular_rates
@@ -654,7 +684,13 @@ class GazeboPolicyTester:
         # coordinates into that policy room frame: sim = world + scene_offset.
         # (Set per-case in _load_case, from each case's own metadata.yaml.)
         self.cases = cases
-        self.case_idx = 0
+        if not (0 <= start_case_idx < len(cases)):
+            raise ValueError(f"start_case_idx={start_case_idx} out of range for {len(cases)} cases")
+        self.end_case_idx = len(cases) - 1 if end_case_idx is None else end_case_idx
+        if not (start_case_idx <= self.end_case_idx < len(cases)):
+            raise ValueError(f"end_case_idx={self.end_case_idx} out of range for "
+                             f"{len(cases)} cases (must be >= start_case_idx={start_case_idx})")
+        self.case_idx = start_case_idx
         self.all_cases_done = False
         self.output_root = output_root
         os.makedirs(self.output_root, exist_ok=True)
@@ -683,6 +719,13 @@ class GazeboPolicyTester:
 
         self.swarm_mode_pub = rospy.Publisher("/traj_server/swarm_command", Int8, queue_size=5)
         self.pva_traj_pub = rospy.Publisher("/drone0/planner_adaptor/exec_trajectory", ExecTrajectory, queue_size=5)
+        # posUpdateCb on the traj_server side updates last_mission_pos_/yaw
+        # unconditionally -- no getMissionCmd()==PVA gate, unlike exec_trajectory
+        # (see execTrajCb). Used to preload the new case's position ahead of
+        # (or independent of) the mode-switch message, closing the race where a
+        # delayed mode switch would otherwise leave the server ignoring our new
+        # PVA position and holding at the previous case's stale one.
+        self.pos_update_pub = rospy.Publisher("/drone0/planner_adaptor/pos_update", ExecTrajectory, queue_size=5)
         self.mission_mode_pub = rospy.Publisher("/traj_server/mission_command", Int8, queue_size=5)
         self.start_target_pub = rospy.Publisher("/policy_viz/start_target", MarkerArray, queue_size=1, latch=True)
         self.trajectory_pub = rospy.Publisher("/policy_viz/trajectory", Path, queue_size=1)
@@ -706,7 +749,7 @@ class GazeboPolicyTester:
         # this lock a write can land mid-swap -> "I/O operation on closed file".
         self.log_lock = threading.Lock()
         self.runtime_log_file = None
-        self._load_case(0)
+        self._load_case(self.case_idx)
 
         self.event_timer = rospy.Timer(rospy.Duration(inference_timestep), self.event_cb)
         self.policy_timer = rospy.Timer(rospy.Duration(inference_timestep), self.nn_evaluation)
@@ -732,6 +775,9 @@ class GazeboPolicyTester:
         self.start_pos_world = self.start_pos_sim - self.scene_offset
         self.target_pos_world = self.target_pos_sim - self.scene_offset
         self.start_quat = np.asarray(case["start_quat_xyzw"], dtype=np.float32)
+        # Preload the server's position before it even needs to be in PVA mode
+        # to accept it -- see publish_pos_update.
+        self.publish_pos_update(self.start_pos_world, self.start_quat)
         self.policy.update_target_pos(self.target_pos_sim)
         self.policy.update_obstacles(
             case["obstacle_positions"], case["obstacle_radii"],
@@ -803,7 +849,7 @@ class GazeboPolicyTester:
         logic in execute_mission naturally carries the drone there and
         re-triggers NN control, exactly like the first case."""
         self.case_idx += 1
-        if self.case_idx >= len(self.cases):
+        if self.case_idx > self.end_case_idx:
             self.all_cases_done = True
             # publish_pva() always commands self.start_pos_world -- fine mid-run
             # (mode 1 = "fly to the NEXT case's start"), but _load_case never
@@ -813,7 +859,7 @@ class GazeboPolicyTester:
             # the target it just reached.
             self.hold_pos_world = self.target_pos_world.copy()
             self.hold_quat = self.start_quat.copy()
-            print("All test cases complete; holding at final target.")
+            print("Reached the end of the requested case range; holding at final target.")
             return
         self._load_case(self.case_idx)
 
@@ -878,7 +924,11 @@ class GazeboPolicyTester:
         msg = Int8()
         msg.data = int(mode)
         self.mission_mode_pub.publish(msg)
-        print(f"switched mission command mode to {mode}")
+        # Called every tick while in mode 1 now (see execute_mission), not just
+        # once at the transition -- only print when it actually changes.
+        if mode != getattr(self, "_last_published_mission_mode", None):
+            print(f"switched mission command mode to {mode}")
+            self._last_published_mission_mode = mode
 
     def publish_pva(self):
         msg = ExecTrajectory()
@@ -891,6 +941,21 @@ class GazeboPolicyTester:
         msg.transform.rotation.w = float(self.start_quat[3])
         msg.type_mask = 2048
         self.pva_traj_pub.publish(msg)
+
+    def publish_pos_update(self, pos_world, quat):
+        """Preload traj_server's last_mission_pos_/yaw via posUpdateCb, which is
+        NOT gated on getMissionCmd()==PVA (unlike exec_trajectory/execTrajCb).
+        Call this when loading a new case so the server already has the right
+        position regardless of how quickly it processes the mode-switch."""
+        msg = ExecTrajectory()
+        msg.transform.translation.x = float(pos_world[0])
+        msg.transform.translation.y = float(pos_world[1])
+        msg.transform.translation.z = float(pos_world[2])
+        msg.transform.rotation.x = float(quat[0])
+        msg.transform.rotation.y = float(quat[1])
+        msg.transform.rotation.z = float(quat[2])
+        msg.transform.rotation.w = float(quat[3])
+        self.pos_update_pub.publish(msg)
 
     def publish_hold_pva(self):
         """Hold at self.hold_pos_world/hold_quat -- used once all_cases_done,
@@ -950,6 +1015,14 @@ class GazeboPolicyTester:
             self.mission_start_time = rospy.Time.now()
 
         if self.mission_command_mode == 1:
+            # Re-assert every tick, not just once at the mode-2->1 transition:
+            # traj_server.cpp's execTrajCb only accepts a new PVA position once
+            # its OWN mode has flipped to PVA (a separate topic/callback from
+            # the position stream), so a single dropped/delayed mode-switch
+            # message would otherwise leave it silently ignoring our new
+            # position and holding the drone at whatever position it last
+            # accepted -- the PREVIOUS case's own start point.
+            self.publish_mission_cmd_mode(1)
             self.publish_pva()
             dist_to_start = np.linalg.norm(np.asarray(self.warp_q[:3]) - self.start_pos_world)
             linear_speed = np.linalg.norm(np.asarray(self.warp_qd[3:], dtype=np.float32))
@@ -1008,6 +1081,29 @@ class GazeboPolicyTester:
                     print(f"Case {self.case_idx + 1}/{len(self.cases)} finished; "
                           "switching back to PVA hold and saving.")
                     self.case_finished = True
+
+                    # Preload the NEXT case's start position before switching
+                    # mode -- and BEFORE the slow save_outputs() below. Once
+                    # publish_mission_cmd_mode(1) lands, traj_server's 25Hz
+                    # execTrajTimerCb starts continuously commanding whatever
+                    # last_mission_pos_ currently is; if we only publish the
+                    # next position afterward (post-save), the server spends
+                    # the whole (multi-second, matplotlib-bound) save holding
+                    # the STALE previous-case-own-start position, and the
+                    # drone visibly flies back to it until the real next
+                    # position finally lands.
+                    next_idx = self.case_idx + 1
+                    if next_idx <= self.end_case_idx:
+                        next_case = self.cases[next_idx]
+                        next_offset = np.asarray(next_case["scene_offset"], dtype=np.float32).reshape(3)
+                        next_start_world = np.asarray(next_case["start_pos_sim"], dtype=np.float32) - next_offset
+                        next_quat = np.asarray(next_case["start_quat_xyzw"], dtype=np.float32)
+                        self.publish_pos_update(next_start_world, next_quat)
+                    else:
+                        # Last case: hold at the target we just reached, not
+                        # this case's own start (see advance_to_next_case).
+                        self.publish_pos_update(self.target_pos_world, self.start_quat)
+
                     self.publish_mission_cmd_mode(1)
                     self.mission_command_mode = 1
                     self.save_outputs()
@@ -1136,12 +1232,13 @@ class GazeboPolicyTester:
             positions=self.policy.obstacle_positions_np,
             radii=self.policy.obstacle_radii_np,
         )
-        xy_path = os.path.join(self.output_dir, "trajectory_xy.gif")
-        xz_path = os.path.join(self.output_dir, "trajectory_xz.gif")
+        # GIF animation (PillowWriter, one frame per timestep) is by far the
+        # slowest part of saving a case -- skipped so back-to-back cases don't
+        # sit through it. Static PNG plots stay since they're cheap.
+        xy_path = None
+        xz_path = None
         body_rates_path = os.path.join(self.output_dir, "body_rates.png")
         throttle_height_path = os.path.join(self.output_dir, "throttle_height.png")
-        self.save_xy_gif(trajectory, xy_path)
-        self.save_xz_gif(trajectory, xz_path)
         self.save_body_rates_plot(body_rates_path)
         self.save_throttle_height_plot(actions, trajectory, throttle_height_path)
         with open(os.path.join(self.output_dir, "metadata.yaml"), "w") as f:
@@ -1356,18 +1453,74 @@ if __name__ == "__main__":
     with open(traj_config_path, "r") as f:
         loaded_params = yaml.safe_load(f)
 
-    rospy.init_node("cmdp_gru_policy_gazebo_test")
+    rospy.init_node("cmdp_gru_policy_realdrone_obstacle_centered_test")
     validate_frame_config(config_params, loaded_params)
 
+    # Real room: ~5m either side of y=0, ~6m in x (x in [-3, 3], y in [-5, 5]).
+    # Unlike the fixed-start variant of this script, every case's scene_offset
+    # is recomputed to map its own obstacle CENTROID (mean of all 4 obstacle
+    # positions -- there's no single "the" obstacle per case) onto the Vicon
+    # room centre, assumed to be (0, 0).
+    VICON_ROOM_CENTER_XY = (0.0, 0.0)
+    # primal_dual2_difficult/layout0 is a 12-leg closed loop around the room
+    # (each case's target == the next case's start); all 12 share the same
+    # obstacle centroid (5, 5) -- the centre of the original 10x10 training
+    # room -- so this anchoring maps them in cleanly.
+    #
+    # WARNING: checked against the full recorded trajectory_sim.npy (not just
+    # start/target) with a 0.3m margin off all four walls, only 8 of these 12
+    # actually fit: case_000, case_005, case_006, case_011 each swing past a
+    # wall by 0.3m or more on one axis (see chat for exact numbers). Flying
+    # all 12 as requested -- those four are NOT verified safe.
+    SELECTED_REALDRONE_CASES = [
+        "layout0/case_000",
+        "layout0/case_001",
+        "layout0/case_002",
+        "layout0/case_003",
+        "layout0/case_004",
+        "layout0/case_005",
+        "layout0/case_006",
+        "layout0/case_007",
+        "layout0/case_008",
+        "layout0/case_009",
+        "layout0/case_010",
+        "layout0/case_011",
+    ]
+
     test_cases_dir = rospy.get_param("~test_cases_dir", DEFAULT_TEST_CASES_DIR)
-    cases = load_case_manifest(test_cases_dir)
+    cases = load_case_manifest(
+        test_cases_dir,
+        fixed_obstacle_center_xy=VICON_ROOM_CENTER_XY,
+        allowed_cases=SELECTED_REALDRONE_CASES,
+    )
     timestamp = time.strftime("%Y%m%d-%H%M%S")
     output_root = rospy.get_param(
         "~output_root",
-        os.path.join(policy_dir, f"real_sim2real_test_{timestamp}"),
+        os.path.join(policy_dir, f"realdrone_obstacle_centered_test_{timestamp}"),
     )
+    # 1-indexed ("start from the 3rd case") to match how you'd refer to it out
+    # loud; converted to a 0-indexed case_idx for GazeboPolicyTester. Use this
+    # to resume after e.g. a battery swap -- pass the SAME _output_root as the
+    # interrupted run too, or the resumed cases will land in a fresh timestamped
+    # folder instead of alongside the ones you already flew.
+    start_case_num = int(rospy.get_param("~start_case_num", 1))
+    if not (1 <= start_case_num <= len(cases)):
+        raise ValueError(f"~start_case_num={start_case_num} out of range for {len(cases)} cases")
+    start_case_idx = start_case_num - 1
+    # 1-indexed, inclusive; defaults to the last case (run through the end).
+    # Set equal to ~start_case_num to run exactly one case.
+    end_case_num = int(rospy.get_param("~end_case_num", len(cases)))
+    if not (start_case_num <= end_case_num <= len(cases)):
+        raise ValueError(f"~end_case_num={end_case_num} out of range "
+                         f"(must be between ~start_case_num={start_case_num} and {len(cases)})")
+    end_case_idx = end_case_num - 1
     print(f"Test cases: {len(cases)} loaded from {test_cases_dir}")
     print(f"Output root: {output_root}")
+    if start_case_idx > 0:
+        skipped = ", ".join(f"{c['layout']}/{c['case']}" for c in cases[:start_case_idx])
+        print(f"Resuming from case {start_case_num}/{len(cases)}; skipping already-flown: {skipped}")
+    running = ", ".join(f"{c['layout']}/{c['case']}" for c in cases[start_case_idx:end_case_idx + 1])
+    print(f"Will run case {start_case_num} through case {end_case_num} ({running})")
 
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
     policy = VelocityPolicy(policy_path, config_params, device=device)
@@ -1379,5 +1532,7 @@ if __name__ == "__main__":
         inference_timestep=float(config_params["delta_time"]),
         cases=cases,
         output_root=output_root,
+        start_case_idx=start_case_idx,
+        end_case_idx=end_case_idx,
     )
     rospy.spin()

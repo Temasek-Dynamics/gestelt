@@ -665,7 +665,7 @@ class VelocityPolicy:
 
 
 class GazeboPolicyTester:
-    def __init__(self, policy, config_params, loaded_params, max_angular_rates, inference_timestep, cases, output_root):
+    def __init__(self, policy, config_params, loaded_params, max_angular_rates, inference_timestep, cases, output_root, start_case_idx=0, end_case_idx=None):
         self.policy = policy
         self.config_params = config_params
         self.max_angular_rates = max_angular_rates
@@ -680,7 +680,13 @@ class GazeboPolicyTester:
         # coordinates into that policy room frame: sim = world + scene_offset.
         # (Set per-case in _load_case, from each case's own metadata.yaml.)
         self.cases = cases
-        self.case_idx = 0
+        if not (0 <= start_case_idx < len(cases)):
+            raise ValueError(f"start_case_idx={start_case_idx} out of range for {len(cases)} cases")
+        self.end_case_idx = len(cases) - 1 if end_case_idx is None else end_case_idx
+        if not (start_case_idx <= self.end_case_idx < len(cases)):
+            raise ValueError(f"end_case_idx={self.end_case_idx} out of range for "
+                             f"{len(cases)} cases (must be >= start_case_idx={start_case_idx})")
+        self.case_idx = start_case_idx
         self.all_cases_done = False
         self.output_root = output_root
         os.makedirs(self.output_root, exist_ok=True)
@@ -732,7 +738,7 @@ class GazeboPolicyTester:
         # this lock a write can land mid-swap -> "I/O operation on closed file".
         self.log_lock = threading.Lock()
         self.runtime_log_file = None
-        self._load_case(0)
+        self._load_case(self.case_idx)
 
         self.event_timer = rospy.Timer(rospy.Duration(inference_timestep), self.event_cb)
         self.policy_timer = rospy.Timer(rospy.Duration(inference_timestep), self.nn_evaluation)
@@ -829,9 +835,17 @@ class GazeboPolicyTester:
         logic in execute_mission naturally carries the drone there and
         re-triggers NN control, exactly like the first case."""
         self.case_idx += 1
-        if self.case_idx >= len(self.cases):
+        if self.case_idx > self.end_case_idx:
             self.all_cases_done = True
-            print("All test cases complete.")
+            # publish_pva() always commands self.start_pos_world -- fine mid-run
+            # (mode 1 = "fly to the NEXT case's start"), but _load_case never
+            # runs again after the last case, so without this the terminal hold
+            # would keep commanding the LAST case's own start point forever,
+            # flying the drone back to where it began instead of holding at
+            # the target it just reached.
+            self.hold_pos_world = self.target_pos_world.copy()
+            self.hold_quat = self.start_quat.copy()
+            print("Reached the end of the requested case range; holding at final target.")
             return
         self._load_case(self.case_idx)
 
@@ -910,6 +924,20 @@ class GazeboPolicyTester:
         msg.type_mask = 2048
         self.pva_traj_pub.publish(msg)
 
+    def publish_hold_pva(self):
+        """Hold at self.hold_pos_world/hold_quat -- used once all_cases_done,
+        instead of publish_pva()'s start_pos_world (see advance_to_next_case)."""
+        msg = ExecTrajectory()
+        msg.transform.translation.x = float(self.hold_pos_world[0])
+        msg.transform.translation.y = float(self.hold_pos_world[1])
+        msg.transform.translation.z = float(self.hold_pos_world[2])
+        msg.transform.rotation.x = float(self.hold_quat[0])
+        msg.transform.rotation.y = float(self.hold_quat[1])
+        msg.transform.rotation.z = float(self.hold_quat[2])
+        msg.transform.rotation.w = float(self.hold_quat[3])
+        msg.type_mask = 2048
+        self.pva_traj_pub.publish(msg)
+
     def publish_att(self):
         msg = ExecTrajectory()
         msg.type_mask = 1
@@ -935,7 +963,7 @@ class GazeboPolicyTester:
     def event_cb(self, event):
         if self.all_cases_done:
             if self.drone_state == DRONESTATE.MISSION.value:
-                self.publish_pva()
+                self.publish_hold_pva()
             return
 
         if self.drone_state == DRONESTATE.IDLE.value:
@@ -947,7 +975,7 @@ class GazeboPolicyTester:
 
     def execute_mission(self):
         if self.all_cases_done:
-            self.publish_pva()
+            self.publish_hold_pva()
             return
 
         if self.mission_start_time is None:
@@ -1360,14 +1388,14 @@ if __name__ == "__main__":
     with open(traj_config_path, "r") as f:
         loaded_params = yaml.safe_load(f)
 
-    rospy.init_node("cmdp_gru_policy_gazebo_test")
+    rospy.init_node("cmdp_gru_policy_realdrone_test")
     validate_frame_config(config_params, loaded_params)
 
     # Real room: ~5m either side of y=0, ~6m in x with the drone always launched
     # from the same physical point at x=-3 (the near wall) -- every case's
     # scene_offset is recomputed (not read from metadata.yaml, which is 0 and
     # meaningless here) to map its own start_pos_sim onto this fixed point.
-    REAL_ROOM_FIXED_START_XY = (-3.0, 0.0)
+    REAL_ROOM_FIXED_START_XY = (-2.5, 0.0)
     # Hand-picked from logs/docs/primal_dual2_blocked: the 10 shortest cases
     # whose full recorded trajectory_sim.npy -- not just start/target -- stays
     # inside x in [-3, 3], y in [-5, 5] (0.3m margin off the far/side walls;
@@ -1397,8 +1425,29 @@ if __name__ == "__main__":
         "~output_root",
         os.path.join(policy_dir, f"realdrone_sim2real_test_{timestamp}"),
     )
+    # 1-indexed ("start from the 3rd case") to match how you'd refer to it out
+    # loud; converted to a 0-indexed case_idx for GazeboPolicyTester. Use this
+    # to resume after e.g. a battery swap -- pass the SAME _output_root as the
+    # interrupted run too, or the resumed cases will land in a fresh timestamped
+    # folder instead of alongside the ones you already flew.
+    start_case_num = int(rospy.get_param("~start_case_num", 1))
+    if not (1 <= start_case_num <= len(cases)):
+        raise ValueError(f"~start_case_num={start_case_num} out of range for {len(cases)} cases")
+    start_case_idx = start_case_num - 1
+    # 1-indexed, inclusive; defaults to the last case (run through the end).
+    # Set equal to ~start_case_num to run exactly one case.
+    end_case_num = int(rospy.get_param("~end_case_num", len(cases)))
+    if not (start_case_num <= end_case_num <= len(cases)):
+        raise ValueError(f"~end_case_num={end_case_num} out of range "
+                         f"(must be between ~start_case_num={start_case_num} and {len(cases)})")
+    end_case_idx = end_case_num - 1
     print(f"Test cases: {len(cases)} loaded from {test_cases_dir}")
     print(f"Output root: {output_root}")
+    if start_case_idx > 0:
+        skipped = ", ".join(f"{c['layout']}/{c['case']}" for c in cases[:start_case_idx])
+        print(f"Resuming from case {start_case_num}/{len(cases)}; skipping already-flown: {skipped}")
+    running = ", ".join(f"{c['layout']}/{c['case']}" for c in cases[start_case_idx:end_case_idx + 1])
+    print(f"Will run case {start_case_num} through case {end_case_num} ({running})")
 
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
     policy = VelocityPolicy(policy_path, config_params, device=device)
@@ -1410,5 +1459,7 @@ if __name__ == "__main__":
         inference_timestep=float(config_params["delta_time"]),
         cases=cases,
         output_root=output_root,
+        start_case_idx=start_case_idx,
+        end_case_idx=end_case_idx,
     )
     rospy.spin()
